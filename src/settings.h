@@ -297,7 +297,10 @@ namespace headsup
     Settings Clamp(Settings s);
     // Whether HeadsUp shows a pointer of its own in place of the game's: another icon, or the game's at another size.
     bool PointerSwapped(const Settings& s);
+    // The file's settings, with HeadsUp's defaults (default_settings.h) for every key it lacks.
     Settings LoadSettings(SettingsStore& store);
+    // What a new install has: Settings' own with default_settings.h over them.
+    Settings DefaultSettings();
     void SaveSettings(const Settings& s, SettingsStore& store);
 
     // What a save has to tell the player: a failure once for a run of them, and the save that ends such a run.

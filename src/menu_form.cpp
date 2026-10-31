@@ -177,7 +177,7 @@ namespace headsup
             form.Line();
             if (form.Button(Word(c, WindowWord::ResetAllSettingsResetEverything), "reset everything", kAccentPill))
             {
-                c.s                  = Settings{};
+                c.s                  = DefaultSettings();
                 form.changed         = true;
                 c.state.confirmReset = false;
             }

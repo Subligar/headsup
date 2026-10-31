@@ -223,7 +223,7 @@ TEST(the_reset_card_asks_twice)
     w.Pass({{"configmenu-reset-reset-all-settings", kClickEvent, ""}});
     CHECK(w.state.confirmReset && w.settings.barHeight == 60);
     const Form form = w.Pass({{"configmenu-reset-reset-everything", kClickEvent, ""}});
-    CHECK(form.changed && !w.state.confirmReset && w.settings.barHeight == Settings{}.barHeight);
+    CHECK(form.changed && !w.state.confirmReset && w.settings.barHeight == DefaultSettings().barHeight);
     // It stands under the cards on its own, with no card around it.
     const FormBlock* reset = Block(form, "configmenu-reset");
     CHECK(reset != nullptr && reset->bare && !Has(reset->rml, "card-head"));

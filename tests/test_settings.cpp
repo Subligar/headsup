@@ -1,5 +1,7 @@
 #include "game_font.h"
 #include "pointer_keys.h"
+#include "default_settings.h"
+#include "ini_text.h"
 #include "settings.h"
 #include "world_info.h"
 #include "release_file.h"
@@ -553,10 +555,20 @@ TEST(a_group_side_that_is_not_left_or_right_keeps_its_default)
     CHECK_EQ(LoadSettings(store).Kind(PlateKind::Mobs).lines[1].text, "$detect Lv $level $con $weak$resist");
 }
 
-TEST(empty_store_gives_defaults)
+TEST(a_new_install_takes_the_built_in_defaults_and_a_saved_file_its_own)
 {
-    MapStore store;
-    CHECK(LoadSettings(store) == Settings{});
+    // Each key of the built-in defaults, as a new install reads it, saves back as the defaults hold it.
+    MapStore empty, saved;
+    SaveSettings(LoadSettings(empty), saved);
+    for (const char* key : {"barTheme", "barLeft", "mobsLine2Text", "pointerIcon", "barHeight"})
+        CHECK_EQ(saved.values[key], *IniValue(kDefaultSettingsText, "settings", key));
+    CHECK(LoadSettings(empty) == DefaultSettings() && !(DefaultSettings() == Settings{}));
+    // A file HeadsUp saved holds every key, so one lacking a key is from before it: it gets Settings' own.
+    MapStore file;
+    file.values["settingsVersion"] = "2.0000";
+    CHECK(LoadSettings(file).barTheme == Settings{}.barTheme);
+    // The faded names stay off.
+    CHECK_EQ(DefaultSettings().opacity.notTargeted, Settings{}.opacity.notTargeted);
 }
 
 TEST(a_whole_number_too_large_for_an_int_is_clamped_like_any_other)
@@ -1071,14 +1083,15 @@ TEST(a_new_install_places_the_windows_under_the_panel_at_its_reference_band_and_
     MapStore fresh;
     const Settings s = LoadSettings(fresh);
     CHECK(s.shiftVanillaUi && s.hiddenWindows.empty());
-    CHECK_EQ(s.placedUnder[static_cast<int>(HelpMode::On)], ReferenceBand(HelpMode::On));
-    CHECK_EQ(s.placedUnder[static_cast<int>(HelpMode::Off)], ReferenceBand(HelpMode::Off));
+    CHECK_EQ(s.placedUnder[static_cast<int>(HelpMode::On)], std::stoi(*IniValue(kDefaultSettingsText, "settings", "placedUnderHelpOn")));
+    CHECK_EQ(s.placedUnder[static_cast<int>(HelpMode::Off)], std::stoi(*IniValue(kDefaultSettingsText, "settings", "placedUnderHelpOff")));
     CHECK(s.viewShifts[0].empty() && s.viewShifts[1].empty());
 }
 
 TEST(a_theme_that_is_not_one_keeps_the_default_and_old_files_get_the_bar)
 {
     MapStore store;
+    store.values["enabled"]     = "true"; // a file from before the bar
     store.values["barTheme"]    = "purple";
     store.values["barCurrency"] = "dollars";
     const Settings s         = LoadSettings(store);
@@ -1113,11 +1126,12 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
     static_assert(std::size(widgetKeys) == kBarWidgetCount);
     for (int w = 0; w < kBarWidgetCount; ++w)
     {
+        const Settings d = DefaultSettings();
         MapStore store;
-        store.values[widgetKeys[w]] = kBarWidgetDefaults[w] ? "false" : "true";
+        store.values[widgetKeys[w]] = d.Widget(static_cast<BarWidget>(w)).on ? "false" : "true";
         const Settings s = LoadSettings(store);
         for (int other = 0; other < kBarWidgetCount; ++other)
-            CHECK(s.Widget(static_cast<BarWidget>(other)).on == (kBarWidgetDefaults[other] != (other == w)));
+            CHECK(s.Widget(static_cast<BarWidget>(other)).on == (d.Widget(static_cast<BarWidget>(other)).on != (other == w)));
     }
 }
 
@@ -1249,10 +1263,6 @@ TEST(the_settings_window_keeps_its_theme_and_its_place)
     store.values["menuHeight"] = "1e9";
     const Settings odd         = LoadSettings(store);
     CHECK(odd.menuWidth == 0 && odd.menuHeight == kMaxMenuSide);
-    // A new file has neither: the window opens in the screen's middle, in the Phoenix look.
-    MapStore empty;
-    const Settings fresh = LoadSettings(empty);
-    CHECK(fresh.menuWidth == 0 && fresh.menuHeight == 0);
 }
 
 TEST(the_window_type_is_kept)
@@ -1299,7 +1309,7 @@ TEST(the_windows_font_size_is_pixels_and_an_old_percent_becomes_the_pixels_it_dr
     // Its own key wins, and the percent is never written again.
     CHECK_EQ(loaded({{"menuScale", "150.0000"}, {"menuFontSize", "20.0000"}}), 20);
     MapStore fresh; // a new install has no percent to convert
-    CHECK_EQ(LoadSettings(fresh).menuFontSize, Settings{}.menuFontSize);
+    CHECK_EQ(LoadSettings(fresh).menuFontSize, DefaultSettings().menuFontSize);
     Settings s;
     s.menuFontSize = 30;
     MapStore file  = OwnFileWith(s, {{"menuScale", "80.0000"}});
@@ -1930,7 +1940,7 @@ TEST(a_new_installs_first_save_passes_on_every_key)
     MapStore fresh;
     ChangedKeys keys(fresh);
     const Settings s = keys.Load();
-    CHECK(s == Settings{});
+    CHECK(s == DefaultSettings());
     CHECK_EQ(keys.Save(s).size(), WholeSave(s).size());
     CHECK(fresh.values == WholeSave(s));
 }
@@ -2398,7 +2408,7 @@ TEST(the_mouse_pointer_is_one_icon_and_the_chocobo_switch_of_before_picks_the_ch
     CHECK(loaded({{"chocoboPointer", "true"}}).pointerIcon == PointerIcon::Chocobo);
     CHECK(loaded({{"chocoboPointer", "false"}}).pointerIcon == PointerIcon::Vanilla);
     MapStore fresh;
-    CHECK(LoadSettings(fresh).pointerIcon == PointerIcon::Vanilla);
+    CHECK(LoadSettings(fresh).pointerIcon == DefaultSettings().pointerIcon);
     // The key of its own wins over the switch of before.
     const Settings file = loaded({{"chocoboPointer", "true"}, {"pointerIcon", "file"}, {"pointerFile", "sword"}});
     CHECK(file.pointerIcon == PointerIcon::File && file.pointerFile == "sword");
@@ -2717,10 +2727,11 @@ TEST(the_game_pointer_is_swapped_for_another_icon_or_another_size)
     CHECK(!PointerSwapped(s));
 }
 
-TEST(looking_up_players_is_off_until_switched_on_and_kept)
+TEST(looking_up_players_is_kept)
 {
-    MapStore empty;
-    CHECK(!LoadSettings(empty).lookUpPlayers);
+    MapStore off;
+    off.values["lookUpPlayers"] = "false";
+    CHECK(!LoadSettings(off).lookUpPlayers);
     MapStore store;
     store.values["lookUpPlayers"] = "true";
     const Settings s = LoadSettings(store);
