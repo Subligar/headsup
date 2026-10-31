@@ -37,6 +37,9 @@ namespace headsup
         None,
         PlayOnlineMail,
         PlayOnlineMessenger,
+        SanDoriaCrest,
+        BastokCrest,
+        WindurstCrest,
     };
 
     struct Span
@@ -86,6 +89,7 @@ namespace headsup
         bool star = false; // a star after the text: who holds what the cell's row is about
         uint16_t item = 0; // a game item's picture before the text, in place of an icon
         Align align   = Align::Left; // in a grid, against its column's left, in its middle or against its right
+        GamePicture picture = GamePicture::None; // a picture from the game's files before the text, as an icon is
         bool operator==(const PopupCell&) const = default;
     };
 

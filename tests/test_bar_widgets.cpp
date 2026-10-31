@@ -857,10 +857,47 @@ TEST(the_zone_says_who_holds_its_region_once_known)
     owners[1]    = Nation::Bastok;
     state.owners = owners;
     const WidgetContent w = BarWidgetContent(BarWidget::Zone, state, settings);
-    CHECK(Joined(w.subtitle) == "Zulkheim \xC2\xB7 Bastok");
-    CHECK(w.subtitle.back() == (Span{"Bastok", Tone::Own, NationColor(Nation::Bastok)}));
+    // Its crest and name after the region, as Show Conquest and Show Conquest Text are by default.
+    CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {kDot, Tone::Dim}, Span{"", Tone::Normal, 0, GamePicture::BastokCrest},
+                             {" Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
     state.zone = 230; // Southern San d'Oria: a city region, not in the conquest packet
     CHECK(Joined(BarWidgetContent(BarWidget::Zone, state, settings).subtitle) == "San d'Oria");
+}
+
+TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_below_it)
+{
+    Settings settings;
+    WidgetOptions& o = settings.Widget(BarWidget::Zone);
+    BarState state;
+    state.zone = 103; // Valkurm Dunes, Zulkheim (region 1)
+    RegionOwners owners{};
+    owners[1]    = Nation::Bastok;
+    state.owners = owners;
+    const Span crest{"", Tone::Normal, 0, GamePicture::BastokCrest}, bastok{" Bastok", Tone::Own, NationColor(Nation::Bastok)};
+    const Span dunes{"Valkurm Dunes"}, region{"Zulkheim", Tone::Dim};
+    const auto shown = [&] { return BarWidgetContent(BarWidget::Zone, state, settings); };
+    o.zoneConquest = ConquestPlace::Left;
+    CHECK(shown().title == (std::vector<Span>{crest, bastok, Text(" "), dunes}) && shown().subtitle == std::vector<Span>{region});
+    o.zoneConquest = ConquestPlace::Right;
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), crest, bastok}));
+    o.zoneConquestText = false; // the crest alone
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), crest}));
+    o.zoneConquest = ConquestPlace::Off;
+    CHECK(shown().title == std::vector<Span>{dunes} && shown().subtitle == std::vector<Span>{region});
+    // Show Region Name off: below, the crest has the second line to itself.
+    o.secondLine     = false;
+    o.zoneConquest   = ConquestPlace::Below;
+    CHECK(shown().subtitle == std::vector<Span>{crest});
+    o.zoneConquest = ConquestPlace::Off;
+    CHECK(shown().subtitle.empty());
+    // The Beastmen have no crest in the game's files: their name, when it is shown, stands alone.
+    owners[1]          = Nation::Beastmen;
+    state.owners       = owners;
+    o.zoneConquest     = ConquestPlace::Right;
+    o.zoneConquestText = true;
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), Span{"Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
+    o.zoneConquestText = false;
+    CHECK(shown().title == std::vector<Span>{dunes});
 }
 
 TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
@@ -868,9 +905,11 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     Settings settings;
     BarState state;
     state.zone = 103; // Valkurm Dunes, Zulkheim (region 1)
+    settings.Widget(BarWidget::Zone).zoneId = true;
     const PopupContent dunes = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(dunes.title == ListOf(Text("Valkurm Dunes"), Text(" 103", Tone::Dim)));
-    CHECK(dunes.sections.size() == 1 && Lines(dunes.sections[0]) == (std::vector<std::string>{"Region Zulkheim"}));
+    // Its region by name alone, in the dim tone the word Region was in.
+    CHECK(dunes.sections.size() == 1 && dunes.sections[0].rows[0].cells[0].text == ListOf(Text("Zulkheim", Tone::Dim)));
     RegionOwners owners{};
     owners[1]    = Nation::Bastok;
     state.owners = owners; // who holds it is on the bar, and in the popup only beside its share
@@ -878,7 +917,10 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     state.zone = 230; // Southern San d'Oria: a city region, outside the conquest
     const PopupContent city = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(Joined(city.title) == "Southern San d'Oria 230");
-    CHECK(city.sections.size() == 1 && Lines(city.sections[0]) == (std::vector<std::string>{"Region San d'Oria"}));
+    CHECK(city.sections.size() == 1 && Lines(city.sections[0]) == (std::vector<std::string>{"San d'Oria"}));
+    // Show Zone ID is off on a new install: the name alone.
+    settings.Widget(BarWidget::Zone).zoneId = false;
+    CHECK(Joined(BarPopupContent(BarWidget::Zone, state, settings).title) == "Southern San d'Oria");
     state.zone = 999; // past the data: its number is its title already, and it has no region
     const PopupContent unknown = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(Joined(unknown.title) == "Zone 999" && unknown.sections.empty());
@@ -899,12 +941,17 @@ TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
     const PopupContent popup       = BarPopupContent(BarWidget::Zone, state, settings);
     const PopupSection* influence = Section(popup, "Influence");
     CHECK(influence != nullptr);
-    CHECK(Lines(popup.sections[0]) == (std::vector<std::string>{"Region Ronfaure"}));
+    CHECK(Lines(popup.sections[0]) == (std::vector<std::string>{"Ronfaure"}));
     CHECK(Lines(*influence) == (std::vector<std::string>{"San d'Oria 61%", "Bastok 21%", "Windurst 11%", "Beastmen 5%",
                                    "Tally in 2d 8h"}));
     for (const PopupRow& row : influence->rows)
         CHECK(row.kind == RowKind::Pair); // each figure at the right edge
     CHECK(influence->rows[1].cells[0].text == ListOf(Colored("Bastok ", NationColor(Nation::Bastok))));
+    // Each nation's crest before its name; the Beastmen have none.
+    CHECK(influence->rows[0].cells[0].picture == GamePicture::SanDoriaCrest &&
+          influence->rows[1].cells[0].picture == GamePicture::BastokCrest &&
+          influence->rows[2].cells[0].picture == GamePicture::WindurstCrest &&
+          influence->rows[3].cells[0].picture == GamePicture::None);
     // Which lines carry the holder's star, top to bottom.
     const auto starred = [&] {
         std::vector<bool> stars;

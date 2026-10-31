@@ -460,6 +460,23 @@ namespace headsup
                 case WidgetTabsRow::SecondLine:
                     if (HasSecondLine(kind)) form.Switch(label.c_str(), o.secondLine, row.tip);
                     break;
+                case WidgetTabsRow::ShowRegionName:
+                    if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.secondLine, row.tip);
+                    break;
+                case WidgetTabsRow::ShowConquest:
+                    if (kind == BarWidget::Zone)
+                    {
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ConquestPlace));
+                        form.Segments(label.c_str(), o.zoneConquest, names.data(), kConquestPlaceCount, row.tip);
+                    }
+                    break;
+                case WidgetTabsRow::ShowConquestText:
+                    if (kind == BarWidget::Zone && o.zoneConquest != ConquestPlace::Off)
+                        form.Switch(label.c_str(), o.zoneConquestText, row.tip);
+                    break;
+                case WidgetTabsRow::ShowZoneId:
+                    if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, row.tip);
+                    break;
                 case WidgetTabsRow::MoonPhase:
                     if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.secondLine, row.tip);
                     break;

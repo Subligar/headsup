@@ -421,6 +421,7 @@ class HeadsUp final : public IPlugin
     std::string m_GameFontFailure;                // why the game's font could not be read; empty when it was
     std::string m_GamePearlFailure;               // why the game's pearl could not be read; empty when it was
     std::string m_PlayOnlineIconsFailure;         // why its PlayOnline icons could not be; empty when they were
+    std::string m_NationCrestsFailure;            // why the nations' crests could not be; empty when they were
     headsup::WindowSkins m_WindowSkins;           // the game's window art, by Window Type
     std::array<std::string, headsup::kWindowTypes> m_SkinFailures; // why a type's art could not be read
     std::array<bool, headsup::kWindowTypes> m_SkinWarned{};        // whether that was said
@@ -428,6 +429,7 @@ class HeadsUp final : public IPlugin
     std::optional<headsup::GameSkinLook> m_SkinLook; // the art drawn now, while the panel or the window uses it
     std::optional<headsup::ColorPicture> m_GamePearl;
     std::optional<headsup::PlayOnlineIcons> m_PlayOnlineIcons;
+    std::optional<headsup::NationCrests> m_NationCrests;
     std::optional<int> m_PearlOutlineDrawn;       // the outline the pearl was last drawn with
     bool m_GameFontWarned = false;
     float m_MenuHeight  = 0.0f;
@@ -1393,6 +1395,8 @@ private:
         if (!m_PlayOnlineIconsFailure.empty())
             Note("the game's PlayOnline icons could not be read (" + m_PlayOnlineIconsFailure +
                  "): the connection widget shows only their counts.");
+        if (!m_NationCrestsFailure.empty())
+            Note("the nations' crests could not be read (" + m_NationCrestsFailure + "): the Zone widget shows no crests.");
     }
 
     // A file of the game's install where the game reads it: while XIPivot is loaded, the first of its overlays that
@@ -1535,6 +1539,7 @@ private:
             m_GameFontFailure        = where;
             m_GamePearlFailure       = where;
             m_PlayOnlineIconsFailure = where;
+            m_NationCrestsFailure    = where;
             return;
         }
         headsup::Read<headsup::ColorPicture> pearl = headsup::ReadGamePearl(*bytes);
@@ -1543,6 +1548,9 @@ private:
         headsup::Read<headsup::PlayOnlineIcons> icons = headsup::ReadPlayOnlineIcons(*bytes);
         if (icons.value) m_PlayOnlineIcons = std::move(icons.value);
         else m_PlayOnlineIconsFailure = where + icons.failure;
+        headsup::Read<headsup::NationCrests> crests = headsup::ReadNationCrests(*bytes);
+        if (crests.value) m_NationCrests = std::move(crests.value);
+        else m_NationCrestsFailure = where + crests.failure;
         headsup::Read<headsup::GameFontFace> font = headsup::ReadGameFont(*bytes);
         if (!font.value)
         {
@@ -2001,7 +2009,7 @@ private:
             [this](const std::string& line) { Note("RmlUi: " + line); },
             [this](const std::string& name) {
                 if (std::optional<headsup::Image> piece = headsup::SkinImage(m_WindowSkins, name)) return piece;
-                if (std::optional<headsup::Image> picture = headsup::GamePictureImage(m_PlayOnlineIcons, name)) return picture;
+                if (std::optional<headsup::Image> picture = headsup::GamePictureImage(m_PlayOnlineIcons, m_NationCrests, name)) return picture;
                 // An item's picture, from the game's own resources.
                 if (const std::optional<uint16_t> item = headsup::ItemOfSource(name))
                 {

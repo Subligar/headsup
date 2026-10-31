@@ -60,7 +60,7 @@ Hover a widget for its popup, and click to keep it open.
 
 | Widget | Shows | Popup |
 |---|---|---|
-| Zone | The zone, its region and who holds it | Each nation's influence there |
+| Zone | The zone, its region and who holds it, by crest and name | Each nation's influence there |
 | Weather | The weather and today's chance of it | A five-day forecast, and which zones can roll each element |
 | Vana'diel Clock | The day, the time and the moon, and the date if you like | The date and the next day and moon |
 | Job | Your jobs, levels and EXP | EXP per hour and the time to level |

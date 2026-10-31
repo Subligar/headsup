@@ -189,12 +189,16 @@ namespace headsup
         return std::string(kHostSource) + std::string(kGameKind) + kSeparator + std::to_string(static_cast<int>(picture));
     }
 
-    std::optional<Image> GamePictureImage(const std::optional<PlayOnlineIcons>& icons, std::string_view name)
+    std::optional<Image> GamePictureImage(const std::optional<PlayOnlineIcons>& icons, const std::optional<NationCrests>& crests,
+        std::string_view name)
     {
-        const ColorPicture* picture = !icons                                                          ? nullptr
-                                      : name == GamePictureSource(GamePicture::PlayOnlineMail)      ? &icons->mail
-                                      : name == GamePictureSource(GamePicture::PlayOnlineMessenger) ? &icons->messenger
-                                                                                                    : nullptr;
+        const auto is = [&](GamePicture picture) { return name == GamePictureSource(picture); };
+        const ColorPicture* picture = icons && is(GamePicture::PlayOnlineMail)       ? &icons->mail
+                                      : icons && is(GamePicture::PlayOnlineMessenger) ? &icons->messenger
+                                      : crests && is(GamePicture::SanDoriaCrest)      ? &crests->sanDoria
+                                      : crests && is(GamePicture::BastokCrest)        ? &crests->bastok
+                                      : crests && is(GamePicture::WindurstCrest)      ? &crests->windurst
+                                                                                      : nullptr;
         if (picture == nullptr) return std::nullopt;
         Image image{picture->width, picture->height, std::vector<uint32_t>(picture->bgra.size() / sizeof(uint32_t))};
         // The picture's bytes are B, G, R, A: an ARGB word's bytes in memory.
@@ -594,6 +598,10 @@ namespace headsup
                 break;
             case PopupPiece::Kind::Item:
                 rml += "<img class=\"p\" src=\"" + ItemSource(piece.item) + "\" style=\"" + place + "width:" +
+                       Px(piece.width) + ";height:" + Px(piece.height) + ";\"/>";
+                break;
+            case PopupPiece::Kind::Picture:
+                rml += "<img class=\"p\" src=\"" + GamePictureSource(piece.picture) + "\" style=\"" + place + "width:" +
                        Px(piece.width) + ";height:" + Px(piece.height) + ";\"/>";
                 break;
             case PopupPiece::Kind::Star:

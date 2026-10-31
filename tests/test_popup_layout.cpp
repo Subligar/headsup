@@ -955,3 +955,19 @@ TEST(a_popup_without_a_title_has_its_pin_alone_at_its_top_right)
     for (const PopupPiece& p : l.pieces)
         if (p.kind == PopupPiece::Kind::Card) CHECK(p.y >= l.pin.y + l.pin.height); // the cards under it
 }
+
+TEST(a_cells_game_picture_goes_before_its_text_as_an_icon_does)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupCell pictured = Word("Bastok"), iconed = Word("Bastok");
+    pictured.picture   = GamePicture::BastokCrest;
+    iconed.icon        = Icon::Fire;
+    const PopupLayout a = LayoutPopup(OneRow(PopupRow{RowKind::Line, 0, {pictured}}), m, BarShape::Pills, false, Fake);
+    const PopupLayout b = LayoutPopup(OneRow(PopupRow{RowKind::Line, 0, {iconed}}), m, BarShape::Pills, false, Fake);
+    const auto first = [](const PopupLayout& l, PopupPiece::Kind kind) {
+        return std::ranges::find(l.pieces, kind, &PopupPiece::kind);
+    };
+    const auto picture = first(a, PopupPiece::Kind::Picture), icon = first(b, PopupPiece::Kind::Icon);
+    CHECK(picture != a.pieces.end() && picture->picture == GamePicture::BastokCrest);
+    CHECK(Near(picture->x, icon->x) && Near(picture->width, icon->width) && Near(Find(a, "Bastok")->x, Find(b, "Bastok")->x));
+}

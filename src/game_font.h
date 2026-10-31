@@ -117,6 +117,12 @@ namespace headsup
         ColorPicture mail, messenger;
     };
     Read<PlayOnlineIcons> ReadPlayOnlineIcons(std::span<const uint8_t> dat);
+    // The three nations' crests the game's conquest menus show, out of a whole 51.DAT. The Beastmen have none.
+    struct NationCrests
+    {
+        ColorPicture sanDoria, bastok, windurst;
+    };
+    Read<NationCrests> ReadNationCrests(std::span<const uint8_t> dat);
     // The glyphs of a shapes chunk, each drawn from the picture of that name, which is width by height.
     Read<std::array<GlyphShape, kGlyphCount>> ReadGlyphShapes(std::span<const uint8_t> body, std::string_view picture, int width,
         int height);

@@ -42,6 +42,9 @@ namespace headsup
 
     constexpr int kMaxWidgetSpacing = 40; // pixels
     constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
+    // Where the Zone widget shows who holds its region: not at all, before or after the zone's name, or under it.
+    enum class ConquestPlace : uint8_t { Off, Left, Right, Below };
+    constexpr int kConquestPlaceCount = 4;
     // The Target widget's Visibility: the targets it shows for.
     enum class TargetShow : uint8_t { NpcsObjects, Players, Mobs, Pets, NoTarget };
     constexpr int kTargetShowCount = 5;
@@ -72,6 +75,9 @@ namespace headsup
         bool clock24         = true;                // its two lines
         bool clockSeconds    = false;               // its own line's seconds
         bool clockServerTime = false;               // the server's time under its own
+        bool zoneId          = false;               // Zone: its number after its name in the popup
+        ConquestPlace zoneConquest = ConquestPlace::Below; // and who holds its region, by their crest
+        bool zoneConquestText      = true;                 // and by name, after the crest
         bool vanaWeekday     = true;                // Vana'diel Clock: the day before the time
         bool vanaDate        = false;               // and the date before the moon
         ExpBarPlace expBar   = ExpBarPlace::Under;  // Job and EXP

@@ -449,3 +449,27 @@ TEST(the_games_playonline_icons_are_the_envelope_and_messenger_squares_of_its_me
     CHECK(!ReadPlayOnlineIcons(small).value);
     CHECK(!ReadPlayOnlineIcons(Chunk("mesi", 0x20, PictureBody(64, 64, "DXT1", blocks, 0xA1, "menu    mesicxx "))).value);
 }
+
+TEST(the_nations_crests_are_their_own_pictures_in_the_menu_dat)
+{
+    // ROM/119/51.DAT: 32 x 32 pictures named "menu    scre    ", "menu    bcre    " and "menu    wcre    ", each in a
+    // chunk named for its first four letters. Here red, green and blue.
+    const auto crest = [](const char* chunk, const char* name, uint16_t color) {
+        Bytes blocks;
+        for (int b = 0; b < 64; ++b)
+            blocks = blocks + ColorBlock(color, 0, {});
+        return Chunk(chunk, 0x20, PictureBody(32, 32, "DXT1", blocks, 0xA1, name));
+    };
+    const Bytes sandy = crest("scre", "menu    scre    ", 0xF800), bastok = crest("bcre", "menu    bcre    ", 0x07E0),
+                windy = crest("wcre", "menu    wcre    ", 0x001F);
+    const Read<NationCrests> read = ReadNationCrests(sandy + bastok + windy);
+    CHECK(read.value && read.failure.empty());
+    const auto first = [](const ColorPicture& p) { return std::array{p.bgra[0], p.bgra[1], p.bgra[2]}; };
+    CHECK(read.value->sanDoria.width == 32 && read.value->sanDoria.height == 32);
+    CHECK(first(read.value->sanDoria) == (std::array<uint8_t, 3>{0, 0, 255}));
+    CHECK(first(read.value->bastok) == (std::array<uint8_t, 3>{0, 255, 0}));
+    CHECK(first(read.value->windurst) == (std::array<uint8_t, 3>{255, 0, 0}));
+    // One missing, and none is read: the chat line says which.
+    const Read<NationCrests> partial = ReadNationCrests(sandy + windy);
+    CHECK(!partial.value && !partial.failure.empty());
+}

@@ -714,6 +714,18 @@ namespace headsup
 
         bool InConquest(const ZoneRecord* zone) { return zone != nullptr && zone->region < kConquestRegionCount; }
 
+        // The crest the game's conquest menus show for a nation; the Beastmen have none in its files.
+        GamePicture NationCrest(Nation nation)
+        {
+            switch (nation)
+            {
+            case Nation::SanDoria: return GamePicture::SanDoriaCrest;
+            case Nation::Bastok: return GamePicture::BastokCrest;
+            case Nation::Windurst: return GamePicture::WindurstCrest;
+            default: return GamePicture::None;
+            }
+        }
+
         // The Conquest widget's nations, short, by Nation.
         constexpr const char* kNationShort[] = {"", "S", "B", "W", "BM"};
         constexpr size_t kNationsPerLine     = 2;
@@ -1226,12 +1238,33 @@ namespace headsup
             const ZoneRecord* zone = KnownZone(state.zone);
             const std::string_view region = ZoneRegion(zone);
             w.title = ListOf(Text(ZoneTitle(state.zone)));
-            // A conquest region always has a name.
-            if (const Nation owner = OwnerOf(zone, state); owner != Nation::None)
-                w.subtitle = ListOf(Text(std::string(region), Tone::Dim), Text(kDot, Tone::Dim),
-                    Colored(NationName(owner), NationColor(owner)));
-            else if (!region.empty())
-                w.subtitle = ListOf(Text(std::string(region), Tone::Dim));
+            if (o.secondLine && !region.empty()) w.subtitle = ListOf(Text(std::string(region), Tone::Dim));
+            // Who holds its region, as its crest and its name after it.
+            std::vector<Span> holder;
+            if (const Nation owner = OwnerOf(zone, state); owner != Nation::None && o.zoneConquest != ConquestPlace::Off)
+            {
+                const GamePicture crest = NationCrest(owner);
+                if (crest != GamePicture::None) holder.push_back(Span{"", Tone::Normal, 0, crest});
+                if (o.zoneConquestText)
+                    holder.push_back(Colored((holder.empty() ? "" : " ") + std::string(NationName(owner)), NationColor(owner)));
+            }
+            if (!holder.empty())
+                switch (o.zoneConquest)
+                {
+                case ConquestPlace::Left:
+                    holder.push_back(Text(" "));
+                    w.title.insert(w.title.begin(), holder.begin(), holder.end());
+                    break;
+                case ConquestPlace::Right:
+                    w.title.push_back(Text(" "));
+                    w.title.insert(w.title.end(), holder.begin(), holder.end());
+                    break;
+                case ConquestPlace::Below:
+                    if (!w.subtitle.empty()) w.subtitle.push_back(Text(kDot, Tone::Dim));
+                    w.subtitle.insert(w.subtitle.end(), holder.begin(), holder.end());
+                    break;
+                case ConquestPlace::Off: break;
+                }
             w.hasPopup = state.zone != 0;
             break;
         }
@@ -1431,10 +1464,8 @@ namespace headsup
             const std::string_view region = ZoneRegion(zone);
             popup.title = ListOf(Text(ZoneTitle(state.zone)));
             // A zone past the data has its number for a title already.
-            if (zone != nullptr) popup.title.push_back(Text(" " + std::to_string(state.zone), Tone::Dim));
-            if (!region.empty())
-                popup.sections.push_back(PopupSection{
-                    "", ListOf(Line(Cell(ListOf(Text("Region ", Tone::Dim), Text(std::string(region))))))});
+            if (zone != nullptr && o.zoneId) popup.title.push_back(Text(" " + std::to_string(state.zone), Tone::Dim));
+            if (!region.empty()) popup.sections.push_back(PopupSection{"", ListOf(Line(Cell(Text(std::string(region), Tone::Dim))))});
             if (InConquest(zone) && state.shares)
             {
                 PopupSection influence{"Influence", {}};
@@ -1443,7 +1474,8 @@ namespace headsup
                 {
                     PopupRow row = Labeled(Colored(NationName(share.nation), NationColor(share.nation)),
                         Text(std::to_string(share.percent) + "%"));
-                    row.cells[0].star = share.nation == owner;
+                    row.cells[0].star    = share.nation == owner;
+                    row.cells[0].picture = NationCrest(share.nation);
                     influence.rows.push_back(std::move(row));
                 }
                 influence.rows.push_back(Labeled("Tally in", Text(SpanText(SecondsToTally(state.unixMs)))));

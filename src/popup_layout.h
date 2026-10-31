@@ -36,6 +36,7 @@ namespace headsup
             Item,       // a game item's picture, which the plugin serves
             ScrollTrack, // a scrolling socket's scrollbar, in its right padding
             ScrollThumb, // and the part of it its shown lines are
+            Picture,     // a picture from the game's files, as an icon is drawn
             PinChip,     // the pin's chip, drawn as a tab's; open while pinned
             PinWord,     // the word on it, drawn as text
         };
@@ -48,6 +49,7 @@ namespace headsup
         bool open      = false;         // Tab: picked
         bool right     = false;         // Text: drawn against its box's right, as a pair's value is
         uint16_t item  = 0;             // Item
+        GamePicture picture = GamePicture::None; // Picture
     };
 
     // Where a card's tab is, from the popup's top-left corner, to click: its key the card's heading.

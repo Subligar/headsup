@@ -220,6 +220,10 @@ namespace headsup
         const char* const kSubtitleNames[kSubtitlePlaceCount] = {"hide", "before", "after"};
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
+        constexpr const char* kZoneIdKey           = "zoneId";
+        constexpr const char* kZoneConquestKey     = "zoneConquest";
+        constexpr const char* kZoneConquestTextKey = "zoneConquestText";
+        const char* const kConquestPlaceNames[kConquestPlaceCount] = {"off", "left", "right", "below"};
         constexpr const char* kVanaWeekdayKey  = "vanaWeekday";
         constexpr const char* kVanaDateKey     = "vanaDate";
         constexpr const char* kLatencyKey   = "barLatency";
@@ -1333,6 +1337,15 @@ namespace headsup
                     std::clamp(number(kWorldSectionsKey, o.worldSections), 0, static_cast<int>(kAllWorldSections)));
                 break;
             }
+            case BarWidget::Zone:
+            {
+                o.zoneId = flag(kZoneIdKey, o.zoneId);
+                const std::string place = text(kZoneConquestKey);
+                for (int c = 0; c < kConquestPlaceCount; ++c)
+                    if (place == kConquestPlaceNames[c]) o.zoneConquest = static_cast<ConquestPlace>(c);
+                o.zoneConquestText = flag(kZoneConquestTextKey, o.zoneConquestText);
+                break;
+            }
             case BarWidget::VanaTime:
                 o.vanaWeekday = flag(kVanaWeekdayKey, o.vanaWeekday);
                 o.vanaDate    = flag(kVanaDateKey, o.vanaDate);
@@ -1416,6 +1429,11 @@ namespace headsup
                 text(kWorldElementKey, ElementName(o.worldElement));
                 text(kWorldGuildKey, GuildShops()[static_cast<size_t>(o.worldGuild)].shops);
                 StoreFloat(store, CopyKey(kWorldSectionsKey, w), static_cast<float>(o.worldSections));
+                break;
+            case BarWidget::Zone:
+                flag(kZoneIdKey, o.zoneId);
+                text(kZoneConquestKey, kConquestPlaceNames[static_cast<int>(o.zoneConquest)]);
+                flag(kZoneConquestTextKey, o.zoneConquestText);
                 break;
             case BarWidget::VanaTime:
                 flag(kVanaWeekdayKey, o.vanaWeekday);

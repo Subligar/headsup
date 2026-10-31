@@ -463,10 +463,19 @@ TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_wha
     CHECK(rml.find(img) != std::string::npos && rml.find(img) < rml.find(">2<"));
     // Its pixels are the game's, B, G, R, A as an ARGB word keeps them.
     PlayOnlineIcons icons{ColorPicture{"menu    mesicon ", 1, 1, {1, 2, 3, 255}}, ColorPicture{"menu    mesicon ", 1, 1, {4, 5, 6, 255}}};
-    const std::optional<Image> messenger = GamePictureImage(icons, GamePictureSource(GamePicture::PlayOnlineMessenger));
+    const std::optional<Image> messenger =
+        GamePictureImage(icons, std::nullopt, GamePictureSource(GamePicture::PlayOnlineMessenger));
     CHECK(messenger && messenger->width == 1 && messenger->argb == std::vector<uint32_t>{0xFF060504u});
-    CHECK(!GamePictureImage(std::nullopt, GamePictureSource(GamePicture::PlayOnlineMail)));
-    CHECK(!GamePictureImage(icons, IconSource(Icon::Gm)));
+    CHECK(!GamePictureImage(std::nullopt, std::nullopt, GamePictureSource(GamePicture::PlayOnlineMail)));
+    CHECK(!GamePictureImage(icons, std::nullopt, IconSource(Icon::Gm)));
+    // The nations' crests, each its own.
+    const NationCrests crests{ColorPicture{"menu    scre    ", 1, 1, {7, 8, 9, 255}},
+        ColorPicture{"menu    bcre    ", 1, 1, {10, 11, 12, 255}}, ColorPicture{"menu    wcre    ", 1, 1, {13, 14, 15, 255}}};
+    const std::optional<Image> bastok = GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::BastokCrest));
+    CHECK(bastok && bastok->argb == std::vector<uint32_t>{0xFF0C0B0Au});
+    CHECK(GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::WindurstCrest))->argb ==
+          std::vector<uint32_t>{0xFF0F0E0Du});
+    CHECK(!GamePictureImage(std::nullopt, std::nullopt, GamePictureSource(GamePicture::SanDoriaCrest)));
 }
 
 TEST(a_meter_is_as_wide_as_its_bar_and_side_texts_with_the_texts_above_and_below_centered_on_the_bar)

@@ -306,6 +306,10 @@
               "rows": [
                 {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one popup for both. That widget leaves its own place. Default is None."},
                 {"key": "second-line", "name": "Second Line"},
+                {"key": "show-region-name", "name": "Show Region Name", "tip": "The zone's region on the second line. Default is on."},
+                {"key": "show-conquest", "name": "Show Conquest", "tip": "The crest of the nation that holds the region, before the zone's name, after it, or below it. Default is Below."},
+                {"key": "show-conquest-text", "name": "Show Conquest Text", "tip": "The holding nation's name after its crest. The Beastmen have no crest, so their name is all there is to show. Default is on."},
+                {"key": "show-zone-id", "name": "Show Zone ID", "tip": "The zone's number after its name in the popup. Default is off."},
                 {"key": "moon-phase", "name": "Show Moon Phase", "tip": "The moon's phase and how full it is, on the second line. Default is on."},
                 {"key": "day-of-week", "name": "Show Day of Week", "tip": "Vana'diel's day before the time, in its element's color. Default is on."},
                 {"key": "date", "name": "Show Date", "tip": "Vana'diel's date on the second line, before the moon. Default is off."},
@@ -1135,6 +1139,15 @@
         {"name": "Use of Abilities", "tip": "Using an ability near it draws it."},
         {"name": "Low Player HP", "tip": "Low HP near it draws it."},
         {"name": "Weaknesses", "tip": "What it is weak to, after its level."}
+      ]
+    },
+    {
+      "key": "conquest-place",
+      "options": [
+        {"name": "Off", "tip": "Who holds the region is not shown."},
+        {"name": "Left", "tip": "Before the zone's name."},
+        {"name": "Right", "tip": "After the zone's name."},
+        {"name": "Below", "tip": "On the second line, after the region."}
       ]
     }
   ],

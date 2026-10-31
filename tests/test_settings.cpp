@@ -2855,6 +2855,25 @@ TEST(the_vanadiel_clocks_day_of_week_and_date_are_kept_for_each_copy)
     CHECK(read.Widget(BarWidget::VanaTime).vanaWeekday && !read.Widget(BarWidget::VanaTime).vanaDate);
 }
 
+TEST(the_zone_widgets_conquest_and_id_settings_are_kept_for_each_copy)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::Zone).zoneConquest == ConquestPlace::Below && s.Widget(BarWidget::Zone).zoneConquestText &&
+          !s.Widget(BarWidget::Zone).zoneId);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Zone);
+    CHECK(copy.has_value());
+    WidgetOptions& o   = s.Widget(*copy);
+    o.zoneConquest     = ConquestPlace::Left;
+    o.zoneConquestText = false;
+    o.zoneId           = true;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(read.Widget(*copy).zoneConquest == ConquestPlace::Left && !read.Widget(*copy).zoneConquestText &&
+          read.Widget(*copy).zoneId);
+    CHECK(read.Widget(BarWidget::Zone).zoneConquest == ConquestPlace::Below);
+}
+
 TEST(show_background_is_kept_for_each_copy)
 {
     Settings s;
