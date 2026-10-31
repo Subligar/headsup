@@ -2834,13 +2834,28 @@ TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_rang
     SaveSettings(s, store);
     const Settings read = LoadSettings(store);
     CHECK_EQ(read.Widget(BarWidget::Bags).spacing, 12);
-    CHECK_EQ(read.Widget(BarWidget::Bags).padding, kThemePadding);
+    CHECK_EQ(read.Widget(BarWidget::Bags).padding, kPanelPadding);
     CHECK_EQ(read.Widget(*copy).padding, 3);
     store.values["barBagsSpacing"] = "500";
     store.values["barBagsPadding_2"] = "-9";
     const Settings held = LoadSettings(store);
     CHECK_EQ(held.Widget(BarWidget::Bags).spacing, kMaxWidgetSpacing);
-    CHECK_EQ(held.Widget(*copy).padding, kThemePadding);
+    CHECK_EQ(held.Widget(*copy).padding, kPanelPadding);
+}
+
+TEST(the_panels_widget_spacing_and_padding_are_kept_and_held_to_their_range)
+{
+    Settings s;
+    s.barWidgetSpacing = 12;
+    s.barWidgetPadding = 5;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(read.barWidgetSpacing == 12 && read.barWidgetPadding == 5);
+    store.values["barWidgetSpacing"] = "500";
+    store.values["barWidgetPadding"] = "-9";
+    const Settings held = LoadSettings(store);
+    CHECK(held.barWidgetSpacing == kMaxWidgetSpacing && held.barWidgetPadding == kThemePadding);
 }
 
 TEST(a_widgets_own_fonts_and_text_size_are_kept_and_default_to_the_panels)

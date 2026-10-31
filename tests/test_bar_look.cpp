@@ -258,13 +258,21 @@ TEST(a_window_from_a_panels_colors_reads_well_and_steps_up_from_its_page)
     }
 }
 
-TEST(a_widget_is_padded_by_the_theme_unless_it_has_its_own)
+TEST(a_widget_is_padded_and_spaced_as_the_panel_says_unless_it_has_its_own)
 {
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
+    Settings s;
     WidgetOptions o;
-    CHECK_EQ(WidgetPadding(m, o), m.padding);
+    CHECK_EQ(WidgetPadding(m, s, o), m.padding); // the theme's
+    CHECK_EQ(WidgetSpacing(s, o), 0.0f);
+    s.barWidgetPadding = 6;
+    s.barWidgetSpacing = 10;
+    CHECK_EQ(WidgetPadding(m, s, o), 6.0f);
+    CHECK_EQ(WidgetSpacing(s, o), 10.0f);
     o.padding = 4;
-    CHECK_EQ(WidgetPadding(m, o), 4.0f);
+    o.spacing = 3;
+    CHECK_EQ(WidgetPadding(m, s, o), 4.0f);
+    CHECK_EQ(WidgetSpacing(s, o), 3.0f);
 }
 
 TEST(a_widgets_fonts_and_text_size_are_its_own_or_the_panels)

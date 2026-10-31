@@ -69,8 +69,10 @@ namespace headsup
     const char* WidgetTextFont(const Settings& settings, const WidgetOptions& options);
     // Its title size setting: its own, or the panel's.
     int WidgetTextSize(const Settings& settings, const WidgetOptions& options);
-    // The room from a widget's sides to what it shows: its own, or the theme's.
-    float WidgetPadding(const BarMetrics& metrics, const WidgetOptions& options);
+    // The room from a widget's sides to what it shows: its own, or the panel's, which may be the theme's.
+    float WidgetPadding(const BarMetrics& metrics, const Settings& settings, const WidgetOptions& options);
+    // The room more between a widget and each neighbour: its own, or the panel's.
+    float WidgetSpacing(const Settings& settings, const WidgetOptions& options);
 
     // What Game Window looks as while the game's art is not read.
     constexpr BarTheme kGameArtFallback = BarTheme::PhoenixGold;

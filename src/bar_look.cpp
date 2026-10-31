@@ -139,9 +139,15 @@ namespace headsup
         return options.textSize == kPanelTextSize ? settings.barTextSize : options.textSize;
     }
 
-    float WidgetPadding(const BarMetrics& metrics, const WidgetOptions& options)
+    float WidgetPadding(const BarMetrics& metrics, const Settings& settings, const WidgetOptions& options)
     {
-        return options.padding == kThemePadding ? metrics.padding : static_cast<float>(options.padding);
+        const int padding = options.padding == kPanelPadding ? settings.barWidgetPadding : options.padding;
+        return padding == kThemePadding ? metrics.padding : static_cast<float>(padding);
+    }
+
+    float WidgetSpacing(const Settings& settings, const WidgetOptions& options)
+    {
+        return static_cast<float>(options.spacing == kPanelSpacing ? settings.barWidgetSpacing : options.spacing);
     }
 
     const char* BarTitleFont(const Settings& settings, BarShape shape)

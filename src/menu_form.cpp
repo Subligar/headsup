@@ -464,11 +464,12 @@ namespace headsup
                     if (HasIcons(kind)) form.Switch(label.c_str(), o.icons, row.tip);
                     break;
                 case WidgetTabsRow::Spacing:
-                    form.SliderInt(label.c_str(), o.spacing, 0, kMaxWidgetSpacing, "%d px", row.tip);
+                    form.SliderInt(label.c_str(), o.spacing, kPanelSpacing, kMaxWidgetSpacing,
+                        o.spacing == kPanelSpacing ? Word(c, WindowWord::DefaultFont) : "%d px", row.tip);
                     break;
                 case WidgetTabsRow::Padding:
-                    form.SliderInt(label.c_str(), o.padding, kThemePadding, kMaxWidgetPadding,
-                        o.padding == kThemePadding ? Word(c, WindowWord::ThemesFont) : "%d px", row.tip);
+                    form.SliderInt(label.c_str(), o.padding, kPanelPadding, kMaxWidgetPadding,
+                        o.padding == kPanelPadding ? Word(c, WindowWord::DefaultFont) : "%d px", row.tip);
                     break;
                 case WidgetTabsRow::TitleFont:
                     form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, Word(c, WindowWord::DefaultFont));
@@ -1409,6 +1410,15 @@ namespace headsup
                 form.SliderInt(label.c_str(), s.barTextSize, kAutoBarTextSize, kMaxBarTextSize, textSize.c_str(), tip);
                 break;
             }
+            case SettingPiece::WidgetSpacing:
+                form.Fade(!BarOn(s));
+                form.SliderInt(label.c_str(), s.barWidgetSpacing, 0, kMaxWidgetSpacing, "%d px", tip);
+                break;
+            case SettingPiece::WidgetPadding:
+                form.Fade(!BarOn(s));
+                form.SliderInt(label.c_str(), s.barWidgetPadding, kThemePadding, kMaxWidgetPadding,
+                    s.barWidgetPadding == kThemePadding ? Word(c, WindowWord::ThemesFont) : "%d px", tip);
+                break;
             case SettingPiece::OneLine:
             {
                 form.Fade(!BarOn(s));

@@ -64,6 +64,8 @@ namespace headsup
             {"maxElements", &Settings::maxElements, 0, kElementCount},
             {"barHeight", &Settings::barHeight, kMinBarHeight, kMaxBarHeight},
             {"barTextSize", &Settings::barTextSize, kAutoBarTextSize, kMaxBarTextSize},
+            {"barWidgetSpacing", &Settings::barWidgetSpacing, 0, kMaxWidgetSpacing},
+            {"barWidgetPadding", &Settings::barWidgetPadding, kThemePadding, kMaxWidgetPadding},
             {"popupTextSize", &Settings::popupTextSize, kAutoPopupTextSize, kMaxBarTextSize},
             {"baseSize", &Settings::baseSize, kMinTextSize, kMaxTextSize},
             {"baseIconSize", &Settings::baseIconSize, kMinTextSize, kMaxTextSize},
@@ -1239,7 +1241,7 @@ namespace headsup
             if (w.currency < 0 || w.currency >= kCurrencyCount) w.currency = fresh.currency;
             if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
             w.spacing = std::clamp(w.spacing, 0, kMaxWidgetSpacing);
-            w.padding = w.padding < 0 ? kThemePadding : std::min(w.padding, kMaxWidgetPadding);
+            w.padding = w.padding < 0 ? kPanelPadding : std::min(w.padding, kMaxWidgetPadding);
             w.textSize = std::clamp(w.textSize, kPanelTextSize, kMaxBarTextSize);
             for (std::string* font : {&w.titleFont, &w.textFont})
                 if (font->size() > kMaxFontName) font->clear();

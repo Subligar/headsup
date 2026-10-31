@@ -42,6 +42,8 @@ namespace headsup
 
     constexpr int kMaxWidgetSpacing = 40; // pixels
     constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
+    // A widget's spacing and padding at their sliders' leftmost: the panel's.
+    constexpr int kPanelSpacing = 0, kPanelPadding = kThemePadding;
     constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
 
     // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
@@ -50,8 +52,8 @@ namespace headsup
         bool on         = false;
         bool secondLine = true;
         bool icons      = true; // and gil's coin
-        int spacing     = 0;             // pixels more between it and each of its neighbours
-        int padding     = kThemePadding; // pixels from its sides to what it shows
+        int spacing     = kPanelSpacing; // pixels more between it and each of its neighbours
+        int padding     = kPanelPadding; // pixels from its sides to what it shows
         std::string titleFont, textFont;  // its own, as the panel's; empty for the panel's
         int textSize    = kPanelTextSize; // its title's, or the panel's
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable
@@ -139,6 +141,8 @@ namespace headsup
         int barTextSize    = kAutoBarTextSize; // the bar's title size, or Auto
         std::string barTitleFont; // widget titles and popup headings; empty for the theme's
         std::string barTextFont;  // details, figures and popup text; empty for the theme's
+        int barWidgetSpacing = 0;             // every widget's, unless it has its own
+        int barWidgetPadding = kThemePadding; // likewise
         int popupTextSize  = kAutoPopupTextSize; // the popups' text size, or Auto
         std::array<WidgetOptions, kPanelSlots> widgets = DefaultWidgets(); // by SlotOf; a copy not placed has none
         std::vector<WindowPlace> pinnedWindows;  // game windows the player put at places of their own, never shifted

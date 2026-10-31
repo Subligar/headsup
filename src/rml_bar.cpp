@@ -257,8 +257,8 @@ namespace headsup
             if (!own.lines.twoLines) OneLine(c, look.settings.barSubtitle);
             widgets.hasPopup[i] = c.hasPopup;
             Shown& shown        = m_Shown[i];
-            const float padding = WidgetPadding(m, look.settings.widgets[i]);
-            widgets.spacing[i]  = static_cast<float>(look.settings.widgets[i].spacing);
+            const float padding = WidgetPadding(m, look.settings, look.settings.widgets[i]);
+            widgets.spacing[i]  = WidgetSpacing(look.settings, look.settings.widgets[i]);
             if (!shown.measured || !(shown.content == c) || shown.padded != padding)
             {
                 shown.content  = c;
@@ -284,7 +284,7 @@ namespace headsup
         // The target goes when its room cannot hold its padding, its icons and the start of its name.
         WidgetContent& target = widgets.contents[SlotOf(BarWidget::Target)];
         const BarLook targetLook  = LookOf(look, widgets, SlotOf(BarWidget::Target));
-        const float targetPadding = WidgetPadding(m, look.settings.Widget(BarWidget::Target));
+        const float targetPadding = WidgetPadding(m, look.settings, look.settings.Widget(BarWidget::Target));
         const float targetMinimum =
             2.0f * targetPadding + targetLook.Leading(target) +
             (target.title.empty() ? 0.0f
