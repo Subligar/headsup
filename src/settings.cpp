@@ -219,6 +219,8 @@ namespace headsup
         const char* const kSubtitleNames[kSubtitlePlaceCount] = {"hide", "before", "after"};
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
+        constexpr const char* kVanaWeekdayKey  = "vanaWeekday";
+        constexpr const char* kVanaDateKey     = "vanaDate";
         constexpr const char* kLatencyKey   = "barLatency";
         constexpr const char* kNetMeterKey  = "barNetMeter";
         const char* const kClockZoneNames[kClockZoneCount] = {"japan", "utc", "usEastern", "usCentral", "usMountain",
@@ -1330,6 +1332,10 @@ namespace headsup
                     std::clamp(number(kWorldSectionsKey, o.worldSections), 0, static_cast<int>(kAllWorldSections)));
                 break;
             }
+            case BarWidget::VanaTime:
+                o.vanaWeekday = flag(kVanaWeekdayKey, o.vanaWeekday);
+                o.vanaDate    = flag(kVanaDateKey, o.vanaDate);
+                break;
             case BarWidget::EarthTime:
             {
                 const std::string zone = text(kClockZoneKey);
@@ -1406,6 +1412,10 @@ namespace headsup
                 text(kWorldElementKey, ElementName(o.worldElement));
                 text(kWorldGuildKey, GuildShops()[static_cast<size_t>(o.worldGuild)].shops);
                 StoreFloat(store, CopyKey(kWorldSectionsKey, w), static_cast<float>(o.worldSections));
+                break;
+            case BarWidget::VanaTime:
+                flag(kVanaWeekdayKey, o.vanaWeekday);
+                flag(kVanaDateKey, o.vanaDate);
                 break;
             case BarWidget::EarthTime:
                 text(kClockZoneKey, o.clockZone ? kClockZoneNames[static_cast<int>(*o.clockZone)] : kLocalZone);

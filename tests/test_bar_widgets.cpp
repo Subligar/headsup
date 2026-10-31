@@ -453,6 +453,23 @@ TEST(vanadiel_time_names_the_day_in_its_elements_color_and_the_moon)
     CHECK(all.find("Next phase in 10:12:00") != std::string::npos);
 }
 
+TEST(the_vanadiel_clock_shows_its_day_of_week_date_and_moon_phase_as_set)
+{
+    Settings settings;
+    BarState state;
+    state.unixMs = 1791417600000LL; // Darksday 1514/03/20 09:00, 64% waxing
+    WidgetOptions& o = settings.Widget(BarWidget::VanaTime);
+    const auto shown = [&] { return BarWidgetContent(BarWidget::VanaTime, state, settings); };
+    o.vanaDate = true;
+    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20 Waxing Gibbous 64%", Tone::Dim}}));
+    o.secondLine = false; // Show Moon Phase off: the date alone
+    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}}));
+    o.vanaDate = false;
+    CHECK(shown().subtitle.empty());
+    o.vanaWeekday = false;
+    CHECK(shown().title == (std::vector<Span>{{"09:00", Tone::Normal}}));
+}
+
 TEST(the_zone_widget_names_the_zone_and_its_region)
 {
     Settings settings;

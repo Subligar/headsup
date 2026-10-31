@@ -64,6 +64,8 @@ namespace headsup
         bool clock24         = true;                // its two lines
         bool clockSeconds    = false;               // its own line's seconds
         bool clockServerTime = false;               // the server's time under its own
+        bool vanaWeekday     = true;                // Vana'diel Clock: the day before the time
+        bool vanaDate        = false;               // and the date before the moon
         ExpBarPlace expBar   = ExpBarPlace::Under;  // Job and EXP
         uint8_t expText      = kDefaultExpText;     // by ExpTextBit
         ExpPlaces expPlaces  = kDefaultExpPlaces;   // EXP: its texts around its bar

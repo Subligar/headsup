@@ -185,7 +185,7 @@ PIECES = Pieces(
         'theme-files': Setting(unnamed=True, words={'save-as': True, 'name-hint': True, 'save': True, 'load': True}),
         'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
-            'combine', 'second-line', 'icons', 'background', 'spacing', 'padding', 'title-font', 'text-font', 'text-size', 'details', 'border', 'jobs', 'currency', 'bag', 'nations', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', 'server-time', '24-hour',
+            'combine', 'second-line', 'moon-phase', 'day-of-week', 'date', 'icons', 'background', 'spacing', 'padding', 'title-font', 'text-font', 'text-size', 'details', 'border', 'jobs', 'currency', 'bag', 'nations', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', 'server-time', '24-hour',
             'seconds', 'layout', 'exp-text', 'exp-bar', 'exp-earned', 'exp-to-next', 'exp-percent', 'exp-align', 'bar-width', 'bar-height',
             'job-names', 'percent', 'latency'), words={'clone': True, 'remove-copy': True, 'combine-none': True}),
         'trays': Setting(unnamed=True), 'reset-layout': Setting(),

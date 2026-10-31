@@ -2843,6 +2843,20 @@ TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_rang
     CHECK_EQ(held.Widget(*copy).padding, kPanelPadding);
 }
 
+TEST(the_vanadiel_clocks_day_of_week_and_date_are_kept_for_each_copy)
+{
+    Settings s;
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::VanaTime);
+    CHECK(copy.has_value() && s.Widget(*copy).vanaWeekday && !s.Widget(*copy).vanaDate);
+    s.Widget(*copy).vanaWeekday = false;
+    s.Widget(*copy).vanaDate    = true;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(!read.Widget(*copy).vanaWeekday && read.Widget(*copy).vanaDate);
+    CHECK(read.Widget(BarWidget::VanaTime).vanaWeekday && !read.Widget(BarWidget::VanaTime).vanaDate);
+}
+
 TEST(show_background_is_kept_for_each_copy)
 {
     Settings s;

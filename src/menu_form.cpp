@@ -458,7 +458,16 @@ namespace headsup
                     break;
                 }
                 case WidgetTabsRow::SecondLine:
-                    if (HasSecondLine(kind)) form.Switch(label.c_str(), o.secondLine, row.tip);
+                    if (HasSecondLine(kind) && kind != BarWidget::VanaTime) form.Switch(label.c_str(), o.secondLine, row.tip);
+                    break;
+                case WidgetTabsRow::MoonPhase:
+                    if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.secondLine, row.tip);
+                    break;
+                case WidgetTabsRow::DayOfWeek:
+                    if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.vanaWeekday, row.tip);
+                    break;
+                case WidgetTabsRow::Date:
+                    if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.vanaDate, row.tip);
                     break;
                 case WidgetTabsRow::Icons:
                     if (HasIcons(kind)) form.Switch(label.c_str(), o.icons, row.tip);

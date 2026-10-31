@@ -683,6 +683,11 @@ namespace headsup
 
         std::string MoonText(const VanaTime& t) { return MoonPhaseName(t.moonPercent, t.moonDirection); }
 
+        std::string VanaDate(const VanaTime& t)
+        {
+            return std::to_string(t.year) + "/" + Printed("%02d", t.month) + "/" + Printed("%02d", t.dayOfMonth);
+        }
+
         bool InConquest(const ZoneRecord* zone) { return zone != nullptr && zone->region < kConquestRegionCount; }
 
         // The Conquest widget's nations, short, by Nation.
@@ -1169,7 +1174,8 @@ namespace headsup
         // Each widget's own content, less its second line or icons where they are switched off.
         WidgetContent w        = ContentOf(widget, state, settings);
         const WidgetOptions& o = settings.Widget(widget);
-        if (!o.secondLine)
+        // The Vana'diel Clock's second line holds its date too: its own content leaves off the moon alone.
+        if (!o.secondLine && widget.kind != BarWidget::VanaTime)
         {
             w.subtitle.clear();
             w.subtitleIcons.clear();
@@ -1228,8 +1234,11 @@ namespace headsup
         case BarWidget::VanaTime:
         {
             const VanaTime t = VanaAt(state.unixMs);
-            w.title    = ListOf(WeekdayText(t), Text(" " + HourMinute(t.hour, t.minute)));
-            w.subtitle = ListOf(Text(MoonText(t) + " " + std::to_string(t.moonPercent) + "%", Tone::Dim));
+            const std::string time = HourMinute(t.hour, t.minute);
+            w.title = o.vanaWeekday ? ListOf(WeekdayText(t), Text(" " + time)) : ListOf(Text(time));
+            std::string line = o.vanaDate ? VanaDate(t) : std::string();
+            if (o.secondLine) line += (line.empty() ? "" : " ") + MoonText(t) + " " + std::to_string(t.moonPercent) + "%";
+            if (!line.empty()) w.subtitle = ListOf(Text(line, Tone::Dim));
             w.hasPopup = true;
             break;
         }
@@ -1468,8 +1477,7 @@ namespace headsup
         case BarWidget::VanaTime:
         {
             const VanaTime t = VanaAt(state.unixMs);
-            popup.title      = ListOf(Text(std::to_string(t.year) + "/" + Printed("%02d", t.month) + "/" +
-                                           Printed("%02d", t.dayOfMonth)));
+            popup.title      = ListOf(Text(VanaDate(t)));
             popup.sections   = ListOf(PopupSection{"",
                 ListOf(Line(Cell(ListOf(WeekdayText(t), Text(" " + HourMinute(t.hour, t.minute))))),
                     LineOf(MoonText(t) + " (" + std::to_string(t.moonPercent) + "%)"),

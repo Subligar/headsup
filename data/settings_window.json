@@ -306,6 +306,9 @@
               "rows": [
                 {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one popup for both. That widget leaves its own place. Default is None."},
                 {"key": "second-line", "name": "Second Line"},
+                {"key": "moon-phase", "name": "Show Moon Phase", "tip": "The moon's phase and how full it is, on the second line. Default is on."},
+                {"key": "day-of-week", "name": "Show Day of Week", "tip": "Vana'diel's day before the time, in its element's color. Default is on."},
+                {"key": "date", "name": "Show Date", "tip": "Vana'diel's date on the second line, before the moon. Default is off."},
                 {"key": "icons", "name": "Icons"},
                 {"key": "background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it. Off, it shows only what the theme gives it. Default is off."},
                 {"key": "spacing", "name": "Spacing", "tip": "More room between this widget and the widgets beside it. Default is the top panel's Widget Spacing."},
@@ -869,7 +872,7 @@
       "options": [
         {"name": "Zone", "tip": "The zone, its region and who holds it. Hover for the influence there and the conquest tally."},
         {"name": "Weather", "tip": "The weather now and today's chance of it. Hover for the forecast, and for the zones that can roll each element today and tomorrow."},
-        {"name": "Vana'diel", "tip": "The Vana'diel day, time and moon."},
+        {"name": "Vana'diel Clock", "tip": "The Vana'diel day, time and moon."},
         {"name": "Target", "tip": "Your target's name, level and con. Hover a mob for its details."},
         {"name": "Gil", "tip": "Gil, or another currency. Hover for every currency."},
         {"name": "Bags", "tip": "How full your inventory is. Hover for every bag."},
