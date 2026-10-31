@@ -163,7 +163,7 @@ PIECES = Pieces(
             words={'weak': True, 'resist': True}),
         'respawn-timers': Setting(), 'timer-size': Setting(), 'up-time': Setting(),
         # User Interface
-        'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(), 'fishing-bar-width': Setting(),
+        'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(), 'fishing-bar-width': Setting(), 'hide-game-fish-bar': Setting(),
         'groups': Setting(unnamed=True, words={'note': True, 'help-on': True, 'help-off': True, 'starts-at': True,
                                                'row-tip': False}),
         'game-help': Setting(), 'auto-adjust': Setting(),

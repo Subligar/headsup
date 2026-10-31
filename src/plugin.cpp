@@ -919,8 +919,9 @@ public:
         const bool movesWindows = (band && band->bottom != 0 && m_Settings.shiftVanillaUi) ||
                                   !m_Settings.pinnedWindows.empty() || m_Settings.moveGameHelp ||
                                   !m_Settings.hiddenWindows.empty();
+        const bool fishBarHidden = m_Settings.enabled && m_Settings.hideGameFishBar && FishHookedNow();
         // The panel also needs the hook to know when the game's map covers it.
-        if ((hidden.Any() || movesWindows || g_BarOn) && !std::exchange(m_WindowHookTried, true))
+        if ((hidden.Any() || movesWindows || g_BarOn || fishBarHidden) && !std::exchange(m_WindowHookTried, true))
         {
             if (const std::string failure = m_WindowHook.Start(); !failure.empty())
                 Print("could not hide or move the game's windows: " + failure + ".");
@@ -931,6 +932,7 @@ public:
         m_SceneCopied      = false;
         m_LoneCursorsDrawn = false;
         m_WindowHook.Hide(hidden);
+        m_WindowHook.HideFishBar(fishBarHidden);
         m_WindowHook.NewFrame();
         m_WindowHook.Place(band ? std::optional<headsup::WindowPlacing>(headsup::WindowPlacing{
                                       .band         = *band,
@@ -1124,7 +1126,7 @@ public:
     {
         if (Ours()) return false;
         RecordDraw('U', type, primCount, vertices, stride, 0u, headsup::VertexCount(type, primCount));
-        if (InSilentDraw()) return true;
+        if (InSilentDraw() || GameFishBarDraw(vertices, headsup::VertexCount(type, primCount), stride)) return true;
         DrawNameplatesBeforeSceneCopy();
         m_Names.OnDrawUP(m_Tracker, m_Settings);
         if (!InterfaceCopy(type, primCount, vertices, stride)) return false;
@@ -1141,7 +1143,9 @@ public:
         UNREFERENCED_PARAMETER(indexFormat);
         if (Ours()) return false;
         RecordDraw('X', type, primCount, vertices, stride, minIndex, numVertices);
-        if (InSilentDraw()) return true;
+        if (InSilentDraw() ||
+            GameFishBarDraw(static_cast<const uint8_t*>(vertices) + static_cast<size_t>(minIndex) * stride, numVertices, stride))
+            return true;
         DrawNameplatesBeforeSceneCopy();
         return false;
     }
@@ -1186,6 +1190,15 @@ private:
     bool InSilentDraw()
     {
         if (!headsup::WindowHook::Silent()) return false;
+        MarkHidden();
+        return true;
+    }
+
+    // A draw of the game's own fish bar while it is hidden: dropped, and marked in a draw dump.
+    bool GameFishBarDraw(const void* vertices, UINT count, UINT stride)
+    {
+        const std::optional<headsup::WindowRect> party = headsup::WindowHook::KeptWindow();
+        if (!party || !headsup::AboveWindow(headsup::VerticesBox(vertices, count, stride), *party)) return false;
         MarkHidden();
         return true;
     }
@@ -1728,12 +1741,17 @@ private:
         return m_NetStats.Read();
     }
 
+    bool FishHookedNow() const
+    {
+        return headsup::FishHooked(m_AshitaCore->GetMemoryManager()->GetEntity()->GetStatus(m_SelfIndex));
+    }
+
     std::optional<float> FishShareNow()
     {
         if (!std::exchange(m_FishTried, true))
             if (const std::string failure = m_Fish.Find(); !failure.empty())
                 Print("the fishing bar cannot show: " + failure + ".");
-        if (!headsup::FishHooked(m_AshitaCore->GetMemoryManager()->GetEntity()->GetStatus(m_SelfIndex))) return std::nullopt;
+        if (!FishHookedNow()) return std::nullopt;
         const std::optional<headsup::FishStamina> fish = m_Fish.Read();
         return fish ? headsup::FishShare(*fish) : std::nullopt;
     }

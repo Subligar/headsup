@@ -1394,6 +1394,10 @@ namespace headsup
                 form.Fade(false);
                 form.Switch(label.c_str(), s.fishBar, tip);
                 break;
+            case SettingPiece::HideGameFishBar:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.hideGameFishBar, tip);
+                break;
             case SettingPiece::FishingBarWidth:
                 form.Fade(!s.fishBar);
                 form.SliderInt(label.c_str(), s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth, "%d px", tip);

@@ -108,3 +108,22 @@ TEST(the_fishing_bar_is_dragged_to_a_place_of_its_own)
     CHECK(!bar.Update(rml.context, palette, settings, 1.0f));
     bar.Close();
 }
+
+TEST(the_games_fish_bar_is_the_party_windows_draws_above_the_party_window)
+{
+    // From a draw dump during a fight (2026-10-31, menu 1920x1080): the bar's fill and a letter of its "Fish", and a
+    // draw of the party window in its own rectangle at the bottom right.
+    const WindowRect party{1792, 1030, 1906, 1066};
+    const auto box = [](float x0, float y0, float x1, float y1) {
+        const float corners[] = {x0, y0, 0.0f, 1.0f, x1, y0, 0.0f, 1.0f, x0, y1, 0.0f, 1.0f, x1, y1, 0.0f, 1.0f};
+        return VerticesBox(corners, 4, 4 * sizeof(float));
+    };
+    CHECK(AboveWindow(box(905.5f, 223.5f, 987.4f, 229.5f), party));
+    CHECK(AboveWindow(box(901.5f, 215.5f, 910.5f, 226.5f), party));
+    CHECK(!AboveWindow(box(1800.0f, 1035.0f, 1880.0f, 1050.0f), party));
+    // Its empty rows run on below it, past the screen's bottom: still the window's.
+    CHECK(!AboveWindow(box(1794.5f, 1076.5f, 1900.5f, 1078.5f), party));
+    // One reaching into the window is the window's own.
+    CHECK(!AboveWindow(box(1700.0f, 1020.0f, 1795.0f, 1045.0f), party));
+    CHECK(!AboveWindow(ScreenBox{}, party));
+}

@@ -197,6 +197,7 @@ namespace headsup
         constexpr const char* kTargetMobLevelKey = "barTargetMobLevel";
         constexpr const char* kTargetJobsKey     = "barTargetJobs";
         constexpr const char* kMenuFontKey      = "menuFont";
+        constexpr const char* kHideGameFishBarKey = "hideGameFishBar";
         constexpr const char* kFishBarKey = "fishBar", *kFishBarWidthKey = "fishBarWidth", *kFishBarXKey = "fishBarX",
                               *kFishBarYKey = "fishBarY";
         constexpr const char* kMenuXKey = "menuX", *kMenuYKey = "menuY", *kMenuWidthKey = "menuWidth",
@@ -1701,6 +1702,7 @@ namespace headsup
             s.menuWidth  = LoadInt(store, kMenuWidthKey, s.menuWidth);
             s.menuHeight = LoadInt(store, kMenuHeightKey, s.menuHeight);
             s.fishBar      = store.GetBool(kFishBarKey, s.fishBar);
+            s.hideGameFishBar = store.GetBool(kHideGameFishBarKey, s.hideGameFishBar);
             s.fishBarWidth = LoadInt(store, kFishBarWidthKey, s.fishBarWidth);
             s.fishBarX     = LoadInt(store, kFishBarXKey, s.fishBarX);
             s.fishBarY     = LoadInt(store, kFishBarYKey, s.fishBarY);
@@ -1807,6 +1809,7 @@ namespace headsup
         setFloat(kMenuWidthKey, static_cast<float>(s.menuWidth));
         setFloat(kMenuHeightKey, static_cast<float>(s.menuHeight));
         setBool(kFishBarKey, s.fishBar);
+        setBool(kHideGameFishBarKey, s.hideGameFishBar);
         setFloat(kFishBarWidthKey, static_cast<float>(s.fishBarWidth));
         setFloat(kFishBarXKey, static_cast<float>(s.fishBarX));
         setFloat(kFishBarYKey, static_cast<float>(s.fishBarY));

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "bar_theme.h"
+#include "native_locate.h"
+#include "screen_box.h"
 #include "settings.h"
 
 #include <RmlUi/Core.h>
@@ -21,6 +23,12 @@ namespace headsup
     // Your status while a fish is on the line, in today's fishing and in the old: the record stays a few seconds past it.
     constexpr uint32_t kHookedStatus = 57, kOldHookedStatus = 38;
     bool FishHooked(uint32_t status);
+
+    // The game draws its own fish bar inside the party window's draw, at the top middle of the screen, far above the
+    // window itself: a draw of the window's that lies wholly above the window's rectangle is the bar's.
+    // The box of count pretransformed vertices, stride bytes apart, each starting with its x and y.
+    ScreenBox VerticesBox(const void* vertices, uint32_t count, uint32_t stride);
+    bool AboveWindow(const ScreenBox& box, const WindowRect& window);
 
     constexpr int kFishBarHeight         = 18; // pixels, its frame counted
     constexpr float kFishBarStartDown    = 0.7f; // of the screen's height, until it is dragged somewhere

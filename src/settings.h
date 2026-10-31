@@ -183,6 +183,7 @@ namespace headsup
         // screen's middle.
         int menuX = 0, menuY = 0, menuWidth = 0, menuHeight = 0;
         bool fishBar     = true; // HeadsUp's own bar of a hooked fish's stamina
+        bool hideGameFishBar = true; // and the game's dropped
         int fishBarWidth = 300;
         int fishBarX = kFishBarUnplaced, fishBarY = kFishBarUnplaced;
         SubtitlePlace barSubtitle = SubtitlePlace::After; // a widget's second line on a bar too short for two

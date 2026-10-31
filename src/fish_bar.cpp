@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace headsup
 {
@@ -40,6 +41,21 @@ namespace headsup
         if (fish.full <= 0) return std::nullopt;
         return std::clamp(static_cast<float>(fish.drawn) / static_cast<float>(fish.full), 0.0f, 1.0f);
     }
+
+    ScreenBox VerticesBox(const void* vertices, uint32_t count, uint32_t stride)
+    {
+        ScreenBox box;
+        const auto* bytes = static_cast<const uint8_t*>(vertices);
+        for (uint32_t v = 0; v < count; ++v)
+        {
+            float xy[2];
+            std::memcpy(xy, bytes + static_cast<size_t>(v) * stride, sizeof(xy));
+            box.Add(xy[0], xy[1]);
+        }
+        return box;
+    }
+
+    bool AboveWindow(const ScreenBox& box, const WindowRect& window) { return box.valid && box.maxY <= window[1]; }
 
     bool FishHooked(uint32_t status) { return status == kHookedStatus || status == kOldHookedStatus; }
 

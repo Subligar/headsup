@@ -114,7 +114,8 @@
           "description": "HeadsUp's own versions of parts of the game's UI. Each keeps working when you hide the game's window it belongs to.",
           "settings": [
             {"key": "fishing-bar", "name": "Fishing Bar", "tip": "The fish's stamina while you fight it. The game draws its bar in the party window, so it goes when that window is hidden. It shows only while a fish is hooked: drag it where you want it then."},
-            {"key": "fishing-bar-width", "name": "Width", "indent": true, "tip": "How wide the fishing bar is."}
+            {"key": "fishing-bar-width", "name": "Width", "indent": true, "tip": "How wide the fishing bar is."},
+            {"key": "hide-game-fish-bar", "name": "Hide the Game's Fish Bar", "tip": "While a fish is hooked, the game's own fish bar at the top of the screen is not drawn. The party window still shows."}
           ]
         },
         {
