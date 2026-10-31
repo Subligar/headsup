@@ -714,7 +714,7 @@ namespace headsup
 
         bool InConquest(const ZoneRecord* zone) { return zone != nullptr && zone->region < kConquestRegionCount; }
 
-        // The crest the game's conquest menus show for a nation; the Beastmen have none in its files.
+        // The crest the game's conquest menus show for a nation.
         GamePicture NationCrest(Nation nation)
         {
             switch (nation)
@@ -722,6 +722,7 @@ namespace headsup
             case Nation::SanDoria: return GamePicture::SanDoriaCrest;
             case Nation::Bastok: return GamePicture::BastokCrest;
             case Nation::Windurst: return GamePicture::WindurstCrest;
+            case Nation::Beastmen: return GamePicture::BeastmenCrest;
             default: return GamePicture::None;
             }
         }

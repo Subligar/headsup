@@ -186,6 +186,8 @@ namespace headsup
 
     std::string GamePictureSource(GamePicture picture)
     {
+        constexpr uint16_t kGoblinMask = 511;
+        if (picture == GamePicture::BeastmenCrest) return ItemSource(kGoblinMask);
         return std::string(kHostSource) + std::string(kGameKind) + kSeparator + std::to_string(static_cast<int>(picture));
     }
 

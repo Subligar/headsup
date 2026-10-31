@@ -890,14 +890,15 @@ TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_
     CHECK(shown().subtitle == std::vector<Span>{crest});
     o.zoneConquest = ConquestPlace::Off;
     CHECK(shown().subtitle.empty());
-    // The Beastmen have no crest in the game's files: their name, when it is shown, stands alone.
+    // The Beastmen have no crest in the game's files: the Goblin Mask stands in for one.
     owners[1]          = Nation::Beastmen;
     state.owners       = owners;
     o.zoneConquest     = ConquestPlace::Right;
     o.zoneConquestText = true;
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), Span{"Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
+    const Span mask{"", Tone::Normal, 0, GamePicture::BeastmenCrest};
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), mask, Span{" Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
     o.zoneConquestText = false;
-    CHECK(shown().title == std::vector<Span>{dunes});
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), mask}));
 }
 
 TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
@@ -947,11 +948,11 @@ TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
     for (const PopupRow& row : influence->rows)
         CHECK(row.kind == RowKind::Pair); // each figure at the right edge
     CHECK(influence->rows[1].cells[0].text == ListOf(Colored("Bastok ", NationColor(Nation::Bastok))));
-    // Each nation's crest before its name; the Beastmen have none.
+    // Each nation's crest before its name.
     CHECK(influence->rows[0].cells[0].picture == GamePicture::SanDoriaCrest &&
           influence->rows[1].cells[0].picture == GamePicture::BastokCrest &&
           influence->rows[2].cells[0].picture == GamePicture::WindurstCrest &&
-          influence->rows[3].cells[0].picture == GamePicture::None);
+          influence->rows[3].cells[0].picture == GamePicture::BeastmenCrest);
     // Which lines carry the holder's star, top to bottom.
     const auto starred = [&] {
         std::vector<bool> stars;

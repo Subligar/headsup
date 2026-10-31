@@ -476,6 +476,8 @@ TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_wha
     CHECK(GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::WindurstCrest))->argb ==
           std::vector<uint32_t>{0xFF0F0E0Du});
     CHECK(!GamePictureImage(std::nullopt, std::nullopt, GamePictureSource(GamePicture::SanDoriaCrest)));
+    // The Beastmen's is the Goblin Mask's item picture, which the game's resources serve as any item's.
+    CHECK(ItemOfSource(GamePictureSource(GamePicture::BeastmenCrest)) == std::optional<uint16_t>{511});
 }
 
 TEST(a_meter_is_as_wide_as_its_bar_and_side_texts_with_the_texts_above_and_below_centered_on_the_bar)
