@@ -919,7 +919,7 @@ public:
         const bool movesWindows = (band && band->bottom != 0 && m_Settings.shiftVanillaUi) ||
                                   !m_Settings.pinnedWindows.empty() || m_Settings.moveGameHelp ||
                                   !m_Settings.hiddenWindows.empty();
-        const bool fishBarHidden = m_Settings.enabled && m_Settings.hideGameFishBar && FishHookedNow();
+        const bool fishBarHidden = m_Settings.enabled && m_Settings.hideGameFishBar && FishNow().has_value();
         // The panel also needs the hook to know when the game's map covers it.
         if ((hidden.Any() || movesWindows || g_BarOn || fishBarHidden) && !std::exchange(m_WindowHookTried, true))
         {
@@ -1746,13 +1746,19 @@ private:
         return headsup::FishHooked(m_AshitaCore->GetMemoryManager()->GetEntity()->GetStatus(m_SelfIndex));
     }
 
-    std::optional<float> FishShareNow()
+    // The game's record of the fish on the line, which it keeps a few seconds past the fight, drawing its bar.
+    std::optional<headsup::FishStamina> FishNow()
     {
         if (!std::exchange(m_FishTried, true))
             if (const std::string failure = m_Fish.Find(); !failure.empty())
                 Print("the fishing bar cannot show: " + failure + ".");
+        return m_Fish.Read();
+    }
+
+    std::optional<float> FishShareNow()
+    {
         if (!FishHookedNow()) return std::nullopt;
-        const std::optional<headsup::FishStamina> fish = m_Fish.Read();
+        const std::optional<headsup::FishStamina> fish = FishNow();
         return fish ? headsup::FishShare(*fish) : std::nullopt;
     }
 

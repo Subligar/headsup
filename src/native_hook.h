@@ -150,7 +150,7 @@ namespace headsup
         void HideWindows(const std::vector<std::string>& names);
         // While the game draws one of those, every draw call it makes is one to drop.
         static bool Silent();
-        // While hide is set the game's fish bar is dropped: the party window's draws outside its own rectangle.
+        // While hide is set the game's fish bar is dropped: the party window's draws above its own rectangle.
         void HideFishBar(bool hide);
         // Inside the party window's draw while it is, its rectangle in the game's menu pixels.
         static std::optional<WindowRect> KeptWindow();
