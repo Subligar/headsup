@@ -5,6 +5,7 @@
 
 #include <RmlUi/Core.h>
 
+#include <cmath>
 #include <optional>
 #include <string>
 #include <vector>
@@ -156,6 +157,36 @@ TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it
                 if (palette.shape == BarShape::Pills ? alpha != static_cast<int>(palette.pill >> 24) : alpha == 0)
                     throw test::Failure{std::string(BarWidgetName(widget.kind)) + " shows no background"};
             }
+        CHECK_EQ(rml.Said(), "");
+    }
+}
+
+TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_shape)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
+        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+    Settings settings;
+    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills, BarShape::Glass, BarShape::Window})
+    {
+        BarPalette palette = settings.customPalette;
+        palette.shape      = shape;
+        const BarLook look = LookOf(palette, settings);
+        test::RmlSession rml;
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        bar->Show();
+        Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Weather));
+        CHECK(widget != nullptr);
+        WidgetContent c;
+        c.shown    = true;
+        c.title    = {Text("Clear")};
+        c.subtitle = {Text("Firesday")};
+        widget->SetClass(kHiddenClass, false);
+        widget->SetInnerRML(WidgetRml(c, look));
+        rml.context->Update();
+        Rml::ElementList titles;
+        widget->GetElementsByClassName(titles, "title");
+        CHECK(!titles.empty());
+        CHECK_EQ(titles.front()->GetAbsoluteOffset(Rml::BoxArea::Border).y, std::round(place.title.top) - 1.0f);
         CHECK_EQ(rml.Said(), "");
     }
 }

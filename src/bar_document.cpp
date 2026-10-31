@@ -44,6 +44,8 @@ namespace headsup
         constexpr float kBoxBorder     = 1.0f; // a pill's or frame's, inside its edge
         // The widgets' content starts a pixel under the pill row's top in every shape, bordered or not.
         constexpr float kContentInset  = 1.0f;
+        // And everything in it stands a pixel higher than its lines' places, where it reads as centered in the pill.
+        constexpr float kContentLift   = 1.0f;
 
         std::string Hex(uint32_t value)
         {
@@ -435,7 +437,7 @@ namespace headsup
         css += std::string(".widget.") + kLitClass + " .title{font-effect:glow(0px 3px 0px 0px " +
                RcssColor(Faded(p.accent, kLitGlow)) + ");}";
 
-        css += ".content{position:relative;height:100%;}";
+        css += ".content{position:relative;top:" + Px(-kContentLift) + ";height:100%;}";
         css += ".icon,.coin,.text,.beside,.line-icons,.line-icon,.t{display:inline-block;vertical-align:top;}";
         css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
                Px(m.gap) + ";}";
