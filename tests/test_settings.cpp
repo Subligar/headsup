@@ -2843,6 +2843,18 @@ TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_rang
     CHECK_EQ(held.Widget(*copy).padding, kPanelPadding);
 }
 
+TEST(show_background_is_kept_for_each_copy)
+{
+    Settings s;
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Weather);
+    CHECK(copy.has_value());
+    s.Widget(*copy).background = true;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(read.Widget(*copy).background && !read.Widget(BarWidget::Weather).background);
+}
+
 TEST(the_panels_widget_spacing_and_padding_are_kept_and_held_to_their_range)
 {
     Settings s;

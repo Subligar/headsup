@@ -145,6 +145,17 @@ namespace headsup
         return padding == kThemePadding ? metrics.padding : static_cast<float>(padding);
     }
 
+    bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head)
+    {
+        return !look.ornate && !BackedPill(look.settings, panel, head) &&
+               std::ranges::none_of(Members(panel, head), [&](PanelWidget member) { return look.BoxOf(member.kind, false).has_value(); });
+    }
+
+    bool BackedPill(const Settings& settings, const PanelGroups& panel, PanelWidget head)
+    {
+        return std::ranges::any_of(Members(panel, head), [&](PanelWidget member) { return settings.Widget(member).background; });
+    }
+
     float WidgetSpacing(const Settings& settings, const WidgetOptions& options)
     {
         return static_cast<float>(options.spacing == kPanelSpacing ? settings.barWidgetSpacing : options.spacing);

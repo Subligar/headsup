@@ -52,6 +52,7 @@ namespace headsup
         bool on         = false;
         bool secondLine = true;
         bool icons      = true; // and gil's coin
+        bool background = false; // its pill or tint shown while not hovered, as well as whatever the theme shows
         int spacing     = kPanelSpacing; // pixels more between it and each of its neighbours
         int padding     = kPanelPadding; // pixels from its sides to what it shows
         std::string titleFont, textFont;  // its own, as the panel's; empty for the panel's

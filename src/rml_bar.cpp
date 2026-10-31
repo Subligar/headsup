@@ -335,12 +335,9 @@ namespace headsup
             Set(shown.element, Rml::PropertyId::PaddingRight, shown.paddingRight.value, after.padding);
             shown.element->SetClass(kJoinBeforeClass, joins.before);
             shown.element->SetClass(kJoinAfterClass, joins.after);
-            // A pill shown only while lit stays so only when every widget in it does.
             const PanelWidget head = widgets.panel.group[w];
-            bool flat = !look.ornate;
-            for (const PanelWidget member : Members(widgets.panel, head))
-                flat = flat && !look.BoxOf(member.kind, false);
-            shown.element->SetClass(kFlatClass, flat);
+            shown.element->SetClass(kFlatClass, FlatPill(look, widgets.panel, head));
+            shown.element->SetClass(kBackedClass, BackedPill(look.settings, widgets.panel, head));
             shown.element->SetClass(kLitClass,
                 widgets.hasPopup[SlotOf(head)] && (input.Hovered() == head || input.Open() == head));
             shown.element->SetClass(kBorderlessClass, widget.kind == BarWidget::Target && !look.settings.widgets[w].targetBorder);

@@ -71,6 +71,10 @@ namespace headsup
     int WidgetTextSize(const Settings& settings, const WidgetOptions& options);
     // The room from a widget's sides to what it shows: its own, or the panel's, which may be the theme's.
     float WidgetPadding(const BarMetrics& metrics, const Settings& settings, const WidgetOptions& options);
+    // Whether a pill shows only while lit: the theme gives none of its widgets a box then and none shows its background.
+    bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head);
+    // Whether any widget in a pill has Show Background on.
+    bool BackedPill(const Settings& settings, const PanelGroups& panel, PanelWidget head);
     // The room more between a widget and each neighbour: its own, or the panel's.
     float WidgetSpacing(const Settings& settings, const WidgetOptions& options);
 

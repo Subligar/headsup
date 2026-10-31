@@ -198,6 +198,7 @@ namespace headsup
                               *kMenuHeightKey = "menuHeight";
         constexpr const char* kSecondLineSuffix = "Line2";
         constexpr const char* kIconsSuffix      = "Icons";
+        constexpr const char* kBackgroundSuffix = "Background";
         constexpr const char* kSpacingSuffix    = "Spacing";
         constexpr const char* kCombineSuffix    = "Combine";
         constexpr const char* kPaddingSuffix    = "Padding";
@@ -1297,6 +1298,7 @@ namespace headsup
             o.on         = flag(widget, o.on);
             o.secondLine = flag(widget + kSecondLineSuffix, o.secondLine);
             o.icons      = flag(widget + kIconsSuffix, o.icons);
+            o.background = flag(widget + kBackgroundSuffix, o.background);
             o.spacing    = number(widget + kSpacingSuffix, o.spacing);
             o.padding    = number(widget + kPaddingSuffix, o.padding);
             o.titleFont  = text((widget + kTitleFontSuffix).c_str());
@@ -1386,6 +1388,7 @@ namespace headsup
             flag(widget, o.on);
             flag(widget + kSecondLineSuffix, o.secondLine);
             flag(widget + kIconsSuffix, o.icons);
+            flag(widget + kBackgroundSuffix, o.background);
             StoreFloat(store, CopyKey(widget + kSpacingSuffix, w), static_cast<float>(o.spacing));
             StoreFloat(store, CopyKey(widget + kPaddingSuffix, w), static_cast<float>(o.padding));
             text((widget + kTitleFontSuffix).c_str(), o.titleFont.c_str());

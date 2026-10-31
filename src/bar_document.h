@@ -89,6 +89,7 @@ namespace headsup
     constexpr const char* kLitClass    = "lit"; // hovered or open, with a popup
     constexpr const char* kBorderlessClass = "borderless"; // the target, its border switched off
     constexpr const char* kFlatClass       = "flat"; // a pill shown only while lit
+    constexpr const char* kBackedClass     = "backed"; // showing its pill or tint while not lit (Show Background)
     // Shares its pill with the widget before it, or after it, and has no edge or round corners on that side.
     constexpr const char* kJoinBeforeClass = "join-before";
     constexpr const char* kJoinAfterClass  = "join-after";

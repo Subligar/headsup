@@ -103,3 +103,59 @@ TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complain
         CHECK_EQ(rml.Said(), "");
     }
 }
+
+TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it_unlit)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
+        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+    Settings settings;
+    std::vector<BarPalette> palettes;
+    for (int t = 0; t < kFixedThemeCount; ++t)
+        palettes.push_back(PaletteOf(static_cast<BarTheme>(t)));
+    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills, BarShape::Glass})
+    {
+        BarPalette custom = settings.customPalette;
+        custom.shape      = shape;
+        palettes.push_back(custom);
+    }
+    for (const BarPalette& palette : palettes)
+    {
+        const BarLook look = LookOf(palette, settings);
+        test::RmlSession rml;
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        bar->Show();
+        // Each widget as the panel marks it.
+        const auto drawn = [&](PanelWidget widget, bool lit, bool backed) -> const Rml::Style::ComputedValues& {
+            settings.Widget(widget).background = backed;
+            const PanelGroups panel            = Panel(settings);
+            Rml::Element* element              = bar->GetElementById(WidgetId(widget));
+            CHECK(element != nullptr);
+            element->SetClass(kHiddenClass, false);
+            element->SetClass(kFlatClass, FlatPill(look, panel, widget));
+            element->SetClass(kBackedClass, BackedPill(settings, panel, widget));
+            element->SetClass(kLitClass, lit);
+            for (int update = 0; update < 3; ++update)
+            {
+                rml.complaints.seconds += 1.0; // past every easing
+                rml.context->Update();
+            }
+            return element->GetComputedValues();
+        };
+        std::optional<float> corners;
+        for (const std::vector<PanelWidget>& section : settings.barSections)
+            for (const PanelWidget widget : section)
+            {
+                if (widget.kind == BarWidget::Target) continue; // a frame of its own
+                const float radius = drawn(widget, true, false).border_top_left_radius();
+                if (!corners) corners = radius;
+                if (radius != *corners)
+                    throw test::Failure{std::string(BarWidgetName(widget.kind)) + " lit has corners of " +
+                                        std::to_string(radius) + " px, the others " + std::to_string(*corners)};
+                // Shown, it is the pill the theme gives its other widgets, or its tint where it gives them none.
+                const int alpha = drawn(widget, false, true).background_color().alpha;
+                if (palette.shape == BarShape::Pills ? alpha != static_cast<int>(palette.pill >> 24) : alpha == 0)
+                    throw test::Failure{std::string(BarWidgetName(widget.kind)) + " shows no background"};
+            }
+        CHECK_EQ(rml.Said(), "");
+    }
+}

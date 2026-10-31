@@ -307,6 +307,7 @@
                 {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one popup for both. That widget leaves its own place. Default is None."},
                 {"key": "second-line", "name": "Second Line"},
                 {"key": "icons", "name": "Icons"},
+                {"key": "background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it. Off, it shows only what the theme gives it. Default is off."},
                 {"key": "spacing", "name": "Spacing", "tip": "More room between this widget and the widgets beside it. Default is the top panel's Widget Spacing."},
                 {"key": "padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default is the top panel's Widget Padding."},
                 {"key": "title-font", "name": "Title Font", "tip": "This widget's title. Default is the top panel's Title Font."},

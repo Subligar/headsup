@@ -324,9 +324,8 @@ namespace headsup
             css += ".glint.a{left:0%;width:30%;decorator:horizontal-gradient(" + RcssColor(Faded(cyan, 0)) + " " + c + ");}";
             css += ".glint.b{left:30%;width:40%;decorator:horizontal-gradient(" + c + " " + v + ");}";
             css += ".glint.c{left:70%;width:30%;decorator:horizontal-gradient(" + v + " " + RcssColor(Faded(violet, 0)) + ");}";
-            css += ".pills .widget,.pills .widget.flat{border-radius:" + Px(look.row.height / 2.0f) +
-                   ";background-color:transparent;border-color:transparent;}";
-            css += ".pills .widget.target{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
+            css += ".pills .widget,.pills .widget.flat{background-color:transparent;border-color:transparent;}";
+            css += ".pills .widget.target,.pills .widget.backed{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
             css += ".pills .widget.lit{background-color:" + RcssColor(Faded(cyan, 0x2E)) + ";border-color:" +
                    RcssColor(Faded(cyan, 0xB3)) + ";}";
             css += ".progress,.beside,.mbar{background-color:#ffffff1f;}";
@@ -409,7 +408,7 @@ namespace headsup
         {
             css += ".ornate .widget{border-width:0px;margin:0px " + Px(clear) + ";padding:" + Px(kContentInset) + " " +
                    Px(m.padding - clear) + " 0px " + Px(m.padding - clear) + ";}";
-            css += ".ornate .widget.lit{" + BoxRules(boxOf(BarWidget::Zone, true)) + "}";
+            css += ".ornate .widget.backed,.ornate .widget.lit{" + BoxRules(boxOf(BarWidget::Zone, true)) + "}";
             css += ".ornate .widget.target{border-width:" + Px(kBoxBorder) + ";margin:0px;padding:0px " +
                    Px(m.padding - kBoxBorder) + ";" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             css += ".ornate .widget.target.lit{" + BoxRules(boxOf(BarWidget::Target, true)) + "}";
