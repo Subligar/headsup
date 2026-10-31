@@ -1390,6 +1390,10 @@ namespace headsup
                 form.Fade(false);
                 form.Switch(label.c_str(), s.screenshotHidesGame, tip);
                 break;
+            case SettingPiece::FishingBar:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.fishBar, tip);
+                break;
             case SettingPiece::FishingBarWidth:
                 form.Fade(!s.fishBar);
                 form.SliderInt(label.c_str(), s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth, "%d px", tip);
@@ -1711,7 +1715,7 @@ namespace headsup
             case CardPiece::Widgets:
             case CardPiece::Layout: return {false, !BarOn(s)};
             case CardPiece::DebugMode: return {false, false, &s.debugMode};
-            case CardPiece::FishingBar: return {false, !on, &s.fishBar};
+            case CardPiece::CustomGameUi: return {false, !on};
             }
             return {};
         }

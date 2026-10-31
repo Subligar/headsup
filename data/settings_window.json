@@ -109,6 +109,15 @@
           ]
         },
         {
+          "key": "custom-game-ui",
+          "name": "Custom Game UI",
+          "description": "HeadsUp's own versions of parts of the game's UI. Each keeps working when you hide the game's window it belongs to.",
+          "settings": [
+            {"key": "fishing-bar", "name": "Fishing Bar", "tip": "The fish's stamina while you fight it. The game draws its bar in the party window, so it goes when that window is hidden. Drag it where you want it while this window is open."},
+            {"key": "fishing-bar-width", "name": "Width", "indent": true, "tip": "How wide the fishing bar is."}
+          ]
+        },
+        {
           "key": "base-game-ui",
           "name": "Base Game UI",
           "settings": [
@@ -134,14 +143,6 @@
                 {"key": "row-tip", "tip": "Keep draws it as the game does, at the X and Y you give it; Hide draws nothing of it and lets no click through to it. Its keys still work, so Escape closes a hidden menu."}
               ]
             }
-          ]
-        },
-        {
-          "key": "fishing-bar",
-          "name": "Fishing Bar",
-          "description": "The fish's stamina while you fight it, in a bar of HeadsUp's own: the game draws its bar in the party window, so it goes when that window is hidden. It also shows while this window is open, so you can drag it where you want it.",
-          "settings": [
-            {"key": "fishing-bar-width", "name": "Width", "tip": "How wide the fishing bar is."}
           ]
         },
         {
