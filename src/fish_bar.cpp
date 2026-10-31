@@ -34,8 +34,10 @@ namespace headsup
     std::optional<float> FishShare(const FishStamina& fish)
     {
         if (fish.full <= 0) return std::nullopt;
-        return std::clamp(static_cast<float>(fish.now) / static_cast<float>(fish.full), 0.0f, 1.0f);
+        return std::clamp(static_cast<float>(fish.drawn) / static_cast<float>(fish.full), 0.0f, 1.0f);
     }
+
+    bool FishHooked(uint32_t status) { return status == kHookedStatus || status == kOldHookedStatus; }
 
     FishPlace FishBarPlace(int x, int y, int width, float screenWidth, float screenHeight)
     {
@@ -47,9 +49,9 @@ namespace headsup
     }
 
     bool FishBar::Update(Rml::Context* context, const BarPalette& palette, Settings& settings,
-        std::optional<float> share, bool preview)
+        std::optional<float> share)
     {
-        const std::optional<float> shown = share ? share : preview ? std::optional<float>{1.0f} : std::nullopt;
+        const std::optional<float> shown = share;
         if (!shown && m_Document == nullptr) return false;
         if (m_Document != nullptr && !(palette == m_Palette)) Close();
         if (m_Document == nullptr)

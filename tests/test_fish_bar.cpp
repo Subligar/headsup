@@ -9,14 +9,22 @@
 
 using namespace headsup;
 
-TEST(a_hooked_fish_shows_the_share_of_its_stamina_left)
+TEST(a_hooked_fish_shows_the_bar_as_the_game_draws_it_against_its_full_stamina)
 {
-    CHECK(FishShare(FishStamina{3000, 4000}) == std::optional<float>{0.75f});
-    CHECK(FishShare(FishStamina{4000, 4000}) == std::optional<float>{1.0f});
-    // The fight can raise it past full on a miss and take it under nothing on a hit.
-    CHECK(FishShare(FishStamina{4200, 4000}) == std::optional<float>{1.0f});
-    CHECK(FishShare(FishStamina{-20, 4000}) == std::optional<float>{0.0f});
-    CHECK(!FishShare(FishStamina{100, 0}).has_value());
+    // Read from the game during a fight (2026-10-31): full 2277, a hit took it to 1445 and the drawn bar eased down.
+    CHECK(FishShare(FishStamina{2277, 1445, 1710}) == std::optional<float>{1710.0f / 2277.0f});
+    CHECK(FishShare(FishStamina{2277, 2277, 2277}) == std::optional<float>{1.0f});
+    // Landed: what is left of the record after the catch draws nothing left.
+    CHECK(FishShare(FishStamina{2277, 0, 0}) == std::optional<float>{0.0f});
+    CHECK(FishShare(FishStamina{2277, 2500, 2400}) == std::optional<float>{1.0f});
+    CHECK(!FishShare(FishStamina{0, 100, 100}).has_value());
+}
+
+TEST(only_a_fish_on_the_line_counts_as_hooked)
+{
+    CHECK(FishHooked(57) && FishHooked(38));
+    for (const uint32_t status : {0u, 56u, 58u, 62u, 43u, 50u})
+        CHECK(!FishHooked(status));
 }
 
 TEST(the_fishing_bar_starts_centered_low_and_stays_on_the_screen)
@@ -39,7 +47,7 @@ namespace
     Rml::Element* Bar(test::RmlSession& rml) { return rml.context->GetDocument(kFishBarDocument)->GetElementById(kFishBarId); }
 }
 
-TEST(the_fishing_bar_shows_while_a_fish_is_on_the_line_or_the_settings_window_is_open)
+TEST(the_fishing_bar_shows_only_while_a_fish_is_on_the_line)
 {
     for (int t = 0; t < kFixedThemeCount; ++t)
     {
@@ -47,21 +55,17 @@ TEST(the_fishing_bar_shows_while_a_fish_is_on_the_line_or_the_settings_window_is
         Settings settings;
         FishBar bar;
         const BarPalette& palette = PaletteOf(static_cast<BarTheme>(t));
-        bar.Update(rml.context, palette, settings, std::nullopt, false);
+        bar.Update(rml.context, palette, settings, std::nullopt);
         rml.context->Update();
         CHECK(rml.context->GetDocument(kFishBarDocument) == nullptr);
-        bar.Update(rml.context, palette, settings, 0.25f, false);
+        bar.Update(rml.context, palette, settings, 0.25f);
         rml.context->Update();
         rml.context->Render();
         CHECK(Bar(rml) != nullptr && Bar(rml)->IsVisible());
         const float inside = Fill(rml)->GetParentNode()->GetBox().GetSize(Rml::BoxArea::Content).x;
         CHECK(std::abs(Fill(rml)->GetBox().GetSize(Rml::BoxArea::Border).x - inside / 4.0f) < 1.0f);
         CHECK_EQ(Bar(rml)->GetBox().GetSize(Rml::BoxArea::Border).x, static_cast<float>(settings.fishBarWidth));
-        // With the window open and no fish, it shows full, to be placed.
-        bar.Update(rml.context, palette, settings, std::nullopt, true);
-        rml.context->Update();
-        CHECK(std::abs(Fill(rml)->GetBox().GetSize(Rml::BoxArea::Border).x - inside) < 1.0f);
-        bar.Update(rml.context, palette, settings, std::nullopt, false);
+        bar.Update(rml.context, palette, settings, std::nullopt);
         rml.context->Update();
         CHECK(!Bar(rml)->IsVisible());
         CHECK_EQ(rml.Said(), "");
@@ -75,7 +79,7 @@ TEST(the_fishing_bar_is_dragged_to_a_place_of_its_own)
     Settings settings;
     FishBar bar;
     const BarPalette& palette = PaletteOf(BarTheme::PhoenixGold);
-    CHECK(!bar.Update(rml.context, palette, settings, 1.0f, false));
+    CHECK(!bar.Update(rml.context, palette, settings, 1.0f));
     rml.context->Update();
     const Rml::Vector2f at = Bar(rml)->GetAbsoluteOffset(Rml::BoxArea::Border);
     const int x = static_cast<int>(at.x) + 20, y = static_cast<int>(at.y) + kFishBarHeight / 2;
@@ -87,11 +91,11 @@ TEST(the_fishing_bar_is_dragged_to_a_place_of_its_own)
         rml.context->Update();
     }
     rml.context->ProcessMouseButtonUp(0, 0);
-    CHECK(bar.Update(rml.context, palette, settings, 1.0f, false));
+    CHECK(bar.Update(rml.context, palette, settings, 1.0f));
     CHECK_EQ(settings.fishBarX, static_cast<int>(at.x) + 100);
     CHECK_EQ(settings.fishBarY, static_cast<int>(at.y) - 40);
     rml.context->Update();
     CHECK_EQ(Bar(rml)->GetAbsoluteOffset(Rml::BoxArea::Border).x, static_cast<float>(settings.fishBarX));
-    CHECK(!bar.Update(rml.context, palette, settings, 1.0f, false));
+    CHECK(!bar.Update(rml.context, palette, settings, 1.0f));
     bar.Close();
 }

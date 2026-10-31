@@ -10,13 +10,17 @@
 
 namespace headsup
 {
-    // A hooked fish as the game keeps it while you fight it (LocateFish): its stamina now and when full.
+    // A hooked fish as the game keeps it while you fight it (LocateFish): its stamina when full and now, and its bar
+    // as the game draws it, which eases down to now after each hit.
     struct FishStamina
     {
-        int32_t now = 0, full = 0;
+        int32_t full = 0, now = 0, drawn = 0;
     };
-    // The share of its stamina the fish has left, 0 to 1; nothing for a fish of no stamina.
+    // The share of its bar the game draws, 0 to 1; nothing for a fish of no stamina.
     std::optional<float> FishShare(const FishStamina& fish);
+    // Your status while a fish is on the line, in today's fishing and in the old: the record stays a few seconds past it.
+    constexpr uint32_t kHookedStatus = 57, kOldHookedStatus = 38;
+    bool FishHooked(uint32_t status);
 
     constexpr int kFishBarHeight         = 18; // pixels, its frame counted
     constexpr float kFishBarStartDown    = 0.7f; // of the screen's height, until it is dragged somewhere
@@ -37,10 +41,9 @@ namespace headsup
     {
     public:
         ~FishBar() override { Close(); }
-        // Each frame: shows the fish's share left, or the bar full while preview (the settings window is open) to be
-        // placed; hides it with neither. True when it was dragged somewhere new, which settings then hold.
-        bool Update(Rml::Context* context, const BarPalette& palette, Settings& settings, std::optional<float> share,
-            bool preview);
+        // Each frame: shows the fish's share left while a fish is hooked, else hides. True when it was dragged somewhere
+        // new, which settings then hold.
+        bool Update(Rml::Context* context, const BarPalette& palette, Settings& settings, std::optional<float> share);
         // Before the context goes.
         void Close();
 

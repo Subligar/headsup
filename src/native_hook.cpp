@@ -871,8 +871,9 @@ namespace headsup
     {
         if (m_Global == 0) return std::nullopt;
         const uint32_t fish = ReadAt<uint32_t>(Pointer(m_Global), 0);
-        if (fish == 0 || !Readable(Pointer(fish), kFishFullStamina + sizeof(int32_t))) return std::nullopt;
-        return FishStamina{ReadAt<int32_t>(Pointer(fish), kFishStamina), ReadAt<int32_t>(Pointer(fish), kFishFullStamina)};
+        if (fish == 0 || !Readable(Pointer(fish), kFishDrawnStamina + sizeof(int32_t))) return std::nullopt;
+        return FishStamina{ReadAt<int32_t>(Pointer(fish), kFishFullStamina), ReadAt<int32_t>(Pointer(fish), kFishStamina),
+            ReadAt<int32_t>(Pointer(fish), kFishDrawnStamina)};
     }
 
     std::string SearchAddressReader::Find()

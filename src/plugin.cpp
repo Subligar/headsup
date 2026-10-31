@@ -899,7 +899,7 @@ public:
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
         if (const bool fishing = m_Settings.enabled && m_Settings.fishBar; m_Rml.Running() &&
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
-                fishing ? FishShareNow() : std::nullopt, fishing && m_RmlMenu.open))
+                fishing ? FishShareNow() : std::nullopt))
             m_SettingsChangedAt = now;
         // Over ImGui from Present; with the bar, under ImGui, when Present is not hooked.
         if (g_PresentSlot != nullptr)
@@ -1732,7 +1732,8 @@ private:
     {
         if (!std::exchange(m_FishTried, true))
             if (const std::string failure = m_Fish.Find(); !failure.empty())
-                Note("the fishing bar cannot show: " + failure + ".");
+                Print("the fishing bar cannot show: " + failure + ".");
+        if (!headsup::FishHooked(m_AshitaCore->GetMemoryManager()->GetEntity()->GetStatus(m_SelfIndex))) return std::nullopt;
         const std::optional<headsup::FishStamina> fish = m_Fish.Read();
         return fish ? headsup::FishShare(*fish) : std::nullopt;
     }
