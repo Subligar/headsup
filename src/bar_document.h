@@ -142,6 +142,8 @@ namespace headsup
     std::string PopupDocument(const BarLook& look, const PopupFaces& faces);
     // Sunk into what holds it: darker, its upper edges in shadow and its lower ones lit.
     std::string SocketRules(float radius);
+    // The panel's text shadow as a font effect, for text of that many pixels.
+    std::string ShadowEffect(int pixels);
     constexpr const char* kOpenClass = "open"; // on a popup while it shows, so what it does as it opens plays each time
     constexpr const char* kPopupId = "popup";
     // A laid out popup's markup, from its top left corner: its panel, then each piece where the layout put it.

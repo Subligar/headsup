@@ -32,6 +32,8 @@ TEST(the_fishing_bar_starts_centered_low_and_stays_on_the_screen)
     const FishPlace start = FishBarPlace(kFishBarUnplaced, kFishBarUnplaced, 300, 1920.0f, 1080.0f);
     CHECK_EQ(start.x, (1920.0f - 300.0f) / 2.0f);
     CHECK(start.y > 1080.0f / 2.0f && start.y + kFishBarHeight < 1080.0f);
+    // Dragged to the top, its name still fits over it.
+    CHECK_EQ(FishBarPlace(100, 0, 300, 1920.0f, 1080.0f).y, static_cast<float>(kFishNameHeight));
     const FishPlace placed = FishBarPlace(100, 200, 300, 1920.0f, 1080.0f);
     CHECK_EQ(placed.x, 100.0f);
     CHECK_EQ(placed.y, 200.0f);
@@ -65,6 +67,13 @@ TEST(the_fishing_bar_shows_only_while_a_fish_is_on_the_line)
         const float inside = Fill(rml)->GetParentNode()->GetBox().GetSize(Rml::BoxArea::Content).x;
         CHECK(std::abs(Fill(rml)->GetBox().GetSize(Rml::BoxArea::Border).x - inside / 4.0f) < 1.0f);
         CHECK_EQ(Bar(rml)->GetBox().GetSize(Rml::BoxArea::Border).x, static_cast<float>(settings.fishBarWidth));
+        // Its name sits over its top left, clear of the bar.
+        Rml::Element* name = rml.context->GetDocument(kFishBarDocument)->GetElementById(kFishNameId);
+        const Rml::Vector2f corner = Bar(rml)->GetAbsoluteOffset(Rml::BoxArea::Border);
+        const Rml::Vector2f at  = name->GetAbsoluteOffset(Rml::BoxArea::Border);
+        CHECK(name->GetInnerRML() == kFishName && name->IsVisible());
+        CHECK(std::abs(at.x - corner.x) < 4.0f);
+        CHECK(at.y + name->GetBox().GetSize(Rml::BoxArea::Border).y <= corner.y + 1.0f && at.y >= 0.0f);
         bar.Update(rml.context, palette, settings, std::nullopt);
         rml.context->Update();
         CHECK(!Bar(rml)->IsVisible());

@@ -27,12 +27,16 @@ namespace headsup
     constexpr const char* kFishBarDocument = "fishing";
     constexpr const char* kFishBarId     = "fishbar";
     constexpr const char* kFishFillId    = "fishfill";
+    constexpr const char* kFishNameId    = "fishname";
+    constexpr const char* kFishName      = "Fish"; // over its top left, as the game's bar has it
+    constexpr int kFishNamePixels = 15, kFishNameHeight = 18;
 
     struct FishPlace
     {
         float x = 0.0f, y = 0.0f;
     };
-    // Its top left: kFishBarUnplaced in the middle low on the screen, else where it was dragged, kept on the screen.
+    // Its top left: kFishBarUnplaced in the middle low on the screen, else where it was dragged, kept on the screen
+    // with its name over it.
     FishPlace FishBarPlace(int x, int y, int width, float screenWidth, float screenHeight);
 
     // HeadsUp's own fishing bar, which the game draws in its party window: a document of the overlay's that drags to

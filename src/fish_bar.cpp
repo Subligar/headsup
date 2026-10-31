@@ -26,8 +26,12 @@ namespace headsup
             css += ".socket{height:100%;" + SocketRules(kFrameRound / 2.0f) + "}";
             css += std::string("#") + kFishFillId + "{height:100%;decorator:horizontal-gradient(" + RcssColor(p.accent) +
                    " " + RcssColor(p.accentEnd) + ");}";
+            css += std::string("#") + kFishNameId + "{position:absolute;left:0px;top:" +
+                   Px(-static_cast<float>(kFishNameHeight) - 1.0f) + ";white-space:pre;font-family:\"" + kDetailFont +
+                   "\";font-size:" + Px(static_cast<float>(kFishNamePixels)) + ";line-height:" +
+                   Px(static_cast<float>(kFishNameHeight)) + ";color:" + RcssColor(p.text) + ";" + ShadowEffect(kFishNamePixels) + "}";
             return "<rml><head><style>" + css + "</style></head><body id=\"" + std::string(kFishBarDocument) + "\"><div id=\"" + kFishBarId + "\" class=\"" +
-                   kHiddenClass + "\"><div class=\"socket\"><div id=\"" + kFishFillId + "\"></div></div></div></body></rml>";
+                   kHiddenClass + "\"><div id=\"" + kFishNameId + "\">" + kFishName + "</div><div class=\"socket\"><div id=\"" + kFishFillId + "\"></div></div></div></body></rml>";
         }
     }
 
@@ -45,7 +49,7 @@ namespace headsup
         const float left = x == kFishBarUnplaced ? (screenWidth - w) / 2.0f : static_cast<float>(x);
         const float top  = y == kFishBarUnplaced ? std::round(screenHeight * kFishBarStartDown) : static_cast<float>(y);
         return FishPlace{std::clamp(left, 0.0f, std::max(0.0f, screenWidth - w)),
-            std::clamp(top, 0.0f, std::max(0.0f, screenHeight - h))};
+            std::clamp(top, static_cast<float>(kFishNameHeight), std::max(static_cast<float>(kFishNameHeight), screenHeight - h))};
     }
 
     bool FishBar::Update(Rml::Context* context, const BarPalette& palette, Settings& settings,

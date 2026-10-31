@@ -121,16 +121,6 @@ namespace headsup
                    Px(style.radius) + ";";
         }
 
-        // The bar's text shadow as a font effect: the letters blurred, once a pixel down and once in place.
-        std::string ShadowEffect(int pixels)
-        {
-            const float sigma = static_cast<float>(pixels) * kShadowPerHeight * kSigmaPerRadius;
-            const std::string blur = Px(static_cast<float>(WholePixels(sigma / kGlowSigmaPerWidth)));
-            const std::string color = RcssColor(WithAlpha(kBlack, static_cast<uint32_t>(std::lround(kShadowStrength * 255.0f))));
-            return "font-effect:glow(0px " + blur + " 0px " + Px(static_cast<float>(kShadowDrop)) + " " + color +
-                   "),glow(0px " + blur + " 0px 0px " + color + ");";
-        }
-
         std::string FaceRules(const std::string& font, int pixels, int lineHeight)
         {
             return "font-family:\"" + font + "\";font-size:" + Px(static_cast<float>(pixels)) + ";line-height:" +
@@ -516,6 +506,16 @@ namespace headsup
         if (!parts.help.empty())
             rml += TextAt("hh", parts.row.helpX, centered(place.figures.height), look.palette.text, parts.help);
         return rml;
+    }
+
+    // The bar's text shadow as a font effect: the letters blurred, once a pixel down and once in place.
+    std::string ShadowEffect(int pixels)
+    {
+        const float sigma = static_cast<float>(pixels) * kShadowPerHeight * kSigmaPerRadius;
+        const std::string blur = Px(static_cast<float>(WholePixels(sigma / kGlowSigmaPerWidth)));
+        const std::string color = RcssColor(WithAlpha(kBlack, static_cast<uint32_t>(std::lround(kShadowStrength * 255.0f))));
+        return "font-effect:glow(0px " + blur + " 0px " + Px(static_cast<float>(kShadowDrop)) + " " + color +
+               "),glow(0px " + blur + " 0px 0px " + color + ");";
     }
 
     std::string SocketRules(float radius)
