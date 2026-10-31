@@ -33,6 +33,7 @@ namespace headsup
     constexpr float kGroupNameWidth = 9.0f;
     constexpr float kChipHeight     = 1.9f;
     constexpr float kChipDot        = 0.5f;
+    constexpr float kChipToggle     = 0.6f; // a widget chip's toggle, as a share of a table's
     constexpr float kTabHeight      = 2.0f;
     constexpr float kTabRule        = 0.12f; // the line a strip of tabs stands on
     constexpr float kTabGap         = 0.12f; // between two tabs, and two rows of them: a couple of pixels

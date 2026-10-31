@@ -2739,7 +2739,7 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     SaveSettings(s, plain);
     for (const auto& [key, value] : plain.values)
         CHECK(key.find("_2") == std::string::npos);
-    const std::optional<PanelWidget> copy = AddWidgetCopy(s, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Gil);
     CHECK(copy.has_value() && s.Widget(*copy).on);
     s.Widget(*copy).currency = 3;
     s.Widget(*copy).secondLine = false;
@@ -2753,13 +2753,35 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     // Taken off, its settings go: put back, it is new.
     RemoveWidgetCopy(s, *copy);
     CHECK(!Placed(s.barSections, *copy) && !Shows(s, *copy));
-    CHECK(AddWidgetCopy(s, BarWidget::Gil) == copy && s.Widget(*copy) == NewWidget(*copy));
+    CHECK(CloneWidget(s, BarWidget::Gil) == copy && s.Widget(*copy) == NewWidget(*copy));
+}
+
+TEST(a_clone_starts_with_every_setting_of_the_widget_it_copies_shown_and_combined_with_nothing)
+{
+    Settings s;
+    WidgetOptions& gil = s.Widget(BarWidget::Gil);
+    gil.on             = false;
+    gil.currency       = 3;
+    gil.secondLine     = false;
+    gil.spacing        = 12;
+    gil.titleFont      = "Cinzel";
+    gil.combine        = PanelWidget{BarWidget::Bags};
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Gil);
+    CHECK(copy.has_value());
+    WidgetOptions expected = gil;
+    expected.on            = true;
+    expected.combine.reset();
+    CHECK(s.Widget(*copy) == expected);
+    // A clone of a copy is a clone of that copy.
+    s.Widget(*copy).currency = 5;
+    const std::optional<PanelWidget> again = CloneWidget(s, *copy);
+    CHECK(again.has_value() && s.Widget(*again).currency == 5);
 }
 
 TEST(a_combined_widget_is_kept_by_its_partners_name_and_loses_a_partner_taken_off_the_panel)
 {
     Settings s;
-    const std::optional<PanelWidget> copy = AddWidgetCopy(s, BarWidget::Bags);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Bags);
     CHECK(copy.has_value());
     s.Widget(BarWidget::Zone).combine    = PanelWidget{BarWidget::Conquest};
     s.Widget(BarWidget::Weather).combine = *copy;
@@ -2804,7 +2826,7 @@ TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_tak
 TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_range)
 {
     Settings s;
-    const std::optional<PanelWidget> copy = AddWidgetCopy(s, BarWidget::Bags);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Bags);
     CHECK(copy.has_value());
     s.Widget(BarWidget::Bags).spacing = 12;
     s.Widget(*copy).padding           = 3;

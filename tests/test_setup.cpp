@@ -162,7 +162,7 @@ TEST(the_widget_groups_hold_every_widget_once)
 TEST(a_widget_turned_off_takes_its_copies_with_it_and_turned_on_shows_its_first)
 {
     Settings s;
-    const auto copy = AddWidgetCopy(s, BarWidget::Gil);
+    const auto copy = CloneWidget(s, BarWidget::Gil);
     CHECK(copy.has_value() && Shows(s, *copy));
     SetWidgetShown(s, BarWidget::Gil, false);
     CHECK(!Shown(s, BarWidget::Gil));

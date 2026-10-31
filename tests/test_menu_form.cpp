@@ -186,9 +186,33 @@ TEST(a_widgets_chip_dropped_on_another_goes_before_it)
     const Form form = w.Pass({{first, kDropEvent, second}});
     const std::vector<PanelWidget>& now = w.settings.barSections[static_cast<int>(BarSection::Left)];
     CHECK(form.changed && now[0] == left[1] && now[1] == left[0]);
-    // A click on a chip opens its tab, at the page's top.
-    const Form clicked = w.Pass({{first, kClickEvent, ""}});
-    CHECK(w.state.widget == SlotOf(left[0]) && clicked.scrollToTop);
+}
+
+TEST(the_layout_comes_first_and_a_click_on_a_chip_shows_its_widgets_settings_under_it)
+{
+    Window w;
+    w.state.page = Page::Widgets;
+    const std::vector<PanelWidget>& left = w.settings.barSections[static_cast<int>(BarSection::Left)];
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const Form form = w.Pass({{chip, kClickEvent, ""}});
+    CHECK(w.state.widget == SlotOf(left[1]) && !form.scrollToTop);
+    const auto layout = std::ranges::find(form.blocks, "widgets-layout", &FormBlock::id);
+    const auto widgets = std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id);
+    CHECK(layout != form.blocks.end() && widgets != form.blocks.end() && layout < widgets);
+    CHECK(!Has(widgets->rml, "class=\"tab"));
+}
+
+TEST(a_chips_toggle_turns_its_widget_on_and_off_and_shows_its_settings)
+{
+    Window w;
+    w.state.page           = Page::Widgets;
+    const PanelWidget gil  = BarWidget::Gil;
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(gil));
+    CHECK(w.settings.Widget(gil).on);
+    CHECK(w.Pass({{chip + "-on", kClickEvent, ""}}).changed);
+    CHECK(!w.settings.Widget(gil).on && w.state.widget == SlotOf(gil));
+    const Form back = w.Pass({{chip + "-on", kClickEvent, ""}});
+    CHECK(w.settings.Widget(gil).on && ClassOn(back, chip.c_str(), "on"));
 }
 
 TEST(the_reset_card_asks_twice)

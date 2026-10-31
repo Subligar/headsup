@@ -407,6 +407,8 @@ namespace headsup
                color(c.muted) + ";}";
         css += ".wchip.on{color:" + color(c.text) + ";}";
         css += ".wchip.picked{border-color:" + color(c.accent) + ";}";
+        css += ".wchip .check{display:inline-block;vertical-align:middle;margin-right:0.8em;font-size:" + Em(kChipToggle) + ";}";
+        css += ".widget-name{color:" + color(c.text) + ";}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
         // What a control says under the pointer.
         css += std::string("#") + kMenuTipId + "{position:absolute;z-index:60;box-sizing:border-box;max-width:" +

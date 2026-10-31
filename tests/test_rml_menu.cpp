@@ -960,8 +960,9 @@ TEST(every_dropdown_slider_row_of_choices_and_number_of_every_page_and_tab_sets_
         const Settings fresh = window.settings;
         const std::map<std::string, std::string> saved = Saved(fresh);
         std::vector<std::string> tabs{""};
-        for (Rml::Element* element : window.OfClass("tab"))
-            tabs.push_back(element->GetId());
+        for (const char* picker : {"tab", "wchip"})
+            for (Rml::Element* element : window.OfClass(picker))
+                tabs.push_back(element->GetId());
         const auto reset = [&](const std::string& tab) {
             window.settings = fresh;
             window.Frames(2);
@@ -1021,7 +1022,8 @@ TEST(every_dropdown_slider_row_of_choices_and_number_of_every_page_and_tab_sets_
                     const std::string choice = id + "-s-" + std::to_string(option);
                     if (!window.Find(choice)->IsClassSet("picked")) other = choice;
                 }
-                if (other.empty() || !window.Click(other) || window.settings == fresh)
+                if (other.empty()) other = id + "-s-0"; // a row of toggles, every one on: the first turned off
+                if (!window.Click(other) || window.settings == fresh)
                     throw test::Failure{"the row of choices " + id + " changes no setting"};
                 set.emplace_back(id, KeysChanged(saved, window.settings));
             }
@@ -1704,7 +1706,7 @@ TEST(a_picked_choice_and_tab_take_dark_text_where_the_accent_is_bright)
         window.Page("toppanel");
         window.Frames(kPastEasing);
         CHECK_EQ(pickedText(window, "seg") < 0.2f, bright);
-        window.Page("widgets");
+        window.Page("mobs");
         window.Frames(kPastEasing);
         CHECK_EQ(pickedText(window, "tab") < 0.2f, bright);
     }
@@ -1845,16 +1847,17 @@ TEST(a_lines_arrows_swap_it_with_the_one_above_or_below_and_the_ends_have_only_o
     CHECK_EQ(window.Said(), "");
 }
 
-TEST(a_copy_added_has_a_tab_and_a_chip_of_its_own_and_its_settings_are_its_own)
+TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
 {
     Window window;
     window.Page("widgets");
     const PanelWidget copy{BarWidget::Gil, 1};
-    window.Click("widgets-widgets-widget-t-" + std::to_string(static_cast<int>(BarWidget::Gil))); // Gil's tab, after Target's
-    CHECK(window.Click("widgets-widgets-add-copy-gil"));
+    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil)));
+    CHECK(!window.Shows("widgets-widgets-remove-copy-gil"));
+    CHECK(window.Click("widgets-widgets-clone-gil"));
     CHECK(Placed(window.settings.barSections, copy));
     CHECK(window.Shows("widgets-layout-chip-" + std::to_string(SlotOf(copy))));
-    // Its tab opens on its own: a currency picked there is the copy's.
+    // The clone's settings show at once: a currency picked there is the clone's.
     CHECK(window.Shows("widgets-widgets-remove-copy-gil-2"));
     window.Click("widgets-widgets-currency-gil-2");
     CHECK(window.Click("widgets-widgets-currency-gil-2-o-1"));
@@ -1864,14 +1867,13 @@ TEST(a_copy_added_has_a_tab_and_a_chip_of_its_own_and_its_settings_are_its_own)
     CHECK_EQ(window.Said(), "");
 }
 
-TEST(the_world_info_tab_offers_the_pick_for_what_it_shows)
+TEST(the_world_info_widget_offers_the_pick_for_what_it_shows)
 {
     Window window;
     WidgetOptions& world = window.settings.Widget(BarWidget::World);
     world.on             = true;
     window.Page("widgets");
-    // Its tab is the last: Game help has none.
-    window.Click("widgets-widgets-widget-t-" + std::to_string(static_cast<int>(BarWidget::World) - 1));
+    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::World)));
     CHECK(window.Shows("widgets-widgets-ship-world") && !window.Shows("widgets-widgets-element-world"));
     window.Click("widgets-widgets-shows-world");
     CHECK(window.Click("widgets-widgets-shows-world-o-1"));
@@ -1881,32 +1883,6 @@ TEST(the_world_info_tab_offers_the_pick_for_what_it_shows)
     CHECK(window.Click("widgets-widgets-element-world-o-4"));
     CHECK(world.worldElement == Element::Lightning);
     CHECK_EQ(window.Said(), "");
-}
-
-TEST(every_widget_tab_shows_its_whole_name_however_many_copies_there_are)
-{
-    // The narrowest and the widest of the fonts the window can be set in.
-    for (const auto [font, copies] : {std::pair{kBarlowCondensed, 0}, {kBarlowCondensed, 3}, {kBarlowCondensed, 12},
-             {kCinzel, 0}, {kCinzel, 3}, {kCinzel, 12}})
-    {
-        Window window(BarTheme::PhoenixGold, font);
-        for (int added = 0; added < copies; ++added)
-            AddWidgetCopy(window.settings, static_cast<BarWidget>(added % kBarWidgetCount == static_cast<int>(BarWidget::Target)
-                                                                     ? static_cast<int>(BarWidget::Gil)
-                                                                     : added % kBarWidgetCount));
-        window.Page("widgets");
-        window.Frames(2);
-        int tabs = 0;
-        for (Rml::Element* tab : window.OfClass("tab"))
-        {
-            if (tab->GetId().rfind("widgets-widgets-widget-t-", 0) != 0) continue;
-            ++tabs;
-            const float text = static_cast<float>(Rml::ElementUtilities::GetStringWidth(tab, tab->GetInnerRML()));
-            if (text > tab->GetBox().GetSize(Rml::BoxArea::Content).x)
-                throw test::Failure{"the tab " + tab->GetInnerRML() + " is cut in " + font + " with " + std::to_string(copies) + " copies"};
-        }
-        CHECK(tabs >= kPlacedWidgetCount);
-    }
 }
 
 namespace

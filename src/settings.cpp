@@ -1462,10 +1462,13 @@ namespace headsup
         return false;
     }
 
-    std::optional<PanelWidget> AddWidgetCopy(Settings& s, BarWidget widget)
+    std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget)
     {
-        const std::optional<PanelWidget> added = AddCopy(s.barSections, widget);
-        if (added) s.Widget(*added) = NewWidget(*added);
+        const std::optional<PanelWidget> added = AddCopy(s.barSections, widget.kind);
+        if (!added) return added;
+        WidgetOptions& clone = s.Widget(*added) = s.Widget(widget);
+        clone.on             = true;
+        clone.combine.reset();
         return added;
     }
 

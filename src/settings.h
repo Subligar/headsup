@@ -227,9 +227,9 @@ namespace headsup
     // A copy is on the panel and switched on; Shown for a widget asks whether any copy of it is.
     bool Shows(const Settings& s, PanelWidget widget);
     bool Shown(const Settings& s, BarWidget widget);
-    // Another copy of a widget, after the last of its copies, shown and with its settings as new; none when it has no
-    // more. Taking a copy off forgets its settings.
-    std::optional<PanelWidget> AddWidgetCopy(Settings& s, BarWidget widget);
+    // Another copy of a widget, after the last of its copies, shown and with that copy's settings but its Combine;
+    // none when it has no more. Taking a copy off forgets its settings.
+    std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);
     void RemoveWidgetCopy(Settings& s, PanelWidget widget);
     // The panel as it is drawn, each widget's combine pulling its partner after it.
     PanelGroups Panel(const Settings& s);

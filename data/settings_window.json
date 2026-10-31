@@ -286,17 +286,23 @@
       "child": true,
       "cards": [
         {
+          "key": "layout",
+          "name": "Layout",
+          "description": "Drag a widget to move it, and click it to see its settings below. Its toggle turns it on and off.",
+          "settings": [
+            {"key": "trays"},
+            {"key": "reset-layout", "name": "Reset Layout", "tip": "Puts every widget back in its first place and takes off any copies. Switches stay."}
+          ]
+        },
+        {
           "key": "widgets",
           "name": "Widgets",
-          "description": "A tab for each widget, with its options.",
+          "description": "The settings of the widget picked in the Layout above.",
           "settings": [
             {
               "key": "widget-tabs",
               "rows": [
-                {"key": "enabled", "name": "Enabled"},
-                {"key": "section", "name": "Section"},
                 {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one popup for both. That widget leaves its own place. Default is None."},
-                {"key": "copies", "name": "Copies", "tip": "Another of this widget on the panel, with settings of its own. You can take a copy off again."},
                 {"key": "second-line", "name": "Second Line"},
                 {"key": "icons", "name": "Icons"},
                 {"key": "spacing", "name": "Spacing", "tip": "More room between this widget and the widgets beside it."},
@@ -333,20 +339,11 @@
                 {"key": "latency", "name": "Ping", "tip": "Your ping to the server, after the rates. It shows once a few of the server's answers are timed."}
               ],
               "words": [
-                {"key": "add-copy", "name": "Add a Copy", "tip": "Puts another of this widget on the panel after it, with its own tab here."},
+                {"key": "clone", "name": "Clone This Widget", "tip": "Puts another of this widget on the panel after it, with all of this one's settings."},
                 {"key": "remove-copy", "name": "Remove This Copy", "tip": "Takes this copy off the panel. Its settings go with it."},
                 {"key": "combine-none", "name": "None"}
               ]
             }
-          ]
-        },
-        {
-          "key": "layout",
-          "name": "Layout",
-          "description": "Drag a chip to move it; click it to open its tab above.",
-          "settings": [
-            {"key": "trays"},
-            {"key": "reset-layout", "name": "Reset Layout", "tip": "Puts every widget back in its first place and takes off any copies. Switches stay."}
           ]
         }
       ]

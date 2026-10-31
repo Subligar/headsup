@@ -1908,7 +1908,7 @@ TEST(each_copy_of_a_widget_shows_by_its_own_settings)
     BarState state;
     state.gil = 1234;
     state.currencies[3] = 50;
-    const std::optional<PanelWidget> copy = AddWidgetCopy(settings, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = CloneWidget(settings, BarWidget::Gil);
     CHECK(copy.has_value());
     settings.Widget(*copy).currency = 3;
     const WidgetContent first = BarWidgetContent(BarWidget::Gil, state, settings), second = BarWidgetContent(*copy, state, settings);
@@ -1924,7 +1924,7 @@ TEST(what_the_plugin_gathers_follows_every_copy)
     Settings settings;
     for (WidgetOptions& each : settings.widgets)
         each.on = false;
-    const std::optional<PanelWidget> clock = AddWidgetCopy(settings, BarWidget::EarthTime);
+    const std::optional<PanelWidget> clock = CloneWidget(settings, BarWidget::EarthTime);
     CHECK(clock.has_value());
     settings.Widget(*clock).clockZone = ClockZone::Utc;
     const BarNeeds needs = NeedsOf(settings, std::nullopt);

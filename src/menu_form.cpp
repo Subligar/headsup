@@ -30,6 +30,8 @@ namespace headsup
         constexpr const char* kSetupPageKey = "setup", *kSetupButtons = "buttons";
         constexpr int kNoOption = -1; // a choice whose settings no option holds
         constexpr const char* kWidgetChip  = "chip "; // a tray chip's name in its card, before its widget's number
+        constexpr const char* kChipToggle  = " on";   // after it, its toggle's
+        constexpr const char* kWidgetNameClass = "caption widget-name";
         constexpr float kAddWindowShare    = 0.8f;    // of a dropdown's width: a group's "+ Add Window"
         constexpr size_t kMaxFindText      = 31;      // letters of a window's name to look for
 
@@ -420,14 +422,15 @@ namespace headsup
             return widget.copy == 0 ? said : said + " " + std::to_string(widget.copy + 1);
         }
 
-        // One widget's options: its switch, its section, what it shows and its own settings, as the layout orders
-        // them; a row the widget has nothing for is left out.
+        // One widget's options: what it shows and its own settings, as the layout orders them, a row the widget has
+        // nothing for left out; then its Clone and, on a copy, its Remove.
         void WidgetOptions(Context& c, const LayoutSetting& e, PanelWidget widget)
         {
             Form& form  = c.form;
             Settings& s = c.s;
             headsup::WidgetOptions& o = s.Widget(widget);
             const BarWidget kind      = widget.kind;
+            form.Caption(CopyName(c, widget).c_str(), kWidgetNameClass);
             form.Note(c.layout.OptionsOf(WindowList::BarWidgets)[static_cast<size_t>(kind)].tip);
             const bool off = !BarOn(s) || !o.on;
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
@@ -438,23 +441,6 @@ namespace headsup
                 form.Fade(off);
                 switch (static_cast<WidgetTabsRow>(row.row))
                 {
-                case WidgetTabsRow::Enabled:
-                    form.Fade(!BarOn(s));
-                    form.Switch(label.c_str(), o.on, row.tip);
-                    break;
-                case WidgetTabsRow::Section:
-                {
-                    // A widget combined into another's pill sits where that one does.
-                    form.Fade(off || Panel(s).group[SlotOf(widget)] != widget);
-                    auto [section, index] = PlaceOf(s.barSections, widget);
-                    int moved             = section;
-                    const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::BarSections));
-                    form.Segments(label.c_str(), moved, names.data(), kBarSectionCount, row.tip);
-                    if (moved != section)
-                        form.changed |= MoveWidget(s.barSections, static_cast<BarSection>(section), index,
-                            static_cast<BarSection>(moved), s.barSections[moved].size());
-                    break;
-                }
                 case WidgetTabsRow::Combine:
                 {
                     const std::vector<PanelWidget> choices = CombineChoices(s, widget);
@@ -469,31 +455,6 @@ namespace headsup
                         },
                         row.tip);
                     o.combine = picked == 0 ? std::nullopt : std::optional<PanelWidget>(choices[static_cast<size_t>(picked - 1)]);
-                    break;
-                }
-                case WidgetTabsRow::Copies:
-                {
-                    if (!HasCopies(kind)) break;
-                    form.Fade(!BarOn(s));
-                    form.Row(label.c_str(), row.tip);
-                    if (widget.copy > 0)
-                    {
-                        if (form.Button(Word(c, WindowWord::WidgetTabsRemoveCopy), ("remove copy" + scope).c_str(), kRaisedPill,
-                                WordTip(c, WindowWord::WidgetTabsRemoveCopy)))
-                        {
-                            RemoveWidgetCopy(s, widget);
-                            c.state.widget = SlotOf(kind);
-                            form.changed   = true;
-                        }
-                    }
-                    else if (form.Button(Word(c, WindowWord::WidgetTabsAddCopy), ("add copy" + scope).c_str(), kRaisedPill,
-                                 WordTip(c, WindowWord::WidgetTabsAddCopy)))
-                        if (const std::optional<PanelWidget> added = AddWidgetCopy(s, kind))
-                        {
-                            c.state.widget = SlotOf(*added);
-                            form.changed   = true;
-                        }
-                    form.EndRow();
                     break;
                 }
                 case WidgetTabsRow::SecondLine:
@@ -669,30 +630,38 @@ namespace headsup
                     break;
                 }
             }
+            if (!HasCopies(kind)) return;
+            form.Fade(!BarOn(s));
+            if (form.Button(Word(c, WindowWord::WidgetTabsClone), ("clone" + scope).c_str(), kRaisedPill,
+                    WordTip(c, WindowWord::WidgetTabsClone)))
+                if (const std::optional<PanelWidget> added = CloneWidget(s, widget))
+                {
+                    c.state.widget = SlotOf(*added);
+                    form.changed   = true;
+                }
+            if (widget.copy > 0 && form.Button(Word(c, WindowWord::WidgetTabsRemoveCopy), ("remove copy" + scope).c_str(),
+                                       kRaisedPill, WordTip(c, WindowWord::WidgetTabsRemoveCopy)))
+            {
+                RemoveWidgetCopy(s, widget);
+                c.state.widget = SlotOf(kind);
+                form.changed   = true;
+            }
         }
 
-        // A tab for each widget, the picked one's options under the tabs.
-        void WidgetTabsOf(Context& c, const LayoutSetting& e)
+        // The widget picked in the Layout above, or the first placed.
+        void PickedWidget(Context& c, const LayoutSetting& e)
         {
-            Form& form = c.form;
-            form.Fade(!BarOn(c.s));
-            const std::vector<PanelWidget> tabs = WidgetTabs(c.s.barSections);
-            std::vector<std::string> names;
-            for (const PanelWidget widget : tabs)
-                names.push_back(CopyName(c, widget));
-            std::vector<const char*> labels;
-            for (const std::string& name : names)
-                labels.push_back(name.c_str());
-            const auto open = std::ranges::find(tabs, WidgetInSlot(c.state.widget));
-            const int count = static_cast<int>(tabs.size());
-            const int tab   = form.Tabs("widget", open != tabs.end() ? static_cast<int>(open - tabs.begin()) : 0,
-                labels.data(), count, true);
-            c.state.widget  = SlotOf(tabs[static_cast<size_t>(tab)]);
-            WidgetOptions(c, e, tabs[static_cast<size_t>(tab)]);
+            c.form.Fade(!BarOn(c.s));
+            const std::vector<PanelWidget> placed = WidgetTabs(c.s.barSections);
+            const auto open = std::ranges::find(placed, WidgetInSlot(c.state.widget));
+            const PanelWidget widget = open != placed.end() ? *open : placed.front();
+            c.state.widget           = SlotOf(widget);
+            WidgetOptions(c, e, widget);
         }
 
         // Left, Center and Right as trays sunk into the card, each holding its widgets as raised chips in bar order:
-        // a chip drags to another place or tray, and a click picks it, which opens its tab. A lit dot says it is on.
+        // a chip drags to another place or tray, and a click picks it, showing its settings under the trays. Its
+        // toggle turns it on and off and picks it too.
         void Trays(Context& c)
         {
             struct Drop
@@ -731,15 +700,12 @@ namespace headsup
                     const int w          = SlotOf(held[i]);
                     const std::string id = form.Id(kWidgetChip + std::to_string(w));
                     form.Raw("<div class=\"btn raised wchip drag\" id=\"" + id + "\" tip=\"" +
-                             EscapedRml(Said(widgets[static_cast<size_t>(held[i].kind)].tip)) + "\"><div class=\"dot\"></div>" +
-                             EscapedRml(CopyName(c, held[i])) + "</div>");
+                             EscapedRml(Said(widgets[static_cast<size_t>(held[i].kind)].tip)) + "\">");
+                    const bool was = s.widgets[w].on;
+                    form.CheckAt((kWidgetChip + std::to_string(w) + kChipToggle).c_str(), s.widgets[w].on);
+                    form.Raw(EscapedRml(CopyName(c, held[i])) + "</div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
-                    // A clicked chip's tab is at the page's top, which the trays may have scrolled out of view.
-                    if (!form.Off() && form.Clicked(id))
-                    {
-                        picked           = w;
-                        form.scrollToTop = true;
-                    }
+                    if (!form.Off() && (form.Clicked(id) || s.widgets[w].on != was)) picked = w;
                     form.Set(id, FormValueKind::Class, "on", {}, s.widgets[w].on);
                     form.Set(id, FormValueKind::Class, kPickedClass, {}, w == picked);
                     dropped(id, here, i); // dropped on a chip: before it
@@ -1530,7 +1496,7 @@ namespace headsup
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
                 form.Switch(label.c_str(), s.helpBarBackground, tip);
                 break;
-            case SettingPiece::WidgetTabs: WidgetTabsOf(c, e); break;
+            case SettingPiece::WidgetTabs: PickedWidget(c, e); break;
             case SettingPiece::Trays: Trays(c); break;
             case SettingPiece::ResetLayout:
                 form.Fade(!BarOn(s));
