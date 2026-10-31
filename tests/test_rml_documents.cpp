@@ -190,3 +190,39 @@ TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_
         CHECK_EQ(rml.Said(), "");
     }
 }
+
+TEST(a_target_without_its_background_looks_as_any_other_widget_lit_or_not)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
+        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+    Settings settings;
+    for (int t = 0; t < kFixedThemeCount; ++t)
+    {
+        const BarLook look = LookOf(PaletteOf(static_cast<BarTheme>(t)), settings);
+        test::RmlSession rml;
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        bar->Show();
+        Rml::Element* target  = bar->GetElementById(WidgetId(BarWidget::Target));
+        Rml::Element* weather = bar->GetElementById(WidgetId(BarWidget::Weather));
+        CHECK(target != nullptr && weather != nullptr);
+        target->SetClass(kTargetClass, false); // Show Background off
+        for (const bool lit : {false, true})
+        {
+            for (Rml::Element* widget : {target, weather})
+            {
+                widget->SetClass(kHiddenClass, false);
+                widget->SetClass(kLitClass, lit);
+            }
+            for (int update = 0; update < 3; ++update)
+            {
+                rml.complaints.seconds += 1.0; // past every easing
+                rml.context->Update();
+            }
+            const auto& a = target->GetComputedValues();
+            const auto& b = weather->GetComputedValues();
+            if (a.background_color() != b.background_color() || a.border_top_color() != b.border_top_color())
+                throw test::Failure{"theme " + std::to_string(t) + (lit ? " lit" : "") + ": the target is drawn apart"};
+        }
+        CHECK_EQ(rml.Said(), "");
+    }
+}

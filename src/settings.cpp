@@ -190,9 +190,10 @@ namespace headsup
         constexpr const char* kLocalZone          = "local";
         constexpr const char* kJobLayoutKey       = "jobLayout";
         const char* const kJobLayoutNames[kJobLayoutCount] = {"jobsFirst", "expFirst", "expOnly"};
-        constexpr const char* kTargetDetailsKey = "barTargetDetails";
-        constexpr const char* kTargetBorderKey  = "barTargetBorder";
-        constexpr const char* kTargetJobsKey    = "barTargetJobs";
+        constexpr const char* kTargetIconsKey    = "barTargetShowIcons";
+        constexpr const char* kTargetShowsKey    = "barTargetShows";
+        constexpr const char* kTargetMobLevelKey = "barTargetMobLevel";
+        constexpr const char* kTargetJobsKey     = "barTargetJobs";
         constexpr const char* kMenuFontKey      = "menuFont";
         constexpr const char* kMenuXKey = "menuX", *kMenuYKey = "menuY", *kMenuWidthKey = "menuWidth",
                               *kMenuHeightKey = "menuHeight";
@@ -1378,9 +1379,12 @@ namespace headsup
                 o.netMeter = flag(kNetMeterKey, o.netMeter);
                 break;
             case BarWidget::Target:
-                o.targetDetails = flag(kTargetDetailsKey, o.targetDetails);
-                o.targetBorder  = flag(kTargetBorderKey, o.targetBorder);
-                o.targetJobs    = flag(kTargetJobsKey, o.targetJobs);
+                o.targetIcons    = static_cast<uint32_t>(
+                    std::clamp(number(kTargetIconsKey, static_cast<int>(o.targetIcons)), 0, static_cast<int>(kAllTargetIcons)));
+                o.targetShows    = static_cast<uint8_t>(
+                    std::clamp(number(kTargetShowsKey, o.targetShows), 0, static_cast<int>(kAllTargetShows)));
+                o.targetMobLevel = flag(kTargetMobLevelKey, o.targetMobLevel);
+                o.targetJobs     = flag(kTargetJobsKey, o.targetJobs);
                 break;
             default: break;
             }
@@ -1441,8 +1445,9 @@ namespace headsup
                 flag(kNetMeterKey, o.netMeter);
                 break;
             case BarWidget::Target:
-                flag(kTargetDetailsKey, o.targetDetails);
-                flag(kTargetBorderKey, o.targetBorder);
+                StoreFloat(store, CopyKey(kTargetIconsKey, w), static_cast<float>(o.targetIcons));
+                StoreFloat(store, CopyKey(kTargetShowsKey, w), static_cast<float>(o.targetShows));
+                flag(kTargetMobLevelKey, o.targetMobLevel);
                 flag(kTargetJobsKey, o.targetJobs);
                 break;
             default: break;
@@ -1453,7 +1458,8 @@ namespace headsup
     WidgetOptions NewWidget(PanelWidget widget)
     {
         WidgetOptions o;
-        o.on = widget.copy > 0 || kBarWidgetDefaults[static_cast<int>(widget.kind)];
+        o.on         = widget.copy > 0 || kBarWidgetDefaults[static_cast<int>(widget.kind)];
+        o.background = widget.kind == BarWidget::Target; // its frame, always shown
         return o;
     }
 

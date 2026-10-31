@@ -105,6 +105,21 @@ namespace headsup
 
         uint32_t NameColor(const ActorInfo& target, const Settings& settings) { return RowColor(target.state, settings); }
 
+        // Which of the Target widget's Visibility a target is: a pet as a pet, whatever its entity is.
+        TargetShow TargetShowOf(const ActorInfo* target)
+        {
+            if (target == nullptr) return TargetShow::NoTarget;
+            switch (PlateKindOf(target->state))
+            {
+            case PlateKind::Mobs: return TargetShow::Mobs;
+            case PlateKind::Pets: return TargetShow::Pets;
+            case PlateKind::Npcs: return TargetShow::NpcsObjects;
+            case PlateKind::Self:
+            case PlateKind::Players: break;
+            }
+            return TargetShow::Players;
+        }
+
         uint32_t ShadeColor(const ActorInfo& target, const Settings& settings)
         {
             return ToArgb(settings.palette.toughness[static_cast<int>(target.level.shade)]);
@@ -122,10 +137,12 @@ namespace headsup
             PopupRow row{RowKind::Tags, 0, {}};
             for (int i = 0; i < icons.count; ++i)
             {
-                std::string tag = IconTag(icons.icons[i]);
-                if (icons.icons[i] == Icon::Sight || icons.icons[i] == Icon::TrueSight) tag += " " + Yalms(info.sight);
-                if (icons.icons[i] == Icon::Sound) tag += " " + Yalms(info.sound);
-                row.cells.push_back(Cell(Text(std::move(tag), Tone::Tag)));
+                const Icon icon = icons.icons[i];
+                if (DetectionOf(icon) == DetectionIcon::Aggro) continue; // the icon before the popup's title says it
+                std::string tag = IconTag(icon);
+                if (icon == Icon::Sight || icon == Icon::TrueSight) tag += " " + Yalms(info.sight);
+                if (icon == Icon::Sound) tag += " " + Yalms(info.sound);
+                row.cells.push_back(Cell(Text(std::move(tag), Tone::Tag), icon));
             }
             if (mob.flags & kMobNotorious) row.cells.push_back(Cell(Text("NM", Tone::Tag)));
             if (mob.flags & kMobCharmable) row.cells.push_back(Cell(Text("Charmable", Tone::Tag)));
@@ -147,17 +164,21 @@ namespace headsup
             return row;
         }
 
-        // "THF/BLM"; nothing for a mob without a job.
+        // "THF/BLM", or "WAR" for WAR/WAR; nothing for a mob without a job.
         std::string MobJobs(const MobInfo& info)
         {
             const std::string main = JobName(info.mainJob), sub = JobName(info.subJob);
-            return main.empty() ? std::string() : sub.empty() ? main : main + "/" + sub;
+            return main.empty() ? std::string() : sub.empty() || sub == main ? main : main + "/" + sub;
         }
 
-        // A cell of a name and its number, as the stats are.
-        PopupCell Numbered(const char* name, int64_t value)
+        // A stat as two cells of a grid: its name against the right of its column, its number against the left of
+        // the next.
+        void AddNumbered(PopupRow& row, const char* name, int64_t value)
         {
-            return Cell(ListOf(Text(name, Tone::Dim), Text(" " + std::to_string(value))));
+            PopupCell said = Cell(Text(name, Tone::Dim));
+            said.align     = Align::Right;
+            row.cells.push_back(std::move(said));
+            row.cells.push_back(Cell(Text(std::to_string(value))));
         }
 
         // A grid of names, kListColumns a line; none when there are no names.
@@ -265,7 +286,7 @@ namespace headsup
                 spawn.rows.push_back(LineOf(std::to_string(mob.placeholders) +
                     (mob.placeholders == 1 ? " placeholder" : " placeholders") + " in this zone"));
             if (mob.placeholderOf == 0 && mob.placeholders == 0)
-                spawn.rows.push_back(LineOf("Not a placeholder", Tone::Dim));
+                spawn.rows.push_back(LineOf("Not an NM placeholder", Tone::Dim));
             return spawn;
         }
 
@@ -589,13 +610,16 @@ namespace headsup
             const MobRecord& mob      = *target->mob;
             const MobResistances& res = ResistancesOf(mob);
             popup.icon  = MobIcon(*target);
-            popup.title = ListOf(Colored(target->name, NameColor(*target, settings)));
+            popup.title = ListOf(Colored(target->name, NameColor(*target, settings)),
+                Text(" ID " + Printed("%03X", target->serverId & kTargetIndexBits), Tone::Dim));
             const MobDefenses& defenses = DefensesOf(mob);
+            // "Level 17-20 WAR (Easy Prey to Even Match)", the level and con in the con's color.
             PopupRow identity{RowKind::Line, 0, {}};
-            if (HasLevel(*target))
-                identity.cells.push_back(Cell(Colored(target->level.text, ShadeColor(*target, settings))));
+            const uint32_t shade = ShadeColor(*target, settings);
+            if (HasLevel(*target)) identity.cells.push_back(Cell(Colored("Level " + std::string(target->level.level), shade)));
             if (const std::string jobs = MobJobs(InfoOf(mob)); !jobs.empty()) identity.cells.push_back(Cell(Text(jobs)));
-            identity.cells.push_back(Cell(Text("ID " + Printed("%03X", target->serverId & kTargetIndexBits), Tone::Dim)));
+            if (HasLevel(*target) && target->level.con[0] != '\0')
+                identity.cells.push_back(Cell(Colored("(" + std::string(target->level.con) + ")", shade)));
 
             PopupRow damage = Grid(kDamageColumns, kFirstElementSdt);
             for (int i = 0; i < kFirstElementSdt; ++i)
@@ -650,17 +674,17 @@ namespace headsup
             const int level = numbers.target ? numbers.target->level : mob.maxLevel;
             if (numbers.target)
             {
-                PopupSection stats{"Stats at Lv " + std::to_string(level), {}};
+                PopupSection stats{"Stats at Level " + std::to_string(level), {}};
                 if (const MobCombat* combat = CombatAt(mob, level))
                 {
-                    PopupRow row = Grid(kStatColumns, kCombatCount);
+                    PopupRow row = Grid(2 * kStatColumns, 2 * kCombatCount);
                     for (int i = 0; i < kCombatCount; ++i)
-                        row.cells.push_back(Numbered(kCombatNames[i], combat->value[i]));
+                        AddNumbered(row, kCombatNames[i], combat->value[i]);
                     stats.rows.push_back(std::move(row));
                 }
-                PopupRow row = Grid(kStatColumns, kStatCount);
+                PopupRow row = Grid(2 * kStatColumns, 2 * kStatCount);
                 for (int i = 0; i < kStatCount; ++i)
-                    row.cells.push_back(Numbered(kStatNames[i], numbers.target->stats.value[i]));
+                    AddNumbered(row, kStatNames[i], numbers.target->stats.value[i]);
                 stats.rows.push_back(std::move(row));
                 popup.sections.push_back(std::move(stats));
             }
@@ -1172,13 +1196,12 @@ namespace headsup
         // Each widget's own content, less its second line or icons where they are switched off.
         WidgetContent w        = ContentOf(widget, state, settings);
         const WidgetOptions& o = settings.Widget(widget);
-        // The Vana'diel Clock's second line holds its date too: its own content leaves off the moon alone.
-        if (!o.secondLine && widget.kind != BarWidget::VanaTime)
+        if (!o.secondLine && HasSecondLine(widget.kind))
         {
             w.subtitle.clear();
             w.subtitleIcons.clear();
         }
-        if (!o.icons)
+        if (!o.icons && HasIcons(widget.kind))
         {
             w.icons.clear();
             w.titleIcons.clear();
@@ -1241,11 +1264,14 @@ namespace headsup
             break;
         }
         case BarWidget::Target:
-            if (state.target == nullptr)
+            if ((o.targetShows & TargetShowBit(TargetShowOf(state.target))) == 0)
+                w.shown = false;
+            else if (state.target == nullptr)
                 w.title = ListOf(Text("No target", Tone::Dim));
-            else if (state.target->kind != EntityKind::Mob)
+            else if (TargetShowOf(state.target) != TargetShow::Mobs)
             {
-                w.title = ListOf(Text(state.target->name));
+                w.title = ListOf(Colored(state.target->name,
+                    ToArgb(settings.palette.type[static_cast<int>(TypeOf(state.target->state))])));
                 if (state.target->kind == EntityKind::Player)
                 {
                     // What is known of their jobs, the newest first; a check alone has a popup to show.
@@ -1264,14 +1290,15 @@ namespace headsup
             }
             else
             {
-                if (o.targetDetails)
-                    w.titleIcons = MobIcons(*state.target);
-                else if (const std::optional<Icon> icon = MobIcon(*state.target))
-                    w.icons.push_back(*icon);
+                // Its aggression before its name, the rest of its icons after it, as Show Icons picks them.
+                const IconSet aggro = IconsFor(state.target->mob, o.targetIcons & DetectionBit(DetectionIcon::Aggro));
+                const IconSet rest  = IconsFor(state.target->mob, o.targetIcons & kAllDetection & ~DetectionBit(DetectionIcon::Aggro));
+                w.icons.assign(aggro.icons, aggro.icons + aggro.count);
+                w.titleIcons.assign(rest.icons, rest.icons + rest.count);
                 w.title = ListOf(Colored(state.target->name, NameColor(*state.target, settings)));
-                if (HasLevel(*state.target))
+                if (o.targetMobLevel && HasLevel(*state.target))
                     w.subtitle = ListOf(Colored(state.target->level.text, ShadeColor(*state.target, settings)));
-                if (o.targetDetails && IsMob(state.target))
+                if ((o.targetIcons & kTargetWeakIcons) != 0 && IsMob(state.target))
                 {
                     // Weaknesses by SDT or rank, as the badges find them by default.
                     const InfoIconSet found = InfoIconsFor(&ResistancesOf(*state.target->mob), BadgeRules{});

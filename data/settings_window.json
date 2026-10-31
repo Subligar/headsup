@@ -310,15 +310,16 @@
                 {"key": "day-of-week", "name": "Show Day of Week", "tip": "Vana'diel's day before the time, in its element's color. Default is on."},
                 {"key": "date", "name": "Show Date", "tip": "Vana'diel's date on the second line, before the moon. Default is off."},
                 {"key": "icons", "name": "Icons"},
-                {"key": "background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it. Off, it shows only what the theme gives it. Default is off."},
+                {"key": "background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it. Off, it shows only what the theme gives it. Default is off, and on for the Target."},
                 {"key": "spacing", "name": "Spacing", "tip": "More room between this widget and the widgets beside it. Default is the top panel's Widget Spacing."},
                 {"key": "padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default is the top panel's Widget Padding."},
                 {"key": "title-font", "name": "Title Font", "tip": "This widget's title. Default is the top panel's Title Font."},
                 {"key": "text-font", "name": "Text Font", "tip": "This widget's second line and numbers. Default is the top panel's Text Font."},
                 {"key": "text-size", "name": "Text Size", "tip": "This widget's title size, with its second line to match. Default is the top panel's Text Size."},
-                {"key": "details", "name": "Details", "tip": "Aggro icons after the name, weaknesses after the level."},
-                {"key": "jobs", "name": "Jobs", "tip": "A player's jobs and levels under their name, once HeadsUp knows them: from your party, a check, or Look Up Players."},
-                {"key": "border", "name": "Border", "tip": "The frame around your target. Off, it has the same edge as every other widget."},
+                {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
+                {"key": "show-icons", "name": "Show Icons", "tip": "A mob's icons: its aggression before its name, the rest after it, and its weaknesses after its level. Default is its aggression alone."},
+                {"key": "show-mob-level", "name": "Show Mob Level", "tip": "A mob's level and how tough it is, under its name. Default is on."},
+                {"key": "jobs", "name": "Show Player Info", "tip": "A player's jobs and levels under their name, once HeadsUp knows them: from your party, a check, or Look Up Players. Default is on."},
                 {"key": "currency", "name": "Currency"},
                 {"key": "nations", "name": "Nations", "tip": "Whose regions the widget counts and its popup lists."},
                 {"key": "shows", "name": "Shows", "tip": "What the widget tells on the panel, with a countdown. Add a copy to show another."},
@@ -1110,6 +1111,31 @@
         {"name": "You", "tip": "Your job, experience, gil, bags, party and target."},
         {"name": "System", "tip": "Your frame rate, connection, memory and the game's help line."}
       ]
+    },
+    {
+      "key": "target-shows",
+      "options": [
+        {"name": "NPCs & Objects", "tip": "Shops, quest givers, doors and the like."},
+        {"name": "Players", "tip": "Other players, and you."},
+        {"name": "Mobs", "tip": "Monsters."},
+        {"name": "Pets", "tip": "Pets, avatars and the like, yours or others'."},
+        {"name": "No Target", "tip": "While nothing is targeted, it says No target."}
+      ]
+    },
+    {
+      "key": "target-icons",
+      "options": [
+        {"name": "Aggression", "tip": "Whether it is aggressive or passive, before its name."},
+        {"name": "Links", "tip": "It joins in when you fight one of its kind."},
+        {"name": "Sight", "tip": "It sees you."},
+        {"name": "True Sight", "tip": "It sees through invisible and sneak."},
+        {"name": "Sound", "tip": "It hears you."},
+        {"name": "Scent", "tip": "It smells you."},
+        {"name": "Use of Spells", "tip": "Casting near it draws it."},
+        {"name": "Use of Abilities", "tip": "Using an ability near it draws it."},
+        {"name": "Low Player HP", "tip": "Low HP near it draws it."},
+        {"name": "Weaknesses", "tip": "What it is weak to, after its level."}
+      ]
     }
   ],
   "words": [
@@ -1123,6 +1149,9 @@
     {"key": "always", "name": "Always", "tip": "This line is always visible as long as the nameplate as a whole is visible."},
     {"key": "never", "name": "Never"},
     {"key": "conditions", "name": "{count} Conditions"},
+    {"key": "checks-all", "name": "All"},
+    {"key": "checks-none", "name": "None"},
+    {"key": "checks-picked", "name": "{count} Picked"},
     {"key": "local", "name": "Local"},
     {"key": "themes-font", "name": "Theme's"},
     {"key": "default-font", "name": "Default"},

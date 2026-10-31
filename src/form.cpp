@@ -626,6 +626,50 @@ namespace headsup
         EndRow();
     }
 
+    void Form::BitsDropdown(const char* label, uint32_t& bits, std::span<const LayoutOption> options, const char* tip)
+    {
+        Row(label, tip);
+        const std::string control = Id(label);
+        const std::string start   = control + kOptionIdInfix;
+        const auto count          = static_cast<int>(options.size());
+        // Before the control is written, so its summary is what the click just made it.
+        if (m_State.popup == control && !m_Off)
+            for (const FormEvent& event : m_Events)
+            {
+                if (event.type != kClickEvent || event.id.compare(0, start.size(), start) != 0) continue;
+                const int option = std::atoi(event.id.c_str() + start.size());
+                if (option < 0 || option >= count) continue;
+                bits ^= 1u << option;
+                changed = true;
+            }
+        int picked        = 0;
+        const char* alone = nullptr;
+        for (int option = 0; option < count; ++option)
+            if ((bits & (1u << option)) != 0)
+            {
+                ++picked;
+                alone = options[static_cast<size_t>(option)].name;
+            }
+        const std::string summary = picked == count ? layout->WordOf(WindowWord::ChecksAll).name
+                                    : picked == 0   ? layout->WordOf(WindowWord::ChecksNone).name
+                                    : picked == 1   ? alone
+                                                    : Filled(layout->WordOf(WindowWord::ChecksPicked).name, kCountMark,
+                                                          std::to_string(picked));
+        if (ListControl(control, summary, kControlWidth))
+        {
+            std::string rml = "<div class=\"list\">";
+            for (int option = 0; option < count; ++option)
+            {
+                const std::string id = start + std::to_string(option);
+                rml += "<div class=\"opt chk\" id=\"" + id + "\"" + TipAttribute(options[static_cast<size_t>(option)].tip) +
+                       "><div class=\"dot\"></div>" + EscapedRml(options[static_cast<size_t>(option)].name) + "</div>";
+                Set(id, FormValueKind::Class, "on", {}, (bits & (1u << option)) != 0);
+            }
+            popup = FormPopup{control, rml + "</div>"};
+        }
+        EndRow();
+    }
+
     void Form::ChecksDropdown(const char* label, LineShow& show, std::span<const ShowCondition> conditions,
         const char* tip)
     {

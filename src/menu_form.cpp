@@ -458,7 +458,7 @@ namespace headsup
                     break;
                 }
                 case WidgetTabsRow::SecondLine:
-                    if (HasSecondLine(kind) && kind != BarWidget::VanaTime) form.Switch(label.c_str(), o.secondLine, row.tip);
+                    if (HasSecondLine(kind)) form.Switch(label.c_str(), o.secondLine, row.tip);
                     break;
                 case WidgetTabsRow::MoonPhase:
                     if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.secondLine, row.tip);
@@ -473,7 +473,7 @@ namespace headsup
                     if (HasIcons(kind)) form.Switch(label.c_str(), o.icons, row.tip);
                     break;
                 case WidgetTabsRow::Background:
-                    if (kind != BarWidget::Target) form.Switch(label.c_str(), o.background, row.tip);
+                    form.Switch(label.c_str(), o.background, row.tip);
                     break;
                 case WidgetTabsRow::Spacing:
                     form.SliderInt(label.c_str(), o.spacing, kPanelSpacing, kMaxWidgetSpacing,
@@ -493,14 +493,23 @@ namespace headsup
                     form.SliderInt(label.c_str(), o.textSize, kPanelTextSize, kMaxBarTextSize,
                         o.textSize == kPanelTextSize ? Word(c, WindowWord::DefaultFont) : "%d px", row.tip);
                     break;
-                case WidgetTabsRow::Details:
-                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetDetails, row.tip);
+                case WidgetTabsRow::Visibility:
+                    if (kind == BarWidget::Target)
+                    {
+                        uint32_t shows = o.targetShows;
+                        form.BitsDropdown(label.c_str(), shows, c.layout.OptionsOf(WindowList::TargetShows), row.tip);
+                        o.targetShows = static_cast<uint8_t>(shows);
+                    }
+                    break;
+                case WidgetTabsRow::ShowIcons:
+                    if (kind == BarWidget::Target)
+                        form.BitsDropdown(label.c_str(), o.targetIcons, c.layout.OptionsOf(WindowList::TargetIcons), row.tip);
+                    break;
+                case WidgetTabsRow::ShowMobLevel:
+                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetMobLevel, row.tip);
                     break;
                 case WidgetTabsRow::Jobs:
                     if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetJobs, row.tip);
-                    break;
-                case WidgetTabsRow::Border:
-                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetBorder, row.tip);
                     break;
                 case WidgetTabsRow::Currency:
                     if (kind == BarWidget::Gil)

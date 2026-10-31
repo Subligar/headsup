@@ -267,7 +267,6 @@ barTheme=umbraDark
 barSeparators=none
 barCurrency=allied_notes
 serverClockZone=usPacific
-barTargetDetails=true
 menuFont=Tahoma
 menuScale=125.0000
 barHeight=48.0000
@@ -385,7 +384,6 @@ helpBarY=8.0000
         s.barSeparators = BarSeparators::None;
         s.Widget(BarWidget::Gil).currency   = *CurrencyOfKey("allied_notes");
         s.Widget(BarWidget::EarthTime).clockServerTime = true; // the file's Server time widget was on
-        s.Widget(BarWidget::Target).targetDetails = true;
         s.menuFont         = "Tahoma";
         s.menuFontSize     = 21; // 125 percent of Ashita's 18 pixels, in Tahoma, which was drawn at 0.95 of its size
         s.moveGameHelp     = true;
@@ -2901,15 +2899,31 @@ TEST(a_widgets_own_fonts_and_text_size_are_kept_and_default_to_the_panels)
     CHECK_EQ(LoadSettings(store).Widget(BarWidget::Zone).textSize, kPanelTextSize);
 }
 
-TEST(the_target_widgets_border_is_on_by_default_and_kept_off_once_turned_off)
+TEST(the_target_widgets_background_is_on_by_default_and_kept_off_once_turned_off)
 {
     Settings s;
-    CHECK(s.Widget(BarWidget::Target).targetBorder);
-    s.Widget(BarWidget::Target).targetBorder = false;
+    CHECK(s.Widget(BarWidget::Target).background && !s.Widget(BarWidget::Gil).background);
+    s.Widget(BarWidget::Target).background = false;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(store.values["barTargetBorder"], "false");
-    CHECK(!LoadSettings(store).Widget(BarWidget::Target).targetBorder);
+    CHECK(!LoadSettings(store).Widget(BarWidget::Target).background);
+}
+
+TEST(the_target_widgets_icons_visibility_and_mob_level_are_kept_and_held_to_their_range)
+{
+    Settings s;
+    WidgetOptions& target = s.Widget(BarWidget::Target);
+    target.targetIcons    = kTargetWeakIcons | DetectionBit(DetectionIcon::Sound);
+    target.targetShows    = TargetShowBit(TargetShow::Mobs);
+    target.targetMobLevel = false;
+    MapStore store;
+    SaveSettings(s, store);
+    const WidgetOptions read = LoadSettings(store).Widget(BarWidget::Target);
+    CHECK(read.targetIcons == target.targetIcons && read.targetShows == target.targetShows && !read.targetMobLevel);
+    store.values["barTargetShowIcons"] = "99999";
+    store.values["barTargetShows"]     = "-3";
+    const WidgetOptions held = LoadSettings(store).Widget(BarWidget::Target);
+    CHECK(held.targetIcons == kAllTargetIcons && held.targetShows == 0);
 }
 
 TEST(the_exp_text_is_kept_apart_for_the_job_and_exp_widgets)

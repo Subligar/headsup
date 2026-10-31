@@ -120,23 +120,83 @@ TEST(the_target_widget_shows_name_level_and_con_in_their_colors)
     CHECK(w.subtitle == (std::vector<Span>{{"Lv 17-20 EP-EM", Tone::Own, 0xFF445566u}}));
 }
 
-TEST(target_details_put_a_mobs_icons_after_its_name_and_its_weaknesses_after_its_level)
+TEST(show_icons_picks_a_mobs_icons_its_aggression_before_its_name_the_rest_after_and_weaknesses_after_its_level)
 {
     Settings settings;
-    settings.Widget(BarWidget::Target).targetDetails = true;
-    const ActorInfo goblin    = Goblin();
+    const ActorInfo goblin = Goblin();
     BarState state;
-    state.target          = &goblin;
-    const WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
-    CHECK(w.icons.empty()); // none before the name: they follow it
-    CHECK(w.titleIcons.size() > 1 && w.titleIcons == EveryIcon(goblin));
+    state.target     = &goblin;
+    WidgetOptions& o = settings.Widget(BarWidget::Target);
+    WidgetContent w  = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.empty() && w.subtitleIcons.empty()); // as new
+    o.targetIcons = kAllTargetIcons;
+    w             = BarWidgetContent(BarWidget::Target, state, settings);
+    std::vector<Icon> rest = EveryIcon(goblin);
+    rest.erase(rest.begin()); // the aggression icon comes first
+    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.size() > 1 && w.titleIcons == rest);
     std::vector<Icon> weak;
     const InfoIconSet all = InfoIconsFor(&ResistancesOf(*goblin.mob), BadgeRules{});
     for (int i = 0; i < all.count; ++i)
         if (all.icons[i].badge == BadgeKind::Weak || all.icons[i].badge == BadgeKind::WeakRank)
             weak.push_back(all.icons[i].icon);
     CHECK(!weak.empty() && w.subtitleIcons == weak);
-    CHECK(Joined(w.subtitle) == goblin.level.text);
+    o.targetIcons = DetectionBit(DetectionIcon::Link);
+    w             = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(w.icons.empty() && w.titleIcons == std::vector<Icon>{Icon::Link} && w.subtitleIcons.empty());
+}
+
+TEST(show_mob_level_off_leaves_out_a_mobs_level_and_con)
+{
+    Settings settings;
+    const ActorInfo goblin = Goblin();
+    BarState state;
+    state.target = &goblin;
+    settings.Widget(BarWidget::Target).targetMobLevel = false;
+    const WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(w.shown && w.subtitle.empty() && Joined(w.title) == "Goblin Bounty Hunter");
+}
+
+TEST(visibility_hides_the_target_widget_for_each_kind_of_target_left_out)
+{
+    Settings settings;
+    const ActorInfo goblin = Goblin();
+    ActorInfo player, npc, pet;
+    player.kind = player.state.kind = EntityKind::Player;
+    npc.kind = npc.state.kind = EntityKind::Npc;
+    pet.kind = pet.state.kind = EntityKind::Npc;
+    pet.state.pet             = true;
+    const std::pair<TargetShow, const ActorInfo*> kinds[] = {{TargetShow::NpcsObjects, &npc}, {TargetShow::Players, &player},
+        {TargetShow::Mobs, &goblin}, {TargetShow::Pets, &pet}, {TargetShow::NoTarget, nullptr}};
+    BarState state;
+    for (const auto& [left, _] : kinds)
+    {
+        settings.Widget(BarWidget::Target).targetShows = static_cast<uint8_t>(kAllTargetShows & ~TargetShowBit(left));
+        for (const auto& [kind, target] : kinds)
+        {
+            state.target = target;
+            CHECK_EQ(BarWidgetContent(BarWidget::Target, state, settings).shown, kind != left);
+        }
+    }
+}
+
+TEST(a_player_npc_or_pets_name_takes_its_entity_type_color)
+{
+    Settings settings;
+    settings.palette.type[static_cast<int>(TargetType::Player)] = ColorFromRgb(0x112233);
+    settings.palette.type[static_cast<int>(TargetType::Npc)]    = ColorFromRgb(0x445566);
+    settings.palette.type[static_cast<int>(TargetType::Pet)]    = ColorFromRgb(0x778899);
+    ActorInfo player, npc, pet;
+    player.kind = player.state.kind = EntityKind::Player;
+    npc.kind = npc.state.kind = EntityKind::Npc;
+    pet.kind = pet.state.kind = EntityKind::Npc;
+    pet.state.pet             = true;
+    BarState state;
+    for (const auto& [target, argb] : {std::pair{&player, 0xFF112233u}, {&npc, 0xFF445566u}, {&pet, 0xFF778899u}})
+    {
+        std::snprintf(target->name, sizeof(target->name), "%s", "Someone");
+        state.target = target;
+        CHECK(BarWidgetContent(BarWidget::Target, state, settings).title == (std::vector<Span>{{"Someone", Tone::Own, argb}}));
+    }
 }
 
 TEST(no_target_reads_no_target_and_a_player_gets_only_a_name)
@@ -178,9 +238,9 @@ TEST(a_dead_mob_with_data_keeps_its_aggro_icon_and_popup_but_has_no_level)
     CHECK(w.hasPopup);
     const PopupContent popup = BarPopupContent(BarWidget::Target, state, settings);
     CHECK(popup.icon == Icon::AggroNQ);
+    CHECK(popup.title == (std::vector<Span>{{"Goblin Bounty Hunter", Tone::Own, nameColor}, {" ID 220", Tone::Dim}}));
     const PopupRow& top = popup.sections[0].rows[0];
-    CHECK(top.cells.size() == 2);
-    CHECK(Joined(top.cells[0].text) == "WAR/WAR" && Joined(top.cells[1].text) == "ID 220");
+    CHECK(top.cells.size() == 1 && Joined(top.cells[0].text) == "WAR"); // WAR/WAR as its job alone
     CHECK(Section(popup, "Spawn") != nullptr);
 }
 
@@ -194,7 +254,7 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     std::vector<std::string> headings;
     for (const PopupSection& s : popup.sections)
         headings.push_back(s.heading);
-    CHECK(headings == (std::vector<std::string>{"", "Damage taken", "Elements", "Statuses", "Immune", "Stats at Lv 20",
+    CHECK(headings == (std::vector<std::string>{"", "Damage taken", "Elements", "Statuses", "Immune", "Stats at Level 20",
                                                 "TP moves", "Spawn"}));
     const PopupRow& elements = Section(popup, "Elements")->rows[0];
     CHECK(elements.kind == RowKind::Grid && elements.columns == 4 && elements.cells.size() == 8);
@@ -205,13 +265,16 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     CHECK(elements.cells[7].text == (std::vector<Span>{{"0%", Tone::Neutral}}));
     CHECK(elements.cells[0].text == (std::vector<Span>{{"+3%", Tone::Weak}}));
     // Its combat stats at 20 from data/phoenix_mob_info.tsv, then STR to CHR and its magic evasion.
-    const PopupRow& combat = Section(popup, "Stats at Lv 20")->rows[0];
-    CHECK(combat.kind == RowKind::Grid && combat.cells.size() == 6);
-    CHECK(combat.cells[0].text == (std::vector<Span>{{"HP", Tone::Dim}, {" 414", Tone::Normal}}));
-    CHECK(combat.cells[3].text == (std::vector<Span>{{"DEF", Tone::Dim}, {" 85", Tone::Normal}}));
-    const PopupRow& stats = Section(popup, "Stats at Lv 20")->rows[1];
-    CHECK(stats.kind == RowKind::Grid && stats.cells.size() == 8);
-    CHECK(stats.cells[7].text == (std::vector<Span>{{"MEva", Tone::Dim}, {" 58", Tone::Normal}}));
+    // Each stat's name against the right of its column and its value against the left of the next.
+    const PopupRow& combat = Section(popup, "Stats at Level 20")->rows[0];
+    CHECK(combat.kind == RowKind::Grid && combat.columns == 8 && combat.cells.size() == 12);
+    const std::vector<Span> hp{{"HP", Tone::Dim}}, value{{"414", Tone::Normal}};
+    CHECK(combat.cells[0].text == hp && combat.cells[0].align == Align::Right);
+    CHECK(combat.cells[1].text == value && combat.cells[1].align == Align::Left);
+    CHECK(Joined(combat.cells[6].text) == "DEF" && Joined(combat.cells[7].text) == "85");
+    const PopupRow& stats = Section(popup, "Stats at Level 20")->rows[1];
+    CHECK(stats.kind == RowKind::Grid && stats.cells.size() == 16);
+    CHECK(Joined(stats.cells[14].text) == "MEva" && Joined(stats.cells[15].text) == "58");
     const PopupRow& moves = Section(popup, "TP moves")->rows[0];
     CHECK(moves.kind == RowKind::Grid && moves.columns == 3 && moves.cells.size() == 3);
     CHECK(Joined(moves.cells[0].text) == "Goblin Rush" && Joined(moves.cells[2].text) == "Bomb Toss Suicide");
@@ -219,8 +282,12 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     CHECK(statuses.columns == 5 && statuses.cells.size() == 10 && statuses.cells[0].icon == Icon::Paralyze);
     CHECK(Section(popup, "Immune")->rows[0].cells[0].text == (std::vector<Span>{{"None", Tone::Neutral}}));
     CHECK(Joined(Section(popup, "Spawn")->rows[0].cells[0].text) == "Respawn 5:00");
-    CHECK(Joined(popup.sections[0].rows[0].cells[1].text) == "WAR/WAR");
-    CHECK(Joined(popup.sections[0].rows[0].cells[2].text) == "ID 220"); // 17199648 is 0x1067220
+    // Its level, job and con said in full, in the con's color; its ID after its name (17199648 is 0x1067220).
+    const uint32_t shade = ToArgb(settings.palette.toughness[static_cast<int>(goblin.level.shade)]);
+    CHECK(popup.sections[0].rows[0].cells[0].text == (std::vector<Span>{{"Level 17-20", Tone::Own, shade}}));
+    CHECK(Joined(popup.sections[0].rows[0].cells[1].text) == "WAR");
+    CHECK(popup.sections[0].rows[0].cells[2].text == (std::vector<Span>{{"(Easy Prey to Even Match)", Tone::Own, shade}}));
+    CHECK(Joined(popup.title) == "Goblin Bounty Hunter ID 220");
     settings.rankDisplay = RankDisplay::Rank;
     CHECK(Section(BarPopupContent(BarWidget::Target, state, settings), "Elements")->rows[0].cells[6].text ==
           (std::vector<Span>{{"-3", Tone::Weak}}));
@@ -268,23 +335,26 @@ TEST(the_tags_say_how_a_mob_aggros_links_and_detects)
     BarState state;
     state.target              = &target;
     const PopupContent goblin = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(TagsOf(goblin) == (std::vector<std::string>{"Aggressive", "Links", "Sight 15y"}));
+    // Its aggression is the icon before its name, so the tags leave it out; each sense has its own icon.
+    CHECK(TagsOf(goblin) == (std::vector<std::string>{"Links", "Sight 15y"}));
+    const std::vector<PopupCell>& cells = goblin.sections[0].rows[1].cells;
+    CHECK(cells[0].icon == std::optional<Icon>(Icon::Link) && cells[1].icon == std::optional<Icon>(Icon::Sight));
     target                        = MobTarget(16797799);
     const PopupContent brontotaur = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(TagsOf(brontotaur) == (std::vector<std::string>{"Aggressive", "Links", "True sight 15y", "Counter"}));
+    CHECK(TagsOf(brontotaur) == (std::vector<std::string>{"Links", "True sight 15y", "Counter"}));
     // Qufim Island's Clipper, a crab: it hears from 8 yalms and a beastmaster can charm it.
     target = MobTarget(17293331);
-    CHECK(TagsOf(BarPopupContent(BarWidget::Target, state, settings)) == (std::vector<std::string>{"Passive", "Sound 8y", "Charmable"}));
+    CHECK(TagsOf(BarPopupContent(BarWidget::Target, state, settings)) == (std::vector<std::string>{"Sound 8y", "Charmable"}));
 }
 
 TEST(a_tags_words_take_the_tag_tone_and_nothing_else_in_the_popup_does)
 {
-    // The words sit in their frames, drawn in the tag's text color; the ID beside them and the rows after keep theirs.
-    // data/phoenix_mobs.tsv: the Brontotaur, 16797799, has three tags (Aggressive, Links, True sight) and counters
-    // (a fourth, data/phoenix_mob_info.tsv); Bloodtear Baldurf, 17195318, flags 11 and detects 257, four (Aggressive,
-    // Sight, Scent, NM).
+    // The words sit in their frames, drawn in the tag's text color; the rows after keep theirs.
+    // data/phoenix_mobs.tsv: the Brontotaur, 16797799, has two tags (Links, True sight) and counters (a third,
+    // data/phoenix_mob_info.tsv); Bloodtear Baldurf, 17195318, flags 11 and detects 257, three (Sight, Scent, NM).
+    // Neither's aggression is a tag: it is the icon before the name.
     Settings settings;
-    for (const auto& [id, tags] : {std::pair{16797799u, size_t{4}}, {17195318u, size_t{4}}})
+    for (const auto& [id, tags] : {std::pair{16797799u, size_t{3}}, {17195318u, size_t{3}}})
     {
         ActorInfo target = MobTarget(id);
         BarState state;
@@ -406,7 +476,7 @@ TEST(the_spawn_section_says_when_there_is_no_timer_no_placeholder_or_one_is_due)
     const ActorInfo goblin = Goblin(); // respawn 300, no placeholder of an NM, no placeholders of its own
     state.target           = &goblin;
     const PopupContent goblinPopup = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Lines(*Section(goblinPopup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Not a placeholder"}));
+    CHECK(Lines(*Section(goblinPopup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Not an NM placeholder"}));
     const ActorInfo snipper = MobTarget(16781313); // respawn 0
     state.target            = &snipper;
     const PopupContent snipperPopup = BarPopupContent(BarWidget::Target, state, settings);
@@ -1464,13 +1534,21 @@ TEST(each_widget_can_drop_its_second_line_or_its_icons)
     Settings settings;
     const ActorInfo goblin = Goblin();
     BarState state;
-    state.target = &goblin;
-    state.gil    = 100;
+    state.zone    = 103;
+    state.unixMs  = kVanaEpochUnixMs;
+    state.weather = Weather::DustStorm;
+    state.target  = &goblin;
+    state.gil     = 100;
+    settings.Widget(BarWidget::Weather).secondLine = false;
+    WidgetContent w = BarWidgetContent(BarWidget::Weather, state, settings);
+    CHECK(w.subtitle.empty() && !w.icons.empty() && Joined(w.title) == "Dust Storm");
+    settings.Widget(BarWidget::Weather).icons = false;
+    CHECK(BarWidgetContent(BarWidget::Weather, state, settings).icons.empty());
+    // The Target's own settings say what its lines and icons show: these two leave it alone.
     settings.Widget(BarWidget::Target).secondLine = false;
-    WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
-    CHECK(w.subtitle.empty() && !w.icons.empty() && Joined(w.title) == "Goblin Bounty Hunter");
-    settings.Widget(BarWidget::Target).icons = false;
-    CHECK(BarWidgetContent(BarWidget::Target, state, settings).icons.empty());
+    settings.Widget(BarWidget::Target).icons      = false;
+    w = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(!w.subtitle.empty() && !w.icons.empty());
     settings.Widget(BarWidget::Gil).icons = false;
     w = BarWidgetContent(BarWidget::Gil, state, settings);
     CHECK(!w.coin && Joined(w.title) == "100");

@@ -32,6 +32,14 @@ namespace headsup
         return Con::TooWeak;
     }
 
+    const char* ConName(Con con)
+    {
+        static const char* const kNames[kConCount] = {"Too Weak", "Incredibly Easy Prey", "Easy Prey", "Decent Challenge",
+            "Even Match", "Tough", "Very Tough", "Incredibly Tough"};
+        const auto i = static_cast<unsigned>(con);
+        return i < kConCount ? kNames[i] : "";
+    }
+
     const char* Abbrev(Con con)
     {
         static const char* const kAbbrev[kConCount] = {"TW", "IEP", "EP", "DC", "EM", "T", "VT", "IT"};

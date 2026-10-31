@@ -414,16 +414,13 @@ namespace headsup
             css += ".ornate .widget.target{border-width:" + Px(kBoxBorder) + ";margin:0px;padding:0px " +
                    Px(m.padding - kBoxBorder) + ";" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             css += ".ornate .widget.target.lit{" + BoxRules(boxOf(BarWidget::Target, true)) + "}";
-            css += std::string(".ornate .widget.target.") + kBorderlessClass + ",.ornate .widget.target." + kBorderlessClass +
-                   ".lit{border-color:transparent;}";
         }
         else
         {
             css += ".pills .widget{" + BoxRules(boxOf(BarWidget::Weather, false)) + "}";
             css += ".pills .widget.flat{" + BoxRules(boxOf(BarWidget::Zone, false)) + "}";
-            css += ".pills .widget.target{" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             // Before the lit rule, which then gives it the accent as every lit pill has.
-            css += std::string(".pills .widget.target.") + kBorderlessClass + "{border-color:" + RcssColor(p.pillBorder) + ";}";
+            css += ".pills .widget.target{" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             css += ".pills .widget.lit{" + BoxRules(boxOf(BarWidget::Weather, true)) + "}";
         }
         // A widget eases into its lit look (above) and its title glows there; the target's frame breathes from the
@@ -433,7 +430,6 @@ namespace headsup
         css += "@keyframes breathe{from{border-color:" + RcssColor(Faded(p.accent, kBreatheLow)) + ";}to{border-color:" +
                RcssColor(Faded(p.accentEnd, kBreatheHigh)) + ";}}";
         css += std::string(".widget.") + kLitClass + "{animation:none;}";
-        css += std::string(".widget.target.") + kBorderlessClass + "{animation:none;}";
         css += std::string(".widget.") + kLitClass + " .title{font-effect:glow(0px 3px 0px 0px " +
                RcssColor(Faded(p.accent, kLitGlow)) + ");}";
 
@@ -493,7 +489,7 @@ namespace headsup
             if (!OnTheBar(widget.kind) || (widget.copy > 0 && !HasCopies(widget.kind))) continue;
             // Zone and Earth time show no pill until lit.
             const bool flat = !look.ornate && !boxOf(widget.kind, false);
-            rml += std::string("<div class=\"widget hidden") + (widget.kind == BarWidget::Target ? " target" : "") +
+            rml += std::string("<div class=\"widget hidden") + (widget.kind == BarWidget::Target ? std::string(" ") + kTargetClass : "") +
                    (flat ? std::string(" ") + kFlatClass : "") + "\" id=\"" + WidgetId(widget) + "\"></div>";
         }
         rml += std::string("<div id=\"") + kHelpId + "\"></div>";

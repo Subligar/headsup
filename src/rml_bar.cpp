@@ -340,7 +340,7 @@ namespace headsup
             shown.element->SetClass(kBackedClass, BackedPill(look.settings, widgets.panel, head));
             shown.element->SetClass(kLitClass,
                 widgets.hasPopup[SlotOf(head)] && (input.Hovered() == head || input.Open() == head));
-            shown.element->SetClass(kBorderlessClass, widget.kind == BarWidget::Target && !look.settings.widgets[w].targetBorder);
+            if (widget.kind == BarWidget::Target) shown.element->SetClass(kTargetClass, look.settings.widgets[w].background);
             const WidgetContent& content = widgets.contents[w];
             if (shown.marked && shown.drawn == content) continue;
             shown.drawn  = content;

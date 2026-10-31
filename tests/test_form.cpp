@@ -780,3 +780,27 @@ TEST(a_chip_dragged_from_one_line_to_another_leaves_the_first)
     CHECK_EQ(card.bottom, "Lv ${level|bazaar}");
 }
 
+
+TEST(a_dropdown_of_checks_toggles_each_bit_and_sums_up_what_is_picked)
+{
+    const LayoutOption options[] = {{"Mobs", "The mobs.", nullptr}, {"Pets", "", nullptr}, {"Players", "", nullptr}};
+    FormState state;
+    uint32_t bits   = 0b111;
+    const auto pass = [&](const std::vector<FormEvent>& events) {
+        Form form(events, state);
+        form.pageKey = "p";
+        form.BeginCard("C");
+        form.BitsDropdown("Shows", bits, options, nullptr);
+        form.EndCard();
+        return form;
+    };
+    CHECK_EQ(TextOf(pass({}), "p-c-shows-val"), "All");
+    const Form open = pass({{"p-c-shows", kClickEvent, ""}});
+    CHECK(open.popup && Has(open.popup->rml, "Mobs") && Has(open.popup->rml, "tip=\"The mobs.\""));
+    const Form one = pass({{"p-c-shows-o-1", kClickEvent, ""}});
+    CHECK(one.changed && bits == 0b101 && TextOf(one, "p-c-shows-val") == "2 Picked");
+    pass({{"p-c-shows-o-0", kClickEvent, ""}});
+    CHECK(bits == 0b100 && TextOf(pass({}), "p-c-shows-val") == "Players");
+    pass({{"p-c-shows-o-2", kClickEvent, ""}});
+    CHECK(bits == 0 && TextOf(pass({}), "p-c-shows-val") == "None");
+}

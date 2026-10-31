@@ -253,6 +253,9 @@ namespace headsup
         void ColorPickRow(const char* label, ColorPick& pick, const std::vector<ColorSource>& sources, const char* tip);
         // When a line shows, as a dropdown of checks: Always, under which every condition reads checked, then each
         // condition.
+        // A dropdown of checks, one bit of bits each in the options' order. Closed, it says All, None, the one picked
+        // or how many are.
+        void BitsDropdown(const char* label, uint32_t& bits, std::span<const LayoutOption> options, const char* tip);
         void ChecksDropdown(const char* label, LineShow& show, std::span<const ShowCondition> conditions,
             const char* tip);
         // An X and a Y to type, side by side.

@@ -42,6 +42,14 @@ namespace headsup
 
     constexpr int kMaxWidgetSpacing = 40; // pixels
     constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
+    // The Target widget's Visibility: the targets it shows for.
+    enum class TargetShow : uint8_t { NpcsObjects, Players, Mobs, Pets, NoTarget };
+    constexpr int kTargetShowCount = 5;
+    constexpr uint8_t TargetShowBit(TargetShow show) { return static_cast<uint8_t>(1u << static_cast<int>(show)); }
+    constexpr uint8_t kAllTargetShows = (1u << kTargetShowCount) - 1;
+    // Its Show Icons: the detection icons, then a mob's weaknesses after its level.
+    constexpr uint32_t kTargetWeakIcons = 1u << kDetectionIconCount;
+    constexpr uint32_t kAllTargetIcons  = kAllDetection | kTargetWeakIcons;
     // A widget's spacing and padding at their sliders' leftmost: the panel's.
     constexpr int kPanelSpacing = 0, kPanelPadding = kThemePadding;
     constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
@@ -76,8 +84,9 @@ namespace headsup
         bool jobNames        = true;
         bool latency         = false; // Connection: its ping after its rates
         bool netMeter        = true;  // and the game's own meter after them
-        bool targetDetails   = false; // Target: a mob's icons after its name and its weaknesses after its level
-        bool targetBorder    = true;  // and its frame, or its pill's own edge
+        uint32_t targetIcons = DetectionBit(DetectionIcon::Aggro); // Target: a mob's icons, by DetectionBit and kTargetWeakIcons
+        uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
+        bool targetMobLevel  = true;  // a mob's level and con under its name
         bool targetJobs      = true;  // and a player's jobs and levels, as far as they are known
         WorldLine worldLine  = WorldLine::Departure; // World Info: what it tells on the panel
         int worldRoute       = 0;                    // its departure, by TravelRoutes
