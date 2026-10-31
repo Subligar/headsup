@@ -512,7 +512,8 @@ TEST(a_swatch_opens_the_color_picker_and_closes_it)
 TEST(a_color_looked_at_in_its_picker_is_the_color_it_was)
 {
     Window window;
-    const std::string swatch = "entities-colors-claim-status-claimed-yours-claim-colors";
+    window.Click("nav-colors");
+    const std::string swatch = "colors-colors-claim-status-claimed-yours-claim-colors";
     const Color before       = window.settings.palette.claim[static_cast<int>(ClaimState::Yours)];
     CHECK(!window.Click(swatch)); // opening it is no change
     CHECK(window.Shows(swatch + "-p-hex"));
@@ -526,7 +527,8 @@ TEST(a_color_looked_at_in_its_picker_is_the_color_it_was)
 TEST(a_click_on_the_pickers_own_ground_leaves_it_open)
 {
     Window window;
-    const std::string swatch = "entities-colors-claim-status-claimed-yours-claim-colors";
+    window.Click("nav-colors");
+    const std::string swatch = "colors-colors-claim-status-claimed-yours-claim-colors";
     window.Click(swatch);
     CHECK(window.Shows(swatch + "-p-hex"));
     // Its padding, beside the sliders: no control, and still the picker.
@@ -1613,10 +1615,10 @@ TEST(a_setting_of_something_switched_off_is_not_shown)
     CHECK(window.Click("entities-nameplates-scale-with-distance"));
     CHECK(window.Shows(least));
     // A card of what is off is gone whole.
-    CHECK(window.Shows("entities-colors-aggression-head"));
+    CHECK(window.Shows("entities-target-cursor-head"));
     window.settings.enabled = false;
     window.Frames(2);
-    CHECK(!window.Shows("entities-colors-aggression-head") && !window.Shows(least));
+    CHECK(!window.Shows("entities-target-cursor-head") && !window.Shows(least));
 }
 
 TEST(the_game_window_theme_draws_the_window_in_the_art_and_its_colors)

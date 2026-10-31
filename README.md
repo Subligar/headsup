@@ -91,8 +91,9 @@ Hover a widget for its popup, and click to keep it open.
 
 | Page | Holds |
 |---|---|
-| Entities | Nameplates, outlines, the target cursor and the color palettes, with a page for Mobs, Players, Self, NPCs and Pets |
+| Entities | Nameplates, outlines and the target cursor, with a page for Mobs, Players, Self, NPCs and Pets |
 | User Interface | Screenshot mode and moving the game's windows, with the Top Panel, Widgets and Mouse Cursor pages |
+| Colors | The colors for aggression, toughness, claims, targeting and each kind of entity |
 | HeadsUp Config | Turning HeadsUp off, a report for bug reports, and the window's own look |
 
 `/hu menu <page>` opens a page, such as `/hu menu mobs`. `/hu screenshot` hides everything for a picture, and
