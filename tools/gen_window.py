@@ -213,7 +213,7 @@ PIECES = Pieces(
     },
     words={'switched-off': True, 'switch-off': True, 'switch-on': True, 'switched-off-top-panel': True,
            'switched-off-headsup': True, 'key-add': True, 'key-waiting': True, 'always': True, 'never': True, 'conditions': True, 'local': True, 'themes-font': True,
-           'default-font': True, 'unused-tags-these': True, 'unused-tags-name': True, 'or': True, 'slot-tip': False,
+           'default-font': True, 'unused-tags-these': True, 'unused-tags-name': True, 'or': True,
            'reload': True, 'export': True,
            'setup-title': True, 'setup-step': True, 'setup-start': True, 'setup-skip': True, 'setup-back': True,
            'setup-next': True, 'setup-finish': True, 'setup-custom': True, 'setup-zoom': True, 'setup-cancel': True, 'setup-warning': True,
