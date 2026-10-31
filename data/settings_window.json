@@ -591,7 +591,7 @@
       {
         "key": "nameplate-design",
         "name": "Nameplate Design",
-        "description": "Design the nameplate for these entities. Drag buttons into the text boxes to include that information. You can also write in the text boxes to add text. Dashes (-) can optionally be replaced by a symbol set in the Entities/Nameplates section.",
+        "description": "Choose what information is displayed on this entity's nameplate, and how it is displayed.\n\n- Drag buttons from the selection area into each line.\n- Placing a button on top of another one merges them, making it choose which one to display automatically.\n- Write your own text between and around buttons as needed.",
         "settings": [
           {
             "key": "design",

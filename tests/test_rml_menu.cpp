@@ -2139,3 +2139,46 @@ TEST(dragging_setups_preview_pans_it_as_far_as_its_zoom_leaves_room)
     CHECK_EQ(run.panX, 0.0f);
     CHECK(window.settings == Settings{});
 }
+
+TEST(a_chip_of_several_tags_wraps_inside_its_line_on_a_narrow_window)
+{
+    Window window;
+    window.settings.Kind(PlateKind::Players).lines[0].text = "${gm|mentor|new|sync|away|linkshell|bazaar|seeking|job|level|joblevel|title} $name";
+    window.OpenAt(100, 100, 560, 700);
+    window.Page("players");
+    window.Frames(2);
+    const std::vector<Rml::Element*> several = window.OfClass("several");
+    CHECK(!several.empty());
+    for (Rml::Element* chip : several)
+    {
+        Rml::Element* box = chip->GetParentNode();
+        while (box != nullptr && !box->IsClassSet("linebox"))
+            box = box->GetParentNode();
+        CHECK(box != nullptr);
+        const auto right = [](Rml::Element* e) {
+            return e->GetAbsoluteOffset(Rml::BoxArea::Border).x + e->GetBox().GetSize(Rml::BoxArea::Border).x;
+        };
+        for (int i = 0; i < chip->GetNumChildren(); ++i)
+            if (right(chip->GetChild(i)) > right(box) + 0.5f)
+                throw test::Failure{"a tag of a chip runs " + std::to_string(right(chip->GetChild(i)) - right(box)) +
+                                    " px past its line"};
+    }
+}
+
+TEST(a_tag_in_a_line_has_no_tip_and_one_to_pick_from_does)
+{
+    Window window;
+    window.settings.Kind(PlateKind::Players).lines[0].text = "${sync|bazaar} $name";
+    window.Page("players");
+    window.Frames(2);
+    int inLines = 0, toPick = 0;
+    for (Rml::Element* chip : window.OfClass("chip"))
+    {
+        const bool inLine = chip->IsClassSet("in");
+        (inLine ? inLines : toPick) += 1;
+        CHECK_EQ(chip->HasAttribute("tip"), !inLine);
+        for (int i = 0; i < chip->GetNumChildren(); ++i)
+            if (chip->GetChild(i)->IsClassSet("part")) CHECK(!chip->GetChild(i)->HasAttribute("tip"));
+    }
+    CHECK(inLines > 0 && toPick > 0);
+}

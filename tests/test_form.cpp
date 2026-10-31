@@ -126,6 +126,18 @@ TEST(a_card_holds_its_rows_and_what_they_show)
     CHECK(!form.changed && !form.popup);
 }
 
+TEST(a_cards_description_of_several_lines_has_each_under_the_last_and_a_dash_line_as_a_bullet)
+{
+    FormState state;
+    Form form({}, state);
+    form.pageKey = "p";
+    form.BeginCard("C", nullptr, "Choose <what>.\n\n- Drag them.\n- Write text.");
+    form.EndCard();
+    CHECK(Has(form.blocks[0].rml, "<div class=\"note\"><div>Choose &lt;what&gt;.</div>"
+                                  "<div class=\"bullet\"><span class=\"dot\">\u2022</span>Drag them.</div>"
+                                  "<div class=\"bullet\"><span class=\"dot\">\u2022</span>Write text.</div></div>"));
+}
+
 TEST(a_click_flips_a_switch_and_the_markup_stays_the_same)
 {
     FormState state;
