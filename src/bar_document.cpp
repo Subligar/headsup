@@ -583,6 +583,7 @@ namespace headsup
             switch (piece.kind)
             {
             case PopupPiece::Kind::Text:
+            case PopupPiece::Kind::PinWord:
                 rml += TextAt(face.c_str(), piece.x, std::round(piece.y) + faces[static_cast<size_t>(piece.font)].drop, color,
                     piece.span.text, piece.right ? piece.width : 0.0f);
                 break;
@@ -614,6 +615,7 @@ namespace headsup
                 rml += "<div class=\"p card\" style=\"" + BoxAt(piece.x, piece.y, piece.width, piece.height) + "\"></div>";
                 break;
             case PopupPiece::Kind::Tab:
+            case PopupPiece::Kind::PinChip:
                 rml += std::string("<div class=\"p tab") + (piece.open ? " lit" : "") + "\" style=\"" +
                        BoxAt(piece.x, piece.y, piece.width, piece.height) + "border-radius:" + Px(piece.height / 2.0f) +
                        ";\"></div>";

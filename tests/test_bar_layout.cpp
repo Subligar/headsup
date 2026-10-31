@@ -99,7 +99,7 @@ TEST(hit_tests_popup_placement_and_fitting_text)
     CHECK(FitText("Goblin Bounty Hunter", 10.0f, measure).empty());
 }
 
-TEST(hovering_opens_leaving_closes_and_a_click_pins)
+TEST(hovering_opens_leaving_closes_and_only_the_pin_chip_pins)
 {
     const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
@@ -116,7 +116,13 @@ TEST(hovering_opens_leaving_closes_and_a_click_pins)
     CHECK(!input.Open().has_value());
     input.SetPopup(BarRect{});
     CHECK(!input.Press(960.0f, 700.0f, true)); // the game's
-    CHECK(input.Press(960.0f, 18.0f, true));   // pinned
+    const BarRect pin{1100.0f, 52.0f, 50.0f, 20.0f};
+    input.Move(960.0f, 18.0f);
+    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
+    CHECK(input.Press(960.0f, 18.0f, true));  // the widget's, and no pin
+    CHECK(input.Press(960.0f, 200.0f, true)); // the popup's, and no pin
+    CHECK(!input.Pinned().has_value());
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its pin chip pins it
     CHECK(input.Pinned() == BarWidget::Target);
     input.Move(960.0f, 700.0f);
     CHECK(input.Open() == BarWidget::Target); // stays
@@ -125,8 +131,10 @@ TEST(hovering_opens_leaving_closes_and_a_click_pins)
     CHECK(input.Open() == BarWidget::VanaTime); // hovering another shows it
     input.Move(960.0f, 700.0f);
     CHECK(input.Open() == BarWidget::Target); // back to the pinned one
-    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f});
-    CHECK(input.Press(960.0f, 200.0f, true)); // a click on the pinned popup unpins
+    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
+    CHECK(input.Press(960.0f, 200.0f, true)); // elsewhere on the pinned popup: still pinned
+    CHECK(input.Pinned() == BarWidget::Target);
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its chip again unpins
     CHECK(!input.Pinned().has_value());
     const BarRect gil = *RectOf(l, BarWidget::Gil);
     CHECK(input.Press(gil.x + 5.0f, 18.0f, true)); // the bar's, but gil has no popup
@@ -153,15 +161,15 @@ TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)
     CHECK(input.PickedTabs().at("Travel") == "Boats");
     CHECK(input.Press(800.0f, 110.0f, true));
     CHECK(input.PickedTabs().at("Travel") == "Airships");
-    CHECK(input.Press(960.0f, 250.0f, true)); // elsewhere on the popup it pins, as before
-    CHECK(input.Pinned() == BarWidget::Target);
+    CHECK(input.Press(960.0f, 250.0f, true)); // elsewhere on the popup: the popup's, and no pin
+    CHECK(!input.Pinned().has_value());
     // With no popup drawn its tabs are gone, and what was picked stays picked for the next time.
     input.SetPopup(BarRect{});
     CHECK(!input.Press(850.0f, 110.0f, true));
     CHECK(input.PickedTabs().at("Travel") == "Airships");
 }
 
-TEST(a_cut_help_bar_under_the_strip_opens_and_pins_its_popup_and_takes_only_its_own_presses)
+TEST(a_cut_help_bar_under_the_strip_opens_its_popup_and_takes_only_its_own_presses)
 {
     // The renderer places Game help's own bar under the strip when its text was cut.
     BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
@@ -173,8 +181,8 @@ TEST(a_cut_help_bar_under_the_strip_opens_and_pins_its_popup_and_takes_only_its_
     input.Move(100.0f, 70.0f);
     CHECK(input.Open() == BarWidget::GameHelp);
     CHECK(!input.Press(600.0f, 70.0f, true)); // beside it, the game's
-    CHECK(input.Press(100.0f, 70.0f, true));
-    CHECK(input.Pinned() == BarWidget::GameHelp);
+    CHECK(input.Press(100.0f, 70.0f, true)); // its own
+    CHECK(!input.Pinned().has_value());
 }
 
 TEST(pinning_another_widget_moves_the_pin)
@@ -185,10 +193,16 @@ TEST(pinning_another_widget_moves_the_pin)
     popups[SlotOf(BarWidget::VanaTime)] = true;
     BarInput input;
     input.Frame(l, popups);
-    CHECK(input.Press(960.0f, 18.0f, true));
+    const BarRect pin{1100.0f, 52.0f, 50.0f, 20.0f};
+    input.Move(960.0f, 18.0f);
+    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true));
     CHECK(input.Pinned() == BarWidget::Target);
-    const BarRect vana = *RectOf(l, BarWidget::VanaTime);
-    CHECK(input.Press(vana.x + 5.0f, 18.0f, true));
+    // Another's popup shows while it is hovered, and its own chip moves the pin to it.
+    const BarRect vana = *RectOf(l, BarWidget::VanaTime), vanaPin{vana.x + 200.0f, 52.0f, 50.0f, 20.0f};
+    input.Move(vana.x + 5.0f, 18.0f);
+    input.SetPopup(BarRect{vana.x, 44.0f, 300.0f, 200.0f}, {}, {}, vanaPin);
+    CHECK(input.Press(vanaPin.x + 5.0f, vanaPin.y + 5.0f, true));
     CHECK(input.Pinned() == BarWidget::VanaTime);
 }
 
@@ -210,7 +224,7 @@ TEST(a_hovered_popup_closes_when_its_widget_stops_having_one)
     CHECK(!input.Press(960.0f, 200.0f, true)); // where the popup was: the game's
     CHECK(!input.Pinned().has_value());
     input.Frame(l, popups);
-    CHECK(input.Press(960.0f, 18.0f, true));
+    input.Pin(BarWidget::Target);
     input.Frame(l, none);
     CHECK(input.Open() == BarWidget::Target && input.Pinned() == BarWidget::Target);
 }
@@ -221,7 +235,7 @@ TEST(a_pinned_widget_that_is_switched_off_loses_its_pin)
     popups[SlotOf(BarWidget::Target)] = true;
     BarInput input;
     input.Frame(LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f), popups);
-    input.Press(960.0f, 18.0f, true);
+    input.Pin(BarWidget::Target);
     CHECK(input.Pinned() == BarWidget::Target);
     input.Frame(LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 0, 90, 60, 50), 0.0f), popups);
     CHECK(!input.Pinned().has_value());
@@ -333,7 +347,7 @@ TEST(leaving_the_game_closes_a_hovered_popup_until_the_pointer_is_back_and_keeps
     input.Frame(l, popups);
     CHECK(!input.Open().has_value() && !input.Hovered().has_value());
     input.Move(960.0f, 18.0f);
-    CHECK(input.Press(960.0f, 18.0f, true));
+    input.Pin(BarWidget::Target);
     const BarRect vana = *RectOf(l, BarWidget::VanaTime);
     input.Move(vana.x + 5.0f, 18.0f);
     CHECK(input.Open() == BarWidget::VanaTime);
@@ -349,7 +363,7 @@ TEST(resetting_drops_a_pinned_popup_and_the_pointer)
     BarInput input;
     input.Frame(l, popups);
     input.Move(960.0f, 18.0f);
-    CHECK(input.Press(960.0f, 18.0f, true));
+    input.Pin(BarWidget::Target);
     CHECK(input.Pinned() == BarWidget::Target);
     input.Reset();
     CHECK(!input.Open().has_value() && !input.Pinned().has_value() && !input.Hovered().has_value());
@@ -608,7 +622,6 @@ TEST(a_press_the_bar_takes_keeps_its_release_from_the_game_once)
 {
     Clicks c;
     CHECK(c.Take(WM_LBUTTONDOWN, kOnBarY));
-    CHECK(c.input.Pinned() == BarWidget::Target);
     CHECK(!c.Take(WM_MOUSEMOVE, kGameY, MK_LBUTTON)); // dragged off the bar, still held
     CHECK(c.Take(WM_LBUTTONUP, kGameY));             // released over the game: still the bar's
     CHECK(!c.Take(WM_LBUTTONUP, kGameY));            // the next one is the game's
@@ -664,8 +677,7 @@ TEST(a_move_the_bar_may_not_see_closes_a_hovered_popup_and_keeps_a_pinned_one)
         CHECK(c.input.Open() == BarWidget::Target);
         CHECK(!c.Take(WM_MOUSEMOVE, kOnBarY, 0, true, overGui, !overGui));
         CHECK(!c.input.Open().has_value());
-        CHECK(c.Take(WM_LBUTTONDOWN, kOnBarY));
-        CHECK(c.Take(WM_LBUTTONUP, kOnBarY));
+        c.input.Pin(BarWidget::Target);
         CHECK(!c.Take(WM_MOUSEMOVE, kOnBarY, 0, true, overGui, !overGui));
         CHECK(c.input.Open() == BarWidget::Target && !c.input.Hovered().has_value());
     }
@@ -676,10 +688,10 @@ TEST(the_open_popup_keeps_the_pointer_over_an_ashita_window_under_it)
 {
     Clicks c;
     CHECK(!c.Take(WM_MOUSEMOVE, kOnBarY));
-    c.input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f});
+    c.input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, BarRect{kOnBarX - 20.0f, 190.0f, 50.0f, 20.0f});
     CHECK(!c.Take(WM_MOUSEMOVE, 200.0f, 0, true, true)); // into the popup, over XIUI's window
     CHECK(c.input.Open() == BarWidget::Target);
-    CHECK(c.Take(WM_LBUTTONDOWN, 200.0f, 0, true, true)); // a press there pins it
+    CHECK(c.Take(WM_LBUTTONDOWN, 200.0f, 0, true, true)); // a press on its pin chip pins it
     CHECK(c.Take(WM_LBUTTONUP, 200.0f, 0, true, true));
     CHECK(c.input.Pinned() == BarWidget::Target);
     CHECK(c.Take(WM_LBUTTONDOWN, 200.0f, 0, true, true)); // and unpins it
@@ -1276,7 +1288,10 @@ TEST(a_combined_pill_hovers_and_pins_as_one_widget_named_by_its_first)
     CHECK(popups[SlotOf(BarWidget::Zone)]);
     BarInput input;
     input.Frame(l, popups);
-    CHECK(input.Press(zone.x + 5.0f, 18.0f, true));
+    const BarRect pin{weather.x + 250.0f, 52.0f, 40.0f, 20.0f};
+    input.Move(weather.x + 5.0f, 18.0f);
+    input.SetPopup(BarRect{weather.x, 44.0f, 300.0f, 200.0f}, {}, {}, pin);
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true));
     CHECK(input.Pinned() == std::optional<PanelWidget>(BarWidget::Zone));
     const PanelGroups g = Combined();
     const BarLayout hiddenZone = LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(0, 80, 120, 200, 90, 60, 50), 0.0f,

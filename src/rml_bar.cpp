@@ -428,7 +428,7 @@ namespace headsup
 
     BarRect RmlBar::ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
         const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-        std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls)
+        std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin)
     {
         const std::optional<PanelWidget> open  = input.Open();
         const std::optional<BarRect> pill      = open ? GroupRect(layout, *open) : std::nullopt;
@@ -486,6 +486,7 @@ namespace headsup
         m_Popup->SetClass(kOpenClass, !hidden);
         for (const PopupTabChip& chip : pl.chips)
             chips.push_back(BarTabChip{chip.key, BarRect{rect.x + chip.x, rect.y + chip.y, chip.width, chip.height}, chip.tab});
+        pin = pl.pin.width > 0.0f ? BarRect{rect.x + pl.pin.x, rect.y + pl.pin.y, pl.pin.width, pl.pin.height} : BarRect{};
         for (const PopupScroll& scroll : pl.scrolls)
             scrolls.push_back(BarScroll{scroll.key, BarRect{rect.x + scroll.x, rect.y + scroll.y, scroll.width, scroll.height},
                 scroll.most, BarRect{rect.x + scroll.grip.x, rect.y + scroll.grip.y, scroll.grip.width, scroll.grip.height},
@@ -545,8 +546,10 @@ namespace headsup
         input.Frame(layout, widgets.hasPopup);
         std::vector<BarTabChip> chips;
         std::vector<BarScroll> scrolls;
-        const BarRect popup = ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, chips, scrolls);
-        input.SetPopup(popup, std::move(chips), std::move(scrolls));
+        BarRect pin;
+        const BarRect popup =
+            ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, chips, scrolls, pin);
+        input.SetPopup(popup, std::move(chips), std::move(scrolls), pin);
         if (m_Visible == hidden)
         {
             m_Visible = !hidden;

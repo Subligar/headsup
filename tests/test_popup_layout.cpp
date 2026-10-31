@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 
 using namespace headsup;
 
@@ -599,23 +600,36 @@ TEST(a_card_too_tall_for_the_room_without_a_table_goes_on_in_another_column)
         CHECK(Find(l, "Currency " + std::to_string(i)) != nullptr);
 }
 
-TEST(immune_icons_get_their_mark_and_pinned_shows)
+TEST(immune_icons_get_their_mark)
 {
-    const BarMetrics m  = MetricsFor(36, BarShape::Pills);
-    const PopupLayout l = LayoutPopup(Sample(), m, BarShape::Pills, true, Fake);
+    const PopupLayout l = LayoutPopup(Sample(), MetricsFor(36, BarShape::Pills), BarShape::Pills, true, Fake);
     CHECK(Of(l, PopupPiece::Kind::ImmuneMark).size() == 1);
-    bool pinned = false;
-    for (const PopupPiece& p : l.pieces)
-        pinned |= p.kind == PopupPiece::Kind::Text && p.span.text == "pinned" && p.span.tone == Tone::Heading &&
-                  p.font == PopupFont::Pin && Near(p.x + p.width, l.width - m.popupPadding);
-    CHECK(pinned);
 }
 
-TEST(an_unpinned_popup_says_nothing_of_it)
+TEST(a_titled_popup_has_its_pin_chip_at_the_top_right_lit_and_saying_pinned_only_while_pinned)
 {
-    const PopupLayout l = LayoutPopup(Sample(), MetricsFor(36, BarShape::Ornate), BarShape::Ornate, false, Fake);
-    for (const PopupPiece& p : l.pieces)
-        if (p.kind == PopupPiece::Kind::Text) CHECK(p.span.text != "pinned");
+    for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
+    {
+        const BarMetrics m = MetricsFor(36, shape);
+        const PopupLayout pinned = LayoutPopup(Sample(), m, shape, true, Fake);
+        const PopupLayout loose  = LayoutPopup(Sample(), m, shape, false, Fake);
+        for (const auto& [l, word, lit] : {std::tuple{&pinned, "pinned", true}, std::tuple{&loose, "pin", false}})
+        {
+            const PopupPiece* chip = nullptr;
+            const PopupPiece* text = nullptr;
+            for (const PopupPiece& p : l->pieces)
+            {
+                if (p.kind == PopupPiece::Kind::PinChip && Near(p.x, l->pin.x) && Near(p.y, l->pin.y)) chip = &p;
+                if (p.kind == PopupPiece::Kind::PinWord && p.font == PopupFont::Pin) text = &p;
+            }
+            CHECK(chip != nullptr && text != nullptr);
+            CHECK(chip->open == lit && text->span.text == word);
+            CHECK(Near(l->pin.x + l->pin.width, l->width - m.popupPadding) && Near(l->pin.y, m.popupPadding));
+            CHECK(text->x >= chip->x && text->x + text->width <= chip->x + chip->width); // its word inside it
+        }
+        CHECK(Near(pinned.width, loose.width)); // pinning never changes the popup's width
+    }
+    CHECK(LayoutPopup(PopupContent{}, MetricsFor(36, BarShape::Pills), BarShape::Pills, false, Fake).pin.width == 0.0f);
 }
 
 TEST(an_empty_popup_is_just_its_padding_and_minimum_width)
@@ -635,7 +649,7 @@ TEST(rows_without_cells_add_no_pieces_and_a_grid_without_cells_does_not_divide_b
     c.sections[0].rows.push_back(PopupRow{RowKind::Tags, 0, {}});
     c.sections[0].rows.push_back(PopupRow{RowKind::Grid, 0, {}});
     const PopupLayout l = LayoutPopup(c, m, BarShape::Ornate, false, Fake);
-    CHECK_EQ(l.pieces.size(), static_cast<size_t>(1)); // the title
+    CHECK_EQ(l.pieces.size(), static_cast<size_t>(3)); // the title, and the pin's chip and word
     CHECK(AllInside(l, m));
 }
 
@@ -742,9 +756,7 @@ TEST(a_pinned_popup_with_a_long_title_keeps_the_mark_clear_of_the_title)
     c.title = {{"A very long mob name that is wider than the minimum", Tone::Normal}};
     const PopupLayout l = LayoutPopup(c, m, BarShape::Ornate, true, Fake);
     const PopupPiece& title = l.pieces[1];
-    const PopupPiece& pin   = l.pieces[2];
-    CHECK(pin.span.text == "pinned");
-    CHECK(pin.x > title.x + title.width);
+    CHECK(l.pin.x > title.x + title.width);
     CHECK(AllInside(l, m));
 }
 
@@ -887,7 +899,7 @@ TEST(a_cut_above_the_first_row_keeps_the_title_alone)
     const PopupLayout l    = LayoutPopup(Tall(), m, BarShape::Ornate, true, Fake);
     PopupLayout cut        = l;
     CutPopup(cut, Bottom(*Find(l, "ID 220")) + m.popupPadding - 0.5f, m.popupPadding);
-    CHECK_EQ(cut.pieces.size(), static_cast<size_t>(3)); // the icon, the name and the pin mark
+    CHECK_EQ(cut.pieces.size(), static_cast<size_t>(4)); // the icon, the name, and the pin's chip and word
     CHECK(Find(cut, "Goblin") != nullptr && Find(cut, "pinned") != nullptr);
     CHECK(Near(cut.height, TitleBottom(l) + m.popupPadding));
 }

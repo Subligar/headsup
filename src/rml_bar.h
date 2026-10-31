@@ -184,7 +184,7 @@ namespace headsup
         // Places the open popup, and adds its cards' tabs and the parts that scroll at their places on the screen.
         BarRect ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-            std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls);
+            std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin);
         bool PopupDocumentFor(RmlHost& host, const BarLook& look);
         void ClosePopup();
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);

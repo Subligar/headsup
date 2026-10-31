@@ -404,9 +404,11 @@ namespace headsup
         Reevaluate();
     }
 
-    void BarInput::SetPopup(const BarRect& popup, std::vector<BarTabChip> chips, std::vector<BarScroll> scrolls)
+    void BarInput::SetPopup(const BarRect& popup, std::vector<BarTabChip> chips, std::vector<BarScroll> scrolls,
+        const BarRect& pin)
     {
         m_Popup   = popup;
+        m_PinChip = pin;
         m_Chips   = std::move(chips);
         m_Scrolls = std::move(scrolls);
         Reevaluate();
@@ -468,10 +470,7 @@ namespace headsup
     {
         if (!Over(x, y)) return false;
         if (!left) return true;
-        const std::optional<PanelWidget> under = WidgetAt(m_Layout, x, y);
-        if (under && m_HasPopup[SlotOf(*under)])
-            m_Pinned = m_Pinned == under ? std::nullopt : under;
-        else if (!under && Open() && m_Popup.Contains(x, y))
+        if (!WidgetAt(m_Layout, x, y) && Open() && m_Popup.Contains(x, y))
         {
             for (const BarScroll& scroll : m_Scrolls)
                 if (scroll.track.Contains(x, y) && scroll.most > 0)
@@ -490,7 +489,7 @@ namespace headsup
                     m_Tabs[chip.key] = chip.tab;
                     return true;
                 }
-            m_Pinned = m_Pinned == Open() ? std::nullopt : Open();
+            if (m_PinChip.Contains(x, y)) m_Pinned = m_Pinned == Open() ? std::nullopt : Open();
         }
         return true;
     }
