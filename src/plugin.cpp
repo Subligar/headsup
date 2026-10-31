@@ -50,6 +50,7 @@
 #ifdef HEADSUP_DEV
 #include "codedump.h"
 #include "drawdump.h"
+#include "mousewatch.h"
 #include "namedump.h"
 #include "pointerwatch.h"
 #include "stackdump.h"
@@ -152,6 +153,10 @@ namespace
     float g_MenuScaleY              = 1.0f;
     IResourceManager* g_Resources   = nullptr; // for the target popup's drops, from Initialize to Release
     headsup::RmlHost* g_Rml         = nullptr; // for OnMouse and OnKeyboard, from Initialize to Release
+#ifdef HEADSUP_DEV
+    headsup::MouseWatch* g_MouseWatch = nullptr; // and the panel's input, for its log
+    const headsup::BarInput* g_BarSeen = nullptr;
+#endif
 
     // The device Ashita gives plugins is Direct3D's own, under Ashita's wrapper: its Present runs after Ashita has
     // drawn ImGui, every addon's windows included, so what HeadsUp draws there is over all of them.
@@ -217,17 +222,25 @@ namespace
         // An Ashita window takes the mouse. Asked only when read: the bar ignores it while off or for blocked messages.
         const bool overGui = overRml || (((g_BarOn && !g_BarHidden && !blocked) || g_SyncClicks) && g_Gui != nullptr &&
                                             g_Gui->GetIO().WantCaptureMouse);
-        if (g_BarClicks != nullptr &&
-            g_BarClicks->Take(message, static_cast<uint32_t>(wParam), x, y, g_BarOn && !g_BarHidden, overGui, blocked))
-            return true;
-        if (overRml) return true;
+        const bool barTook = g_BarClicks != nullptr &&
+            g_BarClicks->Take(message, static_cast<uint32_t>(wParam), x, y, g_BarOn && !g_BarHidden, overGui, blocked);
         // A window the player hides takes no click, which the game would act on unseen; an Ashita window over it does.
-        if (!blocked &&
+        const bool hiddenWindow = !barTook && !overRml && !blocked &&
             headsup::SwallowsClick(message, static_cast<int>(static_cast<float>(static_cast<int16_t>(LOWORD(lParam))) * g_MenuScaleX),
                 static_cast<int>(static_cast<float>(static_cast<int16_t>(HIWORD(lParam))) * g_MenuScaleY),
                 headsup::WindowHook::HiddenRects()) &&
-            !(g_Gui != nullptr && g_Gui->GetIO().WantCaptureMouse))
-            return true;
+            !(g_Gui != nullptr && g_Gui->GetIO().WantCaptureMouse);
+#ifdef HEADSUP_DEV
+        if (g_MouseWatch != nullptr && g_MouseWatch->Running() && g_BarSeen != nullptr)
+        {
+            const auto name = [](const std::optional<headsup::PanelWidget>& w) { return w ? headsup::BarWidgetName(w->kind) : "-"; };
+            g_MouseWatch->Record({message, static_cast<uint32_t>(wParam), static_cast<int16_t>(LOWORD(lParam)),
+                static_cast<int16_t>(HIWORD(lParam)), x, y, blocked, overRml, g_Gui != nullptr && g_Gui->GetIO().WantCaptureMouse,
+                g_BarOn && !g_BarHidden, g_BarSeen->Over(x, y), name(g_BarSeen->Hovered()), name(g_BarSeen->Open()), barTook,
+                hiddenWindow, barTook || overRml || hiddenWindow});
+        }
+#endif
+        if (barTook || overRml || hiddenWindow) return true;
         if (!g_SyncClicks) return false;
         // The game takes a click where its pointer last was, which is somewhere else after the mouse moved over another
         // window: a mouse move to the click's place goes first.
@@ -361,6 +374,7 @@ class HeadsUp final : public IPlugin
 #ifdef HEADSUP_DEV
     headsup::DrawDump m_DrawDump;
     headsup::PointerWatch m_PointerWatch;
+    headsup::MouseWatch m_MouseWatch;
     // config/headsup/settings_window.json, the window's layout in place of the built-in one while one is read.
     std::unique_ptr<headsup::OwnedLayout> m_WindowFile;
     headsup::WindowLayout m_WindowFileView;
@@ -491,6 +505,10 @@ public:
 #endif
         g_Gui       = core->GetGuiManager();
         g_BarClicks = &m_BarClicks;
+#ifdef HEADSUP_DEV
+        g_MouseWatch = &m_MouseWatch;
+        g_BarSeen    = &m_BarInput;
+#endif
         core->GetInputManager()->GetMouse()->AddCallback(kName, OnMouse);
         core->GetInputManager()->GetKeyboard()->AddCallback(kName, nullptr, nullptr, OnKeyboard);
         g_Rml = &m_Rml;
@@ -531,6 +549,10 @@ public:
         m_LoadedFonts.clear();
         if (m_QuadStates) m_Device->DeleteStateBlock(*m_QuadStates);
         g_BarClicks = nullptr;
+#ifdef HEADSUP_DEV
+        g_MouseWatch = nullptr;
+        g_BarSeen    = nullptr;
+#endif
         g_BarOn     = false;
         CloseNotes();
         // Ashita would keep the settings' values loaded after this, for the next load to find even with the file gone.
@@ -675,6 +697,8 @@ public:
             Print(headsup::ArmNameDump(m_NameHook.Running()));
         else if (args[1] == "stackdump")
             Print(headsup::ArmStackDump());
+        else if (args[1] == "mousewatch")
+            Print(args.size() > 2 && args[2] == "stop" ? m_MouseWatch.Stop() : m_MouseWatch.Start(OwnFolder(kLogsFolder)));
         else if (args[1] == "pointerwatch")
             Print(args.size() > 2 && args[2] == "stop" ? m_PointerWatch.Stop() : m_PointerWatch.Start(OwnFolder(kLogsFolder), Now()));
         else if (args[1] == "stripdump")
@@ -700,6 +724,7 @@ public:
             Print("/hu namedump: write every call into the game's name routine during one frame to logs/headsup");
             Print("/hu stackdump: write the stack at the character draws of one frame to logs/headsup");
             Print("/hu pointerwatch [stop]: log every change in the mouse pointer and the game's own to logs/headsup until stopped");
+            Print("/hu mousewatch [stop]: log every mouse message and what HeadsUp made of it to logs/headsup until stopped");
             Print("/hu stripdump: write the game's top-strip text, every level, to logs/headsup");
 #endif
         }
