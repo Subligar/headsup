@@ -85,6 +85,7 @@ namespace headsup
         std::vector<Span> text;
         bool star = false; // a star after the text: who holds what the cell's row is about
         uint16_t item = 0; // a game item's picture before the text, in place of an icon
+        Align align   = Align::Left; // in a grid, against its column's left, in its middle or against its right
         bool operator==(const PopupCell&) const = default;
     };
 
@@ -114,6 +115,7 @@ namespace headsup
     {
         Span name;
         std::vector<PopupRow> rows;
+        std::optional<Icon> icon{}; // before its name
         bool operator==(const PopupTab&) const = default;
     };
 

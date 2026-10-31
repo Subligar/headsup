@@ -83,7 +83,7 @@ namespace headsup
         std::vector<PopupLine> lines;   // top to bottom
         std::vector<PopupTabChip> chips;
         std::vector<PopupScroll> scrolls;
-        BarRect pin{}; // the pin chip, which a press pins or unpins the popup by; none in a popup with no title
+        BarRect pin{}; // the pin chip, which a press pins or unpins the popup by; none in an empty popup
     };
 
     struct TextSize

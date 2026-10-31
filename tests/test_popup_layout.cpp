@@ -903,3 +903,55 @@ TEST(a_cut_above_the_first_row_keeps_the_title_alone)
     CHECK(Find(cut, "Goblin") != nullptr && Find(cut, "pinned") != nullptr);
     CHECK(Near(cut.height, TitleBottom(l) + m.popupPadding));
 }
+
+TEST(a_grid_cell_sits_against_its_columns_left_middle_or_right_as_it_asks)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupCell left = Word("ab"), middle = Word("cd"), right = Word("ef");
+    middle.align = Align::Center;
+    right.align  = Align::Right;
+    // One column of three lines under a wide head: each short cell where its alignment puts it in the head's width.
+    PopupRow grid{RowKind::Grid, 1, {Word("a long head"), left, middle, right}};
+    const PopupLayout l = LayoutPopup(OneRow(grid), m, BarShape::Pills, false, Fake);
+    const PopupPiece* head = Find(l, "a long head");
+    const PopupPiece *a = Find(l, "ab"), *c = Find(l, "cd"), *e = Find(l, "ef");
+    CHECK(head && a && c && e);
+    CHECK(Near(a->x, head->x));
+    CHECK(Near(c->x + c->width / 2.0f, head->x + head->width / 2.0f));
+    CHECK(Near(e->x + e->width, head->x + head->width));
+}
+
+TEST(a_tabs_icon_goes_before_its_name_inside_its_chip)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupContent c;
+    c.title = {{"Weather", Tone::Normal}};
+    PopupSection section{"By Element", {}};
+    section.tabs = {PopupTab{{"Fire", Tone::Normal}, {PopupRow{RowKind::Line, 0, {Word("x")}}}, Icon::Fire},
+        PopupTab{{"Ice", Tone::Normal}, {PopupRow{RowKind::Line, 0, {Word("y")}}}, Icon::Ice}};
+    c.sections.push_back(section);
+    const PopupLayout l = LayoutPopup(c, m, BarShape::Pills, false, Fake);
+    for (const PopupTabChip& chip : l.chips)
+    {
+        const PopupPiece* name = Find(l, chip.tab);
+        const PopupPiece* icon = nullptr;
+        for (const PopupPiece& p : l.pieces)
+            if (p.kind == PopupPiece::Kind::Icon && p.x >= chip.x && p.x < chip.x + chip.width && p.y >= chip.y &&
+                p.y + p.height <= chip.y + chip.height)
+                icon = &p;
+        CHECK(icon != nullptr);
+        CHECK(icon->x + icon->width < name->x && name->x + name->width <= chip.x + chip.width);
+        CHECK(Near(icon->x - chip.x, chip.x + chip.width - (name->x + name->width))); // the two centered in it
+    }
+}
+
+TEST(a_popup_without_a_title_has_its_pin_alone_at_its_top_right)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupContent c;
+    c.sections.push_back(PopupSection{"Forecast", {PopupRow{RowKind::Line, 0, {Word("Sunny")}}}});
+    const PopupLayout l = LayoutPopup(c, m, BarShape::Pills, false, Fake);
+    CHECK(l.pin.width > 0.0f && Near(l.pin.y, m.popupPadding) && Near(l.pin.x + l.pin.width, l.width - m.popupPadding));
+    for (const PopupPiece& p : l.pieces)
+        if (p.kind == PopupPiece::Kind::Card) CHECK(p.y >= l.pin.y + l.pin.height); // the cards under it
+}

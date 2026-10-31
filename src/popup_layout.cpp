@@ -97,6 +97,7 @@ namespace headsup
                 float y, height, name; // from the card's top; its name's width
                 float gap;             // between it and the next in its row
                 float left = 0.0f, width = 0.0f; // from the card's left, once spread
+                size_t parts = 1;                // the pieces after its frame: its icon, if it has one, and its name
             };
             std::vector<Chip> chips;
             std::vector<size_t> sockets; // pieces to widen to the card's inside once its width is known
@@ -151,7 +152,7 @@ namespace headsup
                 float widest = 0.0f, tall = 0.0f;
                 for (const PopupTab& tab : section.tabs)
                 {
-                    const TextSize framed = Framed(CellSize(Cell(tab.name), unit, measure), unit);
+                    const TextSize framed = Framed(CellSize(Cell(tab.name, tab.icon), unit, measure), unit);
                     widest = std::max(widest, framed.width);
                     tall   = std::max(tall, framed.height);
                 }
@@ -160,16 +161,27 @@ namespace headsup
                 contentWidth = std::max(contentWidth, static_cast<float>(across) * (widest + gap) - gap);
                 for (size_t i = 0; i < count; ++i)
                 {
-                    const TextSize size   = CellSize(Cell(section.tabs[i].name), unit, measure);
+                    const PopupTab& tab   = section.tabs[i];
+                    const TextSize size   = CellSize(Cell(tab.name, tab.icon), unit, measure);
                     const TextSize framed = Framed(size, unit);
                     const float top       = y + static_cast<float>(i / across) * (tall + gap);
-                    b.chips.push_back(Block::Chip{section.heading, section.tabs[i].name.text, b.pieces.size(), i % across, across,
+                    const float inside    = top + framed.inkTop - size.inkTop; // where its icon and name start
+                    b.chips.push_back(Block::Chip{section.heading, tab.name.text, b.pieces.size(), i % across, across,
                         std::min(across, count - i / across * across), top, tall, size.width, gap});
                     PopupPiece chip{PopupPiece::Kind::Tab, 0.0f, top, widest, tall, {}};
                     chip.open = i == picked;
                     b.pieces.push_back(std::move(chip));
-                    b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, 0.0f, top + framed.inkTop - size.inkTop, size.width,
-                        size.height, section.tabs[i].name});
+                    // Each after the frame placed from where the chip's content starts; spread, the chip adds where.
+                    float x = 0.0f;
+                    if (tab.icon)
+                    {
+                        const float s = unit * kCellIcon;
+                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Icon, x, inside, s, s, {}, PopupFont::Text, *tab.icon});
+                        x += s + unit * kIconGap;
+                        b.chips.back().parts = 2;
+                    }
+                    const TextSize name = measure(tab.name, PopupFont::Text);
+                    b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, x, inside, name.width, name.height, tab.name});
                 }
                 y += static_cast<float>(lines) * (tall + gap) - gap + metrics.rowGap;
             }
@@ -295,6 +307,8 @@ namespace headsup
                     const PopupCell& cell = row.cells[i];
                     TextSize size         = cells[i];
                     float cx = x, cy = y;
+                    if (grid && cell.align != Align::Left)
+                        cx += (columns[i % columns.size()] - size.width) * (cell.align == Align::Center ? 0.5f : 1.0f);
                     const size_t first = b.pieces.size();
                     if (tags)
                     {
@@ -372,7 +386,8 @@ namespace headsup
                             static_cast<float>(chip.column) * step;
                 b.pieces[chip.piece].x     = chip.left;
                 b.pieces[chip.piece].width = chip.width;
-                b.pieces[chip.piece + 1].x = chip.left + (chip.width - chip.name) / 2.0f;
+                for (size_t part = 1; part <= chip.parts; ++part)
+                    b.pieces[chip.piece + part].x += chip.left + (chip.width - chip.name) / 2.0f;
             }
             if (b.card) l.pieces.push_back(PopupPiece{PopupPiece::Kind::Card, x, y, width, b.height, {}, PopupFont::Text,
                             Icon::AggroNQ, line});
@@ -541,7 +556,7 @@ namespace headsup
         // The pin: a chip at the title row's right edge, lit and saying so while pinned. Its room is the longer word's
         // either way, so pinning never changes the popup's width.
         std::optional<size_t> pinChip;
-        if (!content.title.empty() || content.icon)
+        if (!content.title.empty() || content.icon || !content.sections.empty())
         {
             const Span word{pinned ? kPinnedWord : kPinWord, Tone::Heading, 0};
             const TextSize size   = measure(word, PopupFont::Pin);

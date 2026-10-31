@@ -857,11 +857,7 @@ namespace headsup
             {
                 const auto element = static_cast<Element>(e);
                 const std::vector<ZoneRoll> now = ZonesRolling(element, today), next = ZonesRolling(element, today + 1);
-                PopupTab tab{Colored(ElementName(element), ElementColor(element)), {}};
-                PopupRow count = Labeled("Zones", Text(std::to_string(now.size()) + " today" + kDot + std::to_string(next.size()) + " tomorrow"));
-                count.nested   = true;
-                ScrollsBy(count, state, section.heading + "/" + ElementName(element));
-                tab.rows.push_back(std::move(count));
+                PopupTab tab{Colored(ElementName(element), ElementColor(element)), {}, SdtIcon(kFirstElementSdt + e)};
                 std::map<uint16_t, std::pair<const ZoneRoll*, const ZoneRoll*>> zones;
                 for (const ZoneRoll& roll : now)
                     zones[roll.zone].first = &roll;
@@ -876,8 +872,10 @@ namespace headsup
                 PopupRow grid = Grid(kZoneRollColumns, (order.size() + 1) * kZoneRollColumns);
                 grid.nested   = true;
                 grid.header   = true;
-                for (const char* heading : {"Zone", "Today", "Tomorrow"})
-                    grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
+                ScrollsBy(grid, state, section.heading + "/" + ElementName(element));
+                // Each head counts its column: the zones listed, then those that can roll it today and tomorrow.
+                for (const auto& [heading, count] : {std::pair{"Zone", order.size()}, {"Today", now.size()}, {"Tomorrow", next.size()}})
+                    grid.cells.push_back(Cell(Text(std::string(heading) + " (" + std::to_string(count) + ")", Tone::Dim)));
                 for (const auto& [zone, rolls] : order)
                 {
                     grid.cells.push_back(Cell(Text(ZoneById(zone)->name)));
@@ -1385,7 +1383,7 @@ namespace headsup
             PopupContent own = BarPopupContent(w, state, settings);
             if (joined.title.empty())
                 joined.icon = own.icon;
-            else
+            else if (!own.title.empty())
                 joined.title.push_back(Text(kDot, Tone::Dim));
             joined.title.insert(joined.title.end(), own.title.begin(), own.title.end());
             joined.sections.insert(joined.sections.end(), own.sections.begin(), own.sections.end());
@@ -1429,47 +1427,53 @@ namespace headsup
         case BarWidget::Weather:
         {
             const VanaTime t = VanaAt(state.unixMs);
-            popup.title      = ListOf(Text("Weather"));
-            const std::optional<WeatherOdds> today = OddsOn(state, t.day);
-            const Weather now = state.weather ? *state.weather : today ? today->normal : Weather::None;
-            PopupCell current = Cell(Text(WeatherName(now)), WeatherIcon(now));
-            if (!state.weather) current.text.push_back(Text(" (likely)", Tone::Dim));
-            PopupRow grid   = Grid(kForecastColumns, kForecastDays * kForecastColumns);
+            // No title: the weather now is on the panel, and the forecast names the zone it is for.
+            std::array<WeatherChances, kForecastDays> days{};
             bool oneWeather = true;  // on every day
             bool fogs       = false; // a day can roll a weather fog takes the place of in the small hours
             for (int d = 0; d < kForecastDays; ++d)
             {
-                const int weekday = (t.weekday + d) % kVanaDaysPerWeek;
-                grid.cells.push_back(
-                    Cell(Colored(d == 0 ? "Today" : WeekdayName(weekday), ElementColor(WeekdayElement(weekday)))));
                 const std::optional<WeatherOdds> odds = OddsOn(state, t.day + static_cast<uint32_t>(d));
-                const WeatherChances chances = odds ? Chances(*odds) : WeatherChances{};
-                oneWeather = oneWeather && chances.count == 1;
-                for (const WeatherChance& chance : chances)
+                days[d]    = odds ? Chances(*odds) : WeatherChances{};
+                oneWeather = oneWeather && days[d].count == 1;
+                for (const WeatherChance& chance : days[d])
                     fogs = fogs || chance.weather == Weather::None || chance.weather == Weather::Sunshine ||
                            chance.weather == Weather::Clouds;
+            }
+            // Phoenix's notes in a column at the right, a line beside each day from the first.
+            std::vector<std::string> notes;
+            // One weather on every day (Phoenix's static zones: Promyvion, Temenos): rolling again changes nothing.
+            if (!oneWeather) notes.emplace_back("Phoenix rolls the weather again every 3 to 30 Earth minutes.");
+            if (fogs) notes.emplace_back("From 2:00 to 7:00, outside towns, Phoenix turns sunshine and clouds into fog.");
+            const int columns = kForecastColumns + (notes.empty() ? 0 : 1);
+            PopupRow grid     = Grid(columns, kForecastDays * columns);
+            for (int d = 0; d < kForecastDays; ++d)
+            {
+                const int weekday = (t.weekday + d) % kVanaDaysPerWeek;
+                const std::string name = WeekdayName(weekday);
+                PopupCell day = Cell(Colored(d == 0 ? "Today (" + name + ")" : d == 1 ? "Tomorrow (" + name + ")" : name,
+                    ElementColor(WeekdayElement(weekday))));
+                day.align = Align::Right;
+                grid.cells.push_back(std::move(day));
                 for (int c = 0; c < kForecastColumns - 1; ++c)
                 {
-                    if (c >= chances.count)
+                    PopupCell weather;
+                    if (c < days[d].count)
                     {
-                        grid.cells.emplace_back();
-                        continue;
+                        const WeatherChance& chance = days[d].chances[c];
+                        weather = Cell(Text(std::string(WeatherName(chance.weather)) + " " + std::to_string(chance.percent) + "%"),
+                            WeatherIcon(chance.weather));
                     }
-                    const WeatherChance& chance = chances.chances[c];
-                    grid.cells.push_back(Cell(Text(std::string(WeatherName(chance.weather)) + " " +
-                                                   std::to_string(chance.percent) + "%"),
-                        WeatherIcon(chance.weather)));
+                    weather.align = Align::Center;
+                    grid.cells.push_back(std::move(weather));
                 }
+                if (!notes.empty())
+                    grid.cells.push_back(static_cast<size_t>(d) < notes.size() ? Cell(Text(notes[d], Tone::Dim)) : PopupCell{});
             }
-            PopupSection forecast{"Forecast", ListOf(std::move(grid))};
-            // One weather on every day (Phoenix's static zones: Promyvion, Temenos): rolling again changes nothing.
-            if (!oneWeather)
-                forecast.rows.push_back(
-                    LineOf("Phoenix rolls the weather again every 3 to 30 Earth minutes.", Tone::Dim));
-            if (fogs)
-                forecast.rows.push_back(
-                    LineOf("From 2:00 to 7:00, outside towns, Phoenix turns sunshine and clouds into fog.", Tone::Dim));
-            popup.sections = ListOf(PopupSection{"", ListOf(Line(std::move(current)))}, std::move(forecast),
+            // Zone 0 is the data's "unknown": the heading names no zone for it.
+            const ZoneRecord* zone = state.zone != 0 ? ZoneById(state.zone) : nullptr;
+            popup.sections = ListOf(PopupSection{zone != nullptr ? "Forecast (" + std::string(zone->name) + ")" : "Forecast",
+                                        ListOf(std::move(grid))},
                 ByElement(state, t.day));
             popup.oneColumn = true;
             break;
