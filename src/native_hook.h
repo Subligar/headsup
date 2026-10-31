@@ -1,6 +1,7 @@
 #pragma once
 
 #include "code_patch.h"
+#include "fish_bar.h"
 #include "friend_list.h"
 #include "name_frame.h"
 #include "native_locate.h"
@@ -299,6 +300,19 @@ namespace headsup
         std::string Find();
         // Nothing before Find succeeded, while the client has no session, or when they cannot be read.
         std::optional<PlayOnlineCounts> Read() const;
+
+    private:
+        uint32_t m_Global = 0;
+    };
+
+    // A hooked fish's stamina (LocateFish), read on the game's thread.
+    class FishReader
+    {
+    public:
+        // Finds where the client keeps it: "" when found, else why not.
+        std::string Find();
+        // Nothing before Find succeeded or while no fish is on the line.
+        std::optional<FishStamina> Read() const;
 
     private:
         uint32_t m_Global = 0;

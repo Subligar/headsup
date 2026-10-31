@@ -1387,3 +1387,42 @@ TEST(a_call_that_does_not_pass_the_actor_first_is_not_a_model_draw)
     CHECK(LocateModelDraws(image.Text()).problem == LocateProblem::NoModelDraws);
     CHECK(LocateModelDraws(Image{}.Text()).problem == LocateProblem::NoModelDraws);
 }
+
+namespace
+{
+    // The fish packet's handler as the code dump of 2026-10-27 has it (loaded at 0x03190000, the handler at RVA
+    // 0x9FD30): it makes the intuition's 8 bytes and the fish's record and keeps their pointers.
+    constexpr uint32_t kFishSetupRva = kTextRva + 0x9ED30, kIntuitionGlobal = 0x03617EE4, kFishGlobal = 0x03617EE8;
+    void PutFishSetup(Image& image, uint32_t at, uint32_t intuition, uint32_t fish)
+    {
+        image.Put(at, {0xA1});
+        image.Put32(at + 1, intuition);
+        image.Put(at + 5, {0x85, 0xC0, 0x0F, 0x85, 0x81, 0x01, 0x00, 0x00, 0x6A, 0x08, 0xE8, 0xB7, 0x1E, 0x27, 0x00, 0x6A,
+                              0x38, 0xA3});
+        image.Put32(at + 23, intuition);
+        image.Put(at + 27, {0xE8, 0xAB, 0x1E, 0x27, 0x00, 0x8B, 0x0D});
+        image.Put32(at + 34, intuition);
+        image.Put(at + 38, {0x83, 0xC4, 0x08, 0x85, 0xC9, 0xA3});
+        image.Put32(at + 44, fish);
+    }
+}
+
+TEST(the_fish_record_is_found_where_the_fish_packet_makes_it)
+{
+    Image image;
+    CHECK(LocateFish(image.Text()).problem == LocateProblem::NoFish);
+    PutFishSetup(image, kFishSetupRva, kIntuitionGlobal, kFishGlobal);
+    const FishSite found = LocateFish(image.Text());
+    CHECK(found.problem == LocateProblem::None);
+    CHECK_EQ(found.global, kFishGlobal);
+    PutFishSetup(image, kFishSetupRva + 0x1000, kIntuitionGlobal, kFishGlobal);
+    CHECK(LocateFish(image.Text()).problem == LocateProblem::AmbiguousFish);
+}
+
+TEST(a_setup_keeping_its_first_record_in_two_places_is_not_the_fish_packets)
+{
+    Image image;
+    PutFishSetup(image, kFishSetupRva, kIntuitionGlobal, kFishGlobal);
+    image.Put32(kFishSetupRva + 34, kIntuitionGlobal + 0x10);
+    CHECK(LocateFish(image.Text()).problem == LocateProblem::NoFish);
+}

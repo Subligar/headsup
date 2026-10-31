@@ -195,6 +195,8 @@ namespace headsup
         constexpr const char* kTargetMobLevelKey = "barTargetMobLevel";
         constexpr const char* kTargetJobsKey     = "barTargetJobs";
         constexpr const char* kMenuFontKey      = "menuFont";
+        constexpr const char* kFishBarKey = "fishBar", *kFishBarWidthKey = "fishBarWidth", *kFishBarXKey = "fishBarX",
+                              *kFishBarYKey = "fishBarY";
         constexpr const char* kMenuXKey = "menuX", *kMenuYKey = "menuY", *kMenuWidthKey = "menuWidth",
                               *kMenuHeightKey = "menuHeight";
         constexpr const char* kSecondLineSuffix = "Line2";
@@ -1268,6 +1270,9 @@ namespace headsup
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
         for (int* side : {&s.menuX, &s.menuY, &s.menuWidth, &s.menuHeight})
             *side = std::clamp(*side, 0, kMaxMenuSide);
+        s.fishBarWidth = std::clamp(s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth);
+        for (int* side : {&s.fishBarX, &s.fishBarY})
+            *side = std::clamp(*side, kFishBarUnplaced, kMaxMenuSide);
         if (static_cast<int>(s.barSeparators) >= kBarSeparatorsCount) s.barSeparators = d.barSeparators;
         ClampDesigner(s, d);
         for (StatusBadgeRule& status : s.statusBadges)
@@ -1635,6 +1640,10 @@ namespace headsup
         s.menuY      = LoadInt(store, kMenuYKey, s.menuY);
         s.menuWidth  = LoadInt(store, kMenuWidthKey, s.menuWidth);
         s.menuHeight = LoadInt(store, kMenuHeightKey, s.menuHeight);
+        s.fishBar      = store.GetBool(kFishBarKey, s.fishBar);
+        s.fishBarWidth = LoadInt(store, kFishBarWidthKey, s.fishBarWidth);
+        s.fishBarX     = LoadInt(store, kFishBarXKey, s.fishBarX);
+        s.fishBarY     = LoadInt(store, kFishBarYKey, s.fishBarY);
         const std::string separators = store.GetString(kBarSeparatorsKey, "");
         for (int t = 0; t < kBarSeparatorsCount; ++t)
             if (separators == kBarSeparatorsNames[t]) s.barSeparators = static_cast<BarSeparators>(t);
@@ -1729,6 +1738,10 @@ namespace headsup
         setFloat(kMenuYKey, static_cast<float>(s.menuY));
         setFloat(kMenuWidthKey, static_cast<float>(s.menuWidth));
         setFloat(kMenuHeightKey, static_cast<float>(s.menuHeight));
+        setBool(kFishBarKey, s.fishBar);
+        setFloat(kFishBarWidthKey, static_cast<float>(s.fishBarWidth));
+        setFloat(kFishBarXKey, static_cast<float>(s.fishBarX));
+        setFloat(kFishBarYKey, static_cast<float>(s.fishBarY));
         // A copy's keys are written while it is on the panel; the first copy's always.
         for (int slot = 0; slot < kPanelSlots; ++slot)
             if (const PanelWidget w = WidgetInSlot(slot); w.copy == 0 || Placed(s.barSections, w))

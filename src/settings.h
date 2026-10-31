@@ -131,6 +131,8 @@ namespace headsup
     constexpr int kMinPointerSize = 100, kMaxPointerSize = 300; // percent of the pointer's own size
     constexpr int kMinMenuOpacity = 30; // percent: fainter, the window could not be found to set it back
     constexpr int kMaxMenuSide  = 16384; // pixels: more than any screen is across
+    constexpr int kFishBarUnplaced = -1; // the fishing bar's X and Y until it is dragged somewhere
+    constexpr int kMinFishBarWidth = 100, kMaxFishBarWidth = 1000; // pixels
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMaxUpMinutes = 60, kDefaultUpMinutes = 5; // how long a respawn timer reads "up" before it goes
@@ -180,6 +182,9 @@ namespace headsup
         // Where the player left the settings window, in pixels; no width for one never moved, which opens in the
         // screen's middle.
         int menuX = 0, menuY = 0, menuWidth = 0, menuHeight = 0;
+        bool fishBar     = true; // HeadsUp's own bar of a hooked fish's stamina
+        int fishBarWidth = 300;
+        int fishBarX = kFishBarUnplaced, fishBarY = kFishBarUnplaced;
         SubtitlePlace barSubtitle = SubtitlePlace::After; // a widget's second line on a bar too short for two
         BarPlacement barSections = DefaultPlacement(); // where each widget sits, by BarSection
         bool hideHelpBar = false; // skip the game's own help bar across the top of the screen

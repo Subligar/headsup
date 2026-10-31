@@ -137,6 +137,14 @@
           ]
         },
         {
+          "key": "fishing-bar",
+          "name": "Fishing Bar",
+          "description": "The fish's stamina while you fight it, in a bar of HeadsUp's own: the game draws its bar in the party window, so it goes when that window is hidden. It also shows while this window is open, so you can drag it where you want it.",
+          "settings": [
+            {"key": "fishing-bar-width", "name": "Width", "tip": "How wide the fishing bar is."}
+          ]
+        },
+        {
           "key": "window-groups",
           "name": "Window Groups",
           "settings": [

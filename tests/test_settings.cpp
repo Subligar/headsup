@@ -3016,3 +3016,25 @@ TEST(the_world_info_widget_keeps_its_picks_by_name)
     const WidgetOptions& clamped = bounded.Widget(BarWidget::World);
     CHECK(clamped.worldRoute == 0 && clamped.worldGuild == 0);
 }
+
+TEST(the_fishing_bar_keeps_its_switch_width_and_place)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    CHECK(fresh.fishBar && fresh.fishBarX == kFishBarUnplaced && fresh.fishBarY == kFishBarUnplaced);
+    MapStore store;
+    store.values["fishBar"]      = "false";
+    store.values["fishBarWidth"] = "420";
+    store.values["fishBarX"]     = "640";
+    store.values["fishBarY"]     = "900";
+    const Settings s = LoadSettings(store);
+    CHECK(!s.fishBar && s.fishBarWidth == 420 && s.fishBarX == 640 && s.fishBarY == 900);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(LoadSettings(saved).fishBarX, 640);
+    CHECK(!LoadSettings(saved).fishBar);
+    store.values["fishBarWidth"] = "5";
+    store.values["fishBarX"]     = "-300";
+    const Settings odd = LoadSettings(store);
+    CHECK(odd.fishBarWidth == kMinFishBarWidth && odd.fishBarX == kFishBarUnplaced);
+}

@@ -518,6 +518,13 @@ namespace headsup
         return rml;
     }
 
+    std::string SocketRules(float radius)
+    {
+        return std::string("box-sizing:border-box;border:1px;border-color:") + RcssColor(kSocketShade) + " " +
+               RcssColor(kSocketLight) + " " + RcssColor(kSocketLight) + " " + RcssColor(kSocketShade) +
+               ";border-radius:" + Px(radius) + ";background-color:" + RcssColor(kSocketFill) + ";";
+    }
+
     std::string PopupDocument(const BarLook& look, const PopupFaces& faces)
     {
         const BoxStyle panel = PopupPanel(look);
@@ -545,10 +552,7 @@ namespace headsup
         css += ".thumb{background-color:" + RcssColor(kScrollThumb) + ";}";
         css += ".tab.lit{border-color:" + RcssColor(look.palette.accent) + ";background-color:" +
                RcssColor(Faded(look.palette.accent, kLitTab)) + ";}";
-        // Sunk into its card: darker, its upper edges in shadow and its lower ones lit.
-        css += std::string(".socket{box-sizing:border-box;border:1px;border-color:") + RcssColor(kSocketShade) + " " +
-               RcssColor(kSocketLight) + " " + RcssColor(kSocketLight) + " " + RcssColor(kSocketShade) +
-               ";border-radius:" + Px(PopupCard(look).radius / 2.0f) + ";background-color:" + RcssColor(kSocketFill) + ";}";
+        css += ".socket{" + SocketRules(PopupCard(look).radius / 2.0f) + "}";
         css += ".rule{height:1px;decorator:horizontal-gradient(" + RcssColor(look.palette.divider) + " " +
                RcssColor(look.palette.divider & ~kAlphaMask) + ");}";
         css += ".mark{text-align:center;}";

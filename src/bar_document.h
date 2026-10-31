@@ -140,6 +140,8 @@ namespace headsup
     using PopupFaces = std::array<PopupFace, kPopupFontCount>;
     // The popups' document: an empty popup over the whole screen that takes no clicks, styled from the look.
     std::string PopupDocument(const BarLook& look, const PopupFaces& faces);
+    // Sunk into what holds it: darker, its upper edges in shadow and its lower ones lit.
+    std::string SocketRules(float radius);
     constexpr const char* kOpenClass = "open"; // on a popup while it shows, so what it does as it opens plays each time
     constexpr const char* kPopupId = "popup";
     // A laid out popup's markup, from its top left corner: its panel, then each piece where the layout put it.

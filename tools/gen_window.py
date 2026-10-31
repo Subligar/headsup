@@ -109,7 +109,7 @@ PIECES = Pieces(
         'visibility': Card(), 'outline-design': Card(), 'nameplate-design': Card(), 'line-style': Card(),
         'ornament': Card(), 'nameplate-opacity': Card(), 'detection-icons': Card(), 'badges': Card(),
         'weaknesses': Card(), 'statuses': Card(), 'placeholder-timers': Card(),
-        'screenshot-mode': Card(), 'window-groups': Card(), 'base-game-ui': Card(),
+        'screenshot-mode': Card(), 'window-groups': Card(), 'base-game-ui': Card(), 'fishing-bar': Card(switch=True),
         'top-panel': Card(switch=True), 'theme-colors': Card(), 'help-bar': Card(switch=True), 'widgets': Card(), 'layout': Card(),
         'mouse-pointer': Card(), 'settings-window': Card(), 'reset': Card(), 'debug-mode': Card(switch=True),
     },
@@ -163,7 +163,7 @@ PIECES = Pieces(
             words={'weak': True, 'resist': True}),
         'respawn-timers': Setting(), 'timer-size': Setting(), 'up-time': Setting(),
         # User Interface
-        'key': Setting(), 'hide-game-windows': Setting(),
+        'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar-width': Setting(),
         'groups': Setting(unnamed=True, words={'note': True, 'help-on': True, 'help-off': True, 'starts-at': True,
                                                'row-tip': False}),
         'game-help': Setting(), 'auto-adjust': Setting(),

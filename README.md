@@ -92,7 +92,7 @@ Hover a widget for its popup, and click to keep it open.
 | Page | Holds |
 |---|---|
 | Entities | Nameplates, outlines and the target cursor, with a page for Mobs, Players, Self, NPCs and Pets |
-| User Interface | Screenshot mode and moving the game's windows, with the Top Panel, Widgets and Mouse Cursor pages |
+| User Interface | Screenshot mode, moving the game's windows and a fishing bar of HeadsUp's own, with the Top Panel, Widgets and Mouse Cursor pages |
 | Colors | The colors for aggression, toughness, claims, targeting and each kind of entity |
 | HeadsUp Config | Turning HeadsUp off, a report for bug reports, and the window's own look |
 

@@ -323,6 +323,9 @@ class HeadsUp final : public IPlugin
     std::optional<headsup::NetCounters> m_Counters; // the last read, kept between samples
     std::optional<double> m_CountersReadAt;
     headsup::PlayOnlineReader m_PlayOnline;
+    headsup::FishReader m_Fish;
+    bool m_FishTried = false; // it scans the client's code, so once
+    headsup::FishBar m_FishBar;
     bool m_PlayOnlineTried = false; // it scans the client's code, so once
     std::optional<headsup::PlayOnlineCounts> m_PlayOnlineCounts; // read with the counters
     headsup::ConnectionMeter m_Connection;
@@ -544,6 +547,7 @@ public:
         g_Plugin = nullptr;
         m_RmlBar.Release();
         m_RmlMenu.Close();
+        m_FishBar.Close();
         m_Rml.Stop();
         // After the renderers, which hold fonts made from these until they release.
         for (HANDLE handle : m_LoadedFonts)
@@ -893,6 +897,10 @@ public:
         if (m_Rml.Running())
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
+        if (const bool fishing = m_Settings.enabled && m_Settings.fishBar; m_Rml.Running() &&
+            m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
+                fishing ? FishShareNow() : std::nullopt, fishing && m_RmlMenu.open))
+            m_SettingsChangedAt = now;
         // Over ImGui from Present; with the bar, under ImGui, when Present is not hooked.
         if (g_PresentSlot != nullptr)
             g_AfterGui = [] { if (g_Plugin != nullptr) g_Plugin->DrawOverGui(); };
@@ -1718,6 +1726,15 @@ private:
             if (const std::string failure = m_NetStats.Find(); !failure.empty())
                 Note("the connection widget shows no S and R: " + failure + ".");
         return m_NetStats.Read();
+    }
+
+    std::optional<float> FishShareNow()
+    {
+        if (!std::exchange(m_FishTried, true))
+            if (const std::string failure = m_Fish.Find(); !failure.empty())
+                Note("the fishing bar cannot show: " + failure + ".");
+        const std::optional<headsup::FishStamina> fish = m_Fish.Read();
+        return fish ? headsup::FishShare(*fish) : std::nullopt;
     }
 
     std::optional<headsup::PlayOnlineCounts> PlayOnlineNow()

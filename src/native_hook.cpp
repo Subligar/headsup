@@ -854,6 +854,27 @@ namespace headsup
         return "";
     }
 
+    std::string FishReader::Find()
+    {
+        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
+        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
+        ImageSection text{};
+        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        const FishSite found = LocateFish(text);
+        if (found.problem != LocateProblem::None) return Describe(found.problem);
+        if (!InImage(base, Pointer(found.global), sizeof(uint32_t))) return "its pointer is not in the game's image";
+        m_Global = found.global;
+        return "";
+    }
+
+    std::optional<FishStamina> FishReader::Read() const
+    {
+        if (m_Global == 0) return std::nullopt;
+        const uint32_t fish = ReadAt<uint32_t>(Pointer(m_Global), 0);
+        if (fish == 0 || !Readable(Pointer(fish), kFishFullStamina + sizeof(int32_t))) return std::nullopt;
+        return FishStamina{ReadAt<int32_t>(Pointer(fish), kFishStamina), ReadAt<int32_t>(Pointer(fish), kFishFullStamina)};
+    }
+
     std::string SearchAddressReader::Find()
     {
         const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));

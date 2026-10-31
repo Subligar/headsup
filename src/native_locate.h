@@ -78,6 +78,8 @@ namespace headsup
         AmbiguousWeather,
         NoConfigGet,
         NoSearchAddress,
+        NoFish,
+        AmbiguousFish,
     };
     const char* Describe(LocateProblem problem);
 
@@ -516,4 +518,15 @@ namespace headsup
         uint32_t global       = 0;
     };
     PlayOnlineSite LocatePlayOnline(const ImageSection& text);
+
+    // The fish packet (0x115) makes two records the first time and keeps their pointers in two globals, which the fight
+    // frees and zeroes as it ends: the global of the second, the fish's, while a fish is on the line. Its stamina now
+    // and when full are dwords at kFishStamina and kFishFullStamina.
+    struct FishSite
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t global       = 0;
+    };
+    FishSite LocateFish(const ImageSection& text);
+    constexpr uint32_t kFishStamina = 0x04, kFishFullStamina = 0x08;
 }
