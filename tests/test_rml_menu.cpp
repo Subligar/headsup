@@ -728,6 +728,20 @@ TEST(a_tag_chip_dropped_goes_in_after_what_it_lands_on)
     CHECK_EQ(text, "ab");
 }
 
+TEST(the_fishing_bars_chips_drop_into_its_text)
+{
+    Window window;
+    window.Page("userinterface");
+    const std::string box = "userinterface-custom-game-ui-fish-line";
+    std::string& text     = window.settings.fishBarLine;
+    text                  = "$size";
+    window.Frames(2);
+    CHECK(window.Shows(box + "-c-0") && window.Shows("tag-" + std::to_string(static_cast<int>(Tag::RodBreak))));
+    CHECK(!window.Shows("tag-" + std::to_string(static_cast<int>(Tag::Name)))); // a nameplate's
+    CHECK(window.Drag("tag-" + std::to_string(static_cast<int>(Tag::RodBreak)), box + "-c-0"));
+    CHECK_EQ(text, "${size|rodbreak}");
+}
+
 TEST(backspace_and_delete_beside_a_tag_take_it_out_and_the_arrows_step_past_it)
 {
     Window window;

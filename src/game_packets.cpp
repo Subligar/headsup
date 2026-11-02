@@ -12,7 +12,9 @@ namespace headsup
 {
     namespace
     {
-        constexpr uint32_t kZoneInWeather = 0x68, kZoneInPlayer = 0x04, kWeatherNumber = 0x08;
+        constexpr uint32_t kZoneInWeather = 0x68, kZoneInPlayer = 0x04, kZoneInZone = 0x30, kWeatherNumber = 0x08;
+        constexpr uint32_t kTalkWho = 0x04, kTalkNumMessage = 0x0A, kTalkNumWorkMessage = 0x1A;
+        constexpr uint16_t kTalkNameBit = 0x8000;
         constexpr uint32_t kFirstOwner = 0x1D, kRegionStride = 4;
         constexpr uint32_t kSanDoriaShare = 0x86, kBastokShare = 0x87, kWindurstShare = 0x88, kBeastmenShare = 0x94;
         constexpr unsigned kWholePercent = 100;
@@ -46,6 +48,19 @@ namespace headsup
     {
         if (data == nullptr || size < kZoneInPlayer + sizeof(uint32_t)) return std::nullopt;
         return ReadAt<uint32_t>(data, kZoneInPlayer);
+    }
+
+    std::optional<uint16_t> ParseZoneInZone(const uint8_t* data, uint32_t size)
+    {
+        if (data == nullptr || size < kZoneInZone + sizeof(uint16_t)) return std::nullopt;
+        return ReadAt<uint16_t>(data, kZoneInZone);
+    }
+
+    std::optional<TalkMessage> ParseTalkMessage(uint16_t id, const uint8_t* data, uint32_t size)
+    {
+        const uint32_t at = id == kTalkNumPacket ? kTalkNumMessage : kTalkNumWorkMessage;
+        if (data == nullptr || size < at + sizeof(uint16_t)) return std::nullopt;
+        return TalkMessage{ReadAt<uint32_t>(data, kTalkWho), static_cast<uint16_t>(ReadAt<uint16_t>(data, at) & ~kTalkNameBit)};
     }
 
     std::optional<CraftRanks> ParseCraftRanks(const uint8_t* data, uint32_t size)

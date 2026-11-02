@@ -132,7 +132,10 @@ namespace headsup
     constexpr int kMinMenuOpacity = 30; // percent: fainter, the window could not be found to set it back
     constexpr int kMaxMenuSide  = 16384; // pixels: more than any screen is across
     constexpr int kFishBarUnplaced = -1; // the fishing bar's X and Y until it is dragged somewhere
+    constexpr int kMaxFishBarPlace = 7680; // pixels: across an 8K screen
     constexpr int kMinFishBarWidth = 100, kMaxFishBarWidth = 1000; // pixels
+    constexpr int kMinFishBarHeight = 6, kDefaultFishBarHeight = 18, kMaxFishBarHeight = 80; // pixels, its frame counted
+    constexpr int kMinFishTextSize = 8, kDefaultFishTextSize = 15, kMaxFishTextSize = 40;    // pixels
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
@@ -191,6 +194,18 @@ namespace headsup
         bool hideGameFishBar = true; // and the game's dropped
         int fishBarWidth = 300;
         int fishBarX = kFishBarUnplaced, fishBarY = kFishBarUnplaced;
+        int fishBarHeight   = kDefaultFishBarHeight;
+        int fishBarTextSize = kDefaultFishTextSize;
+        std::string fishBarFont;     // its line's font, or the theme's text font
+        bool fishBarDraggable = true; // off, the pointer goes through it to the game
+        std::string fishBarLine = "${size|fish} $feeling";
+        bool fishColorByCatch  = true; // off, the theme's fill whatever is on the line
+        Color fishSmallColor   = {{0.31f, 0.71f, 0.94f}};
+        Color fishLargeColor   = {{0.18f, 0.48f, 0.84f}};
+        Color fishItemColor    = {{0.66f, 0.60f, 0.49f}};
+        Color fishMonsterColor = {{0.61f, 0.31f, 0.85f}};
+        Color fishLineColor    = {{1.00f, 0.55f, 0.10f}};
+        Color fishRodColor     = {{0.88f, 0.19f, 0.19f}};
         SubtitlePlace barSubtitle = SubtitlePlace::After; // a widget's second line on a bar too short for two
         BarPlacement barSections = DefaultPlacement(); // where each widget sits, by BarSection
         bool hideHelpBar = false; // skip the game's own help bar across the top of the screen

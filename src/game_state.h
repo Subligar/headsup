@@ -2,6 +2,7 @@
 
 #include "check.h"
 #include "currencies.h"
+#include "fish_catch.h"
 #include "game_packets.h"
 #include "outposts.h"
 #include "player_status.h"
@@ -86,6 +87,9 @@ namespace headsup
         bool ConquestRequestDue(double now, bool open, bool refresh) const;
         void ConquestRequested(double now);
 
+        // What the server told you of the fish on your line last: from its bite until the next.
+        const FishCatch& Fish() const { return m_Fish; }
+
         const CurrencyValues& Currencies() const { return m_Currencies; }
         // Your craft ranks, from the last skills packet; none before one, or since another character zoned in.
         const std::optional<CraftRanks>& Crafts() const { return m_Crafts; }
@@ -105,6 +109,8 @@ namespace headsup
         std::optional<RegionOwners> m_Owners; // kept across zoning
         std::optional<RegionShares> m_Shares;       // of the region zoned into: the next zone's may be another
         std::optional<uint32_t> m_Player;           // your server id, from the last zone-in
+        std::optional<uint16_t> m_Zone;             // from the last zone-in
+        FishCatch m_Fish;
         std::vector<uint8_t> m_ConquestBytes;
         bool m_ConquestOwed = true;           // loading counts as a zone-in
         std::optional<double> m_ConquestAsked;

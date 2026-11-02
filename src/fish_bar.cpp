@@ -15,24 +15,29 @@ namespace headsup
         constexpr float kFrameRound = 4.0f;
         constexpr float kPercentWhole = 100.0f;
 
-        std::string FishBarRml(const BarPalette& p)
+        constexpr float kNameLineShare = 1.2f; // of its text size
+
+        std::string FishBarRml(const BarPalette& p, int height, int textSize, const std::string& font,
+            std::optional<uint32_t> fill, bool draggable)
         {
+            const float nameHeight = static_cast<float>(FishNameHeight(textSize));
+            const std::string start = RcssColor(fill.value_or(p.accent)), end = RcssColor(fill.value_or(p.accentEnd));
             std::string css = "body{display:block;width:100%;height:100%;pointer-events:none;z-index:5;}";
             css += "div{display:block;}";
             css += std::string(".") + kHiddenClass + "{display:none;}";
             css += std::string("#") + kFishBarId + "{position:absolute;box-sizing:border-box;height:" +
-                   Px(static_cast<float>(kFishBarHeight)) + ";padding:" + Px(kFramePad) + ";border:1px " +
+                   Px(static_cast<float>(height)) + ";padding:" + Px(kFramePad) + ";border:1px " +
                    RcssColor(p.panelBorder) + ";border-radius:" + Px(kFrameRound) + ";decorator:vertical-gradient(" +
-                   RcssColor(p.panelTop) + " " + RcssColor(p.panelBottom) + ");pointer-events:auto;drag:drag;}";
+                   RcssColor(p.panelTop) + " " + RcssColor(p.panelBottom) + ");" +
+                   (draggable ? "pointer-events:auto;drag:drag;" : "") + "}";
             css += ".socket{height:100%;" + SocketRules(kFrameRound / 2.0f) + "}";
-            css += std::string("#") + kFishFillId + "{height:100%;decorator:horizontal-gradient(" + RcssColor(p.accent) +
-                   " " + RcssColor(p.accentEnd) + ");}";
-            css += std::string("#") + kFishNameId + "{position:absolute;left:0px;top:" +
-                   Px(-static_cast<float>(kFishNameHeight) - 1.0f) + ";white-space:pre;font-family:\"" + kDetailFont +
-                   "\";font-size:" + Px(static_cast<float>(kFishNamePixels)) + ";line-height:" +
-                   Px(static_cast<float>(kFishNameHeight)) + ";color:" + RcssColor(p.text) + ";" + ShadowEffect(kFishNamePixels) + "}";
-            return "<rml><head><style>" + css + "</style></head><body id=\"" + std::string(kFishBarDocument) + "\"><div id=\"" + kFishBarId + "\" class=\"" +
-                   kHiddenClass + "\"><div id=\"" + kFishNameId + "\">" + kFishName + "</div><div class=\"socket\"><div id=\"" + kFishFillId + "\"></div></div></div></body></rml>";
+            css += std::string("#") + kFishFillId + "{height:100%;decorator:horizontal-gradient(" + start + " " + end + ");}";
+            css += std::string("#") + kFishNameId + "{position:absolute;left:0px;top:" + Px(-nameHeight - 1.0f) +
+                   ";white-space:pre;font-family:\"" + font + "\";font-size:" + Px(static_cast<float>(textSize)) +
+                   ";line-height:" + Px(nameHeight) + ";color:" + RcssColor(p.text) + ";" + ShadowEffect(textSize) + "}";
+            return "<rml><head><style>" + css + "</style></head><body id=\"" + std::string(kFishBarDocument) +
+                   "\"><div id=\"" + kFishBarId + "\" class=\"" + kHiddenClass + "\"><div id=\"" + kFishNameId +
+                   "\"></div><div class=\"socket\"><div id=\"" + kFishFillId + "\"></div></div></div></body></rml>";
         }
     }
 
@@ -59,34 +64,40 @@ namespace headsup
 
     bool FishHooked(uint32_t status) { return status == kHookedStatus || status == kOldHookedStatus; }
 
-    FishPlace FishBarPlace(int x, int y, int width, float screenWidth, float screenHeight)
+    int FishNameHeight(int textSize) { return static_cast<int>(std::lround(static_cast<float>(textSize) * kNameLineShare)); }
+
+    FishPlace FishBarPlace(int x, int y, int width, int height, int nameHeight, float screenWidth, float screenHeight)
     {
-        const float w = static_cast<float>(width), h = static_cast<float>(kFishBarHeight);
+        const float w = static_cast<float>(width), h = static_cast<float>(height), above = static_cast<float>(nameHeight);
         const float left = x == kFishBarUnplaced ? (screenWidth - w) / 2.0f : static_cast<float>(x);
         const float top  = y == kFishBarUnplaced ? std::round(screenHeight * kFishBarStartDown) : static_cast<float>(y);
         return FishPlace{std::clamp(left, 0.0f, std::max(0.0f, screenWidth - w)),
-            std::clamp(top, static_cast<float>(kFishNameHeight), std::max(static_cast<float>(kFishNameHeight), screenHeight - h))};
+            std::clamp(top, above, std::max(above, screenHeight - h))};
     }
 
     bool FishBar::Update(Rml::Context* context, const BarPalette& palette, Settings& settings,
-        std::optional<float> share)
+        const std::optional<FishBarView>& view)
     {
-        const std::optional<float> shown = share;
-        if (!shown && m_Document == nullptr) return false;
-        if (m_Document != nullptr && !(palette == m_Palette)) Close();
+        if (!view && m_Document == nullptr) return false;
+        const Look look{palette, settings.fishBarHeight, settings.fishBarTextSize, view ? view->font : m_Look.font,
+            view ? view->fill : m_Look.fill, settings.fishBarDraggable};
+        if (m_Document != nullptr && !(look == m_Look)) Close();
         if (m_Document == nullptr)
         {
-            m_Document = context->LoadDocumentFromMemory(FishBarRml(palette), kFishBarDocument);
+            m_Document = context->LoadDocumentFromMemory(
+                FishBarRml(palette, look.height, look.textSize, look.font, look.fill, look.draggable), kFishBarDocument);
             if (m_Document == nullptr) return false;
-            m_Palette = palette;
-            m_Bar     = m_Document->GetElementById(kFishBarId);
-            m_Fill    = m_Document->GetElementById(kFishFillId);
+            m_Look = look;
+            m_Line.clear();
+            m_Bar  = m_Document->GetElementById(kFishBarId);
+            m_Fill = m_Document->GetElementById(kFishFillId);
+            m_Name = m_Document->GetElementById(kFishNameId);
             for (const Rml::EventId id : {Rml::EventId::Dragstart, Rml::EventId::Drag, Rml::EventId::Dragend})
                 m_Bar->AddEventListener(id, this);
             m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
         }
         // A bar hidden mid-drag (the fish got away) may never hear the button let go: the drag ends with it.
-        if (!shown) m_Dragging = false;
+        if (!view) m_Dragging = false;
         bool moved = false;
         if (m_Dragged && !m_Dragging)
         {
@@ -95,16 +106,23 @@ namespace headsup
             m_Dragged.reset();
             moved = true;
         }
-        m_Bar->SetClass(kHiddenClass, !shown);
-        if (!shown) return moved;
+        m_Bar->SetClass(kHiddenClass, !view);
+        if (!view) return moved;
+        if (view->line != m_Line)
+        {
+            m_Name->SetInnerRML(EscapedRml(view->line));
+            m_Line = view->line;
+        }
         const Rml::Vector2i screen = context->GetDimensions();
-        const FishPlace at = m_Dragging && m_Dragged ? *m_Dragged
-                                                     : FishBarPlace(settings.fishBarX, settings.fishBarY, settings.fishBarWidth,
-                                                           static_cast<float>(screen.x), static_cast<float>(screen.y));
+        const FishPlace at = m_Dragging && m_Dragged
+                                 ? *m_Dragged
+                                 : FishBarPlace(settings.fishBarX, settings.fishBarY, settings.fishBarWidth,
+                                       settings.fishBarHeight, FishNameHeight(settings.fishBarTextSize),
+                                       static_cast<float>(screen.x), static_cast<float>(screen.y));
         m_Bar->SetProperty(Rml::PropertyId::Left, Rml::Property(at.x, Rml::Unit::PX));
         m_Bar->SetProperty(Rml::PropertyId::Top, Rml::Property(at.y, Rml::Unit::PX));
         m_Bar->SetProperty(Rml::PropertyId::Width, Rml::Property(static_cast<float>(settings.fishBarWidth), Rml::Unit::PX));
-        m_Fill->SetProperty(Rml::PropertyId::Width, Rml::Property(*shown * kPercentWhole, Rml::Unit::PERCENT));
+        m_Fill->SetProperty(Rml::PropertyId::Width, Rml::Property(view->share * kPercentWhole, Rml::Unit::PERCENT));
         return moved;
     }
 
@@ -122,8 +140,10 @@ namespace headsup
         case Rml::EventId::Drag:
         {
             const Rml::Vector2f corner = pointer - m_Grab;
+            const float height = m_Bar->GetBox().GetSize(Rml::BoxArea::Border).y;
             m_Dragged = FishBarPlace(static_cast<int>(std::lround(corner.x)), static_cast<int>(std::lround(corner.y)),
-                static_cast<int>(std::lround(width)), static_cast<float>(screen.x), static_cast<float>(screen.y));
+                static_cast<int>(std::lround(width)), static_cast<int>(std::lround(height)),
+                FishNameHeight(m_Look.textSize), static_cast<float>(screen.x), static_cast<float>(screen.y));
             m_Bar->SetProperty(Rml::PropertyId::Left, Rml::Property(m_Dragged->x, Rml::Unit::PX));
             m_Bar->SetProperty(Rml::PropertyId::Top, Rml::Property(m_Dragged->y, Rml::Unit::PX));
             break;
@@ -140,7 +160,7 @@ namespace headsup
             m_Bar->RemoveEventListener(id, this);
         m_Document->Close();
         m_Document = nullptr;
-        m_Bar = m_Fill = nullptr;
+        m_Bar = m_Fill = m_Name = nullptr;
         m_Dragging = false;
         m_Dragged.reset();
     }

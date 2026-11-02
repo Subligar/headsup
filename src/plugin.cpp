@@ -899,7 +899,7 @@ public:
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
         if (const bool fishing = m_Settings.enabled && m_Settings.fishBar; m_Rml.Running() &&
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
-                fishing ? FishShareNow() : std::nullopt))
+                fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
         // Over ImGui from Present; with the bar, under ImGui, when Present is not hooked.
         if (g_PresentSlot != nullptr)
@@ -1755,11 +1755,17 @@ private:
         return m_Fish.Read();
     }
 
-    std::optional<float> FishShareNow()
+    std::optional<headsup::FishBarView> FishBarNow()
     {
         if (!FishHookedNow()) return std::nullopt;
         const std::optional<headsup::FishStamina> fish = FishNow();
-        return fish ? headsup::FishShare(*fish) : std::nullopt;
+        const std::optional<float> share = fish ? headsup::FishShare(*fish) : std::nullopt;
+        if (!share) return std::nullopt;
+        const headsup::FishCatch& caught = m_GameState.Fish();
+        // The player's font where RmlUi can read it, the theme's where it cannot.
+        const char* font = headsup::FishBarFont(m_Settings);
+        return headsup::FishBarView{*share, headsup::FishLine(m_Settings.fishBarLine, caught),
+            headsup::FishFill(m_Settings, caught), m_Rml.EnsureFont(font) ? font : headsup::kDetailFont};
     }
 
     std::optional<headsup::PlayOnlineCounts> PlayOnlineNow()

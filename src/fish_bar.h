@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bar_theme.h"
+#include "fish_catch.h"
 #include "native_locate.h"
 #include "screen_box.h"
 #include "settings.h"
@@ -30,22 +31,31 @@ namespace headsup
     ScreenBox VerticesBox(const void* vertices, uint32_t count, uint32_t stride);
     bool AboveWindow(const ScreenBox& box, const WindowRect& window);
 
-    constexpr int kFishBarHeight         = 18; // pixels, its frame counted
     constexpr float kFishBarStartDown    = 0.7f; // of the screen's height, until it is dragged somewhere
     constexpr const char* kFishBarDocument = "fishing";
     constexpr const char* kFishBarId     = "fishbar";
     constexpr const char* kFishFillId    = "fishfill";
     constexpr const char* kFishNameId    = "fishname";
-    constexpr const char* kFishName      = "Fish"; // over its top left, as the game's bar has it
-    constexpr int kFishNamePixels = 15, kFishNameHeight = 18;
+    // The line over its top left, as the game's bar has its name: as tall as its text and a little more.
+    int FishNameHeight(int textSize);
 
     struct FishPlace
     {
         float x = 0.0f, y = 0.0f;
     };
     // Its top left: kFishBarUnplaced in the middle low on the screen, else where it was dragged, kept on the screen
-    // with its name over it.
-    FishPlace FishBarPlace(int x, int y, int width, float screenWidth, float screenHeight);
+    // with its line over it.
+    FishPlace FishBarPlace(int x, int y, int width, int height, int nameHeight, float screenWidth, float screenHeight);
+
+    // What it shows of a hooked fish: the share of its bar, the line over it (FishLine), and its fill (FishFill) in
+    // the font given, which RmlUi has.
+    struct FishBarView
+    {
+        float share = 0.0f;
+        std::string line;
+        std::optional<uint32_t> fill;
+        const char* font = kDetailFont;
+    };
 
     // HeadsUp's own fishing bar, which the game draws in its party window: a document of the overlay's that drags to
     // its place.
@@ -53,9 +63,10 @@ namespace headsup
     {
     public:
         ~FishBar() override { Close(); }
-        // Each frame: shows the fish's share left while a fish is hooked, else hides. True when it was dragged somewhere
-        // new, which settings then hold.
-        bool Update(Rml::Context* context, const BarPalette& palette, Settings& settings, std::optional<float> share);
+        // Each frame: shows the view while a fish is hooked, else hides. True when it was dragged somewhere new, which
+        // settings then hold.
+        bool Update(Rml::Context* context, const BarPalette& palette, Settings& settings,
+            const std::optional<FishBarView>& view);
         // Before the context goes.
         void Close();
 
@@ -65,7 +76,19 @@ namespace headsup
         Rml::ElementDocument* m_Document = nullptr;
         Rml::Element* m_Bar  = nullptr;
         Rml::Element* m_Fill = nullptr;
-        BarPalette m_Palette{};
+        Rml::Element* m_Name = nullptr;
+        // What the document was built from: a change builds it again.
+        struct Look
+        {
+            BarPalette palette{};
+            int height = 0, textSize = 0;
+            std::string font;
+            std::optional<uint32_t> fill;
+            bool draggable = false;
+            bool operator==(const Look&) const = default;
+        };
+        Look m_Look;
+        std::string m_Line;
         Rml::Vector2f m_Grab{};  // the pointer from the bar's corner as the drag began
         std::optional<FishPlace> m_Dragged; // where the drag left it, not yet in the settings
         bool m_Dragging = false;

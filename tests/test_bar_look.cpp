@@ -310,3 +310,13 @@ TEST(the_help_bar_takes_its_set_width_text_size_and_height)
     CHECK_EQ(HelpBarHeight(kAutoHelpBarHeight, 24.0f), 24.0f);
     CHECK_EQ(HelpBarHeight(40, 24.0f), 40.0f);
 }
+
+TEST(the_fishing_bars_font_is_its_own_or_the_panels_text_font)
+{
+    Settings settings;
+    CHECK(std::string(FishBarFont(settings)) == kDetailFont);
+    settings.barTextFont = "Georgia";
+    CHECK(std::string(FishBarFont(settings)) == "Georgia");
+    settings.fishBarFont = "Verdana";
+    CHECK(std::string(FishBarFont(settings)) == "Verdana");
+}

@@ -163,7 +163,7 @@ PIECES = Pieces(
             words={'weak': True, 'resist': True}),
         'respawn-timers': Setting(), 'timer-size': Setting(), 'up-time': Setting(),
         # User Interface
-        'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(), 'fishing-bar-width': Setting(), 'hide-game-fish-bar': Setting(),
+        'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(), 'fishing-bar-width': Setting(), 'fishing-bar-height': Setting(), 'fishing-bar-x': Setting(), 'fishing-bar-y': Setting(), 'fishing-bar-draggable': Setting(), 'fishing-bar-font': Setting(), 'fishing-bar-text-size': Setting(), 'fishing-bar-line': Setting(), 'fish-color-by-catch': Setting(), 'fish-small-color': Setting(), 'fish-large-color': Setting(), 'fish-item-color': Setting(), 'fish-monster-color': Setting(), 'fish-line-color': Setting(), 'fish-rod-color': Setting(), 'hide-game-fish-bar': Setting(),
         'groups': Setting(unnamed=True, words={'note': True, 'help-on': True, 'help-off': True, 'starts-at': True,
                                                'row-tip': False}),
         'game-help': Setting(), 'auto-adjust': Setting(),
@@ -205,7 +205,7 @@ PIECES = Pieces(
         'plate-mode': List(4), 'outline-mode': List(4, extra={3: 'tipOnClaimRows'}), 'color-source': List(7),
         'show-condition': List(13), 'ornament-place': List(5), 'align': List(3), 'font-style': List(3),
         'smoothness': List(4), 'bar-theme': List(7), 'bar-sections': List(3),
-        'bar-widgets': List(18), 'plate-lines': List(3), 'job-layout': List(3), 'exp-bar': List(3), 'exp-text': List(3), 'exp-place': List(5), 'nations': List(4), 'world-line': List(5), 'world-sections': List(3), 'target-shows': List(5), 'conquest-place': List(4), 'target-icons': List(10), 'tags': List(25),
+        'bar-widgets': List(18), 'plate-lines': List(3), 'job-layout': List(3), 'exp-bar': List(3), 'exp-text': List(3), 'exp-place': List(5), 'nations': List(4), 'world-line': List(5), 'world-sections': List(3), 'target-shows': List(5), 'conquest-place': List(4), 'target-icons': List(10), 'tags': List(30),
         'setup-theme': List(6), 'setup-mob-plates': List(4), 'setup-mob-design': List(3), 'setup-outlines': List(4),
         'setup-outline-thickness': List(3), 'setup-cursor': List(4), 'setup-players': List(2), 'setup-self': List(3),
         'setup-player-icons': List(3), 'setup-line-kinds': List(3), 'setup-npcs': List(2), 'setup-pets': List(3), 'setup-panel': List(2), 'setup-pointer': List(2),

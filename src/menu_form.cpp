@@ -1402,6 +1402,68 @@ namespace headsup
                 form.Fade(!s.fishBar);
                 form.SliderInt(label.c_str(), s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth, "%d px", tip);
                 break;
+            case SettingPiece::FishingBarHeight:
+                form.Fade(!s.fishBar);
+                form.SliderInt(label.c_str(), s.fishBarHeight, kMinFishBarHeight, kMaxFishBarHeight, "%d px", tip);
+                break;
+            case SettingPiece::FishingBarX:
+            case SettingPiece::FishingBarY:
+            {
+                form.Fade(!s.fishBar);
+                int& side = e.piece == SettingPiece::FishingBarX ? s.fishBarX : s.fishBarY;
+                form.SliderInt(label.c_str(), side, kFishBarUnplaced, kMaxFishBarPlace,
+                    side == kFishBarUnplaced ? "Auto" : "%d px", tip);
+                break;
+            }
+            case SettingPiece::FishingBarDraggable:
+                form.Fade(!s.fishBar);
+                form.Switch(label.c_str(), s.fishBarDraggable, tip);
+                break;
+            case SettingPiece::FishingBarFont:
+                form.Fade(!s.fishBar);
+                form.FontDropdown(label.c_str(), s.fishBarFont, c.fonts, tip, Word(c, WindowWord::ThemesFont));
+                break;
+            case SettingPiece::FishingBarTextSize:
+                form.Fade(!s.fishBar);
+                form.SliderInt(label.c_str(), s.fishBarTextSize, kMinFishTextSize, kMaxFishTextSize, "%d px", tip);
+                break;
+            case SettingPiece::FishingBarLine:
+                form.Fade(!s.fishBar);
+                form.Row(label.c_str(), tip);
+                form.LineBox("fish line", s.fishBarLine, c.state.fishLine);
+                form.EndRow();
+                form.Line("line chips");
+                for (const Tag tag : FishBarTags())
+                    form.TagChip(tag);
+                form.EndLine();
+                break;
+            case SettingPiece::FishColorByCatch:
+                form.Fade(!s.fishBar);
+                form.Switch(label.c_str(), s.fishColorByCatch, tip);
+                break;
+            case SettingPiece::FishSmallColor:
+            case SettingPiece::FishLargeColor:
+            case SettingPiece::FishItemColor:
+            case SettingPiece::FishMonsterColor:
+            case SettingPiece::FishLineColor:
+            case SettingPiece::FishRodColor:
+            {
+                form.Fade(!s.fishBar || !s.fishColorByCatch);
+                const auto colorOf = [](SettingPiece piece) {
+                    switch (piece)
+                    {
+                    case SettingPiece::FishSmallColor: return &Settings::fishSmallColor;
+                    case SettingPiece::FishLargeColor: return &Settings::fishLargeColor;
+                    case SettingPiece::FishItemColor: return &Settings::fishItemColor;
+                    case SettingPiece::FishMonsterColor: return &Settings::fishMonsterColor;
+                    case SettingPiece::FishLineColor: return &Settings::fishLineColor;
+                    default: return &Settings::fishRodColor;
+                    }
+                };
+                Color Settings::* const color = colorOf(e.piece);
+                form.Swatch(label.c_str(), s.*color, tip, &(kDefaults.*color));
+                break;
+            }
             case SettingPiece::Groups: WindowGroups(c); break;
             case SettingPiece::AutoAdjust:
                 form.Fade(!s.shiftVanillaUi || r.windowsBand == 0);

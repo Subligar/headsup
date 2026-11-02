@@ -88,6 +88,8 @@ namespace headsup
     // caches that keep it by reference.
     const char* BarTitleFont(const Settings& settings, BarShape shape);
     const char* BarTextFont(const Settings& settings);
+    // The fishing bar's line's font, or the panel's text font.
+    const char* FishBarFont(const Settings& settings);
 
     // Gil's coin, in whole pixels.
     int CoinPixels(const BarMetrics& metrics);

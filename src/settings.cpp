@@ -72,6 +72,8 @@ namespace headsup
             {"helpBarTextSize", &Settings::helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize},
             {"helpBarWidth", &Settings::helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth},
             {"helpBarHeight", &Settings::helpBarHeight, kAutoHelpBarHeight, kMaxHelpBarHeight},
+            {"fishBarHeight", &Settings::fishBarHeight, kMinFishBarHeight, kMaxFishBarHeight},
+            {"fishBarTextSize", &Settings::fishBarTextSize, kMinFishTextSize, kMaxFishTextSize},
             {"baseSize", &Settings::baseSize, kMinTextSize, kMaxTextSize},
             {"baseIconSize", &Settings::baseIconSize, kMinTextSize, kMaxTextSize},
             {"pearlOutline", &Settings::pearlOutline, 0, kMaxPearlOutline, kPercentStep},
@@ -127,7 +129,10 @@ namespace headsup
         };
         constexpr ColorKey kColors[] = {{"weakBadgeColor", &Settings::weakBadgeColor},
             {"resistBadgeColor", &Settings::resistBadgeColor}, {"rankBadgeColor", &Settings::rankBadgeColor},
-            {"immuneBadgeColor", &Settings::immuneBadgeColor}};
+            {"immuneBadgeColor", &Settings::immuneBadgeColor}, {"fishSmallColor", &Settings::fishSmallColor},
+            {"fishLargeColor", &Settings::fishLargeColor}, {"fishItemColor", &Settings::fishItemColor},
+            {"fishMonsterColor", &Settings::fishMonsterColor}, {"fishLineColor", &Settings::fishLineColor},
+            {"fishRodColor", &Settings::fishRodColor}};
         // The edge's custom color is under the keys the edge's one color had. The cursor's own cannot be under
         // cursorColor, where a file from before the designer holds the target's color.
         constexpr const char* kCursorEdgePickKey = "cursorEdgeColor";
@@ -201,6 +206,8 @@ namespace headsup
         constexpr const char* kTargetJobsKey     = "barTargetJobs";
         constexpr const char* kMenuFontKey      = "menuFont";
         constexpr const char* kHideGameFishBarKey = "hideGameFishBar";
+        constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarDraggableKey = "fishBarDraggable",
+                              *kFishBarLineKey = "fishBarLine", *kFishColorByCatchKey = "fishColorByCatch";
         constexpr const char* kFishBarKey = "fishBar", *kFishBarWidthKey = "fishBarWidth", *kFishBarXKey = "fishBarX",
                               *kFishBarYKey = "fishBarY";
         constexpr const char* kMenuXKey = "menuX", *kMenuYKey = "menuY", *kMenuWidthKey = "menuWidth",
@@ -1278,7 +1285,7 @@ namespace headsup
             *side = std::clamp(*side, 0, kMaxMenuSide);
         s.fishBarWidth = std::clamp(s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth);
         for (int* side : {&s.fishBarX, &s.fishBarY})
-            *side = std::clamp(*side, kFishBarUnplaced, kMaxMenuSide);
+            *side = std::clamp(*side, kFishBarUnplaced, kMaxFishBarPlace);
         if (static_cast<int>(s.barSeparators) >= kBarSeparatorsCount) s.barSeparators = d.barSeparators;
         ClampDesigner(s, d);
         for (StatusBadgeRule& status : s.statusBadges)
@@ -1709,6 +1716,10 @@ namespace headsup
             s.fishBarWidth = LoadInt(store, kFishBarWidthKey, s.fishBarWidth);
             s.fishBarX     = LoadInt(store, kFishBarXKey, s.fishBarX);
             s.fishBarY     = LoadInt(store, kFishBarYKey, s.fishBarY);
+            s.fishBarFont  = store.GetString(kFishBarFontKey, s.fishBarFont.c_str());
+            s.fishBarDraggable = store.GetBool(kFishBarDraggableKey, s.fishBarDraggable);
+            s.fishBarLine  = store.GetString(kFishBarLineKey, s.fishBarLine.c_str());
+            s.fishColorByCatch = store.GetBool(kFishColorByCatchKey, s.fishColorByCatch);
             const std::string separators = store.GetString(kBarSeparatorsKey, "");
             for (int t = 0; t < kBarSeparatorsCount; ++t)
                 if (separators == kBarSeparatorsNames[t]) s.barSeparators = static_cast<BarSeparators>(t);
@@ -1816,6 +1827,10 @@ namespace headsup
         setFloat(kFishBarWidthKey, static_cast<float>(s.fishBarWidth));
         setFloat(kFishBarXKey, static_cast<float>(s.fishBarX));
         setFloat(kFishBarYKey, static_cast<float>(s.fishBarY));
+        store.Set(kFishBarFontKey, s.fishBarFont.c_str());
+        setBool(kFishBarDraggableKey, s.fishBarDraggable);
+        store.Set(kFishBarLineKey, s.fishBarLine.c_str());
+        setBool(kFishColorByCatchKey, s.fishColorByCatch);
         // A copy's keys are written while it is on the panel; the first copy's always.
         for (int slot = 0; slot < kPanelSlots; ++slot)
             if (const PanelWidget w = WidgetInSlot(slot); w.copy == 0 || Placed(s.barSections, w))

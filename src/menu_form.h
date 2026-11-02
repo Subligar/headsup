@@ -88,6 +88,7 @@ namespace headsup
         WindowFilter windows;
         std::optional<HelpMode> shiftsFor; // the Window Groups card's mode shown; none for the one the help is in
         DesignEditor design;
+        LineDraft fishLine; // the fishing bar's line, as its box is being written
         std::optional<SetupRun> setup; // Setup is shown in place of the pages
         bool setupBackup    = false;   // a run again started: the settings file is to be copied first
         bool closeRequested = false;   // Setup was skipped or cancelled, and the window closes

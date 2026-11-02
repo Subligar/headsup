@@ -1,3 +1,4 @@
+#include "fish_catch.h"
 #include "plate_template.h"
 #include "test.h"
 
@@ -321,6 +322,8 @@ TEST(every_tag_is_offered_and_each_kind_lists_its_chips_in_order)
             const std::vector<Tag> tags = TagsFor(static_cast<PlateKind>(k));
             offered = offered || std::ranges::find(tags, static_cast<Tag>(t)) != tags.end();
         }
+        const std::vector<Tag> fishing = FishBarTags();
+        offered = offered || std::ranges::find(fishing, static_cast<Tag>(t)) != fishing.end();
         CHECK(offered || static_cast<Tag>(t) == Tag::Break); // Enter makes a break, and no chip
     }
     CHECK((TagsFor(PlateKind::Mobs) == std::vector<Tag>{Tag::Name, Tag::Level, Tag::Con, Tag::Id, Tag::ServerId, Tag::Ph,

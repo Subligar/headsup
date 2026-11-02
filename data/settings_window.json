@@ -115,6 +115,20 @@
           "settings": [
             {"key": "fishing-bar", "name": "Fishing Bar", "tip": "The fish's stamina while you fight it. The game draws its bar in the party window, so it goes when that window is hidden. It shows only while a fish is hooked: drag it where you want it then."},
             {"key": "fishing-bar-width", "name": "Width", "indent": true, "tip": "How wide the fishing bar is."},
+            {"key": "fishing-bar-height", "name": "Height", "indent": true, "tip": "How tall the fishing bar is, its frame counted. Default: 18 px."},
+            {"key": "fishing-bar-x", "name": "X Position", "indent": true, "tip": "Pixels from the left of the screen to the bar. Auto centers it. Default: Auto."},
+            {"key": "fishing-bar-y", "name": "Y Position", "indent": true, "tip": "Pixels from the top of the screen to the bar. Auto puts it low on the screen. Default: Auto."},
+            {"key": "fishing-bar-draggable", "name": "Draggable", "indent": true, "tip": "On, you can drag the bar to move it while a fish is hooked. Off, clicks go through it to the game. Default: On."},
+            {"key": "fishing-bar-font", "name": "Font", "indent": true, "tip": "The font of the text over the bar. Default: the top panel's text font."},
+            {"key": "fishing-bar-text-size", "name": "Font Size", "indent": true, "tip": "The size of the text over the bar. Default: 15 px."},
+            {"key": "fishing-bar-line", "name": "Text", "indent": true, "tip": "What the text over the bar says. Drag the buttons below into it, and write your own text around them. HeadsUp only says what the game has told you, never which fish it is."},
+            {"key": "fish-color-by-catch", "name": "Color by Catch", "indent": true, "tip": "Colors the bar by what is on the line. A rod that could break comes first, then a line that could snap, then the size of the catch. Off, the bar keeps the theme's color. Default: On."},
+            {"key": "fish-small-color", "name": "Small Fish", "indent": true, "tip": "The bar's color for a small fish."},
+            {"key": "fish-large-color", "name": "Large Fish", "indent": true, "tip": "The bar's color for a large fish."},
+            {"key": "fish-item-color", "name": "Item", "indent": true, "tip": "The bar's color for an item."},
+            {"key": "fish-monster-color", "name": "Monster", "indent": true, "tip": "The bar's color for a monster. Default: purple."},
+            {"key": "fish-line-color", "name": "Line Break", "indent": true, "tip": "The bar's color when your line could snap, which the game warns of with a bad feeling. Default: orange."},
+            {"key": "fish-rod-color", "name": "Rod Break", "indent": true, "tip": "The bar's color when your rod could break, which the game warns of with a terrible feeling. Default: red."},
             {"key": "hide-game-fish-bar", "name": "Hide the Game's Fish Bar", "tip": "While a fish is hooked, the game's own fish bar at the top of the screen is not drawn. The party window still shows."}
           ]
         },
@@ -1004,6 +1018,11 @@
         {"name": "Title", "tip": "Shows the player's title. NOTE: Only shows after you use /check on the player."},
         {"name": "Job & Level", "tip": "Shows both the job and level when known. If only level is known, displays 'Level X' where 'X' is the level. If both are known, it displays 'X JOB/SUB'. If neither are known, shows nothing."},
         {"name": "Subjob Level", "tip": "Shows the level of the player's subjob (example: 37) once HeadsUp knows it: from your party, a check, or Look Up Players. Put it after Job to read as WAR/NIN 37."},
+        {"name": "Fish", "tip": "The word Fish."},
+        {"name": "Size", "tip": "What is on the line, as the game tells you when it bites: Small Fish, Large Fish, Item or Monster."},
+        {"name": "Feeling", "tip": "How the game says it feels about the catch, such as Good Feeling, Bad Feeling, Terrible Feeling, Low Skill or Epic Catch."},
+        {"name": "Line Break", "tip": "Shows Line Break when your line could snap. The game warns of this only with a bad feeling."},
+        {"name": "Rod Break", "tip": "Shows Rod Break when your rod could break. The game warns of this only with a terrible feeling."},
         {"name": "Line Break", "tip": "Puts what follows on a row of its own under the rest of the line, in the line's own style. Press Enter in a line to make one."}
       ]
     },

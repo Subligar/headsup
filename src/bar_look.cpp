@@ -169,6 +169,11 @@ namespace headsup
         return settings.barTextFont.empty() ? kDetailFont : Interned(settings.barTextFont);
     }
 
+    const char* FishBarFont(const Settings& settings)
+    {
+        return settings.fishBarFont.empty() ? BarTextFont(settings) : Interned(settings.fishBarFont);
+    }
+
     TextFace BarLook::TitleFace() const { return TextFace{titleFont, static_cast<float>(lines.title)}; }
 
     TextFace BarLook::TitleFace(const WidgetContent& content) const
