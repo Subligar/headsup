@@ -340,7 +340,7 @@ class HeadsUp final : public IPlugin
     std::optional<int64_t> m_TurnInsDay;           // the day in Japan they are for
     bool m_TurnInsRead = false, m_TurnInsFailed = false;
     double m_TurnInsRetry = 0.0;                   // the next fetch after one that got no answer
-    bool m_PingTried = false; // it redirects the game's import of sendto, so once someone wants the ping
+    bool m_PingTried = false; // started once someone wants the ping
     headsup::FreeSpaceWalk m_SpaceWalk;
     headsup::CpuMeter m_Cpu;
     std::optional<uint64_t> m_Mapped; // the process's VirtualSize, read with the processor time
@@ -786,6 +786,8 @@ public:
         m_DrawDump.SawPacket(id, data, size, Now());
 #endif
         if (!injected) m_Connection.Received(Now()); // an addon's injected packet never came from the server
+        if (id == headsup::kZoneOutPacket)
+            if (const std::optional<uint32_t> server = headsup::ParseZoneOutAddress(data, size)) m_Ping.SendingTo(*server);
         const headsup::PacketFollowUp next = m_GameState.Received(id, data, size);
         if (next.zonedIn)
         {

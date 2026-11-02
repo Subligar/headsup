@@ -13,6 +13,7 @@ namespace headsup
     namespace
     {
         constexpr uint32_t kZoneInWeather = 0x68, kZoneInPlayer = 0x04, kZoneInZone = 0x30, kWeatherNumber = 0x08;
+        constexpr uint32_t kZoneOutAddress = 0x08;
         constexpr uint32_t kTalkWho = 0x04, kTalkNumMessage = 0x0A, kTalkNumWorkMessage = 0x1A;
         constexpr uint16_t kTalkNameBit = 0x8000;
         constexpr uint32_t kFirstOwner = 0x1D, kRegionStride = 4;
@@ -48,6 +49,13 @@ namespace headsup
     {
         if (data == nullptr || size < kZoneInPlayer + sizeof(uint32_t)) return std::nullopt;
         return ReadAt<uint32_t>(data, kZoneInPlayer);
+    }
+
+    std::optional<uint32_t> ParseZoneOutAddress(const uint8_t* data, uint32_t size)
+    {
+        if (data == nullptr || size < kZoneOutAddress + sizeof(uint32_t)) return std::nullopt;
+        const auto address = ReadAt<uint32_t>(data, kZoneOutAddress);
+        return address != 0 ? std::optional<uint32_t>(address) : std::nullopt;
     }
 
     std::optional<uint16_t> ParseZoneInZone(const uint8_t* data, uint32_t size)
