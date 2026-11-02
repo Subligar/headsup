@@ -10,7 +10,7 @@ from tooling import ROOT, load
 gen = load('tools/gen_zones.py')
 
 DAYS = '2104' + '0000' * 2158 + '4204'  # day 0 sunshine three times (0x0421), blank days, the last 0x0442
-ZONES = 'id\tname\tregion\tcalendar\n1\tKing Ranperre\'s Tomb\t0\t\n0\tValkurm Dunes\t1\t0\n'
+ZONES = 'id\tname\tregion\tcalendar\tfishing\n1\tKing Ranperre\'s Tomb\t0\t\t\n0\tValkurm Dunes\t1\t0\t7041\n'
 WEATHER = 'calendar\tdays\n0\t' + DAYS + '\n'
 
 
@@ -23,8 +23,8 @@ def numbers(text: str, array: str) -> list:
 class Generate(unittest.TestCase):
     def test_zones_and_calendars(self):
         text = gen.generate(gen.parse_zones(ZONES), gen.parse_calendars(WEATHER))
-        self.assertIn('const ZoneRecord kZones[] = {\n    {"Valkurm Dunes", 1, 0},\n'
-                      '    {"King Ranperre\'s Tomb", 0, 255},\n};', text)
+        self.assertIn('const ZoneRecord kZones[] = {\n    {"Valkurm Dunes", 1, 0, 7041},\n'
+                      '    {"King Ranperre\'s Tomb", 0, 255, 0},\n};', text)
         self.assertIn('static_assert(kWeatherDays == 2160', text)
         self.assertIn('static_assert(kUnknownRegion == 255', text)
         self.assertIn('static_assert(kNoCalendar == 255', text)
@@ -53,7 +53,7 @@ class Generate(unittest.TestCase):
 
     def test_a_calendar_number_past_the_last_is_an_error(self):
         with self.assertRaises(gen.DataError):
-            gen.generate(gen.parse_zones(ZONES.replace('\t1\t0\n', '\t1\t3\n')), gen.parse_calendars(WEATHER))
+            gen.generate(gen.parse_zones(ZONES.replace('\t1\t0\t7041\n', '\t1\t3\t7041\n')), gen.parse_calendars(WEATHER))
 
     def test_a_short_calendar_is_an_error(self):
         with self.assertRaises(gen.DataError):
@@ -61,7 +61,7 @@ class Generate(unittest.TestCase):
 
     def test_a_repeated_zone_is_an_error(self):
         with self.assertRaises(gen.DataError):
-            gen.parse_zones(ZONES + '0\tAgain\t1\t0\n')
+            gen.parse_zones(ZONES + '0\tAgain\t1\t0\t\n')
 
     def test_a_file_without_its_header_is_an_error(self):
         with self.assertRaises(gen.DataError):
@@ -70,9 +70,9 @@ class Generate(unittest.TestCase):
             gen.parse_calendars(WEATHER.replace('calendar\tdays', 'calendar\tweather'))
 
     def test_a_region_phoenix_does_not_have_is_an_error(self):
-        self.assertEqual(gen.parse_zones(ZONES.replace('\t1\t0\n', '\t45\t0\n'))[0]['region'], 45)  # East Ulbuka
+        self.assertEqual(gen.parse_zones(ZONES.replace('\t1\t0\t7041\n', '\t45\t0\t7041\n'))[0]['region'], 45)  # East Ulbuka
         with self.assertRaises(gen.DataError):
-            gen.parse_zones(ZONES.replace('\t1\t0\n', '\t46\t0\n'))
+            gen.parse_zones(ZONES.replace('\t1\t0\t7041\n', '\t46\t0\t7041\n'))
 
     def test_calendars_must_be_numbered_in_order(self):
         with self.assertRaises(gen.DataError):

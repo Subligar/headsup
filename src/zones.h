@@ -10,12 +10,14 @@ namespace headsup
     constexpr int kWeatherDays       = 2160; // a zone's weather calendar repeats after this many Vana'diel days
     constexpr uint8_t kUnknownRegion = 255;
     constexpr uint8_t kNoCalendar    = 255;
+    constexpr uint16_t kNoFishing    = 0;
 
     struct ZoneRecord
     {
         const char* name;  // as players know it: "King Ranperre's Tomb"
         uint8_t region;    // Phoenix's REGION_TYPE, kUnknownRegion for none
         uint8_t calendar;  // its weather calendar, kNoCalendar for none
+        uint16_t fishing;  // the server's number for its first fishing message, kNoFishing for none
     };
 
     const ZoneRecord* ZoneById(uint16_t id);

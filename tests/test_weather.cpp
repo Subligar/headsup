@@ -33,7 +33,7 @@ TEST(a_zones_day_reads_its_calendar_and_blank_days_carry_the_last)
     CHECK(WeatherOn(dunes, 0) == day0);
     CHECK(WeatherOn(dunes, 1) == day0);
     CHECK(WeatherOn(dunes, kWeatherDays) == day0); // the cycle wraps
-    CHECK(!WeatherOn(ZoneRecord{"Nowhere", kUnknownRegion, kNoCalendar}, 0).has_value());
+    CHECK(!WeatherOn(ZoneRecord{"Nowhere", kUnknownRegion, kNoCalendar, kNoFishing}, 0).has_value());
 }
 
 TEST(a_calendar_with_one_set_day_keeps_it_to_the_end_of_its_cycle)

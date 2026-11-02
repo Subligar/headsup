@@ -15,8 +15,9 @@ WEATHER_DAYS = 2160
 LAST_REGION = 45
 UNKNOWN_REGION = 255
 NO_CALENDAR = 255
+NO_FISHING = 0  # zones.h's kNoFishing
 DAY_KINDS = 256  # a calendar's day is a byte, an index into the distinct days
-ZONES_HEADER = 'id\tname\tregion\tcalendar'
+ZONES_HEADER = 'id\tname\tregion\tcalendar\tfishing'
 WEATHER_HEADER = 'calendar\tdays'
 
 
@@ -31,9 +32,9 @@ def parse_zones(text: str) -> list:
     zones, seen = [], set()
     for number, line in enumerate(lines[1:], start=2):
         fields = line.split('\t')
-        if (len(fields) != 4 or not fields[0].isdigit() or not fields[2].isdigit()
-                or not (fields[3] == '' or fields[3].isdigit())):
-            raise DataError(f'phoenix_zones.tsv line {number}: id, name, region and calendar, the numbers whole')
+        if (len(fields) != 5 or not fields[0].isdigit() or not fields[2].isdigit()
+                or not all(field == '' or field.isdigit() for field in fields[3:])):
+            raise DataError(f'phoenix_zones.tsv line {number}: id, name, region, calendar and fishing, the numbers whole')
         zone, region = int(fields[0]), int(fields[2])
         if zone in seen:
             raise DataError(f'phoenix_zones.tsv line {number}: zone {zone} again')
@@ -41,7 +42,8 @@ def parse_zones(text: str) -> list:
             raise DataError(f'phoenix_zones.tsv line {number}: region {region} is not one of Phoenix\'s')
         seen.add(zone)
         zones.append({'id': zone, 'name': fields[1], 'region': region,
-                      'calendar': int(fields[3]) if fields[3] else NO_CALENDAR})
+                      'calendar': int(fields[3]) if fields[3] else NO_CALENDAR,
+                      'fishing': int(fields[4]) if fields[4] else NO_FISHING})
     return sorted(zones, key=lambda z: z['id'])
 
 
@@ -89,8 +91,9 @@ def generate(zones: list, calendars: list) -> str:
              f'static_assert(kWeatherDays == {WEATHER_DAYS}, "gen_zones.py writes {WEATHER_DAYS} days a calendar");',
              f'static_assert(kUnknownRegion == {UNKNOWN_REGION}, "gen_zones.py writes {UNKNOWN_REGION} for none");',
              f'static_assert(kNoCalendar == {NO_CALENDAR}, "gen_zones.py writes {NO_CALENDAR} for none");',
+             f'static_assert(kNoFishing == {NO_FISHING}, "gen_zones.py writes {NO_FISHING} for none");',
              f'constexpr size_t kRegionCount = {LAST_REGION + 1};', 'const ZoneRecord kZones[] = {']
-    lines += [f'    {{{c_string(z["name"])}, {z["region"]}, {z["calendar"]}}},' for z in zones]
+    lines += [f'    {{{c_string(z["name"])}, {z["region"]}, {z["calendar"]}, {z["fishing"]}}},' for z in zones]
     lines += ['};', 'const uint16_t kWeatherOdds[] = {']
     lines += ['    ' + ' '.join(f'0x{v:04x},' for v in kinds[start:start + 16]) for start in range(0, len(kinds), 16)]
     lines += ['};', 'const uint8_t kWeatherCalendars[][kWeatherDays] = {']

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Read zone names, regions and weather calendars from a Phoenix checkout into data/.
+"""Read zone names, regions, weather calendars and fishing messages from a Phoenix checkout into data/.
 
 Usage: zones.py SERVER_DIR OUT_DIR. Phoenix keeps no display names, only script folder names, and no region column:
 regions come from the switch in zoneutils.cpp's GetCurrentRegion, matched to zone numbers through data/enums/zone.yaml.
-Zones share 60 weather calendars, so each distinct one is written once.
+Zones share 60 weather calendars, so each distinct one is written once. A zone's fishing messages start at its
+FISHING_MESSAGE_OFFSET in scripts/zones/<folder>/IDs.lua, blank where it has none.
 """
 import pathlib
 import re
@@ -110,6 +111,11 @@ def parse_weather(text: str) -> dict:
     return calendars
 
 
+def parse_fishing(text: str):
+    found = re.search(r'\bFISHING_MESSAGE_OFFSET\s*=\s*(\d+)', text)
+    return int(found.group(1)) if found else ''
+
+
 def build(server: pathlib.Path):
     def read(relative: str) -> str:
         return (server / relative).read_text(encoding='utf-8')
@@ -127,14 +133,16 @@ def build(server: pathlib.Path):
                 index[days] = len(calendars)
                 calendars.append(days)
             calendar = index[days]
-        rows.append((zone, display_name(names[zone]), regions.get(zone, UNKNOWN_REGION), calendar))
+        ids = server / 'scripts' / 'zones' / names[zone] / 'IDs.lua'
+        fishing = parse_fishing(ids.read_text(encoding='utf-8')) if ids.is_file() else ''
+        rows.append((zone, display_name(names[zone]), regions.get(zone, UNKNOWN_REGION), calendar, fishing))
     return rows, calendars
 
 
 def write(out: pathlib.Path, rows, calendars) -> None:
     out.mkdir(parents=True, exist_ok=True)
-    zones = ['id\tname\tregion\tcalendar']
-    zones += [f'{zone}\t{name}\t{region}\t{calendar}' for zone, name, region, calendar in rows]
+    zones = ['id\tname\tregion\tcalendar\tfishing']
+    zones += [f'{zone}\t{name}\t{region}\t{calendar}\t{fishing}' for zone, name, region, calendar, fishing in rows]
     (out / 'phoenix_zones.tsv').write_text('\n'.join(zones) + '\n', encoding='utf-8')
     weather = ['calendar\tdays'] + [f'{i}\t{days}' for i, days in enumerate(calendars)]
     (out / 'phoenix_weather.tsv').write_text('\n'.join(weather) + '\n', encoding='utf-8')

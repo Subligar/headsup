@@ -23,7 +23,7 @@ TEST(zones_are_found_by_id_with_names_players_know_and_their_regions)
 TEST(a_zone_has_its_weather_calendar)
 {
     CHECK(PackedWeather(*ZoneById(0), 0) == 0x0421); // sunshine, sunshine, sunshine
-    CHECK(!PackedWeather(ZoneRecord{"Nowhere", kUnknownRegion, kNoCalendar}, 0).has_value());
+    CHECK(!PackedWeather(ZoneRecord{"Nowhere", kUnknownRegion, kNoCalendar, kNoFishing}, 0).has_value());
 }
 
 TEST(zone_0_and_ids_past_the_data_are_unknown_and_read_as_the_bar_names_them)
