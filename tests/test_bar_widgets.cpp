@@ -2217,10 +2217,12 @@ TEST(the_conquest_widget_counts_the_regions_of_the_nations_picked_and_its_popup_
     owners[5] = Nation::Windurst;
     owners[18] = Nation::None;
     state.owners = owners;
-    // Two by two, in lined-up columns: San d'Oria and Bastok over Windurst and the beastmen.
+    // Two by two, in lined-up columns, each its crest and count: San d'Oria and Bastok over Windurst and the beastmen.
     const WidgetContent all = BarWidgetContent(BarWidget::Conquest, state, settings);
     CHECK(all.cells && all.title.size() == 2 && all.subtitle.size() == 2);
-    CHECK(all.title[0].text == "S 1" && all.title[1].text == "B 2" && all.subtitle[0].text == "W 1" && all.subtitle[1].text == "BM 14");
+    CHECK(all.title[0].text == " 1" && all.title[1].text == " 2" && all.subtitle[0].text == " 1" && all.subtitle[1].text == " 14");
+    CHECK(all.title[0].picture == GamePicture::SanDoriaCrest && all.title[1].picture == GamePicture::BastokCrest &&
+          all.subtitle[0].picture == GamePicture::WindurstCrest && all.subtitle[1].picture == GamePicture::BeastmenCrest);
     CHECK(all.title[1].argb == NationColor(Nation::Bastok) && all.hasPopup);
     // Bastok alone: its name and count, and its regions in the popup.
     settings.Widget(BarWidget::Conquest).nations = NationBit(Nation::Bastok);

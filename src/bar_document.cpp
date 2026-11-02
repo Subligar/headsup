@@ -76,13 +76,23 @@ namespace headsup
             return value;
         }
 
+        // A span's game picture, before its text.
+        std::string Picture(const Span& span)
+        {
+            return span.picture != GamePicture::None
+                       ? "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"/>"
+                       : std::string();
+        }
+
         std::string Spans(const std::vector<Span>& spans, const BarLook& look)
         {
             std::string rml;
             for (const Span& span : spans)
-                rml += span.picture != GamePicture::None
-                           ? "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"/>"
-                           : "<span style=\"color:" + RcssColor(look.BarColor(span)) + ";\">" + EscapedRml(span.text) + "</span>";
+            {
+                rml += Picture(span);
+                if (!span.text.empty())
+                    rml += "<span style=\"color:" + RcssColor(look.BarColor(span)) + ";\">" + EscapedRml(span.text) + "</span>";
+            }
             return rml;
         }
 
@@ -92,7 +102,7 @@ namespace headsup
             std::string rml;
             for (size_t i = 0; i < spans.size() && i < columns.size(); ++i)
                 rml += "<span class=\"cell\" style=\"width:" + Px(columns[i] + (i + 1 < spans.size() ? look.metrics.gap : 0.0f)) +
-                       ";color:" + RcssColor(look.BarColor(spans[i])) + ";\">" + EscapedRml(spans[i].text) + "</span>";
+                       ";color:" + RcssColor(look.BarColor(spans[i])) + ";\">" + Picture(spans[i]) + EscapedRml(spans[i].text) + "</span>";
             return rml;
         }
 

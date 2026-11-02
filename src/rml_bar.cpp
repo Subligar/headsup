@@ -75,7 +75,7 @@ namespace headsup
     {
         float width = 0.0f;
         for (const Span& s : spans)
-            width += s.picture != GamePicture::None ? kPictureGap + std::round(face.size) : Width(host, s.text, face);
+            width += (s.picture != GamePicture::None ? kPictureGap + std::round(face.size) : 0.0f) + Width(host, s.text, face);
         return width;
     }
 

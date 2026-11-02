@@ -747,9 +747,7 @@ namespace headsup
             }
         }
 
-        // The Conquest widget's nations, short, by Nation.
-        constexpr const char* kNationShort[] = {"", "S", "B", "W", "BM"};
-        constexpr size_t kNationsPerLine     = 2;
+        constexpr size_t kNationsPerLine = 2; // the Conquest widget's, when it shows several
 
         std::vector<Nation> PickedNations(uint8_t bits)
         {
@@ -1414,15 +1412,17 @@ namespace headsup
                 w.title = ListOf(Text("-"));
                 break;
             }
-            // A nation alone by its name; several by their first letters, each in its color, two to a line in columns.
+            // A nation alone by its name; several by their crests, each count in its color, two to a line in columns.
             const std::vector<Nation> picked = PickedNations(o.nations);
             w.cells = picked.size() > 1; // its counts alone, without its name under them
             if (w.cells) w.subtitle.clear();
             for (size_t i = 0; i < picked.size(); ++i)
             {
-                const Nation nation    = picked[i];
-                const std::string name = picked.size() == 1 ? NationName(nation) : kNationShort[static_cast<int>(nation)];
-                const Span count = Colored(name + " " + std::to_string(std::ranges::count(*state.owners, nation)), NationColor(nation));
+                const Nation nation = picked[i];
+                const std::string regions = std::to_string(std::ranges::count(*state.owners, nation));
+                Span count = Colored(picked.size() == 1 ? std::string(NationName(nation)) + " " + regions : " " + regions,
+                    NationColor(nation));
+                if (picked.size() > 1) count.picture = NationCrest(nation);
                 (i < kNationsPerLine ? w.title : w.subtitle).push_back(count);
             }
             if (w.title.empty()) w.title = ListOf(Text("-"));
