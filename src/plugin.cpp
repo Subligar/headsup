@@ -2897,6 +2897,8 @@ private:
             }
         m_PhTimers.Update(now, aliveMobs, m_Settings.phUpMinutes);
         m_Zone = static_cast<uint16_t>(party->GetMemberZone(0));
+        if (player->GetIsZoning() == 0 && m_Zone != 0 && party->GetMemberServerId(0) != 0)
+            m_GameState.Here(party->GetMemberServerId(0), m_Zone);
         m_TimerLines.clear();
         if (m_Settings.phTimers) m_TimerLines = m_PhTimers.Lines(m_Zone, now);
     }

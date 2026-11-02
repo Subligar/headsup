@@ -18,6 +18,12 @@ namespace headsup
         }
     }
 
+    void GameState::Here(uint32_t player, uint16_t zone)
+    {
+        if (!m_Player) m_Player = player;
+        if (!m_Zone) m_Zone = zone;
+    }
+
     PacketFollowUp GameState::Received(uint16_t id, const uint8_t* data, uint32_t size)
     {
         PacketFollowUp next;

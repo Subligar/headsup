@@ -87,6 +87,9 @@ namespace headsup
         bool ConquestRequestDue(double now, bool open, bool refresh) const;
         void ConquestRequested(double now);
 
+        // Who and where you are as the game holds it, for a HeadsUp loaded after the last zone-in; a zone-in's own word
+        // stands over it.
+        void Here(uint32_t player, uint16_t zone);
         // What the server told you of the fish on your line last: from its bite until the next.
         const FishCatch& Fish() const { return m_Fish; }
 

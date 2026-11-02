@@ -624,3 +624,17 @@ TEST(your_fishing_messages_say_what_bit_and_how_it_feels)
     Feed(game, Cut(TalkNum(kYou, 6578 + 0x34), 0x0B)); // too short to hold its message
     CHECK(game.Fish().size == FishSize::Item);
 }
+
+TEST(loaded_mid_zone_the_game_says_where_you_are_until_a_zone_in_does)
+{
+    constexpr uint32_t kYou = 1001;
+    GameState game;
+    game.Here(kYou, 103); // Valkurm Dunes, from 7254
+    Feed(game, TalkNum(kYou, 7254 + 0x33));
+    CHECK(game.Fish().size == FishSize::Item);
+    // A zone-in's word is newer than what the game held when it was asked.
+    Feed(game, ZoneIn(kRain).Put<uint32_t>(0x04, kYou).Put<uint16_t>(0x30, 248)); // Selbina, from 6578
+    game.Here(kYou, 103);
+    Feed(game, TalkNum(kYou, 6578 + 0x08));
+    CHECK(game.Fish().size == FishSize::Small);
+}

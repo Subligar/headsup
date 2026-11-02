@@ -1448,9 +1448,10 @@ namespace headsup
                 break;
             case SettingPiece::FishingBarLine:
                 form.Fade(!s.fishBar);
-                form.Row(label.c_str(), tip);
+                form.Line("line design");
+                form.Caption(label.c_str(), "line-name");
                 form.LineBox("fish line", s.fishBarLine, c.state.fishLine);
-                form.EndRow();
+                form.EndLine();
                 form.Line("line chips");
                 for (const Tag tag : FishBarTags())
                     form.TagChip(tag);
