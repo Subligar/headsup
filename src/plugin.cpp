@@ -1,6 +1,7 @@
 #include "Ashita.h"
 
 #include "auto_check.h"
+#include "profiles.h"
 #include "bar_connection.h"
 #include "bar_document.h"
 #include "bar_fps.h"
@@ -424,6 +425,10 @@ class HeadsUp final : public IPlugin
     std::vector<std::string> m_SeenWindows;
     std::vector<std::string> m_CursorFiles;      // the cursors folder's, as the Target Cursor and Cursor Icon lists offer them
     std::vector<std::string> m_ThemeFiles;       // the themes folder's, as Theme Colors' Load offers them
+    std::vector<std::string> m_ProfileNames;     // the profiles folder's, as the Profiles card offers them
+    std::string m_Profile;   // the profile in use; empty for the settings.ini of before profiles
+    std::string m_Character; // the character logged in, empty before one is
+    headsup::CharacterProfiles m_CharacterProfiles;
     std::optional<std::string> m_CursorFileRead; // the File cursor read last, whether or not it was one
     std::string m_GameFontFailure;                // why the game's font could not be read; empty when it was
     std::string m_GamePearlFailure;               // why the game's pearl could not be read; empty when it was
@@ -507,9 +512,19 @@ public:
                 handle != nullptr)
                 m_LoadedFonts.push_back(handle);
         }
+        if (ProfilesOn())
+        {
+            std::ifstream in(OwnFolder(kConfigFolder) + "\\" + headsup::kCharactersFile, std::ios::binary);
+            m_CharacterProfiles = headsup::ReadCharacterProfiles(
+                std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
+            // Before anyone logs in, the profile played last.
+            if (!m_CharacterProfiles.last.empty() && Exists(ProfileFile(m_CharacterProfiles.last)))
+                m_Profile = m_CharacterProfiles.last;
+        }
         LoadSettings();
         ScanCursors();
         ScanThemes();
+        ScanProfiles();
 #ifdef HEADSUP_DEV
         ReadWindowFile(false);
 #endif
@@ -1010,6 +1025,8 @@ public:
                 .windowPlaces     = &m_WindowPlaces,
                 .cursorFiles      = &m_CursorFiles,
                 .themeFiles       = &m_ThemeFiles,
+                .profiles         = &m_ProfileNames,
+                .profile          = &m_Profile,
 #ifdef HEADSUP_DEV
                 .watching         = m_DrawDump.Watching(),
 #else
@@ -1048,6 +1065,12 @@ public:
             if (const std::optional<std::string> name = m_RmlMenu.TakeThemeSave()) SaveTheme(*name);
             if (const std::optional<std::string> name = m_RmlMenu.TakeThemeLoad(); name && LoadTheme(*name))
                 m_SettingsChangedAt = now;
+            if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
+            if (const std::optional<std::string> name = m_RmlMenu.TakeProfileUse(); name && ProfilesOn()) UseProfile(*name);
+            if (const std::optional<std::string> name = m_RmlMenu.TakeProfileNew(); name && ProfilesOn()) NewProfile(*name);
+            if (const std::optional<std::string> name = m_RmlMenu.TakeProfileRename(); name && ProfilesOn())
+                RenameCurrentProfile(*name);
+            if (const std::optional<std::string> name = m_RmlMenu.TakeProfileDelete(); name && ProfilesOn()) DeleteProfile(*name);
         }
         if (headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
         UpdatePointer();
@@ -2248,19 +2271,120 @@ private:
     }
 
     // Ashita's configuration manager takes the settings file's path inside its config folder.
-    // The settings file's name. A developer's build takes another from HEADSUP_SETTINGS in the game's environment, so
-    // a test client changes a copy and not the file the player's own game reads.
-    static const char* SettingsName()
+    // A developer's build takes a settings file from HEADSUP_SETTINGS in the game's environment, so a test client
+    // changes a copy and not the files the player's own game reads; it has no profiles then.
+    static const char* DevSettings()
     {
 #ifdef HEADSUP_DEV
-        static const std::string named = [] {
-            const char* name = std::getenv("HEADSUP_SETTINGS");
-            return std::string(name != nullptr && *name != '\0' ? name : kSettingsFile);
-        }();
-        return named.c_str();
-#else
-        return kSettingsFile;
+        const char* name = std::getenv("HEADSUP_SETTINGS");
+        if (name != nullptr && *name != '\0') return name;
 #endif
+        return nullptr;
+    }
+    static bool ProfilesOn() { return DevSettings() == nullptr; }
+    static std::string ProfileName(const std::string& profile)
+    {
+        return std::string(headsup::kProfilesFolder) + "/" + profile + headsup::kProfileSuffix;
+    }
+    // The settings file's name inside HeadsUp's config folder: the profile's, or settings.ini before there is one.
+    std::string SettingsName() const
+    {
+        if (const char* dev = DevSettings()) return dev;
+        return m_Profile.empty() ? kSettingsFile : ProfileName(m_Profile);
+    }
+    std::string ProfileFile(const std::string& profile) { return OwnFolder(kConfigFolder) + "\\" + ProfileName(profile); }
+    static bool Exists(const std::string& path) { return GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES; }
+
+    void ScanProfiles()
+    {
+        m_ProfileNames = headsup::ProfileNames(FolderEntries(OwnFolder(kConfigFolder) + "\\" + headsup::kProfilesFolder + "\\"));
+    }
+
+    void WriteCharacterProfiles()
+    {
+        std::ofstream out(OwnFolder(kConfigFolder) + "\\" + headsup::kCharactersFile, std::ios::binary | std::ios::trunc);
+        out << headsup::CharacterProfilesText(m_CharacterProfiles);
+        if (!out.flush()) Print("could not write " + std::string(headsup::kCharactersFile) + "; profiles are picked again next time.");
+    }
+
+    void SavePending()
+    {
+        if (m_SettingsChangedAt || m_SavedKeys.Unwritten()) SaveSettings();
+    }
+
+    // Your settings now written as a profile of this name, over nothing: false when it is there already or the
+    // settings could not be read or written.
+    bool CopySettingsTo(const std::string& profile)
+    {
+        const std::string path = ProfileFile(profile);
+        std::string text;
+        if (Exists(path) || !ReadSettingsFile(text)) return false;
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        out.write(text.data(), static_cast<std::streamsize>(text.size()));
+        return static_cast<bool>(out.flush());
+    }
+
+    // The character uses this profile from now on: your settings saved to the one before, then this one's loaded.
+    void UseProfile(const std::string& profile)
+    {
+        if (!m_Character.empty()) m_CharacterProfiles.byCharacter[m_Character] = profile;
+        m_CharacterProfiles.last = profile;
+        WriteCharacterProfiles();
+        if (profile == m_Profile) return;
+        SavePending();
+        m_Profile = profile;
+        LoadSettings();
+        ScanProfiles();
+        Print("using the profile " + profile + ".");
+    }
+
+    // A character logged in: their profile, or one named for them made from your settings now.
+    void CharacterIn(const std::string& character)
+    {
+        m_Character     = character;
+        const auto used = m_CharacterProfiles.byCharacter.find(character);
+        const std::string profile = used != m_CharacterProfiles.byCharacter.end() ? used->second : character;
+        if (!Exists(ProfileFile(profile))) CopySettingsTo(profile);
+        // A new install's Setup is still owed, now on the character's profile.
+        const bool offer = m_OfferSetup;
+        UseProfile(profile);
+        m_OfferSetup = m_OfferSetup || offer;
+    }
+
+    void NewProfile(const std::string& name)
+    {
+        SavePending();
+        if (!CopySettingsTo(name))
+        {
+            Print("could not make the profile " + name + ".");
+            return;
+        }
+        UseProfile(name);
+    }
+
+    void RenameCurrentProfile(const std::string& name)
+    {
+        if (m_Profile.empty() || Exists(ProfileFile(name))) return;
+        SavePending();
+        if (MoveFileExA(ProfileFile(m_Profile).c_str(), ProfileFile(name).c_str(), MOVEFILE_WRITE_THROUGH) == 0)
+        {
+            Print("could not rename the profile " + m_Profile + ".");
+            return;
+        }
+        headsup::RenameProfile(m_CharacterProfiles, m_Profile, name);
+        WriteCharacterProfiles();
+        m_Profile = name;
+        LoadSettings(); // Ashita's copy of the file is under its old path
+        ScanProfiles();
+    }
+
+    void DeleteProfile(const std::string& name)
+    {
+        if (name == m_Profile) return;
+        if (DeleteFileA(ProfileFile(name).c_str()) == 0) Print("could not delete the profile " + name + ".");
+        headsup::ForgetProfile(m_CharacterProfiles, name);
+        WriteCharacterProfiles();
+        ScanProfiles();
     }
     std::string SettingsPath() const { return std::string(kFolder) + "/" + SettingsName(); }
     std::string SettingsFile() { return OwnFolder(kConfigFolder) + "\\" + SettingsName(); }
@@ -2898,7 +3022,13 @@ private:
         m_PhTimers.Update(now, aliveMobs, m_Settings.phUpMinutes);
         m_Zone = static_cast<uint16_t>(party->GetMemberZone(0));
         if (player->GetIsZoning() == 0 && m_Zone != 0 && party->GetMemberServerId(0) != 0)
+        {
             m_GameState.Here(party->GetMemberServerId(0), m_Zone);
+            // Never under Setup, which works on the settings as they are; it picks the profile once it closes.
+            if (const char* name = party->GetMemberName(0); ProfilesOn() && !m_RmlMenu.InSetup() && name != nullptr &&
+                                                             *name != '\0' && m_Character != name)
+                CharacterIn(name);
+        }
         m_TimerLines.clear();
         if (m_Settings.phTimers) m_TimerLines = m_PhTimers.Lines(m_Zone, now);
     }

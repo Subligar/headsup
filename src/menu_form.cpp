@@ -414,6 +414,46 @@ namespace headsup
             form.EndRow();
         }
 
+        // The profile in use, the others to use or delete, and a name to make a new one under or rename this one to.
+        void ProfileFiles(Context& c)
+        {
+            Form& form = c.form;
+            form.Fade(false);
+            static const std::vector<std::string> kNone;
+            static const std::string kNoProfile;
+            const std::vector<std::string>& names = c.readings.profiles != nullptr ? *c.readings.profiles : kNone;
+            const std::string& inUse = c.readings.profile != nullptr ? *c.readings.profile : kNoProfile;
+            form.Row(Labeled(Word(c, WindowWord::ProfileFilesProfile), "profile").c_str(), WordTip(c, WindowWord::ProfileFilesProfile));
+            if (!names.empty())
+            {
+                if (c.state.profilePicked.empty()) c.state.profilePicked = inUse;
+                const auto known = std::ranges::find(names, c.state.profilePicked);
+                int picked       = known != names.end() ? static_cast<int>(known - names.begin()) : 0;
+                form.DropdownAt("profile file", picked, 0, static_cast<int>(names.size()) - 1,
+                    [&](int i) { return names[static_cast<size_t>(i)] + (names[static_cast<size_t>(i)] == inUse ? " *" : ""); },
+                    kFilterWidth);
+                c.state.profilePicked = names[static_cast<size_t>(picked)];
+                if (form.Button(Word(c, WindowWord::ProfileFilesUse), "use profile", kRaisedPill,
+                        WordTip(c, WindowWord::ProfileFilesUse)) && c.state.profilePicked != inUse)
+                    c.state.profileUse = c.state.profilePicked;
+                if (form.Button(Word(c, WindowWord::ProfileFilesDelete), "delete profile", kRaisedPill,
+                        WordTip(c, WindowWord::ProfileFilesDelete)) && c.state.profilePicked != inUse)
+                    c.state.profileDelete = c.state.profilePicked;
+            }
+            if (form.Opened("profile file") || names.empty()) c.state.profilesRequested = true;
+            form.EndRow();
+            form.Row(Labeled(Word(c, WindowWord::ProfileFilesNew), "new").c_str(), WordTip(c, WindowWord::ProfileFilesNew));
+            form.TextAt("profile name", c.state.profileName, Word(c, WindowWord::ProfileFilesNameHint), kFilterWidth, true,
+                kMaxFileName);
+            const bool named = IsFolderFileName(c.state.profileName) && std::ranges::find(names, c.state.profileName) == names.end();
+            if (form.Button(Word(c, WindowWord::ProfileFilesCreate), "create profile") && named)
+                c.state.profileNew = c.state.profileName;
+            if (form.Button(Word(c, WindowWord::ProfileFilesRename), "rename profile", kRaisedPill,
+                    WordTip(c, WindowWord::ProfileFilesRename)) && named && !inUse.empty())
+                c.state.profileRename = c.state.profileName;
+            form.EndRow();
+        }
+
         // A copy's name as its tab and chip say it: the widget's, and after the first copy its number.
         std::string CopyName(const Context& c, PanelWidget widget)
         {
@@ -1626,6 +1666,7 @@ namespace headsup
             }
             case SettingPiece::ThemePalette: ThemePalette(c, e); break;
             case SettingPiece::ThemeFiles: ThemeFiles(c); break;
+            case SettingPiece::ProfileFiles: ProfileFiles(c); break;
             case SettingPiece::HideGameHelp:
                 form.Fade(!on);
                 form.Switch(label.c_str(), s.hideHelpBar, tip);
@@ -1788,7 +1829,8 @@ namespace headsup
             case CardPiece::WindowGroups:
             case CardPiece::BaseGameUi:
             case CardPiece::ThemeColors:
-            case CardPiece::SettingsWindow: return {};
+            case CardPiece::SettingsWindow:
+            case CardPiece::Profiles: return {};
             case CardPiece::Reset: return {.bare = true};
             case CardPiece::Nameplates: return {false, !on, &s.nameplates};
             case CardPiece::OutlineStyle: return {false, !on, &s.outlines};

@@ -516,6 +516,25 @@
       "name": "HeadsUp Config",
       "cards": [
         {
+          "key": "profiles",
+          "name": "Profiles",
+          "description": "Each character uses a profile of settings, made from your settings the first time they log in. Characters can share a profile: a change on one shows on the other.",
+          "settings": [
+            {
+              "key": "profile-files",
+              "words": [
+                {"key": "profile", "name": "Profile", "tip": "The profiles in config/headsup/profiles. The one this character uses has a star."},
+                {"key": "use", "name": "Use", "tip": "This character uses the profile picked from now on. Your settings are saved to the one in use first."},
+                {"key": "delete", "name": "Delete", "tip": "Deletes the profile picked. The one in use cannot be deleted. A character that used it makes a new one at its next login."},
+                {"key": "new", "name": "New Profile", "tip": "Create makes a profile of this name from your settings now, which this character then uses. Rename gives the profile in use this name, for every character that uses it."},
+                {"key": "name-hint", "name": "Name"},
+                {"key": "create", "name": "Create"},
+                {"key": "rename", "name": "Rename", "tip": "Gives the profile in use this name, for every character that uses it."}
+              ]
+            }
+          ]
+        },
+        {
           "key": "settings-window",
           "name": "Config Window",
           "settings": [

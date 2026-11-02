@@ -111,7 +111,7 @@ PIECES = Pieces(
         'weaknesses': Card(), 'statuses': Card(), 'placeholder-timers': Card(),
         'screenshot-mode': Card(), 'window-groups': Card(), 'custom-game-ui': Card(), 'base-game-ui': Card(),
         'top-panel': Card(switch=True), 'theme-colors': Card(), 'help-bar': Card(switch=True), 'widgets': Card(), 'layout': Card(),
-        'mouse-pointer': Card(), 'settings-window': Card(), 'reset': Card(), 'debug-mode': Card(switch=True),
+        'mouse-pointer': Card(), 'settings-window': Card(), 'profiles': Card(), 'reset': Card(), 'debug-mode': Card(switch=True),
     },
     settings={
         # Entities
@@ -183,6 +183,7 @@ PIECES = Pieces(
             'panel-top', 'panel-bottom', 'panel-border', 'panel-outer', 'text', 'heading', 'tag-fill', 'tag-border',
             'tag-text', 'highlight')),
         'theme-files': Setting(unnamed=True, words={'save-as': True, 'name-hint': True, 'save': True, 'load': True}),
+        'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
         'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-text-size': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
             'combine', 'second-line', 'show-region-name', 'show-conquest', 'show-conquest-text', 'show-zone-id', 'moon-phase', 'day-of-week', 'date', 'icons', 'background', 'spacing', 'padding', 'title-font', 'text-font', 'text-size', 'visibility', 'show-icons', 'show-mob-level', 'jobs', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'nations', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', 'server-time', '24-hour',

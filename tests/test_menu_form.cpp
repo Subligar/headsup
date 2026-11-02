@@ -964,6 +964,36 @@ TEST(a_theme_is_saved_under_a_name_it_can_have_and_loaded_from_the_list)
     CHECK(w.state.themeLoad == "Dusk" && w.settings == before); // the plugin reads it in
 }
 
+TEST(the_profiles_card_asks_the_plugin_to_use_make_rename_or_delete_a_profile)
+{
+    Window w;
+    w.state.page = Page::ConfigMenu;
+    const Settings before = w.settings;
+    const std::vector<std::string> names = {"Carrott", "whatever"};
+    const std::string inUse = "Carrott";
+    w.readings.profiles = &names;
+    w.readings.profile  = &inUse;
+    const char* name = "configmenu-profiles-profile-name";
+    // A name taken, or one no file can have, makes nothing.
+    w.Pass({{name, kChangeEvent, "whatever"}, {"configmenu-profiles-create-profile", kClickEvent, ""}});
+    w.Pass({{name, kChangeEvent, "a/b"}, {"configmenu-profiles-create-profile", kClickEvent, ""}});
+    CHECK(!w.state.profileNew);
+    w.Pass({{name, kChangeEvent, "Fishing"}, {"configmenu-profiles-create-profile", kClickEvent, ""}});
+    CHECK(w.state.profileNew == "Fishing");
+    w.Pass({{"configmenu-profiles-rename-profile", kClickEvent, ""}});
+    CHECK(w.state.profileRename == "Fishing");
+    // The one in use can be neither used again nor deleted.
+    w.Pass({{"configmenu-profiles-use-profile", kClickEvent, ""}, {"configmenu-profiles-delete-profile", kClickEvent, ""}});
+    CHECK(!w.state.profileUse && !w.state.profileDelete);
+    w.Pass({{"configmenu-profiles-profile-file", kClickEvent, ""}});
+    CHECK(w.state.profilesRequested);
+    w.Pass({{"configmenu-profiles-profile-file-o-1", kClickEvent, ""}});
+    w.Pass({{"configmenu-profiles-use-profile", kClickEvent, ""}});
+    CHECK(w.state.profileUse == "whatever");
+    w.Pass({{"configmenu-profiles-delete-profile", kClickEvent, ""}});
+    CHECK(w.state.profileDelete == "whatever" && w.settings == before);
+}
+
 TEST(the_nameplate_fonts_lead_with_the_games_font_and_the_top_panels_leave_it_out)
 {
     Window w;

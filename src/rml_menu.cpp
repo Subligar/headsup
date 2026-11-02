@@ -148,6 +148,11 @@ namespace headsup
     bool RmlMenu::TakeThemesRequest() { return std::exchange(m_State.themesRequested, false); }
     std::optional<std::string> RmlMenu::TakeThemeSave() { return std::exchange(m_State.themeSave, std::nullopt); }
     std::optional<std::string> RmlMenu::TakeThemeLoad() { return std::exchange(m_State.themeLoad, std::nullopt); }
+    bool RmlMenu::TakeProfilesRequest() { return std::exchange(m_State.profilesRequested, false); }
+    std::optional<std::string> RmlMenu::TakeProfileUse() { return std::exchange(m_State.profileUse, std::nullopt); }
+    std::optional<std::string> RmlMenu::TakeProfileNew() { return std::exchange(m_State.profileNew, std::nullopt); }
+    std::optional<std::string> RmlMenu::TakeProfileRename() { return std::exchange(m_State.profileRename, std::nullopt); }
+    std::optional<std::string> RmlMenu::TakeProfileDelete() { return std::exchange(m_State.profileDelete, std::nullopt); }
 
     bool RmlMenu::OpenPage(const std::string& name)
     {
