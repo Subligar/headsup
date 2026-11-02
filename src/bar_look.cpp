@@ -25,8 +25,6 @@ namespace headsup
         constexpr float kLeastProgress   = 2.0f;
         constexpr float kBesideWidth     = 2.0f;  // a bar beside the text: this many bar heights long
         constexpr float kBesideShare     = 0.14f; // and this tall, of the bar's height
-        constexpr float kHelpBarShare    = 0.5f;   // of the screen's width, the widest the help bar gets
-        constexpr float kHelpBarMinWidth = 320.0f; // or this on a narrow screen
         constexpr float kHelpPadShare    = 0.5f;   // of the gap: clear above and below the help bar's row
         constexpr int kOuterGap          = 2;          // an ornate popup's outer border
         constexpr uint32_t kCardFill     = 0x12FFFFFF; // a popup's section card: white over the panel, faintly
@@ -239,10 +237,24 @@ namespace headsup
     }
     float HelpBarLeft(const BarMetrics& metrics) { return std::round(metrics.gap); }
     float HelpBarPad(const BarMetrics& metrics) { return std::round(metrics.gap * kHelpPadShare); }
-    TextFace HelpFace(const BarLook& look) { return TextFace{look.detailFont, static_cast<float>(look.lines.title)}; }
-    float HelpBarWidth(float screenWidth)
+    int HelpTextPixels(int setting, int barTitle) { return setting > kAutoBarTextSize ? setting : barTitle; }
+    namespace
     {
-        return std::min(screenWidth, std::max(kHelpBarMinWidth, std::floor(screenWidth * kHelpBarShare)));
+        float HelpPixels(const BarLook& look)
+        {
+            return static_cast<float>(HelpTextPixels(look.settings.helpBarTextSize, look.lines.title));
+        }
+    }
+    TextFace HelpCaptionFace(const BarLook& look) { return TextFace{look.titleFont, HelpPixels(look)}; }
+    TextFace HelpFace(const BarLook& look) { return TextFace{look.detailFont, HelpPixels(look)}; }
+    float HelpBarHeight(int setting, float fitted)
+    {
+        return setting > kAutoHelpBarHeight ? static_cast<float>(setting) : fitted;
+    }
+    float HelpBarWidth(float screenWidth, int percent)
+    {
+        const float share = static_cast<float>(percent) / static_cast<float>(kMaxHelpBarWidth);
+        return std::floor(screenWidth * share);
     }
 
     BoxStyle PopupPanel(const BarLook& look)

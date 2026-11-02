@@ -135,6 +135,8 @@ namespace headsup
     constexpr int kMinFishBarWidth = 100, kMaxFishBarWidth = 1000; // pixels
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
+    constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
+    constexpr int kAutoHelpBarHeight = 8, kMaxHelpBarHeight = 200;  // pixels, or Auto: as tall as its text
     constexpr int kMaxUpMinutes = 60, kDefaultUpMinutes = 5; // how long a respawn timer reads "up" before it goes
 
     struct Settings
@@ -174,6 +176,9 @@ namespace headsup
         bool moveGameHelp = false; // the game's own help bar goes under the top bar, and the windows under it
         int helpBarX = 0, helpBarY = 0;          // back-buffer pixels from the help bar's place under the top bar
         bool helpBarBackground = true;           // off, the help text alone
+        int helpBarTextSize = kAutoBarTextSize;  // its text's pixels, or Auto: the bar's title size
+        int helpBarWidth    = kDefaultHelpBarWidth;
+        int helpBarHeight   = kAutoHelpBarHeight;
         std::string menuFont = kDefaultMenuFont; // the settings window's text, by its kMenuFonts name
         int menuFontSize     = kDefaultMenuFontSize; // pixels: the settings window's text and everything sized by it
         int menuOpacity      = 100;              // percent

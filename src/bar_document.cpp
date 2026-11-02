@@ -461,8 +461,9 @@ namespace headsup
         css += std::string("#") + kHelpId + "{position:absolute;left:0px;top:0px;width:0px;height:0px;}";
         css += ".p{position:absolute;white-space:pre;}";
         css += ".help-box{position:absolute;" + (look.skin ? SkinRules(*look.skin) : PanelRules(HelpBarPanel(look))) + "}";
-        css += ".hc{" + FaceRules(look.titleFont, lines.title, place.title.height) + ShadowEffect(lines.title) + "}";
-        css += ".hh{" + FaceRules(look.detailFont, lines.title, place.figures.height) + ShadowEffect(lines.title) + "}";
+        const int help = HelpTextPixels(look.settings.helpBarTextSize, lines.title);
+        css += ".hc{" + FaceRules(look.titleFont, help, place.helpCaption.height) + ShadowEffect(help) + "}";
+        css += ".hh{" + FaceRules(look.detailFont, help, place.help.height) + ShadowEffect(help) + "}";
         const bool glass = look.palette.shape == BarShape::Glass;
         if (glass) css += GlassBarRules(look);
         // Last, over every shape's own corners and borders.
@@ -500,11 +501,11 @@ namespace headsup
         if (look.settings.helpBarBackground)
             rml += "<div class=\"help-box\" style=\"" + BoxAt(box.x, box.y, box.width, box.height) + "\"></div>";
         auto centered = [&](int lineHeight) { return box.y + (box.height - static_cast<float>(lineHeight)) / 2.0f; };
-        const float captionY = centered(place.title.height);
+        const float captionY = centered(place.helpCaption.height);
         if (!parts.caption.empty()) rml += TextAt("hc", parts.row.captionX, captionY, look.palette.title, parts.caption);
         if (parts.bag) rml += TextAt("hc", parts.row.bagX, captionY, look.BarColor(*parts.bag), parts.bag->text);
         if (!parts.help.empty())
-            rml += TextAt("hh", parts.row.helpX, centered(place.figures.height), look.palette.text, parts.help);
+            rml += TextAt("hh", parts.row.helpX, centered(place.help.height), look.palette.text, parts.help);
         return rml;
     }
 

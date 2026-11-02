@@ -291,3 +291,22 @@ TEST(a_widgets_fonts_and_text_size_are_its_own_or_the_panels)
     CHECK_EQ(std::string(WidgetTextFont(settings, o)), "Arial");
     CHECK_EQ(WidgetTextSize(settings, o), 20);
 }
+
+TEST(the_help_bar_takes_its_set_width_text_size_and_height)
+{
+    CHECK(Near(HelpBarWidth(1920.0f, kDefaultHelpBarWidth), 960.0f));
+    CHECK(Near(HelpBarWidth(1920.0f, 25), 480.0f));
+    CHECK(Near(HelpBarWidth(1366.0f, 25), 341.0f));
+    Settings settings;
+    TextRow lines;
+    lines.title = 16;
+    CHECK_EQ(HelpFace(LookOf(BarTheme::PhoenixGold, settings, lines)).size, 16.0f);
+    CHECK_EQ(HelpCaptionFace(LookOf(BarTheme::PhoenixGold, settings, lines)).size, 16.0f);
+    settings.helpBarTextSize = 21;
+    const BarLook look = LookOf(BarTheme::PhoenixGold, settings, lines);
+    CHECK_EQ(HelpFace(look).size, 21.0f);
+    CHECK_EQ(HelpCaptionFace(look).size, 21.0f);
+    CHECK(Family(HelpCaptionFace(look), look.titleFont) && Family(HelpFace(look), look.detailFont));
+    CHECK_EQ(HelpBarHeight(kAutoHelpBarHeight, 24.0f), 24.0f);
+    CHECK_EQ(HelpBarHeight(40, 24.0f), 40.0f);
+}

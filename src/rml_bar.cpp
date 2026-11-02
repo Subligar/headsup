@@ -140,11 +140,11 @@ namespace headsup
         return line;
     }
 
-    const RmlBar::Rows& RmlBar::RowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, int barText,
+    const RmlBar::Rows& RmlBar::RowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, int barText, int helpText,
         const char* titleFont, const char* detailFont)
     {
-        return m_Rows.Get(LinesKey{m.height, shape, barText, titleFont, detailFont},
-            [&](const LinesKey&) { return MakeRows(host, m, titleFont, detailFont); });
+        return m_Rows.Get(LinesKey{m.height, shape, barText, titleFont, detailFont, helpText},
+            [&](const LinesKey&) { return MakeRows(host, m, titleFont, detailFont, helpText); });
     }
 
     const RmlBar::Rows& RmlBar::WidgetRowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, int barText,
@@ -158,7 +158,8 @@ namespace headsup
         return m_WidgetRows.emplace_back(key, MakeRows(host, m, titleFont, detailFont)).second;
     }
 
-    RmlBar::Rows RmlBar::MakeRows(RmlHost& host, const BarMetrics& m, const char* titleFont, const char* detailFont)
+    RmlBar::Rows RmlBar::MakeRows(RmlHost& host, const BarMetrics& m, const char* titleFont, const char* detailFont,
+        int helpText)
     {
         Rows rows;
         rows.lines = FitTextRow(m, [&](bool title, int pixels) {
@@ -170,10 +171,13 @@ namespace headsup
         rows.place.figures = PlaceLine(host, detailFont, t.title, kTitleGlyphs, t.titleY, t.aloneY);
         rows.place.detail  = PlaceLine(host, detailFont, t.detail, kDetailGlyphs, t.detailY, t.detailY);
         rows.place.side    = PlaceLine(host, detailFont, t.side, kDetailGlyphs, t.sideY, t.sideY);
+        const int helpPixels    = HelpTextPixels(helpText, t.title);
+        rows.place.helpCaption  = PlaceLine(host, titleFont, helpPixels, kTitleGlyphs, 0.0f, 0.0f);
+        rows.place.help         = PlaceLine(host, detailFont, helpPixels, kTitleGlyphs, 0.0f, 0.0f);
         // A line box is as tall for any text in its font: the caption's and the help's, as GDI draws them.
         int width = 0, caption = 0, help = 0;
-        m_Gdi.Extent("H", titleFont, t.title, 0, width, caption);
-        m_Gdi.Extent("H", detailFont, t.title, 0, width, help);
+        m_Gdi.Extent("H", titleFont, helpPixels, 0, width, caption);
+        m_Gdi.Extent("H", detailFont, helpPixels, 0, width, help);
         rows.helpBarHeight = std::round(static_cast<float>(std::max(caption, help)) + 2.0f * HelpBarPad(m));
         return rows;
     }
@@ -371,12 +375,12 @@ namespace headsup
             !(state.strip->caption.empty() && state.strip->help.empty()))
         {
             const BarMetrics& m        = look.metrics;
-            const TextFace captionFace = look.TitleFace(), helpFace = HelpFace(look);
+            const TextFace captionFace = HelpCaptionFace(look), helpFace = HelpFace(look);
             parts.bag                  = StripBagFill(state);
             const float bagWidth       = parts.bag ? Width(host, parts.bag->text, captionFace) : 0.0f;
             const float left           = HelpBarLeft(m);
-            const float room =
-                HelpBarWidth(screenWidth) - left - 2.0f * m.padding - (bagWidth > 0.0f ? bagWidth + m.gap : 0.0f);
+            const float room           = HelpBarWidth(screenWidth, look.settings.helpBarWidth) - left -
+                               2.0f * m.padding - (bagWidth > 0.0f ? bagWidth + m.gap : 0.0f);
             const HelpBarText& text = m_HelpBar.Get(
                 HelpBarKey{*state.strip, captionFace.family, helpFace.family, WholePixels(captionFace.size),
                     WholePixels(helpFace.size), std::lround(std::floor(room * kFitSteps)),
@@ -390,7 +394,8 @@ namespace headsup
             cut           = text.cut;
             parts.caption = text.caption;
             parts.help    = text.help;
-            parts.row     = PlaceHelpBar(left, top, rows.helpBarHeight, m.padding, m.gap,
+            const float height = HelpBarHeight(look.settings.helpBarHeight, rows.helpBarHeight);
+            parts.row          = PlaceHelpBar(left, top, height, m.padding, m.gap,
                 Width(host, parts.caption, captionFace), bagWidth, Width(host, parts.help, helpFace));
             // Where the player moved it from its place under the top bar.
             for (float* x : {&parts.row.box.x, &parts.row.captionX, &parts.row.bagX, &parts.row.helpX})
@@ -514,7 +519,8 @@ namespace headsup
         if (!host.EnsureFont(titleFont)) titleFont = TitleFont(p.shape);
         const char* detailFont = BarTextFont(settings);
         if (!host.EnsureFont(detailFont)) detailFont = kDetailFont;
-        const Rows& rows = RowsFor(host, m, p.shape, settings.barTextSize, titleFont, detailFont);
+        const Rows& rows =
+            RowsFor(host, m, p.shape, settings.barTextSize, settings.helpBarTextSize, titleFont, detailFont);
         BarLook look{p, settings, m, PillRow(m), rows.lines, titleFont, p.shape == BarShape::Ornate, detailFont,
             std::nullopt};
         if (p.shape == BarShape::Window && skin != nullptr) look.skin = FrameAsSet(settings, skin->frame);
@@ -542,7 +548,8 @@ namespace headsup
             widgets.hasPopup[SlotOf(BarWidget::GameHelp)] = true;
         }
         if (settings.Widget(BarWidget::GameHelp).on)
-            m_HelpReach = BarRect{HelpBarLeft(m) + helpX, helpTop, HelpBarWidth(screenWidth), rows.helpBarHeight};
+            m_HelpReach = BarRect{HelpBarLeft(m) + helpX, helpTop, HelpBarWidth(screenWidth, settings.helpBarWidth),
+                HelpBarHeight(settings.helpBarHeight, rows.helpBarHeight)};
         input.Frame(layout, widgets.hasPopup);
         std::vector<BarTabChip> chips;
         std::vector<BarScroll> scrolls;

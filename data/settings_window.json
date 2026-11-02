@@ -287,7 +287,10 @@
           "settings": [
             {"key": "hide-game-help", "name": "Hide Game Help", "tip": "The game's own help bar, which the top panel covers."},
             {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
-            {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."}
+            {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
+            {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
+            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
+            {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
           ]
         }
       ]

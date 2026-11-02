@@ -28,7 +28,7 @@ TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
         BarLinePlace{14, 23.0f, 0.0f, 3.0f},
-            BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+            BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29, 0}, PopupFace{"Barlow Condensed", 18, 22, 0},
         PopupFace{"Barlow Condensed", 15, 18, 2}, PopupFace{"Barlow Condensed", 15, 18, 0}};
     Settings settings;
@@ -80,7 +80,7 @@ TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complain
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
         BarLinePlace{14, 23.0f, 0.0f, 3.0f},
-            BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+            BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
     Settings settings;
     for (int t = 0; t < kFixedThemeCount; ++t)
     {
@@ -108,7 +108,7 @@ TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complain
 TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it_unlit)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
     Settings settings;
     std::vector<BarPalette> palettes;
     for (int t = 0; t < kFixedThemeCount; ++t)
@@ -164,7 +164,7 @@ TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it
 TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_shape)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
     Settings settings;
     for (const BarShape shape : {BarShape::Ornate, BarShape::Pills, BarShape::Glass, BarShape::Window})
     {
@@ -194,7 +194,7 @@ TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_
 TEST(a_target_without_its_background_looks_as_any_other_widget_lit_or_not)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
     Settings settings;
     for (int t = 0; t < kFixedThemeCount; ++t)
     {

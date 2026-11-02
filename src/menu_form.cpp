@@ -1556,6 +1556,20 @@ namespace headsup
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
                 form.Switch(label.c_str(), s.helpBarBackground, tip);
                 break;
+            case SettingPiece::HelpTextSize:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
+                form.SliderInt(label.c_str(), s.helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize,
+                    s.helpBarTextSize == kAutoBarTextSize ? "Auto" : "%d px", tip);
+                break;
+            case SettingPiece::HelpWidth:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
+                form.SliderInt(label.c_str(), s.helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth, "%d%%", tip);
+                break;
+            case SettingPiece::HelpHeight:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
+                form.SliderInt(label.c_str(), s.helpBarHeight, kAutoHelpBarHeight, kMaxHelpBarHeight,
+                    s.helpBarHeight == kAutoHelpBarHeight ? "Auto" : "%d px", tip);
+                break;
             case SettingPiece::WidgetTabs: PickedWidget(c, e); break;
             case SettingPiece::Trays: Trays(c); break;
             case SettingPiece::ResetLayout:

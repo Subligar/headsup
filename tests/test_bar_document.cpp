@@ -23,7 +23,7 @@ namespace
     {
         return BarTextPlace{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
             BarLinePlace{14, 23.0f, 0.0f, 3.0f},
-            BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+            BarLinePlace{14, 15.0f, 15.0f, 3.0f}, BarLinePlace{16, 0.0f, 0.0f, 0.0f}, BarLinePlace{17, 0.0f, 0.0f, 0.0f}};
     }
 
     bool Has(const std::string& text, const char* part) { return text.find(part) != std::string::npos; }
@@ -203,6 +203,16 @@ TEST(the_help_bar_is_its_box_and_its_three_texts_centered_on_the_row)
     const std::string document = BarDocument(look, Place());
     CHECK(Has(document, "id=\"help\"") && Has(document, ".help-box{"));
     CHECK(Has(document, "decorator:vertical-gradient(#1c160ff7 #0c0a08f7)"));
+}
+
+TEST(the_help_bars_text_is_the_bars_title_size_or_its_own)
+{
+    Settings settings;
+    // The look's title is 13 px; the help's line boxes are 16 and 17 px.
+    CHECK(Has(BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place()), "font-size:13px;line-height:16px;"));
+    settings.helpBarTextSize = 21;
+    const std::string document = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place());
+    CHECK(Has(document, "font-size:21px;line-height:16px;") && Has(document, "font-size:21px;line-height:17px;"));
 }
 
 TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
@@ -417,7 +427,7 @@ TEST(a_widget_with_text_of_its_own_has_rules_of_its_own_under_its_id)
     const PanelWidget gil{BarWidget::Gil, 1};
     // Its own fonts at 20 px titles over 15 px details, a line box 24 px tall from row 6.
     const WidgetText own{gil, kCinzel, kMarcellusSC, TextRow{20, 15, true, 6.0f, 26.0f, 12.0f},
-        BarTextPlace{BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{18, 26.0f, 0.0f, 2.0f}, BarLinePlace{18, 16.0f, 16.0f, 2.0f}}};
+        BarTextPlace{BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{18, 26.0f, 0.0f, 2.0f}, BarLinePlace{18, 16.0f, 16.0f, 2.0f}, {}, {}}};
     const std::string rml = BarDocument(look, Place(), {own});
     CHECK(Has(rml, "#w-gil-2 .title{font-family:\"Cinzel\";font-size:20px;line-height:24px;"));
     CHECK(Has(rml, "#w-gil-2 .detail{font-family:\"Marcellus SC\";font-size:15px;"));

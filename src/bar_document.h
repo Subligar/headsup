@@ -54,6 +54,7 @@ namespace headsup
     struct BarTextPlace
     {
         BarLinePlace title, figures, detail, side;
+        BarLinePlace helpCaption, help; // the help bar's, at its own text size
         bool operator==(const BarTextPlace&) const = default;
     };
 

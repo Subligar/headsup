@@ -118,9 +118,14 @@ namespace headsup
     // Clear above and below the help bar's row.
     float HelpBarPad(const BarMetrics& metrics);
     // The help's text: the detail font at a widget's title size, so the row is one line of the bar's text.
+    // The help bar's caption and help, at its own text size or the bar's title size.
+    int HelpTextPixels(int setting, int barTitle);
+    TextFace HelpCaptionFace(const BarLook& look);
     TextFace HelpFace(const BarLook& look);
-    // The widest the help bar gets: half the screen, or its least width on a narrow one.
-    float HelpBarWidth(float screenWidth);
+    // Its set height, or fitted, as tall as its text.
+    float HelpBarHeight(int setting, float fitted);
+    // The widest the help bar gets: its share of the screen's width.
+    float HelpBarWidth(float screenWidth, int percent);
     // The boxes a popup and the help bar are drawn with: a popup's panel with its outer border, a section's card (a
     // lift on the panel, rounded as a pill theme's panel is), a tag's pill height tall (the ornate themes keep their
     // gold edge around it), and the help bar's panel, bordered all round.
