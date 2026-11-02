@@ -58,6 +58,9 @@ namespace headsup
     constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
 
     // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
+    // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
+    enum class ConquestGrid : uint8_t { TwoByTwo, OneByFour };
+    constexpr int kConquestGridCount = 2;
     struct WidgetOptions
     {
         bool on         = false;
@@ -71,6 +74,7 @@ namespace headsup
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
         uint8_t nations = kAllNations;              // Conquest: whose regions it counts, by NationBit
+        ConquestGrid conquestGrid = ConquestGrid::TwoByTwo; // and how several are laid out
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         bool clock24         = true;                // its two lines
         bool clockSeconds    = false;               // its own line's seconds
@@ -100,6 +104,7 @@ namespace headsup
         int worldGuild       = 0;                    // its guild shop, by GuildShops
         uint8_t worldSections = kAllWorldSections;   // its popup's parts, by WorldBit
         std::optional<PanelWidget> combine;          // shown right after it in its pill, with one popup (Combine)
+        bool combineOnPanel = true, combineInPopup = true; // that widget's place on the panel and cards in the popup
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.

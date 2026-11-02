@@ -747,7 +747,17 @@ namespace headsup
             }
         }
 
-        constexpr size_t kNationsPerLine = 2; // the Conquest widget's, when it shows several
+
+        // The widget just before this one in its combined pill, whose Combine pulled it there; none for a widget alone
+        // or first in its pill.
+        std::optional<PanelWidget> CombinedBefore(const Settings& settings, PanelWidget widget)
+        {
+            const PanelGroups groups = Panel(settings);
+            const std::vector<PanelWidget> pill = Members(groups, groups.group[SlotOf(widget)]);
+            const auto at = std::ranges::find(pill, widget);
+            if (at == pill.end() || at == pill.begin()) return std::nullopt;
+            return *(at - 1);
+        }
 
         std::vector<Nation> PickedNations(uint8_t bits)
         {
@@ -1226,6 +1236,10 @@ namespace headsup
     {
         // Each widget's own content, less its second line or icons where they are switched off.
         WidgetContent w        = ContentOf(widget, state, settings);
+        // Combined, the widget before it in its pill may keep it off the panel; its popup still joins the pill's.
+        if (const std::optional<PanelWidget> before = CombinedBefore(settings, widget);
+            before && !settings.Widget(*before).combineOnPanel)
+            w.shown = false;
         const WidgetOptions& o = settings.Widget(widget);
         if (!o.secondLine && HasSecondLine(widget.kind))
         {
@@ -1416,6 +1430,8 @@ namespace headsup
             const std::vector<Nation> picked = PickedNations(o.nations);
             w.cells = picked.size() > 1; // its counts alone, without its name under them
             if (w.cells) w.subtitle.clear();
+            constexpr size_t kTwoByTwo = 2; // nations a line
+            const size_t perLine = o.conquestGrid == ConquestGrid::OneByFour ? picked.size() : kTwoByTwo;
             for (size_t i = 0; i < picked.size(); ++i)
             {
                 const Nation nation = picked[i];
@@ -1423,7 +1439,7 @@ namespace headsup
                 Span count = Colored(picked.size() == 1 ? std::string(NationName(nation)) + " " + regions : " " + regions,
                     NationColor(nation));
                 if (picked.size() > 1) count.picture = NationCrest(nation);
-                (i < kNationsPerLine ? w.title : w.subtitle).push_back(count);
+                (i < perLine ? w.title : w.subtitle).push_back(count);
             }
             if (w.title.empty()) w.title = ListOf(Text("-"));
             w.figures = true;
@@ -1458,9 +1474,11 @@ namespace headsup
         if (pill.size() <= 1) return BarPopupContent(head, state, settings);
         PopupContent joined;
         joined.oneColumn = true;
-        for (const PanelWidget w : pill)
+        for (size_t i = 0; i < pill.size(); ++i)
         {
+            const PanelWidget w = pill[i];
             if (!BarWidgetContent(w, state, settings).hasPopup) continue;
+            if (i > 0 && !settings.Widget(pill[i - 1]).combineInPopup) continue;
             PopupContent own = BarPopupContent(w, state, settings);
             if (joined.title.empty())
                 joined.icon = own.icon;

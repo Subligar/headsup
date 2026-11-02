@@ -185,6 +185,7 @@ namespace headsup
         constexpr const char* kBarCurrencyKey = "barCurrency";
         constexpr const char* kBarBagKey      = "barBag";
         constexpr const char* kBarNationsKey  = "barNations";
+        constexpr const char* kConquestGridKey = "barConquestGrid";
         constexpr const char* kWorldLineKey     = "barWorldLine";
         constexpr const char* kWorldRouteKey    = "barWorldRoute";
         constexpr const char* kWorldElementKey  = "barWorldElement";
@@ -219,6 +220,7 @@ namespace headsup
         constexpr const char* kBackgroundSuffix = "Background";
         constexpr const char* kSpacingSuffix    = "Spacing";
         constexpr const char* kCombineSuffix    = "Combine";
+        constexpr const char* kCombineOnPanelSuffix = "CombineOnPanel", *kCombineInPopupSuffix = "CombineInPopup";
         constexpr const char* kPaddingSuffix    = "Padding";
         constexpr const char* kTitleFontSuffix  = "TitleFont";
         constexpr const char* kTextFontSuffix   = "TextFont";
@@ -1332,6 +1334,8 @@ namespace headsup
             o.textFont   = text((widget + kTextFontSuffix).c_str());
             o.textSize   = number(widget + kTextSizeSuffix, o.textSize);
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
+            o.combineOnPanel = flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
+            o.combineInPopup = flag(widget + kCombineInPopupSuffix, o.combineInPopup);
             switch (w.kind)
             {
             case BarWidget::Gil:
@@ -1340,6 +1344,8 @@ namespace headsup
             case BarWidget::Bags: o.bag = number(kBarBagKey, o.bag); break;
             case BarWidget::Conquest:
                 o.nations = static_cast<uint8_t>(std::clamp(number(kBarNationsKey, o.nations), 0, static_cast<int>(kAllNations)));
+                o.conquestGrid = static_cast<ConquestGrid>(
+                    std::clamp(number(kConquestGridKey, static_cast<int>(o.conquestGrid)), 0, kConquestGridCount - 1));
                 break;
             case BarWidget::World:
             {
@@ -1438,11 +1444,16 @@ namespace headsup
             text((widget + kTextFontSuffix).c_str(), o.textFont.c_str());
             StoreFloat(store, CopyKey(widget + kTextSizeSuffix, w), static_cast<float>(o.textSize));
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
+            flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
+            flag(widget + kCombineInPopupSuffix, o.combineInPopup);
             switch (w.kind)
             {
             case BarWidget::Gil: text(kBarCurrencyKey, kCurrencyTable[o.currency].key); break;
             case BarWidget::Bags: StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag)); break;
-            case BarWidget::Conquest: StoreFloat(store, CopyKey(kBarNationsKey, w), static_cast<float>(o.nations)); break;
+            case BarWidget::Conquest:
+                StoreFloat(store, CopyKey(kBarNationsKey, w), static_cast<float>(o.nations));
+                StoreFloat(store, CopyKey(kConquestGridKey, w), static_cast<float>(o.conquestGrid));
+                break;
             case BarWidget::World:
                 text(kWorldLineKey, kWorldLineNames[static_cast<int>(o.worldLine)]);
                 text(kWorldRouteKey, TravelRoutes()[static_cast<size_t>(o.worldRoute)].name);

@@ -256,10 +256,10 @@ namespace headsup
         {
             WidgetContent& c = widgets.contents[i];
             c                = BarWidgetContent(WidgetInSlot(i), state, look.settings);
+            widgets.hasPopup[i] = c.hasPopup; // kept off the panel, a combined widget's popup still joins its pill's
             if (!c.shown) continue;
             const BarLook own = LookOf(look, widgets, i);
             if (!own.lines.twoLines) OneLine(c, look.settings.barSubtitle);
-            widgets.hasPopup[i] = c.hasPopup;
             Shown& shown        = m_Shown[i];
             const float padding = WidgetPadding(m, look.settings, look.settings.widgets[i]);
             widgets.spacing[i]  = WidgetSpacing(look.settings, look.settings.widgets[i]);

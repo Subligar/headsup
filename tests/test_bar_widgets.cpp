@@ -2224,6 +2224,11 @@ TEST(the_conquest_widget_counts_the_regions_of_the_nations_picked_and_its_popup_
     CHECK(all.title[0].picture == GamePicture::SanDoriaCrest && all.title[1].picture == GamePicture::BastokCrest &&
           all.subtitle[0].picture == GamePicture::WindurstCrest && all.subtitle[1].picture == GamePicture::BeastmenCrest);
     CHECK(all.title[1].argb == NationColor(Nation::Bastok) && all.hasPopup);
+    // Or all four on one line.
+    settings.Widget(BarWidget::Conquest).conquestGrid = ConquestGrid::OneByFour;
+    const WidgetContent row = BarWidgetContent(BarWidget::Conquest, state, settings);
+    CHECK(row.cells && row.title.size() == 4 && row.subtitle.empty() && row.title[3].picture == GamePicture::BeastmenCrest);
+    settings.Widget(BarWidget::Conquest).conquestGrid = ConquestGrid::TwoByTwo;
     // Bastok alone: its name and count, and its regions in the popup.
     settings.Widget(BarWidget::Conquest).nations = NationBit(Nation::Bastok);
     CHECK_EQ(Joined(BarWidgetContent(BarWidget::Conquest, state, settings).title), "Bastok 2");
@@ -2563,6 +2568,32 @@ TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with
     // A combined pill whose first widget is switched off has its partner's popup alone.
     settings.Widget(BarWidget::Bags).on = false;
     CHECK(PanelPopupContent(BarWidget::Bags, state, settings) == gil);
+}
+
+TEST(a_combined_partner_can_leave_the_panel_or_the_popup_to_the_widget_it_follows)
+{
+    // Bags combined with a second Bags: the popup would list every bag twice.
+    Settings settings;
+    BarState state;
+    const PanelWidget second{BarWidget::Bags, 1};
+    settings.barSections[0].push_back(second);
+    settings.Widget(second).on               = true;
+    settings.Widget(BarWidget::Bags).combine = second;
+    const PopupContent bags = BarPopupContent(BarWidget::Bags, state, settings);
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
+    settings.Widget(BarWidget::Bags).combineInPopup = false;
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections == bags.sections);
+    CHECK(BarWidgetContent(second, state, settings).shown); // still on the panel
+    // On the panel the first alone, the partner's popup still joined.
+    settings.Widget(BarWidget::Bags).combineInPopup = true;
+    settings.Widget(BarWidget::Bags).combineOnPanel = false;
+    const WidgetContent hidden = BarWidgetContent(second, state, settings);
+    CHECK(!hidden.shown && hidden.hasPopup);
+    CHECK(BarWidgetContent(BarWidget::Bags, state, settings).shown);
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
+    // Not combined, the switches change nothing.
+    settings.Widget(BarWidget::Bags).combine.reset();
+    CHECK(BarWidgetContent(second, state, settings).shown);
 }
 
 TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)

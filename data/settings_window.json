@@ -332,6 +332,8 @@
               "key": "widget-tabs",
               "rows": [
                 {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one popup for both. That widget leaves its own place. Default is None."},
+                {"key": "combine-on-panel", "name": "Show Combined on Panel", "tip": "Shows the combined widget in the pill. Off, only this widget shows on the top panel, and the other's popup still joins this one's. Default is on."},
+                {"key": "combine-in-popup", "name": "Show Combined in Popup", "tip": "Adds the combined widget's popup to this one's. Off, the popup shows this widget's alone, so a widget combined with a copy of itself is not listed twice. Default is on."},
                 {"key": "second-line", "name": "Second Line"},
                 {"key": "show-region-name", "name": "Show Region Name", "tip": "The zone's region on the second line. Default is on."},
                 {"key": "show-conquest", "name": "Show Conquest", "tip": "The crest of the nation that holds the region, before the zone's name, after it, or below it. Default is Below."},
@@ -356,6 +358,7 @@
                 {"key": "blue-magic-learned", "name": "Learned Blue Magic", "tip": "How a TP move whose blue magic you already know is shown: still blue with a star after it, or as plain text. Default is Star."},
                 {"key": "currency", "name": "Currency"},
                 {"key": "nations", "name": "Nations", "tip": "Whose regions the widget counts and its popup lists."},
+                {"key": "conquest-grid", "name": "Layout", "tip": "How the nations are laid out when it shows more than one: two lines of two, or all on one line. Default is 2 x 2."},
                 {"key": "shows", "name": "Shows", "tip": "What the widget tells on the panel, with a countdown. Add a copy to show another."},
                 {"key": "ship", "name": "Ship", "tip": "The boat or airship whose next departure the widget shows."},
                 {"key": "element", "name": "Element", "tip": "Shows when that element's weather can next roll in the zone you are in, and its chance that day."},
@@ -1211,6 +1214,13 @@
       "options": [
         {"name": "Star", "tip": "Still blue, with a star after it."},
         {"name": "Plain Text", "tip": "In the popup's usual color, like any other TP move."}
+      ]
+    },
+    {
+      "key": "conquest-grid",
+      "options": [
+        {"name": "2 x 2", "tip": "Two lines of two."},
+        {"name": "1 x 4", "tip": "All on one line."}
       ]
     },
     {

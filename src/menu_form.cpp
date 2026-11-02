@@ -497,6 +497,13 @@ namespace headsup
                     o.combine = picked == 0 ? std::nullopt : std::optional<PanelWidget>(choices[static_cast<size_t>(picked - 1)]);
                     break;
                 }
+                case WidgetTabsRow::CombineOnPanel:
+                case WidgetTabsRow::CombineInPopup:
+                    if (!o.combine || CombineChoices(s, widget).empty()) break;
+                    form.Switch(label.c_str(),
+                        static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::CombineOnPanel ? o.combineOnPanel : o.combineInPopup,
+                        row.tip);
+                    break;
                 case WidgetTabsRow::SecondLine:
                     if (HasSecondLine(kind)) form.Switch(label.c_str(), o.secondLine, row.tip);
                     break;
@@ -597,6 +604,13 @@ namespace headsup
                     {
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Nations));
                         form.Toggles(label.c_str(), o.nations, names.data(), kContenderNations, row.tip);
+                    }
+                    break;
+                case WidgetTabsRow::ConquestGrid:
+                    if (kind == BarWidget::Conquest)
+                    {
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ConquestGrid));
+                        form.Segments(label.c_str(), o.conquestGrid, names.data(), kConquestGridCount, row.tip);
                     }
                     break;
                 case WidgetTabsRow::Shows:
