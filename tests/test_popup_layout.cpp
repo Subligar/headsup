@@ -971,3 +971,22 @@ TEST(a_cells_game_picture_goes_before_its_text_as_an_icon_does)
     CHECK(picture != a.pieces.end() && picture->picture == GamePicture::BastokCrest);
     CHECK(Near(picture->x, icon->x) && Near(picture->width, icon->width) && Near(Find(a, "Bastok")->x, Find(b, "Bastok")->x));
 }
+
+TEST(a_crests_name_value_and_star_are_centered_on_the_crest)
+{
+    // The zone popup's Influence: the holder's crest, its name, its star, and its share.
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupCell nation = Word("Bastok");
+    nation.picture   = GamePicture::BastokCrest;
+    nation.star      = true;
+    const PopupLayout l =
+        LayoutPopup(OneRow(PopupRow{RowKind::Pair, 0, {nation, Word("45%")}}), m, BarShape::Pills, false, Fake);
+    const auto first = [&](PopupPiece::Kind kind) { return *std::ranges::find(l.pieces, kind, &PopupPiece::kind); };
+    const PopupPiece crest = first(PopupPiece::Kind::Picture), star = first(PopupPiece::Kind::Star);
+    const float middle = crest.y + crest.height / 2.0f;
+    const TextSize text = Fake(Span{"Bastok", Tone::Normal, 0}, PopupFont::Text);
+    const PopupPiece* name = Find(l, "Bastok");
+    CHECK(Near(name->y + (text.inkTop + text.inkBottom) / 2.0f, middle));
+    CHECK(Near(star.y + star.height / 2.0f, middle));
+    CHECK(Near(Find(l, "45%")->y, name->y));
+}

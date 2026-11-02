@@ -292,8 +292,19 @@ namespace headsup
                 }
 
                 const size_t perLine = grid ? columns.size() : row.cells.size();
+                // A line holding a game picture (a nation's crest) has its texts' ink and its stars centered on it.
+                const auto centered = [&](size_t from) -> std::optional<float> {
+                    for (size_t c = from; c < std::min(from + perLine, row.cells.size()); ++c)
+                        if (row.cells[c].picture != GamePicture::None && !row.cells[c].text.empty())
+                        {
+                            const TextSize t = measure(row.cells[c].text.front(), PopupFont::Text);
+                            return unit * kCellIcon / 2.0f - (t.inkTop + t.inkBottom) / 2.0f;
+                        }
+                    return std::nullopt;
+                };
                 float lineHeight = 0.0f, x = b.pad + indent;
                 bool shown       = showLine(row, grid && row.header);
+                std::optional<float> drop = centered(0);
                 for (size_t i = 0; i < row.cells.size(); ++i)
                 {
                     if (i > 0 && i % perLine == 0)
@@ -302,6 +313,7 @@ namespace headsup
                         lineHeight = 0.0f;
                         x          = b.pad + indent;
                         shown      = showLine(row, false);
+                        drop       = centered(i);
                     }
                     if (!shown) continue;
                     const PopupCell& cell = row.cells[i];
@@ -347,14 +359,17 @@ namespace headsup
                     for (const Span& text : cell.text)
                     {
                         const TextSize t = measure(text, PopupFont::Text);
-                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, cx, cy, t.width, t.height, text});
+                        const float ty   = cy + drop.value_or(0.0f);
+                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, cx, ty, t.width, t.height, text});
+                        lineHeight = std::max(lineHeight, ty - cy + t.height);
                         cx += t.width;
                     }
                     if (cell.star)
                     {
                         const float s = unit * kStar;
                         cx += unit * kIconGap;
-                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Star, cx, cy + cells[i].inkTop, s, s, {}});
+                        const float sy = drop ? cy + (unit * kCellIcon - s) / 2.0f : cy + cells[i].inkTop;
+                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Star, cx, sy, s, s, {}});
                         cx += s;
                     }
                     if (pair && i == 1)
