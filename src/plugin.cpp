@@ -209,6 +209,10 @@ namespace
         return found != nullptr ? found->Name[0] : nullptr;
     }
 
+    IPlayer* g_Player = nullptr; // for the blue magic you have learned, from Initialize to Release
+
+    bool KnowsSpell(uint16_t spell) { return g_Player != nullptr && g_Player->HasSpell(spell); }
+
     headsup::GamePresses g_GamePresses; // what the game got of each button, for OnMouse
 
     // HeadsUp's own answer for a mouse message: true when the game must not get it.
@@ -486,6 +490,7 @@ public:
         m_AshitaCore = core;
         g_Plugin     = this;
         g_Resources  = core->GetResourceManager();
+        g_Player     = core->GetMemoryManager()->GetPlayer();
         QueryPerformanceFrequency(&m_QpcFrequency);
         m_UnderWine = headsup::UnderWine();
         IConfigurationManager* config = core->GetConfigurationManager();
@@ -531,6 +536,7 @@ public:
         g_SyncClicks = false;
         g_Gui        = nullptr;
         g_Resources  = nullptr;
+        g_Player     = nullptr;
         if (const std::string failure = m_NameHook.Stop(); !failure.empty()) Print(failure + ".");
         if (const std::string failure = m_ArrowHook.Stop(); !failure.empty()) Print(failure + ".");
         if (const std::string failure = m_ModelHook.Stop(); !failure.empty()) Print(failure + ".");
@@ -2556,6 +2562,7 @@ private:
             s.target    = m_Tracker.FindIndex(m_CursorTargets.target);
             s.itemName  = ItemName;
             s.spellName = SpellName;
+            s.knowsSpell = KnowsSpell;
             s.caster    = m_Player.caster;
         }
         if (s.target != nullptr)

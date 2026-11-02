@@ -303,7 +303,11 @@ class Info(unittest.TestCase):
 
     def test_the_tables(self):
         text = gen.generate_info(*self.tables(), 'abc')
-        self.assertIn('const MobSkill kMobSkills[] = {\n    {442, "Bubble Shower"}, {443, "Bubble Curtain"},\n};\n', text)
+        self.assertIn('const MobSkill kMobSkills[] = {\n    {442, "Bubble Shower", 0}, {443, "Bubble Curtain", 0},\n};\n', text)
+        blue = gen.parse_blue('skill\tspell\n443\t586\n')
+        self.assertIn('{443, "Bubble Curtain", 586}', gen.generate_info(*self.tables(), 'abc', blue))
+        with self.assertRaises(gen.DataError):
+            gen.parse_blue('skill\tspell\n443\t586\n443\t587\n', 'b.tsv')
         self.assertIn('const MobSpan kMobSkillLists[] = {\n    {0u, 0},\n    {0u, 2},\n};\n', text)
         self.assertIn('const MobSpell kMobSpells[] = {\n    {159, 1, 8}, {220, 3, 25},\n};\n', text)
         self.assertIn('const MobCombat kMobCombat[] = {\n    {{103, 0, 19, 21, 17, 19}}, {{111, 0, 21, 23, 19, 21}},\n};\n'

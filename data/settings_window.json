@@ -351,6 +351,9 @@
                 {"key": "show-icons", "name": "Show Icons", "tip": "A mob's icons: its aggression before its name, the rest after it, and its weaknesses after its level. Default is its aggression alone."},
                 {"key": "show-mob-level", "name": "Show Mob Level", "tip": "A mob's level and how tough it is, under its name. Default is on."},
                 {"key": "jobs", "name": "Show Player Info", "tip": "A player's jobs and levels under their name, once HeadsUp knows them: from your party, a check, or Look Up Players. Default is on."},
+                {"key": "blue-magic", "name": "Blue Magic", "tip": "In the popup, a mob's TP moves that a blue mage can learn are shown in the Blue Magic Color. Default is on."},
+                {"key": "blue-magic-color", "name": "Blue Magic Color", "tip": "The color of TP moves a blue mage can learn. Default is blue."},
+                {"key": "blue-magic-learned", "name": "Learned Blue Magic", "tip": "How a TP move whose blue magic you already know is shown: still blue with a star after it, or as plain text. Default is Star."},
                 {"key": "currency", "name": "Currency"},
                 {"key": "nations", "name": "Nations", "tip": "Whose regions the widget counts and its popup lists."},
                 {"key": "shows", "name": "Shows", "tip": "What the widget tells on the panel, with a countdown. Add a copy to show another."},
@@ -1172,6 +1175,13 @@
         {"name": "Use of Abilities", "tip": "Using an ability near it draws it."},
         {"name": "Low Player HP", "tip": "Low HP near it draws it."},
         {"name": "Weaknesses", "tip": "What it is weak to, after its level."}
+      ]
+    },
+    {
+      "key": "blue-learned",
+      "options": [
+        {"name": "Star", "tip": "Still blue, with a star after it."},
+        {"name": "Plain Text", "tip": "In the popup's usual color, like any other TP move."}
       ]
     },
     {

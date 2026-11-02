@@ -131,6 +131,9 @@ namespace headsup
     constexpr int kMinPointerSize = 100, kMaxPointerSize = 300; // percent of the pointer's own size
     constexpr int kMinMenuOpacity = 30; // percent: fainter, the window could not be found to set it back
     constexpr int kMaxMenuSide  = 16384; // pixels: more than any screen is across
+    // How the Target popup marks a TP move whose blue magic you have learned: a star after it, or plain text.
+    enum class BlueLearned : uint8_t { Star, Plain };
+    constexpr int kBlueLearnedCount = 2;
     constexpr int kFishBarUnplaced = -1; // the fishing bar's X and Y until it is dragged somewhere
     constexpr int kMaxFishBarPlace = 7680; // pixels: across an 8K screen
     constexpr int kMinFishBarWidth = 100, kMaxFishBarWidth = 1000; // pixels
@@ -199,6 +202,9 @@ namespace headsup
         std::string fishBarFont;     // its line's font, or the theme's text font
         bool fishBarDraggable = true; // off, the pointer goes through it to the game
         std::string fishBarLine = "${size|fish} $feeling";
+        bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
+        Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};
+        BlueLearned blueMagicLearned = BlueLearned::Star;
         bool fishColorByCatch  = true; // off, the theme's fill whatever is on the line
         Color fishSmallColor   = {{0.31f, 0.71f, 0.94f}};
         Color fishLargeColor   = {{0.18f, 0.48f, 0.84f}};

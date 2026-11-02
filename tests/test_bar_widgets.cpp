@@ -293,6 +293,48 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
           (std::vector<Span>{{"-3", Tone::Weak}}));
 }
 
+namespace
+{
+    bool KnowsMetallicBody(uint16_t spell) { return spell == 517; }
+
+    const PopupCell* MoveCell(const PopupContent& popup, const char* name)
+    {
+        const PopupSection* moves = Section(popup, "TP moves");
+        if (moves == nullptr) return nullptr;
+        for (const PopupCell& cell : moves->rows[0].cells)
+            if (Joined(cell.text) == name) return &cell;
+        return nullptr;
+    }
+}
+
+TEST(tp_moves_a_blue_mage_can_learn_are_blue_and_learned_ones_marked)
+{
+    // Qufim Island's Clipper: Metallic Body teaches blue magic 517, Big Scissors nothing.
+    Settings settings;
+    ActorInfo crab = Goblin();
+    crab.mob       = MobById(17293331);
+    BarState state;
+    state.target = &crab;
+    const std::vector<Span> blue{{"Metallic Body", Tone::Own, ToArgb(settings.blueMagicColor)}};
+    const std::vector<Span> plain{{"Metallic Body", Tone::Normal}}, scissors{{"Big Scissors", Tone::Normal}};
+    const auto shown = [&](const char* name) {
+        const PopupContent popup = BarPopupContent(BarWidget::Target, state, settings);
+        const PopupCell* cell    = MoveCell(popup, name);
+        return cell != nullptr ? std::optional<PopupCell>(*cell) : std::nullopt;
+    };
+    CHECK(shown("Metallic Body")->text == blue && !shown("Metallic Body")->star);
+    CHECK(shown("Big Scissors")->text == scissors);
+    // Learned, it keeps its blue and takes a star, or goes back to plain text.
+    state.knowsSpell = KnowsMetallicBody;
+    CHECK(shown("Metallic Body")->text == blue && shown("Metallic Body")->star);
+    settings.blueMagicLearned = BlueLearned::Plain;
+    CHECK(shown("Metallic Body")->text == plain && !shown("Metallic Body")->star);
+    // Off, every move is plain.
+    settings.blueMagic        = false;
+    settings.blueMagicLearned = BlueLearned::Star;
+    CHECK(shown("Metallic Body")->text == plain && !shown("Metallic Body")->star);
+}
+
 TEST(a_placeholder_names_its_nm_and_counts_down)
 {
     // East Ronfaure: two Carrion Worms are Bigmouth Billy's placeholders (data/phoenix_mobs.tsv).

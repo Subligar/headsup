@@ -191,6 +191,29 @@ namespace headsup
             return PopupSection{std::move(heading), ListOf(std::move(grid))};
         }
 
+        // Its TP moves, those a blue mage can learn in the blue magic color, and the ones you have learned starred or
+        // plain as the settings say.
+        std::optional<PopupSection> TpMoves(const MobRecord& mob, const BarState& state, const Settings& settings)
+        {
+            const std::span<const MobSkill> skills = SkillsOf(mob);
+            if (skills.empty()) return std::nullopt;
+            PopupRow grid = Grid(kListColumns, skills.size());
+            for (const MobSkill& skill : skills)
+            {
+                const bool blue    = settings.blueMagic && skill.blueSpell != 0;
+                const bool learned = blue && state.knowsSpell != nullptr && state.knowsSpell(skill.blueSpell);
+                if (!blue || (learned && settings.blueMagicLearned == BlueLearned::Plain))
+                {
+                    grid.cells.push_back(Cell(Text(skill.name)));
+                    continue;
+                }
+                PopupCell cell = Cell(Colored(skill.name, ToArgb(settings.blueMagicColor)));
+                cell.star      = learned;
+                grid.cells.push_back(std::move(cell));
+            }
+            return PopupSection{"TP moves", ListOf(std::move(grid))};
+        }
+
         // The spells it casts at a level: each whose levels hold it, by the game's name.
         std::vector<std::string> SpellsAt(const MobRecord& mob, int level, const BarState& state)
         {
@@ -688,10 +711,7 @@ namespace headsup
                 stats.rows.push_back(std::move(row));
                 popup.sections.push_back(std::move(stats));
             }
-            std::vector<std::string> moves;
-            for (const MobSkill& skill : SkillsOf(mob))
-                moves.emplace_back(skill.name);
-            if (std::optional<PopupSection> list = NameList("TP moves", moves)) popup.sections.push_back(std::move(*list));
+            if (std::optional<PopupSection> moves = TpMoves(mob, state, settings)) popup.sections.push_back(std::move(*moves));
             if (std::optional<PopupSection> list = NameList("Spells", SpellsAt(mob, level, state)))
                 popup.sections.push_back(std::move(*list));
             popup.sections.push_back(Spawn(mob, state));

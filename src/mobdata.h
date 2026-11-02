@@ -121,6 +121,7 @@ namespace headsup
     {
         uint16_t id;
         const char* name;
+        uint16_t blueSpell; // the blue magic it teaches, 0 for none
     };
 
     // A spell a mob casts from minLevel to maxLevel of its own level.

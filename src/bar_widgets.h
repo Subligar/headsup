@@ -56,6 +56,8 @@ namespace headsup
         const char* (*itemName)(uint16_t item) = nullptr;
         // And for a spell ID, for what a mob casts.
         const char* (*spellName)(uint16_t spell) = nullptr;
+        // Whether you have learned a spell, for the blue magic among a mob's TP moves.
+        bool (*knowsSpell)(uint16_t spell) = nullptr;
         std::optional<double> targetPhSeconds; // the target placeholder's countdown, when one runs
         std::optional<PlayerCheck> targetCheck; // the targeted player's last check, gathered with the target
         std::optional<Caster> caster;           // your magic accuracy, gathered with the target for its chances

@@ -528,6 +528,25 @@ namespace headsup
                 case WidgetTabsRow::Jobs:
                     if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetJobs, row.tip);
                     break;
+                case WidgetTabsRow::BlueMagic:
+                    if (kind == BarWidget::Target) form.Switch(label.c_str(), s.blueMagic, row.tip);
+                    break;
+                case WidgetTabsRow::BlueMagicColor:
+                    if (kind != BarWidget::Target) break;
+                {
+                    static const Settings kDefaults;
+                    form.Fade(off || !s.blueMagic);
+                    form.Swatch(label.c_str(), s.blueMagicColor, row.tip, &kDefaults.blueMagicColor);
+                    break;
+                }
+                case WidgetTabsRow::BlueMagicLearned:
+                    if (kind == BarWidget::Target)
+                    {
+                        form.Fade(off || !s.blueMagic);
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::BlueLearned));
+                        form.Segments(label.c_str(), s.blueMagicLearned, names.data(), kBlueLearnedCount, row.tip);
+                    }
+                    break;
                 case WidgetTabsRow::Currency:
                     if (kind == BarWidget::Gil)
                         form.NumberDropdown(label.c_str(), o.currency, kGilCurrency, kCurrencyCount - 1,

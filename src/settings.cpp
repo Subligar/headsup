@@ -132,7 +132,7 @@ namespace headsup
             {"immuneBadgeColor", &Settings::immuneBadgeColor}, {"fishSmallColor", &Settings::fishSmallColor},
             {"fishLargeColor", &Settings::fishLargeColor}, {"fishItemColor", &Settings::fishItemColor},
             {"fishMonsterColor", &Settings::fishMonsterColor}, {"fishLineColor", &Settings::fishLineColor},
-            {"fishRodColor", &Settings::fishRodColor}};
+            {"fishRodColor", &Settings::fishRodColor}, {"blueMagicColor", &Settings::blueMagicColor}};
         // The edge's custom color is under the keys the edge's one color had. The cursor's own cannot be under
         // cursorColor, where a file from before the designer holds the target's color.
         constexpr const char* kCursorEdgePickKey = "cursorEdgeColor";
@@ -206,6 +206,8 @@ namespace headsup
         constexpr const char* kTargetJobsKey     = "barTargetJobs";
         constexpr const char* kMenuFontKey      = "menuFont";
         constexpr const char* kHideGameFishBarKey = "hideGameFishBar";
+        constexpr const char* kBlueMagicKey = "blueMagic", *kBlueMagicLearnedKey = "blueMagicLearned";
+        constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarDraggableKey = "fishBarDraggable",
                               *kFishBarLineKey = "fishBarLine", *kFishColorByCatchKey = "fishColorByCatch";
         constexpr const char* kFishBarKey = "fishBar", *kFishBarWidthKey = "fishBarWidth", *kFishBarXKey = "fishBarX",
@@ -1720,6 +1722,9 @@ namespace headsup
             s.fishBarDraggable = store.GetBool(kFishBarDraggableKey, s.fishBarDraggable);
             s.fishBarLine  = store.GetString(kFishBarLineKey, s.fishBarLine.c_str());
             s.fishColorByCatch = store.GetBool(kFishColorByCatchKey, s.fishColorByCatch);
+            s.blueMagic = store.GetBool(kBlueMagicKey, s.blueMagic);
+            s.blueMagicLearned = static_cast<BlueLearned>(NameIndex(kBlueLearnedNames, kBlueLearnedCount,
+                store.GetString(kBlueMagicLearnedKey, ""), static_cast<int>(s.blueMagicLearned)));
             const std::string separators = store.GetString(kBarSeparatorsKey, "");
             for (int t = 0; t < kBarSeparatorsCount; ++t)
                 if (separators == kBarSeparatorsNames[t]) s.barSeparators = static_cast<BarSeparators>(t);
@@ -1831,6 +1836,8 @@ namespace headsup
         setBool(kFishBarDraggableKey, s.fishBarDraggable);
         store.Set(kFishBarLineKey, s.fishBarLine.c_str());
         setBool(kFishColorByCatchKey, s.fishColorByCatch);
+        setBool(kBlueMagicKey, s.blueMagic);
+        store.Set(kBlueMagicLearnedKey, kBlueLearnedNames[static_cast<int>(s.blueMagicLearned)]);
         // A copy's keys are written while it is on the panel; the first copy's always.
         for (int slot = 0; slot < kPanelSlots; ++slot)
             if (const PanelWidget w = WidgetInSlot(slot); w.copy == 0 || Placed(s.barSections, w))
