@@ -68,6 +68,22 @@ TEST(an_nms_defeat_starts_its_placeholders_timer_under_the_nms_id)
     CHECK(!t.SecondsLeft(kWorm, 101.0).has_value());
 }
 
+TEST(an_nms_defeat_takes_the_place_of_its_placeholders_timers)
+{
+    // The worm killed, its timer runs out and Billy spawns in its place: Billy's death leaves his timer alone.
+    PhTimers t;
+    Fought(t, 101.0, Worm());
+    Fought(t, 400.0, Billy());
+    const std::vector<TimerLine> lines = t.Lines(kEastRonfaure, 400.0);
+    CHECK_EQ(lines.size(), 1u);
+    CHECK(lines[0].text == "Bigmouth Billy [11C] 3:14");
+    CHECK(!t.SecondsLeft(kWorm, 400.0).has_value());
+    // Another NM's placeholder keeps its own.
+    Fought(t, 401.0, PhSighting{kLaTheineMob, 300, "Other"});
+    Fought(t, 402.0, Billy());
+    CHECK(t.SecondsLeft(kLaTheineMob, 402.0).has_value());
+}
+
 TEST(a_death_with_no_respawn_starts_nothing)
 {
     PhTimers t; // a Dynamis statue's spawn: it never comes back on a timer

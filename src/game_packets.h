@@ -13,6 +13,7 @@
 namespace headsup
 {
     constexpr uint16_t kZoneInPacket         = 0x00A; // server to client: entering a zone
+    constexpr uint16_t kZoneOutPacket        = 0x00B; // server to client: leaving it, for the next zone's server
     constexpr uint16_t kWeatherPacket        = 0x057; // server to client: the zone's weather changed
     constexpr uint16_t kSkillsPacket         = 0x062; // server to client: your skills, the crafts' ranks among them
     constexpr uint16_t kConquestPacket       = 0x05E; // server to client: the conquest standings
@@ -24,11 +25,25 @@ namespace headsup
     constexpr std::array<uint8_t, 4> kConquestRequest = {0x5A, 0x02, 0x00, 0x00};
     constexpr uint16_t kInspectGeneralPacket = 0x0C9; // server to client: a check's equipment or general part
     constexpr uint16_t kInspectMessagePacket = 0x0CA; // server to client: a check's name, title and bazaar message
+    constexpr uint16_t kTalkNumPacket        = 0x036; // server to client: a message from the zone's dialog
+    constexpr uint16_t kTalkNumWorkPacket    = 0x02A; // server to client: one with numbers in it
 
     // Offsets count Ashita's 4-byte header. Phoenix's s2c 0x00A: WeatherNumber at 0x68.
     std::optional<Weather> ParseZoneInWeather(const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x00A: your server id (UniqueNo) at 0x04.
     std::optional<uint32_t> ParseZoneInPlayer(const uint8_t* data, uint32_t size);
+    // Phoenix's s2c 0x00B: the next zone's map server at 0x08, an IPv4 address as it goes on the wire; none for none.
+    std::optional<uint32_t> ParseZoneOutAddress(const uint8_t* data, uint32_t size);
+    // Phoenix's s2c 0x00A: the zone's number (ZoneNo) at 0x30.
+    std::optional<uint16_t> ParseZoneInZone(const uint8_t* data, uint32_t size);
+    // A kTalkNumPacket's or kTalkNumWorkPacket's message number in the zone's dialog and whose it is (UniqueNo, at
+    // 0x04): MesNum at 0x0A or 0x1A, its top bit (show the speaker's name) dropped.
+    struct TalkMessage
+    {
+        uint32_t who = 0;
+        uint16_t message = 0;
+    };
+    std::optional<TalkMessage> ParseTalkMessage(uint16_t id, const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x057: WeatherNumber at 0x08.
     std::optional<Weather> ParseWeather(const uint8_t* data, uint32_t size);
     // Your rank in each craft, by guild id (0 Amateur on), from the skills packet.

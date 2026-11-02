@@ -17,13 +17,16 @@ ZONEUTILS = ('auto GetCurrentRegion(const xi::ZoneId zoneId) -> REGION_TYPE\n{\n
              '    }\n}\n')
 WEATHER = ('INSERT INTO `zone_weather` VALUES (100,0x' + DAYS + ');\n'
            'INSERT INTO `zone_weather` VALUES (190,0x' + DAYS + ');\n')
+WEST_RONFAURE_IDS = ('zones[xi.zone.WEST_RONFAURE] =\n{\n    text =\n    {\n'
+                     '        FISHING_MESSAGE_OFFSET        = 7052, -- You can\'t fish here.\n    },\n}\n')
 REAL = pathlib.Path.home() / '.cache' / 'headsup-phoenix' / 'server'
 
 
 def checkout(root: pathlib.Path, weather: str = WEATHER, zoneutils: str = ZONEUTILS) -> pathlib.Path:
     for relative, text in [('sql/zone_settings.sql', SETTINGS), ('sql/zone_weather.sql', weather),
                            ('data/enums/zone.yaml', ZONE_YAML), ('src/map/zone.h', ZONE_H),
-                           ('src/map/utils/zoneutils.cpp', zoneutils)]:
+                           ('src/map/utils/zoneutils.cpp', zoneutils),
+                           ('scripts/zones/West_Ronfaure/IDs.lua', WEST_RONFAURE_IDS)]:
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding='utf-8')
@@ -49,7 +52,7 @@ class Build(unittest.TestCase):
     def test_zones_get_names_regions_and_shared_calendars(self):
         with tempfile.TemporaryDirectory() as tmp:
             rows, calendars = zones.build(checkout(pathlib.Path(tmp)))
-        self.assertEqual(rows, [(100, 'West Ronfaure', 0, 0), (190, "King Ranperre's Tomb", 0, 0)])
+        self.assertEqual(rows, [(100, 'West Ronfaure', 0, 0, 7052), (190, "King Ranperre's Tomb", 0, 0, '')])
         self.assertEqual(calendars, [DAYS])
 
     def test_a_region_case_naming_no_zone_is_an_error(self):
@@ -64,7 +67,7 @@ class Build(unittest.TestCase):
             root = checkout(pathlib.Path(tmp),
                             zoneutils='void Zone()\n{\n    return GetCurrentRegion(ZoneID);\n}\n' + ZONEUTILS)
             rows, _ = zones.build(root)
-        self.assertEqual([region for _, _, region, _ in rows], [0, 0])
+        self.assertEqual([region for _, _, region, _, _ in rows], [0, 0])
 
     def test_a_short_calendar_is_an_error(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -90,16 +93,20 @@ class Build(unittest.TestCase):
     def test_writes_both_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = pathlib.Path(tmp) / 'out'
-            zones.write(out, [(100, 'West Ronfaure', 0, 0), (999, 'Nowhere', 255, '')], [DAYS])
+            zones.write(out, [(100, 'West Ronfaure', 0, 0, 7052), (999, 'Nowhere', 255, '', '')], [DAYS])
             self.assertEqual((out / 'phoenix_zones.tsv').read_text(encoding='utf-8'),
-                             'id\tname\tregion\tcalendar\n100\tWest Ronfaure\t0\t0\n999\tNowhere\t255\t\n')
+                             'id\tname\tregion\tcalendar\tfishing\n100\tWest Ronfaure\t0\t0\t7052\n'
+                             '999\tNowhere\t255\t\t\n')
             self.assertEqual((out / 'phoenix_weather.tsv').read_text(encoding='utf-8'),
                              'calendar\tdays\n0\t' + DAYS + '\n')
 
     @unittest.skipUnless((REAL / 'sql' / 'zone_settings.sql').is_file(), 'no Phoenix checkout')
     def test_the_real_checkout(self):
         rows, calendars = zones.build(REAL)
-        by_id = {zone: (name, region) for zone, name, region, _ in rows}
+        by_id = {zone: (name, region) for zone, name, region, _, _ in rows}
+        fishing = {zone: messages for zone, _, _, _, messages in rows}
+        self.assertEqual(fishing[103], 7254)  # Valkurm Dunes': "You can't fish here." is its first
+        self.assertEqual(fishing[190], '')  # no water
         self.assertEqual(len(rows), 300)
         self.assertEqual(len(calendars), 60)
         self.assertEqual(by_id[103], ('Valkurm Dunes', 1))

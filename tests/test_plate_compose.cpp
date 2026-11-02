@@ -473,6 +473,23 @@ TEST(the_job_and_level_tag_shows_what_is_known_of_the_two)
     CHECK_EQ(Rendered(ComposePlate(AggressiveMob(), kPlayer, s, kGame).lines.back()), std::string(AggressiveMob().name));
 }
 
+TEST(the_sub_level_tag_shows_the_subjobs_level_once_known)
+{
+    Settings s;
+    s.Kind(PlateKind::Players).lines[2].text = "$name $job $sublevel";
+    const auto shown = [&](std::optional<PlayerJobs> jobs) {
+        ActorInfo player = LinkshellPlayer();
+        player.jobs      = jobs;
+        return Rendered(ComposePlate(player, kPlayer, s, kGame).lines[0]);
+    };
+    CHECK_EQ(shown(PlayerJobs{1, 75, 2, 37}), "Chadmage WAR/MNK 37");
+    CHECK_EQ(shown(PlayerJobs{1, 75, 0, 0}), "Chadmage WAR");
+    CHECK_EQ(shown(PlayerJobs{1, 0, 2, 0}), "Chadmage WAR/MNK");
+    CHECK_EQ(shown(std::nullopt), "Chadmage");
+    s.Kind(PlateKind::Mobs).lines[2].text = "$name $sublevel";
+    CHECK_EQ(Rendered(ComposePlate(AggressiveMob(), kPlayer, s, kGame).lines.back()), std::string(AggressiveMob().name));
+}
+
 TEST(the_hook_keeps_vanilla_names_hides_hidden_ones_and_replaces_the_rest)
 {
     Settings s;

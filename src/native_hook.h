@@ -1,6 +1,7 @@
 #pragma once
 
 #include "code_patch.h"
+#include "fish_bar.h"
 #include "friend_list.h"
 #include "name_frame.h"
 #include "native_locate.h"
@@ -149,6 +150,10 @@ namespace headsup
         void HideWindows(const std::vector<std::string>& names);
         // While the game draws one of those, every draw call it makes is one to drop.
         static bool Silent();
+        // While hide is set the game's fish bar is dropped: the party window's draws above its own rectangle.
+        void HideFishBar(bool hide);
+        // Inside the party window's draw while it is, its rectangle in the game's menu pixels.
+        static std::optional<WindowRect> KeptWindow();
         // Where those drawn in the last whole frame are, in the game's menu pixels: clicks there are kept from it.
         static std::span<const WindowRect> HiddenRects();
         // Once a frame, before the game draws its windows: Stop puts back those that drew in the last two.
@@ -299,6 +304,19 @@ namespace headsup
         std::string Find();
         // Nothing before Find succeeded, while the client has no session, or when they cannot be read.
         std::optional<PlayOnlineCounts> Read() const;
+
+    private:
+        uint32_t m_Global = 0;
+    };
+
+    // A hooked fish's stamina (LocateFish), read on the game's thread.
+    class FishReader
+    {
+    public:
+        // Finds where the client keeps it: "" when found, else why not.
+        std::string Find();
+        // Nothing before Find succeeded or while no fish is on the line.
+        std::optional<FishStamina> Read() const;
 
     private:
         uint32_t m_Global = 0;

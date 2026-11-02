@@ -588,3 +588,53 @@ TEST(an_overseers_event_is_handed_on_for_the_supply_runs)
     std::memcpy(event.bytes.data() + 0x2C, &shop, sizeof(shop));
     CHECK(!Feed(game, event).guardEvent.has_value());
 }
+
+namespace
+{
+    // GP_SERV_COMMAND_TALKNUM (0x036): who it is about at 0x04, the message at 0x0A, its top bit "show the name".
+    Packet TalkNum(uint32_t who, uint16_t message) { return Blank(0x036, 0x10).Put(0x04, who).Put<uint16_t>(0x0A, message | 0x8000); }
+    // GP_SERV_COMMAND_TALKNUMWORK (0x02A): who at 0x04, four numbers from 0x08, the message at 0x1A.
+    Packet TalkNumWork(uint32_t who, uint16_t message) { return Blank(0x02A, 0x40).Put(0x04, who).Put(0x1A, message); }
+}
+
+TEST(your_fishing_messages_say_what_bit_and_how_it_feels)
+{
+    // Valkurm Dunes' fishing messages start at 7254 (its IDs.lua's FISHING_MESSAGE_OFFSET).
+    constexpr uint32_t kYou = 1001, kSomeone = 2002;
+    constexpr uint16_t kValkurm = 7254;
+    GameState game;
+    // Before HeadsUp knows the zone, a number says nothing.
+    Feed(game, TalkNum(kYou, kValkurm + 0x08));
+    CHECK(game.Fish() == FishCatch{});
+    Feed(game, ZoneIn(kRain).Put<uint32_t>(0x04, kYou));
+    Feed(game, TalkNum(kYou, kValkurm + 0x32));
+    Feed(game, TalkNum(kSomeone, kValkurm + 0x08)); // another angler's bite
+    Feed(game, TalkNum(kYou, kValkurm + 0x2A));
+    CHECK(game.Fish() == (FishCatch{FishSize::Large, FishFeeling::Bad}));
+    Feed(game, TalkNum(kYou, kValkurm + 0x08));
+    Feed(game, TalkNumWork(kYou, kValkurm + 0x35)); // the keen angler's sense, which names the fish
+    CHECK(game.Fish() == (FishCatch{FishSize::Small, FishFeeling::Good}));
+    // Another zone's numbers start elsewhere: 7254 + 8 there is no bite.
+    Feed(game, ZoneIn(kRain).Put<uint32_t>(0x04, kYou).Put<uint16_t>(0x30, 248)); // Selbina, from 6578
+    CHECK(game.Fish() == FishCatch{});
+    Feed(game, TalkNum(kYou, kValkurm + 0x08));
+    CHECK(game.Fish() == FishCatch{});
+    Feed(game, TalkNum(kYou, 6578 + 0x33));
+    CHECK(game.Fish().size == FishSize::Item);
+    Feed(game, Cut(TalkNum(kYou, 6578 + 0x34), 0x0B)); // too short to hold its message
+    CHECK(game.Fish().size == FishSize::Item);
+}
+
+TEST(loaded_mid_zone_the_game_says_where_you_are_until_a_zone_in_does)
+{
+    constexpr uint32_t kYou = 1001;
+    GameState game;
+    game.Here(kYou, 103); // Valkurm Dunes, from 7254
+    Feed(game, TalkNum(kYou, 7254 + 0x33));
+    CHECK(game.Fish().size == FishSize::Item);
+    // A zone-in's word is newer than what the game held when it was asked.
+    Feed(game, ZoneIn(kRain).Put<uint32_t>(0x04, kYou).Put<uint16_t>(0x30, 248)); // Selbina, from 6578
+    game.Here(kYou, 103);
+    Feed(game, TalkNum(kYou, 6578 + 0x08));
+    CHECK(game.Fish().size == FishSize::Small);
+}

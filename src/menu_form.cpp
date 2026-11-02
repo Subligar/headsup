@@ -30,6 +30,8 @@ namespace headsup
         constexpr const char* kSetupPageKey = "setup", *kSetupButtons = "buttons";
         constexpr int kNoOption = -1; // a choice whose settings no option holds
         constexpr const char* kWidgetChip  = "chip "; // a tray chip's name in its card, before its widget's number
+        constexpr const char* kChipToggle  = " on";   // after it, its toggle's
+        constexpr const char* kWidgetNameClass = "caption widget-name";
         constexpr float kAddWindowShare    = 0.8f;    // of a dropdown's width: a group's "+ Add Window"
         constexpr size_t kMaxFindText      = 31;      // letters of a window's name to look for
 
@@ -175,7 +177,7 @@ namespace headsup
             form.Line();
             if (form.Button(Word(c, WindowWord::ResetAllSettingsResetEverything), "reset everything", kAccentPill))
             {
-                c.s                  = Settings{};
+                c.s                  = DefaultSettings();
                 form.changed         = true;
                 c.state.confirmReset = false;
             }
@@ -412,6 +414,46 @@ namespace headsup
             form.EndRow();
         }
 
+        // The profile in use, the others to use or delete, and a name to make a new one under or rename this one to.
+        void ProfileFiles(Context& c)
+        {
+            Form& form = c.form;
+            form.Fade(false);
+            static const std::vector<std::string> kNone;
+            static const std::string kNoProfile;
+            const std::vector<std::string>& names = c.readings.profiles != nullptr ? *c.readings.profiles : kNone;
+            const std::string& inUse = c.readings.profile != nullptr ? *c.readings.profile : kNoProfile;
+            form.Row(Labeled(Word(c, WindowWord::ProfileFilesProfile), "profile").c_str(), WordTip(c, WindowWord::ProfileFilesProfile));
+            if (!names.empty())
+            {
+                if (c.state.profilePicked.empty()) c.state.profilePicked = inUse;
+                const auto known = std::ranges::find(names, c.state.profilePicked);
+                int picked       = known != names.end() ? static_cast<int>(known - names.begin()) : 0;
+                form.DropdownAt("profile file", picked, 0, static_cast<int>(names.size()) - 1,
+                    [&](int i) { return names[static_cast<size_t>(i)] + (names[static_cast<size_t>(i)] == inUse ? " *" : ""); },
+                    kFilterWidth);
+                c.state.profilePicked = names[static_cast<size_t>(picked)];
+                if (form.Button(Word(c, WindowWord::ProfileFilesUse), "use profile", kRaisedPill,
+                        WordTip(c, WindowWord::ProfileFilesUse)) && c.state.profilePicked != inUse)
+                    c.state.profileUse = c.state.profilePicked;
+                if (form.Button(Word(c, WindowWord::ProfileFilesDelete), "delete profile", kRaisedPill,
+                        WordTip(c, WindowWord::ProfileFilesDelete)) && c.state.profilePicked != inUse)
+                    c.state.profileDelete = c.state.profilePicked;
+            }
+            if (form.Opened("profile file") || names.empty()) c.state.profilesRequested = true;
+            form.EndRow();
+            form.Row(Labeled(Word(c, WindowWord::ProfileFilesNew), "new").c_str(), WordTip(c, WindowWord::ProfileFilesNew));
+            form.TextAt("profile name", c.state.profileName, Word(c, WindowWord::ProfileFilesNameHint), kFilterWidth, true,
+                kMaxFileName);
+            const bool named = IsFolderFileName(c.state.profileName) && std::ranges::find(names, c.state.profileName) == names.end();
+            if (form.Button(Word(c, WindowWord::ProfileFilesCreate), "create profile") && named)
+                c.state.profileNew = c.state.profileName;
+            if (form.Button(Word(c, WindowWord::ProfileFilesRename), "rename profile", kRaisedPill,
+                    WordTip(c, WindowWord::ProfileFilesRename)) && named && !inUse.empty())
+                c.state.profileRename = c.state.profileName;
+            form.EndRow();
+        }
+
         // A copy's name as its tab and chip say it: the widget's, and after the first copy its number.
         std::string CopyName(const Context& c, PanelWidget widget)
         {
@@ -420,14 +462,15 @@ namespace headsup
             return widget.copy == 0 ? said : said + " " + std::to_string(widget.copy + 1);
         }
 
-        // One widget's options: its switch, its section, what it shows and its own settings, as the layout orders
-        // them; a row the widget has nothing for is left out.
+        // One widget's options: what it shows and its own settings, as the layout orders them, a row the widget has
+        // nothing for left out; then its Clone and, on a copy, its Remove.
         void WidgetOptions(Context& c, const LayoutSetting& e, PanelWidget widget)
         {
             Form& form  = c.form;
             Settings& s = c.s;
             headsup::WidgetOptions& o = s.Widget(widget);
             const BarWidget kind      = widget.kind;
+            form.Caption(CopyName(c, widget).c_str(), kWidgetNameClass);
             form.Note(c.layout.OptionsOf(WindowList::BarWidgets)[static_cast<size_t>(kind)].tip);
             const bool off = !BarOn(s) || !o.on;
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
@@ -438,23 +481,6 @@ namespace headsup
                 form.Fade(off);
                 switch (static_cast<WidgetTabsRow>(row.row))
                 {
-                case WidgetTabsRow::Enabled:
-                    form.Fade(!BarOn(s));
-                    form.Switch(label.c_str(), o.on, row.tip);
-                    break;
-                case WidgetTabsRow::Section:
-                {
-                    // A widget combined into another's pill sits where that one does.
-                    form.Fade(off || Panel(s).group[SlotOf(widget)] != widget);
-                    auto [section, index] = PlaceOf(s.barSections, widget);
-                    int moved             = section;
-                    const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::BarSections));
-                    form.Segments(label.c_str(), moved, names.data(), kBarSectionCount, row.tip);
-                    if (moved != section)
-                        form.changed |= MoveWidget(s.barSections, static_cast<BarSection>(section), index,
-                            static_cast<BarSection>(moved), s.barSections[moved].size());
-                    break;
-                }
                 case WidgetTabsRow::Combine:
                 {
                     const std::vector<PanelWidget> choices = CombineChoices(s, widget);
@@ -471,43 +497,55 @@ namespace headsup
                     o.combine = picked == 0 ? std::nullopt : std::optional<PanelWidget>(choices[static_cast<size_t>(picked - 1)]);
                     break;
                 }
-                case WidgetTabsRow::Copies:
-                {
-                    if (!HasCopies(kind)) break;
-                    form.Fade(!BarOn(s));
-                    form.Row(label.c_str(), row.tip);
-                    if (widget.copy > 0)
-                    {
-                        if (form.Button(Word(c, WindowWord::WidgetTabsRemoveCopy), ("remove copy" + scope).c_str(), kRaisedPill,
-                                WordTip(c, WindowWord::WidgetTabsRemoveCopy)))
-                        {
-                            RemoveWidgetCopy(s, widget);
-                            c.state.widget = SlotOf(kind);
-                            form.changed   = true;
-                        }
-                    }
-                    else if (form.Button(Word(c, WindowWord::WidgetTabsAddCopy), ("add copy" + scope).c_str(), kRaisedPill,
-                                 WordTip(c, WindowWord::WidgetTabsAddCopy)))
-                        if (const std::optional<PanelWidget> added = AddWidgetCopy(s, kind))
-                        {
-                            c.state.widget = SlotOf(*added);
-                            form.changed   = true;
-                        }
-                    form.EndRow();
+                case WidgetTabsRow::CombineOnPanel:
+                case WidgetTabsRow::CombineInPopup:
+                    if (!o.combine || CombineChoices(s, widget).empty()) break;
+                    form.Switch(label.c_str(),
+                        static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::CombineOnPanel ? o.combineOnPanel : o.combineInPopup,
+                        row.tip);
                     break;
-                }
                 case WidgetTabsRow::SecondLine:
                     if (HasSecondLine(kind)) form.Switch(label.c_str(), o.secondLine, row.tip);
+                    break;
+                case WidgetTabsRow::ShowRegionName:
+                    if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.secondLine, row.tip);
+                    break;
+                case WidgetTabsRow::ShowConquest:
+                    if (kind == BarWidget::Zone)
+                    {
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ConquestPlace));
+                        form.Segments(label.c_str(), o.zoneConquest, names.data(), kConquestPlaceCount, row.tip);
+                    }
+                    break;
+                case WidgetTabsRow::ShowConquestText:
+                    if (kind == BarWidget::Zone && o.zoneConquest != ConquestPlace::Off)
+                        form.Switch(label.c_str(), o.zoneConquestText, row.tip);
+                    break;
+                case WidgetTabsRow::ShowZoneId:
+                    if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, row.tip);
+                    break;
+                case WidgetTabsRow::MoonPhase:
+                    if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.secondLine, row.tip);
+                    break;
+                case WidgetTabsRow::DayOfWeek:
+                    if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.vanaWeekday, row.tip);
+                    break;
+                case WidgetTabsRow::Date:
+                    if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.vanaDate, row.tip);
                     break;
                 case WidgetTabsRow::Icons:
                     if (HasIcons(kind)) form.Switch(label.c_str(), o.icons, row.tip);
                     break;
+                case WidgetTabsRow::Background:
+                    form.Switch(label.c_str(), o.background, row.tip);
+                    break;
                 case WidgetTabsRow::Spacing:
-                    form.SliderInt(label.c_str(), o.spacing, 0, kMaxWidgetSpacing, "%d px", row.tip);
+                    form.SliderInt(label.c_str(), o.spacing, kPanelSpacing, kMaxWidgetSpacing,
+                        o.spacing == kPanelSpacing ? Word(c, WindowWord::DefaultFont) : "%d px", row.tip);
                     break;
                 case WidgetTabsRow::Padding:
-                    form.SliderInt(label.c_str(), o.padding, kThemePadding, kMaxWidgetPadding,
-                        o.padding == kThemePadding ? Word(c, WindowWord::ThemesFont) : "%d px", row.tip);
+                    form.SliderInt(label.c_str(), o.padding, kPanelPadding, kMaxWidgetPadding,
+                        o.padding == kPanelPadding ? Word(c, WindowWord::DefaultFont) : "%d px", row.tip);
                     break;
                 case WidgetTabsRow::TitleFont:
                     form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, Word(c, WindowWord::DefaultFont));
@@ -519,14 +557,42 @@ namespace headsup
                     form.SliderInt(label.c_str(), o.textSize, kPanelTextSize, kMaxBarTextSize,
                         o.textSize == kPanelTextSize ? Word(c, WindowWord::DefaultFont) : "%d px", row.tip);
                     break;
-                case WidgetTabsRow::Details:
-                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetDetails, row.tip);
+                case WidgetTabsRow::Visibility:
+                    if (kind == BarWidget::Target)
+                    {
+                        uint32_t shows = o.targetShows;
+                        form.BitsDropdown(label.c_str(), shows, c.layout.OptionsOf(WindowList::TargetShows), row.tip);
+                        o.targetShows = static_cast<uint8_t>(shows);
+                    }
+                    break;
+                case WidgetTabsRow::ShowIcons:
+                    if (kind == BarWidget::Target)
+                        form.BitsDropdown(label.c_str(), o.targetIcons, c.layout.OptionsOf(WindowList::TargetIcons), row.tip);
+                    break;
+                case WidgetTabsRow::ShowMobLevel:
+                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetMobLevel, row.tip);
                     break;
                 case WidgetTabsRow::Jobs:
                     if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetJobs, row.tip);
                     break;
-                case WidgetTabsRow::Border:
-                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetBorder, row.tip);
+                case WidgetTabsRow::BlueMagic:
+                    if (kind == BarWidget::Target) form.Switch(label.c_str(), s.blueMagic, row.tip);
+                    break;
+                case WidgetTabsRow::BlueMagicColor:
+                    if (kind != BarWidget::Target) break;
+                {
+                    static const Settings kDefaults;
+                    form.Fade(off || !s.blueMagic);
+                    form.Swatch(label.c_str(), s.blueMagicColor, row.tip, &kDefaults.blueMagicColor);
+                    break;
+                }
+                case WidgetTabsRow::BlueMagicLearned:
+                    if (kind == BarWidget::Target)
+                    {
+                        form.Fade(off || !s.blueMagic);
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::BlueLearned));
+                        form.Segments(label.c_str(), s.blueMagicLearned, names.data(), kBlueLearnedCount, row.tip);
+                    }
                     break;
                 case WidgetTabsRow::Currency:
                     if (kind == BarWidget::Gil)
@@ -538,6 +604,13 @@ namespace headsup
                     {
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Nations));
                         form.Toggles(label.c_str(), o.nations, names.data(), kContenderNations, row.tip);
+                    }
+                    break;
+                case WidgetTabsRow::ConquestGrid:
+                    if (kind == BarWidget::Conquest)
+                    {
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ConquestGrid));
+                        form.Segments(label.c_str(), o.conquestGrid, names.data(), kConquestGridCount, row.tip);
                     }
                     break;
                 case WidgetTabsRow::Shows:
@@ -669,30 +742,38 @@ namespace headsup
                     break;
                 }
             }
+            if (!HasCopies(kind)) return;
+            form.Fade(!BarOn(s));
+            if (form.Button(Word(c, WindowWord::WidgetTabsClone), ("clone" + scope).c_str(), kRaisedPill,
+                    WordTip(c, WindowWord::WidgetTabsClone)))
+                if (const std::optional<PanelWidget> added = CloneWidget(s, widget))
+                {
+                    c.state.widget = SlotOf(*added);
+                    form.changed   = true;
+                }
+            if (widget.copy > 0 && form.Button(Word(c, WindowWord::WidgetTabsRemoveCopy), ("remove copy" + scope).c_str(),
+                                       kRaisedPill, WordTip(c, WindowWord::WidgetTabsRemoveCopy)))
+            {
+                RemoveWidgetCopy(s, widget);
+                c.state.widget = SlotOf(kind);
+                form.changed   = true;
+            }
         }
 
-        // A tab for each widget, the picked one's options under the tabs.
-        void WidgetTabsOf(Context& c, const LayoutSetting& e)
+        // The widget picked in the Layout above, or the first placed.
+        void PickedWidget(Context& c, const LayoutSetting& e)
         {
-            Form& form = c.form;
-            form.Fade(!BarOn(c.s));
-            const std::vector<PanelWidget> tabs = WidgetTabs(c.s.barSections);
-            std::vector<std::string> names;
-            for (const PanelWidget widget : tabs)
-                names.push_back(CopyName(c, widget));
-            std::vector<const char*> labels;
-            for (const std::string& name : names)
-                labels.push_back(name.c_str());
-            const auto open = std::ranges::find(tabs, WidgetInSlot(c.state.widget));
-            const int count = static_cast<int>(tabs.size());
-            const int tab   = form.Tabs("widget", open != tabs.end() ? static_cast<int>(open - tabs.begin()) : 0,
-                labels.data(), count, true);
-            c.state.widget  = SlotOf(tabs[static_cast<size_t>(tab)]);
-            WidgetOptions(c, e, tabs[static_cast<size_t>(tab)]);
+            c.form.Fade(!BarOn(c.s));
+            const std::vector<PanelWidget> placed = WidgetTabs(c.s.barSections);
+            const auto open = std::ranges::find(placed, WidgetInSlot(c.state.widget));
+            const PanelWidget widget = open != placed.end() ? *open : placed.front();
+            c.state.widget           = SlotOf(widget);
+            WidgetOptions(c, e, widget);
         }
 
         // Left, Center and Right as trays sunk into the card, each holding its widgets as raised chips in bar order:
-        // a chip drags to another place or tray, and a click picks it, which opens its tab. A lit dot says it is on.
+        // a chip drags to another place or tray, and a click picks it, showing its settings under the trays. Its
+        // toggle turns it on and off and picks it too.
         void Trays(Context& c)
         {
             struct Drop
@@ -731,15 +812,12 @@ namespace headsup
                     const int w          = SlotOf(held[i]);
                     const std::string id = form.Id(kWidgetChip + std::to_string(w));
                     form.Raw("<div class=\"btn raised wchip drag\" id=\"" + id + "\" tip=\"" +
-                             EscapedRml(Said(widgets[static_cast<size_t>(held[i].kind)].tip)) + "\"><div class=\"dot\"></div>" +
-                             EscapedRml(CopyName(c, held[i])) + "</div>");
+                             EscapedRml(Said(widgets[static_cast<size_t>(held[i].kind)].tip)) + "\">");
+                    const bool was = s.widgets[w].on;
+                    form.CheckAt((kWidgetChip + std::to_string(w) + kChipToggle).c_str(), s.widgets[w].on);
+                    form.Raw(EscapedRml(CopyName(c, held[i])) + "</div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
-                    // A clicked chip's tab is at the page's top, which the trays may have scrolled out of view.
-                    if (!form.Off() && form.Clicked(id))
-                    {
-                        picked           = w;
-                        form.scrollToTop = true;
-                    }
+                    if (!form.Off() && (form.Clicked(id) || s.widgets[w].on != was)) picked = w;
                     form.Set(id, FormValueKind::Class, "on", {}, s.widgets[w].on);
                     form.Set(id, FormValueKind::Class, kPickedClass, {}, w == picked);
                     dropped(id, here, i); // dropped on a chip: before it
@@ -1385,6 +1463,81 @@ namespace headsup
                 form.Fade(false);
                 form.Switch(label.c_str(), s.screenshotHidesGame, tip);
                 break;
+            case SettingPiece::FishingBar:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.fishBar, tip);
+                break;
+            case SettingPiece::HideGameFishBar:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.hideGameFishBar, tip);
+                break;
+            case SettingPiece::FishingBarWidth:
+                form.Fade(!s.fishBar);
+                form.SliderInt(label.c_str(), s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth, "%d px", tip);
+                break;
+            case SettingPiece::FishingBarHeight:
+                form.Fade(!s.fishBar);
+                form.SliderInt(label.c_str(), s.fishBarHeight, kMinFishBarHeight, kMaxFishBarHeight, "%d px", tip);
+                break;
+            case SettingPiece::FishingBarX:
+            case SettingPiece::FishingBarY:
+            {
+                form.Fade(!s.fishBar);
+                int& side = e.piece == SettingPiece::FishingBarX ? s.fishBarX : s.fishBarY;
+                form.SliderInt(label.c_str(), side, kFishBarUnplaced, kMaxFishBarPlace,
+                    side == kFishBarUnplaced ? "Auto" : "%d px", tip);
+                break;
+            }
+            case SettingPiece::FishingBarDraggable:
+                form.Fade(!s.fishBar);
+                form.Switch(label.c_str(), s.fishBarDraggable, tip);
+                break;
+            case SettingPiece::FishingBarFont:
+                form.Fade(!s.fishBar);
+                form.FontDropdown(label.c_str(), s.fishBarFont, c.fonts, tip, Word(c, WindowWord::ThemesFont));
+                break;
+            case SettingPiece::FishingBarTextSize:
+                form.Fade(!s.fishBar);
+                form.SliderInt(label.c_str(), s.fishBarTextSize, kMinFishTextSize, kMaxFishTextSize, "%d px", tip);
+                break;
+            case SettingPiece::FishingBarLine:
+                form.Fade(!s.fishBar);
+                form.Line("line design");
+                form.Caption(label.c_str(), "line-name");
+                form.LineBox("fish line", s.fishBarLine, c.state.fishLine);
+                form.EndLine();
+                form.Line("line chips");
+                for (const Tag tag : FishBarTags())
+                    form.TagChip(tag);
+                form.EndLine();
+                break;
+            case SettingPiece::FishColorByCatch:
+                form.Fade(!s.fishBar);
+                form.Switch(label.c_str(), s.fishColorByCatch, tip);
+                break;
+            case SettingPiece::FishSmallColor:
+            case SettingPiece::FishLargeColor:
+            case SettingPiece::FishItemColor:
+            case SettingPiece::FishMonsterColor:
+            case SettingPiece::FishLineColor:
+            case SettingPiece::FishRodColor:
+            {
+                form.Fade(!s.fishBar || !s.fishColorByCatch);
+                const auto colorOf = [](SettingPiece piece) {
+                    switch (piece)
+                    {
+                    case SettingPiece::FishSmallColor: return &Settings::fishSmallColor;
+                    case SettingPiece::FishLargeColor: return &Settings::fishLargeColor;
+                    case SettingPiece::FishItemColor: return &Settings::fishItemColor;
+                    case SettingPiece::FishMonsterColor: return &Settings::fishMonsterColor;
+                    case SettingPiece::FishLineColor: return &Settings::fishLineColor;
+                    default: return &Settings::fishRodColor;
+                    }
+                };
+                Color Settings::* const color = colorOf(e.piece);
+                form.Swatch(label.c_str(), s.*color, tip, &(kDefaults.*color));
+                break;
+            }
             case SettingPiece::Groups: WindowGroups(c); break;
             case SettingPiece::AutoAdjust:
                 form.Fade(!s.shiftVanillaUi || r.windowsBand == 0);
@@ -1443,6 +1596,15 @@ namespace headsup
                 form.SliderInt(label.c_str(), s.barTextSize, kAutoBarTextSize, kMaxBarTextSize, textSize.c_str(), tip);
                 break;
             }
+            case SettingPiece::WidgetSpacing:
+                form.Fade(!BarOn(s));
+                form.SliderInt(label.c_str(), s.barWidgetSpacing, 0, kMaxWidgetSpacing, "%d px", tip);
+                break;
+            case SettingPiece::WidgetPadding:
+                form.Fade(!BarOn(s));
+                form.SliderInt(label.c_str(), s.barWidgetPadding, kThemePadding, kMaxWidgetPadding,
+                    s.barWidgetPadding == kThemePadding ? Word(c, WindowWord::ThemesFont) : "%d px", tip);
+                break;
             case SettingPiece::OneLine:
             {
                 form.Fade(!BarOn(s));
@@ -1518,6 +1680,23 @@ namespace headsup
             }
             case SettingPiece::ThemePalette: ThemePalette(c, e); break;
             case SettingPiece::ThemeFiles: ThemeFiles(c); break;
+            case SettingPiece::ProfileFiles: ProfileFiles(c); break;
+            case SettingPiece::SaveAutomatically:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.autoSave, tip);
+                break;
+            case SettingPiece::SaveChanges:
+            {
+                const bool pending = !s.autoSave && r.unsaved;
+                form.Fade(!pending);
+                form.Row(label.c_str(), tip);
+                if (form.Button(Word(c, WindowWord::SaveChangesSave), "save changes") && pending) c.state.saveRequested = true;
+                if (form.Button(Word(c, WindowWord::SaveChangesRevert), "revert changes", kRaisedPill,
+                        WordTip(c, WindowWord::SaveChangesRevert)) && pending)
+                    c.state.revertRequested = true;
+                form.EndRow();
+                break;
+            }
             case SettingPiece::HideGameHelp:
                 form.Fade(!on);
                 form.Switch(label.c_str(), s.hideHelpBar, tip);
@@ -1530,7 +1709,21 @@ namespace headsup
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
                 form.Switch(label.c_str(), s.helpBarBackground, tip);
                 break;
-            case SettingPiece::WidgetTabs: WidgetTabsOf(c, e); break;
+            case SettingPiece::HelpTextSize:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
+                form.SliderInt(label.c_str(), s.helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize,
+                    s.helpBarTextSize == kAutoBarTextSize ? "Auto" : "%d px", tip);
+                break;
+            case SettingPiece::HelpWidth:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
+                form.SliderInt(label.c_str(), s.helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth, "%d%%", tip);
+                break;
+            case SettingPiece::HelpHeight:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
+                form.SliderInt(label.c_str(), s.helpBarHeight, kAutoHelpBarHeight, kMaxHelpBarHeight,
+                    s.helpBarHeight == kAutoHelpBarHeight ? "Auto" : "%d px", tip);
+                break;
+            case SettingPiece::WidgetTabs: PickedWidget(c, e); break;
             case SettingPiece::Trays: Trays(c); break;
             case SettingPiece::ResetLayout:
                 form.Fade(!BarOn(s));
@@ -1666,7 +1859,8 @@ namespace headsup
             case CardPiece::WindowGroups:
             case CardPiece::BaseGameUi:
             case CardPiece::ThemeColors:
-            case CardPiece::SettingsWindow: return {};
+            case CardPiece::SettingsWindow:
+            case CardPiece::Profiles: return {};
             case CardPiece::Reset: return {.bare = true};
             case CardPiece::Nameplates: return {false, !on, &s.nameplates};
             case CardPiece::OutlineStyle: return {false, !on, &s.outlines};
@@ -1693,6 +1887,7 @@ namespace headsup
             case CardPiece::Widgets:
             case CardPiece::Layout: return {false, !BarOn(s)};
             case CardPiece::DebugMode: return {false, false, &s.debugMode};
+            case CardPiece::CustomGameUi: return {false, !on};
             }
             return {};
         }

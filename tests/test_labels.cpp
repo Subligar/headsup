@@ -112,3 +112,18 @@ TEST(level_and_con_text_split_the_label)
     CHECK_EQ(IdText(17191194u), "[11A]");
     CHECK_EQ(ServerIdText(17190918u), "[17190918]");
 }
+
+TEST(a_label_also_holds_its_level_and_its_con_said_in_full)
+{
+    const MobRecord range = Mob(19, 21, -2); // cons as 17-19: Easy Prey to Decent Challenge
+    const Label l         = MakeLabel(&range, nullptr, 20);
+    CHECK(std::string(l.level) == "19-21" && std::string(l.con) == "Easy Prey to Decent Challenge");
+    const MobRecord one     = Mob(21, 21);
+    const CheckResult check = {22, Con::IncrediblyEasyPrey};
+    CHECK(std::string(MakeLabel(&one, nullptr, 20).con) == "Tough");
+    CHECK(std::string(MakeLabel(&one, &check, 20).con) == "Incredibly Easy Prey");
+    CHECK(std::string(MakeLabel(nullptr, nullptr, 20).con).empty()); // not known: nothing to say
+    // The longest phrase fits.
+    const MobRecord widest = Mob(3, 150);
+    CHECK(std::string(MakeLabel(&widest, nullptr, 50).con) == "Too Weak to Incredibly Tough");
+}

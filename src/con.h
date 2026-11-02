@@ -33,4 +33,6 @@ namespace headsup
 
     // "??" for a value outside Con.
     const char* Abbrev(Con con);
+    // Its full name, "Incredibly Easy Prey".
+    const char* ConName(Con con);
 }

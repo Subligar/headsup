@@ -512,7 +512,8 @@ TEST(a_swatch_opens_the_color_picker_and_closes_it)
 TEST(a_color_looked_at_in_its_picker_is_the_color_it_was)
 {
     Window window;
-    const std::string swatch = "entities-colors-claim-status-claimed-yours-claim-colors";
+    window.Click("nav-colors");
+    const std::string swatch = "colors-colors-claim-status-claimed-yours-claim-colors";
     const Color before       = window.settings.palette.claim[static_cast<int>(ClaimState::Yours)];
     CHECK(!window.Click(swatch)); // opening it is no change
     CHECK(window.Shows(swatch + "-p-hex"));
@@ -526,7 +527,8 @@ TEST(a_color_looked_at_in_its_picker_is_the_color_it_was)
 TEST(a_click_on_the_pickers_own_ground_leaves_it_open)
 {
     Window window;
-    const std::string swatch = "entities-colors-claim-status-claimed-yours-claim-colors";
+    window.Click("nav-colors");
+    const std::string swatch = "colors-colors-claim-status-claimed-yours-claim-colors";
     window.Click(swatch);
     CHECK(window.Shows(swatch + "-p-hex"));
     // Its padding, beside the sliders: no control, and still the picker.
@@ -724,6 +726,20 @@ TEST(a_tag_chip_dropped_goes_in_after_what_it_lands_on)
     CHECK(window.Drag(box + "-c-0-0", "page-title"));
     CHECK(window.Drag(box + "-c-0", "page-title")); // the one left is the chip itself
     CHECK_EQ(text, "ab");
+}
+
+TEST(the_fishing_bars_chips_drop_into_its_text)
+{
+    Window window;
+    window.Page("userinterface");
+    const std::string box = "userinterface-custom-game-ui-fish-line";
+    std::string& text     = window.settings.fishBarLine;
+    text                  = "$size";
+    window.Frames(2);
+    CHECK(window.Shows(box + "-c-0") && window.Shows("tag-" + std::to_string(static_cast<int>(Tag::RodBreak))));
+    CHECK(!window.Shows("tag-" + std::to_string(static_cast<int>(Tag::Name)))); // a nameplate's
+    CHECK(window.Drag("tag-" + std::to_string(static_cast<int>(Tag::RodBreak)), box + "-c-0"));
+    CHECK_EQ(text, "${size|rodbreak}");
 }
 
 TEST(backspace_and_delete_beside_a_tag_take_it_out_and_the_arrows_step_past_it)
@@ -958,8 +974,9 @@ TEST(every_dropdown_slider_row_of_choices_and_number_of_every_page_and_tab_sets_
         const Settings fresh = window.settings;
         const std::map<std::string, std::string> saved = Saved(fresh);
         std::vector<std::string> tabs{""};
-        for (Rml::Element* element : window.OfClass("tab"))
-            tabs.push_back(element->GetId());
+        for (const char* picker : {"tab", "wchip"})
+            for (Rml::Element* element : window.OfClass(picker))
+                tabs.push_back(element->GetId());
         const auto reset = [&](const std::string& tab) {
             window.settings = fresh;
             window.Frames(2);
@@ -1019,7 +1036,8 @@ TEST(every_dropdown_slider_row_of_choices_and_number_of_every_page_and_tab_sets_
                     const std::string choice = id + "-s-" + std::to_string(option);
                     if (!window.Find(choice)->IsClassSet("picked")) other = choice;
                 }
-                if (other.empty() || !window.Click(other) || window.settings == fresh)
+                if (other.empty()) other = id + "-s-0"; // a row of toggles, every one on: the first turned off
+                if (!window.Click(other) || window.settings == fresh)
                     throw test::Failure{"the row of choices " + id + " changes no setting"};
                 set.emplace_back(id, KeysChanged(saved, window.settings));
             }
@@ -1613,10 +1631,10 @@ TEST(a_setting_of_something_switched_off_is_not_shown)
     CHECK(window.Click("entities-nameplates-scale-with-distance"));
     CHECK(window.Shows(least));
     // A card of what is off is gone whole.
-    CHECK(window.Shows("entities-colors-aggression-head"));
+    CHECK(window.Shows("entities-target-cursor-head"));
     window.settings.enabled = false;
     window.Frames(2);
-    CHECK(!window.Shows("entities-colors-aggression-head") && !window.Shows(least));
+    CHECK(!window.Shows("entities-target-cursor-head") && !window.Shows(least));
 }
 
 TEST(the_game_window_theme_draws_the_window_in_the_art_and_its_colors)
@@ -1702,7 +1720,7 @@ TEST(a_picked_choice_and_tab_take_dark_text_where_the_accent_is_bright)
         window.Page("toppanel");
         window.Frames(kPastEasing);
         CHECK_EQ(pickedText(window, "seg") < 0.2f, bright);
-        window.Page("widgets");
+        window.Page("mobs");
         window.Frames(kPastEasing);
         CHECK_EQ(pickedText(window, "tab") < 0.2f, bright);
     }
@@ -1843,16 +1861,17 @@ TEST(a_lines_arrows_swap_it_with_the_one_above_or_below_and_the_ends_have_only_o
     CHECK_EQ(window.Said(), "");
 }
 
-TEST(a_copy_added_has_a_tab_and_a_chip_of_its_own_and_its_settings_are_its_own)
+TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
 {
     Window window;
     window.Page("widgets");
     const PanelWidget copy{BarWidget::Gil, 1};
-    window.Click("widgets-widgets-widget-t-" + std::to_string(static_cast<int>(BarWidget::Gil))); // Gil's tab, after Target's
-    CHECK(window.Click("widgets-widgets-add-copy-gil"));
+    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil)));
+    CHECK(!window.Shows("widgets-widgets-remove-copy-gil"));
+    CHECK(window.Click("widgets-widgets-clone-gil"));
     CHECK(Placed(window.settings.barSections, copy));
     CHECK(window.Shows("widgets-layout-chip-" + std::to_string(SlotOf(copy))));
-    // Its tab opens on its own: a currency picked there is the copy's.
+    // The clone's settings show at once: a currency picked there is the clone's.
     CHECK(window.Shows("widgets-widgets-remove-copy-gil-2"));
     window.Click("widgets-widgets-currency-gil-2");
     CHECK(window.Click("widgets-widgets-currency-gil-2-o-1"));
@@ -1862,14 +1881,13 @@ TEST(a_copy_added_has_a_tab_and_a_chip_of_its_own_and_its_settings_are_its_own)
     CHECK_EQ(window.Said(), "");
 }
 
-TEST(the_world_info_tab_offers_the_pick_for_what_it_shows)
+TEST(the_world_info_widget_offers_the_pick_for_what_it_shows)
 {
     Window window;
     WidgetOptions& world = window.settings.Widget(BarWidget::World);
     world.on             = true;
     window.Page("widgets");
-    // Its tab is the last: Game help has none.
-    window.Click("widgets-widgets-widget-t-" + std::to_string(static_cast<int>(BarWidget::World) - 1));
+    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::World)));
     CHECK(window.Shows("widgets-widgets-ship-world") && !window.Shows("widgets-widgets-element-world"));
     window.Click("widgets-widgets-shows-world");
     CHECK(window.Click("widgets-widgets-shows-world-o-1"));
@@ -1879,32 +1897,6 @@ TEST(the_world_info_tab_offers_the_pick_for_what_it_shows)
     CHECK(window.Click("widgets-widgets-element-world-o-4"));
     CHECK(world.worldElement == Element::Lightning);
     CHECK_EQ(window.Said(), "");
-}
-
-TEST(every_widget_tab_shows_its_whole_name_however_many_copies_there_are)
-{
-    // The narrowest and the widest of the fonts the window can be set in.
-    for (const auto [font, copies] : {std::pair{kBarlowCondensed, 0}, {kBarlowCondensed, 3}, {kBarlowCondensed, 12},
-             {kCinzel, 0}, {kCinzel, 3}, {kCinzel, 12}})
-    {
-        Window window(BarTheme::PhoenixGold, font);
-        for (int added = 0; added < copies; ++added)
-            AddWidgetCopy(window.settings, static_cast<BarWidget>(added % kBarWidgetCount == static_cast<int>(BarWidget::Target)
-                                                                     ? static_cast<int>(BarWidget::Gil)
-                                                                     : added % kBarWidgetCount));
-        window.Page("widgets");
-        window.Frames(2);
-        int tabs = 0;
-        for (Rml::Element* tab : window.OfClass("tab"))
-        {
-            if (tab->GetId().rfind("widgets-widgets-widget-t-", 0) != 0) continue;
-            ++tabs;
-            const float text = static_cast<float>(Rml::ElementUtilities::GetStringWidth(tab, tab->GetInnerRML()));
-            if (text > tab->GetBox().GetSize(Rml::BoxArea::Content).x)
-                throw test::Failure{"the tab " + tab->GetInnerRML() + " is cut in " + font + " with " + std::to_string(copies) + " copies"};
-        }
-        CHECK(tabs >= kPlacedWidgetCount);
-    }
 }
 
 namespace
@@ -2160,4 +2152,47 @@ TEST(dragging_setups_preview_pans_it_as_far_as_its_zoom_leaves_room)
         window.Wheel(kSetupPreviewClass, 1.0f);
     CHECK_EQ(run.panX, 0.0f);
     CHECK(window.settings == Settings{});
+}
+
+TEST(a_chip_of_several_tags_wraps_inside_its_line_on_a_narrow_window)
+{
+    Window window;
+    window.settings.Kind(PlateKind::Players).lines[0].text = "${gm|mentor|new|sync|away|linkshell|bazaar|seeking|job|level|joblevel|title} $name";
+    window.OpenAt(100, 100, 560, 700);
+    window.Page("players");
+    window.Frames(2);
+    const std::vector<Rml::Element*> several = window.OfClass("several");
+    CHECK(!several.empty());
+    for (Rml::Element* chip : several)
+    {
+        Rml::Element* box = chip->GetParentNode();
+        while (box != nullptr && !box->IsClassSet("linebox"))
+            box = box->GetParentNode();
+        CHECK(box != nullptr);
+        const auto right = [](Rml::Element* e) {
+            return e->GetAbsoluteOffset(Rml::BoxArea::Border).x + e->GetBox().GetSize(Rml::BoxArea::Border).x;
+        };
+        for (int i = 0; i < chip->GetNumChildren(); ++i)
+            if (right(chip->GetChild(i)) > right(box) + 0.5f)
+                throw test::Failure{"a tag of a chip runs " + std::to_string(right(chip->GetChild(i)) - right(box)) +
+                                    " px past its line"};
+    }
+}
+
+TEST(a_tag_in_a_line_has_no_tip_and_one_to_pick_from_does)
+{
+    Window window;
+    window.settings.Kind(PlateKind::Players).lines[0].text = "${sync|bazaar} $name";
+    window.Page("players");
+    window.Frames(2);
+    int inLines = 0, toPick = 0;
+    for (Rml::Element* chip : window.OfClass("chip"))
+    {
+        const bool inLine = chip->IsClassSet("in");
+        (inLine ? inLines : toPick) += 1;
+        CHECK_EQ(chip->HasAttribute("tip"), !inLine);
+        for (int i = 0; i < chip->GetNumChildren(); ++i)
+            if (chip->GetChild(i)->IsClassSet("part")) CHECK(!chip->GetChild(i)->HasAttribute("tip"));
+    }
+    CHECK(inLines > 0 && toPick > 0);
 }

@@ -207,6 +207,10 @@ namespace headsup
         // The Network window's PlayOnline icons are 16 x 16 squares at the foot of its message icons' picture.
         constexpr std::string_view kMessageChunk   = "mesi";
         constexpr std::string_view kMessagePicture = "menu    mesicon ";
+        // The nations' crests: each its own picture, in a chunk named for its first four letters.
+        constexpr std::string_view kSanDoriaCrestChunk = "scre", kSanDoriaCrest = "menu    scre    ";
+        constexpr std::string_view kBastokCrestChunk   = "bcre", kBastokCrest   = "menu    bcre    ";
+        constexpr std::string_view kWindurstCrestChunk = "wcre", kWindurstCrest = "menu    wcre    ";
         constexpr int kMailU = 32, kMessengerU = 48, kPlayOnlineV = 48, kPlayOnlineSide = 16;
         constexpr size_t kBgraBytes = 4;
 
@@ -535,6 +539,16 @@ namespace headsup
         if (!mail.value) return {std::nullopt, std::move(mail.failure)};
         if (!messenger.value) return {std::nullopt, std::move(messenger.failure)};
         return {PlayOnlineIcons{std::move(*mail.value), std::move(*messenger.value)}, {}};
+    }
+
+    Read<NationCrests> ReadNationCrests(std::span<const uint8_t> dat)
+    {
+        Read<ColorPicture> sanDoria = NamedPicture(dat, kSanDoriaCrestChunk, kSanDoriaCrest, "San d'Oria's crest");
+        Read<ColorPicture> bastok   = NamedPicture(dat, kBastokCrestChunk, kBastokCrest, "Bastok's crest");
+        Read<ColorPicture> windurst = NamedPicture(dat, kWindurstCrestChunk, kWindurstCrest, "Windurst's crest");
+        for (Read<ColorPicture>* crest : {&sanDoria, &bastok, &windurst})
+            if (!crest->value) return {std::nullopt, std::move(crest->failure)};
+        return {NationCrests{std::move(*sanDoria.value), std::move(*bastok.value), std::move(*windurst.value)}, {}};
     }
 
     Read<std::array<GlyphShape, kGlyphCount>> ReadGlyphShapes(std::span<const uint8_t> body, std::string_view picture, int width,

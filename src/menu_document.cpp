@@ -214,6 +214,9 @@ namespace headsup
         css += ".line.indent{margin-left:" + Em(kGutter) + ";}";
         css += ".gap{flex:1 1 auto;}";
         css += ".note{color:" + color(c.muted) + ";margin-bottom:" + Em(kSpacing) + ";}";
+        // A description's bullet point hangs its dot in the room left of its text, so a long one wraps under itself.
+        css += ".note .bullet{position:relative;padding-left:" + Em(kBulletIndent) + ";margin-top:0.2em;}";
+        css += ".note .bullet .dot{position:absolute;left:" + Em(kBulletIndent / 3.0f) + ";top:0px;}";
         css += std::string(".") + kSetupPreviewClass + "{display:block;width:" + Em(kPreviewWide) + ";height:" + Em(kPreviewTall) +
                ";margin:0px auto " + Em(kSpacing) + " auto;}";
         css += ".row.indent{margin-left:" + Em(kGutter) + ";}";
@@ -380,6 +383,9 @@ namespace headsup
         css += ".chip img{width:1em;height:1em;margin-right:0.3em;vertical-align:-0.15em;}";
         // A chip of several tags: each a part of its own to drag, with a quiet word between.
         css += ".chip .part,.chip .or{display:inline-block;}";
+        // One too wide for its line wraps between its tags rather than run past the window's edge.
+        css += ".linebox .chip.in.several{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;max-width:100%;height:auto;}";
+        css += ".chip .part{white-space:nowrap;}";
         css += ".chip .or{margin:0px 0.4em;opacity:0.65;}";
         css += ".drag{drag:clone;}";
         css += std::string(".") + kPanClass + "{drag:drag;}";
@@ -407,6 +413,8 @@ namespace headsup
                color(c.muted) + ";}";
         css += ".wchip.on{color:" + color(c.text) + ";}";
         css += ".wchip.picked{border-color:" + color(c.accent) + ";}";
+        css += ".wchip .check{display:inline-block;vertical-align:middle;margin-right:0.8em;font-size:" + Em(kChipToggle) + ";}";
+        css += ".widget-name{color:" + color(c.text) + ";}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
         // What a control says under the pointer.
         css += std::string("#") + kMenuTipId + "{position:absolute;z-index:60;box-sizing:border-box;max-width:" +

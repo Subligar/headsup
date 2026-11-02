@@ -37,7 +37,8 @@ namespace headsup
     std::optional<Image> HostImage(std::string_view name);
     // A picture of the game's, from what was read of its files at load: nothing for another name, or when it was not read.
     std::string GamePictureSource(GamePicture picture);
-    std::optional<Image> GamePictureImage(const std::optional<PlayOnlineIcons>& icons, std::string_view name);
+    std::optional<Image> GamePictureImage(const std::optional<PlayOnlineIcons>& icons, const std::optional<NationCrests>& crests,
+        std::string_view name);
 
     // A line of a widget as RmlUi lays it out: its line box's height, where its top goes from the strip's top (over
     // a detail line, and alone), and how far under that top the icons after its text start.
@@ -53,6 +54,7 @@ namespace headsup
     struct BarTextPlace
     {
         BarLinePlace title, figures, detail, side;
+        BarLinePlace helpCaption, help; // the help bar's, at its own text size
         bool operator==(const BarTextPlace&) const = default;
     };
 
@@ -87,8 +89,9 @@ namespace headsup
     constexpr const char* kRightCapId = "cap-right";
     constexpr const char* kHiddenClass = "hidden";
     constexpr const char* kLitClass    = "lit"; // hovered or open, with a popup
-    constexpr const char* kBorderlessClass = "borderless"; // the target, its border switched off
+    constexpr const char* kTargetClass     = "target"; // the target's own frame and tint: off with Show Background off
     constexpr const char* kFlatClass       = "flat"; // a pill shown only while lit
+    constexpr const char* kBackedClass     = "backed"; // showing its pill or tint while not lit (Show Background)
     // Shares its pill with the widget before it, or after it, and has no edge or round corners on that side.
     constexpr const char* kJoinBeforeClass = "join-before";
     constexpr const char* kJoinAfterClass  = "join-after";
@@ -138,6 +141,10 @@ namespace headsup
     using PopupFaces = std::array<PopupFace, kPopupFontCount>;
     // The popups' document: an empty popup over the whole screen that takes no clicks, styled from the look.
     std::string PopupDocument(const BarLook& look, const PopupFaces& faces);
+    // Sunk into what holds it: darker, its upper edges in shadow and its lower ones lit.
+    std::string SocketRules(float radius);
+    // The panel's text shadow as a font effect, for text of that many pixels.
+    std::string ShadowEffect(int pixels);
     constexpr const char* kOpenClass = "open"; // on a popup while it shows, so what it does as it opens plays each time
     constexpr const char* kPopupId = "popup";
     // A laid out popup's markup, from its top left corner: its panel, then each piece where the layout put it.

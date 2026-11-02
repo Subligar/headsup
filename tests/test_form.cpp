@@ -126,6 +126,18 @@ TEST(a_card_holds_its_rows_and_what_they_show)
     CHECK(!form.changed && !form.popup);
 }
 
+TEST(a_cards_description_of_several_lines_has_each_under_the_last_and_a_dash_line_as_a_bullet)
+{
+    FormState state;
+    Form form({}, state);
+    form.pageKey = "p";
+    form.BeginCard("C", nullptr, "Choose <what>.\n\n- Drag them.\n- Write text.");
+    form.EndCard();
+    CHECK(Has(form.blocks[0].rml, "<div class=\"note\"><div>Choose &lt;what&gt;.</div>"
+                                  "<div class=\"bullet\"><span class=\"dot\">\u2022</span>Drag them.</div>"
+                                  "<div class=\"bullet\"><span class=\"dot\">\u2022</span>Write text.</div></div>"));
+}
+
 TEST(a_click_flips_a_switch_and_the_markup_stays_the_same)
 {
     FormState state;
@@ -768,3 +780,27 @@ TEST(a_chip_dragged_from_one_line_to_another_leaves_the_first)
     CHECK_EQ(card.bottom, "Lv ${level|bazaar}");
 }
 
+
+TEST(a_dropdown_of_checks_toggles_each_bit_and_sums_up_what_is_picked)
+{
+    const LayoutOption options[] = {{"Mobs", "The mobs.", nullptr}, {"Pets", "", nullptr}, {"Players", "", nullptr}};
+    FormState state;
+    uint32_t bits   = 0b111;
+    const auto pass = [&](const std::vector<FormEvent>& events) {
+        Form form(events, state);
+        form.pageKey = "p";
+        form.BeginCard("C");
+        form.BitsDropdown("Shows", bits, options, nullptr);
+        form.EndCard();
+        return form;
+    };
+    CHECK_EQ(TextOf(pass({}), "p-c-shows-val"), "All");
+    const Form open = pass({{"p-c-shows", kClickEvent, ""}});
+    CHECK(open.popup && Has(open.popup->rml, "Mobs") && Has(open.popup->rml, "tip=\"The mobs.\""));
+    const Form one = pass({{"p-c-shows-o-1", kClickEvent, ""}});
+    CHECK(one.changed && bits == 0b101 && TextOf(one, "p-c-shows-val") == "2 Picked");
+    pass({{"p-c-shows-o-0", kClickEvent, ""}});
+    CHECK(bits == 0b100 && TextOf(pass({}), "p-c-shows-val") == "Players");
+    pass({{"p-c-shows-o-2", kClickEvent, ""}});
+    CHECK(bits == 0 && TextOf(pass({}), "p-c-shows-val") == "None");
+}

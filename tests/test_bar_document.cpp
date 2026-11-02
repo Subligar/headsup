@@ -23,7 +23,7 @@ namespace
     {
         return BarTextPlace{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
             BarLinePlace{14, 23.0f, 0.0f, 3.0f},
-            BarLinePlace{14, 15.0f, 15.0f, 3.0f}};
+            BarLinePlace{14, 15.0f, 15.0f, 3.0f}, BarLinePlace{16, 0.0f, 0.0f, 0.0f}, BarLinePlace{17, 0.0f, 0.0f, 0.0f}};
     }
 
     bool Has(const std::string& text, const char* part) { return text.find(part) != std::string::npos; }
@@ -203,6 +203,16 @@ TEST(the_help_bar_is_its_box_and_its_three_texts_centered_on_the_row)
     const std::string document = BarDocument(look, Place());
     CHECK(Has(document, "id=\"help\"") && Has(document, ".help-box{"));
     CHECK(Has(document, "decorator:vertical-gradient(#1c160ff7 #0c0a08f7)"));
+}
+
+TEST(the_help_bars_text_is_the_bars_title_size_or_its_own)
+{
+    Settings settings;
+    // The look's title is 13 px; the help's line boxes are 16 and 17 px.
+    CHECK(Has(BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place()), "font-size:13px;line-height:16px;"));
+    settings.helpBarTextSize = 21;
+    const std::string document = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place());
+    CHECK(Has(document, "font-size:21px;line-height:16px;") && Has(document, "font-size:21px;line-height:17px;"));
 }
 
 TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
@@ -417,7 +427,7 @@ TEST(a_widget_with_text_of_its_own_has_rules_of_its_own_under_its_id)
     const PanelWidget gil{BarWidget::Gil, 1};
     // Its own fonts at 20 px titles over 15 px details, a line box 24 px tall from row 6.
     const WidgetText own{gil, kCinzel, kMarcellusSC, TextRow{20, 15, true, 6.0f, 26.0f, 12.0f},
-        BarTextPlace{BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{18, 26.0f, 0.0f, 2.0f}, BarLinePlace{18, 16.0f, 16.0f, 2.0f}}};
+        BarTextPlace{BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{18, 26.0f, 0.0f, 2.0f}, BarLinePlace{18, 16.0f, 16.0f, 2.0f}, {}, {}}};
     const std::string rml = BarDocument(look, Place(), {own});
     CHECK(Has(rml, "#w-gil-2 .title{font-family:\"Cinzel\";font-size:20px;line-height:24px;"));
     CHECK(Has(rml, "#w-gil-2 .detail{font-family:\"Marcellus SC\";font-size:15px;"));
@@ -426,19 +436,6 @@ TEST(a_widget_with_text_of_its_own_has_rules_of_its_own_under_its_id)
     WidgetText alone = own;
     alone.lines.twoLines = false;
     CHECK(!Has(BarDocument(look, Place(), {alone}), "#w-gil-2 .detail{"));
-}
-
-TEST(a_target_without_its_border_has_none_lit_or_not_and_does_not_breathe)
-{
-    Settings settings;
-    const std::string ornate = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place());
-    CHECK(Has(ornate, ".ornate .widget.target.borderless,.ornate .widget.target.borderless.lit{border-color:transparent;}"));
-    CHECK(Has(ornate, ".widget.target.borderless{animation:none;}"));
-    // Pills: the target's pill takes every widget's edge, and a lit one the accent as theirs do.
-    const BarPalette& umbra = PaletteOf(BarTheme::UmbraDark);
-    const std::string pills = BarDocument(LookOf(BarTheme::UmbraDark, settings), Place());
-    const std::string edge  = ".pills .widget.target.borderless{border-color:" + RcssColor(umbra.pillBorder) + ";}";
-    CHECK(pills.find(edge) != std::string::npos && pills.find(edge) < pills.find(".pills .widget.lit{"));
 }
 
 TEST(a_widget_of_cells_lays_each_in_its_column_a_gap_apart)
@@ -476,10 +473,21 @@ TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_wha
     CHECK(rml.find(img) != std::string::npos && rml.find(img) < rml.find(">2<"));
     // Its pixels are the game's, B, G, R, A as an ARGB word keeps them.
     PlayOnlineIcons icons{ColorPicture{"menu    mesicon ", 1, 1, {1, 2, 3, 255}}, ColorPicture{"menu    mesicon ", 1, 1, {4, 5, 6, 255}}};
-    const std::optional<Image> messenger = GamePictureImage(icons, GamePictureSource(GamePicture::PlayOnlineMessenger));
+    const std::optional<Image> messenger =
+        GamePictureImage(icons, std::nullopt, GamePictureSource(GamePicture::PlayOnlineMessenger));
     CHECK(messenger && messenger->width == 1 && messenger->argb == std::vector<uint32_t>{0xFF060504u});
-    CHECK(!GamePictureImage(std::nullopt, GamePictureSource(GamePicture::PlayOnlineMail)));
-    CHECK(!GamePictureImage(icons, IconSource(Icon::Gm)));
+    CHECK(!GamePictureImage(std::nullopt, std::nullopt, GamePictureSource(GamePicture::PlayOnlineMail)));
+    CHECK(!GamePictureImage(icons, std::nullopt, IconSource(Icon::Gm)));
+    // The nations' crests, each its own.
+    const NationCrests crests{ColorPicture{"menu    scre    ", 1, 1, {7, 8, 9, 255}},
+        ColorPicture{"menu    bcre    ", 1, 1, {10, 11, 12, 255}}, ColorPicture{"menu    wcre    ", 1, 1, {13, 14, 15, 255}}};
+    const std::optional<Image> bastok = GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::BastokCrest));
+    CHECK(bastok && bastok->argb == std::vector<uint32_t>{0xFF0C0B0Au});
+    CHECK(GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::WindurstCrest))->argb ==
+          std::vector<uint32_t>{0xFF0F0E0Du});
+    CHECK(!GamePictureImage(std::nullopt, std::nullopt, GamePictureSource(GamePicture::SanDoriaCrest)));
+    // The Beastmen's is the Goblin Mask's item picture, which the game's resources serve as any item's.
+    CHECK(ItemOfSource(GamePictureSource(GamePicture::BeastmenCrest)) == std::optional<uint16_t>{511});
 }
 
 TEST(a_meter_is_as_wide_as_its_bar_and_side_texts_with_the_texts_above_and_below_centered_on_the_bar)

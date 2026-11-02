@@ -44,6 +44,8 @@ namespace headsup
         constexpr float kBoxBorder     = 1.0f; // a pill's or frame's, inside its edge
         // The widgets' content starts a pixel under the pill row's top in every shape, bordered or not.
         constexpr float kContentInset  = 1.0f;
+        // And everything in it stands a pixel higher than its lines' places, where it reads as centered in the pill.
+        constexpr float kContentLift   = 1.0f;
 
         std::string Hex(uint32_t value)
         {
@@ -74,13 +76,23 @@ namespace headsup
             return value;
         }
 
+        // A span's game picture, before its text.
+        std::string Picture(const Span& span)
+        {
+            return span.picture != GamePicture::None
+                       ? "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"/>"
+                       : std::string();
+        }
+
         std::string Spans(const std::vector<Span>& spans, const BarLook& look)
         {
             std::string rml;
             for (const Span& span : spans)
-                rml += span.picture != GamePicture::None
-                           ? "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"/>"
-                           : "<span style=\"color:" + RcssColor(look.BarColor(span)) + ";\">" + EscapedRml(span.text) + "</span>";
+            {
+                rml += Picture(span);
+                if (!span.text.empty())
+                    rml += "<span style=\"color:" + RcssColor(look.BarColor(span)) + ";\">" + EscapedRml(span.text) + "</span>";
+            }
             return rml;
         }
 
@@ -90,7 +102,7 @@ namespace headsup
             std::string rml;
             for (size_t i = 0; i < spans.size() && i < columns.size(); ++i)
                 rml += "<span class=\"cell\" style=\"width:" + Px(columns[i] + (i + 1 < spans.size() ? look.metrics.gap : 0.0f)) +
-                       ";color:" + RcssColor(look.BarColor(spans[i])) + ";\">" + EscapedRml(spans[i].text) + "</span>";
+                       ";color:" + RcssColor(look.BarColor(spans[i])) + ";\">" + Picture(spans[i]) + EscapedRml(spans[i].text) + "</span>";
             return rml;
         }
 
@@ -117,16 +129,6 @@ namespace headsup
             return "background-color:" + RcssColor(style.top) + ";border-color:" +
                    (style.border != 0 ? RcssColor(style.border) : std::string("transparent")) + ";border-radius:" +
                    Px(style.radius) + ";";
-        }
-
-        // The bar's text shadow as a font effect: the letters blurred, once a pixel down and once in place.
-        std::string ShadowEffect(int pixels)
-        {
-            const float sigma = static_cast<float>(pixels) * kShadowPerHeight * kSigmaPerRadius;
-            const std::string blur = Px(static_cast<float>(WholePixels(sigma / kGlowSigmaPerWidth)));
-            const std::string color = RcssColor(WithAlpha(kBlack, static_cast<uint32_t>(std::lround(kShadowStrength * 255.0f))));
-            return "font-effect:glow(0px " + blur + " 0px " + Px(static_cast<float>(kShadowDrop)) + " " + color +
-                   "),glow(0px " + blur + " 0px 0px " + color + ");";
         }
 
         std::string FaceRules(const std::string& font, int pixels, int lineHeight)
@@ -184,15 +186,21 @@ namespace headsup
 
     std::string GamePictureSource(GamePicture picture)
     {
+        constexpr uint16_t kGoblinMask = 511;
+        if (picture == GamePicture::BeastmenCrest) return ItemSource(kGoblinMask);
         return std::string(kHostSource) + std::string(kGameKind) + kSeparator + std::to_string(static_cast<int>(picture));
     }
 
-    std::optional<Image> GamePictureImage(const std::optional<PlayOnlineIcons>& icons, std::string_view name)
+    std::optional<Image> GamePictureImage(const std::optional<PlayOnlineIcons>& icons, const std::optional<NationCrests>& crests,
+        std::string_view name)
     {
-        const ColorPicture* picture = !icons                                                          ? nullptr
-                                      : name == GamePictureSource(GamePicture::PlayOnlineMail)      ? &icons->mail
-                                      : name == GamePictureSource(GamePicture::PlayOnlineMessenger) ? &icons->messenger
-                                                                                                    : nullptr;
+        const auto is = [&](GamePicture picture) { return name == GamePictureSource(picture); };
+        const ColorPicture* picture = icons && is(GamePicture::PlayOnlineMail)       ? &icons->mail
+                                      : icons && is(GamePicture::PlayOnlineMessenger) ? &icons->messenger
+                                      : crests && is(GamePicture::SanDoriaCrest)      ? &crests->sanDoria
+                                      : crests && is(GamePicture::BastokCrest)        ? &crests->bastok
+                                      : crests && is(GamePicture::WindurstCrest)      ? &crests->windurst
+                                                                                      : nullptr;
         if (picture == nullptr) return std::nullopt;
         Image image{picture->width, picture->height, std::vector<uint32_t>(picture->bgra.size() / sizeof(uint32_t))};
         // The picture's bytes are B, G, R, A: an ARGB word's bytes in memory.
@@ -324,9 +332,8 @@ namespace headsup
             css += ".glint.a{left:0%;width:30%;decorator:horizontal-gradient(" + RcssColor(Faded(cyan, 0)) + " " + c + ");}";
             css += ".glint.b{left:30%;width:40%;decorator:horizontal-gradient(" + c + " " + v + ");}";
             css += ".glint.c{left:70%;width:30%;decorator:horizontal-gradient(" + v + " " + RcssColor(Faded(violet, 0)) + ");}";
-            css += ".pills .widget,.pills .widget.flat{border-radius:" + Px(look.row.height / 2.0f) +
-                   ";background-color:transparent;border-color:transparent;}";
-            css += ".pills .widget.target{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
+            css += ".pills .widget,.pills .widget.flat{background-color:transparent;border-color:transparent;}";
+            css += ".pills .widget.target,.pills .widget.backed{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
             css += ".pills .widget.lit{background-color:" + RcssColor(Faded(cyan, 0x2E)) + ";border-color:" +
                    RcssColor(Faded(cyan, 0xB3)) + ";}";
             css += ".progress,.beside,.mbar{background-color:#ffffff1f;}";
@@ -409,20 +416,17 @@ namespace headsup
         {
             css += ".ornate .widget{border-width:0px;margin:0px " + Px(clear) + ";padding:" + Px(kContentInset) + " " +
                    Px(m.padding - clear) + " 0px " + Px(m.padding - clear) + ";}";
-            css += ".ornate .widget.lit{" + BoxRules(boxOf(BarWidget::Zone, true)) + "}";
+            css += ".ornate .widget.backed,.ornate .widget.lit{" + BoxRules(boxOf(BarWidget::Zone, true)) + "}";
             css += ".ornate .widget.target{border-width:" + Px(kBoxBorder) + ";margin:0px;padding:0px " +
                    Px(m.padding - kBoxBorder) + ";" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             css += ".ornate .widget.target.lit{" + BoxRules(boxOf(BarWidget::Target, true)) + "}";
-            css += std::string(".ornate .widget.target.") + kBorderlessClass + ",.ornate .widget.target." + kBorderlessClass +
-                   ".lit{border-color:transparent;}";
         }
         else
         {
             css += ".pills .widget{" + BoxRules(boxOf(BarWidget::Weather, false)) + "}";
             css += ".pills .widget.flat{" + BoxRules(boxOf(BarWidget::Zone, false)) + "}";
-            css += ".pills .widget.target{" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             // Before the lit rule, which then gives it the accent as every lit pill has.
-            css += std::string(".pills .widget.target.") + kBorderlessClass + "{border-color:" + RcssColor(p.pillBorder) + ";}";
+            css += ".pills .widget.target{" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             css += ".pills .widget.lit{" + BoxRules(boxOf(BarWidget::Weather, true)) + "}";
         }
         // A widget eases into its lit look (above) and its title glows there; the target's frame breathes from the
@@ -432,11 +436,10 @@ namespace headsup
         css += "@keyframes breathe{from{border-color:" + RcssColor(Faded(p.accent, kBreatheLow)) + ";}to{border-color:" +
                RcssColor(Faded(p.accentEnd, kBreatheHigh)) + ";}}";
         css += std::string(".widget.") + kLitClass + "{animation:none;}";
-        css += std::string(".widget.target.") + kBorderlessClass + "{animation:none;}";
         css += std::string(".widget.") + kLitClass + " .title{font-effect:glow(0px 3px 0px 0px " +
                RcssColor(Faded(p.accent, kLitGlow)) + ");}";
 
-        css += ".content{position:relative;height:100%;}";
+        css += ".content{position:relative;top:" + Px(-kContentLift) + ";height:100%;}";
         css += ".icon,.coin,.text,.beside,.line-icons,.line-icon,.t{display:inline-block;vertical-align:top;}";
         css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
                Px(m.gap) + ";}";
@@ -468,8 +471,9 @@ namespace headsup
         css += std::string("#") + kHelpId + "{position:absolute;left:0px;top:0px;width:0px;height:0px;}";
         css += ".p{position:absolute;white-space:pre;}";
         css += ".help-box{position:absolute;" + (look.skin ? SkinRules(*look.skin) : PanelRules(HelpBarPanel(look))) + "}";
-        css += ".hc{" + FaceRules(look.titleFont, lines.title, place.title.height) + ShadowEffect(lines.title) + "}";
-        css += ".hh{" + FaceRules(look.detailFont, lines.title, place.figures.height) + ShadowEffect(lines.title) + "}";
+        const int help = HelpTextPixels(look.settings.helpBarTextSize, lines.title);
+        css += ".hc{" + FaceRules(look.titleFont, help, place.helpCaption.height) + ShadowEffect(help) + "}";
+        css += ".hh{" + FaceRules(look.detailFont, help, place.help.height) + ShadowEffect(help) + "}";
         const bool glass = look.palette.shape == BarShape::Glass;
         if (glass) css += GlassBarRules(look);
         // Last, over every shape's own corners and borders.
@@ -492,7 +496,7 @@ namespace headsup
             if (!OnTheBar(widget.kind) || (widget.copy > 0 && !HasCopies(widget.kind))) continue;
             // Zone and Earth time show no pill until lit.
             const bool flat = !look.ornate && !boxOf(widget.kind, false);
-            rml += std::string("<div class=\"widget hidden") + (widget.kind == BarWidget::Target ? " target" : "") +
+            rml += std::string("<div class=\"widget hidden") + (widget.kind == BarWidget::Target ? std::string(" ") + kTargetClass : "") +
                    (flat ? std::string(" ") + kFlatClass : "") + "\" id=\"" + WidgetId(widget) + "\"></div>";
         }
         rml += std::string("<div id=\"") + kHelpId + "\"></div>";
@@ -507,12 +511,29 @@ namespace headsup
         if (look.settings.helpBarBackground)
             rml += "<div class=\"help-box\" style=\"" + BoxAt(box.x, box.y, box.width, box.height) + "\"></div>";
         auto centered = [&](int lineHeight) { return box.y + (box.height - static_cast<float>(lineHeight)) / 2.0f; };
-        const float captionY = centered(place.title.height);
+        const float captionY = centered(place.helpCaption.height);
         if (!parts.caption.empty()) rml += TextAt("hc", parts.row.captionX, captionY, look.palette.title, parts.caption);
         if (parts.bag) rml += TextAt("hc", parts.row.bagX, captionY, look.BarColor(*parts.bag), parts.bag->text);
         if (!parts.help.empty())
-            rml += TextAt("hh", parts.row.helpX, centered(place.figures.height), look.palette.text, parts.help);
+            rml += TextAt("hh", parts.row.helpX, centered(place.help.height), look.palette.text, parts.help);
         return rml;
+    }
+
+    // The bar's text shadow as a font effect: the letters blurred, once a pixel down and once in place.
+    std::string ShadowEffect(int pixels)
+    {
+        const float sigma = static_cast<float>(pixels) * kShadowPerHeight * kSigmaPerRadius;
+        const std::string blur = Px(static_cast<float>(WholePixels(sigma / kGlowSigmaPerWidth)));
+        const std::string color = RcssColor(WithAlpha(kBlack, static_cast<uint32_t>(std::lround(kShadowStrength * 255.0f))));
+        return "font-effect:glow(0px " + blur + " 0px " + Px(static_cast<float>(kShadowDrop)) + " " + color +
+               "),glow(0px " + blur + " 0px 0px " + color + ");";
+    }
+
+    std::string SocketRules(float radius)
+    {
+        return std::string("box-sizing:border-box;border:1px;border-color:") + RcssColor(kSocketShade) + " " +
+               RcssColor(kSocketLight) + " " + RcssColor(kSocketLight) + " " + RcssColor(kSocketShade) +
+               ";border-radius:" + Px(radius) + ";background-color:" + RcssColor(kSocketFill) + ";";
     }
 
     std::string PopupDocument(const BarLook& look, const PopupFaces& faces)
@@ -542,10 +563,7 @@ namespace headsup
         css += ".thumb{background-color:" + RcssColor(kScrollThumb) + ";}";
         css += ".tab.lit{border-color:" + RcssColor(look.palette.accent) + ";background-color:" +
                RcssColor(Faded(look.palette.accent, kLitTab)) + ";}";
-        // Sunk into its card: darker, its upper edges in shadow and its lower ones lit.
-        css += std::string(".socket{box-sizing:border-box;border:1px;border-color:") + RcssColor(kSocketShade) + " " +
-               RcssColor(kSocketLight) + " " + RcssColor(kSocketLight) + " " + RcssColor(kSocketShade) +
-               ";border-radius:" + Px(PopupCard(look).radius / 2.0f) + ";background-color:" + RcssColor(kSocketFill) + ";}";
+        css += ".socket{" + SocketRules(PopupCard(look).radius / 2.0f) + "}";
         css += ".rule{height:1px;decorator:horizontal-gradient(" + RcssColor(look.palette.divider) + " " +
                RcssColor(look.palette.divider & ~kAlphaMask) + ");}";
         css += ".mark{text-align:center;}";
@@ -582,6 +600,7 @@ namespace headsup
             switch (piece.kind)
             {
             case PopupPiece::Kind::Text:
+            case PopupPiece::Kind::PinWord:
                 rml += TextAt(face.c_str(), piece.x, std::round(piece.y) + faces[static_cast<size_t>(piece.font)].drop, color,
                     piece.span.text, piece.right ? piece.width : 0.0f);
                 break;
@@ -596,6 +615,10 @@ namespace headsup
                 break;
             case PopupPiece::Kind::Item:
                 rml += "<img class=\"p\" src=\"" + ItemSource(piece.item) + "\" style=\"" + place + "width:" +
+                       Px(piece.width) + ";height:" + Px(piece.height) + ";\"/>";
+                break;
+            case PopupPiece::Kind::Picture:
+                rml += "<img class=\"p\" src=\"" + GamePictureSource(piece.picture) + "\" style=\"" + place + "width:" +
                        Px(piece.width) + ";height:" + Px(piece.height) + ";\"/>";
                 break;
             case PopupPiece::Kind::Star:
@@ -613,6 +636,7 @@ namespace headsup
                 rml += "<div class=\"p card\" style=\"" + BoxAt(piece.x, piece.y, piece.width, piece.height) + "\"></div>";
                 break;
             case PopupPiece::Kind::Tab:
+            case PopupPiece::Kind::PinChip:
                 rml += std::string("<div class=\"p tab") + (piece.open ? " lit" : "") + "\" style=\"" +
                        BoxAt(piece.x, piece.y, piece.width, piece.height) + "border-radius:" + Px(piece.height / 2.0f) +
                        ";\"></div>";

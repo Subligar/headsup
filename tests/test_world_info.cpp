@@ -128,7 +128,7 @@ TEST(the_next_day_a_zone_can_roll_an_elements_weather)
             if (WeatherElement(w) == element) percent += chance;
         CHECK(next->percent == percent && WeatherElement(next->weather) == element);
     }
-    CHECK(!NextElementWeather(ZoneRecord{"None", kUnknownRegion, kNoCalendar}, Element::Fire, 0));
+    CHECK(!NextElementWeather(ZoneRecord{"None", kUnknownRegion, kNoCalendar, kNoFishing}, Element::Fire, 0));
 }
 
 TEST(the_zones_that_can_roll_an_element_come_likeliest_first_with_their_chance)

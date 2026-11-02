@@ -29,6 +29,21 @@ TEST(a_zone_in_names_the_zones_weather)
     CHECK(!ParseZoneInWeather(odd.data(), 0x100).has_value());
 }
 
+TEST(a_zone_change_names_the_next_map_servers_address_as_it_goes_on_the_wire)
+{
+    // Phoenix's GP_SERV_COMMAND_LOGOUT (0x00B): its state at 0x04, then the next zone's server, its IP from inet_pton
+    // at 0x08: 51.222.254.225 is the bytes 51 222 254 225.
+    std::vector<uint8_t> out(0x1C, 0);
+    const uint8_t ip[] = {51, 222, 254, 225};
+    std::memcpy(out.data() + 0x08, ip, sizeof(ip));
+    uint32_t wire = 0;
+    std::memcpy(&wire, ip, sizeof(wire));
+    CHECK(ParseZoneOutAddress(out.data(), static_cast<uint32_t>(out.size())) == wire);
+    CHECK(!ParseZoneOutAddress(out.data(), 0x0B).has_value());
+    std::fill(out.begin(), out.end(), 0); // a logout names no server
+    CHECK(!ParseZoneOutAddress(out.data(), static_cast<uint32_t>(out.size())).has_value());
+}
+
 TEST(the_skills_packet_holds_each_crafts_rank_in_its_low_bits)
 {
     // 0x062: two bytes a skill from 0x80; Fishing is skill 48, Cooking 56. A craft's rank is its low 5 bits, its level

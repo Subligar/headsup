@@ -1,5 +1,7 @@
 #include "game_font.h"
 #include "pointer_keys.h"
+#include "default_settings.h"
+#include "ini_text.h"
 #include "settings.h"
 #include "world_info.h"
 #include "release_file.h"
@@ -267,7 +269,6 @@ barTheme=umbraDark
 barSeparators=none
 barCurrency=allied_notes
 serverClockZone=usPacific
-barTargetDetails=true
 menuFont=Tahoma
 menuScale=125.0000
 barHeight=48.0000
@@ -385,7 +386,6 @@ helpBarY=8.0000
         s.barSeparators = BarSeparators::None;
         s.Widget(BarWidget::Gil).currency   = *CurrencyOfKey("allied_notes");
         s.Widget(BarWidget::EarthTime).clockServerTime = true; // the file's Server time widget was on
-        s.Widget(BarWidget::Target).targetDetails = true;
         s.menuFont         = "Tahoma";
         s.menuFontSize     = 21; // 125 percent of Ashita's 18 pixels, in Tahoma, which was drawn at 0.95 of its size
         s.moveGameHelp     = true;
@@ -555,10 +555,20 @@ TEST(a_group_side_that_is_not_left_or_right_keeps_its_default)
     CHECK_EQ(LoadSettings(store).Kind(PlateKind::Mobs).lines[1].text, "$detect Lv $level $con $weak$resist");
 }
 
-TEST(empty_store_gives_defaults)
+TEST(a_new_install_takes_the_built_in_defaults_and_a_saved_file_its_own)
 {
-    MapStore store;
-    CHECK(LoadSettings(store) == Settings{});
+    // Each key of the built-in defaults, as a new install reads it, saves back as the defaults hold it.
+    MapStore empty, saved;
+    SaveSettings(LoadSettings(empty), saved);
+    for (const char* key : {"barTheme", "barLeft", "mobsLine2Text", "pointerIcon", "barHeight"})
+        CHECK_EQ(saved.values[key], *IniValue(kDefaultSettingsText, "settings", key));
+    CHECK(LoadSettings(empty) == DefaultSettings() && !(DefaultSettings() == Settings{}));
+    // A file HeadsUp saved holds every key, so one lacking a key is from before it: it gets Settings' own.
+    MapStore file;
+    file.values["settingsVersion"] = "2.0000";
+    CHECK(LoadSettings(file).barTheme == Settings{}.barTheme);
+    // The faded names stay off.
+    CHECK_EQ(DefaultSettings().opacity.notTargeted, Settings{}.opacity.notTargeted);
 }
 
 TEST(a_whole_number_too_large_for_an_int_is_clamped_like_any_other)
@@ -1073,14 +1083,15 @@ TEST(a_new_install_places_the_windows_under_the_panel_at_its_reference_band_and_
     MapStore fresh;
     const Settings s = LoadSettings(fresh);
     CHECK(s.shiftVanillaUi && s.hiddenWindows.empty());
-    CHECK_EQ(s.placedUnder[static_cast<int>(HelpMode::On)], ReferenceBand(HelpMode::On));
-    CHECK_EQ(s.placedUnder[static_cast<int>(HelpMode::Off)], ReferenceBand(HelpMode::Off));
+    CHECK_EQ(s.placedUnder[static_cast<int>(HelpMode::On)], std::stoi(*IniValue(kDefaultSettingsText, "settings", "placedUnderHelpOn")));
+    CHECK_EQ(s.placedUnder[static_cast<int>(HelpMode::Off)], std::stoi(*IniValue(kDefaultSettingsText, "settings", "placedUnderHelpOff")));
     CHECK(s.viewShifts[0].empty() && s.viewShifts[1].empty());
 }
 
 TEST(a_theme_that_is_not_one_keeps_the_default_and_old_files_get_the_bar)
 {
     MapStore store;
+    store.values["enabled"]     = "true"; // a file from before the bar
     store.values["barTheme"]    = "purple";
     store.values["barCurrency"] = "dollars";
     const Settings s         = LoadSettings(store);
@@ -1115,11 +1126,12 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
     static_assert(std::size(widgetKeys) == kBarWidgetCount);
     for (int w = 0; w < kBarWidgetCount; ++w)
     {
+        const Settings d = DefaultSettings();
         MapStore store;
-        store.values[widgetKeys[w]] = kBarWidgetDefaults[w] ? "false" : "true";
+        store.values[widgetKeys[w]] = d.Widget(static_cast<BarWidget>(w)).on ? "false" : "true";
         const Settings s = LoadSettings(store);
         for (int other = 0; other < kBarWidgetCount; ++other)
-            CHECK(s.Widget(static_cast<BarWidget>(other)).on == (kBarWidgetDefaults[other] != (other == w)));
+            CHECK(s.Widget(static_cast<BarWidget>(other)).on == (d.Widget(static_cast<BarWidget>(other)).on != (other == w)));
     }
 }
 
@@ -1251,10 +1263,6 @@ TEST(the_settings_window_keeps_its_theme_and_its_place)
     store.values["menuHeight"] = "1e9";
     const Settings odd         = LoadSettings(store);
     CHECK(odd.menuWidth == 0 && odd.menuHeight == kMaxMenuSide);
-    // A new file has neither: the window opens in the screen's middle, in the Phoenix look.
-    MapStore empty;
-    const Settings fresh = LoadSettings(empty);
-    CHECK(fresh.menuWidth == 0 && fresh.menuHeight == 0);
 }
 
 TEST(the_window_type_is_kept)
@@ -1301,7 +1309,7 @@ TEST(the_windows_font_size_is_pixels_and_an_old_percent_becomes_the_pixels_it_dr
     // Its own key wins, and the percent is never written again.
     CHECK_EQ(loaded({{"menuScale", "150.0000"}, {"menuFontSize", "20.0000"}}), 20);
     MapStore fresh; // a new install has no percent to convert
-    CHECK_EQ(LoadSettings(fresh).menuFontSize, Settings{}.menuFontSize);
+    CHECK_EQ(LoadSettings(fresh).menuFontSize, DefaultSettings().menuFontSize);
     Settings s;
     s.menuFontSize = 30;
     MapStore file  = OwnFileWith(s, {{"menuScale", "80.0000"}});
@@ -1932,7 +1940,7 @@ TEST(a_new_installs_first_save_passes_on_every_key)
     MapStore fresh;
     ChangedKeys keys(fresh);
     const Settings s = keys.Load();
-    CHECK(s == Settings{});
+    CHECK(s == DefaultSettings());
     CHECK_EQ(keys.Save(s).size(), WholeSave(s).size());
     CHECK(fresh.values == WholeSave(s));
 }
@@ -2400,7 +2408,7 @@ TEST(the_mouse_pointer_is_one_icon_and_the_chocobo_switch_of_before_picks_the_ch
     CHECK(loaded({{"chocoboPointer", "true"}}).pointerIcon == PointerIcon::Chocobo);
     CHECK(loaded({{"chocoboPointer", "false"}}).pointerIcon == PointerIcon::Vanilla);
     MapStore fresh;
-    CHECK(LoadSettings(fresh).pointerIcon == PointerIcon::Vanilla);
+    CHECK(LoadSettings(fresh).pointerIcon == DefaultSettings().pointerIcon);
     // The key of its own wins over the switch of before.
     const Settings file = loaded({{"chocoboPointer", "true"}, {"pointerIcon", "file"}, {"pointerFile", "sword"}});
     CHECK(file.pointerIcon == PointerIcon::File && file.pointerFile == "sword");
@@ -2719,10 +2727,11 @@ TEST(the_game_pointer_is_swapped_for_another_icon_or_another_size)
     CHECK(!PointerSwapped(s));
 }
 
-TEST(looking_up_players_is_off_until_switched_on_and_kept)
+TEST(looking_up_players_is_kept)
 {
-    MapStore empty;
-    CHECK(!LoadSettings(empty).lookUpPlayers);
+    MapStore off;
+    off.values["lookUpPlayers"] = "false";
+    CHECK(!LoadSettings(off).lookUpPlayers);
     MapStore store;
     store.values["lookUpPlayers"] = "true";
     const Settings s = LoadSettings(store);
@@ -2739,7 +2748,7 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     SaveSettings(s, plain);
     for (const auto& [key, value] : plain.values)
         CHECK(key.find("_2") == std::string::npos);
-    const std::optional<PanelWidget> copy = AddWidgetCopy(s, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Gil);
     CHECK(copy.has_value() && s.Widget(*copy).on);
     s.Widget(*copy).currency = 3;
     s.Widget(*copy).secondLine = false;
@@ -2753,13 +2762,35 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     // Taken off, its settings go: put back, it is new.
     RemoveWidgetCopy(s, *copy);
     CHECK(!Placed(s.barSections, *copy) && !Shows(s, *copy));
-    CHECK(AddWidgetCopy(s, BarWidget::Gil) == copy && s.Widget(*copy) == NewWidget(*copy));
+    CHECK(CloneWidget(s, BarWidget::Gil) == copy && s.Widget(*copy) == NewWidget(*copy));
+}
+
+TEST(a_clone_starts_with_every_setting_of_the_widget_it_copies_shown_and_combined_with_nothing)
+{
+    Settings s;
+    WidgetOptions& gil = s.Widget(BarWidget::Gil);
+    gil.on             = false;
+    gil.currency       = 3;
+    gil.secondLine     = false;
+    gil.spacing        = 12;
+    gil.titleFont      = "Cinzel";
+    gil.combine        = PanelWidget{BarWidget::Bags};
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Gil);
+    CHECK(copy.has_value());
+    WidgetOptions expected = gil;
+    expected.on            = true;
+    expected.combine.reset();
+    CHECK(s.Widget(*copy) == expected);
+    // A clone of a copy is a clone of that copy.
+    s.Widget(*copy).currency = 5;
+    const std::optional<PanelWidget> again = CloneWidget(s, *copy);
+    CHECK(again.has_value() && s.Widget(*again).currency == 5);
 }
 
 TEST(a_combined_widget_is_kept_by_its_partners_name_and_loses_a_partner_taken_off_the_panel)
 {
     Settings s;
-    const std::optional<PanelWidget> copy = AddWidgetCopy(s, BarWidget::Bags);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Bags);
     CHECK(copy.has_value());
     s.Widget(BarWidget::Zone).combine    = PanelWidget{BarWidget::Conquest};
     s.Widget(BarWidget::Weather).combine = *copy;
@@ -2804,7 +2835,7 @@ TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_tak
 TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_range)
 {
     Settings s;
-    const std::optional<PanelWidget> copy = AddWidgetCopy(s, BarWidget::Bags);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Bags);
     CHECK(copy.has_value());
     s.Widget(BarWidget::Bags).spacing = 12;
     s.Widget(*copy).padding           = 3;
@@ -2812,13 +2843,73 @@ TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_rang
     SaveSettings(s, store);
     const Settings read = LoadSettings(store);
     CHECK_EQ(read.Widget(BarWidget::Bags).spacing, 12);
-    CHECK_EQ(read.Widget(BarWidget::Bags).padding, kThemePadding);
+    CHECK_EQ(read.Widget(BarWidget::Bags).padding, kPanelPadding);
     CHECK_EQ(read.Widget(*copy).padding, 3);
     store.values["barBagsSpacing"] = "500";
     store.values["barBagsPadding_2"] = "-9";
     const Settings held = LoadSettings(store);
     CHECK_EQ(held.Widget(BarWidget::Bags).spacing, kMaxWidgetSpacing);
-    CHECK_EQ(held.Widget(*copy).padding, kThemePadding);
+    CHECK_EQ(held.Widget(*copy).padding, kPanelPadding);
+}
+
+TEST(the_vanadiel_clocks_day_of_week_and_date_are_kept_for_each_copy)
+{
+    Settings s;
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::VanaTime);
+    CHECK(copy.has_value() && s.Widget(*copy).vanaWeekday && !s.Widget(*copy).vanaDate);
+    s.Widget(*copy).vanaWeekday = false;
+    s.Widget(*copy).vanaDate    = true;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(!read.Widget(*copy).vanaWeekday && read.Widget(*copy).vanaDate);
+    CHECK(read.Widget(BarWidget::VanaTime).vanaWeekday && !read.Widget(BarWidget::VanaTime).vanaDate);
+}
+
+TEST(the_zone_widgets_conquest_and_id_settings_are_kept_for_each_copy)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::Zone).zoneConquest == ConquestPlace::Below && s.Widget(BarWidget::Zone).zoneConquestText &&
+          !s.Widget(BarWidget::Zone).zoneId);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Zone);
+    CHECK(copy.has_value());
+    WidgetOptions& o   = s.Widget(*copy);
+    o.zoneConquest     = ConquestPlace::Left;
+    o.zoneConquestText = false;
+    o.zoneId           = true;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(read.Widget(*copy).zoneConquest == ConquestPlace::Left && !read.Widget(*copy).zoneConquestText &&
+          read.Widget(*copy).zoneId);
+    CHECK(read.Widget(BarWidget::Zone).zoneConquest == ConquestPlace::Below);
+}
+
+TEST(show_background_is_kept_for_each_copy)
+{
+    Settings s;
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Weather);
+    CHECK(copy.has_value());
+    s.Widget(*copy).background = true;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(read.Widget(*copy).background && !read.Widget(BarWidget::Weather).background);
+}
+
+TEST(the_panels_widget_spacing_and_padding_are_kept_and_held_to_their_range)
+{
+    Settings s;
+    s.barWidgetSpacing = 12;
+    s.barWidgetPadding = 5;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(read.barWidgetSpacing == 12 && read.barWidgetPadding == 5);
+    store.values["barWidgetSpacing"] = "500";
+    store.values["barWidgetPadding"] = "-9";
+    const Settings held = LoadSettings(store);
+    CHECK(held.barWidgetSpacing == kMaxWidgetSpacing && held.barWidgetPadding == kThemePadding);
 }
 
 TEST(a_widgets_own_fonts_and_text_size_are_kept_and_default_to_the_panels)
@@ -2838,15 +2929,31 @@ TEST(a_widgets_own_fonts_and_text_size_are_kept_and_default_to_the_panels)
     CHECK_EQ(LoadSettings(store).Widget(BarWidget::Zone).textSize, kPanelTextSize);
 }
 
-TEST(the_target_widgets_border_is_on_by_default_and_kept_off_once_turned_off)
+TEST(the_target_widgets_background_is_on_by_default_and_kept_off_once_turned_off)
 {
     Settings s;
-    CHECK(s.Widget(BarWidget::Target).targetBorder);
-    s.Widget(BarWidget::Target).targetBorder = false;
+    CHECK(s.Widget(BarWidget::Target).background && !s.Widget(BarWidget::Gil).background);
+    s.Widget(BarWidget::Target).background = false;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(store.values["barTargetBorder"], "false");
-    CHECK(!LoadSettings(store).Widget(BarWidget::Target).targetBorder);
+    CHECK(!LoadSettings(store).Widget(BarWidget::Target).background);
+}
+
+TEST(the_target_widgets_icons_visibility_and_mob_level_are_kept_and_held_to_their_range)
+{
+    Settings s;
+    WidgetOptions& target = s.Widget(BarWidget::Target);
+    target.targetIcons    = kTargetWeakIcons | DetectionBit(DetectionIcon::Sound);
+    target.targetShows    = TargetShowBit(TargetShow::Mobs);
+    target.targetMobLevel = false;
+    MapStore store;
+    SaveSettings(s, store);
+    const WidgetOptions read = LoadSettings(store).Widget(BarWidget::Target);
+    CHECK(read.targetIcons == target.targetIcons && read.targetShows == target.targetShows && !read.targetMobLevel);
+    store.values["barTargetShowIcons"] = "99999";
+    store.values["barTargetShows"]     = "-3";
+    const WidgetOptions held = LoadSettings(store).Widget(BarWidget::Target);
+    CHECK(held.targetIcons == kAllTargetIcons && held.targetShows == 0);
 }
 
 TEST(the_exp_text_is_kept_apart_for_the_job_and_exp_widgets)
@@ -2919,4 +3026,27 @@ TEST(the_world_info_widget_keeps_its_picks_by_name)
     const Settings bounded       = Clamp(s);
     const WidgetOptions& clamped = bounded.Widget(BarWidget::World);
     CHECK(clamped.worldRoute == 0 && clamped.worldGuild == 0);
+}
+
+TEST(the_fishing_bar_keeps_its_switch_width_and_place)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    CHECK(fresh.fishBar && fresh.hideGameFishBar && fresh.fishBarX == kFishBarUnplaced && fresh.fishBarY == kFishBarUnplaced);
+    MapStore store;
+    store.values["fishBar"]      = "false";
+    store.values["hideGameFishBar"] = "false";
+    store.values["fishBarWidth"] = "420";
+    store.values["fishBarX"]     = "640";
+    store.values["fishBarY"]     = "900";
+    const Settings s = LoadSettings(store);
+    CHECK(!s.fishBar && !s.hideGameFishBar && s.fishBarWidth == 420 && s.fishBarX == 640 && s.fishBarY == 900);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(LoadSettings(saved).fishBarX, 640);
+    CHECK(!LoadSettings(saved).fishBar && !LoadSettings(saved).hideGameFishBar);
+    store.values["fishBarWidth"] = "5";
+    store.values["fishBarX"]     = "-300";
+    const Settings odd = LoadSettings(store);
+    CHECK(odd.fishBarWidth == kMinFishBarWidth && odd.fishBarX == kFishBarUnplaced);
 }

@@ -10,9 +10,10 @@
 
 namespace headsup
 {
-    // Pings the server the game sends to, on a thread of its own. The game reads its socket once a frame, so timing its
-    // own packets can say no better than the frame time; an ICMP echo, which Phoenix's server answers, can. The address
-    // comes from FFXiMain.dll's import of sendto, which is redirected here.
+    // Pings the game's map server, on a thread of its own. The game reads its socket once a frame, so timing its own
+    // packets can say no better than the frame time; an ICMP echo, which Phoenix's server answers, can. The address is
+    // Phoenix's map server's by name until a zone change names the server (ParseZoneOutAddress): nothing of the game's
+    // is touched, which virus scanners took for something worse.
     class ServerPing
     {
     public:
@@ -22,13 +23,12 @@ namespace headsup
         void Stop();
         // The round trips, in milliseconds, since the last call. It pings only while something takes them.
         std::vector<double> TakeRoundTrips();
-        // Where the game's datagrams go: an IPv4 address as it goes on the wire.
+        // The game's map server: an IPv4 address as it goes on the wire.
         void SendingTo(uint32_t address);
 
     private:
         void Run();
 
-        void** m_Slot = nullptr; // FFXiMain.dll's import of sendto
         void* m_Icmp  = nullptr; // IcmpCreateFile's handle
         std::thread m_Thread;
         std::mutex m_Lock;

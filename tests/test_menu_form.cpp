@@ -79,7 +79,26 @@ TEST(the_window_is_its_sidebar_and_the_open_pages_cards)
     CHECK(Has(form.blocks.front().rml, "<div class=\"nav\" id=\"nav-entities\">") &&
           Has(form.blocks.front().rml, "<div class=\"nav child\" id=\"nav-mobs\">"));
     CHECK(ClassOn(form, "nav-entities", "picked") && !ClassOn(form, "nav-mobs", "picked"));
-    CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-colors-entity-type") != nullptr);
+    CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-target-cursor") != nullptr);
+}
+
+TEST(the_palettes_are_on_their_own_colors_page_after_the_mouse_cursor)
+{
+    Window w;
+    const Form entities    = w.Pass();
+    const std::string side = entities.blocks.front().rml;
+    CHECK(Has(side, "<div class=\"nav\" id=\"nav-colors\">"));
+    CHECK(side.find("id=\"nav-mousecursor\"") < side.find("id=\"nav-colors\"") &&
+          side.find("id=\"nav-colors\"") < side.find("id=\"nav-configmenu\""));
+    const char* kPalettes[] = {
+        "colors-aggression", "colors-toughness", "colors-claim-status", "colors-targeting", "colors-entity-type"};
+    w.state.page      = Page::Colors;
+    const Form colors = w.Pass();
+    for (const char* card : kPalettes)
+    {
+        CHECK(Block(entities, (std::string("entities-") + card).c_str()) == nullptr);
+        CHECK(Block(colors, (std::string("colors-") + card).c_str()) != nullptr);
+    }
 }
 
 TEST(the_kind_pages_leave_the_sidebar_while_nameplates_and_outlines_are_both_off)
@@ -167,9 +186,33 @@ TEST(a_widgets_chip_dropped_on_another_goes_before_it)
     const Form form = w.Pass({{first, kDropEvent, second}});
     const std::vector<PanelWidget>& now = w.settings.barSections[static_cast<int>(BarSection::Left)];
     CHECK(form.changed && now[0] == left[1] && now[1] == left[0]);
-    // A click on a chip opens its tab, at the page's top.
-    const Form clicked = w.Pass({{first, kClickEvent, ""}});
-    CHECK(w.state.widget == SlotOf(left[0]) && clicked.scrollToTop);
+}
+
+TEST(the_layout_comes_first_and_a_click_on_a_chip_shows_its_widgets_settings_under_it)
+{
+    Window w;
+    w.state.page = Page::Widgets;
+    const std::vector<PanelWidget>& left = w.settings.barSections[static_cast<int>(BarSection::Left)];
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const Form form = w.Pass({{chip, kClickEvent, ""}});
+    CHECK(w.state.widget == SlotOf(left[1]) && !form.scrollToTop);
+    const auto layout = std::ranges::find(form.blocks, "widgets-layout", &FormBlock::id);
+    const auto widgets = std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id);
+    CHECK(layout != form.blocks.end() && widgets != form.blocks.end() && layout < widgets);
+    CHECK(!Has(widgets->rml, "class=\"tab"));
+}
+
+TEST(a_chips_toggle_turns_its_widget_on_and_off_and_shows_its_settings)
+{
+    Window w;
+    w.state.page           = Page::Widgets;
+    const PanelWidget gil  = BarWidget::Gil;
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(gil));
+    CHECK(w.settings.Widget(gil).on);
+    CHECK(w.Pass({{chip + "-on", kClickEvent, ""}}).changed);
+    CHECK(!w.settings.Widget(gil).on && w.state.widget == SlotOf(gil));
+    const Form back = w.Pass({{chip + "-on", kClickEvent, ""}});
+    CHECK(w.settings.Widget(gil).on && ClassOn(back, chip.c_str(), "on"));
 }
 
 TEST(the_reset_card_asks_twice)
@@ -180,7 +223,7 @@ TEST(the_reset_card_asks_twice)
     w.Pass({{"configmenu-reset-reset-all-settings", kClickEvent, ""}});
     CHECK(w.state.confirmReset && w.settings.barHeight == 60);
     const Form form = w.Pass({{"configmenu-reset-reset-everything", kClickEvent, ""}});
-    CHECK(form.changed && !w.state.confirmReset && w.settings.barHeight == Settings{}.barHeight);
+    CHECK(form.changed && !w.state.confirmReset && w.settings.barHeight == DefaultSettings().barHeight);
     // It stands under the cards on its own, with no card around it.
     const FormBlock* reset = Block(form, "configmenu-reset");
     CHECK(reset != nullptr && reset->bare && !Has(reset->rml, "card-head"));
@@ -539,15 +582,16 @@ TEST(a_lines_glow_can_be_switched_off_for_combat_once_it_has_a_glow)
 TEST(a_color_off_its_default_has_an_arrow_that_puts_it_back)
 {
     Window w;
-    const char* arrow = "entities-colors-claim-status-claimed-yours-claim-colors-reset";
+    w.state.page      = Page::Colors;
+    const char* arrow = "colors-colors-claim-status-claimed-yours-claim-colors-reset";
     const Color original = w.settings.palette.claim[static_cast<int>(ClaimState::Yours)];
     CHECK(ClassOn(w.Pass(), arrow, "hidden")); // nothing to put back
     w.settings.palette.claim[static_cast<int>(ClaimState::Yours)] = Color{{0.1f, 0.2f, 0.3f}};
     const Form moved = w.Pass();
     CHECK(!ClassOn(moved, arrow, "hidden"));
-    CHECK(ClassOn(moved, "entities-colors-claim-status-unclaimed-claim-colors-reset", "hidden")); // each color its own
+    CHECK(ClassOn(moved, "colors-colors-claim-status-unclaimed-claim-colors-reset", "hidden")); // each color its own
     w.settings.palette.claim[static_cast<int>(ClaimState::CalledForHelp)] = Color{{0.1f, 0.2f, 0.3f}};
-    w.Pass({{"entities-colors-claim-status-called-for-help-claim-colors-reset", kClickEvent, ""}});
+    w.Pass({{"colors-colors-claim-status-called-for-help-claim-colors-reset", kClickEvent, ""}});
     CHECK(w.settings.palette.claim[static_cast<int>(ClaimState::CalledForHelp)] == Settings{}.palette.claim[static_cast<int>(ClaimState::CalledForHelp)]);
     const Form back = w.Pass({{arrow, kClickEvent, ""}});
     CHECK(back.changed && w.settings.palette.claim[static_cast<int>(ClaimState::Yours)] == original);
@@ -684,14 +728,15 @@ TEST(a_palettes_rows_moved_in_the_layout_keep_their_own_colors)
     test::EditedLayout edited;
     edited.SwapRows("entity-type-colors", 0, 1);
     Window w;
-    w.layout = edited.Layout();
-    const char* mobArrow = "entities-colors-entity-type-mob-entity-type-colors-reset";
+    w.layout     = edited.Layout();
+    w.state.page = Page::Colors;
+    const char* mobArrow = "colors-colors-entity-type-mob-entity-type-colors-reset";
     const int mob        = static_cast<int>(TargetType::Mob);
     const Color original = w.settings.palette.type[mob];
     w.settings.palette.type[mob] = Color{{0.1f, 0.2f, 0.3f}};
     const Form moved             = w.Pass();
     CHECK(!ClassOn(moved, mobArrow, "hidden"));
-    CHECK(ClassOn(moved, "entities-colors-entity-type-player-entity-type-colors-reset", "hidden"));
+    CHECK(ClassOn(moved, "colors-colors-entity-type-player-entity-type-colors-reset", "hidden"));
     const Form back = w.Pass({{mobArrow, kClickEvent, ""}});
     CHECK(back.changed && w.settings.palette.type[mob] == original);
 }
@@ -917,6 +962,57 @@ TEST(a_theme_is_saved_under_a_name_it_can_have_and_loaded_from_the_list)
     w.Pass({{"toppanel-theme-colors-theme-file-o-1", kClickEvent, ""}});
     w.Pass({{"toppanel-theme-colors-load-theme", kClickEvent, ""}});
     CHECK(w.state.themeLoad == "Dusk" && w.settings == before); // the plugin reads it in
+}
+
+TEST(the_profiles_card_asks_the_plugin_to_use_make_rename_or_delete_a_profile)
+{
+    Window w;
+    w.state.page = Page::ConfigMenu;
+    const Settings before = w.settings;
+    const std::vector<std::string> names = {"Carrott", "whatever"};
+    const std::string inUse = "Carrott";
+    w.readings.profiles = &names;
+    w.readings.profile  = &inUse;
+    const char* name = "configmenu-profiles-profile-name";
+    // A name taken, or one no file can have, makes nothing.
+    w.Pass({{name, kChangeEvent, "whatever"}, {"configmenu-profiles-create-profile", kClickEvent, ""}});
+    w.Pass({{name, kChangeEvent, "a/b"}, {"configmenu-profiles-create-profile", kClickEvent, ""}});
+    CHECK(!w.state.profileNew);
+    w.Pass({{name, kChangeEvent, "Fishing"}, {"configmenu-profiles-create-profile", kClickEvent, ""}});
+    CHECK(w.state.profileNew == "Fishing");
+    w.Pass({{"configmenu-profiles-rename-profile", kClickEvent, ""}});
+    CHECK(w.state.profileRename == "Fishing");
+    // The one in use can be neither used again nor deleted.
+    w.Pass({{"configmenu-profiles-use-profile", kClickEvent, ""}, {"configmenu-profiles-delete-profile", kClickEvent, ""}});
+    CHECK(!w.state.profileUse && !w.state.profileDelete);
+    w.Pass({{"configmenu-profiles-profile-file", kClickEvent, ""}});
+    CHECK(w.state.profilesRequested);
+    w.Pass({{"configmenu-profiles-profile-file-o-1", kClickEvent, ""}});
+    w.Pass({{"configmenu-profiles-use-profile", kClickEvent, ""}});
+    CHECK(w.state.profileUse == "whatever");
+    w.Pass({{"configmenu-profiles-delete-profile", kClickEvent, ""}});
+    CHECK(w.state.profileDelete == "whatever" && w.settings == before);
+}
+
+TEST(with_saving_by_hand_save_and_revert_ask_the_plugin_only_while_something_is_unsaved)
+{
+    Window w;
+    w.state.page = Page::ConfigMenu;
+    CHECK(w.settings.autoSave);
+    w.readings.unsaved = true;
+    // Saving by itself, there is nothing to press.
+    w.Pass({{"configmenu-profiles-save-changes", kClickEvent, ""}, {"configmenu-profiles-revert-changes", kClickEvent, ""}});
+    CHECK(!w.state.saveRequested && !w.state.revertRequested);
+    w.Pass({{"configmenu-profiles-save-automatically", kClickEvent, ""}});
+    CHECK(!w.settings.autoSave);
+    w.Pass({{"configmenu-profiles-save-changes", kClickEvent, ""}});
+    CHECK(w.state.saveRequested);
+    w.Pass({{"configmenu-profiles-revert-changes", kClickEvent, ""}});
+    CHECK(w.state.revertRequested);
+    w.state.saveRequested = w.state.revertRequested = false;
+    w.readings.unsaved = false;
+    w.Pass({{"configmenu-profiles-save-changes", kClickEvent, ""}, {"configmenu-profiles-revert-changes", kClickEvent, ""}});
+    CHECK(!w.state.saveRequested && !w.state.revertRequested);
 }
 
 TEST(the_nameplate_fonts_lead_with_the_games_font_and_the_top_panels_leave_it_out)

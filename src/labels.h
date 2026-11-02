@@ -27,6 +27,8 @@ namespace headsup
     {
         char text[24]; // "Lv 100-255 IEP-IT" at the longest
         LabelShade shade;
+        char level[8]; // "100-255", or "?"
+        char con[48];  // "Too Weak to Incredibly Tough" at the longest; empty while not known
     };
 
     // A mob's server ID holds its zone above its target index, the ID's last three hex digits.

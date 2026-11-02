@@ -34,6 +34,9 @@ namespace headsup
         const std::vector<WindowPlace>* windowPlaces = nullptr; // where each window seen last stood
         const std::vector<std::string>* cursorFiles = nullptr; // the cursors folder's files, without their extensions
         const std::vector<std::string>* themeFiles  = nullptr; // the themes folder's, the same way
+        const std::vector<std::string>* profiles    = nullptr; // the profiles folder's, the same way
+        const std::string* profile = nullptr; // the profile in use, empty while the old settings.ini is
+        bool unsaved = false; // changes not yet in the file
         std::optional<bool> watching;            // whether the debug watch runs; none in a build without one
         const std::string* lastReport = nullptr; // the file the last report went to, empty before one
         const std::string* logFile    = nullptr; // the file notes go to, empty before one
@@ -83,11 +86,19 @@ namespace headsup
         std::string themeName;   // typed to save the Custom theme under
         std::string themePicked; // the saved theme picked to load
         std::optional<std::string> themeSave, themeLoad; // what the plugin is to write or read in, once
+        bool saveRequested = false, revertRequested = false; // by hand: write the changes, or drop them
+        bool profilesRequested = false; // the list of profiles was opened: the profiles folder is to be read again
+        std::string profileName;   // typed for a new profile, or the one in use's new name
+        std::string profilePicked; // the profile picked in the list
+        // What the plugin is to do with a profile, once: use it, make it from the settings now, give the one in use
+        // its name, or delete it.
+        std::optional<std::string> profileUse, profileNew, profileRename, profileDelete;
         KeyCapture keyCapture;      // the Mouse Cursor page's
         KeyCapture shotKeyCapture;  // screenshot mode's
         WindowFilter windows;
         std::optional<HelpMode> shiftsFor; // the Window Groups card's mode shown; none for the one the help is in
         DesignEditor design;
+        LineDraft fishLine; // the fishing bar's line, as its box is being written
         std::optional<SetupRun> setup; // Setup is shown in place of the pages
         bool setupBackup    = false;   // a run again started: the settings file is to be copied first
         bool closeRequested = false;   // Setup was skipped or cancelled, and the window closes

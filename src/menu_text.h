@@ -18,17 +18,6 @@
 // What the settings window's pages say and the small questions they ask.
 namespace headsup
 {
-    // Which widgets have a second line, or icons, for their options to offer switching off.
-    inline bool HasSecondLine(BarWidget w)
-    {
-        return w != BarWidget::EarthTime && w != BarWidget::Fps && w != BarWidget::Connection &&
-               w != BarWidget::Distance && w != BarWidget::GameHelp && w != BarWidget::Exp;
-    }
-    inline bool HasIcons(BarWidget w)
-    {
-        return w == BarWidget::Weather || w == BarWidget::Target || w == BarWidget::Gil || w == BarWidget::World;
-    }
-
     // Whether text holds part, in any case.
     inline bool Matches(std::string_view text, const char* part)
     {

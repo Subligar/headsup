@@ -258,13 +258,21 @@ TEST(a_window_from_a_panels_colors_reads_well_and_steps_up_from_its_page)
     }
 }
 
-TEST(a_widget_is_padded_by_the_theme_unless_it_has_its_own)
+TEST(a_widget_is_padded_and_spaced_as_the_panel_says_unless_it_has_its_own)
 {
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
+    Settings s;
     WidgetOptions o;
-    CHECK_EQ(WidgetPadding(m, o), m.padding);
+    CHECK_EQ(WidgetPadding(m, s, o), m.padding); // the theme's
+    CHECK_EQ(WidgetSpacing(s, o), 0.0f);
+    s.barWidgetPadding = 6;
+    s.barWidgetSpacing = 10;
+    CHECK_EQ(WidgetPadding(m, s, o), 6.0f);
+    CHECK_EQ(WidgetSpacing(s, o), 10.0f);
     o.padding = 4;
-    CHECK_EQ(WidgetPadding(m, o), 4.0f);
+    o.spacing = 3;
+    CHECK_EQ(WidgetPadding(m, s, o), 4.0f);
+    CHECK_EQ(WidgetSpacing(s, o), 3.0f);
 }
 
 TEST(a_widgets_fonts_and_text_size_are_its_own_or_the_panels)
@@ -282,4 +290,33 @@ TEST(a_widgets_fonts_and_text_size_are_its_own_or_the_panels)
     CHECK(WidgetTitleFont(settings, BarShape::Pills, o) == WidgetTextFont(settings, o)); // one pointer per name
     CHECK_EQ(std::string(WidgetTextFont(settings, o)), "Arial");
     CHECK_EQ(WidgetTextSize(settings, o), 20);
+}
+
+TEST(the_help_bar_takes_its_set_width_text_size_and_height)
+{
+    CHECK(Near(HelpBarWidth(1920.0f, kDefaultHelpBarWidth), 960.0f));
+    CHECK(Near(HelpBarWidth(1920.0f, 25), 480.0f));
+    CHECK(Near(HelpBarWidth(1366.0f, 25), 341.0f));
+    Settings settings;
+    TextRow lines;
+    lines.title = 16;
+    CHECK_EQ(HelpFace(LookOf(BarTheme::PhoenixGold, settings, lines)).size, 16.0f);
+    CHECK_EQ(HelpCaptionFace(LookOf(BarTheme::PhoenixGold, settings, lines)).size, 16.0f);
+    settings.helpBarTextSize = 21;
+    const BarLook look = LookOf(BarTheme::PhoenixGold, settings, lines);
+    CHECK_EQ(HelpFace(look).size, 21.0f);
+    CHECK_EQ(HelpCaptionFace(look).size, 21.0f);
+    CHECK(Family(HelpCaptionFace(look), look.titleFont) && Family(HelpFace(look), look.detailFont));
+    CHECK_EQ(HelpBarHeight(kAutoHelpBarHeight, 24.0f), 24.0f);
+    CHECK_EQ(HelpBarHeight(40, 24.0f), 40.0f);
+}
+
+TEST(the_fishing_bars_font_is_its_own_or_the_panels_text_font)
+{
+    Settings settings;
+    CHECK(std::string(FishBarFont(settings)) == kDetailFont);
+    settings.barTextFont = "Georgia";
+    CHECK(std::string(FishBarFont(settings)) == "Georgia");
+    settings.fishBarFont = "Verdana";
+    CHECK(std::string(FishBarFont(settings)) == "Verdana");
 }

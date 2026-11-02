@@ -60,6 +60,13 @@ namespace headsup
         bool TakeThemesRequest();
         std::optional<std::string> TakeThemeSave();
         std::optional<std::string> TakeThemeLoad();
+        bool TakeProfilesRequest();
+        bool TakeSaveRequest();
+        bool TakeRevertRequest();
+        std::optional<std::string> TakeProfileUse();
+        std::optional<std::string> TakeProfileNew();
+        std::optional<std::string> TakeProfileRename();
+        std::optional<std::string> TakeProfileDelete();
         // Opens the window at the page named, as its sidebar spells it in lower case without spaces ("toppanel");
         // false for a name no page has.
         bool OpenPage(const std::string& name);

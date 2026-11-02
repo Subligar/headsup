@@ -60,9 +60,9 @@ Hover a widget for its popup, and click to keep it open.
 
 | Widget | Shows | Popup |
 |---|---|---|
-| Zone | The zone, its region and who holds it | Each nation's influence there |
+| Zone | The zone, its region and who holds it, by crest and name | Each nation's influence there |
 | Weather | The weather and today's chance of it | A five-day forecast, and which zones can roll each element |
-| Vana'diel | The day, the time and the moon | The date and the next day and moon |
+| Vana'diel Clock | The day, the time and the moon, and the date if you like | The date and the next day and moon |
 | Job | Your jobs, levels and EXP | EXP per hour and the time to level |
 | EXP | Your EXP bar | EXP per hour and the time to level |
 | Party | Your party's lowest HP and MP | Each member's HP, MP and TP |
@@ -91,8 +91,9 @@ Hover a widget for its popup, and click to keep it open.
 
 | Page | Holds |
 |---|---|
-| Entities | Nameplates, outlines, the target cursor and the color palettes, with a page for Mobs, Players, Self, NPCs and Pets |
-| User Interface | Screenshot mode and moving the game's windows, with the Top Panel, Widgets and Mouse Cursor pages |
+| Entities | Nameplates, outlines and the target cursor, with a page for Mobs, Players, Self, NPCs and Pets |
+| User Interface | Screenshot mode, moving the game's windows and a fishing bar of HeadsUp's own, with the Top Panel, Widgets and Mouse Cursor pages |
+| Colors | The colors for aggression, toughness, claims, targeting and each kind of entity |
 | HeadsUp Config | Turning HeadsUp off, a report for bug reports, and the window's own look |
 
 `/hu menu <page>` opens a page, such as `/hu menu mobs`. `/hu screenshot` hides everything for a picture, and

@@ -200,6 +200,8 @@ python3 "$ROOT/tools/phoenix/zones.py" "$SERVER" "$STAGE" ||
     fail "zones; data/ left unchanged"
 python3 "$ROOT/tools/gen_zones.py" --check "$STAGE" ||
     fail "zone data the plugin cannot hold; data/ left unchanged"
+python3 "$ROOT/tools/phoenix/blue_magic.py" "$SERVER" "$STAGE" ||
+    fail "blue magic; data/ left unchanged"
 python3 "$ROOT/tools/phoenix/titles.py" "$SERVER" "$STAGE" ||
     fail "titles; data/ left unchanged"
 python3 "$ROOT/tools/phoenix/world.py" "$SERVER" "$STAGE" ||
@@ -210,12 +212,12 @@ python3 "$ROOT/tools/phoenix/validate.py" "$STAGE/phoenix_mobs.tsv" "$STAGE/phoe
     "$STAGE/phoenix_drops.tsv" || fail "validation; data/ left unchanged"
 mkdir -p "$ROOT/data"
 cp "$STAGE/phoenix_mobs.tsv" "$STAGE/phoenix_mobs.meta" "$STAGE/phoenix_drops.tsv" "$STAGE/phoenix_items.tsv" \
-    "$STAGE/phoenix_mob_info.tsv" "$STAGE/phoenix_skills.tsv" "$STAGE/phoenix_spells.tsv" \
+    "$STAGE/phoenix_mob_info.tsv" "$STAGE/phoenix_skills.tsv" "$STAGE/phoenix_spells.tsv" "$STAGE/phoenix_blue_magic.tsv" \
     "$STAGE/phoenix_rules.json" "$STAGE/phoenix_zones.tsv" "$STAGE/phoenix_weather.tsv" "$STAGE/phoenix_titles.tsv" \
     "$STAGE/phoenix_travel.tsv" "$STAGE/phoenix_guilds.tsv" "$STAGE/phoenix_turnin_hq.tsv" "$STAGE/phoenix_npcs.tsv" "$STAGE/phoenix_npc_shops.tsv" "$STAGE/phoenix_npc_links.tsv" \
     "$STAGE/phoenix_npc_systems.tsv" "$STAGE/phoenix_key_items.tsv" "$STAGE/phoenix_npc_acts.tsv" \
     "$STAGE/phoenix_npc_texts.tsv" "$ROOT/data/"
 log "data/phoenix_mobs.tsv, .meta, phoenix_drops.tsv, phoenix_items.tsv, phoenix_mob_info.tsv, phoenix_skills.tsv," \
-    "phoenix_spells.tsv, phoenix_rules.json, phoenix_zones.tsv, phoenix_weather.tsv, phoenix_titles.tsv," \
+    "phoenix_spells.tsv, phoenix_blue_magic.tsv, phoenix_rules.json, phoenix_zones.tsv, phoenix_weather.tsv, phoenix_titles.tsv," \
     "phoenix_travel.tsv, phoenix_guilds.tsv, phoenix_turnin_hq.tsv and the seven" \
     "NPC files updated"

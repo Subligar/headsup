@@ -45,7 +45,7 @@ namespace headsup
         TextSize CellSize(const PopupCell& cell, float unit, SpanMeasure measure)
         {
             TextSize size;
-            const bool pictured = cell.icon || cell.item != 0;
+            const bool pictured = cell.icon || cell.item != 0 || cell.picture != GamePicture::None;
             if (pictured) size = TextSize{unit * kCellIcon, unit * kCellIcon, 0.0f, unit * kCellIcon};
             bool inked = pictured;
             for (const Span& span : cell.text)
@@ -67,6 +67,7 @@ namespace headsup
         float TagPadY(float unit) { return std::round(unit * kTagPadY); }
 
         // A tag's frame around its cell's ink, with where that ink is in it.
+        constexpr const char* kPinWord = "pin", *kPinnedWord = "pinned"; // the pin chip's, as it is and as it would be
         TextSize Framed(const TextSize& cell, float unit)
         {
             const float ink = cell.inkBottom - cell.inkTop, padY = TagPadY(unit);
@@ -96,6 +97,7 @@ namespace headsup
                 float y, height, name; // from the card's top; its name's width
                 float gap;             // between it and the next in its row
                 float left = 0.0f, width = 0.0f; // from the card's left, once spread
+                size_t parts = 1;                // the pieces after its frame: its icon, if it has one, and its name
             };
             std::vector<Chip> chips;
             std::vector<size_t> sockets; // pieces to widen to the card's inside once its width is known
@@ -150,7 +152,7 @@ namespace headsup
                 float widest = 0.0f, tall = 0.0f;
                 for (const PopupTab& tab : section.tabs)
                 {
-                    const TextSize framed = Framed(CellSize(Cell(tab.name), unit, measure), unit);
+                    const TextSize framed = Framed(CellSize(Cell(tab.name, tab.icon), unit, measure), unit);
                     widest = std::max(widest, framed.width);
                     tall   = std::max(tall, framed.height);
                 }
@@ -159,16 +161,27 @@ namespace headsup
                 contentWidth = std::max(contentWidth, static_cast<float>(across) * (widest + gap) - gap);
                 for (size_t i = 0; i < count; ++i)
                 {
-                    const TextSize size   = CellSize(Cell(section.tabs[i].name), unit, measure);
+                    const PopupTab& tab   = section.tabs[i];
+                    const TextSize size   = CellSize(Cell(tab.name, tab.icon), unit, measure);
                     const TextSize framed = Framed(size, unit);
                     const float top       = y + static_cast<float>(i / across) * (tall + gap);
-                    b.chips.push_back(Block::Chip{section.heading, section.tabs[i].name.text, b.pieces.size(), i % across, across,
+                    const float inside    = top + framed.inkTop - size.inkTop; // where its icon and name start
+                    b.chips.push_back(Block::Chip{section.heading, tab.name.text, b.pieces.size(), i % across, across,
                         std::min(across, count - i / across * across), top, tall, size.width, gap});
                     PopupPiece chip{PopupPiece::Kind::Tab, 0.0f, top, widest, tall, {}};
                     chip.open = i == picked;
                     b.pieces.push_back(std::move(chip));
-                    b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, 0.0f, top + framed.inkTop - size.inkTop, size.width,
-                        size.height, section.tabs[i].name});
+                    // Each after the frame placed from where the chip's content starts; spread, the chip adds where.
+                    float x = 0.0f;
+                    if (tab.icon)
+                    {
+                        const float s = unit * kCellIcon;
+                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Icon, x, inside, s, s, {}, PopupFont::Text, *tab.icon});
+                        x += s + unit * kIconGap;
+                        b.chips.back().parts = 2;
+                    }
+                    const TextSize name = measure(tab.name, PopupFont::Text);
+                    b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, x, inside, name.width, name.height, tab.name});
                 }
                 y += static_cast<float>(lines) * (tall + gap) - gap + metrics.rowGap;
             }
@@ -279,8 +292,19 @@ namespace headsup
                 }
 
                 const size_t perLine = grid ? columns.size() : row.cells.size();
+                // A line holding a game picture (a nation's crest) has its texts' ink and its stars centered on it.
+                const auto centered = [&](size_t from) -> std::optional<float> {
+                    for (size_t c = from; c < std::min(from + perLine, row.cells.size()); ++c)
+                        if (row.cells[c].picture != GamePicture::None && !row.cells[c].text.empty())
+                        {
+                            const TextSize t = measure(row.cells[c].text.front(), PopupFont::Text);
+                            return unit * kCellIcon / 2.0f - (t.inkTop + t.inkBottom) / 2.0f;
+                        }
+                    return std::nullopt;
+                };
                 float lineHeight = 0.0f, x = b.pad + indent;
                 bool shown       = showLine(row, grid && row.header);
+                std::optional<float> drop = centered(0);
                 for (size_t i = 0; i < row.cells.size(); ++i)
                 {
                     if (i > 0 && i % perLine == 0)
@@ -289,11 +313,14 @@ namespace headsup
                         lineHeight = 0.0f;
                         x          = b.pad + indent;
                         shown      = showLine(row, false);
+                        drop       = centered(i);
                     }
                     if (!shown) continue;
                     const PopupCell& cell = row.cells[i];
                     TextSize size         = cells[i];
                     float cx = x, cy = y;
+                    if (grid && cell.align != Align::Left)
+                        cx += (columns[i % columns.size()] - size.width) * (cell.align == Align::Center ? 0.5f : 1.0f);
                     const size_t first = b.pieces.size();
                     if (tags)
                     {
@@ -312,6 +339,14 @@ namespace headsup
                         b.pieces.push_back(std::move(picture));
                         cx += s + (cell.text.empty() ? 0.0f : unit * kIconGap);
                     }
+                    else if (cell.picture != GamePicture::None)
+                    {
+                        const float s = unit * kCellIcon;
+                        PopupPiece picture{PopupPiece::Kind::Picture, cx, cy, s, s, {}};
+                        picture.picture = cell.picture;
+                        b.pieces.push_back(std::move(picture));
+                        cx += s + (cell.text.empty() ? 0.0f : unit * kIconGap);
+                    }
                     else if (cell.icon)
                     {
                         const float s = unit * kCellIcon, mark = unit * kMark;
@@ -324,14 +359,17 @@ namespace headsup
                     for (const Span& text : cell.text)
                     {
                         const TextSize t = measure(text, PopupFont::Text);
-                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, cx, cy, t.width, t.height, text});
+                        const float ty   = cy + drop.value_or(0.0f);
+                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, cx, ty, t.width, t.height, text});
+                        lineHeight = std::max(lineHeight, ty - cy + t.height);
                         cx += t.width;
                     }
                     if (cell.star)
                     {
                         const float s = unit * kStar;
                         cx += unit * kIconGap;
-                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Star, cx, cy + cells[i].inkTop, s, s, {}});
+                        const float sy = drop ? cy + (unit * kCellIcon - s) / 2.0f : cy + cells[i].inkTop;
+                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Star, cx, sy, s, s, {}});
                         cx += s;
                     }
                     if (pair && i == 1)
@@ -371,7 +409,8 @@ namespace headsup
                             static_cast<float>(chip.column) * step;
                 b.pieces[chip.piece].x     = chip.left;
                 b.pieces[chip.piece].width = chip.width;
-                b.pieces[chip.piece + 1].x = chip.left + (chip.width - chip.name) / 2.0f;
+                for (size_t part = 1; part <= chip.parts; ++part)
+                    b.pieces[chip.piece + part].x += chip.left + (chip.width - chip.name) / 2.0f;
             }
             if (b.card) l.pieces.push_back(PopupPiece{PopupPiece::Kind::Card, x, y, width, b.height, {}, PopupFont::Text,
                             Icon::AggroNQ, line});
@@ -537,14 +576,23 @@ namespace headsup
             rowHeight = std::max(rowHeight, t.height);
         }
         float titleWidth = x - pad;
-        std::optional<size_t> pinMark;
-        if (pinned)
+        // The pin: a chip at the title row's right edge, lit and saying so while pinned. Its room is the longer word's
+        // either way, so pinning never changes the popup's width.
+        std::optional<size_t> pinChip;
+        if (!content.title.empty() || content.icon || !content.sections.empty())
         {
-            const Span mark{"pinned", Tone::Heading, 0};
-            const TextSize t = measure(mark, PopupFont::Pin);
-            pinMark          = l.pieces.size();
-            l.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, 0.0f, pad, t.width, t.height, mark, PopupFont::Pin});
-            titleWidth += unit * kCellGap + t.width;
+            const Span word{pinned ? kPinnedWord : kPinWord, Tone::Heading, 0};
+            const TextSize size   = measure(word, PopupFont::Pin);
+            const TextSize framed = Framed(measure(Span{kPinnedWord, Tone::Heading, 0}, PopupFont::Pin), unit);
+            pinChip               = l.pieces.size();
+            PopupPiece chip{PopupPiece::Kind::PinChip, 0.0f, pad, framed.width, framed.height, {}};
+            chip.open = pinned;
+            chip.font = PopupFont::Pin;
+            l.pieces.push_back(std::move(chip));
+            l.pieces.push_back(PopupPiece{PopupPiece::Kind::PinWord, (framed.width - size.width) / 2.0f,
+                pad + framed.inkTop - size.inkTop, size.width, size.height, word, PopupFont::Pin});
+            titleWidth += unit * kCellGap + framed.width;
+            rowHeight = std::max(rowHeight, framed.height);
         }
         l.lines.push_back(PopupLine{pad + rowHeight});
         float top = pad + rowHeight + metrics.rowGap;
@@ -676,7 +724,13 @@ namespace headsup
         const float bottom = std::max(cards.empty() ? top - metrics.rowGap : lowest - cardGap, l.lines[0].bottom);
         l.width            = width + 2.0f * pad;
         l.height           = bottom + pad;
-        if (pinMark) l.pieces[*pinMark].x = l.width - pad - l.pieces[*pinMark].width;
+        if (pinChip)
+        {
+            PopupPiece& chip = l.pieces[*pinChip];
+            chip.x           = l.width - pad - chip.width;
+            l.pieces[*pinChip + 1].x += chip.x;
+            l.pin = BarRect{chip.x, chip.y, chip.width, chip.height};
+        }
         return l;
     }
 

@@ -36,6 +36,13 @@ namespace headsup
             {Tag::Job, "$job", kPlayerKinds},
             {Tag::Level, "$level", kMobKinds | kPlayerKinds},
             {Tag::JobLevel, "$joblevel", kPlayerKinds},
+            {Tag::SubLevel, "$sublevel", kPlayerKinds},
+            // The fishing bar's line (FishBarTags), on no nameplate's page.
+            {Tag::Fish, "$fish", 0},
+            {Tag::FishSize, "$size", 0},
+            {Tag::Feeling, "$feeling", 0},
+            {Tag::LineSnap, "$linesnap", 0},
+            {Tag::RodBreak, "$rodbreak", 0},
             {Tag::Title, "$title", kPlayerKinds},
             {Tag::Con, "$con", kMobKinds},
             {Tag::Id, "$id", kMobKinds},

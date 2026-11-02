@@ -42,25 +42,48 @@ namespace headsup
 
     constexpr int kMaxWidgetSpacing = 40; // pixels
     constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
+    // Where the Zone widget shows who holds its region: not at all, before or after the zone's name, or under it.
+    enum class ConquestPlace : uint8_t { Off, Left, Right, Below };
+    constexpr int kConquestPlaceCount = 4;
+    // The Target widget's Visibility: the targets it shows for.
+    enum class TargetShow : uint8_t { NpcsObjects, Players, Mobs, Pets, NoTarget };
+    constexpr int kTargetShowCount = 5;
+    constexpr uint8_t TargetShowBit(TargetShow show) { return static_cast<uint8_t>(1u << static_cast<int>(show)); }
+    constexpr uint8_t kAllTargetShows = (1u << kTargetShowCount) - 1;
+    // Its Show Icons: the detection icons, then a mob's weaknesses after its level.
+    constexpr uint32_t kTargetWeakIcons = 1u << kDetectionIconCount;
+    constexpr uint32_t kAllTargetIcons  = kAllDetection | kTargetWeakIcons;
+    // A widget's spacing and padding at their sliders' leftmost: the panel's.
+    constexpr int kPanelSpacing = 0, kPanelPadding = kThemePadding;
     constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
 
     // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
+    // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
+    enum class ConquestGrid : uint8_t { TwoByTwo, OneByFour };
+    constexpr int kConquestGridCount = 2;
     struct WidgetOptions
     {
         bool on         = false;
         bool secondLine = true;
         bool icons      = true; // and gil's coin
-        int spacing     = 0;             // pixels more between it and each of its neighbours
-        int padding     = kThemePadding; // pixels from its sides to what it shows
+        bool background = false; // its pill or tint shown while not hovered, as well as whatever the theme shows
+        int spacing     = kPanelSpacing; // pixels more between it and each of its neighbours
+        int padding     = kPanelPadding; // pixels from its sides to what it shows
         std::string titleFont, textFont;  // its own, as the panel's; empty for the panel's
         int textSize    = kPanelTextSize; // its title's, or the panel's
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
         uint8_t nations = kAllNations;              // Conquest: whose regions it counts, by NationBit
+        ConquestGrid conquestGrid = ConquestGrid::TwoByTwo; // and how several are laid out
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         bool clock24         = true;                // its two lines
         bool clockSeconds    = false;               // its own line's seconds
         bool clockServerTime = false;               // the server's time under its own
+        bool zoneId          = false;               // Zone: its number after its name in the popup
+        ConquestPlace zoneConquest = ConquestPlace::Below; // and who holds its region, by their crest
+        bool zoneConquestText      = true;                 // and by name, after the crest
+        bool vanaWeekday     = true;                // Vana'diel Clock: the day before the time
+        bool vanaDate        = false;               // and the date before the moon
         ExpBarPlace expBar   = ExpBarPlace::Under;  // Job and EXP
         uint8_t expText      = kDefaultExpText;     // by ExpTextBit
         ExpPlaces expPlaces  = kDefaultExpPlaces;   // EXP: its texts around its bar
@@ -71,8 +94,9 @@ namespace headsup
         bool jobNames        = true;
         bool latency         = false; // Connection: its ping after its rates
         bool netMeter        = true;  // and the game's own meter after them
-        bool targetDetails   = false; // Target: a mob's icons after its name and its weaknesses after its level
-        bool targetBorder    = true;  // and its frame, or its pill's own edge
+        uint32_t targetIcons = DetectionBit(DetectionIcon::Aggro); // Target: a mob's icons, by DetectionBit and kTargetWeakIcons
+        uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
+        bool targetMobLevel  = true;  // a mob's level and con under its name
         bool targetJobs      = true;  // and a player's jobs and levels, as far as they are known
         WorldLine worldLine  = WorldLine::Departure; // World Info: what it tells on the panel
         int worldRoute       = 0;                    // its departure, by TravelRoutes
@@ -80,6 +104,7 @@ namespace headsup
         int worldGuild       = 0;                    // its guild shop, by GuildShops
         uint8_t worldSections = kAllWorldSections;   // its popup's parts, by WorldBit
         std::optional<PanelWidget> combine;          // shown right after it in its pill, with one popup (Combine)
+        bool combineOnPanel = true, combineInPopup = true; // that widget's place on the panel and cards in the popup
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.
@@ -111,13 +136,24 @@ namespace headsup
     constexpr int kMinPointerSize = 100, kMaxPointerSize = 300; // percent of the pointer's own size
     constexpr int kMinMenuOpacity = 30; // percent: fainter, the window could not be found to set it back
     constexpr int kMaxMenuSide  = 16384; // pixels: more than any screen is across
+    // How the Target popup marks a TP move whose blue magic you have learned: a star after it, or plain text.
+    enum class BlueLearned : uint8_t { Star, Plain };
+    constexpr int kBlueLearnedCount = 2;
+    constexpr int kFishBarUnplaced = -1; // the fishing bar's X and Y until it is dragged somewhere
+    constexpr int kMaxFishBarPlace = 7680; // pixels: across an 8K screen
+    constexpr int kMinFishBarWidth = 100, kMaxFishBarWidth = 1000; // pixels
+    constexpr int kMinFishBarHeight = 6, kDefaultFishBarHeight = 18, kMaxFishBarHeight = 80; // pixels, its frame counted
+    constexpr int kMinFishTextSize = 8, kDefaultFishTextSize = 15, kMaxFishTextSize = 40;    // pixels
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
+    constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
+    constexpr int kAutoHelpBarHeight = 8, kMaxHelpBarHeight = 200;  // pixels, or Auto: as tall as its text
     constexpr int kMaxUpMinutes = 60, kDefaultUpMinutes = 5; // how long a respawn timer reads "up" before it goes
 
     struct Settings
     {
         bool enabled       = true;
+        bool autoSave      = true; // off, changes wait for Save in the settings window, and Revert drops them
         int outlineThickness = 100; // percent of kOutlineUnitPx
         int outlineOpacity   = 60;  // percent
         bool outlineFadeIn   = false; // fainter with distance, down to almost nothing at the range
@@ -139,6 +175,8 @@ namespace headsup
         int barTextSize    = kAutoBarTextSize; // the bar's title size, or Auto
         std::string barTitleFont; // widget titles and popup headings; empty for the theme's
         std::string barTextFont;  // details, figures and popup text; empty for the theme's
+        int barWidgetSpacing = 0;             // every widget's, unless it has its own
+        int barWidgetPadding = kThemePadding; // likewise
         int popupTextSize  = kAutoPopupTextSize; // the popups' text size, or Auto
         std::array<WidgetOptions, kPanelSlots> widgets = DefaultWidgets(); // by SlotOf; a copy not placed has none
         std::vector<WindowPlace> pinnedWindows;  // game windows the player put at places of their own, never shifted
@@ -150,6 +188,9 @@ namespace headsup
         bool moveGameHelp = false; // the game's own help bar goes under the top bar, and the windows under it
         int helpBarX = 0, helpBarY = 0;          // back-buffer pixels from the help bar's place under the top bar
         bool helpBarBackground = true;           // off, the help text alone
+        int helpBarTextSize = kAutoBarTextSize;  // its text's pixels, or Auto: the bar's title size
+        int helpBarWidth    = kDefaultHelpBarWidth;
+        int helpBarHeight   = kAutoHelpBarHeight;
         std::string menuFont = kDefaultMenuFont; // the settings window's text, by its kMenuFonts name
         int menuFontSize     = kDefaultMenuFontSize; // pixels: the settings window's text and everything sized by it
         int menuOpacity      = 100;              // percent
@@ -158,6 +199,25 @@ namespace headsup
         // Where the player left the settings window, in pixels; no width for one never moved, which opens in the
         // screen's middle.
         int menuX = 0, menuY = 0, menuWidth = 0, menuHeight = 0;
+        bool fishBar     = true; // HeadsUp's own bar of a hooked fish's stamina
+        bool hideGameFishBar = true; // and the game's dropped
+        int fishBarWidth = 300;
+        int fishBarX = kFishBarUnplaced, fishBarY = kFishBarUnplaced;
+        int fishBarHeight   = kDefaultFishBarHeight;
+        int fishBarTextSize = kDefaultFishTextSize;
+        std::string fishBarFont;     // its line's font, or the theme's text font
+        bool fishBarDraggable = true; // off, the pointer goes through it to the game
+        std::string fishBarLine = "${size|fish} $feeling";
+        bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
+        Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};
+        BlueLearned blueMagicLearned = BlueLearned::Star;
+        bool fishColorByCatch  = true; // off, the theme's fill whatever is on the line
+        Color fishSmallColor   = {{0.31f, 0.71f, 0.94f}};
+        Color fishLargeColor   = {{0.18f, 0.48f, 0.84f}};
+        Color fishItemColor    = {{0.66f, 0.60f, 0.49f}};
+        Color fishMonsterColor = {{0.61f, 0.31f, 0.85f}};
+        Color fishLineColor    = {{1.00f, 0.55f, 0.10f}};
+        Color fishRodColor     = {{0.88f, 0.19f, 0.19f}};
         SubtitlePlace barSubtitle = SubtitlePlace::After; // a widget's second line on a bar too short for two
         BarPlacement barSections = DefaultPlacement(); // where each widget sits, by BarSection
         bool hideHelpBar = false; // skip the game's own help bar across the top of the screen
@@ -227,9 +287,9 @@ namespace headsup
     // A copy is on the panel and switched on; Shown for a widget asks whether any copy of it is.
     bool Shows(const Settings& s, PanelWidget widget);
     bool Shown(const Settings& s, BarWidget widget);
-    // Another copy of a widget, after the last of its copies, shown and with its settings as new; none when it has no
-    // more. Taking a copy off forgets its settings.
-    std::optional<PanelWidget> AddWidgetCopy(Settings& s, BarWidget widget);
+    // Another copy of a widget, after the last of its copies, shown and with that copy's settings but its Combine;
+    // none when it has no more. Taking a copy off forgets its settings.
+    std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);
     void RemoveWidgetCopy(Settings& s, PanelWidget widget);
     // The panel as it is drawn, each widget's combine pulling its partner after it.
     PanelGroups Panel(const Settings& s);
@@ -270,7 +330,10 @@ namespace headsup
     Settings Clamp(Settings s);
     // Whether HeadsUp shows a pointer of its own in place of the game's: another icon, or the game's at another size.
     bool PointerSwapped(const Settings& s);
+    // The file's settings, with HeadsUp's defaults (default_settings.h) for every key it lacks.
     Settings LoadSettings(SettingsStore& store);
+    // What a new install has: Settings' own with default_settings.h over them.
+    Settings DefaultSettings();
     void SaveSettings(const Settings& s, SettingsStore& store);
 
     // What a save has to tell the player: a failure once for a run of them, and the save that ends such a run.

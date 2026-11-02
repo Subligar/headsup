@@ -47,13 +47,14 @@ namespace headsup
             int barText    = kAutoBarTextSize;
             const char* titleFont  = nullptr; // interned by BarTitleFont and BarTextFont: one pointer per name
             const char* detailFont = nullptr;
+            int helpText = kAutoBarTextSize;
             bool operator==(const LinesKey&) const = default;
         };
         struct Rows
         {
             TextRow lines;
             BarTextPlace place;
-            float helpBarHeight = 0.0f; // the same whatever it shows
+            float helpBarHeight = 0.0f; // fitted to its text, the same whatever it shows
         };
         // What the document was built from: a change builds it again.
         struct DocumentKey
@@ -159,9 +160,10 @@ namespace headsup
             float drop    = 0.0f;
         };
 
-        const Rows& RowsFor(RmlHost& host, const BarMetrics& metrics, BarShape shape, int barText, const char* titleFont,
-            const char* detailFont);
-        Rows MakeRows(RmlHost& host, const BarMetrics& metrics, const char* titleFont, const char* detailFont);
+        const Rows& RowsFor(RmlHost& host, const BarMetrics& metrics, BarShape shape, int barText, int helpText,
+            const char* titleFont, const char* detailFont);
+        Rows MakeRows(RmlHost& host, const BarMetrics& metrics, const char* titleFont, const char* detailFont,
+            int helpText = kAutoBarTextSize);
         // The same for a widget's own text, kept for each one asked for while it is asked for.
         const Rows& WidgetRowsFor(RmlHost& host, const BarMetrics& metrics, BarShape shape, int barText, const char* titleFont,
             const char* detailFont);
@@ -184,7 +186,7 @@ namespace headsup
         // Places the open popup, and adds its cards' tabs and the parts that scroll at their places on the screen.
         BarRect ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-            std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls);
+            std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin);
         bool PopupDocumentFor(RmlHost& host, const BarLook& look);
         void ClosePopup();
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);

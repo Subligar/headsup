@@ -1,5 +1,7 @@
 #include "game_state.h"
 
+#include "zones.h"
+
 #include <algorithm>
 #include <utility>
 
@@ -14,6 +16,12 @@ namespace headsup
             if (owed) return !asked || now - *asked >= kConquestAskGap;
             return refresh && (!asked || now - *asked >= kPopupRefresh);
         }
+    }
+
+    void GameState::Here(uint32_t player, uint16_t zone)
+    {
+        if (!m_Player) m_Player = player;
+        if (!m_Zone) m_Zone = zone;
     }
 
     PacketFollowUp GameState::Received(uint16_t id, const uint8_t* data, uint32_t size)
@@ -32,6 +40,8 @@ namespace headsup
             m_CurrenciesOwed = true;
             m_Shares.reset();
             m_Weather    = ParseZoneInWeather(data, size);
+            m_Zone       = ParseZoneInZone(data, size);
+            m_Fish       = FishCatch{};
             next.zonedIn = true;
             if (const std::optional<uint32_t> player = ParseZoneInPlayer(data, size))
             {
@@ -44,6 +54,13 @@ namespace headsup
                 }
                 m_Player = *player;
             }
+            break;
+        case kTalkNumPacket:
+        case kTalkNumWorkPacket:
+            if (const std::optional<TalkMessage> talk = ParseTalkMessage(id, data, size); talk && talk->who == m_Player)
+                if (const ZoneRecord* zone = m_Zone ? ZoneById(*m_Zone) : nullptr;
+                    zone != nullptr && zone->fishing != kNoFishing && talk->message >= zone->fishing)
+                    ReadFishMessage(m_Fish, static_cast<uint16_t>(talk->message - zone->fishing));
             break;
         case kSkillsPacket:
             if (const auto crafts = ParseCraftRanks(data, size)) m_Crafts = *crafts;

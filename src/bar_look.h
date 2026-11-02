@@ -69,8 +69,14 @@ namespace headsup
     const char* WidgetTextFont(const Settings& settings, const WidgetOptions& options);
     // Its title size setting: its own, or the panel's.
     int WidgetTextSize(const Settings& settings, const WidgetOptions& options);
-    // The room from a widget's sides to what it shows: its own, or the theme's.
-    float WidgetPadding(const BarMetrics& metrics, const WidgetOptions& options);
+    // The room from a widget's sides to what it shows: its own, or the panel's, which may be the theme's.
+    float WidgetPadding(const BarMetrics& metrics, const Settings& settings, const WidgetOptions& options);
+    // Whether a pill shows only while lit: the theme gives none of its widgets a box then and none shows its background.
+    bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head);
+    // Whether any widget in a pill has Show Background on.
+    bool BackedPill(const Settings& settings, const PanelGroups& panel, PanelWidget head);
+    // The room more between a widget and each neighbour: its own, or the panel's.
+    float WidgetSpacing(const Settings& settings, const WidgetOptions& options);
 
     // What Game Window looks as while the game's art is not read.
     constexpr BarTheme kGameArtFallback = BarTheme::PhoenixGold;
@@ -82,6 +88,8 @@ namespace headsup
     // caches that keep it by reference.
     const char* BarTitleFont(const Settings& settings, BarShape shape);
     const char* BarTextFont(const Settings& settings);
+    // The fishing bar's line's font, or the panel's text font.
+    const char* FishBarFont(const Settings& settings);
 
     // Gil's coin, in whole pixels.
     int CoinPixels(const BarMetrics& metrics);
@@ -112,9 +120,14 @@ namespace headsup
     // Clear above and below the help bar's row.
     float HelpBarPad(const BarMetrics& metrics);
     // The help's text: the detail font at a widget's title size, so the row is one line of the bar's text.
+    // The help bar's caption and help, at its own text size or the bar's title size.
+    int HelpTextPixels(int setting, int barTitle);
+    TextFace HelpCaptionFace(const BarLook& look);
     TextFace HelpFace(const BarLook& look);
-    // The widest the help bar gets: half the screen, or its least width on a narrow one.
-    float HelpBarWidth(float screenWidth);
+    // Its set height, or fitted, as tall as its text.
+    float HelpBarHeight(int setting, float fitted);
+    // The widest the help bar gets: its share of the screen's width.
+    float HelpBarWidth(float screenWidth, int percent);
     // The boxes a popup and the help bar are drawn with: a popup's panel with its outer border, a section's card (a
     // lift on the panel, rounded as a pill theme's panel is), a tag's pill height tall (the ornate themes keep their
     // gold edge around it), and the help bar's panel, bordered all round.

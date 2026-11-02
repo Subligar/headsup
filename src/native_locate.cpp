@@ -230,6 +230,13 @@ namespace headsup
         static_assert(static_cast<uint32_t>(kMailGet[12]) == kPlayOnlineMail &&
                       static_cast<uint32_t>(kMessagesGet[12]) == kPlayOnlineMessages && kMessagesGet[19] == kMostPlayOnlineMessages);
         constexpr uint32_t kPlayOnlineGetGlobal = 1;
+        // mov eax,[intuition]; test eax,eax; jnz; push 8; call new; push 38h; mov [intuition],eax; call new;
+        // mov ecx,[intuition]; add esp,8; test ecx,ecx; mov [fish],eax
+        constexpr int16_t kFishSetup[] = {0xA1, -1, -1, -1, -1, 0x85, 0xC0, 0x0F, 0x85, -1, -1, -1, -1, 0x6A, 0x08, 0xE8, -1,
+            -1, -1, -1, 0x6A, 0x38, 0xA3, -1, -1, -1, -1, 0xE8, -1, -1, -1, -1, 0x8B, 0x0D, -1, -1, -1, -1, 0x83, 0xC4, 0x08,
+            0x85, 0xC9, 0xA3};
+        constexpr uint32_t kFishSetupIntuition[] = {1, 23, 34};
+        constexpr uint32_t kFishSetupGlobal      = 44;
         // The 3-second update: xor eax,eax; push 3000; clear both byte counts; mov edx,[net]; mov eax,[edx+4190h], the
         // milliseconds since the last server data.
         constexpr int16_t kCounterUpdate[] = {0x33, 0xC0, 0x68, 0xB8, 0x0B, 0x00, 0x00, 0x89, 0x46, 0x0C, 0x89, 0x46,
@@ -360,6 +367,8 @@ namespace headsup
         case LocateProblem::WindowDrawChanged: return "the game's menu window draw is not as HeadsUp expects";
         case LocateProblem::NoWeather: return "the game's weather was not found";
         case LocateProblem::AmbiguousWeather: return "the game's weather was found more than once";
+        case LocateProblem::NoFish: return "where the game keeps a hooked fish was not found";
+        case LocateProblem::AmbiguousFish: return "where the game keeps a hooked fish was found more than once";
         case LocateProblem::NoConfigGet: return "the game's config values were not found";
         case LocateProblem::NoSearchAddress: return "where the game keeps the search server's address was not found";
         case LocateProblem::NoWindowMove: return "the game's window move was not found";
@@ -1090,5 +1099,19 @@ namespace headsup
     {
         return name != nullptr &&
                std::memcmp(name, window == StripWindow::Help ? kHelpWindow : kTitleWindow, kWindowNameLength) == 0;
+    }
+
+    FishSite LocateFish(const ImageSection& text)
+    {
+        std::vector<uint32_t> found;
+        for (const uint32_t at : FindAll(kFishSetup, text))
+        {
+            const auto first = ReadAt<uint32_t>(text.bytes, at + kFishSetupIntuition[0]);
+            if (std::ranges::all_of(kFishSetupIntuition, [&](uint32_t o) { return ReadAt<uint32_t>(text.bytes, at + o) == first; }))
+                found.push_back(at);
+        }
+        if (found.empty()) return FishSite{LocateProblem::NoFish};
+        if (found.size() > 1) return FishSite{LocateProblem::AmbiguousFish};
+        return FishSite{LocateProblem::None, ReadAt<uint32_t>(text.bytes, found.front() + kFishSetupGlobal)};
     }
 }

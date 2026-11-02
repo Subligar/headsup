@@ -105,6 +105,21 @@ namespace headsup
 
         uint32_t NameColor(const ActorInfo& target, const Settings& settings) { return RowColor(target.state, settings); }
 
+        // Which of the Target widget's Visibility a target is: a pet as a pet, whatever its entity is.
+        TargetShow TargetShowOf(const ActorInfo* target)
+        {
+            if (target == nullptr) return TargetShow::NoTarget;
+            switch (PlateKindOf(target->state))
+            {
+            case PlateKind::Mobs: return TargetShow::Mobs;
+            case PlateKind::Pets: return TargetShow::Pets;
+            case PlateKind::Npcs: return TargetShow::NpcsObjects;
+            case PlateKind::Self:
+            case PlateKind::Players: break;
+            }
+            return TargetShow::Players;
+        }
+
         uint32_t ShadeColor(const ActorInfo& target, const Settings& settings)
         {
             return ToArgb(settings.palette.toughness[static_cast<int>(target.level.shade)]);
@@ -122,10 +137,12 @@ namespace headsup
             PopupRow row{RowKind::Tags, 0, {}};
             for (int i = 0; i < icons.count; ++i)
             {
-                std::string tag = IconTag(icons.icons[i]);
-                if (icons.icons[i] == Icon::Sight || icons.icons[i] == Icon::TrueSight) tag += " " + Yalms(info.sight);
-                if (icons.icons[i] == Icon::Sound) tag += " " + Yalms(info.sound);
-                row.cells.push_back(Cell(Text(std::move(tag), Tone::Tag)));
+                const Icon icon = icons.icons[i];
+                if (DetectionOf(icon) == DetectionIcon::Aggro) continue; // the icon before the popup's title says it
+                std::string tag = IconTag(icon);
+                if (icon == Icon::Sight || icon == Icon::TrueSight) tag += " " + Yalms(info.sight);
+                if (icon == Icon::Sound) tag += " " + Yalms(info.sound);
+                row.cells.push_back(Cell(Text(std::move(tag), Tone::Tag), icon));
             }
             if (mob.flags & kMobNotorious) row.cells.push_back(Cell(Text("NM", Tone::Tag)));
             if (mob.flags & kMobCharmable) row.cells.push_back(Cell(Text("Charmable", Tone::Tag)));
@@ -147,17 +164,21 @@ namespace headsup
             return row;
         }
 
-        // "THF/BLM"; nothing for a mob without a job.
+        // "THF/BLM", or "WAR" for WAR/WAR; nothing for a mob without a job.
         std::string MobJobs(const MobInfo& info)
         {
             const std::string main = JobName(info.mainJob), sub = JobName(info.subJob);
-            return main.empty() ? std::string() : sub.empty() ? main : main + "/" + sub;
+            return main.empty() ? std::string() : sub.empty() || sub == main ? main : main + "/" + sub;
         }
 
-        // A cell of a name and its number, as the stats are.
-        PopupCell Numbered(const char* name, int64_t value)
+        // A stat as two cells of a grid: its name against the right of its column, its number against the left of
+        // the next.
+        void AddNumbered(PopupRow& row, const char* name, int64_t value)
         {
-            return Cell(ListOf(Text(name, Tone::Dim), Text(" " + std::to_string(value))));
+            PopupCell said = Cell(Text(name, Tone::Dim));
+            said.align     = Align::Right;
+            row.cells.push_back(std::move(said));
+            row.cells.push_back(Cell(Text(std::to_string(value))));
         }
 
         // A grid of names, kListColumns a line; none when there are no names.
@@ -168,6 +189,29 @@ namespace headsup
             for (const std::string& name : names)
                 grid.cells.push_back(Cell(Text(name)));
             return PopupSection{std::move(heading), ListOf(std::move(grid))};
+        }
+
+        // Its TP moves, those a blue mage can learn in the blue magic color, and the ones you have learned starred or
+        // plain as the settings say.
+        std::optional<PopupSection> TpMoves(const MobRecord& mob, const BarState& state, const Settings& settings)
+        {
+            const std::span<const MobSkill> skills = SkillsOf(mob);
+            if (skills.empty()) return std::nullopt;
+            PopupRow grid = Grid(kListColumns, skills.size());
+            for (const MobSkill& skill : skills)
+            {
+                const bool blue    = settings.blueMagic && skill.blueSpell != 0;
+                const bool learned = blue && state.knowsSpell != nullptr && state.knowsSpell(skill.blueSpell);
+                if (!blue || (learned && settings.blueMagicLearned == BlueLearned::Plain))
+                {
+                    grid.cells.push_back(Cell(Text(skill.name)));
+                    continue;
+                }
+                PopupCell cell = Cell(Colored(skill.name, ToArgb(settings.blueMagicColor)));
+                cell.star      = learned;
+                grid.cells.push_back(std::move(cell));
+            }
+            return PopupSection{"TP moves", ListOf(std::move(grid))};
         }
 
         // The spells it casts at a level: each whose levels hold it, by the game's name.
@@ -265,7 +309,7 @@ namespace headsup
                 spawn.rows.push_back(LineOf(std::to_string(mob.placeholders) +
                     (mob.placeholders == 1 ? " placeholder" : " placeholders") + " in this zone"));
             if (mob.placeholderOf == 0 && mob.placeholders == 0)
-                spawn.rows.push_back(LineOf("Not a placeholder", Tone::Dim));
+                spawn.rows.push_back(LineOf("Not an NM placeholder", Tone::Dim));
             return spawn;
         }
 
@@ -589,13 +633,16 @@ namespace headsup
             const MobRecord& mob      = *target->mob;
             const MobResistances& res = ResistancesOf(mob);
             popup.icon  = MobIcon(*target);
-            popup.title = ListOf(Colored(target->name, NameColor(*target, settings)));
+            popup.title = ListOf(Colored(target->name, NameColor(*target, settings)),
+                Text(" ID " + Printed("%03X", target->serverId & kTargetIndexBits), Tone::Dim));
             const MobDefenses& defenses = DefensesOf(mob);
+            // "Level 17-20 WAR (Easy Prey to Even Match)", the level and con in the con's color.
             PopupRow identity{RowKind::Line, 0, {}};
-            if (HasLevel(*target))
-                identity.cells.push_back(Cell(Colored(target->level.text, ShadeColor(*target, settings))));
+            const uint32_t shade = ShadeColor(*target, settings);
+            if (HasLevel(*target)) identity.cells.push_back(Cell(Colored("Level " + std::string(target->level.level), shade)));
             if (const std::string jobs = MobJobs(InfoOf(mob)); !jobs.empty()) identity.cells.push_back(Cell(Text(jobs)));
-            identity.cells.push_back(Cell(Text("ID " + Printed("%03X", target->serverId & kTargetIndexBits), Tone::Dim)));
+            if (HasLevel(*target) && target->level.con[0] != '\0')
+                identity.cells.push_back(Cell(Colored("(" + std::string(target->level.con) + ")", shade)));
 
             PopupRow damage = Grid(kDamageColumns, kFirstElementSdt);
             for (int i = 0; i < kFirstElementSdt; ++i)
@@ -650,24 +697,21 @@ namespace headsup
             const int level = numbers.target ? numbers.target->level : mob.maxLevel;
             if (numbers.target)
             {
-                PopupSection stats{"Stats at Lv " + std::to_string(level), {}};
+                PopupSection stats{"Stats at Level " + std::to_string(level), {}};
                 if (const MobCombat* combat = CombatAt(mob, level))
                 {
-                    PopupRow row = Grid(kStatColumns, kCombatCount);
+                    PopupRow row = Grid(2 * kStatColumns, 2 * kCombatCount);
                     for (int i = 0; i < kCombatCount; ++i)
-                        row.cells.push_back(Numbered(kCombatNames[i], combat->value[i]));
+                        AddNumbered(row, kCombatNames[i], combat->value[i]);
                     stats.rows.push_back(std::move(row));
                 }
-                PopupRow row = Grid(kStatColumns, kStatCount);
+                PopupRow row = Grid(2 * kStatColumns, 2 * kStatCount);
                 for (int i = 0; i < kStatCount; ++i)
-                    row.cells.push_back(Numbered(kStatNames[i], numbers.target->stats.value[i]));
+                    AddNumbered(row, kStatNames[i], numbers.target->stats.value[i]);
                 stats.rows.push_back(std::move(row));
                 popup.sections.push_back(std::move(stats));
             }
-            std::vector<std::string> moves;
-            for (const MobSkill& skill : SkillsOf(mob))
-                moves.emplace_back(skill.name);
-            if (std::optional<PopupSection> list = NameList("TP moves", moves)) popup.sections.push_back(std::move(*list));
+            if (std::optional<PopupSection> moves = TpMoves(mob, state, settings)) popup.sections.push_back(std::move(*moves));
             if (std::optional<PopupSection> list = NameList("Spells", SpellsAt(mob, level, state)))
                 popup.sections.push_back(std::move(*list));
             popup.sections.push_back(Spawn(mob, state));
@@ -683,11 +727,37 @@ namespace headsup
 
         std::string MoonText(const VanaTime& t) { return MoonPhaseName(t.moonPercent, t.moonDirection); }
 
+        std::string VanaDate(const VanaTime& t)
+        {
+            return std::to_string(t.year) + "/" + Printed("%02d", t.month) + "/" + Printed("%02d", t.dayOfMonth);
+        }
+
         bool InConquest(const ZoneRecord* zone) { return zone != nullptr && zone->region < kConquestRegionCount; }
 
-        // The Conquest widget's nations, short, by Nation.
-        constexpr const char* kNationShort[] = {"", "S", "B", "W", "BM"};
-        constexpr size_t kNationsPerLine     = 2;
+        // The crest the game's conquest menus show for a nation.
+        GamePicture NationCrest(Nation nation)
+        {
+            switch (nation)
+            {
+            case Nation::SanDoria: return GamePicture::SanDoriaCrest;
+            case Nation::Bastok: return GamePicture::BastokCrest;
+            case Nation::Windurst: return GamePicture::WindurstCrest;
+            case Nation::Beastmen: return GamePicture::BeastmenCrest;
+            default: return GamePicture::None;
+            }
+        }
+
+
+        // The widget just before this one in its combined pill, whose Combine pulled it there; none for a widget alone
+        // or first in its pill.
+        std::optional<PanelWidget> CombinedBefore(const Settings& settings, PanelWidget widget)
+        {
+            const PanelGroups groups = Panel(settings);
+            const std::vector<PanelWidget> pill = Members(groups, groups.group[SlotOf(widget)]);
+            const auto at = std::ranges::find(pill, widget);
+            if (at == pill.end() || at == pill.begin()) return std::nullopt;
+            return *(at - 1);
+        }
 
         std::vector<Nation> PickedNations(uint8_t bits)
         {
@@ -852,11 +922,7 @@ namespace headsup
             {
                 const auto element = static_cast<Element>(e);
                 const std::vector<ZoneRoll> now = ZonesRolling(element, today), next = ZonesRolling(element, today + 1);
-                PopupTab tab{Colored(ElementName(element), ElementColor(element)), {}};
-                PopupRow count = Labeled("Zones", Text(std::to_string(now.size()) + " today" + kDot + std::to_string(next.size()) + " tomorrow"));
-                count.nested   = true;
-                ScrollsBy(count, state, section.heading + "/" + ElementName(element));
-                tab.rows.push_back(std::move(count));
+                PopupTab tab{Colored(ElementName(element), ElementColor(element)), {}, SdtIcon(kFirstElementSdt + e)};
                 std::map<uint16_t, std::pair<const ZoneRoll*, const ZoneRoll*>> zones;
                 for (const ZoneRoll& roll : now)
                     zones[roll.zone].first = &roll;
@@ -871,8 +937,10 @@ namespace headsup
                 PopupRow grid = Grid(kZoneRollColumns, (order.size() + 1) * kZoneRollColumns);
                 grid.nested   = true;
                 grid.header   = true;
-                for (const char* heading : {"Zone", "Today", "Tomorrow"})
-                    grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
+                ScrollsBy(grid, state, section.heading + "/" + ElementName(element));
+                // Each head counts its column: the zones listed, then those that can roll it today and tomorrow.
+                for (const auto& [heading, count] : {std::pair{"Zone", order.size()}, {"Today", now.size()}, {"Tomorrow", next.size()}})
+                    grid.cells.push_back(Cell(Text(std::string(heading) + " (" + std::to_string(count) + ")", Tone::Dim)));
                 for (const auto& [zone, rolls] : order)
                 {
                     grid.cells.push_back(Cell(Text(ZoneById(zone)->name)));
@@ -1168,13 +1236,17 @@ namespace headsup
     {
         // Each widget's own content, less its second line or icons where they are switched off.
         WidgetContent w        = ContentOf(widget, state, settings);
+        // Combined, the widget before it in its pill may keep it off the panel; its popup still joins the pill's.
+        if (const std::optional<PanelWidget> before = CombinedBefore(settings, widget);
+            before && !settings.Widget(*before).combineOnPanel)
+            w.shown = false;
         const WidgetOptions& o = settings.Widget(widget);
-        if (!o.secondLine)
+        if (!o.secondLine && HasSecondLine(widget.kind))
         {
             w.subtitle.clear();
             w.subtitleIcons.clear();
         }
-        if (!o.icons)
+        if (!o.icons && HasIcons(widget.kind))
         {
             w.icons.clear();
             w.titleIcons.clear();
@@ -1199,12 +1271,33 @@ namespace headsup
             const ZoneRecord* zone = KnownZone(state.zone);
             const std::string_view region = ZoneRegion(zone);
             w.title = ListOf(Text(ZoneTitle(state.zone)));
-            // A conquest region always has a name.
-            if (const Nation owner = OwnerOf(zone, state); owner != Nation::None)
-                w.subtitle = ListOf(Text(std::string(region), Tone::Dim), Text(kDot, Tone::Dim),
-                    Colored(NationName(owner), NationColor(owner)));
-            else if (!region.empty())
-                w.subtitle = ListOf(Text(std::string(region), Tone::Dim));
+            if (o.secondLine && !region.empty()) w.subtitle = ListOf(Text(std::string(region), Tone::Dim));
+            // Who holds its region, as its crest and its name after it.
+            std::vector<Span> holder;
+            if (const Nation owner = OwnerOf(zone, state); owner != Nation::None && o.zoneConquest != ConquestPlace::Off)
+            {
+                const GamePicture crest = NationCrest(owner);
+                if (crest != GamePicture::None) holder.push_back(Span{"", Tone::Normal, 0, crest});
+                if (o.zoneConquestText)
+                    holder.push_back(Colored((holder.empty() ? "" : " ") + std::string(NationName(owner)), NationColor(owner)));
+            }
+            if (!holder.empty())
+                switch (o.zoneConquest)
+                {
+                case ConquestPlace::Left:
+                    holder.push_back(Text(" "));
+                    w.title.insert(w.title.begin(), holder.begin(), holder.end());
+                    break;
+                case ConquestPlace::Right:
+                    w.title.push_back(Text(" "));
+                    w.title.insert(w.title.end(), holder.begin(), holder.end());
+                    break;
+                case ConquestPlace::Below:
+                    if (!w.subtitle.empty()) w.subtitle.push_back(Text(kDot, Tone::Dim));
+                    w.subtitle.insert(w.subtitle.end(), holder.begin(), holder.end());
+                    break;
+                case ConquestPlace::Off: break;
+                }
             w.hasPopup = state.zone != 0;
             break;
         }
@@ -1228,17 +1321,23 @@ namespace headsup
         case BarWidget::VanaTime:
         {
             const VanaTime t = VanaAt(state.unixMs);
-            w.title    = ListOf(WeekdayText(t), Text(" " + HourMinute(t.hour, t.minute)));
-            w.subtitle = ListOf(Text(MoonText(t) + " " + std::to_string(t.moonPercent) + "%", Tone::Dim));
+            const std::string time = HourMinute(t.hour, t.minute);
+            w.title = o.vanaWeekday ? ListOf(WeekdayText(t), Text(" " + time)) : ListOf(Text(time));
+            std::string line = o.vanaDate ? VanaDate(t) : std::string();
+            if (o.secondLine) line += (line.empty() ? "" : " ") + MoonText(t) + " " + std::to_string(t.moonPercent) + "%";
+            if (!line.empty()) w.subtitle = ListOf(Text(line, Tone::Dim));
             w.hasPopup = true;
             break;
         }
         case BarWidget::Target:
-            if (state.target == nullptr)
+            if ((o.targetShows & TargetShowBit(TargetShowOf(state.target))) == 0)
+                w.shown = false;
+            else if (state.target == nullptr)
                 w.title = ListOf(Text("No target", Tone::Dim));
-            else if (state.target->kind != EntityKind::Mob)
+            else if (TargetShowOf(state.target) != TargetShow::Mobs)
             {
-                w.title = ListOf(Text(state.target->name));
+                w.title = ListOf(Colored(state.target->name,
+                    ToArgb(settings.palette.type[static_cast<int>(TypeOf(state.target->state))])));
                 if (state.target->kind == EntityKind::Player)
                 {
                     // What is known of their jobs, the newest first; a check alone has a popup to show.
@@ -1257,14 +1356,15 @@ namespace headsup
             }
             else
             {
-                if (o.targetDetails)
-                    w.titleIcons = MobIcons(*state.target);
-                else if (const std::optional<Icon> icon = MobIcon(*state.target))
-                    w.icons.push_back(*icon);
+                // Its aggression before its name, the rest of its icons after it, as Show Icons picks them.
+                const IconSet aggro = IconsFor(state.target->mob, o.targetIcons & DetectionBit(DetectionIcon::Aggro));
+                const IconSet rest  = IconsFor(state.target->mob, o.targetIcons & kAllDetection & ~DetectionBit(DetectionIcon::Aggro));
+                w.icons.assign(aggro.icons, aggro.icons + aggro.count);
+                w.titleIcons.assign(rest.icons, rest.icons + rest.count);
                 w.title = ListOf(Colored(state.target->name, NameColor(*state.target, settings)));
-                if (HasLevel(*state.target))
+                if (o.targetMobLevel && HasLevel(*state.target))
                     w.subtitle = ListOf(Colored(state.target->level.text, ShadeColor(*state.target, settings)));
-                if (o.targetDetails && IsMob(state.target))
+                if ((o.targetIcons & kTargetWeakIcons) != 0 && IsMob(state.target))
                 {
                     // Weaknesses by SDT or rank, as the badges find them by default.
                     const InfoIconSet found = InfoIconsFor(&ResistancesOf(*state.target->mob), BadgeRules{});
@@ -1326,16 +1426,20 @@ namespace headsup
                 w.title = ListOf(Text("-"));
                 break;
             }
-            // A nation alone by its name; several by their first letters, each in its color, two to a line in columns.
+            // A nation alone by its name; several by their crests, each count in its color, two to a line in columns.
             const std::vector<Nation> picked = PickedNations(o.nations);
             w.cells = picked.size() > 1; // its counts alone, without its name under them
             if (w.cells) w.subtitle.clear();
+            constexpr size_t kTwoByTwo = 2; // nations a line
+            const size_t perLine = o.conquestGrid == ConquestGrid::OneByFour ? picked.size() : kTwoByTwo;
             for (size_t i = 0; i < picked.size(); ++i)
             {
-                const Nation nation    = picked[i];
-                const std::string name = picked.size() == 1 ? NationName(nation) : kNationShort[static_cast<int>(nation)];
-                const Span count = Colored(name + " " + std::to_string(std::ranges::count(*state.owners, nation)), NationColor(nation));
-                (i < kNationsPerLine ? w.title : w.subtitle).push_back(count);
+                const Nation nation = picked[i];
+                const std::string regions = std::to_string(std::ranges::count(*state.owners, nation));
+                Span count = Colored(picked.size() == 1 ? std::string(NationName(nation)) + " " + regions : " " + regions,
+                    NationColor(nation));
+                if (picked.size() > 1) count.picture = NationCrest(nation);
+                (i < perLine ? w.title : w.subtitle).push_back(count);
             }
             if (w.title.empty()) w.title = ListOf(Text("-"));
             w.figures = true;
@@ -1370,13 +1474,15 @@ namespace headsup
         if (pill.size() <= 1) return BarPopupContent(head, state, settings);
         PopupContent joined;
         joined.oneColumn = true;
-        for (const PanelWidget w : pill)
+        for (size_t i = 0; i < pill.size(); ++i)
         {
+            const PanelWidget w = pill[i];
             if (!BarWidgetContent(w, state, settings).hasPopup) continue;
+            if (i > 0 && !settings.Widget(pill[i - 1]).combineInPopup) continue;
             PopupContent own = BarPopupContent(w, state, settings);
             if (joined.title.empty())
                 joined.icon = own.icon;
-            else
+            else if (!own.title.empty())
                 joined.title.push_back(Text(kDot, Tone::Dim));
             joined.title.insert(joined.title.end(), own.title.begin(), own.title.end());
             joined.sections.insert(joined.sections.end(), own.sections.begin(), own.sections.end());
@@ -1397,10 +1503,8 @@ namespace headsup
             const std::string_view region = ZoneRegion(zone);
             popup.title = ListOf(Text(ZoneTitle(state.zone)));
             // A zone past the data has its number for a title already.
-            if (zone != nullptr) popup.title.push_back(Text(" " + std::to_string(state.zone), Tone::Dim));
-            if (!region.empty())
-                popup.sections.push_back(PopupSection{
-                    "", ListOf(Line(Cell(ListOf(Text("Region ", Tone::Dim), Text(std::string(region))))))});
+            if (zone != nullptr && o.zoneId) popup.title.push_back(Text(" " + std::to_string(state.zone), Tone::Dim));
+            if (!region.empty()) popup.sections.push_back(PopupSection{"", ListOf(Line(Cell(Text(std::string(region), Tone::Dim))))});
             if (InConquest(zone) && state.shares)
             {
                 PopupSection influence{"Influence", {}};
@@ -1409,7 +1513,8 @@ namespace headsup
                 {
                     PopupRow row = Labeled(Colored(NationName(share.nation), NationColor(share.nation)),
                         Text(std::to_string(share.percent) + "%"));
-                    row.cells[0].star = share.nation == owner;
+                    row.cells[0].star    = share.nation == owner;
+                    row.cells[0].picture = NationCrest(share.nation);
                     influence.rows.push_back(std::move(row));
                 }
                 influence.rows.push_back(Labeled("Tally in", Text(SpanText(SecondsToTally(state.unixMs)))));
@@ -1420,47 +1525,53 @@ namespace headsup
         case BarWidget::Weather:
         {
             const VanaTime t = VanaAt(state.unixMs);
-            popup.title      = ListOf(Text("Weather"));
-            const std::optional<WeatherOdds> today = OddsOn(state, t.day);
-            const Weather now = state.weather ? *state.weather : today ? today->normal : Weather::None;
-            PopupCell current = Cell(Text(WeatherName(now)), WeatherIcon(now));
-            if (!state.weather) current.text.push_back(Text(" (likely)", Tone::Dim));
-            PopupRow grid   = Grid(kForecastColumns, kForecastDays * kForecastColumns);
+            // No title: the weather now is on the panel, and the forecast names the zone it is for.
+            std::array<WeatherChances, kForecastDays> days{};
             bool oneWeather = true;  // on every day
             bool fogs       = false; // a day can roll a weather fog takes the place of in the small hours
             for (int d = 0; d < kForecastDays; ++d)
             {
-                const int weekday = (t.weekday + d) % kVanaDaysPerWeek;
-                grid.cells.push_back(
-                    Cell(Colored(d == 0 ? "Today" : WeekdayName(weekday), ElementColor(WeekdayElement(weekday)))));
                 const std::optional<WeatherOdds> odds = OddsOn(state, t.day + static_cast<uint32_t>(d));
-                const WeatherChances chances = odds ? Chances(*odds) : WeatherChances{};
-                oneWeather = oneWeather && chances.count == 1;
-                for (const WeatherChance& chance : chances)
+                days[d]    = odds ? Chances(*odds) : WeatherChances{};
+                oneWeather = oneWeather && days[d].count == 1;
+                for (const WeatherChance& chance : days[d])
                     fogs = fogs || chance.weather == Weather::None || chance.weather == Weather::Sunshine ||
                            chance.weather == Weather::Clouds;
+            }
+            // Phoenix's notes in a column at the right, a line beside each day from the first.
+            std::vector<std::string> notes;
+            // One weather on every day (Phoenix's static zones: Promyvion, Temenos): rolling again changes nothing.
+            if (!oneWeather) notes.emplace_back("Phoenix rolls the weather again every 3 to 30 Earth minutes.");
+            if (fogs) notes.emplace_back("From 2:00 to 7:00, outside towns, Phoenix turns sunshine and clouds into fog.");
+            const int columns = kForecastColumns + (notes.empty() ? 0 : 1);
+            PopupRow grid     = Grid(columns, kForecastDays * columns);
+            for (int d = 0; d < kForecastDays; ++d)
+            {
+                const int weekday = (t.weekday + d) % kVanaDaysPerWeek;
+                const std::string name = WeekdayName(weekday);
+                PopupCell day = Cell(Colored(d == 0 ? "Today (" + name + ")" : d == 1 ? "Tomorrow (" + name + ")" : name,
+                    ElementColor(WeekdayElement(weekday))));
+                day.align = Align::Right;
+                grid.cells.push_back(std::move(day));
                 for (int c = 0; c < kForecastColumns - 1; ++c)
                 {
-                    if (c >= chances.count)
+                    PopupCell weather;
+                    if (c < days[d].count)
                     {
-                        grid.cells.emplace_back();
-                        continue;
+                        const WeatherChance& chance = days[d].chances[c];
+                        weather = Cell(Text(std::string(WeatherName(chance.weather)) + " " + std::to_string(chance.percent) + "%"),
+                            WeatherIcon(chance.weather));
                     }
-                    const WeatherChance& chance = chances.chances[c];
-                    grid.cells.push_back(Cell(Text(std::string(WeatherName(chance.weather)) + " " +
-                                                   std::to_string(chance.percent) + "%"),
-                        WeatherIcon(chance.weather)));
+                    weather.align = Align::Center;
+                    grid.cells.push_back(std::move(weather));
                 }
+                if (!notes.empty())
+                    grid.cells.push_back(static_cast<size_t>(d) < notes.size() ? Cell(Text(notes[d], Tone::Dim)) : PopupCell{});
             }
-            PopupSection forecast{"Forecast", ListOf(std::move(grid))};
-            // One weather on every day (Phoenix's static zones: Promyvion, Temenos): rolling again changes nothing.
-            if (!oneWeather)
-                forecast.rows.push_back(
-                    LineOf("Phoenix rolls the weather again every 3 to 30 Earth minutes.", Tone::Dim));
-            if (fogs)
-                forecast.rows.push_back(
-                    LineOf("From 2:00 to 7:00, outside towns, Phoenix turns sunshine and clouds into fog.", Tone::Dim));
-            popup.sections = ListOf(PopupSection{"", ListOf(Line(std::move(current)))}, std::move(forecast),
+            // Zone 0 is the data's "unknown": the heading names no zone for it.
+            const ZoneRecord* zone = state.zone != 0 ? ZoneById(state.zone) : nullptr;
+            popup.sections = ListOf(PopupSection{zone != nullptr ? "Forecast (" + std::string(zone->name) + ")" : "Forecast",
+                                        ListOf(std::move(grid))},
                 ByElement(state, t.day));
             popup.oneColumn = true;
             break;
@@ -1468,8 +1579,7 @@ namespace headsup
         case BarWidget::VanaTime:
         {
             const VanaTime t = VanaAt(state.unixMs);
-            popup.title      = ListOf(Text(std::to_string(t.year) + "/" + Printed("%02d", t.month) + "/" +
-                                           Printed("%02d", t.dayOfMonth)));
+            popup.title      = ListOf(Text(VanaDate(t)));
             popup.sections   = ListOf(PopupSection{"",
                 ListOf(Line(Cell(ListOf(WeekdayText(t), Text(" " + HourMinute(t.hour, t.minute))))),
                     LineOf(MoonText(t) + " (" + std::to_string(t.moonPercent) + "%)"),

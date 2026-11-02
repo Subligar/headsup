@@ -63,6 +63,14 @@ namespace
         return nullptr;
     }
 
+    // The weather popup's forecast card, its heading naming the zone.
+    const PopupSection* Forecast(const PopupContent& popup)
+    {
+        for (const PopupSection& s : popup.sections)
+            if (s.heading.starts_with("Forecast")) return &s;
+        return nullptr;
+    }
+
     // Each row of a section as one line of text: its cells' text joined.
     std::vector<std::string> Lines(const PopupSection& section)
     {
@@ -112,23 +120,83 @@ TEST(the_target_widget_shows_name_level_and_con_in_their_colors)
     CHECK(w.subtitle == (std::vector<Span>{{"Lv 17-20 EP-EM", Tone::Own, 0xFF445566u}}));
 }
 
-TEST(target_details_put_a_mobs_icons_after_its_name_and_its_weaknesses_after_its_level)
+TEST(show_icons_picks_a_mobs_icons_its_aggression_before_its_name_the_rest_after_and_weaknesses_after_its_level)
 {
     Settings settings;
-    settings.Widget(BarWidget::Target).targetDetails = true;
-    const ActorInfo goblin    = Goblin();
+    const ActorInfo goblin = Goblin();
     BarState state;
-    state.target          = &goblin;
-    const WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
-    CHECK(w.icons.empty()); // none before the name: they follow it
-    CHECK(w.titleIcons.size() > 1 && w.titleIcons == EveryIcon(goblin));
+    state.target     = &goblin;
+    WidgetOptions& o = settings.Widget(BarWidget::Target);
+    WidgetContent w  = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.empty() && w.subtitleIcons.empty()); // as new
+    o.targetIcons = kAllTargetIcons;
+    w             = BarWidgetContent(BarWidget::Target, state, settings);
+    std::vector<Icon> rest = EveryIcon(goblin);
+    rest.erase(rest.begin()); // the aggression icon comes first
+    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.size() > 1 && w.titleIcons == rest);
     std::vector<Icon> weak;
     const InfoIconSet all = InfoIconsFor(&ResistancesOf(*goblin.mob), BadgeRules{});
     for (int i = 0; i < all.count; ++i)
         if (all.icons[i].badge == BadgeKind::Weak || all.icons[i].badge == BadgeKind::WeakRank)
             weak.push_back(all.icons[i].icon);
     CHECK(!weak.empty() && w.subtitleIcons == weak);
-    CHECK(Joined(w.subtitle) == goblin.level.text);
+    o.targetIcons = DetectionBit(DetectionIcon::Link);
+    w             = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(w.icons.empty() && w.titleIcons == std::vector<Icon>{Icon::Link} && w.subtitleIcons.empty());
+}
+
+TEST(show_mob_level_off_leaves_out_a_mobs_level_and_con)
+{
+    Settings settings;
+    const ActorInfo goblin = Goblin();
+    BarState state;
+    state.target = &goblin;
+    settings.Widget(BarWidget::Target).targetMobLevel = false;
+    const WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(w.shown && w.subtitle.empty() && Joined(w.title) == "Goblin Bounty Hunter");
+}
+
+TEST(visibility_hides_the_target_widget_for_each_kind_of_target_left_out)
+{
+    Settings settings;
+    const ActorInfo goblin = Goblin();
+    ActorInfo player, npc, pet;
+    player.kind = player.state.kind = EntityKind::Player;
+    npc.kind = npc.state.kind = EntityKind::Npc;
+    pet.kind = pet.state.kind = EntityKind::Npc;
+    pet.state.pet             = true;
+    const std::pair<TargetShow, const ActorInfo*> kinds[] = {{TargetShow::NpcsObjects, &npc}, {TargetShow::Players, &player},
+        {TargetShow::Mobs, &goblin}, {TargetShow::Pets, &pet}, {TargetShow::NoTarget, nullptr}};
+    BarState state;
+    for (const auto& [left, _] : kinds)
+    {
+        settings.Widget(BarWidget::Target).targetShows = static_cast<uint8_t>(kAllTargetShows & ~TargetShowBit(left));
+        for (const auto& [kind, target] : kinds)
+        {
+            state.target = target;
+            CHECK_EQ(BarWidgetContent(BarWidget::Target, state, settings).shown, kind != left);
+        }
+    }
+}
+
+TEST(a_player_npc_or_pets_name_takes_its_entity_type_color)
+{
+    Settings settings;
+    settings.palette.type[static_cast<int>(TargetType::Player)] = ColorFromRgb(0x112233);
+    settings.palette.type[static_cast<int>(TargetType::Npc)]    = ColorFromRgb(0x445566);
+    settings.palette.type[static_cast<int>(TargetType::Pet)]    = ColorFromRgb(0x778899);
+    ActorInfo player, npc, pet;
+    player.kind = player.state.kind = EntityKind::Player;
+    npc.kind = npc.state.kind = EntityKind::Npc;
+    pet.kind = pet.state.kind = EntityKind::Npc;
+    pet.state.pet             = true;
+    BarState state;
+    for (const auto& [target, argb] : {std::pair{&player, 0xFF112233u}, {&npc, 0xFF445566u}, {&pet, 0xFF778899u}})
+    {
+        std::snprintf(target->name, sizeof(target->name), "%s", "Someone");
+        state.target = target;
+        CHECK(BarWidgetContent(BarWidget::Target, state, settings).title == (std::vector<Span>{{"Someone", Tone::Own, argb}}));
+    }
 }
 
 TEST(no_target_reads_no_target_and_a_player_gets_only_a_name)
@@ -170,9 +238,9 @@ TEST(a_dead_mob_with_data_keeps_its_aggro_icon_and_popup_but_has_no_level)
     CHECK(w.hasPopup);
     const PopupContent popup = BarPopupContent(BarWidget::Target, state, settings);
     CHECK(popup.icon == Icon::AggroNQ);
+    CHECK(popup.title == (std::vector<Span>{{"Goblin Bounty Hunter", Tone::Own, nameColor}, {" ID 220", Tone::Dim}}));
     const PopupRow& top = popup.sections[0].rows[0];
-    CHECK(top.cells.size() == 2);
-    CHECK(Joined(top.cells[0].text) == "WAR/WAR" && Joined(top.cells[1].text) == "ID 220");
+    CHECK(top.cells.size() == 1 && Joined(top.cells[0].text) == "WAR"); // WAR/WAR as its job alone
     CHECK(Section(popup, "Spawn") != nullptr);
 }
 
@@ -186,7 +254,7 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     std::vector<std::string> headings;
     for (const PopupSection& s : popup.sections)
         headings.push_back(s.heading);
-    CHECK(headings == (std::vector<std::string>{"", "Damage taken", "Elements", "Statuses", "Immune", "Stats at Lv 20",
+    CHECK(headings == (std::vector<std::string>{"", "Damage taken", "Elements", "Statuses", "Immune", "Stats at Level 20",
                                                 "TP moves", "Spawn"}));
     const PopupRow& elements = Section(popup, "Elements")->rows[0];
     CHECK(elements.kind == RowKind::Grid && elements.columns == 4 && elements.cells.size() == 8);
@@ -197,13 +265,16 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     CHECK(elements.cells[7].text == (std::vector<Span>{{"0%", Tone::Neutral}}));
     CHECK(elements.cells[0].text == (std::vector<Span>{{"+3%", Tone::Weak}}));
     // Its combat stats at 20 from data/phoenix_mob_info.tsv, then STR to CHR and its magic evasion.
-    const PopupRow& combat = Section(popup, "Stats at Lv 20")->rows[0];
-    CHECK(combat.kind == RowKind::Grid && combat.cells.size() == 6);
-    CHECK(combat.cells[0].text == (std::vector<Span>{{"HP", Tone::Dim}, {" 414", Tone::Normal}}));
-    CHECK(combat.cells[3].text == (std::vector<Span>{{"DEF", Tone::Dim}, {" 85", Tone::Normal}}));
-    const PopupRow& stats = Section(popup, "Stats at Lv 20")->rows[1];
-    CHECK(stats.kind == RowKind::Grid && stats.cells.size() == 8);
-    CHECK(stats.cells[7].text == (std::vector<Span>{{"MEva", Tone::Dim}, {" 58", Tone::Normal}}));
+    // Each stat's name against the right of its column and its value against the left of the next.
+    const PopupRow& combat = Section(popup, "Stats at Level 20")->rows[0];
+    CHECK(combat.kind == RowKind::Grid && combat.columns == 8 && combat.cells.size() == 12);
+    const std::vector<Span> hp{{"HP", Tone::Dim}}, value{{"414", Tone::Normal}};
+    CHECK(combat.cells[0].text == hp && combat.cells[0].align == Align::Right);
+    CHECK(combat.cells[1].text == value && combat.cells[1].align == Align::Left);
+    CHECK(Joined(combat.cells[6].text) == "DEF" && Joined(combat.cells[7].text) == "85");
+    const PopupRow& stats = Section(popup, "Stats at Level 20")->rows[1];
+    CHECK(stats.kind == RowKind::Grid && stats.cells.size() == 16);
+    CHECK(Joined(stats.cells[14].text) == "MEva" && Joined(stats.cells[15].text) == "58");
     const PopupRow& moves = Section(popup, "TP moves")->rows[0];
     CHECK(moves.kind == RowKind::Grid && moves.columns == 3 && moves.cells.size() == 3);
     CHECK(Joined(moves.cells[0].text) == "Goblin Rush" && Joined(moves.cells[2].text) == "Bomb Toss Suicide");
@@ -211,11 +282,57 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     CHECK(statuses.columns == 5 && statuses.cells.size() == 10 && statuses.cells[0].icon == Icon::Paralyze);
     CHECK(Section(popup, "Immune")->rows[0].cells[0].text == (std::vector<Span>{{"None", Tone::Neutral}}));
     CHECK(Joined(Section(popup, "Spawn")->rows[0].cells[0].text) == "Respawn 5:00");
-    CHECK(Joined(popup.sections[0].rows[0].cells[1].text) == "WAR/WAR");
-    CHECK(Joined(popup.sections[0].rows[0].cells[2].text) == "ID 220"); // 17199648 is 0x1067220
+    // Its level, job and con said in full, in the con's color; its ID after its name (17199648 is 0x1067220).
+    const uint32_t shade = ToArgb(settings.palette.toughness[static_cast<int>(goblin.level.shade)]);
+    CHECK(popup.sections[0].rows[0].cells[0].text == (std::vector<Span>{{"Level 17-20", Tone::Own, shade}}));
+    CHECK(Joined(popup.sections[0].rows[0].cells[1].text) == "WAR");
+    CHECK(popup.sections[0].rows[0].cells[2].text == (std::vector<Span>{{"(Easy Prey to Even Match)", Tone::Own, shade}}));
+    CHECK(Joined(popup.title) == "Goblin Bounty Hunter ID 220");
     settings.rankDisplay = RankDisplay::Rank;
     CHECK(Section(BarPopupContent(BarWidget::Target, state, settings), "Elements")->rows[0].cells[6].text ==
           (std::vector<Span>{{"-3", Tone::Weak}}));
+}
+
+namespace
+{
+    bool KnowsMetallicBody(uint16_t spell) { return spell == 517; }
+
+    const PopupCell* MoveCell(const PopupContent& popup, const char* name)
+    {
+        const PopupSection* moves = Section(popup, "TP moves");
+        if (moves == nullptr) return nullptr;
+        for (const PopupCell& cell : moves->rows[0].cells)
+            if (Joined(cell.text) == name) return &cell;
+        return nullptr;
+    }
+}
+
+TEST(tp_moves_a_blue_mage_can_learn_are_blue_and_learned_ones_marked)
+{
+    // Qufim Island's Clipper: Metallic Body teaches blue magic 517, Big Scissors nothing.
+    Settings settings;
+    ActorInfo crab = Goblin();
+    crab.mob       = MobById(17293331);
+    BarState state;
+    state.target = &crab;
+    const std::vector<Span> blue{{"Metallic Body", Tone::Own, ToArgb(settings.blueMagicColor)}};
+    const std::vector<Span> plain{{"Metallic Body", Tone::Normal}}, scissors{{"Big Scissors", Tone::Normal}};
+    const auto shown = [&](const char* name) {
+        const PopupContent popup = BarPopupContent(BarWidget::Target, state, settings);
+        const PopupCell* cell    = MoveCell(popup, name);
+        return cell != nullptr ? std::optional<PopupCell>(*cell) : std::nullopt;
+    };
+    CHECK(shown("Metallic Body")->text == blue && !shown("Metallic Body")->star);
+    CHECK(shown("Big Scissors")->text == scissors);
+    // Learned, it keeps its blue and takes a star, or goes back to plain text.
+    state.knowsSpell = KnowsMetallicBody;
+    CHECK(shown("Metallic Body")->text == blue && shown("Metallic Body")->star);
+    settings.blueMagicLearned = BlueLearned::Plain;
+    CHECK(shown("Metallic Body")->text == plain && !shown("Metallic Body")->star);
+    // Off, every move is plain.
+    settings.blueMagic        = false;
+    settings.blueMagicLearned = BlueLearned::Star;
+    CHECK(shown("Metallic Body")->text == plain && !shown("Metallic Body")->star);
 }
 
 TEST(a_placeholder_names_its_nm_and_counts_down)
@@ -260,23 +377,26 @@ TEST(the_tags_say_how_a_mob_aggros_links_and_detects)
     BarState state;
     state.target              = &target;
     const PopupContent goblin = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(TagsOf(goblin) == (std::vector<std::string>{"Aggressive", "Links", "Sight 15y"}));
+    // Its aggression is the icon before its name, so the tags leave it out; each sense has its own icon.
+    CHECK(TagsOf(goblin) == (std::vector<std::string>{"Links", "Sight 15y"}));
+    const std::vector<PopupCell>& cells = goblin.sections[0].rows[1].cells;
+    CHECK(cells[0].icon == std::optional<Icon>(Icon::Link) && cells[1].icon == std::optional<Icon>(Icon::Sight));
     target                        = MobTarget(16797799);
     const PopupContent brontotaur = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(TagsOf(brontotaur) == (std::vector<std::string>{"Aggressive", "Links", "True sight 15y", "Counter"}));
+    CHECK(TagsOf(brontotaur) == (std::vector<std::string>{"Links", "True sight 15y", "Counter"}));
     // Qufim Island's Clipper, a crab: it hears from 8 yalms and a beastmaster can charm it.
     target = MobTarget(17293331);
-    CHECK(TagsOf(BarPopupContent(BarWidget::Target, state, settings)) == (std::vector<std::string>{"Passive", "Sound 8y", "Charmable"}));
+    CHECK(TagsOf(BarPopupContent(BarWidget::Target, state, settings)) == (std::vector<std::string>{"Sound 8y", "Charmable"}));
 }
 
 TEST(a_tags_words_take_the_tag_tone_and_nothing_else_in_the_popup_does)
 {
-    // The words sit in their frames, drawn in the tag's text color; the ID beside them and the rows after keep theirs.
-    // data/phoenix_mobs.tsv: the Brontotaur, 16797799, has three tags (Aggressive, Links, True sight) and counters
-    // (a fourth, data/phoenix_mob_info.tsv); Bloodtear Baldurf, 17195318, flags 11 and detects 257, four (Aggressive,
-    // Sight, Scent, NM).
+    // The words sit in their frames, drawn in the tag's text color; the rows after keep theirs.
+    // data/phoenix_mobs.tsv: the Brontotaur, 16797799, has two tags (Links, True sight) and counters (a third,
+    // data/phoenix_mob_info.tsv); Bloodtear Baldurf, 17195318, flags 11 and detects 257, three (Sight, Scent, NM).
+    // Neither's aggression is a tag: it is the icon before the name.
     Settings settings;
-    for (const auto& [id, tags] : {std::pair{16797799u, size_t{4}}, {17195318u, size_t{4}}})
+    for (const auto& [id, tags] : {std::pair{16797799u, size_t{3}}, {17195318u, size_t{3}}})
     {
         ActorInfo target = MobTarget(id);
         BarState state;
@@ -398,7 +518,7 @@ TEST(the_spawn_section_says_when_there_is_no_timer_no_placeholder_or_one_is_due)
     const ActorInfo goblin = Goblin(); // respawn 300, no placeholder of an NM, no placeholders of its own
     state.target           = &goblin;
     const PopupContent goblinPopup = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Lines(*Section(goblinPopup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Not a placeholder"}));
+    CHECK(Lines(*Section(goblinPopup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Not an NM placeholder"}));
     const ActorInfo snipper = MobTarget(16781313); // respawn 0
     state.target            = &snipper;
     const PopupContent snipperPopup = BarPopupContent(BarWidget::Target, state, settings);
@@ -451,6 +571,23 @@ TEST(vanadiel_time_names_the_day_in_its_elements_color_and_the_moon)
     CHECK(all.find("Waxing Gibbous (64%)") != std::string::npos);
     CHECK(all.find("Next day in 36:00") != std::string::npos);
     CHECK(all.find("Next phase in 10:12:00") != std::string::npos);
+}
+
+TEST(the_vanadiel_clock_shows_its_day_of_week_date_and_moon_phase_as_set)
+{
+    Settings settings;
+    BarState state;
+    state.unixMs = 1791417600000LL; // Darksday 1514/03/20 09:00, 64% waxing
+    WidgetOptions& o = settings.Widget(BarWidget::VanaTime);
+    const auto shown = [&] { return BarWidgetContent(BarWidget::VanaTime, state, settings); };
+    o.vanaDate = true;
+    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20 Waxing Gibbous 64%", Tone::Dim}}));
+    o.secondLine = false; // Show Moon Phase off: the date alone
+    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}}));
+    o.vanaDate = false;
+    CHECK(shown().subtitle.empty());
+    o.vanaWeekday = false;
+    CHECK(shown().title == (std::vector<Span>{{"09:00", Tone::Normal}}));
 }
 
 TEST(the_zone_widget_names_the_zone_and_its_region)
@@ -557,21 +694,27 @@ TEST(the_forecast_covers_today_and_four_more_days)
     state.zone   = 103;
     state.unixMs = kVanaEpochUnixMs;
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* forecast = Section(popup, "Forecast");
-    CHECK(forecast != nullptr);
-    CHECK(forecast->rows[0].kind == RowKind::Grid && forecast->rows[0].columns == 4);
+    const PopupSection* forecast = Section(popup, "Forecast (Valkurm Dunes)");
+    CHECK(forecast != nullptr && forecast == &popup.sections.front()); // first, under no title
+    CHECK(popup.title.empty() && !popup.icon);
+    // Each day, its three chances, and Phoenix's notes in a column at the right.
+    CHECK(forecast->rows[0].kind == RowKind::Grid && forecast->rows[0].columns == 5);
     const std::vector<PopupCell>& cells = forecast->rows[0].cells;
-    CHECK(cells.size() == 20);
-    CHECK(Joined(cells[0].text) == "Today");
+    CHECK(cells.size() == 25);
+    CHECK(Joined(cells[0].text) == "Today (Firesday)");
     CHECK(Joined(cells[1].text) == "Sunshine 50%" && Joined(cells[2].text) == "Dust Storm 50%");
     CHECK(cells[3].text.empty()); // the day has two chances
-    CHECK(Joined(cells[4].text) == "Earthsday");     // day 1
-    CHECK(Joined(cells[8].text) == "Watersday");     // day 2: calendar 0x0421, Sunshine 100%
-    CHECK(Joined(cells[9].text) == "Sunshine 100%");
-    CHECK(cells[10].text.empty() && cells[11].text.empty());
-    CHECK(Joined(cells[16].text) == "Iceday");       // day 4: calendar 0x0442, Sunshine 50% and Clouds 50%
-    CHECK(Joined(cells[17].text) == "Sunshine 50%" && Joined(cells[18].text) == "Clouds 50%");
-    CHECK(cells[19].text.empty());
+    CHECK(Joined(cells[5].text) == "Tomorrow (Earthsday)"); // day 1
+    CHECK(Joined(cells[10].text) == "Watersday");           // day 2: calendar 0x0421, Sunshine 100%
+    CHECK(Joined(cells[11].text) == "Sunshine 100%");
+    CHECK(cells[12].text.empty() && cells[13].text.empty());
+    CHECK(Joined(cells[20].text) == "Iceday");              // day 4: calendar 0x0442, Sunshine 50% and Clouds 50%
+    CHECK(Joined(cells[21].text) == "Sunshine 50%" && Joined(cells[22].text) == "Clouds 50%");
+    CHECK(cells[23].text.empty());
+    // The days against their column's right, the weathers in the middle of theirs, each with its element.
+    for (size_t i = 0; i < cells.size(); i += 5)
+        CHECK(cells[i].align == Align::Right && cells[i + 1].align == Align::Center && cells[i + 3].align == Align::Center);
+    CHECK(cells[2].icon == std::optional<Icon>(Icon::Earth) && !cells[1].icon); // dust storm's earth; sunshine has none
 }
 
 TEST(the_forecast_names_the_weekdays_past_the_weeks_end)
@@ -582,10 +725,11 @@ TEST(the_forecast_names_the_weekdays_past_the_weeks_end)
     state.unixMs = 1009831536000LL; // epoch day 6, a Lightsday: the epoch and six days of 3456 Earth seconds
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
     std::vector<std::string> days;
-    const std::vector<PopupCell>& cells = Section(popup, "Forecast")->rows[0].cells;
-    for (size_t i = 0; i < cells.size(); i += 4) // the day cells come first in each row of four
+    const std::vector<PopupCell>& cells = Forecast(popup)->rows[0].cells;
+    for (size_t i = 0; i < cells.size(); i += 5) // the day cells come first in each row of five
         days.push_back(Joined(cells[i].text));
-    CHECK(days == (std::vector<std::string>{"Today", "Darksday", "Firesday", "Earthsday", "Watersday"}));
+    CHECK(days ==
+          (std::vector<std::string>{"Today (Lightsday)", "Tomorrow (Darksday)", "Firesday", "Earthsday", "Watersday"}));
 }
 
 TEST(the_reroll_note_is_in_earth_minutes_and_left_out_where_the_weather_never_changes)
@@ -597,14 +741,17 @@ TEST(the_reroll_note_is_in_earth_minutes_and_left_out_where_the_weather_never_ch
     state.unixMs = kVanaEpochUnixMs;
     state.zone   = 103;
     const PopupContent dunes = BarPopupContent(BarWidget::Weather, state, settings);
-    const std::vector<std::string> notes = Lines(*Section(dunes, "Forecast"));
-    CHECK(notes[notes.size() - 2] == "Phoenix rolls the weather again every 3 to 30 Earth minutes.");
+    const PopupRow& grid     = Forecast(dunes)->rows[0];
+    CHECK_EQ(Forecast(dunes)->rows.size(), static_cast<size_t>(1)); // the notes beside the days, not under them
+    CHECK(Joined(grid.cells[4].text) == "Phoenix rolls the weather again every 3 to 30 Earth minutes.");
     // Phoenix's UpdateWeather turns a roll of no weather, sunshine or clouds into fog from 2:00 to 7:00 outside towns.
-    CHECK(notes.back() == "From 2:00 to 7:00, outside towns, Phoenix turns sunshine and clouds into fog.");
+    CHECK(Joined(grid.cells[9].text) == "From 2:00 to 7:00, outside towns, Phoenix turns sunshine and clouds into fog.");
+    CHECK(grid.cells[4].text.front().tone == Tone::Dim && grid.cells[14].text.empty());
     state.zone = 37;
     const PopupContent temenos   = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* forecast = Section(temenos, "Forecast");
-    CHECK_EQ(forecast->rows.size(), static_cast<size_t>(1)); // neither note: Stellar Glare is all it has
+    const PopupSection* forecast = Forecast(temenos);
+    CHECK(forecast->heading == "Forecast (Temenos)");
+    CHECK(forecast->rows.size() == 1 && forecast->rows[0].columns == 4); // neither note: Stellar Glare is all it has
     CHECK(Joined(forecast->rows[0].cells[1].text) == "Stellar Glare 100%");
 }
 
@@ -623,11 +770,10 @@ TEST(the_weather_popup_has_a_tab_for_each_element_of_the_zones_that_can_roll_it_
     {
         const auto element = static_cast<Element>(e);
         CHECK(fire.tabs[e].name == Colored(ElementName(element), ElementColor(element))); // in its element's color
-        // Its first row: how many zones can roll it today, and tomorrow.
-        CHECK_EQ(Lines(PopupSection{"", fire.tabs[e].rows}).front(),
-            "Zones " + std::to_string(ZonesRolling(element, today).size()) + " today" + kDot +
-                std::to_string(ZonesRolling(element, today + 1).size()) + " tomorrow");
+        CHECK(fire.tabs[e].icon.has_value());                                            // after its element's icon
+        CHECK_EQ(fire.tabs[e].rows.size(), static_cast<size_t>(1));                     // its table alone
     }
+    CHECK(fire.tabs[0].icon != fire.tabs[1].icon);
     // Then a grid of the zones that can roll it either day, today's likeliest first, then tomorrow's.
     state.pickedTabs["By Element"] = "Ice";
     const PopupSection ice = byElement();
@@ -644,8 +790,11 @@ TEST(the_weather_popup_has_a_tab_for_each_element_of_the_zones_that_can_roll_it_
         order.push_back(zone);
     std::ranges::stable_sort(order, [&](uint16_t a, uint16_t b) { return chance[a] > chance[b]; });
     CHECK_EQ(grid.cells.size(), 3 * (order.size() + 1));
-    CHECK(Joined(grid.cells[0].text) == "Zone" && Joined(grid.cells[1].text) == "Today" &&
-          Joined(grid.cells[2].text) == "Tomorrow");
+    // Its heads count the zones it lists, and those that can roll it today and tomorrow.
+    CHECK_EQ(Joined(grid.cells[0].text), "Zone (" + std::to_string(order.size()) + ")");
+    CHECK_EQ(Joined(grid.cells[1].text), "Today (" + std::to_string(ZonesRolling(Element::Ice, today).size()) + ")");
+    CHECK_EQ(Joined(grid.cells[2].text), "Tomorrow (" + std::to_string(ZonesRolling(Element::Ice, today + 1).size()) + ")");
+    CHECK_EQ(grid.scroll, "By Element/Ice"); // it keeps its own scrolling
     for (size_t i = 0; i < order.size(); ++i)
     {
         CHECK_EQ(Joined(grid.cells[3 * (i + 1)].text), ZoneById(order[i])->name);
@@ -718,25 +867,12 @@ TEST(an_unknown_zone_has_no_weather_odds_of_its_own)
     CHECK(w.shown && Joined(w.title) == "Dust Storm" && w.icons == (std::vector<Icon>{Icon::Earth}));
     CHECK(w.subtitle.empty() && !w.hasPopup);
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* forecast = Section(popup, "Forecast");
-    CHECK(forecast != nullptr);
+    const PopupSection* forecast = Forecast(popup);
+    CHECK(forecast != nullptr && forecast->heading == "Forecast");
     const std::vector<PopupCell>& cells = forecast->rows[0].cells;
+    const auto columns = static_cast<size_t>(forecast->rows[0].columns);
     for (size_t i = 0; i < cells.size(); ++i)
-        if (i % 4 != 0) CHECK(cells[i].text.empty()); // the day cells come first in each row of four
-}
-
-TEST(the_current_row_says_likely_until_the_server_gives_the_weather)
-{
-    Settings settings;
-    BarState state;
-    state.zone   = 103;
-    state.unixMs = kVanaEpochUnixMs;
-    const PopupContent before = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(before.sections[0].rows[0].cells[0].text ==
-          (std::vector<Span>{{"Sunshine", Tone::Normal}, {" (likely)", Tone::Dim}}));
-    state.weather = Weather::Sunshine;
-    const PopupContent after = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(after.sections[0].rows[0].cells[0].text == (std::vector<Span>{{"Sunshine", Tone::Normal}}));
+        if (i % columns != 0 && i % columns != 4) CHECK(cells[i].text.empty()); // days first, notes last
 }
 
 TEST(a_live_weather_outside_the_days_chances_still_shows)
@@ -750,8 +886,7 @@ TEST(a_live_weather_outside_the_days_chances_still_shows)
     CHECK(Joined(w.title) == "Rain" && w.icons == (std::vector<Icon>{Icon::Water}));
     CHECK(w.subtitle.empty()); // no chance of it today to give
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(Joined(popup.sections[0].rows[0].cells[0].text) == "Rain");
-    CHECK(Joined(Section(popup, "Forecast")->rows[0].cells[1].text) == "Sunshine 50%");
+    CHECK(Joined(Forecast(popup)->rows[0].cells[1].text) == "Sunshine 50%");
 }
 
 TEST(the_zone_says_who_holds_its_region_once_known)
@@ -764,10 +899,48 @@ TEST(the_zone_says_who_holds_its_region_once_known)
     owners[1]    = Nation::Bastok;
     state.owners = owners;
     const WidgetContent w = BarWidgetContent(BarWidget::Zone, state, settings);
-    CHECK(Joined(w.subtitle) == "Zulkheim \xC2\xB7 Bastok");
-    CHECK(w.subtitle.back() == (Span{"Bastok", Tone::Own, NationColor(Nation::Bastok)}));
+    // Its crest and name after the region, as Show Conquest and Show Conquest Text are by default.
+    CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {kDot, Tone::Dim}, Span{"", Tone::Normal, 0, GamePicture::BastokCrest},
+                             {" Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
     state.zone = 230; // Southern San d'Oria: a city region, not in the conquest packet
     CHECK(Joined(BarWidgetContent(BarWidget::Zone, state, settings).subtitle) == "San d'Oria");
+}
+
+TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_below_it)
+{
+    Settings settings;
+    WidgetOptions& o = settings.Widget(BarWidget::Zone);
+    BarState state;
+    state.zone = 103; // Valkurm Dunes, Zulkheim (region 1)
+    RegionOwners owners{};
+    owners[1]    = Nation::Bastok;
+    state.owners = owners;
+    const Span crest{"", Tone::Normal, 0, GamePicture::BastokCrest}, bastok{" Bastok", Tone::Own, NationColor(Nation::Bastok)};
+    const Span dunes{"Valkurm Dunes"}, region{"Zulkheim", Tone::Dim};
+    const auto shown = [&] { return BarWidgetContent(BarWidget::Zone, state, settings); };
+    o.zoneConquest = ConquestPlace::Left;
+    CHECK(shown().title == (std::vector<Span>{crest, bastok, Text(" "), dunes}) && shown().subtitle == std::vector<Span>{region});
+    o.zoneConquest = ConquestPlace::Right;
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), crest, bastok}));
+    o.zoneConquestText = false; // the crest alone
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), crest}));
+    o.zoneConquest = ConquestPlace::Off;
+    CHECK(shown().title == std::vector<Span>{dunes} && shown().subtitle == std::vector<Span>{region});
+    // Show Region Name off: below, the crest has the second line to itself.
+    o.secondLine     = false;
+    o.zoneConquest   = ConquestPlace::Below;
+    CHECK(shown().subtitle == std::vector<Span>{crest});
+    o.zoneConquest = ConquestPlace::Off;
+    CHECK(shown().subtitle.empty());
+    // The Beastmen have no crest in the game's files: the Goblin Mask stands in for one.
+    owners[1]          = Nation::Beastmen;
+    state.owners       = owners;
+    o.zoneConquest     = ConquestPlace::Right;
+    o.zoneConquestText = true;
+    const Span mask{"", Tone::Normal, 0, GamePicture::BeastmenCrest};
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), mask, Span{" Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
+    o.zoneConquestText = false;
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), mask}));
 }
 
 TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
@@ -775,9 +948,11 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     Settings settings;
     BarState state;
     state.zone = 103; // Valkurm Dunes, Zulkheim (region 1)
+    settings.Widget(BarWidget::Zone).zoneId = true;
     const PopupContent dunes = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(dunes.title == ListOf(Text("Valkurm Dunes"), Text(" 103", Tone::Dim)));
-    CHECK(dunes.sections.size() == 1 && Lines(dunes.sections[0]) == (std::vector<std::string>{"Region Zulkheim"}));
+    // Its region by name alone, in the dim tone the word Region was in.
+    CHECK(dunes.sections.size() == 1 && dunes.sections[0].rows[0].cells[0].text == ListOf(Text("Zulkheim", Tone::Dim)));
     RegionOwners owners{};
     owners[1]    = Nation::Bastok;
     state.owners = owners; // who holds it is on the bar, and in the popup only beside its share
@@ -785,7 +960,10 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     state.zone = 230; // Southern San d'Oria: a city region, outside the conquest
     const PopupContent city = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(Joined(city.title) == "Southern San d'Oria 230");
-    CHECK(city.sections.size() == 1 && Lines(city.sections[0]) == (std::vector<std::string>{"Region San d'Oria"}));
+    CHECK(city.sections.size() == 1 && Lines(city.sections[0]) == (std::vector<std::string>{"San d'Oria"}));
+    // Show Zone ID is off on a new install: the name alone.
+    settings.Widget(BarWidget::Zone).zoneId = false;
+    CHECK(Joined(BarPopupContent(BarWidget::Zone, state, settings).title) == "Southern San d'Oria");
     state.zone = 999; // past the data: its number is its title already, and it has no region
     const PopupContent unknown = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(Joined(unknown.title) == "Zone 999" && unknown.sections.empty());
@@ -806,12 +984,17 @@ TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
     const PopupContent popup       = BarPopupContent(BarWidget::Zone, state, settings);
     const PopupSection* influence = Section(popup, "Influence");
     CHECK(influence != nullptr);
-    CHECK(Lines(popup.sections[0]) == (std::vector<std::string>{"Region Ronfaure"}));
+    CHECK(Lines(popup.sections[0]) == (std::vector<std::string>{"Ronfaure"}));
     CHECK(Lines(*influence) == (std::vector<std::string>{"San d'Oria 61%", "Bastok 21%", "Windurst 11%", "Beastmen 5%",
                                    "Tally in 2d 8h"}));
     for (const PopupRow& row : influence->rows)
         CHECK(row.kind == RowKind::Pair); // each figure at the right edge
     CHECK(influence->rows[1].cells[0].text == ListOf(Colored("Bastok ", NationColor(Nation::Bastok))));
+    // Each nation's crest before its name.
+    CHECK(influence->rows[0].cells[0].picture == GamePicture::SanDoriaCrest &&
+          influence->rows[1].cells[0].picture == GamePicture::BastokCrest &&
+          influence->rows[2].cells[0].picture == GamePicture::WindurstCrest &&
+          influence->rows[3].cells[0].picture == GamePicture::BeastmenCrest);
     // Which lines carry the holder's star, top to bottom.
     const auto starred = [&] {
         std::vector<bool> stars;
@@ -1441,13 +1624,21 @@ TEST(each_widget_can_drop_its_second_line_or_its_icons)
     Settings settings;
     const ActorInfo goblin = Goblin();
     BarState state;
-    state.target = &goblin;
-    state.gil    = 100;
+    state.zone    = 103;
+    state.unixMs  = kVanaEpochUnixMs;
+    state.weather = Weather::DustStorm;
+    state.target  = &goblin;
+    state.gil     = 100;
+    settings.Widget(BarWidget::Weather).secondLine = false;
+    WidgetContent w = BarWidgetContent(BarWidget::Weather, state, settings);
+    CHECK(w.subtitle.empty() && !w.icons.empty() && Joined(w.title) == "Dust Storm");
+    settings.Widget(BarWidget::Weather).icons = false;
+    CHECK(BarWidgetContent(BarWidget::Weather, state, settings).icons.empty());
+    // The Target's own settings say what its lines and icons show: these two leave it alone.
     settings.Widget(BarWidget::Target).secondLine = false;
-    WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
-    CHECK(w.subtitle.empty() && !w.icons.empty() && Joined(w.title) == "Goblin Bounty Hunter");
-    settings.Widget(BarWidget::Target).icons = false;
-    CHECK(BarWidgetContent(BarWidget::Target, state, settings).icons.empty());
+    settings.Widget(BarWidget::Target).icons      = false;
+    w = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(!w.subtitle.empty() && !w.icons.empty());
     settings.Widget(BarWidget::Gil).icons = false;
     w = BarWidgetContent(BarWidget::Gil, state, settings);
     CHECK(!w.coin && Joined(w.title) == "100");
@@ -1908,7 +2099,7 @@ TEST(each_copy_of_a_widget_shows_by_its_own_settings)
     BarState state;
     state.gil = 1234;
     state.currencies[3] = 50;
-    const std::optional<PanelWidget> copy = AddWidgetCopy(settings, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = CloneWidget(settings, BarWidget::Gil);
     CHECK(copy.has_value());
     settings.Widget(*copy).currency = 3;
     const WidgetContent first = BarWidgetContent(BarWidget::Gil, state, settings), second = BarWidgetContent(*copy, state, settings);
@@ -1924,7 +2115,7 @@ TEST(what_the_plugin_gathers_follows_every_copy)
     Settings settings;
     for (WidgetOptions& each : settings.widgets)
         each.on = false;
-    const std::optional<PanelWidget> clock = AddWidgetCopy(settings, BarWidget::EarthTime);
+    const std::optional<PanelWidget> clock = CloneWidget(settings, BarWidget::EarthTime);
     CHECK(clock.has_value());
     settings.Widget(*clock).clockZone = ClockZone::Utc;
     const BarNeeds needs = NeedsOf(settings, std::nullopt);
@@ -2026,11 +2217,18 @@ TEST(the_conquest_widget_counts_the_regions_of_the_nations_picked_and_its_popup_
     owners[5] = Nation::Windurst;
     owners[18] = Nation::None;
     state.owners = owners;
-    // Two by two, in lined-up columns: San d'Oria and Bastok over Windurst and the beastmen.
+    // Two by two, in lined-up columns, each its crest and count: San d'Oria and Bastok over Windurst and the beastmen.
     const WidgetContent all = BarWidgetContent(BarWidget::Conquest, state, settings);
     CHECK(all.cells && all.title.size() == 2 && all.subtitle.size() == 2);
-    CHECK(all.title[0].text == "S 1" && all.title[1].text == "B 2" && all.subtitle[0].text == "W 1" && all.subtitle[1].text == "BM 14");
+    CHECK(all.title[0].text == " 1" && all.title[1].text == " 2" && all.subtitle[0].text == " 1" && all.subtitle[1].text == " 14");
+    CHECK(all.title[0].picture == GamePicture::SanDoriaCrest && all.title[1].picture == GamePicture::BastokCrest &&
+          all.subtitle[0].picture == GamePicture::WindurstCrest && all.subtitle[1].picture == GamePicture::BeastmenCrest);
     CHECK(all.title[1].argb == NationColor(Nation::Bastok) && all.hasPopup);
+    // Or all four on one line.
+    settings.Widget(BarWidget::Conquest).conquestGrid = ConquestGrid::OneByFour;
+    const WidgetContent row = BarWidgetContent(BarWidget::Conquest, state, settings);
+    CHECK(row.cells && row.title.size() == 4 && row.subtitle.empty() && row.title[3].picture == GamePicture::BeastmenCrest);
+    settings.Widget(BarWidget::Conquest).conquestGrid = ConquestGrid::TwoByTwo;
     // Bastok alone: its name and count, and its regions in the popup.
     settings.Widget(BarWidget::Conquest).nations = NationBit(Nation::Bastok);
     CHECK_EQ(Joined(BarWidgetContent(BarWidget::Conquest, state, settings).title), "Bastok 2");
@@ -2370,6 +2568,32 @@ TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with
     // A combined pill whose first widget is switched off has its partner's popup alone.
     settings.Widget(BarWidget::Bags).on = false;
     CHECK(PanelPopupContent(BarWidget::Bags, state, settings) == gil);
+}
+
+TEST(a_combined_partner_can_leave_the_panel_or_the_popup_to_the_widget_it_follows)
+{
+    // Bags combined with a second Bags: the popup would list every bag twice.
+    Settings settings;
+    BarState state;
+    const PanelWidget second{BarWidget::Bags, 1};
+    settings.barSections[0].push_back(second);
+    settings.Widget(second).on               = true;
+    settings.Widget(BarWidget::Bags).combine = second;
+    const PopupContent bags = BarPopupContent(BarWidget::Bags, state, settings);
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
+    settings.Widget(BarWidget::Bags).combineInPopup = false;
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections == bags.sections);
+    CHECK(BarWidgetContent(second, state, settings).shown); // still on the panel
+    // On the panel the first alone, the partner's popup still joined.
+    settings.Widget(BarWidget::Bags).combineInPopup = true;
+    settings.Widget(BarWidget::Bags).combineOnPanel = false;
+    const WidgetContent hidden = BarWidgetContent(second, state, settings);
+    CHECK(!hidden.shown && hidden.hasPopup);
+    CHECK(BarWidgetContent(BarWidget::Bags, state, settings).shown);
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
+    // Not combined, the switches change nothing.
+    settings.Widget(BarWidget::Bags).combine.reset();
+    CHECK(BarWidgetContent(second, state, settings).shown);
 }
 
 TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)

@@ -115,9 +115,9 @@ namespace headsup
     std::string Shortest(const std::string& text, int characters);
 
     // Which popup is open. Hovering a widget that has one opens it; leaving both the widget and its popup, or the
-    // widget losing its popup, closes it, and the pointer crossing the gap between them does not. A left press on a
-    // widget pins its popup, or unpins it if it was pinned; a left press on the open popup toggles its pin too. While
-    // a popup is pinned, hovering another shows that one until the pointer leaves.
+    // widget losing its popup, closes it, and the pointer crossing the gap between them does not. Only a left press
+    // on the open popup's pin chip pins it, or unpins it if it was pinned. While a popup is pinned, hovering another
+    // shows that one until the pointer leaves.
     // A tab of one of the open popup's cards, where it was drawn on the screen: its key the card's heading.
     struct BarTabChip
     {
@@ -140,8 +140,9 @@ namespace headsup
     public:
         // Each frame: where the widgets are now and which have popups. A pinned widget that is gone loses its pin.
         void Frame(const BarLayout& layout, const std::array<bool, kPanelSlots>& hasPopup);
-        // Where the open popup was drawn, or an empty rectangle, its cards' tabs and the parts that scroll.
-        void SetPopup(const BarRect& popup, std::vector<BarTabChip> chips = {}, std::vector<BarScroll> scrolls = {});
+        // Where the open popup was drawn, or an empty rectangle, its cards' tabs, the parts that scroll and its pin chip.
+        void SetPopup(const BarRect& popup, std::vector<BarTabChip> chips = {}, std::vector<BarScroll> scrolls = {},
+            const BarRect& pin = {});
         // The wheel turned notches toward the player: true when the pointer, where it last moved, is over a part of the
         // popup that scrolls, which then scrolls kLinesPerNotch lines a notch, no further than its ends.
         bool Wheel(int notches);
@@ -189,6 +190,7 @@ namespace headsup
         std::vector<BarTabChip> m_Chips;
         std::map<std::string, std::string> m_Tabs;
         std::vector<BarScroll> m_Scrolls;
+        BarRect m_PinChip;
         struct Drag
         {
             std::string key;

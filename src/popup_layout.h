@@ -36,6 +36,9 @@ namespace headsup
             Item,       // a game item's picture, which the plugin serves
             ScrollTrack, // a scrolling socket's scrollbar, in its right padding
             ScrollThumb, // and the part of it its shown lines are
+            Picture,     // a picture from the game's files, as an icon is drawn
+            PinChip,     // the pin's chip, drawn as a tab's; open while pinned
+            PinWord,     // the word on it, drawn as text
         };
         Kind kind = Kind::Text;
         float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f; // from the popup's top-left corner
@@ -46,6 +49,7 @@ namespace headsup
         bool open      = false;         // Tab: picked
         bool right     = false;         // Text: drawn against its box's right, as a pair's value is
         uint16_t item  = 0;             // Item
+        GamePicture picture = GamePicture::None; // Picture
     };
 
     // Where a card's tab is, from the popup's top-left corner, to click: its key the card's heading.
@@ -81,6 +85,7 @@ namespace headsup
         std::vector<PopupLine> lines;   // top to bottom
         std::vector<PopupTabChip> chips;
         std::vector<PopupScroll> scrolls;
+        BarRect pin{}; // the pin chip, which a press pins or unpins the popup by; none in an empty popup
     };
 
     struct TextSize
@@ -95,8 +100,8 @@ namespace headsup
     // under the title, on the panel. A pair's value ends at its card's right edge. When the cards stacked would run
     // taller than kTwoColumnsAbove popup text sizes, they flow into two columns as even as their order allows, and
     // into more when two would run taller than room, a card too tall for it going on in the next under its heading.
-    // The pinned mark ("pinned", in the heading tone) sits at the top right when pinned. It is never narrower than
-    // least, its cards widening to fill it.
+    // The pin chip sits at the title row's top right: "pin", or lit and "pinned" while pinned. It is never narrower
+    // than least, its cards widening to fill it.
     constexpr float kTwoColumnsAbove = 24.0f;
     PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, BarShape shape, bool pinned,
                             SpanMeasure measure, float room = std::numeric_limits<float>::infinity(), float least = 0.0f);

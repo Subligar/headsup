@@ -86,6 +86,15 @@ namespace headsup
     constexpr PanelWidget WidgetInSlot(int slot) { return PanelWidget{static_cast<BarWidget>(slot / kMostCopies), slot % kMostCopies}; }
     // The target has one frame the bar gives way around, and game help a bar of its own: neither has copies.
     constexpr bool HasCopies(BarWidget widget) { return widget != BarWidget::Target && widget != BarWidget::GameHelp; }
+    // Which widgets have a second line, or icons, that Second Line or Icons switches off. The Zone, the Vana'diel
+    // Clock and the Target say what their lines and icons show with settings of their own.
+    constexpr bool HasSecondLine(BarWidget w)
+    {
+        return w != BarWidget::EarthTime && w != BarWidget::Fps && w != BarWidget::Connection && w != BarWidget::Distance &&
+               w != BarWidget::GameHelp && w != BarWidget::Exp && w != BarWidget::VanaTime && w != BarWidget::Target &&
+               w != BarWidget::Zone;
+    }
+    constexpr bool HasIcons(BarWidget w) { return w == BarWidget::Weather || w == BarWidget::Gil || w == BarWidget::World; }
 
     // Where a widget's second line goes when the bar is too short for two: nowhere, or beside its title.
     enum class SubtitlePlace : uint8_t

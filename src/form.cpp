@@ -36,6 +36,7 @@ namespace headsup
         constexpr uint32_t kRgbMoved    = 0b111; // the hex box sets the three
         constexpr int kChannelBits      = 8;
         constexpr const char* kTagIdStart = "tag-"; // a tag chip's id, the same on every page
+        constexpr const char* kSeveralClass = "several"; // a line's chip of several tags
 
         // An id's characters: letters and figures in lower case, anything else a hyphen, never two in a row.
         std::string Slug(std::string_view text)
@@ -67,6 +68,26 @@ namespace headsup
             return tip.empty() ? std::string() : std::string(" ") + kMenuTipAttribute + "=\"" + EscapedRml(tip) + "\"";
         }
         std::string TipAttribute(const char* tip) { return TipAttribute(std::string_view(tip != nullptr ? tip : "")); }
+
+        // A card's description: one line as it is, or each line under the last, one starting "- " as a bullet point.
+        std::string NoteRml(std::string_view about)
+        {
+            if (about.find('\n') == std::string_view::npos) return EscapedRml(std::string(about));
+            constexpr std::string_view kBulletStart = "- ";
+            std::string rml;
+            for (size_t start = 0; start <= about.size();)
+            {
+                const size_t end            = std::min(about.find('\n', start), about.size());
+                const std::string_view line = about.substr(start, end - start);
+                if (line.starts_with(kBulletStart))
+                    rml += "<div class=\"bullet\"><span class=\"dot\">\u2022</span>" +
+                           EscapedRml(std::string(line.substr(kBulletStart.size()))) + "</div>";
+                else if (!line.empty())
+                    rml += "<div>" + EscapedRml(std::string(line)) + "</div>";
+                start = end + 1;
+            }
+            return rml;
+        }
 
         // The step a float slider moves by: one of the last decimal its format shows.
         float StepOf(const char* format)
@@ -170,7 +191,7 @@ namespace headsup
         Out() += "</div>";
         if (!open) return false;
         Out() += "<div class=\"card-body\">";
-        if (about != nullptr && *about != '\0') Out() += "<div class=\"note\">" + EscapedRml(about) + "</div>";
+        if (about != nullptr && *about != '\0') Out() += "<div class=\"note\">" + NoteRml(about) + "</div>";
         return true;
     }
 
@@ -605,6 +626,50 @@ namespace headsup
         EndRow();
     }
 
+    void Form::BitsDropdown(const char* label, uint32_t& bits, std::span<const LayoutOption> options, const char* tip)
+    {
+        Row(label, tip);
+        const std::string control = Id(label);
+        const std::string start   = control + kOptionIdInfix;
+        const auto count          = static_cast<int>(options.size());
+        // Before the control is written, so its summary is what the click just made it.
+        if (m_State.popup == control && !m_Off)
+            for (const FormEvent& event : m_Events)
+            {
+                if (event.type != kClickEvent || event.id.compare(0, start.size(), start) != 0) continue;
+                const int option = std::atoi(event.id.c_str() + start.size());
+                if (option < 0 || option >= count) continue;
+                bits ^= 1u << option;
+                changed = true;
+            }
+        int picked        = 0;
+        const char* alone = nullptr;
+        for (int option = 0; option < count; ++option)
+            if ((bits & (1u << option)) != 0)
+            {
+                ++picked;
+                alone = options[static_cast<size_t>(option)].name;
+            }
+        const std::string summary = picked == count ? layout->WordOf(WindowWord::ChecksAll).name
+                                    : picked == 0   ? layout->WordOf(WindowWord::ChecksNone).name
+                                    : picked == 1   ? alone
+                                                    : Filled(layout->WordOf(WindowWord::ChecksPicked).name, kCountMark,
+                                                          std::to_string(picked));
+        if (ListControl(control, summary, kControlWidth))
+        {
+            std::string rml = "<div class=\"list\">";
+            for (int option = 0; option < count; ++option)
+            {
+                const std::string id = start + std::to_string(option);
+                rml += "<div class=\"opt chk\" id=\"" + id + "\"" + TipAttribute(options[static_cast<size_t>(option)].tip) +
+                       "><div class=\"dot\"></div>" + EscapedRml(options[static_cast<size_t>(option)].name) + "</div>";
+                Set(id, FormValueKind::Class, "on", {}, (bits & (1u << option)) != 0);
+            }
+            popup = FormPopup{control, rml + "</div>"};
+        }
+        EndRow();
+    }
+
     void Form::ChecksDropdown(const char* label, LineShow& show, std::span<const ShowCondition> conditions,
         const char* tip)
     {
@@ -783,24 +848,23 @@ namespace headsup
             return slot.size() == 1 ? chip : chip + kChipTagInfix + std::to_string(tag);
         }
 
-        // A line's slot as a chip: one tag is the chip, and several are parts of it, each dragged alone. A ghost is
-        // a faint one that shows where a held tag would go, and takes no drag.
+        // A line's slot as a chip: one tag is the chip, and several are parts of it, each dragged alone, which wraps
+        // within its line. A ghost is a faint one that shows where a held tag would go, and takes no drag. Neither has
+        // a tip: over a line it would hide the tags around it (the tags to pick from below keep theirs).
         std::string SlotMarkup(const WindowLayout& layout, const std::string& id, const TagSlot& slot, bool ghost = false)
         {
-            const auto tips = layout.OptionsOf(WindowList::Tags);
             const std::string chip = ghost ? std::string("btn accent chip ") + kGhostClass : "btn accent chip in";
             if (slot.size() == 1)
                 return TagMarkup(layout, id, slot.front(), (chip + (ghost ? "" : " drag") + (slot.front() == Tag::Break ? " break" : "")).c_str(),
-                    ghost ? nullptr : tips[static_cast<size_t>(slot.front())].tip);
-            const char* shared = layout.WordOf(WindowWord::SlotTip).tip;
+                    nullptr);
             std::string parts;
             for (size_t tag = 0; tag < slot.size(); ++tag)
             {
                 if (tag > 0) parts += "<div class=\"or\">" + EscapedRml(layout.WordOf(WindowWord::Or).name) + "</div>";
                 parts += TagMarkup(layout, TagIdOf(id, slot, static_cast<int>(tag)), slot[tag], ghost ? "part" : "part drag",
-                    ghost ? nullptr : shared);
+                    nullptr);
             }
-            return "<div class=\"" + chip + "\" id=\"" + id + "\"" + TipAttribute(ghost ? nullptr : shared) + ">" + parts + "</div>";
+            return "<div class=\"" + chip + " " + kSeveralClass + "\" id=\"" + id + "\">" + parts + "</div>";
         }
 
         // Where a chip can be let go in a line box: on the box, a stretch, a chip, or one tag of a chip of several.

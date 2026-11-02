@@ -258,6 +258,12 @@ TEST(a_crabs_tp_moves)
         moves.emplace_back(skill.name);
     for (const char* move : {"Bubble Shower", "Bubble Curtain", "Big Scissors", "Scissor Guard", "Metallic Body"})
         CHECK(std::ranges::find(moves, move) != moves.end());
+    // Metallic Body teaches blue magic 517 (Phoenix's sql/blue_spell_list.sql); Big Scissors teaches none.
+    for (const MobSkill& skill : SkillsOf(*clipper))
+    {
+        if (std::string(skill.name) == "Metallic Body") CHECK_EQ(skill.blueSpell, 517);
+        if (std::string(skill.name) == "Big Scissors") CHECK_EQ(skill.blueSpell, 0);
+    }
 }
 
 // Corse casts from its list (attohwa_chasm's template names spell list 1), each spell from its own level.

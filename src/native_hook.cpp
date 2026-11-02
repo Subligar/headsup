@@ -274,6 +274,9 @@ namespace headsup
         // greyed buttons, and the Direct3D calls made inside it are dropped.
         constexpr uint32_t kWindowDrawn = 0, kWindowSkipped = 1, kWindowSilent = 2;
         bool g_SilentDraw = false;  // inside a silenced window's draw
+        // While the game's fish bar is hidden, the party window's draw keeps only what lands in its own rectangle.
+        bool g_FishBarHidden = false, g_KeepInside = false;
+        WindowRect g_KeptWindow{};
         WindowKeyList g_HiddenKeys; // the windows the player hides
         // The rectangles of those that drew, in menu pixels: this frame's as they come, and the last whole frame's.
         std::array<WindowRect, kMaxWindowKeys> g_HiddenRects{}, g_ShownHiddenRects{};
@@ -751,6 +754,10 @@ namespace headsup
 
     bool WindowHook::Silent() { return g_SilentDraw; }
 
+    void WindowHook::HideFishBar(bool hide) { g_FishBarHidden = hide; }
+
+    std::optional<WindowRect> WindowHook::KeptWindow() { return g_KeepInside ? std::optional<WindowRect>{g_KeptWindow} : std::nullopt; }
+
     std::span<const WindowRect> WindowHook::HiddenRects() { return {g_ShownHiddenRects.data(), g_ShownHiddenRectCount}; }
 
     void WindowHook::NewFrame()
@@ -852,6 +859,28 @@ namespace headsup
         if (!InImage(base, Pointer(found.global), sizeof(uint16_t))) return "the weather is not in the game's image";
         m_Global = found.global;
         return "";
+    }
+
+    std::string FishReader::Find()
+    {
+        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
+        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
+        ImageSection text{};
+        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        const FishSite found = LocateFish(text);
+        if (found.problem != LocateProblem::None) return Describe(found.problem);
+        if (!InImage(base, Pointer(found.global), sizeof(uint32_t))) return "its pointer is not in the game's image";
+        m_Global = found.global;
+        return "";
+    }
+
+    std::optional<FishStamina> FishReader::Read() const
+    {
+        if (m_Global == 0) return std::nullopt;
+        const uint32_t fish = ReadAt<uint32_t>(Pointer(m_Global), 0);
+        if (fish == 0 || !Readable(Pointer(fish), kFishDrawnStamina + sizeof(int32_t))) return std::nullopt;
+        return FishStamina{ReadAt<int32_t>(Pointer(fish), kFishFullStamina), ReadAt<int32_t>(Pointer(fish), kFishStamina),
+            ReadAt<int32_t>(Pointer(fish), kFishDrawnStamina)};
     }
 
     std::string SearchAddressReader::Find()
@@ -1081,6 +1110,7 @@ namespace headsup
         // window in the game's menu space is noted; one the player picked goes down by the shift from that strip to
         // under the help bar, and one they gave an offset moves by it, through the game's own move.
         const WindowKey g_EquipKey = *KeyFromShortName("equip");
+        const WindowKey g_PartyKey = *KeyFromShortName("partywin");
 
         // The equipment window's figures, which its owner placed once, follow it from at to to.
         void MoveEquipNumbers(uint32_t owner, WindowSpot at, int width, int height, WindowSpot to)
@@ -1402,23 +1432,33 @@ namespace headsup
 extern "C" uint32_t HeadsUpOnWindowDraw(uint32_t mcd)
 {
     using namespace headsup;
-    if ((!g_HiddenWindows.Any() && !g_Placing && g_HiddenKeys.Size() == 0) || mcd == 0) return kWindowDrawn;
+    if ((!g_HiddenWindows.Any() && !g_Placing && g_HiddenKeys.Size() == 0 && !g_FishBarHidden) || mcd == 0) return kWindowDrawn;
     const uint32_t descriptor = *reinterpret_cast<const uint32_t*>(mcd + kWindowDescriptor);
     if (descriptor == 0) return kWindowDrawn;
     const auto* name = reinterpret_cast<const char*>(descriptor + kDescriptorName);
     if (g_Placing && g_WindowMoveTo != 0 && std::exchange(g_PlannedFrame, g_WindowFrame) != g_WindowFrame)
         PlaceFrame(false);
     if (SkipsWindow(name, g_HiddenWindows)) return kWindowSkipped;
-    if (g_HiddenKeys.Size() == 0) return kWindowDrawn;
     const std::optional<WindowKey> key = WindowKeyOf(name);
-    if (!key || !g_HiddenKeys.Has(*key)) return kWindowDrawn;
+    if (!key) return kWindowDrawn;
+    if (g_FishBarHidden && *key == g_PartyKey && !g_HiddenKeys.Has(*key))
+    {
+        std::memcpy(g_KeptWindow.data(), reinterpret_cast<const void*>(mcd + kMcdRect), kWindowRectBytes);
+        g_KeepInside = true;
+        return kWindowSilent;
+    }
+    if (!g_HiddenKeys.Has(*key)) return kWindowDrawn;
     if (g_HiddenRectCount < g_HiddenRects.size())
         std::memcpy(g_HiddenRects[g_HiddenRectCount++].data(), reinterpret_cast<const void*>(mcd + kMcdRect), kWindowRectBytes);
     g_SilentDraw = true;
     return kWindowSilent;
 }
 
-extern "C" void HeadsUpAfterWindowDraw() { headsup::g_SilentDraw = false; }
+extern "C" void HeadsUpAfterWindowDraw()
+{
+    headsup::g_SilentDraw = false;
+    headsup::g_KeepInside = false;
+}
 
 // On the game's stack, inside its name routine: nothing here may allocate, throw or call Ashita.
 extern "C" uint32_t HeadsUpOnName(uint32_t frame)
