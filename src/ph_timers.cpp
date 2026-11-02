@@ -38,6 +38,12 @@ namespace headsup
     void PhTimers::Died(double now, const PhSighting& mob)
     {
         if (!m_Earned.erase(mob.serverId) || mob.respawnSeconds == 0) return;
+        // An NM spawns in a placeholder's place, so its timer is theirs: one timer, not theirs left up beside it.
+        if (const MobRecord* nm = MobById(mob.serverId); nm != nullptr && nm->placeholders > 0)
+            std::erase_if(m_Timers, [&](const auto& entry) {
+                const MobRecord* ph = MobById(entry.first);
+                return ph != nullptr && ph->placeholderOf == mob.serverId;
+            });
         m_Timers[mob.serverId] = Timer{mob.serverId, mob.nmName,
             now - kDefeatMessageSeconds + kDeathToDespawnSeconds + static_cast<double>(mob.respawnSeconds)};
     }
