@@ -994,6 +994,27 @@ TEST(the_profiles_card_asks_the_plugin_to_use_make_rename_or_delete_a_profile)
     CHECK(w.state.profileDelete == "whatever" && w.settings == before);
 }
 
+TEST(with_saving_by_hand_save_and_revert_ask_the_plugin_only_while_something_is_unsaved)
+{
+    Window w;
+    w.state.page = Page::ConfigMenu;
+    CHECK(w.settings.autoSave);
+    w.readings.unsaved = true;
+    // Saving by itself, there is nothing to press.
+    w.Pass({{"configmenu-profiles-save-changes", kClickEvent, ""}, {"configmenu-profiles-revert-changes", kClickEvent, ""}});
+    CHECK(!w.state.saveRequested && !w.state.revertRequested);
+    w.Pass({{"configmenu-profiles-save-automatically", kClickEvent, ""}});
+    CHECK(!w.settings.autoSave);
+    w.Pass({{"configmenu-profiles-save-changes", kClickEvent, ""}});
+    CHECK(w.state.saveRequested);
+    w.Pass({{"configmenu-profiles-revert-changes", kClickEvent, ""}});
+    CHECK(w.state.revertRequested);
+    w.state.saveRequested = w.state.revertRequested = false;
+    w.readings.unsaved = false;
+    w.Pass({{"configmenu-profiles-save-changes", kClickEvent, ""}, {"configmenu-profiles-revert-changes", kClickEvent, ""}});
+    CHECK(!w.state.saveRequested && !w.state.revertRequested);
+}
+
 TEST(the_nameplate_fonts_lead_with_the_games_font_and_the_top_panels_leave_it_out)
 {
     Window w;

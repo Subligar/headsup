@@ -520,6 +520,16 @@
           "name": "Profiles",
           "description": "Each character uses a profile of settings, made from your settings the first time they log in. Characters can share a profile: a change on one shows on the other.",
           "settings": [
+            {"key": "save-automatically", "name": "Save Automatically", "tip": "Saves every change to your profile as you make it. Turn it off to try settings out: changes then last until you press Save, and Revert puts back what was saved. Default is on."},
+            {
+              "key": "save-changes",
+              "name": "Unsaved Changes",
+              "tip": "With Save Automatically off: Save writes your changes to the profile. Unsaved changes are lost when HeadsUp unloads, the game closes or you switch profile.",
+              "words": [
+                {"key": "save", "name": "Save"},
+                {"key": "revert", "name": "Revert", "tip": "Puts back the settings as they were last saved."}
+              ]
+            },
             {
               "key": "profile-files",
               "words": [

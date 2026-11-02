@@ -148,6 +148,7 @@ namespace headsup
     struct Settings
     {
         bool enabled       = true;
+        bool autoSave      = true; // off, changes wait for Save in the settings window, and Revert drops them
         int outlineThickness = 100; // percent of kOutlineUnitPx
         int outlineOpacity   = 60;  // percent
         bool outlineFadeIn   = false; // fainter with distance, down to almost nothing at the range

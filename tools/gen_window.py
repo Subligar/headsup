@@ -183,6 +183,7 @@ PIECES = Pieces(
             'panel-top', 'panel-bottom', 'panel-border', 'panel-outer', 'text', 'heading', 'tag-fill', 'tag-border',
             'tag-text', 'highlight')),
         'theme-files': Setting(unnamed=True, words={'save-as': True, 'name-hint': True, 'save': True, 'load': True}),
+        'save-automatically': Setting(), 'save-changes': Setting(words={'save': True, 'revert': True}),
         'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
         'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-text-size': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(

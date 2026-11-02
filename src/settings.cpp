@@ -32,7 +32,7 @@ namespace headsup
             bool Settings::*field;
         };
         constexpr const char* kEnabledKey = "enabled"; // in every file any build saved: what tells a file from none
-        constexpr BoolKey kBools[] = {{kEnabledKey, &Settings::enabled}, {"phTimers", &Settings::phTimers},
+        constexpr BoolKey kBools[] = {{kEnabledKey, &Settings::enabled}, {"autoSave", &Settings::autoSave}, {"phTimers", &Settings::phTimers},
             {"scaleWithDistance", &Settings::scaleWithDistance},
             // Not "countAccuracy": the switch's first builds wrote that key on by default, and it now starts off.
             {"fixPointer", &Settings::fixPointer}, {"countYourAccuracy", &Settings::countAccuracy}, {"showBar", &Settings::showBar},

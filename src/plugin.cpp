@@ -428,6 +428,7 @@ class HeadsUp final : public IPlugin
     std::vector<std::string> m_ProfileNames;     // the profiles folder's, as the Profiles card offers them
     std::string m_Profile;   // the profile in use; empty for the settings.ini of before profiles
     std::string m_Character; // the character logged in, empty before one is
+    bool m_AutoSaveWas = true; // Save Automatically as last saved or loaded
     headsup::CharacterProfiles m_CharacterProfiles;
     std::optional<std::string> m_CursorFileRead; // the File cursor read last, whether or not it was one
     std::string m_GameFontFailure;                // why the game's font could not be read; empty when it was
@@ -542,7 +543,7 @@ public:
 
     void Release(void) override
     {
-        if (m_SettingsChangedAt || m_SavedKeys.Unwritten()) SaveSettings();
+        SavePending();
         SetScreenshot(false);
         HoldGameKeys(false);
         m_AshitaCore->GetInputManager()->GetMouse()->RemoveCallback(kName);
@@ -635,8 +636,9 @@ public:
         }
         else if (args[1] == "on" || args[1] == "off")
         {
-            m_Settings.enabled = args[1] == "on";
-            SaveSettings();
+            m_Settings.enabled  = args[1] == "on";
+            m_SettingsChangedAt = Now();
+            SavePending();
             Print(std::string("HeadsUp ") + (m_Settings.enabled ? "on" : "off"));
         }
         else if (args[1] == "screenshot")
@@ -1027,6 +1029,7 @@ public:
                 .themeFiles       = &m_ThemeFiles,
                 .profiles         = &m_ProfileNames,
                 .profile          = &m_Profile,
+                .unsaved          = m_SettingsChangedAt.has_value(),
 #ifdef HEADSUP_DEV
                 .watching         = m_DrawDump.Watching(),
 #else
@@ -1066,13 +1069,21 @@ public:
             if (const std::optional<std::string> name = m_RmlMenu.TakeThemeLoad(); name && LoadTheme(*name))
                 m_SettingsChangedAt = now;
             if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
+            // The switch itself is always saved, so a profile keeps whether it saves by hand.
+            if (m_Settings.autoSave != std::exchange(m_AutoSaveWas, m_Settings.autoSave) || m_RmlMenu.TakeSaveRequest())
+                SaveSettings();
+            if (m_RmlMenu.TakeRevertRequest())
+            {
+                LoadSettings();
+                m_SettingsChangedAt = std::nullopt;
+            }
             if (const std::optional<std::string> name = m_RmlMenu.TakeProfileUse(); name && ProfilesOn()) UseProfile(*name);
             if (const std::optional<std::string> name = m_RmlMenu.TakeProfileNew(); name && ProfilesOn()) NewProfile(*name);
             if (const std::optional<std::string> name = m_RmlMenu.TakeProfileRename(); name && ProfilesOn())
                 RenameCurrentProfile(*name);
             if (const std::optional<std::string> name = m_RmlMenu.TakeProfileDelete(); name && ProfilesOn()) DeleteProfile(*name);
         }
-        if (headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
+        if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
         UpdatePointer();
         HoldGameKeys(m_Rml.WantsText());
         m_NameHook.NewFrame(NameOwners());
@@ -2307,9 +2318,10 @@ private:
         if (!out.flush()) Print("could not write " + std::string(headsup::kCharactersFile) + "; profiles are picked again next time.");
     }
 
+    // What changed, written while Save Automatically is on; off, it waits for Save.
     void SavePending()
     {
-        if (m_SettingsChangedAt || m_SavedKeys.Unwritten()) SaveSettings();
+        if (m_Settings.autoSave && (m_SettingsChangedAt || m_SavedKeys.Unwritten())) SaveSettings();
     }
 
     // Your settings now written as a profile of this name, over nothing: false when it is there already or the
@@ -2399,7 +2411,8 @@ private:
         m_OfferSetup = GetFileAttributesA(file.c_str()) == INVALID_FILE_ATTRIBUTES;
         if (!config->Load(kConfigAlias, SettingsPath().c_str()) && !m_OfferSetup)
             Print("could not read " + file + "; using the defaults, which a change in the menu will write into that file");
-        m_Settings = m_SavedKeys.Load();
+        m_Settings    = m_SavedKeys.Load();
+        m_AutoSaveWas = m_Settings.autoSave;
         if (m_SavedKeys.Outdated()) m_SettingsChangedAt = Now();
     }
 

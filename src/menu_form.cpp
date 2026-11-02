@@ -1667,6 +1667,22 @@ namespace headsup
             case SettingPiece::ThemePalette: ThemePalette(c, e); break;
             case SettingPiece::ThemeFiles: ThemeFiles(c); break;
             case SettingPiece::ProfileFiles: ProfileFiles(c); break;
+            case SettingPiece::SaveAutomatically:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.autoSave, tip);
+                break;
+            case SettingPiece::SaveChanges:
+            {
+                const bool pending = !s.autoSave && r.unsaved;
+                form.Fade(!pending);
+                form.Row(label.c_str(), tip);
+                if (form.Button(Word(c, WindowWord::SaveChangesSave), "save changes") && pending) c.state.saveRequested = true;
+                if (form.Button(Word(c, WindowWord::SaveChangesRevert), "revert changes", kRaisedPill,
+                        WordTip(c, WindowWord::SaveChangesRevert)) && pending)
+                    c.state.revertRequested = true;
+                form.EndRow();
+                break;
+            }
             case SettingPiece::HideGameHelp:
                 form.Fade(!on);
                 form.Switch(label.c_str(), s.hideHelpBar, tip);

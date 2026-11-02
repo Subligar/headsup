@@ -36,6 +36,7 @@ namespace headsup
         const std::vector<std::string>* themeFiles  = nullptr; // the themes folder's, the same way
         const std::vector<std::string>* profiles    = nullptr; // the profiles folder's, the same way
         const std::string* profile = nullptr; // the profile in use, empty while the old settings.ini is
+        bool unsaved = false; // changes not yet in the file
         std::optional<bool> watching;            // whether the debug watch runs; none in a build without one
         const std::string* lastReport = nullptr; // the file the last report went to, empty before one
         const std::string* logFile    = nullptr; // the file notes go to, empty before one
@@ -85,6 +86,7 @@ namespace headsup
         std::string themeName;   // typed to save the Custom theme under
         std::string themePicked; // the saved theme picked to load
         std::optional<std::string> themeSave, themeLoad; // what the plugin is to write or read in, once
+        bool saveRequested = false, revertRequested = false; // by hand: write the changes, or drop them
         bool profilesRequested = false; // the list of profiles was opened: the profiles folder is to be read again
         std::string profileName;   // typed for a new profile, or the one in use's new name
         std::string profilePicked; // the profile picked in the list
