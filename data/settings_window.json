@@ -1003,6 +1003,7 @@
         {"name": "Owner", "tip": "Shows the name of the pet's owner."},
         {"name": "Title", "tip": "Shows the player's title. NOTE: Only shows after you use /check on the player."},
         {"name": "Job & Level", "tip": "Shows both the job and level when known. If only level is known, displays 'Level X' where 'X' is the level. If both are known, it displays 'X JOB/SUB'. If neither are known, shows nothing."},
+        {"name": "Subjob Level", "tip": "Shows the level of the player's subjob (example: 37) once HeadsUp knows it: from your party, a check, or Look Up Players. Put it after Job to read as WAR/NIN 37."},
         {"name": "Line Break", "tip": "Puts what follows on a row of its own under the rest of the line, in the line's own style. Press Enter in a line to make one."}
       ]
     },

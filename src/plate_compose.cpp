@@ -54,6 +54,7 @@ namespace headsup
             case Tag::Ph:
             case Tag::Job:
             case Tag::JobLevel:
+            case Tag::SubLevel:
             case Tag::Owner:
             case Tag::Title:
                 return true;
@@ -111,6 +112,10 @@ namespace headsup
                 return IsPlayer(info) && info.jobs && info.jobs->mainJob != 0 ? JobText(*info.jobs) : std::string();
             case Tag::Title:
                 return IsPlayer(info) ? TitleName(info.title) : std::string();
+            case Tag::SubLevel:
+                return IsPlayer(info) && info.jobs && info.jobs->subJob != 0 && info.jobs->subLevel != 0
+                           ? std::to_string(info.jobs->subLevel)
+                           : std::string();
             case Tag::JobLevel:
             {
                 if (!IsPlayer(info) || !info.jobs) return {};

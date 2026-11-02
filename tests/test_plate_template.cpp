@@ -327,7 +327,7 @@ TEST(every_tag_is_offered_and_each_kind_lists_its_chips_in_order)
                                            Tag::Detect, Tag::Weak, Tag::Resist, Tag::Status, Tag::Immune}));
     CHECK((TagsFor(PlateKind::Players) == std::vector<Tag>{Tag::Name, Tag::Gm, Tag::Mentor, Tag::New, Tag::Sync, Tag::Away,
                                               Tag::Linkshell, Tag::Bazaar, Tag::Seeking, Tag::Job, Tag::Level, Tag::JobLevel,
-                                              Tag::Title}));
+                                              Tag::SubLevel, Tag::Title}));
 }
 
 TEST(a_line_break_is_a_tag_that_shares_no_slot)
