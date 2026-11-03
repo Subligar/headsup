@@ -1538,11 +1538,17 @@ namespace headsup
                     fogs = fogs || chance.weather == Weather::None || chance.weather == Weather::Sunshine ||
                            chance.weather == Weather::Clouds;
             }
-            // Phoenix's notes in a column at the right, a line beside each day from the first.
+            // Phoenix's notes in a narrow column at the right, a line beside each day from the first, a blank line
+            // between two notes.
             std::vector<std::string> notes;
+            const auto note = [&notes](std::string first, std::string second) {
+                if (!notes.empty()) notes.emplace_back();
+                notes.push_back(std::move(first));
+                notes.push_back(std::move(second));
+            };
             // One weather on every day (Phoenix's static zones: Promyvion, Temenos): rolling again changes nothing.
-            if (!oneWeather) notes.emplace_back("Phoenix rolls the weather again every 3 to 30 Earth minutes.");
-            if (fogs) notes.emplace_back("From 2:00 to 7:00, outside towns, Phoenix turns sunshine and clouds into fog.");
+            if (!oneWeather) note("Phoenix rolls the weather again", "every 3 to 30 Earth minutes.");
+            if (fogs) note("From 2:00 to 7:00 outside towns,", "sunshine and clouds turn to fog.");
             const int columns = kForecastColumns + (notes.empty() ? 0 : 1);
             PopupRow grid     = Grid(columns, kForecastDays * columns);
             for (int d = 0; d < kForecastDays; ++d)
@@ -1566,7 +1572,9 @@ namespace headsup
                     grid.cells.push_back(std::move(weather));
                 }
                 if (!notes.empty())
-                    grid.cells.push_back(static_cast<size_t>(d) < notes.size() ? Cell(Text(notes[d], Tone::Dim)) : PopupCell{});
+                    grid.cells.push_back(static_cast<size_t>(d) < notes.size() && !notes[d].empty()
+                                             ? Cell(Text(notes[d], Tone::Dim))
+                                             : PopupCell{});
             }
             // Zone 0 is the data's "unknown": the heading names no zone for it.
             const ZoneRecord* zone = state.zone != 0 ? ZoneById(state.zone) : nullptr;

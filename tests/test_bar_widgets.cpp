@@ -743,10 +743,14 @@ TEST(the_reroll_note_is_in_earth_minutes_and_left_out_where_the_weather_never_ch
     const PopupContent dunes = BarPopupContent(BarWidget::Weather, state, settings);
     const PopupRow& grid     = Forecast(dunes)->rows[0];
     CHECK_EQ(Forecast(dunes)->rows.size(), static_cast<size_t>(1)); // the notes beside the days, not under them
-    CHECK(Joined(grid.cells[4].text) == "Phoenix rolls the weather again every 3 to 30 Earth minutes.");
+    // Each note on two short lines beside the days, a blank line between them, so the column stays narrow.
+    CHECK(Joined(grid.cells[4].text) == "Phoenix rolls the weather again");
+    CHECK(Joined(grid.cells[9].text) == "every 3 to 30 Earth minutes.");
+    CHECK(grid.cells[14].text.empty());
     // Phoenix's UpdateWeather turns a roll of no weather, sunshine or clouds into fog from 2:00 to 7:00 outside towns.
-    CHECK(Joined(grid.cells[9].text) == "From 2:00 to 7:00, outside towns, Phoenix turns sunshine and clouds into fog.");
-    CHECK(grid.cells[4].text.front().tone == Tone::Dim && grid.cells[14].text.empty());
+    CHECK(Joined(grid.cells[19].text) == "From 2:00 to 7:00 outside towns,");
+    CHECK(Joined(grid.cells[24].text) == "sunshine and clouds turn to fog.");
+    CHECK(grid.cells[4].text.front().tone == Tone::Dim && grid.cells[24].text.front().tone == Tone::Dim);
     state.zone = 37;
     const PopupContent temenos   = BarPopupContent(BarWidget::Weather, state, settings);
     const PopupSection* forecast = Forecast(temenos);
