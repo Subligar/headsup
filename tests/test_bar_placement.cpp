@@ -147,35 +147,35 @@ namespace
 
 TEST(a_combined_widget_leaves_its_place_for_one_right_after_the_widget_it_is_combined_with)
 {
-    BarPlacement p{List{BarWidget::Zone, BarWidget::Weather}, List{BarWidget::Target}, List{BarWidget::Gil, BarWidget::Conquest}};
-    const PanelGroups g = Combine(p, Links({{BarWidget::Zone, BarWidget::Conquest}}));
-    CHECK(In(g.placement, kLeft) == (List{BarWidget::Zone, BarWidget::Conquest, BarWidget::Weather}));
+    BarPlacement p{List{BarWidget::Zone, BarWidget::Weather}, List{BarWidget::Target}, List{BarWidget::Gil, BarWidget::Party}};
+    const PanelGroups g = Combine(p, Links({{BarWidget::Zone, BarWidget::Party}}));
+    CHECK(In(g.placement, kLeft) == (List{BarWidget::Zone, BarWidget::Party, BarWidget::Weather}));
     CHECK(In(g.placement, kRight) == (List{BarWidget::Gil}));
-    CHECK(g.group[SlotOf(BarWidget::Conquest)] == PanelWidget{BarWidget::Zone});
+    CHECK(g.group[SlotOf(BarWidget::Party)] == PanelWidget{BarWidget::Zone});
     CHECK(g.group[SlotOf(BarWidget::Zone)] == PanelWidget{BarWidget::Zone});
     CHECK(g.group[SlotOf(BarWidget::Weather)] == PanelWidget{BarWidget::Weather});
-    CHECK(Members(g, BarWidget::Zone) == (List{BarWidget::Zone, BarWidget::Conquest}));
+    CHECK(Members(g, BarWidget::Zone) == (List{BarWidget::Zone, BarWidget::Party}));
     CHECK(Members(g, BarWidget::Gil) == (List{BarWidget::Gil}));
 }
 
 TEST(combined_widgets_chain_and_copies_combine_like_any_widget)
 {
     const PanelWidget world2{BarWidget::World, 1};
-    BarPlacement p{List{BarWidget::Zone, BarWidget::Weather, world2}, List{}, List{BarWidget::Conquest}};
-    const PanelGroups g = Combine(p, Links({{BarWidget::Zone, BarWidget::Conquest}, {BarWidget::Conquest, world2}}));
-    CHECK(In(g.placement, kLeft) == (List{BarWidget::Zone, BarWidget::Conquest, world2, BarWidget::Weather}));
+    BarPlacement p{List{BarWidget::Zone, BarWidget::Weather, world2}, List{}, List{BarWidget::Party}};
+    const PanelGroups g = Combine(p, Links({{BarWidget::Zone, BarWidget::Party}, {BarWidget::Party, world2}}));
+    CHECK(In(g.placement, kLeft) == (List{BarWidget::Zone, BarWidget::Party, world2, BarWidget::Weather}));
     CHECK(g.group[SlotOf(world2)] == PanelWidget{BarWidget::Zone});
 }
 
 TEST(a_link_that_would_close_a_ring_or_pull_a_widget_twice_is_dropped)
 {
-    BarPlacement p{List{BarWidget::Zone, BarWidget::Weather, BarWidget::Conquest}, List{}, List{}};
+    BarPlacement p{List{BarWidget::Zone, BarWidget::Weather, BarWidget::Party}, List{}, List{}};
     // Zone pulls Conquest; Conquest pulling Zone back would leave neither a place.
-    const PanelGroups ring = Combine(p, Links({{BarWidget::Zone, BarWidget::Conquest}, {BarWidget::Conquest, BarWidget::Zone}}));
-    CHECK(In(ring.placement, kLeft) == (List{BarWidget::Zone, BarWidget::Conquest, BarWidget::Weather}));
+    const PanelGroups ring = Combine(p, Links({{BarWidget::Zone, BarWidget::Party}, {BarWidget::Party, BarWidget::Zone}}));
+    CHECK(In(ring.placement, kLeft) == (List{BarWidget::Zone, BarWidget::Party, BarWidget::Weather}));
     // Weather asks for Conquest too: the lower slot, Zone, has it.
-    const PanelGroups twice = Combine(p, Links({{BarWidget::Weather, BarWidget::Conquest}, {BarWidget::Zone, BarWidget::Conquest}}));
-    CHECK(In(twice.placement, kLeft) == (List{BarWidget::Zone, BarWidget::Conquest, BarWidget::Weather}));
+    const PanelGroups twice = Combine(p, Links({{BarWidget::Weather, BarWidget::Party}, {BarWidget::Zone, BarWidget::Party}}));
+    CHECK(In(twice.placement, kLeft) == (List{BarWidget::Zone, BarWidget::Party, BarWidget::Weather}));
 }
 
 TEST(the_target_an_unplaced_copy_and_a_widget_itself_never_combine)
@@ -191,7 +191,7 @@ TEST(the_target_an_unplaced_copy_and_a_widget_itself_never_combine)
 
 TEST(a_combined_widget_names_its_partner_as_the_settings_file_does)
 {
-    CHECK(PanelWidgetNamed("conquest") == std::optional<PanelWidget>(BarWidget::Conquest));
+    CHECK(PanelWidgetNamed("party") == std::optional<PanelWidget>(BarWidget::Party));
     CHECK(PanelWidgetNamed("world:3") == std::optional<PanelWidget>(PanelWidget{BarWidget::World, 2}));
     CHECK(!PanelWidgetNamed("") && !PanelWidgetNamed("target:2") && !PanelWidgetNamed("nothing"));
 }

@@ -73,7 +73,7 @@ namespace headsup
         int textSize    = kPanelTextSize; // its title's, or the panel's
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
-        uint8_t nations = kAllNations;              // Conquest: whose regions it counts, by NationBit
+        uint8_t nations = kAllNations;              // World Info's conquest: whose regions it counts, by NationBit
         ConquestGrid conquestGrid = ConquestGrid::TwoByTwo; // and how several are laid out
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         bool clock24         = true;                // its two lines

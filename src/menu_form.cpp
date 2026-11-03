@@ -604,14 +604,15 @@ namespace headsup
                             [](int currency) { return std::string(kCurrencyTable[currency].name); }, row.tip);
                     break;
                 case WidgetTabsRow::Nations:
-                    if (kind == BarWidget::Conquest)
+                    if (kind == BarWidget::World &&
+                        (o.worldLine == WorldLine::Conquest || (o.worldSections & WorldBit(WorldSection::Conquest)) != 0))
                     {
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Nations));
                         form.Toggles(label.c_str(), o.nations, names.data(), kContenderNations, row.tip);
                     }
                     break;
                 case WidgetTabsRow::ConquestGrid:
-                    if (kind == BarWidget::Conquest)
+                    if (kind == BarWidget::World && o.worldLine == WorldLine::Conquest)
                     {
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ConquestGrid));
                         form.Segments(label.c_str(), o.conquestGrid, names.data(), kConquestGridCount, row.tip);

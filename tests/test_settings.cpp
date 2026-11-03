@@ -290,7 +290,6 @@ barParty=true
 barSignet=true
 barMemory=true
 barExp=true
-barConquest=true
 barWorld=true
 barZoneLine2=true
 barZoneIcons=true
@@ -339,7 +338,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barLatency=true
-barLeft=zone weather vanaTime job exp party signet conquest world
+barLeft=zone weather vanaTime job exp party signet world
 barCenter=
 barRight=target gil bags connection memory fps earthTime
 hideHelpBar=true
@@ -1119,7 +1118,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
         "barEarthTime", "barGameHelp", "barFps", "barJob", "barConnection", "barParty", "barSignet", "barMemory",
-        "barExp", "barConquest", "barWorld"}; // in BarWidget's order
+        "barExp", "barWorld"}; // in BarWidget's order
     static_assert(std::size(widgetKeys) == kBarWidgetCount);
     for (int w = 0; w < kBarWidgetCount; ++w)
     {
@@ -2789,23 +2788,23 @@ TEST(a_combined_widget_is_kept_by_its_partners_name_and_loses_a_partner_taken_of
     Settings s;
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Bags);
     CHECK(copy.has_value());
-    s.Widget(BarWidget::Zone).combine    = PanelWidget{BarWidget::Conquest};
+    s.Widget(BarWidget::Zone).combine    = PanelWidget{BarWidget::Party};
     s.Widget(BarWidget::Weather).combine = *copy;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(store.values["barZoneCombine"], "conquest");
+    CHECK_EQ(store.values["barZoneCombine"], "party");
     CHECK_EQ(store.values["barWeatherCombine"], "bags:2");
     CHECK_EQ(store.values["barGilCombine"], "");
     const Settings read = LoadSettings(store);
-    CHECK(read.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Conquest));
+    CHECK(read.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Party));
     CHECK(read.Widget(BarWidget::Weather).combine == copy);
-    CHECK(Members(Panel(read), BarWidget::Zone) == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Conquest}));
+    CHECK(Members(Panel(read), BarWidget::Zone) == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Party}));
     store.values["barZoneCombine"] = "nothing";
     CHECK(!LoadSettings(store).Widget(BarWidget::Zone).combine);
     // A copy taken off leaves nothing combined with it, so one put back is not.
     RemoveWidgetCopy(s, *copy);
     CHECK(!s.Widget(BarWidget::Weather).combine);
-    CHECK(s.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Conquest));
+    CHECK(s.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Party));
 }
 
 TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_taken)
@@ -2822,11 +2821,11 @@ TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_tak
             if (w != PanelWidget{BarWidget::Zone} && w.kind != BarWidget::Target) all.push_back(w);
     CHECK(CombineChoices(s, BarWidget::Zone) == all);
     CHECK(CombineChoices(s, BarWidget::Target).empty());
-    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Conquest};
-    CHECK(offers(BarWidget::Zone, BarWidget::Conquest));     // its own pick
-    CHECK(!offers(BarWidget::Weather, BarWidget::Conquest)); // Zone has it
-    CHECK(!offers(BarWidget::Conquest, BarWidget::Zone));    // a ring
-    CHECK(offers(BarWidget::Conquest, BarWidget::Weather));
+    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Party};
+    CHECK(offers(BarWidget::Zone, BarWidget::Party));     // its own pick
+    CHECK(!offers(BarWidget::Weather, BarWidget::Party)); // Zone has it
+    CHECK(!offers(BarWidget::Party, BarWidget::Zone));    // a ring
+    CHECK(offers(BarWidget::Party, BarWidget::Weather));
 }
 
 TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_range)

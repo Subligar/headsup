@@ -85,6 +85,16 @@ namespace
         return lines;
     }
 
+    // World Info's Conquest card, and the lines of its picked tab.
+    const PopupSection& ConquestCard(const PopupContent& popup)
+    {
+        return *std::ranges::find(popup.sections, std::string("Conquest"), &PopupSection::heading);
+    }
+    std::vector<std::string> TabLines(const PopupSection& card)
+    {
+        return Lines(PopupSection{"", card.tabs.at(card.tab).rows});
+    }
+
     std::vector<std::string> TagsOf(const PopupContent& popup)
     {
         std::vector<std::string> tags;
@@ -2220,12 +2230,13 @@ TEST(a_targeted_players_jobs_show_from_whatever_knows_them_unless_switched_off)
     CHECK_EQ(BarWidgetContent(BarWidget::Target, state, settings).subtitle.front().text, "? ? ?");
 }
 
-TEST(the_conquest_widget_counts_the_regions_of_the_nations_picked_and_its_popup_names_them)
+TEST(world_info_shows_conquest_info_counting_the_regions_of_the_nations_picked_and_its_popup_names_them)
 {
     Settings settings;
     BarState state;
-    settings.Widget(BarWidget::Conquest).on = true;
-    CHECK_EQ(Joined(BarWidgetContent(BarWidget::Conquest, state, settings).title), "-"); // before the standings come
+    settings.Widget(BarWidget::World).on        = true;
+    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
+    CHECK_EQ(Joined(BarWidgetContent(BarWidget::World, state, settings).title), "-"); // before the standings come
     RegionOwners owners{};
     owners.fill(Nation::Beastmen);
     owners[0] = Nation::SanDoria;                         // Ronfaure
@@ -2234,23 +2245,23 @@ TEST(the_conquest_widget_counts_the_regions_of_the_nations_picked_and_its_popup_
     owners[18] = Nation::None;
     state.owners = owners;
     // Two by two, in lined-up columns, each its crest and count: San d'Oria and Bastok over Windurst and the beastmen.
-    const WidgetContent all = BarWidgetContent(BarWidget::Conquest, state, settings);
+    const WidgetContent all = BarWidgetContent(BarWidget::World, state, settings);
     CHECK(all.cells && all.title.size() == 2 && all.subtitle.size() == 2);
     CHECK(all.title[0].text == " 1" && all.title[1].text == " 2" && all.subtitle[0].text == " 1" && all.subtitle[1].text == " 14");
     CHECK(all.title[0].picture == GamePicture::SanDoriaCrest && all.title[1].picture == GamePicture::BastokCrest &&
           all.subtitle[0].picture == GamePicture::WindurstCrest && all.subtitle[1].picture == GamePicture::BeastmenCrest);
     CHECK(all.title[1].argb == NationColor(Nation::Bastok) && all.hasPopup);
     // Or all four on one line.
-    settings.Widget(BarWidget::Conquest).conquestGrid = ConquestGrid::OneByFour;
-    const WidgetContent row = BarWidgetContent(BarWidget::Conquest, state, settings);
+    settings.Widget(BarWidget::World).conquestGrid = ConquestGrid::OneByFour;
+    const WidgetContent row = BarWidgetContent(BarWidget::World, state, settings);
     CHECK(row.cells && row.title.size() == 4 && row.subtitle.empty() && row.title[3].picture == GamePicture::BeastmenCrest);
-    settings.Widget(BarWidget::Conquest).conquestGrid = ConquestGrid::TwoByTwo;
+    settings.Widget(BarWidget::World).conquestGrid = ConquestGrid::TwoByTwo;
     // Bastok alone: its name and count, and its regions in the popup.
-    settings.Widget(BarWidget::Conquest).nations = NationBit(Nation::Bastok);
-    CHECK_EQ(Joined(BarWidgetContent(BarWidget::Conquest, state, settings).title), "Bastok 2");
-    const PopupContent popup = BarPopupContent(BarWidget::Conquest, state, settings);
-    CHECK(popup.sections.size() == 1 && popup.sections[0].heading == "Bastok");
-    CHECK(Lines(popup.sections[0]) == (std::vector<std::string>{"Gustaberg", "Derfland"}));
+    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
+    CHECK_EQ(Joined(BarWidgetContent(BarWidget::World, state, settings).title), "Bastok 2");
+    const PopupSection card = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
+    CHECK(card.tabs.size() == 1 && card.tabs[0].name.text == "Bastok");
+    CHECK(TabLines(card) == (std::vector<std::string>{"Gustaberg", "Derfland"}));
 }
 
 TEST(the_bags_popup_always_lists_storage_and_never_the_temporary_items)
@@ -2278,46 +2289,49 @@ TEST(the_bags_popup_always_lists_storage_and_never_the_temporary_items)
         CHECK(BagChoices()[static_cast<size_t>(choice)] != 3);
 }
 
-TEST(the_conquest_popup_marks_your_nations_regions_without_a_supply_run)
+TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
 {
     Settings settings;
-    settings.Widget(BarWidget::Conquest).on = true;
+    settings.Widget(BarWidget::World).on        = true;
+    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
     BarState state;
     RegionOwners owners{};
     owners[3] = owners[4] = Nation::Bastok; // Gustaberg and Derfland
     state.owners = owners;
     state.nation = Nation::Bastok;
-    settings.Widget(BarWidget::Conquest).nations = NationBit(Nation::Bastok);
+    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
     // Before an overseer has told: one line says how to learn them.
     OutpostRuns runs;
     state.outposts = &runs;
-    std::vector<std::string> lines = Lines(BarPopupContent(BarWidget::Conquest, state, settings).sections[0]);
+    std::vector<std::string> lines = TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings)));
     CHECK(lines.size() == 3 && lines[0] == "Gustaberg" && lines[2].find("overseer") != std::string::npos);
     // Told by Bastok's overseer that Gustaberg's was run: Derfland is marked, Gustaberg is not.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
-    lines = Lines(BarPopupContent(BarWidget::Conquest, state, settings).sections[0]);
+    lines = TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings)));
     CHECK((lines == std::vector<std::string>{"Gustaberg", "Derfland · no supply run"}));
     // Another nation's regions are not yours to run supplies to.
-    settings.Widget(BarWidget::Conquest).nations = kAllNations;
+    settings.Widget(BarWidget::World).nations = kAllNations;
     owners[0] = Nation::SanDoria;
     state.owners = owners;
-    const PopupContent all = BarPopupContent(BarWidget::Conquest, state, settings);
-    CHECK((Lines(all.sections[0]) == std::vector<std::string>{"Ronfaure"}));
+    const PopupSection all = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
+    CHECK(all.tabs.size() == 4 && all.tabs[0].name.text == "San d'Oria");
+    CHECK((TabLines(all) == std::vector<std::string>{"Ronfaure"}));
 }
 
 TEST(two_nations_picked_are_one_line_of_two_cells_and_one_is_its_name_over_the_widgets)
 {
     Settings settings;
-    settings.Widget(BarWidget::Conquest).on = true;
+    settings.Widget(BarWidget::World).on        = true;
+    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
     BarState state;
     RegionOwners owners{};
     owners[3] = Nation::Bastok;
     state.owners = owners;
-    settings.Widget(BarWidget::Conquest).nations = NationBit(Nation::Bastok) | NationBit(Nation::Windurst);
-    const WidgetContent two = BarWidgetContent(BarWidget::Conquest, state, settings);
+    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok) | NationBit(Nation::Windurst);
+    const WidgetContent two = BarWidgetContent(BarWidget::World, state, settings);
     CHECK(two.cells && two.title.size() == 2 && two.subtitle.empty());
-    settings.Widget(BarWidget::Conquest).nations = NationBit(Nation::Bastok);
-    const WidgetContent one = BarWidgetContent(BarWidget::Conquest, state, settings);
+    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
+    const WidgetContent one = BarWidgetContent(BarWidget::World, state, settings);
     CHECK(!one.cells && Joined(one.title) == "Bastok 1" && Joined(one.subtitle) == "Conquest");
 }
 
@@ -2387,10 +2401,10 @@ TEST(the_world_info_popup_has_the_parts_you_picked)
             out.push_back(section.heading);
         return out;
     };
-    CHECK((headings() == std::vector<std::string>{"Travel", "Calendar", "Guilds"}));
-    // The calendar beside the ships, Guilds under both; without the ships it stands alone.
+    CHECK((headings() == std::vector<std::string>{"Travel", "Calendar", "Guilds", "Conquest"}));
+    // The calendar beside the ships, Guilds and Conquest under both; without the ships it stands alone.
     const PopupContent all = BarPopupContent(BarWidget::World, state, settings);
-    CHECK(!all.sections[0].beside && all.sections[1].beside && !all.sections[2].beside);
+    CHECK(!all.sections[0].beside && all.sections[1].beside && !all.sections[2].beside && !all.sections[3].beside);
     settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Calendar) | WorldBit(WorldSection::Guilds);
     CHECK(!BarPopupContent(BarWidget::World, state, settings).sections[0].beside);
     settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Calendar);
@@ -2616,10 +2630,24 @@ TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)
 {
     Settings settings;
     settings.Widget(BarWidget::Zone).on       = true;
-    settings.Widget(BarWidget::Conquest).on   = true;
-    settings.Widget(BarWidget::Zone).combine  = PanelWidget{BarWidget::Conquest};
+    settings.Widget(BarWidget::World).on      = true;
+    settings.Widget(BarWidget::Zone).combine  = PanelWidget{BarWidget::World};
     settings.Widget(BarWidget::Gil).combine   = PanelWidget{BarWidget::Bags};
     CHECK(NeedsOf(settings, BarWidget::Zone).conquest);
     CHECK(NeedsOf(settings, BarWidget::Gil).containers == kContainerCount);
     CHECK(!NeedsOf(settings, BarWidget::Weather).conquest);
+}
+
+TEST(the_standings_are_asked_for_while_the_zone_or_a_world_info_showing_conquest_info_is_on_the_panel)
+{
+    Settings settings;
+    settings.Widget(BarWidget::Zone).on  = false;
+    settings.Widget(BarWidget::World).on = true;
+    CHECK(!StandingsShown(settings)); // its next ship
+    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
+    CHECK(StandingsShown(settings));
+    settings.Widget(BarWidget::World).on = false;
+    CHECK(!StandingsShown(settings));
+    settings.Widget(BarWidget::Zone).on = true;
+    CHECK(StandingsShown(settings));
 }

@@ -104,10 +104,12 @@ namespace headsup
         bool memory     = false;
         bool cpu        = false;
         bool linuxxi    = false;
-        bool conquest   = false; // your nation and supply runs, for the Conquest popup
+        bool conquest   = false; // your nation and supply runs, for World Info's conquest
         int containers = 0; // bags from 0 up to this
     };
     BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open);
+    // Whether the panel shows the conquest standings: the Zone widget, or a World Info showing Conquest Info.
+    bool StandingsShown(const Settings& settings);
     // Whether the open popup shows a widget's: its own, or a combined pill's with that widget in it.
     bool PopupShows(const Settings& settings, std::optional<PanelWidget> open, BarWidget widget);
 

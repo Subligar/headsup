@@ -191,7 +191,7 @@ namespace headsup
         constexpr const char* kWorldElementKey  = "barWorldElement";
         constexpr const char* kWorldGuildKey    = "barWorldGuild";
         constexpr const char* kWorldSectionsKey = "barWorldSections";
-        const char* const kWorldLineNames[kWorldLineCount] = {"departure", "weather", "guild", "rse", "moon"};
+        const char* const kWorldLineNames[kWorldLineCount] = {"departure", "weather", "guild", "rse", "moon", "conquest"};
         constexpr const char* kClockServerTimeKey = "clockServerTime";
         // Server time was a widget of its own, with this switch.
         constexpr const char* kServerTimeWidgetKey = "barServerTime";
@@ -255,7 +255,7 @@ namespace headsup
         const char* const kBarSeparatorsNames[kBarSeparatorsCount] = {"theme", "diamonds", "none"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
             "barEarthTime", "barGameHelp", "barFps", "barJob", "barConnection", "barParty", "barSignet", "barMemory",
-            "barExp", "barConquest", "barWorld"};
+            "barExp", "barWorld"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1344,13 +1344,11 @@ namespace headsup
                 if (const std::optional<int> currency = CurrencyOfKey(text(kBarCurrencyKey))) o.currency = *currency;
                 break;
             case BarWidget::Bags: o.bag = number(kBarBagKey, o.bag); break;
-            case BarWidget::Conquest:
+            case BarWidget::World:
+            {
                 o.nations = static_cast<uint8_t>(std::clamp(number(kBarNationsKey, o.nations), 0, static_cast<int>(kAllNations)));
                 o.conquestGrid = static_cast<ConquestGrid>(
                     std::clamp(number(kConquestGridKey, static_cast<int>(o.conquestGrid)), 0, kConquestGridCount - 1));
-                break;
-            case BarWidget::World:
-            {
                 const std::string line = text(kWorldLineKey), route = text(kWorldRouteKey), guild = text(kWorldGuildKey);
                 const std::string element = text(kWorldElementKey);
                 for (int l = 0; l < kWorldLineCount; ++l)
@@ -1453,11 +1451,9 @@ namespace headsup
             {
             case BarWidget::Gil: text(kBarCurrencyKey, kCurrencyTable[o.currency].key); break;
             case BarWidget::Bags: StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag)); break;
-            case BarWidget::Conquest:
+            case BarWidget::World:
                 StoreFloat(store, CopyKey(kBarNationsKey, w), static_cast<float>(o.nations));
                 StoreFloat(store, CopyKey(kConquestGridKey, w), static_cast<float>(o.conquestGrid));
-                break;
-            case BarWidget::World:
                 text(kWorldLineKey, kWorldLineNames[static_cast<int>(o.worldLine)]);
                 text(kWorldRouteKey, TravelRoutes()[static_cast<size_t>(o.worldRoute)].name);
                 text(kWorldElementKey, ElementName(o.worldElement));

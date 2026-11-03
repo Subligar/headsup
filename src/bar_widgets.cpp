@@ -827,8 +827,41 @@ namespace headsup
             return here;
         }
 
+        // How many regions each picked nation holds: a nation alone by its name; several by their crests, each count
+        // in its color, two to a line in columns.
+        WidgetContent ConquestCounts(const BarState& state, const WidgetOptions& o)
+        {
+            WidgetContent w;
+            w.shown    = true;
+            w.subtitle = ListOf(Text("Conquest", Tone::Dim));
+            w.hasPopup = true;
+            if (!state.owners)
+            {
+                w.title = ListOf(Text("-"));
+                return w;
+            }
+            const std::vector<Nation> picked = PickedNations(o.nations);
+            w.cells = picked.size() > 1; // its counts alone, without its name under them
+            if (w.cells) w.subtitle.clear();
+            constexpr size_t kTwoByTwo = 2; // nations a line
+            const size_t perLine = o.conquestGrid == ConquestGrid::OneByFour ? picked.size() : kTwoByTwo;
+            for (size_t i = 0; i < picked.size(); ++i)
+            {
+                const Nation nation = picked[i];
+                const std::string regions = std::to_string(std::ranges::count(*state.owners, nation));
+                Span count = Colored(picked.size() == 1 ? std::string(NationName(nation)) + " " + regions : " " + regions,
+                    NationColor(nation));
+                if (picked.size() > 1) count.picture = NationCrest(nation);
+                (i < perLine ? w.title : w.subtitle).push_back(count);
+            }
+            if (w.title.empty()) w.title = ListOf(Text("-"));
+            w.figures = true;
+            return w;
+        }
+
         WidgetContent WorldWidget(const BarState& state, const WidgetOptions& o)
         {
+            if (o.worldLine == WorldLine::Conquest) return ConquestCounts(state, o);
             WidgetContent w;
             w.shown    = true;
             w.hasPopup = true;
@@ -877,6 +910,7 @@ namespace headsup
                                          Countdown(SecondsToDay(state.unixMs, fullFirst ? full : fresh))));
                 break;
             }
+            case WorldLine::Conquest: break; // ConquestCounts, above
             }
             for (Span& span : w.subtitle)
                 span.tone = Tone::Dim;
@@ -1035,6 +1069,45 @@ namespace headsup
             return rows;
         }
 
+        // The regions each picked nation holds, a tab each. Your nation's say which outposts you have not run supplies to,
+        // as far as overseers told.
+        PopupSection ConquestSection(const BarState& state, const WidgetOptions& o)
+        {
+            PopupSection conquest{"Conquest", {}};
+            if (!state.owners)
+            {
+                conquest.rows.push_back(LineOf("The standings show once the server sends them.", Tone::Dim));
+                return conquest;
+            }
+            for (const Nation nation : PickedNations(o.nations))
+            {
+                const bool yours = state.nation == nation && state.outposts != nullptr;
+                bool unknown     = false;
+                PopupTab held{Colored(NationName(nation), NationColor(nation)), {}};
+                for (int region = 0; region < kConquestRegionCount; ++region)
+                {
+                    if ((*state.owners)[region] != nation) continue;
+                    const auto r                  = static_cast<uint8_t>(region);
+                    const std::optional<bool> ran = yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true);
+                    unknown = unknown || !ran;
+                    if (ran == false)
+                        held.rows.push_back(Line(Cell(ListOf(Text(std::string(RegionName(r))), Text(kDot, Tone::Dim),
+                            Text("no supply run", Tone::Dim)))));
+                    else
+                        held.rows.push_back(LineOf(std::string(RegionName(r))));
+                }
+                if (held.rows.empty()) held.rows.push_back(LineOf("None", Tone::Dim));
+                if (unknown)
+                    held.rows.push_back(LineOf("Talk to a conquest overseer in your nation's city to see your supply runs.", Tone::Dim));
+                for (PopupRow& row : held.rows)
+                    row.nested = true;
+                ScrollsBy(held.rows.front(), state, conquest.heading + "/" + held.name.text);
+                conquest.tabs.push_back(std::move(held));
+            }
+            conquest.tab = Picked(state, conquest);
+            return conquest;
+        }
+
         PopupContent WorldPopup(const BarState& state, const WidgetOptions& o)
         {
             PopupContent popup;
@@ -1118,6 +1191,7 @@ namespace headsup
                 guilds.tab = Picked(state, guilds);
                 popup.sections.push_back(std::move(guilds));
             }
+            if (picked(WorldSection::Conquest)) popup.sections.push_back(ConquestSection(state, o));
             return popup;
         }
 
@@ -1170,6 +1244,16 @@ namespace headsup
         return std::nullopt;
     }
 
+    bool StandingsShown(const Settings& settings)
+    {
+        if (Shown(settings, BarWidget::Zone)) return true;
+        for (int copy = 0; copy < kMostCopies; ++copy)
+            if (const PanelWidget world{BarWidget::World, copy};
+                Shows(settings, world) && settings.Widget(world).worldLine == WorldLine::Conquest)
+                return true;
+        return false;
+    }
+
     bool PopupShows(const Settings& settings, std::optional<PanelWidget> open, BarWidget widget)
     {
         if (!open) return false;
@@ -1207,7 +1291,7 @@ namespace headsup
         needs.gil        = shown(BarWidget::Gil);
         needs.strip      = shown(BarWidget::GameHelp);
         const bool memoryPopup = opened(BarWidget::Memory);
-        needs.conquest   = opened(BarWidget::Conquest);
+        needs.conquest   = opened(BarWidget::World);
         needs.frames     = shown(BarWidget::Fps) || memoryPopup;
         needs.job        = shown(BarWidget::Job) || shown(BarWidget::Exp);
         needs.connection = shown(BarWidget::Connection);
@@ -1420,34 +1504,6 @@ namespace headsup
             return JobWidget(state.job, o.expBar, o.jobNames, o.jobLayout, o.expText);
         case BarWidget::Exp:
             return ExpWidget(state.job, o.expPlaces, o.expBarWidth, o.expBarHeight, o.expAlign);
-        case BarWidget::Conquest:
-        {
-            w.subtitle = ListOf(Text("Conquest", Tone::Dim));
-            w.hasPopup = true;
-            if (!state.owners)
-            {
-                w.title = ListOf(Text("-"));
-                break;
-            }
-            // A nation alone by its name; several by their crests, each count in its color, two to a line in columns.
-            const std::vector<Nation> picked = PickedNations(o.nations);
-            w.cells = picked.size() > 1; // its counts alone, without its name under them
-            if (w.cells) w.subtitle.clear();
-            constexpr size_t kTwoByTwo = 2; // nations a line
-            const size_t perLine = o.conquestGrid == ConquestGrid::OneByFour ? picked.size() : kTwoByTwo;
-            for (size_t i = 0; i < picked.size(); ++i)
-            {
-                const Nation nation = picked[i];
-                const std::string regions = std::to_string(std::ranges::count(*state.owners, nation));
-                Span count = Colored(picked.size() == 1 ? std::string(NationName(nation)) + " " + regions : " " + regions,
-                    NationColor(nation));
-                if (picked.size() > 1) count.picture = NationCrest(nation);
-                (i < perLine ? w.title : w.subtitle).push_back(count);
-            }
-            if (w.title.empty()) w.title = ListOf(Text("-"));
-            w.figures = true;
-            break;
-        }
         case BarWidget::Connection:
             return ConnectionWidget(state.connection, o.latency, o.netMeter);
         case BarWidget::Party:
@@ -1645,39 +1701,6 @@ namespace headsup
         case BarWidget::Job:
         case BarWidget::Exp:
             return JobPopup(state.job);
-        case BarWidget::Conquest:
-        {
-            popup.title = ListOf(Text("Conquest"));
-            if (!state.owners)
-            {
-                popup.sections = ListOf(PopupSection{"", ListOf(LineOf("The standings show once the server sends them.", Tone::Dim))});
-                break;
-            }
-            for (const Nation nation : PickedNations(o.nations))
-            {
-                // Your nation's regions say which outposts you have not run supplies to, as far as overseers told.
-                const bool yours = state.nation == nation && state.outposts != nullptr;
-                bool unknown     = false;
-                PopupSection held{NationName(nation), {}};
-                for (int region = 0; region < kConquestRegionCount; ++region)
-                {
-                    if ((*state.owners)[region] != nation) continue;
-                    const auto r              = static_cast<uint8_t>(region);
-                    const std::optional<bool> ran = yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true);
-                    unknown = unknown || !ran;
-                    if (ran == false)
-                        held.rows.push_back(Line(Cell(ListOf(Text(std::string(RegionName(r))), Text(kDot, Tone::Dim),
-                            Text("no supply run", Tone::Dim)))));
-                    else
-                        held.rows.push_back(LineOf(std::string(RegionName(r))));
-                }
-                if (held.rows.empty()) held.rows.push_back(LineOf("None", Tone::Dim));
-                if (unknown)
-                    held.rows.push_back(LineOf("Talk to a conquest overseer in your nation's city to see your supply runs.", Tone::Dim));
-                popup.sections.push_back(std::move(held));
-            }
-            break;
-        }
         case BarWidget::Connection:
             return ConnectionPopup(state.connection);
         case BarWidget::Party:
