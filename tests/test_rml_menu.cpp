@@ -63,8 +63,11 @@ namespace
     class Window
     {
     public:
+        // Where the panel's popup leaves room for its settings, right of the window.
+        static constexpr float kSettingsX = 1440.0f, kSettingsY = 60.0f, kSettingsHeight = 900.0f;
         Settings settings;
         RmlMenu menu;
+        std::optional<PanelWidget> shown; // the pill whose popup shows its settings, as the panel's input keeps it
         std::vector<uint8_t> held; // the keys that are down, by their virtual-key codes
 
         explicit Window(BarTheme theme = BarTheme::PhoenixGold, const char* font = kBarlowCondensed)
@@ -95,16 +98,28 @@ namespace
             for (int i = 0; i < count; ++i)
             {
                 m_Rml.complaints.seconds += kFrameSeconds;
+                // As the plugin does: the panel's popup shows a placed pill's settings, at the room they took last.
+                if (shown && !Placed(settings.barSections, *shown)) shown.reset();
+                m_Readings.settingsOf = shown ? Members(Panel(settings), *shown) : std::vector<PanelWidget>{};
+                const std::optional<SettingsRoom> room = menu.RoomFor(m_Readings.settingsOf, settings);
+                menu.settingsAt = room ? std::optional(BarRect{kSettingsX, kSettingsY, room->width, kSettingsHeight}) : std::nullopt;
                 changed = menu.Update(m_Host, settings, m_Readings, m_Fonts, kVersion) || changed;
+                if (const std::optional<PanelWidget> asked = menu.TakeSettingsAsked())
+                {
+                    const PanelWidget pill = Panel(settings).group[SlotOf(*asked)];
+                    shown = shown == pill ? std::nullopt : std::optional(pill);
+                }
                 m_Host.context->Update();
                 m_Host.context->Render();
             }
             return changed;
         }
+        // In the window, or the settings over the panel's popup.
         Rml::Element* Find(const std::string& id)
         {
-            Rml::ElementDocument* document = m_Host.context->GetDocument(0);
-            return document != nullptr ? document->GetElementById(id) : nullptr;
+            for (int i = 0; i < m_Host.context->GetNumDocuments(); ++i)
+                if (Rml::Element* found = m_Host.context->GetDocument(i)->GetElementById(id)) return found;
+            return nullptr;
         }
         bool Shows(const std::string& id)
         {
@@ -1266,6 +1281,24 @@ TEST(the_window_is_kept_where_it_is_dragged_by_its_title)
     CHECK_EQ(window.settings.menuX, static_cast<int>((test::RmlSession::kWidth - window.settings.menuWidth) / 2) - 120);
 }
 
+TEST(the_window_goes_partly_off_the_screen_but_keeps_a_fifth_of_it_and_its_title_on)
+{
+    Window window;
+    window.Frames(30);
+    CHECK(window.Drag("head", Rml::Vector2f(-5000.0f, -5000.0f)));
+    const int width = window.settings.menuWidth;
+    CHECK(width > 0);
+    CHECK_EQ(window.settings.menuX, -static_cast<int>(std::lround(width * 0.8f))); // a fifth of it left on
+    CHECK_EQ(window.settings.menuY, 0); // its title never goes off the top
+    CHECK(window.Drag("head", Rml::Vector2f(10000.0f, 10000.0f)));
+    CHECK_EQ(window.settings.menuX, static_cast<int>(test::RmlSession::kWidth) - static_cast<int>(std::lround(width * 0.2f)));
+    // A place kept from a larger screen comes back with the same share on this one.
+    window.OpenAt(-9000, 9000, width, window.settings.menuHeight);
+    const Rml::Vector2f at = window.Find("title")->GetOwnerDocument()->GetAbsoluteOffset(Rml::BoxArea::Border);
+    CHECK_EQ(static_cast<int>(at.x), -static_cast<int>(std::lround(width * 0.8f)));
+    CHECK_EQ(static_cast<int>(at.y), static_cast<int>(test::RmlSession::kHeight) - static_cast<int>(std::lround(window.settings.menuHeight * 0.2f)));
+}
+
 TEST(the_window_moves_from_its_very_top_edge_and_corner)
 {
     Window window;
@@ -1865,19 +1898,50 @@ TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
 {
     Window window;
     window.Page("widgets");
-    const PanelWidget copy{BarWidget::Gil, 1};
-    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil)));
+    const PanelWidget copy{BarWidget::Currency, 1};
+    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)));
     CHECK(!window.Shows("widgets-widgets-remove-copy-gil"));
-    CHECK(window.Click("widgets-widgets-clone-gil"));
+    CHECK(window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)) + "-clone"));
     CHECK(Placed(window.settings.barSections, copy));
     CHECK(window.Shows("widgets-layout-chip-" + std::to_string(SlotOf(copy))));
     // The clone's settings show at once: a currency picked there is the clone's.
     CHECK(window.Shows("widgets-widgets-remove-copy-gil-2"));
     window.Click("widgets-widgets-currency-gil-2");
     CHECK(window.Click("widgets-widgets-currency-gil-2-o-1"));
-    CHECK(window.settings.Widget(copy).currency == 1 && window.settings.Widget(BarWidget::Gil).currency == kGilCurrency);
+    CHECK(window.settings.Widget(copy).currency == 1 && window.settings.Widget(BarWidget::Currency).currency == kGilCurrency);
     CHECK(window.Click("widgets-widgets-remove-copy-gil-2"));
     CHECK(!Placed(window.settings.barSections, copy));
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_second_click_takes_them_away)
+{
+    Window window;
+    window.Page("widgets");
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
+    CHECK(!window.Shows("widgets-widgets-currency-gil"));
+    window.Click(chip);
+    CHECK(window.shown == BarWidget::Currency && window.Shows("widgets-widgets-currency-gil"));
+    CHECK(window.Find(chip)->IsClassSet("picked"));
+    // In a document of their own over the popup's room, as wide as it and no wider, which say how tall they are.
+    Rml::Element* view = window.Find(kMenuViewBodyId);
+    CHECK(view->GetOwnerDocument() != window.Find(chip)->GetOwnerDocument());
+    CHECK(view->GetAbsoluteOffset(Rml::BoxArea::Border) == Rml::Vector2f(Window::kSettingsX, Window::kSettingsY));
+    const std::optional<SettingsRoom> room = window.menu.RoomFor({BarWidget::Currency}, window.settings);
+    CHECK(room && std::fabs(view->GetBox().GetSize(Rml::BoxArea::Border).x - room->width) < 0.5f);
+    CHECK(room->height > 0.0f && room->height == std::ceil(view->GetFirstChild()->GetBox().GetSize(Rml::BoxArea::Border).y));
+    CHECK(!window.menu.RoomFor({BarWidget::Zone}, window.settings)->height);
+    // With the window closed they work on, their dropdown too.
+    window.menu.open = false;
+    window.Frames(2);
+    CHECK(!window.Shows(chip) && window.Shows("widgets-widgets-currency-gil"));
+    window.Click("widgets-widgets-currency-gil");
+    CHECK(window.Click("widgets-widgets-currency-gil-o-1"));
+    CHECK(window.settings.Widget(BarWidget::Currency).currency == 1);
+    window.menu.open = true;
+    window.Frames(2);
+    window.Click(chip);
+    CHECK(!window.shown && !window.Shows("widgets-widgets-currency-gil"));
     CHECK_EQ(window.Said(), "");
 }
 

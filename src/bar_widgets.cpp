@@ -3,6 +3,7 @@
 #include "argb.h"
 #include "bar_game_help.h"
 #include "bar_job.h"
+#include "bar_look.h"
 #include "bar_server_time.h"
 #include "npcdata.h"
 #include "ph_timers.h"
@@ -14,6 +15,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <span>
 #include <string_view>
@@ -827,8 +829,102 @@ namespace headsup
             return here;
         }
 
+        // How many regions each picked nation holds: a nation alone by its name; several by their crests, each count
+        // in its color, two to a line in columns.
+        WidgetContent ConquestCounts(const BarState& state, const WidgetOptions& o)
+        {
+            WidgetContent w;
+            w.shown    = true;
+            w.subtitle = ListOf(Text("Conquest", Tone::Dim));
+            w.hasPopup = true;
+            if (!state.owners)
+            {
+                w.title = ListOf(Text("-"));
+                return w;
+            }
+            const std::vector<Nation> picked = PickedNations(o.nations);
+            w.cells = picked.size() > 1; // its counts alone, without its name under them
+            if (w.cells) w.subtitle.clear();
+            constexpr size_t kTwoByTwo = 2; // nations a line
+            const size_t perLine = o.conquestGrid == ConquestGrid::OneByFour ? picked.size() : kTwoByTwo;
+            for (size_t i = 0; i < picked.size(); ++i)
+            {
+                const Nation nation = picked[i];
+                const std::string regions = std::to_string(std::ranges::count(*state.owners, nation));
+                Span count = Colored(picked.size() == 1 ? std::string(NationName(nation)) + " " + regions : " " + regions,
+                    NationColor(nation));
+                if (picked.size() > 1) count.picture = NationCrest(nation);
+                (i < perLine ? w.title : w.subtitle).push_back(count);
+            }
+            if (w.title.empty()) w.title = ListOf(Text("-"));
+            w.figures = true;
+            return w;
+        }
+
+        constexpr const char* kFavoritePress = "favorite "; // a currency's star tells this, then the currency's key
+
+        std::optional<int> NationPoints(Nation nation)
+        {
+            if (nation < Nation::SanDoria || nation > Nation::Windurst) return std::nullopt;
+            return kConquestPointsFirst + static_cast<int>(nation) - static_cast<int>(Nation::SanDoria);
+        }
+
+        // The favorites as currencies, each once; your nation's conquest points once your nation is known.
+        std::vector<int> FavoriteCurrencies(const std::vector<std::string>& keys, Nation nation)
+        {
+            std::vector<int> out;
+            for (const std::string& key : keys)
+                if (const std::optional<int> c = key == kYourConquestPoints ? NationPoints(nation) : CurrencyOfKey(key);
+                    c && std::ranges::find(out, *c) == out.end())
+                    out.push_back(*c);
+            return out;
+        }
+
+        // The parts of PerfPart that are the connection's.
+        constexpr uint8_t kConnectionParts = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received) |
+                                             PerfBit(PerfPart::Percent) | PerfBit(PerfPart::Ping) |
+                                             PerfBit(PerfPart::Messages);
+
+        // The frame rate, the connection and the memory, each part picked on one line.
+        WidgetContent PerformanceWidget(const BarState& state, uint8_t parts)
+        {
+            WidgetContent w;
+            w.shown    = true;
+            w.hasPopup = true;
+            w.figures  = true;
+            if ((parts & PerfBit(PerfPart::Fps)) != 0) AddPart(w.title, FpsWidget(state.frames).title);
+            if (const uint8_t net = parts & kConnectionParts; net != 0)
+                AddPart(w.title, ConnectionWidget(state.connection, net).title);
+            if ((parts & PerfBit(PerfPart::Memory)) != 0)
+            {
+                std::vector<Span> memory = ListOf(Text("Mem ", Tone::Dim));
+                for (Span& span : MemoryWidget(state.memory).title)
+                    memory.push_back(std::move(span));
+                AddPart(w.title, std::move(memory));
+            }
+            if (w.title.empty()) w.title = ListOf(Text("-"));
+            return w;
+        }
+
+        // The Connection and Memory popups' cards, each first card under its popup's title.
+        PopupContent PerformancePopup(const BarState& state)
+        {
+            PopupContent popup;
+            popup.title = ListOf(Text("Performance"));
+            for (PopupContent part : {ConnectionPopup(state.connection),
+                     MemoryPopup(state.memory, state.cpuPercent, state.frames, state.linuxxi)})
+            {
+                if (!part.sections.empty() && part.sections.front().heading.empty())
+                    part.sections.front().heading = part.title.front().text;
+                for (PopupSection& section : part.sections)
+                    popup.sections.push_back(std::move(section));
+            }
+            return popup;
+        }
+
         WidgetContent WorldWidget(const BarState& state, const WidgetOptions& o)
         {
+            if (o.worldLine == WorldLine::Conquest) return ConquestCounts(state, o);
             WidgetContent w;
             w.shown    = true;
             w.hasPopup = true;
@@ -877,6 +973,7 @@ namespace headsup
                                          Countdown(SecondsToDay(state.unixMs, fullFirst ? full : fresh))));
                 break;
             }
+            case WorldLine::Conquest: break; // ConquestCounts, above
             }
             for (Span& span : w.subtitle)
                 span.tone = Tone::Dim;
@@ -1035,6 +1132,105 @@ namespace headsup
             return rows;
         }
 
+        // The favorites at the top, then every currency in a scrolling list sorted as its tab says, each with a star
+        // that adds it to the favorites or takes it off.
+        PopupContent CurrencyPopup(const BarState& state, const Settings& settings)
+        {
+            PopupContent popup;
+            popup.title = ListOf(Text("Currencies"));
+            const auto amount = [&](int c) { return c == kGilCurrency ? state.gil : state.currencies[c]; };
+            const std::vector<int> favorites = FavoriteCurrencies(settings.currencyFavorites, state.nation.value_or(Nation::None));
+            const auto add = [&](PopupRow& grid, int c) {
+                const bool favorite = std::ranges::find(favorites, c) != favorites.end();
+                PopupCell star;
+                star.icon  = favorite ? Icon::Star : Icon::StarEmpty;
+                star.tint  = favorite ? Colored("", kStarColor) : Text("", Tone::Dim);
+                star.press = kFavoritePress + std::string(kCurrencyTable[c].key);
+                grid.cells.push_back(std::move(star));
+                grid.cells.push_back(Cell(Text(kCurrencyTable[c].name)));
+                const std::optional<uint32_t> held = amount(c);
+                PopupCell value = Cell(held ? Text(Grouped(*held)) : Text("-", Tone::Dim));
+                value.align     = Align::Right;
+                grid.cells.push_back(std::move(value));
+            };
+            constexpr int kColumns = 3; // the star, the name and the amount
+            PopupSection top{"Favorites", {}};
+            if (favorites.empty())
+                top.rows.push_back(LineOf("Click a currency's star to keep it here.", Tone::Dim));
+            else
+            {
+                PopupRow grid = Grid(kColumns, favorites.size() * kColumns);
+                for (const int c : favorites)
+                    add(grid, c);
+                top.rows.push_back(std::move(grid));
+            }
+            PopupSection all{"All Currencies", {}};
+            if (std::ranges::none_of(state.currencies, [](const std::optional<uint32_t>& a) { return a.has_value(); }))
+                all.rows.push_back(LineOf("Their amounts show once the server sends them.", Tone::Dim));
+            std::vector<int> order(kCurrencyCount);
+            for (int c = 0; c < kCurrencyCount; ++c)
+                order[static_cast<size_t>(c)] = c;
+            const auto byName = [](int a, int b) { return std::string_view(kCurrencyTable[a].name) < kCurrencyTable[b].name; };
+            for (const bool byAmount : {true, false})
+            {
+                // Most first, those held alike by name.
+                std::ranges::sort(order, [&](int a, int b) {
+                    const uint32_t x = amount(a).value_or(0), y = amount(b).value_or(0);
+                    return byAmount && x != y ? x > y : byName(a, b);
+                });
+                PopupTab tab{Text(byAmount ? "By Amount" : "Alphabetically"), {}};
+                PopupRow grid = Grid(kColumns, order.size() * kColumns);
+                for (const int c : order)
+                    add(grid, c);
+                grid.nested = true;
+                tab.rows.push_back(std::move(grid));
+                ScrollsBy(tab.rows.front(), state, all.heading + "/" + tab.name.text);
+                all.tabs.push_back(std::move(tab));
+            }
+            all.tab        = Picked(state, all);
+            popup.sections = ListOf(std::move(top), std::move(all));
+            return popup;
+        }
+
+        // The regions each picked nation holds, a tab each. Your nation's say which outposts you have not run supplies to,
+        // as far as overseers told.
+        PopupSection ConquestSection(const BarState& state, const WidgetOptions& o)
+        {
+            PopupSection conquest{"Conquest", {}};
+            if (!state.owners)
+            {
+                conquest.rows.push_back(LineOf("The standings show once the server sends them.", Tone::Dim));
+                return conquest;
+            }
+            for (const Nation nation : PickedNations(o.nations))
+            {
+                const bool yours = state.nation == nation && state.outposts != nullptr;
+                bool unknown     = false;
+                PopupTab held{Colored(NationName(nation), NationColor(nation)), {}};
+                for (int region = 0; region < kConquestRegionCount; ++region)
+                {
+                    if ((*state.owners)[region] != nation) continue;
+                    const auto r                  = static_cast<uint8_t>(region);
+                    const std::optional<bool> ran = yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true);
+                    unknown = unknown || !ran;
+                    if (ran == false)
+                        held.rows.push_back(Line(Cell(ListOf(Text(std::string(RegionName(r))), Text(kDot, Tone::Dim),
+                            Text("no supply run", Tone::Dim)))));
+                    else
+                        held.rows.push_back(LineOf(std::string(RegionName(r))));
+                }
+                if (held.rows.empty()) held.rows.push_back(LineOf("None", Tone::Dim));
+                if (unknown)
+                    held.rows.push_back(LineOf("Talk to a conquest overseer in your nation's city to see your supply runs.", Tone::Dim));
+                for (PopupRow& row : held.rows)
+                    row.nested = true;
+                ScrollsBy(held.rows.front(), state, conquest.heading + "/" + held.name.text);
+                conquest.tabs.push_back(std::move(held));
+            }
+            conquest.tab = Picked(state, conquest);
+            return conquest;
+        }
+
         PopupContent WorldPopup(const BarState& state, const WidgetOptions& o)
         {
             PopupContent popup;
@@ -1118,6 +1314,7 @@ namespace headsup
                 guilds.tab = Picked(state, guilds);
                 popup.sections.push_back(std::move(guilds));
             }
+            if (picked(WorldSection::Conquest)) popup.sections.push_back(ConquestSection(state, o));
             return popup;
         }
 
@@ -1170,6 +1367,57 @@ namespace headsup
         return std::nullopt;
     }
 
+    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
+    {
+        // A status's star or pin; a status taken off the favorites leaves the panel too, as only they have pins.
+        for (const std::string_view kind : {kStatusFavoritePress, kStatusPinPress})
+        {
+            if (!press.starts_with(kind)) continue;
+            const std::string number(press.substr(kind.size()));
+            char* end           = nullptr;
+            const unsigned long id = std::strtoul(number.c_str(), &end, 10);
+            if (number.empty() || *end != '\0' || id > UINT16_MAX || *StatusName(static_cast<uint16_t>(id)) == '\0')
+                return false;
+            const auto status = static_cast<uint16_t>(id);
+            std::vector<uint16_t>& list = kind == kStatusPinPress ? settings.statusPins : settings.statusFavorites;
+            if (const auto at = std::ranges::find(list, status); at != list.end())
+            {
+                list.erase(at);
+                if (kind == kStatusFavoritePress) std::erase(settings.statusPins, status);
+            }
+            else
+                list.push_back(status);
+            return true;
+        }
+        if (!press.starts_with(kFavoritePress)) return false;
+        const std::string key(press.substr(std::string_view(kFavoritePress).size()));
+        if (!CurrencyOfKey(key)) return false;
+        // Your nation's points by their own key once it is known, so its star takes them off.
+        std::vector<std::string> favorites;
+        for (const std::string& held : settings.currencyFavorites)
+        {
+            const std::optional<int> yours = held == kYourConquestPoints ? NationPoints(nation) : std::nullopt;
+            std::string named = yours ? kCurrencyTable[*yours].key : held;
+            if (std::ranges::find(favorites, named) == favorites.end()) favorites.push_back(std::move(named));
+        }
+        if (const auto at = std::ranges::find(favorites, key); at != favorites.end())
+            favorites.erase(at);
+        else
+            favorites.push_back(key);
+        settings.currencyFavorites = std::move(favorites);
+        return true;
+    }
+
+    bool StandingsShown(const Settings& settings)
+    {
+        if (Shown(settings, BarWidget::Zone)) return true;
+        for (int copy = 0; copy < kMostCopies; ++copy)
+            if (const PanelWidget world{BarWidget::World, copy};
+                Shows(settings, world) && settings.Widget(world).worldLine == WorldLine::Conquest)
+                return true;
+        return false;
+    }
+
     bool PopupShows(const Settings& settings, std::optional<PanelWidget> open, BarWidget widget)
     {
         if (!open) return false;
@@ -1201,21 +1449,25 @@ namespace headsup
                            shown(BarWidget::World) || opened(BarWidget::EarthTime) ||
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
         needs.localTime  = localClock;
-        needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather) || worldWeather ||
-                     opened(BarWidget::Signet); // the popup says where it works
-        needs.target     = shown(BarWidget::Target) || shown(BarWidget::Distance);
-        needs.gil        = shown(BarWidget::Gil);
+        needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather) || worldWeather;
+        needs.target     = shown(BarWidget::Target);
+        needs.gil        = shown(BarWidget::Currency);
         needs.strip      = shown(BarWidget::GameHelp);
-        const bool memoryPopup = opened(BarWidget::Memory);
-        needs.conquest   = opened(BarWidget::Conquest);
-        needs.frames     = shown(BarWidget::Fps) || memoryPopup;
-        needs.job        = shown(BarWidget::Job) || shown(BarWidget::Exp);
-        needs.connection = shown(BarWidget::Connection);
+        // The Performance widget reads what its copies show on the panel, and everything for its popup.
+        uint8_t perf = 0;
+        for (int copy = 0; copy < kMostCopies; ++copy)
+            if (const PanelWidget performance{BarWidget::Performance, copy}; Shows(settings, performance))
+                perf |= settings.Widget(performance).perfParts;
+        const bool perfPopup = opened(BarWidget::Performance);
+        needs.conquest   = opened(BarWidget::World) || opened(BarWidget::Currency);
+        needs.frames     = (perf & PerfBit(PerfPart::Fps)) != 0 || perfPopup;
+        needs.job        = shown(BarWidget::Job);
+        needs.connection = (perf & kConnectionParts) != 0 || perfPopup;
         needs.party      = shown(BarWidget::Party);
-        needs.signet     = shown(BarWidget::Signet);
-        needs.memory     = shown(BarWidget::Memory);
-        needs.cpu        = memoryPopup;
-        needs.linuxxi    = memoryPopup;
+        needs.statuses   = (shown(BarWidget::StatusTimers) && !settings.statusPins.empty()) || opened(BarWidget::StatusTimers);
+        needs.memory     = (perf & PerfBit(PerfPart::Memory)) != 0 || perfPopup;
+        needs.cpu        = perfPopup;
+        needs.linuxxi    = perfPopup;
         // Ashita counts a container's items by walking its slots, so the others wait for the popup that lists them.
         if (shown(BarWidget::Bags))
         {
@@ -1374,8 +1626,11 @@ namespace headsup
                 }
                 w.hasPopup = IsMob(state.target); // a mob the data lacks gets its name, level and con, no popup
             }
+            if (w.shown && state.target != nullptr && o.targetDistance && state.targetDistance &&
+                std::isfinite(*state.targetDistance))
+                w.title.push_back(Text(" (" + Printed("%.1f", *state.targetDistance) + ")", Tone::Dim));
             break;
-        case BarWidget::Gil:
+        case BarWidget::Currency:
         {
             // The picked currency; gil with its coin.
             const int picked = o.currency;
@@ -1411,55 +1666,15 @@ namespace headsup
             break;
         case BarWidget::GameHelp:
             return WidgetContent{};
-        case BarWidget::Fps:
-            return FpsWidget(state.frames);
+        case BarWidget::Performance:
+            return PerformanceWidget(state, o.perfParts);
         case BarWidget::Job:
-            return JobWidget(state.job, o.expBar, o.jobNames, o.jobLayout, o.expText);
-        case BarWidget::Exp:
-            return ExpWidget(state.job, o.expPlaces, o.expBarWidth, o.expBarHeight, o.expAlign);
-        case BarWidget::Conquest:
-        {
-            w.subtitle = ListOf(Text("Conquest", Tone::Dim));
-            w.hasPopup = true;
-            if (!state.owners)
-            {
-                w.title = ListOf(Text("-"));
-                break;
-            }
-            // A nation alone by its name; several by their crests, each count in its color, two to a line in columns.
-            const std::vector<Nation> picked = PickedNations(o.nations);
-            w.cells = picked.size() > 1; // its counts alone, without its name under them
-            if (w.cells) w.subtitle.clear();
-            constexpr size_t kTwoByTwo = 2; // nations a line
-            const size_t perLine = o.conquestGrid == ConquestGrid::OneByFour ? picked.size() : kTwoByTwo;
-            for (size_t i = 0; i < picked.size(); ++i)
-            {
-                const Nation nation = picked[i];
-                const std::string regions = std::to_string(std::ranges::count(*state.owners, nation));
-                Span count = Colored(picked.size() == 1 ? std::string(NationName(nation)) + " " + regions : " " + regions,
-                    NationColor(nation));
-                if (picked.size() > 1) count.picture = NationCrest(nation);
-                (i < perLine ? w.title : w.subtitle).push_back(count);
-            }
-            if (w.title.empty()) w.title = ListOf(Text("-"));
-            w.figures = true;
-            break;
-        }
-        case BarWidget::Connection:
-            return ConnectionWidget(state.connection, o.latency, o.netMeter);
+            return o.jobLayout == JobLayout::Bar ? ExpWidget(state.job, o.expPlaces, o.expBarWidth, o.expBarHeight, o.expAlign)
+                                                 : JobWidget(state.job, o.expBar, o.jobNames, o.jobLayout, o.expText);
         case BarWidget::Party:
             return PartyWidget(state.party);
-        case BarWidget::Signet:
-            return SignetWidget(state.signet);
-        case BarWidget::Distance:
-            // Hidden without a target, as the game's own distance shows nothing then.
-            w.shown = state.targetDistance && std::isfinite(*state.targetDistance);
-            if (!w.shown) break;
-            w.title   = ListOf(Text(Printed("%.1f", *state.targetDistance)), Text(" yalms", Tone::Dim));
-            w.figures = true;
-            break;
-        case BarWidget::Memory:
-            return MemoryWidget(state.memory);
+        case BarWidget::StatusTimers:
+            return StatusTimersWidget(state.statuses, settings.statusPins);
         case BarWidget::World:
             return WorldWidget(state, o);
         }
@@ -1538,11 +1753,17 @@ namespace headsup
                     fogs = fogs || chance.weather == Weather::None || chance.weather == Weather::Sunshine ||
                            chance.weather == Weather::Clouds;
             }
-            // Phoenix's notes in a column at the right, a line beside each day from the first.
+            // Phoenix's notes in a narrow column at the right, a line beside each day from the first, a blank line
+            // between two notes.
             std::vector<std::string> notes;
+            const auto note = [&notes](std::string first, std::string second) {
+                if (!notes.empty()) notes.emplace_back();
+                notes.push_back(std::move(first));
+                notes.push_back(std::move(second));
+            };
             // One weather on every day (Phoenix's static zones: Promyvion, Temenos): rolling again changes nothing.
-            if (!oneWeather) notes.emplace_back("Phoenix rolls the weather again every 3 to 30 Earth minutes.");
-            if (fogs) notes.emplace_back("From 2:00 to 7:00, outside towns, Phoenix turns sunshine and clouds into fog.");
+            if (!oneWeather) note("Phoenix rolls the weather again", "every 3 to 30 Earth minutes.");
+            if (fogs) note("From 2:00 to 7:00 outside towns,", "sunshine and clouds turn to fog.");
             const int columns = kForecastColumns + (notes.empty() ? 0 : 1);
             PopupRow grid     = Grid(columns, kForecastDays * columns);
             for (int d = 0; d < kForecastDays; ++d)
@@ -1566,7 +1787,9 @@ namespace headsup
                     grid.cells.push_back(std::move(weather));
                 }
                 if (!notes.empty())
-                    grid.cells.push_back(static_cast<size_t>(d) < notes.size() ? Cell(Text(notes[d], Tone::Dim)) : PopupCell{});
+                    grid.cells.push_back(static_cast<size_t>(d) < notes.size() && !notes[d].empty()
+                                             ? Cell(Text(notes[d], Tone::Dim))
+                                             : PopupCell{});
             }
             // Zone 0 is the data's "unknown": the heading names no zone for it.
             const ZoneRecord* zone = state.zone != 0 ? ZoneById(state.zone) : nullptr;
@@ -1588,23 +1811,7 @@ namespace headsup
             break;
         }
         case BarWidget::Target: return TargetPopup(state, settings);
-        case BarWidget::Gil:
-        {
-            // Gil, then every currency the server gave an amount of; those it has none of stay out.
-            popup.title = ListOf(Text("Currencies"));
-            PopupSection rows;
-            rows.rows.push_back(Labeled("Gil", Text(state.gil ? Grouped(*state.gil) : "-")));
-            bool sent = false;
-            for (int c = kGilCurrency + 1; c < kCurrencyCount; ++c)
-            {
-                const std::optional<uint32_t>& amount = state.currencies[c];
-                sent = sent || amount.has_value();
-                if (amount && *amount > 0) rows.rows.push_back(Labeled(kCurrencyTable[c].name, Text(Grouped(*amount))));
-            }
-            if (!sent) rows.rows.push_back(LineOf("The rest show once the server sends them.", Tone::Dim));
-            popup.sections = ListOf(std::move(rows));
-            break;
-        }
+        case BarWidget::Currency: return CurrencyPopup(state, settings);
         case BarWidget::Bags:
         {
             popup.title   = ListOf(Text("Bags"));
@@ -1636,53 +1843,18 @@ namespace headsup
         }
         case BarWidget::GameHelp:
             return GameHelpPopup(state.strip, StripBagFill(state));
-        case BarWidget::Fps:
-            return FpsPopup(state.frames);
+        case BarWidget::Performance:
+            return PerformancePopup(state);
         case BarWidget::Job:
-        case BarWidget::Exp:
             return JobPopup(state.job);
-        case BarWidget::Conquest:
-        {
-            popup.title = ListOf(Text("Conquest"));
-            if (!state.owners)
-            {
-                popup.sections = ListOf(PopupSection{"", ListOf(LineOf("The standings show once the server sends them.", Tone::Dim))});
-                break;
-            }
-            for (const Nation nation : PickedNations(o.nations))
-            {
-                // Your nation's regions say which outposts you have not run supplies to, as far as overseers told.
-                const bool yours = state.nation == nation && state.outposts != nullptr;
-                bool unknown     = false;
-                PopupSection held{NationName(nation), {}};
-                for (int region = 0; region < kConquestRegionCount; ++region)
-                {
-                    if ((*state.owners)[region] != nation) continue;
-                    const auto r              = static_cast<uint8_t>(region);
-                    const std::optional<bool> ran = yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true);
-                    unknown = unknown || !ran;
-                    if (ran == false)
-                        held.rows.push_back(Line(Cell(ListOf(Text(std::string(RegionName(r))), Text(kDot, Tone::Dim),
-                            Text("no supply run", Tone::Dim)))));
-                    else
-                        held.rows.push_back(LineOf(std::string(RegionName(r))));
-                }
-                if (held.rows.empty()) held.rows.push_back(LineOf("None", Tone::Dim));
-                if (unknown)
-                    held.rows.push_back(LineOf("Talk to a conquest overseer in your nation's city to see your supply runs.", Tone::Dim));
-                popup.sections.push_back(std::move(held));
-            }
-            break;
-        }
-        case BarWidget::Connection:
-            return ConnectionPopup(state.connection);
         case BarWidget::Party:
             return PartyPopup(state.party);
-        case BarWidget::Signet:
-            return SignetPopup(state.signet, state.zone);
-        case BarWidget::Distance: break;
-        case BarWidget::Memory:
-            return MemoryPopup(state.memory, state.cpuPercent, state.frames, state.linuxxi);
+        case BarWidget::StatusTimers:
+        {
+            const auto scrolled = state.scrolled.find(kStatusListKey);
+            return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins,
+                scrolled == state.scrolled.end() ? 0 : scrolled->second);
+        }
         case BarWidget::World:
             return WorldPopup(state, o);
         }

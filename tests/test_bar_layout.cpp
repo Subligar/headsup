@@ -20,7 +20,7 @@ namespace
     {
         std::array<float, kPanelSlots> widths{};
         const std::pair<BarWidget, float> each[] = {{BarWidget::Zone, zone}, {BarWidget::Weather, weather},
-            {BarWidget::VanaTime, vana}, {BarWidget::Target, target}, {BarWidget::Gil, gil}, {BarWidget::Bags, bags},
+            {BarWidget::VanaTime, vana}, {BarWidget::Target, target}, {BarWidget::Currency, gil}, {BarWidget::Bags, bags},
             {BarWidget::EarthTime, earth}};
         for (const auto& [widget, width] : each)
             widths[SlotOf(widget)] = width;
@@ -47,7 +47,7 @@ TEST(pills_put_the_groups_at_the_edges_and_the_target_in_the_middle)
     std::vector<PanelWidget> order;
     for (const PlacedWidget& p : l.widgets)
         order.push_back(p.widget);
-    CHECK(order == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::VanaTime, BarWidget::Target, BarWidget::Gil,
+    CHECK(order == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::VanaTime, BarWidget::Target, BarWidget::Currency,
                                            BarWidget::Bags, BarWidget::EarthTime})); // in bar order
 }
 
@@ -99,7 +99,7 @@ TEST(hit_tests_popup_placement_and_fitting_text)
     CHECK(FitText("Goblin Bounty Hunter", 10.0f, measure).empty());
 }
 
-TEST(hovering_opens_leaving_closes_and_only_the_pin_chip_pins)
+TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
 {
     const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
@@ -119,7 +119,10 @@ TEST(hovering_opens_leaving_closes_and_only_the_pin_chip_pins)
     const BarRect pin{1100.0f, 52.0f, 50.0f, 20.0f};
     input.Move(960.0f, 18.0f);
     input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
-    CHECK(input.Press(960.0f, 18.0f, true));  // the widget's, and no pin
+    CHECK(input.Press(960.0f, 18.0f, true)); // the widget pins its popup
+    CHECK(input.Pinned() == BarWidget::Target);
+    CHECK(input.Press(960.0f, 18.0f, true)); // and unpins it
+    CHECK(!input.Pinned().has_value());
     CHECK(input.Press(960.0f, 200.0f, true)); // the popup's, and no pin
     CHECK(!input.Pinned().has_value());
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its pin chip pins it
@@ -136,7 +139,7 @@ TEST(hovering_opens_leaving_closes_and_only_the_pin_chip_pins)
     CHECK(input.Pinned() == BarWidget::Target);
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its chip again unpins
     CHECK(!input.Pinned().has_value());
-    const BarRect gil = *RectOf(l, BarWidget::Gil);
+    const BarRect gil = *RectOf(l, BarWidget::Currency);
     CHECK(input.Press(gil.x + 5.0f, 18.0f, true)); // the bar's, but gil has no popup
     CHECK(!input.Pinned().has_value());
     CHECK(input.Press(5.0f, 30.0f, false)); // a right press on the strip is the bar's too
@@ -169,6 +172,24 @@ TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)
     CHECK(input.PickedTabs().at("Travel") == "Airships");
 }
 
+TEST(a_press_on_a_pressable_cell_is_told_once_and_picks_no_tab_and_pins_nothing)
+{
+    const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    input.Move(960.0f, 18.0f);
+    const BarRect star{780.0f, 120.0f, 20.0f, 20.0f};
+    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {BarTabChip{"", star, "favorite gil", true}});
+    input.Move(785.0f, 125.0f);
+    CHECK(input.Press(785.0f, 125.0f, true));
+    CHECK(input.Press(785.0f, 125.0f, true));
+    CHECK((input.TakePresses() == std::vector<std::string>{"favorite gil", "favorite gil"}));
+    CHECK(input.TakePresses().empty() && input.PickedTabs().empty() && !input.Pinned());
+    CHECK(input.Press(785.0f, 125.0f, false) && input.TakePresses().empty()); // a right press tells nothing
+}
+
 TEST(a_cut_help_bar_under_the_strip_opens_its_popup_and_takes_only_its_own_presses)
 {
     // The renderer places Game help's own bar under the strip when its text was cut.
@@ -181,8 +202,8 @@ TEST(a_cut_help_bar_under_the_strip_opens_its_popup_and_takes_only_its_own_press
     input.Move(100.0f, 70.0f);
     CHECK(input.Open() == BarWidget::GameHelp);
     CHECK(!input.Press(600.0f, 70.0f, true)); // beside it, the game's
-    CHECK(input.Press(100.0f, 70.0f, true)); // its own
-    CHECK(!input.Pinned().has_value());
+    CHECK(input.Press(100.0f, 70.0f, true)); // its own, which pins it as any widget's does
+    CHECK(input.Pinned() == BarWidget::GameHelp);
 }
 
 TEST(pinning_another_widget_moves_the_pin)
@@ -204,6 +225,48 @@ TEST(pinning_another_widget_moves_the_pin)
     input.SetPopup(BarRect{vana.x, 44.0f, 300.0f, 200.0f}, {}, {}, vanaPin);
     CHECK(input.Press(vanaPin.x + 5.0f, vanaPin.y + 5.0f, true));
     CHECK(input.Pinned() == BarWidget::VanaTime);
+    // A press on another widget on the bar moves the pin to it too.
+    CHECK(input.Press(960.0f, 18.0f, true));
+    CHECK(input.Pinned() == BarWidget::Target);
+}
+
+TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)
+{
+    const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)]   = true;
+    popups[SlotOf(BarWidget::VanaTime)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const BarRect popup{760.0f, 44.0f, 400.0f, 300.0f}, pin{1100.0f, 52.0f, 50.0f, 20.0f}, cog{1074.0f, 52.0f, 20.0f, 20.0f};
+    input.Move(960.0f, 18.0f);
+    input.SetPopup(popup, {}, {}, pin, cog);
+    CHECK(!input.SettingsShown());
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true)); // its settings, pinned
+    CHECK(input.SettingsShown() == BarWidget::Target && input.Pinned() == BarWidget::Target);
+    input.Move(960.0f, 700.0f);
+    CHECK(input.SettingsShown() == BarWidget::Target); // it stays as the pointer goes
+    const BarRect vana = *RectOf(l, BarWidget::VanaTime);
+    input.Move(vana.x + 5.0f, 18.0f);
+    CHECK(input.Open() == BarWidget::VanaTime && !input.SettingsShown()); // another's popup, as it is
+    input.SetPopup(BarRect{vana.x, 44.0f, 300.0f, 200.0f});
+    input.Move(960.0f, 700.0f);
+    input.SetPopup(popup, {}, {}, pin, cog);
+    CHECK(input.SettingsShown() == BarWidget::Target);
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true)); // again: its content, still pinned
+    CHECK(!input.SettingsShown() && input.Pinned() == BarWidget::Target);
+    input.Press(cog.x + 5.0f, cog.y + 5.0f, true);
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // unpinned, it shows its content again
+    CHECK(!input.Pinned() && !input.SettingsShown());
+    // As the settings window asks: shown and pinned, then closed.
+    input.ShowSettings(BarWidget::VanaTime);
+    CHECK(input.SettingsShown() == BarWidget::VanaTime && input.Pinned() == BarWidget::VanaTime);
+    input.ShowSettings(std::nullopt);
+    CHECK(!input.Pinned() && !input.SettingsShown());
+    // A pin moved by a command ends them too.
+    input.ShowSettings(BarWidget::VanaTime);
+    input.Pin(BarWidget::Target);
+    CHECK(!input.SettingsShown());
 }
 
 // Targeting a player or nothing while the pointer rests on the target takes its popup away: the hover goes with it,
@@ -817,7 +880,7 @@ namespace
         std::array<float, kPanelSlots> natural{};
         natural[SlotOf(BarWidget::Zone)]      = 100.0f;
         natural[SlotOf(BarWidget::Target)]    = 200.0f;
-        natural[SlotOf(BarWidget::Gil)]       = 90.0f;
+        natural[SlotOf(BarWidget::Currency)]       = 90.0f;
         natural[SlotOf(BarWidget::Bags)]      = 60.0f;
         natural[SlotOf(BarWidget::EarthTime)] = 50.0f;
         return natural;
@@ -861,51 +924,51 @@ TEST(the_center_holds_several_widgets_centered_as_a_group)
 {
     const float g     = kPills.gap;
     const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, SomeWidths(), 0.0f,
-        Sections({BarWidget::Zone}, {BarWidget::Gil, BarWidget::Target, BarWidget::Bags}, {BarWidget::EarthTime}));
+        Sections({BarWidget::Zone}, {BarWidget::Currency, BarWidget::Target, BarWidget::Bags}, {BarWidget::EarthTime}));
     const float total = 90.0f + g + 200.0f + g + 60.0f, x0 = 960.0f - total / 2.0f;
-    CHECK(Near(RectOf(l, BarWidget::Gil)->x, x0) && Near(RectOf(l, BarWidget::Target)->x, x0 + 90.0f + g));
+    CHECK(Near(RectOf(l, BarWidget::Currency)->x, x0) && Near(RectOf(l, BarWidget::Target)->x, x0 + 90.0f + g));
     CHECK(Near(RectOf(l, BarWidget::Bags)->x, x0 + 90.0f + g + 200.0f + g));
-    CHECK(WidgetAt(l, x0 + 10.0f, PillRow(kPills).y + 1.0f) == BarWidget::Gil); // hover finds it where it is
+    CHECK(WidgetAt(l, x0 + 10.0f, PillRow(kPills).y + 1.0f) == BarWidget::Currency); // hover finds it where it is
 }
 
 TEST(an_empty_center_leaves_the_sides_alone_and_the_target_can_sit_in_a_side)
 {
     const float g     = kPills.gap;
     const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, SomeWidths(), 0.0f,
-        Sections({BarWidget::Zone, BarWidget::Target}, {}, {BarWidget::Gil, BarWidget::Bags, BarWidget::EarthTime}));
+        Sections({BarWidget::Zone, BarWidget::Target}, {}, {BarWidget::Currency, BarWidget::Bags, BarWidget::EarthTime}));
     CHECK(Near(RectOf(l, BarWidget::Target)->x, g + 100.0f + g) && Near(l.targetWidth, 200.0f));
     CHECK(Near(RectOf(l, BarWidget::Target)->y, PillRow(kPills).y));
     CHECK(Near(RectOf(l, BarWidget::EarthTime)->x + 50.0f, 1920.0f - g));
     const BarLayout ornate = LayoutBar(1920.0f, kOrnate, BarShape::Ornate, SomeWidths(), 0.0f,
-        Sections({BarWidget::Zone, BarWidget::Target}, {}, {BarWidget::Gil}));
+        Sections({BarWidget::Zone, BarWidget::Target}, {}, {BarWidget::Currency}));
     CHECK(Near(RectOf(ornate, BarWidget::Target)->height, PillRow(kOrnate).height)); // still framed
 }
 
 TEST(a_target_in_a_side_section_shrinks_to_the_room_left_and_goes_when_that_is_too_little)
 {
     const float g = kPills.gap;
-    const auto right = Sections({BarWidget::Zone}, {}, {BarWidget::Target, BarWidget::Gil});
+    const auto right = Sections({BarWidget::Zone}, {}, {BarWidget::Target, BarWidget::Currency});
     // At 400 px the room between zone and gil, a gap from each, is 400 - 4g - 190 = 185.5 px: under the target's 200.
     const float room  = (400.0f - g - 90.0f - g) - (g + 100.0f + g);
     const BarLayout l = LayoutBar(400.0f, kPills, BarShape::Pills, SomeWidths(), 40.0f, right);
     CHECK(Near(l.targetWidth, std::floor(room))); // whole pixels
     const BarRect& target = *RectOf(l, BarWidget::Target);
-    CHECK(target.x >= g + 100.0f + g - 0.01f && target.x + target.width + g <= RectOf(l, BarWidget::Gil)->x + 0.01f);
+    CHECK(target.x >= g + 100.0f + g - 0.01f && target.x + target.width + g <= RectOf(l, BarWidget::Currency)->x + 0.01f);
     CheckApartAndInside(l, 400.0f, right);
     const BarLayout tight = LayoutBar(400.0f, kPills, BarShape::Pills, SomeWidths(), room + 1.0f, right);
-    CHECK(RectOf(tight, BarWidget::Target) == nullptr && RectOf(tight, BarWidget::Gil) != nullptr);
+    CHECK(RectOf(tight, BarWidget::Target) == nullptr && RectOf(tight, BarWidget::Currency) != nullptr);
 }
 
 TEST(a_target_first_in_the_left_section_gives_way_before_any_right_widget)
 {
     const float g     = kPills.gap;
-    const auto first  = Sections({BarWidget::Target, BarWidget::Zone}, {}, {BarWidget::Gil, BarWidget::Bags,
+    const auto first  = Sections({BarWidget::Target, BarWidget::Zone}, {}, {BarWidget::Currency, BarWidget::Bags,
                                                                             BarWidget::EarthTime});
     // Everything at its width: 2 edges, target, gap, zone, then a gap, gil, gap, bags, gap, Earth time.
     const float demand = g + 200.0f + g + 100.0f + g + 90.0f + g + 60.0f + g + 50.0f + g;
     const BarLayout l  = LayoutBar(500.0f, kPills, BarShape::Pills, SomeWidths(), 40.0f, first);
     CHECK(Near(l.targetWidth, std::floor(200.0f - (demand - 500.0f))));
-    for (const BarWidget w : {BarWidget::Zone, BarWidget::Gil, BarWidget::Bags, BarWidget::EarthTime})
+    for (const BarWidget w : {BarWidget::Zone, BarWidget::Currency, BarWidget::Bags, BarWidget::EarthTime})
         CHECK(RectOf(l, w) != nullptr);
     CheckApartAndInside(l, 500.0f, first);
 }
@@ -913,7 +976,7 @@ TEST(a_target_first_in_the_left_section_gives_way_before_any_right_widget)
 TEST(a_crowded_center_shrinks_its_target_then_drops_it_then_drops_from_its_end)
 {
     const float g     = kPills.gap;
-    const auto center = Sections({BarWidget::Zone}, {BarWidget::Target, BarWidget::Gil, BarWidget::Bags}, {});
+    const auto center = Sections({BarWidget::Zone}, {BarWidget::Target, BarWidget::Currency, BarWidget::Bags}, {});
     // At 450 px the center has 450 - 3g - 100 px: about 31 px short of the target, gil and bags at their widths.
     const BarLayout l = LayoutBar(450.0f, kPills, BarShape::Pills, SomeWidths(), 40.0f, center);
     const float room  = 450.0f - 2.0f * g - (g + 100.0f);
@@ -922,7 +985,7 @@ TEST(a_crowded_center_shrinks_its_target_then_drops_it_then_drops_from_its_end)
     CHECK(RectOf(noTarget, BarWidget::Target) == nullptr && RectOf(noTarget, BarWidget::Bags) != nullptr);
     // At 250 px, gil and bags alone are too wide: bags, at the center's end, goes.
     const BarLayout narrow = LayoutBar(250.0f, kPills, BarShape::Pills, SomeWidths(), 400.0f, center);
-    CHECK(RectOf(narrow, BarWidget::Gil) != nullptr && RectOf(narrow, BarWidget::Bags) == nullptr);
+    CHECK(RectOf(narrow, BarWidget::Currency) != nullptr && RectOf(narrow, BarWidget::Bags) == nullptr);
     for (const BarLayout* each : {&l, &noTarget, &narrow})
         CheckApartAndInside(*each, each == &narrow ? 250.0f : 450.0f, center);
 }
@@ -967,7 +1030,7 @@ TEST(a_target_that_gave_way_comes_back_into_the_room_the_dropped_widgets_left)
     // goes too, and without gil the room between the groups is S - 330 - 6g = 70.5 px.
     const float screen = 400.5f + 6.0f * g;
     const BarLayout l  = LayoutBar(screen, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 40.0f);
-    CHECK(RectOf(l, BarWidget::Gil) == nullptr);
+    CHECK(RectOf(l, BarWidget::Currency) == nullptr);
     const BarRect* target = RectOf(l, BarWidget::Target);
     CHECK(target != nullptr);
     const float room = RectOf(l, BarWidget::Bags)->x - g - (RectOf(l, BarWidget::VanaTime)->x + 120.0f) - g;
@@ -980,7 +1043,7 @@ TEST(an_ornate_target_in_a_side_section_keeps_its_frame_clear_of_the_diamonds_be
 {
     // A divider's diamond is drawn WholePixels(diamond) wide, centered on its x; a frame keeps 2 px clear of it.
     const float clear = static_cast<float>(WholePixels(kOrnate.diamond)) / 2.0f + 2.0f;
-    const auto sides  = Sections({BarWidget::Zone, BarWidget::Target, BarWidget::Gil}, {}, {BarWidget::EarthTime});
+    const auto sides  = Sections({BarWidget::Zone, BarWidget::Target, BarWidget::Currency}, {}, {BarWidget::EarthTime});
     const BarLayout l = LayoutBar(1920.0f, kOrnate, BarShape::Ornate, SomeWidths(), 0.0f, sides);
     const BarRect& target = *RectOf(l, BarWidget::Target);
     CHECK(Near(target.width, 200.0f));
@@ -990,8 +1053,8 @@ TEST(an_ornate_target_in_a_side_section_keeps_its_frame_clear_of_the_diamonds_be
               !(d > target.x && d < target.x + target.width));
     // The diamonds still sit on the plain neighbours' edges, and the section is that much wider.
     CHECK(Near(l.dividers[0], kOrnate.cap + 100.0f) && Near(target.x, kOrnate.cap + 100.0f + clear));
-    CHECK(Near(RectOf(l, BarWidget::Gil)->x, target.x + 200.0f + clear));
-    CHECK(Near(l.dividers[1], RectOf(l, BarWidget::Gil)->x));
+    CHECK(Near(RectOf(l, BarWidget::Currency)->x, target.x + 200.0f + clear));
+    CHECK(Near(l.dividers[1], RectOf(l, BarWidget::Currency)->x));
     CheckApartAndInside(l, 1920.0f, sides, BarShape::Ornate);
 }
 
@@ -1003,9 +1066,9 @@ TEST(a_target_in_a_side_section_also_takes_back_the_room_a_dropped_neighbour_lef
     // without it the target has S - 330 - 6g = 70.5 px between Vana'diel time and bags.
     const float screen = 400.5f + 6.0f * g;
     const auto right   = Sections({BarWidget::Zone, BarWidget::VanaTime}, {},
-        {BarWidget::Target, BarWidget::Gil, BarWidget::Bags, BarWidget::EarthTime});
+        {BarWidget::Target, BarWidget::Currency, BarWidget::Bags, BarWidget::EarthTime});
     const BarLayout l  = LayoutBar(screen, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 40.0f, right);
-    CHECK(RectOf(l, BarWidget::Gil) == nullptr && RectOf(l, BarWidget::Target) != nullptr);
+    CHECK(RectOf(l, BarWidget::Currency) == nullptr && RectOf(l, BarWidget::Target) != nullptr);
     CHECK(Near(l.targetWidth, 70.0f));
     CheckApartAndInside(l, screen, right);
 }
@@ -1016,9 +1079,9 @@ TEST(a_target_in_a_left_section_that_passes_the_screen_edge_takes_back_the_room_
     // Left: zone 100, the target 200, gil 90. Against all three the target would keep floor(S - 190 - 4g) px, less
     // than nothing; gil then needs S >= 190 + 3g and goes past the edge; zone alone leaves the target S - 100 - 3g.
     const float screen = 170.5f + 3.0f * g;
-    const auto left    = Sections({BarWidget::Zone, BarWidget::Target, BarWidget::Gil}, {}, {});
+    const auto left    = Sections({BarWidget::Zone, BarWidget::Target, BarWidget::Currency}, {}, {});
     const BarLayout l  = LayoutBar(screen, kPills, BarShape::Pills, Widths(100, 0, 0, 200, 90, 0, 0), 40.0f, left);
-    CHECK(RectOf(l, BarWidget::Gil) == nullptr && RectOf(l, BarWidget::Zone) != nullptr);
+    CHECK(RectOf(l, BarWidget::Currency) == nullptr && RectOf(l, BarWidget::Zone) != nullptr);
     CHECK(Near(l.targetWidth, 70.0f));
     CheckApartAndInside(l, screen, left);
 }
@@ -1041,11 +1104,11 @@ TEST(a_target_that_fits_exactly_keeps_its_whole_width)
 TEST(the_right_section_keeps_a_gap_from_the_left_or_its_inner_widget_goes)
 {
     const float g     = kPills.gap;
-    const auto sides  = Sections({BarWidget::Zone}, {}, {BarWidget::Gil});
+    const auto sides  = Sections({BarWidget::Zone}, {}, {BarWidget::Currency});
     // Gil against the right edge would start half a gap after zone ends.
     const float screen = g + 100.0f + g / 2.0f + 90.0f + g;
     const BarLayout l  = LayoutBar(screen, kPills, BarShape::Pills, Widths(100, 0, 0, 0, 90, 0, 0), 0.0f, sides);
-    CHECK(RectOf(l, BarWidget::Zone) != nullptr && RectOf(l, BarWidget::Gil) == nullptr);
+    CHECK(RectOf(l, BarWidget::Zone) != nullptr && RectOf(l, BarWidget::Currency) == nullptr);
     CheckApartAndInside(l, screen, sides);
 }
 
@@ -1085,10 +1148,10 @@ TEST(ornate_without_diamonds_keeps_its_widgets_where_they_were)
 
 TEST(diamonds_divide_neighbours_within_each_section_and_never_between_sections)
 {
-    const auto center = Sections({BarWidget::Zone}, {BarWidget::Gil, BarWidget::Bags}, {BarWidget::EarthTime});
+    const auto center = Sections({BarWidget::Zone}, {BarWidget::Currency, BarWidget::Bags}, {BarWidget::EarthTime});
     const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, SomeWidths(), 0.0f, center, BarSeparators::Diamonds);
     CHECK(l.dividers.size() == 1); // between gil and bags, in the center
-    CHECK(l.dividers[0] > RectOf(l, BarWidget::Gil)->x && l.dividers[0] < RectOf(l, BarWidget::Bags)->x);
+    CHECK(l.dividers[0] > RectOf(l, BarWidget::Currency)->x && l.dividers[0] < RectOf(l, BarWidget::Bags)->x);
 }
 
 TEST(a_bar_text_size_that_fits_is_drawn_and_one_that_does_not_is_shrunk_to_what_fits)
@@ -1170,12 +1233,12 @@ TEST(a_larger_bar_text_size_never_draws_smaller_titles)
 TEST(each_copy_of_a_widget_takes_a_place_of_its_own)
 {
     BarPlacement placement = DefaultPlacement();
-    const std::optional<PanelWidget> copy = AddCopy(placement, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = AddCopy(placement, BarWidget::Currency);
     CHECK(copy.has_value());
     std::array<float, kPanelSlots> natural = Widths(100, 0, 120, 200, 90, 60, 50);
     natural[SlotOf(*copy)] = 70.0f;
     const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, natural, 0.0f, placement);
-    const BarRect* first = RectOf(l, BarWidget::Gil);
+    const BarRect* first = RectOf(l, BarWidget::Currency);
     const BarRect* second = RectOf(l, *copy);
     CHECK(first != nullptr && second != nullptr);
     CHECK(Near(second->width, 70.0f) && Near(second->x, first->x + first->width + kPills.gap)); // right after it
@@ -1209,10 +1272,10 @@ namespace
     {
         CombineLinks links{};
         links[SlotOf(BarWidget::Zone)] = BarWidget::Weather;
-        links[SlotOf(BarWidget::Bags)] = BarWidget::Gil;
+        links[SlotOf(BarWidget::Bags)] = BarWidget::Currency;
         const BarPlacement p{std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather, BarWidget::VanaTime},
             std::vector<PanelWidget>{BarWidget::Target},
-            std::vector<PanelWidget>{BarWidget::Gil, BarWidget::Bags, BarWidget::EarthTime}};
+            std::vector<PanelWidget>{BarWidget::Currency, BarWidget::Bags, BarWidget::EarthTime}};
         return Combine(p, links);
     }
 
@@ -1235,7 +1298,7 @@ TEST(combined_widgets_touch_with_no_gap_or_diamond_between_them)
             spacing[SlotOf(BarWidget::Weather)] = 10.0f;
             const BarLayout l = CombinedBar(1920.0f, shape, metrics, separators, spacing);
             const BarRect zone = *RectOf(l, BarWidget::Zone), weather = *RectOf(l, BarWidget::Weather);
-            const BarRect bags = *RectOf(l, BarWidget::Bags), gil = *RectOf(l, BarWidget::Gil);
+            const BarRect bags = *RectOf(l, BarWidget::Bags), gil = *RectOf(l, BarWidget::Currency);
             CHECK(Near(weather.x, zone.x + zone.width));
             CHECK(Near(gil.x, bags.x + bags.width)); // Gil pulled after Bags
             // Between groups, as between any neighbours: here Weather's own room and the gap or diamond.
@@ -1258,7 +1321,7 @@ TEST(a_combined_pill_that_does_not_fit_goes_whole)
     CHECK(RectOf(left, BarWidget::Zone) == nullptr && RectOf(left, BarWidget::Weather) == nullptr);
     const BarLayout right = CombinedBar(g + 50.0f + g + 60.0f + 40.0f, BarShape::Pills, kPills);
     CHECK(RectOf(right, BarWidget::EarthTime) != nullptr);
-    CHECK(RectOf(right, BarWidget::Bags) == nullptr && RectOf(right, BarWidget::Gil) == nullptr);
+    CHECK(RectOf(right, BarWidget::Bags) == nullptr && RectOf(right, BarWidget::Currency) == nullptr);
     // The center drops a combined pill whole from its end.
     CombineLinks links{};
     links[SlotOf(BarWidget::Weather)] = BarWidget::VanaTime;
@@ -1308,5 +1371,5 @@ TEST(a_widget_in_a_combined_pill_knows_which_sides_it_shares)
     CHECK(joins(BarWidget::Weather) == std::pair(true, false));
     CHECK(joins(BarWidget::VanaTime) == std::pair(false, false));
     CHECK(joins(BarWidget::Bags) == std::pair(false, true));
-    CHECK(joins(BarWidget::Gil) == std::pair(true, false));
+    CHECK(joins(BarWidget::Currency) == std::pair(true, false));
 }

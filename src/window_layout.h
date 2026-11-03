@@ -25,6 +25,7 @@ namespace headsup
         Widgets,
         MouseCursor,
         Colors,
+        Theme,
         ConfigMenu,
     };
     constexpr int kPageCount = static_cast<int>(Page::ConfigMenu) + 1;

@@ -414,6 +414,11 @@ namespace headsup
         css += ".wchip.on{color:" + color(c.text) + ";}";
         css += ".wchip.picked{border-color:" + color(c.accent) + ";}";
         css += ".wchip .check{display:inline-block;vertical-align:middle;margin-right:0.8em;font-size:" + Em(kChipToggle) + ";}";
+        // A chip's clone button at its right, its white picture in the chip's text color, brighter under the pointer.
+        css += ".wclone{float:right;height:" + Em(kChipHeight) + ";margin-left:0.4em;}";
+        css += ".wclone img{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) + ";vertical-align:middle;image-color:" +
+               color(c.muted) + ";}";
+        css += ".wclone:hover img{image-color:" + color(c.accent) + ";}";
         css += ".widget-name{color:" + color(c.text) + ";}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
         // What a control says under the pointer.
@@ -429,10 +434,28 @@ namespace headsup
         return css;
     }
 
+    std::string MenuViewStyle(const MenuLook& look)
+    {
+        // The window's style, its body made a clear box over the panel's popup, which draws the ground.
+        return MenuStyle(look) +
+               "body{width:auto;height:auto;min-width:0px;min-height:0px;padding:0px;background-color:transparent;"
+               "decorator:none;border-width:0px;border-radius:0px;z-index:20;}body.open{animation:none;}#" +
+               kMenuViewBodyId + "{overflow-y:auto;}";
+    }
+
+    std::string MenuViewDocument(const MenuLook& look)
+    {
+        return "<rml><head><style>" + MenuViewStyle(look) + "</style></head><body><div id=\"" + kMenuViewBodyId +
+               "\"></div><div id=\"" + kMenuPopupId + "\" class=\"hidden\"></div><div id=\"" + kMenuTipId +
+               "\" class=\"hidden\"></div></body></rml>";
+    }
+
     std::string MenuDocument(const MenuLook& look)
     {
+        // The title's handle lets the window off the screen but for kWindowKeptOn of it, and never off the top.
+        const std::string offScreen = std::to_string(static_cast<int>(std::lround(-(1.0f - kWindowKeptOn) * 100.0f))) + "%";
         return "<rml><head><style>" + MenuStyle(look) + "</style></head><body>"
-               "<handle id=\"head\" move_target=\"#document\"><div id=\"title\">HeadsUp</div><div id=\"" +
+               "<handle id=\"head\" move_target=\"#document\" edge_margin=\"0px " + offScreen + " " + offScreen + " " + offScreen + "\"><div id=\"title\">HeadsUp</div><div id=\"" +
                kMenuVersionId + "\"></div></handle><div id=\"head-line\"></div>" +
                (look.developer ? std::string("<div id=\"tools\"><div class=\"") + kRaisedPill + "\" id=\"" + kMenuReloadId +
                                      "\"></div></div>"

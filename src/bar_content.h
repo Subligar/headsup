@@ -91,6 +91,8 @@ namespace headsup
         uint16_t item = 0; // a game item's picture before the text, in place of an icon
         Align align   = Align::Left; // in a grid, against its column's left, in its middle or against its right
         GamePicture picture = GamePicture::None; // a picture from the game's files before the text, as an icon is
+        std::optional<Span> tint{}; // its icon, one of HeadsUp's own white ones, drawn in this span's color
+        std::string press = {}; // a press on the cell tells the plugin this (ApplyPopupPress)
         bool operator==(const PopupCell&) const = default;
     };
 
@@ -140,6 +142,7 @@ namespace headsup
         std::vector<Span> title;
         std::vector<PopupSection> sections;
         bool oneColumn = false; // its cards down one column, however tall
+        bool settings  = true;  // its widget's settings show in place of it behind a cog: Game help's are in their own card
         bool operator==(const PopupContent&) const = default;
     };
 
@@ -182,6 +185,8 @@ namespace headsup
         return items;
     }
 
+    // A part added to a line of parts, two spaces after the one before.
+    void AddPart(std::vector<Span>& line, std::vector<Span> part);
     Span Text(std::string text, Tone tone = Tone::Normal);
     Span Colored(std::string text, uint32_t argb);
     PopupCell Cell(std::vector<Span> text, std::optional<Icon> icon = std::nullopt);

@@ -76,6 +76,11 @@ TEST(image_names_round_trip_to_their_images)
     CHECK(reset && reset->width == 32 && reset->height == 32);
     CHECK_EQ(reset->argb[(16 + 10) * 32 + 16], 0xFF8C7270u);
     CHECK(!HostImage("hu:reset/32"));
+    // The cog the same way: its ring, under its top tooth, is that color and its middle is clear.
+    const std::optional<Image> cog = HostImage(CogSource(0xFF8C7270u, 32));
+    CHECK(cog && cog->width == 32 && cog->height == 32);
+    CHECK_EQ(cog->argb[(16 - 9) * 32 + 16], 0xFF8C7270u);
+    CHECK_EQ(cog->argb[16 * 32 + 16], 0u);
 }
 
 TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
@@ -265,7 +270,9 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     CHECK(Has(rml, "<div class=\"p f1\" style=\"left:140px;top:30px;width:41px;text-align:right;color:#e4d8bdff;\">5:16</div>"));
     CHECK(Has(rml, "<img class=\"p\" src=\"hu:icon/4\" style=\"left:20px;top:50px;width:19.3px;height:19.3px;\"/>"));
     CHECK(Has(rml, "<div class=\"p f1 mark\" style=\"left:30px;top:60px;width:12px;height:12px;line-height:12px;color:#ff4040ff;\">x</div>"));
-    CHECK(Has(rml, "<img class=\"p\" src=\"hu:star/15\" style=\"left:140px;top:52px;width:15px;height:15px;\"/>"));
+    // A star is HeadsUp's own white one, in the coin's gold.
+    CHECK(Has(rml, "<img class=\"p\" src=\"" + IconSource(Icon::Star) +
+                       "\" style=\"left:140px;top:52px;width:15px;height:15px;image-color:#e8c35aff;\"/>"));
     CHECK(Has(rml, "<div class=\"p rule\" style=\"left:60px;top:46px;width:100px;\"></div>"));
     CHECK(Has(rml, "<div class=\"p tag\" style=\"left:20px;top:80px;width:50px;height:21px;border-radius:10.5px;\"></div>"));
     CHECK(Has(rml, "<div class=\"p socket\" style=\"left:24px;top:70px;width:172px;height:26px;\"></div>"));
@@ -299,22 +306,14 @@ TEST(the_popup_document_styles_its_faces_and_boxes_from_the_look)
                    "border-radius:12.6px;decorator:vertical-gradient(#180e0eff #180e0eff);}"));
     CHECK(Has(rml, ".card{box-sizing:border-box;border:1px #ffffff1e;border-radius:12.6px;background-color:#ffffff12;}"));
     CHECK(Has(rml, ".tag{box-sizing:border-box;border:1px transparent;background-color:#321f1fff;}"));
-    CHECK(Has(rml, "hu:star/") == false);
-}
-
-TEST(a_star_is_served_in_the_coins_gold)
-{
-    CHECK_EQ(StarSource(15), "hu:star/15");
-    const std::optional<Image> star = HostImage("hu:star/15");
-    CHECK(star && star->width == 15 && star->height == 15);
-    CHECK(star->argb[7 * 15 + 7] == 0xFFE8C35Au); // its middle
+    CHECK(!Has(rml, IconSource(Icon::Star)));
 }
 
 TEST(an_items_picture_is_named_by_its_id_for_the_plugin_to_serve)
 {
     CHECK_EQ(ItemSource(4443), "hu:item/4443");
     CHECK(ItemOfSource("hu:item/4443") == 4443);
-    CHECK(!ItemOfSource("hu:item/") && !ItemOfSource("hu:item/70000") && !ItemOfSource("hu:star/15"));
+    CHECK(!ItemOfSource("hu:item/") && !ItemOfSource("hu:item/70000") && !ItemOfSource("hu:coin/15"));
     CHECK(!HostImage("hu:item/4443")); // the plugin's to make, from the game's resources
 }
 
@@ -424,7 +423,7 @@ TEST(a_widget_with_text_of_its_own_has_rules_of_its_own_under_its_id)
 {
     Settings settings;
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
-    const PanelWidget gil{BarWidget::Gil, 1};
+    const PanelWidget gil{BarWidget::Currency, 1};
     // Its own fonts at 20 px titles over 15 px details, a line box 24 px tall from row 6.
     const WidgetText own{gil, kCinzel, kMarcellusSC, TextRow{20, 15, true, 6.0f, 26.0f, 12.0f},
         BarTextPlace{BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{18, 26.0f, 0.0f, 2.0f}, BarLinePlace{18, 16.0f, 16.0f, 2.0f}, {}, {}}};
@@ -599,7 +598,7 @@ TEST(a_side_shared_in_a_combined_pill_keeps_its_text_where_it_was_and_draws_no_e
     {
         const BarLook look = LookOf(theme, Settings{});
         const std::string css = BarDocument(look, Place(), {});
-        for (const BarWidget kind : {BarWidget::Zone, BarWidget::Gil})
+        for (const BarWidget kind : {BarWidget::Zone, BarWidget::Currency})
         {
             const WidgetSide own = SideOf(look, kind, kRoom, false), shared = SideOf(look, kind, kRoom, true);
             // A plain ornate widget has no border; a pill has one, which a shared side drops.

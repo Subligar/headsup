@@ -10,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace headsup
@@ -124,6 +125,7 @@ namespace headsup
         std::string key;
         BarRect rect;
         std::string tab;
+        bool press = false; // a pressable cell: a press tells the plugin its tab
     };
     // A part of the open popup the wheel scrolls, where it was drawn, and how many lines it scrolls.
     struct BarScroll
@@ -140,9 +142,10 @@ namespace headsup
     public:
         // Each frame: where the widgets are now and which have popups. A pinned widget that is gone loses its pin.
         void Frame(const BarLayout& layout, const std::array<bool, kPanelSlots>& hasPopup);
-        // Where the open popup was drawn, or an empty rectangle, its cards' tabs, the parts that scroll and its pin chip.
+        // Where the open popup was drawn, or an empty rectangle, its cards' tabs, the parts that scroll, its pin chip
+        // and its settings chip.
         void SetPopup(const BarRect& popup, std::vector<BarTabChip> chips = {}, std::vector<BarScroll> scrolls = {},
-            const BarRect& pin = {});
+            const BarRect& pin = {}, const BarRect& cog = {});
         // The wheel turned notches toward the player: true when the pointer, where it last moved, is over a part of the
         // popup that scrolls, which then scrolls kLinesPerNotch lines a notch, no further than its ends.
         bool Wheel(int notches);
@@ -159,10 +162,13 @@ namespace headsup
         // Forget the layout, the pointer and any pin, as before the first frame.
         void Reset() { *this = BarInput{}; }
         // True when the press landed on the bar, a widget placed under it or the open popup: the game must not get it.
-        // A left press on a tab picks it, and pins nothing.
+        // A left press on a widget or the popup's pin chip pins or unpins its popup; on a tab it picks it, and pins
+        // nothing.
         bool Press(float x, float y, bool left);
         // The tab picked last in each card since loading, by the card's heading.
         const std::map<std::string, std::string>& PickedTabs() const { return m_Tabs; }
+        // What the presses on pressable cells since the last call told, oldest first.
+        std::vector<std::string> TakePresses() { return std::exchange(m_Presses, {}); }
         bool Over(float x, float y) const;
         // Inside the open popup, which is drawn over Ashita's windows.
         bool InPopup(float x, float y) const { return Open() && m_Popup.Contains(x, y); }
@@ -170,7 +176,20 @@ namespace headsup
         void Pin(std::optional<PanelWidget> widget)
         {
             m_Pinned = widget;
+            m_Settings.reset();
             m_Hover.reset();
+        }
+        // Pins this pill's popup on its settings, as a press on its settings chip does, or unpins and closes it.
+        void ShowSettings(std::optional<PanelWidget> pill)
+        {
+            Pin(pill);
+            m_Settings = pill;
+        }
+        // The pill whose popup shows its settings now: the pinned one, while it is open. A press on its settings chip
+        // or its pin goes back to its content.
+        std::optional<PanelWidget> SettingsShown() const
+        {
+            return m_Settings && m_Settings == m_Pinned && Open() == m_Pinned ? m_Settings : std::nullopt;
         }
         std::optional<PanelWidget> Open() const { return m_Hover ? m_Hover : m_Pinned; }
         std::optional<PanelWidget> Pinned() const { return m_Pinned; }
@@ -189,8 +208,9 @@ namespace headsup
         BarRect m_Popup;
         std::vector<BarTabChip> m_Chips;
         std::map<std::string, std::string> m_Tabs;
+        std::vector<std::string> m_Presses;
         std::vector<BarScroll> m_Scrolls;
-        BarRect m_PinChip;
+        BarRect m_PinChip, m_CogChip;
         struct Drag
         {
             std::string key;
@@ -202,6 +222,7 @@ namespace headsup
         std::optional<PanelWidget> m_Under;  // the widget under the pointer
         std::optional<PanelWidget> m_Hover;  // the popup hovering keeps open
         std::optional<PanelWidget> m_Pinned;
+        std::optional<PanelWidget> m_Settings; // the pinned pill, while its popup shows its settings
     };
 
     // Which of the game's mouse messages the bar takes, by their Windows numbers: a press on the bar or its open

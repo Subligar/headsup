@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -39,6 +40,8 @@ namespace headsup
             Picture,     // a picture from the game's files, as an icon is drawn
             PinChip,     // the pin's chip, drawn as a tab's; open while pinned
             PinWord,     // the word on it, drawn as text
+            CogChip,     // the settings chip left of the pin, drawn as a tab's; open while the settings show
+            Cog,         // the cog on it
         };
         Kind kind = Kind::Text;
         float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f; // from the popup's top-left corner
@@ -50,15 +53,18 @@ namespace headsup
         bool right     = false;         // Text: drawn against its box's right, as a pair's value is
         uint16_t item  = 0;             // Item
         GamePicture picture = GamePicture::None; // Picture
+        bool tinted = false; // Icon: one of HeadsUp's own white ones, drawn in its span's color
     };
 
-    // Where a card's tab is, from the popup's top-left corner, to click: its key the card's heading.
+    // Where a card's tab is, from the popup's top-left corner, to click: its key the card's heading. Or a pressable
+    // cell's, whose tab is what a press on it tells the plugin.
     struct PopupTabChip
     {
         std::string key;
         float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f;
         size_t line = 0;
         std::string tab;
+        bool press = false;
     };
 
     // A socket that shows only some of its lines, from the popup's top-left corner, and how many lines it scrolls.
@@ -86,6 +92,16 @@ namespace headsup
         std::vector<PopupTabChip> chips;
         std::vector<PopupScroll> scrolls;
         BarRect pin{}; // the pin chip, which a press pins or unpins the popup by; none in an empty popup
+        BarRect cog{}; // the settings chip, which a press shows the widget's settings by, or its content again
+        BarRect body{}; // where the settings go while they show: under the title, as wide as the popup's inside
+    };
+
+    // The room the widget's settings take, as the settings window lays them out, which a popup showing them leaves
+    // under its title in place of its sections. 0 tall before they were first laid out.
+    struct SettingsRoom
+    {
+        float width = 0.0f, height = 0.0f;
+        bool operator==(const SettingsRoom&) const = default;
     };
 
     struct TextSize
@@ -100,11 +116,13 @@ namespace headsup
     // under the title, on the panel. A pair's value ends at its card's right edge. When the cards stacked would run
     // taller than kTwoColumnsAbove popup text sizes, they flow into two columns as even as their order allows, and
     // into more when two would run taller than room, a card too tall for it going on in the next under its heading.
-    // The pin chip sits at the title row's top right: "pin", or lit and "pinned" while pinned. It is never narrower
-    // than least, its cards widening to fill it.
+    // The pin chip sits at the title row's top right: "pin", or lit and "pinned" while pinned, with the settings chip
+    // left of it, lit while settings show. It is never narrower than least, its cards widening to fill it. With
+    // settings, their room is left under the title in place of the sections, no taller than room leaves.
     constexpr float kTwoColumnsAbove = 24.0f;
     PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, BarShape shape, bool pinned,
-                            SpanMeasure measure, float room = std::numeric_limits<float>::infinity(), float least = 0.0f);
+                            SpanMeasure measure, float room = std::numeric_limits<float>::infinity(), float least = 0.0f,
+                            std::optional<SettingsRoom> settings = std::nullopt);
     // A layout taller than height keeps the title and the cards that end padding or more above it, and shrinks to
     // them with its padding under the lowest.
     void CutPopup(PopupLayout& layout, float height, float padding);

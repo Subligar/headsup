@@ -95,6 +95,7 @@ namespace headsup
     PopupContent GameHelpPopup(const std::optional<StripText>& strip, const std::optional<Span>& bagFill)
     {
         PopupContent popup;
+        popup.settings = false;
         if (!strip) return popup;
         popup.title = ListOf(Text(strip->caption.empty() ? kPopupTitle : strip->caption));
         PopupSection rows;

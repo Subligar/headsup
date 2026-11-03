@@ -63,19 +63,14 @@ Hover a widget for its popup, and click to keep it open.
 | Zone | The zone, its region and who holds it, by crest and name | Each nation's influence there |
 | Weather | The weather and today's chance of it | A five-day forecast, and which zones can roll each element |
 | Vana'diel Clock | The day, the time and the moon, and the date if you like | The date and the next day and moon |
-| Job | Your jobs, levels and EXP | EXP per hour and the time to level |
-| EXP | Your EXP bar | EXP per hour and the time to level |
+| Job & EXP | Your jobs, levels and EXP, or your EXP bar with its texts around it | EXP per hour and the time to level |
 | Party | Your party's lowest HP and MP | Each member's HP, MP and TP |
-| Signet | Signet or Sanction's time left | What it gives |
-| Distance | Your target's distance | |
-| Conquest | Regions each nation holds | Which regions, and where you can run supplies |
-| World Info | The next ship, weather, guild hours, RSE or moon | Ships, the calendar, guild hours and today's guild turn-ins |
-| Target | Your target's name, level and con | A mob's stats, weaknesses, spells, drops and spawn; an NPC's shop, trades and quests |
-| Gil | Your gil or a currency | Every currency |
+| Status Timers | The time left on each status you pin | Your favorite statuses and every other one, with a star and a pin for each |
+| World Info | The next ship, weather, guild hours, RSE, moon or the regions each nation holds | Ships, the calendar, guild hours, today's guild turn-ins and each nation's regions |
+| Target | Your target's name, level, con and distance | A mob's stats, weaknesses, spells, drops and spawn; an NPC's shop, trades and quests |
+| Currency | Your gil or a currency | Your favorite currencies and every other one, by amount or by name |
 | Bags | Your inventory space | Every bag |
-| Connection | Bytes sent and received, and your ping | The last server data and your PlayOnline messages |
-| Memory | The game's memory left | The frames and LinuxXI's figures |
-| FPS | Frames per second | The slowest recent frame |
+| Performance | Frames per second, bytes sent and received, your ping and the game's memory, as you pick | The last server data, your PlayOnline messages, the frames and LinuxXI's figures |
 | Clock | Your time, or a time zone you pick | The daily reset and the conquest tally |
 
 | Theme | Look |
@@ -91,7 +86,8 @@ Hover a widget for its popup, and click to keep it open.
 
 | Page | Holds |
 |---|---|
-| Entities | Nameplates, outlines and the target cursor, with a page for Mobs, Players, Self, NPCs and Pets |
+| Theme | The look of the top panel, this window, the fishing bar and more |
+| Nameplates & Outlines | Nameplates, outlines and the target cursor, with a page for Mobs, Players, Self, NPCs and Pets |
 | User Interface | Screenshot mode, moving the game's windows and a fishing bar of HeadsUp's own, with the Top Panel, Widgets and Mouse Cursor pages |
 | Colors | The colors for aggression, toughness, claims, targeting and each kind of entity |
 | HeadsUp Config | Turning HeadsUp off, a report for bug reports, and the window's own look |
@@ -105,10 +101,10 @@ HeadsUp reads what the game already shows and the server already sends. It never
 
 | Request | When |
 |---|---|
-| Region Info's conquest request | After each zone change, while the Zone widget is on |
-| The Currencies menu's two requests | After loading and each zone, while the Gil widget is on |
+| Region Info's conquest request | After each zone change, while the Zone widget or World Info's conquest is on |
+| The Currencies menu's two requests | After loading and each zone, while the Currency widget is on |
 | A `/check` of nearby monsters | Only with Auto-Check on (off by default). Never a player |
-| A ping to the server | Once a second, only while the Connection widget shows your ping |
+| A ping to the server | Once a second, only while the Performance widget shows your connection |
 | Today's guild turn-ins from api.phoenix-xi.com | Once a day, while the World Info widget is on |
 
 Its monster, zone and weather data is built from Phoenix's own server code, so anything changed on the live server

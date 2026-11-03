@@ -2,7 +2,7 @@
 
 #include "bar_job.h"
 #include "bar_party.h"
-#include "bar_signet.h"
+#include "bar_statuses.h"
 #include "con.h"
 #include "icons.h"
 #include "mobdata.h"
@@ -57,16 +57,13 @@ namespace headsup
         const uint32_t* times = player->GetStatusTimers();
         const int64_t unixMs =
             std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        bool influence = false;
         for (int i = 0; icons != nullptr && times != nullptr && i < kStatusIconSlots; ++i)
-            if (icons[i] == kSignetEffect || icons[i] == kSanctionEffect)
+            if (icons[i] >= 0)
             {
                 const std::optional<double> left = StatusSecondsLeft(times[i], unixMs);
-                std::fprintf(out, "status %d in icon slot %d: timer %08X, %.0f s left\n", icons[i], i,
-                    static_cast<unsigned>(times[i]), left ? *left : -1.0);
-                influence = true;
+                std::fprintf(out, "status %d (%s) in icon slot %d: timer %08X, %.0f s left\n", icons[i],
+                    StatusName(static_cast<uint16_t>(icons[i])), i, static_cast<unsigned>(times[i]), left ? *left : -1.0);
             }
-        if (!influence) std::fprintf(out, "status %d or %d: in no icon slot\n", kSignetEffect, kSanctionEffect);
         {
             IParty* party = s.core->GetMemoryManager()->GetParty();
             for (uint32_t m = 0; m < static_cast<uint32_t>(kPartySize); ++m)

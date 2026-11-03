@@ -283,15 +283,10 @@ barBags=false
 barEarthTime=false
 barGameHelp=false
 barServerTime=true
-barFps=false
+barPerformance=false
 barJob=false
-barConnection=false
 barParty=true
-barSignet=true
-barDistance=false
-barMemory=true
-barExp=true
-barConquest=true
+barStatusTimers=true
 barWorld=true
 barZoneLine2=true
 barZoneIcons=true
@@ -311,18 +306,14 @@ barGameHelpLine2=true
 barGameHelpIcons=true
 barServerTimeLine2=true
 barServerTimeIcons=true
-barFpsLine2=true
-barFpsIcons=true
+barPerformanceLine2=true
+barPerformanceIcons=true
 barJobLine2=true
 barJobIcons=true
-barConnectionLine2=true
-barConnectionIcons=true
 barPartyLine2=true
 barPartyIcons=true
-barSignetLine2=true
-barSignetIcons=true
-barDistanceLine2=true
-barDistanceIcons=true
+barStatusTimersLine2=true
+barStatusTimersIcons=true
 expBar=beside
 jobNames=false
 clock24=false
@@ -341,10 +332,10 @@ cursorOutline=60.0000
 untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
-barLatency=true
-barLeft=zone weather vanaTime job exp party signet distance conquest world
+barPerformanceParts=16.0000
+barLeft=zone weather vanaTime job party statusTimers world
 barCenter=
-barRight=target gil bags connection memory fps earthTime
+barRight=target gil bags performance earthTime
 hideHelpBar=true
 hideNetstat=true
 screenshotKey=121.0000
@@ -384,7 +375,7 @@ helpBarY=8.0000
         s.showBar      = false;
         s.barTheme     = BarTheme::UmbraDark;
         s.barSeparators = BarSeparators::None;
-        s.Widget(BarWidget::Gil).currency   = *CurrencyOfKey("allied_notes");
+        s.Widget(BarWidget::Currency).currency   = *CurrencyOfKey("allied_notes");
         s.Widget(BarWidget::EarthTime).clockServerTime = true; // the file's Server time widget was on
         s.menuFont         = "Tahoma";
         s.menuFontSize     = 21; // 125 percent of Ashita's 18 pixels, in Tahoma, which was drawn at 0.95 of its size
@@ -393,7 +384,7 @@ helpBarY=8.0000
         s.helpBarX         = 12;
         s.helpBarY         = 8;
         s.Widget(BarWidget::Target).secondLine = false;
-        s.Widget(BarWidget::Gil).icons         = false;
+        s.Widget(BarWidget::Currency).icons         = false;
         s.Widget(BarWidget::Job).expBar     = ExpBarPlace::Beside;
         s.Widget(BarWidget::Job).jobNames   = false;
         s.Widget(BarWidget::EarthTime).clock24    = false;
@@ -404,7 +395,7 @@ helpBarY=8.0000
         s.barSubtitle = SubtitlePlace::Before;
         s.cursorOutlineThickness = 120; // 60 of before
         s.Widget(BarWidget::EarthTime).clockSeconds  = true;
-        s.Widget(BarWidget::Connection).latency = true;
+        s.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Ping);
         s.barHeight    = 48;
         s.barTextSize   = 16;
         s.popupTextSize = 20;
@@ -621,7 +612,7 @@ TEST(clamp_bounds_every_field)
     s.badgeFontName     = "";
     s.barHeight         = 200;
     s.barTheme          = static_cast<BarTheme>(9);
-    s.Widget(BarWidget::Gil).currency       = kCurrencyCount;
+    s.Widget(BarWidget::Currency).currency       = kCurrencyCount;
     const Color wild{{2.0f, -1.0f, 0.5f}};
     s.weakBadgeColor = s.resistBadgeColor = s.rankBadgeColor = s.immuneBadgeColor = s.cursorEdgeColor.custom = wild;
     s.cursorColor     = ColorPick{ColorSource::Game, wild}; // the game's name color is not the cursor's to take
@@ -655,7 +646,7 @@ TEST(clamp_bounds_every_field)
     CHECK(c.statusBadges[7] == (StatusBadgeRule{true, kNoWeakRank, 1}));
     CHECK(c.badgeFontName.empty()); // no font of its own: the default font
     CHECK_EQ(c.barHeight, kMaxBarHeight);
-    CHECK(c.barTheme == BarTheme::PhoenixGold && c.Widget(BarWidget::Gil).currency == kGilCurrency);
+    CHECK(c.barTheme == BarTheme::PhoenixGold && c.Widget(BarWidget::Currency).currency == kGilCurrency);
 }
 
 TEST(the_target_cursor_rises_or_sinks_up_to_twenty_pixels)
@@ -1095,7 +1086,7 @@ TEST(a_theme_that_is_not_one_keeps_the_default_and_old_files_get_the_bar)
     store.values["barTheme"]    = "purple";
     store.values["barCurrency"] = "dollars";
     const Settings s         = LoadSettings(store);
-    CHECK(s.barTheme == BarTheme::PhoenixGold && s.Widget(BarWidget::Gil).currency == kGilCurrency);
+    CHECK(s.barTheme == BarTheme::PhoenixGold && s.Widget(BarWidget::Currency).currency == kGilCurrency);
     CHECK(s.showBar);
     for (int w = 0; w < kBarWidgetCount; ++w) // a widget added to BarWidget takes its default from kBarWidgetDefaults
         CHECK(s.Widget(static_cast<BarWidget>(w)).on == kBarWidgetDefaults[w]);
@@ -1121,8 +1112,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barFps", "barJob", "barConnection", "barParty", "barSignet", "barDistance", "barMemory",
-        "barExp", "barConquest", "barWorld"}; // in BarWidget's order
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld"}; // in BarWidget's order
     static_assert(std::size(widgetKeys) == kBarWidgetCount);
     for (int w = 0; w < kBarWidgetCount; ++w)
     {
@@ -2748,7 +2738,7 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     SaveSettings(s, plain);
     for (const auto& [key, value] : plain.values)
         CHECK(key.find("_2") == std::string::npos);
-    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value() && s.Widget(*copy).on);
     s.Widget(*copy).currency = 3;
     s.Widget(*copy).secondLine = false;
@@ -2762,20 +2752,20 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     // Taken off, its settings go: put back, it is new.
     RemoveWidgetCopy(s, *copy);
     CHECK(!Placed(s.barSections, *copy) && !Shows(s, *copy));
-    CHECK(CloneWidget(s, BarWidget::Gil) == copy && s.Widget(*copy) == NewWidget(*copy));
+    CHECK(CloneWidget(s, BarWidget::Currency) == copy && s.Widget(*copy) == NewWidget(*copy));
 }
 
 TEST(a_clone_starts_with_every_setting_of_the_widget_it_copies_shown_and_combined_with_nothing)
 {
     Settings s;
-    WidgetOptions& gil = s.Widget(BarWidget::Gil);
+    WidgetOptions& gil = s.Widget(BarWidget::Currency);
     gil.on             = false;
     gil.currency       = 3;
     gil.secondLine     = false;
     gil.spacing        = 12;
     gil.titleFont      = "Cinzel";
     gil.combine        = PanelWidget{BarWidget::Bags};
-    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value());
     WidgetOptions expected = gil;
     expected.on            = true;
@@ -2792,23 +2782,23 @@ TEST(a_combined_widget_is_kept_by_its_partners_name_and_loses_a_partner_taken_of
     Settings s;
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Bags);
     CHECK(copy.has_value());
-    s.Widget(BarWidget::Zone).combine    = PanelWidget{BarWidget::Conquest};
+    s.Widget(BarWidget::Zone).combine    = PanelWidget{BarWidget::Party};
     s.Widget(BarWidget::Weather).combine = *copy;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(store.values["barZoneCombine"], "conquest");
+    CHECK_EQ(store.values["barZoneCombine"], "party");
     CHECK_EQ(store.values["barWeatherCombine"], "bags:2");
     CHECK_EQ(store.values["barGilCombine"], "");
     const Settings read = LoadSettings(store);
-    CHECK(read.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Conquest));
+    CHECK(read.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Party));
     CHECK(read.Widget(BarWidget::Weather).combine == copy);
-    CHECK(Members(Panel(read), BarWidget::Zone) == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Conquest}));
+    CHECK(Members(Panel(read), BarWidget::Zone) == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Party}));
     store.values["barZoneCombine"] = "nothing";
     CHECK(!LoadSettings(store).Widget(BarWidget::Zone).combine);
     // A copy taken off leaves nothing combined with it, so one put back is not.
     RemoveWidgetCopy(s, *copy);
     CHECK(!s.Widget(BarWidget::Weather).combine);
-    CHECK(s.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Conquest));
+    CHECK(s.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Party));
 }
 
 TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_taken)
@@ -2825,11 +2815,11 @@ TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_tak
             if (w != PanelWidget{BarWidget::Zone} && w.kind != BarWidget::Target) all.push_back(w);
     CHECK(CombineChoices(s, BarWidget::Zone) == all);
     CHECK(CombineChoices(s, BarWidget::Target).empty());
-    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Conquest};
-    CHECK(offers(BarWidget::Zone, BarWidget::Conquest));     // its own pick
-    CHECK(!offers(BarWidget::Weather, BarWidget::Conquest)); // Zone has it
-    CHECK(!offers(BarWidget::Conquest, BarWidget::Zone));    // a ring
-    CHECK(offers(BarWidget::Conquest, BarWidget::Weather));
+    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Party};
+    CHECK(offers(BarWidget::Zone, BarWidget::Party));     // its own pick
+    CHECK(!offers(BarWidget::Weather, BarWidget::Party)); // Zone has it
+    CHECK(!offers(BarWidget::Party, BarWidget::Zone));    // a ring
+    CHECK(offers(BarWidget::Party, BarWidget::Weather));
 }
 
 TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_range)
@@ -2932,7 +2922,7 @@ TEST(a_widgets_own_fonts_and_text_size_are_kept_and_default_to_the_panels)
 TEST(the_target_widgets_background_is_on_by_default_and_kept_off_once_turned_off)
 {
     Settings s;
-    CHECK(s.Widget(BarWidget::Target).background && !s.Widget(BarWidget::Gil).background);
+    CHECK(s.Widget(BarWidget::Target).background && !s.Widget(BarWidget::Currency).background);
     s.Widget(BarWidget::Target).background = false;
     MapStore store;
     SaveSettings(s, store);
@@ -2956,32 +2946,32 @@ TEST(the_target_widgets_icons_visibility_and_mob_level_are_kept_and_held_to_thei
     CHECK(held.targetIcons == kAllTargetIcons && held.targetShows == 0);
 }
 
-TEST(the_exp_text_is_kept_apart_for_the_job_and_exp_widgets)
+TEST(the_job_and_exp_widgets_lines_and_bar_settings_are_kept)
 {
     Settings s;
-    CHECK(s.Widget(BarWidget::Job).expText == kDefaultExpText && !s.Widget(BarWidget::Exp).on);
-    WidgetOptions& exp = s.Widget(BarWidget::Exp);
-    exp.on             = true;
+    CHECK(s.Widget(BarWidget::Job).expText == kDefaultExpText);
+    WidgetOptions& exp = s.Widget(BarWidget::Job);
+    exp.jobLayout      = JobLayout::Bar;
     exp.expPlaces      = {ExpTextPlace::Above, ExpTextPlace::Off, ExpTextPlace::Left};
     exp.expBarWidth    = 250;
     exp.expBarHeight   = 3;
     exp.expAlign       = Align::Right;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(store.values["expBar"], "under"); // the Job widget's, under its key of before
+    CHECK_EQ(store.values["expBar"], "under");
+    CHECK_EQ(store.values["jobLayout"], "bar");
     const Settings read = LoadSettings(store);
-    CHECK(read.Widget(BarWidget::Exp) == s.Widget(BarWidget::Exp));
     CHECK(read.Widget(BarWidget::Job) == s.Widget(BarWidget::Job));
     CHECK_EQ(store.values["barExpEarned"], "above");
     CHECK_EQ(store.values["barExpAlign"], "right");
-    CHECK(Settings{}.Widget(BarWidget::Exp).expAlign == Align::Center);
+    CHECK(Settings{}.Widget(BarWidget::Job).expAlign == Align::Center);
     // A size past the slider's ends reads as that end; an unknown place as the default's.
     store.values["barExpBarWidth"]  = "9999";
     store.values["barExpBarHeight"] = "0";
     store.values["barExpPercent"]   = "sideways";
     store.values["barExpAlign"]     = "diagonal";
     const Settings reread        = LoadSettings(store);
-    const WidgetOptions& clamped = reread.Widget(BarWidget::Exp);
+    const WidgetOptions& clamped = reread.Widget(BarWidget::Job);
     CHECK(clamped.expBarWidth == kMaxExpBarWidth && clamped.expBarHeight == kMinExpBarHeight);
     CHECK(clamped.expPlaces[static_cast<int>(ExpText::Percent)] == kDefaultExpPlaces[static_cast<int>(ExpText::Percent)]);
     CHECK(clamped.expAlign == Align::Center);
@@ -3049,4 +3039,34 @@ TEST(the_fishing_bar_keeps_its_switch_width_and_place)
     store.values["fishBarX"]     = "-300";
     const Settings odd = LoadSettings(store);
     CHECK(odd.fishBarWidth == kMinFishBarWidth && odd.fishBarX == kFishBarUnplaced);
+}
+
+TEST(the_currency_favorites_are_kept_in_order_and_an_unknown_or_repeated_one_is_left_out)
+{
+    Settings s;
+    CHECK((s.currencyFavorites == std::vector<std::string>{"gil", kYourConquestPoints})); // gil and your nation's points
+    s.currencyFavorites = {"sparks", "gil"};
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["currencyFavorites"], "sparks gil");
+    CHECK((LoadSettings(store).currencyFavorites == std::vector<std::string>{"sparks", "gil"}));
+    store.values["currencyFavorites"] = "nothing sparks cp_nation sparks";
+    CHECK((LoadSettings(store).currencyFavorites == std::vector<std::string>{"sparks", kYourConquestPoints}));
+    store.values["currencyFavorites"] = "";
+    CHECK(LoadSettings(store).currencyFavorites.empty()); // every star taken off
+}
+
+TEST(the_status_favorites_and_pins_are_kept_and_an_unknown_or_repeated_one_is_left_out)
+{
+    Settings s;
+    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) && s.statusPins.empty());
+    s.statusFavorites = {40, 33};
+    s.statusPins      = {33};
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK(store.values["statusFavorites"] == "40 33" && store.values["statusPins"] == "33");
+    const Settings read = LoadSettings(store);
+    CHECK(read.statusFavorites == s.statusFavorites && read.statusPins == s.statusPins);
+    store.values["statusFavorites"] = "40 x 65000 40 253";
+    CHECK((LoadSettings(store).statusFavorites == std::vector<uint16_t>{40, kSignetEffect}));
 }

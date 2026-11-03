@@ -3,6 +3,7 @@
 #include "argb.h"
 #include "bar_placement.h"
 #include "bar_server_time.h"
+#include "bar_statuses.h"
 #include "bar_theme.h"
 #include "bar_types.h"
 #include "color.h"
@@ -73,7 +74,7 @@ namespace headsup
         int textSize    = kPanelTextSize; // its title's, or the panel's
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
-        uint8_t nations = kAllNations;              // Conquest: whose regions it counts, by NationBit
+        uint8_t nations = kAllNations;              // World Info's conquest: whose regions it counts, by NationBit
         ConquestGrid conquestGrid = ConquestGrid::TwoByTwo; // and how several are laid out
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         bool clock24         = true;                // its two lines
@@ -84,20 +85,20 @@ namespace headsup
         bool zoneConquestText      = true;                 // and by name, after the crest
         bool vanaWeekday     = true;                // Vana'diel Clock: the day before the time
         bool vanaDate        = false;               // and the date before the moon
-        ExpBarPlace expBar   = ExpBarPlace::Under;  // Job and EXP
+        ExpBarPlace expBar   = ExpBarPlace::Under;  // Job & EXP
         uint8_t expText      = kDefaultExpText;     // by ExpTextBit
-        ExpPlaces expPlaces  = kDefaultExpPlaces;   // EXP: its texts around its bar
+        ExpPlaces expPlaces  = kDefaultExpPlaces;   // its Bar layout: its texts around its bar
         int expBarWidth      = kDefaultExpBarWidth;
         int expBarHeight     = kDefaultExpBarHeight;
         Align expAlign       = Align::Center;       // its texts above and below the bar, against it
         JobLayout jobLayout  = JobLayout::JobsFirst;
         bool jobNames        = true;
-        bool latency         = false; // Connection: its ping after its rates
-        bool netMeter        = true;  // and the game's own meter after them
+        uint8_t perfParts    = kDefaultPerfParts; // Performance: what it shows on the panel, by PerfBit
         uint32_t targetIcons = DetectionBit(DetectionIcon::Aggro); // Target: a mob's icons, by DetectionBit and kTargetWeakIcons
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
         bool targetMobLevel  = true;  // a mob's level and con under its name
         bool targetJobs      = true;  // and a player's jobs and levels, as far as they are known
+        bool targetDistance  = true;  // and how far it is, after its name
         WorldLine worldLine  = WorldLine::Departure; // World Info: what it tells on the panel
         int worldRoute       = 0;                    // its departure, by TravelRoutes
         Element worldElement = Element::Fire;        // its weather
@@ -152,6 +153,11 @@ namespace headsup
 
     struct Settings
     {
+        // The Currency popup's favorites at its top, by kCurrencyTable's key or kYourConquestPoints, in this order.
+        std::vector<std::string> currencyFavorites{kCurrencyTable[kGilCurrency].key, kYourConquestPoints};
+        // The Status Timers popup's favorites at its top, and those of them it shows on the panel, by status id.
+        std::vector<uint16_t> statusFavorites{kSignetEffect, kSanctionEffect};
+        std::vector<uint16_t> statusPins;
         bool enabled       = true;
         bool autoSave      = true; // off, changes wait for Save in the settings window, and Revert drops them
         int outlineThickness = 100; // percent of kOutlineUnitPx

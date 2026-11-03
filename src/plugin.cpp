@@ -874,13 +874,13 @@ public:
         g_BarOn     = headsup::BarRuns(m_Settings, loginStatus) && m_Rml.Running();
         g_BarHidden = m_UiHidden;
         // Opening Region Info asks the server for the conquest standings; HeadsUp asks the same once per zone-in, and
-        // again while the Zone or Conquest popup shows them.
+        // again while the Zone or World Info popup shows them.
         const auto opened = [&](headsup::BarWidget w) { return headsup::PopupShows(m_Settings, m_BarInput.Open(), w); };
         if (m_GameState.ConquestRequestDue(now,
                 g_BarOn &&
-                    (headsup::Shown(m_Settings, headsup::BarWidget::Zone) || headsup::Shown(m_Settings, headsup::BarWidget::Conquest)) &&
+                    headsup::StandingsShown(m_Settings) &&
                     m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
-                opened(headsup::BarWidget::Zone) || opened(headsup::BarWidget::Conquest)))
+                opened(headsup::BarWidget::Zone) || opened(headsup::BarWidget::World)))
         {
             auto request = headsup::kConquestRequest; // Ashita takes the bytes as non-const
             m_AshitaCore->GetPacketManager()->AddOutgoingPacket(headsup::kConquestRequestPacket,
@@ -888,9 +888,9 @@ public:
             m_GameState.ConquestRequested(now);
         }
         // Opening the Currencies menu asks for them; HeadsUp asks the same, as for the conquest standings.
-        const bool gilOpen = opened(headsup::BarWidget::Gil);
+        const bool gilOpen = opened(headsup::BarWidget::Currency);
         if (m_GameState.CurrencyRequestDue(now,
-                g_BarOn && headsup::Shown(m_Settings, headsup::BarWidget::Gil) &&
+                g_BarOn && headsup::Shown(m_Settings, headsup::BarWidget::Currency) &&
                     m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
                 gilOpen))
         {
@@ -919,9 +919,14 @@ public:
         }
         // Off, the bar is given nothing to show, and releases what it made.
         UpdateSkin();
+        m_RmlBar.settingsRoom = m_RmlMenu.RoomFor(SettingsShownNow(), m_Settings);
         if (m_Rml.Running())
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
+        for (const std::string& press : m_BarInput.TakePresses())
+            if (headsup::ApplyPopupPress(m_Settings, press,
+                    static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1)))
+                m_SettingsChangedAt = now;
         if (const bool fishing = m_Settings.enabled && m_Settings.fishBar; m_Rml.Running() &&
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
@@ -1042,11 +1047,19 @@ public:
 #ifdef HEADSUP_DEV
                 .exportable       = true,
 #endif
+                .settingsOf       = SettingsShownNow(),
             };
+            m_RmlMenu.settingsAt = m_RmlBar.SettingsBody();
             if (m_RmlMenu.Update(MenuHostNow(), m_Settings, readings, m_Fonts.Choices(m_Settings.defaultFont), kVersion))
             {
                 m_SettingsChangedAt = now;
                 SayGameFontFailure();
+            }
+            // A chip clicked opens its pill's popup on its settings, or closes it when it shows them already.
+            if (const std::optional<headsup::PanelWidget> asked = m_RmlMenu.TakeSettingsAsked())
+            {
+                const headsup::PanelWidget pill = headsup::Panel(m_Settings).group[headsup::SlotOf(*asked)];
+                m_BarInput.ShowSettings(m_BarInput.SettingsShown() == pill ? std::nullopt : std::optional(pill));
             }
             if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
             if (m_RmlMenu.TakeSetupBackup()) BackUpSettings();
@@ -1194,6 +1207,13 @@ public:
 
 private:
     // The help bar's tallest reach in the game's menu resolution, with clear space below it, while the bar shows it.
+    // The widgets whose settings the panel's open popup shows, in its pill's order.
+    std::vector<headsup::PanelWidget> SettingsShownNow() const
+    {
+        const std::optional<headsup::PanelWidget> shown = m_BarInput.SettingsShown();
+        return shown ? headsup::Members(headsup::Panel(m_Settings), *shown) : std::vector<headsup::PanelWidget>{};
+    }
+
     std::optional<headsup::HelpBand> HelpBandNow() const
     {
         // The screen in the game's menu resolution, and the help bar's bottom in it while the bar shows it.
@@ -2615,7 +2635,7 @@ private:
             s.nation = static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1);
             s.outposts = &Outposts()[m_AshitaCore->GetMemoryManager()->GetParty()->GetMemberServerId(0)];
         }
-        if (needs.unixTime || needs.localTime || needs.signet)
+        if (needs.unixTime || needs.localTime || needs.statuses)
         {
             const auto clock = std::chrono::system_clock::now();
             s.unixMs         = UnixMsOf(clock);
@@ -2690,10 +2710,10 @@ private:
         }
         if (needs.memory) GatherMemory(now, s, needs.cpu);
         if (needs.linuxxi) s.linuxxi = LinuxXINow(now);
-        if (needs.signet)
+        if (needs.statuses)
         {
             IPlayer* player = m_AshitaCore->GetMemoryManager()->GetPlayer();
-            s.signet = headsup::SignetFrom(player->GetBuffs(), player->GetStatusIcons(), player->GetStatusTimers(),
+            s.statuses = headsup::ActiveStatuses(player->GetBuffs(), player->GetStatusIcons(), player->GetStatusTimers(),
                 s.unixMs);
         }
         if (needs.target)

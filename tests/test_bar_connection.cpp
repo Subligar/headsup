@@ -100,7 +100,8 @@ TEST(the_connection_widget_ends_in_the_games_own_meter_as_its_readout_does_unles
         return text;
     };
     CHECK_EQ(joined(ConnectionWidget(r)), "S 300  R 1,200  100%");
-    CHECK_EQ(joined(ConnectionWidget(r, false, false)), "S 300  R 1,200");
+    CHECK_EQ(joined(ConnectionWidget(r, PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received))), "S 300  R 1,200");
+    CHECK_EQ(joined(ConnectionWidget(r, PerfBit(PerfPart::Received) | PerfBit(PerfPart::Percent))), "R 1,200  100%");
     // Under 100 it is the game's alarm, red as the rates are.
     r.counters->health = 40;
     const WidgetContent alarm = ConnectionWidget(r);

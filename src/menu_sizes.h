@@ -10,6 +10,7 @@ namespace headsup
     constexpr float kWindowHeight   = 36.0f;
     constexpr float kMinWindowWidth  = 42.0f; // a row of two mode dropdowns and a few letters of its label
     constexpr float kMinWindowHeight = 16.0f;
+    constexpr float kWindowKeptOn    = 0.2f; // a share of each side: dragged off the screen, this much stays on
     constexpr float kGutter         = 1.0f;  // around the window's parts and between cards
     constexpr float kCardPad        = 0.9f;  // a card's content from its edges
     constexpr float kCardRadius     = 0.6f;
@@ -34,6 +35,7 @@ namespace headsup
     constexpr float kChipHeight     = 1.9f;
     constexpr float kChipDot        = 0.5f;
     constexpr float kChipToggle     = 0.6f; // a widget chip's toggle, as a share of a table's
+    constexpr float kChipClone      = 1.0f; // a widget chip's clone picture
     constexpr float kBulletIndent   = 1.2f; // a description's bullet point: its text from the card's edge
     constexpr float kTabHeight      = 2.0f;
     constexpr float kTabRule        = 0.12f; // the line a strip of tabs stands on
@@ -41,6 +43,7 @@ namespace headsup
     constexpr float kTabPadding     = 0.6f;  // either side of a name in tabs as wide as their names
     constexpr int kTabFillGrow      = 1000;  // the last row's filler grows this much faster than its tabs
     constexpr float kTipWidth       = 20.0f;
+    constexpr float kSettingsWidth  = 30.0f; // a panel popup's settings: a label and a slider with room
     constexpr float kHeaderRow      = 2.4f;  // a card's title row
     constexpr float kLineNameWidth  = 6.6f;  // "Middle Line", before its design box
     constexpr int kResetArrowPixels = 48;    // the reset arrow's picture, drawn smaller than it is

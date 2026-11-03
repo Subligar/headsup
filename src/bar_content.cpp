@@ -8,6 +8,21 @@ namespace headsup
 {
     Span Text(std::string text, Tone tone) { return Span{std::move(text), tone, 0}; }
 
+    void AddPart(std::vector<Span>& line, std::vector<Span> part)
+    {
+        if (part.empty()) return;
+        constexpr const char* kPartGap = "  ";
+        if (!line.empty())
+        {
+            if (part.front().picture == GamePicture::None)
+                part.front().text = kPartGap + part.front().text;
+            else
+                line.push_back(Text(kPartGap));
+        }
+        for (Span& span : part)
+            line.push_back(std::move(span));
+    }
+
     Span Colored(std::string text, uint32_t argb) { return Span{std::move(text), Tone::Own, argb}; }
 
     PopupCell Cell(std::vector<Span> text, std::optional<Icon> icon) { return PopupCell{icon, false, std::move(text)}; }

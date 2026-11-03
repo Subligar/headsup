@@ -34,7 +34,7 @@ namespace headsup
             return TextLift(metrics.ascent, metrics.descent, pixels);
         }
 
-        constexpr const char* kDocumentName = "settings";
+        constexpr const char* kDocumentName = "settings", *kViewName = "widget settings";
         constexpr float kPopupDrop  = 2.0f;  // pixels between a control and its popup
         constexpr float kTipDrop    = 18.0f; // pixels from the pointer to its tip
         constexpr char kKeySeparator = '\x1f';
@@ -116,13 +116,19 @@ namespace headsup
     void RmlMenu::Close()
     {
         if (m_Document != nullptr) m_Document->Close();
-        m_Document = nullptr;
-        m_Visible  = false;
+        if (m_View != nullptr) m_View->Close();
+        m_Document = m_View = nullptr;
+        m_Visible = m_ViewShown = false;
         m_Placed   = false;
         m_OpenedAt.reset();
-        m_Sidebar = m_Page = m_PageTitle = m_Popup = m_Tip = nullptr;
+        m_ViewAt.reset();
+        m_ViewPixels = 0;
+        m_ViewFor.clear();
+        m_Sidebar = m_Page = m_PageTitle = m_Popup = m_Tip = m_PopupIn = m_TipIn = nullptr;
+        m_ViewBody = m_ViewPopup = m_ViewTip = nullptr;
         m_SidebarRml.clear();
         m_PopupRml.clear();
+        m_ViewRml.clear();
         m_TitleShown.clear();
         m_TipShown.clear();
         m_Cards.clear();
@@ -131,6 +137,15 @@ namespace headsup
         m_Events.clear();
     }
 
+    std::optional<SettingsRoom> RmlMenu::RoomFor(const std::vector<PanelWidget>& widgets, const Settings& settings) const
+    {
+        if (widgets.empty()) return std::nullopt;
+        Rml::Element* shown = m_ViewShown && widgets == m_ViewFor ? m_ViewBody->GetFirstChild() : nullptr;
+        return SettingsRoom{std::round(kSettingsWidth * static_cast<float>(settings.menuFontSize)),
+            shown != nullptr ? std::ceil(shown->GetBox().GetSize(Rml::BoxArea::Border).y) : 0.0f};
+    }
+
+    std::optional<PanelWidget> RmlMenu::TakeSettingsAsked() { return std::exchange(m_State.settingsAsked, std::nullopt); }
     bool RmlMenu::TakeDebugRequest() { return std::exchange(m_State.debugRequested, false); }
     bool RmlMenu::TakeSetupBackup() { return std::exchange(m_State.setupBackup, false); }
 
@@ -170,11 +185,12 @@ namespace headsup
     std::optional<Rml::Vector2f> RmlMenu::CenterOf(const std::string& id, bool scroll)
     {
         Rml::Element* element = m_Document != nullptr ? m_Document->GetElementById(id) : nullptr;
+        if (element == nullptr && m_View != nullptr) element = m_View->GetElementById(id);
         if (element == nullptr) return std::nullopt;
         // What is in the popup or the frame is in view already; a card's control may be scrolled out of it, and in
         // a short window a page's name.
         for (Rml::Element* up = scroll ? element : nullptr; up != nullptr; up = up->GetParentNode())
-            if (up == m_Page || up == m_Sidebar)
+            if (up == m_Page || up == m_Sidebar || up == m_ViewBody)
             {
                 element->ScrollIntoView(Rml::ScrollIntoViewOptions(Rml::ScrollAlignment::Nearest));
                 m_Document->GetContext()->Update();
@@ -192,7 +208,7 @@ namespace headsup
     void RmlMenu::Index()
     {
         m_ById.clear();
-        std::vector<Rml::Element*> left{m_Document};
+        std::vector<Rml::Element*> left{m_Document, m_View};
         while (!left.empty())
         {
             Rml::Element* element = left.back();
@@ -214,12 +230,18 @@ namespace headsup
         if (m_Document != nullptr && look.SameFrame(m_Look))
         {
             m_Document->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(MenuStyle(look)));
+            m_View->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(MenuViewStyle(look)));
             m_Look = std::move(look);
             return true;
         }
         Close();
         m_Document = host.context->LoadDocumentFromMemory(MenuDocument(look), kDocumentName);
-        if (m_Document == nullptr) return false;
+        m_View     = host.context->LoadDocumentFromMemory(MenuViewDocument(look), kViewName);
+        if (m_Document == nullptr || m_View == nullptr)
+        {
+            Close();
+            return false;
+        }
         m_Look       = std::move(look);
         m_FontPixels = 0.0f;
         m_Opacity    = 0;
@@ -228,24 +250,71 @@ namespace headsup
         m_PageTitle  = m_Document->GetElementById(kMenuPageTitleId);
         m_Popup      = m_Document->GetElementById(kMenuPopupId);
         m_Tip        = m_Document->GetElementById(kMenuTipId);
-        for (const Rml::EventId id : {Rml::EventId::Click, Rml::EventId::Change, Rml::EventId::Dragdrop, Rml::EventId::Dragend,
-                 Rml::EventId::Dragmove, Rml::EventId::Mouseover, Rml::EventId::Mousemove, Rml::EventId::Mousescroll,
-                 Rml::EventId::Dragstart, Rml::EventId::Drag})
-            m_Document->AddEventListener(id, this);
-        // On their way down: taking and losing the keyboard do not come back up, and a text box keeps its keys.
-        for (const Rml::EventId id : {Rml::EventId::Focus, Rml::EventId::Blur, Rml::EventId::Keydown})
-            m_Document->AddEventListener(id, this, true);
-        return m_Sidebar != nullptr && m_Page != nullptr && m_PageTitle != nullptr && m_Popup != nullptr && m_Tip != nullptr;
+        m_ViewBody   = m_View->GetElementById(kMenuViewBodyId);
+        m_ViewPopup  = m_View->GetElementById(kMenuPopupId);
+        m_ViewTip    = m_View->GetElementById(kMenuTipId);
+        for (Rml::ElementDocument* document : {m_Document, m_View})
+        {
+            for (const Rml::EventId id : {Rml::EventId::Click, Rml::EventId::Change, Rml::EventId::Dragdrop, Rml::EventId::Dragend,
+                     Rml::EventId::Dragmove, Rml::EventId::Mouseover, Rml::EventId::Mousemove, Rml::EventId::Mousescroll,
+                     Rml::EventId::Dragstart, Rml::EventId::Drag})
+                document->AddEventListener(id, this);
+            // On their way down: taking and losing the keyboard do not come back up, and a text box keeps its keys.
+            for (const Rml::EventId id : {Rml::EventId::Focus, Rml::EventId::Blur, Rml::EventId::Keydown})
+                document->AddEventListener(id, this, true);
+        }
+        return m_Sidebar != nullptr && m_Page != nullptr && m_PageTitle != nullptr && m_Popup != nullptr && m_Tip != nullptr &&
+               m_ViewBody != nullptr && m_ViewPopup != nullptr && m_ViewTip != nullptr;
     }
 
-    void RmlMenu::ApplyBlocks(const std::vector<FormBlock>& blocks)
+    bool RmlMenu::ApplyView(const FormBlock* block, const std::vector<PanelWidget>& of, int pixels)
     {
-        bool replaced = false;
-        size_t card   = 0;
-        bool same     = true; // the cards are the ones shown, in their order
+        const bool shown = block != nullptr && settingsAt.has_value();
+        if (shown != m_ViewShown)
+        {
+            m_ViewShown = shown;
+            if (shown)
+                m_View->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+            else
+                m_View->Hide();
+        }
+        m_ViewFor = shown ? of : std::vector<PanelWidget>{};
+        if (shown && settingsAt != m_ViewAt)
+        {
+            m_ViewAt = settingsAt;
+            SetPx(m_View, Rml::PropertyId::Left, std::round(settingsAt->x));
+            SetPx(m_View, Rml::PropertyId::Top, std::round(settingsAt->y));
+            SetPx(m_ViewBody, Rml::PropertyId::Width, std::round(settingsAt->width));
+            SetPx(m_ViewBody, Rml::PropertyId::Height, std::round(settingsAt->height));
+        }
+        if (pixels != m_ViewPixels)
+        {
+            m_ViewPixels = pixels;
+            SetPx(m_View, Rml::PropertyId::FontSize, static_cast<float>(pixels));
+        }
+        const std::string rml = shown ? "<div id=\"" + block->id + "\">" + block->rml + "</div>" : std::string();
+        if (rml == m_ViewRml) return false;
+        m_ViewBody->SetInnerRML(rml);
+        m_ViewRml = rml;
+        return true;
+    }
+
+    void RmlMenu::ApplyBlocks(const std::vector<FormBlock>& blocks, const std::vector<PanelWidget>& of, int pixels, bool window)
+    {
+        const auto view = std::ranges::find(blocks, true, &FormBlock::popout);
+        bool replaced   = ApplyView(view != blocks.end() ? &*view : nullptr, of, pixels);
+        if (!window)
+        {
+            if (!replaced) return;
+            Index();
+            m_Applied.clear();
+            return;
+        }
+        size_t card       = 0;
+        bool same         = true; // the cards are the ones shown, in their order
         for (const FormBlock& block : blocks)
         {
-            if (block.id == kSidebarBlock) continue;
+            if (block.id == kSidebarBlock || block.popout) continue;
             same = same && card < m_Cards.size() && m_Cards[card].id == block.id;
             ++card;
         }
@@ -254,6 +323,7 @@ namespace headsup
         std::string page;
         for (const FormBlock& block : blocks)
         {
+            if (block.popout) continue;
             if (block.id == kSidebarBlock)
             {
                 if (block.rml == m_SidebarRml) continue;
@@ -279,7 +349,7 @@ namespace headsup
             m_Page->SetInnerRML(page);
             m_Cards.clear();
             for (const FormBlock& block : blocks)
-                if (block.id != kSidebarBlock) m_Cards.push_back(Card{block.id, block.rml});
+                if (block.id != kSidebarBlock && !block.popout) m_Cards.push_back(Card{block.id, block.rml});
             replaced = true;
         }
         if (!replaced) return;
@@ -327,63 +397,70 @@ namespace headsup
     void RmlMenu::ApplyPopup(const std::optional<FormPopup>& popup)
     {
         Rml::Element* anchor = popup ? Find(popup->anchor) : nullptr;
-        m_Popup->SetClass(kHiddenClass, anchor == nullptr);
-        m_Popup->SetClass("open", anchor != nullptr);
-        if (anchor == nullptr)
+        // The list opens in its control's document: the window's, or the settings over the panel's popup.
+        Rml::Element* list = anchor == nullptr ? nullptr : anchor->GetOwnerDocument() == m_View ? m_ViewPopup : m_Popup;
+        for (Rml::Element* each : {m_Popup, m_ViewPopup})
         {
-            if (!m_PopupRml.empty())
-            {
-                m_Popup->SetInnerRML("");
-                m_PopupRml.clear();
-                Index();
-            }
-            return;
+            each->SetClass(kHiddenClass, each != list);
+            each->SetClass("open", each == list);
         }
+        if (m_PopupIn != nullptr && m_PopupIn != list)
+        {
+            m_PopupIn->SetInnerRML("");
+            m_PopupRml.clear();
+            Index();
+        }
+        m_PopupIn = list;
+        if (list == nullptr) return;
         if (popup->rml != m_PopupRml)
         {
-            m_Popup->SetInnerRML(popup->rml);
+            list->SetInnerRML(popup->rml);
             m_PopupRml = popup->rml;
             Index();
             m_Applied.clear();
         }
-        // Under its control, at least as wide, in the window's own space.
-        const Rml::Vector2f window = m_Document->GetAbsoluteOffset(Rml::BoxArea::Border);
+        // Under its control, at least as wide, in its document's own space.
+        const Rml::Vector2f window = anchor->GetOwnerDocument()->GetAbsoluteOffset(Rml::BoxArea::Border);
         const Rml::Vector2f at     = anchor->GetAbsoluteOffset(Rml::BoxArea::Border) - window;
         const Rml::Vector2f size   = anchor->GetBox().GetSize(Rml::BoxArea::Border);
-        SetPx(m_Popup, Rml::PropertyId::Left, std::round(at.x));
-        SetPx(m_Popup, Rml::PropertyId::Top, std::round(at.y + size.y + kPopupDrop));
-        SetPx(m_Popup, Rml::PropertyId::MinWidth, size.x);
+        SetPx(list, Rml::PropertyId::Left, std::round(at.x));
+        SetPx(list, Rml::PropertyId::Top, std::round(at.y + size.y + kPopupDrop));
+        SetPx(list, Rml::PropertyId::MinWidth, size.x);
     }
 
     void RmlMenu::ShowTip(Rml::Element* under, float x, float y)
     {
+        Rml::ElementDocument* document = under != nullptr ? under->GetOwnerDocument() : nullptr;
         while (under != nullptr && !under->HasAttribute(kMenuTipAttribute))
             under = under->GetParentNode();
         const std::string text = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipAttribute, "") : std::string();
-        m_Tip->SetClass(kHiddenClass, text.empty());
+        Rml::Element* tip = document == m_View ? m_ViewTip : m_Tip;
+        m_Tip->SetClass(kHiddenClass, text.empty() || tip != m_Tip);
+        m_ViewTip->SetClass(kHiddenClass, text.empty() || tip != m_ViewTip);
         if (text.empty()) return;
-        if (text != m_TipShown)
+        if (text != m_TipShown || tip != m_TipIn)
         {
-            m_Tip->SetInnerRML(EscapedRml(text));
+            tip->SetInnerRML(EscapedRml(text));
             m_TipShown = text;
+            m_TipIn    = tip;
         }
-        // From the pointer toward the window's middle: there it has room whichever edge the pointer is near, and it
+        // From the pointer toward the document's middle: there it has room whichever edge the pointer is near, and it
         // is never under the pointer.
-        const Rml::Vector2f window = m_Document->GetAbsoluteOffset(Rml::BoxArea::Border);
-        const Rml::Vector2f size   = m_Document->GetBox().GetSize(Rml::BoxArea::Border);
+        const Rml::Vector2f window = document->GetAbsoluteOffset(Rml::BoxArea::Border);
+        const Rml::Vector2f size   = document->GetBox().GetSize(Rml::BoxArea::Border);
         const Rml::Vector2f in(x - window.x, y - window.y);
         const float gap     = kTipDrop * 0.5f;
         const bool leftward = in.x > size.x / 2.0f, upward = in.y > size.y / 2.0f;
-        m_Tip->RemoveProperty(leftward ? Rml::PropertyId::Left : Rml::PropertyId::Right);
-        m_Tip->RemoveProperty(upward ? Rml::PropertyId::Top : Rml::PropertyId::Bottom);
+        tip->RemoveProperty(leftward ? Rml::PropertyId::Left : Rml::PropertyId::Right);
+        tip->RemoveProperty(upward ? Rml::PropertyId::Top : Rml::PropertyId::Bottom);
         if (leftward)
-            SetPx(m_Tip, Rml::PropertyId::Right, std::round(size.x - in.x + gap));
+            SetPx(tip, Rml::PropertyId::Right, std::round(size.x - in.x + gap));
         else
-            SetPx(m_Tip, Rml::PropertyId::Left, std::round(in.x + gap));
+            SetPx(tip, Rml::PropertyId::Left, std::round(in.x + gap));
         if (upward)
-            SetPx(m_Tip, Rml::PropertyId::Bottom, std::round(size.y - in.y + gap));
+            SetPx(tip, Rml::PropertyId::Bottom, std::round(size.y - in.y + gap));
         else
-            SetPx(m_Tip, Rml::PropertyId::Top, std::round(in.y + kTipDrop));
+            SetPx(tip, Rml::PropertyId::Top, std::round(in.y + kTipDrop));
     }
 
     // A key in a stretch that is not the stretch's own: Backspace at its start and Delete at its end are for the tag
@@ -494,8 +571,10 @@ namespace headsup
             if (target->IsClassSet(kLineBoxClass))
                 if (Rml::ElementFormControlInput* last = AsInput(target->GetLastChild()))
                     FocusAt(last, CharacterOf(last->GetValue(), last->GetValue().size()));
-            m_Events.push_back(FormEvent{named == m_Popup ? m_State.form.popup + kPopupGround : id, kClickEvent, {}});
+            m_Events.push_back(
+                FormEvent{named == m_Popup || named == m_ViewPopup ? m_State.form.popup + kPopupGround : id, kClickEvent, {}});
             m_Tip->SetClass(kHiddenClass, true);
+            m_ViewTip->SetClass(kHiddenClass, true);
             break;
         case Rml::EventId::Mousescroll:
             if (named != nullptr && named->IsClassSet(kWheelClass))
@@ -611,13 +690,29 @@ namespace headsup
     }
 
     Form RmlMenu::Pass(std::vector<FormEvent> events, const MenuHost& host, Settings& settings, const MenuReadings& readings,
-        const std::vector<std::string>& fonts)
+        const std::vector<std::string>& fonts, bool window)
     {
         Form form(std::move(events), m_State.form, host.keyDown);
-        if (Rml::Element* focus = host.context->GetFocusElement(); focus != nullptr && focus->GetOwnerDocument() == m_Document)
+        if (Rml::Element* focus = host.context->GetFocusElement();
+            focus != nullptr && (focus->GetOwnerDocument() == m_Document || focus->GetOwnerDocument() == m_View))
             form.focused = focus->GetId();
-        BuildMenu(form, settings, readings, m_State, fonts, host.menuFonts, *m_Layout);
+        if (window) BuildMenu(form, settings, readings, m_State, fonts, host.menuFonts, *m_Layout);
+        BuildWidgetSettings(form, settings, readings, m_State, fonts, host.menuFonts, *m_Layout);
         return form;
+    }
+
+    void RmlMenu::LetGo(const MenuHost& host, Rml::ElementDocument* document, Rml::Element* tip)
+    {
+        if (document->IsPseudoClassSet("hover")) return;
+        tip->SetClass(kHiddenClass, true);
+        // The keyboard is on a part of the slider, and from any part its keys reach the slider: the document
+        // takes it whole.
+        for (Rml::Element* part = host.context->GetFocusElement(); part != nullptr && part != document; part = part->GetParentNode())
+            if (Rml::ElementFormControlInput* input = AsInput(part); input != nullptr && !IsText(input) && input->GetOwnerDocument() == document)
+            {
+                document->Focus();
+                break;
+            }
     }
 
     bool RmlMenu::Update(const MenuHost& host, Settings& settings, const MenuReadings& readings,
@@ -644,6 +739,23 @@ namespace headsup
                 m_Document->SetClass("open", false);
                 m_Document->Hide();
                 m_Visible = false;
+                m_State.Leave();
+            }
+            // The panel popup's settings go on without the window.
+            if (host.context != nullptr && !readings.settingsOf.empty() && settingsAt && Document(host, settings))
+            {
+                LetGo(host, m_View, m_ViewTip);
+                const Form form = Pass(std::exchange(m_Events, {}), host, settings, readings, fonts, false);
+                ApplyBlocks(form.blocks, readings.settingsOf, settings.menuFontSize, false);
+                m_Events.clear();
+                ApplyPopup(form.popup);
+                ApplyValues(form.values);
+                return changed || form.changed;
+            }
+            if (m_View != nullptr && ApplyView(nullptr, {}, m_ViewPixels))
+            {
+                Index();
+                m_Applied.clear();
             }
             m_Events.clear();
             m_State.Leave();
@@ -698,18 +810,8 @@ namespace headsup
 
         // No tip stays once the pointer has left the window, and a slider gives up the keyboard it kept after a drag
         // for the arrows to nudge it: off the window those are the game's, and its camera's keys moved the slider.
-        if (!m_Document->IsPseudoClassSet("hover"))
-        {
-            m_Tip->SetClass(kHiddenClass, true);
-            // The keyboard is on a part of the slider, and from any part its keys reach the slider: the window
-            // takes it whole.
-            for (Rml::Element* part = host.context->GetFocusElement(); part != nullptr && part != m_Document; part = part->GetParentNode())
-                if (Rml::ElementFormControlInput* input = AsInput(part); input != nullptr && !IsText(input) && input->GetOwnerDocument() == m_Document)
-                {
-                    m_Document->Focus();
-                    break;
-                }
-        }
+        LetGo(host, m_Document, m_Tip);
+        LetGo(host, m_View, m_ViewTip);
         // A click acts on what was typed before it. With both in one frame the typing gets a pass of its own first:
         // the click may open another page or fold the card, and the line typed in would never be built to take it.
         std::vector<FormEvent> events = std::exchange(m_Events, {});
@@ -736,7 +838,7 @@ namespace headsup
             m_PageTitle->SetInnerRML(EscapedRml(title));
             m_TitleShown = title;
         }
-        ApplyBlocks(form.blocks);
+        ApplyBlocks(form.blocks, readings.settingsOf, settings.menuFontSize);
         // Whatever a card said of its controls as it was replaced is of controls that are gone.
         m_Events.clear();
         ApplyPopup(form.popup);
@@ -768,8 +870,14 @@ namespace headsup
             const Rml::Vector2i screen = host.context->GetDimensions();
             if (settings.menuWidth > 0 && settings.menuHeight > 0)
             {
-                SetPx(m_Document, Rml::PropertyId::Left, static_cast<float>(settings.menuX));
-                SetPx(m_Document, Rml::PropertyId::Top, static_cast<float>(settings.menuY));
+                // As the title's handle keeps it: a place from a larger screen comes back with the same share on.
+                const auto kept = [](int at, int side, int screenSide) {
+                    const int on = static_cast<int>(std::lround(static_cast<float>(side) * kWindowKeptOn));
+                    return std::clamp(at, on - side, std::max(on - side, screenSide - on));
+                };
+                SetPx(m_Document, Rml::PropertyId::Left, static_cast<float>(kept(settings.menuX, settings.menuWidth, screen.x)));
+                SetPx(m_Document, Rml::PropertyId::Top,
+                    static_cast<float>(std::clamp(kept(settings.menuY, settings.menuHeight, screen.y), 0, std::max(0, screen.y))));
                 SetPx(m_Document, Rml::PropertyId::Width, static_cast<float>(settings.menuWidth));
                 SetPx(m_Document, Rml::PropertyId::Height, static_cast<float>(settings.menuHeight));
             }
@@ -786,7 +894,7 @@ namespace headsup
         const Rml::Vector2f at = m_Document->GetAbsoluteOffset(Rml::BoxArea::Border);
         const int x = static_cast<int>(std::lround(at.x)), y = static_cast<int>(std::lround(at.y));
         const int width = static_cast<int>(std::lround(size.x)), height = static_cast<int>(std::lround(size.y));
-        const std::array<int, 4> now{std::max(0, x), std::max(0, y), width, height};
+        const std::array<int, 4> now{x, std::max(0, y), width, height};
         if (!m_OpenedAt)
         {
             m_OpenedAt = now;

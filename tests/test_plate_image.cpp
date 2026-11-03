@@ -359,55 +359,6 @@ TEST(a_diamond_and_a_coin)
     CHECK(Channel(Pixel(c, 0, 6), kRedShift) < Channel(Pixel(c, 6, 6), kRedShift)); // the darker rim
 }
 
-namespace
-{
-    // Whether a point is in a five-pointed star with a point straight up, in the circle of radius half around
-    // (half, half): the even-odd rule over its ten corners, the notches at a pentagram's (3 - sqrt 5) / 2 of the
-    // points' radius.
-    bool InsideStar(float x, float y, float half)
-    {
-        const float pi = 3.14159265f, notch = (3.0f - std::sqrt(5.0f)) / 2.0f;
-        const auto corner = [&](int k) {
-            const float radius = half * (k % 2 == 0 ? 1.0f : notch), angle = static_cast<float>(k % 10) * pi / 5.0f;
-            return std::pair<float, float>{half + radius * std::sin(angle), half - radius * std::cos(angle)};
-        };
-        bool inside = false;
-        for (int k = 0; k < 10; ++k)
-        {
-            const auto [x0, y0] = corner(k);
-            const auto [x1, y1] = corner(k + 1);
-            if ((y0 > y) != (y1 > y) && x < x0 + (x1 - x0) * (y - y0) / (y1 - y0)) inside = !inside;
-        }
-        return inside;
-    }
-}
-
-TEST(a_star_covers_each_pixel_as_far_as_a_five_pointed_star_with_a_point_up_does)
-{
-    constexpr int kGrid = 16; // points across a pixel
-    for (const int size : {11, 16, 23})
-    {
-        const Image star = Star(size, 0xFFE8C35A);
-        CHECK(star.width == size && star.height == size);
-        const float half = static_cast<float>(size) / 2.0f;
-        float worst      = 0.0f;
-        for (int y = 0; y < size; ++y)
-            for (int x = 0; x < size; ++x)
-            {
-                int in = 0;
-                for (int sy = 0; sy < kGrid; ++sy)
-                    for (int sx = 0; sx < kGrid; ++sx)
-                        in += InsideStar(static_cast<float>(x) + (static_cast<float>(sx) + 0.5f) / kGrid,
-                            static_cast<float>(y) + (static_cast<float>(sy) + 0.5f) / kGrid, half);
-                worst = std::max(worst, std::fabs(static_cast<float>(Alpha(star, x, y)) / 255.0f -
-                                                  static_cast<float>(in) / (kGrid * kGrid)));
-            }
-        CHECK(worst < 0.15f);
-        CHECK(Pixel(star, size / 2, size / 2) == 0xFFE8C35Au && Alpha(star, 0, 0) == 0);
-        CHECK(Alpha(star, size / 2, 0) > 0 && Alpha(star, size / 2, size - 1) == 0); // a point up, a notch down
-    }
-}
-
 TEST(an_opaque_coin_is_opaque_wherever_its_disc_covers_a_pixel_whole)
 {
     const int size = 13;
@@ -507,6 +458,30 @@ TEST(the_reset_arrow_turns_counterclockwise_to_a_head_at_its_top)
         CHECK(Alpha(arrow, size / 2, size / 2 + reach) > 128);
         CHECK(Alpha(arrow, size / 2 - reach - 1, size / 2) > 128);
         CHECK(Alpha(arrow, size / 2, size / 2) == 0 && Alpha(arrow, 0, 0) == 0 && Alpha(arrow, size - 1, size - 1) == 0);
+    }
+}
+
+TEST(the_cog_is_a_ring_with_eight_teeth_and_a_clear_middle)
+{
+    for (const int size : {32, 45, 64})
+    {
+        const Image cog = Cog(size, 0xFFFFFFFFu);
+        CHECK(cog.width == size && cog.height == size);
+        const float half = static_cast<float>(size) / 2.0f, side = static_cast<float>(size);
+        // A point at this share of the side from the middle, turned from straight up by this many eighths.
+        const auto at = [&](float share, float eighths) {
+            const float turn = eighths * 3.14159265f / 4.0f;
+            return Alpha(cog, static_cast<int>(half + std::sin(turn) * share * side),
+                static_cast<int>(half - std::cos(turn) * share * side));
+        };
+        CHECK(Alpha(cog, size / 2, size / 2) == 0);            // the hole
+        CHECK(at(0.27f, 0.0f) > 200 && at(0.27f, 0.5f) > 200); // the ring, under a tooth and between two
+        for (int tooth = 0; tooth < 8; ++tooth)
+        {
+            CHECK(at(0.42f, static_cast<float>(tooth)) > 200);       // each tooth
+            CHECK(at(0.42f, static_cast<float>(tooth) + 0.5f) < 60); // and the gap after it
+        }
+        CHECK(Alpha(cog, 0, 0) == 0 && Alpha(cog, size - 1, size - 1) == 0);
     }
 }
 

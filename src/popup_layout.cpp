@@ -21,6 +21,7 @@ namespace headsup
         constexpr float kCardPad     = 0.55f; // a card's contents from its edges
         constexpr float kCardGap     = 0.45f; // between cards, and between the columns of them
         constexpr float kMinWidth    = 12.0f; // popupText, so a short popup is not a sliver
+        constexpr float kCogShare    = 0.7f;  // the cog, of its chip's height
         constexpr float kSocketInset = 0.9f;  // a socket's rows from its left and right edges
         constexpr float kSocketPad   = 0.35f; // above and below a socket's rows
         constexpr size_t kMostSideBySide  = 4; // groups of a tall grid's lines set side by side before a card goes on
@@ -100,6 +101,12 @@ namespace headsup
                 size_t parts = 1;                // the pieces after its frame: its icon, if it has one, and its name
             };
             std::vector<Chip> chips;
+            struct Press
+            {
+                std::string tells;
+                float x, y, width, height; // from the card's top-left
+            };
+            std::vector<Press> presses; // pressable cells
             std::vector<size_t> sockets; // pieces to widen to the card's inside once its width is known
             struct Anchor
             {
@@ -351,6 +358,11 @@ namespace headsup
                     {
                         const float s = unit * kCellIcon, mark = unit * kMark;
                         b.pieces.push_back(PopupPiece{PopupPiece::Kind::Icon, cx, cy, s, s, {}, PopupFont::Text, *cell.icon});
+                        if (cell.tint)
+                        {
+                            b.pieces.back().tinted = true;
+                            b.pieces.back().span   = *cell.tint;
+                        }
                         if (cell.immune)
                             b.pieces.push_back(PopupPiece{PopupPiece::Kind::ImmuneMark, cx + s - mark, cy + s - mark, mark,
                                 mark, {kTimesSign, Tone::Immune, 0}});
@@ -372,6 +384,8 @@ namespace headsup
                         b.pieces.push_back(PopupPiece{PopupPiece::Kind::Star, cx, sy, s, s, {}});
                         cx += s;
                     }
+                    if (!cell.press.empty()) b.presses.push_back(
+                            Block::Press{cell.press, x, y, grid ? columns[i % columns.size()] : cells[i].width, cells[i].height});
                     if (pair && i == 1)
                     {
                         b.values.push_back(Block::Value{first, b.pieces.size(), cx, row.nested ? inset : 0.0f});
@@ -424,6 +438,9 @@ namespace headsup
             for (Block::Chip& chip : b.chips)
                 l.chips.push_back(PopupTabChip{std::move(chip.key), x + chip.left, y + chip.y, chip.width, chip.height, line,
                     std::move(chip.tab)});
+            for (Block::Press& press : b.presses)
+                l.chips.push_back(PopupTabChip{{}, x + press.x, y + press.y, press.width, press.height, line,
+                    std::move(press.tells), true});
             for (Block::Scroll& scroll : b.scrolls)
                 l.scrolls.push_back(PopupScroll{std::move(scroll.key), x + b.pad, y + scroll.y, width - 2.0f * b.pad,
                     scroll.height, line, scroll.most,
@@ -553,8 +570,28 @@ namespace headsup
         }
     }
 
+    namespace
+    {
+        // The pin chip to the title row's right edge, once the popup's width is known, and the settings chip left of it,
+        // each with the piece on it.
+        void PlaceChips(PopupLayout& l, std::optional<size_t> pinChip, std::optional<size_t> cogChip, float pad, float unit)
+        {
+            if (!pinChip) return;
+            PopupPiece& pin = l.pieces[*pinChip];
+            pin.x           = l.width - pad - pin.width;
+            l.pieces[*pinChip + 1].x += pin.x; // its word
+            l.pieces[*pinChip + 2].x += pin.x; // and its picture
+            l.pin           = BarRect{pin.x, pin.y, pin.width, pin.height};
+            if (!cogChip) return;
+            PopupPiece& cog = l.pieces[*cogChip];
+            cog.x           = pin.x - unit * kCellGap - cog.width;
+            l.pieces[*cogChip + 1].x += cog.x;
+            l.cog = BarRect{cog.x, cog.y, cog.width, cog.height};
+        }
+    }
+
     PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, BarShape shape, bool pinned,
-                            SpanMeasure measure, float room, float least)
+                            SpanMeasure measure, float room, float least, std::optional<SettingsRoom> settings)
     {
         const float unit = metrics.popupText, pad = metrics.popupPadding, cardGap = std::round(unit * kCardGap);
         const bool ornate = shape == BarShape::Ornate;
@@ -577,31 +614,62 @@ namespace headsup
         }
         float titleWidth = x - pad;
         // The pin: a chip at the title row's right edge, lit and saying so while pinned. Its room is the longer word's
-        // either way, so pinning never changes the popup's width.
-        std::optional<size_t> pinChip;
-        if (!content.title.empty() || content.icon || !content.sections.empty())
+        // either way, so pinning never changes the popup's width. The settings chip is a round one left of it.
+        std::optional<size_t> pinChip, cogChip;
+        if (!content.title.empty() || content.icon || !content.sections.empty() || settings)
         {
+            // Its picture left of the word, as tall as the word's ink.
             const Span word{pinned ? kPinnedWord : kPinWord, Tone::Heading, 0};
             const TextSize size   = measure(word, PopupFont::Pin);
-            const TextSize framed = Framed(measure(Span{kPinnedWord, Tone::Heading, 0}, PopupFont::Pin), unit);
+            const TextSize longer = measure(Span{kPinnedWord, Tone::Heading, 0}, PopupFont::Pin);
+            const float mark = std::round(longer.inkBottom - longer.inkTop), gap = std::round(unit * kIconGap);
+            const TextSize framed = Framed(TextSize{longer.width + mark + gap, longer.height, longer.inkTop, longer.inkBottom}, unit);
+            const float left      = std::round((framed.width - mark - gap - size.width) / 2.0f);
             pinChip               = l.pieces.size();
             PopupPiece chip{PopupPiece::Kind::PinChip, 0.0f, pad, framed.width, framed.height, {}};
             chip.open = pinned;
             chip.font = PopupFont::Pin;
             l.pieces.push_back(std::move(chip));
-            l.pieces.push_back(PopupPiece{PopupPiece::Kind::PinWord, (framed.width - size.width) / 2.0f,
+            l.pieces.push_back(PopupPiece{PopupPiece::Kind::PinWord, left + mark + gap,
                 pad + framed.inkTop - size.inkTop, size.width, size.height, word, PopupFont::Pin});
+            PopupPiece picture{PopupPiece::Kind::Icon, left, pad + framed.inkTop, mark, mark, Span{"", Tone::Heading, 0}, PopupFont::Pin};
+            picture.icon   = pinned ? Icon::Pinned : Icon::Pin;
+            picture.tinted = true;
+            l.pieces.push_back(std::move(picture));
             titleWidth += unit * kCellGap + framed.width;
             rowHeight = std::max(rowHeight, framed.height);
+        }
+        if (pinChip && content.settings)
+        {
+            const float side = l.pieces[*pinChip].height;
+            cogChip          = l.pieces.size();
+            PopupPiece cog{PopupPiece::Kind::CogChip, 0.0f, pad, side, side, {}};
+            cog.open = settings.has_value();
+            cog.font = PopupFont::Pin;
+            l.pieces.push_back(std::move(cog));
+            const float mark = std::round(side * kCogShare);
+            l.pieces.push_back(PopupPiece{PopupPiece::Kind::Cog, (side - mark) / 2.0f, pad + (side - mark) / 2.0f, mark, mark, {},
+                PopupFont::Pin});
+            titleWidth += unit * kCellGap + side;
         }
         l.lines.push_back(PopupLine{pad + rowHeight});
         float top = pad + rowHeight + metrics.rowGap;
 
+        float width = std::max({unit * kMinWidth, titleWidth, least - 2.0f * pad});
+        if (settings)
+        {
+            width        = std::max(width, settings->width);
+            const float tall = std::clamp(room - top - pad, 0.0f, settings->height);
+            l.body       = BarRect{pad, top, width, tall};
+            l.width      = width + 2.0f * pad;
+            l.height     = (tall > 0.0f ? top + tall : l.lines[0].bottom) + pad;
+            PlaceChips(l, pinChip, cogChip, pad, unit);
+            return l;
+        }
         // The rows under the title, then the cards.
         std::vector<Block> loose;
         for (const PopupSection& section : content.sections)
             if (section.heading.empty()) loose.push_back(LayoutSection(section, metrics, ornate, measure));
-        float width = std::max({unit * kMinWidth, titleWidth, least - 2.0f * pad});
         float cardsTop = top;
         for (const Block& b : loose)
         {
@@ -724,13 +792,7 @@ namespace headsup
         const float bottom = std::max(cards.empty() ? top - metrics.rowGap : lowest - cardGap, l.lines[0].bottom);
         l.width            = width + 2.0f * pad;
         l.height           = bottom + pad;
-        if (pinChip)
-        {
-            PopupPiece& chip = l.pieces[*pinChip];
-            chip.x           = l.width - pad - chip.width;
-            l.pieces[*pinChip + 1].x += chip.x;
-            l.pin = BarRect{chip.x, chip.y, chip.width, chip.height};
-        }
+        PlaceChips(l, pinChip, cogChip, pad, unit);
         return l;
     }
 

@@ -119,6 +119,7 @@ namespace headsup
     {
         std::string id, rml;
         bool bare = false; // on the page itself under the cards, with no card around it
+        bool popout = false; // the settings the panel's open popup shows, drawn over it and not in the window
         bool operator==(const FormBlock&) const = default;
     };
     constexpr const char* kSidebarBlock = "sidebar";

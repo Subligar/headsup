@@ -400,15 +400,16 @@ namespace headsup
     {
         m_Layout   = layout;
         m_HasPopup = hasPopup;
-        if (m_Pinned && !GroupRect(m_Layout, *m_Pinned)) m_Pinned.reset();
+        if (m_Pinned && !GroupRect(m_Layout, *m_Pinned)) Pin(std::nullopt);
         Reevaluate();
     }
 
     void BarInput::SetPopup(const BarRect& popup, std::vector<BarTabChip> chips, std::vector<BarScroll> scrolls,
-        const BarRect& pin)
+        const BarRect& pin, const BarRect& cog)
     {
         m_Popup   = popup;
         m_PinChip = pin;
+        m_CogChip = cog;
         m_Chips   = std::move(chips);
         m_Scrolls = std::move(scrolls);
         Reevaluate();
@@ -470,7 +471,13 @@ namespace headsup
     {
         if (!Over(x, y)) return false;
         if (!left) return true;
-        if (!WidgetAt(m_Layout, x, y) && Open() && m_Popup.Contains(x, y))
+        // The widget on the bar pins and unpins its popup, as its pin chip does.
+        if (const std::optional<PanelWidget> under = WidgetAt(m_Layout, x, y); under && m_HasPopup[SlotOf(*under)])
+        {
+            m_Pinned = m_Pinned == under ? std::nullopt : under;
+            m_Settings.reset();
+        }
+        else if (!under && Open() && m_Popup.Contains(x, y))
         {
             for (const BarScroll& scroll : m_Scrolls)
                 if (scroll.track.Contains(x, y) && scroll.most > 0)
@@ -486,10 +493,24 @@ namespace headsup
             for (const BarTabChip& chip : m_Chips)
                 if (chip.rect.Contains(x, y))
                 {
-                    m_Tabs[chip.key] = chip.tab;
+                    if (chip.press)
+                        m_Presses.push_back(chip.tab);
+                    else
+                        m_Tabs[chip.key] = chip.tab;
                     return true;
                 }
-            if (m_PinChip.Contains(x, y)) m_Pinned = m_Pinned == Open() ? std::nullopt : Open();
+            if (m_PinChip.Contains(x, y))
+            {
+                m_Pinned = m_Pinned == Open() ? std::nullopt : Open();
+                m_Settings.reset();
+            }
+            else if (m_CogChip.Contains(x, y))
+            {
+                if (SettingsShown())
+                    m_Settings.reset();
+                else
+                    m_Settings = m_Pinned = Open();
+            }
         }
         return true;
     }

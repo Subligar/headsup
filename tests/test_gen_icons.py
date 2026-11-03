@@ -169,7 +169,7 @@ class GenIcons(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.dir = pathlib.Path(self.tmp.name)
         for _, path, _ in gen.ICONS:
-            (self.dir / path).parent.mkdir(exist_ok=True)
+            (self.dir / path).parent.mkdir(parents=True, exist_ok=True)
             (self.dir / path).write_bytes(png(2, 1, bytes([1, 2, 3, 4, 5, 6, 7, 8])))
 
     def tearDown(self):
@@ -198,17 +198,22 @@ class GenIcons(unittest.TestCase):
 
     def test_mobdbs_damage_and_status_icons_come_after_the_player_icons(self):
         names = [name for name, _, _ in gen.ICONS]
-        self.assertEqual(names[names.index('LevelSync') + 1:], [
+        self.assertEqual(names[names.index('LevelSync') + 1:names.index('Petrify') + 1], [
             'Slashing', 'Piercing', 'Impact', 'H2H', 'Fire', 'Ice', 'Wind', 'Earth', 'Lightning', 'Water', 'Light', 'Dark',
             'Sleep', 'LightSleep', 'DarkSleep', 'Gravity', 'Bind', 'Stun', 'Silence', 'Paralyze', 'Blind', 'Slow', 'Poison',
             'Elegy', 'Requiem', 'Petrify'])
-        self.assertIn(('Sleep', 'mobdb-icons/ImmuneSleep.png', 'light and dark sleep'), gen.ICONS)
+        self.assertIn(('Sleep', 'third_party/mobdb-icons/ImmuneSleep.png', 'light and dark sleep'), gen.ICONS)
+
+    def test_headsups_own_icons_come_last_from_its_resources(self):
+        names = [name for name, _, _ in gen.ICONS]
+        self.assertEqual(names[names.index('Petrify') + 1:], ['Pin', 'Pinned', 'Star', 'StarEmpty', 'Clone'])
+        self.assertTrue(all(path.startswith('resources/icons/') for name, path, _ in gen.ICONS if name in ('Pin', 'Clone')))
 
     def test_a_missing_or_unreadable_icon_fails(self):
-        (self.dir / 'mobdb-icons' / 'Link.png').write_bytes(b'GIF89a')
+        (self.dir / 'third_party' / 'mobdb-icons' / 'Link.png').write_bytes(b'GIF89a')
         with self.assertRaises(gen.IconError):
             gen.generate(self.dir)
-        (self.dir / 'mobdb-icons' / 'Link.png').unlink()
+        (self.dir / 'third_party' / 'mobdb-icons' / 'Link.png').unlink()
         with self.assertRaises(gen.IconError):
             gen.generate(self.dir)
 

@@ -27,6 +27,7 @@ namespace
         {
             Form form(std::move(events), state.form);
             BuildMenu(form, settings, readings, state, fonts, menuFonts, layout);
+            BuildWidgetSettings(form, settings, readings, state, fonts, menuFonts, layout);
             return form;
         }
     };
@@ -167,12 +168,15 @@ TEST(a_pages_controls_change_the_settings_they_show)
     const Form off = w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}, {"toppanel-top-panel-height", kChangeEvent, "30"}});
     CHECK(off.changed && !w.settings.showBar && w.settings.barHeight == 52);
     CHECK(ClassOn(off, "toppanel-top-panel-height-box", "off"));
+    // The theme's dropdown, on its own page as it themes this window too, lists every theme, and a click on one picks
+    // it while the panel is off.
+    w.state.page = Page::Theme;
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-1", kClickEvent, ""}});
+    CHECK(w.settings.barTheme == BarTheme::UmbraDark);
+    w.state.page = Page::TopPanel;
     w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}});
     CHECK(w.settings.showBar);
-    // The theme's dropdown lists every theme, and a click on one picks it.
-    w.Pass({{"toppanel-top-panel-theme", kClickEvent, ""}});
-    w.Pass({{"toppanel-top-panel-theme-o-1", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::UmbraDark);
 }
 
 TEST(a_widgets_chip_dropped_on_another_goes_before_it)
@@ -188,31 +192,54 @@ TEST(a_widgets_chip_dropped_on_another_goes_before_it)
     CHECK(form.changed && now[0] == left[1] && now[1] == left[0]);
 }
 
-TEST(the_layout_comes_first_and_a_click_on_a_chip_shows_its_widgets_settings_under_it)
+TEST(a_click_on_a_chip_that_is_on_asks_for_its_settings_and_one_on_its_toggle_or_that_is_off_does_not)
 {
     Window w;
     w.state.page = Page::Widgets;
-    const std::vector<PanelWidget>& left = w.settings.barSections[static_cast<int>(BarSection::Left)];
+    const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
     const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
     const Form form = w.Pass({{chip, kClickEvent, ""}});
-    CHECK(w.state.widget == SlotOf(left[1]) && !form.scrollToTop);
-    const auto layout = std::ranges::find(form.blocks, "widgets-layout", &FormBlock::id);
-    const auto widgets = std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id);
-    CHECK(layout != form.blocks.end() && widgets != form.blocks.end() && layout < widgets);
-    CHECK(!Has(widgets->rml, "class=\"tab"));
+    CHECK(w.state.settingsAsked == left[1] && !form.scrollToTop);
+    CHECK(settings(form) == form.blocks.end()); // the page has none: the panel's popup shows them, once it does
+    w.state.settingsAsked.reset();
+    w.Pass({{chip + "-on", kClickEvent, ""}});
+    CHECK(!w.settings.Widget(left[1]).on && !w.state.settingsAsked);
+    w.Pass({{chip, kClickEvent, ""}});
+    CHECK(!w.state.settingsAsked);
 }
 
-TEST(a_chips_toggle_turns_its_widget_on_and_off_and_shows_its_settings)
+TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under_its_name)
 {
     Window w;
-    w.state.page           = Page::Widgets;
-    const PanelWidget gil  = BarWidget::Gil;
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(gil));
-    CHECK(w.settings.Widget(gil).on);
-    CHECK(w.Pass({{chip + "-on", kClickEvent, ""}}).changed);
-    CHECK(!w.settings.Widget(gil).on && w.state.widget == SlotOf(gil));
-    const Form back = w.Pass({{chip + "-on", kClickEvent, ""}});
-    CHECK(w.settings.Widget(gil).on && ClassOn(back, chip.c_str(), "on"));
+    w.state.page = Page::Widgets;
+    const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[0]));
+    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
+    w.readings.settingsOf = {left[0]};
+    const Form one        = w.Pass();
+    CHECK(settings(one) != one.blocks.end() && settings(one)->popout);
+    CHECK(ClassOn(one, chip.c_str(), "picked"));
+    CHECK(!Has(settings(one)->rml, "widget-name") && !Has(settings(one)->rml, "class=\"tab"));
+    // A combined pill's, on another page: each widget's settings under its name, in the pill's order.
+    w.state.page          = Page::TopPanel;
+    w.readings.settingsOf = {left[0], left[1]};
+    const Form two        = w.Pass();
+    CHECK(settings(two) != two.blocks.end());
+    const std::string& rml = settings(two)->rml;
+    const auto first = rml.find("spacing-" + std::string(BarWidgetName(left[0].kind)));
+    const auto second = rml.find("spacing-" + std::string(BarWidgetName(left[1].kind)));
+    CHECK(first != std::string::npos && second != std::string::npos && first < second);
+    size_t names = 0;
+    for (size_t at = 0; (at = rml.find("widget-name", at)) != std::string::npos; ++at)
+        ++names;
+    CHECK_EQ(names, static_cast<size_t>(2));
+    // The settings have no Clone: the Layout card's chip has it, and a click on it asks for the clone's settings.
+    CHECK(!Has(rml, "clone"));
+    w.state.page = Page::Widgets;
+    w.Pass({{chip + "-clone", kClickEvent, ""}});
+    CHECK(w.state.settingsAsked && w.state.settingsAsked->kind == left[0].kind && w.state.settingsAsked->copy == 1);
+    CHECK(Placed(w.settings.barSections, *w.state.settingsAsked));
 }
 
 TEST(the_reset_card_asks_twice)
@@ -881,32 +908,32 @@ TEST(a_window_set_to_hide_goes_on_the_hidden_list_and_shows_no_place_until_kept_
 TEST(an_edit_of_a_theme_color_makes_the_theme_custom_which_keeps_it)
 {
     Window w;
-    w.state.page        = Page::TopPanel;
+    w.state.page        = Page::Theme;
     w.settings.barTheme = BarTheme::UmbraDark;
-    const std::string accent = "toppanel-theme-colors-accent-theme-palette";
+    const std::string accent = "theme-theme-colors-accent-theme-palette";
     w.Pass({{accent, kClickEvent, ""}});
     CHECK(w.Pass({{accent + "-p-r", kChangeEvent, "1"}}).changed);
     BarPalette edited = PaletteOf(BarTheme::PhoenixGold); // Custom starts from the first theme, whichever is shown
     edited.accent     = (edited.accent & 0xFF00FFFFu) | 0x00010000u;
     CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette == edited);
     // Another theme picked leaves Custom's colors for when it is picked again.
-    w.Pass({{"toppanel-top-panel-theme", kClickEvent, ""}});
-    w.Pass({{"toppanel-top-panel-theme-o-4", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-4", kClickEvent, ""}});
     CHECK(w.settings.barTheme == BarTheme::Aurora && w.settings.customPalette == edited);
-    w.Pass({{"toppanel-top-panel-theme", kClickEvent, ""}});
-    w.Pass({{"toppanel-top-panel-theme-o-5", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-5", kClickEvent, ""}});
     CHECK(w.settings.barTheme == BarTheme::Custom && PaletteFor(w.settings) == edited);
 }
 
 TEST(window_type_shows_while_the_games_art_is_in_use_and_picks_a_type_or_follows_the_game)
 {
     Window w;
-    w.state.page             = Page::TopPanel;
-    const std::string type   = "toppanel-top-panel-window-type";
+    w.state.page             = Page::Theme;
+    const std::string type   = "theme-theme-look-window-type";
     const auto shown = [&] { return !ClassOn(w.Pass(), (type + "-label-row").c_str(), "off"); };
     CHECK(!shown());
-    w.Pass({{"toppanel-top-panel-theme", kClickEvent, ""}});
-    w.Pass({{"toppanel-top-panel-theme-o-6", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-6", kClickEvent, ""}});
     CHECK(w.settings.barTheme == BarTheme::GameWindow && shown());
     w.Pass({{type, kClickEvent, ""}});
     CHECK(w.Pass({{type + "-o-5", kClickEvent, ""}}).changed);
@@ -919,36 +946,36 @@ TEST(window_type_shows_while_the_games_art_is_in_use_and_picks_a_type_or_follows
 TEST(the_theme_colors_card_sets_the_shape_the_border_and_one_color_or_a_gradient)
 {
     Window w;
-    w.state.page = Page::TopPanel;
+    w.state.page = Page::Theme;
     const auto shows = [&](const char* key) {
-        return !ClassOn(w.Pass(), (std::string("toppanel-theme-colors-") + key + "-label-row").c_str(), "off");
+        return !ClassOn(w.Pass(), (std::string("theme-theme-colors-") + key + "-label-row").c_str(), "off");
     };
     BarPalette& p          = w.settings.customPalette;
     const BarPalette& gold = PaletteOf(BarTheme::PhoenixGold);
     // Phoenix Gold's strip is a gradient: its top and bottom show, and no one background.
     CHECK(shows("theme-top") && shows("theme-bottom") && !shows("theme-background"));
-    CHECK(w.Pass({{"toppanel-theme-colors-theme-gradient", kClickEvent, ""}}).changed);
+    CHECK(w.Pass({{"theme-theme-colors-theme-gradient", kClickEvent, ""}}).changed);
     CHECK(!p.gradient && w.settings.barTheme == BarTheme::Custom);
     CHECK(!shows("theme-top") && !shows("theme-bottom") && shows("theme-background"));
     // Its stops are kept for the gradient's return; edited, the middle stays halfway between the two.
-    w.Pass({{"toppanel-theme-colors-theme-gradient", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-gradient", kClickEvent, ""}});
     CHECK(p.gradient && p.stripBottom == gold.stripBottom && shows("theme-top"));
-    w.Pass({{"toppanel-theme-colors-theme-top", kClickEvent, ""}});
-    w.Pass({{"toppanel-theme-colors-theme-top-p-a", kChangeEvent, "0"}});
+    w.Pass({{"theme-theme-colors-theme-top", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-top-p-a", kChangeEvent, "0"}});
     CHECK(p.stripTop == (gold.stripTop & 0x00FFFFFFu) && p.stripMiddle == 0x7F1A1510u);
-    w.Pass({{"toppanel-theme-colors-theme-border-thickness", kChangeEvent, "4"}});
+    w.Pass({{"theme-theme-colors-theme-border-thickness", kChangeEvent, "4"}});
     CHECK_EQ(p.border, 4);
-    w.Pass({{"toppanel-theme-colors-theme-shape-s-2", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-shape-s-2", kClickEvent, ""}});
     CHECK(p.shape == BarShape::Glass);
 }
 
 TEST(a_theme_is_saved_under_a_name_it_can_have_and_loaded_from_the_list)
 {
     Window w;
-    w.state.page          = Page::TopPanel;
+    w.state.page          = Page::Theme;
     const Settings before = w.settings;
-    const char* name = "toppanel-theme-colors-theme-name";
-    const char* save = "toppanel-theme-colors-save-theme";
+    const char* name = "theme-theme-colors-theme-name";
+    const char* save = "theme-theme-colors-save-theme";
     w.Pass({{save, kClickEvent, ""}});
     CHECK(!w.state.themeSave);
     w.Pass({{name, kChangeEvent, "a/b"}, {save, kClickEvent, ""}});
@@ -957,10 +984,10 @@ TEST(a_theme_is_saved_under_a_name_it_can_have_and_loaded_from_the_list)
     CHECK(w.state.themeSave == "Dusk");
     const std::vector<std::string> files = {"Dawn", "Dusk"};
     w.readings.themeFiles = &files;
-    w.Pass({{"toppanel-theme-colors-theme-file", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-file", kClickEvent, ""}});
     CHECK(w.state.themesRequested); // opened, the folder is read again
-    w.Pass({{"toppanel-theme-colors-theme-file-o-1", kClickEvent, ""}});
-    w.Pass({{"toppanel-theme-colors-load-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-file-o-1", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-load-theme", kClickEvent, ""}});
     CHECK(w.state.themeLoad == "Dusk" && w.settings == before); // the plugin reads it in
 }
 
