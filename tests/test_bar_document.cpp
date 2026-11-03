@@ -26,7 +26,7 @@ namespace
             BarLinePlace{14, 15.0f, 15.0f, 3.0f}, BarLinePlace{16, 0.0f, 0.0f, 0.0f}, BarLinePlace{17, 0.0f, 0.0f, 0.0f}};
     }
 
-    bool Has(const std::string& text, const char* part) { return text.find(part) != std::string::npos; }
+    bool Has(const std::string& text, std::string_view part) { return text.find(part) != std::string::npos; }
 }
 
 TEST(markup_text_is_escaped)
@@ -459,6 +459,26 @@ TEST(a_widget_of_cells_lays_each_in_its_column_a_gap_apart)
         return static_cast<float>(s.text.size()) * (title ? 10.0f : 8.0f);
     });
     CHECK((columns == std::vector<float>{30.0f, 40.0f})); // "S 1" at 10 a letter, "BM 14" at 8
+}
+
+TEST(a_widget_of_cells_on_two_lines_draws_its_top_line_at_the_detail_size_so_its_pictures_match)
+{
+    Settings settings;
+    const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
+    WidgetContent c;
+    c.shown    = true;
+    c.cells    = true;
+    c.figures  = true;
+    c.title    = {Span{" 8", Tone::Normal, 0, GamePicture::SanDoriaCrest}, Span{" 4", Tone::Normal, 0, GamePicture::BastokCrest}};
+    c.subtitle = {Span{" 2", Tone::Normal, 0, GamePicture::WindurstCrest}, Span{" 5", Tone::Normal, 0, GamePicture::BeastmenCrest}};
+    CHECK(Has(WidgetRml(c, look, {30.0f, 30.0f}), "<div class=\"title figures cells\">"));
+    const std::string css = BarDocument(look, Place());
+    CHECK(Has(css, ".title.cells{font-size:" + Px(static_cast<float>(look.lines.detail)) + ";}"));
+    CHECK(Has(css, ".title.cells .line-icon{width:" + Px(static_cast<float>(look.lines.detail)) + ";height:" +
+                       Px(static_cast<float>(look.lines.detail)) + ";"));
+    // On one line (1 x 4) it keeps the title's size.
+    c.subtitle.clear();
+    CHECK(!Has(WidgetRml(c, look, {30.0f, 30.0f}), "cells\""));
 }
 
 TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_what_was_read_at_load)

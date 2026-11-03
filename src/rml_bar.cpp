@@ -270,7 +270,7 @@ namespace headsup
                 shown.padded   = padding;
                 // A widget of cells is as wide as its columns; another as its longer line.
                 shown.columns = c.cells ? CellColumns(c, [&](bool title, const Span& span) {
-                    return SteadyWidth(host, {span}, {}, title ? own.TitleFace(c) : own.DetailFace());
+                    return SteadyWidth(host, {span}, {}, title && c.subtitle.empty() ? own.TitleFace(c) : own.DetailFace());
                 }) : std::vector<float>{};
                 const auto detail = [&](const std::vector<Span>& spans) { return SteadyWidth(host, spans, {}, own.MeterFace()); };
                 shown.meter = c.meter ? PlaceMeter(*c.meter, MeterWidths{detail(c.meter->above), detail(c.meter->below),
