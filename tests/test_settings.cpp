@@ -289,7 +289,6 @@ barConnection=false
 barParty=true
 barSignet=true
 barMemory=true
-barExp=true
 barWorld=true
 barZoneLine2=true
 barZoneIcons=true
@@ -338,7 +337,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barLatency=true
-barLeft=zone weather vanaTime job exp party signet world
+barLeft=zone weather vanaTime job party signet world
 barCenter=
 barRight=target gil bags connection memory fps earthTime
 hideHelpBar=true
@@ -1118,7 +1117,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
         "barEarthTime", "barGameHelp", "barFps", "barJob", "barConnection", "barParty", "barSignet", "barMemory",
-        "barExp", "barWorld"}; // in BarWidget's order
+        "barWorld"}; // in BarWidget's order
     static_assert(std::size(widgetKeys) == kBarWidgetCount);
     for (int w = 0; w < kBarWidgetCount; ++w)
     {
@@ -2952,32 +2951,32 @@ TEST(the_target_widgets_icons_visibility_and_mob_level_are_kept_and_held_to_thei
     CHECK(held.targetIcons == kAllTargetIcons && held.targetShows == 0);
 }
 
-TEST(the_exp_text_is_kept_apart_for_the_job_and_exp_widgets)
+TEST(the_job_and_exp_widgets_lines_and_bar_settings_are_kept)
 {
     Settings s;
-    CHECK(s.Widget(BarWidget::Job).expText == kDefaultExpText && !s.Widget(BarWidget::Exp).on);
-    WidgetOptions& exp = s.Widget(BarWidget::Exp);
-    exp.on             = true;
+    CHECK(s.Widget(BarWidget::Job).expText == kDefaultExpText);
+    WidgetOptions& exp = s.Widget(BarWidget::Job);
+    exp.jobLayout      = JobLayout::Bar;
     exp.expPlaces      = {ExpTextPlace::Above, ExpTextPlace::Off, ExpTextPlace::Left};
     exp.expBarWidth    = 250;
     exp.expBarHeight   = 3;
     exp.expAlign       = Align::Right;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(store.values["expBar"], "under"); // the Job widget's, under its key of before
+    CHECK_EQ(store.values["expBar"], "under");
+    CHECK_EQ(store.values["jobLayout"], "bar");
     const Settings read = LoadSettings(store);
-    CHECK(read.Widget(BarWidget::Exp) == s.Widget(BarWidget::Exp));
     CHECK(read.Widget(BarWidget::Job) == s.Widget(BarWidget::Job));
     CHECK_EQ(store.values["barExpEarned"], "above");
     CHECK_EQ(store.values["barExpAlign"], "right");
-    CHECK(Settings{}.Widget(BarWidget::Exp).expAlign == Align::Center);
+    CHECK(Settings{}.Widget(BarWidget::Job).expAlign == Align::Center);
     // A size past the slider's ends reads as that end; an unknown place as the default's.
     store.values["barExpBarWidth"]  = "9999";
     store.values["barExpBarHeight"] = "0";
     store.values["barExpPercent"]   = "sideways";
     store.values["barExpAlign"]     = "diagonal";
     const Settings reread        = LoadSettings(store);
-    const WidgetOptions& clamped = reread.Widget(BarWidget::Exp);
+    const WidgetOptions& clamped = reread.Widget(BarWidget::Job);
     CHECK(clamped.expBarWidth == kMaxExpBarWidth && clamped.expBarHeight == kMinExpBarHeight);
     CHECK(clamped.expPlaces[static_cast<int>(ExpText::Percent)] == kDefaultExpPlaces[static_cast<int>(ExpText::Percent)]);
     CHECK(clamped.expAlign == Align::Center);

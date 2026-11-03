@@ -2172,24 +2172,25 @@ TEST(the_bags_popup_lists_mog_safe_2_only_once_it_holds_something)
     CHECK(listed("Mog Safe 2"));
 }
 
-TEST(the_exp_widget_is_its_bar_by_its_own_settings)
+TEST(the_job_and_exp_widgets_bar_layout_is_its_exp_bar_by_its_own_settings)
 {
     Settings settings;
     BarState state;
     JobSample s;
     s.mainJob = 1, s.mainLevel = 30, s.exp = 12345, s.expNeeded = 20000;
     state.job = JobReport{s, std::nullopt};
-    CHECK(!BarWidgetContent(BarWidget::Exp, state, settings).shown); // off on a new install
-    WidgetOptions& o = settings.Widget(BarWidget::Exp);
-    o.on             = true;
-    o.expPlaces      = {ExpTextPlace::Off, ExpTextPlace::Off, ExpTextPlace::Left};
-    o.expBarWidth    = 200;
-    o.expBarHeight   = 8;
-    const WidgetContent w = BarWidgetContent(BarWidget::Exp, state, settings);
+    WidgetOptions& o = settings.Widget(BarWidget::Job);
+    CHECK(!BarWidgetContent(BarWidget::Job, state, settings).meter); // its lines on a new install
+    o.jobLayout    = JobLayout::Bar;
+    o.expPlaces    = {ExpTextPlace::Off, ExpTextPlace::Off, ExpTextPlace::Left};
+    o.expBarWidth  = 200;
+    o.expBarHeight = 8;
+    const WidgetContent w = BarWidgetContent(BarWidget::Job, state, settings);
     CHECK(w.shown && w.meter && w.meter->left.front().text == "61%" && w.meter->right.empty());
-    CHECK(w.meter->width == 200 && w.meter->height == 8);
+    CHECK(w.meter->width == 200 && w.meter->height == 8 && w.hasPopup);
     CHECK(NeedsOf(settings, std::nullopt).job);
-    // The Job widget keeps its own.
+    // The other layouts keep their own lines.
+    o.jobLayout = JobLayout::JobsFirst;
     CHECK_EQ(BarWidgetContent(BarWidget::Job, state, settings).subtitle.front().text, "7,655 EXP to next");
 }
 

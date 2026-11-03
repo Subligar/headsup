@@ -200,7 +200,7 @@ namespace headsup
         constexpr const char* kClockZoneKey       = "clockZone"; // the Clock widget's: a kClockZoneNames or kLocalZone
         constexpr const char* kLocalZone          = "local";
         constexpr const char* kJobLayoutKey       = "jobLayout";
-        const char* const kJobLayoutNames[kJobLayoutCount] = {"jobsFirst", "expFirst", "expOnly"};
+        const char* const kJobLayoutNames[kJobLayoutCount] = {"jobsFirst", "expFirst", "expOnly", "bar"};
         constexpr const char* kTargetIconsKey    = "barTargetShowIcons";
         constexpr const char* kTargetShowsKey    = "barTargetShows";
         constexpr const char* kTargetMobLevelKey = "barTargetMobLevel";
@@ -255,7 +255,7 @@ namespace headsup
         const char* const kBarSeparatorsNames[kBarSeparatorsCount] = {"theme", "diamonds", "none"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
             "barEarthTime", "barGameHelp", "barFps", "barJob", "barConnection", "barParty", "barSignet", "barMemory",
-            "barExp", "barWorld"};
+            "barWorld"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1396,9 +1396,6 @@ namespace headsup
                 for (int l = 0; l < kJobLayoutCount; ++l)
                     if (layout == kJobLayoutNames[l]) o.jobLayout = static_cast<JobLayout>(l);
                 o.jobNames = flag(kJobNamesKey, o.jobNames);
-                break;
-            }
-            case BarWidget::Exp:
                 for (int t = 0; t < kExpTextCount; ++t)
                 {
                     const std::string place = text(kExpPlaceKeys[t]);
@@ -1413,6 +1410,7 @@ namespace headsup
                         if (align == kExpAlignNames[a]) o.expAlign = static_cast<Align>(a);
                 }
                 break;
+            }
             case BarWidget::Connection:
                 o.latency  = flag(kLatencyKey, o.latency);
                 o.netMeter = flag(kNetMeterKey, o.netMeter);
@@ -1480,8 +1478,6 @@ namespace headsup
                 StoreFloat(store, CopyKey(kExpTextKey, w), static_cast<float>(o.expText));
                 text(kJobLayoutKey, kJobLayoutNames[static_cast<int>(o.jobLayout)]);
                 flag(kJobNamesKey, o.jobNames);
-                break;
-            case BarWidget::Exp:
                 for (int t = 0; t < kExpTextCount; ++t)
                     text(kExpPlaceKeys[t], kExpPlaceNames[static_cast<int>(o.expPlaces[static_cast<size_t>(t)])]);
                 StoreFloat(store, CopyKey(kExpBarWidthKey, w), static_cast<float>(o.expBarWidth));

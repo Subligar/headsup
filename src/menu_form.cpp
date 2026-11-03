@@ -472,6 +472,7 @@ namespace headsup
             Settings& s = c.s;
             headsup::WidgetOptions& o = s.Widget(widget);
             const BarWidget kind      = widget.kind;
+            const bool bar            = kind == BarWidget::Job && o.jobLayout == JobLayout::Bar; // the EXP bar's own rows
             form.Note(c.layout.OptionsOf(WindowList::BarWidgets)[static_cast<size_t>(kind)].tip);
             const bool off = !BarOn(s) || !o.on;
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
@@ -695,14 +696,14 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::ExpText:
-                    if (kind == BarWidget::Job)
+                    if (kind == BarWidget::Job && !bar)
                     {
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ExpText));
                         form.Toggles(label.c_str(), o.expText, names.data(), kExpTextCount, row.tip);
                     }
                     break;
                 case WidgetTabsRow::ExpBar:
-                    if (kind == BarWidget::Job)
+                    if (kind == BarWidget::Job && !bar)
                     {
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ExpBar));
                         form.Segments(label.c_str(), o.expBar, names.data(), kExpBarPlaceCount, row.tip);
@@ -711,7 +712,7 @@ namespace headsup
                 case WidgetTabsRow::ExpEarned:
                 case WidgetTabsRow::ExpToNext:
                 case WidgetTabsRow::ExpPercent:
-                    if (kind == BarWidget::Exp)
+                    if (bar)
                     {
                         const auto which   = static_cast<WidgetTabsRow>(row.row);
                         const ExpText text = which == WidgetTabsRow::ExpEarned ? ExpText::Earned
@@ -722,22 +723,22 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::ExpAlign:
-                    if (kind == BarWidget::Exp)
+                    if (bar)
                     {
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Align));
                         form.Segments(label.c_str(), o.expAlign, names.data(), kAlignCount, row.tip);
                     }
                     break;
                 case WidgetTabsRow::BarWidth:
-                    if (kind == BarWidget::Exp)
+                    if (bar)
                         form.SliderInt(label.c_str(), o.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth, "%d px", row.tip);
                     break;
                 case WidgetTabsRow::BarHeight:
-                    if (kind == BarWidget::Exp)
+                    if (bar)
                         form.SliderInt(label.c_str(), o.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight, "%d px", row.tip);
                     break;
                 case WidgetTabsRow::JobNames:
-                    if (kind == BarWidget::Job) form.Switch(label.c_str(), o.jobNames, row.tip);
+                    if (kind == BarWidget::Job && !bar) form.Switch(label.c_str(), o.jobNames, row.tip);
                     break;
                 case WidgetTabsRow::Percent:
                     if (kind == BarWidget::Connection) form.Switch(label.c_str(), o.netMeter, row.tip);

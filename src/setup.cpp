@@ -211,7 +211,7 @@ namespace headsup
 
         constexpr BarWidget kWhere[]{BarWidget::Zone, BarWidget::Weather, BarWidget::World};
         constexpr BarWidget kTime[]{BarWidget::VanaTime, BarWidget::EarthTime};
-        constexpr BarWidget kYou[]{BarWidget::Job, BarWidget::Exp, BarWidget::Gil, BarWidget::Bags, BarWidget::Party, BarWidget::Target};
+        constexpr BarWidget kYou[]{BarWidget::Job, BarWidget::Gil, BarWidget::Bags, BarWidget::Party, BarWidget::Target};
         constexpr BarWidget kSystem[]{BarWidget::Fps, BarWidget::Connection, BarWidget::Memory, BarWidget::GameHelp, BarWidget::Signet};
         const SetupWidgetGroup kWidgetGroups[]{{"where", kWhere}, {"time", kTime}, {"you", kYou}, {"system", kSystem}};
 

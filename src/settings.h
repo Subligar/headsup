@@ -84,9 +84,9 @@ namespace headsup
         bool zoneConquestText      = true;                 // and by name, after the crest
         bool vanaWeekday     = true;                // Vana'diel Clock: the day before the time
         bool vanaDate        = false;               // and the date before the moon
-        ExpBarPlace expBar   = ExpBarPlace::Under;  // Job and EXP
+        ExpBarPlace expBar   = ExpBarPlace::Under;  // Job & EXP
         uint8_t expText      = kDefaultExpText;     // by ExpTextBit
-        ExpPlaces expPlaces  = kDefaultExpPlaces;   // EXP: its texts around its bar
+        ExpPlaces expPlaces  = kDefaultExpPlaces;   // its Bar layout: its texts around its bar
         int expBarWidth      = kDefaultExpBarWidth;
         int expBarHeight     = kDefaultExpBarHeight;
         Align expAlign       = Align::Center;       // its texts above and below the bar, against it
