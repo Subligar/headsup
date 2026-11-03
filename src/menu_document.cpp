@@ -447,8 +447,10 @@ namespace headsup
 
     std::string MenuDocument(const MenuLook& look)
     {
+        // The title's handle lets the window off the screen but for kWindowKeptOn of it, and never off the top.
+        const std::string offScreen = std::to_string(static_cast<int>(std::lround(-(1.0f - kWindowKeptOn) * 100.0f))) + "%";
         return "<rml><head><style>" + MenuStyle(look) + "</style></head><body>"
-               "<handle id=\"head\" move_target=\"#document\"><div id=\"title\">HeadsUp</div><div id=\"" +
+               "<handle id=\"head\" move_target=\"#document\" edge_margin=\"0px " + offScreen + " " + offScreen + " " + offScreen + "\"><div id=\"title\">HeadsUp</div><div id=\"" +
                kMenuVersionId + "\"></div></handle><div id=\"head-line\"></div>" +
                (look.developer ? std::string("<div id=\"tools\"><div class=\"") + kRaisedPill + "\" id=\"" + kMenuReloadId +
                                      "\"></div></div>"

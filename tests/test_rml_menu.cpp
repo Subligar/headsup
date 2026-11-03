@@ -1281,6 +1281,24 @@ TEST(the_window_is_kept_where_it_is_dragged_by_its_title)
     CHECK_EQ(window.settings.menuX, static_cast<int>((test::RmlSession::kWidth - window.settings.menuWidth) / 2) - 120);
 }
 
+TEST(the_window_goes_partly_off_the_screen_but_keeps_a_fifth_of_it_and_its_title_on)
+{
+    Window window;
+    window.Frames(30);
+    CHECK(window.Drag("head", Rml::Vector2f(-5000.0f, -5000.0f)));
+    const int width = window.settings.menuWidth;
+    CHECK(width > 0);
+    CHECK_EQ(window.settings.menuX, -static_cast<int>(std::lround(width * 0.8f))); // a fifth of it left on
+    CHECK_EQ(window.settings.menuY, 0); // its title never goes off the top
+    CHECK(window.Drag("head", Rml::Vector2f(10000.0f, 10000.0f)));
+    CHECK_EQ(window.settings.menuX, static_cast<int>(test::RmlSession::kWidth) - static_cast<int>(std::lround(width * 0.2f)));
+    // A place kept from a larger screen comes back with the same share on this one.
+    window.OpenAt(-9000, 9000, width, window.settings.menuHeight);
+    const Rml::Vector2f at = window.Find("title")->GetOwnerDocument()->GetAbsoluteOffset(Rml::BoxArea::Border);
+    CHECK_EQ(static_cast<int>(at.x), -static_cast<int>(std::lround(width * 0.8f)));
+    CHECK_EQ(static_cast<int>(at.y), static_cast<int>(test::RmlSession::kHeight) - static_cast<int>(std::lround(window.settings.menuHeight * 0.2f)));
+}
+
 TEST(the_window_moves_from_its_very_top_edge_and_corner)
 {
     Window window;

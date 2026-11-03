@@ -1285,7 +1285,8 @@ namespace headsup
         }
         if (static_cast<int>(s.barSubtitle) >= kSubtitlePlaceCount) s.barSubtitle = d.barSubtitle;
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
-        for (int* side : {&s.menuX, &s.menuY, &s.menuWidth, &s.menuHeight})
+        s.menuX = std::clamp(s.menuX, -kMaxMenuSide, kMaxMenuSide); // dragged partly off the screen's left
+        for (int* side : {&s.menuY, &s.menuWidth, &s.menuHeight})
             *side = std::clamp(*side, 0, kMaxMenuSide);
         s.fishBarWidth = std::clamp(s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth);
         for (int* side : {&s.fishBarX, &s.fishBarY})

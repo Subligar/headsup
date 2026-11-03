@@ -870,8 +870,14 @@ namespace headsup
             const Rml::Vector2i screen = host.context->GetDimensions();
             if (settings.menuWidth > 0 && settings.menuHeight > 0)
             {
-                SetPx(m_Document, Rml::PropertyId::Left, static_cast<float>(settings.menuX));
-                SetPx(m_Document, Rml::PropertyId::Top, static_cast<float>(settings.menuY));
+                // As the title's handle keeps it: a place from a larger screen comes back with the same share on.
+                const auto kept = [](int at, int side, int screenSide) {
+                    const int on = static_cast<int>(std::lround(static_cast<float>(side) * kWindowKeptOn));
+                    return std::clamp(at, on - side, std::max(on - side, screenSide - on));
+                };
+                SetPx(m_Document, Rml::PropertyId::Left, static_cast<float>(kept(settings.menuX, settings.menuWidth, screen.x)));
+                SetPx(m_Document, Rml::PropertyId::Top,
+                    static_cast<float>(std::clamp(kept(settings.menuY, settings.menuHeight, screen.y), 0, std::max(0, screen.y))));
                 SetPx(m_Document, Rml::PropertyId::Width, static_cast<float>(settings.menuWidth));
                 SetPx(m_Document, Rml::PropertyId::Height, static_cast<float>(settings.menuHeight));
             }
@@ -888,7 +894,7 @@ namespace headsup
         const Rml::Vector2f at = m_Document->GetAbsoluteOffset(Rml::BoxArea::Border);
         const int x = static_cast<int>(std::lround(at.x)), y = static_cast<int>(std::lround(at.y));
         const int width = static_cast<int>(std::lround(size.x)), height = static_cast<int>(std::lround(size.y));
-        const std::array<int, 4> now{std::max(0, x), std::max(0, y), width, height};
+        const std::array<int, 4> now{x, std::max(0, y), width, height};
         if (!m_OpenedAt)
         {
             m_OpenedAt = now;
