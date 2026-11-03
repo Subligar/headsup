@@ -188,18 +188,26 @@ TEST(a_widgets_chip_dropped_on_another_goes_before_it)
     CHECK(form.changed && now[0] == left[1] && now[1] == left[0]);
 }
 
-TEST(the_layout_comes_first_and_a_click_on_a_chip_shows_its_widgets_settings_under_it)
+TEST(a_click_on_a_chip_opens_its_settings_in_the_popout_and_a_second_click_or_another_page_closes_it)
 {
     Window w;
     w.state.page = Page::Widgets;
     const std::vector<PanelWidget>& left = w.settings.barSections[static_cast<int>(BarSection::Left)];
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const std::string chip  = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const auto popout       = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
+    const Form closed       = w.Pass();
+    CHECK(popout(closed) == closed.blocks.end());
     const Form form = w.Pass({{chip, kClickEvent, ""}});
     CHECK(w.state.widget == SlotOf(left[1]) && !form.scrollToTop);
-    const auto layout = std::ranges::find(form.blocks, "widgets-layout", &FormBlock::id);
-    const auto widgets = std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id);
-    CHECK(layout != form.blocks.end() && widgets != form.blocks.end() && layout < widgets);
-    CHECK(!Has(widgets->rml, "class=\"tab"));
+    CHECK(popout(form) != form.blocks.end() && popout(form)->popout);
+    CHECK(!Has(popout(form)->rml, "class=\"tab"));
+    const Form again = w.Pass({{chip, kClickEvent, ""}});
+    CHECK(!w.state.widget && popout(again) == again.blocks.end());
+    w.Pass({{chip, kClickEvent, ""}});
+    w.Pass({{"nav-toppanel", kClickEvent, ""}});
+    w.state.page   = Page::Widgets;
+    const Form back = w.Pass();
+    CHECK(popout(back) == back.blocks.end());
 }
 
 TEST(a_chips_toggle_turns_its_widget_on_and_off_and_shows_its_settings)

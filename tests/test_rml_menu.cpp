@@ -1881,6 +1881,34 @@ TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
     CHECK_EQ(window.Said(), "");
 }
 
+TEST(a_widgets_settings_open_beside_the_window_on_the_side_with_room_and_move_by_their_title)
+{
+    Window window;
+    window.Page("widgets");
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil));
+    const auto at   = [&](const char* id) { return window.Find(id)->GetAbsoluteOffset(Rml::BoxArea::Border); };
+    const auto size = [&](const char* id) { return window.Find(id)->GetBox().GetSize(Rml::BoxArea::Border); };
+    CHECK(!window.Shows("popout"));
+    window.Click(chip);
+    CHECK(window.Shows("popout") && window.Shows("widgets-widgets-clone-gil"));
+    Rml::Element* frame = window.Find("popout")->GetOwnerDocument();
+    const Rml::Vector2f windowAt = frame->GetAbsoluteOffset(Rml::BoxArea::Border);
+    const Rml::Vector2f windowSize = frame->GetBox().GetSize(Rml::BoxArea::Border);
+    CHECK(at("popout").x >= windowAt.x + windowSize.x && std::abs(at("popout").y - windowAt.y) <= 1.0f);
+    CHECK(size("popout").y <= windowSize.y);
+    const Rml::Vector2f before = at("popout");
+    window.Drag("popout-head", Rml::Vector2f(40.0f, 30.0f));
+    CHECK(at("popout") == before + Rml::Vector2f(40.0f, 30.0f));
+    window.Click(chip);
+    CHECK(!window.Shows("popout"));
+    // Against the screen's right edge it opens on the left.
+    window.OpenAt(test::RmlSession::kWidth - 820, 100, 800, 700);
+    window.Page("widgets");
+    window.Click(chip);
+    CHECK(window.Shows("popout") && at("popout").x + size("popout").x <= static_cast<float>(test::RmlSession::kWidth - 820));
+    CHECK_EQ(window.Said(), "");
+}
+
 TEST(the_world_info_widget_offers_the_pick_for_what_it_shows)
 {
     Window window;

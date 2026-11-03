@@ -77,7 +77,7 @@ namespace headsup
     {
         FormState form;
         Page page          = Page::Entities;
-        int widget         = 0;     // the Widgets page's picked widget, by BarWidget
+        std::optional<int> widget;  // the Widgets page's picked widget, by its slot, whose settings the popout shows
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool watchRequested = false; // the debug watch is to start, or stop
@@ -109,6 +109,7 @@ namespace headsup
         void Leave()
         {
             form.popup.clear();
+            widget.reset();
             confirmReset   = false;
             keyCapture     = {};
             shotKeyCapture = {};

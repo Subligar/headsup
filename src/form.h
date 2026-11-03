@@ -119,6 +119,7 @@ namespace headsup
     {
         std::string id, rml;
         bool bare = false; // on the page itself under the cards, with no card around it
+        bool popout = false; // in the popout window beside the page, which shows while it has a block
         bool operator==(const FormBlock&) const = default;
     };
     constexpr const char* kSidebarBlock = "sidebar";

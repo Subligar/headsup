@@ -105,6 +105,10 @@ namespace headsup
             const std::vector<std::string>& fonts);
         void FitRuns();
         void ApplyBlocks(const std::vector<FormBlock>& blocks);
+        // Shows the popout's block, or hides the popout without one. True when its markup was replaced.
+        bool ApplyPopout(const FormBlock* block);
+        // Beside the window, on the side of the screen with room for it, level with its top.
+        void PlacePopout();
         void ApplyValues(const std::vector<FormValue>& values);
         void ApplyPopup(const std::optional<FormPopup>& popup);
         // Every element with an id, found again after markup was replaced.
@@ -124,8 +128,10 @@ namespace headsup
         Rml::Element* m_Page      = nullptr;
         Rml::Element* m_PageTitle = nullptr;
         Rml::Element* m_Popup     = nullptr;
+        Rml::Element* m_Popout    = nullptr;
+        Rml::Element* m_PopoutBody = nullptr;
         Rml::Element* m_Tip       = nullptr;
-        std::string m_SidebarRml, m_PopupRml, m_TitleShown, m_TipShown;
+        std::string m_SidebarRml, m_PopupRml, m_PopoutRml, m_TitleShown, m_TipShown;
         std::vector<Card> m_Cards;
         std::unordered_map<std::string, Rml::Element*> m_ById;
         std::unordered_map<std::string, Applied> m_Applied; // what each value was last set to, by its id, kind and name

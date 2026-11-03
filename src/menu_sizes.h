@@ -41,6 +41,8 @@ namespace headsup
     constexpr float kTabPadding     = 0.6f;  // either side of a name in tabs as wide as their names
     constexpr int kTabFillGrow      = 1000;  // the last row's filler grows this much faster than its tabs
     constexpr float kTipWidth       = 20.0f;
+    constexpr float kPopoutWidth    = 30.0f; // the popout beside the window: a label and a slider with room
+    constexpr float kPopoutGap      = 0.5f;  // between the window and the popout
     constexpr float kHeaderRow      = 2.4f;  // a card's title row
     constexpr float kLineNameWidth  = 6.6f;  // "Middle Line", before its design box
     constexpr int kResetArrowPixels = 48;    // the reset arrow's picture, drawn smaller than it is

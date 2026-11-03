@@ -317,7 +317,7 @@
         {
           "key": "layout",
           "name": "Layout",
-          "description": "Drag a widget to move it, and click it to see its settings below. Its toggle turns it on and off.",
+          "description": "Drag a widget to move it, and click it to open its settings beside this window. Click it again to close them. Its toggle turns it on and off.",
           "settings": [
             {"key": "trays"},
             {"key": "reset-layout", "name": "Reset Layout", "tip": "Puts every widget back in its first place and takes off any copies. Switches stay."}
@@ -326,7 +326,7 @@
         {
           "key": "widgets",
           "name": "Widgets",
-          "description": "The settings of the widget picked in the Layout above.",
+          "description": "The settings of the widget picked in the Layout.",
           "settings": [
             {
               "key": "widget-tabs",

@@ -120,9 +120,10 @@ namespace headsup
         m_Visible  = false;
         m_Placed   = false;
         m_OpenedAt.reset();
-        m_Sidebar = m_Page = m_PageTitle = m_Popup = m_Tip = nullptr;
+        m_Sidebar = m_Page = m_PageTitle = m_Popup = m_Popout = m_PopoutBody = m_Tip = nullptr;
         m_SidebarRml.clear();
         m_PopupRml.clear();
+        m_PopoutRml.clear();
         m_TitleShown.clear();
         m_TipShown.clear();
         m_Cards.clear();
@@ -174,7 +175,7 @@ namespace headsup
         // What is in the popup or the frame is in view already; a card's control may be scrolled out of it, and in
         // a short window a page's name.
         for (Rml::Element* up = scroll ? element : nullptr; up != nullptr; up = up->GetParentNode())
-            if (up == m_Page || up == m_Sidebar)
+            if (up == m_Page || up == m_Sidebar || up == m_PopoutBody)
             {
                 element->ScrollIntoView(Rml::ScrollIntoViewOptions(Rml::ScrollAlignment::Nearest));
                 m_Document->GetContext()->Update();
@@ -227,6 +228,8 @@ namespace headsup
         m_Page       = m_Document->GetElementById(kMenuPageId);
         m_PageTitle  = m_Document->GetElementById(kMenuPageTitleId);
         m_Popup      = m_Document->GetElementById(kMenuPopupId);
+        m_Popout     = m_Document->GetElementById(kMenuPopoutId);
+        m_PopoutBody = m_Document->GetElementById(kMenuPopoutBodyId);
         m_Tip        = m_Document->GetElementById(kMenuTipId);
         for (const Rml::EventId id : {Rml::EventId::Click, Rml::EventId::Change, Rml::EventId::Dragdrop, Rml::EventId::Dragend,
                  Rml::EventId::Dragmove, Rml::EventId::Mouseover, Rml::EventId::Mousemove, Rml::EventId::Mousescroll,
@@ -235,17 +238,45 @@ namespace headsup
         // On their way down: taking and losing the keyboard do not come back up, and a text box keeps its keys.
         for (const Rml::EventId id : {Rml::EventId::Focus, Rml::EventId::Blur, Rml::EventId::Keydown})
             m_Document->AddEventListener(id, this, true);
-        return m_Sidebar != nullptr && m_Page != nullptr && m_PageTitle != nullptr && m_Popup != nullptr && m_Tip != nullptr;
+        return m_Sidebar != nullptr && m_Page != nullptr && m_PageTitle != nullptr && m_Popup != nullptr && m_Popout != nullptr &&
+               m_PopoutBody != nullptr && m_Tip != nullptr;
+    }
+
+    bool RmlMenu::ApplyPopout(const FormBlock* block)
+    {
+        const std::string rml = block != nullptr ? "<div id=\"" + block->id + "\">" + block->rml + "</div>" : std::string();
+        if (rml == m_PopoutRml) return false;
+        const bool opening = m_PopoutRml.empty();
+        m_PopoutBody->SetInnerRML(rml);
+        m_PopoutRml = rml;
+        m_Popout->SetClass(kHiddenClass, rml.empty());
+        if (opening) PlacePopout();
+        return true;
+    }
+
+    void RmlMenu::PlacePopout()
+    {
+        const float screen = static_cast<float>(m_Document->GetContext()->GetDimensions().x);
+        const float at     = m_Document->GetAbsoluteOffset(Rml::BoxArea::Border).x;
+        const float window = m_Document->GetBox().GetSize(Rml::BoxArea::Border).x;
+        const float width  = std::round(kPopoutWidth * m_FontPixels), gap = std::round(kPopoutGap * m_FontPixels);
+        const float roomRight = screen - (at + window);
+        const bool right      = roomRight >= width + gap || roomRight >= at;
+        // From the window's inside, within its edge.
+        const float edge = m_Document->GetBox().GetEdge(Rml::BoxArea::Border, Rml::BoxEdge::Left);
+        SetPx(m_Popout, Rml::PropertyId::Left, right ? window - edge + gap : -(width + gap + edge));
+        SetPx(m_Popout, Rml::PropertyId::Top, -edge);
     }
 
     void RmlMenu::ApplyBlocks(const std::vector<FormBlock>& blocks)
     {
-        bool replaced = false;
-        size_t card   = 0;
-        bool same     = true; // the cards are the ones shown, in their order
+        const auto popout = std::ranges::find(blocks, true, &FormBlock::popout);
+        bool replaced     = ApplyPopout(popout != blocks.end() ? &*popout : nullptr);
+        size_t card       = 0;
+        bool same         = true; // the cards are the ones shown, in their order
         for (const FormBlock& block : blocks)
         {
-            if (block.id == kSidebarBlock) continue;
+            if (block.id == kSidebarBlock || block.popout) continue;
             same = same && card < m_Cards.size() && m_Cards[card].id == block.id;
             ++card;
         }
@@ -254,6 +285,7 @@ namespace headsup
         std::string page;
         for (const FormBlock& block : blocks)
         {
+            if (block.popout) continue;
             if (block.id == kSidebarBlock)
             {
                 if (block.rml == m_SidebarRml) continue;
@@ -279,7 +311,7 @@ namespace headsup
             m_Page->SetInnerRML(page);
             m_Cards.clear();
             for (const FormBlock& block : blocks)
-                if (block.id != kSidebarBlock) m_Cards.push_back(Card{block.id, block.rml});
+                if (block.id != kSidebarBlock && !block.popout) m_Cards.push_back(Card{block.id, block.rml});
             replaced = true;
         }
         if (!replaced) return;

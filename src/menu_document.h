@@ -69,6 +69,11 @@ namespace headsup
     constexpr const char* kMenuReloadId    = "reload";
     constexpr const char* kMenuPopupId     = "popup";
     constexpr const char* kMenuTipId       = "tip";
+    // A window of its own beside this one, while a page has something to show there: its title moves it.
+    constexpr const char* kMenuPopoutId      = "popout";
+    constexpr const char* kMenuPopoutHeadId  = "popout-head";
+    constexpr const char* kMenuPopoutTitleId = "popout-title";
+    constexpr const char* kMenuPopoutBodyId  = "popout-body";
     constexpr const char* kMenuCardClass   = "card";
     constexpr const char* kMenuFootClass   = "foot"; // a block under the cards with no card around it
     constexpr const char* kSetupPreviewClass = "setup-preview"; // Setup's picture, as wide as its card
