@@ -31,6 +31,7 @@ namespace headsup
         constexpr int kNoOption = -1; // a choice whose settings no option holds
         constexpr const char* kWidgetChip  = "chip "; // a tray chip's name in its card, before its widget's number
         constexpr const char* kChipToggle  = " on";   // after it, its toggle's
+        constexpr const char* kWidgetNameClass = "caption widget-name"; // over each widget's settings in a combined popup
         constexpr float kAddWindowShare    = 0.8f;    // of a dropdown's width: a group's "+ Add Window"
         constexpr size_t kMaxFindText      = 31;      // letters of a window's name to look for
 
@@ -746,30 +747,32 @@ namespace headsup
                     WordTip(c, WindowWord::WidgetTabsClone)))
                 if (const std::optional<PanelWidget> added = CloneWidget(s, widget))
                 {
-                    c.state.widget = SlotOf(*added);
-                    form.changed   = true;
+                    c.state.settingsAsked = *added;
+                    form.changed          = true;
                 }
             if (widget.copy > 0 && form.Button(Word(c, WindowWord::WidgetTabsRemoveCopy), ("remove copy" + scope).c_str(),
                                        kRaisedPill, WordTip(c, WindowWord::WidgetTabsRemoveCopy)))
             {
                 RemoveWidgetCopy(s, widget);
-                c.state.widget = SlotOf(kind);
-                form.changed   = true;
+                c.state.settingsAsked = PanelWidget{kind};
+                form.changed          = true;
             }
         }
 
-        // The widget picked in the Layout, in the popout under its name.
-        void PickedWidget(Context& c, const LayoutSetting& e)
+        // The settings of each widget the panel's popup shows, under its name when there are more than one.
+        void PopupSettings(Context& c, const LayoutSetting& tabs)
         {
-            c.form.Fade(!BarOn(c.s));
-            const PanelWidget widget = WidgetInSlot(*c.state.widget);
-            c.form.Set(kMenuPopoutTitleId, FormValueKind::Text, {}, CopyName(c, widget));
-            WidgetOptions(c, e, widget);
+            for (const PanelWidget widget : c.readings.settingsOf)
+            {
+                c.form.Fade(false);
+                if (c.readings.settingsOf.size() > 1) c.form.Caption(CopyName(c, widget).c_str(), kWidgetNameClass);
+                WidgetOptions(c, tabs, widget);
+            }
         }
 
         // Left, Center and Right as trays sunk into the card, each holding its widgets as raised chips in bar order:
-        // a chip drags to another place or tray, and a click picks it, opening its settings in the popout, or closes
-        // them when it is picked already. Its toggle turns it on and off and picks it too.
+        // a chip drags to another place or tray, and a click on one that is on opens its popup on the panel on its
+        // settings, or closes it when it shows them already. Its toggle turns it on and off.
         void Trays(Context& c)
         {
             struct Drop
@@ -781,7 +784,6 @@ namespace headsup
             };
             Form& form  = c.form;
             Settings& s = c.s;
-            std::optional<int>& picked = c.state.widget;
             form.Fade(!BarOn(s));
             std::optional<Drop> drop; // applied after the trays are written, so no list changes under its own loop
             const std::string chipStart = form.Named(kWidgetChip) + "-";
@@ -813,12 +815,10 @@ namespace headsup
                     form.CheckAt((kWidgetChip + std::to_string(w) + kChipToggle).c_str(), s.widgets[w].on);
                     form.Raw(EscapedRml(CopyName(c, held[i])) + "</div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
-                    if (!form.Off() && form.Clicked(id))
-                        picked = picked == w ? std::nullopt : std::optional(w);
-                    else if (!form.Off() && s.widgets[w].on != was)
-                        picked = w;
+                    if (!form.Off() && was && s.widgets[w].on && form.Clicked(id)) c.state.settingsAsked = held[i];
                     form.Set(id, FormValueKind::Class, "on", {}, s.widgets[w].on);
-                    form.Set(id, FormValueKind::Class, kPickedClass, {}, w == picked);
+                    form.Set(id, FormValueKind::Class, kPickedClass, {},
+                        std::ranges::find(c.readings.settingsOf, held[i]) != c.readings.settingsOf.end());
                     dropped(id, here, i); // dropped on a chip: before it
                 }
                 // The rest of the tray takes a drop at the section's end.
@@ -1722,7 +1722,7 @@ namespace headsup
                 form.SliderInt(label.c_str(), s.helpBarHeight, kAutoHelpBarHeight, kMaxHelpBarHeight,
                     s.helpBarHeight == kAutoHelpBarHeight ? "Auto" : "%d px", tip);
                 break;
-            case SettingPiece::WidgetTabs: PickedWidget(c, e); break;
+            case SettingPiece::WidgetTabs: break; // in the panel's popup, by BuildWidgetSettings
             case SettingPiece::Trays: Trays(c); break;
             case SettingPiece::ResetLayout:
                 form.Fade(!BarOn(s));
@@ -1845,7 +1845,6 @@ namespace headsup
             bool off      = false;
             bool* enabled = nullptr;
             bool bare     = false; // drawn under the cards with no card of its own
-            bool popout   = false; // drawn in the popout beside the page
         };
         CardState CardStateOf(CardPiece piece, Context& c)
         {
@@ -1884,13 +1883,7 @@ namespace headsup
             case CardPiece::Statuses: return {false, !plates};
             case CardPiece::TopPanel: return {false, !on, &s.showBar};
             case CardPiece::HelpBar: return {false, !BarOn(s), &s.Widget(BarWidget::GameHelp).on};
-            case CardPiece::Widgets:
-            {
-                // A picked widget may have left the panel since: a copy removed, the layout reset.
-                const std::vector<PanelWidget> placed = WidgetTabs(s.barSections);
-                if (c.state.widget && std::ranges::find(placed, WidgetInSlot(*c.state.widget)) == placed.end()) c.state.widget.reset();
-                return {.skipped = !c.state.widget, .off = !BarOn(s), .bare = true, .popout = true};
-            }
+            case CardPiece::Widgets: return {.skipped = true}; // in the panel's popup, by BuildWidgetSettings
             case CardPiece::Layout: return {false, !BarOn(s)};
             case CardPiece::DebugMode: return {false, false, &s.debugMode};
             case CardPiece::CustomGameUi: return {false, !on};
@@ -2154,10 +2147,7 @@ namespace headsup
             if (own.skipped) continue;
             form.Fade(own.off);
             if (own.bare)
-            {
                 form.BeginBare(Labeled(card.name, card.key).c_str());
-                form.blocks.back().popout = own.popout;
-            }
             else if (!form.BeginCard(Labeled(card.name, card.key).c_str(), own.enabled, card.about))
                 continue;
             CardNote(card.piece, c);
@@ -2177,6 +2167,23 @@ namespace headsup
             form.Note(Word(c, s.enabled ? WindowWord::SwitchedOffTopPanel : WindowWord::SwitchedOffHeadsup));
             form.EndCard();
         }
+        s = Clamp(s);
+    }
+
+    void BuildWidgetSettings(Form& form, Settings& s, const MenuReadings& readings, MenuFormState& state,
+        const std::vector<std::string>& fonts, const std::vector<std::string>& menuFonts, const WindowLayout& layout)
+    {
+        const LayoutSetting* tabs = layout.SettingOf(SettingPiece::WidgetTabs);
+        if (readings.settingsOf.empty() || state.setup || tabs == nullptr) return;
+        form.layout  = &layout;
+        form.pageKey = layout.PageOf(Page::Widgets).key;
+        Context c{form, s, readings, state, fonts, menuFonts, layout, std::nullopt};
+        form.Fade(false);
+        form.BeginBare(kWidgetSettingsBlock);
+        form.blocks.back().popout = true;
+        PopupSettings(c, *tabs);
+        form.EndCard();
+        form.Fade(false);
         s = Clamp(s);
     }
 }

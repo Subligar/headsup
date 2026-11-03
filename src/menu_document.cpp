@@ -72,7 +72,7 @@ namespace headsup
         std::string AuroraMenuRules(const MenuColors& c)
         {
             std::string css;
-            css += std::string("body,#") + kMenuPopoutId + "{decorator:vertical-gradient(#111b2cf2 #090e17f2);background-color:transparent;border-color:" +
+            css += "body{decorator:vertical-gradient(#111b2cf2 #090e17f2);background-color:transparent;border-color:" +
                    RcssColor(Faded(c.accent, kAuroraFrame)) + ";}";
             css += ".card{background-color:transparent;decorator:vertical-gradient(#1c283cb8 #131b2ab8);}";
             css += "scrollbarvertical sliderbar{background-color:" + RcssColor(Faded(c.accent, kAuroraFrame)) + ";}";
@@ -87,7 +87,7 @@ namespace headsup
         std::string SkinMenuRules(const SkinFrame& frame)
         {
             const std::string art = "background-color:transparent;border-radius:0px;" + SkinRules(frame);
-            return "body,#" + std::string(kMenuPopoutId) + "{" + art + "}#" + std::string(kMenuPopupId) + ",#" + kMenuTipId + "{" + art + "}";
+            return "body{" + art + "}#" + std::string(kMenuPopupId) + ",#" + kMenuTipId + "{" + art + "}";
         }
     }
 
@@ -414,17 +414,8 @@ namespace headsup
         css += ".wchip.on{color:" + color(c.text) + ";}";
         css += ".wchip.picked{border-color:" + color(c.accent) + ";}";
         css += ".wchip .check{display:inline-block;vertical-align:middle;margin-right:0.8em;font-size:" + Em(kChipToggle) + ";}";
+        css += ".widget-name{color:" + color(c.text) + ";}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
-        // The popout, as tall as the window at most: its title stays put and its settings scroll under it.
-        css += std::string("#") + kMenuPopoutId + "{position:absolute;z-index:10;display:flex;flex-direction:column;"
-               "box-sizing:border-box;width:" + Em(kPopoutWidth) + ";max-height:100%;background-color:" + color(c.background) +
-               ";border:1px " + color(c.border) + ";border-radius:" + Em(kCardRadius * 1.5f) + ";}";
-        css += std::string("#") + kMenuPopoutId + "." + kHiddenClass + "{display:none;}";
-        css += std::string("#") + kMenuPopoutHeadId + "{flex:0 0 auto;height:" + Em(kHeaderRow) + ";padding-left:" + Em(kCardPad) + ";}";
-        css += std::string("#") + kMenuPopoutTitleId + "{line-height:" + Em(kHeaderRow / kCardTitleScale) + ";font-family:\"" +
-               look.titleFont + "\";font-size:" + Em(kCardTitleScale) + ";color:" + color(c.heading) + ";}";
-        css += std::string("#") + kMenuPopoutBodyId + "{flex:1 1 auto;min-height:0px;overflow-y:auto;padding:0px " + Em(kCardPad) +
-               " " + Em(kCardPad) + " " + Em(kCardPad) + ";}";
         // What a control says under the pointer.
         css += std::string("#") + kMenuTipId + "{position:absolute;z-index:60;box-sizing:border-box;max-width:" +
                Em(kTipWidth) + ";padding:0.4em 0.6em;border-radius:" + radius + ";border:1px " + color(c.raisedEdge) +
@@ -438,6 +429,22 @@ namespace headsup
         return css;
     }
 
+    std::string MenuViewStyle(const MenuLook& look)
+    {
+        // The window's style, its body made a clear box over the panel's popup, which draws the ground.
+        return MenuStyle(look) +
+               "body{width:auto;height:auto;min-width:0px;min-height:0px;padding:0px;background-color:transparent;"
+               "decorator:none;border-width:0px;border-radius:0px;z-index:20;}body.open{animation:none;}#" +
+               kMenuViewBodyId + "{overflow-y:auto;}";
+    }
+
+    std::string MenuViewDocument(const MenuLook& look)
+    {
+        return "<rml><head><style>" + MenuViewStyle(look) + "</style></head><body><div id=\"" + kMenuViewBodyId +
+               "\"></div><div id=\"" + kMenuPopupId + "\" class=\"hidden\"></div><div id=\"" + kMenuTipId +
+               "\" class=\"hidden\"></div></body></rml>";
+    }
+
     std::string MenuDocument(const MenuLook& look)
     {
         return "<rml><head><style>" + MenuStyle(look) + "</style></head><body>"
@@ -449,9 +456,7 @@ namespace headsup
                "<div id=\"" + kMenuCloseId +
                "\"><div class=\"cross\"></div><div class=\"cross back\"></div></div><div id=\"columns\"><div id=\"" +
                kMenuSidebarId + "\"></div><div id=\"main\"><div id=\"" + kMenuPageTitleId + "\"></div><div id=\"" +
-               kMenuPageId + "\"></div></div></div><div id=\"" + kMenuPopoutId + "\" class=\"" + kHiddenClass + "\"><handle id=\"" +
-               kMenuPopoutHeadId + "\" move_target=\"#parent\" edge_margin=\"none\"><div id=\"" + kMenuPopoutTitleId +
-               "\"></div></handle><div id=\"" + kMenuPopoutBodyId + "\"></div></div><div id=\"" + kMenuPopupId + "\" class=\"hidden\"></div><div id=\"" + kMenuTipId +
+               kMenuPageId + "\"></div></div></div><div id=\"" + kMenuPopupId + "\" class=\"hidden\"></div><div id=\"" + kMenuTipId +
                "\" class=\"hidden\"></div><handle id=\"resize\" size_target=\"#document\"><div id=\"resize-mark\"></div>"
                "</handle></body></rml>";
     }

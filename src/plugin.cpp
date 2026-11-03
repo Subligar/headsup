@@ -919,6 +919,7 @@ public:
         }
         // Off, the bar is given nothing to show, and releases what it made.
         UpdateSkin();
+        m_RmlBar.settingsRoom = m_RmlMenu.RoomFor(SettingsShownNow(), m_Settings);
         if (m_Rml.Running())
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
@@ -1042,11 +1043,19 @@ public:
 #ifdef HEADSUP_DEV
                 .exportable       = true,
 #endif
+                .settingsOf       = SettingsShownNow(),
             };
+            m_RmlMenu.settingsAt = m_RmlBar.SettingsBody();
             if (m_RmlMenu.Update(MenuHostNow(), m_Settings, readings, m_Fonts.Choices(m_Settings.defaultFont), kVersion))
             {
                 m_SettingsChangedAt = now;
                 SayGameFontFailure();
+            }
+            // A chip clicked opens its pill's popup on its settings, or closes it when it shows them already.
+            if (const std::optional<headsup::PanelWidget> asked = m_RmlMenu.TakeSettingsAsked())
+            {
+                const headsup::PanelWidget pill = headsup::Panel(m_Settings).group[headsup::SlotOf(*asked)];
+                m_BarInput.ShowSettings(m_BarInput.SettingsShown() == pill ? std::nullopt : std::optional(pill));
             }
             if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
             if (m_RmlMenu.TakeSetupBackup()) BackUpSettings();
@@ -1194,6 +1203,13 @@ public:
 
 private:
     // The help bar's tallest reach in the game's menu resolution, with clear space below it, while the bar shows it.
+    // The widgets whose settings the panel's open popup shows, in its pill's order.
+    std::vector<headsup::PanelWidget> SettingsShownNow() const
+    {
+        const std::optional<headsup::PanelWidget> shown = m_BarInput.SettingsShown();
+        return shown ? headsup::Members(headsup::Panel(m_Settings), *shown) : std::vector<headsup::PanelWidget>{};
+    }
+
     std::optional<headsup::HelpBand> HelpBandNow() const
     {
         // The screen in the game's menu resolution, and the help bar's bottom in it while the bar shows it.

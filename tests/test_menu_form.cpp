@@ -27,6 +27,7 @@ namespace
         {
             Form form(std::move(events), state.form);
             BuildMenu(form, settings, readings, state, fonts, menuFonts, layout);
+            BuildWidgetSettings(form, settings, readings, state, fonts, menuFonts, layout);
             return form;
         }
     };
@@ -188,39 +189,51 @@ TEST(a_widgets_chip_dropped_on_another_goes_before_it)
     CHECK(form.changed && now[0] == left[1] && now[1] == left[0]);
 }
 
-TEST(a_click_on_a_chip_opens_its_settings_in_the_popout_and_a_second_click_or_another_page_closes_it)
+TEST(a_click_on_a_chip_that_is_on_asks_for_its_settings_and_one_on_its_toggle_or_that_is_off_does_not)
 {
     Window w;
     w.state.page = Page::Widgets;
-    const std::vector<PanelWidget>& left = w.settings.barSections[static_cast<int>(BarSection::Left)];
-    const std::string chip  = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
-    const auto popout       = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
-    const Form closed       = w.Pass();
-    CHECK(popout(closed) == closed.blocks.end());
+    const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
     const Form form = w.Pass({{chip, kClickEvent, ""}});
-    CHECK(w.state.widget == SlotOf(left[1]) && !form.scrollToTop);
-    CHECK(popout(form) != form.blocks.end() && popout(form)->popout);
-    CHECK(!Has(popout(form)->rml, "class=\"tab"));
-    const Form again = w.Pass({{chip, kClickEvent, ""}});
-    CHECK(!w.state.widget && popout(again) == again.blocks.end());
+    CHECK(w.state.settingsAsked == left[1] && !form.scrollToTop);
+    CHECK(settings(form) == form.blocks.end()); // the page has none: the panel's popup shows them, once it does
+    w.state.settingsAsked.reset();
+    w.Pass({{chip + "-on", kClickEvent, ""}});
+    CHECK(!w.settings.Widget(left[1]).on && !w.state.settingsAsked);
     w.Pass({{chip, kClickEvent, ""}});
-    w.Pass({{"nav-toppanel", kClickEvent, ""}});
-    w.state.page   = Page::Widgets;
-    const Form back = w.Pass();
-    CHECK(popout(back) == back.blocks.end());
+    CHECK(!w.state.settingsAsked);
 }
 
-TEST(a_chips_toggle_turns_its_widget_on_and_off_and_shows_its_settings)
+TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under_its_name)
 {
     Window w;
-    w.state.page           = Page::Widgets;
-    const PanelWidget gil  = BarWidget::Gil;
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(gil));
-    CHECK(w.settings.Widget(gil).on);
-    CHECK(w.Pass({{chip + "-on", kClickEvent, ""}}).changed);
-    CHECK(!w.settings.Widget(gil).on && w.state.widget == SlotOf(gil));
-    const Form back = w.Pass({{chip + "-on", kClickEvent, ""}});
-    CHECK(w.settings.Widget(gil).on && ClassOn(back, chip.c_str(), "on"));
+    w.state.page = Page::Widgets;
+    const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[0]));
+    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
+    w.readings.settingsOf = {left[0]};
+    const Form one        = w.Pass();
+    CHECK(settings(one) != one.blocks.end() && settings(one)->popout);
+    CHECK(ClassOn(one, chip.c_str(), "picked"));
+    CHECK(!Has(settings(one)->rml, "widget-name") && !Has(settings(one)->rml, "class=\"tab"));
+    // A combined pill's, on another page: each widget's settings under its name, in the pill's order.
+    w.state.page          = Page::TopPanel;
+    w.readings.settingsOf = {left[0], left[1]};
+    const Form two        = w.Pass();
+    CHECK(settings(two) != two.blocks.end());
+    const std::string& rml = settings(two)->rml;
+    const auto first = rml.find("clone-" + std::string(BarWidgetName(left[0].kind)));
+    const auto second = rml.find("clone-" + std::string(BarWidgetName(left[1].kind)));
+    CHECK(first != std::string::npos && second != std::string::npos && first < second);
+    size_t names = 0;
+    for (size_t at = 0; (at = rml.find("widget-name", at)) != std::string::npos; ++at)
+        ++names;
+    CHECK_EQ(names, static_cast<size_t>(2));
+    // A click on its Clone asks for the clone's.
+    w.Pass({{"widgets-widgets-clone-" + std::string(BarWidgetName(left[0].kind)), kClickEvent, ""}});
+    CHECK(w.state.settingsAsked && w.state.settingsAsked->kind == left[0].kind && w.state.settingsAsked->copy == 1);
 }
 
 TEST(the_reset_card_asks_twice)

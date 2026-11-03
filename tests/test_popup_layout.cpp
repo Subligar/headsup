@@ -632,6 +632,40 @@ TEST(a_titled_popup_has_its_pin_chip_at_the_top_right_lit_and_saying_pinned_only
     CHECK(LayoutPopup(PopupContent{}, MetricsFor(36, BarShape::Pills), BarShape::Pills, false, Fake).pin.width == 0.0f);
 }
 
+TEST(the_cog_chip_sits_left_of_the_pin_and_settings_take_the_room_they_ask_in_place_of_the_sections)
+{
+    const BarMetrics m  = MetricsFor(36, BarShape::Pills);
+    const float pad     = m.popupPadding;
+    const PopupLayout l = LayoutPopup(Sample(), m, BarShape::Pills, false, Fake);
+    // A round chip as tall as the pin's, beside it with a cell's gap, its cog inside it; not lit.
+    CHECK(l.cog.width > 0.0f && Near(l.cog.width, l.cog.height) && Near(l.cog.height, l.pin.height) && Near(l.cog.y, l.pin.y));
+    CHECK(Near(l.cog.x + l.cog.width + 0.6f * m.popupText, l.pin.x));
+    const std::vector<const PopupPiece*> chips = Of(l, PopupPiece::Kind::CogChip), cogs = Of(l, PopupPiece::Kind::Cog);
+    CHECK(chips.size() == 1 && cogs.size() == 1 && !chips[0]->open);
+    CHECK(cogs[0]->x > l.cog.x && cogs[0]->x + cogs[0]->width < l.cog.x + l.cog.width);
+    CHECK(l.body.width == 0.0f && !Of(l, PopupPiece::Kind::Card).empty());
+
+    const PopupLayout set = LayoutPopup(Sample(), m, BarShape::Pills, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 200.0f});
+    CHECK(Of(set, PopupPiece::Kind::CogChip)[0]->open && Of(set, PopupPiece::Kind::Card).empty());
+    CHECK(Near(set.body.x, pad) && set.body.y >= set.pin.y + set.pin.height && Near(set.body.height, 200.0f));
+    CHECK(Near(set.body.width, set.width - 2.0f * pad) && Near(set.height, set.body.y + 200.0f + pad));
+    // Wider settings widen the popup; a short room cuts them, as they scroll; not yet laid out, the title alone.
+    CHECK(Near(LayoutPopup(Sample(), m, BarShape::Pills, true, Fake, 2000.0f, 0.0f, SettingsRoom{900.0f, 200.0f}).width,
+        900.0f + 2.0f * pad));
+    const PopupLayout cut = LayoutPopup(Sample(), m, BarShape::Pills, true, Fake, set.body.y + 50.0f + pad, 0.0f, SettingsRoom{100.0f, 200.0f});
+    CHECK(Near(cut.body.height, 50.0f) && Near(cut.height, set.body.y + 50.0f + pad));
+    const PopupLayout early = LayoutPopup(Sample(), m, BarShape::Pills, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 0.0f});
+    CHECK(Near(early.height, early.lines[0].bottom + pad) && early.body.height == 0.0f);
+    // A popup with nothing of its own still has its chips over the settings.
+    const PopupLayout bare = LayoutPopup(PopupContent{}, m, BarShape::Pills, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 80.0f});
+    CHECK(bare.pin.width > 0.0f && bare.cog.width > 0.0f && Near(bare.body.height, 80.0f));
+    // One whose settings are somewhere else has its pin alone.
+    PopupContent elsewhere = Sample();
+    elsewhere.settings     = false;
+    const PopupLayout alone = LayoutPopup(elsewhere, m, BarShape::Pills, false, Fake);
+    CHECK(alone.pin.width > 0.0f && alone.cog.width == 0.0f && Of(alone, PopupPiece::Kind::CogChip).empty());
+}
+
 TEST(an_empty_popup_is_just_its_padding_and_minimum_width)
 {
     const BarMetrics m  = MetricsFor(36, BarShape::Pills);
@@ -649,7 +683,7 @@ TEST(rows_without_cells_add_no_pieces_and_a_grid_without_cells_does_not_divide_b
     c.sections[0].rows.push_back(PopupRow{RowKind::Tags, 0, {}});
     c.sections[0].rows.push_back(PopupRow{RowKind::Grid, 0, {}});
     const PopupLayout l = LayoutPopup(c, m, BarShape::Ornate, false, Fake);
-    CHECK_EQ(l.pieces.size(), static_cast<size_t>(3)); // the title, and the pin's chip and word
+    CHECK_EQ(l.pieces.size(), static_cast<size_t>(5)); // the title, the pin's chip and word, and the cog's chip and cog
     CHECK(AllInside(l, m));
 }
 
@@ -899,7 +933,7 @@ TEST(a_cut_above_the_first_row_keeps_the_title_alone)
     const PopupLayout l    = LayoutPopup(Tall(), m, BarShape::Ornate, true, Fake);
     PopupLayout cut        = l;
     CutPopup(cut, Bottom(*Find(l, "ID 220")) + m.popupPadding - 0.5f, m.popupPadding);
-    CHECK_EQ(cut.pieces.size(), static_cast<size_t>(4)); // the icon, the name, and the pin's chip and word
+    CHECK_EQ(cut.pieces.size(), static_cast<size_t>(6)); // the icon, the name, the pin's chip and word, the cog's chip and cog
     CHECK(Find(cut, "Goblin") != nullptr && Find(cut, "pinned") != nullptr);
     CHECK(Near(cut.height, TitleBottom(l) + m.popupPadding));
 }

@@ -206,6 +206,45 @@ TEST(pinning_another_widget_moves_the_pin)
     CHECK(input.Pinned() == BarWidget::VanaTime);
 }
 
+TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)
+{
+    const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)]   = true;
+    popups[SlotOf(BarWidget::VanaTime)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const BarRect popup{760.0f, 44.0f, 400.0f, 300.0f}, pin{1100.0f, 52.0f, 50.0f, 20.0f}, cog{1074.0f, 52.0f, 20.0f, 20.0f};
+    input.Move(960.0f, 18.0f);
+    input.SetPopup(popup, {}, {}, pin, cog);
+    CHECK(!input.SettingsShown());
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true)); // its settings, pinned
+    CHECK(input.SettingsShown() == BarWidget::Target && input.Pinned() == BarWidget::Target);
+    input.Move(960.0f, 700.0f);
+    CHECK(input.SettingsShown() == BarWidget::Target); // it stays as the pointer goes
+    const BarRect vana = *RectOf(l, BarWidget::VanaTime);
+    input.Move(vana.x + 5.0f, 18.0f);
+    CHECK(input.Open() == BarWidget::VanaTime && !input.SettingsShown()); // another's popup, as it is
+    input.SetPopup(BarRect{vana.x, 44.0f, 300.0f, 200.0f});
+    input.Move(960.0f, 700.0f);
+    input.SetPopup(popup, {}, {}, pin, cog);
+    CHECK(input.SettingsShown() == BarWidget::Target);
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true)); // again: its content, still pinned
+    CHECK(!input.SettingsShown() && input.Pinned() == BarWidget::Target);
+    input.Press(cog.x + 5.0f, cog.y + 5.0f, true);
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // unpinned, it shows its content again
+    CHECK(!input.Pinned() && !input.SettingsShown());
+    // As the settings window asks: shown and pinned, then closed.
+    input.ShowSettings(BarWidget::VanaTime);
+    CHECK(input.SettingsShown() == BarWidget::VanaTime && input.Pinned() == BarWidget::VanaTime);
+    input.ShowSettings(std::nullopt);
+    CHECK(!input.Pinned() && !input.SettingsShown());
+    // A pin moved by a command ends them too.
+    input.ShowSettings(BarWidget::VanaTime);
+    input.Pin(BarWidget::Target);
+    CHECK(!input.SettingsShown());
+}
+
 // Targeting a player or nothing while the pointer rests on the target takes its popup away: the hover goes with it,
 // and a pin stays (a pinned target popup reads "No target").
 TEST(a_hovered_popup_closes_when_its_widget_stops_having_one)

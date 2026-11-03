@@ -400,15 +400,16 @@ namespace headsup
     {
         m_Layout   = layout;
         m_HasPopup = hasPopup;
-        if (m_Pinned && !GroupRect(m_Layout, *m_Pinned)) m_Pinned.reset();
+        if (m_Pinned && !GroupRect(m_Layout, *m_Pinned)) Pin(std::nullopt);
         Reevaluate();
     }
 
     void BarInput::SetPopup(const BarRect& popup, std::vector<BarTabChip> chips, std::vector<BarScroll> scrolls,
-        const BarRect& pin)
+        const BarRect& pin, const BarRect& cog)
     {
         m_Popup   = popup;
         m_PinChip = pin;
+        m_CogChip = cog;
         m_Chips   = std::move(chips);
         m_Scrolls = std::move(scrolls);
         Reevaluate();
@@ -489,7 +490,18 @@ namespace headsup
                     m_Tabs[chip.key] = chip.tab;
                     return true;
                 }
-            if (m_PinChip.Contains(x, y)) m_Pinned = m_Pinned == Open() ? std::nullopt : Open();
+            if (m_PinChip.Contains(x, y))
+            {
+                m_Pinned = m_Pinned == Open() ? std::nullopt : Open();
+                m_Settings.reset();
+            }
+            else if (m_CogChip.Contains(x, y))
+            {
+                if (SettingsShown())
+                    m_Settings.reset();
+                else
+                    m_Settings = m_Pinned = Open();
+            }
         }
         return true;
     }

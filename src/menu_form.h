@@ -41,6 +41,8 @@ namespace headsup
         const std::string* lastReport = nullptr; // the file the last report went to, empty before one
         const std::string* logFile    = nullptr; // the file notes go to, empty before one
         bool exportable = false; // a developer's build, which can write its built-in layout out as a file
+        // The widgets whose settings the panel's open popup shows, in its pill's order; none while it shows none.
+        std::vector<PanelWidget> settingsOf;
     };
 
     // The Game Windows card's own state: its filter and whether it lists every window.
@@ -77,7 +79,9 @@ namespace headsup
     {
         FormState form;
         Page page          = Page::Entities;
-        std::optional<int> widget;  // the Widgets page's picked widget, by its slot, whose settings the popout shows
+        // A widget whose settings the panel's popup is to show, or stop showing when it shows them: a chip clicked in
+        // the Layout, a clone made, a copy removed. Once, for the plugin.
+        std::optional<PanelWidget> settingsAsked;
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool watchRequested = false; // the debug watch is to start, or stop
@@ -109,7 +113,6 @@ namespace headsup
         void Leave()
         {
             form.popup.clear();
-            widget.reset();
             confirmReset   = false;
             keyCapture     = {};
             shotKeyCapture = {};
@@ -123,6 +126,13 @@ namespace headsup
     // One pass of the window: the sidebar, then the open page's cards, as the layout orders and words them. fonts:
     // FontChoices, for the nameplates' and the bar's fonts. menuFonts: the fonts the window itself can be set in.
     void BuildMenu(Form& form, Settings& settings, const MenuReadings& readings, MenuFormState& state,
+        const std::vector<std::string>& fonts, const std::vector<std::string>& menuFonts,
+        const WindowLayout& layout = kWindowLayout);
+
+    // The block of the settings the panel's popup shows, whether the window is open or not: each widget's under its
+    // name when there are more than one. Nothing while it shows none.
+    constexpr const char* kWidgetSettingsBlock = "widgets"; // its controls' ids are the Widgets card's
+    void BuildWidgetSettings(Form& form, Settings& settings, const MenuReadings& readings, MenuFormState& state,
         const std::vector<std::string>& fonts, const std::vector<std::string>& menuFonts,
         const WindowLayout& layout = kWindowLayout);
 }

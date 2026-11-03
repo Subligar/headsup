@@ -140,6 +140,7 @@ namespace headsup
         std::vector<Span> title;
         std::vector<PopupSection> sections;
         bool oneColumn = false; // its cards down one column, however tall
+        bool settings  = true;  // its widget's settings show in place of it behind a cog: Game help's are in their own card
         bool operator==(const PopupContent&) const = default;
     };
 

@@ -69,11 +69,7 @@ namespace headsup
     constexpr const char* kMenuReloadId    = "reload";
     constexpr const char* kMenuPopupId     = "popup";
     constexpr const char* kMenuTipId       = "tip";
-    // A window of its own beside this one, while a page has something to show there: its title moves it.
-    constexpr const char* kMenuPopoutId      = "popout";
-    constexpr const char* kMenuPopoutHeadId  = "popout-head";
-    constexpr const char* kMenuPopoutTitleId = "popout-title";
-    constexpr const char* kMenuPopoutBodyId  = "popout-body";
+    constexpr const char* kMenuViewBodyId  = "view-body"; // the settings the panel's popup shows, in their own document
     constexpr const char* kMenuCardClass   = "card";
     constexpr const char* kMenuFootClass   = "foot"; // a block under the cards with no card around it
     constexpr const char* kSetupPreviewClass = "setup-preview"; // Setup's picture, as wide as its card
@@ -81,6 +77,9 @@ namespace headsup
 
     // The settings window's document: its frame, the sidebar and page to fill, the popup and the tip, and its style.
     std::string MenuDocument(const MenuLook& look);
+    // The settings the panel's open popup shows, over its ground, in the window's style, with a popup and tip of their own.
+    std::string MenuViewDocument(const MenuLook& look);
+    std::string MenuViewStyle(const MenuLook& look);
     // The style of every control the kit writes, sized in ems of the window's text.
     std::string MenuStyle(const MenuLook& look);
 }

@@ -3,6 +3,7 @@
 #include "form.h"
 #include "menu_document.h"
 #include "menu_form.h"
+#include "popup_layout.h"
 #include "settings.h"
 #include "window_skin.h"
 
@@ -37,12 +38,20 @@ namespace headsup
     {
     public:
         bool open = false;
+        // Where the panel's open popup leaves room for its settings on the screen, while it shows them
+        // (MenuReadings::settingsOf).
+        std::optional<BarRect> settingsAt;
 
         // True when a setting changed and should be saved. fonts: FontChoices for the nameplates' and the bar's fonts.
         bool Update(const MenuHost& host, Settings& settings, const MenuReadings& readings,
             const std::vector<std::string>& fonts, double version);
         // Closes the window's document; before the host stops.
         void Close();
+        // The room these widgets' settings take as they were last laid out over the panel's popup: 0 tall while they
+        // were not. None for no widgets.
+        std::optional<SettingsRoom> RoomFor(const std::vector<PanelWidget>& widgets, const Settings& settings) const;
+        // Once: the widget whose popup is to show its settings, or stop showing them (MenuFormState::settingsAsked).
+        std::optional<PanelWidget> TakeSettingsAsked();
         // True once after the Debug Report button was pressed: write the /hu debug report.
         bool TakeDebugRequest();
         // Opens the window on Setup, from the settings as they are: the first time, or again (rerun), which warns.
@@ -100,15 +109,18 @@ namespace headsup
         bool RunKey(Rml::ElementFormControlInput* input, const std::string& id, Rml::Input::KeyIdentifier key);
         // A drop, or a drag held (type), of dragged on the control under the pointer, as the form is told of it.
         FormEvent DropOn(Rml::Element* hovered, Rml::Element* dragged, const char* type, Rml::Event& event) const;
-        // One pass of the pages over these events, told which control has the keyboard.
+        // One pass of the pages, while the window is open, and the panel popup's settings over these events, told
+        // which control has the keyboard.
         Form Pass(std::vector<FormEvent> events, const MenuHost& host, Settings& settings, const MenuReadings& readings,
-            const std::vector<std::string>& fonts);
+            const std::vector<std::string>& fonts, bool window = true);
         void FitRuns();
-        void ApplyBlocks(const std::vector<FormBlock>& blocks);
-        // Shows the popout's block, or hides the popout without one. True when its markup was replaced.
-        bool ApplyPopout(const FormBlock* block);
-        // Beside the window, on the side of the screen with room for it, level with its top.
-        void PlacePopout();
+        // The window's pages when window, and the settings over the panel's popup, for these widgets at this size.
+        void ApplyBlocks(const std::vector<FormBlock>& blocks, const std::vector<PanelWidget>& of, int pixels, bool window = true);
+        // Shows the settings' block over the panel's popup at settingsAt, or hides them without one. True when its
+        // markup was replaced.
+        bool ApplyView(const FormBlock* block, const std::vector<PanelWidget>& of, int pixels);
+        // No tip stays once the pointer has left the document, and a slider of it gives up the keyboard.
+        void LetGo(const MenuHost& host, Rml::ElementDocument* document, Rml::Element* tip);
         void ApplyValues(const std::vector<FormValue>& values);
         void ApplyPopup(const std::optional<FormPopup>& popup);
         // Every element with an id, found again after markup was replaced.
@@ -128,10 +140,19 @@ namespace headsup
         Rml::Element* m_Page      = nullptr;
         Rml::Element* m_PageTitle = nullptr;
         Rml::Element* m_Popup     = nullptr;
-        Rml::Element* m_Popout    = nullptr;
-        Rml::Element* m_PopoutBody = nullptr;
         Rml::Element* m_Tip       = nullptr;
-        std::string m_SidebarRml, m_PopupRml, m_PopoutRml, m_TitleShown, m_TipShown;
+        Rml::Element* m_PopupIn   = nullptr; // the popup holding m_PopupRml: the window's or the settings'
+        Rml::Element* m_TipIn     = nullptr; // the tip showing m_TipShown
+        // The panel popup's settings, in a document of their own with a popup and tip.
+        Rml::ElementDocument* m_View = nullptr;
+        Rml::Element* m_ViewBody  = nullptr;
+        Rml::Element* m_ViewPopup = nullptr;
+        Rml::Element* m_ViewTip   = nullptr;
+        bool m_ViewShown          = false;
+        int m_ViewPixels          = 0;
+        std::optional<BarRect> m_ViewAt;
+        std::vector<PanelWidget> m_ViewFor; // whose settings it holds
+        std::string m_SidebarRml, m_PopupRml, m_ViewRml, m_TitleShown, m_TipShown;
         std::vector<Card> m_Cards;
         std::unordered_map<std::string, Rml::Element*> m_ById;
         std::unordered_map<std::string, Applied> m_Applied; // what each value was last set to, by its id, kind and name

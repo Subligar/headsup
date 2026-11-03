@@ -510,6 +510,30 @@ TEST(the_reset_arrow_turns_counterclockwise_to_a_head_at_its_top)
     }
 }
 
+TEST(the_cog_is_a_ring_with_eight_teeth_and_a_clear_middle)
+{
+    for (const int size : {32, 45, 64})
+    {
+        const Image cog = Cog(size, 0xFFFFFFFFu);
+        CHECK(cog.width == size && cog.height == size);
+        const float half = static_cast<float>(size) / 2.0f, side = static_cast<float>(size);
+        // A point at this share of the side from the middle, turned from straight up by this many eighths.
+        const auto at = [&](float share, float eighths) {
+            const float turn = eighths * 3.14159265f / 4.0f;
+            return Alpha(cog, static_cast<int>(half + std::sin(turn) * share * side),
+                static_cast<int>(half - std::cos(turn) * share * side));
+        };
+        CHECK(Alpha(cog, size / 2, size / 2) == 0);            // the hole
+        CHECK(at(0.27f, 0.0f) > 200 && at(0.27f, 0.5f) > 200); // the ring, under a tooth and between two
+        for (int tooth = 0; tooth < 8; ++tooth)
+        {
+            CHECK(at(0.42f, static_cast<float>(tooth)) > 200);       // each tooth
+            CHECK(at(0.42f, static_cast<float>(tooth) + 0.5f) < 60); // and the gap after it
+        }
+        CHECK(Alpha(cog, 0, 0) == 0 && Alpha(cog, size - 1, size - 1) == 0);
+    }
+}
+
 namespace
 {
     int RowInk(const Coverage& c, int y)

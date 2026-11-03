@@ -1220,6 +1220,7 @@ TEST(game_help_is_never_on_the_bar_and_its_popup_has_the_caption_over_the_help)
     CHECK(!BarWidgetContent(BarWidget::GameHelp, state, settings).shown); // it has its own bar
     const PopupContent p = BarPopupContent(BarWidget::GameHelp, state, settings);
     CHECK(Joined(p.title) == "Commands" && Lines(p.sections[0]) == (std::vector<std::string>{"Select a target to auto-attack."}));
+    CHECK(!p.settings); // no cog: its settings are the Help Bar card's
 }
 
 TEST(a_bag_caption_gains_that_bags_count)

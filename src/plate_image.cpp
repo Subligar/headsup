@@ -188,6 +188,10 @@ namespace headsup
         // of a turn left open, and the head's length and half its base.
         constexpr float kResetRadius = 0.32f, kResetStroke = 0.11f, kResetGap = kPi / 4.0f;
         constexpr float kResetHeadLength = 0.26f, kResetHeadHalf = 0.17f;
+        // The cog, in shares of its square: its hole, its ring and its teeth's reach from the center; teeth fill this
+        // share of each tooth's turn.
+        constexpr int kCogTeeth   = 8;
+        constexpr float kCogHole  = 0.15f, kCogRing = 0.34f, kCogReach = 0.47f, kCogToothShare = 0.5f;
     }
 
     int BlurMargin(float blur)
@@ -590,6 +594,29 @@ namespace headsup
             if (std::fabs(std::hypot(dx, dy) - radius) <= stroke && !gap) return true;
             // The head narrows evenly from its base at the ring's top to its tip.
             return x >= tipX && x <= half && std::fabs(y - topY) * (half - tipX) <= base * (x - tipX);
+        };
+        for (int y = 0; y < s; ++y)
+            for (int x = 0; x < s; ++x)
+            {
+                Paint paint;
+                paint.Over(Covered(x, y, kPixelSamples, inside), color);
+                image.argb[static_cast<size_t>(y * s + x)] = paint.Color();
+            }
+        return image;
+    }
+
+    Image Cog(int size, uint32_t color)
+    {
+        const int s = std::max(1, size);
+        Image image{s, s, std::vector<uint32_t>(static_cast<size_t>(s) * static_cast<size_t>(s), 0)};
+        const float side = static_cast<float>(s), half = side / 2.0f, period = 2.0f * kPi / kCogTeeth;
+        const auto inside = [&](float x, float y) {
+            const float dx = x - half, dy = y - half, r = std::hypot(dx, dy) / side;
+            if (r < kCogHole || r > kCogReach) return false;
+            if (r <= kCogRing) return true;
+            // From straight up, half a tooth either side of each tooth's middle.
+            const float along = std::fmod(std::atan2(dx, -dy) + 2.0f * kPi + period * kCogToothShare / 2.0f, period);
+            return along < period * kCogToothShare;
         };
         for (int y = 0; y < s; ++y)
             for (int x = 0; x < s; ++x)

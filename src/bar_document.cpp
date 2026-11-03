@@ -17,7 +17,7 @@ namespace headsup
     namespace
     {
         constexpr std::string_view kIconKind = "icon", kStripKind = "strip", kDiamondKind = "diamond", kCoinKind = "coin",
-                                   kStarKind = "star", kResetKind = "reset", kGameKind = "game",
+                                   kStarKind = "star", kResetKind = "reset", kCogKind = "cog", kGameKind = "game",
                                    kItemKind = "item";
         // RmlUi blurs a glow by a Gaussian of this share of its width; the bar's shadow is a CSS blur radius, twice
         // its Gaussian's.
@@ -255,6 +255,11 @@ namespace headsup
         return std::string(kHostSource) + std::string(kResetKind) + kSeparator + Hex(argb) + kSeparator + std::to_string(pixels);
     }
 
+    std::string CogSource(uint32_t argb, int pixels)
+    {
+        return std::string(kHostSource) + std::string(kCogKind) + kSeparator + Hex(argb) + kSeparator + std::to_string(pixels);
+    }
+
     std::optional<Image> HostImage(std::string_view name)
     {
         if (name.substr(0, kHostSource.size()) != kHostSource) return std::nullopt;
@@ -288,11 +293,12 @@ namespace headsup
             return StripColumn(static_cast<int>(*rows), static_cast<int>(*below), colors[0], colors[1], colors[2], colors[3],
                 colors[4], colors[5], static_cast<int>(*border));
         }
-        if ((kind == kDiamondKind || kind == kResetKind) && parts.size() == 3)
+        if ((kind == kDiamondKind || kind == kResetKind || kind == kCogKind) && parts.size() == 3)
         {
             const std::optional<uint32_t> color = number(1, kHexBase), pixels = number(2);
             if (!color || !pixels) return std::nullopt;
-            return kind == kDiamondKind ? Diamond(static_cast<int>(*pixels), *color) : ResetArrow(static_cast<int>(*pixels), *color);
+            const int size = static_cast<int>(*pixels);
+            return kind == kDiamondKind ? Diamond(size, *color) : kind == kResetKind ? ResetArrow(size, *color) : Cog(size, *color);
         }
         if ((kind == kCoinKind || kind == kStarKind) && parts.size() == 2)
         {
@@ -627,6 +633,13 @@ namespace headsup
                 rml += "<img class=\"p\" src=\"" + GamePictureSource(piece.picture) + "\" style=\"" + place + "width:" +
                        Px(piece.width) + ";height:" + Px(piece.height) + ";\"/>";
                 break;
+            case PopupPiece::Kind::Cog:
+            {
+                const int pixels = WholePixels(piece.width);
+                rml += "<img class=\"p\" src=\"" + CogSource(look.PopupColor(Span{"", Tone::Heading, 0}), pixels) +
+                       "\" style=\"" + place + size(static_cast<float>(pixels), static_cast<float>(pixels)) + "\"/>";
+                break;
+            }
             case PopupPiece::Kind::Star:
             {
                 const int pixels = WholePixels(piece.width);
@@ -643,6 +656,7 @@ namespace headsup
                 break;
             case PopupPiece::Kind::Tab:
             case PopupPiece::Kind::PinChip:
+            case PopupPiece::Kind::CogChip:
                 rml += std::string("<div class=\"p tab") + (piece.open ? " lit" : "") + "\" style=\"" +
                        BoxAt(piece.x, piece.y, piece.width, piece.height) + "border-radius:" + Px(piece.height / 2.0f) +
                        ";\"></div>";

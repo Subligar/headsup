@@ -23,6 +23,9 @@ namespace headsup
     class RmlBar
     {
     public:
+        // The room the settings window laid out the open popup's settings in last, while it shows them.
+        std::optional<SettingsRoom> settingsRoom;
+
         // Each frame: lays out the bar, shows it in the host's bar context and tells input where everything is.
         // While the bar is off it closes its document. hidden: laid out, but not drawn. skin: the game's window art in
         // use, once it is read.
@@ -37,6 +40,8 @@ namespace headsup
         float BarBottomNow() const { return m_BarBottom; }
         // The title size the last frame drew, 0 before one and while the bar is off.
         int TitlePixels() const { return m_TitlePixels; }
+        // Where the open popup's settings go on the screen while it shows them, in back buffer pixels.
+        std::optional<BarRect> SettingsBody() const { return m_SettingsBody; }
 
     private:
         // The bar's text sizes and places follow its height, its text size setting and its shape and fonts.
@@ -137,6 +142,7 @@ namespace headsup
             BarShape shape  = BarShape::Ornate;
             float room      = 0.0f;
             float least     = 0.0f;
+            std::optional<SettingsRoom> settings;
             bool operator==(const PopupKey&) const = default;
         };
         struct PopupDocumentKey
@@ -186,7 +192,7 @@ namespace headsup
         // Places the open popup, and adds its cards' tabs and the parts that scroll at their places on the screen.
         BarRect ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-            std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin);
+            std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin, BarRect& cog);
         bool PopupDocumentFor(RmlHost& host, const BarLook& look);
         void ClosePopup();
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);
@@ -230,6 +236,7 @@ namespace headsup
         std::vector<FaceDigit> m_WidestDigits;
         std::optional<BarRect> m_HelpReach;
         float m_BarBottom = 0.0f;
+        std::optional<BarRect> m_SettingsBody;
         int m_TitlePixels = 0;
     };
 }

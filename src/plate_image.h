@@ -129,6 +129,8 @@ namespace headsup
     Image Star(int size, uint32_t color);
     // A circular arrow in a square size pixels across: most of a ring, turning counterclockwise to a head at its top.
     Image ResetArrow(int size, uint32_t color);
+    // A cog of eight teeth with a hole in its middle, in a square size pixels across.
+    Image Cog(int size, uint32_t color);
 
     // A size in whole pixels, at least one: what text and images are drawn at.
     int WholePixels(float size);

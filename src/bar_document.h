@@ -33,6 +33,7 @@ namespace headsup
     std::string ItemSource(uint16_t item);
     std::optional<uint16_t> ItemOfSource(std::string_view name);
     std::string ResetSource(uint32_t argb, int pixels); // the circular arrow that puts a color back
+    std::string CogSource(uint32_t argb, int pixels);   // the cog on a popup's settings chip
     // The image a name stands for; nothing for a name that is none of the above.
     std::optional<Image> HostImage(std::string_view name);
     // A picture of the game's, from what was read of its files at load: nothing for another name, or when it was not read.

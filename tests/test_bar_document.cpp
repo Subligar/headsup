@@ -76,6 +76,11 @@ TEST(image_names_round_trip_to_their_images)
     CHECK(reset && reset->width == 32 && reset->height == 32);
     CHECK_EQ(reset->argb[(16 + 10) * 32 + 16], 0xFF8C7270u);
     CHECK(!HostImage("hu:reset/32"));
+    // The cog the same way: its ring, under its top tooth, is that color and its middle is clear.
+    const std::optional<Image> cog = HostImage(CogSource(0xFF8C7270u, 32));
+    CHECK(cog && cog->width == 32 && cog->height == 32);
+    CHECK_EQ(cog->argb[(16 - 9) * 32 + 16], 0xFF8C7270u);
+    CHECK_EQ(cog->argb[16 * 32 + 16], 0u);
 }
 
 TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
