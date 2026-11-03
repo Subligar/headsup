@@ -2635,7 +2635,7 @@ private:
             s.nation = static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1);
             s.outposts = &Outposts()[m_AshitaCore->GetMemoryManager()->GetParty()->GetMemberServerId(0)];
         }
-        if (needs.unixTime || needs.localTime || needs.signet)
+        if (needs.unixTime || needs.localTime || needs.statuses)
         {
             const auto clock = std::chrono::system_clock::now();
             s.unixMs         = UnixMsOf(clock);
@@ -2710,10 +2710,10 @@ private:
         }
         if (needs.memory) GatherMemory(now, s, needs.cpu);
         if (needs.linuxxi) s.linuxxi = LinuxXINow(now);
-        if (needs.signet)
+        if (needs.statuses)
         {
             IPlayer* player = m_AshitaCore->GetMemoryManager()->GetPlayer();
-            s.signet = headsup::SignetFrom(player->GetBuffs(), player->GetStatusIcons(), player->GetStatusTimers(),
+            s.statuses = headsup::ActiveStatuses(player->GetBuffs(), player->GetStatusIcons(), player->GetStatusTimers(),
                 s.unixMs);
         }
         if (needs.target)

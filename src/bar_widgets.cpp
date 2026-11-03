@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <span>
 #include <string_view>
@@ -1368,6 +1369,26 @@ namespace headsup
 
     bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
     {
+        // A status's star or pin; a status taken off the favorites leaves the panel too, as only they have pins.
+        for (const std::string_view kind : {kStatusFavoritePress, kStatusPinPress})
+        {
+            if (!press.starts_with(kind)) continue;
+            const std::string number(press.substr(kind.size()));
+            char* end           = nullptr;
+            const unsigned long id = std::strtoul(number.c_str(), &end, 10);
+            if (number.empty() || *end != '\0' || id > UINT16_MAX || *StatusName(static_cast<uint16_t>(id)) == '\0')
+                return false;
+            const auto status = static_cast<uint16_t>(id);
+            std::vector<uint16_t>& list = kind == kStatusPinPress ? settings.statusPins : settings.statusFavorites;
+            if (const auto at = std::ranges::find(list, status); at != list.end())
+            {
+                list.erase(at);
+                if (kind == kStatusFavoritePress) std::erase(settings.statusPins, status);
+            }
+            else
+                list.push_back(status);
+            return true;
+        }
         if (!press.starts_with(kFavoritePress)) return false;
         const std::string key(press.substr(std::string_view(kFavoritePress).size()));
         if (!CurrencyOfKey(key)) return false;
@@ -1428,8 +1449,7 @@ namespace headsup
                            shown(BarWidget::World) || opened(BarWidget::EarthTime) ||
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
         needs.localTime  = localClock;
-        needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather) || worldWeather ||
-                     opened(BarWidget::Signet); // the popup says where it works
+        needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather) || worldWeather;
         needs.target     = shown(BarWidget::Target);
         needs.gil        = shown(BarWidget::Currency);
         needs.strip      = shown(BarWidget::GameHelp);
@@ -1444,7 +1464,7 @@ namespace headsup
         needs.job        = shown(BarWidget::Job);
         needs.connection = (perf & kConnectionParts) != 0 || perfPopup;
         needs.party      = shown(BarWidget::Party);
-        needs.signet     = shown(BarWidget::Signet);
+        needs.statuses   = (shown(BarWidget::StatusTimers) && !settings.statusPins.empty()) || opened(BarWidget::StatusTimers);
         needs.memory     = (perf & PerfBit(PerfPart::Memory)) != 0 || perfPopup;
         needs.cpu        = perfPopup;
         needs.linuxxi    = perfPopup;
@@ -1653,8 +1673,8 @@ namespace headsup
                                                  : JobWidget(state.job, o.expBar, o.jobNames, o.jobLayout, o.expText);
         case BarWidget::Party:
             return PartyWidget(state.party);
-        case BarWidget::Signet:
-            return SignetWidget(state.signet);
+        case BarWidget::StatusTimers:
+            return StatusTimersWidget(state.statuses, settings.statusPins);
         case BarWidget::World:
             return WorldWidget(state, o);
         }
@@ -1829,8 +1849,12 @@ namespace headsup
             return JobPopup(state.job);
         case BarWidget::Party:
             return PartyPopup(state.party);
-        case BarWidget::Signet:
-            return SignetPopup(state.signet, state.zone);
+        case BarWidget::StatusTimers:
+        {
+            const auto scrolled = state.scrolled.find(kStatusListKey);
+            return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins,
+                scrolled == state.scrolled.end() ? 0 : scrolled->second);
+        }
         case BarWidget::World:
             return WorldPopup(state, o);
         }

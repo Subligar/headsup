@@ -1094,7 +1094,7 @@ namespace
             state.job = JobReport{job, 18000.0};
             state.connection = SteadyLink();
             state.party      = FourMembers();
-            state.signet     = SignetState{Influence::Signet, 6130.0};
+            state.statuses   = {ActiveStatus{kSignetEffect, 6130.0}};
             state.memory     = MemoryReport{1532, 2563, 4095};
             state.cpuPercent = 18.0;
             LinuxXIReport report;
@@ -1142,7 +1142,7 @@ namespace
         if (needs.job) s.job = full.job;
         if (needs.connection) s.connection = full.connection;
         if (needs.party) s.party = full.party;
-        if (needs.signet) s.signet = full.signet;
+        if (needs.statuses) s.statuses = full.statuses;
         if (needs.memory) s.memory = full.memory;
         if (needs.cpu) s.cpuPercent = full.cpuPercent;
         if (needs.linuxxi) s.linuxxi = full.linuxxi;
@@ -1156,7 +1156,7 @@ namespace
         for (bool BarNeeds::*part :
             {&BarNeeds::unixTime, &BarNeeds::localTime, &BarNeeds::zone, &BarNeeds::target, &BarNeeds::gil,
             &BarNeeds::strip, &BarNeeds::frames, &BarNeeds::job, &BarNeeds::connection,
-            &BarNeeds::party, &BarNeeds::signet, &BarNeeds::memory, &BarNeeds::cpu, &BarNeeds::linuxxi})
+            &BarNeeds::party, &BarNeeds::statuses, &BarNeeds::memory, &BarNeeds::cpu, &BarNeeds::linuxxi})
             if (needs.*part)
             {
                 less.push_back(needs);
@@ -1598,30 +1598,37 @@ TEST(a_checked_players_title_shows_its_number_when_the_list_lacks_it_and_not_at_
           (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "As of your check"}));
 }
 
-TEST(the_signet_widget_shows_only_while_one_is_on_and_says_where_it_works)
+TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_shown)
 {
     Settings settings;
-    settings.Widget(BarWidget::Signet).on = true;
     BarState state;
-    CHECK(!BarWidgetContent(BarWidget::Signet, state, settings).shown);
-    state.signet    = SignetState{Influence::Signet, 6130.0};
-    WidgetContent w = BarWidgetContent(BarWidget::Signet, state, settings);
-    CHECK(w.shown && w.hasPopup && Joined(w.title) == "Signet" && w.subtitle == ListOf(Text("1h 42m", Tone::Dim)));
-    state.signet->secondsLeft = 540.0;
-    CHECK(BarWidgetContent(BarWidget::Signet, state, settings).subtitle == ListOf(Colored("9m 00s", kWarningColor)));
-    state.zone = 103; // Valkurm Dunes, in Zulkheim
-    // Short lines only: no sentence on where it works beyond the zone you are in.
-    CHECK(Lines(BarPopupContent(BarWidget::Signet, state, settings).sections[0]) ==
-          (std::vector<std::string>{"Time left 9m 00s", "Gives conquest points, crystals",
-              "Here: Zulkheim, where it works"}));
-    state.zone = 50; // Aht Urhgan Whitegate
-    CHECK(Lines(BarPopupContent(BarWidget::Signet, state, settings).sections[0]).back() ==
-          "Here: West Aht Urhgan, where it does not work");
-    state.signet = SignetState{Influence::Sanction, std::nullopt};
-    w            = BarWidgetContent(BarWidget::Signet, state, settings);
-    CHECK(Joined(w.title) == "Sanction" && Joined(w.subtitle) == "-");
-    CHECK(Lines(BarPopupContent(BarWidget::Signet, state, settings).sections[0]).back() ==
-          "Here: West Aht Urhgan, where it works");
+    state.statuses = {ActiveStatus{kSignetEffect, 6130.0}};
+    CHECK(!NeedsOf(settings, std::nullopt).statuses); // off on a new install
+    settings.Widget(BarWidget::StatusTimers).on = true;
+    CHECK(!NeedsOf(settings, std::nullopt).statuses); // nothing pinned to show
+    CHECK(NeedsOf(settings, PanelWidget{BarWidget::StatusTimers}).statuses);
+    settings.statusPins = {kSignetEffect};
+    CHECK(NeedsOf(settings, std::nullopt).statuses);
+    CHECK(Joined(BarWidgetContent(BarWidget::StatusTimers, state, settings).title) == "Signet 1h 42m");
+    // Its popup's favorites are the settings', Signet and Sanction on a new install.
+    const PopupContent p = BarPopupContent(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(p.sections[0].rows[0].cells[2].text) == "Signet" && Joined(p.sections[0].rows[0].cells[6].text) == "Sanction");
+}
+
+TEST(a_statuss_star_and_pin_add_it_and_take_it_off_and_its_star_takes_its_pin_too)
+{
+    Settings s;
+    CHECK(ApplyPopupPress(s, std::string(kStatusFavoritePress) + "40", Nation::None));
+    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect, 40}));
+    CHECK(ApplyPopupPress(s, std::string(kStatusPinPress) + "40", Nation::None));
+    CHECK(ApplyPopupPress(s, std::string(kStatusPinPress) + "253", Nation::None));
+    CHECK((s.statusPins == std::vector<uint16_t>{40, kSignetEffect}));
+    CHECK(ApplyPopupPress(s, std::string(kStatusPinPress) + "253", Nation::None));
+    CHECK((s.statusPins == std::vector<uint16_t>{40}));
+    CHECK(ApplyPopupPress(s, std::string(kStatusFavoritePress) + "40", Nation::None));
+    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) && s.statusPins.empty());
+    for (const char* bad : {"status favorite ", "status favorite 4x", "status pin 65000", "status pin 99999999"})
+        CHECK(!ApplyPopupPress(s, bad, Nation::None));
 }
 
 TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by_name)

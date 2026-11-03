@@ -212,7 +212,7 @@ namespace headsup
         constexpr BarWidget kWhere[]{BarWidget::Zone, BarWidget::Weather, BarWidget::World};
         constexpr BarWidget kTime[]{BarWidget::VanaTime, BarWidget::EarthTime};
         constexpr BarWidget kYou[]{BarWidget::Job, BarWidget::Currency, BarWidget::Bags, BarWidget::Party, BarWidget::Target};
-        constexpr BarWidget kSystem[]{BarWidget::Performance, BarWidget::GameHelp, BarWidget::Signet};
+        constexpr BarWidget kSystem[]{BarWidget::Performance, BarWidget::GameHelp, BarWidget::StatusTimers};
         const SetupWidgetGroup kWidgetGroups[]{{"where", kWhere}, {"time", kTime}, {"you", kYou}, {"system", kSystem}};
 
         constexpr const char* kBackupExtension = ".ini";

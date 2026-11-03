@@ -149,6 +149,7 @@ namespace headsup
         constexpr const char* kScaleCursorKey = "scaleCursor";
         constexpr const char* kKeepPointerKey = "keepPointerKeys"; // hex virtual-key codes, a space apart
         constexpr const char* kCurrencyFavoritesKey = "currencyFavorites"; // kCurrencyTable's keys, a space apart
+        constexpr const char* kStatusFavoritesKey = "statusFavorites", *kStatusPinsKey = "statusPins"; // status ids
 
         std::string SpaceApart(const std::vector<std::string>& words)
         {
@@ -156,6 +157,28 @@ namespace headsup
             for (const std::string& word : words)
                 text += (text.empty() ? "" : " ") + word;
             return text;
+        }
+        std::string SpaceApart(const std::vector<uint16_t>& ids)
+        {
+            std::vector<std::string> words;
+            for (const uint16_t id : ids)
+                words.push_back(std::to_string(id));
+            return SpaceApart(words);
+        }
+        // Status ids a space apart, as SpaceApart writes them: one Phoenix lacks, or one repeated, is left out.
+        std::vector<uint16_t> StatusIds(const std::string& text)
+        {
+            std::vector<uint16_t> ids;
+            std::istringstream words(text);
+            for (std::string word; words >> word;)
+            {
+                char* end              = nullptr;
+                const unsigned long id = std::strtoul(word.c_str(), &end, 10);
+                if (*end == '\0' && id <= UINT16_MAX && *StatusName(static_cast<uint16_t>(id)) != '\0' &&
+                    std::ranges::find(ids, static_cast<uint16_t>(id)) == ids.end())
+                    ids.push_back(static_cast<uint16_t>(id));
+            }
+            return ids;
         }
         constexpr const char* kPinnedWindowsKey = "pinnedWindows"; // "equip:100,200 statcom:0,40"
         constexpr const char* kHiddenWindowsKey = "hiddenWindows"; // "statcom inventor"
@@ -262,7 +285,7 @@ namespace headsup
         constexpr const char* kBarSeparatorsKey                    = "barSeparators";
         const char* const kBarSeparatorsNames[kBarSeparatorsCount] = {"theme", "diamonds", "none"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barSignet", "barWorld"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1696,6 +1719,8 @@ namespace headsup
                                                                                  s.currencyFavorites.end())
                         s.currencyFavorites.push_back(key);
             }
+            s.statusFavorites = StatusIds(store.GetString(kStatusFavoritesKey, SpaceApart(s.statusFavorites).c_str()));
+            s.statusPins      = StatusIds(store.GetString(kStatusPinsKey, SpaceApart(s.statusPins).c_str()));
             std::istringstream keys(store.GetString(kKeepPointerKey, ""));
             for (std::string key; keys >> key;)
             {
@@ -1828,6 +1853,8 @@ namespace headsup
         }
         store.Set(kKeepPointerKey, keys.c_str());
         store.Set(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str());
+        store.Set(kStatusFavoritesKey, SpaceApart(s.statusFavorites).c_str());
+        store.Set(kStatusPinsKey, SpaceApart(s.statusPins).c_str());
         for (int i = 0; i < kStatusRankCount; ++i)
         {
             const std::string base = kStatusKeys[i];

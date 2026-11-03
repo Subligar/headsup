@@ -961,7 +961,7 @@
         {"name": "Performance", "tip": "Frames per second, bytes sent and received each second, your ping and the game's memory, as you pick. Amber or red when data stops or memory runs low. Hover for your ping, the last server data, PlayOnline messages, the processor, the frames and the LinuxXI plugin's figures."},
         {"name": "Job & EXP", "tip": "Jobs, levels and EXP to the next level, with a bar; or the EXP bar alone with its texts around it. Hover for EXP per hour."},
         {"name": "Party", "tip": "Party size and the lowest HP and MP. Hover for each member."},
-        {"name": "Signet", "tip": "Time left on Signet or Sanction, while one is on."},
+        {"name": "Status Timers", "tip": "The time left on each status you pin. Hover for your favorite statuses, with a pin to show one here, and every other status with a star to add it to them."},
         {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."}
       ]
     },

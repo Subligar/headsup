@@ -3,6 +3,7 @@
 #include "argb.h"
 #include "bar_placement.h"
 #include "bar_server_time.h"
+#include "bar_statuses.h"
 #include "bar_theme.h"
 #include "bar_types.h"
 #include "color.h"
@@ -154,6 +155,9 @@ namespace headsup
     {
         // The Currency popup's favorites at its top, by kCurrencyTable's key or kYourConquestPoints, in this order.
         std::vector<std::string> currencyFavorites{kCurrencyTable[kGilCurrency].key, kYourConquestPoints};
+        // The Status Timers popup's favorites at its top, and those of them it shows on the panel, by status id.
+        std::vector<uint16_t> statusFavorites{kSignetEffect, kSanctionEffect};
+        std::vector<uint16_t> statusPins;
         bool enabled       = true;
         bool autoSave      = true; // off, changes wait for Save in the settings window, and Revert drops them
         int outlineThickness = 100; // percent of kOutlineUnitPx

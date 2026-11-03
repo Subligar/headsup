@@ -42,7 +42,7 @@ namespace headsup
         Performance,
         Job,
         Party,
-        Signet,
+        StatusTimers,
         World,
     };
     constexpr int kBarWidgetCount = static_cast<int>(BarWidget::World) + 1;

@@ -286,7 +286,7 @@ barServerTime=true
 barPerformance=false
 barJob=false
 barParty=true
-barSignet=true
+barStatusTimers=true
 barWorld=true
 barZoneLine2=true
 barZoneIcons=true
@@ -312,8 +312,8 @@ barJobLine2=true
 barJobIcons=true
 barPartyLine2=true
 barPartyIcons=true
-barSignetLine2=true
-barSignetIcons=true
+barStatusTimersLine2=true
+barStatusTimersIcons=true
 expBar=beside
 jobNames=false
 clock24=false
@@ -333,7 +333,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather vanaTime job party signet world
+barLeft=zone weather vanaTime job party statusTimers world
 barCenter=
 barRight=target gil bags performance earthTime
 hideHelpBar=true
@@ -1112,7 +1112,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barSignet", "barWorld"}; // in BarWidget's order
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld"}; // in BarWidget's order
     static_assert(std::size(widgetKeys) == kBarWidgetCount);
     for (int w = 0; w < kBarWidgetCount; ++w)
     {
@@ -3054,4 +3054,19 @@ TEST(the_currency_favorites_are_kept_in_order_and_an_unknown_or_repeated_one_is_
     CHECK((LoadSettings(store).currencyFavorites == std::vector<std::string>{"sparks", kYourConquestPoints}));
     store.values["currencyFavorites"] = "";
     CHECK(LoadSettings(store).currencyFavorites.empty()); // every star taken off
+}
+
+TEST(the_status_favorites_and_pins_are_kept_and_an_unknown_or_repeated_one_is_left_out)
+{
+    Settings s;
+    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) && s.statusPins.empty());
+    s.statusFavorites = {40, 33};
+    s.statusPins      = {33};
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK(store.values["statusFavorites"] == "40 33" && store.values["statusPins"] == "33");
+    const Settings read = LoadSettings(store);
+    CHECK(read.statusFavorites == s.statusFavorites && read.statusPins == s.statusPins);
+    store.values["statusFavorites"] = "40 x 65000 40 253";
+    CHECK((LoadSettings(store).statusFavorites == std::vector<uint16_t>{40, kSignetEffect}));
 }

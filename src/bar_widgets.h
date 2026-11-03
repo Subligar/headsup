@@ -6,7 +6,7 @@
 #include "bar_job.h"
 #include "bar_memory.h"
 #include "bar_party.h"
-#include "bar_signet.h"
+#include "bar_statuses.h"
 #include "bar_types.h"
 #include "game_packets.h"
 #include "game_state.h"
@@ -75,7 +75,7 @@ namespace headsup
         std::optional<JobReport> job; // nullopt while the game reports no job
         std::optional<ConnectionReport> connection;
         Party party{}; // empty slots for no one
-        std::optional<SignetState> signet; // nullopt while neither is on
+        std::vector<ActiveStatus> statuses; // yours
         std::optional<MemoryReport> memory; // nullopt before the first whole walk of the space
         std::optional<double> cpuPercent;   // of one core; nullopt before two samples
         LinuxXIState linuxxi;
@@ -100,7 +100,7 @@ namespace headsup
         bool job        = false;
         bool connection = false;
         bool party      = false;
-        bool signet     = false; // read with the clock, which its timer counts from
+        bool statuses   = false; // read with the clock, which their timers count from
         bool memory     = false;
         bool cpu        = false;
         bool linuxxi    = false;
@@ -108,8 +108,9 @@ namespace headsup
         int containers = 0; // bags from 0 up to this
     };
     BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open);
-    // What a press on a popup's pressable cell told (PopupCell::press) done to the settings: a currency's star adds it
-    // to the favorites or takes it off. False when it changed nothing.
+    // What a press on a popup's pressable cell told (PopupCell::press) done to the settings: a currency's or a
+    // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
+    // off. False when it changed nothing.
     bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
     // Whether the panel shows the conquest standings: the Zone widget, or a World Info showing Conquest Info.
     bool StandingsShown(const Settings& settings);
