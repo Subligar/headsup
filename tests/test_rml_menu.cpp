@@ -1922,11 +1922,11 @@ TEST(setup_opens_on_its_welcome_and_start_walks_its_steps_forward_and_back)
     window.Click("setup-buttons-start");
     CHECK(window.Find("nav-setup-theme")->IsClassSet(kPickedClass));
     window.Click("setup-buttons-next");
-    CHECK(window.Shows("setup-fonts"));
+    CHECK(window.Shows("setup-nameplates"));
     window.Click("setup-buttons-back");
     CHECK(window.Shows("setup-theme"));
-    window.Click("nav-setup-widgets");
-    CHECK(window.Shows("setup-widgets"));
+    window.Click("nav-setup-top-panel");
+    CHECK(window.Shows("setup-top-panel"));
     CHECK(window.settings == Settings{});
     CHECK_EQ(window.Said(), "");
 }
@@ -1934,7 +1934,7 @@ TEST(setup_opens_on_its_welcome_and_start_walks_its_steps_forward_and_back)
 TEST(a_setup_steps_list_moves_nowhere_before_it_has_started)
 {
     SetupWindow window(true);
-    window.Click("nav-setup-widgets");
+    window.Click("nav-setup-top-panel");
     CHECK(window.Find("nav-setup-welcome")->IsClassSet(kPickedClass));
 }
 
@@ -1945,6 +1945,21 @@ TEST(a_pick_in_setup_changes_the_settings_at_once)
     window.Click("setup-theme-theme");
     CHECK(window.Click("setup-theme-theme-o-1"));
     CHECK(window.settings.barTheme == BarTheme::UmbraDark);
+}
+
+TEST(a_setup_step_shows_its_presets_parts_only_under_advanced)
+{
+    SetupWindow window(false);
+    window.Click("setup-buttons-start");
+    window.Click("nav-setup-nameplates");
+    CHECK(window.Shows("setup-nameplates-nameplates") && !window.Shows("setup-nameplates-mob-plates"));
+    window.Click("setup-nameplates-advanced");
+    CHECK(window.Shows("setup-nameplates-mob-plates"));
+    // Advanced stays open on the next step, and its parts change the settings as a preset does.
+    window.Click("nav-setup-top-panel");
+    const std::string party = "setup-top-panel-setup-widget-" + std::to_string(static_cast<int>(BarWidget::Party));
+    CHECK(window.Click(party));
+    CHECK(Shown(window.settings, BarWidget::Party));
 }
 
 TEST(skipping_setup_puts_back_its_defaults_closes_the_window_and_counts_it_done)
@@ -2011,7 +2026,7 @@ TEST(finishing_setup_keeps_the_picks_and_leaves_the_window_on_its_pages)
     window.Click("setup-buttons-start");
     window.Click("setup-theme-theme");
     window.Click("setup-theme-theme-o-1");
-    window.Click("nav-setup-mouse-extras");
+    window.Click("nav-setup-options");
     window.Click("setup-buttons-finish");
     window.Frames(2);
     CHECK(window.menu.open && !window.menu.InSetup());
@@ -2028,17 +2043,6 @@ TEST(closing_the_window_during_setup_is_skipping_it)
     window.Click(kMenuCloseId);
     CHECK(!window.menu.InSetup());
     CHECK(window.settings.barTheme == BarTheme::PhoenixGold && window.settings.setupDone);
-}
-
-TEST(setups_widgets_step_turns_a_widget_on_and_off)
-{
-    SetupWindow window(false);
-    window.Click("setup-buttons-start");
-    window.Click("nav-setup-widgets");
-    const std::string party = "setup-widgets-setup-widget-" + std::to_string(static_cast<int>(BarWidget::Party));
-    CHECK(window.Shows(party));
-    CHECK(window.Click(party));
-    CHECK(Shown(window.settings, BarWidget::Party));
 }
 
 TEST(run_setup_on_the_config_page_opens_setup_as_a_run_again)
@@ -2075,7 +2079,7 @@ TEST(a_folded_setup_step_keeps_its_buttons)
     CHECK(window.Find("nav-setup-theme")->IsClassSet(kPickedClass));
     window.Click("setup-theme-head");
     window.Click("setup-buttons-next");
-    CHECK(window.Find("nav-setup-fonts")->IsClassSet(kPickedClass));
+    CHECK(window.Find("nav-setup-nameplates")->IsClassSet(kPickedClass));
 }
 
 TEST(a_choice_the_settings_hold_none_of_reads_your_own)
@@ -2084,23 +2088,25 @@ TEST(a_choice_the_settings_hold_none_of_reads_your_own)
     mine.outlineThickness = 135; // between Thin, Normal and Thick
     SetupWindow window(false, mine);
     window.Click("setup-buttons-start");
-    window.Click("nav-setup-outlines");
-    const std::string shown = window.Find("setup-outlines-outline-thickness")->GetInnerRML();
+    window.Click("nav-setup-nameplates");
+    window.Click("setup-nameplates-advanced");
+    const std::string shown = window.Find("setup-nameplates-outline-thickness")->GetInnerRML();
     CHECK(shown.find(kWindowLayout.WordOf(WindowWord::SetupCustom).name) != std::string::npos);
-    window.Click("setup-outlines-outline-thickness");
-    window.Click("setup-outlines-outline-thickness-o-2");
+    window.Click("setup-nameplates-outline-thickness");
+    window.Click("setup-nameplates-outline-thickness-o-2");
     CHECK_EQ(window.settings.outlineThickness, 200);
 }
 
-TEST(setups_lines_step_moves_one_line_of_a_kinds_nameplate_up_and_across)
+TEST(setups_nameplates_advanced_moves_one_line_of_a_kinds_nameplate_up_and_across)
 {
     SetupWindow window(false);
     window.Click("setup-buttons-start");
-    window.Click("nav-setup-plate-lines");
-    window.Click("setup-plate-lines-line-kind-t-1"); // players
-    window.Click("setup-plate-lines-line-t-1");      // the middle line
-    window.Drag("setup-plate-lines-padding-players1", Rml::Vector2f(80.0f, 0.0f));
-    window.Drag("setup-plate-lines-horizontal-offset-players1", Rml::Vector2f(80.0f, 0.0f));
+    window.Click("nav-setup-nameplates");
+    window.Click("setup-nameplates-advanced");
+    window.Click("setup-nameplates-line-kind-t-1"); // players
+    window.Click("setup-nameplates-line-t-1");      // the middle line
+    window.Drag("setup-nameplates-padding-players1", Rml::Vector2f(80.0f, 0.0f));
+    window.Drag("setup-nameplates-horizontal-offset-players1", Rml::Vector2f(80.0f, 0.0f));
     const KindSettings& players = window.settings.Kind(PlateKind::Players);
     CHECK(players.lines[kMiddleLine].padding > 0 && players.lines[kMiddleLine].offset > 0);
     KindSettings expected = Settings{}.Kind(PlateKind::Players);
@@ -2111,14 +2117,15 @@ TEST(setups_lines_step_moves_one_line_of_a_kinds_nameplate_up_and_across)
     CHECK_EQ(window.Said(), "");
 }
 
-TEST(setups_lines_step_moves_the_line_a_synced_line_takes_its_style_from)
+TEST(setups_nameplates_advanced_moves_the_line_a_synced_line_takes_its_style_from)
 {
     Settings start;
     start.Kind(PlateKind::Mobs).lines[kTopLine].syncWith = kMiddleLine;
     SetupWindow window(false, start);
     window.Click("setup-buttons-start");
-    window.Click("nav-setup-plate-lines");
-    window.Drag("setup-plate-lines-padding-mobs1", Rml::Vector2f(80.0f, 0.0f));
+    window.Click("nav-setup-nameplates");
+    window.Click("setup-nameplates-advanced");
+    window.Drag("setup-nameplates-padding-mobs1", Rml::Vector2f(80.0f, 0.0f));
     CHECK(window.settings.Kind(PlateKind::Mobs).lines[kMiddleLine].padding > 0);
     CHECK_EQ(window.settings.Kind(PlateKind::Mobs).lines[kTopLine].padding, 0);
 }

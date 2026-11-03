@@ -366,6 +366,12 @@ namespace headsup
                 css += scope + ".detail.fig{margin-top:" + Px(std::round(place.detail.top) - underFigures) + ";}";
                 css += scope + ".detail .line-icon{" + square(static_cast<float>(lines.detail)) + "margin-top:" +
                        Px(place.detail.iconDrop) + ";}";
+                // A widget of cells draws its top line at the detail size too, so a picture is as big on either line.
+                const float smaller = std::round(static_cast<float>(lines.title - lines.detail) / 2.0f);
+                css += scope + ".title.cells{font-size:" + Px(static_cast<float>(lines.detail)) + ";}";
+                css += scope + ".title.cells .line-icon{" + square(static_cast<float>(lines.detail)) + "margin-top:" +
+                       Px(place.title.iconDrop + smaller) + ";}";
+                css += scope + ".title.figures.cells .line-icon{margin-top:" + Px(place.figures.iconDrop + smaller) + ";}";
             }
             return css;
         }
@@ -726,7 +732,8 @@ namespace headsup
             rml += "<img class=\"icon\" src=\"" + IconSource(icon) + "\"/>";
         if (content.coin) rml += "<img class=\"coin\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
         rml += "<div class=\"text\">";
-        const std::string title = std::string("title") + (content.figures ? " figures" : "") + (alone ? " alone" : "");
+        const std::string title = std::string("title") + (content.figures ? " figures" : "") +
+                                  (alone ? " alone" : content.cells ? " cells" : "");
         static const std::vector<float> kNoColumns;
         const std::vector<float>& laid = content.cells ? columns : kNoColumns;
         rml += Line(title.c_str(), content.title, content.titleIcons, look, laid);

@@ -463,10 +463,11 @@ TEST(the_job_and_level_tag_shows_what_is_known_of_the_two)
         player.jobs      = jobs;
         return Rendered(ComposePlate(player, kPlayer, s, kGame).lines[0]);
     };
-    CHECK_EQ(shown(PlayerJobs{1, 75, 2, 37}), "Chadmage 75 WAR/MNK");
+    CHECK_EQ(shown(PlayerJobs{1, 75, 2, 37}), "Chadmage 75 WAR / 37 MNK");
+    CHECK_EQ(shown(PlayerJobs{1, 75, 2, 0}), "Chadmage 75 WAR / MNK"); // a subjob whose level is not known yet
     CHECK_EQ(shown(PlayerJobs{1, 75, 0, 0}), "Chadmage 75 WAR");
     CHECK_EQ(shown(PlayerJobs{0, 75, 0, 0}), "Chadmage Level 75"); // a level that came without its job
-    CHECK_EQ(shown(PlayerJobs{1, 0, 2, 0}), "Chadmage WAR/MNK");
+    CHECK_EQ(shown(PlayerJobs{1, 0, 2, 0}), "Chadmage WAR / MNK");
     CHECK_EQ(shown(std::nullopt), "Chadmage");
     // A mob has no such tag.
     s.Kind(PlateKind::Mobs).lines[2].text = "$name $joblevel";
