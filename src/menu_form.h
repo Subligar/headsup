@@ -63,7 +63,8 @@ namespace headsup
         Settings before;
         int zoom = kLeastSetupZoom;
         float panX = 0.0f, panY = 0.0f; // shares of the picture it is dragged across and down, as far as the zoom leaves room
-        int lineKind = 0, line = 0; // the Lines step's tabs: into kSetupLineKinds, and the line
+        int lineKind = 0, line = 0; // the Nameplates step's Advanced tabs: into kSetupLineKinds, and the line
+        bool advanced = false;      // each step shows the parts of its presets, until hidden again
     };
 
     // The settings file a run of Setup again copies the settings to first, named for when, and the picture Setup

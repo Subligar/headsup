@@ -10,21 +10,30 @@ using namespace headsup;
 
 namespace
 {
+    // Each step's choices, or with advanced its Advanced ones: the parts its presets are made of.
+    template <typename Each>
+    void ForEachChoiceOf(bool advanced, Each each)
+    {
+        for (const SetupPage& page : SetupPages())
+            for (const SetupChoice& choice : advanced ? page.advancedChoices : page.choices)
+                each(choice);
+    }
     template <typename Each>
     void ForEachChoice(Each each)
     {
-        for (const SetupPage& page : SetupPages())
-            for (const SetupChoice& choice : page.choices)
-                each(choice);
+        ForEachChoiceOf(false, each);
+        ForEachChoiceOf(true, each);
     }
 
     const RowSettings& MobRow(const Settings& s, Category row) { return s.Kind(PlateKind::Mobs).rows[CategoryIndex(row)]; }
     const SetupChoice& ChoiceNamed(const char* key)
     {
-        for (const SetupPage& page : SetupPages())
-            for (const SetupChoice& choice : page.choices)
-                if (std::string(choice.key) == key) return choice;
-        throw test::Failure{std::string("no choice ") + key};
+        const SetupChoice* found = nullptr;
+        ForEachChoice([&](const SetupChoice& choice) {
+            if (std::string(choice.key) == key) found = &choice;
+        });
+        if (found == nullptr) throw test::Failure{std::string("no choice ") + key};
+        return *found;
     }
     const SetupOption& OptionNamed(const SetupChoice& choice, const char* key)
     {
@@ -81,18 +90,60 @@ TEST(an_option_picked_is_the_one_its_choice_holds_whatever_was_picked_before)
     });
 }
 
-TEST(an_option_leaves_every_other_choice_as_it_was)
+TEST(an_option_leaves_every_other_choice_of_its_kind_as_it_was)
 {
-    ForEachChoice([&](const SetupChoice& choice) {
-        for (const SetupOption& option : choice.options)
-        {
-            Settings s;
-            option.apply(s);
-            ForEachChoice([&](const SetupChoice& other) {
-                if (&other != &choice) CHECK(PickedOption(other, s) == PickedOption(other, Settings{}));
-            });
-        }
-    });
+    // A preset is made of the Advanced choices, so it is only kept from the other presets, and a part from the other parts.
+    for (const bool advanced : {false, true})
+        ForEachChoiceOf(advanced, [&](const SetupChoice& choice) {
+            for (const SetupOption& option : choice.options)
+            {
+                Settings s;
+                option.apply(s);
+                ForEachChoiceOf(advanced, [&](const SetupChoice& other) {
+                    if (&other != &choice) CHECK(PickedOption(other, s) == PickedOption(other, Settings{}));
+                });
+            }
+        });
+}
+
+TEST(a_nameplate_preset_picks_one_option_of_every_part_whatever_was_picked_before)
+{
+    const SetupChoice& presets = ChoiceNamed("nameplates");
+    for (const SetupOption& preset : presets.options)
+    {
+        // From another option of every part, it lands on the same settings as from a new install.
+        Settings s, fresh;
+        for (const SetupChoice& part : SetupPageOf(SetupStep::Nameplates).advancedChoices)
+            part.options.back().apply(s);
+        preset.apply(s);
+        preset.apply(fresh);
+        CHECK(s == fresh);
+        for (const SetupChoice& part : SetupPageOf(SetupStep::Nameplates).advancedChoices)
+            CHECK(PickedOption(part, s).has_value());
+    }
+    const Settings simple = With("nameplates", "simple");
+    CHECK(PickedOption(ChoiceNamed("mob-plates"), simple) == PickedOption(ChoiceNamed("mob-plates"), With("mob-plates", "attackers")));
+    CHECK(MobRow(simple, Category::WontAttack).plate == PlateMode::WhenTargeted);
+    const Settings minimal = With("nameplates", "minimal");
+    CHECK(minimal.Kind(PlateKind::Players).rows[0].plate == PlateMode::Vanilla);
+    CHECK(MobRow(minimal, Category::WillAttack).outline == OutlineMode::WhenTargeted);
+}
+
+TEST(a_top_panel_preset_shows_its_widgets_and_no_others)
+{
+    const Settings minimal = With("panel", "minimal");
+    for (int w = 0; w < kBarWidgetCount; ++w)
+    {
+        const auto widget = static_cast<BarWidget>(w);
+        const bool expected = widget == BarWidget::Zone || widget == BarWidget::VanaTime || widget == BarWidget::Target;
+        CHECK_EQ(minimal.Widget(PanelWidget{widget}).on, expected);
+    }
+    CHECK(minimal.showBar);
+    // Hidden keeps the widgets for the panel turned back on.
+    const Settings hidden = With("panel", "hidden", minimal);
+    CHECK(!hidden.showBar && hidden.Widget(PanelWidget{BarWidget::Zone}).on && !hidden.Widget(PanelWidget{BarWidget::Gil}).on);
+    // Full is a new install's.
+    CHECK(With("panel", "full", minimal) == Settings{});
 }
 
 TEST(a_choice_set_some_other_way_holds_no_option)
@@ -191,12 +242,7 @@ TEST(a_setup_backup_is_named_for_the_second_it_was_made_and_never_takes_anothers
 
 namespace
 {
-    const SetupChoice& PlayerIconsChoice()
-    {
-        for (const SetupChoice& choice : SetupPageOf(SetupStep::PlateLines).choices)
-            if (std::string(choice.key) == "player-icons") return choice;
-        throw test::Failure{"no player-icons choice"};
-    }
+    const SetupChoice& PlayerIconsChoice() { return ChoiceNamed("player-icons"); }
     // The player icons' tags, as a new install's player name line has them before the name.
     std::string Icons()
     {

@@ -1073,6 +1073,14 @@
       ]
     },
     {
+      "key": "setup-nameplates",
+      "options": [
+        {"name": "Full", "tip": "Every mob shows a full nameplate, and mobs that will attack you get an outline. Players, you and NPCs show HeadsUp nameplates. This is the default."},
+        {"name": "Simple", "tip": "Mobs that will attack you show their level, con and name, with an outline. Other mobs show one when you target them. You have no nameplate."},
+        {"name": "Minimal", "tip": "Only your target shows a nameplate and an outline, with just its name. Players, NPCs and pets keep the game's own names."}
+      ]
+    },
+    {
       "key": "setup-mob-plates",
       "options": [
         {"name": "All Mobs", "tip": "Every mob shows a HeadsUp nameplate."},
@@ -1164,7 +1172,9 @@
     {
       "key": "setup-panel",
       "options": [
-        {"name": "Show the Top Panel", "tip": "The Top Panel runs across the top of the screen."},
+        {"name": "Full", "tip": "The zone, weather, both clocks, your job, target, gil and bags, your frame rate, connection, distance and the game's help line."},
+        {"name": "Simple", "tip": "The zone, Vana'diel's time, your job, target, gil and bags."},
+        {"name": "Minimal", "tip": "The zone, Vana'diel's time and your target."},
         {"name": "No Top Panel", "tip": "No Top Panel. You can turn it on again in the settings window."}
       ]
     },
@@ -1264,19 +1274,17 @@
     {"key": "setup-finish", "name": "Finish", "tip": "Keeps your picks and closes Setup."},
     {"key": "setup-zoom", "name": "Zoom", "tip": "Brings the picture nearer to the nameplates. You can also turn the mouse wheel over the picture."},
     {"key": "setup-custom", "name": "Your Own", "tip": "You set these yourself in the settings window. Pick one of the others to replace them."},
+    {"key": "setup-advanced", "name": "Advanced", "tip": "Shows each part of this step's preset on its own, to change in detail."},
+    {"key": "setup-simple", "name": "Hide Advanced", "tip": "Hides the parts of each step's preset again. What you changed stays."},
     {"key": "setup-cancel", "name": "Cancel", "tip": "Puts back the settings you had before Setup and closes it."},
     {"key": "setup-warning", "name": "WARNING", "tip": "Setup changes your settings as you pick. Your settings are saved to {file} first, and Cancel puts them back."},
     {"key": "setup-step-welcome", "name": "Welcome to HeadsUp", "tip": "HeadsUp outlines mobs by whether they will attack you and draws its own nameplates over the game's. These steps set the main things, with a preview of each. Everything else is in the settings window: type /hu to open it."},
-    {"key": "setup-step-theme", "name": "Theme", "tip": "Pick how the Top Panel looks. The settings window takes on the same look."},
-    {"key": "setup-step-fonts", "name": "Fonts and Sizes", "tip": "Pick the fonts and sizes of the nameplates, the Top Panel and this window."},
-    {"key": "setup-step-mob-nameplates", "name": "Mob Nameplates", "tip": "Pick which mobs show a nameplate, and what it shows."},
-    {"key": "setup-step-outlines", "name": "Outlines", "tip": "Pick which mobs get an outline. Its color tells whether the mob will attack you."},
-    {"key": "setup-step-target-cursor", "name": "Target Cursor", "tip": "Pick the marker drawn over your target."},
-    {"key": "setup-step-others", "name": "Players, NPCs and Pets", "tip": "Pick who shows a HeadsUp nameplate and who keeps the game's own name."},
-    {"key": "setup-step-plate-lines", "name": "Nameplate Lines", "tip": "Pick where a player's icons go, and move each line of a nameplate up, down, left or right."},
-    {"key": "setup-step-widgets", "name": "Top Panel Widgets", "tip": "Pick what the Top Panel shows. You can move each widget and change what it shows in the settings window."},
-    {"key": "setup-step-mouse-extras", "name": "Mouse and Extras", "tip": "Pick your mouse pointer, and a few things HeadsUp can do for you."},
+    {"key": "setup-step-theme", "name": "Theme", "tip": "Pick how the Top Panel looks. The settings window takes on the same look. Advanced has the fonts and sizes."},
+    {"key": "setup-step-nameplates", "name": "Nameplates", "tip": "Pick how much the nameplates and outlines show. Advanced has each part on its own: which mobs, what a nameplate shows, outlines, players, NPCs, pets and where each line sits."},
+    {"key": "setup-step-top-panel", "name": "Top Panel", "tip": "Pick how much the Top Panel shows. Advanced turns each widget on or off. You can move each widget and change what it shows in the settings window."},
+    {"key": "setup-step-options", "name": "Options", "tip": "Pick your target cursor and mouse pointer, and a few things HeadsUp can do for you."},
     {"key": "setup-choice-theme", "name": "Top Panel Theme"},
+    {"key": "setup-choice-nameplates", "name": "Nameplates"},
     {"key": "setup-choice-mob-plates", "name": "Which Mobs"},
     {"key": "setup-choice-mob-design", "name": "What It Shows"},
     {"key": "setup-choice-outlines", "name": "Which Mobs"},

@@ -1925,7 +1925,7 @@ namespace headsup
             c.form.changed = true;
         }
 
-        // The Lines step's places: a kind's tab and a line's, then where that line stands, which a line synced to
+        // The Nameplates step's Advanced places: a kind's tab and a line's, then where that line stands, which a line synced to
         // another's style takes from that line.
         void SetupLines(Context& c, SetupRun& run)
         {
@@ -1947,7 +1947,7 @@ namespace headsup
                 LinePlaceRow(form, row, kind, styled, Labeled(NameOf(row, kind), row.key, scope), k.lines[styled]);
         }
 
-        // The Widgets step: a switch for each widget, in groups.
+        // The Top Panel step's Advanced: a switch for each widget, in groups.
         void SetupWidgets(Context& c)
         {
             const std::span<const LayoutOption> groups  = c.layout.OptionsOf(kSetupWidgetGroupNames);
@@ -1996,12 +1996,30 @@ namespace headsup
             const float room = (static_cast<float>(run.zoom) / static_cast<float>(kLeastSetupZoom) - 1.0f) / 2.0f;
             run.panX         = std::clamp(run.panX, -room, room);
             run.panY         = std::clamp(run.panY, -room, room);
-            for (const SetupChoice& choice : page.choices)
-                SetupChoiceRow(c, choice);
-            for (const SettingPiece piece : page.settings)
-                if (const LayoutSetting* setting = c.layout.SettingOf(piece)) DrawSetting(c, *setting);
-            if (run.step == SetupStep::PlateLines) SetupLines(c, run);
-            if (run.step == SetupStep::Widgets) SetupWidgets(c);
+            const auto draw = [&](std::span<const SetupChoice> choices, std::span<const SettingPiece> settings) {
+                for (const SetupChoice& choice : choices)
+                    SetupChoiceRow(c, choice);
+                for (const SettingPiece piece : settings)
+                    if (const LayoutSetting* setting = c.layout.SettingOf(piece)) DrawSetting(c, *setting);
+            };
+            draw(page.choices, page.settings);
+            const bool lines = page.step == SetupStep::Nameplates, widgets = page.step == SetupStep::TopPanel && c.s.showBar;
+            if (page.advancedChoices.empty() && page.advancedSettings.empty() && !lines && !widgets)
+            {
+                form.EndCard();
+                return;
+            }
+            const WindowWord toggle = run.advanced ? WindowWord::SetupSimple : WindowWord::SetupAdvanced;
+            form.Line();
+            if (form.Button(Labeled(Word(c, toggle), "advanced").c_str(), "advanced", kRaisedPill, WordTip(c, toggle)))
+                run.advanced = !run.advanced;
+            form.EndLine();
+            if (run.advanced)
+            {
+                draw(page.advancedChoices, page.advancedSettings);
+                if (lines) SetupLines(c, run);
+                if (widgets) SetupWidgets(c);
+            }
             form.EndCard();
         }
 
