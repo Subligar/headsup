@@ -2,8 +2,97 @@
   "version": "0.8",
   "pages": [
     {
+      "key": "theme",
+      "name": "Theme",
+      "cards": [
+        {
+          "key": "theme-look",
+          "name": "Theme",
+          "description": "The look of the top panel, this config menu, the fishing bar and many more parts of HeadsUp.",
+          "settings": [
+            {"key": "theme", "name": "Theme", "tip": "The look of the top panel, its popups, this config window, the fishing bar and many more parts of HeadsUp."},
+            {
+              "key": "window-type",
+              "name": "Window Type",
+              "indent": true,
+              "tip": "Which of the game's window frames the art is: the one picked in the game's Config, Windows, Shared, or one of the eight.",
+              "options": [
+                {"name": "Follow Game", "tip": "The Window Type the game is set to, followed as you change it."},
+                {"name": "Type 1"},
+                {"name": "Type 2"},
+                {"name": "Type 3"},
+                {"name": "Type 4"},
+                {"name": "Type 5"},
+                {"name": "Type 6"},
+                {"name": "Type 7"},
+                {"name": "Type 8"}
+              ]
+            },
+            {"key": "window-border", "name": "Border", "indent": true, "tip": "A border around the top panel, the help bar, the popups, the fishing bar and this window, in the color of the game's window frame. Off, they are the window's background alone."}
+          ]
+        },
+        {
+          "key": "theme-colors",
+          "name": "Theme Colors",
+          "description": "Every part of the Custom theme, which starts as Phoenix Gold. It colors the top panel, the config menu and many more parts of HeadsUp. Changing one picks the Custom theme, and it keeps your changes while you pick another.",
+          "settings": [
+            {
+              "key": "theme-shape",
+              "name": "Shape",
+              "tip": "How the widgets sit on the strip.",
+              "options": [
+                {"name": "Ornate", "tip": "Diamonds between the widgets and a framed target, as Phoenix Gold has."},
+                {"name": "Pills", "tip": "Each widget in a rounded pill, as Umbra Dark has."},
+                {"name": "Glass", "tip": "Pills that show only when lit, a line of light under the strip and glass popups, as Aurora has."},
+                {"name": "Window", "tip": "The game's own window art under the strip and the popups, with pills only when lit, as Game Window has."}
+              ]
+            },
+            {"key": "theme-background", "name": "Background", "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
+            {"key": "theme-gradient", "name": "Gradient", "tip": "The strip runs from a top color to a bottom color."},
+            {"key": "theme-top", "name": "Top Color", "indent": true, "tip": "The strip's color at its top, with its opacity."},
+            {"key": "theme-bottom", "name": "Bottom Color", "indent": true, "tip": "The strip's color at its foot, with its opacity."},
+            {"key": "theme-border-color", "name": "Border Color", "tip": "The line along the strip's foot."},
+            {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels tall the line along the strip's foot is; 0 for none."},
+            {
+              "key": "theme-palette",
+              "rows": [
+                {"key": "under-line", "name": "Under Line", "tip": "A row just under the border; clear for none."},
+                {"key": "glow-below", "name": "Glow Below", "tip": "What fades out under the strip."},
+                {"key": "accent", "name": "Accent", "tip": "Diamonds, frames, the pin mark and a lit widget."},
+                {"key": "accent-end", "name": "Accent End", "tip": "What the accent runs into where it is a gradient."},
+                {"key": "pill", "name": "Pill", "tip": "A widget's pill."},
+                {"key": "pill-border", "name": "Pill Border"},
+                {"key": "title", "name": "Title", "tip": "A widget's title on the strip."},
+                {"key": "subtitle", "name": "Subtitle", "tip": "A widget's second line, and dim text in popups."},
+                {"key": "divider", "name": "Divider", "tip": "The diamonds between widgets on an ornate strip."},
+                {"key": "panel-top", "name": "Popup Top", "tip": "A popup's color at its top."},
+                {"key": "panel-bottom", "name": "Popup Bottom", "tip": "A popup's color at its foot."},
+                {"key": "panel-border", "name": "Popup Border"},
+                {"key": "panel-outer", "name": "Popup Outer Border", "tip": "A ring around an ornate popup's border; clear for none."},
+                {"key": "text", "name": "Popup Text"},
+                {"key": "heading", "name": "Popup Heading"},
+                {"key": "tag-fill", "name": "Tag Fill", "tip": "The small labels in popups."},
+                {"key": "tag-border", "name": "Tag Border"},
+                {"key": "tag-text", "name": "Tag Text"},
+                {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."}
+              ]
+            },
+            {
+              "key": "theme-files",
+              "words": [
+                {"key": "save-as", "name": "Save As", "tip": "Saves the Custom theme under this name, in config/headsup/themes, over one of the same name."},
+                {"key": "name-hint", "name": "Name"},
+                {"key": "save", "name": "Save"},
+                {"key": "load", "name": "Load", "tip": "Makes a saved theme the Custom theme, and picks it."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "key": "entities",
-      "name": "Entities",
+      "name": "Nameplates & Outlines",
       "cards": [
         {
           "key": "nameplates",
@@ -188,25 +277,6 @@
           "name": "Top Panel",
           "description": "Hover a widget for details; click it to keep them open. The Widgets page has each one's options.",
           "settings": [
-            {"key": "theme", "name": "Theme", "tip": "The look of the top panel, its popups and this config window."},
-            {
-              "key": "window-type",
-              "name": "Window Type",
-              "indent": true,
-              "tip": "Which of the game's window frames the art is: the one picked in the game's Config, Windows, Shared, or one of the eight.",
-              "options": [
-                {"name": "Follow Game", "tip": "The Window Type the game is set to, followed as you change it."},
-                {"name": "Type 1"},
-                {"name": "Type 2"},
-                {"name": "Type 3"},
-                {"name": "Type 4"},
-                {"name": "Type 5"},
-                {"name": "Type 6"},
-                {"name": "Type 7"},
-                {"name": "Type 8"}
-              ]
-            },
-            {"key": "window-border", "name": "Border", "indent": true, "tip": "A border around the top panel, the help bar, the popups and this window, in the color of the game's window frame. Off, they are the window's background alone."},
             {
               "key": "separators",
               "name": "Separators",
@@ -235,63 +305,6 @@
             {"key": "popup-size", "name": "Popup Size", "tip": "Auto follows the height."},
             {"key": "hide-readout", "name": "Hide Readout", "tip": "The game's S, R and % numbers at the top right."},
             {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
-          ]
-        },
-        {
-          "key": "theme-colors",
-          "name": "Theme Colors",
-          "description": "Every part of the Custom theme, which starts as Phoenix Gold. Changing one picks the Custom theme, and it keeps your changes while you pick another.",
-          "settings": [
-            {
-              "key": "theme-shape",
-              "name": "Shape",
-              "tip": "How the widgets sit on the strip.",
-              "options": [
-                {"name": "Ornate", "tip": "Diamonds between the widgets and a framed target, as Phoenix Gold has."},
-                {"name": "Pills", "tip": "Each widget in a rounded pill, as Umbra Dark has."},
-                {"name": "Glass", "tip": "Pills that show only when lit, a line of light under the strip and glass popups, as Aurora has."},
-                {"name": "Window", "tip": "The game's own window art under the strip and the popups, with pills only when lit, as Game Window has."}
-              ]
-            },
-            {"key": "theme-background", "name": "Background", "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
-            {"key": "theme-gradient", "name": "Gradient", "tip": "The strip runs from a top color to a bottom color."},
-            {"key": "theme-top", "name": "Top Color", "indent": true, "tip": "The strip's color at its top, with its opacity."},
-            {"key": "theme-bottom", "name": "Bottom Color", "indent": true, "tip": "The strip's color at its foot, with its opacity."},
-            {"key": "theme-border-color", "name": "Border Color", "tip": "The line along the strip's foot."},
-            {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels tall the line along the strip's foot is; 0 for none."},
-            {
-              "key": "theme-palette",
-              "rows": [
-                {"key": "under-line", "name": "Under Line", "tip": "A row just under the border; clear for none."},
-                {"key": "glow-below", "name": "Glow Below", "tip": "What fades out under the strip."},
-                {"key": "accent", "name": "Accent", "tip": "Diamonds, frames, the pin mark and a lit widget."},
-                {"key": "accent-end", "name": "Accent End", "tip": "What the accent runs into where it is a gradient."},
-                {"key": "pill", "name": "Pill", "tip": "A widget's pill."},
-                {"key": "pill-border", "name": "Pill Border"},
-                {"key": "title", "name": "Title", "tip": "A widget's title on the strip."},
-                {"key": "subtitle", "name": "Subtitle", "tip": "A widget's second line, and dim text in popups."},
-                {"key": "divider", "name": "Divider", "tip": "The diamonds between widgets on an ornate strip."},
-                {"key": "panel-top", "name": "Popup Top", "tip": "A popup's color at its top."},
-                {"key": "panel-bottom", "name": "Popup Bottom", "tip": "A popup's color at its foot."},
-                {"key": "panel-border", "name": "Popup Border"},
-                {"key": "panel-outer", "name": "Popup Outer Border", "tip": "A ring around an ornate popup's border; clear for none."},
-                {"key": "text", "name": "Popup Text"},
-                {"key": "heading", "name": "Popup Heading"},
-                {"key": "tag-fill", "name": "Tag Fill", "tip": "The small labels in popups."},
-                {"key": "tag-border", "name": "Tag Border"},
-                {"key": "tag-text", "name": "Tag Text"},
-                {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."}
-              ]
-            },
-            {
-              "key": "theme-files",
-              "words": [
-                {"key": "save-as", "name": "Save As", "tip": "Saves the Custom theme under this name, in config/headsup/themes, over one of the same name."},
-                {"key": "name-hint", "name": "Name"},
-                {"key": "save", "name": "Save"},
-                {"key": "load", "name": "Load", "tip": "Makes a saved theme the Custom theme, and picks it."}
-              ]
-            }
           ]
         },
         {
@@ -692,8 +705,8 @@
               {"key": "alignment", "name": "Alignment", "tip": "The horizontal alignment of text and icons in this line."},
               {"key": "font", "name": "Font"},
               {"key": "font-style", "name": "Font Style"},
-              {"key": "text-size", "name": "Text Size", "tip": "A percentage of the base font size set in the Entities/Nameplates section."},
-              {"key": "icon-size", "name": "Icon Size", "tip": "A percentage of the icon font size set in the Entities/Nameplates section."},
+              {"key": "text-size", "name": "Text Size", "tip": "A percentage of the base font size set in the Nameplates & Outlines/Nameplates section."},
+              {"key": "icon-size", "name": "Icon Size", "tip": "A percentage of the icon font size set in the Nameplates & Outlines/Nameplates section."},
               {"key": "padding", "name": "Padding", "tip": "Adds extra space between this line and the one below it.", "tipBottomLine": "Adds extra space between this line and the ones above it."},
               {"key": "horizontal-offset", "name": "Horizontal Offset", "tip": "Moves this line left or right from where its alignment puts it. The other lines stay where they are."},
               {"key": "text-color", "name": "Text Color", "tip": "The color of text on this line. Can be custom, or it can be automatically colored based on the entity's state."},
@@ -824,7 +837,7 @@
         "kinds": ["self"],
         "settings": [
           {"key": "respawn-timers", "name": "Respawn Timer", "tip": "If enabled, it shows a timer until the next possible spawn when an NM or its placeholder dies within 50 yalms of you, if you took part: you targeted it, or you were active (moved or turned in the last 2:30) while it was on your screen. Phoenix's rule, so standing AFK earns no timers. If the NM or placeholder is up, it reads 'Up'."},
-          {"key": "timer-size", "name": "Timer Size", "tip": "The font size of the timer text, as a multiplier of the base font size set by the Entities/Nameplates section."},
+          {"key": "timer-size", "name": "Timer Size", "tip": "The font size of the timer text, as a multiplier of the base font size set by the Nameplates & Outlines/Nameplates section."},
           {"key": "up-time", "name": "Up Time", "tip": "How long a timer stays, reading 'Up', once the NM or its placeholder can spawn. Then it goes. At 0 it goes as soon as it is up. Default is 5 minutes."}
         ]
       }
@@ -854,11 +867,11 @@
       "options": [
         {"name": "Custom", "tip": "Set this to be any static color of your choice."},
         {"name": "Vanilla Color", "tip": "Use the same color as used by the base game."},
-        {"name": "By Aggression", "tip": "Automatically changes the color based on whether the mob is passive, aggressive or an NM. (Set these colors in the 'Entities/Colors: Aggression' section.)"},
-        {"name": "By Toughness", "tip": "Automatically changes the color based on how tough the mob is at your current level. (Set these colors in the 'Entities/Colors: Toughness' section.)"},
-        {"name": "By Claim Status", "tip": "Automatically changes the color based on whether the enemy is claimed and by whom. (Set these colors in the 'Entities/Colors: Claim Status' section.)"},
-        {"name": "By Targeting", "tip": "Automatically changes the color based on whether you are targeting the entity, locked on, sub-targeting, etc. (Set these colors in the 'Entities/Colors: Targeting' section.)"},
-        {"name": "By Entity Type", "tip": "Automatically changes the color based on the type of entity and their relation to you. (Set these colors in the 'Entities/Colors: Entity Type' section.)"}
+        {"name": "By Aggression", "tip": "Automatically changes the color based on whether the mob is passive, aggressive or an NM. (Set these colors in the 'Colors/Aggression' section.)"},
+        {"name": "By Toughness", "tip": "Automatically changes the color based on how tough the mob is at your current level. (Set these colors in the 'Colors/Toughness' section.)"},
+        {"name": "By Claim Status", "tip": "Automatically changes the color based on whether the enemy is claimed and by whom. (Set these colors in the 'Colors/Claim Status' section.)"},
+        {"name": "By Targeting", "tip": "Automatically changes the color based on whether you are targeting the entity, locked on, sub-targeting, etc. (Set these colors in the 'Colors/Targeting' section.)"},
+        {"name": "By Entity Type", "tip": "Automatically changes the color based on the type of entity and their relation to you. (Set these colors in the 'Colors/Entity Type' section.)"}
       ]
     },
     {
@@ -1030,8 +1043,8 @@
       "key": "tags",
       "options": [
         {"name": "Name", "tip": "The name of the entity."},
-        {"name": "Level", "tip": "Shows the entity's current level. NOTE: For mobs, this will show a range until you /check the mob. You can also enable the Auto-Check feature in the 'Entities/Nameplates' section. For players, this shows once you /check them, or with the Auto-Check feature on once the server has sent it (it does when you come upon them, not when they arrive beside you), unless they are anonymous."},
-        {"name": "Difficulty", "tip": "Shows initials indicating the mob's difficulty for your current level (TW for Too Weak, EP for Easy Prey, and so on). NOTE: Shows a range of possibilities until you /check the mob, unless you have the Auto-Check feature enabled in the 'Entities/Nameplates' section."},
+        {"name": "Level", "tip": "Shows the entity's current level. NOTE: For mobs, this will show a range until you /check the mob. You can also enable the Auto-Check feature in the 'Nameplates & Outlines/Nameplates' section. For players, this shows once you /check them, or with the Auto-Check feature on once the server has sent it (it does when you come upon them, not when they arrive beside you), unless they are anonymous."},
+        {"name": "Difficulty", "tip": "Shows initials indicating the mob's difficulty for your current level (TW for Too Weak, EP for Easy Prey, and so on). NOTE: Shows a range of possibilities until you /check the mob, unless you have the Auto-Check feature enabled in the 'Nameplates & Outlines/Nameplates' section."},
         {"name": "ID", "tip": "The last three hex digits of the mob's ID. Example: [106]."},
         {"name": "Server ID", "tip": "The mob's full server ID in decimal. Example: [17190918]."},
         {"name": "Placeholder", "tip": "If the mob is a placeholder for a notorious monster, this shows [PH]. Otherwise, it shows nothing."},

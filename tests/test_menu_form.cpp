@@ -168,12 +168,15 @@ TEST(a_pages_controls_change_the_settings_they_show)
     const Form off = w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}, {"toppanel-top-panel-height", kChangeEvent, "30"}});
     CHECK(off.changed && !w.settings.showBar && w.settings.barHeight == 52);
     CHECK(ClassOn(off, "toppanel-top-panel-height-box", "off"));
+    // The theme's dropdown, on its own page as it themes this window too, lists every theme, and a click on one picks
+    // it while the panel is off.
+    w.state.page = Page::Theme;
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-1", kClickEvent, ""}});
+    CHECK(w.settings.barTheme == BarTheme::UmbraDark);
+    w.state.page = Page::TopPanel;
     w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}});
     CHECK(w.settings.showBar);
-    // The theme's dropdown lists every theme, and a click on one picks it.
-    w.Pass({{"toppanel-top-panel-theme", kClickEvent, ""}});
-    w.Pass({{"toppanel-top-panel-theme-o-1", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::UmbraDark);
 }
 
 TEST(a_widgets_chip_dropped_on_another_goes_before_it)
@@ -902,32 +905,32 @@ TEST(a_window_set_to_hide_goes_on_the_hidden_list_and_shows_no_place_until_kept_
 TEST(an_edit_of_a_theme_color_makes_the_theme_custom_which_keeps_it)
 {
     Window w;
-    w.state.page        = Page::TopPanel;
+    w.state.page        = Page::Theme;
     w.settings.barTheme = BarTheme::UmbraDark;
-    const std::string accent = "toppanel-theme-colors-accent-theme-palette";
+    const std::string accent = "theme-theme-colors-accent-theme-palette";
     w.Pass({{accent, kClickEvent, ""}});
     CHECK(w.Pass({{accent + "-p-r", kChangeEvent, "1"}}).changed);
     BarPalette edited = PaletteOf(BarTheme::PhoenixGold); // Custom starts from the first theme, whichever is shown
     edited.accent     = (edited.accent & 0xFF00FFFFu) | 0x00010000u;
     CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette == edited);
     // Another theme picked leaves Custom's colors for when it is picked again.
-    w.Pass({{"toppanel-top-panel-theme", kClickEvent, ""}});
-    w.Pass({{"toppanel-top-panel-theme-o-4", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-4", kClickEvent, ""}});
     CHECK(w.settings.barTheme == BarTheme::Aurora && w.settings.customPalette == edited);
-    w.Pass({{"toppanel-top-panel-theme", kClickEvent, ""}});
-    w.Pass({{"toppanel-top-panel-theme-o-5", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-5", kClickEvent, ""}});
     CHECK(w.settings.barTheme == BarTheme::Custom && PaletteFor(w.settings) == edited);
 }
 
 TEST(window_type_shows_while_the_games_art_is_in_use_and_picks_a_type_or_follows_the_game)
 {
     Window w;
-    w.state.page             = Page::TopPanel;
-    const std::string type   = "toppanel-top-panel-window-type";
+    w.state.page             = Page::Theme;
+    const std::string type   = "theme-theme-look-window-type";
     const auto shown = [&] { return !ClassOn(w.Pass(), (type + "-label-row").c_str(), "off"); };
     CHECK(!shown());
-    w.Pass({{"toppanel-top-panel-theme", kClickEvent, ""}});
-    w.Pass({{"toppanel-top-panel-theme-o-6", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-6", kClickEvent, ""}});
     CHECK(w.settings.barTheme == BarTheme::GameWindow && shown());
     w.Pass({{type, kClickEvent, ""}});
     CHECK(w.Pass({{type + "-o-5", kClickEvent, ""}}).changed);
@@ -940,36 +943,36 @@ TEST(window_type_shows_while_the_games_art_is_in_use_and_picks_a_type_or_follows
 TEST(the_theme_colors_card_sets_the_shape_the_border_and_one_color_or_a_gradient)
 {
     Window w;
-    w.state.page = Page::TopPanel;
+    w.state.page = Page::Theme;
     const auto shows = [&](const char* key) {
-        return !ClassOn(w.Pass(), (std::string("toppanel-theme-colors-") + key + "-label-row").c_str(), "off");
+        return !ClassOn(w.Pass(), (std::string("theme-theme-colors-") + key + "-label-row").c_str(), "off");
     };
     BarPalette& p          = w.settings.customPalette;
     const BarPalette& gold = PaletteOf(BarTheme::PhoenixGold);
     // Phoenix Gold's strip is a gradient: its top and bottom show, and no one background.
     CHECK(shows("theme-top") && shows("theme-bottom") && !shows("theme-background"));
-    CHECK(w.Pass({{"toppanel-theme-colors-theme-gradient", kClickEvent, ""}}).changed);
+    CHECK(w.Pass({{"theme-theme-colors-theme-gradient", kClickEvent, ""}}).changed);
     CHECK(!p.gradient && w.settings.barTheme == BarTheme::Custom);
     CHECK(!shows("theme-top") && !shows("theme-bottom") && shows("theme-background"));
     // Its stops are kept for the gradient's return; edited, the middle stays halfway between the two.
-    w.Pass({{"toppanel-theme-colors-theme-gradient", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-gradient", kClickEvent, ""}});
     CHECK(p.gradient && p.stripBottom == gold.stripBottom && shows("theme-top"));
-    w.Pass({{"toppanel-theme-colors-theme-top", kClickEvent, ""}});
-    w.Pass({{"toppanel-theme-colors-theme-top-p-a", kChangeEvent, "0"}});
+    w.Pass({{"theme-theme-colors-theme-top", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-top-p-a", kChangeEvent, "0"}});
     CHECK(p.stripTop == (gold.stripTop & 0x00FFFFFFu) && p.stripMiddle == 0x7F1A1510u);
-    w.Pass({{"toppanel-theme-colors-theme-border-thickness", kChangeEvent, "4"}});
+    w.Pass({{"theme-theme-colors-theme-border-thickness", kChangeEvent, "4"}});
     CHECK_EQ(p.border, 4);
-    w.Pass({{"toppanel-theme-colors-theme-shape-s-2", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-shape-s-2", kClickEvent, ""}});
     CHECK(p.shape == BarShape::Glass);
 }
 
 TEST(a_theme_is_saved_under_a_name_it_can_have_and_loaded_from_the_list)
 {
     Window w;
-    w.state.page          = Page::TopPanel;
+    w.state.page          = Page::Theme;
     const Settings before = w.settings;
-    const char* name = "toppanel-theme-colors-theme-name";
-    const char* save = "toppanel-theme-colors-save-theme";
+    const char* name = "theme-theme-colors-theme-name";
+    const char* save = "theme-theme-colors-save-theme";
     w.Pass({{save, kClickEvent, ""}});
     CHECK(!w.state.themeSave);
     w.Pass({{name, kChangeEvent, "a/b"}, {save, kClickEvent, ""}});
@@ -978,10 +981,10 @@ TEST(a_theme_is_saved_under_a_name_it_can_have_and_loaded_from_the_list)
     CHECK(w.state.themeSave == "Dusk");
     const std::vector<std::string> files = {"Dawn", "Dusk"};
     w.readings.themeFiles = &files;
-    w.Pass({{"toppanel-theme-colors-theme-file", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-file", kClickEvent, ""}});
     CHECK(w.state.themesRequested); // opened, the folder is read again
-    w.Pass({{"toppanel-theme-colors-theme-file-o-1", kClickEvent, ""}});
-    w.Pass({{"toppanel-theme-colors-load-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-file-o-1", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-load-theme", kClickEvent, ""}});
     CHECK(w.state.themeLoad == "Dusk" && w.settings == before); // the plugin reads it in
 }
 

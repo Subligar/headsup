@@ -99,7 +99,7 @@ VISIBILITY_ROWS = {**rows('aggressive', 'passive', 'nm-aggressive', 'nm-passive'
                    **rows('your-pets', 'party-pets', 'friend-pets', 'others-pets', kinds=('pets',))}
 
 PIECES = Pieces(
-    pages={'entities': 'Entities', 'mobs': 'Mobs', 'players': 'Players', 'self': 'Self', 'npcs': 'Npcs', 'pets': 'Pets',
+    pages={'theme': 'Theme', 'entities': 'Entities', 'mobs': 'Mobs', 'players': 'Players', 'self': 'Self', 'npcs': 'Npcs', 'pets': 'Pets',
            'userinterface': 'UserInterface', 'toppanel': 'TopPanel', 'widgets': 'Widgets', 'mousecursor': 'MouseCursor',
            'colors': 'Colors', 'configmenu': 'ConfigMenu'},
     cards={
