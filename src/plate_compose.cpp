@@ -19,6 +19,7 @@ namespace headsup
     {
         constexpr char kSpace          = ' ';
         constexpr const char* kJobJoin = "/";
+        constexpr const char* kLevelsJoin = " / "; // Job & Level's, between the main job and the subjob
         constexpr const char* kLevelWord = "Level "; // before a player's level known without their job
 
         const LineDesign& StyleLine(const KindSettings& kind, int line) { return kind.lines[StyleLineOf(kind, line)]; }
@@ -121,7 +122,13 @@ namespace headsup
                 if (!IsPlayer(info) || !info.jobs) return {};
                 const PlayerJobs& jobs = *info.jobs;
                 if (jobs.mainJob == 0) return jobs.mainLevel != 0 ? kLevelWord + std::to_string(jobs.mainLevel) : std::string();
-                return jobs.mainLevel != 0 ? std::to_string(jobs.mainLevel) + kSpace + JobText(jobs) : JobText(jobs);
+                // Each job after its level, when known: "75 WAR / 37 NIN".
+                const auto leveled = [](uint8_t level, uint8_t job) {
+                    return level != 0 ? std::to_string(level) + kSpace + JobName(job) : std::string(JobName(job));
+                };
+                std::string text = leveled(jobs.mainLevel, jobs.mainJob);
+                if (jobs.subJob != 0) text += kLevelsJoin + leveled(jobs.subLevel, jobs.subJob);
+                return text;
             }
             default:
                 return {};
