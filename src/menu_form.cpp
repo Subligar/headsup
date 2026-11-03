@@ -1,5 +1,6 @@
 #include "menu_form.h"
 
+#include "bar_document.h"
 #include "bar_theme.h"
 #include "cursor_picture.h"
 #include "icons.h"
@@ -31,6 +32,7 @@ namespace headsup
         constexpr int kNoOption = -1; // a choice whose settings no option holds
         constexpr const char* kWidgetChip  = "chip "; // a tray chip's name in its card, before its widget's number
         constexpr const char* kChipToggle  = " on";   // after it, its toggle's
+        constexpr const char* kChipClone   = " clone"; // and its clone button's
         constexpr const char* kWidgetNameClass = "caption widget-name"; // over each widget's settings in a combined popup
         constexpr float kAddWindowShare    = 0.8f;    // of a dropdown's width: a group's "+ Add Window"
         constexpr size_t kMaxFindText      = 31;      // letters of a window's name to look for
@@ -743,13 +745,6 @@ namespace headsup
             }
             if (!HasCopies(kind)) return;
             form.Fade(!BarOn(s));
-            if (form.Button(Word(c, WindowWord::WidgetTabsClone), ("clone" + scope).c_str(), kRaisedPill,
-                    WordTip(c, WindowWord::WidgetTabsClone)))
-                if (const std::optional<PanelWidget> added = CloneWidget(s, widget))
-                {
-                    c.state.settingsAsked = *added;
-                    form.changed          = true;
-                }
             if (widget.copy > 0 && form.Button(Word(c, WindowWord::WidgetTabsRemoveCopy), ("remove copy" + scope).c_str(),
                                        kRaisedPill, WordTip(c, WindowWord::WidgetTabsRemoveCopy)))
             {
@@ -772,7 +767,8 @@ namespace headsup
 
         // Left, Center and Right as trays sunk into the card, each holding its widgets as raised chips in bar order:
         // a chip drags to another place or tray, and a click on one that is on opens its popup on the panel on its
-        // settings, or closes it when it shows them already. Its toggle turns it on and off.
+        // settings, or closes it when it shows them already. Its toggle turns it on and off, and the button at its
+        // right clones it.
         void Trays(Context& c)
         {
             struct Drop
@@ -786,6 +782,7 @@ namespace headsup
             Settings& s = c.s;
             form.Fade(!BarOn(s));
             std::optional<Drop> drop; // applied after the trays are written, so no list changes under its own loop
+            std::optional<PanelWidget> clone; // the same
             const std::string chipStart = form.Named(kWidgetChip) + "-";
             const auto sections         = c.layout.OptionsOf(WindowList::BarSections);
             const auto widgets          = c.layout.OptionsOf(WindowList::BarWidgets);
@@ -813,6 +810,14 @@ namespace headsup
                              EscapedRml(Said(widgets[static_cast<size_t>(held[i].kind)].tip)) + "\">");
                     const bool was = s.widgets[w].on;
                     form.CheckAt((kWidgetChip + std::to_string(w) + kChipToggle).c_str(), s.widgets[w].on);
+                    if (HasCopies(held[i].kind))
+                    {
+                        const std::string cloneId = form.Id(kWidgetChip + std::to_string(w) + kChipClone);
+                        form.Raw("<div class=\"wclone\" id=\"" + cloneId + "\" tip=\"" +
+                                 EscapedRml(WordTip(c, WindowWord::WidgetTabsClone)) + "\"><img src=\"" +
+                                 IconSource(Icon::Clone) + "\"/></div>");
+                        if (!form.Off() && form.Clicked(cloneId)) clone = held[i];
+                    }
                     form.Raw(EscapedRml(CopyName(c, held[i])) + "</div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
                     if (!form.Off() && was && s.widgets[w].on && form.Clicked(id)) c.state.settingsAsked = held[i];
@@ -828,6 +833,11 @@ namespace headsup
             }
             form.EndLine();
             if (drop) form.changed |= MoveWidget(s.barSections, drop->from, drop->index, drop->to, drop->at);
+            if (const std::optional<PanelWidget> added = clone ? CloneWidget(s, *clone) : std::nullopt)
+            {
+                c.state.settingsAsked = *added;
+                form.changed          = true;
+            }
         }
 
         // A palette's colors in two columns, the first the longer, each with an arrow back to its default.

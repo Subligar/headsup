@@ -1901,7 +1901,7 @@ TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
     const PanelWidget copy{BarWidget::Gil, 1};
     window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil)));
     CHECK(!window.Shows("widgets-widgets-remove-copy-gil"));
-    CHECK(window.Click("widgets-widgets-clone-gil"));
+    CHECK(window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil)) + "-clone"));
     CHECK(Placed(window.settings.barSections, copy));
     CHECK(window.Shows("widgets-layout-chip-" + std::to_string(SlotOf(copy))));
     // The clone's settings show at once: a currency picked there is the clone's.
@@ -1919,9 +1919,9 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     Window window;
     window.Page("widgets");
     const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil));
-    CHECK(!window.Shows("widgets-widgets-clone-gil"));
+    CHECK(!window.Shows("widgets-widgets-currency-gil"));
     window.Click(chip);
-    CHECK(window.shown == BarWidget::Gil && window.Shows("widgets-widgets-clone-gil"));
+    CHECK(window.shown == BarWidget::Gil && window.Shows("widgets-widgets-currency-gil"));
     CHECK(window.Find(chip)->IsClassSet("picked"));
     // In a document of their own over the popup's room, as wide as it and no wider, which say how tall they are.
     Rml::Element* view = window.Find(kMenuViewBodyId);
@@ -1934,14 +1934,14 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     // With the window closed they work on, their dropdown too.
     window.menu.open = false;
     window.Frames(2);
-    CHECK(!window.Shows(chip) && window.Shows("widgets-widgets-clone-gil"));
+    CHECK(!window.Shows(chip) && window.Shows("widgets-widgets-currency-gil"));
     window.Click("widgets-widgets-currency-gil");
     CHECK(window.Click("widgets-widgets-currency-gil-o-1"));
     CHECK(window.settings.Widget(BarWidget::Gil).currency == 1);
     window.menu.open = true;
     window.Frames(2);
     window.Click(chip);
-    CHECK(!window.shown && !window.Shows("widgets-widgets-clone-gil"));
+    CHECK(!window.shown && !window.Shows("widgets-widgets-currency-gil"));
     CHECK_EQ(window.Said(), "");
 }
 

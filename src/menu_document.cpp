@@ -414,6 +414,11 @@ namespace headsup
         css += ".wchip.on{color:" + color(c.text) + ";}";
         css += ".wchip.picked{border-color:" + color(c.accent) + ";}";
         css += ".wchip .check{display:inline-block;vertical-align:middle;margin-right:0.8em;font-size:" + Em(kChipToggle) + ";}";
+        // A chip's clone button at its right, its white picture in the chip's text color, brighter under the pointer.
+        css += ".wclone{float:right;height:" + Em(kChipHeight) + ";margin-left:0.4em;}";
+        css += ".wclone img{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) + ";vertical-align:middle;image-color:" +
+               color(c.muted) + ";}";
+        css += ".wclone:hover img{image-color:" + color(c.accent) + ";}";
         css += ".widget-name{color:" + color(c.text) + ";}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
         // What a control says under the pointer.

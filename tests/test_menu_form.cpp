@@ -227,16 +227,19 @@ TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under
     const Form two        = w.Pass();
     CHECK(settings(two) != two.blocks.end());
     const std::string& rml = settings(two)->rml;
-    const auto first = rml.find("clone-" + std::string(BarWidgetName(left[0].kind)));
-    const auto second = rml.find("clone-" + std::string(BarWidgetName(left[1].kind)));
+    const auto first = rml.find("spacing-" + std::string(BarWidgetName(left[0].kind)));
+    const auto second = rml.find("spacing-" + std::string(BarWidgetName(left[1].kind)));
     CHECK(first != std::string::npos && second != std::string::npos && first < second);
     size_t names = 0;
     for (size_t at = 0; (at = rml.find("widget-name", at)) != std::string::npos; ++at)
         ++names;
     CHECK_EQ(names, static_cast<size_t>(2));
-    // A click on its Clone asks for the clone's.
-    w.Pass({{"widgets-widgets-clone-" + std::string(BarWidgetName(left[0].kind)), kClickEvent, ""}});
+    // The settings have no Clone: the Layout card's chip has it, and a click on it asks for the clone's settings.
+    CHECK(!Has(rml, "clone"));
+    w.state.page = Page::Widgets;
+    w.Pass({{chip + "-clone", kClickEvent, ""}});
     CHECK(w.state.settingsAsked && w.state.settingsAsked->kind == left[0].kind && w.state.settingsAsked->copy == 1);
+    CHECK(Placed(w.settings.barSections, *w.state.settingsAsked));
 }
 
 TEST(the_reset_card_asks_twice)
