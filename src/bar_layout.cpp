@@ -493,7 +493,10 @@ namespace headsup
             for (const BarTabChip& chip : m_Chips)
                 if (chip.rect.Contains(x, y))
                 {
-                    m_Tabs[chip.key] = chip.tab;
+                    if (chip.press)
+                        m_Presses.push_back(chip.tab);
+                    else
+                        m_Tabs[chip.key] = chip.tab;
                     return true;
                 }
             if (m_PinChip.Contains(x, y))

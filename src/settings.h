@@ -152,6 +152,8 @@ namespace headsup
 
     struct Settings
     {
+        // The Currency popup's favorites at its top, by kCurrencyTable's key or kYourConquestPoints, in this order.
+        std::vector<std::string> currencyFavorites{kCurrencyTable[kGilCurrency].key, kYourConquestPoints};
         bool enabled       = true;
         bool autoSave      = true; // off, changes wait for Save in the settings window, and Revert drops them
         int outlineThickness = 100; // percent of kOutlineUnitPx

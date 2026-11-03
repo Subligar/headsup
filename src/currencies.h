@@ -90,6 +90,9 @@ namespace headsup
         {"apollyon_units", "Apollyon Units", kCurrencies2Packet, 0x9C, 4},
     };
     constexpr int kCurrencyCount = static_cast<int>(std::size(kCurrencyTable));
+    // San d'Oria's conquest points, then Bastok's and Windurst's, in the order of Nation.
+    constexpr int kConquestPointsFirst = 1;
+    static_assert(std::string_view(kCurrencyTable[kConquestPointsFirst].key) == "cp_sandoria");
     constexpr int kGilCurrency   = 0;
 
     // Each currency's amount by kCurrencyTable's order: nothing until its packet came.
@@ -99,4 +102,6 @@ namespace headsup
     void ReadCurrencies(CurrencyValues& values, uint16_t id, const uint8_t* data, uint32_t size);
     // The currency a key names; none for one no currency has.
     std::optional<int> CurrencyOfKey(std::string_view key);
+    // In the favorites list (Settings::currencyFavorites): your nation's conquest points, whichever nation that is.
+    constexpr const char* kYourConquestPoints = "cp_nation";
 }

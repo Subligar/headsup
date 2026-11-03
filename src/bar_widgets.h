@@ -104,10 +104,13 @@ namespace headsup
         bool memory     = false;
         bool cpu        = false;
         bool linuxxi    = false;
-        bool conquest   = false; // your nation and supply runs, for World Info's conquest
+        bool conquest   = false; // your nation and supply runs, for World Info's conquest and Currency's points
         int containers = 0; // bags from 0 up to this
     };
     BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open);
+    // What a press on a popup's pressable cell told (PopupCell::press) done to the settings: a currency's star adds it
+    // to the favorites or takes it off. False when it changed nothing.
+    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
     // Whether the panel shows the conquest standings: the Zone widget, or a World Info showing Conquest Info.
     bool StandingsShown(const Settings& settings);
     // Whether the open popup shows a widget's: its own, or a combined pill's with that widget in it.

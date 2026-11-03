@@ -954,7 +954,7 @@
         {"name": "Weather", "tip": "The weather now and today's chance of it. Hover for the forecast, and for the zones that can roll each element today and tomorrow."},
         {"name": "Vana'diel Clock", "tip": "The Vana'diel day, time and moon."},
         {"name": "Target", "tip": "Your target's name, level and con. Hover a mob for its details."},
-        {"name": "Gil", "tip": "Gil, or another currency. Hover for every currency."},
+        {"name": "Currency", "tip": "Gil, or another currency. Hover for your favorite currencies and every other one, with a star to keep one at the top."},
         {"name": "Bags", "tip": "How full your inventory is. Hover for every bag."},
         {"name": "Clock", "tip": "Your computer's time, or another time zone's, over the server's if you like. Hover for the daily reset and conquest tally."},
         {"name": "Game Help", "tip": "The game's help text, in a bar of its own under the top panel."},

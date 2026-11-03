@@ -28,7 +28,6 @@ namespace headsup
     std::string StripSource(const BarPalette& palette, int rows, int belowRows);
     std::string DiamondSource(uint32_t argb, int pixels);
     std::string CoinSource(int pixels);
-    std::string StarSource(int pixels);
     // A game item's picture, which only the plugin can make (from the game's resources), and the item a name is.
     std::string ItemSource(uint16_t item);
     std::optional<uint16_t> ItemOfSource(std::string_view name);

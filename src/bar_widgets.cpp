@@ -3,6 +3,7 @@
 #include "argb.h"
 #include "bar_game_help.h"
 #include "bar_job.h"
+#include "bar_look.h"
 #include "bar_server_time.h"
 #include "npcdata.h"
 #include "ph_timers.h"
@@ -859,6 +860,25 @@ namespace headsup
             return w;
         }
 
+        constexpr const char* kFavoritePress = "favorite "; // a currency's star tells this, then the currency's key
+
+        std::optional<int> NationPoints(Nation nation)
+        {
+            if (nation < Nation::SanDoria || nation > Nation::Windurst) return std::nullopt;
+            return kConquestPointsFirst + static_cast<int>(nation) - static_cast<int>(Nation::SanDoria);
+        }
+
+        // The favorites as currencies, each once; your nation's conquest points once your nation is known.
+        std::vector<int> FavoriteCurrencies(const std::vector<std::string>& keys, Nation nation)
+        {
+            std::vector<int> out;
+            for (const std::string& key : keys)
+                if (const std::optional<int> c = key == kYourConquestPoints ? NationPoints(nation) : CurrencyOfKey(key);
+                    c && std::ranges::find(out, *c) == out.end())
+                    out.push_back(*c);
+            return out;
+        }
+
         // The parts of PerfPart that are the connection's.
         constexpr uint8_t kConnectionParts = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received) |
                                              PerfBit(PerfPart::Percent) | PerfBit(PerfPart::Ping) |
@@ -1111,6 +1131,66 @@ namespace headsup
             return rows;
         }
 
+        // The favorites at the top, then every currency in a scrolling list sorted as its tab says, each with a star
+        // that adds it to the favorites or takes it off.
+        PopupContent CurrencyPopup(const BarState& state, const Settings& settings)
+        {
+            PopupContent popup;
+            popup.title = ListOf(Text("Currencies"));
+            const auto amount = [&](int c) { return c == kGilCurrency ? state.gil : state.currencies[c]; };
+            const std::vector<int> favorites = FavoriteCurrencies(settings.currencyFavorites, state.nation.value_or(Nation::None));
+            const auto add = [&](PopupRow& grid, int c) {
+                const bool favorite = std::ranges::find(favorites, c) != favorites.end();
+                PopupCell star;
+                star.icon  = favorite ? Icon::Star : Icon::StarEmpty;
+                star.tint  = favorite ? Colored("", kStarColor) : Text("", Tone::Dim);
+                star.press = kFavoritePress + std::string(kCurrencyTable[c].key);
+                grid.cells.push_back(std::move(star));
+                grid.cells.push_back(Cell(Text(kCurrencyTable[c].name)));
+                const std::optional<uint32_t> held = amount(c);
+                PopupCell value = Cell(held ? Text(Grouped(*held)) : Text("-", Tone::Dim));
+                value.align     = Align::Right;
+                grid.cells.push_back(std::move(value));
+            };
+            constexpr int kColumns = 3; // the star, the name and the amount
+            PopupSection top{"Favorites", {}};
+            if (favorites.empty())
+                top.rows.push_back(LineOf("Click a currency's star to keep it here.", Tone::Dim));
+            else
+            {
+                PopupRow grid = Grid(kColumns, favorites.size() * kColumns);
+                for (const int c : favorites)
+                    add(grid, c);
+                top.rows.push_back(std::move(grid));
+            }
+            PopupSection all{"All Currencies", {}};
+            if (std::ranges::none_of(state.currencies, [](const std::optional<uint32_t>& a) { return a.has_value(); }))
+                all.rows.push_back(LineOf("Their amounts show once the server sends them.", Tone::Dim));
+            std::vector<int> order(kCurrencyCount);
+            for (int c = 0; c < kCurrencyCount; ++c)
+                order[static_cast<size_t>(c)] = c;
+            const auto byName = [](int a, int b) { return std::string_view(kCurrencyTable[a].name) < kCurrencyTable[b].name; };
+            for (const bool byAmount : {true, false})
+            {
+                // Most first, those held alike by name.
+                std::ranges::sort(order, [&](int a, int b) {
+                    const uint32_t x = amount(a).value_or(0), y = amount(b).value_or(0);
+                    return byAmount && x != y ? x > y : byName(a, b);
+                });
+                PopupTab tab{Text(byAmount ? "By Amount" : "Alphabetically"), {}};
+                PopupRow grid = Grid(kColumns, order.size() * kColumns);
+                for (const int c : order)
+                    add(grid, c);
+                grid.nested = true;
+                tab.rows.push_back(std::move(grid));
+                ScrollsBy(tab.rows.front(), state, all.heading + "/" + tab.name.text);
+                all.tabs.push_back(std::move(tab));
+            }
+            all.tab        = Picked(state, all);
+            popup.sections = ListOf(std::move(top), std::move(all));
+            return popup;
+        }
+
         // The regions each picked nation holds, a tab each. Your nation's say which outposts you have not run supplies to,
         // as far as overseers told.
         PopupSection ConquestSection(const BarState& state, const WidgetOptions& o)
@@ -1286,6 +1366,27 @@ namespace headsup
         return std::nullopt;
     }
 
+    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
+    {
+        if (!press.starts_with(kFavoritePress)) return false;
+        const std::string key(press.substr(std::string_view(kFavoritePress).size()));
+        if (!CurrencyOfKey(key)) return false;
+        // Your nation's points by their own key once it is known, so its star takes them off.
+        std::vector<std::string> favorites;
+        for (const std::string& held : settings.currencyFavorites)
+        {
+            const std::optional<int> yours = held == kYourConquestPoints ? NationPoints(nation) : std::nullopt;
+            std::string named = yours ? kCurrencyTable[*yours].key : held;
+            if (std::ranges::find(favorites, named) == favorites.end()) favorites.push_back(std::move(named));
+        }
+        if (const auto at = std::ranges::find(favorites, key); at != favorites.end())
+            favorites.erase(at);
+        else
+            favorites.push_back(key);
+        settings.currencyFavorites = std::move(favorites);
+        return true;
+    }
+
     bool StandingsShown(const Settings& settings)
     {
         if (Shown(settings, BarWidget::Zone)) return true;
@@ -1330,7 +1431,7 @@ namespace headsup
         needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather) || worldWeather ||
                      opened(BarWidget::Signet); // the popup says where it works
         needs.target     = shown(BarWidget::Target);
-        needs.gil        = shown(BarWidget::Gil);
+        needs.gil        = shown(BarWidget::Currency);
         needs.strip      = shown(BarWidget::GameHelp);
         // The Performance widget reads what its copies show on the panel, and everything for its popup.
         uint8_t perf = 0;
@@ -1338,7 +1439,7 @@ namespace headsup
             if (const PanelWidget performance{BarWidget::Performance, copy}; Shows(settings, performance))
                 perf |= settings.Widget(performance).perfParts;
         const bool perfPopup = opened(BarWidget::Performance);
-        needs.conquest   = opened(BarWidget::World);
+        needs.conquest   = opened(BarWidget::World) || opened(BarWidget::Currency);
         needs.frames     = (perf & PerfBit(PerfPart::Fps)) != 0 || perfPopup;
         needs.job        = shown(BarWidget::Job);
         needs.connection = (perf & kConnectionParts) != 0 || perfPopup;
@@ -1509,7 +1610,7 @@ namespace headsup
                 std::isfinite(*state.targetDistance))
                 w.title.push_back(Text(" (" + Printed("%.1f", *state.targetDistance) + ")", Tone::Dim));
             break;
-        case BarWidget::Gil:
+        case BarWidget::Currency:
         {
             // The picked currency; gil with its coin.
             const int picked = o.currency;
@@ -1690,23 +1791,7 @@ namespace headsup
             break;
         }
         case BarWidget::Target: return TargetPopup(state, settings);
-        case BarWidget::Gil:
-        {
-            // Gil, then every currency the server gave an amount of; those it has none of stay out.
-            popup.title = ListOf(Text("Currencies"));
-            PopupSection rows;
-            rows.rows.push_back(Labeled("Gil", Text(state.gil ? Grouped(*state.gil) : "-")));
-            bool sent = false;
-            for (int c = kGilCurrency + 1; c < kCurrencyCount; ++c)
-            {
-                const std::optional<uint32_t>& amount = state.currencies[c];
-                sent = sent || amount.has_value();
-                if (amount && *amount > 0) rows.rows.push_back(Labeled(kCurrencyTable[c].name, Text(Grouped(*amount))));
-            }
-            if (!sent) rows.rows.push_back(LineOf("The rest show once the server sends them.", Tone::Dim));
-            popup.sections = ListOf(std::move(rows));
-            break;
-        }
+        case BarWidget::Currency: return CurrencyPopup(state, settings);
         case BarWidget::Bags:
         {
             popup.title   = ListOf(Text("Bags"));

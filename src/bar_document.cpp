@@ -17,7 +17,7 @@ namespace headsup
     namespace
     {
         constexpr std::string_view kIconKind = "icon", kStripKind = "strip", kDiamondKind = "diamond", kCoinKind = "coin",
-                                   kStarKind = "star", kResetKind = "reset", kCogKind = "cog", kGameKind = "game",
+                                   kResetKind = "reset", kCogKind = "cog", kGameKind = "game",
                                    kItemKind = "item";
         // RmlUi blurs a glow by a Gaussian of this share of its width; the bar's shadow is a CSS blur radius, twice
         // its Gaussian's.
@@ -230,11 +230,6 @@ namespace headsup
         return std::string(kHostSource) + std::string(kCoinKind) + kSeparator + std::to_string(pixels);
     }
 
-    std::string StarSource(int pixels)
-    {
-        return std::string(kHostSource) + std::string(kStarKind) + kSeparator + std::to_string(pixels);
-    }
-
     std::string ItemSource(uint16_t item)
     {
         return std::string(kHostSource) + std::string(kItemKind) + kSeparator + std::to_string(item);
@@ -300,11 +295,11 @@ namespace headsup
             const int size = static_cast<int>(*pixels);
             return kind == kDiamondKind ? Diamond(size, *color) : kind == kResetKind ? ResetArrow(size, *color) : Cog(size, *color);
         }
-        if ((kind == kCoinKind || kind == kStarKind) && parts.size() == 2)
+        if (kind == kCoinKind && parts.size() == 2)
         {
             const std::optional<uint32_t> pixels = number(1);
             if (!pixels) return std::nullopt;
-            return kind == kCoinKind ? Coin(static_cast<int>(*pixels), kCoinColor) : Star(static_cast<int>(*pixels), kStarColor);
+            return Coin(static_cast<int>(*pixels), kCoinColor);
         }
         return std::nullopt;
     }
@@ -644,8 +639,9 @@ namespace headsup
             case PopupPiece::Kind::Star:
             {
                 const int pixels = WholePixels(piece.width);
-                rml += "<img class=\"p\" src=\"" + StarSource(pixels) + "\" style=\"" + place +
-                       size(static_cast<float>(pixels), static_cast<float>(pixels)) + "\"/>";
+                rml += "<img class=\"p\" src=\"" + IconSource(Icon::Star) + "\" style=\"" + place +
+                       size(static_cast<float>(pixels), static_cast<float>(pixels)) + "image-color:" + RcssColor(kStarColor) +
+                       ";\"/>";
                 break;
             }
             case PopupPiece::Kind::Rule:

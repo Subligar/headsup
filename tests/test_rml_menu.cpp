@@ -1898,17 +1898,17 @@ TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
 {
     Window window;
     window.Page("widgets");
-    const PanelWidget copy{BarWidget::Gil, 1};
-    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil)));
+    const PanelWidget copy{BarWidget::Currency, 1};
+    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)));
     CHECK(!window.Shows("widgets-widgets-remove-copy-gil"));
-    CHECK(window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil)) + "-clone"));
+    CHECK(window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)) + "-clone"));
     CHECK(Placed(window.settings.barSections, copy));
     CHECK(window.Shows("widgets-layout-chip-" + std::to_string(SlotOf(copy))));
     // The clone's settings show at once: a currency picked there is the clone's.
     CHECK(window.Shows("widgets-widgets-remove-copy-gil-2"));
     window.Click("widgets-widgets-currency-gil-2");
     CHECK(window.Click("widgets-widgets-currency-gil-2-o-1"));
-    CHECK(window.settings.Widget(copy).currency == 1 && window.settings.Widget(BarWidget::Gil).currency == kGilCurrency);
+    CHECK(window.settings.Widget(copy).currency == 1 && window.settings.Widget(BarWidget::Currency).currency == kGilCurrency);
     CHECK(window.Click("widgets-widgets-remove-copy-gil-2"));
     CHECK(!Placed(window.settings.barSections, copy));
     CHECK_EQ(window.Said(), "");
@@ -1918,16 +1918,16 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
 {
     Window window;
     window.Page("widgets");
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Gil));
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
     CHECK(!window.Shows("widgets-widgets-currency-gil"));
     window.Click(chip);
-    CHECK(window.shown == BarWidget::Gil && window.Shows("widgets-widgets-currency-gil"));
+    CHECK(window.shown == BarWidget::Currency && window.Shows("widgets-widgets-currency-gil"));
     CHECK(window.Find(chip)->IsClassSet("picked"));
     // In a document of their own over the popup's room, as wide as it and no wider, which say how tall they are.
     Rml::Element* view = window.Find(kMenuViewBodyId);
     CHECK(view->GetOwnerDocument() != window.Find(chip)->GetOwnerDocument());
     CHECK(view->GetAbsoluteOffset(Rml::BoxArea::Border) == Rml::Vector2f(Window::kSettingsX, Window::kSettingsY));
-    const std::optional<SettingsRoom> room = window.menu.RoomFor({BarWidget::Gil}, window.settings);
+    const std::optional<SettingsRoom> room = window.menu.RoomFor({BarWidget::Currency}, window.settings);
     CHECK(room && std::fabs(view->GetBox().GetSize(Rml::BoxArea::Border).x - room->width) < 0.5f);
     CHECK(room->height > 0.0f && room->height == std::ceil(view->GetFirstChild()->GetBox().GetSize(Rml::BoxArea::Border).y));
     CHECK(!window.menu.RoomFor({BarWidget::Zone}, window.settings)->height);
@@ -1937,7 +1937,7 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     CHECK(!window.Shows(chip) && window.Shows("widgets-widgets-currency-gil"));
     window.Click("widgets-widgets-currency-gil");
     CHECK(window.Click("widgets-widgets-currency-gil-o-1"));
-    CHECK(window.settings.Widget(BarWidget::Gil).currency == 1);
+    CHECK(window.settings.Widget(BarWidget::Currency).currency == 1);
     window.menu.open = true;
     window.Frames(2);
     window.Click(chip);

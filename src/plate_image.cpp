@@ -180,8 +180,6 @@ namespace headsup
         // The middle stop of a strip's gradient sits 55% of the way down, as the mockup's CSS has it.
         constexpr float kStripMiddle = 0.55f;
         constexpr float kRimShade    = 0.6f; // a coin's rim, as a share of its color
-        constexpr int kStarPoints    = 5;
-        constexpr float kStarNotch   = 0.381966f; // a pentagram's notches, (3 - sqrt 5) / 2 of its points' radius
         constexpr int kPixelSamples  = 8;         // across a pixel, each way: the star's and the reset arrow's
         constexpr float kPi          = 3.14159265f;
         // The reset arrow, in shares of its square: its ring's middle from the center and its thickness, the eighth
@@ -547,32 +545,6 @@ namespace headsup
                 Paint paint;
                 paint.Add(disc - inner, rim);
                 paint.Add(inner, color);
-                image.argb[static_cast<size_t>(y * s + x)] = paint.Color();
-            }
-        return image;
-    }
-
-    Image Star(int size, uint32_t color)
-    {
-        const int s = std::max(1, size);
-        Image image{s, s, std::vector<uint32_t>(static_cast<size_t>(s) * static_cast<size_t>(s), 0)};
-        const float half = static_cast<float>(s) / 2.0f, sector = kPi / kStarPoints; // from a point to its notch
-        const float notchX = half * kStarNotch * std::sin(sector), notchY = half * kStarNotch * std::cos(sector);
-        // From the center, x to the right and y up. Folded into the sector between the top point and the notch beside
-        // it, the star is the center's side of the line through those two.
-        const auto inside = [&](float x, float y) {
-            float angle = std::fmod(std::abs(std::atan2(x, y)), 2.0f * sector);
-            if (angle > sector) angle = 2.0f * sector - angle;
-            const float radius = std::hypot(x, y);
-            return notchX * (radius * std::cos(angle) - half) - (notchY - half) * radius * std::sin(angle) <= 0.0f;
-        };
-        // From the middle, with y up.
-        const auto centered = [&](float x, float y) { return inside(x - half, half - y); };
-        for (int y = 0; y < s; ++y)
-            for (int x = 0; x < s; ++x)
-            {
-                Paint paint;
-                paint.Over(Covered(x, y, kPixelSamples, centered), color);
                 image.argb[static_cast<size_t>(y * s + x)] = paint.Color();
             }
         return image;

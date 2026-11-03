@@ -56,13 +56,15 @@ namespace headsup
         bool tinted = false; // Icon: one of HeadsUp's own white ones, drawn in its span's color
     };
 
-    // Where a card's tab is, from the popup's top-left corner, to click: its key the card's heading.
+    // Where a card's tab is, from the popup's top-left corner, to click: its key the card's heading. Or a pressable
+    // cell's, whose tab is what a press on it tells the plugin.
     struct PopupTabChip
     {
         std::string key;
         float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f;
         size_t line = 0;
         std::string tab;
+        bool press = false;
     };
 
     // A socket that shows only some of its lines, from the popup's top-left corner, and how many lines it scrolls.

@@ -10,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace headsup
@@ -124,6 +125,7 @@ namespace headsup
         std::string key;
         BarRect rect;
         std::string tab;
+        bool press = false; // a pressable cell: a press tells the plugin its tab
     };
     // A part of the open popup the wheel scrolls, where it was drawn, and how many lines it scrolls.
     struct BarScroll
@@ -165,6 +167,8 @@ namespace headsup
         bool Press(float x, float y, bool left);
         // The tab picked last in each card since loading, by the card's heading.
         const std::map<std::string, std::string>& PickedTabs() const { return m_Tabs; }
+        // What the presses on pressable cells since the last call told, oldest first.
+        std::vector<std::string> TakePresses() { return std::exchange(m_Presses, {}); }
         bool Over(float x, float y) const;
         // Inside the open popup, which is drawn over Ashita's windows.
         bool InPopup(float x, float y) const { return Open() && m_Popup.Contains(x, y); }
@@ -204,6 +208,7 @@ namespace headsup
         BarRect m_Popup;
         std::vector<BarTabChip> m_Chips;
         std::map<std::string, std::string> m_Tabs;
+        std::vector<std::string> m_Presses;
         std::vector<BarScroll> m_Scrolls;
         BarRect m_PinChip, m_CogChip;
         struct Drag

@@ -35,7 +35,7 @@ namespace headsup
         Weather,
         VanaTime,
         Target,
-        Gil,
+        Currency,
         Bags,
         EarthTime,
         GameHelp,
@@ -96,7 +96,7 @@ namespace headsup
                w != BarWidget::GameHelp && w != BarWidget::VanaTime && w != BarWidget::Target &&
                w != BarWidget::Zone;
     }
-    constexpr bool HasIcons(BarWidget w) { return w == BarWidget::Weather || w == BarWidget::Gil || w == BarWidget::World; }
+    constexpr bool HasIcons(BarWidget w) { return w == BarWidget::Weather || w == BarWidget::Currency || w == BarWidget::World; }
 
     // Where a widget's second line goes when the bar is too short for two: nowhere, or beside its title.
     enum class SubtitlePlace : uint8_t

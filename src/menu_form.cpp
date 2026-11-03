@@ -600,7 +600,7 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::Currency:
-                    if (kind == BarWidget::Gil)
+                    if (kind == BarWidget::Currency)
                         form.NumberDropdown(label.c_str(), o.currency, kGilCurrency, kCurrencyCount - 1,
                             [](int currency) { return std::string(kCurrencyTable[currency].name); }, row.tip);
                     break;

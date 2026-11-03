@@ -16,7 +16,7 @@ namespace headsup
         constexpr BarWidget kDefaultLeft[]   = {BarWidget::Zone, BarWidget::Weather, BarWidget::VanaTime, BarWidget::Job,
             BarWidget::Party, BarWidget::Signet, BarWidget::World};
         constexpr BarWidget kDefaultCenter[] = {BarWidget::Target};
-        constexpr BarWidget kDefaultRight[]  = {BarWidget::Gil, BarWidget::Bags, BarWidget::Performance, BarWidget::EarthTime};
+        constexpr BarWidget kDefaultRight[]  = {BarWidget::Currency, BarWidget::Bags, BarWidget::Performance, BarWidget::EarthTime};
         static_assert(std::size(kDefaultLeft) + std::size(kDefaultCenter) + std::size(kDefaultRight) ==
                       kPlacedWidgetCount);
 

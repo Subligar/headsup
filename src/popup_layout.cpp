@@ -101,6 +101,12 @@ namespace headsup
                 size_t parts = 1;                // the pieces after its frame: its icon, if it has one, and its name
             };
             std::vector<Chip> chips;
+            struct Press
+            {
+                std::string tells;
+                float x, y, width, height; // from the card's top-left
+            };
+            std::vector<Press> presses; // pressable cells
             std::vector<size_t> sockets; // pieces to widen to the card's inside once its width is known
             struct Anchor
             {
@@ -352,6 +358,11 @@ namespace headsup
                     {
                         const float s = unit * kCellIcon, mark = unit * kMark;
                         b.pieces.push_back(PopupPiece{PopupPiece::Kind::Icon, cx, cy, s, s, {}, PopupFont::Text, *cell.icon});
+                        if (cell.tint)
+                        {
+                            b.pieces.back().tinted = true;
+                            b.pieces.back().span   = *cell.tint;
+                        }
                         if (cell.immune)
                             b.pieces.push_back(PopupPiece{PopupPiece::Kind::ImmuneMark, cx + s - mark, cy + s - mark, mark,
                                 mark, {kTimesSign, Tone::Immune, 0}});
@@ -373,6 +384,8 @@ namespace headsup
                         b.pieces.push_back(PopupPiece{PopupPiece::Kind::Star, cx, sy, s, s, {}});
                         cx += s;
                     }
+                    if (!cell.press.empty()) b.presses.push_back(
+                            Block::Press{cell.press, x, y, grid ? columns[i % columns.size()] : cells[i].width, cells[i].height});
                     if (pair && i == 1)
                     {
                         b.values.push_back(Block::Value{first, b.pieces.size(), cx, row.nested ? inset : 0.0f});
@@ -425,6 +438,9 @@ namespace headsup
             for (Block::Chip& chip : b.chips)
                 l.chips.push_back(PopupTabChip{std::move(chip.key), x + chip.left, y + chip.y, chip.width, chip.height, line,
                     std::move(chip.tab)});
+            for (Block::Press& press : b.presses)
+                l.chips.push_back(PopupTabChip{{}, x + press.x, y + press.y, press.width, press.height, line,
+                    std::move(press.tells), true});
             for (Block::Scroll& scroll : b.scrolls)
                 l.scrolls.push_back(PopupScroll{std::move(scroll.key), x + b.pad, y + scroll.y, width - 2.0f * b.pad,
                     scroll.height, line, scroll.most,

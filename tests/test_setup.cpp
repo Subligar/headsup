@@ -141,7 +141,7 @@ TEST(a_top_panel_preset_shows_its_widgets_and_no_others)
     CHECK(minimal.showBar);
     // Hidden keeps the widgets for the panel turned back on.
     const Settings hidden = With("panel", "hidden", minimal);
-    CHECK(!hidden.showBar && hidden.Widget(PanelWidget{BarWidget::Zone}).on && !hidden.Widget(PanelWidget{BarWidget::Gil}).on);
+    CHECK(!hidden.showBar && hidden.Widget(PanelWidget{BarWidget::Zone}).on && !hidden.Widget(PanelWidget{BarWidget::Currency}).on);
     // Full is a new install's.
     CHECK(With("panel", "full", minimal) == Settings{});
 }
@@ -213,10 +213,10 @@ TEST(the_widget_groups_hold_every_widget_once)
 TEST(a_widget_turned_off_takes_its_copies_with_it_and_turned_on_shows_its_first)
 {
     Settings s;
-    const auto copy = CloneWidget(s, BarWidget::Gil);
+    const auto copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value() && Shows(s, *copy));
-    SetWidgetShown(s, BarWidget::Gil, false);
-    CHECK(!Shown(s, BarWidget::Gil));
+    SetWidgetShown(s, BarWidget::Currency, false);
+    CHECK(!Shown(s, BarWidget::Currency));
     SetWidgetShown(s, BarWidget::Party, true);
     CHECK(Shows(s, PanelWidget{BarWidget::Party}));
 }

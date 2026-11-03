@@ -375,7 +375,7 @@ helpBarY=8.0000
         s.showBar      = false;
         s.barTheme     = BarTheme::UmbraDark;
         s.barSeparators = BarSeparators::None;
-        s.Widget(BarWidget::Gil).currency   = *CurrencyOfKey("allied_notes");
+        s.Widget(BarWidget::Currency).currency   = *CurrencyOfKey("allied_notes");
         s.Widget(BarWidget::EarthTime).clockServerTime = true; // the file's Server time widget was on
         s.menuFont         = "Tahoma";
         s.menuFontSize     = 21; // 125 percent of Ashita's 18 pixels, in Tahoma, which was drawn at 0.95 of its size
@@ -384,7 +384,7 @@ helpBarY=8.0000
         s.helpBarX         = 12;
         s.helpBarY         = 8;
         s.Widget(BarWidget::Target).secondLine = false;
-        s.Widget(BarWidget::Gil).icons         = false;
+        s.Widget(BarWidget::Currency).icons         = false;
         s.Widget(BarWidget::Job).expBar     = ExpBarPlace::Beside;
         s.Widget(BarWidget::Job).jobNames   = false;
         s.Widget(BarWidget::EarthTime).clock24    = false;
@@ -612,7 +612,7 @@ TEST(clamp_bounds_every_field)
     s.badgeFontName     = "";
     s.barHeight         = 200;
     s.barTheme          = static_cast<BarTheme>(9);
-    s.Widget(BarWidget::Gil).currency       = kCurrencyCount;
+    s.Widget(BarWidget::Currency).currency       = kCurrencyCount;
     const Color wild{{2.0f, -1.0f, 0.5f}};
     s.weakBadgeColor = s.resistBadgeColor = s.rankBadgeColor = s.immuneBadgeColor = s.cursorEdgeColor.custom = wild;
     s.cursorColor     = ColorPick{ColorSource::Game, wild}; // the game's name color is not the cursor's to take
@@ -646,7 +646,7 @@ TEST(clamp_bounds_every_field)
     CHECK(c.statusBadges[7] == (StatusBadgeRule{true, kNoWeakRank, 1}));
     CHECK(c.badgeFontName.empty()); // no font of its own: the default font
     CHECK_EQ(c.barHeight, kMaxBarHeight);
-    CHECK(c.barTheme == BarTheme::PhoenixGold && c.Widget(BarWidget::Gil).currency == kGilCurrency);
+    CHECK(c.barTheme == BarTheme::PhoenixGold && c.Widget(BarWidget::Currency).currency == kGilCurrency);
 }
 
 TEST(the_target_cursor_rises_or_sinks_up_to_twenty_pixels)
@@ -1086,7 +1086,7 @@ TEST(a_theme_that_is_not_one_keeps_the_default_and_old_files_get_the_bar)
     store.values["barTheme"]    = "purple";
     store.values["barCurrency"] = "dollars";
     const Settings s         = LoadSettings(store);
-    CHECK(s.barTheme == BarTheme::PhoenixGold && s.Widget(BarWidget::Gil).currency == kGilCurrency);
+    CHECK(s.barTheme == BarTheme::PhoenixGold && s.Widget(BarWidget::Currency).currency == kGilCurrency);
     CHECK(s.showBar);
     for (int w = 0; w < kBarWidgetCount; ++w) // a widget added to BarWidget takes its default from kBarWidgetDefaults
         CHECK(s.Widget(static_cast<BarWidget>(w)).on == kBarWidgetDefaults[w]);
@@ -2738,7 +2738,7 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     SaveSettings(s, plain);
     for (const auto& [key, value] : plain.values)
         CHECK(key.find("_2") == std::string::npos);
-    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value() && s.Widget(*copy).on);
     s.Widget(*copy).currency = 3;
     s.Widget(*copy).secondLine = false;
@@ -2752,20 +2752,20 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     // Taken off, its settings go: put back, it is new.
     RemoveWidgetCopy(s, *copy);
     CHECK(!Placed(s.barSections, *copy) && !Shows(s, *copy));
-    CHECK(CloneWidget(s, BarWidget::Gil) == copy && s.Widget(*copy) == NewWidget(*copy));
+    CHECK(CloneWidget(s, BarWidget::Currency) == copy && s.Widget(*copy) == NewWidget(*copy));
 }
 
 TEST(a_clone_starts_with_every_setting_of_the_widget_it_copies_shown_and_combined_with_nothing)
 {
     Settings s;
-    WidgetOptions& gil = s.Widget(BarWidget::Gil);
+    WidgetOptions& gil = s.Widget(BarWidget::Currency);
     gil.on             = false;
     gil.currency       = 3;
     gil.secondLine     = false;
     gil.spacing        = 12;
     gil.titleFont      = "Cinzel";
     gil.combine        = PanelWidget{BarWidget::Bags};
-    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value());
     WidgetOptions expected = gil;
     expected.on            = true;
@@ -2922,7 +2922,7 @@ TEST(a_widgets_own_fonts_and_text_size_are_kept_and_default_to_the_panels)
 TEST(the_target_widgets_background_is_on_by_default_and_kept_off_once_turned_off)
 {
     Settings s;
-    CHECK(s.Widget(BarWidget::Target).background && !s.Widget(BarWidget::Gil).background);
+    CHECK(s.Widget(BarWidget::Target).background && !s.Widget(BarWidget::Currency).background);
     s.Widget(BarWidget::Target).background = false;
     MapStore store;
     SaveSettings(s, store);
@@ -3039,4 +3039,19 @@ TEST(the_fishing_bar_keeps_its_switch_width_and_place)
     store.values["fishBarX"]     = "-300";
     const Settings odd = LoadSettings(store);
     CHECK(odd.fishBarWidth == kMinFishBarWidth && odd.fishBarX == kFishBarUnplaced);
+}
+
+TEST(the_currency_favorites_are_kept_in_order_and_an_unknown_or_repeated_one_is_left_out)
+{
+    Settings s;
+    CHECK((s.currencyFavorites == std::vector<std::string>{"gil", kYourConquestPoints})); // gil and your nation's points
+    s.currencyFavorites = {"sparks", "gil"};
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["currencyFavorites"], "sparks gil");
+    CHECK((LoadSettings(store).currencyFavorites == std::vector<std::string>{"sparks", "gil"}));
+    store.values["currencyFavorites"] = "nothing sparks cp_nation sparks";
+    CHECK((LoadSettings(store).currencyFavorites == std::vector<std::string>{"sparks", kYourConquestPoints}));
+    store.values["currencyFavorites"] = "";
+    CHECK(LoadSettings(store).currencyFavorites.empty()); // every star taken off
 }

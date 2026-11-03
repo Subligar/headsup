@@ -148,6 +148,15 @@ namespace headsup
         // Saved files from before the cursor scaled on its own, when it scaled with the names, take the names'.
         constexpr const char* kScaleCursorKey = "scaleCursor";
         constexpr const char* kKeepPointerKey = "keepPointerKeys"; // hex virtual-key codes, a space apart
+        constexpr const char* kCurrencyFavoritesKey = "currencyFavorites"; // kCurrencyTable's keys, a space apart
+
+        std::string SpaceApart(const std::vector<std::string>& words)
+        {
+            std::string text;
+            for (const std::string& word : words)
+                text += (text.empty() ? "" : " ") + word;
+            return text;
+        }
         constexpr const char* kPinnedWindowsKey = "pinnedWindows"; // "equip:100,200 statcom:0,40"
         constexpr const char* kHiddenWindowsKey = "hiddenWindows"; // "statcom inventor"
         constexpr const char* kShiftVanillaUiKey = "shiftVanillaUi";
@@ -1338,7 +1347,7 @@ namespace headsup
             o.combineInPopup = flag(widget + kCombineInPopupSuffix, o.combineInPopup);
             switch (w.kind)
             {
-            case BarWidget::Gil:
+            case BarWidget::Currency:
                 if (const std::optional<int> currency = CurrencyOfKey(text(kBarCurrencyKey))) o.currency = *currency;
                 break;
             case BarWidget::Bags: o.bag = number(kBarBagKey, o.bag); break;
@@ -1444,7 +1453,7 @@ namespace headsup
             flag(widget + kCombineInPopupSuffix, o.combineInPopup);
             switch (w.kind)
             {
-            case BarWidget::Gil: text(kBarCurrencyKey, kCurrencyTable[o.currency].key); break;
+            case BarWidget::Currency: text(kBarCurrencyKey, kCurrencyTable[o.currency].key); break;
             case BarWidget::Bags: StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag)); break;
             case BarWidget::World:
                 StoreFloat(store, CopyKey(kBarNationsKey, w), static_cast<float>(o.nations));
@@ -1678,6 +1687,15 @@ namespace headsup
             s.barTitleFont  = store.GetString(kBarTitleFontKey, "");
             s.barTextFont   = store.GetString(kBarTextFontKey, "");
             s.scaleCursor   = store.GetBool(kScaleCursorKey, file ? s.scaleWithDistance : s.scaleCursor);
+            {
+                // An unknown or repeated key is left out.
+                std::istringstream words(store.GetString(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str()));
+                s.currencyFavorites.clear();
+                for (std::string key; words >> key;)
+                    if ((CurrencyOfKey(key) || key == kYourConquestPoints) && std::ranges::find(s.currencyFavorites, key) ==
+                                                                                 s.currencyFavorites.end())
+                        s.currencyFavorites.push_back(key);
+            }
             std::istringstream keys(store.GetString(kKeepPointerKey, ""));
             for (std::string key; keys >> key;)
             {
@@ -1809,6 +1827,7 @@ namespace headsup
             keys += (keys.empty() ? "" : " ") + std::string(hex);
         }
         store.Set(kKeepPointerKey, keys.c_str());
+        store.Set(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str());
         for (int i = 0; i < kStatusRankCount; ++i)
         {
             const std::string base = kStatusKeys[i];

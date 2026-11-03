@@ -493,7 +493,8 @@ namespace headsup
         m_Popup->SetClass(kHiddenClass, hidden);
         m_Popup->SetClass(kOpenClass, !hidden);
         for (const PopupTabChip& chip : pl.chips)
-            chips.push_back(BarTabChip{chip.key, BarRect{rect.x + chip.x, rect.y + chip.y, chip.width, chip.height}, chip.tab});
+            chips.push_back(BarTabChip{chip.key, BarRect{rect.x + chip.x, rect.y + chip.y, chip.width, chip.height}, chip.tab,
+                chip.press});
         pin = pl.pin.width > 0.0f ? BarRect{rect.x + pl.pin.x, rect.y + pl.pin.y, pl.pin.width, pl.pin.height} : BarRect{};
         cog = pl.cog.width > 0.0f ? BarRect{rect.x + pl.cog.x, rect.y + pl.cog.y, pl.cog.width, pl.cog.height} : BarRect{};
         if (input.SettingsShown() == open && !hidden)

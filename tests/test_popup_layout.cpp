@@ -962,6 +962,22 @@ TEST(a_grid_cell_sits_against_its_columns_left_middle_or_right_as_it_asks)
     CHECK(Near(e->x + e->width, head->x + head->width));
 }
 
+TEST(a_pressable_cell_is_a_chip_over_it_that_tells_its_press_and_its_tinted_icon_takes_its_color)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupCell star;
+    star.icon  = Icon::StarEmpty;
+    star.tint  = Text("", Tone::Dim);
+    star.press = "favorite gil";
+    const PopupLayout l = LayoutPopup(OneRow(PopupRow{RowKind::Line, 0, {star, Word("Gil")}}), m, BarShape::Pills, false, Fake);
+    const auto chip = std::ranges::find_if(l.chips, [](const PopupTabChip& c) { return c.press; });
+    CHECK(chip != l.chips.end() && chip->tab == "favorite gil");
+    const auto icon = std::ranges::find_if(l.pieces, [](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::StarEmpty; });
+    CHECK(icon != l.pieces.end() && icon->tinted && icon->span.tone == Tone::Dim);
+    CHECK(Near(chip->x, icon->x) && Near(chip->y, icon->y) && chip->width >= icon->width && chip->height >= icon->height);
+    CHECK(chip->x + chip->width < Find(l, "Gil")->x + 0.01f); // the star's cell alone
+}
+
 TEST(a_tabs_icon_goes_before_its_name_inside_its_chip)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);

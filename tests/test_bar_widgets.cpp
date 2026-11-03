@@ -619,9 +619,9 @@ TEST(gil_bags_and_earth_time)
 {
     Settings settings;
     BarState state;
-    CHECK(Joined(BarWidgetContent(BarWidget::Gil, state, settings).title) == "-");
+    CHECK(Joined(BarWidgetContent(BarWidget::Currency, state, settings).title) == "-");
     state.gil             = 1234567;
-    const WidgetContent g = BarWidgetContent(BarWidget::Gil, state, settings);
+    const WidgetContent g = BarWidgetContent(BarWidget::Currency, state, settings);
     CHECK(g.coin && Joined(g.title) == "1,234,567" && g.subtitle.empty() && g.hasPopup);
     state.bags[0]         = BagCount{45, 80};
     state.bags[5]         = BagCount{30, 30}; // a full satchel
@@ -661,7 +661,7 @@ TEST(each_widget_follows_its_switch_and_a_switched_off_one_builds_nothing)
     Settings settings;
     BarState state;
     state.zone = 103;
-    CHECK(BarWidgetContent(BarWidget::Gil, state, settings).shown);
+    CHECK(BarWidgetContent(BarWidget::Currency, state, settings).shown);
     for (WidgetOptions& each : settings.widgets)
         each.on = false;
     for (int i = 0; i < kBarWidgetCount; ++i)
@@ -1624,27 +1624,82 @@ TEST(the_signet_widget_shows_only_while_one_is_on_and_says_where_it_works)
           "Here: West Aht Urhgan, where it works");
 }
 
-TEST(the_gil_widget_shows_the_picked_currency_and_its_popup_every_one_you_have)
+TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by_name)
 {
+    // A grid's lines, its cells' texts a space apart.
+    const auto gridLines = [](const PopupRow& grid) {
+        std::vector<std::string> lines;
+        for (size_t i = 0; i < grid.cells.size(); i += static_cast<size_t>(grid.columns))
+        {
+            std::string line;
+            for (size_t c = i; c < i + static_cast<size_t>(grid.columns); ++c)
+                if (const std::string text = Joined(grid.cells[c].text); !text.empty()) line += (line.empty() ? "" : " ") + text;
+            lines.push_back(line);
+        }
+        return lines;
+    };
     Settings settings;
     BarState state;
-    state.gil = 4751;
-    PopupContent p = BarPopupContent(BarWidget::Gil, state, settings);
-    CHECK(Joined(p.title) == "Currencies" &&
-          Lines(p.sections[0]) == (std::vector<std::string>{"Gil 4,751", "The rest show once the server sends them."}));
-
+    state.gil    = 4751;
+    state.nation = Nation::Bastok;
+    PopupContent p = BarPopupContent(BarWidget::Currency, state, settings);
+    CHECK(Joined(p.title) == "Currencies" && p.sections.size() == 2 && p.sections[0].heading == "Favorites");
+    // By default gil and your nation's conquest points, each starred; a star's press takes it off.
+    const PopupRow& top = p.sections[0].rows[0];
+    CHECK((gridLines(top) == std::vector<std::string>{"Gil 4,751", "Conquest Points (Bastok) -"}));
+    CHECK(top.cells[0].icon == Icon::Star && top.cells[0].press == "favorite gil" && top.cells[2].align == Align::Right);
+    const PopupSection& all = p.sections[1];
+    CHECK(all.tabs.size() == 2 && all.tabs[0].name.text == "By Amount" && all.tabs[1].name.text == "Alphabetically");
+    CHECK((Lines(all) == std::vector<std::string>{"Their amounts show once the server sends them."}));
     const int notes = *CurrencyOfKey("allied_notes"), sparks = *CurrencyOfKey("sparks");
-    settings.Widget(BarWidget::Gil).currency = notes;
-    WidgetContent w      = BarWidgetContent(BarWidget::Gil, state, settings);
-    CHECK(!w.coin && Joined(w.title) == "-" && Joined(w.subtitle) == "Allied Notes"); // not sent yet
     for (std::optional<uint32_t>& amount : state.currencies)
         amount = 0; // the server sent them all, most at none
     state.currencies[notes]  = 12000;
     state.currencies[sparks] = 350;
-    w = BarWidgetContent(BarWidget::Gil, state, settings);
+    p = BarPopupContent(BarWidget::Currency, state, settings);
+    // Most first, those held alike by name; every currency is listed, unstarred unless a favorite.
+    const PopupRow& byAmount = p.sections[1].tabs[0].rows[0];
+    std::vector<std::string> lines = gridLines(byAmount);
+    CHECK(lines.size() == static_cast<size_t>(kCurrencyCount) && byAmount.nested && !byAmount.scroll.empty());
+    CHECK((std::vector<std::string>(lines.begin(), lines.begin() + 4) ==
+           std::vector<std::string>{"Allied Notes 12,000", "Gil 4,751", "Sparks of Eminence 350", "Ancient Beastcoins 0"}));
+    CHECK(byAmount.cells[0].icon == Icon::StarEmpty && byAmount.cells[3].icon == Icon::Star); // Gil's
+    state.pickedTabs["All Currencies"] = "Alphabetically";
+    p = BarPopupContent(BarWidget::Currency, state, settings);
+    CHECK(p.sections[1].tab == 1);
+    lines = gridLines(p.sections[1].tabs[1].rows[0]);
+    CHECK(lines[0] == "Allied Notes 12,000" && lines[1] == "Ancient Beastcoins 0");
+}
+
+TEST(a_currencys_star_adds_it_to_the_favorites_and_takes_it_off)
+{
+    Settings s;
+    CHECK(ApplyPopupPress(s, "favorite sparks", Nation::Bastok));
+    CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "cp_bastok", "sparks"}));
+    CHECK(ApplyPopupPress(s, "favorite cp_bastok", Nation::Bastok));
+    CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "sparks"}));
+    CHECK(!ApplyPopupPress(s, "favorite nothing", Nation::Bastok) && !ApplyPopupPress(s, "something else", Nation::Bastok));
+    CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "sparks"}));
+    // Before your nation is known, its points stay yours, whichever nation that turns out to be.
+    Settings early;
+    CHECK(ApplyPopupPress(early, "favorite sparks", Nation::None));
+    CHECK((early.currencyFavorites == std::vector<std::string>{"gil", kYourConquestPoints, "sparks"}));
+}
+
+TEST(the_currency_widget_shows_the_picked_currency)
+{
+    Settings settings;
+    BarState state;
+    state.gil = 4751;
+    const int notes = *CurrencyOfKey("allied_notes");
+    settings.Widget(BarWidget::Currency).currency = notes;
+    WidgetContent w      = BarWidgetContent(BarWidget::Currency, state, settings);
+    CHECK(!w.coin && Joined(w.title) == "-" && Joined(w.subtitle) == "Allied Notes"); // not sent yet
+    for (std::optional<uint32_t>& amount : state.currencies)
+        amount = 0; // the server sent them all, most at none
+    state.currencies[notes] = 12000;
+    w = BarWidgetContent(BarWidget::Currency, state, settings);
     CHECK(Joined(w.title) == "12,000" && w.hasPopup);
-    p = BarPopupContent(BarWidget::Gil, state, settings);
-    CHECK(Lines(p.sections[0]) == (std::vector<std::string>{"Gil 4,751", "Sparks of Eminence 350", "Allied Notes 12,000"}));
 }
 
 TEST(the_target_says_how_far_it_is_after_its_name_unless_show_distance_is_off)
@@ -1689,8 +1744,8 @@ TEST(each_widget_can_drop_its_second_line_or_its_icons)
     settings.Widget(BarWidget::Target).icons      = false;
     w = BarWidgetContent(BarWidget::Target, state, settings);
     CHECK(!w.subtitle.empty() && !w.icons.empty());
-    settings.Widget(BarWidget::Gil).icons = false;
-    w = BarWidgetContent(BarWidget::Gil, state, settings);
+    settings.Widget(BarWidget::Currency).icons = false;
+    w = BarWidgetContent(BarWidget::Currency, state, settings);
     CHECK(!w.coin && Joined(w.title) == "100");
 }
 
@@ -2150,10 +2205,10 @@ TEST(each_copy_of_a_widget_shows_by_its_own_settings)
     BarState state;
     state.gil = 1234;
     state.currencies[3] = 50;
-    const std::optional<PanelWidget> copy = CloneWidget(settings, BarWidget::Gil);
+    const std::optional<PanelWidget> copy = CloneWidget(settings, BarWidget::Currency);
     CHECK(copy.has_value());
     settings.Widget(*copy).currency = 3;
-    const WidgetContent first = BarWidgetContent(BarWidget::Gil, state, settings), second = BarWidgetContent(*copy, state, settings);
+    const WidgetContent first = BarWidgetContent(BarWidget::Currency, state, settings), second = BarWidgetContent(*copy, state, settings);
     CHECK(first.coin && !second.coin && second.title.front().text == "50");
     // A copy not on the panel shows nothing, whatever it was set to.
     RemoveWidgetCopy(settings, *copy);
@@ -2606,11 +2661,11 @@ TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with
 {
     Settings settings;
     BarState state;
-    settings.Widget(BarWidget::Bags).combine = PanelWidget{BarWidget::Gil};
-    settings.Widget(BarWidget::Gil).combine  = PanelWidget{BarWidget::EarthTime};
+    settings.Widget(BarWidget::Bags).combine = PanelWidget{BarWidget::Currency};
+    settings.Widget(BarWidget::Currency).combine  = PanelWidget{BarWidget::EarthTime};
     settings.Widget(BarWidget::EarthTime).on = false; // in the pill, but shown nowhere
     const PopupContent bags = BarPopupContent(BarWidget::Bags, state, settings);
-    const PopupContent gil  = BarPopupContent(BarWidget::Gil, state, settings);
+    const PopupContent gil  = BarPopupContent(BarWidget::Currency, state, settings);
     const PopupContent both = PanelPopupContent(BarWidget::Bags, state, settings);
     std::vector<Span> title = bags.title;
     title.push_back(Span{kDot, Tone::Dim});
@@ -2658,9 +2713,9 @@ TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)
     settings.Widget(BarWidget::Zone).on       = true;
     settings.Widget(BarWidget::World).on      = true;
     settings.Widget(BarWidget::Zone).combine  = PanelWidget{BarWidget::World};
-    settings.Widget(BarWidget::Gil).combine   = PanelWidget{BarWidget::Bags};
+    settings.Widget(BarWidget::Currency).combine   = PanelWidget{BarWidget::Bags};
     CHECK(NeedsOf(settings, BarWidget::Zone).conquest);
-    CHECK(NeedsOf(settings, BarWidget::Gil).containers == kContainerCount);
+    CHECK(NeedsOf(settings, BarWidget::Currency).containers == kContainerCount);
     CHECK(!NeedsOf(settings, BarWidget::Weather).conquest);
 }
 

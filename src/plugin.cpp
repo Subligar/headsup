@@ -888,9 +888,9 @@ public:
             m_GameState.ConquestRequested(now);
         }
         // Opening the Currencies menu asks for them; HeadsUp asks the same, as for the conquest standings.
-        const bool gilOpen = opened(headsup::BarWidget::Gil);
+        const bool gilOpen = opened(headsup::BarWidget::Currency);
         if (m_GameState.CurrencyRequestDue(now,
-                g_BarOn && headsup::Shown(m_Settings, headsup::BarWidget::Gil) &&
+                g_BarOn && headsup::Shown(m_Settings, headsup::BarWidget::Currency) &&
                     m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
                 gilOpen))
         {
@@ -923,6 +923,10 @@ public:
         if (m_Rml.Running())
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
+        for (const std::string& press : m_BarInput.TakePresses())
+            if (headsup::ApplyPopupPress(m_Settings, press,
+                    static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1)))
+                m_SettingsChangedAt = now;
         if (const bool fishing = m_Settings.enabled && m_Settings.fishBar; m_Rml.Running() &&
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
