@@ -1613,15 +1613,26 @@ TEST(the_gil_widget_shows_the_picked_currency_and_its_popup_every_one_you_have)
     CHECK(Lines(p.sections[0]) == (std::vector<std::string>{"Gil 4,751", "Sparks of Eminence 350", "Allied Notes 12,000"}));
 }
 
-TEST(the_distance_widget_shows_how_far_the_target_is_and_hides_without_one)
+TEST(the_target_says_how_far_it_is_after_its_name_unless_show_distance_is_off)
 {
     Settings settings;
+    const ActorInfo goblin = Goblin();
     BarState state;
-    CHECK(!BarWidgetContent(BarWidget::Distance, state, settings).shown);
+    state.target         = &goblin;
     state.targetDistance = 12.34f;
-    const WidgetContent w = BarWidgetContent(BarWidget::Distance, state, settings);
-    CHECK(w.shown && !w.hasPopup && Joined(w.title) == "12.3 yalms" && w.subtitle.empty());
-    CHECK(w.title[1] == Text(" yalms", Tone::Dim));
+    const std::string name = Joined(BarWidgetContent(BarWidget::Target, state, Settings{}).title);
+    WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(w.title.back() == Text(" (12.3)", Tone::Dim));
+    settings.Widget(BarWidget::Target).targetDistance = false;
+    w = BarWidgetContent(BarWidget::Target, state, settings);
+    CHECK(Joined(w.title) + " (12.3)" == name);
+    // Without a target, or a distance, there is nothing to measure.
+    settings.Widget(BarWidget::Target).targetDistance = true;
+    state.targetDistance.reset();
+    CHECK(Joined(BarWidgetContent(BarWidget::Target, state, settings).title) + " (12.3)" == name);
+    state.target         = nullptr;
+    state.targetDistance = 5.0f;
+    CHECK(Joined(BarWidgetContent(BarWidget::Target, state, settings).title) == "No target");
 }
 
 TEST(each_widget_can_drop_its_second_line_or_its_icons)

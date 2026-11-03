@@ -573,6 +573,9 @@ namespace headsup
                 case WidgetTabsRow::ShowMobLevel:
                     if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetMobLevel, row.tip);
                     break;
+                case WidgetTabsRow::ShowDistance:
+                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetDistance, row.tip);
+                    break;
                 case WidgetTabsRow::Jobs:
                     if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetJobs, row.tip);
                     break;

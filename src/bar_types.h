@@ -44,7 +44,6 @@ namespace headsup
         Connection,
         Party,
         Signet,
-        Distance,
         Memory,
         Exp, // the Job widget's EXP and bar alone
         Conquest,
@@ -54,7 +53,7 @@ namespace headsup
     // Which widgets a new settings file shows, by BarWidget. to_array takes its size from the list, so a widget added
     // to BarWidget without a default here fails the assert.
     constexpr auto kBarWidgetDefaults =
-        std::to_array<bool>({true, true, true, true, true, true, true, true, true, true, true, false, false, true, false, false, false, false});
+        std::to_array<bool>({true, true, true, true, true, true, true, true, true, true, true, false, false, false, false, false, false});
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
     constexpr uint8_t kAllNations = 0x0F; // the Conquest widget's: a bit each for the three nations and the beastmen
@@ -90,7 +89,7 @@ namespace headsup
     // Clock and the Target say what their lines and icons show with settings of their own.
     constexpr bool HasSecondLine(BarWidget w)
     {
-        return w != BarWidget::EarthTime && w != BarWidget::Fps && w != BarWidget::Connection && w != BarWidget::Distance &&
+        return w != BarWidget::EarthTime && w != BarWidget::Fps && w != BarWidget::Connection &&
                w != BarWidget::GameHelp && w != BarWidget::Exp && w != BarWidget::VanaTime && w != BarWidget::Target &&
                w != BarWidget::Zone;
     }

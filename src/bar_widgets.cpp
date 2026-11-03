@@ -1203,7 +1203,7 @@ namespace headsup
         needs.localTime  = localClock;
         needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather) || worldWeather ||
                      opened(BarWidget::Signet); // the popup says where it works
-        needs.target     = shown(BarWidget::Target) || shown(BarWidget::Distance);
+        needs.target     = shown(BarWidget::Target);
         needs.gil        = shown(BarWidget::Gil);
         needs.strip      = shown(BarWidget::GameHelp);
         const bool memoryPopup = opened(BarWidget::Memory);
@@ -1374,6 +1374,9 @@ namespace headsup
                 }
                 w.hasPopup = IsMob(state.target); // a mob the data lacks gets its name, level and con, no popup
             }
+            if (w.shown && state.target != nullptr && o.targetDistance && state.targetDistance &&
+                std::isfinite(*state.targetDistance))
+                w.title.push_back(Text(" (" + Printed("%.1f", *state.targetDistance) + ")", Tone::Dim));
             break;
         case BarWidget::Gil:
         {
@@ -1451,13 +1454,6 @@ namespace headsup
             return PartyWidget(state.party);
         case BarWidget::Signet:
             return SignetWidget(state.signet);
-        case BarWidget::Distance:
-            // Hidden without a target, as the game's own distance shows nothing then.
-            w.shown = state.targetDistance && std::isfinite(*state.targetDistance);
-            if (!w.shown) break;
-            w.title   = ListOf(Text(Printed("%.1f", *state.targetDistance)), Text(" yalms", Tone::Dim));
-            w.figures = true;
-            break;
         case BarWidget::Memory:
             return MemoryWidget(state.memory);
         case BarWidget::World:
@@ -1688,7 +1684,6 @@ namespace headsup
             return PartyPopup(state.party);
         case BarWidget::Signet:
             return SignetPopup(state.signet, state.zone);
-        case BarWidget::Distance: break;
         case BarWidget::Memory:
             return MemoryPopup(state.memory, state.cpuPercent, state.frames, state.linuxxi);
         case BarWidget::World:

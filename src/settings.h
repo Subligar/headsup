@@ -98,6 +98,7 @@ namespace headsup
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
         bool targetMobLevel  = true;  // a mob's level and con under its name
         bool targetJobs      = true;  // and a player's jobs and levels, as far as they are known
+        bool targetDistance  = true;  // and how far it is, after its name
         WorldLine worldLine  = WorldLine::Departure; // World Info: what it tells on the panel
         int worldRoute       = 0;                    // its departure, by TravelRoutes
         Element worldElement = Element::Fire;        // its weather

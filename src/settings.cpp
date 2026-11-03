@@ -205,6 +205,7 @@ namespace headsup
         constexpr const char* kTargetShowsKey    = "barTargetShows";
         constexpr const char* kTargetMobLevelKey = "barTargetMobLevel";
         constexpr const char* kTargetJobsKey     = "barTargetJobs";
+        constexpr const char* kTargetDistanceKey = "barTargetDistance";
         constexpr const char* kMenuFontKey      = "menuFont";
         constexpr const char* kHideGameFishBarKey = "hideGameFishBar";
         constexpr const char* kBlueMagicKey = "blueMagic", *kBlueMagicLearnedKey = "blueMagicLearned";
@@ -253,7 +254,7 @@ namespace headsup
         constexpr const char* kBarSeparatorsKey                    = "barSeparators";
         const char* const kBarSeparatorsNames[kBarSeparatorsCount] = {"theme", "diamonds", "none"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barFps", "barJob", "barConnection", "barParty", "barSignet", "barDistance", "barMemory",
+            "barEarthTime", "barGameHelp", "barFps", "barJob", "barConnection", "barParty", "barSignet", "barMemory",
             "barExp", "barConquest", "barWorld"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
@@ -1425,6 +1426,7 @@ namespace headsup
                     std::clamp(number(kTargetShowsKey, o.targetShows), 0, static_cast<int>(kAllTargetShows)));
                 o.targetMobLevel = flag(kTargetMobLevelKey, o.targetMobLevel);
                 o.targetJobs     = flag(kTargetJobsKey, o.targetJobs);
+                o.targetDistance = flag(kTargetDistanceKey, o.targetDistance);
                 break;
             default: break;
             }
@@ -1499,6 +1501,7 @@ namespace headsup
                 StoreFloat(store, CopyKey(kTargetShowsKey, w), static_cast<float>(o.targetShows));
                 flag(kTargetMobLevelKey, o.targetMobLevel);
                 flag(kTargetJobsKey, o.targetJobs);
+                flag(kTargetDistanceKey, o.targetDistance);
                 break;
             default: break;
             }
