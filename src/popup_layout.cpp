@@ -563,7 +563,8 @@ namespace headsup
             if (!pinChip) return;
             PopupPiece& pin = l.pieces[*pinChip];
             pin.x           = l.width - pad - pin.width;
-            l.pieces[*pinChip + 1].x += pin.x;
+            l.pieces[*pinChip + 1].x += pin.x; // its word
+            l.pieces[*pinChip + 2].x += pin.x; // and its picture
             l.pin           = BarRect{pin.x, pin.y, pin.width, pin.height};
             if (!cogChip) return;
             PopupPiece& cog = l.pieces[*cogChip];
@@ -601,16 +602,24 @@ namespace headsup
         std::optional<size_t> pinChip, cogChip;
         if (!content.title.empty() || content.icon || !content.sections.empty() || settings)
         {
+            // Its picture left of the word, as tall as the word's ink.
             const Span word{pinned ? kPinnedWord : kPinWord, Tone::Heading, 0};
             const TextSize size   = measure(word, PopupFont::Pin);
-            const TextSize framed = Framed(measure(Span{kPinnedWord, Tone::Heading, 0}, PopupFont::Pin), unit);
+            const TextSize longer = measure(Span{kPinnedWord, Tone::Heading, 0}, PopupFont::Pin);
+            const float mark = std::round(longer.inkBottom - longer.inkTop), gap = std::round(unit * kIconGap);
+            const TextSize framed = Framed(TextSize{longer.width + mark + gap, longer.height, longer.inkTop, longer.inkBottom}, unit);
+            const float left      = std::round((framed.width - mark - gap - size.width) / 2.0f);
             pinChip               = l.pieces.size();
             PopupPiece chip{PopupPiece::Kind::PinChip, 0.0f, pad, framed.width, framed.height, {}};
             chip.open = pinned;
             chip.font = PopupFont::Pin;
             l.pieces.push_back(std::move(chip));
-            l.pieces.push_back(PopupPiece{PopupPiece::Kind::PinWord, (framed.width - size.width) / 2.0f,
+            l.pieces.push_back(PopupPiece{PopupPiece::Kind::PinWord, left + mark + gap,
                 pad + framed.inkTop - size.inkTop, size.width, size.height, word, PopupFont::Pin});
+            PopupPiece picture{PopupPiece::Kind::Icon, left, pad + framed.inkTop, mark, mark, Span{"", Tone::Heading, 0}, PopupFont::Pin};
+            picture.icon   = pinned ? Icon::Pinned : Icon::Pin;
+            picture.tinted = true;
+            l.pieces.push_back(std::move(picture));
             titleWidth += unit * kCellGap + framed.width;
             rowHeight = std::max(rowHeight, framed.height);
         }

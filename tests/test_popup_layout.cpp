@@ -23,11 +23,12 @@ namespace
         return TextSize{7.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
     }
 
+    // The pieces of a kind, but the pin chip's own picture.
     std::vector<const PopupPiece*> Of(const PopupLayout& l, PopupPiece::Kind kind)
     {
         std::vector<const PopupPiece*> out;
         for (const PopupPiece& p : l.pieces)
-            if (p.kind == kind) out.push_back(&p);
+            if (p.kind == kind && !p.tinted) out.push_back(&p);
         return out;
     }
 
@@ -617,15 +618,21 @@ TEST(a_titled_popup_has_its_pin_chip_at_the_top_right_lit_and_saying_pinned_only
         {
             const PopupPiece* chip = nullptr;
             const PopupPiece* text = nullptr;
+            const PopupPiece* mark = nullptr;
             for (const PopupPiece& p : l->pieces)
             {
                 if (p.kind == PopupPiece::Kind::PinChip && Near(p.x, l->pin.x) && Near(p.y, l->pin.y)) chip = &p;
                 if (p.kind == PopupPiece::Kind::PinWord && p.font == PopupFont::Pin) text = &p;
+                if (p.kind == PopupPiece::Kind::Icon && p.tinted) mark = &p;
             }
-            CHECK(chip != nullptr && text != nullptr);
+            CHECK(chip != nullptr && text != nullptr && mark != nullptr);
             CHECK(chip->open == lit && text->span.text == word);
             CHECK(Near(l->pin.x + l->pin.width, l->width - m.popupPadding) && Near(l->pin.y, m.popupPadding));
             CHECK(text->x >= chip->x && text->x + text->width <= chip->x + chip->width); // its word inside it
+            // The pin's picture left of its word, inside the chip, in the word's color.
+            CHECK(mark->icon == (lit ? Icon::Pinned : Icon::Pin) && mark->span.tone == text->span.tone);
+            CHECK(mark->x > chip->x && mark->x + mark->width < text->x && mark->y > chip->y &&
+                  mark->y + mark->height < chip->y + chip->height);
         }
         CHECK(Near(pinned.width, loose.width)); // pinning never changes the popup's width
     }
@@ -683,7 +690,7 @@ TEST(rows_without_cells_add_no_pieces_and_a_grid_without_cells_does_not_divide_b
     c.sections[0].rows.push_back(PopupRow{RowKind::Tags, 0, {}});
     c.sections[0].rows.push_back(PopupRow{RowKind::Grid, 0, {}});
     const PopupLayout l = LayoutPopup(c, m, BarShape::Ornate, false, Fake);
-    CHECK_EQ(l.pieces.size(), static_cast<size_t>(5)); // the title, the pin's chip and word, and the cog's chip and cog
+    CHECK_EQ(l.pieces.size(), static_cast<size_t>(6)); // the title, the pin's chip, word and picture, and the cog's chip and cog
     CHECK(AllInside(l, m));
 }
 
@@ -933,7 +940,7 @@ TEST(a_cut_above_the_first_row_keeps_the_title_alone)
     const PopupLayout l    = LayoutPopup(Tall(), m, BarShape::Ornate, true, Fake);
     PopupLayout cut        = l;
     CutPopup(cut, Bottom(*Find(l, "ID 220")) + m.popupPadding - 0.5f, m.popupPadding);
-    CHECK_EQ(cut.pieces.size(), static_cast<size_t>(6)); // the icon, the name, the pin's chip and word, the cog's chip and cog
+    CHECK_EQ(cut.pieces.size(), static_cast<size_t>(7)); // the icon, the name, the pin's chip, word and picture, the cog's chip and cog
     CHECK(Find(cut, "Goblin") != nullptr && Find(cut, "pinned") != nullptr);
     CHECK(Near(cut.height, TitleBottom(l) + m.popupPadding));
 }
@@ -999,7 +1006,7 @@ TEST(a_cells_game_picture_goes_before_its_text_as_an_icon_does)
     const PopupLayout a = LayoutPopup(OneRow(PopupRow{RowKind::Line, 0, {pictured}}), m, BarShape::Pills, false, Fake);
     const PopupLayout b = LayoutPopup(OneRow(PopupRow{RowKind::Line, 0, {iconed}}), m, BarShape::Pills, false, Fake);
     const auto first = [](const PopupLayout& l, PopupPiece::Kind kind) {
-        return std::ranges::find(l.pieces, kind, &PopupPiece::kind);
+        return std::ranges::find_if(l.pieces, [kind](const PopupPiece& p) { return p.kind == kind && !p.tinted; });
     };
     const auto picture = first(a, PopupPiece::Kind::Picture), icon = first(b, PopupPiece::Kind::Icon);
     CHECK(picture != a.pieces.end() && picture->picture == GamePicture::BastokCrest);

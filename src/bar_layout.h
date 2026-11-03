@@ -160,7 +160,8 @@ namespace headsup
         // Forget the layout, the pointer and any pin, as before the first frame.
         void Reset() { *this = BarInput{}; }
         // True when the press landed on the bar, a widget placed under it or the open popup: the game must not get it.
-        // A left press on a tab picks it, and pins nothing.
+        // A left press on a widget or the popup's pin chip pins or unpins its popup; on a tab it picks it, and pins
+        // nothing.
         bool Press(float x, float y, bool left);
         // The tab picked last in each card since loading, by the card's heading.
         const std::map<std::string, std::string>& PickedTabs() const { return m_Tabs; }

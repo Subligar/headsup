@@ -53,6 +53,7 @@ namespace headsup
         bool right     = false;         // Text: drawn against its box's right, as a pair's value is
         uint16_t item  = 0;             // Item
         GamePicture picture = GamePicture::None; // Picture
+        bool tinted = false; // Icon: one of HeadsUp's own white ones, drawn in its span's color
     };
 
     // Where a card's tab is, from the popup's top-left corner, to click: its key the card's heading.

@@ -623,7 +623,8 @@ namespace headsup
                 break;
             case PopupPiece::Kind::Icon:
                 rml += "<img class=\"p\" src=\"" + IconSource(piece.icon) + "\" style=\"" + place + "width:" +
-                       Px(piece.width) + ";height:" + Px(piece.height) + ";\"/>";
+                       Px(piece.width) + ";height:" + Px(piece.height) + ";" +
+                       (piece.tinted ? "image-color:" + RcssColor(color) + ";" : std::string()) + "\"/>";
                 break;
             case PopupPiece::Kind::Item:
                 rml += "<img class=\"p\" src=\"" + ItemSource(piece.item) + "\" style=\"" + place + "width:" +

@@ -99,7 +99,7 @@ TEST(hit_tests_popup_placement_and_fitting_text)
     CHECK(FitText("Goblin Bounty Hunter", 10.0f, measure).empty());
 }
 
-TEST(hovering_opens_leaving_closes_and_only_the_pin_chip_pins)
+TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
 {
     const BarLayout l = LayoutBar(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
@@ -119,7 +119,10 @@ TEST(hovering_opens_leaving_closes_and_only_the_pin_chip_pins)
     const BarRect pin{1100.0f, 52.0f, 50.0f, 20.0f};
     input.Move(960.0f, 18.0f);
     input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
-    CHECK(input.Press(960.0f, 18.0f, true));  // the widget's, and no pin
+    CHECK(input.Press(960.0f, 18.0f, true)); // the widget pins its popup
+    CHECK(input.Pinned() == BarWidget::Target);
+    CHECK(input.Press(960.0f, 18.0f, true)); // and unpins it
+    CHECK(!input.Pinned().has_value());
     CHECK(input.Press(960.0f, 200.0f, true)); // the popup's, and no pin
     CHECK(!input.Pinned().has_value());
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its pin chip pins it
@@ -181,8 +184,8 @@ TEST(a_cut_help_bar_under_the_strip_opens_its_popup_and_takes_only_its_own_press
     input.Move(100.0f, 70.0f);
     CHECK(input.Open() == BarWidget::GameHelp);
     CHECK(!input.Press(600.0f, 70.0f, true)); // beside it, the game's
-    CHECK(input.Press(100.0f, 70.0f, true)); // its own
-    CHECK(!input.Pinned().has_value());
+    CHECK(input.Press(100.0f, 70.0f, true)); // its own, which pins it as any widget's does
+    CHECK(input.Pinned() == BarWidget::GameHelp);
 }
 
 TEST(pinning_another_widget_moves_the_pin)
@@ -204,6 +207,9 @@ TEST(pinning_another_widget_moves_the_pin)
     input.SetPopup(BarRect{vana.x, 44.0f, 300.0f, 200.0f}, {}, {}, vanaPin);
     CHECK(input.Press(vanaPin.x + 5.0f, vanaPin.y + 5.0f, true));
     CHECK(input.Pinned() == BarWidget::VanaTime);
+    // A press on another widget on the bar moves the pin to it too.
+    CHECK(input.Press(960.0f, 18.0f, true));
+    CHECK(input.Pinned() == BarWidget::Target);
 }
 
 TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)

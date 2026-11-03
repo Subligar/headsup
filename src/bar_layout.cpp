@@ -471,7 +471,13 @@ namespace headsup
     {
         if (!Over(x, y)) return false;
         if (!left) return true;
-        if (!WidgetAt(m_Layout, x, y) && Open() && m_Popup.Contains(x, y))
+        // The widget on the bar pins and unpins its popup, as its pin chip does.
+        if (const std::optional<PanelWidget> under = WidgetAt(m_Layout, x, y); under && m_HasPopup[SlotOf(*under)])
+        {
+            m_Pinned = m_Pinned == under ? std::nullopt : under;
+            m_Settings.reset();
+        }
+        else if (!under && Open() && m_Popup.Contains(x, y))
         {
             for (const BarScroll& scroll : m_Scrolls)
                 if (scroll.track.Contains(x, y) && scroll.most > 0)
