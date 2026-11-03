@@ -105,7 +105,7 @@ namespace headsup
         return Printed("%.1f MB", bytes / (kBytesPerKb * kBytesPerKb));
     }
 
-    WidgetContent ConnectionWidget(const std::optional<ConnectionReport>& report, bool latency, bool meter)
+    WidgetContent ConnectionWidget(const std::optional<ConnectionReport>& report, uint8_t parts)
     {
         WidgetContent w;
         w.shown = true;
@@ -116,17 +116,26 @@ namespace headsup
         }
         // One line: amber or red figures say what the popup explains.
         const LinkState state = StateOf(*report);
-        w.title = ListOf(Text("S ", Tone::Dim), Figure(Rate(report->counters, &NetCounters::sent), state),
-            Text("  R ", Tone::Dim), Figure(Rate(report->counters, &NetCounters::received), state));
-        if (meter && report->counters) w.title.push_back(Figure(Printed("  %d%%", report->counters->health), state));
-        if (latency && report->latency) w.title.push_back(Text(Printed("  %.0f ms", report->latency->medianMs), Tone::Dim));
-        if (Waiting(report->playOnline))
+        const auto has        = [parts](PerfPart part) { return (parts & PerfBit(part)) != 0; };
+        if (has(PerfPart::Sent))
+            AddPart(w.title, ListOf(Text("S ", Tone::Dim), Figure(Rate(report->counters, &NetCounters::sent), state)));
+        if (has(PerfPart::Received))
+            AddPart(w.title, ListOf(Text("R ", Tone::Dim), Figure(Rate(report->counters, &NetCounters::received), state)));
+        if (has(PerfPart::Percent) && report->counters)
+            AddPart(w.title, ListOf(Figure(Printed("%d%%", report->counters->health), state)));
+        if (has(PerfPart::Ping) && report->latency)
+            AddPart(w.title, ListOf(Text(Printed("%.0f ms", report->latency->medianMs), Tone::Dim)));
+        if (has(PerfPart::Messages) && Waiting(report->playOnline))
+        {
+            std::vector<Span> waiting;
             for (const auto& [picture, count] : {std::pair{GamePicture::PlayOnlineMail, report->playOnline->mail},
                      std::pair{GamePicture::PlayOnlineMessenger, report->playOnline->messages}})
             {
-                w.title.push_back(Span{"", Tone::Normal, 0, picture});
-                if (count > 0) w.title.push_back(Text(std::to_string(count), Tone::Dim));
+                waiting.push_back(Span{"", Tone::Normal, 0, picture});
+                if (count > 0) waiting.push_back(Text(std::to_string(count), Tone::Dim));
             }
+            AddPart(w.title, std::move(waiting));
+        }
         w.hasPopup = true;
         w.figures  = true;
         return w;

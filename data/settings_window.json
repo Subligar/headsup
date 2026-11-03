@@ -393,8 +393,7 @@
                 {"key": "bar-width", "name": "Bar Width", "tip": "How long the bar is."},
                 {"key": "bar-height", "name": "Bar Height", "tip": "How thick the bar is. It stays in the middle of the panel."},
                 {"key": "job-names", "name": "Job Names", "tip": "Off, the levels alone."},
-                {"key": "percent", "name": "Percent", "tip": "The game's own connection meter after the rates, as its readout shows it: 100% while data comes in, less once it stops."},
-                {"key": "latency", "name": "Ping", "tip": "Your ping to the server, after the rates. It shows once a few of the server's answers are timed."}
+                {"key": "panel-parts", "name": "Shows", "tip": "What the widget shows on the panel, one after another."}
               ],
               "words": [
                 {"key": "clone", "name": "Clone This Widget", "tip": "Puts another of this widget on the panel after it, with all of this one's settings."},
@@ -959,13 +958,23 @@
         {"name": "Bags", "tip": "How full your inventory is. Hover for every bag."},
         {"name": "Clock", "tip": "Your computer's time, or another time zone's, over the server's if you like. Hover for the daily reset and conquest tally."},
         {"name": "Game Help", "tip": "The game's help text, in a bar of its own under the top panel."},
-        {"name": "FPS", "tip": "Frames per second. Hover for frame times."},
+        {"name": "Performance", "tip": "Frames per second, bytes sent and received each second, your ping and the game's memory, as you pick. Amber or red when data stops or memory runs low. Hover for your ping, the last server data, PlayOnline messages, the processor, the frames and the LinuxXI plugin's figures."},
         {"name": "Job & EXP", "tip": "Jobs, levels and EXP to the next level, with a bar; or the EXP bar alone with its texts around it. Hover for EXP per hour."},
-        {"name": "Connection", "tip": "Bytes sent and received each second; amber or red when data stops. Hover for your ping."},
         {"name": "Party", "tip": "Party size and the lowest HP and MP. Hover for each member."},
         {"name": "Signet", "tip": "Time left on Signet or Sanction, while one is on."},
-        {"name": "Memory", "tip": "The game's memory used, over what is left before it runs out at 4 GB; amber, then red, as it runs low. Hover for the processor, the frames and the LinuxXI plugin's figures."},
         {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."}
+      ]
+    },
+    {
+      "key": "perf-parts",
+      "options": [
+        {"name": "FPS", "tip": "Frames per second."},
+        {"name": "Sent", "tip": "Bytes sent each second; amber or red when data stops."},
+        {"name": "Received", "tip": "Bytes received each second; amber or red when data stops."},
+        {"name": "Percent", "tip": "The game's own connection meter, as its readout shows it: 100% while data comes in, less once it stops."},
+        {"name": "Ping", "tip": "Your ping to the server. It shows once a few of the server's answers are timed."},
+        {"name": "Memory", "tip": "The game's memory used; amber, then red, as it runs low before it runs out at 4 GB."},
+        {"name": "Messages", "tip": "PlayOnline's mail and messenger icons while something waits, with how many."}
       ]
     },
     {

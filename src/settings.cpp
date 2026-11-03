@@ -246,16 +246,14 @@ namespace headsup
         const char* const kConquestPlaceNames[kConquestPlaceCount] = {"off", "left", "right", "below"};
         constexpr const char* kVanaWeekdayKey  = "vanaWeekday";
         constexpr const char* kVanaDateKey     = "vanaDate";
-        constexpr const char* kLatencyKey   = "barLatency";
-        constexpr const char* kNetMeterKey  = "barNetMeter";
+        constexpr const char* kPerfPartsKey = "barPerformanceParts";
         const char* const kClockZoneNames[kClockZoneCount] = {"japan", "utc", "usEastern", "usCentral", "usMountain",
             "usArizona", "usPacific", "usAlaska", "usHawaii", "ukIreland", "centralEurope", "easternEurope",
             "australiaEastern"};
         constexpr const char* kBarSeparatorsKey                    = "barSeparators";
         const char* const kBarSeparatorsNames[kBarSeparatorsCount] = {"theme", "diamonds", "none"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barFps", "barJob", "barConnection", "barParty", "barSignet", "barMemory",
-            "barWorld"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barSignet", "barWorld"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1411,9 +1409,8 @@ namespace headsup
                 }
                 break;
             }
-            case BarWidget::Connection:
-                o.latency  = flag(kLatencyKey, o.latency);
-                o.netMeter = flag(kNetMeterKey, o.netMeter);
+            case BarWidget::Performance:
+                o.perfParts = static_cast<uint8_t>(std::clamp(number(kPerfPartsKey, o.perfParts), 0, static_cast<int>(kAllPerfParts)));
                 break;
             case BarWidget::Target:
                 o.targetIcons    = static_cast<uint32_t>(
@@ -1484,10 +1481,7 @@ namespace headsup
                 StoreFloat(store, CopyKey(kExpBarHeightKey, w), static_cast<float>(o.expBarHeight));
                 text(kExpAlignKey, kExpAlignNames[static_cast<int>(o.expAlign)]);
                 break;
-            case BarWidget::Connection:
-                flag(kLatencyKey, o.latency);
-                flag(kNetMeterKey, o.netMeter);
-                break;
+            case BarWidget::Performance: StoreFloat(store, CopyKey(kPerfPartsKey, w), static_cast<float>(o.perfParts)); break;
             case BarWidget::Target:
                 StoreFloat(store, CopyKey(kTargetIconsKey, w), static_cast<float>(o.targetIcons));
                 StoreFloat(store, CopyKey(kTargetShowsKey, w), static_cast<float>(o.targetShows));

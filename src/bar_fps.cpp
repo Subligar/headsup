@@ -39,14 +39,4 @@ namespace headsup
         w.figures  = true;
         return w;
     }
-
-    PopupContent FpsPopup(const std::optional<FrameReport>& frames)
-    {
-        PopupContent popup;
-        popup.title = ListOf(Text("Frame rate"));
-        if (!frames) return popup;
-        popup.sections = ListOf(PopupSection{"", ListOf(Labeled("Frame time", Text(Printed("%.1f ms", frames->averageMs))),
-            Labeled("Slowest frame", Text(Printed("%.1f ms", frames->slowestMs))))});
-        return popup;
-    }
 }

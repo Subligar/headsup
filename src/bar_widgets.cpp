@@ -859,6 +859,48 @@ namespace headsup
             return w;
         }
 
+        // The parts of PerfPart that are the connection's.
+        constexpr uint8_t kConnectionParts = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received) |
+                                             PerfBit(PerfPart::Percent) | PerfBit(PerfPart::Ping) |
+                                             PerfBit(PerfPart::Messages);
+
+        // The frame rate, the connection and the memory, each part picked on one line.
+        WidgetContent PerformanceWidget(const BarState& state, uint8_t parts)
+        {
+            WidgetContent w;
+            w.shown    = true;
+            w.hasPopup = true;
+            w.figures  = true;
+            if ((parts & PerfBit(PerfPart::Fps)) != 0) AddPart(w.title, FpsWidget(state.frames).title);
+            if (const uint8_t net = parts & kConnectionParts; net != 0)
+                AddPart(w.title, ConnectionWidget(state.connection, net).title);
+            if ((parts & PerfBit(PerfPart::Memory)) != 0)
+            {
+                std::vector<Span> memory = ListOf(Text("Mem ", Tone::Dim));
+                for (Span& span : MemoryWidget(state.memory).title)
+                    memory.push_back(std::move(span));
+                AddPart(w.title, std::move(memory));
+            }
+            if (w.title.empty()) w.title = ListOf(Text("-"));
+            return w;
+        }
+
+        // The Connection and Memory popups' cards, each first card under its popup's title.
+        PopupContent PerformancePopup(const BarState& state)
+        {
+            PopupContent popup;
+            popup.title = ListOf(Text("Performance"));
+            for (PopupContent part : {ConnectionPopup(state.connection),
+                     MemoryPopup(state.memory, state.cpuPercent, state.frames, state.linuxxi)})
+            {
+                if (!part.sections.empty() && part.sections.front().heading.empty())
+                    part.sections.front().heading = part.title.front().text;
+                for (PopupSection& section : part.sections)
+                    popup.sections.push_back(std::move(section));
+            }
+            return popup;
+        }
+
         WidgetContent WorldWidget(const BarState& state, const WidgetOptions& o)
         {
             if (o.worldLine == WorldLine::Conquest) return ConquestCounts(state, o);
@@ -1290,16 +1332,21 @@ namespace headsup
         needs.target     = shown(BarWidget::Target);
         needs.gil        = shown(BarWidget::Gil);
         needs.strip      = shown(BarWidget::GameHelp);
-        const bool memoryPopup = opened(BarWidget::Memory);
+        // The Performance widget reads what its copies show on the panel, and everything for its popup.
+        uint8_t perf = 0;
+        for (int copy = 0; copy < kMostCopies; ++copy)
+            if (const PanelWidget performance{BarWidget::Performance, copy}; Shows(settings, performance))
+                perf |= settings.Widget(performance).perfParts;
+        const bool perfPopup = opened(BarWidget::Performance);
         needs.conquest   = opened(BarWidget::World);
-        needs.frames     = shown(BarWidget::Fps) || memoryPopup;
+        needs.frames     = (perf & PerfBit(PerfPart::Fps)) != 0 || perfPopup;
         needs.job        = shown(BarWidget::Job);
-        needs.connection = shown(BarWidget::Connection);
+        needs.connection = (perf & kConnectionParts) != 0 || perfPopup;
         needs.party      = shown(BarWidget::Party);
         needs.signet     = shown(BarWidget::Signet);
-        needs.memory     = shown(BarWidget::Memory);
-        needs.cpu        = memoryPopup;
-        needs.linuxxi    = memoryPopup;
+        needs.memory     = (perf & PerfBit(PerfPart::Memory)) != 0 || perfPopup;
+        needs.cpu        = perfPopup;
+        needs.linuxxi    = perfPopup;
         // Ashita counts a container's items by walking its slots, so the others wait for the popup that lists them.
         if (shown(BarWidget::Bags))
         {
@@ -1498,19 +1545,15 @@ namespace headsup
             break;
         case BarWidget::GameHelp:
             return WidgetContent{};
-        case BarWidget::Fps:
-            return FpsWidget(state.frames);
+        case BarWidget::Performance:
+            return PerformanceWidget(state, o.perfParts);
         case BarWidget::Job:
             return o.jobLayout == JobLayout::Bar ? ExpWidget(state.job, o.expPlaces, o.expBarWidth, o.expBarHeight, o.expAlign)
                                                  : JobWidget(state.job, o.expBar, o.jobNames, o.jobLayout, o.expText);
-        case BarWidget::Connection:
-            return ConnectionWidget(state.connection, o.latency, o.netMeter);
         case BarWidget::Party:
             return PartyWidget(state.party);
         case BarWidget::Signet:
             return SignetWidget(state.signet);
-        case BarWidget::Memory:
-            return MemoryWidget(state.memory);
         case BarWidget::World:
             return WorldWidget(state, o);
         }
@@ -1695,18 +1738,14 @@ namespace headsup
         }
         case BarWidget::GameHelp:
             return GameHelpPopup(state.strip, StripBagFill(state));
-        case BarWidget::Fps:
-            return FpsPopup(state.frames);
+        case BarWidget::Performance:
+            return PerformancePopup(state);
         case BarWidget::Job:
             return JobPopup(state.job);
-        case BarWidget::Connection:
-            return ConnectionPopup(state.connection);
         case BarWidget::Party:
             return PartyPopup(state.party);
         case BarWidget::Signet:
             return SignetPopup(state.signet, state.zone);
-        case BarWidget::Memory:
-            return MemoryPopup(state.memory, state.cpuPercent, state.frames, state.linuxxi);
         case BarWidget::World:
             return WorldPopup(state, o);
         }

@@ -1294,18 +1294,42 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
     }
 }
 
-TEST(the_fps_widget_shows_frames_a_second_and_its_popup_the_frame_times)
+TEST(the_performance_widget_shows_frames_a_second_and_its_popup_the_frame_times)
+{
+    Settings settings;
+    settings.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Fps);
+    BarState state;
+    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "-");
+    state.frames = FrameReport{1000.0 / 30.0, 120.0};
+    const WidgetContent w = BarWidgetContent(BarWidget::Performance, state, settings);
+    CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "30 fps" && w.subtitle.empty());
+    const PopupContent p = BarPopupContent(BarWidget::Performance, state, settings);
+    CHECK(Joined(p.title) == "Performance");
+    const auto processor = std::ranges::find(p.sections, std::string("Processor"), &PopupSection::heading);
+    CHECK(processor != p.sections.end() &&
+          Lines(*processor) == (std::vector<std::string>{"Frame rate 30 fps", "Frame time 33.3 ms", "Slowest frame 120.0 ms"}));
+}
+
+TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_those)
 {
     Settings settings;
     BarState state;
-    CHECK(Joined(BarWidgetContent(BarWidget::Fps, state, settings).title) == "-");
-    CHECK(!BarWidgetContent(BarWidget::Fps, state, settings).hasPopup);
-    state.frames = FrameReport{1000.0 / 30.0, 120.0};
-    const WidgetContent w = BarWidgetContent(BarWidget::Fps, state, settings);
-    CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "30 fps" && w.subtitle.empty());
-    const PopupContent p = BarPopupContent(BarWidget::Fps, state, settings);
-    CHECK(Joined(p.title) == "Frame rate");
-    CHECK(Lines(p.sections[0]) == (std::vector<std::string>{"Frame time 33.3 ms", "Slowest frame 120.0 ms"}));
+    state.frames     = FrameReport{1000.0 / 30.0, 120.0};
+    state.connection = SteadyLink();
+    state.memory     = MemoryReport{1532, 2563, 4095};
+    WidgetOptions& o = settings.Widget(BarWidget::Performance);
+    // By default the rates, the game's meter and PlayOnline's messages, as the Connection widget showed.
+    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S 175  R 227  100%");
+    o.perfParts = PerfBit(PerfPart::Fps) | PerfBit(PerfPart::Received) | PerfBit(PerfPart::Memory);
+    const std::string line = Joined(BarWidgetContent(BarWidget::Performance, state, settings).title);
+    CHECK(line.starts_with("30 fps  R 227  Mem ") && line.find("S ") == std::string::npos);
+    CHECK(NeedsOf(settings, std::nullopt).frames && NeedsOf(settings, std::nullopt).connection &&
+          NeedsOf(settings, std::nullopt).memory && !NeedsOf(settings, std::nullopt).cpu);
+    o.perfParts = PerfBit(PerfPart::Fps);
+    CHECK(!NeedsOf(settings, std::nullopt).connection && !NeedsOf(settings, std::nullopt).memory);
+    // Its popup reads everything.
+    const BarNeeds open = NeedsOf(settings, PanelWidget{BarWidget::Performance});
+    CHECK(open.connection && open.memory && open.cpu && open.linuxxi);
 }
 
 TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_of_either)
@@ -1350,39 +1374,39 @@ TEST(the_job_widget_says_one_merit_and_promises_no_merit_without_limit_mode)
     CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("Next merit in") == 0; }));
 }
 
-TEST(the_connection_widget_shows_the_games_rates_on_one_line_and_turns_amber_then_red)
+TEST(the_performance_widget_shows_the_games_rates_on_one_line_and_turns_amber_then_red)
 {
     Settings settings;
     BarState state;
     state.connection = SteadyLink();
-    WidgetContent w  = BarWidgetContent(BarWidget::Connection, state, settings);
+    WidgetContent w  = BarWidgetContent(BarWidget::Performance, state, settings);
     CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "S 175  R 227  100%" && w.subtitle.empty());
     CHECK(w.title[1] == Text("175"));
 
     state.connection->silence = 3.0;
-    w = BarWidgetContent(BarWidget::Connection, state, settings);
+    w = BarWidgetContent(BarWidget::Performance, state, settings);
     CHECK(w.title[1] == Text("175")); // the game's counters still see data arrive
     state.connection->counters->received = 0;
-    w = BarWidgetContent(BarWidget::Connection, state, settings);
+    w = BarWidgetContent(BarWidget::Performance, state, settings);
     CHECK(w.title[1] == Colored("175", kWarningColor) && w.title[3] == Colored("0", kWarningColor));
 
     state.connection->silence          = 13.0;
     state.connection->counters->health = 94;
-    w = BarWidgetContent(BarWidget::Connection, state, settings);
+    w = BarWidgetContent(BarWidget::Performance, state, settings);
     CHECK(w.title[1] == Colored("175", kAlarmColor) && w.subtitle.empty());
 
     state.connection->counters.reset(); // the chain could not be read
     state.connection->silence = 0.3;
-    CHECK(Joined(BarWidgetContent(BarWidget::Connection, state, settings).title) == "S -  R -");
+    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S -  R -");
 }
 
-TEST(the_connection_popup_gives_the_rates_ping_last_data_and_session_totals)
+TEST(the_performance_popup_gives_the_rates_ping_last_data_and_session_totals)
 {
     Settings settings;
     BarState state;
     state.connection     = SteadyLink();
-    const PopupContent p = BarPopupContent(BarWidget::Connection, state, settings);
-    CHECK(Joined(p.title) == "Connection" && p.sections.size() == 2);
+    const PopupContent p = BarPopupContent(BarWidget::Performance, state, settings);
+    CHECK(Joined(p.title) == "Performance" && p.sections.size() == 2 && p.sections[0].heading == "Connection");
     // Short lines only: no sentence on where S and R come from (the menu tip says it).
     CHECK(Lines(p.sections[0]) == (std::vector<std::string>{"Sent 175 B/s", "Received 227 B/s", "Ping 48 ms",
                                       "40 to 66 ms over recent pings", "Last server data 1s"})); // 0.3 s, rounded up
@@ -1391,26 +1415,26 @@ TEST(the_connection_popup_gives_the_rates_ping_last_data_and_session_totals)
     CHECK(Lines(p.sections[1]) == (std::vector<std::string>{"Sent 1.2 MB", "Received 34.5 KB", "Over 1h 12m"}));
 }
 
-TEST(the_connection_popup_colors_the_last_server_data_as_the_bar_and_names_the_meter_only_under_100)
+TEST(the_performance_popup_colors_the_last_server_data_as_the_bar_and_names_the_meter_only_under_100)
 {
     Settings settings;
     BarState state;
     state.connection          = SteadyLink();
     state.connection->silence = 17.4;
     state.connection->counters->received = 0;
-    PopupContent p            = BarPopupContent(BarWidget::Connection, state, settings);
+    PopupContent p            = BarPopupContent(BarWidget::Performance, state, settings);
     CHECK(p.sections[0].rows[4] ==
           Line(Cell(ListOf(Colored("Last server data ", kWarningColor), Colored("18s", kWarningColor)))));
     CHECK(p.sections[0].rows.size() == 5); // the meter is still full
 
     state.connection->counters->health = 94;
-    p = BarPopupContent(BarWidget::Connection, state, settings);
+    p = BarPopupContent(BarWidget::Performance, state, settings);
     CHECK(p.sections[0].rows[4] ==
           Line(Cell(ListOf(Colored("Last server data ", kAlarmColor), Colored("18s", kAlarmColor)))));
     CHECK(Lines(p.sections[0]).back() == "The game's own meter is at 94%: it falls once 10 s pass without server data.");
 
     state.connection->zoning = true; // no color while zoning; the meter line stays while the meter is under 100
-    p = BarPopupContent(BarWidget::Connection, state, settings);
+    p = BarPopupContent(BarWidget::Performance, state, settings);
     CHECK(p.sections[0].rows[4] == Labeled("Last server data", Text("18s")) && p.sections[0].rows.size() == 6);
 }
 
@@ -1781,17 +1805,18 @@ TEST(the_clocks_add_seconds_when_asked)
     CHECK(Joined(BarWidgetContent(BarWidget::EarthTime, state, settings).title) == "09:30:07");
 }
 
-TEST(the_connection_widget_adds_its_ping_when_asked)
+TEST(the_performance_widget_adds_its_ping_when_asked)
 {
     Settings settings;
     BarState state;
     state.connection = SteadyLink();
-    settings.Widget(BarWidget::Connection).netMeter = false;
-    CHECK(Joined(BarWidgetContent(BarWidget::Connection, state, settings).title) == "S 175  R 227");
-    settings.Widget(BarWidget::Connection).latency = true;
-    CHECK(Joined(BarWidgetContent(BarWidget::Connection, state, settings).title) == "S 175  R 227  48 ms");
+    uint8_t& parts   = settings.Widget(BarWidget::Performance).perfParts;
+    parts            = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received);
+    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S 175  R 227");
+    parts |= PerfBit(PerfPart::Ping);
+    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S 175  R 227  48 ms");
     state.connection->latency.reset(); // not measured yet
-    CHECK(Joined(BarWidgetContent(BarWidget::Connection, state, settings).title) == "S 175  R 227");
+    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S 175  R 227");
 }
 
 TEST(a_mobs_popup_lists_what_it_drops_at_its_treasure_hunter_0_chance_and_what_can_be_stolen)

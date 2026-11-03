@@ -39,19 +39,17 @@ namespace headsup
         Bags,
         EarthTime,
         GameHelp,
-        Fps,
+        Performance,
         Job,
-        Connection,
         Party,
         Signet,
-        Memory,
         World,
     };
     constexpr int kBarWidgetCount = static_cast<int>(BarWidget::World) + 1;
     // Which widgets a new settings file shows, by BarWidget. to_array takes its size from the list, so a widget added
     // to BarWidget without a default here fails the assert.
     constexpr auto kBarWidgetDefaults =
-        std::to_array<bool>({true, true, true, true, true, true, true, true, true, true, true, false, false, false, false});
+        std::to_array<bool>({true, true, true, true, true, true, true, true, true, true, false, false, false});
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
     constexpr uint8_t kAllNations = 0x0F; // World Info's conquest: a bit each for the three nations and the beastmen
@@ -62,6 +60,13 @@ namespace headsup
     constexpr int kWorldSectionCount     = static_cast<int>(WorldSection::Conquest) + 1;
     constexpr uint8_t kAllWorldSections  = (1u << kWorldSectionCount) - 1;
     constexpr uint8_t WorldBit(WorldSection section) { return static_cast<uint8_t>(1u << static_cast<int>(section)); }
+    // What the Performance widget shows on the panel, a bit each, in this order on its line.
+    enum class PerfPart : uint8_t { Fps, Sent, Received, Percent, Ping, Memory, Messages };
+    constexpr int kPerfPartCount = static_cast<int>(PerfPart::Messages) + 1;
+    constexpr uint8_t PerfBit(PerfPart part) { return static_cast<uint8_t>(1u << static_cast<int>(part)); }
+    constexpr uint8_t kAllPerfParts     = (1u << kPerfPartCount) - 1;
+    constexpr uint8_t kDefaultPerfParts = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received) |
+                                          PerfBit(PerfPart::Percent) | PerfBit(PerfPart::Messages);
     constexpr int kContainerCount = 17; // Ashita's containers 0 (inventory) to 16 (wardrobe 8), the bags a widget can show
 
     // A widget on the panel: which, and which of its copies. Copy 0 is the one every settings file has; the others are
@@ -87,7 +92,7 @@ namespace headsup
     // Clock and the Target say what their lines and icons show with settings of their own.
     constexpr bool HasSecondLine(BarWidget w)
     {
-        return w != BarWidget::EarthTime && w != BarWidget::Fps && w != BarWidget::Connection &&
+        return w != BarWidget::EarthTime && w != BarWidget::Performance &&
                w != BarWidget::GameHelp && w != BarWidget::VanaTime && w != BarWidget::Target &&
                w != BarWidget::Zone;
     }

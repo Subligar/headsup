@@ -283,12 +283,10 @@ barBags=false
 barEarthTime=false
 barGameHelp=false
 barServerTime=true
-barFps=false
+barPerformance=false
 barJob=false
-barConnection=false
 barParty=true
 barSignet=true
-barMemory=true
 barWorld=true
 barZoneLine2=true
 barZoneIcons=true
@@ -308,12 +306,10 @@ barGameHelpLine2=true
 barGameHelpIcons=true
 barServerTimeLine2=true
 barServerTimeIcons=true
-barFpsLine2=true
-barFpsIcons=true
+barPerformanceLine2=true
+barPerformanceIcons=true
 barJobLine2=true
 barJobIcons=true
-barConnectionLine2=true
-barConnectionIcons=true
 barPartyLine2=true
 barPartyIcons=true
 barSignetLine2=true
@@ -336,10 +332,10 @@ cursorOutline=60.0000
 untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
-barLatency=true
+barPerformanceParts=16.0000
 barLeft=zone weather vanaTime job party signet world
 barCenter=
-barRight=target gil bags connection memory fps earthTime
+barRight=target gil bags performance earthTime
 hideHelpBar=true
 hideNetstat=true
 screenshotKey=121.0000
@@ -399,7 +395,7 @@ helpBarY=8.0000
         s.barSubtitle = SubtitlePlace::Before;
         s.cursorOutlineThickness = 120; // 60 of before
         s.Widget(BarWidget::EarthTime).clockSeconds  = true;
-        s.Widget(BarWidget::Connection).latency = true;
+        s.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Ping);
         s.barHeight    = 48;
         s.barTextSize   = 16;
         s.popupTextSize = 20;
@@ -1116,8 +1112,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barFps", "barJob", "barConnection", "barParty", "barSignet", "barMemory",
-        "barWorld"}; // in BarWidget's order
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barSignet", "barWorld"}; // in BarWidget's order
     static_assert(std::size(widgetKeys) == kBarWidgetCount);
     for (int w = 0; w < kBarWidgetCount; ++w)
     {

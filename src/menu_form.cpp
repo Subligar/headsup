@@ -740,11 +740,12 @@ namespace headsup
                 case WidgetTabsRow::JobNames:
                     if (kind == BarWidget::Job && !bar) form.Switch(label.c_str(), o.jobNames, row.tip);
                     break;
-                case WidgetTabsRow::Percent:
-                    if (kind == BarWidget::Connection) form.Switch(label.c_str(), o.netMeter, row.tip);
-                    break;
-                case WidgetTabsRow::Latency:
-                    if (kind == BarWidget::Connection) form.Switch(label.c_str(), o.latency, row.tip);
+                case WidgetTabsRow::PanelParts:
+                    if (kind == BarWidget::Performance)
+                    {
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::PerfParts));
+                        form.Toggles(label.c_str(), o.perfParts, names.data(), kPerfPartCount, row.tip);
+                    }
                     break;
                 }
             }

@@ -39,5 +39,4 @@ namespace headsup
     int FramesPerSecond(double averageMs);
 
     WidgetContent FpsWidget(const std::optional<FrameReport>& frames);
-    PopupContent FpsPopup(const std::optional<FrameReport>& frames);
 }

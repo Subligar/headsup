@@ -92,8 +92,7 @@ namespace headsup
         Align expAlign       = Align::Center;       // its texts above and below the bar, against it
         JobLayout jobLayout  = JobLayout::JobsFirst;
         bool jobNames        = true;
-        bool latency         = false; // Connection: its ping after its rates
-        bool netMeter        = true;  // and the game's own meter after them
+        uint8_t perfParts    = kDefaultPerfParts; // Performance: what it shows on the panel, by PerfBit
         uint32_t targetIcons = DetectionBit(DetectionIcon::Aggro); // Target: a mob's icons, by DetectionBit and kTargetWeakIcons
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
         bool targetMobLevel  = true;  // a mob's level and con under its name

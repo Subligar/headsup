@@ -69,8 +69,8 @@ namespace headsup
     // "820 B", "34.5 KB", "1.2 MB", a KB being 1,024 bytes.
     std::string ByteText(double bytes);
 
-    // latency: the median round trip after the rates, once there is one; meter: the game's own meter after them, as its
-    // readout has it.
-    WidgetContent ConnectionWidget(const std::optional<ConnectionReport>& report, bool latency = false, bool meter = true);
+    // The parts of parts, by PerfBit, that are the connection's: the rates sent and received, the game's own meter as its
+    // readout has it, the median round trip once there is one, and PlayOnline's waiting messages.
+    WidgetContent ConnectionWidget(const std::optional<ConnectionReport>& report, uint8_t parts = kDefaultPerfParts);
     PopupContent ConnectionPopup(const std::optional<ConnectionReport>& report);
 }
