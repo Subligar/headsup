@@ -1075,3 +1075,15 @@ TEST(look_up_players_is_a_switch_beside_auto_check)
     CHECK(w.Pass({{"entities-nameplates-look-up-players", kClickEvent, ""}}).changed);
     CHECK(w.settings.lookUpPlayers);
 }
+
+TEST(the_theme_is_never_faint_after_a_faint_setting)
+{
+    Window w;
+    w.state.page = Page::Theme;
+    test::EditedLayout edited;
+    edited.MoveSetting("theme", "theme-look", 1); // after Window Type, which is faint without the game's art
+    w.layout       = edited.Layout();
+    const Form form = w.Pass();
+    CHECK(ClassOn(form, "theme-theme-look-window-type-label-row", kOffClass));
+    CHECK(!ClassOn(form, "theme-theme-look-theme-label-row", kOffClass));
+}

@@ -1598,6 +1598,7 @@ namespace headsup
             case SettingPiece::WindowList: WindowList(c); break;
             // Top Panel and Widgets
             case SettingPiece::Theme:
+                form.Fade(false);
                 OptionsDropdown(form, label, s.barTheme, c.layout.OptionsOf(WindowList::BarTheme), tip);
                 break;
             case SettingPiece::WindowType:
