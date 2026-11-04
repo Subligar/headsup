@@ -2,9 +2,8 @@
 
 namespace headsup
 {
-    // HeadsUp's defaults where they differ from Settings' own: a settings file's [settings] lines, read under every
-    // file (LoadSettings), so a key a file lacks takes its value here. From the user's settings of 2026-10-31, but
-    // the faded names (Nameplate Opacity). nameplateDesigns has the nameplate lines below read.
+    // HeadsUp's defaults where they differ from Settings' own, as a settings file's [settings] lines: what a new
+    // install reads (LoadSettings). nameplateDesigns has the nameplate lines below read.
     constexpr const char* kDefaultSettingsText = R"([settings]
 nameplateDesigns=true
 autoCheck=true

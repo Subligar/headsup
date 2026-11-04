@@ -25,7 +25,6 @@ namespace headsup
 {
     namespace
     {
-        // Whole numbers are stored as floats, like every other number in settings.ini.
         struct BoolKey
         {
             const char* key;
@@ -34,7 +33,6 @@ namespace headsup
         constexpr const char* kEnabledKey = "enabled"; // in every file any build saved: what tells a file from none
         constexpr BoolKey kBools[] = {{kEnabledKey, &Settings::enabled}, {"autoSave", &Settings::autoSave}, {"phTimers", &Settings::phTimers},
             {"scaleWithDistance", &Settings::scaleWithDistance},
-            // Not "countAccuracy": the switch's first builds wrote that key on by default, and it now starts off.
             {"fixPointer", &Settings::fixPointer}, {"countYourAccuracy", &Settings::countAccuracy}, {"showBar", &Settings::showBar},
             {"hideHelpBar", &Settings::hideHelpBar}, {"hideNetstat", &Settings::hideNetstat},
             {"screenshotHidesGame", &Settings::screenshotHidesGame},
@@ -47,6 +45,7 @@ namespace headsup
             {"autoCheck", &Settings::autoCheck}, {"lookUpPlayers", &Settings::lookUpPlayers},
             {"gameWindowBorder", &Settings::gameWindowBorder}};
 
+        // Whole numbers are stored as floats, like every other number in settings.ini.
         struct IntKey
         {
             const char* key;
@@ -183,8 +182,7 @@ namespace headsup
         constexpr const char* kPinnedWindowsKey = "pinnedWindows"; // "equip:100,200 statcom:0,40"
         constexpr const char* kHiddenWindowsKey = "hiddenWindows"; // "statcom inventor"
         constexpr const char* kShiftVanillaUiKey = "shiftVanillaUi";
-        constexpr const char* kOldMoveWindowsKey = "moveWindows";
-        // By HelpMode. movedWindows, windowGroups and allUnderBar, the picks before views, are never read again.
+        // By HelpMode.
         constexpr const char* kPlacedUnderKeys[kHelpModes] = {"placedUnderHelpOff", "placedUnderHelpOn"};
         constexpr const char* kViewShiftsKeys[kHelpModes]  = {"viewShiftsHelpOff", "viewShiftsHelpOn"}; // "status:20"
         constexpr const char* kMoveGameHelpKey  = "moveGameHelp";
@@ -317,15 +315,14 @@ namespace headsup
         const char* const kPaletteKeys[]                 = {"paletteAggression", "paletteToughness", "paletteClaim", "paletteTarget", "paletteType"};
         constexpr const char* kLabelShadePrefix = "label"; // kLabelShadeKeys' prefix, which the palette's toughness keys drop
         constexpr const char* kRowInfix         = "Row";
-        constexpr const char* kOpacityInfix     = "Opacity";
-        constexpr const char* kPlateOpacityBase = "plateOpacity"; // every kind's, after the builds that kept one a kind
+        constexpr const char* kPlateOpacityBase = "plateOpacity";
         constexpr const char* kGlowOffSuffix    = "GlowOffInCombat";
         constexpr const char* kOldUntargetedKey = "untargetedOpacity";   // every mob's that was not your target
         constexpr const char* kOldGlowOffKey    = "glowOffWhenFighting"; // every line of a mob your party had claimed
         constexpr const char* kOldPetRow        = "Pet"; // the pets' one row of before, after kRowInfix
         constexpr const char* kLineInfix        = "Line";
         constexpr const char* kOrnamentInfix    = "Ornament";
-        // A design's keys after their base, a row's, a line's, an ornament's or a kind's opacity's: read and written by
+        // A design's keys after their base, a row's, a line's, an ornament's or the opacity's: read and written by
         // these names alone.
         constexpr const char *kPlateKey = "Plate", *kOutlineKey = "Outline", *kColorKey = "Color";
         constexpr const char *kTextKey = "Text", *kSyncKey = "Sync", *kAlwaysKey = "Always", *kWhenKey = "When",
@@ -585,25 +582,18 @@ namespace headsup
             LoadPick(store, base + kColorKey, o.color);
         }
 
-        // The nameplates' opacities, from a file of any age: their own keys, else the mobs' of the builds that kept
-        // them a kind, else for Not Targeted the one opacity of before, which was the mobs'.
+        // The nameplates' opacities: their own keys, else for Not Targeted the one opacity of before.
         void LoadOpacity(SettingsStore& store, OpacitySettings& o)
         {
-            const std::string own = kPlateOpacityBase, heir = std::string(KindKey(PlateKind::Mobs)) + kOpacityInfix;
-            const auto held = [&](const char* suffix) {
-                const std::optional<float> mine = HeldNumber(store, own + suffix);
-                return mine ? mine : HeldNumber(store, heir + suffix);
+            const std::string own = kPlateOpacityBase;
+            const auto percent = [&](const char* suffix, int fallback) {
+                return Whole(HeldNumber(store, own + suffix).value_or(static_cast<float>(fallback)));
             };
-            const auto percent = [&](const char* suffix, std::optional<float> before, int fallback) {
-                const std::optional<float> v = held(suffix);
-                return Whole(v.value_or(before.value_or(static_cast<float>(fallback))));
-            };
-            o.noTarget    = percent(kNoTargetKey, std::nullopt, o.noTarget);
-            o.notTargeted = percent(kNotTargetedKey, HeldNumber(store, kOldUntargetedKey), o.notTargeted);
-            o.targeted    = percent(kTargetedKey, std::nullopt, o.targeted);
-            o.range       = held(kRangeKey).value_or(o.range);
-            const std::optional<bool> fadeIn = HeldSwitch(store, (own + kFadeInKey).c_str());
-            o.fadeIn = fadeIn ? *fadeIn : HeldSwitch(store, (heir + kFadeInKey).c_str()).value_or(o.fadeIn);
+            o.noTarget    = percent(kNoTargetKey, o.noTarget);
+            o.notTargeted = Rebased(store, own + kNotTargetedKey, kOldUntargetedKey, o.notTargeted, [](float before) { return before; });
+            o.targeted    = percent(kTargetedKey, o.targeted);
+            o.range       = HeldNumber(store, own + kRangeKey).value_or(o.range);
+            o.fadeIn      = HeldSwitch(store, (own + kFadeInKey).c_str()).value_or(o.fadeIn);
         }
 
         // A kind's lines' glow in combat, from a file of any age: the lines' own keys, else the one switch of before,
@@ -672,10 +662,8 @@ namespace headsup
         enum class OldIconSide : uint8_t { Left, Right, Hidden };
         const char* const kOldIconSideNames[] = {"left", "right", "hide"};
         constexpr int kOldSideCount           = static_cast<int>(std::size(kOldIconSideNames));
-        // A group of mob icons takes a side, never "hide": the names before it.
-        constexpr int kOldGroupSideCount      = static_cast<int>(OldIconSide::Hidden);
-        enum class OldMobId : uint8_t { Off, LastThree, Decimal, Full };
-        const char* const kOldMobIdNames[] = {"off", "lastThree", "decimal", "full"};
+        enum class OldMobId : uint8_t { Off, LastThree, Full };
+        const char* const kOldMobIdNames[] = {"off", "lastThree", "full"};
         // The player icons as such a file numbers them, GM first: each one's key and the tag that stands for it.
         struct OldPlayerIcon
         {
@@ -687,28 +675,18 @@ namespace headsup
             {"iconLinkshell", kTagLinkshell}, {"iconBazaar", kTagBazaar}, {"iconSeekingParty", kTagSeeking}};
         constexpr int kOldPlayerIconCount = static_cast<int>(std::size(kOldPlayerIcons));
         constexpr int kOldGmIcon          = 0;
-        constexpr std::array<int, kOldPlayerIconCount> OldPlayerIconOrder()
-        {
-            std::array<int, kOldPlayerIconCount> order{};
-            for (int i = 0; i < kOldPlayerIconCount; ++i)
-                order[i] = i;
-            return order;
-        }
 
-        constexpr int kOldCategoryCount = static_cast<int>(Category::OtherClaim) + 1;
+        constexpr int kOldCategoryCount = static_cast<int>(Category::Placeholder) + 1;
         constexpr int kOldLabelShadeCount = static_cast<int>(LabelShade::VeryTough) + 1; // Incredibly Tough came later
         struct OldSettings
         {
             bool showLabels = true, replaceMobNames = true, replacePlayerNames = true, replaceNpcNames = true;
-            bool showIcons = true, showDamageIcons = false, showStatusRankIcons = false, showImmunityIcons = false;
-            OldIconSide detectionIconSide = OldIconSide::Left, badgeSide = OldIconSide::Right;
-            bool mobIconsInline     = false; // the mob icons on the level line, each group at its side
+            bool showIcons = true;
             bool hideClaimedByParty = false, hideClaimed = false;
             OldMobId mobId          = OldMobId::Off;
             bool markPlaceholders   = true;
-            std::string fontName = kDefaultFont, playerFontName = kDefaultFont, npcFontName = kDefaultFont;
-            std::string labelFontName = kDefaultFont;
-            bool fontBold = false, playerFontBold = false, npcFontBold = false, labelFontBold = false;
+            std::string fontName = kDefaultFont, labelFontName = kDefaultFont;
+            bool fontBold = false, labelFontBold = false;
             bool nameGlow = true, ownGlowColor = false;
             int glowStrength = 100, glowSize = 100;
             Color glowColor = ColorFromRgb(0xFFB45A);
@@ -722,7 +700,6 @@ namespace headsup
             int playerIconSize   = 100; // percent of the name's letter height
             bool showPlayerIcons = true;
             OldIconSide playerIconSide[kOldPlayerIconCount] = {};
-            std::array<int, kOldPlayerIconCount> playerIconOrder = OldPlayerIconOrder();
             Color cursorColor           = ColorFromRgb(kPhoenixRed);
             Color lockedCursorColor     = {{0.65f, 0.40f, 1.00f}};
             Color subCursorColor        = {{0.99f, 0.82f, 0.09f}};
@@ -739,8 +716,8 @@ namespace headsup
                 {{1.00f, 0.35f, 0.35f}}, // Very Tough
             };
             Color textOutline = {{0.00f, 0.00f, 0.00f}};
-            // By Category, the eight such a file knew: whether its mobs were outlined, and in what color.
-            bool show[kOldCategoryCount]   = {true, false, false, true, true, true, false, false};
+            // By Category, the six such a file knew: whether its mobs were outlined, and in what color.
+            bool show[kOldCategoryCount]   = {true, false, false, true, true, true};
             Color color[kOldCategoryCount] = {
                 {{1.00f, 0.15f, 0.15f}}, // aggressive
                 {{0.20f, 1.00f, 0.30f}}, // passive
@@ -748,8 +725,6 @@ namespace headsup
                 {{1.00f, 0.60f, 0.10f}}, // aggressive NM
                 {{1.00f, 0.84f, 0.00f}}, // passive NM
                 {{0.70f, 0.30f, 1.00f}}, // lottery placeholder
-                {{0.30f, 0.65f, 1.00f}}, // claimed by your party
-                {{0.55f, 0.45f, 0.40f}}, // claimed by someone else
             };
         };
 
@@ -766,9 +741,7 @@ namespace headsup
             {"nameGlow", &OldSettings::nameGlow}, {"showOrnament", &OldSettings::showOrnament},
             {"ownGlowColor", &OldSettings::ownGlowColor}, {"ownOrnamentColor", &OldSettings::ownOrnamentColor},
             {"replacePlayerNames", &OldSettings::replacePlayerNames}, {"replaceNpcNames", &OldSettings::replaceNpcNames},
-            {"showPlayerIcons", &OldSettings::showPlayerIcons}, {"ownNameColor", &OldSettings::ownNameColor},
-            {"showDamageIcons", &OldSettings::showDamageIcons}, {"showStatusRankIcons", &OldSettings::showStatusRankIcons},
-            {"showImmunityIcons", &OldSettings::showImmunityIcons}};
+            {"showPlayerIcons", &OldSettings::showPlayerIcons}, {"ownNameColor", &OldSettings::ownNameColor}};
 
         struct OldIntKey
         {
@@ -796,11 +769,6 @@ namespace headsup
             {"ornamentColor", &OldSettings::ornamentColor}};
 
         constexpr const char* kOldFontKey = "fontName";
-        // Files from before players and NPCs had their own name fonts take the mobs'.
-        constexpr const char* kOldPlayerFontKey = "playerFontName";
-        constexpr const char* kOldPlayerBoldKey = "playerFontBold";
-        constexpr const char* kOldNpcFontKey    = "npcFontName";
-        constexpr const char* kOldNpcBoldKey    = "npcFontBold";
         // Files from before the level line had its own font and shadow take the name's.
         constexpr const char* kOldLabelFontKey        = "labelFontName";
         constexpr const char* kOldLabelBoldKey        = "labelFontBold";
@@ -811,13 +779,8 @@ namespace headsup
         constexpr const char* kOldFont           = "Trebuchet MS";
         constexpr const char* kOldShowSuffix     = "Show";
         const char* const kOldCategoryKeys[kOldCategoryCount] = {"willAttack", "wontAttack", "unknown", "nmWillAttack",
-            "nmWontAttack", "placeholder", "partyClaim", "otherClaim"};
-        constexpr const char* kOldMobIdKey           = "mobId";
-        constexpr const char* kOldDetectionSideKey   = "detectionIconSide";
-        constexpr const char* kOldBadgeSideKey       = "badgeSide";
-        constexpr const char* kOldIconPlaceKey       = "mobIconPlace";
-        constexpr const char* kOldInlineIcons        = "inline";
-        constexpr const char* kOldPlayerIconOrderKey = "playerIconOrder"; // kOldPlayerIcons' keys, a space apart
+            "nmWontAttack", "placeholder"};
+        constexpr const char* kOldMobIdKey = "mobId";
 
         // saved is the file's version: the defaults that changed before it are put right, as kVersionKey says.
         OldSettings LoadOld(SettingsStore& store, float saved)
@@ -843,22 +806,9 @@ namespace headsup
                 o.show[c] = store.GetBool((base + kOldShowSuffix).c_str(), o.show[c]);
                 LoadColor(store, base, o.color[c]);
             }
-            auto side = [&](const char* key, int sides, OldIconSide fallback) {
-                const int named = NameIndex(kOldIconSideNames, sides, store.GetString(key, ""), static_cast<int>(fallback));
-                return static_cast<OldIconSide>(named);
-            };
             for (int i = 0; i < kOldPlayerIconCount; ++i)
-                o.playerIconSide[i] = side(kOldPlayerIcons[i].key, kOldSideCount, o.playerIconSide[i]);
-            // An order that does not name every icon once is none.
-            std::istringstream order(store.GetString(kOldPlayerIconOrderKey, ""));
-            std::vector<int> icons;
-            for (std::string name; order >> name;)
-                for (int i = 0; i < kOldPlayerIconCount; ++i)
-                    if (name == kOldPlayerIcons[i].key && std::ranges::find(icons, i) == icons.end()) icons.push_back(i);
-            if (std::ssize(icons) == kOldPlayerIconCount) std::ranges::copy(icons, o.playerIconOrder.begin());
-            o.detectionIconSide = side(kOldDetectionSideKey, kOldGroupSideCount, o.detectionIconSide);
-            o.badgeSide         = side(kOldBadgeSideKey, kOldGroupSideCount, o.badgeSide);
-            o.mobIconsInline    = store.GetString(kOldIconPlaceKey, "") == kOldInlineIcons;
+                o.playerIconSide[i] = static_cast<OldIconSide>(NameIndex(kOldIconSideNames, kOldSideCount,
+                    store.GetString(kOldPlayerIcons[i].key, ""), static_cast<int>(o.playerIconSide[i])));
             o.mobId = static_cast<OldMobId>(NameIndex(kOldMobIdNames, static_cast<int>(std::size(kOldMobIdNames)),
                 store.GetString(kOldMobIdKey, ""), static_cast<int>(o.mobId)));
             if (saved < kRedCursorVersion && o.cursorColor == kOldCursorColor) o.cursorColor = OldSettings{}.cursorColor;
@@ -867,20 +817,16 @@ namespace headsup
                 if (o.fontName == kOldFont) o.fontName = kDefaultFont;
                 if (o.labelFontName == kOldFont) o.labelFontName = kDefaultFont;
             }
-            o.playerFontName = store.GetString(kOldPlayerFontKey, o.fontName.c_str());
-            o.playerFontBold = store.GetBool(kOldPlayerBoldKey, o.fontBold);
-            o.npcFontName    = store.GetString(kOldNpcFontKey, o.fontName.c_str());
-            o.npcFontBold    = store.GetBool(kOldNpcBoldKey, o.fontBold);
             return o;
         }
 
-        // The icons beside a name, as the fixed plate laid them: those on the left in the order's turn, GM always last
+        // The icons beside a name, as the fixed plate laid them: those on the left in their order, GM always last
         // of them and so nearest the name whatever its side says, then the name, then those on the right.
         std::string PlayerNameText(const OldSettings& o)
         {
             if (!o.showPlayerIcons) return kTagName;
             std::string left, right;
-            for (const int icon : o.playerIconOrder)
+            for (int icon = 0; icon < kOldPlayerIconCount; ++icon)
             {
                 if (icon == kOldGmIcon) continue;
                 if (o.playerIconSide[icon] == OldIconSide::Left) left += kOldPlayerIcons[icon].tag;
@@ -943,15 +889,6 @@ namespace headsup
                 mobs.rows[c].outline = o.show[c] ? OutlineMode::Shown : steps ? OutlineMode::ByNature : OutlineMode::Disabled;
                 s.palette.aggression[n] = o.color[c];
             }
-            // Switched off, a claimed mob kept the outline its nature gave it.
-            for (const Category claim : {Category::PartyClaim, Category::OtherClaim})
-            {
-                const int c = CategoryIndex(claim);
-                mobs.rows[c].outline = o.show[c] ? OutlineMode::Shown : OutlineMode::ByNature;
-                mobs.rows[c].outlineColor.source = ColorSource::Claim;
-            }
-            s.palette.claim[static_cast<int>(ClaimState::Yours)]  = o.color[CategoryIndex(Category::PartyClaim)];
-            s.palette.claim[static_cast<int>(ClaimState::Others)] = o.color[CategoryIndex(Category::OtherClaim)];
             std::ranges::copy(o.labelColor, s.palette.toughness);
             s.palette.target[static_cast<int>(TargetState::Targeted)]   = o.cursorColor;
             s.palette.target[static_cast<int>(TargetState::Locked)]     = o.lockedCursorColor;
@@ -976,14 +913,14 @@ namespace headsup
             for (const PlateKind kind : {PlateKind::Players, PlateKind::Self})
             {
                 LineDesign& line = s.Kind(kind).lines[kBottomLine];
-                line.font        = fontOf(o.playerFontName);
-                line.style       = boldOf(o.playerFontBold);
+                line.font        = fontOf(o.fontName);
+                line.style       = boldOf(o.fontBold);
                 line.text        = PlayerNameText(o);
             }
             players.lines[kBottomLine].iconSize = IconPercent(o.playerNameSize);
             self.lines[kBottomLine].iconSize    = IconPercent(o.selfNameSize);
-            npcs.lines[kBottomLine].font = fontOf(o.npcFontName);
-            npcs.lines[kBottomLine].style = boldOf(o.npcFontBold);
+            npcs.lines[kBottomLine].font = fontOf(o.fontName);
+            npcs.lines[kBottomLine].style = boldOf(o.fontBold);
 
             s.baseSize                         = base;
             mobLevel.textSize                  = percent(o.labelSize);
@@ -997,30 +934,10 @@ namespace headsup
             auto append = [](std::string& text, const std::string& part) { text += (text.empty() || part.empty() ? "" : " ") + part; };
             if (o.showLabels) append(level, kTagLevelCon);
             if (o.mobId == OldMobId::LastThree) append(level, kTagId);
-            if (o.mobId == OldMobId::Decimal) append(level, kTagServerId);
             if (o.mobId == OldMobId::Full) append(level, std::string(kTagServerId) + " " + kTagId);
             if (o.mobId != OldMobId::Off && o.markPlaceholders) append(level, kTagPlaceholder);
             mobLevel.text = level;
-            std::string badges;
-            if (o.showDamageIcons) badges += kTagWeakResist;
-            if (o.showStatusRankIcons) badges += kTagStatus;
-            if (o.showImmunityIcons) badges += kTagImmune;
-            const std::string detect = o.showIcons ? kTagDetect : "";
-            const bool badgesLeft    = o.badgeSide == OldIconSide::Left;
-            if (o.mobIconsInline && !level.empty())
-            {
-                const bool detectLeft   = o.detectionIconSide == OldIconSide::Left;
-                const std::string left  = (badgesLeft ? badges : "") + (detectLeft ? detect : "");
-                const std::string right = (detectLeft ? "" : detect) + (badgesLeft ? "" : badges);
-                std::string row;
-                append(row, left);
-                append(row, level);
-                append(row, right);
-                mobLevel.text = row;
-                mobIcons.text.clear();
-            }
-            else
-                mobIcons.text = badgesLeft ? badges + detect : detect + badges;
+            mobIcons.text = o.showIcons ? kTagDetect : "";
             auto condition = [&]() -> LineShow {
                 if (o.hideClaimed) return LineShow{false, ConditionBit(ShowCondition::Unclaimed)};
                 if (o.hideClaimedByParty)
@@ -1784,8 +1701,7 @@ namespace headsup
                     LoadWidget(store, w, s.widgets[slot]);
             s.pinnedWindows = WindowPlacesFrom(store.GetString(kPinnedWindowsKey, ""));
             s.hiddenWindows = HiddenWindowsFrom(store.GetString(kHiddenWindowsKey, ""));
-            s.shiftVanillaUi =
-                HeldSwitch(store, kShiftVanillaUiKey).value_or(HeldSwitch(store, kOldMoveWindowsKey).value_or(s.shiftVanillaUi));
+            s.shiftVanillaUi = store.GetBool(kShiftVanillaUiKey, s.shiftVanillaUi);
             for (size_t m = 0; m < kHelpModes; ++m)
             {
                 s.placedUnder[m] = LoadInt(store, kPlacedUnderKeys[m], s.placedUnder[m]);

@@ -137,11 +137,6 @@ textOutlineB=0.5000
 iconTintR=0.7500
 iconTintG=0.5000
 iconTintB=0.9000
-showDamageIcons=true
-showStatusRankIcons=true
-showImmunityIcons=true
-detectionIconSide=right
-badgeSide=left
 elementWeakRank=-3.0000
 elementResistRank=6.0000
 maxElements=3.0000
@@ -235,14 +230,6 @@ placeholderShow=false
 placeholderR=0.6300
 placeholderG=0.6400
 placeholderB=0.6500
-partyClaimShow=true
-partyClaimR=0.7300
-partyClaimG=0.7400
-partyClaimB=0.7500
-otherClaimShow=true
-otherClaimR=0.8300
-otherClaimG=0.8400
-otherClaimB=0.8500
 iconGm=right
 iconMentor=hide
 iconNewAdventurer=right
@@ -259,7 +246,6 @@ iconAwayShare=false
 iconLinkshellShare=false
 iconBazaarShare=true
 iconSeekingPartyShare=false
-playerIconOrder=iconSeekingParty iconGm iconMentor iconNewAdventurer iconLevelSync iconAway iconLinkshell iconBazaar
 playerIconMax=4.0000
 mobId=lastThree
 look=fantasy
@@ -323,11 +309,6 @@ debugMode=true
 barTitleFont=Cinzel
 barTextFont=
 barSubtitle=before
-playerFontName=Verdana
-playerFontBold=false
-npcFontName=Cinzel
-npcFontBold=true
-mobIconPlace=inline
 cursorOutline=60.0000
 untargetedOpacity=40.0000
 clockSeconds=true
@@ -431,8 +412,7 @@ helpBarY=8.0000
         "glowStrength", "cursorColorR", "cursorColorG", "cursorColorB", "subCursorColorR", "subCursorColorG",
         "subCursorColorB", "outOfRangeCursorColorR", "outOfRangeCursorColorG", "outOfRangeCursorColorB",
         "lockedCursorColorR", "lockedCursorColorG", "lockedCursorColorB", "nameColorR", "nameColorG", "nameColorB",
-        "textOutlineR", "textOutlineG", "textOutlineB", "iconTintR", "iconTintG", "iconTintB", "showDamageIcons",
-        "showStatusRankIcons", "showImmunityIcons", "detectionIconSide", "badgeSide", "fontName", "labelUnknownR",
+        "textOutlineR", "textOutlineG", "textOutlineB", "iconTintR", "iconTintG", "iconTintB", "fontName", "labelUnknownR",
         "labelUnknownG", "labelUnknownB", "labelTooWeakR", "labelTooWeakG", "labelTooWeakB", "labelEasyPreyR",
         "labelEasyPreyG", "labelEasyPreyB", "labelDecentChallengeR", "labelDecentChallengeG", "labelDecentChallengeB",
         "labelEvenMatchR", "labelEvenMatchG", "labelEvenMatchB", "labelToughR", "labelToughG", "labelToughB",
@@ -440,12 +420,10 @@ helpBarY=8.0000
         "willAttackB", "wontAttackShow", "wontAttackR", "wontAttackG", "wontAttackB", "unknownShow", "unknownR",
         "unknownG", "unknownB", "nmWillAttackShow", "nmWillAttackR", "nmWillAttackG", "nmWillAttackB", "nmWontAttackShow",
         "nmWontAttackR", "nmWontAttackG", "nmWontAttackB", "placeholderShow", "placeholderR", "placeholderG",
-        "placeholderB", "partyClaimShow", "partyClaimR", "partyClaimG", "partyClaimB", "otherClaimShow", "otherClaimR",
-        "otherClaimG", "otherClaimB", "iconGm", "iconMentor", "iconNewAdventurer", "iconLevelSync", "iconAway",
+        "placeholderB", "iconGm", "iconMentor", "iconNewAdventurer", "iconLevelSync", "iconAway",
         "iconLinkshell", "iconBazaar", "iconSeekingParty", "iconGmShare", "iconMentorShare", "iconNewAdventurerShare",
         "iconLevelSyncShare", "iconAwayShare", "iconLinkshellShare", "iconBazaarShare", "iconSeekingPartyShare",
-        "playerIconOrder", "playerIconMax", "mobId", "look", "playerFontName", "playerFontBold", "npcFontName",
-        "npcFontBold", "mobIconPlace"};
+        "playerIconMax", "mobId", "look"};
 
     MapStore Parse(const char* file)
     {
@@ -535,15 +513,6 @@ TEST(a_player_icon_side_that_is_not_a_side_keeps_its_default)
     store.values["enabled"]       = "true"; // a file: with neither this nor a version, a store is a new install
     store.values["iconLinkshell"] = "middle";
     CHECK_EQ(LoadSettings(store).Kind(PlateKind::Players).lines[2].text, "$mentor$new$sync$away$linkshell$bazaar$seeking$gm$name");
-}
-
-TEST(a_group_side_that_is_not_left_or_right_keeps_its_default)
-{
-    // On the level line the detection icons lead and the badges trail, each at its default side.
-    MapStore store;
-    store.values = {{"enabled", "true"}, {"showDamageIcons", "true"}, {"mobIconPlace", "inline"}, {"detectionIconSide", "hide"},
-        {"badgeSide", "middle"}};
-    CHECK_EQ(LoadSettings(store).Kind(PlateKind::Mobs).lines[1].text, "$detect Lv $level $con $weak$resist");
 }
 
 TEST(a_new_install_takes_the_built_in_defaults_and_a_saved_file_its_own)
@@ -681,18 +650,6 @@ TEST(a_file_from_before_badge_numbers_keeps_its_ranks_and_trades_the_skillchain_
         CHECK(LoadSettings(file).rankDisplay == each && !LoadSettings(file).countAccuracy);
         CHECK(!file.values.contains("showRanks"));
     }
-}
-
-TEST(your_accuracy_starts_left_out_even_in_a_file_where_an_early_build_wrote_it_on)
-{
-    MapStore early;
-    early.values = {{"enabled", "true"}, {"countAccuracy", "true"}};
-    CHECK(!LoadSettings(early).countAccuracy);
-    Settings s;
-    s.countAccuracy = true;
-    MapStore file;
-    SaveSettings(s, file);
-    CHECK(LoadSettings(file).countAccuracy);
 }
 
 TEST(a_file_from_before_hide_during_conversation_keeps_plates_in_conversations)
@@ -987,30 +944,6 @@ TEST(the_window_placement_saves_and_loads_back_its_switches_places_and_each_mode
     const std::vector<ViewShift> clamped = {{std::string(first), kMaxWindowOffset}};
     CHECK(read.viewShifts[static_cast<int>(HelpMode::On)] == clamped);
     CHECK_EQ(read.placedUnder[static_cast<int>(HelpMode::Off)], kMaxWindowOffset);
-}
-
-TEST(shift_vanilla_ui_reads_the_old_move_windows_switch_and_writes_only_its_own)
-{
-    MapStore old;
-    old.addsDefaults        = true; // a typed read of the new key would add it on and win over the old one
-    old.values["moveWindows"] = "false";
-    old.values["keepClear"]   = "true";
-    const Settings read = LoadSettings(old);
-    CHECK(!read.shiftVanillaUi);
-    MapStore ashita;
-    ashita.values["moveWindows"] = "0";
-    CHECK(!LoadSettings(ashita).shiftVanillaUi);
-    MapStore both;
-    both.values["shiftVanillaUi"] = "true";
-    both.values["moveWindows"]    = "false";
-    CHECK(LoadSettings(both).shiftVanillaUi);
-    MapStore fresh;
-    fresh.addsDefaults = true;
-    CHECK(LoadSettings(fresh).shiftVanillaUi);
-    MapStore saved;
-    SaveSettings(read, saved);
-    CHECK(saved.values["shiftVanillaUi"] == "false");
-    CHECK(!saved.values.contains("moveWindows") && !saved.values.contains("keepClear"));
 }
 
 TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_phoenix_gold)
@@ -1604,19 +1537,14 @@ TEST(an_old_file_migrates_field_by_field)
         for (int r = 0; r < RowCountOf(kind); ++r)
             CHECK(s.Kind(kind).rows[r].plate == PlateMode::Vanilla);
     CHECK(s.Kind(PlateKind::Pets).rows[0].plate == PlateMode::Vanilla); // a pet was drawn as a mob
-    // willAttackShow and friends set the outline modes; the claim keys set the claim rows' color source.
+    // willAttackShow and friends set the outline modes.
     const KindSettings& mobs = s.Kind(PlateKind::Mobs);
     CHECK(mobs.rows[CategoryIndex(Category::WillAttack)].outline ==
           OutlineMode::Disabled); // willAttackShow=false
-    CHECK(mobs.rows[CategoryIndex(Category::PartyClaim)].outlineColor.source ==
-          ColorSource::Claim); // partyClaimShow=true
     // The category and label colors fill the palettes.
     CHECK(s.palette.aggression[static_cast<int>(Nature::Aggressive)] ==
           (Color{{std::strtof(store.values.at("willAttackR").c_str(), nullptr), std::strtof(store.values.at("willAttackG").c_str(), nullptr),
                  std::strtof(store.values.at("willAttackB").c_str(), nullptr)}}));
-    CHECK(s.palette.claim[static_cast<int>(ClaimState::Yours)] ==
-          (Color{{std::strtof(store.values.at("partyClaimR").c_str(), nullptr), std::strtof(store.values.at("partyClaimG").c_str(), nullptr),
-                 std::strtof(store.values.at("partyClaimB").c_str(), nullptr)}}));
     CHECK(s.palette.toughness[static_cast<int>(LabelShade::Tough)] ==
           (Color{{std::strtof(store.values.at("labelToughR").c_str(), nullptr), std::strtof(store.values.at("labelToughG").c_str(), nullptr),
                  std::strtof(store.values.at("labelToughB").c_str(), nullptr)}}));
@@ -1629,24 +1557,22 @@ TEST(an_old_file_migrates_field_by_field)
     CHECK_EQ(s.Kind(PlateKind::Pets).lines[2].font, store.values.at("fontName"));
     CHECK_EQ(s.Kind(PlateKind::Pets).lines[2].style, StyleBit(FontStyle::Bold));
     CHECK_EQ(mobs.lines[1].font, store.values.at("labelFontName"));
-    CHECK_EQ(s.Kind(PlateKind::Players).lines[2].font, store.values.at("playerFontName"));
-    CHECK_EQ(s.Kind(PlateKind::Npcs).lines[2].font, store.values.at("npcFontName"));
+    CHECK_EQ(s.Kind(PlateKind::Players).lines[2].font, store.values.at("fontName"));
+    CHECK_EQ(s.Kind(PlateKind::Npcs).lines[2].font, store.values.at("fontName"));
     const int base = static_cast<int>(std::strtof(store.values.at("mobNameSize").c_str(), nullptr));
     CHECK_EQ(s.baseSize, base);
     CHECK_EQ(mobs.lines[2].textSize, 100);
     CHECK_EQ(mobs.lines[1].textSize, Stepped(static_cast<int>(std::lround(100.0f * std::strtof(store.values.at("labelSize").c_str(), nullptr) / static_cast<float>(base))), kPercentStep));
     CHECK_EQ(mobs.lines[0].iconSize, 150); // iconSize=24 px, of the 16 px base icon
     CHECK_EQ(s.Kind(PlateKind::Self).lines[2].textSize, Stepped(static_cast<int>(std::lround(100.0f * std::strtof(store.values.at("selfNameSize").c_str(), nullptr) / static_cast<float>(base))), kPercentStep));
-    // showLabels=false with mobId=lastThree leaves the ID alone on line 2; showIcons=false with the three badge
-    // switches on leaves the badge tags on line 1; hideClaimed shows both lines on unclaimed mobs only.
-    // mobIconPlace=inline with the level text "$id": the icons move onto line 2, left of the ID (badgeSide=left;
-    // detectionIconSide=right, but showIcons=false has no detection tag).
+    // showLabels=false with mobId=lastThree leaves the ID alone on line 2; showIcons=false leaves line 1 empty;
+    // hideClaimed shows line 2 on unclaimed mobs only.
     CHECK_EQ(mobs.lines[0].text, "");
-    CHECK_EQ(mobs.lines[1].text, "$weak$resist$status$immune $id");
+    CHECK_EQ(mobs.lines[1].text, "$id");
     CHECK(mobs.lines[0].show == LineShow{}); // no text on line 1, so hideClaimed=true leaves it alone
     CHECK(mobs.lines[1].show == (LineShow{false, ConditionBit(ShowCondition::Unclaimed)}));
     CHECK(mobs.lines[2].show == LineShow{});
-    CHECK(mobs.rows[CategoryIndex(Category::PartyClaim)].outline == OutlineMode::Shown); // its own switch was on
+    CHECK(mobs.rows[CategoryIndex(Category::PartyClaim)].outline == OutlineMode::ByNature);
     CHECK(mobs.rows[CategoryIndex(Category::PartyClaim)].outlineColor.source == ColorSource::Claim);
     CHECK_EQ(mobs.lines[2].glow, 0); // nameGlow=false
     for (const KindSettings& k : s.kinds) // and nothing else glowed before the designer
@@ -1714,19 +1640,13 @@ namespace
     const RowSettings& OthersRow(const Settings& s) { return s.Kind(PlateKind::Mobs).rows[CategoryIndex(Category::OtherClaim)]; }
 }
 
-TEST(a_claim_row_is_shown_in_the_claim_color_only_by_its_own_switch_else_by_nature)
+TEST(a_claim_row_of_an_old_file_is_outlined_by_nature_in_the_claim_color)
 {
     for (const Settings& s : {Load2({}), Load2WithNaturesOff({})})
     {
         CHECK(PartyRow(s).outline == OutlineMode::ByNature && OthersRow(s).outline == OutlineMode::ByNature);
-        CHECK(PartyRow(s).outlineColor.source == ColorSource::Claim);
+        CHECK(PartyRow(s).outlineColor.source == ColorSource::Claim && OthersRow(s).outlineColor.source == ColorSource::Claim);
     }
-    const Settings party = Load2({{"partyClaimShow", "true"}});
-    CHECK(PartyRow(party).outline == OutlineMode::Shown && PartyRow(party).outlineColor.source == ColorSource::Claim);
-    CHECK(OthersRow(party).outline == OutlineMode::ByNature);
-    const Settings others = Load2WithNaturesOff({{"otherClaimShow", "true"}});
-    CHECK(OthersRow(others).outline == OutlineMode::Shown && OthersRow(others).outlineColor.source == ColorSource::Claim);
-    CHECK(PartyRow(others).outline == OutlineMode::ByNature);
 }
 
 TEST(the_placeholder_row_is_shown_by_its_switch_else_by_nature)
@@ -1752,27 +1672,10 @@ TEST(by_nature_round_trips_on_a_claim_row_and_is_reset_elsewhere)
     CHECK(c.Kind(PlateKind::Mobs).rows[CategoryIndex(Category::OtherClaim)].outline == OutlineMode::ByNature);
 }
 
-TEST(the_mob_icon_row_is_written_as_the_old_plate_laid_it_out)
+TEST(the_mob_icon_row_shows_the_detection_icons_by_the_old_switch)
 {
-    auto lines = [](std::initializer_list<std::pair<const char*, const char*>> keys) {
-        const Settings s = Load2(keys);
-        return std::pair<std::string, std::string>{s.Kind(PlateKind::Mobs).lines[0].text, s.Kind(PlateKind::Mobs).lines[1].text};
-    };
-    using Pair = std::pair<std::string, std::string>;
-    CHECK(lines({{"showDamageIcons", "true"}}) == (Pair{"$detect$weak$resist", "Lv $level $con"}));
-    CHECK(lines({{"showDamageIcons", "true"}, {"badgeSide", "left"}}) == (Pair{"$weak$resist$detect", "Lv $level $con"}));
-    CHECK(lines({{"showDamageIcons", "true"}, {"detectionIconSide", "right"}, {"badgeSide", "left"}}) ==
-          (Pair{"$weak$resist$detect", "Lv $level $con"}));
-    CHECK(lines({{"showDamageIcons", "true"}, {"detectionIconSide", "right"}}) == (Pair{"$detect$weak$resist", "Lv $level $con"}));
-    CHECK(lines({{"showStatusRankIcons", "true"}, {"showImmunityIcons", "true"}}) == (Pair{"$detect$status$immune", "Lv $level $con"}));
-    CHECK(lines({{"mobIconPlace", "center"}, {"showDamageIcons", "true"}}) == (Pair{"$detect$weak$resist", "Lv $level $con"}));
-    CHECK(lines({{"mobIconPlace", "inline"}, {"showDamageIcons", "true"}}) == (Pair{"", "$detect Lv $level $con $weak$resist"}));
-    CHECK(lines({{"mobIconPlace", "inline"}, {"showDamageIcons", "true"}, {"detectionIconSide", "right"}, {"badgeSide", "right"}}) ==
-          (Pair{"", "Lv $level $con $detect$weak$resist"}));
-    CHECK(lines({{"mobIconPlace", "inline"}, {"showDamageIcons", "true"}, {"detectionIconSide", "left"}, {"badgeSide", "left"}}) ==
-          (Pair{"", "$weak$resist$detect Lv $level $con"}));
-    CHECK(lines({{"mobIconPlace", "inline"}, {"showDamageIcons", "true"}, {"showLabels", "false"}, {"mobId", "off"}}) ==
-          (Pair{"$detect$weak$resist", ""}));
+    CHECK_EQ(Load2({}).Kind(PlateKind::Mobs).lines[0].text, "$detect");
+    CHECK_EQ(Load2({{"showIcons", "false"}}).Kind(PlateKind::Mobs).lines[0].text, "");
 }
 
 TEST(a_players_name_line_carries_the_icons_the_old_settings_showed_on_each_side)
@@ -1784,8 +1687,6 @@ TEST(a_players_name_line_carries_the_icons_the_old_settings_showed_on_each_side)
     };
     CHECK_EQ(name({{"showPlayerIcons", "false"}}), "$name");
     CHECK_EQ(name({{"iconLinkshell", "right"}, {"iconBazaar", "hide"}}), "$mentor$new$sync$away$seeking$gm$name$linkshell");
-    CHECK_EQ(name({{"playerIconOrder", "iconSeekingParty iconGm iconMentor iconNewAdventurer iconLevelSync iconAway iconLinkshell iconBazaar"}}),
-        "$seeking$mentor$new$sync$away$linkshell$bazaar$gm$name");
     CHECK_EQ(name({{"iconGm", "hide"}}), "$mentor$new$sync$away$linkshell$bazaar$seeking$gm$name"); // GM shows whatever its side
 }
 
@@ -2290,28 +2191,24 @@ TEST(the_nameplates_opacity_is_bounded)
     CHECK_EQ(Clamp(s).opacity.range, kMinOutlineDistance);
 }
 
-TEST(the_one_nameplate_opacity_takes_the_mobs_values_from_a_file_that_had_one_a_kind)
+TEST(the_nameplate_opacity_takes_not_targeted_from_the_one_opacity_of_before)
 {
-    MapStore file = ReleaseFile({{"mobsOpacityNoTarget", "60.0000"}, {"mobsOpacityNotTargeted", "45.0000"},
-        {"mobsOpacityTargeted", "90.0000"}, {"mobsOpacityFadeIn", "true"}, {"mobsOpacityRange", "30.0000"},
-        {"playersOpacityNoTarget", "80.0000"}, {"petsOpacityNotTargeted", "20.0000"}, {"selfOpacityTargeted", "50.0000"},
-        {"untargetedOpacity", "40.0000"}});
-    CHECK((LoadSettings(file).opacity == OpacitySettings{60, 45, 90, true, 30.0f}));
-    // Its own keys win over the mobs'.
-    file.values["plateOpacityNoTarget"] = "70.0000";
-    file.values["plateOpacityFadeIn"]   = "false";
-    file.values["plateOpacityRange"]    = "25.0000";
+    MapStore file = ReleaseFile({{"untargetedOpacity", "40.0000"}});
+    const Settings fresh;
+    CHECK((LoadSettings(file).opacity ==
+           OpacitySettings{fresh.opacity.noTarget, 40, fresh.opacity.targeted, fresh.opacity.fadeIn, fresh.opacity.range}));
+    // Its own keys win.
+    file.values["plateOpacityNotTargeted"] = "45.0000";
+    file.values["plateOpacityNoTarget"]    = "70.0000";
+    file.values["plateOpacityFadeIn"]      = "false";
+    file.values["plateOpacityRange"]       = "25.0000";
     const Settings own = LoadSettings(file);
-    CHECK((own.opacity == OpacitySettings{70, 45, 90, false, 25.0f}));
-    // A save writes its own five keys and no kind's.
+    CHECK((own.opacity == OpacitySettings{70, 45, fresh.opacity.targeted, false, 25.0f}));
     MapStore saved;
     SaveSettings(own, saved);
     for (const char* key : {"plateOpacityNoTarget", "plateOpacityNotTargeted", "plateOpacityTargeted", "plateOpacityFadeIn",
              "plateOpacityRange"})
         CHECK(saved.values.contains(key));
-    for (int k = 0; k < kPlateKindCount; ++k)
-        for (const auto& [key, value] : saved.values)
-            CHECK(!key.starts_with(std::string(KindKey(static_cast<PlateKind>(k))) + "Opacity"));
     CHECK(LoadSettings(saved).opacity == own.opacity);
 }
 
@@ -2590,9 +2487,8 @@ TEST(pets_migrate_as_the_mobs_they_were_drawn_as)
     CHECK(petRow(Load2({{"replaceMobNames", "false"}})) == PlateMode::Vanilla);
     CHECK(petRow(Load2({{"replaceMobNames", "true"}})) == PlateMode::Shown);
     CHECK(petRow(Load2({{"replaceNpcNames", "false"}, {"replacePlayerNames", "false"}})) == PlateMode::Shown);
-    // The mob name's font and bold, whatever players and NPCs had.
-    const Settings fonts = Load2({{"fontName", "Georgia"}, {"fontBold", "true"}, {"playerFontName", "Verdana"},
-        {"playerFontBold", "false"}, {"npcFontName", "Cinzel"}, {"npcFontBold", "false"}});
+    // The mob name's font and bold.
+    const Settings fonts = Load2({{"fontName", "Georgia"}, {"fontBold", "true"}});
     const LineDesign& petName = fonts.Kind(PlateKind::Pets).lines[2];
     CHECK_EQ(petName.font, "Georgia");
     CHECK_EQ(petName.style, StyleBit(FontStyle::Bold));

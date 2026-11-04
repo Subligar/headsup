@@ -58,10 +58,10 @@ namespace headsup
     constexpr int kPanelSpacing = 0, kPanelPadding = kThemePadding;
     constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
 
-    // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
     // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
     enum class ConquestGrid : uint8_t { TwoByTwo, OneByFour };
     constexpr int kConquestGridCount = 2;
+    // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
     struct WidgetOptions
     {
         bool on         = false;
@@ -336,7 +336,7 @@ namespace headsup
     Settings Clamp(Settings s);
     // Whether HeadsUp shows a pointer of its own in place of the game's: another icon, or the game's at another size.
     bool PointerSwapped(const Settings& s);
-    // The file's settings, with HeadsUp's defaults (default_settings.h) for every key it lacks.
+    // The file's settings; a new install's are HeadsUp's defaults (default_settings.h).
     Settings LoadSettings(SettingsStore& store);
     // What a new install has: Settings' own with default_settings.h over them.
     Settings DefaultSettings();
