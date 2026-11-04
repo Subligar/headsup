@@ -149,11 +149,6 @@ namespace headsup
         values.push_back(FormValue{std::move(id), kind, std::move(name), std::move(text), on});
     }
 
-    std::string Form::Shown(const char* label)
-    {
-        return std::string(LabelText(label));
-    }
-
     void Form::BeginBlock(const char* id)
     {
         blocks.push_back(FormBlock{id, {}, false});
@@ -222,7 +217,7 @@ namespace headsup
         const std::string id = Id(std::string(label) + " label");
         const std::string row = id + "-row";
         Out() += std::string("<div class=\"row") + (m_Indent ? " indent" : "") + "\" id=\"" + row + "\"><div class=\"label\" id=\"" +
-                 id + "\"" + TipAttribute(tip) + ">" + EscapedRml(Shown(label)) + "</div><div class=\"ctl\">";
+                 id + "\"" + TipAttribute(tip) + ">" + EscapedRml(LabelText(label)) + "</div><div class=\"ctl\">";
         Set(row, FormValueKind::Class, kOffClass, {}, m_Off);
     }
 

@@ -38,8 +38,8 @@ namespace headsup
         constexpr float kPopupDrop  = 2.0f;  // pixels between a control and its popup
         constexpr float kTipDrop    = 18.0f; // pixels from the pointer to its tip
         constexpr char kKeySeparator = '\x1f';
-        // A design line's box and the stretches of text in it, as menu_document styles them.
-        constexpr float kCaretRoom         = 0.4f;     // ems past a stretch's last letter: its caret, and a place to click
+        // Ems past the last letter of a stretch in a design line's box: its caret, and a place to click.
+        constexpr float kCaretRoom = 0.4f;
 
         Rml::Element* WithId(Rml::Element* element)
         {
@@ -566,11 +566,11 @@ namespace headsup
         case Rml::EventId::Click:
             if (id == kMenuCloseId) m_Closed = true;
             m_Reload |= id == kMenuReloadId;
-            // The picker's own ground, between its sliders, is the picker: a click there is one on its control.
             // A click in a line box beside its stretches is a click at its end.
             if (target->IsClassSet(kLineBoxClass))
                 if (Rml::ElementFormControlInput* last = AsInput(target->GetLastChild()))
                     FocusAt(last, CharacterOf(last->GetValue(), last->GetValue().size()));
+            // The picker's own ground, between its sliders, is the picker: a click there is one on its control.
             m_Events.push_back(
                 FormEvent{named == m_Popup || named == m_ViewPopup ? m_State.form.popup + kPopupGround : id, kClickEvent, {}});
             m_Tip->SetClass(kHiddenClass, true);

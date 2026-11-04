@@ -64,7 +64,6 @@ namespace headsup
     // Enter in a stretch of a line box: value is the stretch as it is typed and at the caret's byte in it.
     constexpr const char* kBreakEvent  = "break";
     constexpr char kKillBack = 'b', kKillForward = 'f';
-    // The ids of a line box's parts, after the box's own: a stretch of text and a tag, each with its number.
     // Classes the kit writes, the window sets and the stylesheet draws: one name each for the three.
     constexpr const char* kOffClass     = "off";     // a setting of something switched off: not shown
     constexpr const char* kLiveClass    = "live";    // a number box showing what is so now, no setting
@@ -87,6 +86,7 @@ namespace headsup
     constexpr const char* kSplitAttribute = "split";
     constexpr const char* kReplacedClass = "replaced";
     constexpr const char* kLeavingClass  = "leaving";
+    // The ids of a line box's parts, after the box's own: a stretch of text and a tag, each with its number.
     constexpr const char* kRunIdInfix  = "-t-";
     // The ids of a control's parts, after the control's own: a dropdown's option, a row of choices' choice and a tab
     // strip's tab, each with its number.
@@ -181,7 +181,7 @@ namespace headsup
         // What follows is not shown and takes no clicks, while the feature it belongs to is off: a setting that
         // would do nothing is no setting. A card begun so is left out whole.
         void Fade(bool off) { m_Off = off; }
-        // True in the pass a click opened the list of the dropdown of this name, the card's last so named.
+        // True in the pass a click opened the list of the dropdown of this name, the card's first so named.
         bool Opened(std::string_view name) const;
         // How many cards of this pass show, folded or not.
         int CardsShown() const { return m_CardsShown; }
@@ -347,10 +347,6 @@ namespace headsup
 
     private:
         std::string& Out() { return blocks.back().rml; }
-        // The label a row shows: what is before "##", as the layout words it.
-        static std::string Shown(const char* label);
-        // A dropdown's closed control: what it shows and its arrow. True while its popup is open.
-        // markup: shown, or name, is RML and not words to escape.
         // A row of joined buttons: press is told of each one clicked, and picked says which are lit.
         void SegmentRow(const std::string& base, const char* const* options, int count,
             const std::function<void(int)>& press, const std::function<bool(int)>& picked);
@@ -364,6 +360,8 @@ namespace headsup
         void TakeChecks(const std::string& control, FunctionRef<void(int)> clicked);
         // One check of its popup, start being the dropdown's control and kOptionIdInfix.
         std::string CheckRow(const std::string& start, int index, const char* name, const char* tip, bool on);
+        // A dropdown's closed control: what it shows and its arrow. True while its popup is open.
+        // markup: shown, or name, is RML and not words to escape.
         bool ListControl(const std::string& control, const std::string& shown, float width, const std::string& tip = {},
             bool markup = false);
         std::string ListRow(const std::string& control, int index, const std::string& name, bool picked,

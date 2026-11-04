@@ -52,11 +52,11 @@ namespace headsup
         bool all = false;
     };
 
+    // How near the preview is, in percent: the whole scene, and each notch of the wheel over it.
+    constexpr int kLeastSetupZoom = 100, kMostSetupZoom = 300, kSetupZoomNotch = 25;
     // Setup while the window shows it: the step open, whether it is a run after the first (which warns, then starts
     // from the defaults), whether it has started, and the settings as they were when it opened, which Skip and
     // Cancel put back.
-    // How near the preview is, in percent: the whole scene, and each notch of the wheel over it.
-    constexpr int kLeastSetupZoom = 100, kMostSetupZoom = 300, kSetupZoomNotch = 25;
     struct SetupRun
     {
         SetupStep step = SetupStep::Welcome;
