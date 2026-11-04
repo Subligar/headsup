@@ -87,8 +87,9 @@ namespace headsup
 
     bool NameplateRenderer::Prepare(PlateTexture& t, const char* text, const TextLook& look, int pixelHeight)
     {
-        TextureKey key{text, pixelHeight, 0, look};
-        if (t.key == key && (t.texture != nullptr || t.unfit)) return true;
+        // Compared before the key is made: a key copies the text and its font.
+        const bool same = t.key.text == text && t.key.height == pixelHeight && t.key.width == 0 && t.key.look == look;
+        if (same && (t.texture != nullptr || t.unfit)) return true;
         if (!RedrawNow(t.texture != nullptr, m_RedrawMs)) return true;
         // A name new in a busy frame is drawn at once without its glow, which costs the most: a later frame adds it.
         if (t.texture == nullptr && look.glow != 0 && !RedrawNow(true, m_RedrawMs))
@@ -98,6 +99,7 @@ namespace headsup
             return Prepare(t, text, plain, pixelHeight);
         }
         const Stopwatch stopwatch(m_RedrawMs);
+        TextureKey key{text, pixelHeight, 0, look};
         // What a height's shadow, glow and edge measure.
         struct Style
         {

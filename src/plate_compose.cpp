@@ -450,7 +450,8 @@ namespace headsup
         {
             if (item.kind != ItemKind::Text) continue;
             if (!text.empty()) text += kSpace;
-            text += WithDashes(item.text);
+            text += item.text;
         }
+        text = WithDashes(std::move(text));
     }
 }
