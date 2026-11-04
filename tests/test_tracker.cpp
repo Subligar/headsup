@@ -103,6 +103,24 @@ TEST(a_mob_attacks_as_phoenixs_aggro_check_decides)
     }
 }
 
+TEST(a_name_too_long_for_its_room_is_cut_to_fit_with_its_terminator)
+{
+    Tracker t;
+    ActorInput pet = Player(0x1000);
+    const std::string room(sizeof(ActorInfo{}.name) - 1, 'n'), owner(sizeof(ActorInfo{}.ownerName) - 1, 'o');
+    const std::string longName = room + "xyz", longOwner = owner + "x";
+    pet.name      = longName.c_str();
+    pet.ownerName = longOwner.c_str();
+    t.Update({pet}, kLevel20, Settings{}, CursorTargets{});
+    CHECK_EQ(std::string(t.Find(0x1000)->name), room);
+    CHECK_EQ(std::string(t.Find(0x1000)->ownerName), owner);
+    pet.name      = "Zi";
+    pet.ownerName = owner.c_str();
+    t.Update({pet}, kLevel20, Settings{}, CursorTargets{});
+    CHECK_EQ(std::string(t.Find(0x1000)->name), "Zi");
+    CHECK_EQ(std::string(t.Find(0x1000)->ownerName), owner);
+}
+
 TEST(players_and_npcs_keep_their_names_without_outlines)
 {
     Tracker t;
