@@ -1031,6 +1031,9 @@ namespace headsup
         if (mapping.problem != LocateProblem::None) return Describe(mapping.problem);
         const PointerShow show = LocatePointerShow(text);
         if (show.problem != LocateProblem::None) return Describe(show.problem);
+        // The image stays mapped while the game runs, so a mouse move reads the controller's global unchecked.
+        if (!InImage(base, Pointer(show.controllerGlobal), sizeof(uintptr_t)))
+            return "the mouse controller's pointer is not in the game's image";
         const KeyHide keyHide = LocateKeyHide(text);
         if (keyHide.problem != LocateProblem::None) return Describe(keyHide.problem);
         std::vector<CodePatch> patches;
