@@ -37,6 +37,16 @@ namespace headsup
         constexpr float kAddWindowShare    = 0.8f;    // of a dropdown's width: a group's "+ Add Window"
         constexpr size_t kMaxFindText      = 31;      // letters of a window's name to look for
 
+        const std::vector<std::string>& PlateFonts(MenuFormState& state, const std::vector<std::string>& fonts)
+        {
+            if (state.plateFontsFrom != fonts)
+            {
+                state.plateFontsFrom = fonts;
+                state.plateFonts     = NameplateFontChoices(fonts);
+            }
+            return state.plateFonts;
+        }
+
         // What a page is drawn with and from.
         struct Context
         {
@@ -50,7 +60,7 @@ namespace headsup
             std::optional<PlateKind> kind; // an entity page's
             bool plates        = false;    // the kind has a row that draws a nameplate
             bool outlineColors = false;    // and one outlined in its own color pick
-            const std::vector<std::string> plateFonts = NameplateFontChoices(fonts);
+            const std::vector<std::string>& plateFonts = PlateFonts(state, fonts);
         };
 
         std::string Words(const char* text) { return std::string(Said(text)); }
@@ -1960,7 +1970,10 @@ namespace headsup
         void SetupChoiceRow(Context& c, const SetupChoice& choice)
         {
             const std::span<const LayoutOption> options = c.layout.OptionsOf(choice.list);
-            const std::optional<size_t> held            = PickedOption(choice, c.s);
+            SetupRun& run                               = *c.state.setup;
+            const auto [known, fresh]                   = run.picked.try_emplace(&choice);
+            if (fresh) known->second = PickedOption(choice, c.s);
+            const std::optional<size_t> held = known->second;
             const int was = held ? static_cast<int>(*held) : kNoOption;
             int picked    = was;
             const auto name = [&](int i) { return i < 0 ? Words(Word(c, WindowWord::SetupCustom)) : Words(options[static_cast<size_t>(i)].name); };
@@ -1969,6 +1982,7 @@ namespace headsup
                 WordTip(c, choice.word), 0.0f, tip);
             if (picked == was || picked < 0) return;
             choice.options[static_cast<size_t>(picked)].apply(c.s);
+            run.picked.clear();
             c.form.changed = true;
         }
 
@@ -2124,6 +2138,11 @@ namespace headsup
         {
             Form& form    = c.form;
             SetupRun& run = *c.state.setup;
+            if (run.pickedFor != c.s)
+            {
+                run.pickedFor = c.s;
+                run.picked.clear();
+            }
             form.BeginBlock(kSidebarBlock);
             for (const SetupPage& page : SetupPages())
             {
@@ -2164,7 +2183,7 @@ namespace headsup
         {
             Context c{form, s, readings, state, fonts, menuFonts, layout, std::nullopt};
             BuildSetup(c);
-            s = Clamp(s);
+            s = Clamp(std::move(s));
             return;
         }
         if (KindOfPage(state.page) && !KindPagesShown(s))
@@ -2215,7 +2234,7 @@ namespace headsup
             form.Note(Word(c, s.enabled ? WindowWord::SwitchedOffTopPanel : WindowWord::SwitchedOffHeadsup));
             form.EndCard();
         }
-        s = Clamp(s);
+        s = Clamp(std::move(s));
     }
 
     void BuildWidgetSettings(Form& form, Settings& s, const MenuReadings& readings, MenuFormState& state,
@@ -2232,6 +2251,6 @@ namespace headsup
         PopupSettings(c, *tabs);
         form.EndCard();
         form.Fade(false);
-        s = Clamp(s);
+        s = Clamp(std::move(s));
     }
 }

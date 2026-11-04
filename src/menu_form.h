@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace headsup
@@ -67,6 +68,9 @@ namespace headsup
         float panX = 0.0f, panY = 0.0f; // shares of the picture it is dragged across and down, as far as the zoom leaves room
         int lineKind = 0, line = 0; // the Nameplates step's Advanced tabs: into kSetupLineKinds, and the line
         bool advanced = false;      // each step shows the parts of its presets, until hidden again
+        // Which option each choice drawn holds, while the settings are still pickedFor.
+        Settings pickedFor = {};
+        std::unordered_map<const SetupChoice*, std::optional<size_t>> picked = {};
     };
 
     // The settings file a run of Setup again copies the settings to first, named for when, and the picture Setup
@@ -105,6 +109,8 @@ namespace headsup
         DesignEditor design;
         LineDraft fishLine; // the fishing bar's line, as its box is being written
         std::optional<SetupRun> setup; // Setup is shown in place of the pages
+        // The nameplates' font choices, made from the installed fonts in plateFontsFrom.
+        std::vector<std::string> plateFonts, plateFontsFrom;
         bool setupBackup    = false;   // a run again started: the settings file is to be copied first
         bool closeRequested = false;   // Setup was skipped or cancelled, and the window closes
 

@@ -102,9 +102,13 @@ namespace headsup
             input->SetSelectionRange(character, character);
         }
 
-        std::string KeyOf(const FormValue& value)
+        // What m_Applied knows a value by, written into key, which keeps its room from the last.
+        void KeyOf(std::string_view id, FormValueKind kind, std::string_view name, std::string& key)
         {
-            return value.id + kKeySeparator + static_cast<char>('0' + static_cast<int>(value.kind)) + value.name;
+            key.assign(id);
+            key += kKeySeparator;
+            key += static_cast<char>('0' + static_cast<int>(kind));
+            key += name;
         }
 
         void SetPx(Rml::Element* element, Rml::PropertyId property, float value)
@@ -133,6 +137,7 @@ namespace headsup
         m_TipShown.clear();
         m_Cards.clear();
         m_ById.clear();
+        m_Runs.clear();
         m_Applied.clear();
         m_Events.clear();
     }
@@ -208,12 +213,14 @@ namespace headsup
     void RmlMenu::Index()
     {
         m_ById.clear();
+        m_Runs.clear();
         std::vector<Rml::Element*> left{m_Document, m_View};
         while (!left.empty())
         {
             Rml::Element* element = left.back();
             left.pop_back();
             if (!element->GetId().empty()) m_ById.emplace(element->GetId(), element);
+            if (element->IsClassSet(kRunClass)) m_Runs.push_back(element);
             for (int child = 0; child < element->GetNumChildren(); ++child)
                 left.push_back(element->GetChild(child));
         }
@@ -360,12 +367,12 @@ namespace headsup
     void RmlMenu::ApplyValues(const std::vector<FormValue>& values)
     {
         Rml::Element* focus = m_Document->GetFocusLeafNode();
+        std::string key;
         for (const FormValue& value : values)
         {
-            const std::string key = KeyOf(value);
-            const Applied now{value.text, value.on};
+            KeyOf(value.id, value.kind, value.name, key);
             const auto known = m_Applied.find(key);
-            if (known != m_Applied.end() && known->second == now) continue;
+            if (known != m_Applied.end() && known->second.text == value.text && known->second.on == value.on) continue;
             Rml::Element* element = Find(value.id);
             if (element == nullptr) continue;
             switch (value.kind)
@@ -390,7 +397,7 @@ namespace headsup
                 break;
             }
             }
-            m_Applied[key] = now;
+            m_Applied[key] = Applied{value.text, value.on};
         }
     }
 
@@ -500,9 +507,7 @@ namespace headsup
     // Each stretch of a line box is as wide as what is typed in it, so that its tags sit against its letters.
     void RmlMenu::FitRuns()
     {
-        Rml::ElementList runs;
-        m_Page->GetElementsByClassName(runs, kRunClass);
-        for (Rml::Element* run : runs)
+        for (Rml::Element* run : m_Runs)
         {
             Rml::ElementFormControlInput* input = AsInput(run);
             if (input == nullptr) continue;
@@ -604,7 +609,9 @@ namespace headsup
                 if (const auto was = m_FocusValue.find(id); was == m_FocusValue.end() || was->second != value)
                     m_Events.push_back(FormEvent{id, kCommitEvent, value});
                 // What it shows from here is the form's to set again.
-                m_Applied.erase(id + kKeySeparator + static_cast<char>('0' + static_cast<int>(FormValueKind::Value)));
+                std::string key;
+                KeyOf(id, FormValueKind::Value, {}, key);
+                m_Applied.erase(key);
                 if (target->IsClassSet(kRunClass)) target->GetParentNode()->SetClass(kTypingClass, false);
             }
             break;
