@@ -1096,9 +1096,9 @@ namespace headsup
             return ranks;
         }
 
-        // A craft guild's turn-ins today, from Phoenix's site, under a line of their own: each rank's item and its high
-        // quality, each with its picture and its points, and the most a day, your rank starred and lit;
-        // until the site answers, a line saying so.
+        // A craft guild's turn-ins today, from Phoenix's site, under a line of their own: the item each rank is asked for
+        // today and its high quality, each with its picture and its points, and the most a day, your rank starred and
+        // lit; until the site answers, a line saying so.
         std::vector<PopupRow> TurnIns(const BarState& state, int craft, const std::string& guild)
         {
             std::vector<PopupRow> rows = ListOf(LineOf("Today's Turn-ins", Tone::Heading));
@@ -1112,18 +1112,21 @@ namespace headsup
                 return rows;
             }
             const std::vector<RankTurnIn> ranks = ByRank(state.turnIns->guilds[static_cast<size_t>(craft)]);
-            PopupRow grid = Grid(kTurnInColumns, (ranks.size() + 1) * kTurnInColumns);
+            PopupRow grid = Grid(kTurnInColumns, (kCraftRankCount + 1) * kTurnInColumns);
             grid.nested   = true;
             grid.header   = true;
             ScrollsBy(grid, state, "Guilds/" + guild + "/Turn-ins");
             for (const char* heading : {"Rank", "NQ Item", "Points", "HQ Item", "Points", "Max Points"})
                 grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
             const auto figure = [](int value) { return Grouped(static_cast<uint64_t>(std::max(value, 0))); };
-            for (const RankTurnIn& rank : ranks)
+            for (uint8_t craftRank = 0; craftRank < kCraftRankCount; ++craftRank)
             {
-                const GuildTurnIn& item = *rank.item;
-                const GuildTurnIn* high = rank.high;
-                const bool yours = state.crafts && (*state.crafts)[static_cast<size_t>(craft)] == item.rank;
+                const uint8_t asked = AskedRank(craftRank, state.unixMs);
+                const auto rank = std::ranges::find_if(ranks, [&](const RankTurnIn& r) { return r.item->rank == asked; });
+                if (rank == ranks.end()) continue;
+                const GuildTurnIn& item = *rank->item;
+                const GuildTurnIn* high = rank->high;
+                const bool yours = state.crafts && (*state.crafts)[static_cast<size_t>(craft)] == craftRank;
                 // An item with its picture; a rank without a high quality has its cells empty.
                 const auto named = [&](const GuildTurnIn* t) {
                     if (t == nullptr) return PopupCell{};
@@ -1132,7 +1135,7 @@ namespace headsup
                     cell.item = t->item;
                     return cell;
                 };
-                PopupCell level = Cell(Text(item.rankName, yours ? Tone::Normal : Tone::Dim));
+                PopupCell level = Cell(Text(kCraftRankNames[craftRank], yours ? Tone::Normal : Tone::Dim));
                 level.star      = yours;
                 grid.cells.push_back(std::move(level));
                 grid.cells.push_back(named(&item));

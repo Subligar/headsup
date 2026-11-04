@@ -2,7 +2,9 @@
 
 #include "bar_server_time.h"
 #include "json_text.h"
+#include "vanadiel.h"
 
+#include <algorithm>
 #include <charconv>
 #include <cmath>
 
@@ -13,6 +15,7 @@ namespace headsup
         // The site's names for the guilds, by id, and the shops' (Clothcraft is the site's weaving).
         constexpr const char* kPointsNames[kCraftGuilds] = {"guild_fishing", "guild_woodworking", "guild_smithing",
             "guild_goldsmithing", "guild_weaving", "guild_leathercraft", "guild_bonecraft", "guild_alchemy", "guild_cooking"};
+        constexpr uint8_t kNovice = 3, kVeteran = 9; // the ranks whose turn-ins step daily
         constexpr const char* kGuildNames[kCraftGuilds] = {"Fishing", "Woodworking", "Smithing", "Goldsmithing",
             "Clothcraft", "Leathercraft", "Bonecraft", "Alchemy", "Cooking"};
 
@@ -59,7 +62,7 @@ namespace headsup
                 const std::optional<int> points = WholeNumber(rank.Field("points")), most = WholeNumber(rank.Field("maxPoints"));
                 if (!level || !item || !points || !most || *level < 0 || *item <= 0 || *item > UINT16_MAX) continue;
                 read.guilds[static_cast<size_t>(*id)].push_back(GuildTurnIn{static_cast<uint8_t>(*level),
-                    TextOf(rank.Field("rankName")), static_cast<uint16_t>(*item), TextOf(rank.Field("itemName")), *points, *most});
+                    static_cast<uint16_t>(*item), TextOf(rank.Field("itemName")), *points, *most});
             }
         }
         return read;
@@ -75,6 +78,13 @@ namespace headsup
         const auto [end, error] = std::from_chars(text.data(), text.data() + line, day);
         if (error != std::errc() || end != text.data() + line) return std::nullopt;
         return SavedGuildPatterns{day, std::string(text.substr(line + 1))};
+    }
+
+    uint8_t AskedRank(uint8_t craftRank, int64_t unixMs)
+    {
+        const int64_t day   = JstDay(unixMs) - JstDay(kVanaEpochUnixMs);
+        const uint8_t stops = static_cast<uint8_t>(std::clamp(craftRank, kNovice, kVeteran) + 1);
+        return static_cast<uint8_t>(day % stops);
     }
 
     bool GuildPatternsDue(std::optional<int64_t> savedDay, int64_t unixMs) { return !savedDay || *savedDay != JstDay(unixMs); }
