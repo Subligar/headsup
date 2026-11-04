@@ -9,6 +9,7 @@ namespace headsup
     constexpr uint32_t kAlphaMask = 0xFF000000; // a D3DCOLOR's alpha byte
     constexpr uint32_t kBarGreen  = 0xFF6FE36F; // the bar's one green: wind, Windurst, a weapon skill's TP
     constexpr int kRedShift = 16, kGreenShift = 8, kBlueShift = 0, kAlphaShift = 24; // in a D3DCOLOR (A8R8G8B8)
+    constexpr int kBytesPerPixel = 4; // A8R8G8B8 textures and GDI's 32-bit bitmaps
 
     constexpr uint32_t Argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
     {

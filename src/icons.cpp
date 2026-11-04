@@ -1,5 +1,6 @@
 #include "icons.h"
 
+#include "argb.h"
 #include "game_font.h"
 
 #include <algorithm>
@@ -271,8 +272,8 @@ namespace headsup
 
     namespace
     {
-        constexpr size_t kBytes = 4, kChannels = 3, kAlpha = 3;
-        constexpr float kFullByte = 255.0f;
+        constexpr size_t kChannels = 3, kAlpha = 3;
+        constexpr float kFullByte = static_cast<float>(kOpaqueAlpha);
         constexpr float kVisibleShare = 0.5f; // a pixel of the game's at least this covered is part of its pearl
         constexpr float kSolidShare   = 0.9f; // and its color its own: the game's clasp and rim are paler and partly clear
         constexpr int kAllRings       = std::numeric_limits<int>::max();
@@ -458,16 +459,16 @@ namespace headsup
 
     std::vector<unsigned char> PaintedIcon(const IconBitmap& icon, uint32_t color)
     {
-        constexpr double kHalfStrength = 255.0 / 2.0; // a color channel at this leaves the texture as it is
+        constexpr double kHalfStrength = kOpaqueAlpha / 2.0; // a color channel at this leaves the texture as it is
         const size_t pixels = static_cast<size_t>(icon.width) * icon.height;
-        std::vector<unsigned char> out(icon.bgra, icon.bgra + pixels * kBytes);
+        std::vector<unsigned char> out(icon.bgra, icon.bgra + pixels * kBytesPerPixel);
         for (size_t c = 0; c < kChannels; ++c)
         {
             const double gain = static_cast<double>(color >> (8 * c) & 0xFF) / kHalfStrength;
             for (size_t p = 0; p < pixels; ++p)
             {
-                unsigned char& channel = out[p * kBytes + c];
-                channel = static_cast<unsigned char>(std::min<long>(255, std::lround(channel * gain)));
+                unsigned char& channel = out[p * kBytesPerPixel + c];
+                channel = static_cast<unsigned char>(std::min<long>(kOpaqueAlpha, std::lround(channel * gain)));
             }
         }
         return out;
@@ -476,7 +477,7 @@ namespace headsup
     std::vector<unsigned char> GameLitPearl(const ColorPicture& game, const IconBitmap& shape, int outlinePercent)
     {
         const size_t pixels = static_cast<size_t>(game.width) * static_cast<size_t>(game.height);
-        if (game.width <= 0 || game.height <= 0 || game.bgra.size() != pixels * kBytes || shape.width == 0 || shape.height == 0)
+        if (game.width <= 0 || game.height <= 0 || game.bgra.size() != pixels * kBytesPerPixel || shape.width == 0 || shape.height == 0)
             return {};
         // The game's alpha stands at half: twice it is the pearl's coverage.
         std::array<Plane, kChannels> colors;
@@ -486,8 +487,8 @@ namespace headsup
         for (size_t p = 0; p < pixels; ++p)
         {
             for (size_t c = 0; c < kChannels; ++c)
-                colors[c].values[p] = static_cast<float>(game.bgra[p * kBytes + c]);
-            const float share = 2.0f * static_cast<float>(game.bgra[p * kBytes + kAlpha]) / kFullByte;
+                colors[c].values[p] = static_cast<float>(game.bgra[p * kBytesPerPixel + c]);
+            const float share = 2.0f * static_cast<float>(game.bgra[p * kBytesPerPixel + kAlpha]) / kFullByte;
             solid[p]          = share >= kSolidShare;
             if (share < kVisibleShare) continue;
             const int x = static_cast<int>(p % static_cast<size_t>(game.width)), y = static_cast<int>(p / static_cast<size_t>(game.width));
@@ -504,7 +505,7 @@ namespace headsup
         const size_t count = static_cast<size_t>(width) * static_cast<size_t>(height);
         Plane shapeSolid{width, height, std::vector<float>(count)};
         for (size_t p = 0; p < count; ++p)
-            shapeSolid.values[p] = shape.bgra[p * kBytes + kAlpha] >= kShapeSolidAlpha ? 1.0f : 0.0f;
+            shapeSolid.values[p] = shape.bgra[p * kBytesPerPixel + kAlpha] >= kShapeSolidAlpha ? 1.0f : 0.0f;
         const Plane soft      = Padded(Blurred(shapeSolid, kEdgeBlur), kTraceMargin);
         const int samplesWide = width * kTraceSamples + 2, samplesTall = height * kTraceSamples + 2;
         std::vector<float> distance(static_cast<size_t>(samplesWide) * static_cast<size_t>(samplesTall), 0.0f);
@@ -551,12 +552,12 @@ namespace headsup
         for (size_t p = 0; p < count; ++p)
             seen[p] = alpha[p] > 0;
         Bleed(lit, seen, kClearBleedRings);
-        std::vector<unsigned char> bgra(count * kBytes);
+        std::vector<unsigned char> bgra(count * kBytesPerPixel);
         for (size_t p = 0; p < count; ++p)
         {
             for (size_t c = 0; c < kChannels; ++c)
-                bgra[p * kBytes + c] = static_cast<unsigned char>(std::lround(std::clamp(lit[c].values[p], 0.0f, kFullByte)));
-            bgra[p * kBytes + kAlpha] = alpha[p];
+                bgra[p * kBytesPerPixel + c] = static_cast<unsigned char>(std::lround(std::clamp(lit[c].values[p], 0.0f, kFullByte)));
+            bgra[p * kBytesPerPixel + kAlpha] = alpha[p];
         }
         return bgra;
     }

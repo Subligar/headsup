@@ -1,5 +1,6 @@
 #include "cursor_file.h"
 
+#include "argb.h"
 #include "bytes.h"
 
 #include <cmath>
@@ -13,7 +14,6 @@ namespace headsup
 #include "generated/pointer.inc"
 
         constexpr double kJiffiesPerSecond = 60.0;
-        constexpr size_t kBytesPerPixel    = 4;
         constexpr size_t kRgbSize          = 3; // blue, green, red: a 24-bit pixel, or a palette color without its pad byte
         constexpr size_t kPaletteEntrySize = 4;
         constexpr uint32_t kMaxCursorSide  = 256; // a cursor file's directory gives each side in a byte, 0 meaning 256
@@ -108,7 +108,7 @@ namespace headsup
                         if (index >= colors) return std::nullopt;
                         std::memcpy(out, dib + headerSize + index * kPaletteEntrySize, kRgbSize);
                     }
-                    out[3] = (mask[x / 8] >> (7 - x % 8) & 1) != 0 ? 0 : 255;
+                    out[3] = (mask[x / 8] >> (7 - x % 8) & 1) != 0 ? 0 : kOpaqueAlpha;
                     ownAlpha = ownAlpha || (bpp == kDeepBits && row[x * kBytesPerPixel + 3] != 0);
                 }
             }
@@ -215,7 +215,7 @@ namespace headsup
         {
             const size_t at        = p * kBytesPerPixel;
             const bool transparent = at + 2 < mask.size() && (mask[at] | mask[at + 1] | mask[at + 2]) != 0;
-            image.bgra[at + 3]     = transparent ? 0 : 255;
+            image.bgra[at + 3]     = transparent ? 0 : kOpaqueAlpha;
         }
         return image;
     }

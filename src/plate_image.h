@@ -1,6 +1,8 @@
 #pragma once
 
+#include "argb.h"
 #include "dash_mark.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -9,8 +11,6 @@
 
 namespace headsup
 {
-    constexpr int kBytesPerPixel = 4; // A8R8G8B8 textures and GDI's 32-bit bitmaps
-
     // Antialiased text or a filled shape, one byte per pixel, rows top to bottom.
     struct Coverage
     {
@@ -19,6 +19,7 @@ namespace headsup
         std::vector<uint8_t> alpha;
     };
 
+    constexpr float kFullCoverage  = static_cast<float>(kOpaqueAlpha); // a Coverage byte wholly covered
     constexpr uint8_t kInkCoverage = 64; // a quarter: the least a pixel of a glyph is covered to count as its ink
 
     // The rows and columns of a coverage holding ink, right and bottom exclusive.
@@ -125,7 +126,6 @@ namespace headsup
     Image Diamond(int size, uint32_t color);
     // Gil's coin: a disc size pixels across with a 1 px rim at 60% of its color's brightness.
     Image Coin(int size, uint32_t color);
-    // A five-pointed star with a point straight up, in the circle size pixels across.
     // A circular arrow in a square size pixels across: most of a ring, turning counterclockwise to a head at its top.
     Image ResetArrow(int size, uint32_t color);
     // A cog of eight teeth with a hole in its middle, in a square size pixels across.
