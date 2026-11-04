@@ -21,6 +21,7 @@ namespace headsup
         constexpr float kCardPad     = 0.55f; // a card's contents from its edges
         constexpr float kCardGap     = 0.45f; // between cards, and between the columns of them
         constexpr float kMinWidth    = 12.0f; // popupText, so a short popup is not a sliver
+        constexpr const char* kPinWord = "pin", *kPinnedWord = "pinned"; // the pin chip's, as it is and as it would be
         constexpr float kCogShare    = 0.7f;  // the cog, of its chip's height
         constexpr float kSocketInset = 0.9f;  // a socket's rows from its left and right edges
         constexpr float kSocketPad   = 0.35f; // above and below a socket's rows
@@ -68,7 +69,6 @@ namespace headsup
         float TagPadY(float unit) { return std::round(unit * kTagPadY); }
 
         // A tag's frame around its cell's ink, with where that ink is in it.
-        constexpr const char* kPinWord = "pin", *kPinnedWord = "pinned"; // the pin chip's, as it is and as it would be
         TextSize Framed(const TextSize& cell, float unit)
         {
             const float ink = cell.inkBottom - cell.inkTop, padY = TagPadY(unit);
@@ -269,7 +269,6 @@ namespace headsup
                 const bool pair = row.kind == RowKind::Pair && row.cells.size() == 2;
                 const float gap = unit * (tags ? kTagGap : pair ? kPairGap : kCellGap);
                 // A socket's rows as far in from its right as from its left.
-                // socket's right as from its left.
                 const float indent = row.nested ? inset : 0.0f;
                 cells.clear();
                 columns = grid ? runColumns[r] : std::vector<float>{};

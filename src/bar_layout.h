@@ -65,11 +65,12 @@ namespace headsup
         bool operator==(const TextRow&) const = default;
     };
     // Placed by their ink, which ink gives for the title's or the detail's font at a size: the title's top to the
-    // detail's bottom, with at least 3 px between the title's descenders and the detail's top, centered in the pill
-    // row inside its border with clear space above and below; a title alone, its top to its baseline centered and all
-    // of its ink inside. The sizes are the metrics', made smaller together only as far as that needs; when the detail
-    // line would need to be smaller than 9 px, the titles show alone, as large as fits. A set title size (titleSet) is
-    // never made smaller to keep two lines: the detail line alone shrinks, to 9 px, before the titles show alone.
+    // detail's bottom, with a few clear pixels between the title's descenders and the detail's top, centered in the
+    // pill row inside its border with clear space above and below; a title alone, its top to its baseline centered and
+    // all of its ink inside. The sizes are the metrics', made smaller together only as far as that needs; when the
+    // detail line would need to be smaller than the least worth drawing, the titles show alone, as large as fits. A set
+    // title size (titleSet) is never made smaller to keep two lines: the detail line alone shrinks, to that least,
+    // before the titles show alone.
     TextRow FitTextRow(const BarMetrics& metrics, FunctionRef<LineInk(bool title, int pixels)> ink);
 
     // natural: each widget's width by SlotOf, 0 for one not shown. The left section starts after the left end cap
@@ -115,10 +116,6 @@ namespace headsup
     // The first characters of text and "...", the least of it worth showing; the text itself when it has no more.
     std::string Shortest(const std::string& text, int characters);
 
-    // Which popup is open. Hovering a widget that has one opens it; leaving both the widget and its popup, or the
-    // widget losing its popup, closes it, and the pointer crossing the gap between them does not. Only a left press
-    // on the open popup's pin chip pins it, or unpins it if it was pinned. While a popup is pinned, hovering another
-    // shows that one until the pointer leaves.
     // A tab of one of the open popup's cards, where it was drawn on the screen: its key the card's heading.
     struct BarTabChip
     {
@@ -137,6 +134,10 @@ namespace headsup
         float thumb = 0.0f; // the thumb's length down the track
     };
 
+    // Which popup is open. Hovering a widget that has one opens it; leaving both the widget and its popup, or the
+    // widget losing its popup, closes it, and the pointer crossing the gap between them does not. Only a left press
+    // on the open popup's pin chip pins it, or unpins it if it was pinned. While a popup is pinned, hovering another
+    // shows that one until the pointer leaves.
     class BarInput
     {
     public:

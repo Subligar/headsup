@@ -108,7 +108,7 @@ namespace headsup
         int containers = 0; // bags from 0 up to this
     };
     BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open);
-    // What a press on a popup's pressable cell told (PopupCell::press) done to the settings: a currency's or a
+    // Does to the settings what a press on a popup's pressable cell told (PopupCell::press): a currency's or a
     // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
     // off. False when it changed nothing.
     bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);

@@ -167,9 +167,6 @@ namespace headsup
                    RcssColor(style.bottom) + ");";
         }
 
-        // A box drawn in the game's art, which is its own edge.
-
-
         // A box of one fill, its edge and, when it has them, its corners.
         std::string FlatRules(const BoxStyle& style, bool corners)
         {

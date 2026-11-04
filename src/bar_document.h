@@ -95,7 +95,6 @@ namespace headsup
     // Shares its pill with the widget before it, or after it, and has no edge or round corners on that side.
     constexpr const char* kJoinBeforeClass = "join-before";
     constexpr const char* kJoinAfterClass  = "join-after";
-    // A widget's inner markup: its icons, coin, title and detail lines in their colors, and its progress bar.
     // A meter's texts as wide as they are drawn, and where its parts go across it: its bar after barX, the texts
     // above and below centered on the bar.
     struct MeterWidths
@@ -109,6 +108,7 @@ namespace headsup
     };
     MeterPlace PlaceMeter(const Meter& meter, const MeterWidths& text, float gap);
 
+    // A widget's inner markup: its icons, coin, title and detail lines in their colors, and its progress bar.
     // columns: a widget of cells' column widths (CellColumns); meter: a meter's place (PlaceMeter).
     std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns = {},
         const MeterPlace& meter = {});
