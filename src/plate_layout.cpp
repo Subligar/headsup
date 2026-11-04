@@ -224,13 +224,13 @@ namespace headsup
         return shape;
     }
 
-    IconSpot IconInRun(const RunShape& shape, const PlateItem& run, size_t i)
+    ScreenPoint IconInRun(const RunShape& shape, const PlateItem& run, size_t i)
     {
         const size_t row   = i / kIconsPerRow;
         const size_t first = row * kIconsPerRow;
         const size_t inRow = std::min(run.icons.size() - first, static_cast<size_t>(kIconsPerRow));
         const float width  = IconRunWidth(static_cast<int>(inRow), BadgesIn(run, first, inRow), shape.iconSize);
-        return IconSpot{(shape.right ? shape.width - width : 0.0f) +
+        return ScreenPoint{(shape.right ? shape.width - width : 0.0f) +
                             IconOffset(static_cast<int>(i - first), BadgesIn(run, first, i - first), shape.iconSize),
             shape.bottomRowTop - static_cast<float>(row) * shape.rowStep};
     }

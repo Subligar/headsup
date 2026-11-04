@@ -131,7 +131,7 @@ TEST(a_cursor_is_drawn_for_your_target_and_the_one_you_are_picking_alone)
 TEST(a_lone_cursor_points_at_its_anchor)
 {
     // A 20x32 arrow pointing from its middle: its tip on the anchor, the rest above it.
-    const CursorSpot spot = CursorAtAnchor(1400.0f, 608.0f, 20.0f, 32.0f, 0.5f);
+    const ScreenPoint spot = CursorAtAnchor(1400.0f, 608.0f, 20.0f, 32.0f, 0.5f);
     CHECK(Near(spot.x, 1390.0f) && Near(spot.y, 576.0f));
     CHECK(Near(CursorAtAnchor(1400.0f, 608.0f, 20.0f, 32.0f, 0.25f).x, 1395.0f));
     // Raised, it stands that far over the anchor; a raise below nothing lowers it onto it.
@@ -423,7 +423,7 @@ TEST(no_cursor_is_drawn_over_arrows_the_game_could_not_be_kept_from_drawing)
 
 TEST(a_badge_hangs_past_its_icons_bottom_right_corner)
 {
-    const IconSpot at = BadgeAt(IconSpot{1041.0f, 160.2f}, 16.0f, 10.0f, 7.0f);
+    const ScreenPoint at = BadgeAt(ScreenPoint{1041.0f, 160.2f}, 16.0f, 10.0f, 7.0f);
     CHECK(Near(at.x, 1052.6f) && Near(at.y, 174.0f));
 }
 
@@ -552,24 +552,24 @@ TEST(a_plates_size_follows_how_far_it_is_as_the_games_own_names_do)
 
 TEST(a_cursor_is_kept_inside_the_screen)
 {
-    const CursorSpot inside = KeepOnScreen(CursorSpot{100.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint inside = KeepOnScreen(ScreenPoint{100.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(inside.x, 100.0f);
     CHECK_EQ(inside.y, 100.0f);
-    const CursorSpot above = KeepOnScreen(CursorSpot{100.0f, -50.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint above = KeepOnScreen(ScreenPoint{100.0f, -50.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(above.y, 0.0f);
-    const CursorSpot right = KeepOnScreen(CursorSpot{2555.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint right = KeepOnScreen(ScreenPoint{2555.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(right.x, 2540.0f);
-    const CursorSpot left = KeepOnScreen(CursorSpot{-5.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint left = KeepOnScreen(ScreenPoint{-5.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(left.x, 0.0f);
-    const CursorSpot huge = KeepOnScreen(CursorSpot{50.0f, 50.0f}, 3000.0f, 2000.0f, 2560.0f, 1440.0f);
+    const ScreenPoint huge = KeepOnScreen(ScreenPoint{50.0f, 50.0f}, 3000.0f, 2000.0f, 2560.0f, 1440.0f);
     CHECK_EQ(huge.x, 0.0f);
     CHECK_EQ(huge.y, 0.0f);
-    const CursorSpot below = KeepOnScreen(CursorSpot{100.0f, 1430.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint below = KeepOnScreen(ScreenPoint{100.0f, 1430.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(below.y, 1408.0f);
     // The top panel lies over the scene: a cursor that would go under it stays just below it, and one already
     // below it is where it was.
-    CHECK_EQ(KeepOnScreen(CursorSpot{100.0f, 20.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 61.0f);
-    CHECK_EQ(KeepOnScreen(CursorSpot{100.0f, -50.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 61.0f);
-    CHECK_EQ(KeepOnScreen(CursorSpot{100.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 100.0f);
-    CHECK_EQ(KeepOnScreen(CursorSpot{100.0f, 1430.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 1408.0f);
+    CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, 20.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 61.0f);
+    CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, -50.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 61.0f);
+    CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 100.0f);
+    CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, 1430.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 1408.0f);
 }

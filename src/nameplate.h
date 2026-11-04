@@ -34,14 +34,10 @@ namespace headsup
     std::vector<LoneCursor> LoneCursors(const CursorTargets& targets, const Settings& settings, const PlayerState& player,
         const std::vector<uint16_t>& withNameplateCursor);
 
-    struct CursorSpot
-    {
-        float x, y;
-    };
     // Whether the game's own arrow would show at this anchor: only inside the screen. A target behind the camera has
     // its anchor left at the corner, (0,0), and one off to a side far outside.
     bool AnchorOnScreen(float x, float y, float screenWidth, float screenHeight);
-    CursorSpot CursorAtAnchor(float anchorX, float anchorY, float width, float height, float tip, float raise = 0.0f);
+    ScreenPoint CursorAtAnchor(float anchorX, float anchorY, float width, float height, float tip, float raise = 0.0f);
     // The width in pixels of a cursor drawn pixelHeight tall, whose settings give it width by height.
     int CursorPixelWidth(int pixelHeight, int width, int height);
     // The cursor's edge in pixels, at least one: 100 percent is a twentieth of its height.
@@ -51,19 +47,15 @@ namespace headsup
     constexpr float kPickedCursorRise = 10.0f / 32.0f;
     // A cursor box moved the least that keeps all of it inside a screen this size.
     // top: what of the screen's top is covered, as by the top panel, which the cursor stays below.
-    CursorSpot KeepOnScreen(CursorSpot spot, float width, float height, float screenWidth, float screenHeight, float top = 0.0f);
+    ScreenPoint KeepOnScreen(ScreenPoint spot, float width, float height, float screenWidth, float screenHeight, float top = 0.0f);
 
     // How many icons a row of a run holds; the rest wrap onto rows above.
     constexpr int kIconsPerRow = 8;
     // A badge's text height, and how far its box reaches past its icon's right and bottom edges, as shares of the icon size.
     constexpr float kBadgeShare = 0.65f, kBadgeOverhang = 0.35f, kBadgeHang = 0.3f;
 
-    struct IconSpot
-    {
-        float x, y;
-    };
     // Where a badge of this size goes on its icon.
-    IconSpot BadgeAt(IconSpot icon, float iconSize, float width, float height);
+    ScreenPoint BadgeAt(ScreenPoint icon, float iconSize, float width, float height);
 
     // A texture drawn with square pixels (text, the ornament, the cursor) as a quad in the scene image: its corner in
     // screen pixels, halo included, and its size in the image's. The image is toX by toY times the screen and these

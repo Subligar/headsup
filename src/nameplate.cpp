@@ -93,9 +93,9 @@ namespace headsup
         return x > 0.0f && y > 0.0f && x < screenWidth && y < screenHeight;
     }
 
-    CursorSpot CursorAtAnchor(float anchorX, float anchorY, float width, float height, float tip, float raise)
+    ScreenPoint CursorAtAnchor(float anchorX, float anchorY, float width, float height, float tip, float raise)
     {
-        return CursorSpot{anchorX - width * tip, anchorY - height - raise};
+        return ScreenPoint{anchorX - width * tip, anchorY - height - raise};
     }
 
     int CursorPixelWidth(int pixelHeight, int width, int height)
@@ -108,15 +108,15 @@ namespace headsup
         return WholePixels(static_cast<float>(pixelHeight) * kCursorEdgePerHeight * static_cast<float>(percent) / kPercent);
     }
 
-    CursorSpot KeepOnScreen(CursorSpot spot, float width, float height, float screenWidth, float screenHeight, float top)
+    ScreenPoint KeepOnScreen(ScreenPoint spot, float width, float height, float screenWidth, float screenHeight, float top)
     {
-        return CursorSpot{std::clamp(spot.x, 0.0f, std::max(0.0f, screenWidth - width)),
+        return ScreenPoint{std::clamp(spot.x, 0.0f, std::max(0.0f, screenWidth - width)),
             std::clamp(spot.y, top, std::max(top, screenHeight - height))};
     }
 
-    IconSpot BadgeAt(IconSpot icon, float iconSize, float width, float height)
+    ScreenPoint BadgeAt(ScreenPoint icon, float iconSize, float width, float height)
     {
-        return IconSpot{icon.x + iconSize * (1.0f + kBadgeOverhang) - width, icon.y + iconSize * (1.0f + kBadgeHang) - height};
+        return ScreenPoint{icon.x + iconSize * (1.0f + kBadgeOverhang) - width, icon.y + iconSize * (1.0f + kBadgeHang) - height};
     }
 
     SquareQuad PlaceSquarePixels(float x, float y, float width, float height, float halo, float fit, float toX,

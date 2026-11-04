@@ -627,7 +627,7 @@ namespace headsup
             for (size_t j = 0; j < line.items.size(); ++j)
             {
                 const PlateItem& item = line.items[j];
-                const ItemPlace at    = place.items[j];
+                const ScreenPoint at  = place.items[j];
                 if (item.name && !named)
                 {
                     named            = true;
@@ -644,15 +644,15 @@ namespace headsup
                     const IconDraw& draw    = item.icons[k];
                     const IconTexture* icon = m_Icons.For(m_Device, draw.icon, draw.paint);
                     if (icon == nullptr) break;
-                    const IconSpot in = IconInRun(run, item, k);
-                    const IconSpot spot{at.x + in.x, at.y + in.y};
+                    const ScreenPoint in = IconInRun(run, item, k);
+                    const ScreenPoint spot{at.x + in.x, at.y + in.y};
                     f.AddQuad(m_Quads, icon->texture, spot.x, spot.y, run.iconSize * f.toX, run.iconSize * f.toY, icon->u, icon->v, depth,
                         kWhite, rank, alpha);
                     ++drawn;
                     const PlateTexture* badge = m_IconBadges[firstBadge + k];
                     if (badge == nullptr) continue;
-                    const ItemSize box    = f.BoxOf(*badge, badgeShown(run));
-                    const IconSpot corner = BadgeAt(spot, run.iconSize, box.width, box.height);
+                    const ItemSize box       = f.BoxOf(*badge, badgeShown(run));
+                    const ScreenPoint corner = BadgeAt(spot, run.iconSize, box.width, box.height);
                     addText(*badge, corner.x, corner.y, badgeShown(run));
                 }
                 firstBadge += item.icons.size();
@@ -671,8 +671,8 @@ namespace headsup
             const float fit = FitOf(cursorShown, p.cursor.raster);
             float top       = layout.cursor.y + CursorBob(f.now, cursorBox.height, settings.cursorFloat);
             auto addCursor  = [&](const PlateTexture& cursor) {
-                const CursorSpot spot{layout.cursor.x, top};
-                const CursorSpot kept = m_KeepCursors ? KeepOnScreen(spot, cursorBox.width, cursorBox.height, scene.width,
+                const ScreenPoint spot{layout.cursor.x, top};
+                const ScreenPoint kept = m_KeepCursors ? KeepOnScreen(spot, cursorBox.width, cursorBox.height, scene.width,
                                                             scene.height, m_CoveredTop)
                                                       : spot;
                 // The cursor is no part of the nameplate: it stays whole however faint the plate is.
@@ -734,7 +734,7 @@ namespace headsup
                 GpuQuad& cursor = f.cursorQuads[q].gpu;
                 cursor.y -= up;
                 if (m_KeepCursors)
-                    cursor.y = KeepOnScreen(CursorSpot{cursor.x, cursor.y}, cursor.width, cursor.height, f.scene.width * f.toX,
+                    cursor.y = KeepOnScreen(ScreenPoint{cursor.x, cursor.y}, cursor.width, cursor.height, f.scene.width * f.toX,
                         f.scene.height * f.toY, m_CoveredTop * f.toY).y;
             }
             // Drawn after the plate it belongs to, in the plate's rank and at its depth.
@@ -778,8 +778,8 @@ namespace headsup
                 break;
             const float fit       = FitOf(shown, t.raster);
             const float width     = t.width * fit, height = t.height * fit;
-            const CursorSpot at = CursorAtAnchor(cursor.x, cursor.y, width, height, t.tip, static_cast<float>(settings.cursorRaise));
-            const CursorSpot kept = KeepOnScreen(CursorSpot{at.x, at.y + CursorBob(now, height, settings.cursorFloat)}, width,
+            const ScreenPoint at = CursorAtAnchor(cursor.x, cursor.y, width, height, t.tip, static_cast<float>(settings.cursorRaise));
+            const ScreenPoint kept = KeepOnScreen(ScreenPoint{at.x, at.y + CursorBob(now, height, settings.cursorFloat)}, width,
                 height, screenWidth, screenHeight, m_CoveredTop);
             const SquareQuad q = PlaceSquarePixels(kept.x, kept.y, t.width, t.height, t.halo, fit, 1.0f, 1.0f);
             quads.push_back(GpuQuad{t.texture, std::round(q.x), std::round(q.y), q.width, q.height, 0.0f, t.u, t.v, 0.0f, kWhite});

@@ -556,10 +556,10 @@ TEST(a_wrapped_badge_group_stands_a_gap_and_a_hang_over_the_level_line_with_the_
     MeasureLine(composed[1], level, 1.0f, lines[1]);
     MeasureLine(composed[2], name, 1.0f, lines[2]);
     const PlateLayout l   = LayoutPlate(Anchor(), lines, 14.0f, 20.0f, 0.5f, 0, 0.0f);
-    const ItemPlace left  = l.lines[0].items[0], right = l.lines[0].items[1];
-    const IconSpot bottom = IconInRun(ShapeOfRun(composed[0], 1, 1.0f), composed[0].items[1], 0);
-    const IconSpot upper  = IconInRun(ShapeOfRun(composed[0], 1, 1.0f), composed[0].items[1], 8);
-    const IconSpot detect = IconInRun(ShapeOfRun(composed[0], 0, 1.0f), composed[0].items[0], 0);
+    const ScreenPoint left  = l.lines[0].items[0], right = l.lines[0].items[1];
+    const ScreenPoint bottom = IconInRun(ShapeOfRun(composed[0], 1, 1.0f), composed[0].items[1], 0);
+    const ScreenPoint upper  = IconInRun(ShapeOfRun(composed[0], 1, 1.0f), composed[0].items[1], 8);
+    const ScreenPoint detect = IconInRun(ShapeOfRun(composed[0], 0, 1.0f), composed[0].items[0], 0);
     CHECK_EQ(l.lines[1].top, 179.5f);
     CHECK(Near(left.x + detect.x, -29.4f));
     CHECK(Near(left.y + detect.y, 156.7f));
