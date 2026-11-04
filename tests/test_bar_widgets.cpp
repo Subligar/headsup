@@ -2436,7 +2436,29 @@ TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
     state.owners = owners;
     const PopupSection all = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
     CHECK(all.tabs.size() == 4 && all.tabs[0].name.text == "San d'Oria");
-    CHECK((TabLines(all) == std::vector<std::string>{"Ronfaure"}));
+    CHECK((Lines(PopupSection{"", all.tabs[0].rows}) == std::vector<std::string>{"Ronfaure"}));
+}
+
+TEST(world_infos_conquest_card_opens_on_your_nations_tab_until_another_is_picked)
+{
+    Settings settings;
+    settings.Widget(BarWidget::World).on = true;
+    BarState state;
+    RegionOwners owners{};
+    state.owners = owners;
+    const auto card = [&] { return ConquestCard(BarPopupContent(BarWidget::World, state, settings)); };
+    CHECK_EQ(card().tab, static_cast<size_t>(0)); // no nation known: the first
+    state.nation = Nation::Bastok;
+    const PopupSection yours = card();
+    CHECK_EQ(yours.tabs.at(yours.tab).name.text, "Bastok");
+    std::map<std::string, std::string> picked{{"Conquest", "Windurst"}};
+    state.pickedTabs = &picked;
+    const PopupSection other = card();
+    CHECK_EQ(other.tabs.at(other.tab).name.text, "Windurst");
+    // Your nation left out by the widget's Nations: the first.
+    picked.clear();
+    settings.Widget(BarWidget::World).nations = NationBit(Nation::SanDoria) | NationBit(Nation::Windurst);
+    CHECK_EQ(card().tab, static_cast<size_t>(0));
 }
 
 TEST(two_nations_picked_are_one_line_of_two_cells_and_one_is_its_name_over_the_widgets)

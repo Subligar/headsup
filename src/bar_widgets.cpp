@@ -991,13 +991,13 @@ namespace headsup
         }
 
         // The tab the player picked last in the card, or its first.
-        size_t Picked(const BarState& state, const PopupSection& section)
+        size_t Picked(const BarState& state, const PopupSection& section, size_t fallback = 0)
         {
-            if (state.pickedTabs == nullptr) return 0;
+            if (state.pickedTabs == nullptr) return fallback;
             const auto picked = state.pickedTabs->find(section.heading);
-            if (picked == state.pickedTabs->end()) return 0;
+            if (picked == state.pickedTabs->end()) return fallback;
             const auto tab = std::ranges::find(section.tabs, picked->second, [](const PopupTab& t) { return t.name.text; });
-            return tab == section.tabs.end() ? 0 : static_cast<size_t>(tab - section.tabs.begin());
+            return tab == section.tabs.end() ? fallback : static_cast<size_t>(tab - section.tabs.begin());
         }
 
         // A zone's weathers of an element on a day, likeliest first, after the likeliest one's icon; a dash for none.
@@ -1250,7 +1250,10 @@ namespace headsup
                 ScrollsBy(held.rows.front(), state, conquest.heading + "/" + held.name.text);
                 conquest.tabs.push_back(std::move(held));
             }
-            conquest.tab = Picked(state, conquest);
+            // Your nation's tab until another is picked.
+            const auto yours = std::ranges::find(conquest.tabs, state.nation ? std::string(NationName(*state.nation)) : "",
+                [](const PopupTab& tab) { return tab.name.text; });
+            conquest.tab = Picked(state, conquest, yours == conquest.tabs.end() ? 0 : static_cast<size_t>(yours - conquest.tabs.begin()));
             return conquest;
         }
 
