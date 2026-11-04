@@ -2,7 +2,9 @@
 #include "search_server.h"
 #include "test.h"
 
+#include <algorithm>
 #include <array>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -51,6 +53,70 @@ namespace
         std::copy(bytes.begin(), bytes.end(), key.begin());
         return key;
     }
+
+    // search_list.cpp's field codes and widths in bits.
+    constexpr uint32_t kNameCode = 0x00, kJobCode = 0x03, kLevelCode = 0x04, kFlags1Code = 0x06, kIdCode = 0x08;
+    constexpr uint32_t kUnknownCode = 0x1F, kAnonymousFlag = 0x4000; // and flags1's anonymous bit
+    constexpr int kCodeWidth = 5, kNameLengthWidth = 4, kNameCharWidth = 7, kJobWidth = 5, kLevelWidth = 8,
+                  kFlags1Width = 16, kIdWidth = 20, kByteWidth = 8;
+
+    // An entry's fields as LandSandBoat's search_list.cpp packs them: each value's bits, most significant first.
+    struct EntryBits
+    {
+        std::vector<uint8_t> bytes;
+        int bit = 0;
+        EntryBits& Put(uint32_t value, int width)
+        {
+            for (int i = width - 1; i >= 0; --i, ++bit)
+            {
+                if (bit % 8 == 0) bytes.push_back(0);
+                if (value >> i & 1u) bytes.back() |= static_cast<uint8_t>(0x80u >> (bit % 8));
+            }
+            return *this;
+        }
+        EntryBits& Name(const std::string& name)
+        {
+            Put(kNameCode, kCodeWidth).Put(static_cast<uint32_t>(name.size()), kNameLengthWidth);
+            for (const char c : name)
+                Put(static_cast<uint8_t>(c), kNameCharWidth);
+            return *this;
+        }
+    };
+
+    // The last answer packet of this one entry, sealed as the server seals it: its entries' end at 0x08, 0x80 at
+    // 0x0A, the entry from 0x18, the md5 of 8 up to the hash, 4 key bytes, then enciphered from 8 in pairs of words
+    // under the md5 of the answer's key, the last 12 bytes left as they are.
+    std::vector<uint8_t> AnswerOf(const EntryBits& entry, const std::array<uint8_t, kAnswerKeyBytes>& key)
+    {
+        constexpr size_t kEntriesAt = 0x18, kTrailer = 20, kPlainTail = 12, kFrom = 8;
+        std::vector<uint8_t> p(kEntriesAt);
+        p.push_back(static_cast<uint8_t>(entry.bytes.size()));
+        p.insert(p.end(), entry.bytes.begin(), entry.bytes.end());
+        const size_t end = p.size();
+        p.resize((end + kTrailer + 7) / 8 * 8);
+        p[0] = static_cast<uint8_t>(p.size());
+        p[1] = static_cast<uint8_t>(p.size() >> 8);
+        std::copy_n("IXFF", 4, p.begin() + 4);
+        p[8]    = static_cast<uint8_t>(end);
+        p[9]    = static_cast<uint8_t>(end >> 8);
+        p[0x0A] = 0x80;
+        const size_t hashAt = p.size() - kTrailer;
+        const std::array<uint8_t, kMd5Bytes> hash = Md5(std::span<const uint8_t>(p).subspan(kFrom, hashAt - kFrom));
+        std::copy(hash.begin(), hash.end(), p.begin() + static_cast<std::ptrdiff_t>(hashAt));
+        const FfxiBlowfish fish(Md5(key));
+        size_t words = (p.size() - kPlainTail) / 4;
+        words -= words % 2;
+        for (size_t w = 0; w < words; w += 2)
+        {
+            uint32_t left = 0, right = 0;
+            std::memcpy(&left, p.data() + kFrom + w * 4, 4);
+            std::memcpy(&right, p.data() + kFrom + w * 4 + 4, 4);
+            fish.Encipher(left, right);
+            std::memcpy(p.data() + kFrom + w * 4, &left, 4);
+            std::memcpy(p.data() + kFrom + w * 4 + 4, &right, 4);
+        }
+        return p;
+    }
 }
 
 TEST(md5_is_rfc_1321s)
@@ -84,10 +150,8 @@ TEST(an_answer_gives_each_players_jobs_and_levels)
     CHECK(packet && packet->last && packet->players.size() == 1u);
     const SearchedPlayer& p = packet->players[0];
     constexpr uint8_t kRdm = 5, kWhm = 3;
-    constexpr uint16_t kWestRonfaure = 100;
     CHECK_EQ(p.id, kHeadsup & kSearchIdMask);
     CHECK_EQ(p.name, std::string("Headsup"));
-    CHECK(!p.anonymous && p.zone == kWestRonfaure);
     CHECK(p.mainJob == kRdm && p.mainLevel == 20 && p.subJob == kWhm && p.subLevel == 10);
 }
 
@@ -97,8 +161,7 @@ TEST(an_entry_whose_padding_could_start_a_field_still_gives_its_player)
     CHECK(packet && packet->last && packet->players.size() == 1u);
     const SearchedPlayer& p = packet->players[0];
     constexpr uint8_t kThf = 6, kWar = 1;
-    constexpr uint16_t kValkurmDunes = 103;
-    CHECK(p.id == 65004u && p.name == std::string("Headsupfour") && p.zone == kValkurmDunes);
+    CHECK(p.id == 65004u && p.name == std::string("Headsupfour"));
     CHECK(p.mainJob == kThf && p.mainLevel == 20 && p.subJob == kWar && p.subLevel == 10);
 }
 
@@ -107,7 +170,27 @@ TEST(an_anonymous_player_answers_without_jobs_and_no_one_offline_answers)
     const std::optional<SearchPacket> packet = ReadSearchPacket(Bytes(kAnonAnswer), Key(kAnonKey));
     CHECK(packet && packet->last && packet->players.size() == 1u);
     const SearchedPlayer& p = packet->players[0];
-    CHECK(p.anonymous && p.name == std::string("Headsup") && p.mainJob == 0 && p.mainLevel == 0);
+    CHECK(p.name == std::string("Headsup") && p.mainJob == 0 && p.mainLevel == 0);
+}
+
+TEST(a_field_of_no_known_code_ends_an_entry_that_still_hides_an_anonymous_players_jobs_and_needs_an_id)
+{
+    const std::array<uint8_t, kAnswerKeyBytes> key = Key(kHeadsupKey);
+    constexpr uint8_t kRdm = 5, kWhm = 3;
+    EntryBits anonymous;
+    anonymous.Name("Headsup").Put(kJobCode, kCodeWidth).Put(kRdm, kJobWidth).Put(kWhm, kJobWidth);
+    anonymous.Put(kLevelCode, kCodeWidth).Put(20, kLevelWidth).Put(10, kLevelWidth);
+    anonymous.Put(kFlags1Code, kCodeWidth).Put(kAnonymousFlag, kFlags1Width).Put(kIdCode, kCodeWidth).Put(kHeadsup, kIdWidth);
+    anonymous.Put(kUnknownCode, kCodeWidth).Put(UINT8_MAX, kByteWidth);
+    const std::optional<SearchPacket> packet = ReadSearchPacket(AnswerOf(anonymous, key), key);
+    CHECK(packet && packet->players.size() == 1u);
+    const SearchedPlayer& p = packet->players[0];
+    CHECK(p.id == kHeadsup && p.name == std::string("Headsup"));
+    CHECK(p.mainJob == 0 && p.subJob == 0 && p.mainLevel == 0 && p.subLevel == 0);
+    EntryBits idless;
+    idless.Name("Headsup").Put(kFlags1Code, kCodeWidth).Put(0, kFlags1Width).Put(kUnknownCode, kCodeWidth).Put(UINT8_MAX, kByteWidth);
+    const std::optional<SearchPacket> noId = ReadSearchPacket(AnswerOf(idless, key), key);
+    CHECK(noId && noId->players.empty());
 }
 
 TEST(a_packet_cut_short_or_under_another_key_is_no_answer)

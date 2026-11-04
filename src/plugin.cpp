@@ -131,8 +131,6 @@ namespace
     public:
         IConfigurationManager* config = nullptr; // from Initialize on
 
-        bool GetBool(const char* key, bool fallback) override { return config->GetBool(kConfigAlias, kSection, key, fallback); }
-        float GetFloat(const char* key, float fallback) override { return config->GetFloat(kConfigAlias, kSection, key, fallback); }
         std::string GetString(const char* key, const char* fallback) override
         {
             const char* value = config->GetString(kConfigAlias, kSection, key);
@@ -579,6 +577,7 @@ public:
         m_Ping.Stop();
         m_Fonts.Wait();
         m_Search.Stop();
+        m_TurnInFetch.Stop();
         m_Nameplates.Release();
         m_SetupPreview.Release();
         g_AfterGui = nullptr;
@@ -2177,7 +2176,7 @@ private:
             else
                 m_TurnInsRetry = now + kTurnInsRetry;
         }
-        if (headsup::GuildPatternsDue(m_TurnInsDay, unixMs) && !m_TurnInFetch.Busy() && now >= m_TurnInsRetry)
+        if (headsup::GuildPatternsDue(m_TurnInsDay, unixMs) && now >= m_TurnInsRetry)
             m_TurnInFetch.Start(headsup::kGuildPatternsHost, headsup::kGuildPatternsPath);
     }
 

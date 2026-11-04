@@ -19,13 +19,13 @@
 #include <cstdio>
 #include <iterator>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 namespace headsup
 {
     namespace
     {
-        // Whole numbers are stored as floats, like every other number in settings.ini.
         struct BoolKey
         {
             const char* key;
@@ -34,7 +34,6 @@ namespace headsup
         constexpr const char* kEnabledKey = "enabled"; // in every file any build saved: what tells a file from none
         constexpr BoolKey kBools[] = {{kEnabledKey, &Settings::enabled}, {"autoSave", &Settings::autoSave}, {"phTimers", &Settings::phTimers},
             {"scaleWithDistance", &Settings::scaleWithDistance},
-            // Not "countAccuracy": the switch's first builds wrote that key on by default, and it now starts off.
             {"fixPointer", &Settings::fixPointer}, {"countYourAccuracy", &Settings::countAccuracy}, {"showBar", &Settings::showBar},
             {"hideHelpBar", &Settings::hideHelpBar}, {"hideNetstat", &Settings::hideNetstat},
             {"screenshotHidesGame", &Settings::screenshotHidesGame},
@@ -45,8 +44,12 @@ namespace headsup
             {"nameplates", &Settings::nameplates}, {"outlines", &Settings::outlines},
             {"outlineFadeIn", &Settings::outlineFadeIn}, {"cursorFloat", &Settings::cursorFloat},
             {"autoCheck", &Settings::autoCheck}, {"lookUpPlayers", &Settings::lookUpPlayers},
-            {"gameWindowBorder", &Settings::gameWindowBorder}};
+            {"gameWindowBorder", &Settings::gameWindowBorder}, {"fishBar", &Settings::fishBar},
+            {"hideGameFishBar", &Settings::hideGameFishBar}, {"fishBarDraggable", &Settings::fishBarDraggable},
+            {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
+            {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground}};
 
+        // Whole numbers are stored as floats, like every other number in settings.ini.
         struct IntKey
         {
             const char* key;
@@ -82,10 +85,18 @@ namespace headsup
             {"timerPercent", &Settings::timerPercent, kMinSizePercent, kMaxSizePercent, kPercentStep},
             {"phUpMinutes", &Settings::phUpMinutes, 0, kMaxUpMinutes},
             {"screenshotKey", &Settings::screenshotKey, 0, UINT8_MAX},
-            {"windowType", &Settings::windowType, kFollowGameWindow, kWindowTypes}};
+            {"windowType", &Settings::windowType, kFollowGameWindow, kWindowTypes},
+            {"menuX", &Settings::menuX, -kMaxMenuSide, kMaxMenuSide}, // dragged partly off the screen's left
+            {"menuY", &Settings::menuY, 0, kMaxMenuSide}, {"menuWidth", &Settings::menuWidth, 0, kMaxMenuSide},
+            {"menuHeight", &Settings::menuHeight, 0, kMaxMenuSide},
+            {"fishBarWidth", &Settings::fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth},
+            {"fishBarX", &Settings::fishBarX, kFishBarUnplaced, kMaxFishBarPlace},
+            {"fishBarY", &Settings::fishBarY, kFishBarUnplaced, kMaxFishBarPlace},
+            {"helpBarX", &Settings::helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset},
+            {"helpBarY", &Settings::helpBarY, -kMaxHelpBarOffset, kMaxHelpBarOffset}};
 
         // Numbers whose meaning changed and whose key changed with it: saved and bounded as the rest, and read through
-        // Rebased, since a typed read of the new key would have Ashita's store hold its default before the old is asked.
+        // Rebased.
         constexpr const char* kCursorWidthKey = "cursorWidth", *kCursorHeightKey = "cursorHeight";
         constexpr const char* kCursorEdgeKey  = "cursorOutlineThickness";
         constexpr const char* kMenuFontSizeKey = "menuFontSize";
@@ -183,14 +194,9 @@ namespace headsup
         constexpr const char* kPinnedWindowsKey = "pinnedWindows"; // "equip:100,200 statcom:0,40"
         constexpr const char* kHiddenWindowsKey = "hiddenWindows"; // "statcom inventor"
         constexpr const char* kShiftVanillaUiKey = "shiftVanillaUi";
-        constexpr const char* kOldMoveWindowsKey = "moveWindows";
-        // By HelpMode. movedWindows, windowGroups and allUnderBar, the picks before views, are never read again.
+        // By HelpMode.
         constexpr const char* kPlacedUnderKeys[kHelpModes] = {"placedUnderHelpOff", "placedUnderHelpOn"};
         constexpr const char* kViewShiftsKeys[kHelpModes]  = {"viewShiftsHelpOff", "viewShiftsHelpOn"}; // "status:20"
-        constexpr const char* kMoveGameHelpKey  = "moveGameHelp";
-        constexpr const char* kHelpBarXKey = "helpBarX";
-        constexpr const char* kHelpBarBackgroundKey = "helpBarBackground";
-        constexpr const char* kHelpBarYKey = "helpBarY";
         constexpr int kHex                    = 16;
         // A file's first save writes every key it lacks, so it keeps the defaults of its day, and each default that
         // changed is put right once in files from before. 1: the target cursor's became Phoenix's red. 2: the font's
@@ -239,15 +245,9 @@ namespace headsup
         constexpr const char* kTargetJobsKey     = "barTargetJobs";
         constexpr const char* kTargetDistanceKey = "barTargetDistance";
         constexpr const char* kMenuFontKey      = "menuFont";
-        constexpr const char* kHideGameFishBarKey = "hideGameFishBar";
-        constexpr const char* kBlueMagicKey = "blueMagic", *kBlueMagicLearnedKey = "blueMagicLearned";
+        constexpr const char* kBlueMagicLearnedKey = "blueMagicLearned";
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
-        constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarDraggableKey = "fishBarDraggable",
-                              *kFishBarLineKey = "fishBarLine", *kFishColorByCatchKey = "fishColorByCatch";
-        constexpr const char* kFishBarKey = "fishBar", *kFishBarWidthKey = "fishBarWidth", *kFishBarXKey = "fishBarX",
-                              *kFishBarYKey = "fishBarY";
-        constexpr const char* kMenuXKey = "menuX", *kMenuYKey = "menuY", *kMenuWidthKey = "menuWidth",
-                              *kMenuHeightKey = "menuHeight";
+        constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
         constexpr const char* kSecondLineSuffix = "Line2";
         constexpr const char* kIconsSuffix      = "Icons";
         constexpr const char* kBackgroundSuffix = "Background";
@@ -266,7 +266,6 @@ namespace headsup
         const char* const kExpPlaceNames[kExpTextPlaceCount] = {"off", "above", "below", "left", "right"};
         constexpr const char* kExpBarWidthKey = "barExpBarWidth", *kExpBarHeightKey = "barExpBarHeight";
         constexpr const char* kExpAlignKey = "barExpAlign";
-        const char* const kExpAlignNames[kAlignCount] = {"left", "center", "right"};
         constexpr const char* kJobNamesKey  = "jobNames";
         constexpr const char* kSubtitleKey  = "barSubtitle";
         const char* const kSubtitleNames[kSubtitlePlaceCount] = {"hide", "before", "after"};
@@ -317,15 +316,14 @@ namespace headsup
         const char* const kPaletteKeys[]                 = {"paletteAggression", "paletteToughness", "paletteClaim", "paletteTarget", "paletteType"};
         constexpr const char* kLabelShadePrefix = "label"; // kLabelShadeKeys' prefix, which the palette's toughness keys drop
         constexpr const char* kRowInfix         = "Row";
-        constexpr const char* kOpacityInfix     = "Opacity";
-        constexpr const char* kPlateOpacityBase = "plateOpacity"; // every kind's, after the builds that kept one a kind
+        constexpr const char* kPlateOpacityBase = "plateOpacity";
         constexpr const char* kGlowOffSuffix    = "GlowOffInCombat";
         constexpr const char* kOldUntargetedKey = "untargetedOpacity";   // every mob's that was not your target
         constexpr const char* kOldGlowOffKey    = "glowOffWhenFighting"; // every line of a mob your party had claimed
         constexpr const char* kOldPetRow        = "Pet"; // the pets' one row of before, after kRowInfix
         constexpr const char* kLineInfix        = "Line";
         constexpr const char* kOrnamentInfix    = "Ornament";
-        // A design's keys after their base, a row's, a line's, an ornament's or a kind's opacity's: read and written by
+        // A design's keys after their base, a row's, a line's, an ornament's or the opacity's: read and written by
         // these names alone.
         constexpr const char *kPlateKey = "Plate", *kOutlineKey = "Outline", *kColorKey = "Color";
         constexpr const char *kTextKey = "Text", *kSyncKey = "Sync", *kAlwaysKey = "Always", *kWhenKey = "When",
@@ -353,25 +351,9 @@ namespace headsup
             return c;
         }
 
-        void LoadColor(SettingsStore& store, const std::string& base, Color& c)
-        {
-            for (int i = 0; i < 3; ++i)
-                c.v[i] = store.GetFloat((base + kChannelKeys[i]).c_str(), c.v[i]);
-        }
-
-        // Saturates rather than overflowing, so Clamp then takes a huge value to the nearest limit.
-        int Whole(float v) { return static_cast<int>(std::clamp<double>(std::round(v), INT_MIN, INT_MAX)); }
-
-        int LoadInt(SettingsStore& store, const char* key, int fallback)
-        {
-            const float v = store.GetFloat(key, static_cast<float>(fallback));
-            return std::isfinite(v) ? Whole(v) : fallback;
-        }
-
         // What a key the store lacks reads as: no line of a file holds a line break, so it differs from every text.
         constexpr const char* kNoText = "\n";
-        // A key's number as the store holds it; nothing for a key it lacks or that holds no number. Asked as text: a
-        // typed read of a key Ashita's store lacks adds the key with the default it was given.
+        // A key's number as the store holds it; nothing for a key it lacks or that holds no number.
         std::optional<float> HeldNumber(SettingsStore& store, const std::string& key)
         {
             const std::string text = store.GetString(key.c_str(), kNoText);
@@ -380,13 +362,30 @@ namespace headsup
             return text == kNoText || end == text.c_str() || !std::isfinite(v) ? std::nullopt : std::optional<float>(v);
         }
 
-        // A switch as the store holds it, asked as text for the same reason; nothing for a key it lacks. A build
-        // writes true or false, and Ashita's own default for a key it added is 1 or 0.
-        std::optional<bool> HeldSwitch(SettingsStore& store, const char* key)
+        // A switch as the store holds it; nothing for a key it lacks. HeadsUp writes true or false, and Ashita wrote 1
+        // or 0 for a key that the typed reads of builds before added.
+        std::optional<bool> HeldSwitch(SettingsStore& store, const std::string& key)
         {
-            const std::string text = store.GetString(key, kNoText);
+            const std::string text = store.GetString(key.c_str(), kNoText);
             if (text == kNoText) return std::nullopt;
-            return text == kTrue || text == kAshitaTrue;
+            return text == kAshitaTrue || std::ranges::equal(text, std::string_view(kTrue), [](char a, char b) {
+                return std::tolower(static_cast<unsigned char>(a)) == b;
+            });
+        }
+
+        void LoadColor(SettingsStore& store, const std::string& base, Color& c)
+        {
+            for (int i = 0; i < 3; ++i)
+                c.v[i] = HeldNumber(store, base + kChannelKeys[i]).value_or(c.v[i]);
+        }
+
+        // Saturates rather than overflowing, so Clamp then takes a huge value to the nearest limit.
+        int Whole(float v) { return static_cast<int>(std::clamp<double>(std::round(v), INT_MIN, INT_MAX)); }
+
+        int LoadInt(SettingsStore& store, const std::string& key, int fallback)
+        {
+            const std::optional<float> held = HeldNumber(store, key);
+            return held ? Whole(*held) : fallback;
         }
 
         // A number whose meaning changed: the file's own under its new key, else what the value under its old key
@@ -494,26 +493,26 @@ namespace headsup
         {
             auto key = [&](const char* name) { return base + name; };
             line.text     = store.GetString(key(kTextKey).c_str(), line.text.c_str());
-            line.syncWith = LoadInt(store, key(kSyncKey).c_str(), line.syncWith);
-            line.show.always = store.GetBool(key(kAlwaysKey).c_str(), line.show.always);
+            line.syncWith = LoadInt(store, key(kSyncKey), line.syncWith);
+            line.show.always = HeldSwitch(store, key(kAlwaysKey)).value_or(line.show.always);
             line.show.when   = LoadHex(store, key(kWhenKey), line.show.when);
             line.align = static_cast<Align>(NameIndex(kAlignNames, kAlignCount, store.GetString(key(kAlignKey).c_str(), ""), static_cast<int>(line.align)));
             line.font     = store.GetString(key(kFontKey).c_str(), line.font.c_str());
             // Bold was a switch of its own before a line had styles.
             if (store.GetString(key(kStyleKey).c_str(), kNoText) != kNoText)
                 line.style = static_cast<uint8_t>(LoadHex(store, key(kStyleKey), line.style));
-            else if (HeldSwitch(store, key(kBoldKey).c_str()).value_or(false))
+            else if (HeldSwitch(store, key(kBoldKey)).value_or(false))
                 line.style = StyleBit(FontStyle::Bold);
-            line.textSize = LoadInt(store, key(kTextSizeKey).c_str(), line.textSize);
+            line.textSize = LoadInt(store, key(kTextSizeKey), line.textSize);
             line.iconSize = Rebased(store, key(kIconScaleKey), key(kIconSizeKey), line.iconSize,
                 [&](float before) { return before * iconShare; });
-            line.padding = LoadInt(store, key(kPaddingKey).c_str(), line.padding);
-            line.offset  = LoadInt(store, key(kOffsetKey).c_str(), line.offset);
+            line.padding = LoadInt(store, key(kPaddingKey), line.padding);
+            line.offset  = LoadInt(store, key(kOffsetKey), line.offset);
             LoadPick(store, key(kColorKey), line.color);
             line.shadow = Rebased(store, key(kShadowStrengthKey), key(kShadowKey), line.shadow, ShadowStrengthOf);
             LoadPick(store, key(kShadowColorKey), line.shadowColor);
-            line.glow     = LoadInt(store, key(kGlowKey).c_str(), line.glow);
-            line.glowSize = LoadInt(store, key(kGlowSizeKey).c_str(), line.glowSize);
+            line.glow     = LoadInt(store, key(kGlowKey), line.glow);
+            line.glowSize = LoadInt(store, key(kGlowSizeKey), line.glowSize);
             LoadPick(store, key(kGlowColorKey), line.glowColor);
         }
 
@@ -573,37 +572,30 @@ namespace headsup
             const std::string base = std::string(KindKey(kind)) + kOrnamentInfix;
             OrnamentSettings& o    = k.ornament;
             const std::string visibility  = store.GetString((base + kVisibilityKey).c_str(), kNoText);
-            const std::optional<bool> wasOn = HeldSwitch(store, (base + kOldOrnamentOnSuffix).c_str());
+            const std::optional<bool> wasOn = HeldSwitch(store, base + kOldOrnamentOnSuffix);
             if (visibility != kNoText)
                 o.place = static_cast<OrnamentPlace>(NameIndex(kOrnamentPlaceNames, kOrnamentPlaceCount, visibility, static_cast<int>(o.place)));
             else if (wasOn)
                 o.place = !*wasOn ? OrnamentPlace::Disabled
                           : store.GetString((base + kOldOrnamentPlaceSuffix).c_str(), "") == kOldOrnamentUpperPlace ? OrnamentPlace::AboveMiddle
                                                                                                                      : OrnamentPlace::BelowMiddle;
-            o.width  = LoadInt(store, (base + kWidthKey).c_str(), o.width);
-            o.height = LoadInt(store, (base + kHeightKey).c_str(), o.height);
+            o.width  = LoadInt(store, base + kWidthKey, o.width);
+            o.height = LoadInt(store, base + kHeightKey, o.height);
             LoadPick(store, base + kColorKey, o.color);
         }
 
-        // The nameplates' opacities, from a file of any age: their own keys, else the mobs' of the builds that kept
-        // them a kind, else for Not Targeted the one opacity of before, which was the mobs'.
+        // The nameplates' opacities: their own keys, else for Not Targeted the one opacity of before.
         void LoadOpacity(SettingsStore& store, OpacitySettings& o)
         {
-            const std::string own = kPlateOpacityBase, heir = std::string(KindKey(PlateKind::Mobs)) + kOpacityInfix;
-            const auto held = [&](const char* suffix) {
-                const std::optional<float> mine = HeldNumber(store, own + suffix);
-                return mine ? mine : HeldNumber(store, heir + suffix);
+            const std::string own = kPlateOpacityBase;
+            const auto percent = [&](const char* suffix, int fallback) {
+                return Whole(HeldNumber(store, own + suffix).value_or(static_cast<float>(fallback)));
             };
-            const auto percent = [&](const char* suffix, std::optional<float> before, int fallback) {
-                const std::optional<float> v = held(suffix);
-                return Whole(v.value_or(before.value_or(static_cast<float>(fallback))));
-            };
-            o.noTarget    = percent(kNoTargetKey, std::nullopt, o.noTarget);
-            o.notTargeted = percent(kNotTargetedKey, HeldNumber(store, kOldUntargetedKey), o.notTargeted);
-            o.targeted    = percent(kTargetedKey, std::nullopt, o.targeted);
-            o.range       = held(kRangeKey).value_or(o.range);
-            const std::optional<bool> fadeIn = HeldSwitch(store, (own + kFadeInKey).c_str());
-            o.fadeIn = fadeIn ? *fadeIn : HeldSwitch(store, (heir + kFadeInKey).c_str()).value_or(o.fadeIn);
+            o.noTarget    = percent(kNoTargetKey, o.noTarget);
+            o.notTargeted = Rebased(store, own + kNotTargetedKey, kOldUntargetedKey, o.notTargeted, [](float before) { return before; });
+            o.targeted    = percent(kTargetedKey, o.targeted);
+            o.range       = HeldNumber(store, own + kRangeKey).value_or(o.range);
+            o.fadeIn      = HeldSwitch(store, own + kFadeInKey).value_or(o.fadeIn);
         }
 
         // A kind's lines' glow in combat, from a file of any age: the lines' own keys, else the one switch of before,
@@ -615,7 +607,7 @@ namespace headsup
             {
                 LineDesign& line = k.lines[n];
                 line.glowOffInCombat =
-                    HeldSwitch(store, (LineBase(kind, n) + kGlowOffSuffix).c_str()).value_or(before.value_or(line.glowOffInCombat));
+                    HeldSwitch(store, LineBase(kind, n) + kGlowOffSuffix).value_or(before.value_or(line.glowOffInCombat));
             }
         }
 
@@ -672,10 +664,8 @@ namespace headsup
         enum class OldIconSide : uint8_t { Left, Right, Hidden };
         const char* const kOldIconSideNames[] = {"left", "right", "hide"};
         constexpr int kOldSideCount           = static_cast<int>(std::size(kOldIconSideNames));
-        // A group of mob icons takes a side, never "hide": the names before it.
-        constexpr int kOldGroupSideCount      = static_cast<int>(OldIconSide::Hidden);
-        enum class OldMobId : uint8_t { Off, LastThree, Decimal, Full };
-        const char* const kOldMobIdNames[] = {"off", "lastThree", "decimal", "full"};
+        enum class OldMobId : uint8_t { Off, LastThree, Full };
+        const char* const kOldMobIdNames[] = {"off", "lastThree", "full"};
         // The player icons as such a file numbers them, GM first: each one's key and the tag that stands for it.
         struct OldPlayerIcon
         {
@@ -687,28 +677,18 @@ namespace headsup
             {"iconLinkshell", kTagLinkshell}, {"iconBazaar", kTagBazaar}, {"iconSeekingParty", kTagSeeking}};
         constexpr int kOldPlayerIconCount = static_cast<int>(std::size(kOldPlayerIcons));
         constexpr int kOldGmIcon          = 0;
-        constexpr std::array<int, kOldPlayerIconCount> OldPlayerIconOrder()
-        {
-            std::array<int, kOldPlayerIconCount> order{};
-            for (int i = 0; i < kOldPlayerIconCount; ++i)
-                order[i] = i;
-            return order;
-        }
 
-        constexpr int kOldCategoryCount = static_cast<int>(Category::OtherClaim) + 1;
+        constexpr int kOldCategoryCount = static_cast<int>(Category::Placeholder) + 1;
         constexpr int kOldLabelShadeCount = static_cast<int>(LabelShade::VeryTough) + 1; // Incredibly Tough came later
         struct OldSettings
         {
             bool showLabels = true, replaceMobNames = true, replacePlayerNames = true, replaceNpcNames = true;
-            bool showIcons = true, showDamageIcons = false, showStatusRankIcons = false, showImmunityIcons = false;
-            OldIconSide detectionIconSide = OldIconSide::Left, badgeSide = OldIconSide::Right;
-            bool mobIconsInline     = false; // the mob icons on the level line, each group at its side
+            bool showIcons = true;
             bool hideClaimedByParty = false, hideClaimed = false;
             OldMobId mobId          = OldMobId::Off;
             bool markPlaceholders   = true;
-            std::string fontName = kDefaultFont, playerFontName = kDefaultFont, npcFontName = kDefaultFont;
-            std::string labelFontName = kDefaultFont;
-            bool fontBold = false, playerFontBold = false, npcFontBold = false, labelFontBold = false;
+            std::string fontName = kDefaultFont, labelFontName = kDefaultFont;
+            bool fontBold = false, labelFontBold = false;
             bool nameGlow = true, ownGlowColor = false;
             int glowStrength = 100, glowSize = 100;
             Color glowColor = ColorFromRgb(0xFFB45A);
@@ -722,7 +702,6 @@ namespace headsup
             int playerIconSize   = 100; // percent of the name's letter height
             bool showPlayerIcons = true;
             OldIconSide playerIconSide[kOldPlayerIconCount] = {};
-            std::array<int, kOldPlayerIconCount> playerIconOrder = OldPlayerIconOrder();
             Color cursorColor           = ColorFromRgb(kPhoenixRed);
             Color lockedCursorColor     = {{0.65f, 0.40f, 1.00f}};
             Color subCursorColor        = {{0.99f, 0.82f, 0.09f}};
@@ -739,8 +718,8 @@ namespace headsup
                 {{1.00f, 0.35f, 0.35f}}, // Very Tough
             };
             Color textOutline = {{0.00f, 0.00f, 0.00f}};
-            // By Category, the eight such a file knew: whether its mobs were outlined, and in what color.
-            bool show[kOldCategoryCount]   = {true, false, false, true, true, true, false, false};
+            // By Category, the six such a file knew: whether its mobs were outlined, and in what color.
+            bool show[kOldCategoryCount]   = {true, false, false, true, true, true};
             Color color[kOldCategoryCount] = {
                 {{1.00f, 0.15f, 0.15f}}, // aggressive
                 {{0.20f, 1.00f, 0.30f}}, // passive
@@ -748,8 +727,6 @@ namespace headsup
                 {{1.00f, 0.60f, 0.10f}}, // aggressive NM
                 {{1.00f, 0.84f, 0.00f}}, // passive NM
                 {{0.70f, 0.30f, 1.00f}}, // lottery placeholder
-                {{0.30f, 0.65f, 1.00f}}, // claimed by your party
-                {{0.55f, 0.45f, 0.40f}}, // claimed by someone else
             };
         };
 
@@ -766,9 +743,7 @@ namespace headsup
             {"nameGlow", &OldSettings::nameGlow}, {"showOrnament", &OldSettings::showOrnament},
             {"ownGlowColor", &OldSettings::ownGlowColor}, {"ownOrnamentColor", &OldSettings::ownOrnamentColor},
             {"replacePlayerNames", &OldSettings::replacePlayerNames}, {"replaceNpcNames", &OldSettings::replaceNpcNames},
-            {"showPlayerIcons", &OldSettings::showPlayerIcons}, {"ownNameColor", &OldSettings::ownNameColor},
-            {"showDamageIcons", &OldSettings::showDamageIcons}, {"showStatusRankIcons", &OldSettings::showStatusRankIcons},
-            {"showImmunityIcons", &OldSettings::showImmunityIcons}};
+            {"showPlayerIcons", &OldSettings::showPlayerIcons}, {"ownNameColor", &OldSettings::ownNameColor}};
 
         struct OldIntKey
         {
@@ -796,11 +771,6 @@ namespace headsup
             {"ornamentColor", &OldSettings::ornamentColor}};
 
         constexpr const char* kOldFontKey = "fontName";
-        // Files from before players and NPCs had their own name fonts take the mobs'.
-        constexpr const char* kOldPlayerFontKey = "playerFontName";
-        constexpr const char* kOldPlayerBoldKey = "playerFontBold";
-        constexpr const char* kOldNpcFontKey    = "npcFontName";
-        constexpr const char* kOldNpcBoldKey    = "npcFontBold";
         // Files from before the level line had its own font and shadow take the name's.
         constexpr const char* kOldLabelFontKey        = "labelFontName";
         constexpr const char* kOldLabelBoldKey        = "labelFontBold";
@@ -811,20 +781,15 @@ namespace headsup
         constexpr const char* kOldFont           = "Trebuchet MS";
         constexpr const char* kOldShowSuffix     = "Show";
         const char* const kOldCategoryKeys[kOldCategoryCount] = {"willAttack", "wontAttack", "unknown", "nmWillAttack",
-            "nmWontAttack", "placeholder", "partyClaim", "otherClaim"};
-        constexpr const char* kOldMobIdKey           = "mobId";
-        constexpr const char* kOldDetectionSideKey   = "detectionIconSide";
-        constexpr const char* kOldBadgeSideKey       = "badgeSide";
-        constexpr const char* kOldIconPlaceKey       = "mobIconPlace";
-        constexpr const char* kOldInlineIcons        = "inline";
-        constexpr const char* kOldPlayerIconOrderKey = "playerIconOrder"; // kOldPlayerIcons' keys, a space apart
+            "nmWontAttack", "placeholder"};
+        constexpr const char* kOldMobIdKey = "mobId";
 
         // saved is the file's version: the defaults that changed before it are put right, as kVersionKey says.
         OldSettings LoadOld(SettingsStore& store, float saved)
         {
             OldSettings o;
             for (const OldBoolKey& b : kOldBools)
-                o.*b.field = store.GetBool(b.key, o.*b.field);
+                o.*b.field = HeldSwitch(store, b.key).value_or(o.*b.field);
             o.mobNameSize = o.playerNameSize = o.selfNameSize = o.npcNameSize = LoadInt(store, kOldOneNameSizeKey, o.mobNameSize);
             for (const OldIntKey& i : kOldInts)
                 o.*i.field = LoadInt(store, i.key, o.*i.field);
@@ -832,7 +797,7 @@ namespace headsup
                 LoadColor(store, c.key, o.*c.field);
             o.fontName         = store.GetString(kOldFontKey, kDefaultFont);
             o.labelFontName    = store.GetString(kOldLabelFontKey, o.fontName.c_str());
-            o.labelFontBold    = store.GetBool(kOldLabelBoldKey, o.fontBold);
+            o.labelFontBold    = HeldSwitch(store, kOldLabelBoldKey).value_or(o.fontBold);
             o.labelShadowColor = o.textOutline;
             LoadColor(store, kOldLabelShadowColorKey, o.labelShadowColor);
             for (int k = 0; k < kOldLabelShadeCount; ++k)
@@ -840,25 +805,12 @@ namespace headsup
             for (int c = 0; c < kOldCategoryCount; ++c)
             {
                 const std::string base = kOldCategoryKeys[c];
-                o.show[c] = store.GetBool((base + kOldShowSuffix).c_str(), o.show[c]);
+                o.show[c] = HeldSwitch(store, base + kOldShowSuffix).value_or(o.show[c]);
                 LoadColor(store, base, o.color[c]);
             }
-            auto side = [&](const char* key, int sides, OldIconSide fallback) {
-                const int named = NameIndex(kOldIconSideNames, sides, store.GetString(key, ""), static_cast<int>(fallback));
-                return static_cast<OldIconSide>(named);
-            };
             for (int i = 0; i < kOldPlayerIconCount; ++i)
-                o.playerIconSide[i] = side(kOldPlayerIcons[i].key, kOldSideCount, o.playerIconSide[i]);
-            // An order that does not name every icon once is none.
-            std::istringstream order(store.GetString(kOldPlayerIconOrderKey, ""));
-            std::vector<int> icons;
-            for (std::string name; order >> name;)
-                for (int i = 0; i < kOldPlayerIconCount; ++i)
-                    if (name == kOldPlayerIcons[i].key && std::ranges::find(icons, i) == icons.end()) icons.push_back(i);
-            if (std::ssize(icons) == kOldPlayerIconCount) std::ranges::copy(icons, o.playerIconOrder.begin());
-            o.detectionIconSide = side(kOldDetectionSideKey, kOldGroupSideCount, o.detectionIconSide);
-            o.badgeSide         = side(kOldBadgeSideKey, kOldGroupSideCount, o.badgeSide);
-            o.mobIconsInline    = store.GetString(kOldIconPlaceKey, "") == kOldInlineIcons;
+                o.playerIconSide[i] = static_cast<OldIconSide>(NameIndex(kOldIconSideNames, kOldSideCount,
+                    store.GetString(kOldPlayerIcons[i].key, ""), static_cast<int>(o.playerIconSide[i])));
             o.mobId = static_cast<OldMobId>(NameIndex(kOldMobIdNames, static_cast<int>(std::size(kOldMobIdNames)),
                 store.GetString(kOldMobIdKey, ""), static_cast<int>(o.mobId)));
             if (saved < kRedCursorVersion && o.cursorColor == kOldCursorColor) o.cursorColor = OldSettings{}.cursorColor;
@@ -867,20 +819,16 @@ namespace headsup
                 if (o.fontName == kOldFont) o.fontName = kDefaultFont;
                 if (o.labelFontName == kOldFont) o.labelFontName = kDefaultFont;
             }
-            o.playerFontName = store.GetString(kOldPlayerFontKey, o.fontName.c_str());
-            o.playerFontBold = store.GetBool(kOldPlayerBoldKey, o.fontBold);
-            o.npcFontName    = store.GetString(kOldNpcFontKey, o.fontName.c_str());
-            o.npcFontBold    = store.GetBool(kOldNpcBoldKey, o.fontBold);
             return o;
         }
 
-        // The icons beside a name, as the fixed plate laid them: those on the left in the order's turn, GM always last
+        // The icons beside a name, as the fixed plate laid them: those on the left in their order, GM always last
         // of them and so nearest the name whatever its side says, then the name, then those on the right.
         std::string PlayerNameText(const OldSettings& o)
         {
             if (!o.showPlayerIcons) return kTagName;
             std::string left, right;
-            for (const int icon : o.playerIconOrder)
+            for (int icon = 0; icon < kOldPlayerIconCount; ++icon)
             {
                 if (icon == kOldGmIcon) continue;
                 if (o.playerIconSide[icon] == OldIconSide::Left) left += kOldPlayerIcons[icon].tag;
@@ -943,15 +891,6 @@ namespace headsup
                 mobs.rows[c].outline = o.show[c] ? OutlineMode::Shown : steps ? OutlineMode::ByNature : OutlineMode::Disabled;
                 s.palette.aggression[n] = o.color[c];
             }
-            // Switched off, a claimed mob kept the outline its nature gave it.
-            for (const Category claim : {Category::PartyClaim, Category::OtherClaim})
-            {
-                const int c = CategoryIndex(claim);
-                mobs.rows[c].outline = o.show[c] ? OutlineMode::Shown : OutlineMode::ByNature;
-                mobs.rows[c].outlineColor.source = ColorSource::Claim;
-            }
-            s.palette.claim[static_cast<int>(ClaimState::Yours)]  = o.color[CategoryIndex(Category::PartyClaim)];
-            s.palette.claim[static_cast<int>(ClaimState::Others)] = o.color[CategoryIndex(Category::OtherClaim)];
             std::ranges::copy(o.labelColor, s.palette.toughness);
             s.palette.target[static_cast<int>(TargetState::Targeted)]   = o.cursorColor;
             s.palette.target[static_cast<int>(TargetState::Locked)]     = o.lockedCursorColor;
@@ -976,14 +915,14 @@ namespace headsup
             for (const PlateKind kind : {PlateKind::Players, PlateKind::Self})
             {
                 LineDesign& line = s.Kind(kind).lines[kBottomLine];
-                line.font        = fontOf(o.playerFontName);
-                line.style       = boldOf(o.playerFontBold);
+                line.font        = fontOf(o.fontName);
+                line.style       = boldOf(o.fontBold);
                 line.text        = PlayerNameText(o);
             }
             players.lines[kBottomLine].iconSize = IconPercent(o.playerNameSize);
             self.lines[kBottomLine].iconSize    = IconPercent(o.selfNameSize);
-            npcs.lines[kBottomLine].font = fontOf(o.npcFontName);
-            npcs.lines[kBottomLine].style = boldOf(o.npcFontBold);
+            npcs.lines[kBottomLine].font = fontOf(o.fontName);
+            npcs.lines[kBottomLine].style = boldOf(o.fontBold);
 
             s.baseSize                         = base;
             mobLevel.textSize                  = percent(o.labelSize);
@@ -997,30 +936,10 @@ namespace headsup
             auto append = [](std::string& text, const std::string& part) { text += (text.empty() || part.empty() ? "" : " ") + part; };
             if (o.showLabels) append(level, kTagLevelCon);
             if (o.mobId == OldMobId::LastThree) append(level, kTagId);
-            if (o.mobId == OldMobId::Decimal) append(level, kTagServerId);
             if (o.mobId == OldMobId::Full) append(level, std::string(kTagServerId) + " " + kTagId);
             if (o.mobId != OldMobId::Off && o.markPlaceholders) append(level, kTagPlaceholder);
             mobLevel.text = level;
-            std::string badges;
-            if (o.showDamageIcons) badges += kTagWeakResist;
-            if (o.showStatusRankIcons) badges += kTagStatus;
-            if (o.showImmunityIcons) badges += kTagImmune;
-            const std::string detect = o.showIcons ? kTagDetect : "";
-            const bool badgesLeft    = o.badgeSide == OldIconSide::Left;
-            if (o.mobIconsInline && !level.empty())
-            {
-                const bool detectLeft   = o.detectionIconSide == OldIconSide::Left;
-                const std::string left  = (badgesLeft ? badges : "") + (detectLeft ? detect : "");
-                const std::string right = (detectLeft ? "" : detect) + (badgesLeft ? "" : badges);
-                std::string row;
-                append(row, left);
-                append(row, level);
-                append(row, right);
-                mobLevel.text = row;
-                mobIcons.text.clear();
-            }
-            else
-                mobIcons.text = badgesLeft ? badges + detect : detect + badges;
+            mobIcons.text = o.showIcons ? kTagDetect : "";
             auto condition = [&]() -> LineShow {
                 if (o.hideClaimed) return LineShow{false, ConditionBit(ShowCondition::Unclaimed)};
                 if (o.hideClaimedByParty)
@@ -1275,8 +1194,6 @@ namespace headsup
             s.placedUnder[m] = std::clamp(s.placedUnder[m], 0, kMaxWindowOffset);
             s.viewShifts[m]  = ViewShiftsFrom(ViewShiftsText(s.viewShifts[m]), WindowViews());
         }
-        s.helpBarX        = std::clamp(s.helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset);
-        s.helpBarY        = std::clamp(s.helpBarY, -kMaxHelpBarOffset, kMaxHelpBarOffset);
         for (const ColorKey& c : kColors)
             s.*c.field = ClampColor(s.*c.field, d.*c.field);
         const bool named = IsFolderFileName(s.cursorFile);
@@ -1316,12 +1233,6 @@ namespace headsup
         }
         if (static_cast<int>(s.barSubtitle) >= kSubtitlePlaceCount) s.barSubtitle = d.barSubtitle;
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
-        s.menuX = std::clamp(s.menuX, -kMaxMenuSide, kMaxMenuSide); // dragged partly off the screen's left
-        for (int* side : {&s.menuY, &s.menuWidth, &s.menuHeight})
-            *side = std::clamp(*side, 0, kMaxMenuSide);
-        s.fishBarWidth = std::clamp(s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth);
-        for (int* side : {&s.fishBarX, &s.fishBarY})
-            *side = std::clamp(*side, kFishBarUnplaced, kMaxFishBarPlace);
         if (static_cast<int>(s.barSeparators) >= kBarSeparatorsCount) s.barSeparators = d.barSeparators;
         ClampDesigner(s, d);
         for (StatusBadgeRule& status : s.statusBadges)
@@ -1343,19 +1254,9 @@ namespace headsup
         void LoadWidget(SettingsStore& store, PanelWidget w, WidgetOptions& o)
         {
             const std::string widget = kBarWidgetKeys[static_cast<int>(w.kind)];
-            // The first copy's switches are read as they always were; a later copy's as text, so that a file is
-            // given no keys of a copy it never had.
-            const auto flag = [&](const std::string& key, bool fallback) {
-                const std::string own = CopyKey(key, w);
-                return w.copy == 0 ? store.GetBool(own.c_str(), fallback) : HeldSwitch(store, own.c_str()).value_or(fallback);
-            };
+            const auto flag = [&](const std::string& key, bool fallback) { return HeldSwitch(store, CopyKey(key, w)).value_or(fallback); };
             const auto text = [&](const char* key) { return store.GetString(CopyKey(key, w).c_str(), ""); };
-            const auto number = [&](const std::string& key, int fallback) {
-                const std::string own = CopyKey(key, w);
-                if (w.copy == 0) return LoadInt(store, own.c_str(), fallback);
-                const std::optional<float> held = HeldNumber(store, own);
-                return held ? Whole(*held) : fallback;
-            };
+            const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
             o.secondLine = flag(widget + kSecondLineSuffix, o.secondLine);
             o.icons      = flag(widget + kIconsSuffix, o.icons);
@@ -1381,8 +1282,7 @@ namespace headsup
                     std::clamp(number(kConquestGridKey, static_cast<int>(o.conquestGrid)), 0, kConquestGridCount - 1));
                 const std::string line = text(kWorldLineKey), route = text(kWorldRouteKey), guild = text(kWorldGuildKey);
                 const std::string element = text(kWorldElementKey);
-                for (int l = 0; l < kWorldLineCount; ++l)
-                    if (line == kWorldLineNames[l]) o.worldLine = static_cast<WorldLine>(l);
+                o.worldLine = static_cast<WorldLine>(NameIndex(kWorldLineNames, kWorldLineCount, line, static_cast<int>(o.worldLine)));
                 for (size_t r = 0; r < TravelRoutes().size(); ++r)
                     if (route == TravelRoutes()[r].name) o.worldRoute = static_cast<int>(r);
                 for (size_t g = 0; g < GuildShops().size(); ++g)
@@ -1396,9 +1296,8 @@ namespace headsup
             case BarWidget::Zone:
             {
                 o.zoneId = flag(kZoneIdKey, o.zoneId);
-                const std::string place = text(kZoneConquestKey);
-                for (int c = 0; c < kConquestPlaceCount; ++c)
-                    if (place == kConquestPlaceNames[c]) o.zoneConquest = static_cast<ConquestPlace>(c);
+                o.zoneConquest = static_cast<ConquestPlace>(
+                    NameIndex(kConquestPlaceNames, kConquestPlaceCount, text(kZoneConquestKey), static_cast<int>(o.zoneConquest)));
                 o.zoneConquestText = flag(kZoneConquestTextKey, o.zoneConquestText);
                 break;
             }
@@ -1408,9 +1307,9 @@ namespace headsup
                 break;
             case BarWidget::EarthTime:
             {
-                const std::string zone = text(kClockZoneKey);
-                for (int z = 0; z < kClockZoneCount; ++z)
-                    if (zone == kClockZoneNames[z]) o.clockZone = static_cast<ClockZone>(z);
+                // kClockZoneCount for a name of none of them, as kLocalZone is.
+                if (const int zone = NameIndex(kClockZoneNames, kClockZoneCount, text(kClockZoneKey), kClockZoneCount); zone < kClockZoneCount)
+                    o.clockZone = static_cast<ClockZone>(zone);
                 o.clock24      = flag(kClock24Key, o.clock24);
                 o.clockSeconds = flag(kClockSecondsKey, o.clockSeconds);
                 // A file from when Server time was a widget, and shown, has the Clock stack it.
@@ -1419,26 +1318,18 @@ namespace headsup
             }
             case BarWidget::Job:
             {
-                const std::string expBar = text(kExpBarKey), layout = text(kJobLayoutKey);
-                for (int e = 0; e < kExpBarPlaceCount; ++e)
-                    if (expBar == kExpBarNames[e]) o.expBar = static_cast<ExpBarPlace>(e);
+                o.expBar = static_cast<ExpBarPlace>(NameIndex(kExpBarNames, kExpBarPlaceCount, text(kExpBarKey), static_cast<int>(o.expBar)));
                 o.expText = static_cast<uint8_t>(std::clamp(number(kExpTextKey, o.expText), 0, (1 << kExpTextCount) - 1));
-                for (int l = 0; l < kJobLayoutCount; ++l)
-                    if (layout == kJobLayoutNames[l]) o.jobLayout = static_cast<JobLayout>(l);
+                o.jobLayout = static_cast<JobLayout>(NameIndex(kJobLayoutNames, kJobLayoutCount, text(kJobLayoutKey), static_cast<int>(o.jobLayout)));
                 o.jobNames = flag(kJobNamesKey, o.jobNames);
                 for (int t = 0; t < kExpTextCount; ++t)
                 {
-                    const std::string place = text(kExpPlaceKeys[t]);
-                    for (int e = 0; e < kExpTextPlaceCount; ++e)
-                        if (place == kExpPlaceNames[e]) o.expPlaces[static_cast<size_t>(t)] = static_cast<ExpTextPlace>(e);
+                    ExpTextPlace& place = o.expPlaces[static_cast<size_t>(t)];
+                    place = static_cast<ExpTextPlace>(NameIndex(kExpPlaceNames, kExpTextPlaceCount, text(kExpPlaceKeys[t]), static_cast<int>(place)));
                 }
                 o.expBarWidth  = number(kExpBarWidthKey, o.expBarWidth);
                 o.expBarHeight = number(kExpBarHeightKey, o.expBarHeight);
-                {
-                    const std::string align = text(kExpAlignKey);
-                    for (int a = 0; a < kAlignCount; ++a)
-                        if (align == kExpAlignNames[a]) o.expAlign = static_cast<Align>(a);
-                }
+                o.expAlign = static_cast<Align>(NameIndex(kAlignNames, kAlignCount, text(kExpAlignKey), static_cast<int>(o.expAlign)));
                 break;
             }
             case BarWidget::Performance:
@@ -1511,7 +1402,7 @@ namespace headsup
                     text(kExpPlaceKeys[t], kExpPlaceNames[static_cast<int>(o.expPlaces[static_cast<size_t>(t)])]);
                 StoreFloat(store, CopyKey(kExpBarWidthKey, w), static_cast<float>(o.expBarWidth));
                 StoreFloat(store, CopyKey(kExpBarHeightKey, w), static_cast<float>(o.expBarHeight));
-                text(kExpAlignKey, kExpAlignNames[static_cast<int>(o.expAlign)]);
+                text(kExpAlignKey, kAlignNames[static_cast<int>(o.expAlign)]);
                 break;
             case BarWidget::Performance: StoreFloat(store, CopyKey(kPerfPartsKey, w), static_cast<float>(o.perfParts)); break;
             case BarWidget::Target:
@@ -1612,27 +1503,29 @@ namespace headsup
             explicit DefaultedStore(SettingsStore& file)
                 : m_File(file)
             {}
-            bool GetBool(const char* key, bool fallback) override
-            {
-                const std::optional<std::string> d = Default(key);
-                return m_File.GetBool(key, d ? *d == "true" || *d == "1" : fallback);
-            }
-            float GetFloat(const char* key, float fallback) override
-            {
-                const std::optional<std::string> d = Default(key);
-                return m_File.GetFloat(key, d ? std::strtof(d->c_str(), nullptr) : fallback);
-            }
             std::string GetString(const char* key, const char* fallback) override
             {
-                const std::optional<std::string> d = Default(key);
-                return m_File.GetString(key, d ? d->c_str() : fallback);
+                const auto d = Defaults().find(key);
+                return m_File.GetString(key, d != Defaults().end() ? d->second.c_str() : fallback);
             }
             void Set(const char* key, const char* value) override { m_File.Set(key, value); }
 
         private:
-            static std::optional<std::string> Default(const char* key)
+            // kDefaultSettingsText's values by key, read once.
+            static const std::unordered_map<std::string, std::string>& Defaults()
             {
-                return IniValue(kDefaultSettingsText, kDefaultsSection, key);
+                static const std::unordered_map<std::string, std::string> values = [] {
+                    std::unordered_map<std::string, std::string> read;
+                    std::istringstream lines(kDefaultSettingsText);
+                    for (std::string line; std::getline(lines, line);)
+                        if (const size_t equals = line.find('='); equals != std::string::npos)
+                        {
+                            const std::string key = line.substr(0, equals);
+                            read.try_emplace(key, *IniValue(kDefaultSettingsText, kDefaultsSection, key));
+                        }
+                    return read;
+                }();
+                return values;
             }
             SettingsStore& m_File;
         };
@@ -1640,8 +1533,6 @@ namespace headsup
         class EmptyStore final : public SettingsStore
         {
         public:
-            bool GetBool(const char*, bool fallback) override { return fallback; }
-            float GetFloat(const char*, float fallback) override { return fallback; }
             std::string GetString(const char*, const char* fallback) override { return fallback; }
             void Set(const char*, const char*) override {}
         };
@@ -1655,8 +1546,8 @@ namespace headsup
 
     namespace
     {
-        // Asked before anything is read: a typed read adds its key. Every build's file holds these two, and a store
-        // with neither is a new install, which has today's defaults and no look from before to keep.
+        // Every build's file holds these two, and a store with neither is a new install, which has today's defaults and
+        // no look from before to keep.
         bool HoldsFile(SettingsStore& store)
         {
             return store.GetString(kVersionKey, kNoText) != kNoText || store.GetString(kEnabledKey, kNoText) != kNoText;
@@ -1666,7 +1557,7 @@ namespace headsup
         {
             Settings s;
             for (const BoolKey& b : kBools)
-                s.*b.field = store.GetBool(b.key, s.*b.field);
+                s.*b.field = HeldSwitch(store, b.key).value_or(s.*b.field);
             for (const IntKey& i : kInts)
                 s.*i.field = LoadInt(store, i.key, s.*i.field);
             // The shape a file from before had, which also gave its one size a width.
@@ -1700,7 +1591,7 @@ namespace headsup
             s.cursorOutlineThickness = Rebased(store, kCursorEdgeKey, kOldCursorOutlineKey, s.cursorOutlineThickness,
                 [](float before) { return before * kCursorEdgeRebase; });
             for (const FloatKey& f : kFloats)
-                s.*f.field = store.GetFloat(f.key, s.*f.field);
+                s.*f.field = HeldNumber(store, f.key).value_or(s.*f.field);
             for (const ColorKey& c : kColors)
                 LoadColor(store, c.key, s.*c.field);
             LoadPick(store, kCursorPickKey, s.cursorColor);
@@ -1709,7 +1600,7 @@ namespace headsup
             s.badgeFontName = store.GetString(kBadgeFontKey, file ? kBadgeFont : s.badgeFontName.c_str());
             s.barTitleFont  = store.GetString(kBarTitleFontKey, "");
             s.barTextFont   = store.GetString(kBarTextFontKey, "");
-            s.scaleCursor   = store.GetBool(kScaleCursorKey, file ? s.scaleWithDistance : s.scaleCursor);
+            s.scaleCursor   = HeldSwitch(store, kScaleCursorKey).value_or(file ? s.scaleWithDistance : s.scaleCursor);
             {
                 // An unknown or repeated key is left out.
                 std::istringstream words(store.GetString(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str()));
@@ -1732,20 +1623,19 @@ namespace headsup
             {
                 const std::string base = kStatusKeys[i];
                 StatusBadgeRule& rule  = s.statusBadges[i];
-                rule.show              = store.GetBool((base + kStatusShowSuffix).c_str(), rule.show);
-                rule.weakRank          = LoadInt(store, (base + kWeakRankSuffix).c_str(), rule.weakRank);
-                rule.resistRank        = LoadInt(store, (base + kResistRankSuffix).c_str(), rule.resistRank);
+                rule.show              = HeldSwitch(store, base + kStatusShowSuffix).value_or(rule.show);
+                rule.weakRank          = LoadInt(store, base + kWeakRankSuffix, rule.weakRank);
+                rule.resistRank        = LoadInt(store, base + kResistRankSuffix, rule.resistRank);
             }
-            const std::string theme = store.GetString(kBarThemeKey, "");
-            for (int t = 0; t < kBarThemeCount; ++t)
-                if (theme == kBarThemeNames[t]) s.barTheme = static_cast<BarTheme>(t);
+            s.barTheme = static_cast<BarTheme>(
+                NameIndex(kBarThemeNames, kBarThemeCount, store.GetString(kBarThemeKey, ""), static_cast<int>(s.barTheme)));
             const std::string custom = kCustomThemeKey;
             for (const PaletteColor& color : kPaletteColors)
                 s.customPalette.*color.field = LoadHex(store, custom + color.name, s.customPalette.*color.field);
             s.customPalette.shape = static_cast<BarShape>(NameIndex(kBarShapeNames, kBarShapeCount,
                 store.GetString((custom + kShapeSuffix).c_str(), ""), static_cast<int>(s.customPalette.shape)));
-            s.customPalette.border = LoadInt(store, (custom + kBorderSuffix).c_str(), s.customPalette.border);
-            s.customPalette.gradient = store.GetBool((custom + kGradientSuffix).c_str(), s.customPalette.gradient);
+            s.customPalette.border = LoadInt(store, custom + kBorderSuffix, s.customPalette.border);
+            s.customPalette.gradient = HeldSwitch(store, custom + kGradientSuffix).value_or(s.customPalette.gradient);
             s.menuFont         = store.GetString(kMenuFontKey, s.menuFont.c_str());
             // By the font named: one whose Windows file was missing was drawn in Barlow Condensed, which nothing here knows.
             s.menuFontSize     = Rebased(store, kMenuFontSizeKey, kOldMenuScaleKey, s.menuFontSize, [&](float percent) {
@@ -1753,28 +1643,14 @@ namespace headsup
                 return kAshitaFontPixels * std::clamp(percent, kOldMinMenuScale, kOldMaxMenuScale) / kPercent *
                        (font != nullptr ? font->oldScale : 1.0f);
             });
-            s.menuX      = LoadInt(store, kMenuXKey, s.menuX);
-            s.menuY      = LoadInt(store, kMenuYKey, s.menuY);
-            s.menuWidth  = LoadInt(store, kMenuWidthKey, s.menuWidth);
-            s.menuHeight = LoadInt(store, kMenuHeightKey, s.menuHeight);
-            s.fishBar      = store.GetBool(kFishBarKey, s.fishBar);
-            s.hideGameFishBar = store.GetBool(kHideGameFishBarKey, s.hideGameFishBar);
-            s.fishBarWidth = LoadInt(store, kFishBarWidthKey, s.fishBarWidth);
-            s.fishBarX     = LoadInt(store, kFishBarXKey, s.fishBarX);
-            s.fishBarY     = LoadInt(store, kFishBarYKey, s.fishBarY);
             s.fishBarFont  = store.GetString(kFishBarFontKey, s.fishBarFont.c_str());
-            s.fishBarDraggable = store.GetBool(kFishBarDraggableKey, s.fishBarDraggable);
             s.fishBarLine  = store.GetString(kFishBarLineKey, s.fishBarLine.c_str());
-            s.fishColorByCatch = store.GetBool(kFishColorByCatchKey, s.fishColorByCatch);
-            s.blueMagic = store.GetBool(kBlueMagicKey, s.blueMagic);
             s.blueMagicLearned = static_cast<BlueLearned>(NameIndex(kBlueLearnedNames, kBlueLearnedCount,
                 store.GetString(kBlueMagicLearnedKey, ""), static_cast<int>(s.blueMagicLearned)));
-            const std::string separators = store.GetString(kBarSeparatorsKey, "");
-            for (int t = 0; t < kBarSeparatorsCount; ++t)
-                if (separators == kBarSeparatorsNames[t]) s.barSeparators = static_cast<BarSeparators>(t);
-            const std::string subtitle = store.GetString(kSubtitleKey, "");
-            for (int i = 0; i < kSubtitlePlaceCount; ++i)
-                if (subtitle == kSubtitleNames[i]) s.barSubtitle = static_cast<SubtitlePlace>(i);
+            s.barSeparators = static_cast<BarSeparators>(NameIndex(kBarSeparatorsNames, kBarSeparatorsCount,
+                store.GetString(kBarSeparatorsKey, ""), static_cast<int>(s.barSeparators)));
+            s.barSubtitle = static_cast<SubtitlePlace>(
+                NameIndex(kSubtitleNames, kSubtitlePlaceCount, store.GetString(kSubtitleKey, ""), static_cast<int>(s.barSubtitle)));
             std::array<std::string, kBarSectionCount> sections;
             for (int i = 0; i < kBarSectionCount; ++i)
                 sections[i] = store.GetString(kBarSectionKeys[i], "");
@@ -1784,26 +1660,21 @@ namespace headsup
                     LoadWidget(store, w, s.widgets[slot]);
             s.pinnedWindows = WindowPlacesFrom(store.GetString(kPinnedWindowsKey, ""));
             s.hiddenWindows = HiddenWindowsFrom(store.GetString(kHiddenWindowsKey, ""));
-            s.shiftVanillaUi =
-                HeldSwitch(store, kShiftVanillaUiKey).value_or(HeldSwitch(store, kOldMoveWindowsKey).value_or(s.shiftVanillaUi));
+            s.shiftVanillaUi = HeldSwitch(store, kShiftVanillaUiKey).value_or(s.shiftVanillaUi);
             for (size_t m = 0; m < kHelpModes; ++m)
             {
                 s.placedUnder[m] = LoadInt(store, kPlacedUnderKeys[m], s.placedUnder[m]);
                 s.viewShifts[m]  = ViewShiftsFrom(store.GetString(kViewShiftsKeys[m], ""), WindowViews());
             }
-            s.moveGameHelp  = store.GetBool(kMoveGameHelpKey, s.moveGameHelp);
-            s.helpBarX      = LoadInt(store, kHelpBarXKey, s.helpBarX);
-            s.helpBarBackground = store.GetBool(kHelpBarBackgroundKey, s.helpBarBackground);
-            s.helpBarY      = LoadInt(store, kHelpBarYKey, s.helpBarY);
-            const float saved = store.GetFloat(kVersionKey, 0.0f);
-            if (saved >= kDesignerVersion || store.GetBool(kDesignsSavedKey, false)) LoadDesigner(store, s);
+            const float saved = HeldNumber(store, kVersionKey).value_or(0.0f);
+            if (saved >= kDesignerVersion || HeldSwitch(store, kDesignsSavedKey).value_or(false)) LoadDesigner(store, s);
             else if (file) MigrateDesigner(LoadOld(store, saved), s);
             for (int k = 0; k < kPlateKindCount; ++k)
             {
                 const auto kind = static_cast<PlateKind>(k);
                 LoadGlowOff(store, kind, s.kinds[k]);
                 if (HasStatusIcons(kind))
-                    s.kinds[k].maxIcons = LoadInt(store, (std::string(KindKey(kind)) + kMaxIconsSuffix).c_str(), s.kinds[k].maxIcons);
+                    s.kinds[k].maxIcons = LoadInt(store, std::string(KindKey(kind)) + kMaxIconsSuffix, s.kinds[k].maxIcons);
             }
             LoadOpacity(store, s.opacity);
             return Clamp(s);
@@ -1819,19 +1690,16 @@ namespace headsup
 
     void SaveSettings(const Settings& s, SettingsStore& store)
     {
-        auto setBool  = [&](const std::string& key, bool v) { StoreBool(store, key, v); };
-        auto setFloat = [&](const std::string& key, float v) { StoreFloat(store, key, v); };
-        auto setColor = [&](const std::string& base, const Color& c) { StoreColor(store, base, c); };
         for (const BoolKey& b : kBools)
-            setBool(b.key, s.*b.field);
+            StoreBool(store, b.key, s.*b.field);
         for (const IntKey& i : kInts)
-            setFloat(i.key, static_cast<float>(s.*i.field));
+            StoreFloat(store, i.key, static_cast<float>(s.*i.field));
         for (const IntKey& i : kRebasedInts)
-            setFloat(i.key, static_cast<float>(s.*i.field));
+            StoreFloat(store, i.key, static_cast<float>(s.*i.field));
         for (const FloatKey& f : kFloats)
-            setFloat(f.key, s.*f.field);
+            StoreFloat(store, f.key, s.*f.field);
         for (const ColorKey& c : kColors)
-            setColor(c.key, s.*c.field);
+            StoreColor(store, c.key, s.*c.field);
         store.Set(kCursorStyleKey, CursorStyleName(s.cursorStyle));
         store.Set(kCursorFileKey, s.cursorFile.c_str());
         store.Set(kPointerIconKey, kPointerIconNames[static_cast<int>(s.pointerIcon)]);
@@ -1843,7 +1711,7 @@ namespace headsup
         store.Set(kBadgeFontKey, s.badgeFontName.c_str());
         store.Set(kBarTitleFontKey, s.barTitleFont.c_str());
         store.Set(kBarTextFontKey, s.barTextFont.c_str());
-        setBool(kScaleCursorKey, s.scaleCursor);
+        StoreBool(store, kScaleCursorKey, s.scaleCursor);
         std::string keys;
         for (const uint8_t vk : s.keepPointerKeys)
         {
@@ -1858,32 +1726,20 @@ namespace headsup
         for (int i = 0; i < kStatusRankCount; ++i)
         {
             const std::string base = kStatusKeys[i];
-            setBool(base + kStatusShowSuffix, s.statusBadges[i].show);
-            setFloat(base + kWeakRankSuffix, static_cast<float>(s.statusBadges[i].weakRank));
-            setFloat(base + kResistRankSuffix, static_cast<float>(s.statusBadges[i].resistRank));
+            StoreBool(store, base + kStatusShowSuffix, s.statusBadges[i].show);
+            StoreFloat(store, base + kWeakRankSuffix, static_cast<float>(s.statusBadges[i].weakRank));
+            StoreFloat(store, base + kResistRankSuffix, static_cast<float>(s.statusBadges[i].resistRank));
         }
         store.Set(kBarThemeKey, kBarThemeNames[static_cast<int>(s.barTheme)]);
         for (const PaletteColor& color : kPaletteColors)
             StoreHex(store, kCustomThemeKey + std::string(color.name), s.customPalette.*color.field);
         store.Set((kCustomThemeKey + std::string(kShapeSuffix)).c_str(), kBarShapeNames[static_cast<int>(s.customPalette.shape)]);
-        setFloat(kCustomThemeKey + std::string(kBorderSuffix), static_cast<float>(s.customPalette.border));
-        setBool(kCustomThemeKey + std::string(kGradientSuffix), s.customPalette.gradient);
+        StoreFloat(store, kCustomThemeKey + std::string(kBorderSuffix), static_cast<float>(s.customPalette.border));
+        StoreBool(store, kCustomThemeKey + std::string(kGradientSuffix), s.customPalette.gradient);
         store.Set(kBarSeparatorsKey, kBarSeparatorsNames[static_cast<int>(s.barSeparators)]);
         store.Set(kMenuFontKey, s.menuFont.c_str());
-        setFloat(kMenuXKey, static_cast<float>(s.menuX));
-        setFloat(kMenuYKey, static_cast<float>(s.menuY));
-        setFloat(kMenuWidthKey, static_cast<float>(s.menuWidth));
-        setFloat(kMenuHeightKey, static_cast<float>(s.menuHeight));
-        setBool(kFishBarKey, s.fishBar);
-        setBool(kHideGameFishBarKey, s.hideGameFishBar);
-        setFloat(kFishBarWidthKey, static_cast<float>(s.fishBarWidth));
-        setFloat(kFishBarXKey, static_cast<float>(s.fishBarX));
-        setFloat(kFishBarYKey, static_cast<float>(s.fishBarY));
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());
-        setBool(kFishBarDraggableKey, s.fishBarDraggable);
         store.Set(kFishBarLineKey, s.fishBarLine.c_str());
-        setBool(kFishColorByCatchKey, s.fishColorByCatch);
-        setBool(kBlueMagicKey, s.blueMagic);
         store.Set(kBlueMagicLearnedKey, kBlueLearnedNames[static_cast<int>(s.blueMagicLearned)]);
         // A copy's keys are written while it is on the panel; the first copy's always.
         for (int slot = 0; slot < kPanelSlots; ++slot)
@@ -1894,18 +1750,14 @@ namespace headsup
             store.Set(kBarSectionKeys[i], PlacementNames(s.barSections[i]).c_str());
         store.Set(kPinnedWindowsKey, WindowPlaceText(s.pinnedWindows).c_str());
         store.Set(kHiddenWindowsKey, HiddenWindowsText(s.hiddenWindows).c_str());
-        setBool(kShiftVanillaUiKey, s.shiftVanillaUi);
+        StoreBool(store, kShiftVanillaUiKey, s.shiftVanillaUi);
         for (size_t m = 0; m < kHelpModes; ++m)
         {
-            setFloat(kPlacedUnderKeys[m], static_cast<float>(s.placedUnder[m]));
+            StoreFloat(store, kPlacedUnderKeys[m], static_cast<float>(s.placedUnder[m]));
             store.Set(kViewShiftsKeys[m], ViewShiftsText(s.viewShifts[m]).c_str());
         }
-        setBool(kMoveGameHelpKey, s.moveGameHelp);
-        setFloat(kHelpBarXKey, static_cast<float>(s.helpBarX));
-        setBool(kHelpBarBackgroundKey, s.helpBarBackground);
-        setFloat(kHelpBarYKey, static_cast<float>(s.helpBarY));
         SaveDesigner(store, s);
-        setFloat(kVersionKey, static_cast<float>(kSettingsVersion));
+        StoreFloat(store, kVersionKey, static_cast<float>(kSettingsVersion));
     }
 
     void ChangedKeys::Set(const char* key, const char* value)
@@ -1932,8 +1784,6 @@ namespace headsup
         SaveSettings(Settings{}, *this);
         m_Passing = true;
         const std::string marker = m_Held.at(kDesignsSavedKey);
-        // Asked before LoadSettings reads anything: Ashita's typed getters set a key it lacks to the default they
-        // were given, and the store would then seem to hold what a new install's file, not yet written, does not.
         bool any = false;
         for (auto& [key, text] : m_Held)
         {

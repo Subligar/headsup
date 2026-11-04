@@ -949,8 +949,6 @@ namespace
     {
     public:
         std::map<std::string, std::string> values;
-        bool GetBool(const char*, bool fallback) override { return fallback; }
-        float GetFloat(const char*, float fallback) override { return fallback; }
         std::string GetString(const char*, const char* fallback) override { return fallback; }
         void Set(const char* key, const char* value) override { values[key] = value; }
     };

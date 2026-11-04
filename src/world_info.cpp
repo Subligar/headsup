@@ -11,9 +11,7 @@ namespace headsup
     {
 #include "generated/world.inc"
 
-        constexpr double kMsPerSecond   = 1000.0;
-        constexpr int kHoursPerDay      = 24;
-        constexpr double kVanaHour      = kEarthSecondsPerVanaDay / kHoursPerDay; // in Earth seconds
+        constexpr double kVanaHour      = kEarthSecondsPerVanaDay / kVanaHoursPerDay; // in Earth seconds
         // Phoenix's rse::get_race, 1 to 8 by the game's race numbers, and get_location.
         constexpr const char* kRseRaces[] = {"Hume Male", "Hume Female", "Elvaan Male", "Elvaan Female", "Tarutaru Male",
             "Tarutaru Female", "Mithra", "Galka"};
@@ -34,7 +32,7 @@ namespace headsup
     Sailing NextSailing(const TravelRoute& route, int64_t unixMs)
     {
         const double every = route.every;
-        const double into  = std::fmod(static_cast<double>(unixMs - kVanaEpochUnixMs) / kMsPerSecond, every);
+        const double into  = std::fmod(static_cast<double>(unixMs - kVanaEpochUnixMs) / kMsPerEarthSecond, every);
         Sailing best;
         for (int i = 0; i < route.count; ++i)
         {

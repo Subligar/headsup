@@ -30,9 +30,7 @@ namespace headsup
     {
         uint32_t id = 0; // masked by kSearchIdMask
         std::string name;
-        uint16_t zone  = 0;
-        bool anonymous = true; // the server leaves out an anonymous player's nation, jobs, levels, race and rank
-        uint8_t mainJob = 0, subJob = 0, mainLevel = 0, subLevel = 0;
+        uint8_t mainJob = 0, subJob = 0, mainLevel = 0, subLevel = 0; // 0 for an anonymous player's, which the server leaves out
         bool operator==(const SearchedPlayer&) const = default;
     };
     struct SearchPacket
