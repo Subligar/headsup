@@ -338,7 +338,7 @@ namespace headsup
                         block.rml + "</div>";
                 continue;
             }
-            Card& shown = m_Cards[card++];
+            FormBlock& shown = m_Cards[card++];
             if (shown.rml == block.rml) continue;
             if (Rml::Element* element = Find(block.id)) element->SetInnerRML(block.rml);
             shown.rml = block.rml;
@@ -349,7 +349,7 @@ namespace headsup
             m_Page->SetInnerRML(page);
             m_Cards.clear();
             for (const FormBlock& block : blocks)
-                if (block.id != kSidebarBlock && !block.popout) m_Cards.push_back(Card{block.id, block.rml});
+                if (block.id != kSidebarBlock && !block.popout) m_Cards.push_back(block);
             replaced = true;
         }
         if (!replaced) return;

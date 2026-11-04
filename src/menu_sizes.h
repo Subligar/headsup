@@ -31,7 +31,6 @@ namespace headsup
     constexpr float kNumberWidth    = 4.2f;  // a number to type
     constexpr float kNumberName     = 1.1f;  // the X or Y before it
     constexpr float kFilterWidth    = 12.0f;
-    constexpr float kGroupNameWidth = 9.0f;
     constexpr float kChipHeight     = 1.9f;
     constexpr float kChipDot        = 0.5f;
     constexpr float kChipToggle     = 0.6f; // a widget chip's toggle, as a share of a table's

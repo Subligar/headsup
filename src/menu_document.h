@@ -16,7 +16,6 @@ namespace headsup
         Aurora,
         GameWindow,
     };
-    constexpr int kMenuThemeCount = static_cast<int>(MenuTheme::GameWindow) + 1;
 
     // The settings window's colors (ARGB): a page, the cards on it, the controls on those, each a step lighter, and
     // the trays a step below the page.
