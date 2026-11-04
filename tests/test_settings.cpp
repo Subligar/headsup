@@ -2726,6 +2726,26 @@ TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_rang
     CHECK_EQ(held.Widget(*copy).padding, kPanelPadding);
 }
 
+TEST(a_widgets_popup_text_size_is_kept_for_each_copy_and_held_to_its_range)
+{
+    Settings s;
+    CHECK_EQ(s.Widget(BarWidget::Bags).popupTextSize, kPanelPopupTextSize);
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Bags);
+    CHECK(copy.has_value());
+    s.Widget(*copy).popupTextSize = 22;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["barBagsPopupTextSize_2"], "22.0000");
+    const Settings read = LoadSettings(store);
+    CHECK_EQ(read.Widget(*copy).popupTextSize, 22);
+    CHECK_EQ(read.Widget(BarWidget::Bags).popupTextSize, kPanelPopupTextSize);
+    store.values["barBagsPopupTextSize"]   = "500";
+    store.values["barBagsPopupTextSize_2"] = "3";
+    const Settings held = LoadSettings(store);
+    CHECK_EQ(held.Widget(BarWidget::Bags).popupTextSize, kMaxBarTextSize);
+    CHECK_EQ(held.Widget(*copy).popupTextSize, kPanelPopupTextSize);
+}
+
 TEST(the_vanadiel_clocks_day_of_week_and_date_are_kept_for_each_copy)
 {
     Settings s;

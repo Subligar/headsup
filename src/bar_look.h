@@ -69,6 +69,11 @@ namespace headsup
     const char* WidgetTextFont(const Settings& settings, const WidgetOptions& options);
     // Its title size setting: its own, or the panel's.
     int WidgetTextSize(const Settings& settings, const WidgetOptions& options);
+    // Its popup's text size: its own, or the panel's Popup Size.
+    int WidgetPopupTextSize(const Settings& settings, const WidgetOptions& options);
+    // The look a widget's popup is drawn in: the panel's, at the widget's popup text size. A combined popup is the
+    // widget's that owns the pill.
+    BarLook PopupLook(const BarLook& look, PanelWidget widget);
     // The room from a widget's sides to what it shows: its own, or the panel's, which may be the theme's.
     float WidgetPadding(const BarMetrics& metrics, const Settings& settings, const WidgetOptions& options);
     // Whether a pill shows only while lit: the theme gives none of its widgets a box then and none shows its background.

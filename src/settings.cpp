@@ -258,6 +258,7 @@ namespace headsup
         constexpr const char* kTitleFontSuffix  = "TitleFont";
         constexpr const char* kTextFontSuffix   = "TextFont";
         constexpr const char* kTextSizeSuffix   = "TextSize";
+        constexpr const char* kPopupTextSizeSuffix = "PopupTextSize";
         constexpr const char* kExpBarKey        = "expBar";
         constexpr const char* kExpTextKey       = "expText";
         const char* const kExpBarNames[kExpBarPlaceCount] = {"under", "beside", "off"};
@@ -1218,6 +1219,7 @@ namespace headsup
             w.spacing = std::clamp(w.spacing, 0, kMaxWidgetSpacing);
             w.padding = w.padding < 0 ? kPanelPadding : std::min(w.padding, kMaxWidgetPadding);
             w.textSize = std::clamp(w.textSize, kPanelTextSize, kMaxBarTextSize);
+            w.popupTextSize = std::clamp(w.popupTextSize, kPanelPopupTextSize, kMaxBarTextSize);
             for (std::string* font : {&w.titleFont, &w.textFont})
                 if (font->size() > kMaxFontName) font->clear();
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
@@ -1266,6 +1268,7 @@ namespace headsup
             o.titleFont  = text((widget + kTitleFontSuffix).c_str());
             o.textFont   = text((widget + kTextFontSuffix).c_str());
             o.textSize   = number(widget + kTextSizeSuffix, o.textSize);
+            o.popupTextSize = number(widget + kPopupTextSizeSuffix, o.popupTextSize);
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
             o.combineOnPanel = flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
             o.combineInPopup = flag(widget + kCombineInPopupSuffix, o.combineInPopup);
@@ -1362,6 +1365,7 @@ namespace headsup
             text((widget + kTitleFontSuffix).c_str(), o.titleFont.c_str());
             text((widget + kTextFontSuffix).c_str(), o.textFont.c_str());
             StoreFloat(store, CopyKey(widget + kTextSizeSuffix, w), static_cast<float>(o.textSize));
+            StoreFloat(store, CopyKey(widget + kPopupTextSizeSuffix, w), static_cast<float>(o.popupTextSize));
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
             flag(widget + kCombineInPopupSuffix, o.combineInPopup);

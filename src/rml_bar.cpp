@@ -436,7 +436,7 @@ namespace headsup
         return m_Popup != nullptr;
     }
 
-    BarRect RmlBar::ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
+    BarRect RmlBar::ShowPopup(RmlHost& host, const BarLook& panelLook, const BarState& state,
         const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
         std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin, BarRect& cog)
     {
@@ -459,6 +459,7 @@ namespace headsup
             }
             return BarRect{};
         }
+        const BarLook look = PopupLook(panelLook, *open);
         if (!PopupDocumentFor(host, look)) return BarRect{};
         const BarPalette& p = look.palette;
         const BarMetrics& m = look.metrics;

@@ -57,6 +57,7 @@ namespace headsup
     // A widget's spacing and padding at their sliders' leftmost: the panel's.
     constexpr int kPanelSpacing = 0, kPanelPadding = kThemePadding;
     constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
+    constexpr int kPanelPopupTextSize = kAutoPopupTextSize; // and its popup's: the panel's Popup Size
 
     // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
     enum class ConquestGrid : uint8_t { TwoByTwo, OneByFour };
@@ -72,6 +73,7 @@ namespace headsup
         int padding     = kPanelPadding; // pixels from its sides to what it shows
         std::string titleFont, textFont;  // its own, as the panel's; empty for the panel's
         int textSize    = kPanelTextSize; // its title's, or the panel's
+        int popupTextSize = kPanelPopupTextSize; // its popup's, or the panel's Popup Size
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
         uint8_t nations = kAllNations;              // World Info's conquest: whose regions it counts, by NationBit

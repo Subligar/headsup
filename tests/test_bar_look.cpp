@@ -320,3 +320,22 @@ TEST(the_fishing_bars_font_is_its_own_or_the_panels_text_font)
     settings.fishBarFont = "Verdana";
     CHECK(std::string(FishBarFont(settings)) == "Verdana");
 }
+
+TEST(a_widgets_popup_follows_popup_size_until_it_sets_its_own)
+{
+    Settings s;
+    s.barHeight     = 45;
+    s.popupTextSize = 18;
+    const BarLook look = LookOf(BarTheme::PhoenixGold, s);
+    const PanelWidget zone{BarWidget::Zone}, bags{BarWidget::Bags};
+    CHECK_EQ(WidgetPopupTextSize(s, s.Widget(zone)), 18);
+    CHECK(Near(PopupLook(look, zone).metrics.popupText, 18.0f));
+    s.Widget(zone).popupTextSize = 26;
+    CHECK_EQ(WidgetPopupTextSize(s, s.Widget(zone)), 26);
+    const BarLook own = PopupLook(look, zone), other = PopupLook(look, bags);
+    CHECK(Near(own.metrics.popupText, 26.0f));
+    CHECK(Near(other.metrics.popupText, 18.0f));            // the others keep Popup Size
+    CHECK(own.metrics.heading > other.metrics.heading);       // the whole popup scales, its headings too
+    CHECK(own.metrics.popupPadding > other.metrics.popupPadding);
+    CHECK(Near(own.metrics.title, look.metrics.title));       // and the panel's own sizes stay
+}

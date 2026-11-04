@@ -588,6 +588,10 @@ namespace headsup
                     form.SliderInt(label.c_str(), o.textSize, kPanelTextSize, kMaxBarTextSize,
                         PixelsOr(Word(c, WindowWord::Default), kPanelTextSize), row.tip);
                     break;
+                case WidgetTabsRow::PopupTextSize:
+                    form.SliderInt(label.c_str(), o.popupTextSize, kPanelPopupTextSize, kMaxBarTextSize,
+                        PixelsOr(Word(c, WindowWord::Default), kPanelPopupTextSize), row.tip);
+                    break;
                 case WidgetTabsRow::Visibility:
                     if (kind == BarWidget::Target)
                     {

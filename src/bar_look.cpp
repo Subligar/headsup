@@ -137,6 +137,19 @@ namespace headsup
         return options.textSize == kPanelTextSize ? settings.barTextSize : options.textSize;
     }
 
+    int WidgetPopupTextSize(const Settings& settings, const WidgetOptions& options)
+    {
+        return options.popupTextSize == kPanelPopupTextSize ? settings.popupTextSize : options.popupTextSize;
+    }
+
+    BarLook PopupLook(const BarLook& look, PanelWidget widget)
+    {
+        const Settings& s = look.settings;
+        BarLook own       = look;
+        own.metrics = MetricsFor(s.barHeight, look.palette.shape, s.barTextSize, WidgetPopupTextSize(s, s.Widget(widget)));
+        return own;
+    }
+
     float WidgetPadding(const BarMetrics& metrics, const Settings& settings, const WidgetOptions& options)
     {
         const int padding = options.padding == kPanelPadding ? settings.barWidgetPadding : options.padding;

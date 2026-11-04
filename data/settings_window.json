@@ -369,6 +369,7 @@
                 {"key": "title-font", "name": "Title Font", "tip": "This widget's title. Default is the top panel's Title Font."},
                 {"key": "text-font", "name": "Text Font", "tip": "This widget's second line and numbers. Default is the top panel's Text Font."},
                 {"key": "text-size", "name": "Text Size", "tip": "This widget's title size, with its second line to match. Default is the top panel's Text Size."},
+                {"key": "popup-text-size", "name": "Popup Text Size", "tip": "The text size of this widget's popup, its headings and spacing scaled to match. A combined popup takes the first widget's. Default is the top panel's Popup Size."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
                 {"key": "show-icons", "name": "Show Icons", "tip": "A mob's icons: its aggression before its name, the rest after it, and its weaknesses after its level. Default is its aggression alone."},
                 {"key": "show-mob-level", "name": "Show Mob Level", "tip": "A mob's level and how tough it is, under its name. Default is on."},
