@@ -192,9 +192,8 @@ namespace headsup
         return set;
     }
 
-    InfoIconSet InfoIconsOf(const MobResistances* mob, const BadgeRules& rules, BadgeGroup group)
+    InfoIconSet InfoIconsOf(const InfoIconSet& all, BadgeGroup group)
     {
-        const InfoIconSet all = InfoIconsFor(mob, rules);
         InfoIconSet set;
         for (int i = 0; i < all.count; ++i)
         {

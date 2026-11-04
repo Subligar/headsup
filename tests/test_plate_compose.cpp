@@ -838,7 +838,7 @@ TEST(badge_tags_draw_what_the_icon_groups_and_badge_functions_give)
         std::vector<IconDraw> out;
         for (const BadgeGroup group : groups)
         {
-            const InfoIconSet set = InfoIconsOf(&ResistancesOf(*hunter), rules, group);
+            const InfoIconSet set = InfoIconsOf(InfoIconsFor(&ResistancesOf(*hunter), rules), group);
             for (int i = 0; i < set.count; ++i)
             {
                 IconDraw draw;

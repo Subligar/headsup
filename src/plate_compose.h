@@ -17,8 +17,8 @@ namespace headsup
     struct IconDraw
     {
         Icon icon          = Icon::AggroNQ;
-        std::optional<uint32_t> paint; // the color the icon is painted in, the linkshell's; none as it is drawn
-        std::string badge;
+        std::optional<uint32_t> paint{}; // the color the icon is painted in, the linkshell's; none as it is drawn
+        std::string badge{};
         uint32_t badgeColor = 0;
         bool operator==(const IconDraw&) const = default;
     };
@@ -30,8 +30,8 @@ namespace headsup
     struct PlateItem
     {
         ItemKind kind = ItemKind::Text;
-        std::string text;
-        std::vector<IconDraw> icons;
+        std::string text{};
+        std::vector<IconDraw> icons{};
         int spaces = 0;
         bool name  = false;
         bool operator==(const PlateItem&) const = default;

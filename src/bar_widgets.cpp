@@ -684,7 +684,7 @@ namespace headsup
             }
 
             PopupRow immune{RowKind::Line, 0, {}};
-            const InfoIconSet immunities = InfoIconsOf(&res, BadgeRules{}, BadgeGroup::Immune);
+            const InfoIconSet immunities = InfoIconsOf(InfoIconsFor(&res, BadgeRules{}), BadgeGroup::Immune);
             for (int i = 0; i < immunities.count; ++i)
                 immune.cells.push_back(PopupCell{immunities.icons[i].icon, true, {}});
             if (immune.cells.empty()) immune.cells.push_back(Cell(Text("None", Tone::Neutral)));
