@@ -79,8 +79,8 @@ namespace headsup
         std::optional<MemoryReport> memory; // nullopt before the first whole walk of the space
         std::optional<double> cpuPercent;   // of one core; nullopt before two samples
         LinuxXIState linuxxi;
-        std::map<std::string, std::string> pickedTabs; // the tab the player picked in a card, by its heading
-        std::map<std::string, size_t> scrolled; // lines a part of a popup is scrolled past, by its key
+        const std::map<std::string, std::string>* pickedTabs = nullptr; // the tab the player picked in a card, by its heading
+        const std::map<std::string, size_t>* scrolled        = nullptr; // lines a part of a popup is scrolled past, by its key
         const GuildPatterns* turnIns = nullptr; // today's guild point turn-ins, once fetched
         bool turnInsFailed = false;             // the last fetch got no answer
         std::optional<CraftRanks> crafts;       // yours, once the server sent them

@@ -980,19 +980,26 @@ namespace headsup
             return w;
         }
 
+        size_t ScrolledBy(const BarState& state, const std::string& key)
+        {
+            if (state.scrolled == nullptr) return 0;
+            const auto scrolled = state.scrolled->find(key);
+            return scrolled == state.scrolled->end() ? 0 : scrolled->second;
+        }
+
         // A socket's first row: the key its scrolling is kept by, and how far it is scrolled.
         void ScrollsBy(PopupRow& first, const BarState& state, std::string key)
         {
-            const auto scrolled = state.scrolled.find(key);
-            first.scrolled      = scrolled == state.scrolled.end() ? 0 : scrolled->second;
+            first.scrolled      = ScrolledBy(state, key);
             first.scroll        = std::move(key);
         }
 
         // The tab the player picked last in the card, or its first.
         size_t Picked(const BarState& state, const PopupSection& section)
         {
-            const auto picked = state.pickedTabs.find(section.heading);
-            if (picked == state.pickedTabs.end()) return 0;
+            if (state.pickedTabs == nullptr) return 0;
+            const auto picked = state.pickedTabs->find(section.heading);
+            if (picked == state.pickedTabs->end()) return 0;
             const auto tab = std::ranges::find(section.tabs, picked->second, [](const PopupTab& t) { return t.name.text; });
             return tab == section.tabs.end() ? 0 : static_cast<size_t>(tab - section.tabs.begin());
         }
@@ -1850,11 +1857,8 @@ namespace headsup
         case BarWidget::Party:
             return PartyPopup(state.party);
         case BarWidget::StatusTimers:
-        {
-            const auto scrolled = state.scrolled.find(kStatusListKey);
             return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins,
-                scrolled == state.scrolled.end() ? 0 : scrolled->second);
-        }
+                ScrolledBy(state, kStatusListKey));
         case BarWidget::World:
             return WorldPopup(state, o);
         }

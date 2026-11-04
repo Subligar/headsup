@@ -789,7 +789,8 @@ TEST(the_weather_popup_has_a_tab_for_each_element_of_the_zones_that_can_roll_it_
     }
     CHECK(fire.tabs[0].icon != fire.tabs[1].icon);
     // Then a grid of the zones that can roll it either day, today's likeliest first, then tomorrow's.
-    state.pickedTabs["By Element"] = "Ice";
+    const std::map<std::string, std::string> pickedIce{{"By Element", "Ice"}};
+    state.pickedTabs = &pickedIce;
     const PopupSection ice = byElement();
     CHECK_EQ(ice.tab, static_cast<size_t>(Element::Ice));
     const PopupRow& grid = ice.tabs[ice.tab].rows.back();
@@ -835,7 +836,8 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
     Element most = Element::Fire;
     for (int e = 0; e < kElementCount; ++e)
         if (ZonesRolling(static_cast<Element>(e), 777).size() > ZonesRolling(most, 777).size()) most = static_cast<Element>(e);
-    state.pickedTabs["By Element"] = ElementName(most);
+    const std::map<std::string, std::string> picked{{"By Element", ElementName(most)}};
+    state.pickedTabs = &picked;
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
@@ -856,7 +858,8 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
     const PopupRow& grid     = Section(first, "By Element")->tabs[Section(first, "By Element")->tab].rows.back();
     const std::string last   = Joined(grid.cells[grid.cells.size() - 3].text);
     CHECK(!shows(l, last));
-    state.scrolled[key] = l.scrolls.front().most;
+    const std::map<std::string, size_t> scrolled{{key, l.scrolls.front().most}};
+    state.scrolled = &scrolled;
     const PopupLayout end = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, BarShape::Pills, false, measure, room);
     CHECK(shows(end, last) && end.height <= room + 0.01f);
 }
@@ -1671,7 +1674,8 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     CHECK((std::vector<std::string>(lines.begin(), lines.begin() + 4) ==
            std::vector<std::string>{"Allied Notes 12,000", "Gil 4,751", "Sparks of Eminence 350", "Ancient Beastcoins 0"}));
     CHECK(byAmount.cells[0].icon == Icon::StarEmpty && byAmount.cells[3].icon == Icon::Star); // Gil's
-    state.pickedTabs["All Currencies"] = "Alphabetically";
+    const std::map<std::string, std::string> picked{{"All Currencies", "Alphabetically"}};
+    state.pickedTabs = &picked;
     p = BarPopupContent(BarWidget::Currency, state, settings);
     CHECK(p.sections[1].tab == 1);
     lines = gridLines(p.sections[1].tabs[1].rows[0]);
@@ -2537,9 +2541,10 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
     const std::vector<std::string> routes = Lines(PopupSection{"", first.tabs[0].rows});
     CHECK(std::ranges::find(routes, "Jeuno to San d'Oria Boards in 5:16") != routes.end());
     // Picking Boats picks its tab.
-    state.pickedTabs["Travel"] = "Boats";
+    std::map<std::string, std::string> picked{{"Travel", "Boats"}};
+    state.pickedTabs = &picked;
     CHECK_EQ(travel().tab, static_cast<size_t>(1));
-    state.pickedTabs["Travel"] = "Airships";
+    picked["Travel"] = "Airships";
     state.unixMs = kVanaEpochUnixMs + 864LL * 1000 + 100 * 1000; // 100 s into a cycle: its door opened at 28 s
     const std::vector<std::string> boarding = Lines(PopupSection{"", travel().tabs[0].rows});
     CHECK(std::ranges::find(boarding, std::string("Jeuno to San d'Oria Boarding") + kDot + "leaves in 1:22") != boarding.end());
@@ -2576,7 +2581,8 @@ TEST(each_guild_has_a_tab_of_its_shops)
             "Open " + std::to_string(open[names[i]].first) + " of " + std::to_string(open[names[i]].second));
     }
     // Each shop's hours, then who and where, set in under the count.
-    state.pickedTabs["Guilds"] = "Woodworking";
+    const std::map<std::string, std::string> picked{{"Guilds", "Woodworking"}};
+    state.pickedTabs = &picked;
     const PopupSection woodworking = guilds();
     const PopupRow& grid           = woodworking.tabs[woodworking.tab].rows[1]; // after the count, before the turn-ins
     CHECK(woodworking.tabs[woodworking.tab].name.text == "Woodworking");
@@ -2594,7 +2600,8 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
     state.unixMs = kEarthsdayTen;
     Settings settings = WorldShowing(WorldLine::Departure);
     settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Guilds);
-    state.pickedTabs["Guilds"] = "Fishing";
+    const std::map<std::string, std::string> picked{{"Guilds", "Fishing"}};
+    state.pickedTabs = &picked;
     const auto fishing = [&] {
         const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(0);
         return guilds.tabs[guilds.tab].rows;
@@ -2638,7 +2645,8 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
     // Worth the same and neither a +1, listed high quality first: Phoenix's recipes say which is which.
     CHECK(text(5, 1) == "Inferno Sword" && cell(5, 1).item == 16594 && text(5, 3) == "Hellfire Sword" && text(5, 4) == "3,488");
     // A guild that takes no turn-ins has none.
-    state.pickedTabs["Guilds"] = "Tenshodo";
+    const std::map<std::string, std::string> pickedTenshodo{{"Guilds", "Tenshodo"}};
+    state.pickedTabs = &pickedTenshodo;
     const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(0);
     CHECK(guilds.tabs[guilds.tab].name.text == "Tenshodo" && guilds.tabs[guilds.tab].rows.size() == 2);
 }
