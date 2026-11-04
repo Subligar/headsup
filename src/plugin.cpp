@@ -18,6 +18,7 @@
 #include "game_cursor.h"
 #include "game_names.h"
 #include "game_state.h"
+#include "import_slot.h"
 #include "installed_fonts.h"
 #include "menu_state.h"
 #include "mobdata.h"
@@ -107,11 +108,11 @@ namespace
     constexpr int kCaptureFrames             = 120;
     constexpr double kFrameTimeWeight        = 0.05;
     constexpr int32_t kChatMode              = 1; // the chat mode Ashita's own plugins print in
+    constexpr float kWindowClearance         = 4.0f; // back buffer pixels between the help bar and a window it moved
     // The game's menu resolution, which its target window's arrow anchors are in, from its registry settings.
     constexpr const char* kBootConfig        = "boot";
     constexpr const char* kRegistry          = "ffxi.registry";
     constexpr const char* kMenuWidth         = "0037";
-    constexpr float kWindowClearance         = 4.0f; // back buffer pixels between the help bar and a window it moved
     constexpr const char* kMenuHeight        = "0038";
     // XIPivot, which puts its overlays' DAT files in place of the game's, and where it keeps its config and overlays.
     constexpr const char* kPivotModule       = "pivot.dll";
@@ -165,37 +166,47 @@ namespace
         const RGNDATA*);
     constexpr size_t kPresentSlot = 15; // IDirect3DDevice8's vtable: Present follows Reset
     void** g_PresentSlot          = nullptr;
-    PresentFn g_RealPresent       = nullptr;
+    void* g_RealPresent           = nullptr;
     void (*g_AfterGui)()          = nullptr; // the plugin's draw over ImGui, while it is loaded
 
     HRESULT __attribute__((stdcall)) HookedPresent(IDirect3DDevice8* device, const RECT* source, const RECT* dest,
         HWND window, const RGNDATA* dirty)
     {
         if (g_AfterGui != nullptr) g_AfterGui();
-        return g_RealPresent(device, source, dest, window, dirty);
+        return reinterpret_cast<PresentFn>(g_RealPresent)(device, source, dest, window, dirty);
     }
 
     // The game's Reset fails while anything holds a default-pool resource, as the settings window's layer is.
     using ResetFn               = HRESULT(__attribute__((stdcall))*)(IDirect3DDevice8*, D3DPRESENT_PARAMETERS*);
     constexpr size_t kResetSlot = 14;
     void** g_ResetSlot          = nullptr;
-    ResetFn g_RealReset         = nullptr;
+    void* g_RealReset           = nullptr;
     void (*g_BeforeReset)()     = nullptr; // lets go of the plugin's default-pool resources, while it is loaded
 
     HRESULT __attribute__((stdcall)) HookedReset(IDirect3DDevice8* device, D3DPRESENT_PARAMETERS* parameters)
     {
         if (g_BeforeReset != nullptr) g_BeforeReset();
-        return g_RealReset(device, parameters);
+        return reinterpret_cast<ResetFn>(g_RealReset)(device, parameters);
     }
 
-    // Writes a vtable slot, which lives in read-only memory.
-    bool WriteSlot(void** slot, void* value)
+    // Points the device's vtable slot at hook, keeping what it held in real. False when the slot could not be written.
+    bool PatchSlot(void**& patched, IDirect3DDevice8* device, size_t index, void* hook, void*& real)
     {
-        DWORD was = 0;
-        if (!VirtualProtect(slot, sizeof(void*), PAGE_READWRITE, &was)) return false;
-        *slot = value;
-        VirtualProtect(slot, sizeof(void*), was, &was);
+        if (patched != nullptr || device == nullptr) return true;
+        void** slot = *reinterpret_cast<void***>(device) + index;
+        if (*slot == hook) return true;
+        real = *slot;
+        if (!headsup::WriteSlot(slot, hook)) return false;
+        patched = slot;
         return true;
+    }
+
+    // Puts the slot back, unless something hooked it over HeadsUp, whose calls would then still come through here.
+    void UnpatchSlot(void**& patched, void* hook, void* real)
+    {
+        if (patched == nullptr) return;
+        if (*patched == hook) headsup::WriteSlot(patched, real);
+        patched = nullptr;
     }
 
     const char* ItemName(uint16_t item)
@@ -219,8 +230,10 @@ namespace
     // HeadsUp's own answer for a mouse message: true when the game must not get it.
     bool KeepMouse(uint32_t message, WPARAM wParam, LPARAM lParam, bool blocked)
     {
-        const float x = static_cast<float>(static_cast<int16_t>(LOWORD(lParam))) * g_BarScaleX;
-        const float y = static_cast<float>(static_cast<int16_t>(HIWORD(lParam))) * g_BarScaleY;
+        const auto clientX = static_cast<int16_t>(LOWORD(lParam));
+        const auto clientY = static_cast<int16_t>(HIWORD(lParam));
+        const float x      = static_cast<float>(clientX) * g_BarScaleX;
+        const float y      = static_cast<float>(clientY) * g_BarScaleY;
         // RmlUi's overlay lies over every window: what it takes, nothing under it sees.
         const bool overRml = !blocked && g_Rml != nullptr && g_Rml->Running() &&
                              g_Rml->Mouse(message, x, y, static_cast<int16_t>(HIWORD(wParam)));
@@ -231,16 +244,14 @@ namespace
             g_BarClicks->Take(message, static_cast<uint32_t>(wParam), x, y, g_BarOn && !g_BarHidden, overGui, blocked);
         // A window the player hides takes no click, which the game would act on unseen; an Ashita window over it does.
         const bool hiddenWindow = !barTook && !overRml && !blocked &&
-            headsup::SwallowsClick(message, static_cast<int>(static_cast<float>(static_cast<int16_t>(LOWORD(lParam))) * g_MenuScaleX),
-                static_cast<int>(static_cast<float>(static_cast<int16_t>(HIWORD(lParam))) * g_MenuScaleY),
-                headsup::WindowHook::HiddenRects()) &&
+            headsup::SwallowsClick(message, static_cast<int>(static_cast<float>(clientX) * g_MenuScaleX),
+                static_cast<int>(static_cast<float>(clientY) * g_MenuScaleY), headsup::WindowHook::HiddenRects()) &&
             !(g_Gui != nullptr && g_Gui->GetIO().WantCaptureMouse);
 #ifdef HEADSUP_DEV
         if (g_MouseWatch != nullptr && g_MouseWatch->Running() && g_BarSeen != nullptr)
         {
             const auto name = [](const std::optional<headsup::PanelWidget>& w) { return w ? headsup::BarWidgetName(w->kind) : "-"; };
-            g_MouseWatch->Record({message, static_cast<uint32_t>(wParam), static_cast<int16_t>(LOWORD(lParam)),
-                static_cast<int16_t>(HIWORD(lParam)), x, y, blocked, overRml, g_Gui != nullptr && g_Gui->GetIO().WantCaptureMouse,
+            g_MouseWatch->Record({message, static_cast<uint32_t>(wParam), clientX, clientY, x, y, blocked, overRml, g_Gui != nullptr && g_Gui->GetIO().WantCaptureMouse,
                 g_BarOn && !g_BarHidden, g_BarSeen->Over(x, y), name(g_BarSeen->Hovered()), name(g_BarSeen->Open()), barTook,
                 hiddenWindow, barTook || overRml || hiddenWindow});
         }
@@ -286,6 +297,11 @@ class HeadsUp final : public IPlugin
     double m_LastSaveMs   = 0.0;
     size_t m_LastSaveKeys = 0; // how many keys the last save had for the file
     headsup::Tracker m_Tracker;
+    // UpdateTracker's, kept as members for their room.
+    std::vector<headsup::ActorInput> m_Inputs;
+    std::vector<uint32_t> m_AliveMobs; // which lose their placeholder timers
+    std::vector<headsup::PetLink> m_Pets;
+    std::vector<headsup::CheckCandidate> m_Checkable;
     headsup::PhTimers m_PhTimers;
     headsup::Activity m_Activity; // whether you have moved or turned lately, which a placeholder's timer asks
     std::optional<headsup::OutpostFile> m_Outposts; // read from its file when first needed
@@ -311,7 +327,7 @@ class HeadsUp final : public IPlugin
     bool m_WindowHookTried = false; // it patches the game's code, so it starts only once someone wants it
     headsup::PointerFix m_PointerFix;
     headsup::StripTextReader m_StripText;
-    std::string m_StripTextFound = "not looked for"; // Find's result, said by the dev dump
+    std::optional<std::string> m_StripTextFound; // Find's result once looked for, said by the dev dump
     headsup::StripObject m_HelpBytes{}, m_TitleBytes{}; // this frame's
     headsup::StripObject m_LastHelp{}, m_LastTitle{};   // the bytes m_Strip was converted from
     bool m_StripConverted = false;
@@ -352,6 +368,7 @@ class HeadsUp final : public IPlugin
     bool m_PointerFailed = false; // said once; tried again when the setting changes or the folder is read again
     std::tuple<headsup::PointerIcon, std::string, int> m_PointerFor; // the icon, file and size the pointer was started for
     headsup::InstalledFonts m_Fonts;
+    std::vector<std::string> m_MenuFonts; // the kMenuFonts this system has, from Initialize on
     headsup::PlayerState m_Player;
     headsup::CheckResults m_Checks;
     headsup::AutoCheck m_AutoCheck;
@@ -421,8 +438,8 @@ class HeadsUp final : public IPlugin
     std::vector<headsup::WindowPlace> m_WindowPlaces; // for the settings window, while it is open
     std::optional<std::string> m_WindowLog;   // /hu windowlog's file, while it runs
     std::vector<std::string> m_OpenWindows;   // the game's windows drawn in the last frame, by short name
-    std::vector<std::string> m_LastOpen;      // the open windows it wrote last // what the window hook has: the settings' windows and groups
-    std::vector<std::string> m_SeenWindows;
+    std::vector<std::string> m_LastOpen;      // the open windows it wrote last
+    std::vector<std::string> m_SeenWindows;   // what the window hook has: the settings' windows and groups
     std::vector<std::string> m_CursorFiles;      // the cursors folder's, as the Target Cursor and Cursor Icon lists offer them
     std::vector<std::string> m_ThemeFiles;       // the themes folder's, as Theme Colors' Load offers them
     std::vector<std::string> m_ProfileNames;     // the profiles folder's, as the Profiles card offers them
@@ -513,11 +530,11 @@ public:
                 handle != nullptr)
                 m_LoadedFonts.push_back(handle);
         }
+        for (const headsup::MenuFont& choice : headsup::kMenuFonts)
+            if (headsup::MenuFontInstalled(choice)) m_MenuFonts.emplace_back(choice.name);
         if (ProfilesOn())
         {
-            std::ifstream in(OwnFolder(kConfigFolder) + "\\" + headsup::kCharactersFile, std::ios::binary);
-            m_CharacterProfiles = headsup::ReadCharacterProfiles(
-                std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
+            m_CharacterProfiles = headsup::ReadCharacterProfiles(ReadText(ConfigPath(headsup::kCharactersFile)));
             // Before anyone logs in, the profile played last.
             if (!m_CharacterProfiles.last.empty() && Exists(ProfileFile(m_CharacterProfiles.last)))
                 m_Profile = m_CharacterProfiles.last;
@@ -564,8 +581,10 @@ public:
         m_Search.Stop();
         m_Nameplates.Release();
         m_SetupPreview.Release();
-        UnhookPresent();
-        UnhookReset();
+        g_AfterGui = nullptr;
+        UnpatchSlot(g_PresentSlot, reinterpret_cast<void*>(&HookedPresent), g_RealPresent);
+        g_BeforeReset = nullptr;
+        UnpatchSlot(g_ResetSlot, reinterpret_cast<void*>(&HookedReset), g_RealReset);
         g_Plugin = nullptr;
         m_RmlBar.Release();
         m_RmlMenu.Close();
@@ -717,9 +736,7 @@ public:
         else if (args[1] == "windowowners")
         {
             const std::string path = OwnFolder(kLogsFolder) + "\\windowowners.txt";
-            std::ofstream out(path, std::ios::binary | std::ios::trunc);
-            const std::string report = headsup::WindowHook::OwnersReport();
-            out.write(report.data(), static_cast<std::streamsize>(report.size()));
+            WriteText(path, headsup::WindowHook::OwnersReport());
             Print("windowowners: wrote each open game window's owner to " + path);
         }
         else if (args[1] == "namedump")
@@ -733,7 +750,7 @@ public:
         else if (args[1] == "stripdump")
         {
             FindStripText();
-            Print(headsup::WriteStripDump(m_StripText, m_StripTextFound, OwnFolder(kLogsFolder)));
+            Print(headsup::WriteStripDump(m_StripText, *m_StripTextFound, OwnFolder(kLogsFolder)));
         }
 #endif
         else
@@ -902,24 +919,26 @@ public:
             m_GameState.CurrencyRequested(now);
         }
         if (RECT client{}; g_GameWindow != nullptr && GetClientRect(g_GameWindow, &client) && client.right > 0 &&
-                           client.bottom > 0 && m_MenuWidth > 0.0f && m_MenuHeight > 0.0f)
+                           client.bottom > 0)
         {
-            g_MenuScaleX = m_MenuWidth / static_cast<float>(client.right);
-            g_MenuScaleY = m_MenuHeight / static_cast<float>(client.bottom);
+            if (m_MenuWidth > 0.0f && m_MenuHeight > 0.0f)
+            {
+                g_MenuScaleX = m_MenuWidth / static_cast<float>(client.right);
+                g_MenuScaleY = m_MenuHeight / static_cast<float>(client.bottom);
+            }
+            if (g_BarOn)
+            {
+                g_BarScaleX = m_Names.BackBufferWidth() / static_cast<float>(client.right);
+                g_BarScaleY = m_Names.BackBufferHeight() / static_cast<float>(client.bottom);
+                // No message says the pointer left the client area, and in windowed modes the game never moves Windows'.
+                if (POINT pointer{}; GetCursorPos(&pointer) && ScreenToClient(g_GameWindow, &pointer) &&
+                                     !PtInRect(&client, pointer))
+                    m_BarInput.Leave();
+            }
         }
-        if (RECT client{}; g_BarOn && g_GameWindow != nullptr && GetClientRect(g_GameWindow, &client) &&
-                           client.right > 0 && client.bottom > 0)
-        {
-            g_BarScaleX = m_Names.BackBufferWidth() / static_cast<float>(client.right);
-            g_BarScaleY = m_Names.BackBufferHeight() / static_cast<float>(client.bottom);
-            // No message says the pointer left the client area, and in windowed modes the game never moves Windows'.
-            if (POINT pointer{}; GetCursorPos(&pointer) && ScreenToClient(g_GameWindow, &pointer) &&
-                                 !PtInRect(&client, pointer))
-                m_BarInput.Leave();
-        }
-        // Off, the bar is given nothing to show, and releases what it made.
         UpdateSkin();
         m_RmlBar.settingsRoom = m_RmlMenu.RoomFor(SettingsShownNow(), m_Settings);
+        // Off, the bar is given nothing to show, and releases what it made.
         if (m_Rml.Running())
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
@@ -931,14 +950,29 @@ public:
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
-        // Over ImGui from Present; with the bar, under ImGui, when Present is not hooked.
-        if (g_PresentSlot != nullptr)
-            g_AfterGui = [] { if (g_Plugin != nullptr) g_Plugin->DrawOverGui(); };
         m_BarDrawn = false;
         if (!Logging()) CloseNotes();
         m_ArrowHook.Hide(m_Settings.enabled && m_Settings.cursorStyle != headsup::CursorStyle::Vanilla);
         LoadCursorFile();
         LightGamePearl();
+        m_Shot.EndFrame();
+        m_SceneCopied      = false;
+        m_LoneCursorsDrawn = false;
+        const std::optional<headsup::HelpBand> band = UpdateWindows(now, mapShown);
+        m_PointerFix.Enable(m_Settings.enabled && m_Settings.fixPointer);
+        static const std::vector<uint8_t> kNoKeys;
+        m_PointerFix.KeepPointerFor(m_Settings.enabled ? m_Settings.keepPointerKeys : kNoKeys);
+        g_SyncClicks = m_Settings.enabled && m_Settings.fixPointer;
+        UpdateMenu(now, loginStatus, drewInScene, band);
+        if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
+        UpdatePointer();
+        HoldGameKeys(m_Rml.WantsText());
+        m_NameHook.NewFrame(NameOwners());
+    }
+
+    // The window hook: what to hide, place and shift of the game's windows, and which are open. The help bar's band.
+    std::optional<headsup::HelpBand> UpdateWindows(double now, bool mapShown)
+    {
         // The game's help bar is the only help left while an event or the map hides HeadsUp's bar; a screenshot wants
         // neither.
         const bool helpGone = m_Settings.hideHelpBar && (m_Screenshot || !(m_Player.inEvent || mapShown));
@@ -958,9 +992,6 @@ public:
             if (const std::string failure = m_WindowHook.TakeMoveProblem(); !failure.empty())
                 Note("the game's windows stay under the help bar: " + failure + ".");
         }
-        m_Shot.EndFrame();
-        m_SceneCopied      = false;
-        m_LoneCursorsDrawn = false;
         m_WindowHook.Hide(hidden);
         m_WindowHook.HideFishBar(fishBarHidden);
         m_WindowHook.NewFrame();
@@ -999,109 +1030,106 @@ public:
             }
             m_LastOpen = open;
         }
-        m_PointerFix.Enable(m_Settings.enabled && m_Settings.fixPointer);
-        m_PointerFix.KeepPointerFor(m_Settings.enabled ? m_Settings.keepPointerKeys : std::vector<uint8_t>{});
-        g_SyncClicks = m_Settings.enabled && m_Settings.fixPointer;
-        if (m_Rml.Running())
+        return band;
+    }
+
+    // The settings window, and what it hands back: saves, reverts, profile and theme picks.
+    void UpdateMenu(double now, uint8_t loginStatus, bool drewInScene, const std::optional<headsup::HelpBand>& band)
+    {
+        if (!m_Rml.Running()) return;
+        if (m_OfferSetup && loginStatus == headsup::kLoginInGame && !m_Player.inEvent &&
+            m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0)
         {
-            if (m_OfferSetup && loginStatus == headsup::kLoginInGame && !m_Player.inEvent &&
-                m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0)
-            {
-                m_OfferSetup = false;
-                if (!m_Settings.setupDone) m_RmlMenu.StartSetup(m_Settings, false);
-            }
-            const headsup::NameStats names = m_NameHook.Stats();
-            if (m_RmlMenu.open) m_WindowPlaces = m_WindowHook.Places();
-            const headsup::MenuReadings readings{
-                .outlinedMobs     = m_Tracker.OutlinedCount(),
-                .meshes           = m_Outline.MeshesLastFrame(),
-                .nameplates       = static_cast<uint32_t>(m_Nameplates.LastShown().size()),
-                .frameMs          = m_FrameMs,
-                .lastSaveMs       = m_LastSaveMs,
-                .lastSaveKeys     = m_LastSaveKeys,
-                .stencilAvailable = m_Outline.StencilAvailable(),
-                .drewInScene      = drewInScene,
-                .hooked           = m_NameHook.Running(),
-                .names            = names.names,
-                .replaced         = names.replaced,
-                .hidden           = names.hidden,
-                .level            = m_Player.level,
-                .sitting          = m_Player.sitting,
-                .barTitlePixels   = m_RmlBar.TitlePixels(),
-                .windowsBand      = m_WindowHook.WindowsBand(),
-                .barBand          = HelpBandNow().value_or(headsup::HelpBand{}).topBar,
-                .seenWindows      = &m_SeenWindows,
-                .windowPlaces     = &m_WindowPlaces,
-                .cursorFiles      = &m_CursorFiles,
-                .themeFiles       = &m_ThemeFiles,
-                .profiles         = &m_ProfileNames,
-                .profile          = &m_Profile,
-                .unsaved          = m_SettingsChangedAt.has_value(),
-#ifdef HEADSUP_DEV
-                .watching         = m_DrawDump.Watching(),
-#else
-                .watching         = std::nullopt,
-#endif
-                .lastReport       = &m_LastReport,
-                .logFile          = &m_NoteFileName,
-#ifdef HEADSUP_DEV
-                .exportable       = true,
-#endif
-                .settingsOf       = SettingsShownNow(),
-            };
-            m_RmlMenu.settingsAt = m_RmlBar.SettingsBody();
-            if (m_RmlMenu.Update(MenuHostNow(), m_Settings, readings, m_Fonts.Choices(m_Settings.defaultFont), kVersion))
-            {
-                m_SettingsChangedAt = now;
-                SayGameFontFailure();
-            }
-            // A chip clicked opens its pill's popup on its settings, or closes it when it shows them already.
-            if (const std::optional<headsup::PanelWidget> asked = m_RmlMenu.TakeSettingsAsked())
-            {
-                const headsup::PanelWidget pill = headsup::Panel(m_Settings).group[headsup::SlotOf(*asked)];
-                m_BarInput.ShowSettings(m_BarInput.SettingsShown() == pill ? std::nullopt : std::optional(pill));
-            }
-            if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
-            if (m_RmlMenu.TakeSetupBackup()) BackUpSettings();
-#ifdef HEADSUP_DEV
-            if (m_RmlMenu.TakeWatchRequest())
-            {
-                const bool stopping = m_DrawDump.Watching();
-                Print(m_DrawDump.Start(stopping ? headsup::kDrawDumpStop : headsup::kDrawDumpWatch, Now(), m_AshitaCore,
-                    OwnFolder(kLogsFolder)));
-                if (stopping) m_LastReport = m_DrawDump.LogPath();
-            }
-            if (m_RmlMenu.TakeReloadRequest())
-            {
-                ReadWindowFile(true);
-                m_RmlMenu.Close(); // built anew from the layout on the next frame
-            }
-            if (m_RmlMenu.TakeExportRequest()) ExportWindowFile();
-#endif
-            if (m_RmlMenu.TakeCursorsRequest()) ScanCursors();
-            if (m_RmlMenu.TakeThemesRequest()) ScanThemes();
-            if (const std::optional<std::string> name = m_RmlMenu.TakeThemeSave()) SaveTheme(*name);
-            if (const std::optional<std::string> name = m_RmlMenu.TakeThemeLoad(); name && LoadTheme(*name))
-                m_SettingsChangedAt = now;
-            if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
-            // The switch itself is always saved, so a profile keeps whether it saves by hand.
-            if (m_Settings.autoSave != std::exchange(m_AutoSaveWas, m_Settings.autoSave) || m_RmlMenu.TakeSaveRequest())
-                SaveSettings();
-            if (m_RmlMenu.TakeRevertRequest())
-            {
-                LoadSettings();
-                m_SettingsChangedAt = std::nullopt;
-            }
-            if (const std::optional<std::string> name = m_RmlMenu.TakeProfileUse(); name && ProfilesOn()) UseProfile(*name);
-            if (const std::optional<std::string> name = m_RmlMenu.TakeProfileNew(); name && ProfilesOn()) NewProfile(*name);
-            if (const std::optional<std::string> name = m_RmlMenu.TakeProfileRename(); name && ProfilesOn())
-                RenameCurrentProfile(*name);
-            if (const std::optional<std::string> name = m_RmlMenu.TakeProfileDelete(); name && ProfilesOn()) DeleteProfile(*name);
+            m_OfferSetup = false;
+            if (!m_Settings.setupDone) m_RmlMenu.StartSetup(m_Settings, false);
         }
-        if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
-        UpdatePointer();
-        HoldGameKeys(m_Rml.WantsText());
-        m_NameHook.NewFrame(NameOwners());
+        const headsup::NameStats names = m_NameHook.Stats();
+        if (m_RmlMenu.open) m_WindowPlaces = m_WindowHook.Places();
+        const headsup::MenuReadings readings{
+            .outlinedMobs     = m_Tracker.OutlinedCount(),
+            .meshes           = m_Outline.MeshesLastFrame(),
+            .nameplates       = static_cast<uint32_t>(m_Nameplates.LastShown().size()),
+            .frameMs          = m_FrameMs,
+            .lastSaveMs       = m_LastSaveMs,
+            .lastSaveKeys     = m_LastSaveKeys,
+            .stencilAvailable = m_Outline.StencilAvailable(),
+            .drewInScene      = drewInScene,
+            .hooked           = m_NameHook.Running(),
+            .names            = names.names,
+            .replaced         = names.replaced,
+            .hidden           = names.hidden,
+            .level            = m_Player.level,
+            .sitting          = m_Player.sitting,
+            .barTitlePixels   = m_RmlBar.TitlePixels(),
+            .windowsBand      = m_WindowHook.WindowsBand(),
+            .barBand          = band.value_or(headsup::HelpBand{}).topBar,
+            .seenWindows      = &m_SeenWindows,
+            .windowPlaces     = &m_WindowPlaces,
+            .cursorFiles      = &m_CursorFiles,
+            .themeFiles       = &m_ThemeFiles,
+            .profiles         = &m_ProfileNames,
+            .profile          = &m_Profile,
+            .unsaved          = m_SettingsChangedAt.has_value(),
+#ifdef HEADSUP_DEV
+            .watching         = m_DrawDump.Watching(),
+#else
+            .watching         = std::nullopt,
+#endif
+            .lastReport       = &m_LastReport,
+            .logFile          = &m_NoteFileName,
+#ifdef HEADSUP_DEV
+            .exportable       = true,
+#endif
+            .settingsOf       = SettingsShownNow(),
+        };
+        m_RmlMenu.settingsAt = m_RmlBar.SettingsBody();
+        if (m_RmlMenu.Update(MenuHostNow(), m_Settings, readings, m_Fonts.Choices(m_Settings.defaultFont), kVersion))
+        {
+            m_SettingsChangedAt = now;
+            SayGameFontFailure();
+        }
+        // A chip clicked opens its pill's popup on its settings, or closes it when it shows them already.
+        if (const std::optional<headsup::PanelWidget> asked = m_RmlMenu.TakeSettingsAsked())
+        {
+            const headsup::PanelWidget pill = headsup::Panel(m_Settings).group[headsup::SlotOf(*asked)];
+            m_BarInput.ShowSettings(m_BarInput.SettingsShown() == pill ? std::nullopt : std::optional(pill));
+        }
+        if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
+        if (m_RmlMenu.TakeSetupBackup()) BackUpSettings();
+#ifdef HEADSUP_DEV
+        if (m_RmlMenu.TakeWatchRequest())
+        {
+            const bool stopping = m_DrawDump.Watching();
+            Print(m_DrawDump.Start(stopping ? headsup::kDrawDumpStop : headsup::kDrawDumpWatch, Now(), m_AshitaCore,
+                OwnFolder(kLogsFolder)));
+            if (stopping) m_LastReport = m_DrawDump.LogPath();
+        }
+        if (m_RmlMenu.TakeReloadRequest())
+        {
+            ReadWindowFile(true);
+            m_RmlMenu.Close(); // built anew from the layout on the next frame
+        }
+        if (m_RmlMenu.TakeExportRequest()) ExportWindowFile();
+#endif
+        if (m_RmlMenu.TakeCursorsRequest()) ScanCursors();
+        if (m_RmlMenu.TakeThemesRequest()) ScanThemes();
+        if (const std::optional<std::string> name = m_RmlMenu.TakeThemeSave()) SaveTheme(*name);
+        if (const std::optional<std::string> name = m_RmlMenu.TakeThemeLoad(); name && LoadTheme(*name))
+            m_SettingsChangedAt = now;
+        if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
+        // The switch itself is always saved, so a profile keeps whether it saves by hand.
+        if (m_Settings.autoSave != std::exchange(m_AutoSaveWas, m_Settings.autoSave) || m_RmlMenu.TakeSaveRequest())
+            SaveSettings();
+        if (m_RmlMenu.TakeRevertRequest())
+        {
+            LoadSettings();
+            m_SettingsChangedAt = std::nullopt;
+        }
+        if (const std::optional<std::string> name = m_RmlMenu.TakeProfileUse(); name && ProfilesOn()) UseProfile(*name);
+        if (const std::optional<std::string> name = m_RmlMenu.TakeProfileNew(); name && ProfilesOn()) NewProfile(*name);
+        if (const std::optional<std::string> name = m_RmlMenu.TakeProfileRename(); name && ProfilesOn())
+            RenameCurrentProfile(*name);
+        if (const std::optional<std::string> name = m_RmlMenu.TakeProfileDelete(); name && ProfilesOn()) DeleteProfile(*name);
     }
 
     // The game reads its keys through DirectInput, past the keyboard callback's answer: the arrows turned the camera
@@ -1206,7 +1234,6 @@ public:
     }
 
 private:
-    // The help bar's tallest reach in the game's menu resolution, with clear space below it, while the bar shows it.
     // The widgets whose settings the panel's open popup shows, in its pill's order.
     std::vector<headsup::PanelWidget> SettingsShownNow() const
     {
@@ -1239,7 +1266,7 @@ private:
     // HeadsUp's own draws, which come back through the hooks.
     bool Ours() const { return m_Drawing || m_Outline.Drawing(); }
 
-    // Only developer builds (dev/) record draws, for /hu drawdump.
+    // Only developer builds (with HeadsUp-dev) record draws, for /hu drawdump.
     void RecordDraw([[maybe_unused]] char hook, [[maybe_unused]] D3DPRIMITIVETYPE type, [[maybe_unused]] UINT count,
         [[maybe_unused]] const void* vertices, [[maybe_unused]] UINT stride, [[maybe_unused]] UINT firstVertex,
         [[maybe_unused]] UINT vertexCount)
@@ -1451,6 +1478,7 @@ private:
     std::vector<headsup::NameOwner> NameOwners() const
     {
         std::vector<headsup::NameOwner> owners;
+        owners.reserve(m_Tracker.Actors().size());
         for (const headsup::ActorPtr actor : m_Tracker.Actors())
             if (const headsup::ActorInfo* info = m_Tracker.Find(actor))
                 owners.push_back({actor, info->index,
@@ -1486,32 +1514,16 @@ private:
     // holds the file. Its bytes, or why there are none (failure, which names the file once one was found).
     std::optional<std::vector<uint8_t>> GameFileBytes(std::string_view file, std::string& failure)
     {
-        std::string pivotIni;
         const std::string pivotFolder = headsup::ModuleFolder(kPivotModule);
-        if (!pivotFolder.empty())
-        {
-            std::ifstream in(std::string(m_AshitaCore->GetInstallPath()) + kPivotConfig, std::ios::binary);
-            pivotIni.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-        }
+        const std::string pivotIni =
+            pivotFolder.empty() ? "" : ReadText(std::string(m_AshitaCore->GetInstallPath()) + kPivotConfig);
         const std::string gameFolder = headsup::ModuleFolder(headsup::kGameModule);
         for (const std::string& path : headsup::GameFileCandidates(pivotIni, pivotFolder + kPivotDats, gameFolder, file))
         {
-            std::ifstream in(path, std::ios::binary | std::ios::ate);
-            const std::streamoff size = in.tellg();
-            if (!in || size <= 0) continue;
-            failure = path + ": ";
-            if (static_cast<uint64_t>(size) > kMaxDatBytes)
-            {
-                failure += "it is too large";
-                return std::nullopt;
-            }
-            std::vector<uint8_t> bytes(static_cast<size_t>(size));
-            in.seekg(0);
-            if (!in.read(reinterpret_cast<char*>(bytes.data()), size))
-            {
-                failure += "it could not be read";
-                return std::nullopt;
-            }
+            std::string problem;
+            std::optional<std::vector<uint8_t>> bytes = ReadBytes(path, kMaxDatBytes, problem);
+            if (!bytes && problem.empty()) continue;
+            failure = path + ": " + problem;
             return bytes;
         }
         failure = "the game's " + std::string(file) + " was not found under " + gameFolder;
@@ -1781,7 +1793,7 @@ private:
     // It scans the client's image, so once; the bar's widget and the dev dump share it.
     void FindStripText()
     {
-        if (m_StripTextFound == "not looked for") m_StripTextFound = m_StripText.Find();
+        if (!m_StripTextFound) m_StripTextFound = m_StripText.Find();
     }
 
     // The client's own, which a reload does not lose as the last weather packet is; that while it cannot be read.
@@ -1878,51 +1890,21 @@ private:
 
     void HookPresent(IDirect3DDevice8* device)
     {
-        if (g_PresentSlot != nullptr || device == nullptr) return;
-        void** slot = *reinterpret_cast<void***>(device) + kPresentSlot;
-        if (*slot == reinterpret_cast<void*>(&HookedPresent)) return;
-        g_RealPresent = reinterpret_cast<PresentFn>(*slot);
-        if (!WriteSlot(slot, reinterpret_cast<void*>(&HookedPresent)))
-        {
+        if (!PatchSlot(g_PresentSlot, device, kPresentSlot, reinterpret_cast<void*>(&HookedPresent), g_RealPresent))
             Note("the top panel's popups draw under other addons' windows: Present could not be hooked.");
-            return;
-        }
-        g_PresentSlot = slot;
+        else if (g_PresentSlot != nullptr)
+            g_AfterGui = [] { if (g_Plugin != nullptr) g_Plugin->DrawOverGui(); };
     }
 
     void HookReset(IDirect3DDevice8* device)
     {
-        if (g_ResetSlot != nullptr || device == nullptr) return;
-        void** slot = *reinterpret_cast<void***>(device) + kResetSlot;
-        if (*slot == reinterpret_cast<void*>(&HookedReset)) return;
-        g_RealReset = reinterpret_cast<ResetFn>(*slot);
-        if (!WriteSlot(slot, reinterpret_cast<void*>(&HookedReset)))
+        if (!PatchSlot(g_ResetSlot, device, kResetSlot, reinterpret_cast<void*>(&HookedReset), g_RealReset))
         {
             m_Rml.RefuseLayers();
             Note("the settings window is drawn opaque: Reset could not be hooked.");
-            return;
         }
-        g_ResetSlot   = slot;
-        g_BeforeReset = [] { if (g_Plugin != nullptr) g_Plugin->BeforeReset(); };
-    }
-
-    // As UnhookPresent.
-    void UnhookReset()
-    {
-        g_BeforeReset = nullptr;
-        if (g_ResetSlot == nullptr) return;
-        if (*g_ResetSlot == reinterpret_cast<void*>(&HookedReset)) WriteSlot(g_ResetSlot, reinterpret_cast<void*>(g_RealReset));
-        g_ResetSlot = nullptr;
-    }
-
-    // Puts Present back, unless something hooked it over HeadsUp, whose calls would then still come through here.
-    void UnhookPresent()
-    {
-        g_AfterGui = nullptr;
-        if (g_PresentSlot == nullptr) return;
-        if (*g_PresentSlot == reinterpret_cast<void*>(&HookedPresent))
-            WriteSlot(g_PresentSlot, reinterpret_cast<void*>(g_RealPresent));
-        g_PresentSlot = nullptr;
+        else if (g_ResetSlot != nullptr)
+            g_BeforeReset = [] { if (g_Plugin != nullptr) g_Plugin->BeforeReset(); };
     }
 
     void BeforeReset()
@@ -1949,8 +1931,7 @@ private:
         if (font != nullptr && (font->file == nullptr ? m_Rml.EnsureFont(font->name)
                                                       : m_Rml.EnsureFontFile(font->name, headsup::WindowsFontPath(font->file))))
             host.textFont = font->name;
-        for (const headsup::MenuFont& choice : headsup::kMenuFonts)
-            if (headsup::MenuFontInstalled(choice)) host.menuFonts.emplace_back(choice.name);
+        host.menuFonts = m_MenuFonts;
 #ifdef HEADSUP_DEV
         host.developer = true;
         if (m_WindowFile != nullptr) host.layout = &m_WindowFileView;
@@ -2145,8 +2126,10 @@ private:
         return folder;
     }
 
-    std::string CursorsFolder() { return OwnFolder(kConfigFolder) + "\\" + kCursorsFolder + "\\"; }
-    std::string ThemesFolder() { return OwnFolder(kConfigFolder) + "\\" + kThemesFolder + "\\"; }
+    std::string ConfigPath(std::string_view name) { return OwnFolder(kConfigFolder) + "\\" + std::string(name); }
+
+    std::string CursorsFolder() { return ConfigPath(kCursorsFolder) + "\\"; }
+    std::string ThemesFolder() { return ConfigPath(kThemesFolder) + "\\"; }
 
     // The names of the files in one of HeadsUp's own folders, which is made if it is not there.
     static std::vector<std::string> FolderEntries(const std::string& folder)
@@ -2165,8 +2148,8 @@ private:
         return entries;
     }
 
-    std::string OutpostsPath() { return OwnFolder(kConfigFolder) + "\\" + kOutpostsFile; }
-    std::string TurnInsPath() { return OwnFolder(kConfigFolder) + "\\" + kTurnInsFile; }
+    std::string OutpostsPath() { return ConfigPath(kOutpostsFile); }
+    std::string TurnInsPath() { return ConfigPath(kTurnInsFile); }
 
     // The saved turn-ins at first, a fetch's answer as it comes, and a fetch when the day in Japan has moved on from
     // the one kept, never sooner than kTurnInsRetry after one that got no answer.
@@ -2174,9 +2157,7 @@ private:
     {
         if (!std::exchange(m_TurnInsRead, true))
         {
-            std::ifstream in(TurnInsPath(), std::ios::binary);
-            const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            if (const std::optional<headsup::SavedGuildPatterns> saved = headsup::ReadGuildPatternsFile(text))
+            if (const std::optional<headsup::SavedGuildPatterns> saved = headsup::ReadGuildPatternsFile(ReadText(TurnInsPath())))
                 if (std::optional<headsup::GuildPatterns> read = headsup::ReadGuildPatterns(saved->json))
                 {
                     m_TurnIns    = std::move(read);
@@ -2191,10 +2172,7 @@ private:
             {
                 m_TurnIns    = std::move(read);
                 m_TurnInsDay = headsup::JstDay(unixMs);
-                std::ofstream out(TurnInsPath(), std::ios::binary | std::ios::trunc);
-                const std::string text = headsup::GuildPatternsFile(*m_TurnInsDay, answer->body);
-                out.write(text.data(), static_cast<std::streamsize>(text.size()));
-                if (!out.good()) Note("could not save the guild turn-ins to " + TurnInsPath() + ".");
+                if (!WriteText(TurnInsPath(), headsup::GuildPatternsFile(*m_TurnInsDay, answer->body))) Note("could not save the guild turn-ins to " + TurnInsPath() + ".");
             }
             else
                 m_TurnInsRetry = now + kTurnInsRetry;
@@ -2207,8 +2185,7 @@ private:
     {
         if (!m_Outposts)
         {
-            std::ifstream in(OutpostsPath(), std::ios::binary);
-            m_Outposts = headsup::OutpostFileFrom(std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
+            m_Outposts = headsup::OutpostFileFrom(ReadText(OutpostsPath()));
         }
         return *m_Outposts;
     }
@@ -2219,10 +2196,7 @@ private:
         const uint32_t character = m_AshitaCore->GetMemoryManager()->GetParty()->GetMemberServerId(0);
         const headsup::ZoneRecord* zone = headsup::KnownZone(m_Zone);
         if (character == 0 || zone == nullptr || !Outposts()[character].Heard(event, zone->region)) return;
-        std::ofstream out(OutpostsPath(), std::ios::binary | std::ios::trunc);
-        const std::string text = headsup::OutpostFileText(Outposts());
-        out.write(text.data(), static_cast<std::streamsize>(text.size()));
-        if (!out.good()) Note("could not save the supply runs to " + OutpostsPath() + ".");
+        if (!WriteText(OutpostsPath(), headsup::OutpostFileText(Outposts()))) Note("could not save the supply runs to " + OutpostsPath() + ".");
     }
 
     void ScanThemes() { m_ThemeFiles = headsup::FolderFileNames(FolderEntries(ThemesFolder()), headsup::kThemeExtensions); }
@@ -2230,10 +2204,7 @@ private:
     void SaveTheme(const std::string& name)
     {
         const std::string path = ThemesFolder() + name + headsup::kThemeExtensions[0];
-        std::ofstream out(path, std::ios::binary | std::ios::trunc);
-        const std::string text = headsup::ThemeFileText(m_Settings.customPalette);
-        out.write(text.data(), static_cast<std::streamsize>(text.size()));
-        Print(out.good() ? "saved the Custom theme as " + name + "." : "could not save the theme " + path + ".");
+        Print(WriteText(path, headsup::ThemeFileText(m_Settings.customPalette)) ? "saved the Custom theme as " + name + "." : "could not save the theme " + path + ".");
         ScanThemes();
     }
 
@@ -2241,9 +2212,7 @@ private:
     bool LoadTheme(const std::string& name)
     {
         const std::string path = ThemesFolder() + name + headsup::kThemeExtensions[0];
-        std::ifstream in(path, std::ios::binary);
-        const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        const std::optional<headsup::BarPalette> palette = headsup::PaletteFromThemeFile(text);
+        const std::optional<headsup::BarPalette> palette = headsup::PaletteFromThemeFile(ReadText(path));
         if (!palette)
         {
             Print("could not read a theme from " + path + ".");
@@ -2268,13 +2237,10 @@ private:
     {
         for (const char* extension : headsup::kCursorExtensions)
         {
-            std::ifstream in(CursorsFolder() + name + extension, std::ios::binary | std::ios::ate);
-            const std::streamoff size = in.tellg();
-            if (!in || size <= 0 || static_cast<uint64_t>(size) > headsup::kMaxCursorFileBytes) continue;
-            std::vector<uint8_t> bytes(static_cast<size_t>(size));
-            in.seekg(0);
-            if (!in.read(reinterpret_cast<char*>(bytes.data()), size)) continue;
-            if (std::vector<headsup::CursorFrame> frames = headsup::ReadCursorFile(bytes.data(), bytes.size()); !frames.empty())
+            std::string problem;
+            const std::optional<std::vector<uint8_t>> bytes = ReadBytes(CursorsFolder() + name + extension, headsup::kMaxCursorFileBytes, problem);
+            if (!bytes) continue;
+            if (std::vector<headsup::CursorFrame> frames = headsup::ReadCursorFile(bytes->data(), bytes->size()); !frames.empty())
                 return frames;
         }
         return {};
@@ -2325,19 +2291,54 @@ private:
         if (const char* dev = DevSettings()) return dev;
         return m_Profile.empty() ? kSettingsFile : ProfileName(m_Profile);
     }
-    std::string ProfileFile(const std::string& profile) { return OwnFolder(kConfigFolder) + "\\" + ProfileName(profile); }
+    std::string ProfileFile(const std::string& profile) { return ConfigPath(ProfileName(profile)); }
     static bool Exists(const std::string& path) { return GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES; }
+
+    // The file's bytes; none for one that is missing or cannot be read.
+    static std::string ReadText(const std::string& path)
+    {
+        std::ifstream in(path, std::ios::binary);
+        return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+
+    // The file made anew with the text; false when it could not be written.
+    static bool WriteText(const std::string& path, std::string_view text)
+    {
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        out.write(text.data(), static_cast<std::streamsize>(text.size()));
+        return static_cast<bool>(out.flush());
+    }
+
+    // The file's bytes, at most max of them. None for a missing or empty file, and none with the problem said for one
+    // too large or that could not be read.
+    static std::optional<std::vector<uint8_t>> ReadBytes(const std::string& path, uint64_t max, std::string& problem)
+    {
+        std::ifstream in(path, std::ios::binary | std::ios::ate);
+        const std::streamoff size = in.tellg();
+        if (!in || size <= 0) return std::nullopt;
+        if (static_cast<uint64_t>(size) > max)
+        {
+            problem = "it is too large";
+            return std::nullopt;
+        }
+        std::vector<uint8_t> bytes(static_cast<size_t>(size));
+        in.seekg(0);
+        if (!in.read(reinterpret_cast<char*>(bytes.data()), size))
+        {
+            problem = "it could not be read";
+            return std::nullopt;
+        }
+        return bytes;
+    }
 
     void ScanProfiles()
     {
-        m_ProfileNames = headsup::ProfileNames(FolderEntries(OwnFolder(kConfigFolder) + "\\" + headsup::kProfilesFolder + "\\"));
+        m_ProfileNames = headsup::ProfileNames(FolderEntries(ConfigPath(headsup::kProfilesFolder) + "\\"));
     }
 
     void WriteCharacterProfiles()
     {
-        std::ofstream out(OwnFolder(kConfigFolder) + "\\" + headsup::kCharactersFile, std::ios::binary | std::ios::trunc);
-        out << headsup::CharacterProfilesText(m_CharacterProfiles);
-        if (!out.flush()) Print("could not write " + std::string(headsup::kCharactersFile) + "; profiles are picked again next time.");
+        if (!WriteText(ConfigPath(headsup::kCharactersFile), headsup::CharacterProfilesText(m_CharacterProfiles))) Print("could not write " + std::string(headsup::kCharactersFile) + "; profiles are picked again next time.");
     }
 
     // What changed, written while Save Automatically is on; off, it waits for Save.
@@ -2352,10 +2353,7 @@ private:
     {
         const std::string path = ProfileFile(profile);
         std::string text;
-        if (Exists(path) || !ReadSettingsFile(text)) return false;
-        std::ofstream out(path, std::ios::binary | std::ios::trunc);
-        out.write(text.data(), static_cast<std::streamsize>(text.size()));
-        return static_cast<bool>(out.flush());
+        return !Exists(path) && ReadSettingsFile(text) && WriteText(path, text);
     }
 
     // The character uses this profile from now on: your settings saved to the one before, then this one's loaded.
@@ -2421,7 +2419,7 @@ private:
         ScanProfiles();
     }
     std::string SettingsPath() const { return std::string(kFolder) + "/" + SettingsName(); }
-    std::string SettingsFile() { return OwnFolder(kConfigFolder) + "\\" + SettingsName(); }
+    std::string SettingsFile() { return ConfigPath(SettingsName()); }
 
     void LoadSettings()
     {
@@ -2430,7 +2428,7 @@ private:
         // Ashita keeps a loaded file's values after the plugin unloads: without this, a file deleted since would load
         // as it was. A missing file is fine: every value keeps its default.
         config->Delete(kConfigAlias);
-        m_OfferSetup = GetFileAttributesA(file.c_str()) == INVALID_FILE_ATTRIBUTES;
+        m_OfferSetup = !Exists(file);
         if (!config->Load(kConfigAlias, SettingsPath().c_str()) && !m_OfferSetup)
             Print("could not read " + file + "; using the defaults, which a change in the menu will write into that file");
         m_Settings    = m_SavedKeys.Load();
@@ -2443,7 +2441,7 @@ private:
     {
         const std::string path = SettingsFile();
         std::FILE* in          = std::fopen(path.c_str(), "rb");
-        if (in == nullptr) return GetFileAttributesA(path.c_str()) == INVALID_FILE_ATTRIBUTES;
+        if (in == nullptr) return !Exists(path);
         const long size = std::fseek(in, 0, SEEK_END) == 0 ? std::ftell(in) : -1;
         const bool fits = size >= 0 && size <= kMaxSettingsBytes && std::fseek(in, 0, SEEK_SET) == 0;
         if (fits) text.resize(static_cast<size_t>(size));
@@ -2492,13 +2490,10 @@ private:
         }
         SYSTEMTIME t{};
         GetLocalTime(&t);
-        const std::string folder = OwnFolder(kConfigFolder) + "\\";
-        const std::string name   = headsup::SetupBackupName({t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond},
-              [&](const std::string& file) { return GetFileAttributesA((folder + file).c_str()) != INVALID_FILE_ATTRIBUTES; });
-        const std::string path = folder + name;
-        std::ofstream out(path, std::ios::binary | std::ios::trunc);
-        out.write(text.data(), static_cast<std::streamsize>(text.size()));
-        if (!out.flush())
+        const std::string name = headsup::SetupBackupName({t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond},
+            [&](const std::string& file) { return Exists(ConfigPath(file)); });
+        const std::string path = ConfigPath(name);
+        if (!WriteText(path, text))
         {
             Print("Setup could not save your settings to " + path + ". Cancel still puts them back while the game runs.");
             return;
@@ -2883,14 +2878,12 @@ private:
         if (!std::exchange(m_SearchAddressTried, true))
             if (const std::string failure = m_SearchAddress.Find(); !failure.empty())
                 Note("Look Up Players asks no one: " + failure + ".");
+        const auto lookedUp = [](const headsup::ActorInput& a) {
+            return a.kind == headsup::EntityKind::Player && !a.self && a.serverId != 0;
+        };
         std::vector<headsup::InView> inView;
-        std::unordered_map<uint32_t, uint16_t> indexOf;
         for (const headsup::ActorInput& a : inputs)
-            if (a.kind == headsup::EntityKind::Player && !a.self && a.serverId != 0)
-            {
-                inView.push_back(headsup::InView{a.serverId, a.distance});
-                indexOf[a.serverId] = a.index;
-            }
+            if (lookedUp(a)) inView.push_back(headsup::InView{a.serverId, a.distance});
         m_Lookups.Frame(inView, now);
         for (const uint16_t index : changed)
             for (const headsup::ActorInput& a : inputs)
@@ -2903,11 +2896,16 @@ private:
                 Note("Look Up Players: " + result->failure + ".");
             }
             else
+            {
+                std::unordered_map<uint32_t, uint16_t> indexOf;
+                for (const headsup::ActorInput& a : inputs)
+                    if (lookedUp(a)) indexOf[a.serverId] = a.index;
                 for (const headsup::LookupAnswer& answer : m_Lookups.Answered(result->players))
                 {
                     const auto index = indexOf.find(answer.id);
                     m_GameState.LookedUp(answer.id, index != indexOf.end() ? index->second : 0, answer.player);
                 }
+            }
         }
         if (const auto address = m_SearchAddress.Read())
             if (const std::optional<std::vector<uint32_t>> ids = m_Lookups.NextRequest(now))
@@ -2950,10 +2948,10 @@ private:
             m_LinkshellsReadAt = now;
         }
         const uint32_t count = std::min<uint32_t>(entity->GetEntityMapSize(), headsup::kMaxEntities);
-        std::vector<headsup::ActorInput> inputs;
-        std::vector<uint32_t> aliveMobs; // which lose their placeholder timers
-        std::vector<headsup::PetLink> pets;
-        std::vector<headsup::CheckCandidate> checkable;
+        m_Inputs.clear();
+        m_AliveMobs.clear();
+        m_Pets.clear();
+        m_Checkable.clear();
         const bool autoChecks = m_Settings.enabled && m_Settings.autoCheck;
         for (uint32_t i = 0; i < count; ++i)
         {
@@ -2963,7 +2961,7 @@ private:
             const bool isMob    = kind == headsup::EntityKind::Mob;
             const bool isPlayer = kind == headsup::EntityKind::Player;
             // Before the actor is asked for: a player without one still owns their pet.
-            pets.push_back(headsup::PetLink{index, kind, entity->GetPetTargetIndex(i)});
+            m_Pets.push_back(headsup::PetLink{index, kind, entity->GetPetTargetIndex(i)});
             const uintptr_t actor = entity->GetActorPointer(i);
             if (actor == 0) continue;
             const uint32_t serverId = entity->GetServerId(i);
@@ -2982,7 +2980,7 @@ private:
             const float distance                = headsup::DistanceFromSquared(entity->GetDistance(i));
             if (autoChecks)
             {
-                headsup::CheckCandidate& candidate = checkable.emplace_back();
+                headsup::CheckCandidate& candidate = m_Checkable.emplace_back();
                 candidate.serverId  = serverId;
                 candidate.index     = index;
                 candidate.kind      = kind;
@@ -2992,7 +2990,7 @@ private:
                 candidate.gaugeable = record == nullptr || (record->flags & headsup::kMobNotorious) == 0;
                 candidate.name      = name;
             }
-            if (isMob && alive) aliveMobs.push_back(serverId);
+            if (isMob && alive) m_AliveMobs.push_back(serverId);
             const headsup::WorldPoint feet =
                 headsup::FromEntityPosition(entity->GetLocalPositionX(i), entity->GetLocalPositionY(i), entity->GetLocalPositionZ(i));
             if (self) m_Activity.Pose(now, feet, entity->GetLocalPositionYaw(i));
@@ -3000,7 +2998,7 @@ private:
                 headsup::EarnsTimer(headsup::Targeted(headsup::TargetStateOf(index, m_CursorTargets)),
                     m_Names.MeshDraws(index) > 0, m_Activity.Active(now)))
                 m_PhTimers.Earned(serverId);
-            inputs.push_back(headsup::ActorInput{
+            m_Inputs.push_back(headsup::ActorInput{
                 .actor    = static_cast<headsup::ActorPtr>(actor),
                 .index    = index,
                 .serverId = serverId,
@@ -3025,8 +3023,8 @@ private:
                 .title          = isPlayer ? TitleOf(self, serverId, player) : 0,
             });
         }
-        const std::unordered_map<uint16_t, uint16_t> petOwners = headsup::PetOwners(pets);
-        for (headsup::ActorInput& input : inputs)
+        const std::unordered_map<uint16_t, uint16_t> petOwners = headsup::PetOwners(m_Pets);
+        for (headsup::ActorInput& input : m_Inputs)
             if (const auto owner = petOwners.find(input.index); owner != petOwners.end())
             {
                 const uint16_t ownerIndex = owner->second;
@@ -3036,7 +3034,7 @@ private:
                 input.petRow = headsup::PetRowOf(yours, headsup::InYourParty(entity->GetServerId(ownerIndex), yours, m_PartyIds),
                     headsup::IsFriend(m_Friends, entity->GetServerId(ownerIndex)));
             }
-        for (headsup::CheckCandidate& candidate : checkable)
+        for (headsup::CheckCandidate& candidate : m_Checkable)
             candidate.pet = petOwners.contains(candidate.index);
         m_Player.level   = player->GetMainJobLevel();
         m_Player.caster  = CasterNow();
@@ -3044,17 +3042,17 @@ private:
         // The status the server gave you says an event runs: your own stayed 0 through an NPC's dialog, a cutscene
         // and one begun at zone-in.
         m_Player.inEvent = headsup::IsEventStatus(entity->GetStatusServer(m_SelfIndex));
-        m_Player.inCombat = headsup::PlayerInCombat(inputs);
-        m_Tracker.Update(inputs, m_Player, m_Settings, m_CursorTargets);
-        UpdateLookups(inputs, now);
+        m_Player.inCombat = headsup::PlayerInCombat(m_Inputs);
+        m_Tracker.Update(m_Inputs, m_Player, m_Settings, m_CursorTargets);
+        UpdateLookups(m_Inputs, now);
         if (headsup::MayAutoCheck(autoChecks, player->GetIsZoning() != 0, m_Player.inEvent, m_Player.level))
-            if (const std::optional<headsup::CheckCandidate> mob = m_AutoCheck.Due(checkable, now))
+            if (const std::optional<headsup::CheckCandidate> mob = m_AutoCheck.Due(m_Checkable, now))
             {
                 auto request = headsup::CheckRequest(mob->serverId, mob->index); // Ashita takes the bytes as non-const
                 m_AshitaCore->GetPacketManager()->AddOutgoingPacket(headsup::kCheckRequestPacket,
                     static_cast<uint32_t>(request.size()), request.data());
             }
-        m_PhTimers.Update(now, aliveMobs, m_Settings.phUpMinutes);
+        m_PhTimers.Update(now, m_AliveMobs, m_Settings.phUpMinutes);
         m_Zone = static_cast<uint16_t>(party->GetMemberZone(0));
         if (player->GetIsZoning() == 0 && m_Zone != 0 && party->GetMemberServerId(0) != 0)
         {
