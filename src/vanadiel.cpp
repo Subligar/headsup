@@ -7,10 +7,8 @@ namespace headsup
 {
     namespace
     {
-        constexpr int64_t kVanaSpeed  = 25;
         constexpr int64_t kVanaDayMs  = 86400000LL, kVanaHourMs = 3600000LL, kVanaMinuteMs = 60000LL; // Vana'diel ms
-        constexpr double kMsPerSecond = 1000.0;
-        constexpr int kStartYear = 886, kDaysPerYear = 360, kDaysPerMonth = 30, kMonthsPerYear = 12, kHoursPerDay = 24;
+        constexpr int kStartYear = 886, kDaysPerYear = 360, kDaysPerMonth = 30, kMonthsPerYear = 12;
         constexpr int kMinutesPerHour = 60;
         // Phoenix's get_phase: the cycle is 84 days, and day 0 of the epoch is day 38 of it (886 years plus 26 days).
         constexpr int kMoonCycle = 84, kMoonHalf = 42, kMoonOffset = 38;
@@ -42,7 +40,7 @@ namespace headsup
         t.year       = kStartYear + static_cast<int>(days / kDaysPerYear);
         t.month      = static_cast<int>((days / kDaysPerMonth) % kMonthsPerYear) + 1;
         t.dayOfMonth = static_cast<int>(days % kDaysPerMonth) + 1;
-        t.hour       = static_cast<int>((vana / kVanaHourMs) % kHoursPerDay);
+        t.hour       = static_cast<int>((vana / kVanaHourMs) % kVanaHoursPerDay);
         t.minute     = static_cast<int>((vana / kVanaMinuteMs) % kMinutesPerHour);
         t.weekday    = static_cast<int>(days % kVanaDaysPerWeek);
         MoonOn(t.day, t.moonPercent, t.moonDirection);
@@ -71,7 +69,7 @@ namespace headsup
     double SecondsToNextDay(int64_t unixMs)
     {
         const int64_t intoDay = VanaMs(unixMs) % kVanaDayMs;
-        return static_cast<double>(kVanaDayMs - intoDay) / static_cast<double>(kVanaSpeed) / kMsPerSecond;
+        return static_cast<double>(kVanaDayMs - intoDay) / static_cast<double>(kVanaSpeed) / kMsPerEarthSecond;
     }
 
     double SecondsToNextPhase(int64_t unixMs)
@@ -92,7 +90,7 @@ namespace headsup
     double SecondsToDay(int64_t unixMs, uint32_t day)
     {
         const double start = static_cast<double>(day) * static_cast<double>(kVanaDayMs);
-        return (start - static_cast<double>(VanaMs(unixMs))) / static_cast<double>(kVanaSpeed) / kMsPerSecond;
+        return (start - static_cast<double>(VanaMs(unixMs))) / static_cast<double>(kVanaSpeed) / kMsPerEarthSecond;
     }
 
     uint32_t NextMoonDay(uint32_t day, bool full)

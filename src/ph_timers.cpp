@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <utility>
 
 namespace headsup
 {
@@ -44,7 +45,7 @@ namespace headsup
                 const MobRecord* ph = MobById(entry.first);
                 return ph != nullptr && ph->placeholderOf == mob.serverId;
             });
-        m_Timers[mob.serverId] = Timer{mob.serverId, mob.nmName,
+        m_Timers[mob.serverId] = Timer{mob.nmName,
             now - kDefeatMessageSeconds + kDeathToDespawnSeconds + static_cast<double>(mob.respawnSeconds)};
     }
 
@@ -58,17 +59,15 @@ namespace headsup
 
     std::vector<TimerLine> PhTimers::Lines(uint16_t zone, double now) const
     {
-        std::vector<const Timer*> here;
+        std::vector<std::pair<uint32_t, const Timer*>> here;
         for (const auto& [serverId, timer] : m_Timers)
-            if (((serverId >> kTargetIndexWidth) & kZoneBits) == zone) here.push_back(&timer);
-        std::sort(here.begin(), here.end(), [](const Timer* a, const Timer* b) { return a->dueAt < b->dueAt; });
+            if (((serverId >> kTargetIndexWidth) & kZoneBits) == zone) here.emplace_back(serverId, &timer);
+        std::sort(here.begin(), here.end(), [](const auto& a, const auto& b) { return a.second->dueAt < b.second->dueAt; });
         std::vector<TimerLine> lines;
-        for (const Timer* timer : here)
+        for (const auto& [serverId, timer] : here)
         {
             const bool up = now >= timer->dueAt;
-            lines.push_back(TimerLine{timer->nmName + " " + IdText(timer->serverId) + " " +
-                                          (up ? kUpText : Countdown(timer->dueAt - now)),
-                up});
+            lines.push_back(TimerLine{timer->nmName + " " + IdText(serverId) + " " + (up ? kUpText : Countdown(timer->dueAt - now)), up});
         }
         return lines;
     }

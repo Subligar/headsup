@@ -10,7 +10,10 @@ namespace headsup
     // Firesday, and runs 25 times faster than Earth.
     constexpr int64_t kVanaEpochUnixMs = 1009810800000LL;
     constexpr int kVanaDaysPerWeek     = 8;
-    constexpr double kEarthSecondsPerVanaDay = 86400.0 / 25.0; // a Vana'diel day, running 25 times faster than Earth
+    constexpr int64_t kVanaSpeed       = 25;
+    constexpr int kVanaHoursPerDay     = 24;
+    constexpr double kEarthSecondsPerVanaDay = 86400.0 / kVanaSpeed;
+    constexpr double kMsPerEarthSecond       = 1000.0;
 
     enum class MoonDirection : uint8_t
     {
