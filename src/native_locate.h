@@ -176,13 +176,6 @@ namespace headsup
         uint32_t draw = 0;
     };
     ModelDraws LocateModelDraws(const ImageSection& text);
-    struct WindowMoveSite
-    {
-        LocateProblem problem = LocateProblem::None;
-        uint32_t moveTo  = 0; // RVA
-        uint32_t getRect = 0; // RVA of MCD::GetRect, 0 when it was not found once
-        uint32_t entryRect = 0; // RVA of MCD::GetEntryRect, the same way
-    };
     // The one call that builds a window from the menu catalog (thiscall on the new window's MCD, its descriptor the
     // one argument): RVAs of the five-byte call and of the builder.
     struct WindowBuildSite
@@ -220,6 +213,13 @@ namespace headsup
     // The game's own move of a window, MCD::MoveTo(int16 x, int16 y) (RVA 0x119110 in the client of 2026-10-07): a
     // thiscall on the MCD that pops its two arguments. It moves the frame and every entry, so drawing and the mouse's
     // hit tests follow, then has the owner lay out its own content again.
+    struct WindowMoveSite
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t moveTo  = 0; // RVA
+        uint32_t getRect = 0; // RVA of MCD::GetRect, 0 when it was not found once
+        uint32_t entryRect = 0; // RVA of MCD::GetEntryRect, the same way
+    };
     WindowMoveSite LocateWindowMove(const ImageSection& text);
     // MCD::GetRect(int16* place) (RVA 0x118F70 in the client of 2026-10-13): a thiscall on the MCD that pops its one
     // argument and writes the window's rectangle there. Many owners keep such a copy of their window's place and draw

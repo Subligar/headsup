@@ -1116,9 +1116,6 @@ namespace headsup
 {
     namespace
     {
-        // Before the window draws. The strip's own windows say where the game's strip ends. Any other idle, laid out
-        // window in the game's menu space is noted; one the player picked goes down by the shift from that strip to
-        // under the help bar, and one they gave an offset moves by it, through the game's own move.
         const WindowKey g_EquipKey = *KeyFromShortName("equip");
         const WindowKey g_PartyKey = *KeyFromShortName("partywin");
 
@@ -1137,8 +1134,6 @@ namespace headsup
                 }
         }
 
-        // Where an owner keeps its copy of its window's place, read off its class's layout: none for a class that keeps
-        // none, or when the code cannot be read.
         // An owner's class's layout code, kLayoutScanBytes of it, and where it starts; none when it cannot be read.
         std::optional<std::pair<std::span<const uint8_t>, uint32_t>> OwnerLayout(uint32_t owner)
         {
@@ -1152,6 +1147,8 @@ namespace headsup
             return std::pair{std::span<const uint8_t>(code, kLayoutScanBytes), layout};
         }
 
+        // Where an owner keeps its copy of its window's place, read off its class's layout: none for a class that keeps
+        // none, or when the code cannot be read.
         std::optional<uint32_t> PlaceCopyAt(uint32_t owner)
         {
             const auto layout = g_WindowGetRect != 0 ? OwnerLayout(owner) : std::nullopt;
@@ -1382,6 +1379,9 @@ namespace headsup
                 PlaceWindow(g_OpenWindows[i].mcd, g_OpenWindows[i].key);
         }
 
+        // Before the window draws. The strip's own windows say where the game's strip ends. Any other idle, laid out
+        // window in the game's menu space is noted; one the player picked goes down by the shift from that strip to
+        // under the help bar, and one they gave an offset moves by it, through the game's own move.
         void PlaceWindow(uint32_t mcd, const WindowKey& key)
         {
             const auto field = [mcd](uint32_t at) { return reinterpret_cast<const uint8_t*>(mcd + at); };

@@ -27,9 +27,6 @@ namespace headsup
     // The folder a loaded module was loaded from, without its last separator; empty when it is not loaded.
     std::string ModuleFolder(const char* module);
 
-    // Sends every name the game is about to draw through HeadsUp first: the six bytes at the name routine's hook
-    // (native_locate.h) become a jump to a gate that calls OnName with the routine's frame, then either runs the bytes
-    // it replaced and resumes the routine, or skips to the routine's exit so the game draws nothing.
     // An entity whose names the hook may meet this frame, and what becomes of them: kept, hidden or replaced.
     struct NameOwner
     {
@@ -45,6 +42,9 @@ namespace headsup
         uint32_t hidden   = 0; // of those, drawn by no one
     };
 
+    // Sends every name the game is about to draw through HeadsUp first: the six bytes at the name routine's hook
+    // (native_locate.h) become a jump to a gate that calls OnName with the routine's frame, then either runs the bytes
+    // it replaced and resumes the routine, or skips to the routine's exit so the game draws nothing.
     class NameHook
     {
     public:
@@ -128,8 +128,6 @@ namespace headsup
         std::vector<CodePatch> m_Calls;
     };
 
-    // Skips the game's help bar and connection readout while asked: the draw loop's call to the menu window draw
-    // (native_locate.h) goes to HeadsUp, which passes every window but those hidden on to the game.
     // How the game's windows are placed this frame: the panel's band, and the settings for the help's mode.
     struct WindowPlacing
     {
@@ -139,6 +137,8 @@ namespace headsup
         bool moveGameHelp = false; // the game's strip goes right under the panel, and the windows under it
     };
 
+    // Skips the game's help bar and connection readout while asked: the draw loop's call to the menu window draw
+    // (native_locate.h) goes to HeadsUp, which passes every window but those hidden on to the game.
     class WindowHook
     {
     public:
@@ -251,7 +251,7 @@ namespace headsup
         StripSites m_Sites;
         std::array<StripWindowReader, 2> m_Readers; // by StripWindow
     };
-    // The client's connection counters (LocateNetStats), read on the game's thread.
+
     // The search server's address and port as the client keeps them since login (LocateSearchAddress), found once.
     class SearchAddressReader
     {
@@ -330,6 +330,7 @@ namespace headsup
         uint32_t m_Global = 0;
     };
 
+    // The client's connection counters (LocateNetStats), read on the game's thread.
     class NetStatsReader
     {
     public:

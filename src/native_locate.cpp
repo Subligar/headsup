@@ -95,7 +95,6 @@ namespace headsup
         // mov [esi+4],ecx (the descriptor); call (its frame); mov ebx,eax; test ebx,ebx.
         constexpr int16_t kWindowBuild[] = {0x53, 0x55, 0x56, 0x8B, 0xF1, 0x8B, 0x4C, 0x24, 0x10, 0x57, 0x89, 0x4E, 0x04,
             0xE8, -1, -1, -1, -1, 0x8B, 0xD8, 0x85, 0xDB};
-        // MCD::GetRect's start: sub esp,0Ch; push esi; mov esi,ecx; mov al,[esi+99h]; test al,al; jz.
         // mov edx,[the strip title's owner]; add esp,10h; lea ecx,[esp+4]; push ecx; mov ecx,[edx+8]; call GetRect; then
         // the label drawn at the rectangle's left and its bottom plus 3, in 80808080.
         constexpr int16_t kScanLabel[] = {0x8B, 0x15, -1, -1, -1, -1, 0x83, 0xC4, 0x10, 0x8D, 0x4C, 0x24, 0x04, 0x51,
@@ -107,6 +106,7 @@ namespace headsup
             0x5C, 0x24, 0x0C, 0x66, 0x89, 0x5C, 0x24, 0x0E, 0x66, 0x89, 0x5C, 0x24, 0x10, 0x66, 0x89, 0x5C, 0x24, 0x12, 0x51,
             0x8B, 0x48, 0x08, 0xE8, -1, -1, -1, -1, 0x8B, 0x7C, 0x24, 0x3C};
         constexpr uint32_t kStripCountCall = 58;
+        // MCD::GetRect's start: sub esp,0Ch; push esi; mov esi,ecx; mov al,[esi+99h]; test al,al; jz.
         constexpr int16_t kWindowGetRect[] = {0x83, 0xEC, 0x0C, 0x56, 0x8B, 0xF1, 0x8A, 0x86, 0x99, 0x00, 0x00, 0x00,
             0x84, 0xC0, 0x0F, 0x84};
         constexpr int16_t kWindowEntryRect[] = {0x8B, 0x44, 0x24, 0x08, 0x56, 0x50, 0x8B, 0xF1, 0xE8, -1, -1, -1, -1, 0x85,
@@ -217,10 +217,10 @@ namespace headsup
         constexpr int16_t kWeatherLoad[]      = {0x66, 0xA1, -1, -1, -1, -1, 0x66, 0x3D, 0x04, 0x00, 0x72, -1, 0x66,
             0x3D, 0x14, 0x00};
         constexpr uint32_t kWeatherLoadGlobal = 2;
-        // mov ecx,[config]; test ecx,ecx; jz; mov eax,[esp+4]; push eax; call get; ret; or eax,-1; ret.
         // xor ebx,ebx; push edi; mov [address],ebx; mov [port],bx; call
         constexpr int16_t kSearchSetup[] = {0x33, 0xDB, 0x57, 0x89, 0x1D, -1, -1, -1, -1, 0x66, 0x89, 0x1D, -1, -1, -1, -1, 0xE8};
         constexpr uint32_t kSearchSetupAddress = 5, kSearchSetupPort = 12;
+        // mov ecx,[config]; test ecx,ecx; jz; mov eax,[esp+4]; push eax; call get; ret; or eax,-1; ret.
         constexpr int16_t kConfigGet[] = {0x8B, 0x0D, -1, -1, -1, -1, 0x85, 0xC9, 0x74, -1, 0x8B, 0x44, 0x24, 0x04, 0x50,
             0xE8, -1, -1, -1, -1, 0xC3, 0x83, 0xC8, 0xFF, 0xC3};
         constexpr size_t kCounterLoads        = 2;
