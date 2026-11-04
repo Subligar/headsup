@@ -206,8 +206,8 @@ class GenIcons(unittest.TestCase):
 
     def test_headsups_own_icons_come_last_from_its_resources(self):
         names = [name for name, _, _ in gen.ICONS]
-        self.assertEqual(names[names.index('Petrify') + 1:], ['Pin', 'Pinned', 'Star', 'StarEmpty', 'Clone'])
-        self.assertTrue(all(path.startswith('resources/icons/') for name, path, _ in gen.ICONS if name in ('Pin', 'Clone')))
+        self.assertEqual(names[names.index('Petrify') + 1:], ['Pin', 'Pinned', 'Star', 'StarEmpty', 'Clone', 'Flag'])
+        self.assertTrue(all(path.startswith('resources/icons/') for name, path, _ in gen.ICONS if name in ('Pin', 'Clone', 'Flag')))
 
     def test_a_missing_or_unreadable_icon_fails(self):
         (self.dir / 'third_party' / 'mobdb-icons' / 'Link.png').write_bytes(b'GIF89a')

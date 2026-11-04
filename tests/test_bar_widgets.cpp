@@ -2417,10 +2417,19 @@ TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
     state.outposts = &runs;
     std::vector<std::string> lines = TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings)));
     CHECK(lines.size() == 3 && lines[0] == "Gustaberg" && lines[2].find("overseer") != std::string::npos);
-    // Told by Bastok's overseer that Gustaberg's was run: Derfland is marked, Gustaberg is not.
+    // Told by Bastok's overseer that Gustaberg's was run: Derfland is marked by a gray flag after its name, Gustaberg
+    // is not.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
-    lines = TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings)));
-    CHECK((lines == std::vector<std::string>{"Gustaberg", "Derfland · no supply run"}));
+    const PopupSection told = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
+    CHECK((TabLines(told) == std::vector<std::string>{"Gustaberg", "Derfland"}));
+    const std::vector<PopupRow>& rows = told.tabs.at(told.tab).rows;
+    const auto flagged = [](const PopupRow& row) {
+        return std::ranges::any_of(row.cells, [](const PopupCell& c) {
+            return c.icon == Icon::Flag && c.tint && c.tint->tone == Tone::Dim && c.text.empty();
+        });
+    };
+    CHECK(!flagged(rows[0]) && flagged(rows[1]));
+    CHECK(rows[1].cells.back().icon == Icon::Flag); // after the name
     // Another nation's regions are not yours to run supplies to.
     settings.Widget(BarWidget::World).nations = kAllNations;
     owners[0] = Nation::SanDoria;

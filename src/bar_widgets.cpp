@@ -1233,8 +1233,12 @@ namespace headsup
                     const std::optional<bool> ran = yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true);
                     unknown = unknown || !ran;
                     if (ran == false)
-                        held.rows.push_back(Line(Cell(ListOf(Text(std::string(RegionName(r))), Text(kDot, Tone::Dim),
-                            Text("no supply run", Tone::Dim)))));
+                    {
+                        PopupCell flag; // gray, after the name: no supply run there yet
+                        flag.icon = Icon::Flag;
+                        flag.tint = Text("", Tone::Dim);
+                        held.rows.push_back(PopupRow{RowKind::Line, 0, {Cell(Text(std::string(RegionName(r)))), std::move(flag)}});
+                    }
                     else
                         held.rows.push_back(LineOf(std::string(RegionName(r))));
                 }
