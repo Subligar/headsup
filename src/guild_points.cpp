@@ -15,7 +15,6 @@ namespace headsup
         // The site's names for the guilds, by id, and the shops' (Clothcraft is the site's weaving).
         constexpr const char* kPointsNames[kCraftGuilds] = {"guild_fishing", "guild_woodworking", "guild_smithing",
             "guild_goldsmithing", "guild_weaving", "guild_leathercraft", "guild_bonecraft", "guild_alchemy", "guild_cooking"};
-        constexpr uint8_t kNovice = 3, kVeteran = 9; // the ranks whose turn-ins step daily
         constexpr const char* kGuildNames[kCraftGuilds] = {"Fishing", "Woodworking", "Smithing", "Goldsmithing",
             "Clothcraft", "Leathercraft", "Bonecraft", "Alchemy", "Cooking"};
 

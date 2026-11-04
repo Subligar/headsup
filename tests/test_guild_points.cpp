@@ -68,13 +68,13 @@ TEST(the_saved_answer_keeps_the_day_in_japan_it_was_fetched_and_is_due_again_the
 TEST(the_guild_asks_each_rank_for_a_rank_that_turns_daily_through_those_up_to_its_own)
 {
     // Phoenix's guild.cpp: Novice to Veteran each hold a rank that steps once a day, wrapping past their own; below
-    // Novice counts as Novice. 2026-11-04 in Japan is day 9073 from the epoch, worked out from the server's own sums:
+    // Novice counts as Novice and above Veteran as Veteran. 2026-11-04 in Japan is day 9073 from the epoch, worked out from the server's own sums:
     // Novice 9073 % 4, Apprentice % 5, Journeyman % 6, Craftsman % 7, Artisan % 8, Adept % 9, Veteran % 10.
     constexpr int64_t kDayMs = 86'400'000;
     constexpr int64_t kNov4  = kVanaEpochUnixMs + 9073 * kDayMs + 3 * 3'600'000;
-    const uint8_t nov4[kCraftRankCount] = {1, 1, 1, 1, 3, 1, 1, 1, 1, 3};
-    const uint8_t nov5[kCraftRankCount] = {2, 2, 2, 2, 4, 2, 2, 2, 2, 4};
-    for (uint8_t rank = 0; rank < kCraftRankCount; ++rank)
+    const uint8_t nov4[kExpert + 1] = {1, 1, 1, 1, 3, 1, 1, 1, 1, 3, 3};
+    const uint8_t nov5[kExpert + 1] = {2, 2, 2, 2, 4, 2, 2, 2, 2, 4, 4};
+    for (uint8_t rank = 0; rank <= kExpert; ++rank)
     {
         CHECK_EQ(AskedRank(rank, kNov4), nov4[rank]);
         CHECK_EQ(AskedRank(rank, kNov4 + kDayMs), nov5[rank]);
