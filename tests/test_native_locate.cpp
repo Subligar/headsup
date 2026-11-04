@@ -655,7 +655,7 @@ namespace
 
 TEST(the_connection_counters_are_found_through_the_readouts_two_loads_of_them)
 {
-    const NetStats found = LocateNetStats(NetClient().Text());
+    const GlobalSite found = LocateNetStats(NetClient().Text());
     CHECK(found.problem == LocateProblem::None);
     CHECK_EQ(found.global, 0x034C0000u + 0x4DFD98u);
 }
@@ -989,7 +989,7 @@ TEST(the_weather_is_found_once_by_its_effects_range_check)
     Image image;
     CHECK(LocateWeather(image.Text()).problem == LocateProblem::NoWeather);
     put(image, kWeatherRead);
-    const WeatherSite found = LocateWeather(image.Text());
+    const GlobalSite found = LocateWeather(image.Text());
     CHECK(found.problem == LocateProblem::None && found.global == kWeatherGlobal);
     put(image, kWeatherRead + 0x100);
     CHECK(LocateWeather(image.Text()).problem == LocateProblem::AmbiguousWeather);
@@ -1324,7 +1324,7 @@ namespace
 
 TEST(the_playonline_counts_are_found_through_the_network_windows_two_getters)
 {
-    const PlayOnlineSite found = LocatePlayOnline(PlayOnlineClient().Text());
+    const GlobalSite found = LocatePlayOnline(PlayOnlineClient().Text());
     CHECK(found.problem == LocateProblem::None);
     CHECK_EQ(found.global, 0x034C0000u + 0x4DF908u);
 }
@@ -1413,7 +1413,7 @@ TEST(the_fish_record_is_found_where_the_fish_packet_makes_it)
     Image image;
     CHECK(LocateFish(image.Text()).problem == LocateProblem::NoFish);
     PutFishSetup(image, kFishSetupRva, kIntuitionGlobal, kFishGlobal);
-    const FishSite found = LocateFish(image.Text());
+    const GlobalSite found = LocateFish(image.Text());
     CHECK(found.problem == LocateProblem::None);
     CHECK_EQ(found.global, kFishGlobal);
     PutFishSetup(image, kFishSetupRva + 0x1000, kIntuitionGlobal, kFishGlobal);

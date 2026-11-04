@@ -418,6 +418,16 @@ namespace headsup
             return false;
         }
 
+        // The game's image, its code in text; nullptr, with why, when it is not loaded or its code cannot be read.
+        uint8_t* GameCode(ImageSection& text, std::string& why)
+        {
+            auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
+            if (base == nullptr) why = std::string(kGameModule) + " is not loaded";
+            else if (!FindSection(base, kCodeSection, text)) why = kCodeNotRead;
+            else return base;
+            return nullptr;
+        }
+
         // Whether count bytes at at lie in the readable image at base, whose headers FindSection has checked.
         bool InImage(const uint8_t* base, const uint8_t* at, size_t count)
         {
@@ -447,14 +457,17 @@ namespace headsup
             return failure + "; HeadsUp stays in memory until the game closes";
         }
 
-        // Why the game's bytes did not all go back, in the hook's words, or an empty string.
-        std::string PutBack(std::span<const CodePatch> patches, const char* changed, const char* unwritten)
+        // Puts the game's bytes back in what: why they did not all go back, or an empty string.
+        std::string TakeOut(std::span<const CodePatch> patches, const char* what)
         {
             switch (Restore(patches, WriteCode))
             {
             case Restored::All: return "";
-            case Restored::ChangedSince: return changed;
-            case Restored::NotWritten: return unwritten;
+            case Restored::ChangedSince:
+                return KeptLoaded(std::string("HeadsUp's hook in ") + what +
+                                  " was written over by another tool, so it was left as it is");
+            case Restored::NotWritten:
+                return KeptLoaded(std::string("HeadsUp's hook in ") + what + " could not be taken out");
             }
             return "";
         }
@@ -505,17 +518,16 @@ namespace headsup
     std::string NameHook::Start()
     {
         if (Running()) return "";
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{}, rdata{};
-        if (!FindSection(base, kCodeSection, text) || !FindSection(base, kConstSection, rdata))
-            return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
+        if (!FindSection(base, kConstSection, rdata)) return kCodeNotRead;
         const uint32_t moduleBase  = Address(base);
         const NameRoutine routine = LocateNameRoutine(moduleBase, text, rdata);
         if (routine.problem != LocateProblem::None) return Describe(routine.problem);
 
-        auto* site = const_cast<uint8_t*>(base) + routine.hook;
-        if (std::memcmp(site, kNameHookBytes, sizeof(kNameHookBytes)) != 0) return Describe(LocateProblem::PatchSiteChanged);
+        uint8_t* site = base + routine.hook;
         g_CallerReturns.clear();
         for (const uint32_t rva : routine.callerReturns)
             g_CallerReturns.push_back(moduleBase + rva);
@@ -529,7 +541,7 @@ namespace headsup
             BranchOperand(Address(site), Address(&HeadsUpNameGate)))};
         for (const uint32_t rva : routine.wrapperCalls)
         {
-            uint8_t* call = const_cast<uint8_t*>(base) + rva;
+            uint8_t* call = base + rva;
             patches.push_back(Retarget(call, Address(call), Address(&HeadsUpEntityNameGate)));
         }
         if (const std::string failure = PutIn(patches); !failure.empty()) return failure;
@@ -546,9 +558,7 @@ namespace headsup
         const std::vector<CodePatch> patches = std::exchange(m_Patches, {});
         g_Owners.clear(); // the gate then resumes the routine for every name
         g_HideNames = false;
-        return KeptLoaded(PutBack(patches,
-            "the game's name routine was changed again after HeadsUp hooked it, so it was left as it is",
-            "the game's name routine could not be put back"));
+        return TakeOut(patches, "the game's name routine");
     }
 }
 
@@ -557,10 +567,10 @@ namespace headsup
     std::string ArrowHook::Start()
     {
         if (Running()) return "";
-        auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const ArrowCalls calls = LocateArrowCalls(text);
         if (calls.problem != LocateProblem::None) return Describe(calls.problem);
         const uint32_t moduleBase = Address(base), gate = Address(&HeadsUpArrowGate);
@@ -580,10 +590,10 @@ namespace headsup
     std::string ModelHook::Start()
     {
         if (Running()) return "";
-        auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const ModelDraws draws = LocateModelDraws(text);
         if (draws.problem != LocateProblem::None) return Describe(draws.problem);
         std::vector<CodePatch> calls;
@@ -600,9 +610,7 @@ namespace headsup
     {
         if (!Running()) return "";
         const std::vector<CodePatch> calls = std::exchange(m_Calls, {});
-        return KeptLoaded(PutBack(calls,
-            "the game's model draws were changed again after HeadsUp hooked them, so they were left as they are",
-            "the game's model draws could not be put back"));
+        return TakeOut(calls, "the game's model draws");
     }
 
     void ModelHook::NewFrame() { g_HeadsUpModelDepth = 0; }
@@ -617,9 +625,7 @@ namespace headsup
         g_HideArrows = false; // also after a Start that left one of its calls behind
         if (!Running()) return "";
         const std::array<CodePatch, 2> calls = std::exchange(m_Calls, {});
-        return KeptLoaded(PutBack(calls,
-            "the game's target arrows were changed again after HeadsUp hooked them, so they were left as they are",
-            "the game's target arrows could not be put back"));
+        return TakeOut(calls, "the game's target arrows");
     }
 
     void ArrowHook::Hide(bool hide) { g_HideArrows = hide; }
@@ -645,10 +651,10 @@ namespace headsup
     std::string WindowHook::Start()
     {
         if (Running()) return "";
-        auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const WindowDraw found = LocateWindowDraw(text);
         if (found.problem != LocateProblem::None) return Describe(found.problem);
         g_WindowList = found.list;
@@ -725,25 +731,15 @@ namespace headsup
         g_PlannedFrame = 0;
         g_PlannedKeys.Clear();
         g_WindowsBand  = 0;
-        const CodePatch count       = std::exchange(m_CountCall, {});
-        const std::string countBack = count.at == nullptr ? "" : KeptLoaded(PutBack({&count, 1},
-            "the item lists' count was changed again after HeadsUp hooked it, so it was left as it is",
-            "the item lists' count could not be put back"));
-        const CodePatch label       = std::exchange(m_LabelCall, {});
-        const std::string labelBack = label.at == nullptr ? "" : KeptLoaded(PutBack({&label, 1},
-            "Wide Scan's grid label was changed again after HeadsUp hooked it, so it was left as it is",
-            "Wide Scan's grid label could not be put back"));
-        const CodePatch build       = std::exchange(m_BuildCall, {});
-        const std::string buildBack = build.at == nullptr ? "" : KeptLoaded(PutBack({&build, 1},
-            "the game's window build was changed again after HeadsUp hooked it, so it was left as it is",
-            "the game's window build could not be put back"));
-        const CodePatch moveStart  = std::exchange(m_MoveStart, {});
-        const std::string moveBack = moveStart.at == nullptr ? "" : KeptLoaded(PutBack({&moveStart, 1},
-            "the game's window move was changed again after HeadsUp hooked it, so it was left as it is",
-            "the game's window move could not be put back"));
-        const std::string drawBack = KeptLoaded(PutBack({&call, 1},
-            "the game's window draw was changed again after HeadsUp hooked it, so it was left as it is",
-            "the game's window draw could not be put back"));
+        const auto takeOut = [](CodePatch& member, const char* what) {
+            const CodePatch patch = std::exchange(member, {});
+            return patch.at == nullptr ? std::string() : TakeOut({&patch, 1}, what);
+        };
+        const std::string countBack = takeOut(m_CountCall, "the item lists' count");
+        const std::string labelBack = takeOut(m_LabelCall, "Wide Scan's grid label");
+        const std::string buildBack = takeOut(m_BuildCall, "the game's window build");
+        const std::string moveBack  = takeOut(m_MoveStart, "the game's window move");
+        const std::string drawBack  = TakeOut({&call, 1}, "the game's window draw");
         for (const std::string* back : {&drawBack, &labelBack, &countBack, &buildBack})
             if (!back->empty()) return *back;
         return moveBack;
@@ -831,58 +827,45 @@ namespace headsup
 
 namespace headsup
 {
+    namespace
+    {
+        // A global locate found in the game's code into global, once it is bytes inside the game's image: "" when
+        // found, else why not (outside when it is not in the image).
+        std::string FindGlobal(GlobalSite (*locate)(const ImageSection&), size_t bytes, const char* outside,
+            uint32_t& global)
+        {
+            ImageSection text{};
+            std::string why;
+            const uint8_t* base = GameCode(text, why);
+            if (base == nullptr) return why;
+            const GlobalSite found = locate(text);
+            if (found.problem != LocateProblem::None) return Describe(found.problem);
+            // The image stays mapped while the game runs, so Read reads a global checked here without checking it
+            // again.
+            if (!InImage(base, Pointer(found.global), bytes)) return outside;
+            global = found.global;
+            return "";
+        }
+    }
+
     std::string NetStatsReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
-        ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
-        const NetStats found = LocateNetStats(text);
-        if (found.problem != LocateProblem::None) return Describe(found.problem);
-        // The image stays mapped while the game runs, so Read reads a global checked here without checking it again.
-        if (!InImage(base, Pointer(found.global), sizeof(uint32_t)))
-            return "their pointer is not in the game's image";
-        m_Global = found.global;
-        return "";
+        return FindGlobal(LocateNetStats, sizeof(uint32_t), "their pointer is not in the game's image", m_Global);
     }
 
     std::string PlayOnlineReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
-        ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
-        const PlayOnlineSite found = LocatePlayOnline(text);
-        if (found.problem != LocateProblem::None) return Describe(found.problem);
-        if (!InImage(base, Pointer(found.global), sizeof(uint32_t))) return "their pointer is not in the game's image";
-        m_Global = found.global;
-        return "";
+        return FindGlobal(LocatePlayOnline, sizeof(uint32_t), "their pointer is not in the game's image", m_Global);
     }
 
     std::string WeatherReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
-        ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
-        const WeatherSite found = LocateWeather(text);
-        if (found.problem != LocateProblem::None) return Describe(found.problem);
-        if (!InImage(base, Pointer(found.global), sizeof(uint16_t))) return "the weather is not in the game's image";
-        m_Global = found.global;
-        return "";
+        return FindGlobal(LocateWeather, sizeof(uint16_t), "the weather is not in the game's image", m_Global);
     }
 
     std::string FishReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
-        ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
-        const FishSite found = LocateFish(text);
-        if (found.problem != LocateProblem::None) return Describe(found.problem);
-        if (!InImage(base, Pointer(found.global), sizeof(uint32_t))) return "its pointer is not in the game's image";
-        m_Global = found.global;
-        return "";
+        return FindGlobal(LocateFish, sizeof(uint32_t), "its pointer is not in the game's image", m_Global);
     }
 
     std::optional<FishStamina> FishReader::Read() const
@@ -896,10 +879,10 @@ namespace headsup
 
     std::string SearchAddressReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        const uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const SearchAddressSite found = LocateSearchAddress(text);
         if (found.problem != LocateProblem::None) return Describe(found.problem);
         if (!InImage(base, Pointer(found.address), sizeof(uint32_t)) || !InImage(base, Pointer(found.port), sizeof(uint16_t)))
@@ -920,13 +903,13 @@ namespace headsup
 
     std::string WindowTypeReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const ConfigGetSite found = LocateConfigGet(text);
         if (found.problem != LocateProblem::None) return Describe(found.problem);
-        m_Get = reinterpret_cast<int32_t(__cdecl*)(int32_t)>(const_cast<uint8_t*>(base) + found.entry);
+        m_Get = reinterpret_cast<int32_t(__cdecl*)(int32_t)>(base + found.entry);
         return "";
     }
 
@@ -985,10 +968,11 @@ namespace headsup
 {
     std::string StripTextReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{}, data{};
-        if (!FindSection(base, kCodeSection, text) || !FindSection(base, kDataSection, data)) return kCodeNotRead;
+        std::string why;
+        const uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
+        if (!FindSection(base, kDataSection, data)) return kCodeNotRead;
         const StripSites found = LocateStripText(text, data);
         if (found.problem != LocateProblem::None) return Describe(found.problem);
         // The image stays mapped while the game runs, so the slots checked here are read without checking them again.
@@ -1035,10 +1019,10 @@ namespace headsup
     std::string PointerFix::Start()
     {
         if (Running()) return "";
-        auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const PointerMapping mapping = LocatePointerMapping(text);
         if (mapping.problem != LocateProblem::None) return Describe(mapping.problem);
         const PointerShow show = LocatePointerShow(text);
@@ -1072,12 +1056,10 @@ namespace headsup
     {
         g_FixPointer = false;
         g_KeepKeys.clear();
-        const std::string failure = PutBack(m_Patches,
-            "the game's reading of the mouse was changed again after HeadsUp fixed it, so it was left as it is",
-            "the game's reading of the mouse could not be put back");
+        const std::string failure = TakeOut(m_Patches, "the game's reading of the mouse");
         m_Patches.clear();
         g_ControllerGlobal = g_ShowPointer = 0;
-        return KeptLoaded(failure);
+        return failure;
     }
 
     void PointerFix::Enable(bool on) { g_FixPointer = on; }

@@ -293,16 +293,16 @@ namespace headsup
             return calls;
         }
 
-        // Offsets into .text where the pattern matches, its -1 bytes matching anything.
-        std::vector<uint32_t> Find(const int16_t* pattern, uint32_t bytes, const ImageSection& text)
+        // Offsets into the section where the pattern matches, its -1 bytes matching anything.
+        std::vector<uint32_t> Find(std::span<const int16_t> pattern, const ImageSection& section)
         {
             std::vector<uint32_t> found;
-            for (uint32_t at = 0; at + bytes <= text.size; ++at)
+            for (uint32_t at = 0; at + pattern.size() <= section.size; ++at)
             {
-                uint32_t i = 0;
-                while (i < bytes && (pattern[i] == kAnyByte || text.bytes[at + i] == pattern[i]))
+                size_t i = 0;
+                while (i < pattern.size() && (pattern[i] == kAnyByte || section.bytes[at + i] == pattern[i]))
                     ++i;
-                if (i == bytes) found.push_back(at);
+                if (i == pattern.size()) found.push_back(at);
             }
             return found;
         }
@@ -310,12 +310,6 @@ namespace headsup
         uint32_t CallTarget(uint32_t call, const ImageSection& text)
         {
             return call + kBranchLength + ReadAt<uint32_t>(text.bytes, call - text.rva + 1);
-        }
-
-        template <size_t N>
-        std::vector<uint32_t> FindAll(const int16_t (&pattern)[N], const ImageSection& section)
-        {
-            return Find(pattern, N, section);
         }
 
         std::vector<uint32_t> ReturnsFromCallsTo(uint32_t target, const ImageSection& text)
@@ -478,10 +472,10 @@ namespace headsup
     {
         PointerMapping result;
         uint32_t windowRect = 0, metrics = 0;
-        for (const auto& [pattern, bytes] : {std::pair{kMessageGuess, sizeof(kMessageGuess) / sizeof(int16_t)},
-                 std::pair{kWarpGuess, sizeof(kWarpGuess) / sizeof(int16_t)}, std::pair{kEdgeGuess, sizeof(kEdgeGuess) / sizeof(int16_t)}})
+        using Pattern = std::span<const int16_t>;
+        for (const Pattern pattern : {Pattern(kMessageGuess), Pattern(kWarpGuess), Pattern(kEdgeGuess)})
         {
-            const std::vector<uint32_t> found = Find(pattern, static_cast<uint32_t>(bytes), text);
+            const std::vector<uint32_t> found = Find(pattern, text);
             if (found.empty()) return PointerMapping{LocateProblem::NoPointerMapping, {}};
             if (found.size() > 1) return PointerMapping{LocateProblem::AmbiguousPointerMapping, {}};
             const uint32_t at = found.front();
@@ -498,7 +492,7 @@ namespace headsup
 
     PointerShow LocatePointerShow(const ImageSection& text)
     {
-        const std::vector<uint32_t> found = Find(kMoveShow, sizeof(kMoveShow) / sizeof(int16_t), text);
+        const std::vector<uint32_t> found = Find(kMoveShow, text);
         if (found.empty()) return PointerShow{LocateProblem::NoPointerShow};
         if (found.size() > 1) return PointerShow{LocateProblem::AmbiguousPointerShow};
         const uint32_t at = found.front();
@@ -506,9 +500,8 @@ namespace headsup
         const uint32_t show       = CallTarget(text.rva + at + kShowCall, text);
         const uint32_t showAt     = show - text.rva;
         if (ReadAt<uint32_t>(text.bytes, at + kShowController) != controller || showAt >= text.size ||
-            Find(kShowRoutine, sizeof(kShowRoutine) / sizeof(int16_t), ImageSection{text.rva + showAt, text.bytes + showAt,
-                                                                                std::min<uint32_t>(text.size - showAt,
-                                                                                    sizeof(kShowRoutine) / sizeof(int16_t))})
+            Find(kShowRoutine, ImageSection{text.rva + showAt, text.bytes + showAt,
+                                   std::min<uint32_t>(text.size - showAt, std::size(kShowRoutine))})
                 .empty())
             return PointerShow{LocateProblem::PointerShowChanged};
         return PointerShow{LocateProblem::None, controller, show};
@@ -516,7 +509,7 @@ namespace headsup
 
     KeyHide LocateKeyHide(const ImageSection& text)
     {
-        const std::vector<uint32_t> found = Find(kMouseUseCalls, sizeof(kMouseUseCalls) / sizeof(int16_t), text);
+        const std::vector<uint32_t> found = Find(kMouseUseCalls, text);
         if (found.empty()) return KeyHide{LocateProblem::NoKeyHide};
         if (found.size() > 1) return KeyHide{LocateProblem::AmbiguousKeyHide};
         const uint32_t on = text.rva + found.front() + kMouseOnCall, off = text.rva + found.front() + kMouseOffCall;
@@ -526,7 +519,7 @@ namespace headsup
 
     WindowDraw LocateWindowDraw(const ImageSection& text)
     {
-        const std::vector<uint32_t> found = Find(kWindowLoop, sizeof(kWindowLoop) / sizeof(int16_t), text);
+        const std::vector<uint32_t> found = Find(kWindowLoop, text);
         if (found.empty()) return WindowDraw{LocateProblem::NoWindowDraw};
         if (found.size() > 1) return WindowDraw{LocateProblem::AmbiguousWindowDraw};
         const uint32_t call = text.rva + found.front() + kWindowLoopCall;
@@ -540,7 +533,7 @@ namespace headsup
             return WindowDraw{LocateProblem::WindowDrawChanged};
         const uint32_t from = found.front() >= kWindowListReach ? found.front() - kWindowListReach : 0;
         const std::vector<uint32_t> moves =
-            FindAll(kWindowListMove, ImageSection{text.rva + from, text.bytes + from, found.front() - from});
+            Find(kWindowListMove, ImageSection{text.rva + from, text.bytes + from, found.front() - from});
         const uint32_t list = moves.empty() ? 0 : ReadAt<uint32_t>(text.bytes, from + moves.back() + kWindowListAddress);
         return WindowDraw{LocateProblem::None, call, draw, list};
     }
@@ -548,7 +541,7 @@ namespace headsup
     ModelDraws LocateModelDraws(const ImageSection& text)
     {
         ModelDraws result;
-        for (const uint32_t at : FindAll(kModelDrawCall, text))
+        for (const uint32_t at : Find(kModelDrawCall, text))
             result.calls.push_back(text.rva + at + kModelDrawCallAt);
         if (result.calls.empty())
         {
@@ -561,37 +554,37 @@ namespace headsup
         return result;
     }
 
-    NetStats LocateNetStats(const ImageSection& text)
+    GlobalSite LocateNetStats(const ImageSection& text)
     {
-        const std::vector<uint32_t> loads = FindAll(kCounterLoad, text);
-        if (loads.empty()) return NetStats{LocateProblem::NoNetStats};
+        const std::vector<uint32_t> loads = Find(kCounterLoad, text);
+        if (loads.empty()) return GlobalSite{LocateProblem::NoNetStats};
         const uint32_t global = ReadAt<uint32_t>(text.bytes, loads.front() + kCounterLoadGlobal);
         if (loads.size() != kCounterLoads || ReadAt<uint32_t>(text.bytes, loads.back() + kCounterLoadGlobal) != global)
-            return NetStats{LocateProblem::AmbiguousNetStats};
-        const std::vector<uint32_t> updates = FindAll(kCounterUpdate, text);
+            return GlobalSite{LocateProblem::AmbiguousNetStats};
+        const std::vector<uint32_t> updates = Find(kCounterUpdate, text);
         if (updates.size() != 1 || ReadAt<uint32_t>(text.bytes, updates.front() + kCounterUpdateGlobal) != global)
-            return NetStats{LocateProblem::NetStatsChanged};
-        return NetStats{LocateProblem::None, global};
+            return GlobalSite{LocateProblem::NetStatsChanged};
+        return GlobalSite{LocateProblem::None, global};
     }
 
-    WeatherSite LocateWeather(const ImageSection& text)
+    GlobalSite LocateWeather(const ImageSection& text)
     {
-        const std::vector<uint32_t> found = FindAll(kWeatherLoad, text);
-        if (found.empty()) return WeatherSite{LocateProblem::NoWeather};
-        if (found.size() > 1) return WeatherSite{LocateProblem::AmbiguousWeather};
-        return WeatherSite{LocateProblem::None, ReadAt<uint32_t>(text.bytes, found.front() + kWeatherLoadGlobal)};
+        const std::vector<uint32_t> found = Find(kWeatherLoad, text);
+        if (found.empty()) return GlobalSite{LocateProblem::NoWeather};
+        if (found.size() > 1) return GlobalSite{LocateProblem::AmbiguousWeather};
+        return GlobalSite{LocateProblem::None, ReadAt<uint32_t>(text.bytes, found.front() + kWeatherLoadGlobal)};
     }
 
     ConfigGetSite LocateConfigGet(const ImageSection& text)
     {
-        const std::vector<uint32_t> found = FindAll(kConfigGet, text);
+        const std::vector<uint32_t> found = Find(kConfigGet, text);
         if (found.empty()) return ConfigGetSite{LocateProblem::NoConfigGet};
         return ConfigGetSite{LocateProblem::None, text.rva + found.front()};
     }
 
     SearchAddressSite LocateSearchAddress(const ImageSection& text)
     {
-        for (const uint32_t at : FindAll(kSearchSetup, text))
+        for (const uint32_t at : Find(kSearchSetup, text))
         {
             const auto address = ReadAt<uint32_t>(text.bytes, at + kSearchSetupAddress);
             const auto port    = ReadAt<uint32_t>(text.bytes, at + kSearchSetupPort);
@@ -600,14 +593,14 @@ namespace headsup
         return SearchAddressSite{LocateProblem::NoSearchAddress};
     }
 
-    PlayOnlineSite LocatePlayOnline(const ImageSection& text)
+    GlobalSite LocatePlayOnline(const ImageSection& text)
     {
-        const std::vector<uint32_t> mail = FindAll(kMailGet, text), messages = FindAll(kMessagesGet, text);
-        if (mail.empty() || messages.empty()) return PlayOnlineSite{LocateProblem::NoPlayOnline};
+        const std::vector<uint32_t> mail = Find(kMailGet, text), messages = Find(kMessagesGet, text);
+        if (mail.empty() || messages.empty()) return GlobalSite{LocateProblem::NoPlayOnline};
         const uint32_t global = ReadAt<uint32_t>(text.bytes, messages.front() + kPlayOnlineGetGlobal);
         if (mail.size() != 1 || messages.size() != 1 || ReadAt<uint32_t>(text.bytes, mail.front() + kPlayOnlineGetGlobal) != global)
-            return PlayOnlineSite{LocateProblem::AmbiguousPlayOnline};
-        return PlayOnlineSite{LocateProblem::None, global};
+            return GlobalSite{LocateProblem::AmbiguousPlayOnline};
+        return GlobalSite{LocateProblem::None, global};
     }
 
     PlayOnlineCounts PlayOnlineFrom(uint16_t messages, uint16_t mail)
@@ -631,10 +624,10 @@ namespace headsup
 
     WindowMoveSite LocateWindowMove(const ImageSection& text)
     {
-        const std::vector<uint32_t> found = FindAll(kWindowMoveTo, text);
+        const std::vector<uint32_t> found = Find(kWindowMoveTo, text);
         if (found.empty()) return WindowMoveSite{LocateProblem::NoWindowMove};
         if (found.size() > 1) return WindowMoveSite{LocateProblem::AmbiguousWindowMove};
-        const std::vector<uint32_t> getRect = FindAll(kWindowGetRect, text), entryRect = FindAll(kWindowEntryRect, text);
+        const std::vector<uint32_t> getRect = Find(kWindowGetRect, text), entryRect = Find(kWindowEntryRect, text);
         return WindowMoveSite{LocateProblem::None, text.rva + found.front(),
             getRect.size() == 1 ? text.rva + getRect.front() : 0, entryRect.size() == 1 ? text.rva + entryRect.front() : 0};
     }
@@ -643,17 +636,14 @@ namespace headsup
 
     WindowBuildSite LocateWindowBuild(const ImageSection& text)
     {
-        const std::vector<uint32_t> found = FindAll(kWindowBuild, text);
+        const std::vector<uint32_t> found = Find(kWindowBuild, text);
         if (found.empty()) return WindowBuildSite{LocateProblem::NoWindowBuild};
         if (found.size() > 1) return WindowBuildSite{LocateProblem::AmbiguousWindowBuild};
-        constexpr uint8_t kCall = 0xE8;
-        const uint32_t build = text.rva + found.front();
-        std::vector<uint32_t> calls;
-        for (uint32_t i = 0; i + kBranchLength <= text.size; ++i)
-            if (text.bytes[i] == kCall && CallTarget(text.rva + i, text) == build) calls.push_back(text.rva + i);
-        if (calls.empty()) return WindowBuildSite{LocateProblem::NoWindowBuild};
-        if (calls.size() > 1) return WindowBuildSite{LocateProblem::AmbiguousWindowBuild};
-        return WindowBuildSite{LocateProblem::None, calls.front(), build};
+        const uint32_t build                = text.rva + found.front();
+        const std::vector<uint32_t> returns = ReturnsFromCallsTo(build, text);
+        if (returns.empty()) return WindowBuildSite{LocateProblem::NoWindowBuild};
+        if (returns.size() > 1) return WindowBuildSite{LocateProblem::AmbiguousWindowBuild};
+        return WindowBuildSite{LocateProblem::None, returns.front() - kBranchLength, build};
     }
 
     WindowSpot GameMeant(WindowSpot asked, WindowSpot placed, WindowSpot origin)
@@ -667,7 +657,7 @@ namespace headsup
         // ret with code after it is an early return. Read no further: that code is another class's.
         std::span<const uint8_t> LayoutBody(std::span<const uint8_t> layout, uintptr_t at)
         {
-            constexpr uint8_t kRet = 0xC3, kNop = 0x90, kInt3 = 0xCC;
+            constexpr uint8_t kRet = 0xC3, kInt3 = 0xCC;
             constexpr uintptr_t kFunctionAlign = 16;
             for (size_t i = 0; i + 1 < layout.size(); ++i)
             {
@@ -680,12 +670,10 @@ namespace headsup
             return layout;
         }
 
-        constexpr uint8_t kCallOp = 0xE8;
-        constexpr size_t kCallLength = 5;
         bool CallsAt(std::span<const uint8_t> code, size_t i, uintptr_t at, uintptr_t target)
         {
-            return code[i] == kCallOp && i + kCallLength <= code.size() &&
-                   at + i + kCallLength + static_cast<uintptr_t>(ReadAt<int32_t>(code.data(), i + 1)) == target;
+            return code[i] == kCallOpcode && i + kBranchLength <= code.size() &&
+                   at + i + kBranchLength + static_cast<uintptr_t>(ReadAt<int32_t>(code.data(), i + 1)) == target;
         }
     }
 
@@ -759,8 +747,8 @@ namespace headsup
         for (size_t i = 0; i < layout.size(); ++i)
         {
             if (!CallsAt(layout, i, at, entryRect)) continue;
-            const std::span<const uint8_t> after = layout.subspan(i + kCallLength).first(
-                std::min(kStoreReach, layout.size() - i - kCallLength));
+            const std::span<const uint8_t> after = layout.subspan(i + kBranchLength).first(
+                std::min(kStoreReach, layout.size() - i - kBranchLength));
             for (size_t first = 0; first < after.size(); ++first)
             {
                 const std::optional<Store> left = storeAt(after, first);
@@ -784,10 +772,9 @@ namespace headsup
             ++i;
         if (i + 2 > layout.size() || layout[i] != kMov || (layout[i + 1] != kEsiEcx && layout[i + 1] != kEdiEcx)) return std::nullopt;
         i += 2;
-        if (i + kCallLength > layout.size() || layout[i] != kCallOp) return std::nullopt;
-        int32_t relative = 0;
-        std::memcpy(&relative, layout.data() + i + 1, sizeof(relative));
-        return at + i + kCallLength + static_cast<uintptr_t>(static_cast<intptr_t>(relative));
+        if (i + kBranchLength > layout.size() || layout[i] != kCallOpcode) return std::nullopt;
+        const int32_t relative = ReadAt<int32_t>(layout.data(), i + 1);
+        return at + i + kBranchLength + static_cast<uintptr_t>(static_cast<intptr_t>(relative));
     }
 
     std::optional<WindowSpot> MovedEntryPlace(WindowSpot point, const WindowRect& window, int dx, int dy)
@@ -810,7 +797,7 @@ namespace headsup
 
     TitleRectSite LocateScanLabel(const ImageSection& text, uint32_t getRect)
     {
-        const std::vector<uint32_t> found = FindAll(kScanLabel, text);
+        const std::vector<uint32_t> found = Find(kScanLabel, text);
         if (getRect == 0 || found.empty()) return TitleRectSite{LocateProblem::NoScanLabel};
         if (found.size() > 1) return TitleRectSite{LocateProblem::AmbiguousScanLabel};
         const uint32_t call = text.rva + found.front() + kScanLabelCall;
@@ -820,7 +807,7 @@ namespace headsup
 
     TitleRectSite LocateStripCount(const ImageSection& text, uint32_t getRect)
     {
-        const std::vector<uint32_t> found = FindAll(kStripCount, text);
+        const std::vector<uint32_t> found = Find(kStripCount, text);
         if (getRect == 0 || found.empty()) return TitleRectSite{LocateProblem::NoStripCount};
         if (found.size() > 1) return TitleRectSite{LocateProblem::AmbiguousStripCount};
         const uint32_t call = text.rva + found.front() + kStripCountCall;
@@ -854,28 +841,29 @@ namespace headsup
         return key;
     }
 
-    bool HelpStripWindow(const WindowKey& key)
+    namespace
     {
-        for (const char* strip : {kHelpWindow, kTitleWindow})
-            if (std::memcmp(key.data(), strip + kMenuPrefixLength, kWindowKeyLength) == 0) return true;
-        return false;
+        // Whether key is the key of the window with this 16-byte name.
+        bool KeyOf(const WindowKey& key, const char* window)
+        {
+            return std::memcmp(key.data(), window + kMenuPrefixLength, kWindowKeyLength) == 0;
+        }
     }
 
-    bool FollowsHelpStrip(const WindowKey& key)
-    {
-        return HelpStripWindow(key) || std::memcmp(key.data(), kNetstatWindow + kMenuPrefixLength, kWindowKeyLength) == 0;
-    }
+    bool HelpStripWindow(const WindowKey& key) { return KeyOf(key, kHelpWindow) || KeyOf(key, kTitleWindow); }
 
-    bool TitleWindow(const WindowKey& key)
-    {
-        return std::memcmp(key.data(), kTitleWindow + kMenuPrefixLength, kWindowKeyLength) == 0;
-    }
+    bool FollowsHelpStrip(const WindowKey& key) { return HelpStripWindow(key) || KeyOf(key, kNetstatWindow); }
 
-    bool MovableWindow(const WindowKey& key)
+    bool TitleWindow(const WindowKey& key) { return KeyOf(key, kTitleWindow); }
+
+    bool MovableWindow(const WindowKey& key) { return !FollowsHelpStrip(key); }
+
+    std::string_view NextField(std::string_view& text, char separator)
     {
-        for (const char* strip : {kHelpWindow, kTitleWindow, kNetstatWindow})
-            if (std::memcmp(key.data(), strip + kMenuPrefixLength, kWindowKeyLength) == 0) return false;
-        return true;
+        const size_t end             = std::min(text.find(separator), text.size());
+        const std::string_view field = text.substr(0, end);
+        text.remove_prefix(std::min(end + 1, text.size()));
+        return field;
     }
 
     std::vector<WindowPlace> WindowPlacesFrom(std::string_view text)
@@ -883,9 +871,7 @@ namespace headsup
         std::vector<WindowPlace> places;
         while (!text.empty() && places.size() < kMaxWindowKeys)
         {
-            const size_t end = std::min(text.find(' '), text.size());
-            const std::string_view entry = text.substr(0, end);
-            text.remove_prefix(std::min(end + 1, text.size()));
+            const std::string_view entry = NextField(text, ' ');
             const size_t colon = entry.find(':'), comma = entry.find(',', colon == std::string_view::npos ? 0 : colon);
             if (colon == std::string_view::npos || comma == std::string_view::npos) continue;
             const std::string_view name = entry.substr(0, colon);
@@ -916,9 +902,7 @@ namespace headsup
         std::vector<std::string> names;
         while (!text.empty() && names.size() < kMaxWindowKeys)
         {
-            const size_t end = std::min(text.find(' '), text.size());
-            const std::string_view name = text.substr(0, end);
-            text.remove_prefix(std::min(end + 1, text.size()));
+            const std::string_view name = NextField(text, ' ');
             const std::optional<WindowKey> key = KeyFromShortName(name);
             if (key && MovableWindow(*key) && std::ranges::find(names, name) == names.end()) names.emplace_back(name);
         }
@@ -941,13 +925,9 @@ namespace headsup
             for (const KnownWindow& w : kKnownWindows)
                 names.emplace_back(w.key);
             for (std::string_view rest = kAllWindows; !rest.empty();)
-            {
-                const size_t end = std::min(rest.find(' '), rest.size());
-                if (const std::string_view name = rest.substr(0, end);
+                if (const std::string_view name = NextField(rest, ' ');
                     !name.empty() && std::ranges::find(names, name) == names.end())
                     names.emplace_back(name);
-                rest.remove_prefix(std::min(end + 1, rest.size()));
-            }
             return names;
         }();
         return all;
@@ -978,16 +958,8 @@ namespace headsup
     std::optional<WindowSpot> WindowPlacements::PlaceFor(uint32_t mcd, const WindowKey& key, WindowSpot now, int width,
         int height, int dx, int dy, int screenRight, int screenBottom)
     {
-        Placed* placed = nullptr;
-        for (Placed& p : m_Placed)
-            if (p.mcd == mcd && p.key == key) placed = &p;
-        if (placed == nullptr)
-        {
-            placed  = &m_Placed[m_Next];
-            m_Next  = (m_Next + 1) % m_Placed.size();
-            *placed = Placed{mcd, key, now, now};
-        }
-        else if (now != placed->to)
+        const auto [placed, fresh] = Slot(mcd, key, now);
+        if (!fresh && now != placed->to)
         {
             if (now == placed->from && placed->from != placed->to)
             {
@@ -1022,17 +994,20 @@ namespace headsup
     WindowSpot WindowPlacements::Moved(uint32_t mcd, const WindowKey& key, WindowSpot from, int width, int height, int dx,
         int dy, int screenRight, int screenBottom)
     {
-        Placed* placed = nullptr;
+        Placed& placed = *Slot(mcd, key, from).first;
+        placed.from    = from;
+        return Place(placed, width, height, dx, dy, screenRight, screenBottom);
+    }
+
+    std::pair<WindowPlacements::Placed*, bool> WindowPlacements::Slot(uint32_t mcd, const WindowKey& key,
+        WindowSpot now)
+    {
         for (Placed& p : m_Placed)
-            if (p.mcd == mcd && p.key == key) placed = &p;
-        if (placed == nullptr)
-        {
-            placed = &m_Placed[m_Next];
-            m_Next = (m_Next + 1) % m_Placed.size();
-            *placed = Placed{mcd, key};
-        }
-        placed->from = from;
-        return Place(*placed, width, height, dx, dy, screenRight, screenBottom);
+            if (p.mcd == mcd && p.key == key) return {&p, false};
+        Placed& added = m_Placed[m_Next];
+        m_Next        = (m_Next + 1) % m_Placed.size();
+        added         = Placed{mcd, key, now, now};
+        return {&added, true};
     }
 
     WindowSpot WindowPlacements::Place(Placed& placed, int width, int height, int dx, int dy, int screenRight,
@@ -1072,9 +1047,9 @@ namespace headsup
 
     StripSites LocateStripText(const ImageSection& text, const ImageSection& data)
     {
-        const auto help = FindAll(kHelpRecord, data), title = FindAll(kTitleRecord, data);
-        const auto helpSet = FindAll(kHelpSetter, text), titleSet = FindAll(kTitleSetter, text);
-        const auto setText = FindAll(kSetText, text), picker = FindAll(kLevelPicker, text);
+        const auto help = Find(kHelpRecord, data), title = Find(kTitleRecord, data);
+        const auto helpSet = Find(kHelpSetter, text), titleSet = Find(kTitleSetter, text);
+        const auto setText = Find(kSetText, text), picker = Find(kLevelPicker, text);
         for (const auto* found : {&help, &title, &helpSet, &titleSet, &setText, &picker})
             if (found->empty()) return StripSites{LocateProblem::NoStripText};
         for (const auto* found : {&help, &title, &helpSet, &titleSet, &setText, &picker})
@@ -1101,17 +1076,17 @@ namespace headsup
                std::memcmp(name, window == StripWindow::Help ? kHelpWindow : kTitleWindow, kWindowNameLength) == 0;
     }
 
-    FishSite LocateFish(const ImageSection& text)
+    GlobalSite LocateFish(const ImageSection& text)
     {
         std::vector<uint32_t> found;
-        for (const uint32_t at : FindAll(kFishSetup, text))
+        for (const uint32_t at : Find(kFishSetup, text))
         {
             const auto first = ReadAt<uint32_t>(text.bytes, at + kFishSetupIntuition[0]);
             if (std::ranges::all_of(kFishSetupIntuition, [&](uint32_t o) { return ReadAt<uint32_t>(text.bytes, at + o) == first; }))
                 found.push_back(at);
         }
-        if (found.empty()) return FishSite{LocateProblem::NoFish};
-        if (found.size() > 1) return FishSite{LocateProblem::AmbiguousFish};
-        return FishSite{LocateProblem::None, ReadAt<uint32_t>(text.bytes, found.front() + kFishSetupGlobal)};
+        if (found.empty()) return GlobalSite{LocateProblem::NoFish};
+        if (found.size() > 1) return GlobalSite{LocateProblem::AmbiguousFish};
+        return GlobalSite{LocateProblem::None, ReadAt<uint32_t>(text.bytes, found.front() + kFishSetupGlobal)};
     }
 }

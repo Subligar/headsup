@@ -208,9 +208,7 @@ namespace headsup
         std::vector<ViewShift> shifts;
         while (!text.empty())
         {
-            const size_t end       = std::min(text.find(kShiftSeparator), text.size());
-            const std::string_view entry = text.substr(0, end);
-            text.remove_prefix(std::min(end + 1, text.size()));
+            const std::string_view entry = NextField(text, kShiftSeparator);
             const size_t colon = entry.rfind(kShiftColon);
             if (colon == std::string_view::npos) continue;
             const std::string_view id = entry.substr(0, colon), number = entry.substr(colon + 1);
