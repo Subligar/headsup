@@ -254,10 +254,11 @@ namespace headsup
     {
         const BarMetrics& m = look.metrics;
         std::array<float, kPanelSlots> natural{};
+        widgets.panel = Panel(look.settings);
         for (int i = 0; i < kPanelSlots; ++i)
         {
             WidgetContent& c = widgets.contents[i];
-            c                = BarWidgetContent(WidgetInSlot(i), state, look.settings);
+            c                = BarWidgetContent(WidgetInSlot(i), state, look.settings, widgets.panel);
             widgets.hasPopup[i] = c.hasPopup; // kept off the panel, a combined widget's popup still joins its pill's
             if (!c.shown) continue;
             const BarLook own = LookOf(look, widgets, i);
@@ -295,7 +296,6 @@ namespace headsup
             2.0f * targetPadding + targetLook.Leading(target) +
             (target.title.empty() ? 0.0f
                                   : Width(host, Shortest(target.title.front().text, kFewLetters), targetLook.TitleFace()));
-        widgets.panel = Panel(look.settings);
         SharePopups(widgets.hasPopup, widgets.panel.group);
         const BarLayout layout = LayoutBar(screenWidth, m, look.palette.shape, natural, targetMinimum,
             widgets.panel.placement, look.settings.barSeparators, widgets.spacing, widgets.panel.group);

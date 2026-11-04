@@ -117,8 +117,9 @@ namespace headsup
     // Whether the open popup shows a widget's: its own, or a combined pill's with that widget in it.
     bool PopupShows(const Settings& settings, std::optional<PanelWidget> open, BarWidget widget);
 
-    // Game help is never shown on the bar: it has a bar of its own, under the top bar.
-    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings);
+    // Game help is never shown on the bar: it has a bar of its own, under the top bar. panel: Panel(settings).
+    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings,
+        const PanelGroups& panel);
     // The used and total slots of the bag the game's caption names, as the Bags widget writes them.
     std::optional<Span> StripBagFill(const BarState& state);
     PopupContent BarPopupContent(PanelWidget widget, const BarState& state, const Settings& settings);
