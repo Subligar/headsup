@@ -560,6 +560,7 @@ public:
         m_Ping.Stop();
         m_Fonts.Wait();
         m_Search.Stop();
+        m_TurnInFetch.Stop();
         m_Nameplates.Release();
         m_SetupPreview.Release();
         UnhookPresent();
@@ -2197,7 +2198,7 @@ private:
             else
                 m_TurnInsRetry = now + kTurnInsRetry;
         }
-        if (headsup::GuildPatternsDue(m_TurnInsDay, unixMs) && !m_TurnInFetch.Busy() && now >= m_TurnInsRetry)
+        if (headsup::GuildPatternsDue(m_TurnInsDay, unixMs) && now >= m_TurnInsRetry)
             m_TurnInFetch.Start(headsup::kGuildPatternsHost, headsup::kGuildPatternsPath);
     }
 
