@@ -150,9 +150,6 @@ namespace headsup
             {
                 const size_t picked = std::min(section.tab, section.tabs.size() - 1);
                 rows.insert(rows.end(), section.tabs[picked].rows.begin(), section.tabs[picked].rows.end());
-                // The card as wide as its widest tab's rows, whichever is picked, its chips wrapping at that.
-                for (const PopupTab& tab : section.tabs)
-                    contentWidth = std::max(contentWidth, LayoutSection(PopupSection{"", tab.rows}, metrics, ornate, measure).width);
                 // One width, the widest name's, in as few rows as hold them, shared evenly; spread across the card
                 // once its width is known.
                 const float gap = unit * kTagGap;
@@ -447,7 +444,8 @@ namespace headsup
                     BarRect{x + width - b.pad - scroll.grip, y + scroll.trackY, scroll.grip, scroll.track}, scroll.thumb});
             l.lines.push_back(PopupLine{y + b.height});
         }
-        // A card as LayoutSection lays it out, with its reserve: its height with each tab picked in turn, the tallest.
+        // A card as LayoutSection lays it out, as wide as with its widest tab picked, so its chips wrap the same
+        // whichever is, and with its reserve: its height with its tallest tab picked.
         Block LayoutCard(const PopupSection& section, const BarMetrics& metrics, bool ornate, SpanMeasure measure)
         {
             Block b  = LayoutSection(section, metrics, ornate, measure);
@@ -455,8 +453,10 @@ namespace headsup
             PopupSection each = section;
             for (size_t tab = 0; tab < std::max<size_t>(section.tabs.size(), 1); ++tab)
             {
-                each.tab  = tab;
-                b.reserve = std::max(b.reserve, LayoutSection(each, metrics, ornate, measure).height);
+                each.tab           = tab;
+                const Block picked = LayoutSection(each, metrics, ornate, measure);
+                b.reserve          = std::max(b.reserve, picked.height);
+                b.width            = std::max(b.width, picked.width);
             }
             return b;
         }

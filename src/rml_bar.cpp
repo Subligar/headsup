@@ -42,6 +42,7 @@ namespace headsup
         m_PopupMarked   = false;
         m_PopupLeft = m_PopupTop = m_PopupWidth = m_PopupHeight = Px{};
         m_SettingsBody.reset();
+        m_PopupWidths = {};
     }
 
     const RmlBar::FaceLine& RmlBar::FaceLineOf(RmlHost& host, const char* family, int pixels)
@@ -444,6 +445,7 @@ namespace headsup
         {
             m_WidestFor = open;
             m_Widest    = 0.0f;
+            m_PopupWidths = {};
         }
         if (anchor == nullptr)
         {
@@ -461,8 +463,10 @@ namespace headsup
         auto measure = [&](const Span& s, PopupFont f) {
             const TextFace face  = look.FaceOf(f);
             const FaceLine& line = FaceLineOf(host, face.family, WholePixels(face.size));
-            return TextSize{Width(host, SteadyFigures(s.text, WidestDigitOf(host, face)), face), line.height, line.inkTop,
-                line.inkBottom, 0.0f};
+            const auto [width, fresh] =
+                m_PopupWidths[static_cast<size_t>(f)].try_emplace(SteadyFigures(s.text, WidestDigitOf(host, face)));
+            if (fresh) width->second = Width(host, width->first, face);
+            return TextSize{width->second, line.height, line.inkTop, line.inkBottom, 0.0f};
         };
         // The ornate panel's outer border and the line under the strip count: the gap is from them. The help bar's
         // popup goes under the help bar's box.

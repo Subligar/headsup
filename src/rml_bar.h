@@ -14,6 +14,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace headsup
@@ -231,6 +232,8 @@ namespace headsup
         std::optional<PanelWidget> m_WidestFor;
         float m_Widest = 0.0f;
         PopupFaces m_PopupFaces;
+        // Each popup font's widths of the texts the open popup measured, its figures at the font's widest digit.
+        std::array<std::unordered_map<std::string, float>, kPopupFontCount> m_PopupWidths;
         std::vector<FaceLine> m_FaceLines;
         Memo<FitKey, std::string> m_TitleFit, m_SubtitleFit;
         std::vector<FaceDigit> m_WidestDigits;
