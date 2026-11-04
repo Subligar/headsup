@@ -176,6 +176,11 @@ namespace headsup
             int rank;
         };
 
+        // What every plate of a frame is drawn with, and what its plates leave for the stacking.
+        struct PlateFrame;
+        // False once GDI or Direct3D refused a texture: no more plates are drawn this frame.
+        bool UpdatePlate(const ActorInfo& info, PlateFrame& frame);
+        void StackPlates(PlateFrame& frame);
         bool Prepare(PlateTexture& t, const char* text, const TextLook& look, int pixelHeight);
         // The icon's badge from the shared ones: null without one, and for every badge once one could not be made.
         const PlateTexture* PrepareBadge(const IconDraw& icon, const LineStyle& line, int pixelHeight);
