@@ -560,17 +560,17 @@ TEST(the_newer_of_a_check_and_a_lookup_reports_a_players_jobs)
     GameState game;
     CHECK(!game.ReportedJobs(kOtherId).has_value());
     Feed(game, CharSync(kCharacter, kOther, 0, 75));
-    game.LookedUp(kOtherId, kOther, SearchedPlayer{kOtherId & kSearchIdMask, "Other", 100, false, 1, 13, 75, 37});
+    game.LookedUp(kOtherId, kOther, SearchedPlayer{kOtherId & kSearchIdMask, "Other", 1, 13, 75, 37});
     CHECK(game.ReportedJobs(kOtherId) == (PlayerJobs{1, 75, 13, 37}));
     CHECK_EQ(int{game.SyncOf(kOther).level}, 0); // the answer is newer than their last sync
     Packet general = Blank(0x0C9, 0x54).Put<uint32_t>(0x04, kOtherId).Put<uint16_t>(0x08, kOther)
         .Put<uint8_t>(0x0A, 0x01).Put<uint8_t>(0x22, 5).Put<uint8_t>(0x23, 4).Put<uint8_t>(0x24, 52).Put<uint8_t>(0x25, 26);
     Feed(game, general);
     CHECK(game.ReportedJobs(kOtherId) == (PlayerJobs{5, 52, 4, 26}));
-    game.LookedUp(kOtherId, kOther, SearchedPlayer{kOtherId & kSearchIdMask, "Other", 100, false, 6, 13, 30, 15});
+    game.LookedUp(kOtherId, kOther, SearchedPlayer{kOtherId & kSearchIdMask, "Other", 6, 13, 30, 15});
     CHECK(game.ReportedJobs(kOtherId) == (PlayerJobs{6, 30, 13, 15}));
     // Anonymous, the search server says nothing of the jobs: nothing is reported, the check's as much as the answer's.
-    game.LookedUp(kOtherId, kOther, SearchedPlayer{kOtherId & kSearchIdMask, "Other", 100, true});
+    game.LookedUp(kOtherId, kOther, SearchedPlayer{kOtherId & kSearchIdMask, "Other"});
     CHECK(!game.ReportedJobs(kOtherId).has_value());
 }
 

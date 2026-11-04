@@ -11,7 +11,7 @@ namespace
 
     SearchedPlayer Answer(uint32_t id, uint8_t mainJob = 5, uint8_t mainLevel = 20)
     {
-        return SearchedPlayer{id & kSearchIdMask, "Someone", 100, false, mainJob, 3, mainLevel, 10};
+        return SearchedPlayer{id & kSearchIdMask, "Someone", mainJob, 3, mainLevel, 10};
     }
 
     // Every one in view answered at once, as the server would.
