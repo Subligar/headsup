@@ -41,7 +41,6 @@
 #include "settings.h"
 #include "shot_watch.h"
 #include "tracker.h"
-#include "window_file.h"
 #include "window_skin.h"
 #include "linuxxi_report.h"
 #include "memory_query.h"
@@ -56,6 +55,7 @@
 #include "pointerwatch.h"
 #include "stackdump.h"
 #include "stripdump.h"
+#include "window_file.h"
 #endif
 
 #include <algorithm>
