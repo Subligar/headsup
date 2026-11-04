@@ -74,18 +74,12 @@ namespace headsup
             placed.push_back({&m_Adventurer.model, SampleActor::Adventurer, {0.0f, 0.0f, 2.0f * kBesideUnits}});
             placed.push_back({&m_Shantotto.model, SampleActor::Shantotto, {0.0f, 0.0f, -kBesideUnits}});
         }
-        ModelBounds box = Moved(placed.front().model->Standing(), placed.front().at);
+        std::vector<ModelBounds> standing;
         for (const Placed& p : placed)
-            box = Joined(box, Moved(p.model->Standing(), p.at));
-        const float headroom = (box.high.y - box.low.y) * kHeadroom;
-        // Zoomed toward halfway up the room over the heads, where the plates are, so they stay in the picture as
-        // they grow. The game's up is -y.
-        Vec3 toward = HeadOf(box);
-        toward.y -= headroom / 2.0f;
-        box.low.y -= headroom;
-        const float closer   = static_cast<float>(zoom) / kPercent;
-        const float yaw      = kFacingYaw + kSwayYaw * static_cast<float>(std::sin(now * kSwaySpeed));
-        ModelView view = FramedView(box, yaw, static_cast<float>(kWidth) / static_cast<float>(kHeight), closer, toward);
+            standing.push_back(Moved(p.model->Standing(), p.at));
+        const float closer = static_cast<float>(zoom) / kPercent;
+        const float yaw    = kFacingYaw + kSwayYaw * static_cast<float>(std::sin(now * kSwaySpeed));
+        ModelView view     = FramedOver(standing, kHeadroom, yaw, static_cast<float>(kWidth) / static_cast<float>(kHeight), closer);
         Pan(view, across, down);
 
         const SampleScene scene = SetupScene(others, yourName);
@@ -104,10 +98,10 @@ namespace headsup
         // they are laid out on a screen a zoomth of the picture's size and drawn zoom times as large.
         const PlateScene plates{static_cast<float>(kWidth) / closer, static_cast<float>(kHeight) / closer, nullptr,
             [&](uint16_t index, bool) -> std::optional<DrawnName> {
-                for (const Placed& p : placed)
-                    if (SampleIndex(p.actor) == index)
-                        if (const auto head = PointInPicture(view, HeadOf(Moved(p.model->Standing(), p.at)), kWidth, kHeight))
-                            return SampleName(p.actor, head->x / closer, head->y / closer);
+                for (size_t i = 0; i < placed.size(); ++i)
+                    if (SampleIndex(placed[i].actor) == index)
+                        if (const auto plate = PlateOver(view, standing[i], kWidth, kHeight, closer))
+                            return SampleName(placed[i].actor, plate->x, plate->y);
                 return std::nullopt;
             }};
         m_Plates.Update(m_Tracker, plates, WithGameNames(settings, m_Tracker, scene.player), closer, closer, scene.targets, now,

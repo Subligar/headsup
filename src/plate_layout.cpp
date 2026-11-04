@@ -31,6 +31,19 @@ namespace headsup
             const size_t above = (std::max(run.icons.size(), size_t{1}) - 1) / kIconsPerRow;
             return iconSize + static_cast<float>(above) * RowStep(run, iconSize);
         }
+
+        // Where an icon sits right of its row's first: past the before icons ahead of it, iconSize + kIconGap each, and
+        // the overhang of each of the badged ones among them.
+        float IconOffset(int before, int badged, float iconSize)
+        {
+            return static_cast<float>(before) * (iconSize + kIconGap) + static_cast<float>(badged) * iconSize * kBadgeOverhang;
+        }
+
+        // A row of count icons, badges of them with a badge.
+        float IconRunWidth(int count, int badges, float iconSize)
+        {
+            return count > 0 ? IconOffset(count, badges, iconSize) - kIconGap : 0.0f;
+        }
     }
 
     namespace
@@ -188,16 +201,6 @@ namespace headsup
         return box;
     }
 
-    float IconOffset(int before, int badged, float iconSize)
-    {
-        return static_cast<float>(before) * (iconSize + kIconGap) + static_cast<float>(badged) * iconSize * kBadgeOverhang;
-    }
-
-    float IconRunWidth(int count, int badges, float iconSize)
-    {
-        return count > 0 ? IconOffset(count, badges, iconSize) - kIconGap : 0.0f;
-    }
-
     RunShape ShapeOfRun(const ComposedLine& line, size_t item, float scale)
     {
         const auto isText    = [](const PlateItem& other) { return other.kind == ItemKind::Text; };
@@ -221,13 +224,13 @@ namespace headsup
         return shape;
     }
 
-    IconSpot IconInRun(const RunShape& shape, const PlateItem& run, size_t i)
+    ScreenPoint IconInRun(const RunShape& shape, const PlateItem& run, size_t i)
     {
         const size_t row   = i / kIconsPerRow;
         const size_t first = row * kIconsPerRow;
         const size_t inRow = std::min(run.icons.size() - first, static_cast<size_t>(kIconsPerRow));
         const float width  = IconRunWidth(static_cast<int>(inRow), BadgesIn(run, first, inRow), shape.iconSize);
-        return IconSpot{(shape.right ? shape.width - width : 0.0f) +
+        return ScreenPoint{(shape.right ? shape.width - width : 0.0f) +
                             IconOffset(static_cast<int>(i - first), BadgesIn(run, first, i - first), shape.iconSize),
             shape.bottomRowTop - static_cast<float>(row) * shape.rowStep};
     }

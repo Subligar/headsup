@@ -384,14 +384,14 @@ TEST(the_badge_groups_split_the_info_icons_in_order)
     RankOf(r, StatusRank::Silence) = 6;
     r.immunity                     = kImmuneStun;
     const auto group = [&](const MobResistances& mob, const BadgeRules& rules, BadgeGroup g) {
-        const InfoIconSet set = InfoIconsOf(&mob, rules, g);
+        const InfoIconSet set = InfoIconsOf(InfoIconsFor(&mob, rules), g);
         return std::vector<InfoIcon>(set.icons, set.icons + set.count);
     };
     CHECK(group(r, BadgeRules{}, BadgeGroup::Weak) == (std::vector<InfoIcon>{{Icon::Impact, BadgeKind::Weak, 50}}));
     CHECK(group(r, BadgeRules{}, BadgeGroup::Resist) == (std::vector<InfoIcon>{{Icon::Slashing, BadgeKind::Resist, 25}}));
     CHECK(group(r, BadgeRules{}, BadgeGroup::Status) == (std::vector<InfoIcon>{{Icon::Silence, BadgeKind::StatusRank, 6}}));
     CHECK(group(r, BadgeRules{}, BadgeGroup::Immune) == (std::vector<InfoIcon>{{Icon::Stun, BadgeKind::Immune, 0}}));
-    CHECK_EQ(InfoIconsOf(nullptr, BadgeRules{}, BadgeGroup::Weak).count, 0);
+    CHECK_EQ(InfoIconsOf(InfoIconsFor(nullptr, BadgeRules{}), BadgeGroup::Weak).count, 0);
 
     // The ranks and the second entries: each group holds an SDT or weakness first and its rank or resistance after.
     MobResistances s = Neutral();

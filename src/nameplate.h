@@ -34,14 +34,10 @@ namespace headsup
     std::vector<LoneCursor> LoneCursors(const CursorTargets& targets, const Settings& settings, const PlayerState& player,
         const std::vector<uint16_t>& withNameplateCursor);
 
-    struct CursorSpot
-    {
-        float x, y;
-    };
     // Whether the game's own arrow would show at this anchor: only inside the screen. A target behind the camera has
     // its anchor left at the corner, (0,0), and one off to a side far outside.
     bool AnchorOnScreen(float x, float y, float screenWidth, float screenHeight);
-    CursorSpot CursorAtAnchor(float anchorX, float anchorY, float width, float height, float tip, float raise = 0.0f);
+    ScreenPoint CursorAtAnchor(float anchorX, float anchorY, float width, float height, float tip, float raise = 0.0f);
     // The width in pixels of a cursor drawn pixelHeight tall, whose settings give it width by height.
     int CursorPixelWidth(int pixelHeight, int width, int height);
     // The cursor's edge in pixels, at least one: 100 percent is a twentieth of its height.
@@ -51,19 +47,15 @@ namespace headsup
     constexpr float kPickedCursorRise = 10.0f / 32.0f;
     // A cursor box moved the least that keeps all of it inside a screen this size.
     // top: what of the screen's top is covered, as by the top panel, which the cursor stays below.
-    CursorSpot KeepOnScreen(CursorSpot spot, float width, float height, float screenWidth, float screenHeight, float top = 0.0f);
+    ScreenPoint KeepOnScreen(ScreenPoint spot, float width, float height, float screenWidth, float screenHeight, float top = 0.0f);
 
     // How many icons a row of a run holds; the rest wrap onto rows above.
     constexpr int kIconsPerRow = 8;
     // A badge's text height, and how far its box reaches past its icon's right and bottom edges, as shares of the icon size.
     constexpr float kBadgeShare = 0.65f, kBadgeOverhang = 0.35f, kBadgeHang = 0.3f;
 
-    struct IconSpot
-    {
-        float x, y;
-    };
     // Where a badge of this size goes on its icon.
-    IconSpot BadgeAt(IconSpot icon, float iconSize, float width, float height);
+    ScreenPoint BadgeAt(ScreenPoint icon, float iconSize, float width, float height);
 
     // A texture drawn with square pixels (text, the ornament, the cursor) as a quad in the scene image: its corner in
     // screen pixels, halo included, and its size in the image's. The image is toX by toY times the screen and these
@@ -95,15 +87,14 @@ namespace headsup
 
     float CursorBob(double seconds, float height, bool floating);
 
-    // Not rounded, so sizes change as smoothly as the game's names; kept within the two limits.
-    float DistanceScale(float letterHeight, float screenHeight, float minScale, float maxScale);
-    // The size DistanceScale gives a game's name this many yalms from the camera, without the game's steps (it sizes
-    // its names in eightieths, by its depth from the camera, so they change in jumps and as the camera turns): 1 for
-    // a distance that is not a number.
+    // The size of a game's name this many yalms from the camera, against letters a 180th of the screen tall, without
+    // the game's steps (it sizes its names in eightieths, by its depth from the camera, so they change in jumps and as
+    // the camera turns): 1 for a distance that is not a number.
     float ScaleAtDistance(float yalms, float minScale, float maxScale);
     // A plate sized by its own name, yours or any without the scene camera (shadows off): ScaleAtDistance of the
     // name's yalms from the camera, which its depth gives, so neither the game's steps nor a frame it draws a name at
-    // another size move it; DistanceScale of the name's height where the depth says nothing.
+    // another size move it. Where the depth says nothing, the name's height against letters a 180th of the screen
+    // tall, unrounded so it changes as smoothly as the game's names. Both within the two limits.
     float NameScale(float depth, float letterHeight, float screenHeight, float minScale, float maxScale);
     // How far the camera sits behind you, in yalms, which every other plate adds to its owner's distance from you:
     // your own name's distance from the camera, which its depth gives and which the game draws every frame, else the
@@ -135,17 +126,14 @@ namespace headsup
     // now) when it scales with distance, else FixedRasterHeight's, and never below its height setting, so that each
     // step of its width is a pixel of the picture and none rounds to the width before it.
     int CursorRaster(float shown, int current, bool scales, int height);
-    // Whether an image whose ink is width by height, with halo pixels around it, fits a texture of this side.
-    bool FitsTexture(int width, int height, int halo, int side);
-    // The height to try so the image fits: raster when the image drawn at it fits, else raster scaled down by what the
-    // image is over, in whole pixels, not below the smallest step and never above raster.
-    int FittingRaster(int raster, int width, int height, int halo, int side);
     // An image as measured at one height: its ink box and the halo around it.
     struct ImageSize
     {
         int width = 0, height = 0, halo = 0;
     };
-    // The tallest height, raster at most, at which the image fits a texture of this side, or nothing when it fits at
-    // none. Letters are whole pixels wide at every height, so a scaled-down image is measured and scaled again.
+    // The tallest height, raster at most, at which the image (its ink and the halo around it) fits a texture of this
+    // side, or nothing when it fits at none. Too large, it is scaled down by what it is over, in whole pixels, not
+    // below the smallest step; letters are whole pixels wide at every height, so a scaled-down image is measured and
+    // scaled again.
     std::optional<int> RasterThatFits(int raster, int side, const std::function<ImageSize(int)>& measure);
 }

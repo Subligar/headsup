@@ -1,25 +1,23 @@
 #include "pointer_keys.h"
 #include "test.h"
 
-using namespace headsup;
+#include <algorithm>
 
-TEST(left_and_right_ctrl_shift_and_alt_are_one_key_each)
-{
-    CHECK_EQ(NormalizeKey(0xA2), 0x11); // left Ctrl
-    CHECK_EQ(NormalizeKey(0xA3), 0x11);
-    CHECK_EQ(NormalizeKey(0xA0), 0x10); // left Shift
-    CHECK_EQ(NormalizeKey(0xA5), 0x12); // right Alt
-    CHECK_EQ(NormalizeKey(0x51), 0x51); // Q
-}
+using namespace headsup;
 
 TEST(the_pointer_stays_only_while_every_key_held_is_one_to_keep)
 {
     const std::vector<uint8_t> keep = {0x11, 0x1B}; // Ctrl, Esc
-    CHECK(KeepsPointer({0x11}, keep));
-    CHECK(KeepsPointer({0x11, 0x1B}, keep));
-    CHECK(!KeepsPointer({0x11, 0x51}, keep)); // Ctrl+Q: Q hides
-    CHECK(!KeepsPointer({}, keep));           // a key already let go: as the game does
-    CHECK(!KeepsPointer({0x11}, {}));
+    const auto held = [](std::vector<uint8_t> keys) {
+        return [keys](uint8_t vk) { return std::ranges::find(keys, vk) != keys.end(); };
+    };
+    CHECK(KeepsPointer(held({0x11}), keep));
+    CHECK(KeepsPointer(held({0x11, 0xA2}), keep)); // Windows reports left Ctrl down as both Ctrl and left Ctrl
+    CHECK(KeepsPointer(held({0x11, 0x1B}), keep));
+    CHECK(KeepsPointer(held({0x11, 0x01}), keep)); // the left mouse button is no key
+    CHECK(!KeepsPointer(held({0x11, 0x51}), keep)); // Ctrl+Q: Q hides
+    CHECK(!KeepsPointer(held({}), keep));           // a key already let go: as the game does
+    CHECK(!KeepsPointer(held({0x11}), {}));
 }
 
 TEST(mouse_buttons_are_not_keys)
@@ -91,7 +89,11 @@ TEST(no_key_is_never_pressed)
 TEST(a_key_to_press_is_a_real_key_with_its_sides_as_one_or_none)
 {
     CHECK_EQ(BindableKey(kF10), kF10);
+    CHECK_EQ(BindableKey(0xA2), 0x11); // left Ctrl
     CHECK_EQ(BindableKey(0xA3), 0x11); // right Ctrl
+    CHECK_EQ(BindableKey(0xA0), 0x10); // left Shift
+    CHECK_EQ(BindableKey(0xA5), 0x12); // right Alt
+    CHECK_EQ(BindableKey(0x51), 0x51); // Q
     CHECK_EQ(BindableKey(0x02), 0);    // the right mouse button
     CHECK_EQ(BindableKey(0), 0);
     CHECK_EQ(BindableKey(0xFF), 0);    // past the last key

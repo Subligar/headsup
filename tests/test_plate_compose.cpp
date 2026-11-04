@@ -71,7 +71,7 @@ TEST(the_default_mob_design_composes_todays_three_lines)
     CHECK_EQ(OrnamentLineOf(plate).line, 2);
     CHECK_EQ(plate.ornamentColor, ToArgb(s.palette.aggression[static_cast<int>(Nature::Aggressive)]));
     CHECK_EQ(plate.lines[2].look.textSize, 15.0f);
-    CHECK_EQ(plate.lines[1].look.textSize, BasePixels(s, 85));
+    CHECK_EQ(plate.lines[1].look.textSize, 12.75f); // 85% of 15 px
     CHECK_EQ(plate.lines[0].look.iconSize, 16.0f); // the whole of the base icon size
     CHECK_EQ(plate.lines[0].source, 0);
 }
@@ -329,7 +329,7 @@ TEST(a_line_takes_the_style_of_the_line_it_syncs_with)
     mobs.lines[1].syncWith = 2;
     mobs.lines[1].textSize = 50;
     const ComposedPlate plate = ComposePlate(AggressiveMob(), kPlayer, s, kGame);
-    CHECK_EQ(plate.lines[1].look.textSize, BasePixels(s, 200));
+    CHECK_EQ(plate.lines[1].look.textSize, 30.0f); // 200% of 15 px
     CHECK_EQ(plate.lines[1].look.style, StyleBit(FontStyle::Bold) | StyleBit(FontStyle::Underline));
     CHECK_EQ(Rendered(plate.lines[1]), "Lv 17-20 EP-EM"); // its own text
 }
@@ -578,7 +578,7 @@ TEST(a_synced_line_follows_the_chain_to_the_style_it_shows)
     CHECK_EQ(plate.lines.size(), size_t{3});
     for (int i = 0; i < 2; ++i)
     {
-        CHECK_EQ(plate.lines[i].look.textSize, BasePixels(s, 200));
+        CHECK_EQ(plate.lines[i].look.textSize, 30.0f);
         CHECK_EQ(plate.lines[i].look.style, StyleBit(FontStyle::Bold) | StyleBit(FontStyle::Underline));
     }
     CHECK_EQ(Rendered(plate.lines[0]), "[006]");
@@ -595,8 +595,8 @@ TEST(a_sync_cycle_leaves_each_line_its_own_style)
     mobs.lines[1].textSize = 90;
     const ComposedPlate plate = Compose(AggressiveMob(), s);
     CHECK_EQ(plate.lines.size(), size_t{3});
-    CHECK_EQ(plate.lines[0].look.textSize, BasePixels(s, 60));
-    CHECK_EQ(plate.lines[1].look.textSize, BasePixels(s, 90));
+    CHECK_EQ(plate.lines[0].look.textSize, 9.0f); // 60% of 15 px
+    CHECK_EQ(plate.lines[1].look.textSize, 13.5f);
 }
 
 TEST(a_tag_that_renders_nothing_takes_one_space_with_it)
@@ -838,7 +838,7 @@ TEST(badge_tags_draw_what_the_icon_groups_and_badge_functions_give)
         std::vector<IconDraw> out;
         for (const BadgeGroup group : groups)
         {
-            const InfoIconSet set = InfoIconsOf(&ResistancesOf(*hunter), rules, group);
+            const InfoIconSet set = InfoIconsOf(InfoIconsFor(&ResistancesOf(*hunter), rules), group);
             for (int i = 0; i < set.count; ++i)
             {
                 IconDraw draw;

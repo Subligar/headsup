@@ -102,7 +102,8 @@ namespace headsup
         {
             SearchedPlayer p;
             uint32_t flags1 = kAnonymous;
-            while (bits.Has(kCodeBits) && !bits.OnlyPadding())
+            bool known      = true;
+            while (known && bits.Has(kCodeBits) && !bits.OnlyPadding())
             {
                 const uint32_t code = bits.Read(kCodeBits);
                 const auto field = [&](int width) { return bits.Has(width) ? std::optional(bits.Read(width)) : std::nullopt; };
@@ -117,9 +118,7 @@ namespace headsup
                         else return std::nullopt;
                     break;
                 }
-                case kArea:
-                    if (const auto zone = field(kAreaBits)) p.zone = static_cast<uint16_t>(*zone);
-                    break;
+                case kArea: field(kAreaBits); break;
                 case kJob:
                 {
                     const auto main = field(kJobBits), sub = field(kJobBits);
@@ -150,11 +149,10 @@ namespace headsup
                 case kComment:
                 case kFlags2: field(kWordBits); break;
                 case kLanguage: field(kLanguageBits); break;
-                default: return p.name.empty() ? std::nullopt : std::optional(p); // a field this reader does not know ends it
+                default: known = false; break; // a field this reader does not know ends it
                 }
             }
-            p.anonymous = (flags1 & kAnonymous) != 0;
-            if (p.anonymous) p.mainJob = p.subJob = p.mainLevel = p.subLevel = 0;
+            if ((flags1 & kAnonymous) != 0) p.mainJob = p.subJob = p.mainLevel = p.subLevel = 0;
             if (p.name.empty() || p.id == 0) return std::nullopt;
             return p;
         }

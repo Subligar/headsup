@@ -22,23 +22,6 @@ namespace headsup
 
         constexpr char kCopyMark = ':'; // between a widget's name and its copy's number in the settings file
 
-        std::optional<PanelWidget> WidgetNamed(const std::string& name)
-        {
-            const size_t mark = name.find(kCopyMark);
-            const std::string kind = name.substr(0, mark);
-            int copy = 0;
-            if (mark != std::string::npos)
-            {
-                const std::string number = name.substr(mark + 1);
-                if (number.empty() || number.size() > 1 || number[0] < '2' || number[0] > '0' + kMostCopies) return std::nullopt;
-                copy = number[0] - '1';
-            }
-            for (int w = 0; w < kBarWidgetCount; ++w)
-                if (kind == kWidgetNames[w] && (copy == 0 || HasCopies(static_cast<BarWidget>(w))))
-                    return PanelWidget{static_cast<BarWidget>(w), copy};
-            return std::nullopt;
-        }
-
         template <size_t N>
         std::vector<PanelWidget> Section(const BarWidget (&widgets)[N])
         {
@@ -46,7 +29,22 @@ namespace headsup
         }
     }
 
-    std::optional<PanelWidget> PanelWidgetNamed(const std::string& name) { return WidgetNamed(name); }
+    std::optional<PanelWidget> PanelWidgetNamed(const std::string& name)
+    {
+        const size_t mark = name.find(kCopyMark);
+        const std::string kind = name.substr(0, mark);
+        int copy = 0;
+        if (mark != std::string::npos)
+        {
+            const std::string number = name.substr(mark + 1);
+            if (number.empty() || number.size() > 1 || number[0] < '2' || number[0] > '0' + kMostCopies) return std::nullopt;
+            copy = number[0] - '1';
+        }
+        for (int w = 0; w < kBarWidgetCount; ++w)
+            if (kind == kWidgetNames[w] && (copy == 0 || HasCopies(static_cast<BarWidget>(w))))
+                return PanelWidget{static_cast<BarWidget>(w), copy};
+        return std::nullopt;
+    }
 
     PanelGroups Combine(const BarPlacement& placement, const CombineLinks& links)
     {
@@ -128,7 +126,7 @@ namespace headsup
             std::istringstream words(names[s]);
             for (std::string word; words >> word;)
             {
-                const std::optional<PanelWidget> w = WidgetNamed(word);
+                const std::optional<PanelWidget> w = PanelWidgetNamed(word);
                 if (w && OnTheBar(w->kind) && !std::exchange(placed[SlotOf(*w)], true)) placement[s].push_back(*w);
             }
         }

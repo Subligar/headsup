@@ -47,9 +47,8 @@ namespace headsup
     // The option the settings hold, or none when the player set the choice's fields some other way.
     std::optional<size_t> PickedOption(const SetupChoice& choice, const Settings& s);
 
-    // The kinds whose plates' lines the Nameplates step moves under Advanced, named in order by kSetupLineKindNames.
+    // The kinds whose plates' lines the Nameplates step moves under Advanced, named in order by the setup-line-kinds list.
     constexpr PlateKind kSetupLineKinds[]{PlateKind::Mobs, PlateKind::Players, PlateKind::Self};
-    constexpr WindowList kSetupLineKindNames = WindowList::SetupLineKinds;
 
     // The Top Panel step's Advanced on and off for each widget, in groups.
     struct SetupWidgetGroup
@@ -57,14 +56,14 @@ namespace headsup
         const char* key;
         std::span<const BarWidget> widgets; // named as the bar-widgets list names them
     };
-    // The groups' names, in order.
-    constexpr WindowList kSetupWidgetGroupNames = WindowList::SetupWidgetGroups;
+    // Named in order by the setup-widget-groups list.
     std::span<const SetupWidgetGroup> SetupWidgetGroups();
     // A widget turned off is off, and its copies leave the panel; turned on, its first copy shows.
     void SetWidgetShown(Settings& s, BarWidget widget, bool shown);
 
     // The file running Setup again copies the settings to first, beside them: named for the second it was made, with
     // a number after when taken(name) says that name is already a file, so no run writes over another's.
+    constexpr const char* kSetupBackupStem = "settings-before-setup-", *kSetupBackupExtension = ".ini";
     struct SetupTime
     {
         int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;

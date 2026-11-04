@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate src/generated/window_pieces.h and window_layout.inc from data/settings_window.json.
+"""Generate src/generated/window_pieces.h, window_layout.inc and window_file.inc from data/settings_window.json.
 
 The file holds the settings window's words and their order: its pages, the cards on each, the settings in each card,
 and the names and tips of options, rows and words. What each key is belongs to the code (PIECES): the file orders
@@ -157,7 +157,7 @@ PIECES = Pieces(
         'badge-font': Setting(), 'badge-numbers': Setting(options=3), 'count-your-accuracy': Setting(),
         'weak-color': Setting(), 'resist-color': Setting(),
         'status-resist-color': Setting(), 'immune-color': Setting(),
-        'weak-from': Setting(), 'resist-from': Setting(), 'max-elements': Setting(),
+        'weak-from': Setting(), 'resist-from': Setting(), 'max-elements': Setting(words={'none': True, 'all': True, 'some': False}),
         'status-table': Setting(unnamed=True, rows=rows(
             'paralyze', 'bind', 'silence', 'slow', 'poison', 'light-sleep', 'dark-sleep', 'blind', 'stun', 'gravity'),
             words={'weak': True, 'resist': True}),
@@ -173,7 +173,7 @@ PIECES = Pieces(
                                                     'hide': True, 'keep': True, 'row-tip': False}),
         # Top Panel and Widgets
         'theme': Setting(), 'window-type': Setting(options=9), 'window-border': Setting(), 'separators': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
-        'height': Setting(), 'text-size': Setting(), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'one-line': Setting(options=3), 'popup-size': Setting(),
+        'height': Setting(), 'text-size': Setting(words={'fits': True}), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'one-line': Setting(options=3), 'popup-size': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
         'theme-shape': Setting(options=4), 'theme-background': Setting(), 'theme-gradient': Setting(),
         'theme-top': Setting(), 'theme-bottom': Setting(), 'theme-border-color': Setting(),
@@ -199,9 +199,10 @@ PIECES = Pieces(
         'reset-all-settings': Setting(words={'note': True, 'reset-everything': True, 'keep-them': True}),
         'debug-report': Setting(words={'watch': True, 'stop': True, 'saved': True}),
         'logging': Setting(words={'file': True}),
-        'mobs-outlined': Setting(), 'meshes-outlined': Setting(), 'stencil-buffer': Setting(), 'nameplates': Setting(),
-        'drawn': Setting(), 'game-s-names': Setting(), 'frame-time': Setting(), 'last-save': Setting(),
-        'your-level': Setting(),
+        'mobs-outlined': Setting(), 'meshes-outlined': Setting(), 'stencil-buffer': Setting(words={'available': True, 'missing': True}), 'nameplates': Setting(),
+        'drawn': Setting(words={'in-scene': True, 'on-top': True}), 'game-s-names': Setting(words={'not-hooked': True}),
+        'frame-time': Setting(), 'last-save': Setting(words={'key': True, 'keys': True}),
+        'your-level': Setting(words={'unknown': True, 'sitting': True}),
     },
     lists={
         'plate-mode': List(4), 'outline-mode': List(4, extra={3: 'tipOnClaimRows'}), 'color-source': List(7),
@@ -214,8 +215,9 @@ PIECES = Pieces(
         'setup-widget-groups': List(4),
     },
     words={'switched-off': True, 'switch-off': True, 'switch-on': True, 'switched-off-top-panel': True,
-           'switched-off-headsup': True, 'key-add': True, 'key-waiting': True, 'always': True, 'never': True, 'conditions': True, 'checks-all': True, 'checks-none': True, 'checks-picked': True, 'local': True, 'themes-font': True,
-           'default-font': True, 'unused-tags-these': True, 'unused-tags-name': True, 'or': True,
+           'switched-off-headsup': True, 'key-add': True, 'key-waiting': True, 'always': True, 'never': True, 'conditions': True, 'checks-all': True, 'checks-none': True, 'checks-picked': True, 'local': True, 'themes': True,
+           'default': True, 'auto': True, 'reset-to-default': False, 'cutoff-off': True, 'weak-off': False,
+           'weak-rank': False, 'resist-off': False, 'resist-rank': False, 'unused-tags-these': True, 'unused-tags-name': True, 'or': True,
            'reload': True, 'export': True,
            'setup-title': True, 'setup-step': True, 'setup-start': True, 'setup-skip': True, 'setup-back': True,
            'setup-next': True, 'setup-finish': True, 'setup-custom': True, 'setup-zoom': True, 'setup-cancel': True, 'setup-warning': True,
@@ -563,7 +565,8 @@ def c_text(text) -> str:
 
 
 def generate(layout: Layout, pieces: Pieces = PIECES, text: str = ''):
-    """The enums of every piece the code draws, and the file's tables in its order with the file itself."""
+    """The enums of every piece the code draws, the file's tables in its order, and for a developer's build what a
+    reader of the file takes from the code, with the file itself."""
     with_rows = [key for key, setting in pieces.settings.items() if setting.rows]
     words = [(pascal(key), key) for key in pieces.words] + [
         (pascal(setting) + pascal(word), word) for setting in pieces.settings for word in pieces.settings[setting].words]
@@ -605,13 +608,12 @@ def generate(layout: Layout, pieces: Pieces = PIECES, text: str = ''):
 
     for listed in layout.lists:
         first = add_options(listed.options)
-        lists.append(f'    {{WindowList::{pascal(listed.key)}, "{listed.key}", {first}, {len(listed.options)}}},')
+        lists.append(f'    {{WindowList::{pascal(listed.key)}, {first}, {len(listed.options)}}},')
     all_cards = [card for page in layout.pages for card in page.cards] + layout.entity
     for card in all_cards:
-        switched = card.piece is not None and pieces.cards[card.piece].switch
         cards.append(f'    {{CardPiece::{pascal(card.piece) if card.piece else "Plain"}, "{card.key}", '
                      f'{c_text(card.name)}, {c_text(card.description)}, {bits(card.kinds)}, {len(settings)}, '
-                     f'{len(card.settings)}, {"true" if switched else "false"}}},')
+                     f'{len(card.settings)}}},')
         for s in card.settings:
             known = pieces.settings[s.key]
             first_option = add_options(s.options)
@@ -623,11 +625,10 @@ def generate(layout: Layout, pieces: Pieces = PIECES, text: str = ''):
             settings.append(f'    {{SettingPiece::{pascal(s.key)}, "{s.key}", {shared(s.name)}, {shared(s.tip)}, '
                             f'{text_by_kind(s.name)}, {text_by_kind(s.tip)}, {bits(s.kinds)}, '
                             f'{"true" if known.entity else "false"}, {first_option}, {len(s.options)}, {first_row}, '
-                            f'{len(s.rows)}, {"true" if known.rows_fixed else "false"}, {bits(known.kinds)}, '
-                            f'{"true" if s.indent else "false"}}},')
+                            f'{len(s.rows)}, {"true" if s.indent else "false"}}},')
             for word in s.words:
                 layout_words.append(f'    {{WindowWord::{pascal(s.key) + pascal(word.key)}, {c_text(word.name)}, '
-                                    f'{c_text(word.tip)}, "{word.key}", "{s.key}"}},')
+                                    f'{c_text(word.tip)}}},')
     entity_first = len(cards) - len(layout.entity)
     for page in layout.pages:
         first, count = (entity_first, len(layout.entity)) if page.key in KINDS else (
@@ -635,8 +636,7 @@ def generate(layout: Layout, pieces: Pieces = PIECES, text: str = ''):
         pages.append(f'    {{Page::{pieces.pages[page.key]}, "{page.key}", {c_text(page.name)}, '
                      f'{"true" if page.child else "false"}, {first}, {count}}},')
     for word in layout.words:
-        layout_words.append(f'    {{WindowWord::{pascal(word.key)}, {c_text(word.name)}, {c_text(word.tip)}, "{word.key}", '
-                            'nullptr},')
+        layout_words.append(f'    {{WindowWord::{pascal(word.key)}, {c_text(word.name)}, {c_text(word.tip)}}},')
 
     tables = ['// Generated by tools/gen_window.py from data/settings_window.json. Do not edit.']
     tables += [f'constexpr const char* kByKind{i}[] = {array};' for i, array in enumerate(by_kind)]
@@ -645,9 +645,21 @@ def generate(layout: Layout, pieces: Pieces = PIECES, text: str = ''):
                               ('kLayoutPages', 'LayoutPage', pages), ('kLayoutLists', 'LayoutList', lists),
                               ('kLayoutWords', 'LayoutWord', layout_words)):
         tables += [f'constexpr {kind} {name}[] = {{'] + lines + ['};']
-    tables += [f'constexpr const char* kLayoutVersion = {c_text(layout.version)};',
+    reader = ['// Generated by tools/gen_window.py from data/settings_window.json. Do not edit.',
+              '// What a reader of a developer\'s copy of the file takes from the code, and the file itself.',
+              'constexpr SettingRule kSettingRules[] = {']
+    reader += [f'    {{{"true" if s.rows_fixed else "false"}, {bits(s.kinds)}}},' for s in pieces.settings.values()]
+    reader += ['};', 'constexpr CardPiece kSwitchedCards[] = {']
+    reader += [f'    CardPiece::{pascal(key)},' for key, card in pieces.cards.items() if card.switch]
+    reader += ['};', 'constexpr ListKey kListKeys[] = {']
+    reader += [f'    {{WindowList::{pascal(key)}, "{key}"}},' for key in pieces.lists]
+    reader += ['};', 'constexpr WordKey kWordKeys[] = {']
+    reader += [f'    {{WindowWord::{pascal(key)}, "{key}", nullptr}},' for key in pieces.words]
+    reader += [f'    {{WindowWord::{pascal(setting) + pascal(word)}, "{word}", "{setting}"}},'
+               for setting in pieces.settings for word in pieces.settings[setting].words]
+    reader += ['};', f'constexpr const char* kLayoutVersion = {c_text(layout.version)};',
                f'constexpr const char* kLayoutText = {c_string(text)};']
-    return '\n'.join(header) + '\n', '\n'.join(tables) + '\n'
+    return '\n'.join(header) + '\n', '\n'.join(tables) + '\n', '\n'.join(reader) + '\n'
 
 
 def format_value(value, indent: int) -> str:
@@ -698,11 +710,12 @@ def main(argv) -> int:
     except (OSError, DataError) as error:
         print(f'gen_window: {error}', file=sys.stderr)
         return 1
-    header, tables = generate(layout, PIECES, text)
+    header, tables, reader = generate(layout, PIECES, text)
     out = root / 'src' / 'generated'
     out.mkdir(parents=True, exist_ok=True)
     (out / 'window_pieces.h').write_text(header, encoding='utf-8')
     (out / 'window_layout.inc').write_text(tables, encoding='utf-8')
+    (out / 'window_file.inc').write_text(reader, encoding='utf-8')
     cards = sum(len(page.cards) for page in layout.pages) + len(layout.entity)
     print(f'window: {len(layout.pages)} pages, {cards} cards, {len(PIECES.settings)} settings -> {out}')
     return 0

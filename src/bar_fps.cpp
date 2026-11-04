@@ -30,13 +30,8 @@ namespace headsup
         return averageMs > 0.0 ? static_cast<int>(std::lround(static_cast<double>(kMsPerSecond) / averageMs)) : 0;
     }
 
-    WidgetContent FpsWidget(const std::optional<FrameReport>& frames)
+    std::vector<Span> FpsFigures(const std::optional<FrameReport>& frames)
     {
-        WidgetContent w;
-        w.shown    = true;
-        w.title    = ListOf(Text(frames ? std::to_string(FramesPerSecond(frames->averageMs)) + " fps" : "-"));
-        w.hasPopup = frames.has_value();
-        w.figures  = true;
-        return w;
+        return ListOf(Text(frames ? std::to_string(FramesPerSecond(frames->averageMs)) + " fps" : "-"));
     }
 }

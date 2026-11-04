@@ -2,6 +2,7 @@
 
 #include "icons.h"
 #include "plate_settings.h"
+#include "player_status.h"
 #include "window_layout.h"
 
 #include <cstddef>
@@ -60,9 +61,20 @@ namespace headsup
         size_t at = std::string::npos;
         bool operator==(const RunCaret&) const = default;
     };
-    const char* TagName(Tag tag);  // "$name", as a line's text holds it
-    // The icon a player's status tag draws, which its chip shows too; nothing for a tag that is text or whose icons
-    // depend on the mob.
+    // What a tag is on a plate: text, a player's status icon while that status is on (its chip shows the icon too),
+    // a mob's badge group, or none of them.
+    struct TagEntry
+    {
+        Tag tag;
+        const char* name; // "$name", as a line's text holds it
+        uint8_t kinds;    // the kinds whose page offers it
+        bool text = false;
+        std::optional<Icon> icon = std::nullopt;
+        bool PlayerStatus::*status = nullptr;
+        std::optional<BadgeGroup> group = std::nullopt;
+    };
+    const TagEntry& EntryOf(Tag tag);
+    const char* TagName(Tag tag);
     std::optional<Icon> TagIcon(Tag tag);
     // The chips a kind's page offers, in order.
     std::vector<Tag> TagsFor(PlateKind kind);

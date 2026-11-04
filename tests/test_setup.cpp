@@ -216,7 +216,7 @@ TEST(a_widget_turned_off_takes_its_copies_with_it_and_turned_on_shows_its_first)
     const auto copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value() && Shows(s, *copy));
     SetWidgetShown(s, BarWidget::Currency, false);
-    CHECK(!Shown(s, BarWidget::Currency));
+    CHECK(!AnyCopyShown(s, BarWidget::Currency));
     SetWidgetShown(s, BarWidget::Party, true);
     CHECK(Shows(s, PanelWidget{BarWidget::Party}));
 }
@@ -224,7 +224,7 @@ TEST(a_widget_turned_off_takes_its_copies_with_it_and_turned_on_shows_its_first)
 TEST(each_choice_has_a_name_in_its_list_for_each_option)
 {
     ForEachChoice([&](const SetupChoice& choice) { CHECK_EQ(kWindowLayout.OptionsOf(choice.list).size(), choice.options.size()); });
-    CHECK_EQ(kWindowLayout.OptionsOf(kSetupWidgetGroupNames).size(), SetupWidgetGroups().size());
+    CHECK_EQ(kWindowLayout.OptionsOf(WindowList::SetupWidgetGroups).size(), SetupWidgetGroups().size());
 }
 
 TEST(a_setup_backup_is_named_for_the_second_it_was_made_and_never_takes_anothers_name)

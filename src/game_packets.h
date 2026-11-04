@@ -20,9 +20,21 @@ namespace headsup
     // Client to server: GP_CLI_COMMAND_REQCONQUEST, which the game sends when Region Info opens. Phoenix answers with
     // a kConquestPacket and a 0x071 (0x05a_reqconquest.cpp).
     constexpr uint16_t kConquestRequestPacket = 0x05A;
-    // Its bytes as Ashita's AddOutgoingPacket takes them, header and all: the id in the first word's low 9 bits, the
-    // size in 4-byte words (1: the header alone) in its high 7, then the sync word, which the game fills in.
-    constexpr std::array<uint8_t, 4> kConquestRequest = {0x5A, 0x02, 0x00, 0x00};
+    // A client packet's bytes as Ashita's AddOutgoingPacket takes them, header and all: the id in the first word's low
+    // 9 bits, the size in 4-byte words in its high 7, then the sync word, which the game fills in, and zeros.
+    template <size_t Size>
+    constexpr std::array<uint8_t, Size> RequestHeader(uint16_t id)
+    {
+        constexpr int kIdBits         = 9;
+        constexpr size_t kWordBytes   = 4;
+        const auto word               = static_cast<uint16_t>(id | Size / kWordBytes << kIdBits);
+        std::array<uint8_t, Size> bytes{};
+        bytes[0] = static_cast<uint8_t>(word);
+        bytes[1] = static_cast<uint8_t>(word >> 8);
+        return bytes;
+    }
+    constexpr size_t kBareHeaderBytes = 4; // a packet of its header alone
+    constexpr std::array<uint8_t, kBareHeaderBytes> kConquestRequest = RequestHeader<kBareHeaderBytes>(kConquestRequestPacket);
     constexpr uint16_t kInspectGeneralPacket = 0x0C9; // server to client: a check's equipment or general part
     constexpr uint16_t kInspectMessagePacket = 0x0CA; // server to client: a check's name, title and bazaar message
     constexpr uint16_t kTalkNumPacket        = 0x036; // server to client: a message from the zone's dialog
@@ -72,13 +84,12 @@ namespace headsup
         uint8_t percent = 0;
         bool operator==(const RegionShare&) const = default;
     };
-    constexpr int kContenderCount = 4; // the three nations and the beastmen
+    constexpr int kContenderNations = 4; // San d'Oria to the beastmen, as kAllNations has them
     // The largest share first, equal shares in Nation's order.
-    using RegionShares = std::array<RegionShare, kContenderCount>;
+    using RegionShares = std::array<RegionShare, kContenderNations>;
     // Nothing for a short packet, or for shares of more than 100 in all, which a layout other than Phoenix's would
     // give.
     std::optional<RegionShares> ParseRegionShares(const uint8_t* data, uint32_t size);
-    constexpr int kContenderNations = 4; // San d'Oria to the beastmen, as kAllNations has them
     constexpr uint8_t NationBit(Nation nation) { return static_cast<uint8_t>(1u << (static_cast<int>(nation) - 1)); }
     const char* NationName(Nation nation); // "San d'Oria", ...; "" for none
     uint32_t NationColor(Nation nation);

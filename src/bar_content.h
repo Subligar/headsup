@@ -162,13 +162,13 @@ namespace headsup
     }
     // "2d 8h", "8h 30m", "5m 09s", "9s": the two largest units, rounded up to the whole second.
     std::string SpanText(double seconds);
-    // "09:05"
-    // "21:07", or "9:07 PM" on a 12-hour clock.
-    // second is shown when it is 0 or more: "21:07:05", "9:07:05 PM".
     // A widget on one line: its second line before or after its title, dimmed, with its icons; or left off.
     void OneLine(WidgetContent& content, SubtitlePlace place);
 
+    // "21:07", or "9:07 PM" on a 12-hour clock.
+    // second is shown when it is 0 or more: "21:07:05", "9:07:05 PM".
     std::string ClockText(int hour, int minute, bool twentyFour, int second = -1);
+    // "09:05"
     std::string HourMinute(int hour, int minute);
     // A figure running low, and one gone wrong.
     constexpr uint32_t kWarningColor = 0xFFFFB347;

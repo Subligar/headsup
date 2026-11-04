@@ -19,7 +19,7 @@ namespace headsup
         FinishText();
         m_CameraRun = CameraRun(m_CameraRun, SceneCamera() != nullptr);
         ++m_Frame;
-        m_MeshDraws.clear();
+        m_MeshDraws.fill(0);
         m_TextFinished   = false;
         m_NamesThisFrame = false;
         m_CameraSeen     = false;
@@ -32,12 +32,6 @@ namespace headsup
         if (m_TextFinished) return;
         m_TextFinished  = true;
         m_MeshDrawsLast = m_MeshDraws;
-    }
-
-    uint32_t GameNames::MeshDraws(uint16_t index) const
-    {
-        const auto it = m_MeshDrawsLast.find(index);
-        return it == m_MeshDrawsLast.end() ? 0 : it->second;
     }
 
     void GameNames::ReadBackBufferSize()
@@ -94,7 +88,8 @@ namespace headsup
 
     void GameNames::OnDrawUP(const Tracker& tracker, const Settings& settings)
     {
-        if (!NameplatesOn(settings) || m_Device == nullptr || tracker.Actors().empty() || m_BackBufferWidth <= 0.0f) return;
+        if (m_CameraSeen || !NameplatesOn(settings) || m_Device == nullptr || tracker.Actors().empty() || m_BackBufferWidth <= 0.0f)
+            return;
         DWORD fvf = 0;
         if (!BoundFvf(m_Device, fvf)) return;
         if ((fvf & D3DFVF_POSITION_MASK) == D3DFVF_XYZ) CaptureCamera(tracker);

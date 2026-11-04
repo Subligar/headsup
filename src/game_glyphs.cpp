@@ -1,10 +1,5 @@
 #include "game_glyphs.h"
 
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <cstring>
-
 namespace headsup
 {
     uint32_t VertexCount(uint32_t primitiveType, uint32_t primitiveCount)

@@ -1,10 +1,10 @@
 #include "name_frame.h"
 
 #include "argb.h"
+#include "bytes.h"
 
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 
 namespace headsup
 {
@@ -32,30 +32,22 @@ namespace headsup
         constexpr float kNearPlane = 0.1f, kSizePerYalm = 5.12f, kSizeFar = 0.056f, kSizeSteps = 80.0f;
         // Names are drawn through a modulate-2x texture stage, so the frame's color is half what shows.
         constexpr uint32_t kNameModulate = 2;
-
-        template <typename T>
-        T At(const uint8_t* frame, uint32_t offset)
-        {
-            T value;
-            std::memcpy(&value, frame + offset, sizeof(value));
-            return value;
-        }
     }
 
     NameFrame ReadNameFrame(const uint8_t* frame)
     {
         NameFrame read;
-        read.caller     = At<uint32_t>(frame, kFrameCaller);
-        read.length     = At<uint32_t>(frame, kFrameLength);
-        read.x          = At<float>(frame, kFrameX);
-        read.y          = At<float>(frame, kFrameY);
-        read.depth      = At<float>(frame, kFrameDepth);
-        read.scaleX     = At<float>(frame, kFrameScaleX);
-        read.scaleY     = At<float>(frame, kFrameScaleY);
-        read.text       = At<uint32_t>(frame, kFrameText);
-        read.size       = At<float>(frame, kFrameSize);
-        read.color      = At<uint32_t>(frame, kFrameColor);
-        read.shellColor = At<uint32_t>(frame, kFrameShellColor);
+        read.caller     = ReadAt<uint32_t>(frame, kFrameCaller);
+        read.length     = ReadAt<uint32_t>(frame, kFrameLength);
+        read.x          = ReadAt<float>(frame, kFrameX);
+        read.y          = ReadAt<float>(frame, kFrameY);
+        read.depth      = ReadAt<float>(frame, kFrameDepth);
+        read.scaleX     = ReadAt<float>(frame, kFrameScaleX);
+        read.scaleY     = ReadAt<float>(frame, kFrameScaleY);
+        read.text       = ReadAt<uint32_t>(frame, kFrameText);
+        read.size       = ReadAt<float>(frame, kFrameSize);
+        read.color      = ReadAt<uint32_t>(frame, kFrameColor);
+        read.shellColor = ReadAt<uint32_t>(frame, kFrameShellColor);
         return read;
     }
 

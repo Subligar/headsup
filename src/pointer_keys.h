@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -9,12 +10,10 @@ namespace headsup
 {
     // Keys are Windows virtual-key codes, and left and right Ctrl, Shift and Alt are one key each.
     constexpr uint8_t kFirstKey = 0x08, kLastKey = 0xFE;
-    uint8_t NormalizeKey(uint8_t vk);
     bool MouseButton(uint8_t vk);
-
-    // FFXI hides its pointer when a key sets off one of its commands; it stays when every key held is one to keep.
-    bool KeepsPointer(const std::vector<uint8_t>& held, const std::vector<uint8_t>& keep);
-    constexpr size_t kMaxKeptKeys = 32;
+    // Whether a key down counts as held: not a mouse button, nor a sided Ctrl, Shift or Alt, which Windows reports
+    // with the plain one.
+    bool HeldKey(uint8_t vk);
 
     std::string KeyName(uint8_t vk);
 
@@ -36,15 +35,29 @@ namespace headsup
     template <typename Down>
     std::vector<uint8_t> HeldKeys(Down down)
     {
-        constexpr uint8_t kFirstSided = 0xA0, kLastSided = 0xA5;
         std::vector<uint8_t> held;
         for (unsigned vk = kFirstKey; vk <= kLastKey; ++vk)
         {
             const auto key = static_cast<uint8_t>(vk);
-            // The sided Ctrl, Shift and Alt are reported with the plain ones, which are kept.
-            if (MouseButton(key) || (key >= kFirstSided && key <= kLastSided) || !down(key)) continue;
-            held.push_back(key);
+            if (HeldKey(key) && down(key)) held.push_back(key);
         }
         return held;
     }
+
+    // FFXI hides its pointer when a key sets off one of its commands; it stays when every key held is one to keep.
+    // Allocates nothing: the game's command check calls it.
+    template <typename Down>
+    bool KeepsPointer(Down down, const std::vector<uint8_t>& keep)
+    {
+        bool any = false;
+        for (unsigned vk = kFirstKey; vk <= kLastKey; ++vk)
+        {
+            const auto key = static_cast<uint8_t>(vk);
+            if (!HeldKey(key) || !down(key)) continue;
+            if (std::find(keep.begin(), keep.end(), key) == keep.end()) return false;
+            any = true;
+        }
+        return any;
+    }
+    constexpr size_t kMaxKeptKeys = 32;
 }

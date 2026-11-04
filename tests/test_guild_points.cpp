@@ -1,5 +1,7 @@
 #include "guild_points.h"
+#include "bar_server_time.h"
 #include "test.h"
+#include "vanadiel.h"
 
 #include <string>
 
@@ -27,11 +29,10 @@ TEST(the_sites_answer_reads_as_each_craft_guilds_turn_ins_by_rank)
     CHECK_EQ(read->pattern, 7);
     const std::vector<GuildTurnIn>& fishing = read->guilds[0];
     CHECK_EQ(fishing.size(), static_cast<size_t>(2));
-    CHECK(fishing[0].rank == 0 && fishing[0].rankName == "Amateur" && fishing[0].item == 4443 &&
+    CHECK(fishing[0].rank == 0 && fishing[0].item == 4443 &&
           fishing[0].itemName == "Cobalt Jellyfish" && fishing[0].points == 24 && fishing[0].maxPoints == 1200);
     CHECK(fishing[1].rank == 1 && fishing[1].item == 4403);
     // The site's weaving is Clothcraft; an item it has no name for keeps its id.
-    CHECK_EQ(std::string(CraftGuildName(4)), "Clothcraft");
     const std::vector<GuildTurnIn>& cloth = read->guilds[4];
     CHECK(cloth.size() == 2 && cloth[1].item == 13 && cloth[1].itemName.empty());
     CHECK(read->guilds[1].empty());
@@ -62,4 +63,23 @@ TEST(the_saved_answer_keeps_the_day_in_japan_it_was_fetched_and_is_due_again_the
     CHECK(GuildPatternsDue(std::nullopt, kBeforeReset));
     CHECK(!ReadGuildPatternsFile("not a day\n{}"));
     CHECK(!ReadGuildPatternsFile(""));
+}
+
+TEST(the_guild_asks_each_rank_for_a_rank_that_turns_daily_through_those_up_to_its_own)
+{
+    // Phoenix's guild.cpp: Novice to Veteran each hold a rank that steps once a day, wrapping past their own; below
+    // Novice counts as Novice. 2026-11-04 in Japan is day 9073 from the epoch, worked out from the server's own sums:
+    // Novice 9073 % 4, Apprentice % 5, Journeyman % 6, Craftsman % 7, Artisan % 8, Adept % 9, Veteran % 10.
+    constexpr int64_t kDayMs = 86'400'000;
+    constexpr int64_t kNov4  = kVanaEpochUnixMs + 9073 * kDayMs + 3 * 3'600'000;
+    const uint8_t nov4[kCraftRankCount] = {1, 1, 1, 1, 3, 1, 1, 1, 1, 3};
+    const uint8_t nov5[kCraftRankCount] = {2, 2, 2, 2, 4, 2, 2, 2, 2, 4};
+    for (uint8_t rank = 0; rank < kCraftRankCount; ++rank)
+    {
+        CHECK_EQ(AskedRank(rank, kNov4), nov4[rank]);
+        CHECK_EQ(AskedRank(rank, kNov4 + kDayMs), nov5[rank]);
+    }
+    // The day turns at midnight in Japan, as the server's does.
+    const int64_t lastOfNov4 = kVanaEpochUnixMs + 9074 * kDayMs - 1;
+    CHECK(AskedRank(4, lastOfNov4) == 3 && AskedRank(4, lastOfNov4 + 1) == 4);
 }

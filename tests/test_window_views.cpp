@@ -354,11 +354,12 @@ TEST(a_windows_buttons_are_read_with_their_places)
         memory.Put(node + 0x2C, &nodes[i].y, 2);
         memory.Put(node + 0x32, nodes[i].place.data(), 8);
     }
-    const std::vector<ButtonSpot> buttons = ButtonSpots(kMcd, memory.Access());
-    CHECK(buttons.size() == 2);
+    std::array<ButtonSpot, kMaxListLinks> buttons{};
+    CHECK(ButtonSpots(kMcd, memory.Access(), buttons) == 2);
     CHECK(buttons[0].node == kNodes && buttons[0].x == 54 && buttons[0].y == 243);
     CHECK((buttons[0].place == std::array<int16_t, 4>{39, 31, 359, 49}));
     CHECK(buttons[1].node == kNodes + 2 * kNode && buttons[1].y == 266);
+    CHECK(ButtonSpots(kMcd, memory.Access(), std::span(buttons).first(1)) == 1); // no more than there is room for
 }
 
 TEST(a_button_the_window_placed_itself_keeps_that_place_through_a_move)
@@ -385,5 +386,6 @@ TEST(a_window_list_that_loops_is_read_to_an_end)
     memory.Put32(kLink + 0x10, kNode);
     const uint16_t button = 1;
     memory.Put(kNode, &button, 2);
-    CHECK(ButtonSpots(kMcd, memory.Access()).size() == 1); // each button once, or a move would shift it twice
+    std::array<ButtonSpot, kMaxListLinks> buttons{};
+    CHECK(ButtonSpots(kMcd, memory.Access(), buttons) == 1); // each button once, or a move would shift it twice
 }

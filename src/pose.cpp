@@ -40,6 +40,39 @@ namespace headsup
             }
             return clip;
         }
+
+        bool RowAtHeight(const Camera& camera, const WorldPoint& feet, float height, float& row)
+        {
+            const ClipYW clip = ClipAt(camera, feet, height);
+            if (clip.w <= kNearestDepth) return false;
+            row = (1.0f - clip.y / clip.w) * 0.5f * camera.screenHeight;
+            return true;
+        }
+
+        bool HeightAtRow(const Camera& camera, const WorldPoint& feet, float row, float& height)
+        {
+            // A point's clip y and w are linear in its height above the feet, so the height solves directly.
+            const ClipYW base = ClipAt(camera, feet, 0.0f);
+            const ClipYW one  = ClipAt(camera, feet, 1.0f);
+            const float upY = one.y - base.y, upW = one.w - base.w;
+            const float ndc    = 1.0f - 2.0f * row / camera.screenHeight;
+            const float across = upY - ndc * upW;
+            if (base.w <= kNearestDepth || std::fabs(across) < kEndOn) return false;
+            height = (ndc * base.w - base.y) / across;
+            return true;
+        }
+
+        float PoseHeightShare(Pose pose)
+        {
+            switch (pose)
+            {
+                case Pose::Resting: return kRestingShare;
+                case Pose::Sitting: return kSittingShare;
+                case Pose::Chair: return kChairShare;
+                case Pose::Standing: break;
+            }
+            return 1.0f;
+        }
     }
 
     Pose PoseFromStatus(uint32_t status)
@@ -91,39 +124,6 @@ namespace headsup
     bool CameraStillSeen(uint32_t frame, uint32_t seenFrame)
     {
         return frame - seenFrame <= kCameraGraceFrames;
-    }
-
-    bool RowAtHeight(const Camera& camera, const WorldPoint& feet, float height, float& row)
-    {
-        const ClipYW clip = ClipAt(camera, feet, height);
-        if (clip.w <= kNearestDepth) return false;
-        row = (1.0f - clip.y / clip.w) * 0.5f * camera.screenHeight;
-        return true;
-    }
-
-    bool HeightAtRow(const Camera& camera, const WorldPoint& feet, float row, float& height)
-    {
-        // A point's clip y and w are linear in its height above the feet, so the height solves directly.
-        const ClipYW base = ClipAt(camera, feet, 0.0f);
-        const ClipYW one  = ClipAt(camera, feet, 1.0f);
-        const float upY = one.y - base.y, upW = one.w - base.w;
-        const float ndc    = 1.0f - 2.0f * row / camera.screenHeight;
-        const float across = upY - ndc * upW;
-        if (base.w <= kNearestDepth || std::fabs(across) < kEndOn) return false;
-        height = (ndc * base.w - base.y) / across;
-        return true;
-    }
-
-    float PoseHeightShare(Pose pose)
-    {
-        switch (pose)
-        {
-            case Pose::Resting: return kRestingShare;
-            case Pose::Sitting: return kSittingShare;
-            case Pose::Chair: return kChairShare;
-            case Pose::Standing: break;
-        }
-        return 1.0f;
     }
 
     float PosedNameRow(const Camera& camera, const WorldPoint& feet, float gameRow, Pose pose)

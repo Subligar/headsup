@@ -82,7 +82,7 @@ namespace headsup
     constexpr BarTheme kGameArtFallback = BarTheme::PhoenixGold;
     // The palette the bar is drawn with: the picked theme's, the player's own for Custom, or the skin's for Game
     // Window (kGameArtFallback's while none is read).
-    const BarPalette& PaletteFor(const Settings& settings, const GameSkinLook* skin = nullptr);
+    const BarPalette& PaletteFor(const Settings& settings, const GameSkinLook* skin);
 
     // The bar's fonts: the player's, or the theme's when they set none. Each name lasts as long as the process, for the
     // caches that keep it by reference.
@@ -119,7 +119,6 @@ namespace headsup
     float HelpBarLeft(const BarMetrics& metrics);
     // Clear above and below the help bar's row.
     float HelpBarPad(const BarMetrics& metrics);
-    // The help's text: the detail font at a widget's title size, so the row is one line of the bar's text.
     // The help bar's caption and help, at its own text size or the bar's title size.
     int HelpTextPixels(int setting, int barTitle);
     TextFace HelpCaptionFace(const BarLook& look);

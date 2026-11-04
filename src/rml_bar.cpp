@@ -30,7 +30,7 @@ namespace headsup
         m_Dividers = {};
         m_RightCap = nullptr;
         m_Help     = nullptr;
-        m_HelpRml.clear();
+        m_HelpDrawn.reset();
         ClosePopup();
     }
 
@@ -40,8 +40,9 @@ namespace headsup
         m_PopupDocument = nullptr;
         m_Popup         = nullptr;
         m_PopupMarked   = false;
-        m_PopupLeft = m_PopupTop = m_PopupWidth = m_PopupHeight = Px{};
+        m_PopupLeft = m_PopupTop = m_PopupWidth = m_PopupHeight = std::nullopt;
         m_SettingsBody.reset();
+        m_PopupWidths = {};
     }
 
     const RmlBar::FaceLine& RmlBar::FaceLineOf(RmlHost& host, const char* family, int pixels)
@@ -241,7 +242,7 @@ namespace headsup
         for (int d = 0; d < kDividerCount; ++d)
             m_Dividers[d].element = m_Document->GetElementById(DividerId(d));
         m_RightCap     = m_Document->GetElementById(kRightCapId);
-        m_RightCapLeft = Px{};
+        m_RightCapLeft.reset();
         m_Help         = m_Document->GetElementById(kHelpId);
         m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
         m_Visible = true;
@@ -253,10 +254,11 @@ namespace headsup
     {
         const BarMetrics& m = look.metrics;
         std::array<float, kPanelSlots> natural{};
+        widgets.panel = Panel(look.settings);
         for (int i = 0; i < kPanelSlots; ++i)
         {
             WidgetContent& c = widgets.contents[i];
-            c                = BarWidgetContent(WidgetInSlot(i), state, look.settings);
+            c                = BarWidgetContent(WidgetInSlot(i), state, look.settings, widgets.panel);
             widgets.hasPopup[i] = c.hasPopup; // kept off the panel, a combined widget's popup still joins its pill's
             if (!c.shown) continue;
             const BarLook own = LookOf(look, widgets, i);
@@ -294,7 +296,6 @@ namespace headsup
             2.0f * targetPadding + targetLook.Leading(target) +
             (target.title.empty() ? 0.0f
                                   : Width(host, Shortest(target.title.front().text, kFewLetters), targetLook.TitleFace()));
-        widgets.panel = Panel(look.settings);
         SharePopups(widgets.hasPopup, widgets.panel.group);
         const BarLayout layout = LayoutBar(screenWidth, m, look.palette.shape, natural, targetMinimum,
             widgets.panel.placement, look.settings.barSeparators, widgets.spacing, widgets.panel.group);
@@ -332,12 +333,12 @@ namespace headsup
             const PillJoins joins = JoinsOf(layout, widget);
             const WidgetSide before = SideOf(look, widget, shown.padded, joins.before);
             const WidgetSide after  = SideOf(look, widget, shown.padded, joins.after);
-            Set(shown.element, Rml::PropertyId::Left, shown.left.value, rect->x);
-            Set(shown.element, Rml::PropertyId::Width, shown.width.value, rect->width - before.margin - after.margin);
-            Set(shown.element, Rml::PropertyId::MarginLeft, shown.marginLeft.value, before.margin);
-            Set(shown.element, Rml::PropertyId::MarginRight, shown.marginRight.value, after.margin);
-            Set(shown.element, Rml::PropertyId::PaddingLeft, shown.paddingLeft.value, before.padding);
-            Set(shown.element, Rml::PropertyId::PaddingRight, shown.paddingRight.value, after.padding);
+            Set(shown.element, Rml::PropertyId::Left, shown.left, rect->x);
+            Set(shown.element, Rml::PropertyId::Width, shown.width, rect->width - before.margin - after.margin);
+            Set(shown.element, Rml::PropertyId::MarginLeft, shown.marginLeft, before.margin);
+            Set(shown.element, Rml::PropertyId::MarginRight, shown.marginRight, after.margin);
+            Set(shown.element, Rml::PropertyId::PaddingLeft, shown.paddingLeft, before.padding);
+            Set(shown.element, Rml::PropertyId::PaddingRight, shown.paddingRight, after.padding);
             shown.element->SetClass(kJoinBeforeClass, joins.before);
             shown.element->SetClass(kJoinAfterClass, joins.after);
             const PanelWidget head = widgets.panel.group[w];
@@ -360,11 +361,11 @@ namespace headsup
             const bool shown = d < layout.dividers.size();
             divider.element->SetClass(kHiddenClass, !shown);
             if (shown)
-                Set(divider.element, Rml::PropertyId::Left, divider.left.value,
+                Set(divider.element, Rml::PropertyId::Left, divider.left,
                     std::round(layout.dividers[d] - diamond / 2.0f));
         }
         const auto cap = static_cast<float>(WholePixels(m.diamond * kCapScale));
-        Set(m_RightCap, Rml::PropertyId::Left, m_RightCapLeft.value, std::round(screenWidth - m.cap / 2.0f - cap / 2.0f));
+        Set(m_RightCap, Rml::PropertyId::Left, m_RightCapLeft, std::round(screenWidth - m.cap / 2.0f - cap / 2.0f));
     }
 
     BarRect RmlBar::ShowHelpBar(RmlHost& host, const BarLook& look, const Rows& rows, const BarState& state, float top,
@@ -382,33 +383,36 @@ namespace headsup
             const float left           = HelpBarLeft(m);
             const float room           = HelpBarWidth(screenWidth, look.settings.helpBarWidth) - left -
                                2.0f * m.padding - (bagWidth > 0.0f ? bagWidth + m.gap : 0.0f);
-            const HelpBarText& text = m_HelpBar.Get(
+            const HelpBarFit& fit = m_HelpBar.Get(
                 HelpBarKey{*state.strip, captionFace.family, helpFace.family, WholePixels(captionFace.size),
                     WholePixels(helpFace.size), std::lround(std::floor(room * kFitSteps)),
                     std::lround(m.padding * kFitSteps)},
                 [&](const HelpBarKey& k) {
-                    return HelpBarLine(k.strip, static_cast<float>(k.room) / kFitSteps,
+                    HelpBarFit made{HelpBarLine(k.strip, static_cast<float>(k.room) / kFitSteps,
                         static_cast<float>(k.gap) / kFitSteps,
                         [&](const std::string& s) { return Width(host, s, captionFace); },
-                        [&](const std::string& s) { return Width(host, s, helpFace); });
+                        [&](const std::string& s) { return Width(host, s, helpFace); })};
+                    made.captionWidth = Width(host, made.text.caption, captionFace);
+                    made.helpWidth    = Width(host, made.text.help, helpFace);
+                    return made;
                 });
-            cut           = text.cut;
-            parts.caption = text.caption;
-            parts.help    = text.help;
+            cut           = fit.text.cut;
+            parts.caption = fit.text.caption;
+            parts.help    = fit.text.help;
             const float height = HelpBarHeight(look.settings.helpBarHeight, rows.helpBarHeight);
-            parts.row          = PlaceHelpBar(left, top, height, m.padding, m.gap,
-                Width(host, parts.caption, captionFace), bagWidth, Width(host, parts.help, helpFace));
+            parts.row          = PlaceHelpBar(left, top, height, m.padding, m.gap, fit.captionWidth, bagWidth, fit.helpWidth);
             // Where the player moved it from its place under the top bar.
             for (float* x : {&parts.row.box.x, &parts.row.captionX, &parts.row.bagX, &parts.row.helpX})
                 *x += offsetX;
         }
-        std::string rml = HelpBarRml(parts, look, rows.place);
-        if (m_Help != nullptr && rml != m_HelpRml)
+        const BarRect box = parts.row.box;
+        std::pair drawn{std::move(parts), look.settings.helpBarBackground};
+        if (m_Help != nullptr && drawn != m_HelpDrawn)
         {
-            m_Help->SetInnerRML(rml);
-            m_HelpRml = std::move(rml);
+            m_Help->SetInnerRML(HelpBarRml(drawn.first, look, rows.place));
+            m_HelpDrawn = std::move(drawn);
         }
-        return parts.row.box;
+        return box;
     }
 
     bool RmlBar::PopupDocumentFor(RmlHost& host, const BarLook& look)
@@ -444,6 +448,7 @@ namespace headsup
         {
             m_WidestFor = open;
             m_Widest    = 0.0f;
+            m_PopupWidths = {};
         }
         if (anchor == nullptr)
         {
@@ -461,8 +466,10 @@ namespace headsup
         auto measure = [&](const Span& s, PopupFont f) {
             const TextFace face  = look.FaceOf(f);
             const FaceLine& line = FaceLineOf(host, face.family, WholePixels(face.size));
-            return TextSize{Width(host, SteadyFigures(s.text, WidestDigitOf(host, face)), face), line.height, line.inkTop,
-                line.inkBottom, 0.0f};
+            const auto [width, fresh] =
+                m_PopupWidths[static_cast<size_t>(f)].try_emplace(SteadyFigures(s.text, WidestDigitOf(host, face)));
+            if (fresh) width->second = Width(host, width->first, face);
+            return TextSize{width->second, line.height, line.inkTop, line.inkBottom, 0.0f};
         };
         // The ornate panel's outer border and the line under the strip count: the gap is from them. The help bar's
         // popup goes under the help bar's box.
@@ -486,10 +493,10 @@ namespace headsup
             m_Popup->SetInnerRML(PopupRml(pl, look, m_PopupFaces));
             m_PopupMarked = true;
         }
-        Set(m_Popup, Rml::PropertyId::Left, m_PopupLeft.value, std::round(rect.x));
-        Set(m_Popup, Rml::PropertyId::Top, m_PopupTop.value, std::round(rect.y));
-        Set(m_Popup, Rml::PropertyId::Width, m_PopupWidth.value, rect.width);
-        Set(m_Popup, Rml::PropertyId::Height, m_PopupHeight.value, rect.height);
+        Set(m_Popup, Rml::PropertyId::Left, m_PopupLeft, std::round(rect.x));
+        Set(m_Popup, Rml::PropertyId::Top, m_PopupTop, std::round(rect.y));
+        Set(m_Popup, Rml::PropertyId::Width, m_PopupWidth, rect.width);
+        Set(m_Popup, Rml::PropertyId::Height, m_PopupHeight, rect.height);
         m_Popup->SetClass(kHiddenClass, hidden);
         m_Popup->SetClass(kOpenClass, !hidden);
         for (const PopupTabChip& chip : pl.chips)

@@ -25,7 +25,12 @@ namespace headsup
             return problem == std::errc{} && at == end ? std::optional<int>(value) : std::nullopt;
         }
 
-        constexpr float kTitleShare = 0.40f, kDetailShare = 0.33f, kPopupTextShare = 0.39f; // of H
+        // BarMetrics' shares of H; from heading on, of the H the popup's text size stands for.
+        constexpr float kTitleShare = 0.40f, kDetailShare = 0.33f, kPopupTextShare = 0.39f;
+        constexpr float kIconShare = 0.50f, kPaddingShare = 0.33f, kGapShare = 0.17f, kCapShare = 0.64f;
+        constexpr float kDiamondShare = 0.22f, kPillHeightShare = 0.80f, kPillRadiusShare = 0.17f, kBelowShare = 0.28f;
+        constexpr float kHeadingShare = 0.33f, kPopupPaddingShare = 0.36f, kRowGapShare = 0.11f;
+        constexpr float kOrnateRadiusShare = 0.11f, kPillsRadiusShare = 0.28f;
 
         // Alpha is the first byte: 0x1A is 10%, 0x33 20%, 0x59 35%, 0x80 50% and 0xF7 97%.
         constexpr BarPalette kPalettes[kFixedThemeCount] = {
@@ -74,13 +79,14 @@ namespace headsup
         const float u = popupText > kAutoPopupTextSize ? static_cast<float>(popupText) / kPopupTextShare : h;
         const bool setBar    = barText > kAutoBarTextSize;
         const float title    = setBar ? static_cast<float>(barText) : kTitleShare * h;
-        // At Auto exactly as before: a share of 0.33 H taken through the title could round a pixel the other way.
+        // At Auto a share of H: taken through the title, it could round a pixel the other way.
         const float subtitle = setBar ? title * kDetailShare / kTitleShare : kDetailShare * h;
         return BarMetrics{.height = h, .title = title, .subtitle = subtitle, .titleSet = setBar,
-            .icon = 0.50f * h, .padding = 0.33f * h, .gap = 0.17f * h, .cap = 0.64f * h, .diamond = 0.22f * h,
-            .pillHeight = 0.80f * h, .pillRadius = 0.17f * h, .below = 0.28f * h, .popupText = kPopupTextShare * u,
-            .heading = 0.33f * u, .popupPadding = 0.36f * u, .rowGap = 0.11f * u,
-            .panelRadius = (shape == BarShape::Ornate ? 0.11f : shape == BarShape::Window ? 0.0f : 0.28f) * u};
+            .icon = kIconShare * h, .padding = kPaddingShare * h, .gap = kGapShare * h, .cap = kCapShare * h,
+            .diamond = kDiamondShare * h, .pillHeight = kPillHeightShare * h, .pillRadius = kPillRadiusShare * h,
+            .below = kBelowShare * h, .popupText = kPopupTextShare * u, .heading = kHeadingShare * u,
+            .popupPadding = kPopupPaddingShare * u, .rowGap = kRowGapShare * u,
+            .panelRadius = (shape == BarShape::Ornate ? kOrnateRadiusShare : shape == BarShape::Window ? 0.0f : kPillsRadiusShare) * u};
     }
 
     const char* TitleFont(BarShape shape) { return shape == BarShape::Ornate ? kMarcellusSC : kDetailFont; }

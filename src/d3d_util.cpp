@@ -115,6 +115,7 @@ namespace headsup
             reinterpret_cast<const uint32_t*>(end & ~uintptr_t{3}), tracker, game.begin, game.end);
     }
 
+#ifdef HEADSUP_DEV
     __attribute__((noinline)) std::vector<StackOwner> OwnersOnStack(const Tracker& tracker)
     {
         const auto sp       = reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
@@ -135,4 +136,5 @@ namespace headsup
         }
         return found;
     }
+#endif
 }

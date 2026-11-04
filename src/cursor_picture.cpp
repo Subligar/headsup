@@ -10,7 +10,6 @@ namespace headsup
 {
     namespace
     {
-        constexpr size_t kBytesPerPixel = 4;
         constexpr float kPictureTip     = 0.5f;
 
         Image PictureOf(const CursorImage& cursor)

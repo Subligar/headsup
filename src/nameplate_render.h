@@ -53,7 +53,6 @@ namespace headsup
             int nameHeight;
             uint32_t nameColor;
             std::vector<ShownLine> lines; // the plate's lines, a design line's rows each
-            int lineCount;
         };
 
         void SetDevice(IDirect3DDevice8* device);
@@ -93,7 +92,7 @@ namespace headsup
         std::string TakeIconFailure();
 
     private:
-        // How a texture's text is drawn. A cursor's line font names its shape and its shadow color is its outline's.
+        // How a texture's text is drawn.
         struct TextLook
         {
             LineStyle line;
@@ -103,7 +102,7 @@ namespace headsup
             bool operator==(const TextLook&) const = default;
         };
 
-        // The ornament's and the cursor's text is empty; only the ornament has a width.
+        // The ornament's text is empty, and only it has a width.
         struct TextureKey
         {
             std::string text;
@@ -112,10 +111,20 @@ namespace headsup
             bool operator==(const TextureKey&) const = default;
         };
 
+        // What a cursor's picture is drawn from: a file's serial tells a file read again from the one before.
+        struct CursorKey
+        {
+            CursorStyle style = CursorStyle::Vanilla;
+            int fileSerial = 0, height = 0, width = 0, radius = 0;
+            uint32_t color = 0, edge = 0;
+            bool operator==(const CursorKey&) const = default;
+        };
+
         struct PlateTexture
         {
             IDirect3DTexture8* texture = nullptr;
-            TextureKey key;
+            TextureKey key;      // a text's or the ornament's
+            CursorKey cursorKey; // a cursor's
             float width  = 0.0f;
             float height = 0.0f;
             float u = 0.0f, v = 0.0f; // the image's share of its power-of-two texture
@@ -166,6 +175,11 @@ namespace headsup
             int rank;
         };
 
+        // What every plate of a frame is drawn with, and what its plates leave for the stacking.
+        struct PlateFrame;
+        // False once GDI or Direct3D refused a texture: no more plates are drawn this frame.
+        bool UpdatePlate(const ActorInfo& info, PlateFrame& frame);
+        void StackPlates(PlateFrame& frame);
         bool Prepare(PlateTexture& t, const char* text, const TextLook& look, int pixelHeight);
         // The icon's badge from the shared ones: null without one, and for every badge once one could not be made.
         const PlateTexture* PrepareBadge(const IconDraw& icon, const LineStyle& line, int pixelHeight);
@@ -177,7 +191,8 @@ namespace headsup
         int m_CursorFileSerial = 0;
         float m_CoveredTop     = 0.0f;
         bool m_KeepCursors     = true;
-        bool Upload(PlateTexture& t, const Image& image, TextureKey key);
+        // Puts the image in t, which then holds nothing else: its caller sets its key.
+        bool Upload(PlateTexture& t, const Image& image, int raster);
         // Marks t as holding this key with nothing to draw: its image fits no texture at the smallest height either.
         static void LeaveOut(PlateTexture& t, TextureKey key);
         void FailNames(std::string what);
@@ -199,8 +214,7 @@ namespace headsup
         std::vector<Shown> m_Shown;
         std::vector<CursorName> m_CursorNames;
         size_t m_PlateCursors = 0; // how many of them, the first ones, sit on a nameplate
-        PlateTexture m_LoneCursor;
-        PlateTexture m_LoneCursorUnder; // the target's own, while it is also the candidate being picked
+        std::vector<PlateTexture> m_LoneCursors; // by their place among the lone cursors drawn
         // Kept from plate to plate so measuring one allocates nothing: its lines as the layout takes them, the text
         // boxes of the line being measured, a badge for each of its icons (null without one), which texts are left out
         // and where each line's texts start among its design line's.

@@ -244,10 +244,10 @@ namespace
         return c <= 0.04045 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4);
     }
     // WCAG's relative luminance and contrast ratio.
-    double Luminance(uint32_t argb) { return 0.2126 * Linear(argb, 16) + 0.7152 * Linear(argb, 8) + 0.0722 * Linear(argb, 0); }
+    double WcagLuminance(uint32_t argb) { return 0.2126 * Linear(argb, 16) + 0.7152 * Linear(argb, 8) + 0.0722 * Linear(argb, 0); }
     double Contrast(uint32_t a, uint32_t b)
     {
-        const double la = Luminance(a), lb = Luminance(b);
+        const double la = WcagLuminance(a), lb = WcagLuminance(b);
         return (std::max(la, lb) + 0.05) / (std::min(la, lb) + 0.05);
     }
     // A color's hue in degrees, and how far from grey it is (its largest channel less its smallest, of 255).
@@ -268,7 +268,7 @@ TEST(the_palette_keeps_the_backgrounds_hue)
     const uint32_t blue = 0xFF1E2A6E;
     const BarPalette p  = SkinPalette(Colored(blue, 0xFF888888));
     CHECK(std::abs(Hue(p.accent) - Hue(blue)) < 2.0);
-    CHECK(Luminance(p.accent) > Luminance(blue) && Chroma(p.accent) >= Chroma(blue));
+    CHECK(WcagLuminance(p.accent) > WcagLuminance(blue) && Chroma(p.accent) >= Chroma(blue));
     const MenuColors m = SkinMenuColors(Colored(blue, 0xFF888888));
     CHECK(m.accent == p.accent && std::abs(Hue(m.control) - Hue(blue)) < 2.0);
 }
@@ -287,7 +287,7 @@ TEST(its_text_stands_out_from_its_background)
 TEST(a_grey_skin_gives_a_grey_accent)
 {
     const BarPalette p = SkinPalette(Colored(0xFF404040, 0xFF888888));
-    CHECK(Chroma(p.accent) <= 2 && Luminance(p.accent) > Luminance(0xFF404040));
+    CHECK(Chroma(p.accent) <= 2 && WcagLuminance(p.accent) > WcagLuminance(0xFF404040));
 }
 
 TEST(the_background_is_shaded_as_the_game_shades_it)

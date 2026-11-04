@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
+#include <cstring>
 
 namespace headsup
 {
@@ -39,6 +39,18 @@ namespace headsup
         });
     }
 
+    namespace
+    {
+        // As much of the name as its room holds, and the terminator.
+        template <size_t N>
+        void CopyName(char (&to)[N], const char* from)
+        {
+            const size_t length = strnlen(from, N - 1);
+            std::memcpy(to, from, length);
+            to[length] = '\0';
+        }
+    }
+
     void Tracker::Update(const std::vector<ActorInput>& actors, const PlayerState& player, const Settings& settings,
         const CursorTargets& targets)
     {
@@ -63,8 +75,8 @@ namespace headsup
             info.distance    = a.distance;
             info.pose        = a.pose;
             info.feet        = a.feet;
-            std::snprintf(info.name, sizeof(info.name), "%s", a.name);
-            std::snprintf(info.ownerName, sizeof(info.ownerName), "%s", a.ownerName);
+            CopyName(info.name, a.name);
+            CopyName(info.ownerName, a.ownerName);
             if (a.checked != nullptr) info.checked = *a.checked;
             info.status = a.status;
             info.jobs   = a.jobs;

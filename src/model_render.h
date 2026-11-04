@@ -21,14 +21,12 @@ namespace headsup
         IDirect3DTexture8* Texture() const { return m_Target; }
         float U() const { return m_U; }
         float V() const { return m_V; }
-        int Width() const { return m_Width; }
-        int Height() const { return m_Height; }
         void Release();
 
       private:
         IDirect3DTexture8* m_Target = nullptr;
         IDirect3DSurface8* m_Depth  = nullptr;
-        int m_Side = 0, m_Width = 0, m_Height = 0;
+        int m_Side = 0;
         float m_U = 1.0f, m_V = 1.0f;
     };
 

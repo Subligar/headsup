@@ -58,10 +58,10 @@ namespace headsup
     constexpr int kPanelSpacing = 0, kPanelPadding = kThemePadding;
     constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
 
-    // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
     // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
     enum class ConquestGrid : uint8_t { TwoByTwo, OneByFour };
     constexpr int kConquestGridCount = 2;
+    // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
     struct WidgetOptions
     {
         bool on         = false;
@@ -290,9 +290,9 @@ namespace headsup
     // have them.
     void UseHelpTextDefaults(Settings& s);
     bool BarOn(const Settings& s);
-    // A copy is on the panel and switched on; Shown for a widget asks whether any copy of it is.
+    // A copy is on the panel and switched on; AnyCopyShown asks whether any copy of a widget is.
     bool Shows(const Settings& s, PanelWidget widget);
-    bool Shown(const Settings& s, BarWidget widget);
+    bool AnyCopyShown(const Settings& s, BarWidget widget);
     // Another copy of a widget, after the last of its copies, shown and with that copy's settings but its Combine;
     // none when it has no more. Taking a copy off forgets its settings.
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);
@@ -325,18 +325,16 @@ namespace headsup
     class SettingsStore
     {
     public:
-        virtual ~SettingsStore()                                 = default;
-        virtual bool GetBool(const char* key, bool fallback)     = 0;
-        virtual float GetFloat(const char* key, float fallback)  = 0;
+        virtual ~SettingsStore()                                             = default;
         virtual std::string GetString(const char* key, const char* fallback) = 0;
-        virtual void Set(const char* key, const char* value)     = 0;
+        virtual void Set(const char* key, const char* value)                 = 0;
     };
 
     // Out-of-range values become the nearest limit; NaN and infinities become the default.
     Settings Clamp(Settings s);
     // Whether HeadsUp shows a pointer of its own in place of the game's: another icon, or the game's at another size.
     bool PointerSwapped(const Settings& s);
-    // The file's settings, with HeadsUp's defaults (default_settings.h) for every key it lacks.
+    // The file's settings; a new install's are HeadsUp's defaults (default_settings.h).
     Settings LoadSettings(SettingsStore& store);
     // What a new install has: Settings' own with default_settings.h over them.
     Settings DefaultSettings();
@@ -353,8 +351,6 @@ namespace headsup
         explicit ChangedKeys(SettingsStore& store)
             : m_Store(store)
         {}
-        bool GetBool(const char* key, bool fallback) override { return m_Store.GetBool(key, fallback); }
-        float GetFloat(const char* key, float fallback) override { return m_Store.GetFloat(key, fallback); }
         std::string GetString(const char* key, const char* fallback) override { return m_Store.GetString(key, fallback); }
         void Set(const char* key, const char* value) override;
         // LoadSettings, after asking the store for the text it holds for every key a save writes, so the next save

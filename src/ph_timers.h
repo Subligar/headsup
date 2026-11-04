@@ -73,7 +73,6 @@ namespace headsup
     private:
         struct Timer
         {
-            uint32_t serverId;
             std::string nmName;
             double dueAt;
         };

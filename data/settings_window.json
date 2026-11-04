@@ -289,7 +289,14 @@
             {"key": "title-font", "name": "Title Font"},
             {"key": "text-font", "name": "Default Font"},
             {"key": "height", "name": "Height"},
-            {"key": "text-size", "name": "Base Font Size", "tip": "Auto follows the height. Too large for two lines, the second line goes as One Line says."},
+            {
+              "key": "text-size",
+              "name": "Base Font Size",
+              "tip": "Auto follows the height. Too large for two lines, the second line goes as One Line says.",
+              "words": [
+                {"key": "fits", "name": "{count} px ({total} fits)"}
+              ]
+            },
             {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Each widget can set its own on the Widgets page. Default is 0 px."},
             {"key": "widget-padding", "name": "Widget Padding", "tip": "The room inside every widget, from its edges to its text. Each widget can set its own on the Widgets page. Default is the theme's own."},
             {
@@ -594,13 +601,47 @@
             },
             {"key": "mobs-outlined", "name": "Mobs Outlined"},
             {"key": "meshes-outlined", "name": "Meshes Outlined"},
-            {"key": "stencil-buffer", "name": "Stencil Buffer"},
+            {
+              "key": "stencil-buffer",
+              "name": "Stencil Buffer",
+              "words": [
+                {"key": "available", "name": "available"},
+                {"key": "missing", "name": "missing: no outlines"}
+              ]
+            },
             {"key": "nameplates", "name": "Nameplates"},
-            {"key": "drawn", "name": "Drawn"},
-            {"key": "game-s-names", "name": "Game's Names"},
+            {
+              "key": "drawn",
+              "name": "Drawn",
+              "words": [
+                {"key": "in-scene", "name": "into the scene"},
+                {"key": "on-top", "name": "on top"}
+              ]
+            },
+            {
+              "key": "game-s-names",
+              "name": "Game's Names",
+              "words": [
+                {"key": "not-hooked", "name": "not hooked"}
+              ]
+            },
             {"key": "frame-time", "name": "Frame Time"},
-            {"key": "last-save", "name": "Last Save"},
-            {"key": "your-level", "name": "Your Level"}
+            {
+              "key": "last-save",
+              "name": "Last Save",
+              "words": [
+                {"key": "key", "name": "key"},
+                {"key": "keys", "name": "keys"}
+              ]
+            },
+            {
+              "key": "your-level",
+              "name": "Your Level",
+              "words": [
+                {"key": "unknown", "name": "unknown"},
+                {"key": "sitting", "name": "{count}, sitting"}
+              ]
+            }
           ]
         },
         {
@@ -800,7 +841,16 @@
         "settings": [
           {"key": "weak-from", "name": "Weak From", "tip": "The minimum weakness for which a badge is displayed."},
           {"key": "resist-from", "name": "Resist From", "tip": "The minimum resistance for which a badge is displayed."},
-          {"key": "max-elements", "name": "Max Elements", "tip": "The maximum number of element icons that can be shown."}
+          {
+            "key": "max-elements",
+            "name": "Max Elements",
+            "tip": "The maximum number of element icons that can be shown.",
+            "words": [
+              {"key": "none", "name": "None", "tip": "No element badges."},
+              {"key": "all", "name": "All", "tip": "Every element past the cutoffs."},
+              {"key": "some", "tip": "The {count} elements farthest from neutral."}
+            ]
+          }
         ]
       },
       {
@@ -1281,8 +1331,15 @@
     {"key": "checks-none", "name": "None"},
     {"key": "checks-picked", "name": "{count} Picked"},
     {"key": "local", "name": "Local"},
-    {"key": "themes-font", "name": "Theme's"},
-    {"key": "default-font", "name": "Default"},
+    {"key": "themes", "name": "Theme's"},
+    {"key": "default", "name": "Default"},
+    {"key": "auto", "name": "Auto"},
+    {"key": "reset-to-default", "tip": "Back to its default."},
+    {"key": "cutoff-off", "name": "Off"},
+    {"key": "weak-off", "tip": "No badges for weaknesses."},
+    {"key": "weak-rank", "tip": "A badge for weaknesses of rank {count} and stronger."},
+    {"key": "resist-off", "tip": "No badges for resistances."},
+    {"key": "resist-rank", "tip": "A badge for resistances of rank {count} and stronger."},
     {"key": "unused-tags-these", "name": "Put the {tags} tag on a line of the design to show these on a nameplate."},
     {"key": "unused-tags-name", "name": "Put the {tags} tag on a line of the design to show a name: the game's own is hidden where HeadsUp draws the nameplate."},
     {"key": "or", "name": "or"},

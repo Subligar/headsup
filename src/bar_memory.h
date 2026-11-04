@@ -42,7 +42,9 @@ namespace headsup
         bool operator==(const LinuxXIState&) const = default;
     };
 
-    WidgetContent MemoryWidget(const std::optional<MemoryReport>& memory);
-    PopupContent MemoryPopup(const std::optional<MemoryReport>& memory, std::optional<double> cpuPercent,
+    // The space used, amber or red as little is left; "-" before a report.
+    std::vector<Span> MemoryFigures(const std::optional<MemoryReport>& memory);
+    // The Memory card first, when there is a report.
+    std::vector<PopupSection> MemorySections(const std::optional<MemoryReport>& memory, std::optional<double> cpuPercent,
         const std::optional<FrameReport>& frames, const LinuxXIState& linuxxi);
 }

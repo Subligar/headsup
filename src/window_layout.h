@@ -65,9 +65,7 @@ namespace headsup
         uint8_t kinds;
         bool entity; // part of an entity's design: drawn for its page's kind
         int firstOption, optionCount, firstRow, rowCount;
-        bool rowsFixed;    // its rows come in the code's order
-        uint8_t codeKinds; // the kinds the code has it on, whatever the file says
-        bool indent;       // drawn in from the card's edge, under the setting it belongs to
+        bool indent; // drawn in from the card's edge, under the setting it belongs to
     };
     struct LayoutCard
     {
@@ -77,7 +75,6 @@ namespace headsup
         const char* about;
         uint8_t kinds;
         int firstSetting, settingCount;
-        bool switched; // its title's switch is the only one of its setting, so it cannot go
     };
     struct LayoutPage
     {
@@ -90,7 +87,6 @@ namespace headsup
     struct LayoutList
     {
         WindowList list;
-        const char* key;
         int firstOption, optionCount;
     };
     struct LayoutWord
@@ -98,8 +94,6 @@ namespace headsup
         WindowWord word;
         const char* name;
         const char* tip;
-        const char* key;
-        const char* setting; // the key of the setting it is a word of, none for the window's own
     };
 
     struct WindowLayout
@@ -123,8 +117,6 @@ namespace headsup
         const LayoutWord& WordOf(WindowWord word) const;
     };
     extern const WindowLayout kWindowLayout;
-    // data/settings_window.json as it was built in, and the plugin's version it is of.
-    extern const std::string_view kWindowFileText, kWindowFileVersion;
 
     // A word of the layout as text: a tip the file leaves out is none.
     inline std::string_view Said(const char* text) { return text != nullptr ? std::string_view(text) : std::string_view(); }

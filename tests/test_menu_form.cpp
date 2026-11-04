@@ -37,8 +37,6 @@ namespace
     {
     public:
         std::map<std::string, std::string> values;
-        bool GetBool(const char*, bool fallback) override { return fallback; }
-        float GetFloat(const char*, float fallback) override { return fallback; }
         std::string GetString(const char*, const char* fallback) override { return fallback; }
         void Set(const char* key, const char* value) override { values[key] = value; }
     };
@@ -922,7 +920,7 @@ TEST(an_edit_of_a_theme_color_makes_the_theme_custom_which_keeps_it)
     CHECK(w.settings.barTheme == BarTheme::Aurora && w.settings.customPalette == edited);
     w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
     w.Pass({{"theme-theme-look-theme-o-5", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::Custom && PaletteFor(w.settings) == edited);
+    CHECK(w.settings.barTheme == BarTheme::Custom && PaletteFor(w.settings, nullptr) == edited);
 }
 
 TEST(window_type_shows_while_the_games_art_is_in_use_and_picks_a_type_or_follows_the_game)
@@ -1074,4 +1072,16 @@ TEST(look_up_players_is_a_switch_beside_auto_check)
     CHECK(At(card, "entities-nameplates-auto-check") < At(card, "entities-nameplates-look-up-players"));
     CHECK(w.Pass({{"entities-nameplates-look-up-players", kClickEvent, ""}}).changed);
     CHECK(w.settings.lookUpPlayers);
+}
+
+TEST(the_theme_is_never_faint_after_a_faint_setting)
+{
+    Window w;
+    w.state.page = Page::Theme;
+    test::EditedLayout edited;
+    edited.MoveSetting("theme", "theme-look", 1); // after Window Type, which is faint without the game's art
+    w.layout       = edited.Layout();
+    const Form form = w.Pass();
+    CHECK(ClassOn(form, "theme-theme-look-window-type-label-row", kOffClass));
+    CHECK(!ClassOn(form, "theme-theme-look-theme-label-row", kOffClass));
 }

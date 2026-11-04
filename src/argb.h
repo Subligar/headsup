@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 
 namespace headsup
@@ -9,6 +10,7 @@ namespace headsup
     constexpr uint32_t kAlphaMask = 0xFF000000; // a D3DCOLOR's alpha byte
     constexpr uint32_t kBarGreen  = 0xFF6FE36F; // the bar's one green: wind, Windurst, a weapon skill's TP
     constexpr int kRedShift = 16, kGreenShift = 8, kBlueShift = 0, kAlphaShift = 24; // in a D3DCOLOR (A8R8G8B8)
+    constexpr int kBytesPerPixel = 4; // A8R8G8B8 textures and GDI's 32-bit bitmaps
 
     constexpr uint32_t Argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
     {
@@ -25,6 +27,18 @@ namespace headsup
     {
         const uint32_t scaled = (Channel(argb, kAlphaShift) * alpha + kOpaqueAlpha / 2) / kOpaqueAlpha;
         return (argb & ~kAlphaMask) | (scaled << kAlphaShift);
+    }
+
+    // WCAG's relative luminance of an sRGB color, its red, green and blue from 0 to 1.
+    inline float Luminance(float r, float g, float b)
+    {
+        const auto linear = [](float c) { return c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f); };
+        return 0.2126f * linear(r) + 0.7152f * linear(g) + 0.0722f * linear(b);
+    }
+    inline float Luminance(uint32_t argb)
+    {
+        const auto share = [&](int shift) { return static_cast<float>(Channel(argb, shift)) / static_cast<float>(kOpaqueAlpha); };
+        return Luminance(share(kRedShift), share(kGreenShift), share(kBlueShift));
     }
 
     // Half way to white, opaque: the ornament's diamond against its hairline.

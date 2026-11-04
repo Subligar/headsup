@@ -5,11 +5,6 @@
 
 namespace headsup
 {
-    namespace
-    {
-        constexpr uint8_t kNop = 0x90;
-    }
-
     uint32_t BranchOperand(uint32_t address, uint32_t to) { return to - (address + kBranchLength); }
 
     CodePatch Retarget(uint8_t* branch, uint32_t address, uint32_t to)

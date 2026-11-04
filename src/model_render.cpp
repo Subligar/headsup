@@ -49,10 +49,8 @@ namespace headsup
         const HRESULT bound = device->SetRenderTarget(surface, m_Depth);
         surface->Release();
         if (FAILED(bound)) return false;
-        m_Width  = width;
-        m_Height = height;
-        m_U      = static_cast<float>(width) / static_cast<float>(m_Side);
-        m_V      = static_cast<float>(height) / static_cast<float>(m_Side);
+        m_U = static_cast<float>(width) / static_cast<float>(m_Side);
+        m_V = static_cast<float>(height) / static_cast<float>(m_Side);
         D3DVIEWPORT8 viewport{0, 0, static_cast<DWORD>(width), static_cast<DWORD>(height), 0.0f, 1.0f};
         device->SetViewport(&viewport);
         device->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, background, 1.0f, 0);

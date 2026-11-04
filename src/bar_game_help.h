@@ -37,6 +37,7 @@ namespace headsup
     {
         BarRect box;
         float captionX = 0.0f, bagX = 0.0f, helpX = 0.0f;
+        bool operator==(const HelpBarRow&) const = default;
     };
     HelpBarRow PlaceHelpBar(float left, float top, float height, float padding, float gap, float captionWidth,
         float bagWidth, float helpWidth);

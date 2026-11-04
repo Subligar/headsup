@@ -1,3 +1,4 @@
+#include "currencies.h"
 #include "game_packets.h"
 #include "test.h"
 
@@ -260,6 +261,13 @@ TEST(a_containers_items_are_looked_for_within_the_slots_the_client_keeps)
     CHECK_EQ(LastItemSlot(81), 80u);
     CHECK_EQ(LastItemSlot(255), 80u); // a capacity the game never gives: no read past the array
     CHECK_EQ(LastItemSlot(0), 0u);    // a container you have no room in: no slot from 1 on
+}
+
+TEST(the_currency_requests_are_the_bytes_the_client_sends)
+{
+    // 0x10F and 0x115, each its header of one word alone.
+    CHECK((kCurrencies1RequestBytes == std::array<uint8_t, 4>{0x0F, 0x03, 0x00, 0x00}));
+    CHECK((kCurrencies2RequestBytes == std::array<uint8_t, 4>{0x15, 0x03, 0x00, 0x00}));
 }
 
 TEST(the_conquest_request_is_a_bare_header_naming_0x05a_and_one_word)

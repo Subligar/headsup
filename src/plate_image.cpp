@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 #include <iterator>
+#include <numbers>
 #include <utility>
 
 namespace headsup
@@ -18,8 +19,6 @@ namespace headsup
         const ShapePoint kArrowPoints[] = {{0.0f, 0.0f}, {1.0f, 0.0f}, {0.5f, 1.0f}};
         constexpr float kArrowAspect    = 0.8f;
         constexpr int kRowSamples       = 4; // per pixel row; columns are covered exactly
-        constexpr uint8_t kFullAlpha    = 0xFF;
-        constexpr float kFullCoverage   = static_cast<float>(kFullAlpha);
         constexpr float kSigmaPerBlur   = 0.5f; // a CSS blur radius is two standard deviations
         constexpr float kTapsPerSigma   = 3.0f;
         constexpr float kGlowOpacity    = 0.6f; // the mockup's glow color is at 60%
@@ -136,7 +135,7 @@ namespace headsup
             return Argb(channel(kAlphaShift), channel(kRedShift), channel(kGreenShift), channel(kBlueShift));
         }
 
-        uint32_t WithAlpha(uint32_t argb, float share)
+        uint32_t Faded(uint32_t argb, float share)
         {
             const auto alpha =
                 static_cast<uint8_t>(std::lround(Channel(argb, kAlphaShift) * std::clamp(share, 0.0f, 1.0f)));
@@ -181,10 +180,9 @@ namespace headsup
         constexpr float kStripMiddle = 0.55f;
         constexpr float kRimShade    = 0.6f; // a coin's rim, as a share of its color
         constexpr int kPixelSamples  = 8;         // across a pixel, each way: the star's and the reset arrow's
-        constexpr float kPi          = 3.14159265f;
         // The reset arrow, in shares of its square: its ring's middle from the center and its thickness, the eighth
         // of a turn left open, and the head's length and half its base.
-        constexpr float kResetRadius = 0.32f, kResetStroke = 0.11f, kResetGap = kPi / 4.0f;
+        constexpr float kResetRadius = 0.32f, kResetStroke = 0.11f, kResetGap = std::numbers::pi_v<float> / 4.0f;
         constexpr float kResetHeadLength = 0.26f, kResetHeadHalf = 0.17f;
         // The cog, in shares of its square: its hole, its ring and its teeth's reach from the center; teeth fill this
         // share of each tooth's turn.
@@ -236,7 +234,7 @@ namespace headsup
                 for (int x = 0; x < coverage.width; ++x)
                 {
                     uint8_t most = 0;
-                    for (int dy = -radius; dy <= radius && most < kFullAlpha; ++dy)
+                    for (int dy = -radius; dy <= radius && most < kOpaqueAlpha; ++dy)
                     {
                         for (int dx = -radius; dx <= radius; ++dx)
                         {
@@ -363,7 +361,7 @@ namespace headsup
         const int bottom = std::min(top + thickness, text.height);
         for (int y = std::max(top, 0); y < bottom; ++y)
             for (int x = margin; x < text.width - margin; ++x)
-                text.alpha[static_cast<size_t>(y * text.width + x)] = kFullAlpha;
+                text.alpha[static_cast<size_t>(y * text.width + x)] = kOpaqueAlpha;
     }
 
     int UnderlineThickness(int pixelHeight, int fontThickness)
@@ -483,7 +481,7 @@ namespace headsup
         image.argb.insert(image.argb.end(), static_cast<size_t>(line), bottomLine);
         if (under != 0) image.argb.push_back(underLine);
         for (int y = 0; y < fade; ++y)
-            image.argb.push_back(WithAlpha(below, 1.0f - static_cast<float>(y) / static_cast<float>(fade)));
+            image.argb.push_back(Faded(below, 1.0f - static_cast<float>(y) / static_cast<float>(fade)));
         return image;
     }
 
@@ -581,13 +579,13 @@ namespace headsup
     {
         const int s = std::max(1, size);
         Image image{s, s, std::vector<uint32_t>(static_cast<size_t>(s) * static_cast<size_t>(s), 0)};
-        const float side = static_cast<float>(s), half = side / 2.0f, period = 2.0f * kPi / kCogTeeth;
+        const float side = static_cast<float>(s), half = side / 2.0f, period = 2.0f * std::numbers::pi_v<float> / kCogTeeth;
         const auto inside = [&](float x, float y) {
             const float dx = x - half, dy = y - half, r = std::hypot(dx, dy) / side;
             if (r < kCogHole || r > kCogReach) return false;
             if (r <= kCogRing) return true;
             // From straight up, half a tooth either side of each tooth's middle.
-            const float along = std::fmod(std::atan2(dx, -dy) + 2.0f * kPi + period * kCogToothShare / 2.0f, period);
+            const float along = std::fmod(std::atan2(dx, -dy) + 2.0f * std::numbers::pi_v<float> + period * kCogToothShare / 2.0f, period);
             return along < period * kCogToothShare;
         };
         for (int y = 0; y < s; ++y)
@@ -711,7 +709,7 @@ namespace headsup
         for (int y = 0; y < height; ++y)
             for (int x = 0; x < width; ++x)
                 c.alpha[static_cast<size_t>((y + margin) * c.width + x + margin)] =
-                    static_cast<uint8_t>(std::lround(std::min(covered[static_cast<size_t>(y * width + x)], 1.0f) * 255.0f));
+                    static_cast<uint8_t>(std::lround(std::min(covered[static_cast<size_t>(y * width + x)], 1.0f) * kFullCoverage));
         return c;
     }
 }

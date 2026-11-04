@@ -136,11 +136,11 @@ namespace headsup
                 if (shown.index != info->index) continue;
                 std::fprintf(out, " | name %08X %dpx at (%.1f,%.1f)", static_cast<unsigned>(shown.nameColor), shown.nameHeight,
                     shown.nameX, shown.nameY);
-                for (int i = 0; i < shown.lineCount; ++i)
+                for (size_t i = 0; i < shown.lines.size(); ++i)
                 {
                     const auto& line = shown.lines[i];
-                    std::fprintf(out, " | line %d '%s' at (%.1f,%.1f) %d px, %d icons", i + 1, line.text.c_str(), line.x, line.y,
-                        line.height, line.icons);
+                    std::fprintf(out, " | line %d '%s' at (%.1f,%.1f) %d px, %d icons", static_cast<int>(i) + 1, line.text.c_str(),
+                        line.x, line.y, line.height, line.icons);
                 }
             }
             std::fprintf(out, "\n");

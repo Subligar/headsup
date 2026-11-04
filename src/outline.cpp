@@ -84,19 +84,19 @@ namespace headsup
 
     const ActorInfo* OutlineRenderer::CharacterMeshOwner(const Tracker& tracker, std::optional<uintptr_t> drawing)
     {
-        if (m_Device == nullptr || !IsCharacterModelDraw()) return nullptr;
-        if (!drawing) return FindOwnerOnStack(tracker);
-        return *drawing != 0 ? tracker.Find(static_cast<ActorPtr>(*drawing)) : nullptr;
+        const ActorInfo* owner = drawing && *drawing != 0 ? tracker.Find(static_cast<ActorPtr>(*drawing)) : nullptr;
+        if (m_Device == nullptr || (drawing && owner == nullptr) || !IsCharacterModelDraw()) return nullptr;
+        return drawing ? owner : FindOwnerOnStack(tracker);
     }
 
-    bool OutlineRenderer::DrawOutlined(D3DPRIMITIVETYPE type, UINT minIndex, UINT numVertices, UINT startIndex, UINT primCount,
+    void OutlineRenderer::DrawOutlined(D3DPRIMITIVETYPE type, UINT minIndex, UINT numVertices, UINT startIndex, UINT primCount,
         const ActorInfo& owner, const Settings& settings)
     {
         m_StencilAvailable = BoundSurfaceHasStencil();
         if (!m_StencilAvailable)
         {
             if (!m_StencilWarned) m_StencilWarned = m_StencilWarningPending = true;
-            return false;
+            return;
         }
 
         if (!m_ClearedThisFrame)
@@ -178,6 +178,5 @@ namespace headsup
         for (size_t i = 0; i < std::size(kSavedStages); ++i)
             m_Device->SetTextureStageState(kSavedStages[i].stage, kSavedStages[i].type, stages[i]);
         ++m_Meshes;
-        return true;
     }
 }

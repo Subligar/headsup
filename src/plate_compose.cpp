@@ -9,6 +9,7 @@
 #include "titles.h"
 
 #include <algorithm>
+#include <array>
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -23,6 +24,12 @@ namespace headsup
         constexpr const char* kLevelWord = "Level "; // before a player's level known without their job
 
         const LineDesign& StyleLine(const KindSettings& kind, int line) { return kind.lines[StyleLineOf(kind, line)]; }
+
+        // The percent of the base size as pixels.
+        float BasePixels(const Settings& s, int percent)
+        {
+            return static_cast<float>(s.baseSize) * static_cast<float>(percent) / kPercent;
+        }
 
         LineLook LookOf(const LineDesign& d, const EntityState& state, const Settings& s, uint32_t gameArgb)
         {
@@ -41,41 +48,6 @@ namespace headsup
             look.glowColor   = ResolveColor(d.glowColor, state, s.palette, gameArgb);
             look.align       = d.align;
             return look;
-        }
-
-        bool IsTextTag(Tag tag)
-        {
-            switch (tag)
-            {
-            case Tag::Name:
-            case Tag::Level:
-            case Tag::Con:
-            case Tag::Id:
-            case Tag::ServerId:
-            case Tag::Ph:
-            case Tag::Job:
-            case Tag::JobLevel:
-            case Tag::SubLevel:
-            case Tag::Owner:
-            case Tag::Title:
-                return true;
-            default:
-                return false;
-            }
-        }
-
-        PlateItem ItemOf(ItemKind kind)
-        {
-            PlateItem item;
-            item.kind = kind;
-            return item;
-        }
-        IconDraw DrawOf(Icon icon, std::optional<uint32_t> paint = std::nullopt)
-        {
-            IconDraw draw;
-            draw.icon  = icon;
-            draw.paint = paint;
-            return draw;
         }
 
         bool IsMob(const ActorInfo& info) { return info.state.kind == EntityKind::Mob; }
@@ -135,85 +107,68 @@ namespace headsup
             }
         }
 
-        bool PlayerHas(Tag tag, const PlayerStatus& status)
-        {
-            switch (tag)
-            {
-            case Tag::Gm: return status.gm;
-            case Tag::Mentor: return status.mentor;
-            case Tag::New: return status.newAdventurer;
-            case Tag::Sync: return status.levelSync;
-            case Tag::Away: return status.away;
-            case Tag::Linkshell: return status.linkshell;
-            case Tag::Bazaar: return status.bazaar;
-            case Tag::Seeking: return status.seekingParty;
-            default: return false;
-            }
-        }
-
         // A player's status icon that the kind's limit counts: every one but GM's, which is always drawn.
-        bool IsCountedIcon(Tag tag) { return tag != Tag::Gm && TagIcon(tag).has_value(); }
+        bool IsCountedIcon(Tag tag) { return tag != Tag::Gm && EntryOf(tag).icon.has_value(); }
 
-        bool IsBadgeTag(Tag tag)
+        // What a mob's badge tags draw from, figured once for every badge group on its plate.
+        struct MobBadges
         {
-            return tag == Tag::Weak || tag == Tag::Resist || tag == Tag::Status || tag == Tag::Immune;
-        }
-
-        BadgeGroup GroupOf(Tag tag)
+            InfoIconSet all;
+            RankNumbers numbers;
+        };
+        MobBadges BadgesOf(const ActorInfo& info, const PlayerState& player, const Settings& s)
         {
-            switch (tag)
-            {
-            case Tag::Weak: return BadgeGroup::Weak;
-            case Tag::Resist: return BadgeGroup::Resist;
-            case Tag::Status: return BadgeGroup::Status;
-            default: return BadgeGroup::Immune;
-            }
+            BadgeRules rules{.elementWeakRank = s.elementWeakRank, .elementResistRank = s.elementResistRank,
+                .maxElements = s.maxElements};
+            std::ranges::copy(s.statusBadges, rules.status);
+            return MobBadges{InfoIconsFor(info.mob ? &ResistancesOf(*info.mob) : nullptr, rules),
+                RankNumbers{s.rankDisplay, s.countAccuracy, player.caster ? &*player.caster : nullptr,
+                    info.mob ? MagicTargetOf(*info.mob, info.checked ? info.checked->level : 0) : std::nullopt}};
         }
 
         std::vector<IconDraw> TagIcons(Tag tag, const ActorInfo& info, const PlayerState& player, const Settings& s,
-            std::optional<BadgeRules>& badgeRules)
+            std::optional<MobBadges>& badges)
         {
             std::vector<IconDraw> out;
-            switch (tag)
-            {
-            case Tag::Detect:
+            const TagEntry& entry = EntryOf(tag);
+            if (tag == Tag::Detect)
             {
                 if (!IsMob(info)) return out;
                 const IconSet set = IconsFor(info.mob, s.detectionShown);
-                for (int i = 0; i < set.count; ++i) out.push_back(DrawOf(set.icons[i]));
+                for (int i = 0; i < set.count; ++i) out.push_back(IconDraw{.icon = set.icons[i]});
                 return out;
             }
-            case Tag::Weak:
-            case Tag::Resist:
-            case Tag::Status:
-            case Tag::Immune:
+            if (entry.group)
             {
                 if (!IsMob(info)) return out;
-                if (!badgeRules)
-                {
-                    badgeRules = BadgeRules{.elementWeakRank = s.elementWeakRank, .elementResistRank = s.elementResistRank,
-                        .maxElements = s.maxElements};
-                    std::ranges::copy(s.statusBadges, badgeRules->status);
-                }
-                const InfoIconSet set = InfoIconsOf(info.mob ? &ResistancesOf(*info.mob) : nullptr, *badgeRules, GroupOf(tag));
-                const RankNumbers numbers{s.rankDisplay, s.countAccuracy, player.caster ? &*player.caster : nullptr,
-                    info.mob ? MagicTargetOf(*info.mob, info.checked ? info.checked->level : 0) : std::nullopt};
+                if (!badges) badges.emplace(BadgesOf(info, player, s));
+                const InfoIconSet set = InfoIconsOf(badges->all, *entry.group);
                 for (int i = 0; i < set.count; ++i)
-                {
-                    IconDraw draw = DrawOf(set.icons[i].icon);
-                    draw.badge      = BadgeText(set.icons[i], numbers);
-                    draw.badgeColor = BadgeColor(set.icons[i].badge, s);
-                    out.push_back(std::move(draw));
-                }
+                    out.push_back(IconDraw{.icon = set.icons[i].icon, .badge = BadgeText(set.icons[i], badges->numbers),
+                        .badgeColor = BadgeColor(set.icons[i].badge, s)});
                 return out;
             }
-            default:
-                break;
-            }
-            const std::optional<Icon> icon = TagIcon(tag);
-            if (!icon || info.state.kind != EntityKind::Player || !info.status || !PlayerHas(tag, *info.status)) return out;
-            out.push_back(DrawOf(*icon, tag == Tag::Linkshell ? std::optional(info.linkshellArgb) : std::nullopt));
+            if (!entry.icon || !IsPlayer(info) || !info.status || !((*info.status).*entry.status)) return out;
+            out.push_back(IconDraw{.icon = *entry.icon, .paint = tag == Tag::Linkshell ? std::optional(info.linkshellArgb) : std::nullopt});
             return out;
+        }
+
+        // A design line's template as last parsed, parsed again only when its text changes (one thread composes).
+        const std::vector<Atom>& ParsedLine(PlateKind kind, int line, const std::string& text)
+        {
+            struct Parsed
+            {
+                std::string text;
+                std::vector<Atom> atoms;
+            };
+            static std::array<std::array<Parsed, kPlateLines>, kPlateKindCount> parsed;
+            Parsed& at = parsed[static_cast<size_t>(kind)][static_cast<size_t>(line)];
+            if (at.text != text)
+            {
+                at.atoms = ParseTemplate(text);
+                at.text  = text;
+            }
+            return at.atoms;
         }
 
         // Appends an atom's rendering: letters join the open text run, spaces beside an icon run become a gap.
@@ -226,12 +181,7 @@ namespace headsup
             bool badgeRun    = false; // the last icon run is a badge group's, which wraps apart from other icons
 
             bool AfterIcons() const { return !items.empty() && items.back().kind == ItemKind::Icons; }
-            void Space(size_t count)
-            {
-                PlateItem item = ItemOf(ItemKind::Space);
-                item.spaces    = static_cast<int>(count);
-                items.push_back(std::move(item));
-            }
+            void Space(size_t count) { items.push_back(PlateItem{.kind = ItemKind::Space, .spaces = static_cast<int>(count)}); }
 
             void Empty() { trimNext = pending.ends_with(kSpace); }
 
@@ -261,10 +211,7 @@ namespace headsup
                 {
                     const size_t last = pending.find_last_not_of(kSpace);
                     if (first > 0 && AfterIcons()) Space(first);
-                    PlateItem item = ItemOf(ItemKind::Text);
-                    item.text      = pending.substr(first, last - first + 1);
-                    item.name      = pendingName;
-                    items.push_back(std::move(item));
+                    items.push_back(PlateItem{.kind = ItemKind::Text, .text = pending.substr(first, last - first + 1), .name = pendingName});
                     if (last + 1 < pending.size() && iconFollows) Space(pending.size() - last - 1);
                 }
                 pending.clear();
@@ -279,11 +226,7 @@ namespace headsup
                 if (AfterIcons() && badgeRun == badges)
                     items.back().icons.insert(items.back().icons.end(), v.begin(), v.end());
                 else
-                {
-                    PlateItem item = ItemOf(ItemKind::Icons);
-                    item.icons     = std::move(v);
-                    items.push_back(std::move(item));
-                }
+                    items.push_back(PlateItem{.kind = ItemKind::Icons, .icons = std::move(v)});
                 badgeRun = badges;
             }
 
@@ -298,10 +241,8 @@ namespace headsup
         // the first line, else on a line of its own in the bottom line's look.
         void PutGmIcon(ComposedPlate& plate, const LineLook& bottomLook)
         {
-            PlateItem icon = ItemOf(ItemKind::Icons);
-            icon.icons.push_back(DrawOf(*TagIcon(Tag::Gm)));
-            PlateItem gap = ItemOf(ItemKind::Space);
-            gap.spaces    = 1;
+            PlateItem icon{.kind = ItemKind::Icons, .icons = {IconDraw{.icon = *TagIcon(Tag::Gm)}}};
+            const PlateItem gap{.kind = ItemKind::Space, .spaces = 1};
             for (ComposedLine& line : plate.lines)
                 if (const auto name = std::ranges::find_if(line.items, [](const PlateItem& item) { return item.name; });
                     name != line.items.end())
@@ -323,11 +264,6 @@ namespace headsup
             }
             plate.lines.push_back(ComposedLine{kBottomLine, {std::move(icon)}, bottomLook});
         }
-    }
-
-    float BasePixels(const Settings& s, int percent)
-    {
-        return static_cast<float>(s.baseSize) * static_cast<float>(percent) / kPercent;
     }
 
     namespace
@@ -372,7 +308,7 @@ namespace headsup
             std::ranges::replace(text, kDash, dash);
             return text;
         };
-        std::optional<BadgeRules> badgeRules;
+        std::optional<MobBadges> badges;
         int statusIcons = 0; // the plate's so far, of those its kind limits
         bool gmDrawn    = false;
         plate.lines.reserve(kPlateLines);
@@ -392,7 +328,7 @@ namespace headsup
                     plate.lines.push_back(ComposedLine{i, std::move(builder.items), look, static_cast<int>(plate.lines.size() - firstRow)});
                 builder = LineBuilder{};
             };
-            for (const Atom& atom : ParseTemplate(kind.lines[i].text))
+            for (const Atom& atom : ParsedLine(PlateKindOf(st), i, kind.lines[i].text))
             {
                 if (!atom.slot.empty() && atom.slot.front() == Tag::Break)
                 {
@@ -409,7 +345,7 @@ namespace headsup
                 for (const Tag tag : atom.slot)
                 {
                     if (drawn || (deadMob && tag != Tag::Name)) continue;
-                    if (IsTextTag(tag))
+                    if (EntryOf(tag).text)
                     {
                         const std::string text = TagText(tag, info, player);
                         drawn                  = !text.empty();
@@ -418,11 +354,11 @@ namespace headsup
                     }
                     const bool counted = IsCountedIcon(tag);
                     if (counted && statusIcons >= kind.maxIcons) continue;
-                    std::vector<IconDraw> icons = TagIcons(tag, info, player, s, badgeRules);
+                    std::vector<IconDraw> icons = TagIcons(tag, info, player, s, badges);
                     drawn                       = !icons.empty();
                     if (drawn && counted) ++statusIcons;
                     gmDrawn = gmDrawn || (drawn && tag == Tag::Gm);
-                    if (drawn) builder.Icons(std::move(icons), IsBadgeTag(tag));
+                    if (drawn) builder.Icons(std::move(icons), EntryOf(tag).group.has_value());
                 }
                 if (!drawn && !deadMob) builder.Empty();
             }
@@ -514,7 +450,8 @@ namespace headsup
         {
             if (item.kind != ItemKind::Text) continue;
             if (!text.empty()) text += kSpace;
-            text += WithDashes(item.text);
+            text += item.text;
         }
+        text = WithDashes(std::move(text));
     }
 }

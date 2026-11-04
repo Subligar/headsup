@@ -45,15 +45,6 @@ namespace headsup
         return result;
     }
 
-    std::vector<PanelWidget> WidgetTabs(const BarPlacement& placement)
-    {
-        std::vector<PanelWidget> tabs;
-        for (int slot = 0; slot < kPanelSlots; ++slot)
-            if (const PanelWidget w = WidgetInSlot(slot); OnTheBar(w.kind) && (w.copy == 0 || Placed(placement, w)))
-                tabs.push_back(w);
-        return tabs;
-    }
-
 
     int ClockZoneChoice(const std::optional<ClockZone>& zone) { return zone ? static_cast<int>(*zone) + 1 : 0; }
 

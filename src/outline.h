@@ -23,8 +23,8 @@ namespace headsup
         // the stack is searched instead.
         const ActorInfo* CharacterMeshOwner(const Tracker& tracker, std::optional<uintptr_t> drawing);
         // Marks the mesh in the stencil and draws its border around it, before the game's own draw of the mesh, which
-        // the caller lets through. False when there is no stencil to mark.
-        bool DrawOutlined(D3DPRIMITIVETYPE type, UINT minIndex, UINT numVertices, UINT startIndex, UINT primCount,
+        // the caller lets through. Nothing when there is no stencil to mark.
+        void DrawOutlined(D3DPRIMITIVETYPE type, UINT minIndex, UINT numVertices, UINT startIndex, UINT primCount,
             const ActorInfo& owner, const Settings& settings);
 
         uint32_t MeshesLastFrame() const { return m_MeshesLast; }

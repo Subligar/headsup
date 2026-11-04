@@ -6,17 +6,12 @@ namespace headsup
 {
     namespace
     {
-        constexpr uint32_t kMbPerGb = 1024;
         constexpr int kLuaColumns  = 4; // two addons a row, each a name and its size
 
         std::string MbText(uint32_t mb) { return Grouped(mb) + " MB"; }
-        std::string LeftText(uint32_t mb)
-        {
-            return mb >= kMbPerGb ? Printed("%.1f GB", static_cast<double>(mb) / kMbPerGb) : MbText(mb);
-        }
 
-        // The space left, in the color of how little it is.
-        Span LeftSpan(std::string text, Headroom headroom, Tone plenty)
+        // A figure in the color of how little space is left.
+        Span HeadroomSpan(std::string text, Headroom headroom)
         {
             switch (headroom)
             {
@@ -24,7 +19,7 @@ namespace headsup
             case Headroom::Low: return Colored(std::move(text), kWarningColor);
             case Headroom::Critical: return Colored(std::move(text), kAlarmColor);
             }
-            return Text(std::move(text), plenty);
+            return Text(std::move(text));
         }
 
         // One fix's figures; what it is when it never started or is switched off.
@@ -82,38 +77,24 @@ namespace headsup
         return Headroom::Plenty;
     }
 
-    WidgetContent MemoryWidget(const std::optional<MemoryReport>& memory)
+    std::vector<Span> MemoryFigures(const std::optional<MemoryReport>& memory)
     {
-        WidgetContent w;
-        w.shown   = true;
-        w.figures = true;
-        if (!memory)
-        {
-            w.title = ListOf(Text("-"));
-            return w;
-        }
-        const Headroom headroom = HeadroomOf(*memory);
-        const std::string used  = MbText(memory->usedMb);
-        w.title    = ListOf(headroom == Headroom::Critical ? Colored(used, kAlarmColor) : Text(used));
-        w.subtitle = ListOf(LeftSpan(LeftText(memory->leftMb) + " left", headroom, Tone::Dim));
-        w.hasPopup = true;
-        return w;
+        return ListOf(memory ? HeadroomSpan(MbText(memory->usedMb), HeadroomOf(*memory)) : Text("-"));
     }
 
-    PopupContent MemoryPopup(const std::optional<MemoryReport>& memory, std::optional<double> cpuPercent,
+    std::vector<PopupSection> MemorySections(const std::optional<MemoryReport>& memory, std::optional<double> cpuPercent,
         const std::optional<FrameReport>& frames, const LinuxXIState& linuxxi)
     {
-        PopupContent popup;
-        popup.title = ListOf(Text("Memory"));
+        std::vector<PopupSection> sections;
         if (memory)
         {
             const Headroom headroom = HeadroomOf(*memory);
-            PopupSection space;
+            PopupSection space{"Memory", {}};
             space.rows.push_back(Labeled("Used", Text(MbText(memory->usedMb))));
-            space.rows.push_back(Labeled("Left", LeftSpan(MbText(memory->leftMb), headroom, Tone::Normal)));
+            space.rows.push_back(Labeled("Left", HeadroomSpan(MbText(memory->leftMb), headroom)));
             space.rows.push_back(Labeled("Of", Text(MbText(memory->ceilingMb))));
             if (headroom != Headroom::Plenty) space.rows.push_back(LineOf("The game closes once none is left.", Tone::Dim));
-            popup.sections.push_back(std::move(space));
+            sections.push_back(std::move(space));
         }
         PopupSection processor{"Processor", {}};
         if (cpuPercent) processor.rows.push_back(Labeled("CPU", Text(Printed("%.0f%%", *cpuPercent) + " of one core")));
@@ -123,12 +104,12 @@ namespace headsup
             processor.rows.push_back(Labeled("Frame time", Text(Printed("%.1f ms", frames->averageMs))));
             processor.rows.push_back(Labeled("Slowest frame", Text(Printed("%.1f ms", frames->slowestMs))));
         }
-        if (!processor.rows.empty()) popup.sections.push_back(std::move(processor));
+        if (!processor.rows.empty()) sections.push_back(std::move(processor));
         if (linuxxi.report)
-            AddLinuxXI(popup.sections, *linuxxi.report);
+            AddLinuxXI(sections, *linuxxi.report);
         else if (linuxxi.otherVersion)
-            popup.sections.push_back(PopupSection{"LinuxXI", ListOf(LineOf("It sends report version " + std::to_string(*linuxxi.otherVersion) +
+            sections.push_back(PopupSection{"LinuxXI", ListOf(LineOf("It sends report version " + std::to_string(*linuxxi.otherVersion) +
                                                                      "; this HeadsUp reads " + std::to_string(kLinuxXIReportVersion) + ".", Tone::Dim))});
-        return popup;
+        return sections;
     }
 }

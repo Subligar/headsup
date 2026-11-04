@@ -11,9 +11,6 @@ namespace headsup
 
         int64_t FloorDiv(int64_t a, int64_t b) { return a / b - ((a % b != 0) && ((a < 0) != (b < 0)) ? 1 : 0); }
 
-        // Days since 1970-01-01 in Japan.
-        int64_t JstDay(int64_t unixMs) { return FloorDiv(unixMs + kJstOffsetMs, kMsPerDay); }
-
         // The days since 1970-01-01 of a date, and a date of them (Howard Hinnant's days_from_civil and
         // civil_from_days).
         int64_t DaysFromCivil(int64_t y, int m, int d)
@@ -112,14 +109,7 @@ namespace headsup
         }
     }
 
-    JstTime JstAt(int64_t unixMs)
-    {
-        const int64_t day   = JstDay(unixMs);
-        const int64_t inDay = unixMs + kJstOffsetMs - day * kMsPerDay;
-        const int64_t week  = ((day + kEpochWeekday) % kDaysPerWeek + kDaysPerWeek) % kDaysPerWeek;
-        return JstTime{static_cast<int>(week), static_cast<int>(inDay / kMsPerHour),
-            static_cast<int>(inDay % kMsPerHour / kMsPerMinute)};
-    }
+    int64_t JstDay(int64_t unixMs) { return FloorDiv(unixMs + kJstOffsetMs, kMsPerDay); }
 
     const char* ClockZoneName(ClockZone zone) { return kZones[static_cast<int>(zone)].name; }
 
@@ -142,7 +132,7 @@ namespace headsup
 
     double SecondsToTally(int64_t unixMs)
     {
-        return SecondsTo(JstDay(unixMs) + kDaysPerWeek - JstAt(unixMs).weekday, unixMs);
+        return SecondsTo(JstDay(unixMs) + kDaysPerWeek - ZoneAt(ClockZone::Japan, unixMs).weekday, unixMs);
     }
 
     std::string ZoneClockText(const ZoneTime& t, bool twentyFour, bool seconds)

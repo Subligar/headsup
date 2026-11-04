@@ -97,8 +97,8 @@ namespace headsup
         int16_t x = 0, y = 0;
         std::array<int16_t, 4> place{};
     };
-    // The buttons in a window's list as the game holds them.
-    std::vector<ButtonSpot> ButtonSpots(uint32_t mcd, const ProcessMemory& memory);
+    // The buttons in a window's list as the game holds them, at most out.size(): returns how many it wrote.
+    size_t ButtonSpots(uint32_t mcd, const ProcessMemory& memory, std::span<ButtonSpot> out);
     // A move of the window lays each button out again at the window's corner plus its place, losing one the window put
     // elsewhere itself (Unity Information's Active and Inactive): the place that keeps it where it stands, if it needs one.
     std::optional<std::array<int16_t, 4>> PlaceKept(const ButtonSpot& button, int windowLeft, int windowTop);

@@ -41,16 +41,11 @@ namespace headsup
         bool ornamentUnder   = false;
     };
 
-    struct ItemPlace
-    {
-        float x = 0.0f, y = 0.0f;
-    };
-
     struct LinePlace
     {
-        std::vector<ItemPlace> items;
+        std::vector<ScreenPoint> items;
         float left = 0.0f, top = 0.0f, width = 0.0f, height = 0.0f;
-        ItemPlace ornament;
+        ScreenPoint ornament;
         float ornamentWidth = 0.0f, ornamentHeight = 0.0f; // 0 when the line has none
     };
 
@@ -59,7 +54,7 @@ namespace headsup
         std::vector<LinePlace> lines;
         float centerX = 0.0f, top = 0.0f;
         float timersY = 0.0f, timerStep = 0.0f;
-        CursorSpot cursor{};
+        ScreenPoint cursor{};
     };
 
     // Lines top to bottom: the last sits on the game's name and the rest stack above it, each a gap over the one under
@@ -69,11 +64,6 @@ namespace headsup
         float cursorHeight, float cursorTip, int timerCount, float timerHeight, float cursorRaise = 0.0f);
     PlateBox BoxOf(const PlateLayout& layout);
 
-    // Where an icon sits right of its row's first: past the before icons ahead of it, iconSize + kIconGap each, and
-    // the overhang of each of the badged ones among them.
-    float IconOffset(int before, int badged, float iconSize);
-    // A row of count icons, badges of them with a badge.
-    float IconRunWidth(int count, int badges, float iconSize);
     // An icon run in its item's box: rows of kIconsPerRow from the bottom up, rowStep apart, the lowest bottomRowTop
     // under the box's top; a partial row sits against the box's right edge when right is set, else its left.
     struct RunShape
@@ -87,7 +77,7 @@ namespace headsup
     // box is its own rows; without text every run takes the line's tallest rows and the hang of any badge on the line.
     RunShape ShapeOfRun(const ComposedLine& line, size_t item, float scale);
     // Icon i of the run, from its item's top left corner.
-    IconSpot IconInRun(const RunShape& shape, const PlateItem& run, size_t i);
+    ScreenPoint IconInRun(const RunShape& shape, const PlateItem& run, size_t i);
     // A composed line as LayoutPlate takes it, without an ornament: texts holds its Text items' boxes in order.
     void MeasureLine(const ComposedLine& line, std::span<const ItemSize> texts, float scale, LineInput& into);
 }

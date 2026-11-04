@@ -73,7 +73,7 @@ namespace headsup
     // The bar's markup and style: the strip across the screen, the ornate caps, a divider for each pair of
     // neighbours and every placed widget's element, all sized from the look, with the text rules of each widget in
     // own under its id. The widgets and dividers carry the hidden class and no place: the plugin shows and places them.
-    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own = {});
+    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own);
     std::string WidgetId(PanelWidget widget);
     // A widget's margin and padding on one side as its element takes them, for a room from its edge to what it
     // shows: inside a pill's or a frame's border, or past a plain ornate widget's margin. A side it shares in a
@@ -95,7 +95,6 @@ namespace headsup
     // Shares its pill with the widget before it, or after it, and has no edge or round corners on that side.
     constexpr const char* kJoinBeforeClass = "join-before";
     constexpr const char* kJoinAfterClass  = "join-after";
-    // A widget's inner markup: its icons, coin, title and detail lines in their colors, and its progress bar.
     // A meter's texts as wide as they are drawn, and where its parts go across it: its bar after barX, the texts
     // above and below centered on the bar.
     struct MeterWidths
@@ -109,9 +108,10 @@ namespace headsup
     };
     MeterPlace PlaceMeter(const Meter& meter, const MeterWidths& text, float gap);
 
+    // A widget's inner markup: its icons, coin, title and detail lines in their colors, and its progress bar.
     // columns: a widget of cells' column widths (CellColumns); meter: a meter's place (PlaceMeter).
-    std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns = {},
-        const MeterPlace& meter = {});
+    std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns,
+        const MeterPlace& meter);
     // A widget of cells' columns: each as wide as its widest cell, which width measures (title: on the first line).
     std::vector<float> CellColumns(const WidgetContent& content, FunctionRef<float(bool title, const Span&)> width);
     float CellsWidth(const std::vector<float>& columns, float gap);
@@ -123,6 +123,7 @@ namespace headsup
         HelpBarRow row;
         std::string caption, help;
         std::optional<Span> bag;
+        bool operator==(const HelpBarParts&) const = default;
     };
     std::string HelpBarRml(const HelpBarParts& parts, const BarLook& look, const BarTextPlace& place);
     constexpr const char* kHelpId = "help";
@@ -137,6 +138,7 @@ namespace headsup
         float drop = 0.0f;
         bool operator==(const PopupFace&) const = default;
     };
+    constexpr float kPercentWhole = 100.0f; // a share's whole, as RCSS percentages count it
     constexpr int kPopupFontCount = static_cast<int>(PopupFont::Pin) + 1;
     using PopupFaces = std::array<PopupFace, kPopupFontCount>;
     // The popups' document: an empty popup over the whole screen that takes no clicks, styled from the look.

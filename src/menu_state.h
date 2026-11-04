@@ -31,9 +31,6 @@ namespace headsup
     // ("Hide Level and Icons"); letters already capital stay.
     std::string TitleCaseText(std::string_view text);
 
-    // The Widgets page's tabs: every widget on the bar, in BarWidget's order, each with its other copies after it.
-    std::vector<PanelWidget> WidgetTabs(const BarPlacement& placement);
-
     // The Clock widget's Time Zone dropdown: the computer's own zone first, as no zone picked, then every ClockZone.
     constexpr int kClockZoneChoices = kClockZoneCount + 1;
     int ClockZoneChoice(const std::optional<ClockZone>& zone);

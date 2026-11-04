@@ -655,7 +655,7 @@ namespace
 
 TEST(the_connection_counters_are_found_through_the_readouts_two_loads_of_them)
 {
-    const NetStats found = LocateNetStats(NetClient().Text());
+    const GlobalSite found = LocateNetStats(NetClient().Text());
     CHECK(found.problem == LocateProblem::None);
     CHECK_EQ(found.global, 0x034C0000u + 0x4DFD98u);
 }
@@ -989,7 +989,7 @@ TEST(the_weather_is_found_once_by_its_effects_range_check)
     Image image;
     CHECK(LocateWeather(image.Text()).problem == LocateProblem::NoWeather);
     put(image, kWeatherRead);
-    const WeatherSite found = LocateWeather(image.Text());
+    const GlobalSite found = LocateWeather(image.Text());
     CHECK(found.problem == LocateProblem::None && found.global == kWeatherGlobal);
     put(image, kWeatherRead + 0x100);
     CHECK(LocateWeather(image.Text()).problem == LocateProblem::AmbiguousWeather);
@@ -1166,17 +1166,18 @@ TEST(an_owners_copy_of_its_windows_place_moves_with_the_window)
     // As read from the test client (2026-10-15): the Level box's owner keeps its window's rectangle at +0x14 exactly,
     // the craft skill list's keeps the same left, top and right with the list's full height.
     using Place = std::array<int16_t, 4>;
-    CHECK((MovedPlaceCopy(Place{16, 208, 128, 296}, Place{16, 208, 128, 296}, 0, 48) == Place{16, 256, 128, 344}));
-    CHECK((MovedPlaceCopy(Place{130, 48, 382, 184}, Place{130, 48, 382, 140}, 0, 48) == Place{130, 96, 382, 232}));
-    CHECK((MovedPlaceCopy(Place{130, 48, 382, 184}, Place{130, 48, 382, 140}, 6, -10) == Place{136, 38, 388, 174}));
+    using enum PlaceMatch;
+    CHECK((MovedPlaceCopy(Place{16, 208, 128, 296}, Place{16, 208, 128, 296}, 0, 48, Edges) == Place{16, 256, 128, 344}));
+    CHECK((MovedPlaceCopy(Place{130, 48, 382, 184}, Place{130, 48, 382, 140}, 0, 48, Edges) == Place{130, 96, 382, 232}));
+    CHECK((MovedPlaceCopy(Place{130, 48, 382, 184}, Place{130, 48, 382, 140}, 6, -10, Edges) == Place{136, 38, 388, 174}));
     // Whatever else an owner keeps there is left alone.
-    CHECK(!MovedPlaceCopy(Place{0, 48, 382, 184}, Place{130, 48, 382, 140}, 0, 48));
-    CHECK(!MovedPlaceCopy(Place{130, 49, 382, 184}, Place{130, 48, 382, 140}, 0, 48));
-    CHECK(!MovedPlaceCopy(Place{130, 48, 380, 184}, Place{130, 48, 382, 140}, 0, 48));
-    CHECK(!MovedPlaceCopy(Place{130, 48, 382, 20}, Place{130, 48, 382, 140}, 0, 48)); // a bottom above its top
+    CHECK(!MovedPlaceCopy(Place{0, 48, 382, 184}, Place{130, 48, 382, 140}, 0, 48, Edges));
+    CHECK(!MovedPlaceCopy(Place{130, 49, 382, 184}, Place{130, 48, 382, 140}, 0, 48, Edges));
+    CHECK(!MovedPlaceCopy(Place{130, 48, 380, 184}, Place{130, 48, 382, 140}, 0, 48, Edges));
+    CHECK(!MovedPlaceCopy(Place{130, 48, 382, 20}, Place{130, 48, 382, 140}, 0, 48, Edges)); // a bottom above its top
     // Where the class's layout says nothing, only a copy that is the window's rectangle exactly is taken for one.
-    CHECK((MovedPlaceCopy(Place{16, 48, 382, 104}, Place{16, 48, 382, 104}, 0, 16, PlaceMatch::Exact) == Place{16, 64, 382, 120}));
-    CHECK(!MovedPlaceCopy(Place{130, 48, 382, 184}, Place{130, 48, 382, 140}, 0, 48, PlaceMatch::Exact));
+    CHECK((MovedPlaceCopy(Place{16, 48, 382, 104}, Place{16, 48, 382, 104}, 0, 16, Exact) == Place{16, 64, 382, 120}));
+    CHECK(!MovedPlaceCopy(Place{130, 48, 382, 184}, Place{130, 48, 382, 140}, 0, 48, Exact));
 }
 
 TEST(an_owners_copy_of_an_entrys_corner_moves_with_the_window_while_it_is_inside_it)
@@ -1323,7 +1324,7 @@ namespace
 
 TEST(the_playonline_counts_are_found_through_the_network_windows_two_getters)
 {
-    const PlayOnlineSite found = LocatePlayOnline(PlayOnlineClient().Text());
+    const GlobalSite found = LocatePlayOnline(PlayOnlineClient().Text());
     CHECK(found.problem == LocateProblem::None);
     CHECK_EQ(found.global, 0x034C0000u + 0x4DF908u);
 }
@@ -1412,7 +1413,7 @@ TEST(the_fish_record_is_found_where_the_fish_packet_makes_it)
     Image image;
     CHECK(LocateFish(image.Text()).problem == LocateProblem::NoFish);
     PutFishSetup(image, kFishSetupRva, kIntuitionGlobal, kFishGlobal);
-    const FishSite found = LocateFish(image.Text());
+    const GlobalSite found = LocateFish(image.Text());
     CHECK(found.problem == LocateProblem::None);
     CHECK_EQ(found.global, kFishGlobal);
     PutFishSetup(image, kFishSetupRva + 0x1000, kIntuitionGlobal, kFishGlobal);
