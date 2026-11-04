@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <utility>
 #include <vector>
@@ -18,10 +19,14 @@ namespace headsup
     {
     public:
         // The entry for key, value-initialized when there was none, marked used in this frame.
-        Value& Use(const Key& key, uint32_t frame)
+        Value& Use(const Key& key, uint32_t frame) { return Use<Key>(key, frame); }
+        // The same for anything a Key compares with, such as a view of the text a Key owns: it is made into a Key only
+        // for a new entry.
+        template <typename Probe>
+        Value& Use(const Probe& key, uint32_t frame)
         {
             auto found = m_Entries.find(key);
-            if (found == m_Entries.end()) found = m_Entries.emplace(key, Entry{}).first;
+            if (found == m_Entries.end()) found = m_Entries.emplace(Key(key), Entry{}).first;
             found->second.used = frame;
             return found->second.value;
         }
@@ -60,6 +65,6 @@ namespace headsup
             Value value{};
             uint32_t used = 0;
         };
-        std::map<Key, Entry> m_Entries;
+        std::map<Key, Entry, std::less<>> m_Entries;
     };
 }
