@@ -804,3 +804,29 @@ TEST(a_dropdown_of_checks_toggles_each_bit_and_sums_up_what_is_picked)
     pass({{"p-c-shows-o-2", kClickEvent, ""}});
     CHECK(bits == 0 && TextOf(pass({}), "p-c-shows-val") == "None");
 }
+
+TEST(a_faint_dropdown_of_checks_takes_no_click_left_open)
+{
+    const LayoutOption options[] = {{"Mobs", "", nullptr}, {"Pets", "", nullptr}};
+    const std::span<const ShowCondition> conditions = ConditionsFor(PlateKind::Mobs);
+    FormState state;
+    uint32_t bits = 0b11;
+    LineShow show;
+    show.always     = false;
+    const auto pass = [&](const std::vector<FormEvent>& events, bool faded) {
+        Form form(events, state);
+        form.pageKey = "p";
+        form.BeginCard("C");
+        form.Fade(faded);
+        form.BitsDropdown("Shows", bits, options, nullptr);
+        form.ChecksDropdown("Show", show, conditions, nullptr);
+        form.EndCard();
+        return form;
+    };
+    pass({{"p-c-shows", kClickEvent, ""}}, false);
+    const Form bitsFaint = pass({{"p-c-shows-o-1", kClickEvent, ""}}, true);
+    CHECK(!bitsFaint.changed && bits == 0b11);
+    pass({{"p-c-show", kClickEvent, ""}}, false);
+    const Form checksFaint = pass({{"p-c-show-o-1", kClickEvent, ""}}, true);
+    CHECK(!checksFaint.changed && show.when == 0 && !show.always);
+}

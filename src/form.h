@@ -254,11 +254,11 @@ namespace headsup
         void ArgbSwatch(const char* label, uint32_t& argb, const char* tip);
         // A color pick: the dropdown of its source, then the swatch of a custom color.
         void ColorPickRow(const char* label, ColorPick& pick, const std::vector<ColorSource>& sources, const char* tip);
-        // When a line shows, as a dropdown of checks: Always, under which every condition reads checked, then each
-        // condition.
         // A dropdown of checks, one bit of bits each in the options' order. Closed, it says All, None, the one picked
         // or how many are.
         void BitsDropdown(const char* label, uint32_t& bits, std::span<const LayoutOption> options, const char* tip);
+        // When a line shows, as a dropdown of checks: Always, under which every condition reads checked, then each
+        // condition.
         void ChecksDropdown(const char* label, LineShow& show, std::span<const ShowCondition> conditions,
             const char* tip);
         // An X and a Y to type, side by side.
@@ -359,6 +359,11 @@ namespace headsup
         // An open swatch's popup: a slider for each of levels (red, green, blue and maybe alpha, 0 to 255) and the
         // first three as hex, to type. Moves the levels as the player does, and says which moved, a bit each.
         uint32_t Picker(const std::string& swatch, std::span<int> levels);
+        // A dropdown of checks' clicks while its popup is open, by the check's place, before the control is written
+        // so that its summary is what the click just made it.
+        void TakeChecks(const std::string& control, FunctionRef<void(int)> clicked);
+        // One check of its popup, start being the dropdown's control and kOptionIdInfix.
+        std::string CheckRow(const std::string& start, int index, const char* name, const char* tip, bool on);
         bool ListControl(const std::string& control, const std::string& shown, float width, const std::string& tip = {},
             bool markup = false);
         std::string ListRow(const std::string& control, int index, const std::string& name, bool picked,

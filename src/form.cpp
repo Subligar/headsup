@@ -626,22 +626,33 @@ namespace headsup
         EndRow();
     }
 
+    void Form::TakeChecks(const std::string& control, FunctionRef<void(int)> clicked)
+    {
+        const std::string start = control + kOptionIdInfix;
+        if (m_State.popup != control || m_Off) return;
+        for (const FormEvent& event : m_Events)
+            if (event.type == kClickEvent && event.id.compare(0, start.size(), start) == 0)
+                clicked(std::atoi(event.id.c_str() + start.size()));
+    }
+
+    std::string Form::CheckRow(const std::string& start, int index, const char* name, const char* tip, bool on)
+    {
+        const std::string id = start + std::to_string(index);
+        Set(id, FormValueKind::Class, "on", {}, on);
+        return "<div class=\"opt chk\" id=\"" + id + "\"" + TipAttribute(tip) + "><div class=\"dot\"></div>" + EscapedRml(name) +
+               "</div>";
+    }
+
     void Form::BitsDropdown(const char* label, uint32_t& bits, std::span<const LayoutOption> options, const char* tip)
     {
         Row(label, tip);
         const std::string control = Id(label);
-        const std::string start   = control + kOptionIdInfix;
         const auto count          = static_cast<int>(options.size());
-        // Before the control is written, so its summary is what the click just made it.
-        if (m_State.popup == control && !m_Off)
-            for (const FormEvent& event : m_Events)
-            {
-                if (event.type != kClickEvent || event.id.compare(0, start.size(), start) != 0) continue;
-                const int option = std::atoi(event.id.c_str() + start.size());
-                if (option < 0 || option >= count) continue;
-                bits ^= 1u << option;
-                changed = true;
-            }
+        TakeChecks(control, [&](int option) {
+            if (option < 0 || option >= count) return;
+            bits ^= 1u << option;
+            changed = true;
+        });
         int picked        = 0;
         const char* alone = nullptr;
         for (int option = 0; option < count; ++option)
@@ -659,12 +670,8 @@ namespace headsup
         {
             std::string rml = "<div class=\"list\">";
             for (int option = 0; option < count; ++option)
-            {
-                const std::string id = start + std::to_string(option);
-                rml += "<div class=\"opt chk\" id=\"" + id + "\"" + TipAttribute(options[static_cast<size_t>(option)].tip) +
-                       "><div class=\"dot\"></div>" + EscapedRml(options[static_cast<size_t>(option)].name) + "</div>";
-                Set(id, FormValueKind::Class, "on", {}, (bits & (1u << option)) != 0);
-            }
+                rml += CheckRow(control + kOptionIdInfix, option, options[static_cast<size_t>(option)].name,
+                    options[static_cast<size_t>(option)].tip, (bits & (1u << option)) != 0);
             popup = FormPopup{control, rml + "</div>"};
         }
         EndRow();
@@ -675,30 +682,18 @@ namespace headsup
     {
         Row(label, tip);
         const std::string control = Id(label);
-        const std::string start   = control + kOptionIdInfix;
-        // Before the control is written, so its summary is what the click just made it.
-        if (m_State.popup == control)
-            for (const FormEvent& event : m_Events)
-            {
-                if (event.type != kClickEvent || event.id.compare(0, start.size(), start) != 0) continue;
-                changed |= ToggleCondition(show, conditions, std::atoi(event.id.c_str() + start.size()));
-            }
+        TakeChecks(control, [&](int index) { changed |= ToggleCondition(show, conditions, index); });
         if (ListControl(control, ShowSummary(show, conditions, *layout), kControlWidth))
         {
-            std::string rml = "<div class=\"list\">";
-            const auto row  = [&](int index, const char* name, const char* tip, bool on) {
-                const std::string id = start + std::to_string(index);
-                rml += "<div class=\"opt chk\" id=\"" + id + "\"" + TipAttribute(tip) + "><div class=\"dot\"></div>" +
-                       EscapedRml(name) + "</div>";
-                Set(id, FormValueKind::Class, "on", {}, on);
-            };
+            const std::string start  = control + kOptionIdInfix;
             const LayoutWord& always = layout->WordOf(WindowWord::Always);
             const auto names         = layout->OptionsOf(WindowList::ShowCondition);
-            row(0, always.name, always.tip, show.always);
+            std::string rml          = "<div class=\"list\">" + CheckRow(start, 0, always.name, always.tip, show.always);
             for (size_t i = 0; i < conditions.size(); ++i)
             {
                 const LayoutOption& condition = names[static_cast<size_t>(conditions[i])];
-                row(static_cast<int>(i) + 1, condition.name, condition.tip, show.always || (show.when & ConditionBit(conditions[i])) != 0);
+                rml += CheckRow(start, static_cast<int>(i) + 1, condition.name, condition.tip,
+                    show.always || (show.when & ConditionBit(conditions[i])) != 0);
             }
             popup = FormPopup{control, rml + "</div>"};
         }
