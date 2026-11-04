@@ -476,6 +476,7 @@ namespace headsup
         {
             m_Pinned = m_Pinned == under ? std::nullopt : under;
             m_Settings.reset();
+            m_PinnedForSettings = false;
         }
         else if (!under && Open() && m_Popup.Contains(x, y))
         {
@@ -503,13 +504,21 @@ namespace headsup
             {
                 m_Pinned = m_Pinned == Open() ? std::nullopt : Open();
                 m_Settings.reset();
+                m_PinnedForSettings = false;
             }
             else if (m_CogChip.Contains(x, y))
             {
                 if (SettingsShown())
+                {
                     m_Settings.reset();
+                    if (m_PinnedForSettings) m_Pinned.reset();
+                    m_PinnedForSettings = false;
+                }
                 else
+                {
+                    m_PinnedForSettings = m_Pinned != Open();
                     m_Settings = m_Pinned = Open();
+                }
             }
         }
         return true;

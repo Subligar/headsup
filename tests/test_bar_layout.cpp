@@ -265,11 +265,28 @@ TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)
     input.Move(960.0f, 700.0f);
     input.SetPopup(popup, {}, {}, pin, cog);
     CHECK(input.SettingsShown() == BarWidget::Target);
-    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true)); // again: its content, still pinned
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true)); // again: its content, and unpinned, as the cog pinned it
+    CHECK(!input.SettingsShown() && !input.Pinned());
+    // Pinned by its pin first, it stays pinned when the cog closes its settings.
+    CHECK(input.Press(960.0f, 18.0f, true));
+    input.Move(960.0f, 700.0f);
+    CHECK(input.Pinned() == BarWidget::Target);
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
+    CHECK(input.SettingsShown() == BarWidget::Target);
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
     CHECK(!input.SettingsShown() && input.Pinned() == BarWidget::Target);
     input.Press(cog.x + 5.0f, cog.y + 5.0f, true);
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // unpinned, it shows its content again
     CHECK(!input.Pinned() && !input.SettingsShown());
+    // Settings opened by the cog, then pinned by hand: the pin is the player's now, and the cog leaves it.
+    input.Move(960.0f, 18.0f);
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // the pin's press unpins and ends the settings
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // pinned by hand
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
+    CHECK(input.Pinned() == BarWidget::Target);
+    input.Pin(std::nullopt);
     // As the settings window asks: shown and pinned, then closed.
     input.ShowSettings(BarWidget::VanaTime);
     CHECK(input.SettingsShown() == BarWidget::VanaTime && input.Pinned() == BarWidget::VanaTime);

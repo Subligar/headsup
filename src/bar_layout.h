@@ -175,13 +175,16 @@ namespace headsup
         {
             m_Pinned = widget;
             m_Settings.reset();
+            m_PinnedForSettings = false;
             m_Hover.reset();
         }
         // Pins this pill's popup on its settings, as a press on its settings chip does, or unpins and closes it.
         void ShowSettings(std::optional<PanelWidget> pill)
         {
+            const bool held = pill && m_Pinned == pill;
             Pin(pill);
-            m_Settings = pill;
+            m_Settings          = pill;
+            m_PinnedForSettings = pill && !held;
         }
         // The pill whose popup shows its settings now: the pinned one, while it is open. A press on its settings chip
         // or its pin goes back to its content.
@@ -221,6 +224,7 @@ namespace headsup
         std::optional<PanelWidget> m_Hover;  // the popup hovering keeps open
         std::optional<PanelWidget> m_Pinned;
         std::optional<PanelWidget> m_Settings; // the pinned pill, while its popup shows its settings
+        bool m_PinnedForSettings = false;      // its pin came with its settings, and goes when they close
     };
 
     // Which of the game's mouse messages the bar takes, by their Windows numbers: a press on the bar or its open
