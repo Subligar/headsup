@@ -236,7 +236,7 @@ namespace headsup
         Exact,
     };
     std::optional<WindowRect> MovedPlaceCopy(const WindowRect& copy, const WindowRect& window, int dx, int dy,
-        PlaceMatch match = PlaceMatch::Edges);
+        PlaceMatch match);
     constexpr uint32_t kUsualPlaceCopy = 0x14; // where most owners keep it
     // Where an owner keeps that copy, from the start of its class's layout (vtable slot kOwnerLayoutSlot), at at: the
     // displacement of `lea r, [base + disp8]` whose register it pushes for its call of MCD::GetRect, at getRect, with
