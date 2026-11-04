@@ -85,13 +85,10 @@ namespace headsup
     // of the room it is in.
     // groups: by SlotOf, the first widget of each one's pill (PanelGroups). The widgets of a pill touch, with no gap,
     // room or diamond between them, and are placed or dropped together.
-    inline constexpr std::array<float, kPanelSlots> kNoSpacing{};
     BarLayout LayoutBar(float screenWidth, const BarMetrics& metrics, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
-                        const BarPlacement& placement = DefaultPlacement(),
-                        BarSeparators separators = BarSeparators::Theme,
-                        const std::array<float, kPanelSlots>& spacing = kNoSpacing,
-                        const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups());
+                        const BarPlacement& placement, BarSeparators separators,
+                        const std::array<float, kPanelSlots>& spacing, const std::array<PanelWidget, kPanelSlots>& groups);
     // The widget under the point, or for a combined pill its first widget, which names the pill's popup.
     std::optional<PanelWidget> WidgetAt(const BarLayout& layout, float x, float y);
     const BarRect* RectOf(const BarLayout& layout, PanelWidget widget);

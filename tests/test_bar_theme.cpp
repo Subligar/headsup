@@ -54,12 +54,12 @@ TEST(the_themes_folder_lists_its_theme_files_by_name)
 
 TEST(sizes_follow_the_bar_height)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     CHECK(Near(m.height, 36.0f) && Near(m.title, 14.4f) && Near(m.subtitle, 11.88f) && Near(m.icon, 18.0f));
     // The pill leaves room above and below it for its text; the end cap, room either side of its diamond.
     CHECK(Near(m.pillHeight, 28.8f) && Near(m.cap, 23.04f));
-    CHECK(Near(MetricsFor(36, BarShape::Pills).panelRadius, 10.08f) && Near(m.panelRadius, 3.96f));
-    CHECK(Near(MetricsFor(200, BarShape::Pills).height, 64.0f) && Near(MetricsFor(1, BarShape::Pills).height, 24.0f));
+    CHECK(Near(MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize).panelRadius, 10.08f) && Near(m.panelRadius, 3.96f));
+    CHECK(Near(MetricsFor(200, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize).height, 64.0f) && Near(MetricsFor(1, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize).height, 24.0f));
     CHECK(std::string(TitleFont(BarShape::Ornate)) == "Marcellus SC" &&
           std::string(TitleFont(BarShape::Pills)) == kDetailFont);
 }

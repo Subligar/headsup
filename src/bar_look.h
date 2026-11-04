@@ -82,7 +82,7 @@ namespace headsup
     constexpr BarTheme kGameArtFallback = BarTheme::PhoenixGold;
     // The palette the bar is drawn with: the picked theme's, the player's own for Custom, or the skin's for Game
     // Window (kGameArtFallback's while none is read).
-    const BarPalette& PaletteFor(const Settings& settings, const GameSkinLook* skin = nullptr);
+    const BarPalette& PaletteFor(const Settings& settings, const GameSkinLook* skin);
 
     // The bar's fonts: the player's, or the theme's when they set none. Each name lasts as long as the process, for the
     // caches that keep it by reference.

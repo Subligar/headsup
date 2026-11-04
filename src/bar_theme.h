@@ -88,8 +88,7 @@ namespace headsup
         float panelRadius;  // by shape; none for the art's corners
         bool operator==(const BarMetrics&) const = default;
     };
-    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText = kAutoBarTextSize,
-        int popupText = kAutoPopupTextSize);
+    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText, int popupText);
 
     // Ornate titles are Marcellus SC; everything else is the bundled Barlow Condensed.
     const char* TitleFont(BarShape shape);

@@ -16,7 +16,7 @@ namespace
     BarLook LookOf(BarTheme theme, const Settings& settings, TextRow lines = {}, int height = 45)
     {
         const BarPalette& p = PaletteOf(theme);
-        const BarMetrics m  = MetricsFor(height, p.shape);
+        const BarMetrics m  = MetricsFor(height, p.shape, kAutoBarTextSize, kAutoPopupTextSize);
         return BarLook{p, settings, m, PillRow(m), lines, BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate,
             BarTextFont(settings), std::nullopt};
     }
@@ -27,13 +27,13 @@ namespace
 TEST(the_custom_theme_takes_the_settings_palette_and_starts_as_phoenix_gold)
 {
     Settings s;
-    CHECK(PaletteFor(s) == PaletteOf(BarTheme::PhoenixGold) && s.customPalette == PaletteOf(BarTheme::PhoenixGold));
+    CHECK(PaletteFor(s, nullptr) == PaletteOf(BarTheme::PhoenixGold) && s.customPalette == PaletteOf(BarTheme::PhoenixGold));
     s.customPalette.accent = 0xFF00FF00;
-    CHECK(PaletteFor(s) == PaletteOf(BarTheme::PhoenixGold)); // kept for when Custom is picked
+    CHECK(PaletteFor(s, nullptr) == PaletteOf(BarTheme::PhoenixGold)); // kept for when Custom is picked
     s.barTheme = BarTheme::Custom;
-    CHECK(PaletteFor(s).accent == 0xFF00FF00u && PaletteFor(s).stripTop == PaletteOf(BarTheme::PhoenixGold).stripTop);
+    CHECK(PaletteFor(s, nullptr).accent == 0xFF00FF00u && PaletteFor(s, nullptr).stripTop == PaletteOf(BarTheme::PhoenixGold).stripTop);
     s.barTheme = BarTheme::UmbraDark;
-    CHECK(PaletteFor(s) == PaletteOf(BarTheme::UmbraDark));
+    CHECK(PaletteFor(s, nullptr) == PaletteOf(BarTheme::UmbraDark));
 }
 
 TEST(each_tone_takes_its_color_on_the_bar_and_in_a_popup)
@@ -199,7 +199,7 @@ TEST(game_window_without_the_games_art_is_phoenix_gold)
 {
     Settings s;
     s.barTheme = BarTheme::GameWindow;
-    CHECK(PaletteFor(s) == PaletteOf(BarTheme::PhoenixGold));
+    CHECK(PaletteFor(s, nullptr) == PaletteOf(BarTheme::PhoenixGold));
 }
 
 namespace
@@ -260,7 +260,7 @@ TEST(a_window_from_a_panels_colors_reads_well_and_steps_up_from_its_page)
 
 TEST(a_widget_is_padded_and_spaced_as_the_panel_says_unless_it_has_its_own)
 {
-    const BarMetrics m = MetricsFor(45, BarShape::Pills);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     Settings s;
     WidgetOptions o;
     CHECK_EQ(WidgetPadding(m, s, o), m.padding); // the theme's
