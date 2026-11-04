@@ -35,10 +35,7 @@ namespace headsup
         constexpr float kSegmentGap   = 0.25f; // between two joined choices
         constexpr float kSegmentPad   = 0.3f;  // a choice's text from its sides, at the least
         constexpr float kFaint        = 0.45f; // the opacity of a held tag where it would go, and of one leaving
-    }
 
-    namespace
-    {
         // The accent's alpha where it is light and no fill: a slider's filled part and a hovered card's edge, the
         // title's glow, the line under it, a text box that has the keyboard, and the picked page from end to end.
         constexpr uint32_t kWash = 0x59, kGlow = 0x66, kLine = 0xB3, kFocus = 0x99, kPickedStart = 0x47, kPickedEnd = 0x14;
@@ -52,15 +49,6 @@ namespace headsup
         // A fill this bright or brighter (WCAG's relative luminance, of its gradient's two ends) takes dark text: the
         // gold, blue and cyan accents do, Phoenix's red does not.
         constexpr float kBrightFill = 0.3f;
-
-        float Luminance(uint32_t argb)
-        {
-            const auto linear = [&](int shift) {
-                const float v = static_cast<float>(Channel(argb, shift)) / 255.0f;
-                return v <= 0.03928f ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f);
-            };
-            return 0.2126f * linear(kRedShift) + 0.7152f * linear(kGreenShift) + 0.0722f * linear(kBlueShift);
-        }
 
         // The text on the accent's gradient: a picked choice or tab, and an accent button.
         uint32_t OnAccent(const MenuColors& c)
@@ -79,10 +67,7 @@ namespace headsup
             css += std::string("#") + kMenuPopupId + ",#" + kMenuTipId + "{border-color:" + RcssColor(Faded(c.accent, kAuroraPopupFrame)) + ";}";
             return css;
         }
-    }
 
-    namespace
-    {
         // The game's art in place of the window's fill and edge, and of its lists' and tips'.
         std::string SkinMenuRules(const SkinFrame& frame)
         {
@@ -176,7 +161,7 @@ namespace headsup
         css += "scrollbarvertical sliderbar:hover{background-color:" + color(c.hover) + ";}";
         css += "scrollbarvertical sliderbar:active{background-color:" + color(c.accent) + ";}";
         css += "scrollbarvertical sliderarrowdec,scrollbarvertical sliderarrowinc{width:0px;height:0px;}";
-        // Cards: the edge lights under the pointer, the arrow turns into place and the rows fade in as one opens.
+        // A card's edge lights under the pointer, its arrow turns into place and its rows fade in as it opens.
         const std::string cardSpacing = "margin-bottom:" + Em(kGutter * 0.7f) + ";margin-right:" + Em(kScrollbar + 0.3f) + ";";
         css += std::string(".") + kMenuCardClass + "{background-color:" + color(c.card) + ";border:1px " + color(c.border) +
                ";border-radius:" + Em(kCardRadius) + ";" + cardSpacing + "transition:border-color 0.2s cubic-out;}";
@@ -202,7 +187,7 @@ namespace headsup
         css += ".card-body{padding:0px " + Em(kCardPad) + " " + Em(kCardPad * 0.6f) + " " + Em(kCardPad) +
                ";animation:0.2s cubic-out fade-in;}";
         css += "@keyframes fade-in{from{opacity:0;}to{opacity:1;}}";
-        // Rows: the label at the left, its controls at the right. A label too long for what they leave it is cut.
+        // A row has its label at the left and its controls at the right. A label too long for what they leave it is cut.
         css += ".row{display:flex;flex-direction:row;align-items:center;justify-content:space-between;"
                "min-height:" + frame + ";margin-bottom:" + Em(kSpacing) + ";}";
         css += ".label{flex:1 1 0px;min-width:0px;overflow:hidden;white-space:nowrap;" + raised + "color:" + color(c.label) + ";}";
@@ -348,7 +333,6 @@ namespace headsup
         css += ".pick-row{position:relative;display:flex;flex-direction:row;align-items:center;margin-bottom:0.3em;}";
         css += ".pick-name{width:1.2em;color:" + color(c.label) + ";}";
         css += ".pick-row input.range{width:9em;}.pick-row .val{position:relative;width:2.6em;text-align:right;}";
-        // Buttons and chips.
         css += ".btn{box-sizing:border-box;height:" + frame + ";" + line(kFrame, kPillEdge) + "padding:0px " + Em(kPadX + 0.2f) +
                ";border-radius:" + Em(kFrame / 2.0f) + ";border:" + Px(kPillEdge) + " transparent;text-align:center;white-space:nowrap;}";
         css += ".btn.raised{background-color:" + color(c.control) + ";border-color:" + color(c.raisedEdge) + ";}";
@@ -402,7 +386,6 @@ namespace headsup
         css += ".tab.picked{background-color:" + color(c.accent) + ";}";
         css += ".tab-rule{height:" + Em(kTabRule) + ";margin-top:-" + Em(kTabGap) + ";margin-bottom:" + Em(kSpacing) +
                ";decorator:horizontal-gradient(" + color(c.accent) + fadingOut + ";}";
-        // The widgets' trays.
         css += ".line.trays{align-items:stretch;flex-wrap:nowrap;}";
         css += ".line.trays > *{margin-right:0.6em;}";
         css += ".tray{flex:1 1 0px;box-sizing:border-box;padding:0.4em 0.45em;border-radius:" + Em(kCardRadius) +

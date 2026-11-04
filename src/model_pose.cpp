@@ -285,4 +285,23 @@ namespace headsup
         if (clip[3] <= 0.0f) return std::nullopt;
         return PicturePoint{(clip[0] / clip[3] + 1.0f) / 2.0f * width, (1.0f - clip[1] / clip[3]) / 2.0f * height};
     }
+
+    ModelView FramedOver(std::span<const ModelBounds> standing, float headroom, float yaw, float aspect, float zoom)
+    {
+        ModelBounds box = standing.front();
+        for (const ModelBounds& each : standing)
+            box = Joined(box, each);
+        const float room = (box.high.y - box.low.y) * headroom;
+        Vec3 toward      = HeadOf(box);
+        toward.y -= room / 2.0f;
+        box.low.y -= room;
+        return FramedView(box, yaw, aspect, zoom, toward);
+    }
+
+    std::optional<PicturePoint> PlateOver(const ModelView& view, const ModelBounds& standing, float width, float height, float zoom)
+    {
+        const std::optional<PicturePoint> head = PointInPicture(view, HeadOf(standing), width, height);
+        if (!head) return std::nullopt;
+        return PicturePoint{head->x / zoom, head->y / zoom};
+    }
 }

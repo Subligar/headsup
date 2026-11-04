@@ -337,3 +337,27 @@ TEST(a_panned_view_moves_every_point_by_the_same_share_of_the_picture)
         CHECK(Near(now->x - was->x, 160.0f) && Near(now->y - was->y, -36.0f));
     }
 }
+
+TEST(models_framed_with_headroom_are_centered_with_it_and_zoom_toward_halfway_up_it)
+{
+    // Side by side they fill y from -2 to 0 (up is -y) and z from -1 to 3; a headroom of half their height adds y -3
+    // to -2 over them, so the framed box's middle is (0, -1.5, 1) and halfway up the room is y -2.5.
+    const ModelBounds standing[]{{{-1, -2, -1}, {1, 0, 1}}, {{-1, -1.5f, 1}, {1, 0, 3}}};
+    const ModelView whole = FramedOver(standing, 0.5f, 0.0f, 2.0f, 1.0f);
+    const auto middle     = PointInPicture(whole, {0, -1.5f, 1}, 640, 320);
+    CHECK(middle && Near(middle->x, 320) && Near(middle->y, 160));
+    const ModelView zoomed = FramedOver(standing, 0.5f, 0.0f, 2.0f, 2.5f);
+    const auto target = PointInPicture(whole, {0, -2.5f, 1}, 640, 320), zoomedTarget = PointInPicture(zoomed, {0, -2.5f, 1}, 640, 320);
+    CHECK(target && zoomedTarget && Near(target->x, zoomedTarget->x) && Near(target->y, zoomedTarget->y));
+    const auto head = PointInPicture(whole, {0, -2, 1}, 640, 320), zoomedHead = PointInPicture(zoomed, {0, -2, 1}, 640, 320);
+    CHECK(head && zoomedHead && zoomedHead->y > head->y + 1.0f);
+}
+
+TEST(a_plate_goes_over_its_models_head_on_a_screen_a_zoomth_of_the_picture)
+{
+    const ModelBounds standing[]{{{-1, -2, -1}, {1, 0, 1}}};
+    const ModelView view = FramedOver(standing, 0.5f, 0.0f, 2.0f, 1.0f);
+    const auto plate     = PlateOver(view, standing[0], 640, 320, 2.0f);
+    const auto head      = PointInPicture(view, {0, -2, 0}, 640, 320);
+    CHECK(plate && head && Near(plate->x, 160) && Near(plate->y, head->y / 2.0f) && plate->y < 80);
+}

@@ -1,4 +1,5 @@
 import copy
+import re
 import json
 import unittest
 
@@ -283,7 +284,7 @@ class Generate(unittest.TestCase):
     def test_tables_follow_the_files_order_and_name_every_piece(self):
         tree = fixture()
         tree['pages'][0]['cards'].reverse()
-        header, tables = gen.generate(parse(tree), PIECES)
+        header, tables, _ = gen.generate(parse(tree), PIECES)
         self.assertIn('enum class SettingPiece : uint16_t\n{\n    Size,\n    Style,\n    Speed,\n    Badge,\n    Rows,', header)
         self.assertIn('constexpr int kSettingPieceCount = 8;', header)
         self.assertIn('enum class LinesRow : uint16_t\n{\n    Font,\n    Padding,\n};', header)
@@ -292,50 +293,55 @@ class Generate(unittest.TestCase):
         # Looks before General now, and their settings in that order.
         looks, general = tables.index('{CardPiece::Looks,'), tables.index('{CardPiece::General,')
         self.assertLess(looks, general)
-        self.assertIn('{CardPiece::Looks, "looks", "Looks", nullptr, kEveryKind, 0, 1, false},', tables)
-        self.assertIn('{CardPiece::General, "general", "General", "The whole of it.", kEveryKind, 1, 2, true},', tables)
+        self.assertIn('{CardPiece::Looks, "looks", "Looks", nullptr, kEveryKind, 0, 1},', tables)
+        self.assertIn('{CardPiece::General, "general", "General", "The whole of it.", kEveryKind, 1, 2},', tables)
 
-    def test_what_a_reader_of_the_file_takes_from_the_code(self):
-        # A row order the code keeps, the kinds the code has a setting on, and each word's key and its setting's.
-        _, tables = gen.generate(parse(fixture()), PIECES)
-        self.assertRegex(tables, r'\{SettingPiece::Palette, "palette", .*, true, kEveryKind, false\},')
-        self.assertRegex(tables, r'\{SettingPiece::Lines, "lines", .*, false, kEveryKind, false\},')
-        self.assertRegex(tables, r'\{SettingPiece::MaxIcons, "max-icons", .*, false, 6, false\},')
-        self.assertIn('{WindowWord::RowsHead, "Nameplates", nullptr, "head", "rows"},', tables)
-        self.assertIn('{WindowWord::EveryWindow, nullptr, "All.", "every-window", nullptr},', tables)
+    def test_what_a_reader_of_the_file_takes_from_the_code_is_apart_from_the_tables(self):
+        # A row order the code keeps, the kinds the code has a setting on, the cards that cannot go, and each list's
+        # and word's key, in the code's order of each.
+        _, tables, reader = gen.generate(parse(fixture()), PIECES)
+        rules = reader[reader.index('kSettingRules'):reader.index('kSwitchedCards')]
+        self.assertEqual(re.findall(r'\{(\w+), (\w+)\}', rules), [('false', 'kEveryKind')] * 6 + [('true', 'kEveryKind'), ('false', '6')])
+        self.assertIn('kSwitchedCards[] = {\n    CardPiece::General,\n};', reader)
+        self.assertIn('{WindowList::Mode, "mode"},', reader)
+        self.assertIn('{WindowWord::RowsHead, "head", "rows"},', reader)
+        self.assertIn('{WindowWord::EveryWindow, "every-window", nullptr},', reader)
+        self.assertNotIn('"every-window"', tables)
+        self.assertIn('{WindowWord::EveryWindow, nullptr, "All."},', tables)
 
     def test_a_setting_the_file_indents_is_indented_in_its_table(self):
         tree = fixture()
         tree['pages'][0]['cards'][0]['settings'][1]['indent'] = True
-        _, tables = gen.generate(parse(tree), PIECES)
-        self.assertRegex(tables, r'\{SettingPiece::Speed, "speed", .*, kEveryKind, true\},')
-        self.assertRegex(tables, r'\{SettingPiece::Size, "size", .*, kEveryKind, false\},')
+        _, tables, _ = gen.generate(parse(tree), PIECES)
+        self.assertRegex(tables, r'\{SettingPiece::Speed, "speed", .*, 0, 0, true\},')
+        self.assertRegex(tables, r'\{SettingPiece::Size, "size", .*, 0, false\},')
 
-    def test_the_file_itself_and_its_version_go_with_the_tables(self):
+    def test_the_file_itself_and_its_version_go_only_to_a_reader_of_the_file(self):
         text = json.dumps(fixture())
-        _, tables = gen.generate(gen.parse(text, 'w.json', PIECES), PIECES, text)
-        self.assertIn('constexpr const char* kLayoutVersion = "0.65";', tables)
-        self.assertIn('constexpr const char* kLayoutText = ' + gen.c_string(text) + ';', tables)
+        _, tables, reader = gen.generate(gen.parse(text, 'w.json', PIECES), PIECES, text)
+        self.assertIn('constexpr const char* kLayoutVersion = "0.65";', reader)
+        self.assertIn('constexpr const char* kLayoutText = ' + gen.c_string(text) + ';', reader)
+        self.assertNotIn('kLayoutText', tables)
 
     def test_kinds_are_bits_by_the_order_of_the_entity_pages(self):
-        _, tables = gen.generate(parse(fixture()), PIECES)
+        _, tables, _ = gen.generate(parse(fixture()), PIECES)
         self.assertIn('{SettingPiece::MaxIcons, "max-icons", "Max Icons", nullptr, nullptr, nullptr, 6, true,', tables)
         self.assertIn('{CardPiece::Plain, "mob-badges", "Badges", nullptr, 1,', tables)
 
     def test_a_text_by_kind_is_an_array_in_the_kinds_order(self):
-        _, tables = gen.generate(parse(fixture()), PIECES)
+        _, tables, _ = gen.generate(parse(fixture()), PIECES)
         self.assertIn('{"A mob\'s.", "A player\'s.", "Yours.", "An NPC\'s.", "A pet\'s."}', tables)
 
     def test_a_page_of_the_entity_cards_and_the_lists(self):
-        _, tables = gen.generate(parse(fixture()), PIECES)
+        _, tables, _ = gen.generate(parse(fixture()), PIECES)
         self.assertIn('{Page::Mobs, "mobs", "Mobs", true, 3, 2},', tables)
-        self.assertIn('{WindowList::Mode, "mode", 0, 2},', tables)
+        self.assertIn('{WindowList::Mode, 0, 2},', tables)
         self.assertIn('{"On", "Some.", "Claimed."},', tables)
 
     def test_quotes_and_letters_past_ascii_are_escaped(self):
         tree = fixture()
         tree['words'][0]['name'] = 'Say "hi" – now'
-        _, tables = gen.generate(parse(tree), PIECES)
+        _, tables, _ = gen.generate(parse(tree), PIECES)
         self.assertIn('"Say \\042hi\\042 \\342\\200\\223 now"', tables)
 
 

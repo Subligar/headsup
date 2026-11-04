@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 
 namespace headsup
@@ -26,6 +27,18 @@ namespace headsup
     {
         const uint32_t scaled = (Channel(argb, kAlphaShift) * alpha + kOpaqueAlpha / 2) / kOpaqueAlpha;
         return (argb & ~kAlphaMask) | (scaled << kAlphaShift);
+    }
+
+    // WCAG's relative luminance of an sRGB color, its red, green and blue from 0 to 1.
+    inline float Luminance(float r, float g, float b)
+    {
+        const auto linear = [](float c) { return c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f); };
+        return 0.2126f * linear(r) + 0.7152f * linear(g) + 0.0722f * linear(b);
+    }
+    inline float Luminance(uint32_t argb)
+    {
+        const auto share = [&](int shift) { return static_cast<float>(Channel(argb, shift)) / static_cast<float>(kOpaqueAlpha); };
+        return Luminance(share(kRedShift), share(kGreenShift), share(kBlueShift));
     }
 
     // Half way to white, opaque: the ornament's diamond against its hairline.

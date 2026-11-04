@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace headsup
@@ -52,11 +53,11 @@ namespace headsup
         bool all = false;
     };
 
+    // How near the preview is, in percent: the whole scene, and each notch of the wheel over it.
+    constexpr int kLeastSetupZoom = 100, kMostSetupZoom = 300, kSetupZoomNotch = 25;
     // Setup while the window shows it: the step open, whether it is a run after the first (which warns, then starts
     // from the defaults), whether it has started, and the settings as they were when it opened, which Skip and
     // Cancel put back.
-    // How near the preview is, in percent: the whole scene, and each notch of the wheel over it.
-    constexpr int kLeastSetupZoom = 100, kMostSetupZoom = 300, kSetupZoomNotch = 25;
     struct SetupRun
     {
         SetupStep step = SetupStep::Welcome;
@@ -67,11 +68,14 @@ namespace headsup
         float panX = 0.0f, panY = 0.0f; // shares of the picture it is dragged across and down, as far as the zoom leaves room
         int lineKind = 0, line = 0; // the Nameplates step's Advanced tabs: into kSetupLineKinds, and the line
         bool advanced = false;      // each step shows the parts of its presets, until hidden again
+        // Which option each choice drawn holds, while the settings are still pickedFor.
+        Settings pickedFor = {};
+        std::unordered_map<const SetupChoice*, std::optional<size_t>> picked = {};
     };
 
-    // The settings file a run of Setup again copies the settings to first, named for when, and the picture Setup
+    // What Setup's warning names its backup by in place of when it is made (SetupBackupName), and the picture Setup
     // shows its preview in.
-    constexpr const char* kSetupBackupFile = "settings-before-setup-<date>-<time>.ini";
+    constexpr const char* kSetupBackupWhen = "<date>-<time>";
     constexpr const char* kSetupPicture    = "hu:setup/scene";
 
     // What the settings window keeps between passes that is no setting.
@@ -105,6 +109,8 @@ namespace headsup
         DesignEditor design;
         LineDraft fishLine; // the fishing bar's line, as its box is being written
         std::optional<SetupRun> setup; // Setup is shown in place of the pages
+        // The nameplates' font choices, made from the installed fonts in plateFontsFrom.
+        std::vector<std::string> plateFonts, plateFontsFrom;
         bool setupBackup    = false;   // a run again started: the settings file is to be copied first
         bool closeRequested = false;   // Setup was skipped or cancelled, and the window closes
 

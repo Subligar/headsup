@@ -244,8 +244,6 @@ namespace headsup
             return {mean(2), mean(1), mean(0)};
         }
 
-        float Linear(float c) { return c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f); }
-        float Luminance(Rgb c) { return 0.2126f * Linear(c.r) + 0.7152f * Linear(c.g) + 0.0722f * Linear(c.b); }
 
         // What every color of a skin is worked out from.
         struct Tones
@@ -265,7 +263,7 @@ namespace headsup
             const Hsl base = HslOf(back);
             t.hue    = {base.h, base.s < kGreyChroma ? 0.0f : std::max(base.s, kAccentChroma), 0.0f};
             t.accent = RgbOf(Hsl{t.hue.h, t.hue.s, kAccentLight});
-            t.text   = RgbOf(Luminance(t.middle) < kDarkText ? kLightText : kDarkTextColor);
+            t.text   = RgbOf(Luminance(t.middle.r, t.middle.g, t.middle.b) < kDarkText ? kLightText : kDarkTextColor);
             return t;
         }
         Rgb Shade(const Tones& t, float chromaShare, float light) { return RgbOf(Hsl{t.hue.h, t.hue.s * chromaShare, light}); }

@@ -69,4 +69,11 @@ namespace headsup
         float x = 0.0f, y = 0.0f;
     };
     std::optional<PicturePoint> PointInPicture(const ModelView& view, const Vec3& point, float width, float height);
+
+    // A view of models where they stand, by their boxes there, with headroom of their height over their heads for
+    // the plates and the cursor; zoomed toward halfway up that room, where the plates are, so they stay in the
+    // picture as they grow.
+    ModelView FramedOver(std::span<const ModelBounds> standing, float headroom, float yaw, float aspect, float zoom);
+    // Where a plate over a model standing in this box goes, on a screen a zoomth of the picture's size.
+    std::optional<PicturePoint> PlateOver(const ModelView& view, const ModelBounds& standing, float width, float height, float zoom);
 }

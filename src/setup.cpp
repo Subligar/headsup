@@ -13,7 +13,6 @@ namespace headsup
 {
     namespace
     {
-        KindSettings& KindOf(Settings& s, PlateKind kind) { return s.Kind(kind); }
         const KindSettings& DefaultKind(PlateKind kind)
         {
             static const std::array<KindSettings, kPlateKindCount> kDefaults = DefaultKinds();
@@ -21,7 +20,7 @@ namespace headsup
         }
         void EveryRow(Settings& s, PlateKind kind, PlateMode mode)
         {
-            KindSettings& k = KindOf(s, kind);
+            KindSettings& k = s.Kind(kind);
             for (int row = 0; row < RowCountOf(kind); ++row)
                 k.rows[row].plate = mode;
         }
@@ -47,7 +46,7 @@ namespace headsup
         {
             EveryRow(s, PlateKind::Mobs, PlateMode::WhenTargeted);
             for (Category row : kAttackRows)
-                KindOf(s, PlateKind::Mobs).rows[CategoryIndex(row)].plate = PlateMode::Shown;
+                s.Kind(PlateKind::Mobs).rows[CategoryIndex(row)].plate = PlateMode::Shown;
         }
         const SetupOption kMobPlates[]{{"all", [](Settings& s) { EveryRow(s, PlateKind::Mobs, PlateMode::Shown); }},
             {"attackers", AttackersShown}, {"target", [](Settings& s) { EveryRow(s, PlateKind::Mobs, PlateMode::WhenTargeted); }},
@@ -56,7 +55,7 @@ namespace headsup
         // A design of the default mob lines, the top ones of which show nothing.
         void MobLines(Settings& s, int emptyLines, OrnamentPlace ornament)
         {
-            KindSettings& mobs = KindOf(s, PlateKind::Mobs);
+            KindSettings& mobs = s.Kind(PlateKind::Mobs);
             const KindSettings& defaults = DefaultKind(PlateKind::Mobs);
             for (int line = 0; line < kPlateLines; ++line)
             {
@@ -74,7 +73,7 @@ namespace headsup
         void MobOutlines(Settings& s, std::span<const Category> rows, OutlineMode mode)
         {
             s.outlines         = true;
-            KindSettings& mobs = KindOf(s, PlateKind::Mobs);
+            KindSettings& mobs = s.Kind(PlateKind::Mobs);
             for (int row = 0; row < kCategoryCount; ++row)
                 mobs.rows[row].outline = IsClaimRow(static_cast<Category>(row)) ? OutlineMode::ByNature : OutlineMode::Disabled;
             for (Category row : rows)
@@ -129,7 +128,7 @@ namespace headsup
         {
             for (PlateKind kind : {PlateKind::Players, PlateKind::Self})
             {
-                KindSettings& k = KindOf(s, kind);
+                KindSettings& k = s.Kind(kind);
                 k.lines[kBottomLine].text = name;
                 if (above) k.lines[kMiddleLine].text = kPlayerIcons;
                 else if (k.lines[kMiddleLine].text == kPlayerIcons) k.lines[kMiddleLine].text.clear();
@@ -215,7 +214,6 @@ namespace headsup
         constexpr BarWidget kSystem[]{BarWidget::Performance, BarWidget::GameHelp, BarWidget::StatusTimers};
         const SetupWidgetGroup kWidgetGroups[]{{"where", kWhere}, {"time", kTime}, {"you", kYou}, {"system", kSystem}};
 
-        constexpr const char* kBackupExtension = ".ini";
         constexpr int kFirstAgain              = 2; // the number a second backup of the same second takes
     }
 
@@ -249,12 +247,12 @@ namespace headsup
 
     std::string SetupBackupName(const SetupTime& at, const std::function<bool(const std::string&)>& taken)
     {
-        char stem[64];
-        std::snprintf(stem, sizeof(stem), "settings-before-setup-%04d-%02d-%02d-%02d%02d%02d", at.year, at.month, at.day, at.hour,
-            at.minute, at.second);
-        std::string name = std::string(stem) + kBackupExtension;
+        char when[32];
+        std::snprintf(when, sizeof(when), "%04d-%02d-%02d-%02d%02d%02d", at.year, at.month, at.day, at.hour, at.minute, at.second);
+        const std::string stem = kSetupBackupStem + std::string(when);
+        std::string name       = stem + kSetupBackupExtension;
         for (int again = kFirstAgain; taken(name); ++again)
-            name = std::string(stem) + "-" + std::to_string(again) + kBackupExtension;
+            name = stem + "-" + std::to_string(again) + kSetupBackupExtension;
         return name;
     }
 }

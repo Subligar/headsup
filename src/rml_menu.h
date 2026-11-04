@@ -89,15 +89,10 @@ namespace headsup
 
     private:
         const WindowLayout* m_Layout = &kWindowLayout; // the host's, from its last update
-        struct Card
-        {
-            std::string id, rml;
-        };
         struct Applied
         {
             std::string text;
             bool on = false;
-            bool operator==(const Applied&) const = default;
         };
 
         // Builds the document again when its look changed. False when RmlUi refused it.
@@ -153,8 +148,9 @@ namespace headsup
         std::optional<BarRect> m_ViewAt;
         std::vector<PanelWidget> m_ViewFor; // whose settings it holds
         std::string m_SidebarRml, m_PopupRml, m_ViewRml, m_TitleShown, m_TipShown;
-        std::vector<Card> m_Cards;
+        std::vector<FormBlock> m_Cards;
         std::unordered_map<std::string, Rml::Element*> m_ById;
+        std::vector<Rml::Element*> m_Runs; // the stretches of the line boxes
         std::unordered_map<std::string, Applied> m_Applied; // what each value was last set to, by its id, kind and name
         std::unordered_map<std::string, std::string> m_FocusValue; // a text box's text as it took the keyboard
         std::vector<FormEvent> m_Events; // since the last pass
