@@ -299,7 +299,7 @@ TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)
 }
 
 // Targeting a player or nothing while the pointer rests on the target takes its popup away: the hover goes with it,
-// and a pin stays (a pinned target popup reads "No target").
+// and a pin stays (a pinned target popup reads "No Target").
 TEST(a_hovered_popup_closes_when_its_widget_stops_having_one)
 {
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);

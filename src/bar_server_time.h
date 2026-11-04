@@ -58,7 +58,7 @@ namespace headsup
     // A zone's clock as a widget titles it: "JST 15:30", "PDT 11:30:42 PM".
     std::string ZoneClockText(const ZoneTime& t, bool twentyFour, bool seconds);
 
-    // What the Clock's popup lists: the server's clock, "Server time Friday 15:30 JST", and the time to the daily reset
+    // What the Clock's popup lists: the server's clock, "Server Time Friday 15:30 JST", and the time to the daily reset
     // and to the conquest tally, which go by it.
     PopupSection ServerTimeRows(int64_t unixMs);
 }

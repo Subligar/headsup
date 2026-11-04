@@ -204,10 +204,10 @@ namespace headsup
         if (AtCap(s))
         {
             rows.rows.push_back(Labeled("Merits", Text(std::to_string(s.merits) + " / " + std::to_string(s.meritsMax))));
-            rows.rows.push_back(Labeled("Limit points", Text(OutOf(s.limitPoints, kLimitPointsPerMerit))));
-            rows.rows.push_back(Labeled("Per hour", PerHourText(job->perHour)));
+            rows.rows.push_back(Labeled("Limit Points", Text(OutOf(s.limitPoints, kLimitPointsPerMerit))));
+            rows.rows.push_back(Labeled("Per Hour", PerHourText(job->perHour)));
             if (job->perHour && s.limitMode && s.merits < s.meritsMax)
-                rows.rows.push_back(Labeled("Next merit in",
+                rows.rows.push_back(Labeled("Next Merit in",
                     Text(SpanText((kLimitPointsPerMerit - std::min(s.limitPoints, kLimitPointsPerMerit)) * kHour /
                                   *job->perHour))));
             if (!s.limitMode) rows.rows.push_back(LineOf("Limit Mode is off, so EXP does not become merits.", Tone::Dim));
@@ -215,11 +215,11 @@ namespace headsup
         else
         {
             rows.rows.push_back(Labeled("EXP", Text(OutOf(s.exp, s.expNeeded))));
-            rows.rows.push_back(Labeled("To next", Text(Grouped(ToNext(s)))));
-            rows.rows.push_back(Labeled("Per hour", PerHourText(job->perHour)));
+            rows.rows.push_back(Labeled("To Next", Text(Grouped(ToNext(s)))));
+            rows.rows.push_back(Labeled("Per Hour", PerHourText(job->perHour)));
             if (job->perHour)
-                rows.rows.push_back(Labeled("Next level in", Text(SpanText(ToNext(s) * kHour / *job->perHour))));
-            rows.rows.push_back(Labeled("Limit points", Text(OutOf(s.limitPoints, kLimitPointsPerMerit))));
+                rows.rows.push_back(Labeled("Next Level in", Text(SpanText(ToNext(s) * kHour / *job->perHour))));
+            rows.rows.push_back(Labeled("Limit Points", Text(OutOf(s.limitPoints, kLimitPointsPerMerit))));
         }
         popup.sections = ListOf(std::move(rows));
         return popup;

@@ -55,7 +55,7 @@ TEST(a_lines_figures_are_measured_as_its_fonts_widest_digit_so_a_ticking_clock_k
     CHECK_EQ(SteadyFigures("Lightsday 14:43", '8'), std::string("Lightsday 88:88"));
     CHECK_EQ(SteadyFigures("S 184 R 85", '0'), std::string("S 000 R 00")); // as many figures as it has
     CHECK_EQ(SteadyFigures("Waning Crescent 38%", '4'), std::string("Waning Crescent 44%"));
-    CHECK_EQ(SteadyFigures("No target", '0'), std::string("No target"));
+    CHECK_EQ(SteadyFigures("No Target", '0'), std::string("No Target"));
     CHECK_EQ(SteadyFigures("Zulkheim \xC2\xB7 Bastok", '0'), std::string("Zulkheim \xC2\xB7 Bastok")); // bytes past ASCII stay
     // A font's widest digit, by what each measures: the first of them when several are as wide.
     const auto old = [](char digit) { return digit == '1' ? 4.0f : digit == '4' ? 9.5f : digit == '7' ? 6.0f : 8.0f; };

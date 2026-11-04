@@ -17,7 +17,7 @@ namespace headsup
             return count;
         }
 
-        constexpr const char* kPopupTitle = "Game help"; // a popup's title when there is no caption
+        constexpr const char* kPopupTitle = "Game Help"; // a popup's title when there is no caption
         constexpr char kSpace             = ' ';
 
         std::vector<std::string> Words(const std::string& text)

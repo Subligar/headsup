@@ -33,21 +33,21 @@ namespace headsup
         void AddLinuxXI(std::vector<PopupSection>& sections, const LinuxXIReport& r)
         {
             PopupSection fixes{"LinuxXI", {}};
-            fixes.rows.push_back(Labeled("Packet copies",
+            fixes.rows.push_back(Labeled("Packet Copies",
                 FixSpan(r.flags, kPoolHooked, kPoolOn, Grouped(r.copiesHeld) + " (" + Grouped(r.copiesPeak) + " at most)")));
             if ((r.flags & kPoolHooked) != 0)
                 fixes.rows.push_back(Labeled("Pool", Text(MbText(r.chunks * r.chunkMb) + " (" + MbText(r.chunksPeak * r.chunkMb) + " at most)")));
-            fixes.rows.push_back(Labeled("Releases held back",
+            fixes.rows.push_back(Labeled("Releases Held Back",
                 FixSpan(r.flags, kGraceActive, kGraceOn, Grouped(r.releasesHeldBack) + " (" + Grouped(r.releasesWaiting) + " waiting)")));
-            fixes.rows.push_back(Labeled("Addons stepped", Text(Grouped(r.addonsStepped) + " (" + Grouped(r.addonsNotLoaded) + " not loaded)")));
-            fixes.rows.push_back(Labeled("Registry compares", FixSpan(r.flags, kLocaleActive, kLocaleOn, "C locale")));
+            fixes.rows.push_back(Labeled("Addons Stepped", Text(Grouped(r.addonsStepped) + " (" + Grouped(r.addonsNotLoaded) + " not loaded)")));
+            fixes.rows.push_back(Labeled("Registry Compares", FixSpan(r.flags, kLocaleActive, kLocaleOn, "C Locale")));
             sections.push_back(std::move(fixes));
             if (r.addonCount == 0) return;
-            PopupSection lua{"Lua memory", {}};
+            PopupSection lua{"Lua Memory", {}};
             uint64_t total = 0;
             for (uint32_t i = 0; i < r.addonCount; ++i)
                 total += r.lua[i].kilobytes;
-            lua.rows.push_back(Labeled("All addons", Text(KbText(total))));
+            lua.rows.push_back(Labeled("All Addons", Text(KbText(total))));
             PopupRow grid = Grid(kLuaColumns, 2 * r.addonCount);
             for (uint32_t i = 0; i < r.addonCount; ++i)
             {
@@ -100,9 +100,9 @@ namespace headsup
         if (cpuPercent) processor.rows.push_back(Labeled("CPU", Text(Printed("%.0f%%", *cpuPercent) + " of one core")));
         if (frames)
         {
-            processor.rows.push_back(Labeled("Frame rate", Text(std::to_string(FramesPerSecond(frames->averageMs)) + " fps")));
-            processor.rows.push_back(Labeled("Frame time", Text(Printed("%.1f ms", frames->averageMs))));
-            processor.rows.push_back(Labeled("Slowest frame", Text(Printed("%.1f ms", frames->slowestMs))));
+            processor.rows.push_back(Labeled("Frame Rate", Text(std::to_string(FramesPerSecond(frames->averageMs)) + " fps")));
+            processor.rows.push_back(Labeled("Frame Time", Text(Printed("%.1f ms", frames->averageMs))));
+            processor.rows.push_back(Labeled("Slowest Frame", Text(Printed("%.1f ms", frames->slowestMs))));
         }
         if (!processor.rows.empty()) sections.push_back(std::move(processor));
         if (linuxxi.report)

@@ -161,8 +161,8 @@ namespace headsup
                 if (info.traits & trait) row.cells.push_back(Cell(Text(name, Tone::Tag)));
             if (*info.addEffect != '\0')
                 row.cells.push_back(Cell(Text(std::string_view(info.addEffect) == kUnknownAddEffect
-                                                  ? std::string("Additional effect")
-                                                  : std::string("Additional effect: ") + info.addEffect,
+                                                  ? std::string("Additional Effect")
+                                                  : std::string("Additional Effect: ") + info.addEffect,
                     Tone::Tag)));
             return row;
         }
@@ -214,7 +214,7 @@ namespace headsup
                 cell.star      = learned;
                 grid.cells.push_back(std::move(cell));
             }
-            return PopupSection{"TP moves", ListOf(std::move(grid))};
+            return PopupSection{"TP Moves", ListOf(std::move(grid))};
         }
 
         // The spells it casts at a level: each whose levels hold it, by the game's name.
@@ -287,7 +287,7 @@ namespace headsup
         {
             PopupSection spawn{"Spawn", {}};
             const MobInfo& info = InfoOf(mob);
-            spawn.rows.push_back(LineOf(mob.respawn > 0 ? "Respawn " + Countdown(mob.respawn) : "No respawn timer"));
+            spawn.rows.push_back(LineOf(mob.respawn > 0 ? "Respawn " + Countdown(mob.respawn) : "No Respawn Timer"));
             if (info.windowStart != kNoWindow)
                 spawn.rows.push_back(LineOf("Spawns " + Hour(info.windowStart) + " to " + Hour(info.windowEnd)));
             if (info.lotteryChance > 0)
@@ -305,14 +305,14 @@ namespace headsup
                 if (state.targetPhSeconds)
                 {
                     const double left = *state.targetPhSeconds;
-                    spawn.rows.push_back(LineOf(left > 0.0 ? "Back in " + Countdown(left) : "Due now", Tone::Weak));
+                    spawn.rows.push_back(LineOf(left > 0.0 ? "Back in " + Countdown(left) : "Due Now", Tone::Weak));
                 }
             }
             if (mob.placeholders > 0)
                 spawn.rows.push_back(LineOf(std::to_string(mob.placeholders) +
                     (mob.placeholders == 1 ? " placeholder" : " placeholders") + " in this zone"));
             if (mob.placeholderOf == 0 && mob.placeholders == 0)
-                spawn.rows.push_back(LineOf("Not an NM placeholder", Tone::Dim));
+                spawn.rows.push_back(LineOf("Not an NM Placeholder", Tone::Dim));
             return spawn;
         }
 
@@ -597,7 +597,7 @@ namespace headsup
                 AddListing(sections, "Trade", ItemNames(TradesOf(npc), state), (npc.unread & kNpcUnreadTrade) != 0);
             AddListing(sections, "Pops", MobNames(PopsOf(npc)), (npc.unread & kNpcUnreadPops) != 0);
             AddListing(sections, "Gives", ItemNames(GivesOf(npc), state), (npc.unread & kNpcUnreadGives) != 0);
-            AddListing(sections, "Key items", KeyItemNames(KeyItemsOf(npc)));
+            AddListing(sections, "Key Items", KeyItemNames(KeyItemsOf(npc)));
             AddListing(sections, "Checks for", KeyItemNames(NeedsOf(npc)));
             AddLinks(sections, npc);
             return sections;
@@ -609,7 +609,7 @@ namespace headsup
             const ActorInfo* target = state.target;
             if (target == nullptr)
             {
-                popup.title = ListOf(Text("No target", Tone::Dim));
+                popup.title = ListOf(Text("No Target", Tone::Dim));
                 return popup;
             }
             if (!IsMob(target))
@@ -621,14 +621,14 @@ namespace headsup
                     PopupSection rows;
                     rows.rows.push_back(Labeled("Jobs", Text(CheckedJobs(c.general))));
                     if (c.general.masterLevel > 0)
-                        rows.rows.push_back(Labeled("Master level", Text(std::to_string(c.general.masterLevel))));
+                        rows.rows.push_back(Labeled("Master Level", Text(std::to_string(c.general.masterLevel))));
                     if (!c.general.linkshell.empty())
                         rows.rows.push_back(Labeled("Linkshell", Text(c.general.linkshell)));
                     if (const std::string title = TitleName(c.message.title); !title.empty())
                         rows.rows.push_back(Labeled("Title", Text(title)));
                     else if (c.message.title != 0)
                         rows.rows.push_back(Labeled("Title", Text("#" + std::to_string(c.message.title))));
-                    rows.rows.push_back(LineOf("As of your check", Tone::Dim));
+                    rows.rows.push_back(LineOf("As of Your Check", Tone::Dim));
                     popup.sections = ListOf(std::move(rows));
                 }
                 else if (const NpcRecord* npc = NpcOf(target))
@@ -652,7 +652,7 @@ namespace headsup
             PopupRow damage = Grid(kDamageColumns, kFirstElementSdt);
             for (int i = 0; i < kFirstElementSdt; ++i)
                 damage.cells.push_back(Cell(Percent(SdtPercent(res.sdt[i])), SdtIcon(i)));
-            PopupSection damageTaken{"Damage taken", ListOf(std::move(damage))};
+            PopupSection damageTaken{"Damage Taken", ListOf(std::move(damage))};
             PopupRow kinds = Grid(kDamageColumns, kDamageKindCount);
             for (int k = 0; k < kDamageKindCount; ++k)
                 if (const int percent = SdtPercent(defenses.damageTaken[k]); percent != 0)
@@ -825,9 +825,9 @@ namespace headsup
         {
             const ZoneRecord* zone = KnownZone(zoneId);
             const uint32_t today   = VanaAt(unixMs).day;
-            ZoneWeather here{zone ? NextElementWeather(*zone, element, today) : std::nullopt, "Not in this zone"};
+            ZoneWeather here{zone ? NextElementWeather(*zone, element, today) : std::nullopt, "Not in This Zone"};
             if (here.next)
-                here.when = here.next->day == today ? "Can roll here now" : "Here in " + Countdown(SecondsToDay(unixMs, here.next->day));
+                here.when = here.next->day == today ? "Can Roll Here Now" : "Here in " + Countdown(SecondsToDay(unixMs, here.next->day));
             return here;
         }
 
@@ -938,7 +938,7 @@ namespace headsup
                 const ZoneWeather here = WeatherHere(state.zone, o.worldElement, state.unixMs);
                 w.title = here.next ? ListOf(Text(std::string(WeatherName(here.next->weather)) + " " +
                                                   std::to_string(here.next->percent) + "%"))
-                                    : ListOf(Text(std::string(ElementName(o.worldElement)) + " weather"));
+                                    : ListOf(Text(std::string(ElementName(o.worldElement)) + " Weather"));
                 if (here.next)
                     if (const std::optional<Icon> icon = WeatherIcon(here.next->weather)) w.icons.push_back(*icon);
                 w.subtitle = ListOf(Text(here.when, Tone::Dim));
@@ -1101,7 +1101,7 @@ namespace headsup
         // your rank starred and lit; until the site answers, a line saying so.
         std::vector<PopupRow> TurnIns(const BarState& state, int craft, const std::string& guild)
         {
-            std::vector<PopupRow> rows = ListOf(LineOf("Today's Turn-ins", Tone::Heading));
+            std::vector<PopupRow> rows = ListOf(LineOf("Today's Turn-Ins", Tone::Heading));
             if (state.turnIns == nullptr)
             {
                 PopupRow waiting = LineOf(state.turnInsFailed ? "phoenix-xi.com did not answer; trying again soon"
@@ -1439,7 +1439,7 @@ namespace headsup
                 if ((o.targetShows & TargetShowBit(TargetShowOf(state.target))) == 0)
                     w.shown = false;
                 else if (state.target == nullptr)
-                    w.title = ListOf(Text("No target", Tone::Dim));
+                    w.title = ListOf(Text("No Target", Tone::Dim));
                 else if (TargetShowOf(state.target) != TargetShow::Mobs)
                 {
                     w.title = ListOf(Colored(state.target->name,
@@ -1828,8 +1828,8 @@ namespace headsup
             popup.sections   = ListOf(PopupSection{"",
                 ListOf(Line(Cell(ListOf(WeekdayText(t), Text(" " + HourMinute(t.hour, t.minute))))),
                     LineOf(MoonText(t) + " (" + std::to_string(t.moonPercent) + "%)"),
-                    LineOf("Next day in " + Countdown(SecondsToNextDay(state.unixMs)), Tone::Dim),
-                    LineOf("Next phase in " + Countdown(SecondsToNextPhase(state.unixMs)), Tone::Dim))});
+                    LineOf("Next Day in " + Countdown(SecondsToNextDay(state.unixMs)), Tone::Dim),
+                    LineOf("Next Phase in " + Countdown(SecondsToNextPhase(state.unixMs)), Tone::Dim))});
             break;
         }
         case BarWidget::Target: return TargetPopup(state, settings);

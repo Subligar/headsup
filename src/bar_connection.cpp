@@ -35,8 +35,8 @@ namespace headsup
         {
             const std::string when = r.silence ? SpanText(*r.silence) : "-";
             const LinkState state  = StateOf(r);
-            if (state == LinkState::Normal) return Labeled("Last server data", Text(when));
-            return Line(Cell(ListOf(Figure("Last server data ", state), Figure(when, state))));
+            if (state == LinkState::Normal) return Labeled("Last Server Data", Text(when));
+            return Line(Cell(ListOf(Figure("Last Server Data ", state), Figure(when, state))));
         }
 
         bool Waiting(const std::optional<PlayOnlineCounts>& counts)
@@ -154,7 +154,7 @@ namespace headsup
             now.rows.push_back(LineOf("The game's own meter is at " + std::to_string(r.counters->health) +
                                           "%: it falls once 10 s pass without server data.",
                 Tone::Dim));
-        PopupSection totals{"This session", {}};
+        PopupSection totals{"This Session", {}};
         if (r.countedSeconds > 0.0)
         {
             totals.rows.push_back(Labeled("Sent", Text(ByteText(r.sentBytes))));

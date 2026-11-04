@@ -218,9 +218,9 @@ TEST(no_target_reads_no_target_and_a_player_gets_only_a_name)
 {
     Settings settings;
     BarState state;
-    CHECK(Content(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No target", Tone::Dim}}));
+    CHECK(Content(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No Target", Tone::Dim}}));
     CHECK(!Content(BarWidget::Target, state, settings).hasPopup);
-    CHECK(BarPopupContent(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No target", Tone::Dim}}));
+    CHECK(BarPopupContent(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No Target", Tone::Dim}}));
     ActorInfo player;
     player.kind = EntityKind::Player;
     std::snprintf(player.name, sizeof(player.name), "%s", "Zinnia");
@@ -269,8 +269,8 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     std::vector<std::string> headings;
     for (const PopupSection& s : popup.sections)
         headings.push_back(s.heading);
-    CHECK(headings == (std::vector<std::string>{"", "Damage taken", "Elements", "Statuses", "Immune", "Stats at Level 20",
-                                                "TP moves", "Spawn"}));
+    CHECK(headings == (std::vector<std::string>{"", "Damage Taken", "Elements", "Statuses", "Immune", "Stats at Level 20",
+                                                "TP Moves", "Spawn"}));
     const PopupRow& elements = Section(popup, "Elements")->rows[0];
     CHECK(elements.kind == RowKind::Grid && elements.columns == 4 && elements.cells.size() == 8);
     CHECK(elements.cells[6].icon == Icon::Light);
@@ -290,7 +290,7 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     const PopupRow& stats = Section(popup, "Stats at Level 20")->rows[1];
     CHECK(stats.kind == RowKind::Grid && stats.cells.size() == 16);
     CHECK(Joined(stats.cells[14].text) == "MEva" && Joined(stats.cells[15].text) == "58");
-    const PopupRow& moves = Section(popup, "TP moves")->rows[0];
+    const PopupRow& moves = Section(popup, "TP Moves")->rows[0];
     CHECK(moves.kind == RowKind::Grid && moves.columns == 3 && moves.cells.size() == 3);
     CHECK(Joined(moves.cells[0].text) == "Goblin Rush" && Joined(moves.cells[2].text) == "Bomb Toss Suicide");
     const PopupRow& statuses = Section(popup, "Statuses")->rows[0];
@@ -314,7 +314,7 @@ namespace
 
     const PopupCell* MoveCell(const PopupContent& popup, const char* name)
     {
-        const PopupSection* moves = Section(popup, "TP moves");
+        const PopupSection* moves = Section(popup, "TP Moves");
         if (moves == nullptr) return nullptr;
         for (const PopupCell& cell : moves->rows[0].cells)
             if (Joined(cell.text) == name) return &cell;
@@ -454,7 +454,7 @@ TEST(a_lottery_nm_shows_its_jobs_window_chance_and_cooldown_and_its_placeholder_
     CHECK(Lines(*Section(popup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Spawns 20:00 to 04:00",
                                                  "15% pop chance", "3:00:00 cooldown after its kill",
                                                  "1 placeholder in this zone"}));
-    const PopupRow& kinds = Section(popup, "Damage taken")->rows[1];
+    const PopupRow& kinds = Section(popup, "Damage Taken")->rows[1];
     CHECK(kinds.cells.size() == 2);
     CHECK(kinds.cells[0].text == (std::vector<Span>{{"Magic", Tone::Dim}, {" ", Tone::Normal}, {"-25%", Tone::Resist}}));
     CHECK(kinds.cells[1].text == (std::vector<Span>{{"Breath", Tone::Dim}, {" ", Tone::Normal}, {"-50%", Tone::Resist}}));
@@ -465,7 +465,7 @@ TEST(a_lottery_nm_shows_its_jobs_window_chance_and_cooldown_and_its_placeholder_
     // A mob with no other kind of damage taken has only its SDT row.
     const ActorInfo goblin = Goblin();
     state.target           = &goblin;
-    CHECK(Section(BarPopupContent(BarWidget::Target, state, settings), "Damage taken")->rows.size() == 1);
+    CHECK(Section(BarPopupContent(BarWidget::Target, state, settings), "Damage Taken")->rows.size() == 1);
 }
 
 TEST(a_casters_spells_are_the_ones_it_casts_at_its_level)
@@ -509,7 +509,7 @@ TEST(an_element_it_absorbs_and_what_it_does_by_itself)
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]).back() == "Regen");
     const ActorInfo elemental = MobTarget(16928885);
     state.target              = &elemental;
-    CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]).back() == "Additional effect: Poison");
+    CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]).back() == "Additional Effect: Poison");
 }
 
 TEST(a_resisted_damage_type_shows_its_percent_in_the_resist_tone)
@@ -520,7 +520,7 @@ TEST(a_resisted_damage_type_shows_its_percent_in_the_resist_tone)
     BarState state;
     state.target             = &target;
     const PopupContent popup = BarPopupContent(BarWidget::Target, state, settings);
-    const PopupRow& damage   = Section(popup, "Damage taken")->rows[0];
+    const PopupRow& damage   = Section(popup, "Damage Taken")->rows[0];
     CHECK(damage.cells[0].icon == Icon::Slashing);
     CHECK(damage.cells[0].text == (std::vector<Span>{{"-50%", Tone::Resist}}));
     CHECK(damage.cells[3].text == (std::vector<Span>{{"-75%", Tone::Resist}}));
@@ -533,16 +533,16 @@ TEST(the_spawn_section_says_when_there_is_no_timer_no_placeholder_or_one_is_due)
     const ActorInfo goblin = Goblin(); // respawn 300, no placeholder of an NM, no placeholders of its own
     state.target           = &goblin;
     const PopupContent goblinPopup = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Lines(*Section(goblinPopup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Not an NM placeholder"}));
+    CHECK(Lines(*Section(goblinPopup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Not an NM Placeholder"}));
     const ActorInfo snipper = MobTarget(16781313); // respawn 0
     state.target            = &snipper;
     const PopupContent snipperPopup = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Lines(*Section(snipperPopup, "Spawn")).front() == "No respawn timer");
+    CHECK(Lines(*Section(snipperPopup, "Spawn")).front() == "No Respawn Timer");
     const ActorInfo worm  = MobTarget(17191194); // Bigmouth Billy's placeholder
     state.target          = &worm;
     state.targetPhSeconds = 0.0;
     const PopupContent wormPopup = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Section(wormPopup, "Spawn")->rows[2].cells[0].text == (std::vector<Span>{{"Due now", Tone::Weak}}));
+    CHECK(Section(wormPopup, "Spawn")->rows[2].cells[0].text == (std::vector<Span>{{"Due Now", Tone::Weak}}));
 }
 
 TEST(an_immunity_shows_a_cross_in_its_status_and_an_icon_under_immune)
@@ -584,8 +584,8 @@ TEST(vanadiel_time_names_the_day_in_its_elements_color_and_the_moon)
         for (const PopupCell& cell : row.cells)
             all += Joined(cell.text) + "|";
     CHECK(all.find("Waxing Gibbous (64%)") != std::string::npos);
-    CHECK(all.find("Next day in 36:00") != std::string::npos);
-    CHECK(all.find("Next phase in 10:12:00") != std::string::npos);
+    CHECK(all.find("Next Day in 36:00") != std::string::npos);
+    CHECK(all.find("Next Phase in 10:12:00") != std::string::npos);
 }
 
 TEST(the_vanadiel_clock_shows_its_day_of_week_date_and_moon_phase_as_set)
@@ -1264,7 +1264,7 @@ TEST(a_help_line_without_a_caption_wraps_in_the_popup_under_a_fixed_title)
                              "to begin. Press cancel to return to the previous menu.";
     state.strip = StripText{"", help};
     const PopupContent p = BarPopupContent(BarWidget::GameHelp, state, settings);
-    CHECK(Joined(p.title) == "Game help");
+    CHECK(Joined(p.title) == "Game Help");
     const std::vector<std::string> lines = Lines(p.sections[0]);
     CHECK(lines.size() == 2);
     for (const std::string& line : lines)
@@ -1297,8 +1297,8 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
         settings.Widget(BarWidget::EarthTime).clockServerTime = stacked;
         const PopupContent p     = BarPopupContent(BarWidget::EarthTime, state, settings);
         CHECK(Joined(p.title) == "2026-10-08"); // the Pacific coast's date
-        CHECK(p.sections.size() == 1 && Lines(p.sections[0]) == (std::vector<std::string>{"Server time Friday 15:30 JST",
-                                                                    "Daily reset in 8h 29m", "Conquest tally in 2d 8h"}));
+        CHECK(p.sections.size() == 1 && Lines(p.sections[0]) == (std::vector<std::string>{"Server Time Friday 15:30 JST",
+                                                                    "Daily Reset in 8h 29m", "Conquest Tally in 2d 8h"}));
     }
 }
 
@@ -1315,7 +1315,7 @@ TEST(the_performance_widget_shows_frames_a_second_and_its_popup_the_frame_times)
     CHECK(Joined(p.title) == "Performance");
     const auto processor = std::ranges::find(p.sections, std::string("Processor"), &PopupSection::heading);
     CHECK(processor != p.sections.end() &&
-          Lines(*processor) == (std::vector<std::string>{"Frame rate 30 fps", "Frame time 33.3 ms", "Slowest frame 120.0 ms"}));
+          Lines(*processor) == (std::vector<std::string>{"Frame Rate 30 fps", "Frame Time 33.3 ms", "Slowest Frame 120.0 ms"}));
 }
 
 TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_those)
@@ -1370,15 +1370,15 @@ TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_o
     CHECK(w.progress && std::fabs(*w.progress - 4140.0f / 7600.0f) < 1e-6f); // the bar under it
     CHECK(Joined(BarPopupContent(BarWidget::Job, state, settings).title) == "Job and EXP"); // words: the title font
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
-          (std::vector<std::string>{"EXP 4,140 / 7,600", "To next 3,460", "Per hour 18,000", "Next level in 11m 32s",
-              "Limit points 0 / 10,000"})); // 7,600 - 4,140 = 3,460; at 18,000 an hour that is 692 s
+          (std::vector<std::string>{"EXP 4,140 / 7,600", "To Next 3,460", "Per Hour 18,000", "Next Level in 11m 32s",
+              "Limit Points 0 / 10,000"})); // 7,600 - 4,140 = 3,460; at 18,000 an hour that is 692 s
 
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
     CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "7 merits");
     CHECK(Content(BarWidget::Job, state, settings).progress == 0.421f); // limit points to the next merit
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
-          (std::vector<std::string>{"Merits 7 / 10", "Limit points 4,210 / 10,000", "Per hour -",
+          (std::vector<std::string>{"Merits 7 / 10", "Limit Points 4,210 / 10,000", "Per Hour -",
               "Limit Mode is off, so EXP does not become merits."}));
 }
 
@@ -1394,7 +1394,7 @@ TEST(the_job_widget_says_one_merit_and_promises_no_merit_without_limit_mode)
         CHECK(line.find("Next merit") == std::string::npos); // Limit Mode is off
     state.job->sample.limitMode = true;
     const auto lines = Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]);
-    CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("Next merit in") == 0; }));
+    CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("Next Merit in") == 0; }));
 }
 
 TEST(the_performance_widget_shows_the_games_rates_on_one_line_and_turns_amber_then_red)
@@ -1432,9 +1432,9 @@ TEST(the_performance_popup_gives_the_rates_ping_last_data_and_session_totals)
     CHECK(Joined(p.title) == "Performance" && p.sections.size() == 2 && p.sections[0].heading == "Connection");
     // Short lines only: no sentence on where S and R come from (the menu tip says it).
     CHECK(Lines(p.sections[0]) == (std::vector<std::string>{"Sent 175 B/s", "Received 227 B/s", "Ping 48 ms",
-                                      "40 to 66 ms over recent pings", "Last server data 1s"})); // 0.3 s, rounded up
-    CHECK(p.sections[0].rows[4] == Labeled("Last server data", Text("1s")));
-    CHECK(p.sections[1].heading == "This session");
+                                      "40 to 66 ms over recent pings", "Last Server Data 1s"})); // 0.3 s, rounded up
+    CHECK(p.sections[0].rows[4] == Labeled("Last Server Data", Text("1s")));
+    CHECK(p.sections[1].heading == "This Session");
     CHECK(Lines(p.sections[1]) == (std::vector<std::string>{"Sent 1.2 MB", "Received 34.5 KB", "Over 1h 12m"}));
 }
 
@@ -1447,18 +1447,18 @@ TEST(the_performance_popup_colors_the_last_server_data_as_the_bar_and_names_the_
     state.connection->counters->received = 0;
     PopupContent p            = BarPopupContent(BarWidget::Performance, state, settings);
     CHECK(p.sections[0].rows[4] ==
-          Line(Cell(ListOf(Colored("Last server data ", kWarningColor), Colored("18s", kWarningColor)))));
+          Line(Cell(ListOf(Colored("Last Server Data ", kWarningColor), Colored("18s", kWarningColor)))));
     CHECK(p.sections[0].rows.size() == 5); // the meter is still full
 
     state.connection->counters->health = 94;
     p = BarPopupContent(BarWidget::Performance, state, settings);
     CHECK(p.sections[0].rows[4] ==
-          Line(Cell(ListOf(Colored("Last server data ", kAlarmColor), Colored("18s", kAlarmColor)))));
+          Line(Cell(ListOf(Colored("Last Server Data ", kAlarmColor), Colored("18s", kAlarmColor)))));
     CHECK(Lines(p.sections[0]).back() == "The game's own meter is at 94%: it falls once 10 s pass without server data.");
 
     state.connection->zoning = true; // no color while zoning; the meter line stays while the meter is under 100
     p = BarPopupContent(BarWidget::Performance, state, settings);
-    CHECK(p.sections[0].rows[4] == Labeled("Last server data", Text("18s")) && p.sections[0].rows.size() == 6);
+    CHECK(p.sections[0].rows[4] == Labeled("Last Server Data", Text("18s")) && p.sections[0].rows.size() == 6);
 }
 
 TEST(the_party_widget_counts_members_and_shows_the_lowest_hp_and_mp_in_your_zone)
@@ -1593,13 +1593,13 @@ TEST(a_checked_player_shows_their_jobs_and_a_popup_of_the_check)
     CHECK(Joined(w.subtitle) == "WAR 75 / NIN 37" && w.hasPopup);
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]) ==
           (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Linkshell Phoenix", "Title New Adventurer",
-              "As of your check"}));
+              "As of Your Check"}));
     check.general.masterLevel = 5;
     check.general.linkshell.clear();
     state.targetCheck = check;
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]) ==
-          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Master level 5", "Title New Adventurer",
-              "As of your check"}));
+          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Master Level 5", "Title New Adventurer",
+              "As of Your Check"}));
     check.general.mainJob = check.general.subJob = check.general.mainLevel = check.general.subLevel = 0;
     state.targetCheck = check; // anonymous
     CHECK(Joined(Content(BarWidget::Target, state, settings).subtitle) == "? ? ?");
@@ -1615,10 +1615,10 @@ TEST(a_checked_players_title_shows_its_number_when_the_list_lacks_it_and_not_at_
     state.target    = &player;
     state.targetCheck = PlayerCheck{InspectGeneral{0x01006A2B, 0x410, "", 1, 13, 75, 37, 0}, InspectMessage{"", 99999}};
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]) ==
-          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Title #99999", "As of your check"}));
+          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Title #99999", "As of Your Check"}));
     state.targetCheck->message.title = 0;
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]) ==
-          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "As of your check"}));
+          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "As of Your Check"}));
 }
 
 TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_shown)
@@ -1752,7 +1752,7 @@ TEST(the_target_says_how_far_it_is_after_its_name_unless_show_distance_is_off)
     CHECK(Joined(Content(BarWidget::Target, state, settings).title) + " (12.3)" == name);
     state.target         = nullptr;
     state.targetDistance = 5.0f;
-    CHECK(Joined(Content(BarWidget::Target, state, settings).title) == "No target");
+    CHECK(Joined(Content(BarWidget::Target, state, settings).title) == "No Target");
 }
 
 TEST(each_widget_can_drop_its_second_line_or_its_icons)
@@ -2092,7 +2092,7 @@ TEST(an_npcs_popup_names_the_key_items_it_gives_and_checks_for)
     BarState state;
     state.target         = &qm;
     const PopupContent p = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Headings(p) == (std::vector<std::string>{"", "Click", "Pops", "Key items", "Checks for", "Quests"}));
+    CHECK(Headings(p) == (std::vector<std::string>{"", "Click", "Pops", "Key Items", "Checks for", "Quests"}));
     CHECK(SectionLines(p, "Click") ==
           (std::vector<std::string>{"There is nothing out of the ordinary here.", "In Elderly Pursuits, step 1",
               "You are overwhelmed by the putrid stench of", "decay!", "\xE2\x86\x92 Pops Para",
@@ -2101,7 +2101,7 @@ TEST(an_npcs_popup_names_the_key_items_it_gives_and_checks_for)
               "\xE2\x86\x92 Gives key item Cathedral Medallion"}));
     CHECK(SectionLines(p, "Quests") == (std::vector<std::string>{"Elderly Pursuits Other Areas"}));
     CHECK(SectionLines(p, "Pops") == (std::vector<std::string>{"Para"}));
-    CHECK(SectionLines(p, "Key items") == (std::vector<std::string>{"Cathedral Medallion"}));
+    CHECK(SectionLines(p, "Key Items") == (std::vector<std::string>{"Cathedral Medallion"}));
     CHECK(SectionLines(p, "Checks for") == (std::vector<std::string>{"Antique Amulet"}));
 }
 
@@ -2524,12 +2524,12 @@ TEST(the_world_info_widget_tells_what_you_picked_with_its_countdown)
     // Day 9 is 12% and waxing; full on day 46.
     CHECK_EQ(shown(WorldLine::Moon), "Waxing Crescent 12% / Full moon in 35:07:12");
     const std::optional<ElementWeather> rain = NextElementWeather(*ZoneById(79), Element::Water, VanaAt(kEarthsdayTen).day);
-    const std::string when = rain->day == VanaAt(kEarthsdayTen).day ? "Can roll here now"
+    const std::string when = rain->day == VanaAt(kEarthsdayTen).day ? "Can Roll Here Now"
                                                                      : "Here in " + Countdown(SecondsToDay(kEarthsdayTen, rain->day));
     CHECK_EQ(shown(WorldLine::Weather), std::string(WeatherName(rain->weather)) + " " + std::to_string(rain->percent) + "% / " + when);
     // A zone that never rolls it.
     state.zone = 100; // West Ronfaure: sunshine and clouds only
-    CHECK_EQ(shown(WorldLine::Weather), "Water weather / Not in this zone");
+    CHECK_EQ(shown(WorldLine::Weather), "Water Weather / Not in This Zone");
 }
 
 TEST(the_world_info_popup_has_the_parts_you_picked)
@@ -2670,7 +2670,7 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
     // The shops in one socket, the turn-ins under a line of their own in another.
     std::vector<PopupRow> rows = fishing();
     CHECK(rows.size() == 4 && rows[0].nested && rows[1].nested && !rows[2].nested && rows[3].nested);
-    CHECK_EQ(Lines(PopupSection{"", {rows[2]}}).front(), "Today's Turn-ins");
+    CHECK_EQ(Lines(PopupSection{"", {rows[2]}}).front(), "Today's Turn-Ins");
     // Not fetched yet, it says so.
     CHECK_EQ(Lines(PopupSection{"", {rows[3]}}).front(), "They come from phoenix-xi.com");
     state.turnInsFailed = true;

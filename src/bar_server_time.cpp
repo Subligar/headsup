@@ -144,10 +144,10 @@ namespace headsup
     {
         const ZoneTime t = ZoneAt(ClockZone::Japan, unixMs);
         PopupSection rows;
-        rows.rows.push_back(Labeled("Server time", Text(std::string(JstWeekdayName(t.weekday)) + " " +
+        rows.rows.push_back(Labeled("Server Time", Text(std::string(JstWeekdayName(t.weekday)) + " " +
                                                         HourMinute(t.hour, t.minute) + " " + t.abbreviation)));
-        rows.rows.push_back(Labeled("Daily reset in", Text(SpanText(SecondsToDailyReset(unixMs)))));
-        rows.rows.push_back(Labeled("Conquest tally in", Text(SpanText(SecondsToTally(unixMs)))));
+        rows.rows.push_back(Labeled("Daily Reset in", Text(SpanText(SecondsToDailyReset(unixMs)))));
+        rows.rows.push_back(Labeled("Conquest Tally in", Text(SpanText(SecondsToTally(unixMs)))));
         return rows;
     }
 }
