@@ -13,10 +13,10 @@ namespace
 
 TEST(japan_time_is_nine_hours_ahead_of_utc_with_weeks_from_monday)
 {
-    CHECK(JstAt(kFriday1530Jst) == (JstTime{4, 15, 30}));
-    CHECK(JstAt(kSunday2300Jst) == (JstTime{6, 23, 0}));
-    CHECK(JstAt(kMonday0000Jst) == (JstTime{0, 0, 0}));
-    CHECK(JstAt(0) == (JstTime{3, 9, 0})); // 1970-01-01 09:00 JST, a Thursday
+    CHECK(ZoneAt(ClockZone::Japan, kFriday1530Jst) == (ZoneTime{4, 15, 30, "JST"}));
+    CHECK(ZoneAt(ClockZone::Japan, kSunday2300Jst) == (ZoneTime{6, 23, 0, "JST"}));
+    CHECK(ZoneAt(ClockZone::Japan, kMonday0000Jst) == (ZoneTime{0, 0, 0, "JST"}));
+    CHECK(ZoneAt(ClockZone::Japan, 0) == (ZoneTime{3, 9, 0, "JST"})); // 1970-01-01 09:00 JST, a Thursday
     CHECK_EQ(JstWeekdayName(4), "Friday");
 }
 

@@ -1,5 +1,6 @@
 #include "guild_points.h"
 
+#include "bar_server_time.h"
 #include "json_text.h"
 
 #include <charconv>
@@ -14,7 +15,6 @@ namespace headsup
             "guild_goldsmithing", "guild_weaving", "guild_leathercraft", "guild_bonecraft", "guild_alchemy", "guild_cooking"};
         constexpr const char* kGuildNames[kCraftGuilds] = {"Fishing", "Woodworking", "Smithing", "Goldsmithing",
             "Clothcraft", "Leathercraft", "Bonecraft", "Alchemy", "Cooking"};
-        constexpr int64_t kMsPerDay = 86400000LL, kJstOffsetMs = 9LL * 3600000LL;
 
         std::optional<int> WholeNumber(const JsonValue* value)
         {
@@ -28,8 +28,6 @@ namespace headsup
             return value != nullptr && value->kind == JsonValue::Kind::Text ? value->text : std::string();
         }
     }
-
-    const char* CraftGuildName(int guild) { return guild >= 0 && guild < kCraftGuilds ? kGuildNames[guild] : ""; }
 
     std::optional<int> CraftGuildNamed(std::string_view name)
     {
@@ -65,12 +63,6 @@ namespace headsup
             }
         }
         return read;
-    }
-
-    int64_t JstDay(int64_t unixMs)
-    {
-        const int64_t shifted = unixMs + kJstOffsetMs;
-        return shifted >= 0 ? shifted / kMsPerDay : (shifted - kMsPerDay + 1) / kMsPerDay;
     }
 
     std::string GuildPatternsFile(int64_t day, std::string_view json) { return std::to_string(day) + "\n" + std::string(json); }
