@@ -4,6 +4,7 @@
 #include "bar_game_help.h"
 #include "bar_job.h"
 #include "bar_look.h"
+#include "memo.h"
 #include "bar_server_time.h"
 #include "npcdata.h"
 #include "ph_timers.h"
@@ -1009,10 +1010,19 @@ namespace headsup
         PopupSection ByElement(const BarState& state, uint32_t today)
         {
             PopupSection section{"By Element", {}};
+            // Each element's zones rolling it today and tomorrow, which change only with the day.
+            using Rolls = std::array<std::pair<std::vector<ZoneRoll>, std::vector<ZoneRoll>>, kElementCount>;
+            static Memo<uint32_t, Rolls> days;
+            const Rolls& rolls = days.Get(today, [](uint32_t day) {
+                Rolls out;
+                for (int e = 0; e < kElementCount; ++e)
+                    out[e] = {ZonesRolling(static_cast<Element>(e), day), ZonesRolling(static_cast<Element>(e), day + 1)};
+                return out;
+            });
             for (int e = 0; e < kElementCount; ++e)
             {
                 const auto element = static_cast<Element>(e);
-                const std::vector<ZoneRoll> now = ZonesRolling(element, today), next = ZonesRolling(element, today + 1);
+                const std::vector<ZoneRoll>& now = rolls[e].first, &next = rolls[e].second;
                 PopupTab tab{Colored(ElementName(element), ElementColor(element)), {}, SdtIcon(kFirstElementSdt + e)};
                 std::map<uint16_t, std::pair<const ZoneRoll*, const ZoneRoll*>> zones;
                 for (const ZoneRoll& roll : now)
