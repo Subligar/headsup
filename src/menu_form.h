@@ -73,9 +73,9 @@ namespace headsup
         std::unordered_map<const SetupChoice*, std::optional<size_t>> picked = {};
     };
 
-    // The settings file a run of Setup again copies the settings to first, named for when, and the picture Setup
+    // What Setup's warning names its backup by in place of when it is made (SetupBackupName), and the picture Setup
     // shows its preview in.
-    constexpr const char* kSetupBackupFile = "settings-before-setup-<date>-<time>.ini";
+    constexpr const char* kSetupBackupWhen = "<date>-<time>";
     constexpr const char* kSetupPicture    = "hu:setup/scene";
 
     // What the settings window keeps between passes that is no setting.

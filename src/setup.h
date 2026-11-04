@@ -65,6 +65,7 @@ namespace headsup
 
     // The file running Setup again copies the settings to first, beside them: named for the second it was made, with
     // a number after when taken(name) says that name is already a file, so no run writes over another's.
+    constexpr const char* kSetupBackupStem = "settings-before-setup-", *kSetupBackupExtension = ".ini";
     struct SetupTime
     {
         int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;

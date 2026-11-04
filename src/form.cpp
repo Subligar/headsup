@@ -19,7 +19,6 @@ namespace headsup
 {
     namespace
     {
-        constexpr std::string_view kIdMark = "##"; // in a label: before it what shows, after it what names the id
         constexpr float kColorFull        = 255.0f;
         constexpr int kHexDigits          = 6;
         constexpr int kNumberDigits       = 6; // a number box holds a sign and five digits
@@ -62,12 +61,6 @@ namespace headsup
             return mark == std::string_view::npos ? label : label.substr(mark + kIdMark.size());
         }
         std::string_view LabelText(std::string_view label) { return label.substr(0, label.find(kIdMark)); }
-
-        std::string TipAttribute(std::string_view tip)
-        {
-            return tip.empty() ? std::string() : std::string(" ") + kMenuTipAttribute + "=\"" + EscapedRml(tip) + "\"";
-        }
-        std::string TipAttribute(const char* tip) { return TipAttribute(std::string_view(tip != nullptr ? tip : "")); }
 
         // A card's description: one line as it is, or each line under the last, one starting "- " as a bullet point.
         std::string NoteRml(std::string_view about)
@@ -117,6 +110,12 @@ namespace headsup
                 break;
             }
     }
+
+    std::string TipAttribute(std::string_view tip)
+    {
+        return tip.empty() ? std::string() : std::string(" ") + kMenuTipAttribute + "=\"" + EscapedRml(tip) + "\"";
+    }
+    std::string TipAttribute(const char* tip) { return TipAttribute(std::string_view(tip != nullptr ? tip : "")); }
 
     std::string Form::Id(std::string_view name)
     {

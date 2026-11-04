@@ -30,6 +30,10 @@ namespace headsup
         return text;
     }
 
+    // A tip as an element's attribute, with its space before it; none for no tip.
+    std::string TipAttribute(std::string_view tip);
+    std::string TipAttribute(const char* tip);
+
     // Something the player did to a control since the last pass, by the control's id.
     struct FormEvent
     {
@@ -92,6 +96,7 @@ namespace headsup
     // strip's tab, each with its number.
     constexpr const char* kOptionIdInfix = "-o-", *kSegmentIdInfix = "-s-", *kTabIdInfix = "-t-";
     constexpr const char* kChipIdInfix = "-c-";
+    constexpr std::string_view kIdMark = "##"; // in a label: before it what shows, after it what names the id
     constexpr const char* kGhostIdInfix = "-g-"; // before a stretch: where a held tag shows where it would go
     constexpr const char* kChipTagInfix = "-"; // after a chip's id and before a tag's number, in a chip of several
 

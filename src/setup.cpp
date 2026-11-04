@@ -215,7 +215,6 @@ namespace headsup
         constexpr BarWidget kSystem[]{BarWidget::Performance, BarWidget::GameHelp, BarWidget::StatusTimers};
         const SetupWidgetGroup kWidgetGroups[]{{"where", kWhere}, {"time", kTime}, {"you", kYou}, {"system", kSystem}};
 
-        constexpr const char* kBackupExtension = ".ini";
         constexpr int kFirstAgain              = 2; // the number a second backup of the same second takes
     }
 
@@ -249,12 +248,12 @@ namespace headsup
 
     std::string SetupBackupName(const SetupTime& at, const std::function<bool(const std::string&)>& taken)
     {
-        char stem[64];
-        std::snprintf(stem, sizeof(stem), "settings-before-setup-%04d-%02d-%02d-%02d%02d%02d", at.year, at.month, at.day, at.hour,
-            at.minute, at.second);
-        std::string name = std::string(stem) + kBackupExtension;
+        char when[32];
+        std::snprintf(when, sizeof(when), "%04d-%02d-%02d-%02d%02d%02d", at.year, at.month, at.day, at.hour, at.minute, at.second);
+        const std::string stem = kSetupBackupStem + std::string(when);
+        std::string name       = stem + kSetupBackupExtension;
         for (int again = kFirstAgain; taken(name); ++again)
-            name = std::string(stem) + "-" + std::to_string(again) + kBackupExtension;
+            name = stem + "-" + std::to_string(again) + kSetupBackupExtension;
         return name;
     }
 }

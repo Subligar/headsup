@@ -69,7 +69,7 @@ namespace headsup
         // several lines or widgets, whatever name says.
         std::string Labeled(const char* name, std::string_view key, std::string_view scope = {})
         {
-            return Words(name) + "##" + std::string(key) + std::string(scope);
+            return Words(name) + std::string(kIdMark) + std::string(key) + std::string(scope);
         }
         const char* Word(const Context& c, WindowWord word) { return c.layout.WordOf(word).name; }
         const char* WordTip(const Context& c, WindowWord word) { return c.layout.WordOf(word).tip; }
@@ -250,7 +250,7 @@ namespace headsup
                 std::string windows;
                 for (const WindowKey& key : view.windows)
                     windows += (windows.empty() ? "" : ", ") + WindowName(ShortName(key));
-                form.Row((std::string(view.name) + "##view " + id).c_str(), WordTip(c, WindowWord::GroupsRowTip));
+                form.Row(Labeled(std::string(view.name).c_str(), "view " + id).c_str(), WordTip(c, WindowWord::GroupsRowTip));
                 // Named after the view: a box's own label is the box's id and -name, which "y search" would give
                 // the box of the view "search/name".
                 const bool reset = form.ResetAt((id + " reset").c_str(), own != shifts.end());
@@ -337,7 +337,7 @@ namespace headsup
             {
                 const char* label      = WindowLabel(window);
                 const std::string name = TitleCaseText(label != nullptr ? std::string(label) : window); // the game's own
-                form.Row((name + "##" + name + " window " + window).c_str(), WordTip(c, WindowWord::WindowListRowTip));
+                form.Row(Labeled(name.c_str(), "window " + window).c_str(), WordTip(c, WindowWord::WindowListRowTip));
                 const auto hidden = std::ranges::find(s.hiddenWindows, window);
                 bool kept         = hidden == s.hiddenWindows.end();
                 form.ToggleAt(("keep " + window).c_str(), kept, Word(c, WindowWord::WindowListHide),
@@ -841,16 +841,15 @@ namespace headsup
                 {
                     const int w          = SlotOf(held[i]);
                     const std::string id = form.Id(kWidgetChip + std::to_string(w));
-                    form.Raw("<div class=\"btn raised wchip drag\" id=\"" + id + "\" tip=\"" +
-                             EscapedRml(Said(widgets[static_cast<size_t>(held[i].kind)].tip)) + "\">");
+                    form.Raw("<div class=\"btn raised wchip drag\" id=\"" + id + "\"" +
+                             TipAttribute(widgets[static_cast<size_t>(held[i].kind)].tip) + ">");
                     const bool was = s.widgets[w].on;
                     form.CheckAt((kWidgetChip + std::to_string(w) + kChipToggle).c_str(), s.widgets[w].on);
                     if (HasCopies(held[i].kind))
                     {
                         const std::string cloneId = form.Id(kWidgetChip + std::to_string(w) + kChipClone);
-                        form.Raw("<div class=\"wclone\" id=\"" + cloneId + "\" tip=\"" +
-                                 EscapedRml(WordTip(c, WindowWord::WidgetTabsClone)) + "\"><img src=\"" +
-                                 IconSource(Icon::Clone) + "\"/></div>");
+                        form.Raw("<div class=\"wclone\" id=\"" + cloneId + "\"" + TipAttribute(WordTip(c, WindowWord::WidgetTabsClone)) +
+                                 "><img src=\"" + IconSource(Icon::Clone) + "\"/></div>");
                         if (!form.Off() && form.Clicked(cloneId)) clone = held[i];
                     }
                     form.Raw(EscapedRml(CopyName(c, held[i])) + "</div>");
@@ -942,7 +941,7 @@ namespace headsup
             const auto modes        = c.layout.OptionsOf(WindowList::PlateMode);
             const auto outlineModes = c.layout.OptionsOf(WindowList::OutlineMode);
             form.Fade(!s.enabled);
-            form.Row("##visibility heads", nullptr);
+            form.Row(Labeled(nullptr, "visibility heads").c_str(), nullptr);
             form.Fade(!plates);
             form.Caption(Labeled(Word(c, WindowWord::VisibilityNameplates), "nameplates").c_str(), "head", kModeWidth);
             form.Fade(!outlines);
@@ -1194,7 +1193,7 @@ namespace headsup
             const auto weakTip   = [&](int rank) { return CutoffTip(c, rank, true); };
             const auto resistTip = [&](int rank) { return CutoffTip(c, rank, false); };
             form.Fade(dim);
-            form.Row("##status heads", nullptr);
+            form.Row(Labeled(nullptr, "status heads").c_str(), nullptr);
             form.Caption("", "head", kToggleWidth);
             form.Caption(Labeled(Word(c, WindowWord::StatusTableWeak), "weak").c_str(), "head", kCutoffWidth);
             form.Caption(Labeled(Word(c, WindowWord::StatusTableResist), "resist").c_str(), "head", kCutoffWidth);
@@ -2037,7 +2036,8 @@ namespace headsup
             SetupRun& run = *c.state.setup;
             if (run.rerun && !run.started)
                 form.Note((Words(Word(c, WindowWord::SetupWarning)) + ": " +
-                           Filled(Said(WordTip(c, WindowWord::SetupWarning)), kFileMark, kSetupBackupFile))
+                           Filled(Said(WordTip(c, WindowWord::SetupWarning)), kFileMark,
+                                  kSetupBackupStem + std::string(kSetupBackupWhen) + kSetupBackupExtension))
                               .c_str());
             form.Raw(std::string("<img class=\"") + kSetupPreviewClass + " " + kWheelClass + " " + kPanClass + "\" id=\"" +
                      kSetupPreviewClass + "\" src=\"" + kSetupPicture + "\"/>");
