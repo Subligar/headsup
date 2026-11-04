@@ -35,10 +35,7 @@ namespace headsup
         constexpr float kSegmentGap   = 0.25f; // between two joined choices
         constexpr float kSegmentPad   = 0.3f;  // a choice's text from its sides, at the least
         constexpr float kFaint        = 0.45f; // the opacity of a held tag where it would go, and of one leaving
-    }
 
-    namespace
-    {
         // The accent's alpha where it is light and no fill: a slider's filled part and a hovered card's edge, the
         // title's glow, the line under it, a text box that has the keyboard, and the picked page from end to end.
         constexpr uint32_t kWash = 0x59, kGlow = 0x66, kLine = 0xB3, kFocus = 0x99, kPickedStart = 0x47, kPickedEnd = 0x14;
@@ -70,10 +67,7 @@ namespace headsup
             css += std::string("#") + kMenuPopupId + ",#" + kMenuTipId + "{border-color:" + RcssColor(Faded(c.accent, kAuroraPopupFrame)) + ";}";
             return css;
         }
-    }
 
-    namespace
-    {
         // The game's art in place of the window's fill and edge, and of its lists' and tips'.
         std::string SkinMenuRules(const SkinFrame& frame)
         {

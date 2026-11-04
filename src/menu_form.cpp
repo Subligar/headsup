@@ -1929,12 +1929,12 @@ namespace headsup
             case CardPiece::Visibility:
             case CardPiece::PlaceholderTimers:
             case CardPiece::MousePointer: return {false, !on};
-            case CardPiece::Badges: return {false, !plates};
             case CardPiece::OutlineDesign: return {c.kind && !c.outlineColors, !on || !s.outlines};
+            case CardPiece::Badges:
             case CardPiece::NameplateDesign:
             case CardPiece::LineStyle:
             case CardPiece::Ornament:
-            case CardPiece::NameplateOpacity: return {false, !plates};
+            case CardPiece::NameplateOpacity:
             case CardPiece::DetectionIcons:
             case CardPiece::Weaknesses:
             case CardPiece::Statuses: return {false, !plates};
@@ -1992,7 +1992,7 @@ namespace headsup
             Form& form                  = c.form;
             const LayoutSetting* styles = c.layout.SettingOf(SettingPiece::LineStyles);
             if (styles == nullptr) return;
-            const std::vector<const char*> kinds = NamesOf(c.layout.OptionsOf(kSetupLineKindNames));
+            const std::vector<const char*> kinds = NamesOf(c.layout.OptionsOf(WindowList::SetupLineKinds));
             run.lineKind = form.Tabs("line kind", run.lineKind, kinds.data(), static_cast<int>(kinds.size()));
             const auto lines = c.layout.OptionsOf(WindowList::PlateLines);
             const std::vector<const char*> lineNames = NamesOf(lines);
@@ -2010,7 +2010,7 @@ namespace headsup
         // The Top Panel step's Advanced: a switch for each widget, in groups.
         void SetupWidgets(Context& c)
         {
-            const std::span<const LayoutOption> groups  = c.layout.OptionsOf(kSetupWidgetGroupNames);
+            const std::span<const LayoutOption> groups  = c.layout.OptionsOf(WindowList::SetupWidgetGroups);
             const std::span<const LayoutOption> widgets = c.layout.OptionsOf(WindowList::BarWidgets);
             for (size_t g = 0; g < SetupWidgetGroups().size(); ++g)
             {
