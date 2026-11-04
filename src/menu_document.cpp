@@ -53,15 +53,6 @@ namespace headsup
         // gold, blue and cyan accents do, Phoenix's red does not.
         constexpr float kBrightFill = 0.3f;
 
-        float Luminance(uint32_t argb)
-        {
-            const auto linear = [&](int shift) {
-                const float v = static_cast<float>(Channel(argb, shift)) / 255.0f;
-                return v <= 0.03928f ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f);
-            };
-            return 0.2126f * linear(kRedShift) + 0.7152f * linear(kGreenShift) + 0.0722f * linear(kBlueShift);
-        }
-
         // The text on the accent's gradient: a picked choice or tab, and an accent button.
         uint32_t OnAccent(const MenuColors& c)
         {
