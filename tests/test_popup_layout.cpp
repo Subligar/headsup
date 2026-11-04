@@ -607,32 +607,30 @@ TEST(immune_icons_get_their_mark)
     CHECK(Of(l, PopupPiece::Kind::ImmuneMark).size() == 1);
 }
 
-TEST(a_titled_popup_has_its_pin_chip_at_the_top_right_lit_and_saying_pinned_only_while_pinned)
+TEST(a_titled_popup_has_a_round_pin_chip_at_the_top_right_with_its_pin_alone_filled_only_while_pinned)
 {
     for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
     {
         const BarMetrics m = MetricsFor(36, shape, kAutoBarTextSize, kAutoPopupTextSize);
         const PopupLayout pinned = LayoutPopup(Sample(), m, shape, true, Fake);
         const PopupLayout loose  = LayoutPopup(Sample(), m, shape, false, Fake);
-        for (const auto& [l, word, lit] : {std::tuple{&pinned, "pinned", true}, std::tuple{&loose, "pin", false}})
+        for (const auto& [l, lit] : {std::pair{&pinned, true}, std::pair{&loose, false}})
         {
             const PopupPiece* chip = nullptr;
-            const PopupPiece* text = nullptr;
             const PopupPiece* mark = nullptr;
             for (const PopupPiece& p : l->pieces)
             {
                 if (p.kind == PopupPiece::Kind::PinChip && Near(p.x, l->pin.x) && Near(p.y, l->pin.y)) chip = &p;
-                if (p.kind == PopupPiece::Kind::PinWord && p.font == PopupFont::Pin) text = &p;
                 if (p.kind == PopupPiece::Kind::Icon && p.tinted) mark = &p;
+                CHECK(p.font != PopupFont::Pin || p.kind != PopupPiece::Kind::Text); // no word on it
             }
-            CHECK(chip != nullptr && text != nullptr && mark != nullptr);
-            CHECK(chip->open == lit && text->span.text == word);
+            CHECK(chip != nullptr && mark != nullptr && chip->open == lit);
+            CHECK(Near(l->pin.width, l->pin.height)); // round
             CHECK(Near(l->pin.x + l->pin.width, l->width - m.popupPadding) && Near(l->pin.y, m.popupPadding));
-            CHECK(text->x >= chip->x && text->x + text->width <= chip->x + chip->width); // its word inside it
-            // The pin's picture left of its word, inside the chip, in the word's color.
-            CHECK(mark->icon == (lit ? Icon::Pinned : Icon::Pin) && mark->span.tone == text->span.tone);
-            CHECK(mark->x > chip->x && mark->x + mark->width < text->x && mark->y > chip->y &&
-                  mark->y + mark->height < chip->y + chip->height);
+            // The empty pin, or the filled one while pinned, in the middle of the chip.
+            CHECK(mark->icon == (lit ? Icon::Pinned : Icon::Pin));
+            CHECK(Near(mark->x - chip->x, chip->x + chip->width - mark->x - mark->width) &&
+                  Near(mark->y - chip->y, chip->y + chip->height - mark->y - mark->height) && mark->width < chip->width);
         }
         CHECK(Near(pinned.width, loose.width)); // pinning never changes the popup's width
     }
@@ -690,7 +688,7 @@ TEST(rows_without_cells_add_no_pieces_and_a_grid_without_cells_does_not_divide_b
     c.sections[0].rows.push_back(PopupRow{RowKind::Tags, 0, {}});
     c.sections[0].rows.push_back(PopupRow{RowKind::Grid, 0, {}});
     const PopupLayout l = LayoutPopup(c, m, BarShape::Ornate, false, Fake);
-    CHECK_EQ(l.pieces.size(), static_cast<size_t>(6)); // the title, the pin's chip, word and picture, and the cog's chip and cog
+    CHECK_EQ(l.pieces.size(), static_cast<size_t>(5)); // the title, the pin's chip and picture, and the cog's chip and cog
     CHECK(AllInside(l, m));
 }
 
@@ -940,8 +938,8 @@ TEST(a_cut_above_the_first_row_keeps_the_title_alone)
     const PopupLayout l    = LayoutPopup(Tall(), m, BarShape::Ornate, true, Fake);
     PopupLayout cut        = l;
     CutPopup(cut, Bottom(*Find(l, "ID 220")) + m.popupPadding - 0.5f, m.popupPadding);
-    CHECK_EQ(cut.pieces.size(), static_cast<size_t>(7)); // the icon, the name, the pin's chip, word and picture, the cog's chip and cog
-    CHECK(Find(cut, "Goblin") != nullptr && Find(cut, "pinned") != nullptr);
+    CHECK_EQ(cut.pieces.size(), static_cast<size_t>(6)); // the icon, the name, the pin's chip and picture, the cog's chip and cog
+    CHECK(Find(cut, "Goblin") != nullptr && Of(cut, PopupPiece::Kind::PinChip).size() == 1);
     CHECK(Near(cut.height, TitleBottom(l) + m.popupPadding));
 }
 

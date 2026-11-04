@@ -21,8 +21,8 @@ namespace headsup
         constexpr float kCardPad     = 0.55f; // a card's contents from its edges
         constexpr float kCardGap     = 0.45f; // between cards, and between the columns of them
         constexpr float kMinWidth    = 12.0f; // popupText, so a short popup is not a sliver
-        constexpr const char* kPinWord = "pin", *kPinnedWord = "pinned"; // the pin chip's, as it is and as it would be
-        constexpr float kCogShare    = 0.7f;  // the cog, of its chip's height
+        constexpr float kPinChip     = 1.4f;  // the round pin chip's side, in popup text sizes
+        constexpr float kMarkShare   = 0.7f;  // the pin or cog, of its chip's height
         constexpr float kSocketInset = 0.9f;  // a socket's rows from its left and right edges
         constexpr float kSocketPad   = 0.35f; // above and below a socket's rows
         constexpr size_t kMostSideBySide  = 4; // groups of a tall grid's lines set side by side before a card goes on
@@ -595,7 +595,7 @@ namespace headsup
         const float unit = metrics.popupText, pad = metrics.popupPadding, cardGap = std::round(unit * kCardGap);
         const bool ornate = shape == BarShape::Ornate;
         PopupLayout l;
-        // The title row: its icon, its text and the pinned mark, which goes to the right edge once it is known.
+        // The title row: its icon, its text and the pin, which goes to the right edge once it is known.
         float x = pad, rowHeight = 0.0f;
         if (content.icon)
         {
@@ -612,31 +612,24 @@ namespace headsup
             rowHeight = std::max(rowHeight, t.height);
         }
         float titleWidth = x - pad;
-        // The pin: a chip at the title row's right edge, lit and saying so while pinned. Its room is the longer word's
-        // either way, so pinning never changes the popup's width. The settings chip is a round one left of it.
+        // The pin: a round chip at the title row's right edge with the pin alone in it, empty, or filled and lit while
+        // pinned. The settings chip is a round one left of it.
         std::optional<size_t> pinChip, cogChip;
         if (!content.title.empty() || content.icon || !content.sections.empty() || settings)
         {
-            // Its picture left of the word, as tall as the word's ink.
-            const Span word{pinned ? kPinnedWord : kPinWord, Tone::Heading, 0};
-            const TextSize size   = measure(word, PopupFont::Pin);
-            const TextSize longer = measure(Span{kPinnedWord, Tone::Heading, 0}, PopupFont::Pin);
-            const float mark = std::round(longer.inkBottom - longer.inkTop), gap = std::round(unit * kIconGap);
-            const TextSize framed = Framed(TextSize{longer.width + mark + gap, longer.height, longer.inkTop, longer.inkBottom}, unit);
-            const float left      = std::round((framed.width - mark - gap - size.width) / 2.0f);
-            pinChip               = l.pieces.size();
-            PopupPiece chip{PopupPiece::Kind::PinChip, 0.0f, pad, framed.width, framed.height, {}};
+            const float side = std::round(unit * kPinChip), mark = std::round(side * kMarkShare);
+            pinChip          = l.pieces.size();
+            PopupPiece chip{PopupPiece::Kind::PinChip, 0.0f, pad, side, side, {}};
             chip.open = pinned;
             chip.font = PopupFont::Pin;
             l.pieces.push_back(std::move(chip));
-            l.pieces.push_back(PopupPiece{PopupPiece::Kind::PinWord, left + mark + gap,
-                pad + framed.inkTop - size.inkTop, size.width, size.height, word, PopupFont::Pin});
-            PopupPiece picture{PopupPiece::Kind::Icon, left, pad + framed.inkTop, mark, mark, Span{"", Tone::Heading, 0}, PopupFont::Pin};
+            PopupPiece picture{PopupPiece::Kind::Icon, (side - mark) / 2.0f, pad + (side - mark) / 2.0f, mark, mark,
+                Span{"", Tone::Heading, 0}, PopupFont::Pin};
             picture.icon   = pinned ? Icon::Pinned : Icon::Pin;
             picture.tinted = true;
             l.pieces.push_back(std::move(picture));
-            titleWidth += unit * kCellGap + framed.width;
-            rowHeight = std::max(rowHeight, framed.height);
+            titleWidth += unit * kCellGap + side;
+            rowHeight = std::max(rowHeight, side);
         }
         if (pinChip && content.settings)
         {
@@ -646,7 +639,7 @@ namespace headsup
             cog.open = settings.has_value();
             cog.font = PopupFont::Pin;
             l.pieces.push_back(std::move(cog));
-            const float mark = std::round(side * kCogShare);
+            const float mark = std::round(side * kMarkShare);
             l.pieces.push_back(PopupPiece{PopupPiece::Kind::Cog, (side - mark) / 2.0f, pad + (side - mark) / 2.0f, mark, mark, {},
                 PopupFont::Pin});
             titleWidth += unit * kCellGap + side;

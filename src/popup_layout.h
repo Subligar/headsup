@@ -38,8 +38,7 @@ namespace headsup
             ScrollTrack, // a scrolling socket's scrollbar, in its right padding
             ScrollThumb, // and the part of it its shown lines are
             Picture,     // a picture from the game's files, as an icon is drawn
-            PinChip,     // the pin's chip, drawn as a tab's; open while pinned
-            PinWord,     // the word on it, drawn as text
+            PinChip,     // the pin's round chip, drawn as a tab's; open while pinned
             CogChip,     // the settings chip left of the pin, drawn as a tab's; open while the settings show
             Cog,         // the cog on it
         };
@@ -116,9 +115,9 @@ namespace headsup
     // under the title, on the panel. A pair's value ends at its card's right edge. When the cards stacked would run
     // taller than kTwoColumnsAbove popup text sizes, they flow into two columns as even as their order allows, and
     // into more when two would run taller than room, a card too tall for it going on in the next under its heading.
-    // The pin chip sits at the title row's top right: "pin", or lit and "pinned" while pinned, with the settings chip
-    // left of it, lit while settings show. It is never narrower than least, its cards widening to fill it. With
-    // settings, their room is left under the title in place of the sections, no taller than room leaves.
+    // The round pin chip sits at the title row's top right: an empty pin, or lit with a filled one while pinned, with
+    // the settings chip left of it, lit while settings show. It is never narrower than least, its cards widening to
+    // fill it. With settings, their room is left under the title in place of the sections, no taller than room leaves.
     constexpr float kTwoColumnsAbove = 24.0f;
     PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, BarShape shape, bool pinned,
                             SpanMeasure measure, float room = std::numeric_limits<float>::infinity(), float least = 0.0f,
