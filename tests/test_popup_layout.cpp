@@ -1078,8 +1078,8 @@ TEST(a_spread_grid_keeps_its_right_column_at_the_cards_edge_and_its_centered_one
             const PopupPiece& from = *Find(l, name);
             // The time ends as far in from the card's right as the route starts from its left.
             CHECK(Near(card.x + card.width - (time.x + time.width), from.x - card.x));
-            // The status sits in the card's middle, clear of the route.
-            CHECK(Near(said.x + said.width / 2.0f, card.x + card.width / 2.0f));
+            // The status sits a text size right of the card's middle, clear of the route.
+            CHECK(Near(said.x + said.width / 2.0f, card.x + card.width / 2.0f + m.popupText));
             CHECK(said.x > from.x + from.width && said.x + said.width < time.x);
         }
 }

@@ -16,6 +16,7 @@ namespace headsup
         constexpr float kStar        = 0.85f; // a starred cell's star, about as tall as a capital
         constexpr float kCellGap     = 0.6f;  // between cells of a line
         constexpr float kColumnGap   = 0.8f;
+        constexpr float kMiddleRight = 1.0f;  // a spread grid's centered column, right of the card's middle
         constexpr float kPairGap     = 1.2f;  // the least between a pair's label and its value
         constexpr float kTagPadX     = 0.6f, kTagPadY = 0.4f, kTagGap = 0.3f; // from a tag's ink to its frame
         constexpr float kCardPad     = 0.55f; // a card's contents from its edges
@@ -282,12 +283,13 @@ namespace headsup
                 const float columnGap = unit * kColumnGap;
                 if (grid && row.spread && columns.size() % 2 == 1)
                 {
-                    // The middle column in the card's middle: as much room on its right as its left side needs.
+                    // The middle column just right of the card's middle: room for the wider side on either half.
                     const size_t middle = columns.size() / 2;
                     float sides[2]      = {0.0f, 0.0f};
                     for (size_t c = 0; c < columns.size(); ++c)
                         if (c != middle) sides[c > middle] += columns[c] + columnGap;
-                    rowWidth += 2.0f * std::max(sides[0], sides[1]) + columns[middle];
+                    const float right = unit * kMiddleRight;
+                    rowWidth += 2.0f * std::max(sides[0] - right, sides[1] + right) + columns[middle];
                 }
                 else
                 {
@@ -405,7 +407,7 @@ namespace headsup
                             b.pieces[v].right = b.pieces[v].kind == PopupPiece::Kind::Text;
                     }
                     else if (spread)
-                        b.values.push_back(Block::Value{first, b.pieces.size(), (start + cx) / 2.0f, 0.0f, true});
+                        b.values.push_back(Block::Value{first, b.pieces.size(), (start + cx) / 2.0f - unit * kMiddleRight, 0.0f, true});
                     lineHeight = std::max(lineHeight, size.height);
                     x += grid ? columns[i % columns.size()] + unit * kColumnGap : size.width + gap;
                 }
