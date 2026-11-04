@@ -27,20 +27,6 @@ namespace headsup
         return nullptr;
     }
 
-    void** ImportSlotByOrdinal(HMODULE module, const char* library, WORD ordinal)
-    {
-        auto* base = reinterpret_cast<uint8_t*>(module);
-        for (auto* d = Imports(base); d != nullptr && d->Name != 0; ++d)
-        {
-            if (_stricmp(reinterpret_cast<const char*>(base + d->Name), library) != 0 || d->OriginalFirstThunk == 0) continue;
-            // The lookup table, which the loader leaves as it was, runs beside the slots.
-            auto* slot = reinterpret_cast<void**>(base + d->FirstThunk);
-            for (auto* entry = reinterpret_cast<const IMAGE_THUNK_DATA32*>(base + d->OriginalFirstThunk); entry->u1.Ordinal != 0; ++entry, ++slot)
-                if (IMAGE_SNAP_BY_ORDINAL32(entry->u1.Ordinal) && IMAGE_ORDINAL32(entry->u1.Ordinal) == ordinal) return slot;
-        }
-        return nullptr;
-    }
-
     bool WriteSlot(void** slot, void* value)
     {
         DWORD old = 0;
