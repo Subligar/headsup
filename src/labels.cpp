@@ -1,6 +1,7 @@
 #include "labels.h"
 
 #include <cstdio>
+#include <optional>
 
 namespace headsup
 {
@@ -9,6 +10,25 @@ namespace headsup
         constexpr LabelShade kConShades[kConCount] = {LabelShade::TooWeak, LabelShade::EasyPrey, LabelShade::EasyPrey,
             LabelShade::DecentChallenge, LabelShade::EvenMatch, LabelShade::Tough, LabelShade::VeryTough,
             LabelShade::IncrediblyTough};
+
+        // The con a check gave, else the cons of the mob's level range against yours; none while either is unknown.
+        struct ConRange
+        {
+            Con easiest, hardest;
+        };
+        std::optional<ConRange> ConsOf(const MobRecord* mob, const CheckResult* checked, int playerLevel)
+        {
+            if (checked != nullptr && checked->level > 0) return ConRange{checked->con, checked->con};
+            if (mob == nullptr || mob->maxLevel == 0 || playerLevel <= 0) return std::nullopt;
+            return ConRange{Difficulty(playerLevel, mob->minLevel + mob->expLevelMod),
+                Difficulty(playerLevel, mob->maxLevel + mob->expLevelMod)};
+        }
+
+        // One con's name, or the two ends' with between them.
+        std::string RangeText(const ConRange& cons, const char* (*name)(Con), const char* between)
+        {
+            return cons.easiest == cons.hardest ? name(cons.hardest) : std::string(name(cons.easiest)) + between + name(cons.hardest);
+        }
     }
 
     std::string IdText(uint32_t serverId)
@@ -41,35 +61,20 @@ namespace headsup
 
     std::string ConText(const MobRecord* mob, const CheckResult* checked, int playerLevel)
     {
-        if (checked != nullptr && checked->level > 0) return Abbrev(checked->con);
-        if (mob == nullptr || mob->maxLevel == 0 || playerLevel <= 0) return "??";
-        const Con easiest = Difficulty(playerLevel, mob->minLevel + mob->expLevelMod);
-        const Con hardest = Difficulty(playerLevel, mob->maxLevel + mob->expLevelMod);
-        return easiest == hardest ? Abbrev(hardest) : std::string(Abbrev(easiest)) + "-" + Abbrev(hardest);
+        const std::optional<ConRange> cons = ConsOf(mob, checked, playerLevel);
+        return cons ? RangeText(*cons, Abbrev, "-") : "??";
     }
 
     Label MakeLabel(const MobRecord* mob, const CheckResult* checked, int playerLevel)
     {
         Label label{};
-        label.shade = LabelShade::Unknown;
+        const std::optional<ConRange> cons = ConsOf(mob, checked, playerLevel);
+        label.shade             = cons ? ShadeFor(cons->hardest) : LabelShade::Unknown;
         const std::string level = LevelText(mob, checked);
         const std::string text  = "Lv " + level + " " + ConText(mob, checked, playerLevel);
         std::snprintf(label.text, sizeof(label.text), "%s", text.c_str());
         std::snprintf(label.level, sizeof(label.level), "%s", level.c_str());
-        std::string con;
-        if (checked != nullptr && checked->level > 0)
-            con = ConName(checked->con);
-        else if (mob != nullptr && mob->maxLevel != 0 && playerLevel > 0)
-        {
-            const Con easiest = Difficulty(playerLevel, mob->minLevel + mob->expLevelMod);
-            const Con hardest = Difficulty(playerLevel, mob->maxLevel + mob->expLevelMod);
-            con = easiest == hardest ? ConName(hardest) : std::string(ConName(easiest)) + " to " + ConName(hardest);
-        }
-        std::snprintf(label.con, sizeof(label.con), "%s", con.c_str());
-        if (checked != nullptr && checked->level > 0)
-            label.shade = ShadeFor(checked->con);
-        else if (mob != nullptr && mob->maxLevel != 0 && playerLevel > 0)
-            label.shade = ShadeFor(Difficulty(playerLevel, mob->maxLevel + mob->expLevelMod));
+        std::snprintf(label.con, sizeof(label.con), "%s", cons ? RangeText(*cons, ConName, " to ").c_str() : "");
         return label;
     }
 }
