@@ -53,7 +53,6 @@ namespace headsup
             int nameHeight;
             uint32_t nameColor;
             std::vector<ShownLine> lines; // the plate's lines, a design line's rows each
-            int lineCount;
         };
 
         void SetDevice(IDirect3DDevice8* device);

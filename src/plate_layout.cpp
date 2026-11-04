@@ -31,6 +31,19 @@ namespace headsup
             const size_t above = (std::max(run.icons.size(), size_t{1}) - 1) / kIconsPerRow;
             return iconSize + static_cast<float>(above) * RowStep(run, iconSize);
         }
+
+        // Where an icon sits right of its row's first: past the before icons ahead of it, iconSize + kIconGap each, and
+        // the overhang of each of the badged ones among them.
+        float IconOffset(int before, int badged, float iconSize)
+        {
+            return static_cast<float>(before) * (iconSize + kIconGap) + static_cast<float>(badged) * iconSize * kBadgeOverhang;
+        }
+
+        // A row of count icons, badges of them with a badge.
+        float IconRunWidth(int count, int badges, float iconSize)
+        {
+            return count > 0 ? IconOffset(count, badges, iconSize) - kIconGap : 0.0f;
+        }
     }
 
     namespace
@@ -186,16 +199,6 @@ namespace headsup
             if (place.ornamentHeight > 0.0f) add(place.ornament.x, place.ornament.y, place.ornamentWidth, place.ornamentHeight);
         }
         return box;
-    }
-
-    float IconOffset(int before, int badged, float iconSize)
-    {
-        return static_cast<float>(before) * (iconSize + kIconGap) + static_cast<float>(badged) * iconSize * kBadgeOverhang;
-    }
-
-    float IconRunWidth(int count, int badges, float iconSize)
-    {
-        return count > 0 ? IconOffset(count, badges, iconSize) - kIconGap : 0.0f;
     }
 
     RunShape ShapeOfRun(const ComposedLine& line, size_t item, float scale)

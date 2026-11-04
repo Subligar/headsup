@@ -69,11 +69,6 @@ namespace headsup
         float cursorHeight, float cursorTip, int timerCount, float timerHeight, float cursorRaise = 0.0f);
     PlateBox BoxOf(const PlateLayout& layout);
 
-    // Where an icon sits right of its row's first: past the before icons ahead of it, iconSize + kIconGap each, and
-    // the overhang of each of the badged ones among them.
-    float IconOffset(int before, int badged, float iconSize);
-    // A row of count icons, badges of them with a badge.
-    float IconRunWidth(int count, int badges, float iconSize);
     // An icon run in its item's box: rows of kIconsPerRow from the bottom up, rowStep apart, the lowest bottomRowTop
     // under the box's top; a partial row sits against the box's right edge when right is set, else its left.
     struct RunShape

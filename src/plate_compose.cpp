@@ -25,6 +25,12 @@ namespace headsup
 
         const LineDesign& StyleLine(const KindSettings& kind, int line) { return kind.lines[StyleLineOf(kind, line)]; }
 
+        // The percent of the base size as pixels.
+        float BasePixels(const Settings& s, int percent)
+        {
+            return static_cast<float>(s.baseSize) * static_cast<float>(percent) / kPercent;
+        }
+
         LineLook LookOf(const LineDesign& d, const EntityState& state, const Settings& s, uint32_t gameArgb)
         {
             LineLook look;
@@ -258,11 +264,6 @@ namespace headsup
             }
             plate.lines.push_back(ComposedLine{kBottomLine, {std::move(icon)}, bottomLook});
         }
-    }
-
-    float BasePixels(const Settings& s, int percent)
-    {
-        return static_cast<float>(s.baseSize) * static_cast<float>(percent) / kPercent;
     }
 
     namespace

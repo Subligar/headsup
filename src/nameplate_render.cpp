@@ -614,7 +614,6 @@ namespace headsup
         shown.nameY      = 0.0f;
         shown.nameHeight = 0;
         shown.nameColor  = kWhite;
-        shown.lineCount  = static_cast<int>(lineCount);
         shown.lines.resize(lineCount);
         bool named       = false;
         // Icons after every text, over the shadows beside them, in the order their badges were prepared in.
@@ -745,8 +744,8 @@ namespace headsup
                     (line->bottom - line->top) * f.toY, m_SolidU, m_SolidV, s.depth, s.color, s.rank, s.alpha);
             Shown& shown = m_Shown[s.shown];
             if (shown.nameHeight > 0) shown.nameY -= p.rise;
-            for (int line = 0; line < shown.lineCount; ++line)
-                shown.lines[line].y -= p.rise;
+            for (ShownLine& line : shown.lines)
+                line.y -= p.rise;
         }
     }
 

@@ -26,6 +26,23 @@ namespace headsup
         // An image's longer side with its halo on both ends.
         int LongerSide(int width, int height, int halo) { return std::max(width, height) + 2 * halo; }
 
+        bool FitsTexture(int width, int height, int halo, int side)
+        {
+            return LongerSide(width, height, halo) <= side;
+        }
+
+        int FittingRaster(int raster, int width, int height, int halo, int side)
+        {
+            if (FitsTexture(width, height, halo, side)) return raster;
+            const long long fitting = static_cast<long long>(raster) * side / LongerSide(width, height, halo);
+            return std::min(raster, std::max(static_cast<int>(kRasterSmallest), static_cast<int>(fitting)));
+        }
+
+        float DistanceScale(float letterHeight, float screenHeight, float minScale, float maxScale)
+        {
+            const float factor = screenHeight > 0.0f ? letterHeight / (screenHeight / kLettersPerScreen) : 1.0f;
+            return std::isfinite(factor) ? std::clamp(factor, minScale, maxScale) : 1.0f;
+        }
     }
 
     bool NameOnScreen(const ScreenBox& plate, float screenWidth, float screenHeight)
@@ -159,16 +176,10 @@ namespace headsup
         return -static_cast<float>((phase + 1.0) * 0.5) * height * kBobShare;
     }
 
-    float DistanceScale(float letterHeight, float screenHeight, float minScale, float maxScale)
-    {
-        const float factor = screenHeight > 0.0f ? letterHeight / (screenHeight / kLettersPerScreen) : 1.0f;
-        return std::isfinite(factor) ? std::clamp(factor, minScale, maxScale) : 1.0f;
-    }
-
     float ScaleAtDistance(float yalms, float minScale, float maxScale)
     {
         // The game's name size is 5 / yalms + 0.07 of full size (fitted to a name dump), and full size is 4.21875
-        // times DistanceScale's 1: 180 letters a screen over the 42.67 a full-size name's letters make of it.
+        // times letters a 180th of the screen tall: 180 letters a screen over the 42.67 a full-size name's make of it.
         constexpr float kPerYalm = 21.09f, kFarthest = 0.3f;
         if (std::isnan(yalms)) return 1.0f;
         return yalms > 0.0f ? std::clamp(kPerYalm / yalms + kFarthest, minScale, maxScale) : maxScale;
@@ -236,18 +247,6 @@ namespace headsup
     int CursorRaster(float shown, int current, bool scales, int height)
     {
         return std::max(scales ? RasterHeight(shown, current) : FixedRasterHeight(shown), height);
-    }
-
-    bool FitsTexture(int width, int height, int halo, int side)
-    {
-        return LongerSide(width, height, halo) <= side;
-    }
-
-    int FittingRaster(int raster, int width, int height, int halo, int side)
-    {
-        if (FitsTexture(width, height, halo, side)) return raster;
-        const long long fitting = static_cast<long long>(raster) * side / LongerSide(width, height, halo);
-        return std::min(raster, std::max(static_cast<int>(kRasterSmallest), static_cast<int>(fitting)));
     }
 
     std::optional<int> RasterThatFits(int raster, int side, const std::function<ImageSize(int)>& measure)

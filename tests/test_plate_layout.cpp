@@ -330,25 +330,35 @@ TEST(the_box_holds_every_item_and_ornament)
     CHECK_EQ(box.bottom, l.lines[1].top + 15.0f);
 }
 
+namespace
+{
+    // An icon run's first row as ShapeOfRun gives it, alone on a line of iconSize icons.
+    float RowWidth(const PlateItem& run, float iconSize) { return ShapeOfRun(Line({run}, 13.0f, iconSize), 0, 1.0f).width; }
+}
+
 TEST(an_icon_row_is_its_icons_and_gaps_plus_each_badges_overhang)
 {
-    CHECK_EQ(IconRunWidth(3, 0, 16.0f), 3.0f * 16.0f + 2.0f * kIconGap);
-    CHECK_EQ(IconRunWidth(3, 3, 16.0f), 3.0f * (16.0f + kIconGap + 16.0f * kBadgeOverhang) - kIconGap);
-    CHECK_EQ(IconRunWidth(0, 0, 16.0f), 0.0f);
+    CHECK_EQ(RowWidth(IconItem(3, 0), 16.0f), 3.0f * 16.0f + 2.0f * kIconGap);
+    CHECK_EQ(RowWidth(IconItem(3, 3), 16.0f), 3.0f * (16.0f + kIconGap + 16.0f * kBadgeOverhang) - kIconGap);
+    CHECK_EQ(RowWidth(IconItem(0, 0), 16.0f), 0.0f);
 }
 
 TEST(a_row_mixing_plain_and_badged_icons_steps_past_each_by_its_own_width)
 {
     // The composer keeps badged icons in runs of their own, but a row counts its badges, so a mixed one holds: at
     // 16 px two plain icons 18 px apart, then three badged ones 23.6 px apart (a 5.6 px overhang each), 104.8 px.
-    const float places[] = {0.0f, 18.0f, 36.0f, 59.6f, 83.2f};
-    for (int i = 0; i < 5; ++i)
-        CHECK(Near(IconOffset(i, std::max(0, i - 2), 16.0f), places[i]));
-    CHECK(Near(IconRunWidth(5, 3, 16.0f), 104.8f));
-    CHECK_EQ(IconRunWidth(5, 2, 16.0f), 5.0f * 16.0f + 2.0f * 16.0f * kBadgeOverhang + 4.0f * kIconGap);
+    PlateItem mixed = IconItem(5, 0);
+    for (size_t i = 2; i < mixed.icons.size(); ++i) mixed.icons[i].badge = "+25%";
+    const ComposedLine line = Line({mixed}, 13.0f, 16.0f);
+    const RunShape shape    = ShapeOfRun(line, 0, 1.0f);
+    const float places[]    = {0.0f, 18.0f, 36.0f, 59.6f, 83.2f};
+    for (size_t i = 0; i < 5; ++i)
+        CHECK(Near(IconInRun(shape, mixed, i).x, places[i]));
+    CHECK(Near(shape.width, 104.8f));
     // The last icon's place, its width and its badge's overhang are the row's width: drawn as measured.
-    CHECK(Near(IconOffset(4, 2, 16.0f) + 16.0f + 5.6f, IconRunWidth(5, 3, 16.0f)));
-    CHECK(Near(IconOffset(2, 0, 24.0f) + 24.0f, IconRunWidth(3, 0, 24.0f)));
+    CHECK(Near(IconInRun(shape, mixed, 4).x + 16.0f + 5.6f, shape.width));
+    const PlateItem plain = IconItem(3, 0);
+    CHECK(Near(IconInRun(ShapeOfRun(Line({plain}, 13.0f, 24.0f), 0, 1.0f), plain, 2).x + 24.0f, RowWidth(plain, 24.0f)));
 }
 
 TEST(a_measured_lines_offset_grows_with_the_distance_scale)
@@ -575,7 +585,7 @@ TEST(a_players_name_centers_on_the_games_name_with_its_icons_left_of_it_and_the_
     const PlateLayout l = LayoutPlate(Anchor(), lines, 14.0f, 20.0f, 0.5f, 0, 0.0f);
     CHECK_EQ(l.lines[0].items[1].x, 54.0f);
     CHECK_EQ(l.lines[0].items[0].x, 4.5f);
-    CHECK_EQ(l.lines[0].items[0].x + IconOffset(2, 0, 14.0f), 36.5f);
+    CHECK_EQ(l.lines[0].items[0].x + IconInRun(ShapeOfRun(line, 0, 1.0f), line.items[0], 2).x, 36.5f);
     CHECK_EQ(l.lines[0].items[0].y, 203.0f);
     CHECK_EQ(l.lines[0].items[1].y, 199.5f);
     CHECK_EQ(l.cursor.y, 182.5f);

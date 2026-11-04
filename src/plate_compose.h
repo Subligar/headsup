@@ -86,8 +86,6 @@ namespace headsup
         bool namesFailed);
     // The lines this entity shows now, with every tag rendered; empty for a mode that shows nothing.
     ComposedPlate ComposePlate(const ActorInfo& info, const PlayerState& player, const Settings& settings, uint32_t gameArgb);
-    // The percent of the base size as pixels.
-    float BasePixels(const Settings& settings, int percent);
     // A plate as it is drawn once Direct3D could not make an icon: its icon runs and their gaps go, and so do the
     // lines left empty.
     void DropIcons(ComposedPlate& plate);
