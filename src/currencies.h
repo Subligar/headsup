@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game_packets.h"
+
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -9,10 +11,10 @@ namespace headsup
 {
     // Client to server: GP_CLI_COMMAND_CURRENCIES_1 and _2, which the game sends when its Currencies menu opens.
     // Phoenix answers each with kCurrencies1Packet or kCurrencies2Packet (0x10f_currencies_1.cpp,
-    // 0x115_currencies_2.cpp). Their bytes as kConquestRequest's: the header alone.
+    // 0x115_currencies_2.cpp). Each is its header alone.
     constexpr uint16_t kCurrencies1Request = 0x10F, kCurrencies2Request = 0x115;
-    constexpr std::array<uint8_t, 4> kCurrencies1RequestBytes = {0x0F, 0x03, 0x00, 0x00};
-    constexpr std::array<uint8_t, 4> kCurrencies2RequestBytes = {0x15, 0x03, 0x00, 0x00};
+    constexpr std::array<uint8_t, kBareHeaderBytes> kCurrencies1RequestBytes = RequestHeader<kBareHeaderBytes>(kCurrencies1Request);
+    constexpr std::array<uint8_t, kBareHeaderBytes> kCurrencies2RequestBytes = RequestHeader<kBareHeaderBytes>(kCurrencies2Request);
     constexpr uint16_t kCurrencies1Packet = 0x113, kCurrencies2Packet = 0x118;
 
     struct CurrencyInfo

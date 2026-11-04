@@ -1,6 +1,7 @@
 #include "auto_check.h"
 
 #include "bytes.h"
+#include "game_packets.h"
 
 #include <cstring>
 
@@ -8,9 +9,7 @@ namespace headsup
 {
     namespace
     {
-        // Phoenix's c2s 0x0DD, counting Ashita's 4-byte header: the id in the first word's low 9 bits and the size
-        // in 4-byte words in its high 7.
-        constexpr uint8_t kRequestHeader[] = {0xDD, 0x08};
+        // Phoenix's c2s 0x0DD, counting Ashita's 4-byte header.
         constexpr size_t kRequestServerId = 0x04, kRequestIndex = 0x08;
         // What an addon's report of a check's answer holds, both parts: the checker addon's name in the line's header
         // and the level it reports, or simplelog's words for a con and for an answer the server would not gauge.
@@ -37,8 +36,7 @@ namespace headsup
 
     std::array<uint8_t, kCheckRequestSize> CheckRequest(uint32_t serverId, uint16_t index)
     {
-        std::array<uint8_t, kCheckRequestSize> request{};
-        std::memcpy(request.data(), kRequestHeader, sizeof(kRequestHeader));
+        std::array<uint8_t, kCheckRequestSize> request = RequestHeader<kCheckRequestSize>(kCheckRequestPacket);
         const uint32_t wideIndex = index;
         std::memcpy(request.data() + kRequestServerId, &serverId, sizeof(serverId));
         std::memcpy(request.data() + kRequestIndex, &wideIndex, sizeof(wideIndex));
