@@ -705,7 +705,8 @@ namespace headsup
     namespace
     {
         void PutWindowBack(const WindowPlacements::Placed& placed);
-        void PlaceFrame(bool present, const OpenWindow* building = nullptr);
+        size_t PlanFrame(bool present, const OpenWindow* building = nullptr);
+        void PlaceListed(size_t count);
     }
 
     std::string WindowHook::Stop()
@@ -770,7 +771,12 @@ namespace headsup
         g_ShownHiddenRects     = g_HiddenRects;
         g_ShownHiddenRectCount = std::exchange(g_HiddenRectCount, 0);
         g_Placements.SetFrame(++g_WindowFrame);
-        if (g_Placing && g_WindowMoveTo != 0) PlaceFrame(true);
+        if (!g_Placing || g_WindowMoveTo == 0) return;
+        const size_t count = PlanFrame(true);
+        g_PlannedKeys.Clear();
+        for (size_t i = 0; i < count; ++i)
+            if (!g_OpenWindows[i].hidden) g_PlannedKeys.Add(g_OpenWindows[i].key);
+        PlaceListed(count);
     }
 
     void WindowHook::Place(std::optional<WindowPlacing> placing) { g_Placing = placing; }
@@ -1314,12 +1320,11 @@ namespace headsup
                 home[side] = static_cast<int16_t>(home[side] + (side % 2 == 0 ? to.left - now.left : to.top - now.top));
         }
 
-        // Twice a frame: at Present, from the whole list, the strip's shift, the line the windows go under and the
-        // view's shift, and every listed window placed, those its parent draws too (the job level and skill lists,
-        // which the list marks to skip while it draws); and at the first window draw, again with that plan unless a
-        // window opened since, so one opening is placed before it is first drawn. As one is built, the plan counts it and
-        // notes where it goes, so a place the game works out from it before its first draw is known for one.
-        void PlaceFrame(bool present, const OpenWindow* building)
+        // The frame's windows from the game's list into g_OpenWindows, and how many. At Present, and at the first
+        // window draw when a window opened since, it works out again the strip's shift, the line the windows go under
+        // and the view's shift. A window being built is counted, so a place the game works out from it before its
+        // first draw is known.
+        size_t PlanFrame(bool present, const OpenWindow* building)
         {
             const WindowPlacing& placing = *g_Placing;
             size_t count                 = ReadWindowList(g_WindowList, kProcessMemory, g_OpenWindows);
@@ -1360,21 +1365,14 @@ namespace headsup
                         placing.band.screenBottom);
                 }
             }
-            if (building != nullptr)
-            {
-                const int width = building->right - building->left, height = building->bottom - building->top;
-                const WindowSpot at{building->left, building->top};
-                if (PlaceIn({g_Pins.data(), g_PinCount}, building->key) == nullptr)
-                    g_Placements.Moved(building->mcd, building->key, at, width, height, 0, ShiftFor(at, width),
-                        placing.band.screenRight, placing.band.screenBottom);
-                return;
-            }
-            if (present)
-            {
-                g_PlannedKeys.Clear();
-                for (size_t i = 0; i < count; ++i)
-                    if (!g_OpenWindows[i].hidden) g_PlannedKeys.Add(g_OpenWindows[i].key);
-            }
+            return count;
+        }
+
+        // Every window PlanFrame listed, those its parent draws too (the job level and skill lists, which the list
+        // marks to skip while it draws): at Present, and at the first window draw so one opening is placed before it
+        // is first drawn.
+        void PlaceListed(size_t count)
+        {
             for (size_t i = 0; i < count; ++i)
                 PlaceWindow(g_OpenWindows[i].mcd, g_OpenWindows[i].key);
         }
@@ -1448,7 +1446,7 @@ extern "C" uint32_t HeadsUpOnWindowDraw(uint32_t mcd)
     if (descriptor == 0) return kWindowDrawn;
     const auto* name = reinterpret_cast<const char*>(descriptor + kDescriptorName);
     if (g_Placing && g_WindowMoveTo != 0 && std::exchange(g_PlannedFrame, g_WindowFrame) != g_WindowFrame)
-        PlaceFrame(false);
+        PlaceListed(PlanFrame(false));
     if (SkipsWindow(name, g_HiddenWindows)) return kWindowSkipped;
     const std::optional<WindowKey> key = WindowKeyOf(name);
     if (!key) return kWindowDrawn;
@@ -1536,7 +1534,12 @@ extern "C" void HeadsUpOnBuilt(uint32_t mcd)
     if (!g_Placing || g_WindowMoveTo == 0 || mcd == 0 || !ReadWindow(kProcessMemory, mcd, built) ||
         !MovableWindow(built.key))
         return;
-    PlaceFrame(false, &built);
+    PlanFrame(false, &built);
+    const int width = built.right - built.left, height = built.bottom - built.top;
+    const WindowSpot at{built.left, built.top};
+    if (PlaceIn({g_Pins.data(), g_PinCount}, built.key) == nullptr)
+        g_Placements.Moved(mcd, built.key, at, width, height, 0, ShiftFor(at, width), g_Placing->band.screenRight,
+            g_Placing->band.screenBottom);
     MoveBuilt(mcd, built.key);
 }
 
