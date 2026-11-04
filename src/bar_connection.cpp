@@ -105,26 +105,21 @@ namespace headsup
         return Printed("%.1f MB", bytes / (kBytesPerKb * kBytesPerKb));
     }
 
-    WidgetContent ConnectionWidget(const std::optional<ConnectionReport>& report, uint8_t parts)
+    std::vector<Span> ConnectionFigures(const std::optional<ConnectionReport>& report, uint8_t parts)
     {
-        WidgetContent w;
-        w.shown = true;
-        if (!report)
-        {
-            w.title = ListOf(Text("-"));
-            return w;
-        }
+        if (!report) return ListOf(Text("-"));
+        std::vector<Span> line;
         // One line: amber or red figures say what the popup explains.
         const LinkState state = StateOf(*report);
         const auto has        = [parts](PerfPart part) { return (parts & PerfBit(part)) != 0; };
         if (has(PerfPart::Sent))
-            AddPart(w.title, ListOf(Text("S ", Tone::Dim), Figure(Rate(report->counters, &NetCounters::sent), state)));
+            AddPart(line, ListOf(Text("S ", Tone::Dim), Figure(Rate(report->counters, &NetCounters::sent), state)));
         if (has(PerfPart::Received))
-            AddPart(w.title, ListOf(Text("R ", Tone::Dim), Figure(Rate(report->counters, &NetCounters::received), state)));
+            AddPart(line, ListOf(Text("R ", Tone::Dim), Figure(Rate(report->counters, &NetCounters::received), state)));
         if (has(PerfPart::Percent) && report->counters)
-            AddPart(w.title, ListOf(Figure(Printed("%d%%", report->counters->health), state)));
+            AddPart(line, ListOf(Figure(Printed("%d%%", report->counters->health), state)));
         if (has(PerfPart::Ping) && report->latency)
-            AddPart(w.title, ListOf(Text(Printed("%.0f ms", report->latency->medianMs), Tone::Dim)));
+            AddPart(line, ListOf(Text(Printed("%.0f ms", report->latency->medianMs), Tone::Dim)));
         if (has(PerfPart::Messages) && Waiting(report->playOnline))
         {
             std::vector<Span> waiting;
@@ -134,20 +129,16 @@ namespace headsup
                 waiting.push_back(Span{"", Tone::Normal, 0, picture});
                 if (count > 0) waiting.push_back(Text(std::to_string(count), Tone::Dim));
             }
-            AddPart(w.title, std::move(waiting));
+            AddPart(line, std::move(waiting));
         }
-        w.hasPopup = true;
-        w.figures  = true;
-        return w;
+        return line;
     }
 
-    PopupContent ConnectionPopup(const std::optional<ConnectionReport>& report)
+    std::vector<PopupSection> ConnectionSections(const std::optional<ConnectionReport>& report)
     {
-        PopupContent popup;
-        popup.title = ListOf(Text("Connection"));
-        if (!report) return popup;
+        if (!report) return {};
         const ConnectionReport& r = *report;
-        PopupSection now;
+        PopupSection now{"Connection", {}};
         now.rows.push_back(Labeled("Sent", Text(PerSecond(r.counters, &NetCounters::sent))));
         now.rows.push_back(Labeled("Received", Text(PerSecond(r.counters, &NetCounters::received))));
         if (r.latency)
@@ -173,11 +164,11 @@ namespace headsup
         }
         else
             totals.rows.push_back(LineOf("Counted once the game's counters can be read.", Tone::Dim));
-        popup.sections = ListOf(std::move(now), std::move(totals));
+        std::vector<PopupSection> sections = ListOf(std::move(now), std::move(totals));
         if (Waiting(r.playOnline))
-            popup.sections.push_back(PopupSection{"PlayOnline",
+            sections.push_back(PopupSection{"PlayOnline",
                 ListOf(Labeled("Messages", Text(std::to_string(r.playOnline->messages))),
                     Labeled("Mail", Text(std::to_string(r.playOnline->mail))))});
-        return popup;
+        return sections;
     }
 }

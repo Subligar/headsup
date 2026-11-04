@@ -38,5 +38,6 @@ namespace headsup
     // Frames a second at that average frame time, rounded; 0 for none.
     int FramesPerSecond(double averageMs);
 
-    WidgetContent FpsWidget(const std::optional<FrameReport>& frames);
+    // "30 fps", or "-" before a frame.
+    std::vector<Span> FpsFigures(const std::optional<FrameReport>& frames);
 }

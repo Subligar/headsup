@@ -892,13 +892,13 @@ namespace headsup
             w.shown    = true;
             w.hasPopup = true;
             w.figures  = true;
-            if ((parts & PerfBit(PerfPart::Fps)) != 0) AddPart(w.title, FpsWidget(state.frames).title);
+            if ((parts & PerfBit(PerfPart::Fps)) != 0) AddPart(w.title, FpsFigures(state.frames));
             if (const uint8_t net = parts & kConnectionParts; net != 0)
-                AddPart(w.title, ConnectionWidget(state.connection, net).title);
+                AddPart(w.title, ConnectionFigures(state.connection, net));
             if ((parts & PerfBit(PerfPart::Memory)) != 0)
             {
                 std::vector<Span> memory = ListOf(Text("Mem ", Tone::Dim));
-                for (Span& span : MemoryWidget(state.memory).title)
+                for (Span& span : MemoryFigures(state.memory))
                     memory.push_back(std::move(span));
                 AddPart(w.title, std::move(memory));
             }
@@ -906,19 +906,13 @@ namespace headsup
             return w;
         }
 
-        // The Connection and Memory popups' cards, each first card under its popup's title.
         PopupContent PerformancePopup(const BarState& state)
         {
             PopupContent popup;
-            popup.title = ListOf(Text("Performance"));
-            for (PopupContent part : {ConnectionPopup(state.connection),
-                     MemoryPopup(state.memory, state.cpuPercent, state.frames, state.linuxxi)})
-            {
-                if (!part.sections.empty() && part.sections.front().heading.empty())
-                    part.sections.front().heading = part.title.front().text;
-                for (PopupSection& section : part.sections)
-                    popup.sections.push_back(std::move(section));
-            }
+            popup.title    = ListOf(Text("Performance"));
+            popup.sections = ConnectionSections(state.connection);
+            for (PopupSection& section : MemorySections(state.memory, state.cpuPercent, state.frames, state.linuxxi))
+                popup.sections.push_back(std::move(section));
             return popup;
         }
 

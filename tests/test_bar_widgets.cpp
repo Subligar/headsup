@@ -1332,6 +1332,21 @@ TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_tho
     CHECK(open.connection && open.memory && open.cpu && open.linuxxi);
 }
 
+TEST(the_performance_widgets_memory_turns_amber_then_red_as_the_space_left_runs_low)
+{
+    Settings settings;
+    settings.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Memory);
+    BarState state;
+    const auto used = [&](uint32_t leftMb) {
+        constexpr uint32_t kCeilingMb = 4095;
+        state.memory = MemoryReport{kCeilingMb - leftMb, leftMb, kCeilingMb};
+        return BarWidgetContent(BarWidget::Performance, state, settings).title.back();
+    };
+    CHECK(used(kLowLeftMb).tone == Tone::Normal);
+    CHECK(used(kLowLeftMb - 1) == Colored("3,584 MB", kWarningColor)); // 4,095 - 511
+    CHECK(used(kCriticalLeftMb - 1) == Colored("3,840 MB", kAlarmColor));
+}
+
 TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_of_either)
 {
     Settings settings;
