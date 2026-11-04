@@ -2,6 +2,7 @@
 
 #include "bar_document.h"
 #include "color.h"
+#include "function_ref.h"
 #include "markup.h"
 #include "menu_sizes.h"
 #include "menu_state.h"
@@ -219,7 +220,8 @@ namespace headsup
             value = static_cast<Enum>(picked);
             EndRow();
         }
-        void SliderInt(const char* label, int& value, int lo, int hi, const char* format, const char* tip);
+        // shown: the value as text, as it is after this pass.
+        void SliderInt(const char* label, int& value, int lo, int hi, FunctionRef<std::string(int)> shown, const char* tip);
         void SliderPercent(const char* label, int& value, int lo, int hi, const char* tip);
         // A number stepped one at a time by the arrows either side of it, for one whose change moves the window under
         // the pointer, as a slider's would.

@@ -322,12 +322,12 @@ namespace headsup
         changed = true;
     }
 
-    void Form::SliderInt(const char* label, int& value, int lo, int hi, const char* format, const char* tip)
+    void Form::SliderInt(const char* label, int& value, int lo, int hi, FunctionRef<std::string(int)> shown, const char* tip)
     {
         const std::string slider = Id(label);
         TakeWhole(slider, value, lo, hi);
-        Slider(slider, label, static_cast<float>(value), static_cast<float>(lo), static_cast<float>(hi), 1.0f,
-            Formatted(format, value), tip);
+        Slider(slider, label, static_cast<float>(value), static_cast<float>(lo), static_cast<float>(hi), 1.0f, shown(value),
+            tip);
     }
 
     void Form::SliderPercent(const char* label, int& value, int lo, int hi, const char* tip)
@@ -598,7 +598,7 @@ namespace headsup
         const std::string reset = Id(id);
         const bool clicked      = !m_Off && differs && Clicked(reset);
         // In the markup either way, hidden while there is nothing to put back: a value changed builds nothing.
-        Out() += "<div class=\"reset\" id=\"" + reset + "\" tip=\"Back to its default.\"></div>";
+        Out() += "<div class=\"reset\" id=\"" + reset + "\"" + TipAttribute(layout->WordOf(WindowWord::ResetToDefault).tip) + "></div>";
         Set(reset, FormValueKind::Class, kHiddenClass, {}, !differs || clicked);
         return clicked;
     }

@@ -65,6 +65,25 @@ namespace headsup
         const char* WordTip(const Context& c, WindowWord word) { return c.layout.WordOf(word).tip; }
         std::string_view FileName(std::string_view path) { return path.substr(path.find_last_of("\\/") + 1); }
 
+        // A cutoff as its dropdown shows it: the rank, which no chance stands for without a mob, or Off past the end.
+        std::string CutoffText(const Context& c, int rank)
+        {
+            return rank == kNoWeakRank || rank == kNoResistRank ? Words(Word(c, WindowWord::CutoffOff)) : std::to_string(rank);
+        }
+        // weak: the cutoff is a weakness's; a resistance's otherwise.
+        std::string CutoffTip(const Context& c, int rank, bool weak)
+        {
+            if (rank == kNoWeakRank || rank == kNoResistRank) return Words(WordTip(c, weak ? WindowWord::WeakOff : WindowWord::ResistOff));
+            return Filled(Said(WordTip(c, weak ? WindowWord::WeakRank : WindowWord::ResistRank)), kCountMark, std::to_string(rank));
+        }
+
+        std::string Pixels(int px) { return Formatted("%d px", px); }
+        // A size as pixels, but the word at lowest, where the slider's lowest stands for no size of its own.
+        auto PixelsOr(const char* word, int lowest)
+        {
+            return [=](int px) { return px == lowest ? Words(word) : Pixels(px); };
+        }
+
         // A tip that says how near a fade begins.
         std::string Near(const char* tip) { return Filled(Said(tip), kNearMark, Formatted("%.0f", kFadeNearYalms)); }
 
@@ -543,21 +562,21 @@ namespace headsup
                     break;
                 case WidgetTabsRow::Spacing:
                     form.SliderInt(label.c_str(), o.spacing, kPanelSpacing, kMaxWidgetSpacing,
-                        o.spacing == kPanelSpacing ? Word(c, WindowWord::DefaultFont) : "%d px", row.tip);
+                        PixelsOr(Word(c, WindowWord::Default), kPanelSpacing), row.tip);
                     break;
                 case WidgetTabsRow::Padding:
                     form.SliderInt(label.c_str(), o.padding, kPanelPadding, kMaxWidgetPadding,
-                        o.padding == kPanelPadding ? Word(c, WindowWord::DefaultFont) : "%d px", row.tip);
+                        PixelsOr(Word(c, WindowWord::Default), kPanelPadding), row.tip);
                     break;
                 case WidgetTabsRow::TitleFont:
-                    form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, Word(c, WindowWord::DefaultFont));
+                    form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, Word(c, WindowWord::Default));
                     break;
                 case WidgetTabsRow::TextFont:
-                    form.FontDropdown(label.c_str(), o.textFont, c.fonts, row.tip, Word(c, WindowWord::DefaultFont));
+                    form.FontDropdown(label.c_str(), o.textFont, c.fonts, row.tip, Word(c, WindowWord::Default));
                     break;
                 case WidgetTabsRow::TextSize:
                     form.SliderInt(label.c_str(), o.textSize, kPanelTextSize, kMaxBarTextSize,
-                        o.textSize == kPanelTextSize ? Word(c, WindowWord::DefaultFont) : "%d px", row.tip);
+                        PixelsOr(Word(c, WindowWord::Default), kPanelTextSize), row.tip);
                     break;
                 case WidgetTabsRow::Visibility:
                     if (kind == BarWidget::Target)
@@ -731,11 +750,11 @@ namespace headsup
                     break;
                 case WidgetTabsRow::BarWidth:
                     if (bar)
-                        form.SliderInt(label.c_str(), o.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth, "%d px", row.tip);
+                        form.SliderInt(label.c_str(), o.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth, Pixels, row.tip);
                     break;
                 case WidgetTabsRow::BarHeight:
                     if (bar)
-                        form.SliderInt(label.c_str(), o.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight, "%d px", row.tip);
+                        form.SliderInt(label.c_str(), o.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight, Pixels, row.tip);
                     break;
                 case WidgetTabsRow::JobNames:
                     if (kind == BarWidget::Job && !bar) form.Switch(label.c_str(), o.jobNames, row.tip);
@@ -1001,11 +1020,11 @@ namespace headsup
             switch (static_cast<LineStylesRow>(row.row))
             {
             case LineStylesRow::Padding:
-                form.SliderInt(label.c_str(), line.padding, kMinLinePadding, kMaxLinePadding, "%d px",
+                form.SliderInt(label.c_str(), line.padding, kMinLinePadding, kMaxLinePadding, Pixels,
                     n < kPlateLines - 1 ? TipOf(row, kind) : row.otherTip);
                 return true;
             case LineStylesRow::HorizontalOffset:
-                form.SliderInt(label.c_str(), line.offset, kMinLineOffset, kMaxLineOffset, "%d px", TipOf(row, kind));
+                form.SliderInt(label.c_str(), line.offset, kMinLineOffset, kMaxLineOffset, Pixels, TipOf(row, kind));
                 return true;
             default: return false;
             }
@@ -1061,7 +1080,7 @@ namespace headsup
                     }
                     break;
                 case LineStylesRow::Font:
-                    form.FontDropdown(label.c_str(), line.font, c.plateFonts, tip, Word(c, WindowWord::DefaultFont));
+                    form.FontDropdown(label.c_str(), line.font, c.plateFonts, tip, Word(c, WindowWord::Default));
                     break;
                 case LineStylesRow::FontStyle:
                 {
@@ -1121,10 +1140,10 @@ namespace headsup
                     OptionsDropdown(form, label, o.place, c.layout.OptionsOf(WindowList::OrnamentPlace), tip);
                     break;
                 case OrnamentRow::Width:
-                    form.SliderInt(label.c_str(), o.width, kMinOrnamentWidth, kMaxOrnamentWidth, "%d px", tip);
+                    form.SliderInt(label.c_str(), o.width, kMinOrnamentWidth, kMaxOrnamentWidth, Pixels, tip);
                     break;
                 case OrnamentRow::Height:
-                    form.SliderInt(label.c_str(), o.height, kMinOrnamentThickness, kMaxOrnamentThickness, "%d px", tip);
+                    form.SliderInt(label.c_str(), o.height, kMinOrnamentThickness, kMaxOrnamentThickness, Pixels, tip);
                     break;
                 case OrnamentRow::Color: form.ColorPickRow(label.c_str(), o.color, SourcesFor(kind, false), tip); break;
                 }
@@ -1161,9 +1180,9 @@ namespace headsup
             Form& form           = c.form;
             Settings& s          = c.s;
             const bool dim       = !s.enabled || !s.nameplates || !Uses(s, {Tag::Status});
-            const auto cutoff    = [](int rank) { return CutoffText(rank); };
-            const auto weakTip   = [](int rank) { return CutoffTip(rank, true); };
-            const auto resistTip = [](int rank) { return CutoffTip(rank, false); };
+            const auto cutoff    = [&](int rank) { return CutoffText(c, rank); };
+            const auto weakTip   = [&](int rank) { return CutoffTip(c, rank, true); };
+            const auto resistTip = [&](int rank) { return CutoffTip(c, rank, false); };
             form.Fade(dim);
             form.Row("##status heads", nullptr);
             form.Caption("", "head", kToggleWidth);
@@ -1235,13 +1254,13 @@ namespace headsup
             const bool shown  = plates && c.plates; // a kind's design, on a page whose rows draw a nameplate
             static const Settings kDefaults;
             static const Palette kPalette = DefaultPalette();
-            const auto cutoff             = [](int rank) { return CutoffText(rank); };
+            const auto cutoff             = [&](int rank) { return CutoffText(c, rank); };
             switch (e.piece)
             {
             // Entities
             case SettingPiece::BaseFontSize:
                 form.Fade(!plates);
-                form.SliderInt(label.c_str(), s.baseSize, kMinTextSize, kMaxTextSize, "%d px", tip);
+                form.SliderInt(label.c_str(), s.baseSize, kMinTextSize, kMaxTextSize, Pixels, tip);
                 break;
             case SettingPiece::DefaultFont:
                 form.Fade(!plates);
@@ -1249,7 +1268,7 @@ namespace headsup
                 break;
             case SettingPiece::BaseIconSize:
                 form.Fade(!plates);
-                form.SliderInt(label.c_str(), s.baseIconSize, kMinTextSize, kMaxTextSize, "%d px", tip);
+                form.SliderInt(label.c_str(), s.baseIconSize, kMinTextSize, kMaxTextSize, Pixels, tip);
                 break;
             case SettingPiece::LinkpearlOutline:
                 form.Fade(!plates);
@@ -1285,7 +1304,7 @@ namespace headsup
                 break;
             case SettingPiece::VerticalOffset:
                 form.Fade(!plates);
-                form.SliderInt(label.c_str(), s.nameRaise, kMinNameRaise, kMaxNameRaise, "%d px", tip);
+                form.SliderInt(label.c_str(), s.nameRaise, kMinNameRaise, kMaxNameRaise, Pixels, tip);
                 break;
             case SettingPiece::StackNames:
                 form.Fade(!plates);
@@ -1331,11 +1350,11 @@ namespace headsup
             case SettingPiece::CursorStyle: TargetCursorStyle(c, e, label, tip); break;
             case SettingPiece::Width:
                 form.Fade(!cursor);
-                form.SliderInt(label.c_str(), s.cursorWidth, kMinCursorSide, kMaxCursorSide, "%d px", tip);
+                form.SliderInt(label.c_str(), s.cursorWidth, kMinCursorSide, kMaxCursorSide, Pixels, tip);
                 break;
             case SettingPiece::CursorHeight:
                 form.Fade(!cursor);
-                form.SliderInt(label.c_str(), s.cursorHeight, kMinCursorSide, kMaxCursorSide, "%d px", tip);
+                form.SliderInt(label.c_str(), s.cursorHeight, kMinCursorSide, kMaxCursorSide, Pixels, tip);
                 break;
             case SettingPiece::OutlineThickness:
                 form.Fade(!cursor);
@@ -1351,7 +1370,7 @@ namespace headsup
                 break;
             case SettingPiece::CursorVerticalOffset:
                 form.Fade(!cursor);
-                form.SliderInt(label.c_str(), s.cursorRaise, -kMaxCursorRaise, kMaxCursorRaise, "%d px", tip);
+                form.SliderInt(label.c_str(), s.cursorRaise, -kMaxCursorRaise, kMaxCursorRaise, Pixels, tip);
                 break;
             case SettingPiece::Color:
                 form.Fade(!cursor || CursorIsPicture(s.cursorStyle));
@@ -1411,7 +1430,7 @@ namespace headsup
             // The Target widget's popup reads these too, but they are set with the nameplates.
             case SettingPiece::BadgeFont:
                 form.Fade(!plates);
-                form.FontDropdown(label.c_str(), s.badgeFontName, c.plateFonts, tip, Word(c, WindowWord::DefaultFont));
+                form.FontDropdown(label.c_str(), s.badgeFontName, c.plateFonts, tip, Word(c, WindowWord::Default));
                 break;
             case SettingPiece::BadgeNumbers:
                 form.Fade(!plates);
@@ -1440,17 +1459,26 @@ namespace headsup
             case SettingPiece::WeakFrom:
                 form.Fade(!plates || !Uses(s, {Tag::Weak, Tag::Resist}));
                 form.NumberDropdown(label.c_str(), s.elementWeakRank, kMaxWeakRank, kNoWeakRank, cutoff, tip, 0.0f,
-                    [](int rank) { return CutoffTip(rank, true); });
+                    [&](int rank) { return CutoffTip(c, rank, true); });
                 break;
             case SettingPiece::ResistFrom:
                 form.Fade(!plates || !Uses(s, {Tag::Weak, Tag::Resist}));
                 form.NumberDropdown(label.c_str(), s.elementResistRank, kMinResistRank, kNoResistRank, cutoff, tip, 0.0f,
-                    [](int rank) { return CutoffTip(rank, false); });
+                    [&](int rank) { return CutoffTip(c, rank, false); });
                 break;
             case SettingPiece::MaxElements:
+            {
                 form.Fade(!plates || !Uses(s, {Tag::Weak, Tag::Resist}));
-                form.NumberDropdown(label.c_str(), s.maxElements, kElementCount, 0, ElementCountText, tip, 0.0f, ElementCountTip);
+                const auto word = [&](int count) {
+                    return c.layout.WordOf(count == 0               ? WindowWord::MaxElementsNone
+                                           : count == kElementCount ? WindowWord::MaxElementsAll
+                                                                    : WindowWord::MaxElementsSome);
+                };
+                form.NumberDropdown(label.c_str(), s.maxElements, kElementCount, 0,
+                    [&](int count) { return word(count).name != nullptr ? Words(word(count).name) : std::to_string(count); }, tip,
+                    0.0f, [&](int count) { return Filled(Said(word(count).tip), kCountMark, std::to_string(count)); });
                 break;
+            }
             case SettingPiece::StatusTable: StatusTable(c, e); break;
             case SettingPiece::RespawnTimers:
                 form.Fade(!on);
@@ -1462,7 +1490,7 @@ namespace headsup
                 break;
             case SettingPiece::UpTime:
                 form.Fade(!on || !s.phTimers);
-                form.SliderInt(label.c_str(), s.phUpMinutes, 0, kMaxUpMinutes, "%d min", tip);
+                form.SliderInt(label.c_str(), s.phUpMinutes, 0, kMaxUpMinutes, [](int minutes) { return Formatted("%d min", minutes); }, tip);
                 break;
             // User Interface
             case SettingPiece::Key:
@@ -1488,11 +1516,11 @@ namespace headsup
                 break;
             case SettingPiece::FishingBarWidth:
                 form.Fade(!s.fishBar);
-                form.SliderInt(label.c_str(), s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth, "%d px", tip);
+                form.SliderInt(label.c_str(), s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth, Pixels, tip);
                 break;
             case SettingPiece::FishingBarHeight:
                 form.Fade(!s.fishBar);
-                form.SliderInt(label.c_str(), s.fishBarHeight, kMinFishBarHeight, kMaxFishBarHeight, "%d px", tip);
+                form.SliderInt(label.c_str(), s.fishBarHeight, kMinFishBarHeight, kMaxFishBarHeight, Pixels, tip);
                 break;
             case SettingPiece::FishingBarX:
             case SettingPiece::FishingBarY:
@@ -1500,7 +1528,7 @@ namespace headsup
                 form.Fade(!s.fishBar);
                 int& side = e.piece == SettingPiece::FishingBarX ? s.fishBarX : s.fishBarY;
                 form.SliderInt(label.c_str(), side, kFishBarUnplaced, kMaxFishBarPlace,
-                    side == kFishBarUnplaced ? "Auto" : "%d px", tip);
+                    PixelsOr(Word(c, WindowWord::Auto), kFishBarUnplaced), tip);
                 break;
             }
             case SettingPiece::FishingBarDraggable:
@@ -1509,11 +1537,11 @@ namespace headsup
                 break;
             case SettingPiece::FishingBarFont:
                 form.Fade(!s.fishBar);
-                form.FontDropdown(label.c_str(), s.fishBarFont, c.fonts, tip, Word(c, WindowWord::ThemesFont));
+                form.FontDropdown(label.c_str(), s.fishBarFont, c.fonts, tip, Word(c, WindowWord::Themes));
                 break;
             case SettingPiece::FishingBarTextSize:
                 form.Fade(!s.fishBar);
-                form.SliderInt(label.c_str(), s.fishBarTextSize, kMinFishTextSize, kMaxFishTextSize, "%d px", tip);
+                form.SliderInt(label.c_str(), s.fishBarTextSize, kMinFishTextSize, kMaxFishTextSize, Pixels, tip);
                 break;
             case SettingPiece::FishingBarLine:
                 form.Fade(!s.fishBar);
@@ -1589,35 +1617,36 @@ namespace headsup
             }
             case SettingPiece::TitleFont:
                 form.Fade(!BarOn(s));
-                form.FontDropdown(label.c_str(), s.barTitleFont, c.fonts, tip, Word(c, WindowWord::ThemesFont));
+                form.FontDropdown(label.c_str(), s.barTitleFont, c.fonts, tip, Word(c, WindowWord::Themes));
                 break;
             case SettingPiece::TextFont:
                 form.Fade(!BarOn(s));
-                form.FontDropdown(label.c_str(), s.barTextFont, c.fonts, tip, Word(c, WindowWord::ThemesFont));
+                form.FontDropdown(label.c_str(), s.barTextFont, c.fonts, tip, Word(c, WindowWord::Themes));
                 break;
             case SettingPiece::Height:
                 form.Fade(!BarOn(s));
-                form.SliderInt(label.c_str(), s.barHeight, kMinBarHeight, kMaxBarHeight, "%d px", tip);
+                form.SliderInt(label.c_str(), s.barHeight, kMinBarHeight, kMaxBarHeight, Pixels, tip);
                 break;
             case SettingPiece::TextSize:
             {
                 form.Fade(!BarOn(s));
-                std::string textSize = "%d px";
-                if (s.barTextSize == kAutoBarTextSize)
-                    textSize = "Auto";
-                else if (r.barTitlePixels > 0 && r.barTitlePixels != s.barTextSize)
-                    textSize = Formatted("%%d px (%d fits)", r.barTitlePixels);
-                form.SliderInt(label.c_str(), s.barTextSize, kAutoBarTextSize, kMaxBarTextSize, textSize.c_str(), tip);
+                const auto textSize = [&](int px) {
+                    if (px == kAutoBarTextSize || r.barTitlePixels <= 0 || r.barTitlePixels == px)
+                        return PixelsOr(Word(c, WindowWord::Auto), kAutoBarTextSize)(px);
+                    return Filled(Filled(Said(Word(c, WindowWord::TextSizeFits)), kCountMark, std::to_string(px)), kTotalMark,
+                        std::to_string(r.barTitlePixels));
+                };
+                form.SliderInt(label.c_str(), s.barTextSize, kAutoBarTextSize, kMaxBarTextSize, textSize, tip);
                 break;
             }
             case SettingPiece::WidgetSpacing:
                 form.Fade(!BarOn(s));
-                form.SliderInt(label.c_str(), s.barWidgetSpacing, 0, kMaxWidgetSpacing, "%d px", tip);
+                form.SliderInt(label.c_str(), s.barWidgetSpacing, 0, kMaxWidgetSpacing, Pixels, tip);
                 break;
             case SettingPiece::WidgetPadding:
                 form.Fade(!BarOn(s));
                 form.SliderInt(label.c_str(), s.barWidgetPadding, kThemePadding, kMaxWidgetPadding,
-                    s.barWidgetPadding == kThemePadding ? Word(c, WindowWord::ThemesFont) : "%d px", tip);
+                    PixelsOr(Word(c, WindowWord::Themes), kThemePadding), tip);
                 break;
             case SettingPiece::OneLine:
             {
@@ -1629,7 +1658,7 @@ namespace headsup
             case SettingPiece::PopupSize:
                 form.Fade(!BarOn(s));
                 form.SliderInt(label.c_str(), s.popupTextSize, kAutoPopupTextSize, kMaxBarTextSize,
-                    s.popupTextSize == kAutoPopupTextSize ? "Auto" : "%d px", tip);
+                    PixelsOr(Word(c, WindowWord::Auto), kAutoPopupTextSize), tip);
                 break;
             case SettingPiece::HideReadout:
                 form.Fade(!on);
@@ -1688,7 +1717,7 @@ namespace headsup
             {
                 form.Fade(!BarOn(s));
                 BarPalette edited = s.customPalette;
-                form.SliderInt(label.c_str(), edited.border, 0, kMaxStripBorder, "%d px", tip);
+                form.SliderInt(label.c_str(), edited.border, 0, kMaxStripBorder, Pixels, tip);
                 EditTheme(c, edited);
                 break;
             }
@@ -1726,16 +1755,16 @@ namespace headsup
             case SettingPiece::HelpTextSize:
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
                 form.SliderInt(label.c_str(), s.helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize,
-                    s.helpBarTextSize == kAutoBarTextSize ? "Auto" : "%d px", tip);
+                    PixelsOr(Word(c, WindowWord::Auto), kAutoBarTextSize), tip);
                 break;
             case SettingPiece::HelpWidth:
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
-                form.SliderInt(label.c_str(), s.helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth, "%d%%", tip);
+                form.SliderInt(label.c_str(), s.helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth, [](int percent) { return Formatted("%d%%", percent); }, tip);
                 break;
             case SettingPiece::HelpHeight:
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
                 form.SliderInt(label.c_str(), s.helpBarHeight, kAutoHelpBarHeight, kMaxHelpBarHeight,
-                    s.helpBarHeight == kAutoHelpBarHeight ? "Auto" : "%d px", tip);
+                    PixelsOr(Word(c, WindowWord::Auto), kAutoHelpBarHeight), tip);
                 break;
             case SettingPiece::WidgetTabs: break; // in the panel's popup, by BuildWidgetSettings
             case SettingPiece::Trays: Trays(c); break;
@@ -1820,7 +1849,7 @@ namespace headsup
                 break;
             case SettingPiece::StencilBuffer:
                 form.Fade(!s.debugMode);
-                form.Reading(label.c_str(), r.stencilAvailable ? "available" : "missing: no outlines");
+                form.Reading(label.c_str(), Word(c, r.stencilAvailable ? WindowWord::StencilBufferAvailable : WindowWord::StencilBufferMissing));
                 break;
             case SettingPiece::Nameplates:
                 form.Fade(!s.debugMode);
@@ -1828,12 +1857,13 @@ namespace headsup
                 break;
             case SettingPiece::Drawn:
                 form.Fade(!s.debugMode);
-                form.Reading(label.c_str(), r.drewInScene ? "into the scene" : "on top");
+                form.Reading(label.c_str(), Word(c, r.drewInScene ? WindowWord::DrawnInScene : WindowWord::DrawnOnTop));
                 break;
             case SettingPiece::GameSNames:
                 form.Fade(!s.debugMode);
                 form.Reading(label.c_str(),
-                    r.hooked ? Formatted("%u, %u by HeadsUp, %u hidden", r.names, r.replaced, r.hidden) : "not hooked");
+                    r.hooked ? Formatted("%u, %u by HeadsUp, %u hidden", r.names, r.replaced, r.hidden)
+                             : Words(Word(c, WindowWord::GameSNamesNotHooked)));
                 break;
             case SettingPiece::FrameTime:
                 form.Fade(!s.debugMode);
@@ -1842,12 +1872,14 @@ namespace headsup
             case SettingPiece::LastSave:
                 form.Fade(!s.debugMode);
                 form.Reading(label.c_str(),
-                    Formatted("%.0f ms, %zu %s", r.lastSaveMs, r.lastSaveKeys, r.lastSaveKeys == 1 ? "key" : "keys"));
+                    Formatted("%.0f ms, %zu %s", r.lastSaveMs, r.lastSaveKeys, Word(c, r.lastSaveKeys == 1 ? WindowWord::LastSaveKey : WindowWord::LastSaveKeys)));
                 break;
             case SettingPiece::YourLevel:
                 form.Fade(!s.debugMode);
                 form.Reading(label.c_str(),
-                    r.level > 0 ? Formatted("%d%s", r.level, r.sitting ? ", sitting" : "") : std::string("unknown"));
+                    r.level <= 0  ? Words(Word(c, WindowWord::YourLevelUnknown))
+                    : r.sitting ? Filled(Said(Word(c, WindowWord::YourLevelSitting)), kCountMark, std::to_string(r.level))
+                                : std::to_string(r.level));
                 break;
             }
         }
