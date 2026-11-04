@@ -2646,39 +2646,43 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
     state.crafts  = CraftRanks{1};
     const auto grid = [&] { return fishing()[3]; };
     const auto text = [](const PopupRow& g, size_t row, size_t column) { return Joined(g.cells[6 * row + column].text); };
-    // Day 0 of Phoenix's epoch: every rank is asked for the table's first, by its own name, yours starred and lit.
+    // Day 0 of Phoenix's epoch: Novice to Expert are each asked for the table's first; a Recruit asks as a Novice, so
+    // that row is yours, starred and lit.
     PopupRow day = grid();
     CHECK(day.kind == RowKind::Grid && day.columns == 6 && day.nested && day.header && day.scroll == "Guilds/Fishing/Turn-ins");
-    CHECK_EQ(day.cells.size(), static_cast<size_t>(6 * 11));
+    CHECK_EQ(day.cells.size(), static_cast<size_t>(6 * 9));
     CHECK(text(day, 0, 0) == "Rank" && text(day, 0, 1) == "NQ Item" && text(day, 0, 2) == "Points" &&
           text(day, 0, 3) == "HQ Item" && text(day, 0, 4) == "Points" && text(day, 0, 5) == "Max Points");
     // Each rank's item and its high quality in columns of their own, each with its picture.
-    CHECK(text(day, 1, 0) == "Amateur" && !day.cells[6].star && text(day, 1, 1) == "Flute" && day.cells[7].item == 16 &&
-          text(day, 1, 2) == "12" && text(day, 1, 3) == "Flute +1" && day.cells[9].item == 17 && text(day, 1, 4) == "14" &&
-          text(day, 1, 5) == "1,120");
-    CHECK(text(day, 2, 0) == "Recruit" && text(day, 2, 1) == "Flute" && text(day, 10, 0) == "Veteran" && text(day, 10, 1) == "Flute");
-    CHECK(day.cells[12].star && day.cells[13].text.front().tone == Tone::Heading && day.cells[15].text.front().tone == Tone::Heading);
-    CHECK(day.cells[7].text.front().tone == Tone::Normal);
-    // Day 2: every rank from Initiate on is asked for the third; both most-a-days where they differ.
+    CHECK(text(day, 1, 0) == "Novice" && text(day, 1, 1) == "Flute" && day.cells[7].item == 16 && text(day, 1, 2) == "12" &&
+          text(day, 1, 3) == "Flute +1" && day.cells[9].item == 17 && text(day, 1, 4) == "14" && text(day, 1, 5) == "1,120");
+    CHECK(day.cells[6].star && day.cells[7].text.front().tone == Tone::Heading && day.cells[9].text.front().tone == Tone::Heading);
+    CHECK(text(day, 2, 0) == "Apprentice" && !day.cells[12].star && day.cells[13].text.front().tone == Tone::Normal);
+    CHECK(text(day, 8, 0) == "Expert" && text(day, 8, 1) == "Flute");
+    // An Expert's own row is Expert's.
+    state.crafts = CraftRanks{10};
+    day          = grid();
+    CHECK(!day.cells[6].star && day.cells[6 * 8].star);
+    // Day 2: every rank is asked for the third; both most-a-days where they differ.
     constexpr int64_t kDayMs = 86'400'000;
     state.unixMs = kVanaEpochUnixMs + 2 * kDayMs;
     day          = grid();
     CHECK(text(day, 1, 1) == "Darksteel Cuisses" && text(day, 1, 3) == "Dst. Cuisses +1" && text(day, 1, 5) == "7,400 [7,040]");
-    // Day 13: Novice and below 13 % 4, Apprentice 13 % 5, Journeyman 13 % 6, Craftsman 13 % 7 and Artisan 13 % 8 (none
-    // in this table, so left out), Adept 13 % 9, Veteran 13 % 10.
+    // Day 13: Novice 13 % 4, Apprentice 13 % 5, Journeyman 13 % 6, Craftsman 13 % 7 and Artisan 13 % 8 (none in this
+    // table, so left out), Adept 13 % 9, Veteran and Expert 13 % 10.
     state.unixMs = kVanaEpochUnixMs + 13 * kDayMs;
     day          = grid();
-    CHECK_EQ(day.cells.size(), static_cast<size_t>(6 * 9));
-    CHECK(text(day, 4, 0) == "Novice" && text(day, 4, 1) == "Roasted Corn" && text(day, 4, 3) == "Grilled Corn" &&
-          text(day, 4, 2) == "31" && text(day, 4, 4) == "37");
+    CHECK_EQ(day.cells.size(), static_cast<size_t>(6 * 7));
+    CHECK(text(day, 1, 0) == "Novice" && text(day, 1, 1) == "Roasted Corn" && text(day, 1, 3) == "Grilled Corn" &&
+          text(day, 1, 2) == "31" && text(day, 1, 4) == "37");
     // One item, no name from the site: no high quality, its cells left empty.
-    CHECK(text(day, 5, 0) == "Apprentice" && text(day, 5, 1) == "Item 40" && text(day, 5, 2) == "90" && text(day, 5, 3).empty() &&
-          day.cells[6 * 5 + 3].item == 0 && text(day, 5, 4).empty());
-    CHECK(text(day, 6, 0) == "Journeyman" && text(day, 6, 1) == "Roasted Corn");
+    CHECK(text(day, 2, 0) == "Apprentice" && text(day, 2, 1) == "Item 40" && text(day, 2, 2) == "90" && text(day, 2, 3).empty() &&
+          day.cells[6 * 2 + 3].item == 0 && text(day, 2, 4).empty());
+    CHECK(text(day, 3, 0) == "Journeyman" && text(day, 3, 1) == "Roasted Corn");
     // Worth the same and neither a +1, listed high quality first: Phoenix's recipes say which is which.
-    CHECK(text(day, 7, 0) == "Adept" && text(day, 7, 1) == "Inferno Sword" && day.cells[6 * 7 + 1].item == 16594 &&
-          text(day, 7, 3) == "Hellfire Sword" && text(day, 7, 4) == "3,488");
-    CHECK(text(day, 8, 0) == "Veteran" && text(day, 8, 1) == "Item 40");
+    CHECK(text(day, 4, 0) == "Adept" && text(day, 4, 1) == "Inferno Sword" && day.cells[6 * 4 + 1].item == 16594 &&
+          text(day, 4, 3) == "Hellfire Sword" && text(day, 4, 4) == "3,488");
+    CHECK(text(day, 5, 0) == "Veteran" && text(day, 5, 1) == "Item 40" && text(day, 6, 0) == "Expert" && text(day, 6, 1) == "Item 40");
     // A guild that takes no turn-ins has none.
     const std::map<std::string, std::string> pickedTenshodo{{"Guilds", "Tenshodo"}};
     state.pickedTabs = &pickedTenshodo;

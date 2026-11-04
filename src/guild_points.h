@@ -15,9 +15,10 @@ namespace headsup
     constexpr const wchar_t* kGuildPatternsPath = L"/api/v1/server/guild-patterns";
     // The craft guilds, by the site's guild id: Fishing to Cooking, whose craft skills are kFirstCraftSkill on.
     constexpr int kCraftGuilds = 9, kFirstCraftSkill = 48;
-    constexpr uint8_t kCraftRankCount = 10;
-    constexpr const char* kCraftRankNames[kCraftRankCount] = {"Amateur", "Recruit", "Initiate", "Novice", "Apprentice",
-        "Journeyman", "Craftsman", "Artisan", "Adept", "Veteran"};
+    // Phoenix keeps a daily turn-in for Novice to Veteran: a rank below asks as Novice, one above as Veteran.
+    constexpr uint8_t kNovice = 3, kVeteran = 9, kExpert = 10;
+    constexpr const char* kCraftRankNames[kExpert + 1] = {"Amateur", "Recruit", "Initiate", "Novice", "Apprentice",
+        "Journeyman", "Craftsman", "Artisan", "Adept", "Veteran", "Expert"};
 
     struct GuildTurnIn
     {
@@ -47,8 +48,8 @@ namespace headsup
     };
     std::string GuildPatternsFile(int64_t day, std::string_view json);
     std::optional<SavedGuildPatterns> ReadGuildPatternsFile(std::string_view text);
-    // The table's rank the guild asks a crafter of this rank for today. Phoenix steps each rank's daily through the
-    // ranks up to its own (guild.cpp updateGuildPointsPattern), and counts those below Novice as Novice.
+    // The table's rank the guild asks a crafter of this rank for today: Phoenix steps each rank's daily through the
+    // ranks up to its own (guild.cpp updateGuildPointsPattern).
     uint8_t AskedRank(uint8_t craftRank, int64_t unixMs);
     // Fetched again only on a day in Japan it was not: once a day, and just after the reset.
     bool GuildPatternsDue(std::optional<int64_t> savedDay, int64_t unixMs);
