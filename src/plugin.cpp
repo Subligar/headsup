@@ -130,8 +130,6 @@ namespace
     public:
         IConfigurationManager* config = nullptr; // from Initialize on
 
-        bool GetBool(const char* key, bool fallback) override { return config->GetBool(kConfigAlias, kSection, key, fallback); }
-        float GetFloat(const char* key, float fallback) override { return config->GetFloat(kConfigAlias, kSection, key, fallback); }
         std::string GetString(const char* key, const char* fallback) override
         {
             const char* value = config->GetString(kConfigAlias, kSection, key);

@@ -26,22 +26,6 @@ namespace
         std::map<std::string, std::string> values;
         std::vector<std::string> sets; // the key of every Set, in order
 
-        bool addsDefaults = false; // as Ashita's store: a typed read of a key it lacks adds the key with the default
-
-        bool GetBool(const char* key, bool fallback) override
-        {
-            const auto it = values.find(key);
-            if (it != values.end()) return it->second == "true" || it->second == "1";
-            if (addsDefaults) values[key] = fallback ? "1" : "0"; // as Ashita writes a switch it adds
-            return fallback;
-        }
-        float GetFloat(const char* key, float fallback) override
-        {
-            const auto it = values.find(key);
-            if (it != values.end()) return std::strtof(it->second.c_str(), nullptr);
-            if (addsDefaults) values[key] = std::to_string(fallback);
-            return fallback;
-        }
         std::string GetString(const char* key, const char* fallback) override
         {
             const auto it = values.find(key);
@@ -436,13 +420,12 @@ helpBarY=8.0000
     }
 
     // The file release 0.65 wrote for a new install, with these of its keys changed: what a player's file holds
-    // when this build first reads it. As Ashita's store, a typed read of a key it lacks adds the key.
+    // when this build first reads it.
     MapStore ReleaseFile(std::initializer_list<std::pair<const char*, const char*>> changed = {})
     {
         MapStore file = Parse(kReleaseFile);
         for (const auto& [key, value] : changed)
             file.values[key] = value;
-        file.addsDefaults = true;
         return file;
     }
     // This build's own file of these settings, which still holds keys of before with these values.
@@ -464,18 +447,6 @@ TEST(players_and_npcs_take_the_mob_name_font_from_a_file_saved_before_they_had_t
     const Settings s = LoadSettings(old);
     for (const PlateKind kind : {PlateKind::Players, PlateKind::Self, PlateKind::Npcs})
         CHECK(s.Kind(kind).lines[2].font == "Georgia" && s.Kind(kind).lines[2].style == StyleBit(FontStyle::Bold));
-}
-
-TEST(a_file_from_before_incredibly_tough_had_its_own_color_gains_no_key_for_it)
-{
-    // No build ever wrote labelIncrediblyTough: a typed read of it would add it to a version 2 file for nothing.
-    MapStore file     = Parse(kSavedFile);
-    file.addsDefaults = true;
-    const Settings s  = LoadSettings(file);
-    for (const char* channel : {"R", "G", "B"})
-        CHECK(!file.values.contains(std::string("labelIncrediblyTough") + channel));
-    const int deep = static_cast<int>(LabelShade::IncrediblyTough);
-    CHECK(s.palette.toughness[deep] == Settings{}.palette.toughness[deep]);
 }
 
 TEST(a_saved_file_loads_every_setting_and_saves_back_the_same)
@@ -505,6 +476,18 @@ TEST(a_saved_file_loads_every_setting_and_saves_back_the_same)
             CHECK_EQ(saved.values[key], value);
     }
     CHECK(LoadSettings(saved) == loaded);
+}
+
+TEST(a_released_file_saves_back_every_key_it_holds_as_it_held_it)
+{
+    MapStore file = ReleaseFile();
+    MapStore saved;
+    SaveSettings(LoadSettings(file), saved);
+    // What a save puts right: the version, the panel's widgets of before, and percents onto the steps of five.
+    const char* const putRight[] = {"settingsVersion", "barLeft", "barRight", "mobsLine2TextSize", "timerPercent"};
+    for (const auto& [key, value] : file.values)
+        if (saved.values.contains(key) && std::ranges::find(putRight, key) == std::end(putRight))
+            CHECK_EQ(saved.values.at(key), value);
 }
 
 TEST(a_player_icon_side_that_is_not_a_side_keeps_its_default)
@@ -960,7 +943,6 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     CHECK(file.values["customThemeStripTop"] == "10203000" && file.values["customThemeShape"] == "glass");
     CHECK(LoadSettings(file) == s);
     MapStore fresh;
-    fresh.addsDefaults = true;
     CHECK(LoadSettings(fresh).customPalette == PaletteOf(BarTheme::PhoenixGold));
     MapStore garbled;
     garbled.values["customThemeAccent"] = "not a color";
@@ -1914,15 +1896,11 @@ TEST(a_file_an_older_or_earlier_build_saved_is_owed_a_save_that_gives_it_the_ver
     CHECK(!OutdatedWhenLoaded(edited));
 }
 
-TEST(the_stores_texts_are_asked_before_a_typed_read_can_add_a_default_to_it)
+TEST(a_save_passes_on_the_keys_an_old_file_lacks)
 {
-    // Ashita's typed getters add a key the file lacks to its memory with the default they were given. Asked after
-    // them, the store would seem to hold nameplates=true, the file would not, and no save would ever write it.
     MapStore file = Parse(kSavedFile); // the release's file: no nameplates, outlines or baseSize
-    file.addsDefaults = true;
     ChangedKeys keys(file);
     const Settings s = keys.Load();
-    CHECK_EQ(file.values.at("nameplates"), "1"); // the stand-in did add it, as Ashita writes a switch
     std::map<std::string, std::string> passed;
     for (const KeyText& k : keys.Save(s))
         passed[k.key] = k.text;
@@ -1984,17 +1962,27 @@ TEST(a_run_of_failed_saves_is_said_once_and_so_is_the_save_that_ends_it)
     CHECK(keys.ReadBack(true) == SaveNotice::Saved);
 }
 
+TEST(a_switch_is_on_for_true_in_any_case_or_1_and_off_for_anything_else)
+{
+    const auto load = [](const char* key, const char* text) {
+        MapStore file;
+        file.values = {{"settingsVersion", "4.0000"}, {key, text}};
+        return LoadSettings(file);
+    };
+    for (const char* on : {"true", "TRUE", "True", "1"})
+        CHECK(load("autoCheck", on).autoCheck && load("barGameHelp", on).Widget(BarWidget::GameHelp).on);
+    for (const char* off : {"false", "0", "yes", "truer", ""})
+        CHECK(!load("enabled", off).enabled);
+}
+
 TEST(reads_go_straight_through_to_the_store_behind)
 {
     MapStore file = SavedByThisBuild();
     file.values["maxDistance"] = "99.0000"; // edited by hand: Load clamps what it returns, not what the store holds
     ChangedKeys keys(file);
     CHECK_EQ(keys.Load().maxDistance, kMaxOutlineDistance);
-    CHECK_EQ(keys.GetFloat("maxDistance", 1.0f), 99.0f);
-    CHECK(!keys.GetBool("enabled", true)); // kSavedFile's
+    CHECK_EQ(keys.GetString("maxDistance", "none"), "99.0000");
     CHECK_EQ(keys.GetString("badgeFontName", "none"), "Tahoma");
-    CHECK(keys.GetBool("missing", true) && !keys.GetBool("missing", false));
-    CHECK_EQ(keys.GetFloat("missing", 2.5f), 2.5f);
     CHECK_EQ(keys.GetString("missing", "none"), "none");
     CHECK(file.sets.empty());
 }

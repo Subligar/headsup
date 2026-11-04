@@ -325,11 +325,9 @@ namespace headsup
     class SettingsStore
     {
     public:
-        virtual ~SettingsStore()                                 = default;
-        virtual bool GetBool(const char* key, bool fallback)     = 0;
-        virtual float GetFloat(const char* key, float fallback)  = 0;
+        virtual ~SettingsStore()                                             = default;
         virtual std::string GetString(const char* key, const char* fallback) = 0;
-        virtual void Set(const char* key, const char* value)     = 0;
+        virtual void Set(const char* key, const char* value)                 = 0;
     };
 
     // Out-of-range values become the nearest limit; NaN and infinities become the default.
@@ -353,8 +351,6 @@ namespace headsup
         explicit ChangedKeys(SettingsStore& store)
             : m_Store(store)
         {}
-        bool GetBool(const char* key, bool fallback) override { return m_Store.GetBool(key, fallback); }
-        float GetFloat(const char* key, float fallback) override { return m_Store.GetFloat(key, fallback); }
         std::string GetString(const char* key, const char* fallback) override { return m_Store.GetString(key, fallback); }
         void Set(const char* key, const char* value) override;
         // LoadSettings, after asking the store for the text it holds for every key a save writes, so the next save
