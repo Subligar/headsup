@@ -15,10 +15,38 @@ namespace
     const float kProjection[16] = {0.747742f, 0.0f, 0.0f, 0.0f, 0.0f, 1.26042f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f,
         -0.1f, 0.0f};
 
-    Camera TownCamera() { return MakeCamera(kView, kProjection, 1440.0f); }
+    constexpr float kScreenHeight = 1440.0f;
+    Camera TownCamera() { return MakeCamera(kView, kProjection, kScreenHeight); }
 
     bool Near(float a, float b) { return test::Near(a, b, 0.5f); } // a pixel row
 
+    // The row of a point this high over the feet, as Direct3D projects it through kView and then kProjection.
+    float RowAt(const WorldPoint& feet, float height)
+    {
+        const float point[4] = {feet.x, feet.y - height, feet.z, 1.0f};
+        float view[4] = {}, clip[4] = {};
+        for (int j = 0; j < 4; ++j)
+            for (int k = 0; k < 4; ++k)
+                view[j] += point[k] * kView[k * 4 + j];
+        for (int j = 0; j < 4; ++j)
+            for (int k = 0; k < 4; ++k)
+                clip[j] += view[k] * kProjection[k * 4 + j];
+        return (1.0f - clip[1] / clip[3]) * 0.5f * kScreenHeight;
+    }
+
+    // The height over the feet at this row, by halving: a higher point is a smaller row.
+    float HeightAt(const WorldPoint& feet, float row)
+    {
+        constexpr float kTallest = 10.0f; // yalms
+        constexpr int kHalvings  = 40;
+        float low = 0.0f, high = kTallest;
+        for (int i = 0; i < kHalvings; ++i)
+        {
+            const float middle = (low + high) / 2.0f;
+            (RowAt(feet, middle) > row ? low : high) = middle;
+        }
+        return (low + high) / 2.0f;
+    }
 }
 
 TEST(a_camera_no_draw_gives_any_more_stops_counting)
@@ -74,40 +102,31 @@ TEST(a_standing_players_name_stays_where_the_game_puts_it)
     CHECK(Near(PosedNameRow(TownCamera(), feet, 624.4f, Pose::Standing), 624.4f));
 }
 
-TEST(rows_and_heights_above_the_feet_convert_both_ways)
-{
-    // In the capture, Shio sat in a chair with the game's name bottom at row -51.4, above the screen, and Maryel sat on
-    // the ground with it at row 662.7; their feet and those heights were found by bisection on the same camera.
-    const Camera camera  = TownCamera();
-    const WorldPoint shio = FromEntityPosition(61.957f, -97.996f, -0.917f);
-    float row = 0.0f, height = 0.0f;
-    CHECK(RowAtHeight(camera, shio, 0.0f, row) && Near(row, 733.53f));
-    CHECK(HeightAtRow(camera, shio, -51.4f, height) && std::fabs(height - 2.9226f) < 0.01f);
-    CHECK(HeightAtRow(camera, FromEntityPosition(83.920f, -99.868f, 0.297f), 662.7f, height) && std::fabs(height - 1.6548f) < 0.01f);
-}
-
 TEST(a_posed_players_name_comes_down_to_their_head)
 {
-    // The game put Shio's name 2.92 yalms above their feet in a chair, Maryel's 1.65 sitting and Justcool's 2.21
-    // resting; each comes down to its pose's share of that height and stays above the feet.
+    // In the capture the game put Shio's name 2.92 yalms above their feet in a chair (its bottom at row -51.4, above
+    // the screen), Maryel's 1.65 sitting and Justcool's 2.21 resting, found by bisection on the same camera. Each comes
+    // down to a share of that height and stays above the feet.
     const Camera camera = TownCamera();
     struct Case
     {
         WorldPoint feet;
         float gameRow;
+        float gameHeight;
         Pose pose;
     };
-    const Case cases[] = {{FromEntityPosition(61.957f, -97.996f, -0.917f), -51.4f, Pose::Chair},
-        {FromEntityPosition(83.920f, -99.868f, 0.297f), 662.7f, Pose::Sitting},
-        {FromEntityPosition(68.954f, -130.954f, -0.474f), 619.1f, Pose::Resting}};
+    const Case cases[] = {{FromEntityPosition(61.957f, -97.996f, -0.917f), -51.4f, 2.9226f, Pose::Chair},
+        {FromEntityPosition(83.920f, -99.868f, 0.297f), 662.7f, 1.6548f, Pose::Sitting},
+        {FromEntityPosition(68.954f, -130.954f, -0.474f), 619.1f, 2.2062f, Pose::Resting}};
     for (const Case& c : cases)
     {
-        const float share = PoseHeightShare(c.pose);
+        const float game = HeightAt(c.feet, c.gameRow);
+        CHECK(std::fabs(game - c.gameHeight) < 0.01f);
+        const float share = HeightAt(c.feet, PosedNameRow(camera, c.feet, c.gameRow, c.pose)) / game;
         CHECK(share > 0.0f && share < 1.0f);
-        float game = 0.0f, posed = 0.0f;
-        CHECK(HeightAtRow(camera, c.feet, c.gameRow, game));
-        CHECK(HeightAtRow(camera, c.feet, PosedNameRow(camera, c.feet, c.gameRow, c.pose), posed));
-        CHECK(std::fabs(posed - share * game) < 0.01f);
+        // A share of the height, not a drop by so much: the same pose at another height comes down in the same share.
+        const float higher = HeightAt(c.feet, PosedNameRow(camera, c.feet, RowAt(c.feet, 2.0f * game), c.pose)) / (2.0f * game);
+        CHECK(std::fabs(higher - share) < 0.001f);
     }
 }
 
@@ -121,9 +140,7 @@ TEST(a_seated_players_name_is_placed_on_screen_when_the_games_is_above_it)
     CHECK(!NameOnScreen(letters, 2560.0f, 1440.0f));
     CHECK(NameOnScreen(placed, 2560.0f, 1440.0f));
     CHECK(std::fabs(placed.Height() - letters.Height()) < 0.01f && std::fabs(placed.CenterX() - letters.CenterX()) < 0.01f);
-    float game = 0.0f, ours = 0.0f;
-    CHECK(HeightAtRow(camera, feet, letters.maxY, game) && HeightAtRow(camera, feet, placed.maxY, ours));
-    CHECK(std::fabs(ours - PoseHeightShare(Pose::Chair) * game) < 0.01f);
+    CHECK(Near(placed.maxY, PosedNameRow(camera, feet, letters.maxY, Pose::Chair)));
 }
 
 TEST(a_name_that_cannot_be_projected_stays_put)
@@ -131,8 +148,6 @@ TEST(a_name_that_cannot_be_projected_stays_put)
     // Behind the camera.
     const WorldPoint behind = FromEntityPosition(40.0f, -80.0f, 0.0f);
     CHECK(Near(PosedNameRow(TownCamera(), behind, 300.0f, Pose::Chair), 300.0f));
-    float row = 0.0f;
-    CHECK(!RowAtHeight(TownCamera(), behind, 0.0f, row));
 }
 
 TEST(a_camera_knows_where_it_is)

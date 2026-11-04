@@ -43,12 +43,11 @@ namespace headsup
         constexpr int kBlockPixels         = kBlockSide * kBlockSide;
         constexpr size_t kDxt3BlockBytes   = 16, kDxt1BlockBytes = 8, kAlphaBytes = 8;
         constexpr int kAlphaBits           = 4;
-        constexpr uint32_t kAlphaMask      = 0xF, kAlphaScale = 17; // four bits of alpha to eight
+        constexpr uint32_t kDxtAlphaMask   = 0xF, kAlphaScale = 17; // four bits of alpha to eight
         constexpr int kPickBits            = 2;
         constexpr uint32_t kPickMask       = 3, kClearPick = 3;
         constexpr size_t kSecondColorAt    = 2, kPicksAt = 4;
-        constexpr uint32_t kFull           = 255;
-        constexpr int kRedShift = 11, kGreenShift = 5;
+        constexpr int k565RedShift = 11, k565GreenShift = 5;
         constexpr uint32_t kFiveBits = 31, kSixBits = 63;
 
         // A shapes chunk's body: its name, a count of the pictures it draws from and their 16-byte names, the
@@ -80,7 +79,6 @@ namespace headsup
         constexpr float kUnderlineThick  = 1.0f;
         constexpr float kBoldUnits       = 0.5f;  // about a pixel of the picture
         constexpr float kSharpEdgePixels = 1.0f;
-        constexpr float kFullCoverage    = 255.0f;
 
         struct Scale
         {
@@ -190,12 +188,12 @@ namespace headsup
             }
         }
 
-        uint32_t Channel8(uint32_t value, uint32_t max) { return value * kFull / max; }
+        uint32_t Channel8(uint32_t value, uint32_t max) { return value * kOpaqueAlpha / max; }
 
         // The brightest channel of a 565 color: the picture's letters are white and their edge black.
         uint32_t Brightness(uint16_t color)
         {
-            return std::max({Channel8(color >> kRedShift & kFiveBits, kFiveBits), Channel8(color >> kGreenShift & kSixBits, kSixBits),
+            return std::max({Channel8(color >> k565RedShift & kFiveBits, kFiveBits), Channel8(color >> k565GreenShift & kSixBits, kSixBits),
                 Channel8(color & kFiveBits, kFiveBits)});
         }
 
@@ -212,7 +210,6 @@ namespace headsup
         constexpr std::string_view kBastokCrestChunk   = "bcre", kBastokCrest   = "menu    bcre    ";
         constexpr std::string_view kWindurstCrestChunk = "wcre", kWindurstCrest = "menu    wcre    ";
         constexpr int kMailU = 32, kMessengerU = 48, kPlayOnlineV = 48, kPlayOnlineSide = 16;
-        constexpr size_t kBgraBytes = 4;
 
         // What a picture chunk's header says, or why it is no picture.
         struct PictureHeader
@@ -255,10 +252,10 @@ namespace headsup
         std::array<uint32_t, kBlockPixels> BlockAlphas(const uint8_t* block, bool dxt3)
         {
             std::array<uint32_t, kBlockPixels> alpha{};
-            alpha.fill(kFull);
+            alpha.fill(kOpaqueAlpha);
             if (dxt3)
                 for (int k = 0; k < kBlockPixels; ++k)
-                    alpha[static_cast<size_t>(k)] = (block[k / 2] >> (k % 2 * kAlphaBits) & kAlphaMask) * kAlphaScale;
+                    alpha[static_cast<size_t>(k)] = (block[k / 2] >> (k % 2 * kAlphaBits) & kDxtAlphaMask) * kAlphaScale;
             return alpha;
         }
 
@@ -277,20 +274,20 @@ namespace headsup
             {
                 const uint32_t pick = picks >> (k * kPickBits) & kPickMask;
                 if (!fourColors && pick == kClearPick) alpha[static_cast<size_t>(k)] = 0;
-                fill[static_cast<size_t>(k)] = static_cast<uint8_t>(colors[pick] * alpha[static_cast<size_t>(k)] / kFull);
+                fill[static_cast<size_t>(k)] = static_cast<uint8_t>(colors[pick] * alpha[static_cast<size_t>(k)] / kOpaqueAlpha);
             }
             return fill;
         }
 
         // Each pixel of a block in its colors, blue, green, red and alpha; DXT1's clear pick is clear black.
-        std::array<std::array<uint8_t, kBgraBytes>, kBlockPixels> BlockColors(const uint8_t* block, bool dxt3)
+        std::array<std::array<uint8_t, kBytesPerPixel>, kBlockPixels> BlockColors(const uint8_t* block, bool dxt3)
         {
             const std::array<uint32_t, kBlockPixels> alpha = BlockAlphas(block, dxt3);
             if (dxt3) block += kAlphaBytes;
             const auto c0 = ReadAt<uint16_t>(block, 0), c1 = ReadAt<uint16_t>(block, kSecondColorAt);
             const auto bgr = [](uint16_t c) {
-                return std::array<uint32_t, 3>{Channel8(c & kFiveBits, kFiveBits), Channel8(c >> kGreenShift & kSixBits, kSixBits),
-                    Channel8(c >> kRedShift & kFiveBits, kFiveBits)};
+                return std::array<uint32_t, 3>{Channel8(c & kFiveBits, kFiveBits), Channel8(c >> k565GreenShift & kSixBits, kSixBits),
+                    Channel8(c >> k565RedShift & kFiveBits, kFiveBits)};
             };
             const std::array<uint32_t, 3> a = bgr(c0), b = bgr(c1);
             const bool fourColors = dxt3 || c0 > c1;
@@ -301,7 +298,7 @@ namespace headsup
                 colors[3][c] = fourColors ? (a[c] + 2 * b[c]) / 3 : 0;
             }
             const auto picks = ReadAt<uint32_t>(block, kPicksAt);
-            std::array<std::array<uint8_t, kBgraBytes>, kBlockPixels> out{};
+            std::array<std::array<uint8_t, kBytesPerPixel>, kBlockPixels> out{};
             for (int k = 0; k < kBlockPixels; ++k)
             {
                 const uint32_t pick = picks >> (k * kPickBits) & kPickMask;
@@ -452,18 +449,18 @@ namespace headsup
             if (bits != kPaletteBits && bits != kTrueColorBits)
                 return {std::nullopt, "its picture has " + std::to_string(bits) + " bits a pixel"};
             const size_t pixels  = static_cast<size_t>(width) * static_cast<size_t>(height);
-            const size_t palette = bits == kPaletteBits ? kPaletteColors * kBgraBytes : 0;
+            const size_t palette = bits == kPaletteBits ? kPaletteColors * kBytesPerPixel : 0;
             const size_t at      = kPixelsAt + (body[0] == kPaletteFlag ? kPixelsGap : 0);
             if (body.size() < at + palette + pixels * (bits / 8)) return {std::nullopt, "its picture ends early"};
             ColorPicture picture{std::string(reinterpret_cast<const char*>(body.data() + kNameAt), kNameBytes), width, height,
-                std::vector<uint8_t>(pixels * kBgraBytes)};
+                std::vector<uint8_t>(pixels * kBytesPerPixel)};
             for (size_t y = 0; y < static_cast<size_t>(height); ++y)
                 for (size_t x = 0; x < static_cast<size_t>(width); ++x)
                 {
                     const size_t stored = (static_cast<size_t>(height) - 1 - y) * static_cast<size_t>(width) + x;
-                    const uint8_t* from = bits == kPaletteBits ? body.data() + at + body[at + palette + stored] * kBgraBytes
-                                                               : body.data() + at + stored * kBgraBytes;
-                    std::copy(from, from + kBgraBytes, picture.bgra.begin() + static_cast<std::ptrdiff_t>((y * static_cast<size_t>(width) + x) * kBgraBytes));
+                    const uint8_t* from = bits == kPaletteBits ? body.data() + at + body[at + palette + stored] * kBytesPerPixel
+                                                               : body.data() + at + stored * kBytesPerPixel;
+                    std::copy(from, from + kBytesPerPixel, picture.bgra.begin() + static_cast<std::ptrdiff_t>((y * static_cast<size_t>(width) + x) * kBytesPerPixel));
                 }
             return {std::move(picture), {}};
         }
@@ -476,14 +473,14 @@ namespace headsup
         if (!header.value) return {std::nullopt, std::move(header.failure)};
         const PictureHeader& h = *header.value;
         ColorPicture picture{h.name, h.width, h.height,
-            std::vector<uint8_t>(static_cast<size_t>(h.width) * static_cast<size_t>(h.height) * kBgraBytes)};
+            std::vector<uint8_t>(static_cast<size_t>(h.width) * static_cast<size_t>(h.height) * kBytesPerPixel)};
         for (size_t by = 0; by < h.blocksTall; ++by)
             for (size_t bx = 0; bx < h.blocksWide; ++bx)
             {
                 const auto colors = BlockColors(body.data() + kBlocksAt + (by * h.blocksWide + bx) * h.blockBytes, h.dxt3);
                 for (int k = 0; k < kBlockPixels; ++k)
                     std::copy(colors[static_cast<size_t>(k)].begin(), colors[static_cast<size_t>(k)].end(),
-                        picture.bgra.begin() + static_cast<std::ptrdiff_t>(PixelOf(h, bx, by, k) * kBgraBytes));
+                        picture.bgra.begin() + static_cast<std::ptrdiff_t>(PixelOf(h, bx, by, k) * kBytesPerPixel));
             }
         return {std::move(picture), {}};
     }
@@ -506,17 +503,17 @@ namespace headsup
         Read<ColorPicture> Square(const ColorPicture& sheet, int u, int v, int side, const std::string& what)
         {
             if (sheet.width < u + side || sheet.height < v + side) return {std::nullopt, "its picture is too small to hold " + what};
-            const size_t row = static_cast<size_t>(side) * kBgraBytes;
+            const size_t row = static_cast<size_t>(side) * kBytesPerPixel;
             ColorPicture square{sheet.name, side, side, {}};
             square.bgra.reserve(row * static_cast<size_t>(side));
             for (int y = 0; y < side; ++y)
             {
                 const auto from = sheet.bgra.begin() +
-                                  static_cast<std::ptrdiff_t>((static_cast<size_t>(v + y) * static_cast<size_t>(sheet.width) + static_cast<size_t>(u)) * kBgraBytes);
+                                  static_cast<std::ptrdiff_t>((static_cast<size_t>(v + y) * static_cast<size_t>(sheet.width) + static_cast<size_t>(u)) * kBytesPerPixel);
                 square.bgra.insert(square.bgra.end(), from, from + static_cast<std::ptrdiff_t>(row));
             }
             bool seen = false;
-            for (size_t p = kBgraBytes - 1; p < square.bgra.size(); p += kBgraBytes)
+            for (size_t p = kBytesPerPixel - 1; p < square.bgra.size(); p += kBytesPerPixel)
                 seen = seen || square.bgra[p] != 0;
             if (!seen) return {std::nullopt, "its " + what + " shows nothing"};
             return {std::move(square), {}};

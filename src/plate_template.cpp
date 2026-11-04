@@ -16,52 +16,42 @@ namespace headsup
         constexpr uint8_t kPetKinds    = KindBit(PlateKind::Pets);
         constexpr uint8_t kAnyKinds    = kMobKinds | kPlayerKinds | kNpcKinds | kPetKinds;
 
-        struct TagEntry
-        {
-            Tag tag;
-            const char* name; // with the mark
-            uint8_t kinds;    // the kinds whose page offers it
-        };
+        constexpr bool kText = true;
         // The order is the chips' order on each page that offers the tag, so it need not follow the enum.
         const TagEntry kTags[] = {
-            {Tag::Name, "$name", kAnyKinds},
-            {Tag::Gm, "$gm", kPlayerKinds},
-            {Tag::Mentor, "$mentor", kPlayerKinds},
-            {Tag::New, "$new", kPlayerKinds},
-            {Tag::Sync, "$sync", kPlayerKinds},
-            {Tag::Away, "$away", kPlayerKinds},
-            {Tag::Linkshell, "$linkshell", kPlayerKinds},
-            {Tag::Bazaar, "$bazaar", kPlayerKinds},
-            {Tag::Seeking, "$seeking", kPlayerKinds},
-            {Tag::Job, "$job", kPlayerKinds},
-            {Tag::Level, "$level", kMobKinds | kPlayerKinds},
-            {Tag::JobLevel, "$joblevel", kPlayerKinds},
-            {Tag::SubLevel, "$sublevel", kPlayerKinds},
+            {Tag::Name, "$name", kAnyKinds, kText},
+            {Tag::Gm, "$gm", kPlayerKinds, false, Icon::Gm, &PlayerStatus::gm},
+            {Tag::Mentor, "$mentor", kPlayerKinds, false, Icon::Mentor, &PlayerStatus::mentor},
+            {Tag::New, "$new", kPlayerKinds, false, Icon::NewAdventurer, &PlayerStatus::newAdventurer},
+            {Tag::Sync, "$sync", kPlayerKinds, false, Icon::LevelSync, &PlayerStatus::levelSync},
+            {Tag::Away, "$away", kPlayerKinds, false, Icon::Away, &PlayerStatus::away},
+            {Tag::Linkshell, "$linkshell", kPlayerKinds, false, Icon::Linkshell, &PlayerStatus::linkshell},
+            {Tag::Bazaar, "$bazaar", kPlayerKinds, false, Icon::Bazaar, &PlayerStatus::bazaar},
+            {Tag::Seeking, "$seeking", kPlayerKinds, false, Icon::Invite, &PlayerStatus::seekingParty},
+            {Tag::Job, "$job", kPlayerKinds, kText},
+            {Tag::Level, "$level", kMobKinds | kPlayerKinds, kText},
+            {Tag::JobLevel, "$joblevel", kPlayerKinds, kText},
+            {Tag::SubLevel, "$sublevel", kPlayerKinds, kText},
             // The fishing bar's line (FishBarTags), on no nameplate's page.
             {Tag::Fish, "$fish", 0},
             {Tag::FishSize, "$size", 0},
             {Tag::Feeling, "$feeling", 0},
             {Tag::LineSnap, "$linesnap", 0},
             {Tag::RodBreak, "$rodbreak", 0},
-            {Tag::Title, "$title", kPlayerKinds},
-            {Tag::Con, "$con", kMobKinds},
-            {Tag::Id, "$id", kMobKinds},
-            {Tag::ServerId, "$serverid", kMobKinds},
-            {Tag::Ph, "$ph", kMobKinds},
+            {Tag::Title, "$title", kPlayerKinds, kText},
+            {Tag::Con, "$con", kMobKinds, kText},
+            {Tag::Id, "$id", kMobKinds, kText},
+            {Tag::ServerId, "$serverid", kMobKinds, kText},
+            {Tag::Ph, "$ph", kMobKinds, kText},
             {Tag::Detect, "$detect", kMobKinds},
-            {Tag::Weak, "$weak", kMobKinds},
-            {Tag::Resist, "$resist", kMobKinds},
-            {Tag::Status, "$status", kMobKinds},
-            {Tag::Immune, "$immune", kMobKinds},
-            {Tag::Owner, "$owner", kPetKinds},
+            {Tag::Weak, "$weak", kMobKinds, false, {}, nullptr, BadgeGroup::Weak},
+            {Tag::Resist, "$resist", kMobKinds, false, {}, nullptr, BadgeGroup::Resist},
+            {Tag::Status, "$status", kMobKinds, false, {}, nullptr, BadgeGroup::Status},
+            {Tag::Immune, "$immune", kMobKinds, false, {}, nullptr, BadgeGroup::Immune},
+            {Tag::Owner, "$owner", kPetKinds, kText},
             {Tag::Break, "$break", 0}, // Enter in a line's box makes it, and no page offers it as a chip
         };
         static_assert(std::size(kTags) == kTagCount);
-
-        const TagEntry& EntryOf(Tag tag)
-        {
-            return *std::ranges::find(kTags, tag, &TagEntry::tag);
-        }
 
         constexpr char kNameOpen = '{', kNameClose = '}'; // around a tag's name, where a letter follows it
 
@@ -76,23 +66,11 @@ namespace headsup
         }
     }
 
+    const TagEntry& EntryOf(Tag tag) { return *std::ranges::find(kTags, tag, &TagEntry::tag); }
+
     const char* TagName(Tag tag) { return EntryOf(tag).name; }
 
-    std::optional<Icon> TagIcon(Tag tag)
-    {
-        switch (tag)
-        {
-        case Tag::Gm: return Icon::Gm;
-        case Tag::Mentor: return Icon::Mentor;
-        case Tag::New: return Icon::NewAdventurer;
-        case Tag::Sync: return Icon::LevelSync;
-        case Tag::Away: return Icon::Away;
-        case Tag::Linkshell: return Icon::Linkshell;
-        case Tag::Bazaar: return Icon::Bazaar;
-        case Tag::Seeking: return Icon::Invite;
-        default: return std::nullopt;
-        }
-    }
+    std::optional<Icon> TagIcon(Tag tag) { return EntryOf(tag).icon; }
 
     namespace
     {

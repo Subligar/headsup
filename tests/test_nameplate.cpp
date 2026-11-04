@@ -131,7 +131,7 @@ TEST(a_cursor_is_drawn_for_your_target_and_the_one_you_are_picking_alone)
 TEST(a_lone_cursor_points_at_its_anchor)
 {
     // A 20x32 arrow pointing from its middle: its tip on the anchor, the rest above it.
-    const CursorSpot spot = CursorAtAnchor(1400.0f, 608.0f, 20.0f, 32.0f, 0.5f);
+    const ScreenPoint spot = CursorAtAnchor(1400.0f, 608.0f, 20.0f, 32.0f, 0.5f);
     CHECK(Near(spot.x, 1390.0f) && Near(spot.y, 576.0f));
     CHECK(Near(CursorAtAnchor(1400.0f, 608.0f, 20.0f, 32.0f, 0.25f).x, 1395.0f));
     // Raised, it stands that far over the anchor; a raise below nothing lowers it onto it.
@@ -188,21 +188,26 @@ TEST(a_cursors_picture_is_as_wide_for_its_height_as_the_settings_have_it)
 namespace
 {
     constexpr float kLeastScale = 0.5f, kMostScale = 2.5f; // the settings' defaults
+    constexpr float kNoDepth    = 0.0f; // a name's depth that says nothing of its distance
+    constexpr float kLizardHeightScale = 11.8f / 8.0f; // an 11.8 px name over a 1440p screen's 8 px letters
 }
 
 TEST(scale_follows_the_game_name_with_limits)
 {
-    // 1440p: a typical game letter is 8 px (1440 / 180).
-    CHECK(Near(DistanceScale(8.0f, 1440.0f, kLeastScale, kMostScale), 1.0f));
-    CHECK(Near(DistanceScale(10.0f, 1440.0f, kLeastScale, kMostScale), 1.25f)); // smoothly, not in whole pixels
-    CHECK(Near(DistanceScale(100.0f, 1440.0f, kLeastScale, kMostScale), 2.5f)); // at most 2.5x
-    CHECK(Near(DistanceScale(1.0f, 1440.0f, kLeastScale, kMostScale), 0.5f));   // at least 0.5x
-    CHECK(Near(DistanceScale(std::nanf(""), 1440.0f, kLeastScale, kMostScale), 1.0f));
-    CHECK(Near(DistanceScale(8.0f, 0.0f, kLeastScale, kMostScale), 1.0f));
+    // With a depth that says nothing, a name is sized by its height. 1440p: a typical game letter is 8 px (1440 / 180).
+    const auto byHeight = [](float letterHeight, float screenHeight, float least, float most) {
+        return NameScale(kNoDepth, letterHeight, screenHeight, least, most);
+    };
+    CHECK(Near(byHeight(8.0f, 1440.0f, kLeastScale, kMostScale), 1.0f));
+    CHECK(Near(byHeight(10.0f, 1440.0f, kLeastScale, kMostScale), 1.25f)); // smoothly, not in whole pixels
+    CHECK(Near(byHeight(100.0f, 1440.0f, kLeastScale, kMostScale), 2.5f)); // at most 2.5x
+    CHECK(Near(byHeight(1.0f, 1440.0f, kLeastScale, kMostScale), 0.5f));   // at least 0.5x
+    CHECK(Near(byHeight(std::nanf(""), 1440.0f, kLeastScale, kMostScale), 1.0f));
+    CHECK(Near(byHeight(8.0f, 0.0f, kLeastScale, kMostScale), 1.0f));
     // The limits are the caller's.
-    CHECK(Near(DistanceScale(100.0f, 1440.0f, 0.8f, 1.2f), 1.2f));
-    CHECK(Near(DistanceScale(1.0f, 1440.0f, 0.8f, 1.2f), 0.8f));
-    CHECK(Near(DistanceScale(8.0f, 1440.0f, 0.8f, 1.2f), 1.0f));
+    CHECK(Near(byHeight(100.0f, 1440.0f, 0.8f, 1.2f), 1.2f));
+    CHECK(Near(byHeight(1.0f, 1440.0f, 0.8f, 1.2f), 0.8f));
+    CHECK(Near(byHeight(8.0f, 1440.0f, 0.8f, 1.2f), 1.0f));
 }
 
 TEST(a_plate_sized_by_its_own_name_follows_the_names_distance_and_not_its_jumps)
@@ -210,14 +215,13 @@ TEST(a_plate_sized_by_its_own_name_follows_the_names_distance_and_not_its_jumps)
     // From a live watch dump with shadows off (no scene camera): the Hill Lizard's name 11.8 px tall at depth
     // 0.99436, which is 0.1 / 0.00564 = 17.73 yalms from the camera: 21.09 / 17.73 + 0.3 = 1.49, its height 1.475.
     CHECK(std::abs(NameScale(0.99436f, 11.8f, 1440.0f, kLeastScale, kMostScale) - 1.4895f) < 0.001f);
-    CHECK(std::abs(NameScale(0.99436f, 11.8f, 1440.0f, kLeastScale, kMostScale) -
-                   DistanceScale(11.8f, 1440.0f, kLeastScale, kMostScale)) < 0.02f);
+    CHECK(std::abs(NameScale(0.99436f, 11.8f, 1440.0f, kLeastScale, kMostScale) - kLizardHeightScale) < 0.02f);
     // The game drew a name a third taller for a frame at the same depth: the plate does not follow.
     CHECK_EQ(NameScale(0.99436f, 15.8f, 1440.0f, kLeastScale, kMostScale), NameScale(0.99436f, 11.8f, 1440.0f, kLeastScale, kMostScale));
     // A depth that says nothing leaves the name's height.
-    CHECK_EQ(NameScale(0.0f, 11.8f, 1440.0f, kLeastScale, kMostScale), DistanceScale(11.8f, 1440.0f, kLeastScale, kMostScale));
-    CHECK_EQ(NameScale(1.0f, 11.8f, 1440.0f, kLeastScale, kMostScale), DistanceScale(11.8f, 1440.0f, kLeastScale, kMostScale));
-    CHECK_EQ(NameScale(std::nanf(""), 11.8f, 1440.0f, kLeastScale, kMostScale), DistanceScale(11.8f, 1440.0f, kLeastScale, kMostScale));
+    CHECK(Near(NameScale(0.0f, 11.8f, 1440.0f, kLeastScale, kMostScale), kLizardHeightScale));
+    CHECK(Near(NameScale(1.0f, 11.8f, 1440.0f, kLeastScale, kMostScale), kLizardHeightScale));
+    CHECK(Near(NameScale(std::nanf(""), 11.8f, 1440.0f, kLeastScale, kMostScale), kLizardHeightScale));
     // The limits are the caller's.
     CHECK_EQ(NameScale(0.99436f, 11.8f, 1440.0f, 0.8f, 1.2f), 1.2f);
 }
@@ -276,22 +280,35 @@ TEST(text_is_drawn_no_taller_than_the_tallest_step_and_stretched_past_it)
     CHECK_EQ(FixedRasterHeight(288.0f), 213);
 }
 
+namespace
+{
+    // An image measured width by height, with halo pixels around it, at raster, and in proportion at other heights.
+    std::function<ImageSize(int)> Measured(int raster, int width, int height, int halo)
+    {
+        return [=](int at) {
+            const auto scaled = [&](int pixels) { return static_cast<int>(static_cast<long long>(pixels) * at / raster); };
+            return ImageSize{scaled(width), scaled(height), scaled(halo)};
+        };
+    }
+    int Fitting(int raster, int width, int height, int halo, int side)
+    {
+        return RasterThatFits(raster, side, Measured(raster, width, height, halo)).value_or(0);
+    }
+}
+
 TEST(a_text_too_large_for_a_texture_is_drawn_smaller_until_its_image_fits)
 {
     // Ink 1500 by 130 with a 20 px halo around it is 1540 by 170.
-    CHECK(FitsTexture(1500, 130, 20, 2048));
-    CHECK(FitsTexture(2008, 130, 20, 2048)); // exactly the side
-    CHECK(!FitsTexture(2009, 130, 20, 2048));
-    CHECK(!FitsTexture(300, 2009, 20, 2048)); // too tall
-    CHECK_EQ(FittingRaster(100, 1500, 130, 20, 2048), 100);
-    CHECK_EQ(FittingRaster(100, 2008, 130, 20, 2048), 100);
-    CHECK_EQ(FittingRaster(100, 4056, 130, 20, 2048), 50);  // 4096 wide: twice too wide
-    CHECK_EQ(FittingRaster(100, 400000, 130, 20, 2048), 6); // never below the smallest step
-    CHECK_EQ(FittingRaster(100, 2000, 130, 40, 2048), 98);  // the halo counts: 2080 wide
-    CHECK_EQ(FittingRaster(100, 2000, 130, 24, 2048), 100); // and 2048 with a thinner one
-    CHECK_EQ(FittingRaster(200, 300, 2260, 150, 2048), 160); // a glow's halo can make it too tall: 2560
-    CHECK_EQ(FittingRaster(213, 4990, 300, 0, 4096), 174);  // 174.8, not rounded up: at 175 it is 4 px too wide
-    CHECK_EQ(FittingRaster(4, 400000, 130, 20, 2048), 4);   // a height under the smallest step is not raised to it
+    CHECK_EQ(Fitting(100, 1500, 130, 20, 2048), 100);
+    CHECK_EQ(Fitting(100, 2008, 130, 20, 2048), 100); // exactly the side
+    CHECK_EQ(Fitting(100, 2009, 130, 20, 2048), 99);  // a pixel over: 1988 and a 19 px halo at 99
+    CHECK_EQ(Fitting(100, 300, 2009, 20, 2048), 99);  // too tall
+    CHECK_EQ(Fitting(100, 4056, 130, 20, 2048), 50);  // 4096 wide: twice too wide
+    CHECK(!RasterThatFits(100, 2048, Measured(100, 400000, 130, 20))); // never below the smallest step, 6 px
+    CHECK_EQ(Fitting(100, 2000, 130, 40, 2048), 98);  // the halo counts: 2080 wide
+    CHECK_EQ(Fitting(100, 2000, 130, 24, 2048), 100); // and 2048 with a thinner one
+    CHECK_EQ(Fitting(200, 300, 2260, 150, 2048), 160); // a glow's halo can make it too tall: 2560
+    CHECK_EQ(Fitting(213, 4990, 300, 0, 4096), 174);  // 174.8, not rounded up: at 175 it is too wide
 }
 
 namespace
@@ -406,7 +423,7 @@ TEST(no_cursor_is_drawn_over_arrows_the_game_could_not_be_kept_from_drawing)
 
 TEST(a_badge_hangs_past_its_icons_bottom_right_corner)
 {
-    const IconSpot at = BadgeAt(IconSpot{1041.0f, 160.2f}, 16.0f, 10.0f, 7.0f);
+    const ScreenPoint at = BadgeAt(ScreenPoint{1041.0f, 160.2f}, 16.0f, 10.0f, 7.0f);
     CHECK(Near(at.x, 1052.6f) && Near(at.y, 174.0f));
 }
 
@@ -520,7 +537,7 @@ TEST(a_plates_rise_eases_to_where_it_should_be_and_settles_there)
 TEST(a_plates_size_follows_how_far_it_is_as_the_games_own_names_do)
 {
     // The game's own names, measured in one frame (a name dump): 0.5625 of full size 10.17 yalms from the camera and
-    // 0.4125 at 14.55, which DistanceScale makes 2.373 and 1.740. The game steps its size; a plate's is smooth.
+    // 0.4125 at 14.55, which against 1440p's 8 px letters are 2.373 and 1.740. The game steps its size; a plate's is smooth.
     CHECK(Near(ScaleAtDistance(10.174f, kLeastScale, kMostScale), 2.373f, 0.03f));
     CHECK(Near(ScaleAtDistance(14.55f, kLeastScale, kMostScale), 1.740f, 0.03f));
     CHECK(ScaleAtDistance(30.0f, kLeastScale, kMostScale) < ScaleAtDistance(29.0f, kLeastScale, kMostScale)); // every yalm tells: no steps
@@ -535,24 +552,24 @@ TEST(a_plates_size_follows_how_far_it_is_as_the_games_own_names_do)
 
 TEST(a_cursor_is_kept_inside_the_screen)
 {
-    const CursorSpot inside = KeepOnScreen(CursorSpot{100.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint inside = KeepOnScreen(ScreenPoint{100.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(inside.x, 100.0f);
     CHECK_EQ(inside.y, 100.0f);
-    const CursorSpot above = KeepOnScreen(CursorSpot{100.0f, -50.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint above = KeepOnScreen(ScreenPoint{100.0f, -50.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(above.y, 0.0f);
-    const CursorSpot right = KeepOnScreen(CursorSpot{2555.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint right = KeepOnScreen(ScreenPoint{2555.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(right.x, 2540.0f);
-    const CursorSpot left = KeepOnScreen(CursorSpot{-5.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint left = KeepOnScreen(ScreenPoint{-5.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(left.x, 0.0f);
-    const CursorSpot huge = KeepOnScreen(CursorSpot{50.0f, 50.0f}, 3000.0f, 2000.0f, 2560.0f, 1440.0f);
+    const ScreenPoint huge = KeepOnScreen(ScreenPoint{50.0f, 50.0f}, 3000.0f, 2000.0f, 2560.0f, 1440.0f);
     CHECK_EQ(huge.x, 0.0f);
     CHECK_EQ(huge.y, 0.0f);
-    const CursorSpot below = KeepOnScreen(CursorSpot{100.0f, 1430.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
+    const ScreenPoint below = KeepOnScreen(ScreenPoint{100.0f, 1430.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f);
     CHECK_EQ(below.y, 1408.0f);
     // The top panel lies over the scene: a cursor that would go under it stays just below it, and one already
     // below it is where it was.
-    CHECK_EQ(KeepOnScreen(CursorSpot{100.0f, 20.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 61.0f);
-    CHECK_EQ(KeepOnScreen(CursorSpot{100.0f, -50.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 61.0f);
-    CHECK_EQ(KeepOnScreen(CursorSpot{100.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 100.0f);
-    CHECK_EQ(KeepOnScreen(CursorSpot{100.0f, 1430.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 1408.0f);
+    CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, 20.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 61.0f);
+    CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, -50.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 61.0f);
+    CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 100.0f);
+    CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, 1430.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 1408.0f);
 }

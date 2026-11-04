@@ -83,9 +83,9 @@ namespace headsup
     // sleep share one Sleep badge when theirs are the same.
     InfoIconSet InfoIconsFor(const MobResistances* mob, const BadgeRules& rules);
     enum class BadgeGroup : uint8_t { Weak, Resist, Status, Immune };
-    // The entries of InfoIconsFor in one group, in its order: Weak holds Weak and WeakRank, Resist Resist and
-    // ResistRank, Status StatusWeak and StatusRank.
-    InfoIconSet InfoIconsOf(const MobResistances* mob, const BadgeRules& rules, BadgeGroup group);
+    // The entries of a set InfoIconsFor gave in one group, in its order: Weak holds Weak and WeakRank, Resist Resist
+    // and ResistRank, Status StatusWeak and StatusRank.
+    InfoIconSet InfoIconsOf(const InfoIconSet& all, BadgeGroup group);
     // A change in damage taken or in a chance as the badges spell it: "+25%", "-50%", "0%".
     std::string PercentText(int percent);
     // The mark of an immunity: a times sign.

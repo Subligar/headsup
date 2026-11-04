@@ -49,9 +49,7 @@ namespace headsup
     uint32_t CameraRun(uint32_t run, bool seen);
     bool CameraSteady(uint32_t run);
 
-    bool RowAtHeight(const Camera& camera, const WorldPoint& feet, float height, float& row);
-    bool HeightAtRow(const Camera& camera, const WorldPoint& feet, float row, float& height);
-
-    float PoseHeightShare(Pose pose);
+    // The row a posed player's name comes down to: the game's row brought down to the pose's share of its height above
+    // their feet. The game's row where the camera cannot say.
     float PosedNameRow(const Camera& camera, const WorldPoint& feet, float gameRow, Pose pose);
 }
