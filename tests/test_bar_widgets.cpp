@@ -2588,12 +2588,13 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
     // next, and how long until it does, against the right.
     const auto airships = std::ranges::count_if(TravelRoutes(), [](const TravelRoute& r) { return std::string(r.group) == "Airships"; });
     const auto rows = [](const PopupTab& tab) {
-        CHECK(tab.rows.size() == 1 && tab.rows[0].kind == RowKind::Grid && tab.rows[0].columns == 3 && tab.rows[0].nested);
+        CHECK(tab.rows.size() == 1 && tab.rows[0].kind == RowKind::Grid && tab.rows[0].columns == 3 && tab.rows[0].nested &&
+              tab.rows[0].spread);
         std::vector<std::array<std::string, 3>> out;
         const std::vector<PopupCell>& cells = tab.rows[0].cells;
         for (size_t i = 0; i + 2 < cells.size(); i += 3)
         {
-            CHECK(cells[i + 2].align == Align::Right && cells[i + 2].text.size() == 1); // only the time ticks
+            CHECK(cells[i + 1].align == Align::Center && cells[i + 2].align == Align::Right && cells[i + 2].text.size() == 1);
             out.push_back({Joined(cells[i].text), Joined(cells[i + 1].text), Joined(cells[i + 2].text)});
         }
         return out;

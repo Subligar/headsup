@@ -85,8 +85,9 @@ namespace headsup
             struct Value
             {
                 size_t first, last; // pieces [first, last)
-                float right;        // where the value ends now
+                float right;        // where the value ends now, or its middle
                 float inset;        // how far in from the card's padding it ends: a socket's room on its right
+                bool middle = false; // it goes to the card's middle, not its right edge
             };
             std::vector<Value> values;
             struct Chip
@@ -278,9 +279,22 @@ namespace headsup
                     const TextSize s = cells.emplace_back(CellSize(row.cells[i], unit, measure));
                     if (!grid) rowWidth += (tags ? Framed(s, unit) : s).width + (i > 0 ? gap : 0.0f);
                 }
-                for (const float c : columns)
-                    rowWidth += c;
-                if (grid) rowWidth += unit * kColumnGap * static_cast<float>(columns.size() - 1);
+                const float columnGap = unit * kColumnGap;
+                if (grid && row.spread && columns.size() % 2 == 1)
+                {
+                    // The middle column in the card's middle: as much room on its right as its left side needs.
+                    const size_t middle = columns.size() / 2;
+                    float sides[2]      = {0.0f, 0.0f};
+                    for (size_t c = 0; c < columns.size(); ++c)
+                        if (c != middle) sides[c > middle] += columns[c] + columnGap;
+                    rowWidth += 2.0f * std::max(sides[0], sides[1]) + columns[middle];
+                }
+                else
+                {
+                    for (const float c : columns)
+                        rowWidth += c;
+                    if (grid) rowWidth += columnGap * static_cast<float>(columns.size() - 1);
+                }
                 contentWidth = std::max(contentWidth, rowWidth);
                 if (row.nested && !socket)
                 {
@@ -325,6 +339,7 @@ namespace headsup
                     if (grid && cell.align != Align::Left)
                         cx += (columns[i % columns.size()] - size.width) * (cell.align == Align::Center ? 0.5f : 1.0f);
                     const size_t first = b.pieces.size();
+                    const float start  = cx;
                     if (tags)
                     {
                         // The cell's ink centered in its frame: the text's line box can reach past it.
@@ -382,12 +397,15 @@ namespace headsup
                     }
                     if (!cell.press.empty()) b.presses.push_back(
                             Block::Press{cell.press, x, y, grid ? columns[i % columns.size()] : cells[i].width, cells[i].height});
-                    if (pair && i == 1)
+                    const bool spread = grid && row.spread && cell.align != Align::Left;
+                    if ((pair && i == 1) || (spread && cell.align == Align::Right))
                     {
                         b.values.push_back(Block::Value{first, b.pieces.size(), cx, row.nested ? inset : 0.0f});
                         for (size_t v = first; v < b.pieces.size(); ++v)
                             b.pieces[v].right = b.pieces[v].kind == PopupPiece::Kind::Text;
                     }
+                    else if (spread)
+                        b.values.push_back(Block::Value{first, b.pieces.size(), (start + cx) / 2.0f, 0.0f, true});
                     lineHeight = std::max(lineHeight, size.height);
                     x += grid ? columns[i % columns.size()] + unit * kColumnGap : size.width + gap;
                 }
@@ -399,12 +417,13 @@ namespace headsup
             return b;
         }
 
-        // Moves a block's pieces to x, y and its pair values to its right edge at width; a card's ground goes first.
+        // Moves a block's pieces to x, y and its pair values to its right edge at width, or its middle; a card's ground goes
+        // first.
         void Place(Block& b, float x, float y, float width, size_t line, PopupLayout& l)
         {
             for (const Block::Value& v : b.values)
                 for (size_t i = v.first; i < v.last; ++i)
-                    b.pieces[i].x += width - b.pad - v.inset - v.right;
+                    b.pieces[i].x += (v.middle ? width / 2.0f : width - b.pad - v.inset) - v.right;
             for (const size_t socket : b.sockets)
                 b.pieces[socket].width = width - 2.0f * b.pad;
             for (const Block::Anchor& anchor : b.anchors)

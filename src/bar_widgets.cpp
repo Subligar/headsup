@@ -1278,11 +1278,14 @@ namespace headsup
                         const Sailing next = NextSailing(routes[last], state.unixMs);
                         PopupCell time     = Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn)));
                         time.align         = Align::Right;
+                        PopupCell stage    = Cell(Text(next.boarding ? "Departs" : "Arrives", Tone::Dim));
+                        stage.align        = Align::Center;
                         grid.cells.push_back(Cell(Text(routes[last].name)));
-                        grid.cells.push_back(Cell(Text(next.boarding ? "Departs" : "Arrives", Tone::Dim)));
+                        grid.cells.push_back(std::move(stage));
                         grid.cells.push_back(std::move(time));
                     }
                     grid.nested = true;
+                    grid.spread = true; // the times against the card's right edge, the stages in its middle
                     kind.rows.push_back(std::move(grid));
                     ScrollsBy(kind.rows.front(), state, travel.heading + "/" + kind.name.text);
                     travel.tabs.push_back(std::move(kind));

@@ -1045,3 +1045,41 @@ TEST(a_crests_name_value_and_star_are_centered_on_the_crest)
     CHECK(Near(star.y + star.height / 2.0f, middle));
     CHECK(Near(Find(l, "45%")->y, name->y));
 }
+
+TEST(a_spread_grid_keeps_its_right_column_at_the_cards_edge_and_its_centered_one_in_its_middle)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
+    const auto layout = [&](const char* name, const char* status, bool nested) {
+        PopupRow grid{RowKind::Grid, 3, {}};
+        grid.spread = true;
+        grid.nested = nested;
+        for (const char* route : {name, "Jeuno to Bastok"})
+        {
+            PopupCell middle = Word(status), left = Word("5:16");
+            middle.align     = Align::Center;
+            left.align       = Align::Right;
+            grid.cells.push_back(Word(route));
+            grid.cells.push_back(std::move(middle));
+            grid.cells.push_back(std::move(left));
+        }
+        PopupContent c;
+        c.title = {{"World Info", Tone::Normal}};
+        c.sections.push_back(PopupSection{"Travel", {grid}});
+        return LayoutPopup(c, m, BarShape::Pills, false, Fake);
+    };
+    for (const bool nested : {false, true})
+        for (const auto& [name, status] : {std::pair{"Jeuno to San d'Oria", "Arrives"}, std::pair{"Jeuno to Kazham", "Departs"},
+                 std::pair{"A much longer route's name than the others", "Arrives"}})
+        {
+            const PopupLayout l    = layout(name, status, nested);
+            const PopupPiece& card = *Of(l, PopupPiece::Kind::Card).at(0);
+            const PopupPiece& time = *Find(l, "5:16");
+            const PopupPiece& said = *Find(l, status);
+            const PopupPiece& from = *Find(l, name);
+            // The time ends as far in from the card's right as the route starts from its left.
+            CHECK(Near(card.x + card.width - (time.x + time.width), from.x - card.x));
+            // The status sits in the card's middle, clear of the route.
+            CHECK(Near(said.x + said.width / 2.0f, card.x + card.width / 2.0f));
+            CHECK(said.x > from.x + from.width && said.x + said.width < time.x);
+        }
+}
