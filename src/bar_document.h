@@ -137,6 +137,7 @@ namespace headsup
         float drop = 0.0f;
         bool operator==(const PopupFace&) const = default;
     };
+    constexpr float kPercentWhole = 100.0f; // a share's whole, as RCSS percentages count it
     constexpr int kPopupFontCount = static_cast<int>(PopupFont::Pin) + 1;
     using PopupFaces = std::array<PopupFace, kPopupFontCount>;
     // The popups' document: an empty popup over the whole screen that takes no clicks, styled from the look.

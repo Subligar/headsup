@@ -7,7 +7,6 @@ namespace headsup
 {
     namespace
     {
-        constexpr auto kMsPerSecondF = static_cast<double>(kMsPerSecond);
         constexpr double kBytesPerKb = 1024.0;
 
         std::string Rate(const std::optional<NetCounters>& counters, int32_t NetCounters::*field)

@@ -505,6 +505,12 @@ namespace headsup
             return "Appears " + JoinedNames(shows);
         }
 
+        // The dim note under a list when an NPC's scripts do more of it than the data could read.
+        PopupRow UnreadNote(bool listed)
+        {
+            return LineOf(listed ? "And more its script works out" : "Worked out by its script", Tone::Dim);
+        }
+
         // A name a line, and a dim note when its scripts do more of it than the data could read; none when there is
         // neither.
         void AddListing(std::vector<PopupSection>& sections, std::string heading, const std::vector<std::string>& names,
@@ -514,9 +520,7 @@ namespace headsup
             PopupSection section{std::move(heading), {}};
             for (const std::string& name : names)
                 section.rows.push_back(LineOf(name));
-            if (unread)
-                section.rows.push_back(
-                    LineOf(names.empty() ? "Worked out by its script" : "And more its script works out", Tone::Dim));
+            if (unread) section.rows.push_back(UnreadNote(!names.empty()));
             sections.push_back(std::move(section));
         }
 
@@ -549,9 +553,7 @@ namespace headsup
             if (section.rows.empty() && !unread) return;
             if (!section.rows.empty() && shop->fame)
                 section.rows.push_back(LineOf("Prices before fame, which moves them up to 10% either way", Tone::Dim));
-            if (unread)
-                section.rows.push_back(LineOf(
-                    section.rows.empty() ? "Worked out by its script" : "And more its script works out", Tone::Dim));
+            if (unread) section.rows.push_back(UnreadNote(!section.rows.empty()));
             sections.push_back(std::move(section));
         }
 
@@ -1324,6 +1326,14 @@ namespace headsup
             return popup;
         }
 
+        // Calls each with the options of every copy of a widget that Shows.
+        template <typename Each>
+        void EachShownCopy(const Settings& settings, BarWidget widget, const Each& each)
+        {
+            for (int copy = 0; copy < kMostCopies; ++copy)
+                if (const PanelWidget w{widget, copy}; Shows(settings, w)) each(settings.Widget(w));
+        }
+
         // Red when full; dim for a bag with no room yet, which is not full.
         Span BagFill(const BagCount& bag)
         {
@@ -1587,12 +1597,10 @@ namespace headsup
 
     bool StandingsShown(const Settings& settings)
     {
-        if (AnyCopyShown(settings, BarWidget::Zone)) return true;
-        for (int copy = 0; copy < kMostCopies; ++copy)
-            if (const PanelWidget world{BarWidget::World, copy};
-                Shows(settings, world) && settings.Widget(world).worldLine == WorldLine::Conquest)
-                return true;
-        return false;
+        bool shown = AnyCopyShown(settings, BarWidget::Zone);
+        EachShownCopy(settings, BarWidget::World,
+            [&](const WidgetOptions& o) { shown = shown || o.worldLine == WorldLine::Conquest; });
+        return shown;
     }
 
     bool PopupShows(const Settings& settings, std::optional<PanelWidget> open, BarWidget widget)
@@ -1610,18 +1618,14 @@ namespace headsup
         // A Clock in a zone of its own goes by the time alone, as its server line and its popup's resets do; in the
         // computer's zone, by what Windows makes of the time.
         bool zonedClock = false, localClock = false, serverClock = false;
-        for (int copy = 0; copy < kMostCopies; ++copy)
-            if (const PanelWidget clock{BarWidget::EarthTime, copy}; Shows(settings, clock))
-            {
-                const WidgetOptions& o = settings.Widget(clock);
-                (o.clockZone ? zonedClock : localClock) = true;
-                serverClock = serverClock || o.clockServerTime;
-            }
+        EachShownCopy(settings, BarWidget::EarthTime, [&](const WidgetOptions& o) {
+            (o.clockZone ? zonedClock : localClock) = true;
+            serverClock = serverClock || o.clockServerTime;
+        });
         // World Info reads the zone for a weather on the panel.
         bool worldWeather = false;
-        for (int copy = 0; copy < kMostCopies; ++copy)
-            if (const PanelWidget world{BarWidget::World, copy}; Shows(settings, world))
-                worldWeather = worldWeather || settings.Widget(world).worldLine == WorldLine::Weather;
+        EachShownCopy(settings, BarWidget::World,
+            [&](const WidgetOptions& o) { worldWeather = worldWeather || o.worldLine == WorldLine::Weather; });
         needs.unixTime   = shown(BarWidget::Weather) || shown(BarWidget::VanaTime) || zonedClock || serverClock ||
                            shown(BarWidget::World) || opened(BarWidget::EarthTime) ||
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
@@ -1632,9 +1636,7 @@ namespace headsup
         needs.strip      = shown(BarWidget::GameHelp);
         // The Performance widget reads what its copies show on the panel, and everything for its popup.
         uint8_t perf = 0;
-        for (int copy = 0; copy < kMostCopies; ++copy)
-            if (const PanelWidget performance{BarWidget::Performance, copy}; Shows(settings, performance))
-                perf |= settings.Widget(performance).perfParts;
+        EachShownCopy(settings, BarWidget::Performance, [&](const WidgetOptions& o) { perf |= o.perfParts; });
         const bool perfPopup = opened(BarWidget::Performance);
         needs.conquest   = opened(BarWidget::World) || opened(BarWidget::Currency);
         needs.frames     = (perf & PerfBit(PerfPart::Fps)) != 0 || perfPopup;
@@ -1649,9 +1651,8 @@ namespace headsup
         if (shown(BarWidget::Bags))
         {
             needs.containers = opened(BarWidget::Bags) ? kContainerCount : 1;
-            for (int copy = 0; copy < kMostCopies; ++copy)
-                if (const PanelWidget bags{BarWidget::Bags, copy}; Shows(settings, bags))
-                    needs.containers = std::max(needs.containers, settings.Widget(bags).bag + 1);
+            EachShownCopy(settings, BarWidget::Bags,
+                [&](const WidgetOptions& o) { needs.containers = std::max(needs.containers, o.bag + 1); });
         }
         return needs;
     }

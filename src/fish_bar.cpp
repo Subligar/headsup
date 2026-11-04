@@ -13,7 +13,6 @@ namespace headsup
     {
         constexpr float kFramePad   = 3.0f; // pixels between its frame and its socket
         constexpr float kFrameRound = 4.0f;
-        constexpr float kPercentWhole = 100.0f;
 
         constexpr float kNameLineShare = 1.2f; // of its text size
 
