@@ -23,28 +23,25 @@ namespace headsup
             {0x22, "Page Down"}, {0x23, "End"}, {0x24, "Home"}, {0x25, "Left"}, {0x26, "Up"}, {0x27, "Right"}, {0x28, "Down"},
             {0x2D, "Insert"}, {0x2E, "Delete"}, {0x6A, "Num *"}, {0x6B, "Num +"}, {0x6D, "Num -"}, {0x6E, "Num ."},
             {0x6F, "Num /"}, {0x90, "Num Lock"}, {0x91, "Scroll Lock"}};
-    }
 
-    uint8_t NormalizeKey(uint8_t vk)
-    {
-        switch (vk)
+        uint8_t NormalizeKey(uint8_t vk)
         {
-        case kLeftShift:
-        case kRightShift: return kShift;
-        case kLeftCtrl:
-        case kRightCtrl: return kCtrl;
-        case kLeftAlt:
-        case kRightAlt: return kAlt;
-        default: return vk;
+            switch (vk)
+            {
+            case kLeftShift:
+            case kRightShift: return kShift;
+            case kLeftCtrl:
+            case kRightCtrl: return kCtrl;
+            case kLeftAlt:
+            case kRightAlt: return kAlt;
+            default: return vk;
+            }
         }
     }
 
     bool MouseButton(uint8_t vk) { return std::ranges::find(kMouseButtons, vk) != std::end(kMouseButtons); }
 
-    bool KeepsPointer(const std::vector<uint8_t>& held, const std::vector<uint8_t>& keep)
-    {
-        return !held.empty() && std::ranges::all_of(held, [&](uint8_t vk) { return std::ranges::find(keep, vk) != keep.end(); });
-    }
+    bool HeldKey(uint8_t vk) { return !MouseButton(vk) && (vk < kLeftShift || vk > kRightAlt); }
 
     uint8_t BindableKey(int vk)
     {

@@ -311,6 +311,7 @@ namespace headsup
         // The frame's windows from that list, read at its first window draw, and what they were found to need.
         std::array<OpenWindow, kMaxWindowKeys> g_OpenWindows{};
         std::array<FrameWindow, kMaxWindowKeys> g_FrameWindows{};
+        std::array<ButtonSpot, kMaxListLinks> g_Buttons{}; // the buttons of the window MoveTo moves
         uint32_t g_PlannedFrame = 0;     // the frame whose first window draw placed its windows
         WindowKeyList g_PlannedKeys;     // the windows shown at the last Present's plan
         FrameShifts g_FrameShifts;
@@ -335,7 +336,7 @@ namespace headsup
         __attribute__((thiscall)) void MouseOffUnlessKept(uintptr_t controller, int on)
         {
             const auto down = [](uint8_t vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; };
-            if (on == 0 && !g_KeepKeys.empty() && KeepsPointer(HeldKeys(down), g_KeepKeys)) return;
+            if (on == 0 && !g_KeepKeys.empty() && KeepsPointer(down, g_KeepKeys)) return;
             reinterpret_cast<MouseUseFn>(g_MouseUse)(controller, on);
         }
 
@@ -417,6 +418,16 @@ namespace headsup
             return false;
         }
 
+        // The game's image, its code in text; nullptr, with why, when it is not loaded or its code cannot be read.
+        uint8_t* GameCode(ImageSection& text, std::string& why)
+        {
+            auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
+            if (base == nullptr) why = std::string(kGameModule) + " is not loaded";
+            else if (!FindSection(base, kCodeSection, text)) why = kCodeNotRead;
+            else return base;
+            return nullptr;
+        }
+
         // Whether count bytes at at lie in the readable image at base, whose headers FindSection has checked.
         bool InImage(const uint8_t* base, const uint8_t* at, size_t count)
         {
@@ -446,14 +457,17 @@ namespace headsup
             return failure + "; HeadsUp stays in memory until the game closes";
         }
 
-        // Why the game's bytes did not all go back, in the hook's words, or an empty string.
-        std::string PutBack(std::span<const CodePatch> patches, const char* changed, const char* unwritten)
+        // Puts the game's bytes back in what: why they did not all go back, or an empty string.
+        std::string TakeOut(std::span<const CodePatch> patches, const char* what)
         {
             switch (Restore(patches, WriteCode))
             {
             case Restored::All: return "";
-            case Restored::ChangedSince: return changed;
-            case Restored::NotWritten: return unwritten;
+            case Restored::ChangedSince:
+                return KeptLoaded(std::string("HeadsUp's hook in ") + what +
+                                  " was written over by another tool, so it was left as it is");
+            case Restored::NotWritten:
+                return KeptLoaded(std::string("HeadsUp's hook in ") + what + " could not be taken out");
             }
             return "";
         }
@@ -472,7 +486,9 @@ namespace headsup
         }
     }
 
+#ifdef HEADSUP_DEV
     std::span<const uint32_t> NameHook::CallerReturns() const { return g_CallerReturns; }
+#endif
 
     void NameHook::SetDevice(IDirect3DDevice8* device) { g_Device = device; }
 
@@ -502,17 +518,16 @@ namespace headsup
     std::string NameHook::Start()
     {
         if (Running()) return "";
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{}, rdata{};
-        if (!FindSection(base, kCodeSection, text) || !FindSection(base, kConstSection, rdata))
-            return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
+        if (!FindSection(base, kConstSection, rdata)) return kCodeNotRead;
         const uint32_t moduleBase  = Address(base);
         const NameRoutine routine = LocateNameRoutine(moduleBase, text, rdata);
         if (routine.problem != LocateProblem::None) return Describe(routine.problem);
 
-        auto* site = const_cast<uint8_t*>(base) + routine.hook;
-        if (std::memcmp(site, kNameHookBytes, sizeof(kNameHookBytes)) != 0) return Describe(LocateProblem::PatchSiteChanged);
+        uint8_t* site = base + routine.hook;
         g_CallerReturns.clear();
         for (const uint32_t rva : routine.callerReturns)
             g_CallerReturns.push_back(moduleBase + rva);
@@ -526,12 +541,14 @@ namespace headsup
             BranchOperand(Address(site), Address(&HeadsUpNameGate)))};
         for (const uint32_t rva : routine.wrapperCalls)
         {
-            uint8_t* call = const_cast<uint8_t*>(base) + rva;
+            uint8_t* call = base + rva;
             patches.push_back(Retarget(call, Address(call), Address(&HeadsUpEntityNameGate)));
         }
         if (const std::string failure = PutIn(patches); !failure.empty()) return failure;
-        m_Patches    = std::move(patches);
+        m_Patches = std::move(patches);
+#ifdef HEADSUP_DEV
         m_ModuleBase = moduleBase;
+#endif
         return "";
     }
 
@@ -541,9 +558,7 @@ namespace headsup
         const std::vector<CodePatch> patches = std::exchange(m_Patches, {});
         g_Owners.clear(); // the gate then resumes the routine for every name
         g_HideNames = false;
-        return KeptLoaded(PutBack(patches,
-            "the game's name routine was changed again after HeadsUp hooked it, so it was left as it is",
-            "the game's name routine could not be put back"));
+        return TakeOut(patches, "the game's name routine");
     }
 }
 
@@ -552,10 +567,10 @@ namespace headsup
     std::string ArrowHook::Start()
     {
         if (Running()) return "";
-        auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const ArrowCalls calls = LocateArrowCalls(text);
         if (calls.problem != LocateProblem::None) return Describe(calls.problem);
         const uint32_t moduleBase = Address(base), gate = Address(&HeadsUpArrowGate);
@@ -575,10 +590,10 @@ namespace headsup
     std::string ModelHook::Start()
     {
         if (Running()) return "";
-        auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const ModelDraws draws = LocateModelDraws(text);
         if (draws.problem != LocateProblem::None) return Describe(draws.problem);
         std::vector<CodePatch> calls;
@@ -595,9 +610,7 @@ namespace headsup
     {
         if (!Running()) return "";
         const std::vector<CodePatch> calls = std::exchange(m_Calls, {});
-        return KeptLoaded(PutBack(calls,
-            "the game's model draws were changed again after HeadsUp hooked them, so they were left as they are",
-            "the game's model draws could not be put back"));
+        return TakeOut(calls, "the game's model draws");
     }
 
     void ModelHook::NewFrame() { g_HeadsUpModelDepth = 0; }
@@ -612,9 +625,7 @@ namespace headsup
         g_HideArrows = false; // also after a Start that left one of its calls behind
         if (!Running()) return "";
         const std::array<CodePatch, 2> calls = std::exchange(m_Calls, {});
-        return KeptLoaded(PutBack(calls,
-            "the game's target arrows were changed again after HeadsUp hooked them, so they were left as they are",
-            "the game's target arrows could not be put back"));
+        return TakeOut(calls, "the game's target arrows");
     }
 
     void ArrowHook::Hide(bool hide) { g_HideArrows = hide; }
@@ -640,10 +651,10 @@ namespace headsup
     std::string WindowHook::Start()
     {
         if (Running()) return "";
-        auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const WindowDraw found = LocateWindowDraw(text);
         if (found.problem != LocateProblem::None) return Describe(found.problem);
         g_WindowList = found.list;
@@ -700,7 +711,8 @@ namespace headsup
     namespace
     {
         void PutWindowBack(const WindowPlacements::Placed& placed);
-        void PlaceFrame(bool present, const OpenWindow* building = nullptr);
+        size_t PlanFrame(bool present, const OpenWindow* building = nullptr);
+        void PlaceListed(size_t count);
     }
 
     std::string WindowHook::Stop()
@@ -719,25 +731,15 @@ namespace headsup
         g_PlannedFrame = 0;
         g_PlannedKeys.Clear();
         g_WindowsBand  = 0;
-        const CodePatch count       = std::exchange(m_CountCall, {});
-        const std::string countBack = count.at == nullptr ? "" : KeptLoaded(PutBack({&count, 1},
-            "the item lists' count was changed again after HeadsUp hooked it, so it was left as it is",
-            "the item lists' count could not be put back"));
-        const CodePatch label       = std::exchange(m_LabelCall, {});
-        const std::string labelBack = label.at == nullptr ? "" : KeptLoaded(PutBack({&label, 1},
-            "Wide Scan's grid label was changed again after HeadsUp hooked it, so it was left as it is",
-            "Wide Scan's grid label could not be put back"));
-        const CodePatch build       = std::exchange(m_BuildCall, {});
-        const std::string buildBack = build.at == nullptr ? "" : KeptLoaded(PutBack({&build, 1},
-            "the game's window build was changed again after HeadsUp hooked it, so it was left as it is",
-            "the game's window build could not be put back"));
-        const CodePatch moveStart  = std::exchange(m_MoveStart, {});
-        const std::string moveBack = moveStart.at == nullptr ? "" : KeptLoaded(PutBack({&moveStart, 1},
-            "the game's window move was changed again after HeadsUp hooked it, so it was left as it is",
-            "the game's window move could not be put back"));
-        const std::string drawBack = KeptLoaded(PutBack({&call, 1},
-            "the game's window draw was changed again after HeadsUp hooked it, so it was left as it is",
-            "the game's window draw could not be put back"));
+        const auto takeOut = [](CodePatch& member, const char* what) {
+            const CodePatch patch = std::exchange(member, {});
+            return patch.at == nullptr ? std::string() : TakeOut({&patch, 1}, what);
+        };
+        const std::string countBack = takeOut(m_CountCall, "the item lists' count");
+        const std::string labelBack = takeOut(m_LabelCall, "Wide Scan's grid label");
+        const std::string buildBack = takeOut(m_BuildCall, "the game's window build");
+        const std::string moveBack  = takeOut(m_MoveStart, "the game's window move");
+        const std::string drawBack  = TakeOut({&call, 1}, "the game's window draw");
         for (const std::string* back : {&drawBack, &labelBack, &countBack, &buildBack})
             if (!back->empty()) return *back;
         return moveBack;
@@ -765,7 +767,12 @@ namespace headsup
         g_ShownHiddenRects     = g_HiddenRects;
         g_ShownHiddenRectCount = std::exchange(g_HiddenRectCount, 0);
         g_Placements.SetFrame(++g_WindowFrame);
-        if (g_Placing && g_WindowMoveTo != 0) PlaceFrame(true);
+        if (!g_Placing || g_WindowMoveTo == 0) return;
+        const size_t count = PlanFrame(true);
+        g_PlannedKeys.Clear();
+        for (size_t i = 0; i < count; ++i)
+            if (!g_OpenWindows[i].hidden) g_PlannedKeys.Add(g_OpenWindows[i].key);
+        PlaceListed(count);
     }
 
     void WindowHook::Place(std::optional<WindowPlacing> placing) { g_Placing = placing; }
@@ -820,58 +827,45 @@ namespace headsup
 
 namespace headsup
 {
+    namespace
+    {
+        // A global locate found in the game's code into global, once it is bytes inside the game's image: "" when
+        // found, else why not (outside when it is not in the image).
+        std::string FindGlobal(GlobalSite (*locate)(const ImageSection&), size_t bytes, const char* outside,
+            uint32_t& global)
+        {
+            ImageSection text{};
+            std::string why;
+            const uint8_t* base = GameCode(text, why);
+            if (base == nullptr) return why;
+            const GlobalSite found = locate(text);
+            if (found.problem != LocateProblem::None) return Describe(found.problem);
+            // The image stays mapped while the game runs, so Read reads a global checked here without checking it
+            // again.
+            if (!InImage(base, Pointer(found.global), bytes)) return outside;
+            global = found.global;
+            return "";
+        }
+    }
+
     std::string NetStatsReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
-        ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
-        const NetStats found = LocateNetStats(text);
-        if (found.problem != LocateProblem::None) return Describe(found.problem);
-        // The image stays mapped while the game runs, so Read reads a global checked here without checking it again.
-        if (!InImage(base, Pointer(found.global), sizeof(uint32_t)))
-            return "their pointer is not in the game's image";
-        m_Global = found.global;
-        return "";
+        return FindGlobal(LocateNetStats, sizeof(uint32_t), "their pointer is not in the game's image", m_Global);
     }
 
     std::string PlayOnlineReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
-        ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
-        const PlayOnlineSite found = LocatePlayOnline(text);
-        if (found.problem != LocateProblem::None) return Describe(found.problem);
-        if (!InImage(base, Pointer(found.global), sizeof(uint32_t))) return "their pointer is not in the game's image";
-        m_Global = found.global;
-        return "";
+        return FindGlobal(LocatePlayOnline, sizeof(uint32_t), "their pointer is not in the game's image", m_Global);
     }
 
     std::string WeatherReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
-        ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
-        const WeatherSite found = LocateWeather(text);
-        if (found.problem != LocateProblem::None) return Describe(found.problem);
-        if (!InImage(base, Pointer(found.global), sizeof(uint16_t))) return "the weather is not in the game's image";
-        m_Global = found.global;
-        return "";
+        return FindGlobal(LocateWeather, sizeof(uint16_t), "the weather is not in the game's image", m_Global);
     }
 
     std::string FishReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
-        ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
-        const FishSite found = LocateFish(text);
-        if (found.problem != LocateProblem::None) return Describe(found.problem);
-        if (!InImage(base, Pointer(found.global), sizeof(uint32_t))) return "its pointer is not in the game's image";
-        m_Global = found.global;
-        return "";
+        return FindGlobal(LocateFish, sizeof(uint32_t), "its pointer is not in the game's image", m_Global);
     }
 
     std::optional<FishStamina> FishReader::Read() const
@@ -885,10 +879,10 @@ namespace headsup
 
     std::string SearchAddressReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        const uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const SearchAddressSite found = LocateSearchAddress(text);
         if (found.problem != LocateProblem::None) return Describe(found.problem);
         if (!InImage(base, Pointer(found.address), sizeof(uint32_t)) || !InImage(base, Pointer(found.port), sizeof(uint16_t)))
@@ -909,13 +903,13 @@ namespace headsup
 
     std::string WindowTypeReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const ConfigGetSite found = LocateConfigGet(text);
         if (found.problem != LocateProblem::None) return Describe(found.problem);
-        m_Get = reinterpret_cast<int32_t(__cdecl*)(int32_t)>(const_cast<uint8_t*>(base) + found.entry);
+        m_Get = reinterpret_cast<int32_t(__cdecl*)(int32_t)>(base + found.entry);
         return "";
     }
 
@@ -974,10 +968,11 @@ namespace headsup
 {
     std::string StripTextReader::Find()
     {
-        const auto* base = reinterpret_cast<const uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{}, data{};
-        if (!FindSection(base, kCodeSection, text) || !FindSection(base, kDataSection, data)) return kCodeNotRead;
+        std::string why;
+        const uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
+        if (!FindSection(base, kDataSection, data)) return kCodeNotRead;
         const StripSites found = LocateStripText(text, data);
         if (found.problem != LocateProblem::None) return Describe(found.problem);
         // The image stays mapped while the game runs, so the slots checked here are read without checking them again.
@@ -996,6 +991,7 @@ namespace headsup
         const ProcessMemory kProcessMemory{ProcessReadable, ProcessCopy};
     }
 
+#ifdef HEADSUP_DEV
     StripRead StripTextReader::Read(StripWindow window) const
     {
         const uint32_t slot   = window == StripWindow::Help ? m_Sites.helpSlot : m_Sites.titleSlot;
@@ -1007,6 +1003,7 @@ namespace headsup
             return StripRead{reader.Owner(), 0, {}, why};
         return StripRead{reader.Owner(), reader.Owner() + textAt, {object.begin(), object.end()}, ""};
     }
+#endif
 
     bool StripTextReader::Read(StripWindow window, StripObject& into)
     {
@@ -1022,14 +1019,17 @@ namespace headsup
     std::string PointerFix::Start()
     {
         if (Running()) return "";
-        auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-        if (base == nullptr) return std::string(kGameModule) + " is not loaded";
         ImageSection text{};
-        if (!FindSection(base, kCodeSection, text)) return kCodeNotRead;
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
         const PointerMapping mapping = LocatePointerMapping(text);
         if (mapping.problem != LocateProblem::None) return Describe(mapping.problem);
         const PointerShow show = LocatePointerShow(text);
         if (show.problem != LocateProblem::None) return Describe(show.problem);
+        // The image stays mapped while the game runs, so a mouse move reads the controller's global unchecked.
+        if (!InImage(base, Pointer(show.controllerGlobal), sizeof(uintptr_t)))
+            return "the mouse controller's pointer is not in the game's image";
         const KeyHide keyHide = LocateKeyHide(text);
         if (keyHide.problem != LocateProblem::None) return Describe(keyHide.problem);
         std::vector<CodePatch> patches;
@@ -1056,12 +1056,10 @@ namespace headsup
     {
         g_FixPointer = false;
         g_KeepKeys.clear();
-        const std::string failure = PutBack(m_Patches,
-            "the game's reading of the mouse was changed again after HeadsUp fixed it, so it was left as it is",
-            "the game's reading of the mouse could not be put back");
+        const std::string failure = TakeOut(m_Patches, "the game's reading of the mouse");
         m_Patches.clear();
         g_ControllerGlobal = g_ShowPointer = 0;
-        return KeptLoaded(failure);
+        return failure;
     }
 
     void PointerFix::Enable(bool on) { g_FixPointer = on; }
@@ -1106,9 +1104,6 @@ namespace headsup
 {
     namespace
     {
-        // Before the window draws. The strip's own windows say where the game's strip ends. Any other idle, laid out
-        // window in the game's menu space is noted; one the player picked goes down by the shift from that strip to
-        // under the help bar, and one they gave an offset moves by it, through the game's own move.
         const WindowKey g_EquipKey = *KeyFromShortName("equip");
         const WindowKey g_PartyKey = *KeyFromShortName("partywin");
 
@@ -1127,8 +1122,6 @@ namespace headsup
                 }
         }
 
-        // Where an owner keeps its copy of its window's place, read off its class's layout: none for a class that keeps
-        // none, or when the code cannot be read.
         // An owner's class's layout code, kLayoutScanBytes of it, and where it starts; none when it cannot be read.
         std::optional<std::pair<std::span<const uint8_t>, uint32_t>> OwnerLayout(uint32_t owner)
         {
@@ -1142,6 +1135,8 @@ namespace headsup
             return std::pair{std::span<const uint8_t>(code, kLayoutScanBytes), layout};
         }
 
+        // Where an owner keeps its copy of its window's place, read off its class's layout: none for a class that keeps
+        // none, or when the code cannot be read.
         std::optional<uint32_t> PlaceCopyAt(uint32_t owner)
         {
             const auto layout = g_WindowGetRect != 0 ? OwnerLayout(owner) : std::nullopt;
@@ -1176,7 +1171,8 @@ namespace headsup
             const bool readable             = copy != nullptr && Readable(copy, kWindowRectBytes);
             WindowRect kept{};
             if (readable) std::memcpy(kept.data(), copy, kWindowRectBytes);
-            for (const ButtonSpot& button : ButtonSpots(mcd, kProcessMemory))
+            const size_t buttons = ButtonSpots(mcd, kProcessMemory, g_Buttons);
+            for (const ButtonSpot& button : std::span(g_Buttons).first(buttons))
                 if (const auto place = PlaceKept(button, window[0], window[1]);
                     place && Readable(Pointer(button.node + kNodePlace), sizeof(*place)))
                     std::memcpy(reinterpret_cast<void*>(button.node + kNodePlace), place->data(), sizeof(*place));
@@ -1306,12 +1302,11 @@ namespace headsup
                 home[side] = static_cast<int16_t>(home[side] + (side % 2 == 0 ? to.left - now.left : to.top - now.top));
         }
 
-        // Twice a frame: at Present, from the whole list, the strip's shift, the line the windows go under and the
-        // view's shift, and every listed window placed, those its parent draws too (the job level and skill lists,
-        // which the list marks to skip while it draws); and at the first window draw, again with that plan unless a
-        // window opened since, so one opening is placed before it is first drawn. As one is built, the plan counts it and
-        // notes where it goes, so a place the game works out from it before its first draw is known for one.
-        void PlaceFrame(bool present, const OpenWindow* building)
+        // The frame's windows from the game's list into g_OpenWindows, and how many. At Present, and at the first
+        // window draw when a window opened since, it works out again the strip's shift, the line the windows go under
+        // and the view's shift. A window being built is counted, so a place the game works out from it before its
+        // first draw is known.
+        size_t PlanFrame(bool present, const OpenWindow* building)
         {
             const WindowPlacing& placing = *g_Placing;
             size_t count                 = ReadWindowList(g_WindowList, kProcessMemory, g_OpenWindows);
@@ -1352,25 +1347,21 @@ namespace headsup
                         placing.band.screenBottom);
                 }
             }
-            if (building != nullptr)
-            {
-                const int width = building->right - building->left, height = building->bottom - building->top;
-                const WindowSpot at{building->left, building->top};
-                if (PlaceIn({g_Pins.data(), g_PinCount}, building->key) == nullptr)
-                    g_Placements.Moved(building->mcd, building->key, at, width, height, 0, ShiftFor(at, width),
-                        placing.band.screenRight, placing.band.screenBottom);
-                return;
-            }
-            if (present)
-            {
-                g_PlannedKeys.Clear();
-                for (size_t i = 0; i < count; ++i)
-                    if (!g_OpenWindows[i].hidden) g_PlannedKeys.Add(g_OpenWindows[i].key);
-            }
+            return count;
+        }
+
+        // Every window PlanFrame listed, those its parent draws too (the job level and skill lists, which the list
+        // marks to skip while it draws): at Present, and at the first window draw so one opening is placed before it
+        // is first drawn.
+        void PlaceListed(size_t count)
+        {
             for (size_t i = 0; i < count; ++i)
                 PlaceWindow(g_OpenWindows[i].mcd, g_OpenWindows[i].key);
         }
 
+        // Before the window draws. The strip's own windows say where the game's strip ends. Any other idle, laid out
+        // window in the game's menu space is noted; one the player picked goes down by the shift from that strip to
+        // under the help bar, and one they gave an offset moves by it, through the game's own move.
         void PlaceWindow(uint32_t mcd, const WindowKey& key)
         {
             const auto field = [mcd](uint32_t at) { return reinterpret_cast<const uint8_t*>(mcd + at); };
@@ -1437,7 +1428,7 @@ extern "C" uint32_t HeadsUpOnWindowDraw(uint32_t mcd)
     if (descriptor == 0) return kWindowDrawn;
     const auto* name = reinterpret_cast<const char*>(descriptor + kDescriptorName);
     if (g_Placing && g_WindowMoveTo != 0 && std::exchange(g_PlannedFrame, g_WindowFrame) != g_WindowFrame)
-        PlaceFrame(false);
+        PlaceListed(PlanFrame(false));
     if (SkipsWindow(name, g_HiddenWindows)) return kWindowSkipped;
     const std::optional<WindowKey> key = WindowKeyOf(name);
     if (!key) return kWindowDrawn;
@@ -1525,7 +1516,12 @@ extern "C" void HeadsUpOnBuilt(uint32_t mcd)
     if (!g_Placing || g_WindowMoveTo == 0 || mcd == 0 || !ReadWindow(kProcessMemory, mcd, built) ||
         !MovableWindow(built.key))
         return;
-    PlaceFrame(false, &built);
+    PlanFrame(false, &built);
+    const int width = built.right - built.left, height = built.bottom - built.top;
+    const WindowSpot at{built.left, built.top};
+    if (PlaceIn({g_Pins.data(), g_PinCount}, built.key) == nullptr)
+        g_Placements.Moved(mcd, built.key, at, width, height, 0, ShiftFor(at, width), g_Placing->band.screenRight,
+            g_Placing->band.screenBottom);
     MoveBuilt(mcd, built.key);
 }
 

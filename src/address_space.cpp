@@ -1,7 +1,6 @@
 #include "address_space.h"
 
 #include <algorithm>
-#include <limits>
 
 namespace headsup
 {
@@ -34,13 +33,6 @@ namespace headsup
             if (region->free) m_Free += end - m_At;
             m_At = end;
         }
-    }
-
-    std::optional<FreeSpace> WholeFreeSpace(FunctionRef<std::optional<Region>(uint64_t at)> query)
-    {
-        FreeSpaceWalk walk;
-        walk.Step(0.0, query, std::numeric_limits<int>::max());
-        return walk.Last();
     }
 
     MemoryReport MemoryOf(const FreeSpace& space, uint64_t mapped, bool wine)

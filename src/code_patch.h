@@ -20,6 +20,7 @@ namespace headsup
 
     // A call or jump: its opcode, then where it goes, counted from the instruction after it.
     constexpr uint8_t kCallOpcode = 0xE8, kJumpOpcode = 0xE9;
+    constexpr uint8_t kNop = 0x90;
     constexpr uint32_t kBranchLength = 5;
     // The operand of a call or jump at `address` in the client that lands on `to`.
     uint32_t BranchOperand(uint32_t address, uint32_t to);

@@ -7,6 +7,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace headsup
@@ -176,13 +177,6 @@ namespace headsup
         uint32_t draw = 0;
     };
     ModelDraws LocateModelDraws(const ImageSection& text);
-    struct WindowMoveSite
-    {
-        LocateProblem problem = LocateProblem::None;
-        uint32_t moveTo  = 0; // RVA
-        uint32_t getRect = 0; // RVA of MCD::GetRect, 0 when it was not found once
-        uint32_t entryRect = 0; // RVA of MCD::GetEntryRect, the same way
-    };
     // The one call that builds a window from the menu catalog (thiscall on the new window's MCD, its descriptor the
     // one argument): RVAs of the five-byte call and of the builder.
     struct WindowBuildSite
@@ -220,6 +214,13 @@ namespace headsup
     // The game's own move of a window, MCD::MoveTo(int16 x, int16 y) (RVA 0x119110 in the client of 2026-10-07): a
     // thiscall on the MCD that pops its two arguments. It moves the frame and every entry, so drawing and the mouse's
     // hit tests follow, then has the owner lay out its own content again.
+    struct WindowMoveSite
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t moveTo  = 0; // RVA
+        uint32_t getRect = 0; // RVA of MCD::GetRect, 0 when it was not found once
+        uint32_t entryRect = 0; // RVA of MCD::GetEntryRect, the same way
+    };
     WindowMoveSite LocateWindowMove(const ImageSection& text);
     // MCD::GetRect(int16* place) (RVA 0x118F70 in the client of 2026-10-13): a thiscall on the MCD that pops its one
     // argument and writes the window's rectangle there. Many owners keep such a copy of their window's place and draw
@@ -236,7 +237,7 @@ namespace headsup
         Exact,
     };
     std::optional<WindowRect> MovedPlaceCopy(const WindowRect& copy, const WindowRect& window, int dx, int dy,
-        PlaceMatch match = PlaceMatch::Edges);
+        PlaceMatch match);
     constexpr uint32_t kUsualPlaceCopy = 0x14; // where most owners keep it
     // Where an owner keeps that copy, from the start of its class's layout (vtable slot kOwnerLayoutSlot), at at: the
     // displacement of `lea r, [base + disp8]` whose register it pushes for its call of MCD::GetRect, at getRect, with
@@ -304,6 +305,8 @@ namespace headsup
         bool operator==(const WindowPlace&) const = default;
     };
     constexpr int kMaxWindowOffset = 2000;
+    // The text up to the first separator, which is taken off text with it.
+    std::string_view NextField(std::string_view& text, char separator);
     // The places the player puts windows at, from the settings file's "equip:100,200 statcom:0,40": a name no window
     // could have, a strip window, a repeat and any past kMaxWindowKeys go; places are held to 0 to kMaxWindowOffset.
     std::vector<WindowPlace> WindowPlacesFrom(std::string_view text);
@@ -414,6 +417,8 @@ namespace headsup
         std::vector<Placed> MovedSince(uint32_t since) const;
 
     private:
+        // The window's slot, and whether it is new: a new one takes the oldest's, with from and to at now.
+        std::pair<Placed*, bool> Slot(uint32_t mcd, const WindowKey& key, WindowSpot now);
         WindowSpot Place(Placed& placed, int width, int height, int dx, int dy, int screenRight, int screenBottom);
 
         std::array<Placed, kMaxWindowKeys> m_Placed{};
@@ -455,21 +460,17 @@ namespace headsup
     // that is 0 until a session starts: bytes received a second and bytes sent a second, each averaged over the last
     // 3 seconds, and a meter from 0 to 100 that stays full while anything arrives within 10 seconds.
     constexpr uint32_t kNetCounters = 0x4638;
-    struct NetStats
+    // A global found in the client's code: its address in the running client, as the code holds it.
+    struct GlobalSite
     {
         LocateProblem problem = LocateProblem::None;
-        uint32_t global       = 0; // the pointer's address in the running client, as the code holds it
+        uint32_t global       = 0;
     };
-    NetStats LocateNetStats(const ImageSection& text);
+    GlobalSite LocateNetStats(const ImageSection& text);
 
     // The client keeps the zone's weather as a uint16 Weather id in a global, which its weather effects read with
     // mov ax,[global]; cmp ax,4; jb; cmp ax,20.
-    struct WeatherSite
-    {
-        LocateProblem problem = LocateProblem::None;
-        uint32_t global       = 0; // the weather's address in the running client, as the code holds it
-    };
-    WeatherSite LocateWeather(const ImageSection& text);
+    GlobalSite LocateWeather(const ImageSection& text);
 
     // The client's getter of its config values (int32_t __cdecl get(int32_t key), -1 for none), as Ashita's config
     // addon finds it: the first of the two routines of its bytes. Key 18 is Config > Windows > Shared > Window Type.
@@ -512,21 +513,11 @@ namespace headsup
     };
     PlayOnlineCounts PlayOnlineFrom(uint16_t messages, uint16_t mail);
     // From the window's getters of the two: mov eax,[global]; test eax,eax; je; mov ax,[eax+0Eh] (and +0Ah).
-    struct PlayOnlineSite
-    {
-        LocateProblem problem = LocateProblem::None;
-        uint32_t global       = 0;
-    };
-    PlayOnlineSite LocatePlayOnline(const ImageSection& text);
+    GlobalSite LocatePlayOnline(const ImageSection& text);
 
     // The fish packet (0x115) makes two records the first time and keeps their pointers in two globals, which the fight
     // frees and zeroes a few seconds after it ends: the global of the second, the fish's. Its stamina when full, now
     // and as its bar draws it are dwords at kFishFullStamina, kFishStamina and kFishDrawnStamina.
-    struct FishSite
-    {
-        LocateProblem problem = LocateProblem::None;
-        uint32_t global       = 0;
-    };
-    FishSite LocateFish(const ImageSection& text);
+    GlobalSite LocateFish(const ImageSection& text);
     constexpr uint32_t kFishFullStamina = 0x00, kFishStamina = 0x04, kFishDrawnStamina = 0x08;
 }
