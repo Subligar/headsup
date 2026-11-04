@@ -7,8 +7,8 @@
 #include "settings.h"
 #include "tracker.h"
 
+#include <array>
 #include <cstdint>
-#include <unordered_map>
 #include <vector>
 
 namespace headsup
@@ -34,7 +34,6 @@ namespace headsup
 
         // The scene's camera, from the fixed-function draws characters own.
         void OnDrawUP(const Tracker& tracker, const Settings& settings);
-        // The game draws its arrow after our nameplates, so this is the frame before's.
         void CountMesh(uint16_t index) { ++m_MeshDraws[index]; }
 
         // The game is about to copy its scene image, names included, to the back buffer: the last moment to draw into it.
@@ -53,7 +52,7 @@ namespace headsup
         // The scene camera once it has stayed (CameraSteady), which is what may move a seated name.
         const Camera* SteadyCamera() const { return CameraSteady(m_CameraRun) ? SceneCamera() : nullptr; }
 
-        uint32_t MeshDraws(uint16_t index) const;
+        uint32_t MeshDraws(uint16_t index) const { return m_MeshDrawsLast[index]; }
 
     private:
         struct TargetScale
@@ -72,8 +71,8 @@ namespace headsup
         float m_BackBufferHeight   = 0.0f;
         uintptr_t m_BackBuffer     = 0;
 
-        std::unordered_map<uint16_t, uint32_t> m_MeshDraws;
-        std::unordered_map<uint16_t, uint32_t> m_MeshDrawsLast;
+        std::array<uint32_t, kMaxEntities> m_MeshDraws{};
+        std::array<uint32_t, kMaxEntities> m_MeshDrawsLast{};
         uint32_t m_Frame      = 0;
         bool m_TextFinished   = false;
         bool m_NamesThisFrame = false;
