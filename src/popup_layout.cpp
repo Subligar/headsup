@@ -495,7 +495,7 @@ namespace headsup
         // A card that would run taller than tall: its long grids' lines set side by side in it, as few groups as fit;
         // failing that, cut into parts that fit between its rows, a grid's lines counting as rows, each part keeping
         // the heading. A row taller than tall alone is a part of its own.
-        std::vector<PopupSection> Fitted(const PopupSection& section, float tall, const BarMetrics& metrics, bool ornate,
+        std::vector<PopupSection> SplitToFit(const PopupSection& section, float tall, const BarMetrics& metrics, bool ornate,
                                          SpanMeasure measure)
         {
             // As tall as it can be: with its tallest tab picked, so picking another never sets it differently.
@@ -680,7 +680,7 @@ namespace headsup
         std::vector<Block> cards;
         for (const PopupSection& section : content.sections)
             if (!section.heading.empty())
-                for (const PopupSection& part : Fitted(section, tall, metrics, ornate, measure))
+                for (const PopupSection& part : SplitToFit(section, tall, metrics, ornate, measure))
                     cards.push_back(LayoutCard(part, metrics, ornate, measure));
 
         float lowest = top;

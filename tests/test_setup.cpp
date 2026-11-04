@@ -216,7 +216,7 @@ TEST(a_widget_turned_off_takes_its_copies_with_it_and_turned_on_shows_its_first)
     const auto copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value() && Shows(s, *copy));
     SetWidgetShown(s, BarWidget::Currency, false);
-    CHECK(!Shown(s, BarWidget::Currency));
+    CHECK(!AnyCopyShown(s, BarWidget::Currency));
     SetWidgetShown(s, BarWidget::Party, true);
     CHECK(Shows(s, PanelWidget{BarWidget::Party}));
 }

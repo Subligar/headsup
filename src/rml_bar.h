@@ -76,11 +76,6 @@ namespace headsup
             std::optional<SkinFrame> skin;
             bool operator==(const DocumentKey&) const = default;
         };
-        // A value RmlUi was last given, so it is given only when it changes.
-        struct Px
-        {
-            std::optional<float> value;
-        };
         // A widget's element and what it shows now.
         struct Shown
         {
@@ -93,12 +88,13 @@ namespace headsup
             bool measured = false;
             WidgetContent drawn; // as its markup was made from: the target's is cut to its room
             bool marked = false; // its markup is drawn's
-            Px left, width, marginLeft, marginRight, paddingLeft, paddingRight;
+            // The values RmlUi was last given, so each is given only when it changes.
+            std::optional<float> left, width, marginLeft, marginRight, paddingLeft, paddingRight;
         };
         struct Divider
         {
             Rml::Element* element = nullptr;
-            Px left;
+            std::optional<float> left;
         };
         struct FitKey
         {
@@ -218,7 +214,7 @@ namespace headsup
         std::array<Shown, kPanelSlots> m_Shown;
         std::array<Divider, kDividerCount> m_Dividers;
         Rml::Element* m_RightCap = nullptr;
-        Px m_RightCapLeft;
+        std::optional<float> m_RightCapLeft;
         Rml::Element* m_Help = nullptr;
         std::string m_HelpRml;
         Memo<HelpBarKey, HelpBarText> m_HelpBar;
@@ -226,7 +222,7 @@ namespace headsup
         PopupDocumentKey m_PopupDocumentKey;
         Rml::Element* m_Popup = nullptr;
         bool m_PopupMarked    = false; // its markup is the layout's
-        Px m_PopupLeft, m_PopupTop, m_PopupWidth, m_PopupHeight;
+        std::optional<float> m_PopupLeft, m_PopupTop, m_PopupWidth, m_PopupHeight;
         Memo<PopupKey, PopupLayout> m_PopupLayout;
         // The widest the open popup has been since it opened, which it keeps as its text changes with the time.
         std::optional<PanelWidget> m_WidestFor;

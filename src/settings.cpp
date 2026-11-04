@@ -1547,7 +1547,7 @@ namespace headsup
         return s.Widget(widget).on && (widget.copy == 0 || Placed(s.barSections, widget));
     }
 
-    bool Shown(const Settings& s, BarWidget widget)
+    bool AnyCopyShown(const Settings& s, BarWidget widget)
     {
         for (int copy = 0; copy < kMostCopies; ++copy)
             if (Shows(s, PanelWidget{widget, copy})) return true;

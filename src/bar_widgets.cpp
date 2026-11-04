@@ -1078,7 +1078,10 @@ namespace headsup
                     if (high)
                         same->high = &turnIn;
                     else
-                        same->high = std::exchange(same->item, &turnIn);
+                    {
+                        same->high = same->item;
+                        same->item = &turnIn;
+                    }
                 }
             }
             return ranks;
@@ -1584,7 +1587,7 @@ namespace headsup
 
     bool StandingsShown(const Settings& settings)
     {
-        if (Shown(settings, BarWidget::Zone)) return true;
+        if (AnyCopyShown(settings, BarWidget::Zone)) return true;
         for (int copy = 0; copy < kMostCopies; ++copy)
             if (const PanelWidget world{BarWidget::World, copy};
                 Shows(settings, world) && settings.Widget(world).worldLine == WorldLine::Conquest)
@@ -1601,7 +1604,7 @@ namespace headsup
 
     BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open)
     {
-        const auto shown  = [&](BarWidget widget) { return Shown(settings, widget); };
+        const auto shown  = [&](BarWidget widget) { return AnyCopyShown(settings, widget); };
         const auto opened = [&](BarWidget widget) { return PopupShows(settings, open, widget); };
         BarNeeds needs;
         // A Clock in a zone of its own goes by the time alone, as its server line and its popup's resets do; in the

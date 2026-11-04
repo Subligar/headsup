@@ -2023,7 +2023,7 @@ TEST(a_setup_step_shows_its_presets_parts_only_under_advanced)
     window.Click("nav-setup-top-panel");
     const std::string party = "setup-top-panel-setup-widget-" + std::to_string(static_cast<int>(BarWidget::Party));
     CHECK(window.Click(party));
-    CHECK(Shown(window.settings, BarWidget::Party));
+    CHECK(AnyCopyShown(window.settings, BarWidget::Party));
 }
 
 TEST(skipping_setup_puts_back_its_defaults_closes_the_window_and_counts_it_done)

@@ -40,7 +40,7 @@ namespace headsup
         m_PopupDocument = nullptr;
         m_Popup         = nullptr;
         m_PopupMarked   = false;
-        m_PopupLeft = m_PopupTop = m_PopupWidth = m_PopupHeight = Px{};
+        m_PopupLeft = m_PopupTop = m_PopupWidth = m_PopupHeight = std::nullopt;
         m_SettingsBody.reset();
         m_PopupWidths = {};
     }
@@ -242,7 +242,7 @@ namespace headsup
         for (int d = 0; d < kDividerCount; ++d)
             m_Dividers[d].element = m_Document->GetElementById(DividerId(d));
         m_RightCap     = m_Document->GetElementById(kRightCapId);
-        m_RightCapLeft = Px{};
+        m_RightCapLeft.reset();
         m_Help         = m_Document->GetElementById(kHelpId);
         m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
         m_Visible = true;
@@ -333,12 +333,12 @@ namespace headsup
             const PillJoins joins = JoinsOf(layout, widget);
             const WidgetSide before = SideOf(look, widget, shown.padded, joins.before);
             const WidgetSide after  = SideOf(look, widget, shown.padded, joins.after);
-            Set(shown.element, Rml::PropertyId::Left, shown.left.value, rect->x);
-            Set(shown.element, Rml::PropertyId::Width, shown.width.value, rect->width - before.margin - after.margin);
-            Set(shown.element, Rml::PropertyId::MarginLeft, shown.marginLeft.value, before.margin);
-            Set(shown.element, Rml::PropertyId::MarginRight, shown.marginRight.value, after.margin);
-            Set(shown.element, Rml::PropertyId::PaddingLeft, shown.paddingLeft.value, before.padding);
-            Set(shown.element, Rml::PropertyId::PaddingRight, shown.paddingRight.value, after.padding);
+            Set(shown.element, Rml::PropertyId::Left, shown.left, rect->x);
+            Set(shown.element, Rml::PropertyId::Width, shown.width, rect->width - before.margin - after.margin);
+            Set(shown.element, Rml::PropertyId::MarginLeft, shown.marginLeft, before.margin);
+            Set(shown.element, Rml::PropertyId::MarginRight, shown.marginRight, after.margin);
+            Set(shown.element, Rml::PropertyId::PaddingLeft, shown.paddingLeft, before.padding);
+            Set(shown.element, Rml::PropertyId::PaddingRight, shown.paddingRight, after.padding);
             shown.element->SetClass(kJoinBeforeClass, joins.before);
             shown.element->SetClass(kJoinAfterClass, joins.after);
             const PanelWidget head = widgets.panel.group[w];
@@ -361,11 +361,11 @@ namespace headsup
             const bool shown = d < layout.dividers.size();
             divider.element->SetClass(kHiddenClass, !shown);
             if (shown)
-                Set(divider.element, Rml::PropertyId::Left, divider.left.value,
+                Set(divider.element, Rml::PropertyId::Left, divider.left,
                     std::round(layout.dividers[d] - diamond / 2.0f));
         }
         const auto cap = static_cast<float>(WholePixels(m.diamond * kCapScale));
-        Set(m_RightCap, Rml::PropertyId::Left, m_RightCapLeft.value, std::round(screenWidth - m.cap / 2.0f - cap / 2.0f));
+        Set(m_RightCap, Rml::PropertyId::Left, m_RightCapLeft, std::round(screenWidth - m.cap / 2.0f - cap / 2.0f));
     }
 
     BarRect RmlBar::ShowHelpBar(RmlHost& host, const BarLook& look, const Rows& rows, const BarState& state, float top,
@@ -490,10 +490,10 @@ namespace headsup
             m_Popup->SetInnerRML(PopupRml(pl, look, m_PopupFaces));
             m_PopupMarked = true;
         }
-        Set(m_Popup, Rml::PropertyId::Left, m_PopupLeft.value, std::round(rect.x));
-        Set(m_Popup, Rml::PropertyId::Top, m_PopupTop.value, std::round(rect.y));
-        Set(m_Popup, Rml::PropertyId::Width, m_PopupWidth.value, rect.width);
-        Set(m_Popup, Rml::PropertyId::Height, m_PopupHeight.value, rect.height);
+        Set(m_Popup, Rml::PropertyId::Left, m_PopupLeft, std::round(rect.x));
+        Set(m_Popup, Rml::PropertyId::Top, m_PopupTop, std::round(rect.y));
+        Set(m_Popup, Rml::PropertyId::Width, m_PopupWidth, rect.width);
+        Set(m_Popup, Rml::PropertyId::Height, m_PopupHeight, rect.height);
         m_Popup->SetClass(kHiddenClass, hidden);
         m_Popup->SetClass(kOpenClass, !hidden);
         for (const PopupTabChip& chip : pl.chips)
