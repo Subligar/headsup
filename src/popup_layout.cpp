@@ -21,6 +21,7 @@ namespace headsup
         constexpr float kCardPad     = 0.55f; // a card's contents from its edges
         constexpr float kCardGap     = 0.45f; // between cards, and between the columns of them
         constexpr float kMinWidth    = 12.0f; // popupText, so a short popup is not a sliver
+        constexpr const char* kPinWord = "pin", *kPinnedWord = "pinned"; // the pin chip's, as it is and as it would be
         constexpr float kCogShare    = 0.7f;  // the cog, of its chip's height
         constexpr float kSocketInset = 0.9f;  // a socket's rows from its left and right edges
         constexpr float kSocketPad   = 0.35f; // above and below a socket's rows
@@ -68,7 +69,6 @@ namespace headsup
         float TagPadY(float unit) { return std::round(unit * kTagPadY); }
 
         // A tag's frame around its cell's ink, with where that ink is in it.
-        constexpr const char* kPinWord = "pin", *kPinnedWord = "pinned"; // the pin chip's, as it is and as it would be
         TextSize Framed(const TextSize& cell, float unit)
         {
             const float ink = cell.inkBottom - cell.inkTop, padY = TagPadY(unit);
@@ -150,9 +150,6 @@ namespace headsup
             {
                 const size_t picked = std::min(section.tab, section.tabs.size() - 1);
                 rows.insert(rows.end(), section.tabs[picked].rows.begin(), section.tabs[picked].rows.end());
-                // The card as wide as its widest tab's rows, whichever is picked, its chips wrapping at that.
-                for (const PopupTab& tab : section.tabs)
-                    contentWidth = std::max(contentWidth, LayoutSection(PopupSection{"", tab.rows}, metrics, ornate, measure).width);
                 // One width, the widest name's, in as few rows as hold them, shared evenly; spread across the card
                 // once its width is known.
                 const float gap = unit * kTagGap;
@@ -272,7 +269,6 @@ namespace headsup
                 const bool pair = row.kind == RowKind::Pair && row.cells.size() == 2;
                 const float gap = unit * (tags ? kTagGap : pair ? kPairGap : kCellGap);
                 // A socket's rows as far in from its right as from its left.
-                // socket's right as from its left.
                 const float indent = row.nested ? inset : 0.0f;
                 cells.clear();
                 columns = grid ? runColumns[r] : std::vector<float>{};
@@ -447,7 +443,8 @@ namespace headsup
                     BarRect{x + width - b.pad - scroll.grip, y + scroll.trackY, scroll.grip, scroll.track}, scroll.thumb});
             l.lines.push_back(PopupLine{y + b.height});
         }
-        // A card as LayoutSection lays it out, with its reserve: its height with each tab picked in turn, the tallest.
+        // A card as LayoutSection lays it out, as wide as with its widest tab picked, so its chips wrap the same
+        // whichever is, and with its reserve: its height with its tallest tab picked.
         Block LayoutCard(const PopupSection& section, const BarMetrics& metrics, bool ornate, SpanMeasure measure)
         {
             Block b  = LayoutSection(section, metrics, ornate, measure);
@@ -455,8 +452,10 @@ namespace headsup
             PopupSection each = section;
             for (size_t tab = 0; tab < std::max<size_t>(section.tabs.size(), 1); ++tab)
             {
-                each.tab  = tab;
-                b.reserve = std::max(b.reserve, LayoutSection(each, metrics, ornate, measure).height);
+                each.tab           = tab;
+                const Block picked = LayoutSection(each, metrics, ornate, measure);
+                b.reserve          = std::max(b.reserve, picked.height);
+                b.width            = std::max(b.width, picked.width);
             }
             return b;
         }
@@ -496,7 +495,7 @@ namespace headsup
         // A card that would run taller than tall: its long grids' lines set side by side in it, as few groups as fit;
         // failing that, cut into parts that fit between its rows, a grid's lines counting as rows, each part keeping
         // the heading. A row taller than tall alone is a part of its own.
-        std::vector<PopupSection> Fitted(const PopupSection& section, float tall, const BarMetrics& metrics, bool ornate,
+        std::vector<PopupSection> SplitToFit(const PopupSection& section, float tall, const BarMetrics& metrics, bool ornate,
                                          SpanMeasure measure)
         {
             // As tall as it can be: with its tallest tab picked, so picking another never sets it differently.
@@ -681,7 +680,7 @@ namespace headsup
         std::vector<Block> cards;
         for (const PopupSection& section : content.sections)
             if (!section.heading.empty())
-                for (const PopupSection& part : Fitted(section, tall, metrics, ornate, measure))
+                for (const PopupSection& part : SplitToFit(section, tall, metrics, ornate, measure))
                     cards.push_back(LayoutCard(part, metrics, ornate, measure));
 
         float lowest = top;

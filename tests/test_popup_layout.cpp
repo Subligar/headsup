@@ -106,7 +106,7 @@ namespace
 
 TEST(the_title_sits_beside_its_icon_inside_the_padding)
 {
-    const BarMetrics m  = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m  = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout l = LayoutPopup(Sample(), m, BarShape::Ornate, false, Fake);
     const PopupPiece* icon  = Of(l, PopupPiece::Kind::Icon).front();
     CHECK(Near(icon->x, m.popupPadding) && Near(icon->y, m.popupPadding));
@@ -117,7 +117,7 @@ TEST(the_title_sits_beside_its_icon_inside_the_padding)
 
 TEST(grid_columns_line_up_and_the_popup_wraps_its_contents)
 {
-    const BarMetrics m  = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m  = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout l = LayoutPopup(Sample(), m, BarShape::Ornate, false, Fake);
     std::vector<const PopupPiece*> texts;
     for (const PopupPiece& p : l.pieces)
@@ -134,7 +134,7 @@ TEST(each_heading_gets_a_card_holding_its_rows_and_goes_uppercase_as_pills)
 {
     for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
     {
-        const BarMetrics m  = MetricsFor(36, shape);
+        const BarMetrics m  = MetricsFor(36, shape, kAutoBarTextSize, kAutoPopupTextSize);
         const PopupLayout l = LayoutPopup(Sample(), m, shape, false, Fake);
         const auto cards    = Of(l, PopupPiece::Kind::Card);
         CHECK(cards.size() == 2 && Of(l, PopupPiece::Kind::Rule).empty());
@@ -158,7 +158,7 @@ TEST(each_heading_gets_a_card_holding_its_rows_and_goes_uppercase_as_pills)
 
 TEST(a_starred_cell_has_a_star_after_its_text_from_the_top_of_the_texts_ink)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     const auto laid = [&](bool starred) {
         PopupRow held = Labeled(Text("San d'Oria and its two allies"), Text("61%"));
         held.cells[0].star = starred;
@@ -203,7 +203,7 @@ namespace
 
 TEST(a_card_with_tabs_shows_the_picked_ones_rows_under_its_tabs_at_one_width)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     std::vector<float> widths, heights;
     for (const size_t picked : {0u, 1u})
     {
@@ -238,7 +238,7 @@ TEST(a_card_with_tabs_shows_the_picked_ones_rows_under_its_tabs_at_one_width)
 
 TEST(cards_keep_their_columns_whichever_tab_is_picked)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     std::vector<std::vector<float>> places;
     for (const size_t picked : {0u, 1u})
     {
@@ -295,7 +295,7 @@ namespace
 
 TEST(a_socket_longer_than_ten_lines_shows_ten_and_scrolls_under_its_heads)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout top = LayoutPopup(Zones(0), m, BarShape::Pills, false, Fake);
     // The count and nine zones make ten lines; the table's heads stay.
     CHECK(Find(top, "Zones ") && Find(top, "Zone") && Find(top, "Zone 8") && !Find(top, "Zone 9"));
@@ -317,7 +317,7 @@ TEST(a_socket_longer_than_ten_lines_shows_ten_and_scrolls_under_its_heads)
 
 TEST(a_scrolling_socket_has_a_scrollbar_in_its_right_padding_showing_where_it_is)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     std::vector<std::pair<float, float>> thumbs; // its top and bottom, from the track's top, as a share of the track
     for (const size_t scrolled : {0u, 5u, 100u})
     {
@@ -354,7 +354,7 @@ TEST(a_scrolling_socket_has_a_scrollbar_in_its_right_padding_showing_where_it_is
 
 TEST(a_sockets_rows_keep_as_much_room_on_their_right_as_on_their_left)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout l    = LayoutPopup(Zones(0), m, BarShape::Pills, false, Fake);
     const PopupPiece& sock = *Of(l, PopupPiece::Kind::Socket).front();
     const PopupPiece& name = *Find(l, "Zones "), &value = *Find(l, "30 today");
@@ -367,7 +367,7 @@ TEST(a_sockets_rows_keep_as_much_room_on_their_right_as_on_their_left)
 
 TEST(a_card_beside_another_shares_its_row_at_one_width_and_height_and_one_alone_fills_the_width)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     std::vector<std::vector<const PopupPiece*>> layouts;
     std::vector<PopupLayout> keep;
     for (const size_t picked : {0u, 1u})
@@ -405,7 +405,7 @@ TEST(a_card_beside_another_shares_its_row_at_one_width_and_height_and_one_alone_
 
 TEST(tabs_are_one_width_spread_across_the_card_in_one_row_or_two)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     const auto layout = [&](std::vector<const char*> names) {
         PopupContent c;
         c.title = {{"World Info", Tone::Normal}};
@@ -454,7 +454,7 @@ TEST(tabs_are_one_width_spread_across_the_card_in_one_row_or_two)
 
 TEST(a_popup_is_never_narrower_than_it_is_asked_to_be)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c;
     c.title = {{"Gil", Tone::Normal}};
     c.sections.push_back(PopupSection{"Currencies", {Labeled("Gil", Text("4,751"))}});
@@ -471,7 +471,7 @@ TEST(a_popup_is_never_narrower_than_it_is_asked_to_be)
 
 TEST(a_cell_of_an_item_has_its_picture_before_its_text_as_an_icon_would)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c;
     c.title = {{"Guilds", Tone::Normal}};
     PopupCell jellyfish = Word("Cobalt Jellyfish");
@@ -488,7 +488,7 @@ TEST(a_cell_of_an_item_has_its_picture_before_its_text_as_an_icon_would)
 
 TEST(a_pairs_value_ends_at_its_cards_right_edge_and_its_label_at_the_left)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c;
     c.title = {{"Gil", Tone::Normal}};
     c.sections.push_back(PopupSection{"Currencies", {Labeled("Gil", Text("4,751")),
@@ -506,7 +506,7 @@ TEST(a_pairs_value_ends_at_its_cards_right_edge_and_its_label_at_the_left)
 
 TEST(a_tall_popup_flows_its_cards_into_two_columns)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c;
     c.title = {{"Mob", Tone::Normal}};
     for (const char* heading : {"One", "Two", "Three", "Four"})
@@ -534,7 +534,7 @@ TEST(a_tall_popup_flows_its_cards_into_two_columns)
 
 TEST(a_table_taller_than_the_room_sets_its_lines_side_by_side_in_its_card_and_drops_nothing)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c;
     c.title = {{"Weather", Tone::Normal}};
     c.sections.push_back(PopupSection{"Forecast", {PopupRow{RowKind::Line, 0, {Word("Today")}}}});
@@ -587,7 +587,7 @@ TEST(a_table_taller_than_the_room_sets_its_lines_side_by_side_in_its_card_and_dr
 
 TEST(a_card_too_tall_for_the_room_without_a_table_goes_on_in_another_column)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c;
     c.title = {{"Gil", Tone::Normal}};
     PopupSection currencies{"Currencies", {}};
@@ -603,7 +603,7 @@ TEST(a_card_too_tall_for_the_room_without_a_table_goes_on_in_another_column)
 
 TEST(immune_icons_get_their_mark)
 {
-    const PopupLayout l = LayoutPopup(Sample(), MetricsFor(36, BarShape::Pills), BarShape::Pills, true, Fake);
+    const PopupLayout l = LayoutPopup(Sample(), MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize), BarShape::Pills, true, Fake);
     CHECK(Of(l, PopupPiece::Kind::ImmuneMark).size() == 1);
 }
 
@@ -611,7 +611,7 @@ TEST(a_titled_popup_has_its_pin_chip_at_the_top_right_lit_and_saying_pinned_only
 {
     for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
     {
-        const BarMetrics m = MetricsFor(36, shape);
+        const BarMetrics m = MetricsFor(36, shape, kAutoBarTextSize, kAutoPopupTextSize);
         const PopupLayout pinned = LayoutPopup(Sample(), m, shape, true, Fake);
         const PopupLayout loose  = LayoutPopup(Sample(), m, shape, false, Fake);
         for (const auto& [l, word, lit] : {std::tuple{&pinned, "pinned", true}, std::tuple{&loose, "pin", false}})
@@ -636,12 +636,12 @@ TEST(a_titled_popup_has_its_pin_chip_at_the_top_right_lit_and_saying_pinned_only
         }
         CHECK(Near(pinned.width, loose.width)); // pinning never changes the popup's width
     }
-    CHECK(LayoutPopup(PopupContent{}, MetricsFor(36, BarShape::Pills), BarShape::Pills, false, Fake).pin.width == 0.0f);
+    CHECK(LayoutPopup(PopupContent{}, MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize), BarShape::Pills, false, Fake).pin.width == 0.0f);
 }
 
 TEST(the_cog_chip_sits_left_of_the_pin_and_settings_take_the_room_they_ask_in_place_of_the_sections)
 {
-    const BarMetrics m  = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m  = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     const float pad     = m.popupPadding;
     const PopupLayout l = LayoutPopup(Sample(), m, BarShape::Pills, false, Fake);
     // A round chip as tall as the pin's, beside it with a cell's gap, its cog inside it; not lit.
@@ -675,7 +675,7 @@ TEST(the_cog_chip_sits_left_of_the_pin_and_settings_take_the_room_they_ask_in_pl
 
 TEST(an_empty_popup_is_just_its_padding_and_minimum_width)
 {
-    const BarMetrics m  = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m  = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout l = LayoutPopup(PopupContent{}, m, BarShape::Pills, false, Fake);
     CHECK(l.pieces.empty());
     CHECK(Near(l.width, m.popupText * 12.0f + 2.0f * m.popupPadding));
@@ -684,7 +684,7 @@ TEST(an_empty_popup_is_just_its_padding_and_minimum_width)
 
 TEST(rows_without_cells_add_no_pieces_and_a_grid_without_cells_does_not_divide_by_zero)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c     = OneRow(PopupRow{RowKind::Grid, 3, {}});
     c.sections[0].rows.push_back(PopupRow{RowKind::Line, 0, {}});
     c.sections[0].rows.push_back(PopupRow{RowKind::Tags, 0, {}});
@@ -696,7 +696,7 @@ TEST(rows_without_cells_add_no_pieces_and_a_grid_without_cells_does_not_divide_b
 
 TEST(a_grid_without_columns_is_one_line_of_cells)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     for (const int columns : {0, -2})
     {
         const PopupLayout l =
@@ -713,7 +713,7 @@ TEST(a_grid_without_columns_is_one_line_of_cells)
 
 TEST(a_grid_wider_than_its_cells_stays_on_one_line_and_a_short_last_line_keeps_the_columns)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout wide =
         LayoutPopup(OneRow(PopupRow{RowKind::Grid, 4, {Word("aa"), Word("bb")}}), m, BarShape::Ornate, false, Fake);
     CHECK(Near(Of(wide, PopupPiece::Kind::Text)[1]->y, Of(wide, PopupPiece::Kind::Text)[2]->y));
@@ -731,7 +731,7 @@ TEST(a_grid_wider_than_its_cells_stays_on_one_line_and_a_short_last_line_keeps_t
 
 TEST(each_tag_gets_a_frame_around_its_text)
 {
-    const BarMetrics m  = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m  = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout l = LayoutPopup(OneRow(PopupRow{RowKind::Tags, 0, {Word("Fire"), Word("Ice")}}), m,
                                       BarShape::Pills, false, Fake);
     const std::vector<const PopupPiece*> tags = Of(l, PopupPiece::Kind::Tag);
@@ -760,7 +760,7 @@ TEST(tags_and_immune_marks_keep_inside_their_frames_and_rows_at_every_bar_height
     for (const int h : {24, 36, 64})
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m  = MetricsFor(h, shape);
+            const BarMetrics m  = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
             const PopupLayout l = LayoutPopup(c, m, shape, true, Fake);
             CHECK(Of(l, PopupPiece::Kind::ImmuneMark).size() == 3 && Of(l, PopupPiece::Kind::Tag).size() == 2);
             CHECK(Of(l, PopupPiece::Kind::Card).size() == 3);
@@ -770,7 +770,7 @@ TEST(tags_and_immune_marks_keep_inside_their_frames_and_rows_at_every_bar_height
 
 TEST(a_heading_wider_than_the_rows_widens_its_card_and_the_popup)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c     = OneRow(PopupRow{RowKind::Line, 0, {Word("short")}});
     c.sections[0].heading   = std::string(60, 'h');
     const PopupLayout l     = LayoutPopup(c, m, BarShape::Ornate, false, Fake);
@@ -783,7 +783,7 @@ TEST(a_heading_wider_than_the_rows_widens_its_card_and_the_popup)
 
 TEST(a_section_without_a_heading_has_no_rule)
 {
-    const BarMetrics m  = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m  = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout l =
         LayoutPopup(OneRow(PopupRow{RowKind::Line, 0, {Word("x")}}), m, BarShape::Ornate, false, Fake);
     CHECK(Of(l, PopupPiece::Kind::Rule).empty());
@@ -791,7 +791,7 @@ TEST(a_section_without_a_heading_has_no_rule)
 
 TEST(a_pinned_popup_with_a_long_title_keeps_the_mark_clear_of_the_title)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c;
     c.icon  = Icon::AggroNQ;
     c.title = {{"A very long mob name that is wider than the minimum", Tone::Normal}};
@@ -877,7 +877,7 @@ namespace
 
 TEST(a_popup_that_fits_is_not_cut)
 {
-    const BarMetrics m  = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m  = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout l = LayoutPopup(Tall(), m, BarShape::Ornate, true, Fake);
     for (const float room : {l.height, l.height + 100.0f})
     {
@@ -896,7 +896,7 @@ TEST(a_cut_popup_keeps_whole_cards_with_its_padding_under_them)
     for (const int h : {24, 36, 64})
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m  = MetricsFor(h, shape);
+            const BarMetrics m  = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
             const PopupLayout l = LayoutPopup(Tall(), m, shape, true, Fake);
             for (float room = TitleBottom(l) + m.popupPadding; room < l.height; room += 0.5f)
             {
@@ -924,7 +924,7 @@ TEST(a_cut_popup_keeps_whole_cards_with_its_padding_under_them)
 
 TEST(a_cut_through_a_card_drops_the_card_whole)
 {
-    const BarMetrics m      = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m      = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout l     = LayoutPopup(Tall(), m, BarShape::Ornate, false, Fake);
     const PopupPiece& spawn = *Find(l, "Spawn");
     PopupLayout cut         = l;
@@ -936,7 +936,7 @@ TEST(a_cut_through_a_card_drops_the_card_whole)
 
 TEST(a_cut_above_the_first_row_keeps_the_title_alone)
 {
-    const BarMetrics m     = MetricsFor(36, BarShape::Ornate);
+    const BarMetrics m     = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
     const PopupLayout l    = LayoutPopup(Tall(), m, BarShape::Ornate, true, Fake);
     PopupLayout cut        = l;
     CutPopup(cut, Bottom(*Find(l, "ID 220")) + m.popupPadding - 0.5f, m.popupPadding);
@@ -947,7 +947,7 @@ TEST(a_cut_above_the_first_row_keeps_the_title_alone)
 
 TEST(a_grid_cell_sits_against_its_columns_left_middle_or_right_as_it_asks)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupCell left = Word("ab"), middle = Word("cd"), right = Word("ef");
     middle.align = Align::Center;
     right.align  = Align::Right;
@@ -964,7 +964,7 @@ TEST(a_grid_cell_sits_against_its_columns_left_middle_or_right_as_it_asks)
 
 TEST(a_pressable_cell_is_a_chip_over_it_that_tells_its_press_and_its_tinted_icon_takes_its_color)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupCell star;
     star.icon  = Icon::StarEmpty;
     star.tint  = Text("", Tone::Dim);
@@ -980,7 +980,7 @@ TEST(a_pressable_cell_is_a_chip_over_it_that_tells_its_press_and_its_tinted_icon
 
 TEST(a_tabs_icon_goes_before_its_name_inside_its_chip)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c;
     c.title = {{"Weather", Tone::Normal}};
     PopupSection section{"By Element", {}};
@@ -1004,7 +1004,7 @@ TEST(a_tabs_icon_goes_before_its_name_inside_its_chip)
 
 TEST(a_popup_without_a_title_has_its_pin_alone_at_its_top_right)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupContent c;
     c.sections.push_back(PopupSection{"Forecast", {PopupRow{RowKind::Line, 0, {Word("Sunny")}}}});
     const PopupLayout l = LayoutPopup(c, m, BarShape::Pills, false, Fake);
@@ -1015,7 +1015,7 @@ TEST(a_popup_without_a_title_has_its_pin_alone_at_its_top_right)
 
 TEST(a_cells_game_picture_goes_before_its_text_as_an_icon_does)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupCell pictured = Word("Bastok"), iconed = Word("Bastok");
     pictured.picture   = GamePicture::BastokCrest;
     iconed.icon        = Icon::Fire;
@@ -1032,7 +1032,7 @@ TEST(a_cells_game_picture_goes_before_its_text_as_an_icon_does)
 TEST(a_crests_name_value_and_star_are_centered_on_the_crest)
 {
     // The zone popup's Influence: the holder's crest, its name, its star, and its share.
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     PopupCell nation = Word("Bastok");
     nation.picture   = GamePicture::BastokCrest;
     nation.star      = true;

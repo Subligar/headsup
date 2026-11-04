@@ -907,7 +907,7 @@ public:
         // Opening the Currencies menu asks for them; HeadsUp asks the same, as for the conquest standings.
         const bool gilOpen = opened(headsup::BarWidget::Currency);
         if (m_GameState.CurrencyRequestDue(now,
-                g_BarOn && headsup::Shown(m_Settings, headsup::BarWidget::Currency) &&
+                g_BarOn && headsup::AnyCopyShown(m_Settings, headsup::BarWidget::Currency) &&
                     m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
                 gilOpen))
         {
@@ -2646,7 +2646,7 @@ private:
             }
         }
         // Today's guild point turn-ins while World Info shows: kept for the day in Japan, fetched again after its reset.
-        if (headsup::Shown(m_Settings, headsup::BarWidget::World) && s.unixMs != 0)
+        if (headsup::AnyCopyShown(m_Settings, headsup::BarWidget::World) && s.unixMs != 0)
         {
             KeepTurnIns(s.unixMs, now);
             s.turnIns       = m_TurnIns && m_TurnInsDay == headsup::JstDay(s.unixMs) ? &*m_TurnIns : nullptr;

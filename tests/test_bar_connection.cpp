@@ -93,19 +93,19 @@ TEST(the_connection_widget_ends_in_the_games_own_meter_as_its_readout_does_unles
 {
     ConnectionReport r;
     r.counters = NetCounters{1200, 300, 100};
-    const auto joined = [](const WidgetContent& w) {
+    const auto joined = [](const std::vector<Span>& line) {
         std::string text;
-        for (const Span& s : w.title)
+        for (const Span& s : line)
             text += s.text;
         return text;
     };
-    CHECK_EQ(joined(ConnectionWidget(r)), "S 300  R 1,200  100%");
-    CHECK_EQ(joined(ConnectionWidget(r, PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received))), "S 300  R 1,200");
-    CHECK_EQ(joined(ConnectionWidget(r, PerfBit(PerfPart::Received) | PerfBit(PerfPart::Percent))), "R 1,200  100%");
+    CHECK_EQ(joined(ConnectionFigures(r, kDefaultPerfParts)), "S 300  R 1,200  100%");
+    CHECK_EQ(joined(ConnectionFigures(r, PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received))), "S 300  R 1,200");
+    CHECK_EQ(joined(ConnectionFigures(r, PerfBit(PerfPart::Received) | PerfBit(PerfPart::Percent))), "R 1,200  100%");
     // Under 100 it is the game's alarm, red as the rates are.
     r.counters->health = 40;
-    const WidgetContent alarm = ConnectionWidget(r);
-    CHECK(alarm.title.back().text == "  40%" && alarm.title.back().argb == kAlarmColor);
+    const std::vector<Span> alarm = ConnectionFigures(r, kDefaultPerfParts);
+    CHECK(alarm.back().text == "  40%" && alarm.back().argb == kAlarmColor);
 }
 
 TEST(playonline_messages_waiting_add_the_games_envelope_and_messenger_each_with_its_count)
@@ -113,26 +113,26 @@ TEST(playonline_messages_waiting_add_the_games_envelope_and_messenger_each_with_
     ConnectionReport r;
     r.counters   = NetCounters{1200, 300, 100};
     r.playOnline = PlayOnlineCounts{2, 0}; // a message and a friend request, beside the messenger
-    const WidgetContent w = ConnectionWidget(r);
+    const std::vector<Span> line = ConnectionFigures(r, kDefaultPerfParts);
     std::vector<GamePicture> pictures;
     std::string afterMail, afterMessenger;
-    for (size_t i = 0; i < w.title.size(); ++i)
-        if (w.title[i].picture != GamePicture::None)
+    for (size_t i = 0; i < line.size(); ++i)
+        if (line[i].picture != GamePicture::None)
         {
-            pictures.push_back(w.title[i].picture);
-            const std::string next = i + 1 < w.title.size() && w.title[i + 1].picture == GamePicture::None ? w.title[i + 1].text : "";
-            (w.title[i].picture == GamePicture::PlayOnlineMail ? afterMail : afterMessenger) = next;
+            pictures.push_back(line[i].picture);
+            const std::string next = i + 1 < line.size() && line[i + 1].picture == GamePicture::None ? line[i + 1].text : "";
+            (line[i].picture == GamePicture::PlayOnlineMail ? afterMail : afterMessenger) = next;
         }
     // As the game's Network window: both icons while either count is above 0, a count beside each that is.
     CHECK((pictures == std::vector<GamePicture>{GamePicture::PlayOnlineMail, GamePicture::PlayOnlineMessenger}));
     CHECK(afterMessenger == "2" && afterMail.empty());
-    CHECK(w.title.front().text == "S "); // after the readout
+    CHECK(line.front().text == "S "); // after the readout
     r.playOnline = PlayOnlineCounts{0, 0};
-    const WidgetContent none = ConnectionWidget(r);
-    CHECK(std::none_of(none.title.begin(), none.title.end(), [](const Span& s) { return s.picture != GamePicture::None; }));
+    const std::vector<Span> none = ConnectionFigures(r, kDefaultPerfParts);
+    CHECK(std::none_of(none.begin(), none.end(), [](const Span& s) { return s.picture != GamePicture::None; }));
     // The popup says it too, only while something waits.
     r.playOnline = PlayOnlineCounts{2, 1};
-    const size_t sections = ConnectionPopup(r).sections.size();
+    const size_t sections = ConnectionSections(r).size();
     r.playOnline = PlayOnlineCounts{0, 0};
-    CHECK_EQ(sections, ConnectionPopup(r).sections.size() + 1);
+    CHECK_EQ(sections, ConnectionSections(r).size() + 1);
 }

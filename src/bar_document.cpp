@@ -40,7 +40,6 @@ namespace headsup
         // and its rows.
         constexpr size_t kStripColors = 6, kStripParts = 1 + kStripColors + 3;
         constexpr int kHexBase         = 16;
-        constexpr float kPercentWhole  = 100.0f;
         constexpr float kBoxBorder     = 1.0f; // a pill's or frame's, inside its edge
         // The widgets' content starts a pixel under the pill row's top in every shape, bordered or not.
         constexpr float kContentInset  = 1.0f;
@@ -166,9 +165,6 @@ namespace headsup
                    ";border-radius:" + Px(style.radius) + ";decorator:vertical-gradient(" + RcssColor(style.top) + " " +
                    RcssColor(style.bottom) + ");";
         }
-
-        // A box drawn in the game's art, which is its own edge.
-
 
         // A box of one fill, its edge and, when it has them, its corners.
         std::string FlatRules(const BoxStyle& style, bool corners)

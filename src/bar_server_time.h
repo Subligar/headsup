@@ -10,13 +10,9 @@ namespace headsup
     // Phoenix keeps Japan's time (earth_time.h's jst namespace): UTC+9, without daylight saving.
     constexpr int64_t kJstOffsetMs = 9 * kMsPerHour;
 
-    struct JstTime
-    {
-        int weekday = 0; // 0 Monday to 6 Sunday, as Phoenix's get_game_weekday counts
-        int hour = 0, minute = 0;
-        bool operator==(const JstTime&) const = default;
-    };
-    JstTime JstAt(int64_t unixMs);
+    // The day in Japan a time is in, counted from the Unix epoch.
+    int64_t JstDay(int64_t unixMs);
+    // 0 Monday to 6 Sunday, as Phoenix's get_game_weekday counts.
     const char* JstWeekdayName(int weekday);
     // Earth seconds to the next JST midnight, Phoenix's daily reset: more than 0, at most a day.
     double SecondsToDailyReset(int64_t unixMs);

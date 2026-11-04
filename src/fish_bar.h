@@ -89,6 +89,13 @@ namespace headsup
         };
         Look m_Look;
         std::string m_Line;
+        // The bar's place, width and fill as its elements were last given them.
+        struct Placed
+        {
+            float x = 0.0f, y = 0.0f, width = 0.0f, share = 0.0f;
+            bool operator==(const Placed&) const = default;
+        };
+        std::optional<Placed> m_Placed;
         Rml::Vector2f m_Grab{};  // the pointer from the bar's corner as the drag began
         std::optional<FishPlace> m_Dragged; // where the drag left it, not yet in the settings
         bool m_Dragging = false;

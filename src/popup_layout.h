@@ -15,7 +15,7 @@ namespace headsup
 {
     enum class PopupFont : uint8_t
     {
-        Title,   // TitleFont at 1.35 popupText
+        Title,   // TitleFont, larger than popupText
         Text,    // the detail font at popupText
         Heading, // TitleFont at heading size; uppercase and letter-spaced in the detail font for pills
         Pin,     // the pinned mark: a heading's font and size, set solid

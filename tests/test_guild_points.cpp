@@ -1,4 +1,5 @@
 #include "guild_points.h"
+#include "bar_server_time.h"
 #include "test.h"
 
 #include <string>
@@ -31,7 +32,6 @@ TEST(the_sites_answer_reads_as_each_craft_guilds_turn_ins_by_rank)
           fishing[0].itemName == "Cobalt Jellyfish" && fishing[0].points == 24 && fishing[0].maxPoints == 1200);
     CHECK(fishing[1].rank == 1 && fishing[1].item == 4403);
     // The site's weaving is Clothcraft; an item it has no name for keeps its id.
-    CHECK_EQ(std::string(CraftGuildName(4)), "Clothcraft");
     const std::vector<GuildTurnIn>& cloth = read->guilds[4];
     CHECK(cloth.size() == 2 && cloth[1].item == 13 && cloth[1].itemName.empty());
     CHECK(read->guilds[1].empty());

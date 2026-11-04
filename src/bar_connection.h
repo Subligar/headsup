@@ -71,6 +71,7 @@ namespace headsup
 
     // The parts of parts, by PerfBit, that are the connection's: the rates sent and received, the game's own meter as its
     // readout has it, the median round trip once there is one, and PlayOnline's waiting messages.
-    WidgetContent ConnectionWidget(const std::optional<ConnectionReport>& report, uint8_t parts = kDefaultPerfParts);
-    PopupContent ConnectionPopup(const std::optional<ConnectionReport>& report);
+    std::vector<Span> ConnectionFigures(const std::optional<ConnectionReport>& report, uint8_t parts);
+    // The Connection card first, when there is a report.
+    std::vector<PopupSection> ConnectionSections(const std::optional<ConnectionReport>& report);
 }

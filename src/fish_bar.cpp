@@ -13,7 +13,6 @@ namespace headsup
     {
         constexpr float kFramePad   = 3.0f; // pixels between its frame and its socket
         constexpr float kFrameRound = 4.0f;
-        constexpr float kPercentWhole = 100.0f;
 
         constexpr float kNameLineShare = 1.2f; // of its text size
 
@@ -119,10 +118,13 @@ namespace headsup
                                  : FishBarPlace(settings.fishBarX, settings.fishBarY, settings.fishBarWidth,
                                        settings.fishBarHeight, FishNameHeight(settings.fishBarTextSize),
                                        static_cast<float>(screen.x), static_cast<float>(screen.y));
-        m_Bar->SetProperty(Rml::PropertyId::Left, Rml::Property(at.x, Rml::Unit::PX));
-        m_Bar->SetProperty(Rml::PropertyId::Top, Rml::Property(at.y, Rml::Unit::PX));
-        m_Bar->SetProperty(Rml::PropertyId::Width, Rml::Property(static_cast<float>(settings.fishBarWidth), Rml::Unit::PX));
-        m_Fill->SetProperty(Rml::PropertyId::Width, Rml::Property(view->share * kPercentWhole, Rml::Unit::PERCENT));
+        const Placed placed{at.x, at.y, static_cast<float>(settings.fishBarWidth), view->share};
+        if (placed == m_Placed) return moved;
+        m_Placed = placed;
+        m_Bar->SetProperty(Rml::PropertyId::Left, Rml::Property(placed.x, Rml::Unit::PX));
+        m_Bar->SetProperty(Rml::PropertyId::Top, Rml::Property(placed.y, Rml::Unit::PX));
+        m_Bar->SetProperty(Rml::PropertyId::Width, Rml::Property(placed.width, Rml::Unit::PX));
+        m_Fill->SetProperty(Rml::PropertyId::Width, Rml::Property(placed.share * kPercentWhole, Rml::Unit::PERCENT));
         return moved;
     }
 
@@ -146,6 +148,7 @@ namespace headsup
                 FishNameHeight(m_Look.textSize), static_cast<float>(screen.x), static_cast<float>(screen.y));
             m_Bar->SetProperty(Rml::PropertyId::Left, Rml::Property(m_Dragged->x, Rml::Unit::PX));
             m_Bar->SetProperty(Rml::PropertyId::Top, Rml::Property(m_Dragged->y, Rml::Unit::PX));
+            m_Placed.reset();
             break;
         }
         case Rml::EventId::Dragend: m_Dragging = false; break;
@@ -163,5 +166,6 @@ namespace headsup
         m_Bar = m_Fill = m_Name = nullptr;
         m_Dragging = false;
         m_Dragged.reset();
+        m_Placed.reset();
     }
 }

@@ -290,9 +290,9 @@ namespace headsup
     // have them.
     void UseHelpTextDefaults(Settings& s);
     bool BarOn(const Settings& s);
-    // A copy is on the panel and switched on; Shown for a widget asks whether any copy of it is.
+    // A copy is on the panel and switched on; AnyCopyShown asks whether any copy of a widget is.
     bool Shows(const Settings& s, PanelWidget widget);
-    bool Shown(const Settings& s, BarWidget widget);
+    bool AnyCopyShown(const Settings& s, BarWidget widget);
     // Another copy of a widget, after the last of its copies, shown and with that copy's settings but its Combine;
     // none when it has no more. Taking a copy off forgets its settings.
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);

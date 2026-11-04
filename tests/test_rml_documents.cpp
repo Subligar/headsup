@@ -18,7 +18,7 @@ namespace
 
     BarLook LookOf(const BarPalette& p, const Settings& settings)
     {
-        const BarMetrics m  = MetricsFor(kBarHeight, p.shape);
+        const BarMetrics m  = MetricsFor(kBarHeight, p.shape, kAutoBarTextSize, kAutoPopupTextSize);
         return BarLook{p, settings, m, PillRow(m), TextRow{13, 11, true, 10.0f, 24.0f, 12.0f},
             BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate, BarTextFont(settings), std::nullopt};
     }
@@ -61,7 +61,7 @@ TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
         BarLook look = LookOf(d.palette, settings);
         look.skin    = d.skin;
         test::RmlSession rml;
-        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
         Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
         CHECK(bar != nullptr && popups != nullptr);
         bar->Show();
@@ -86,7 +86,7 @@ TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complain
     {
         test::RmlSession rml;
         Rml::ElementDocument* bar =
-            rml.context->LoadDocumentFromMemory(BarDocument(LookOf(PaletteOf(static_cast<BarTheme>(t)), settings), place), "bar");
+            rml.context->LoadDocumentFromMemory(BarDocument(LookOf(PaletteOf(static_cast<BarTheme>(t)), settings), place, {}), "bar");
         bar->Show();
         Rml::Element* target = bar->GetElementById(WidgetId(BarWidget::Target));
         CHECK(target != nullptr);
@@ -123,7 +123,7 @@ TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it
     {
         const BarLook look = LookOf(palette, settings);
         test::RmlSession rml;
-        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
         bar->Show();
         // Each widget as the panel marks it.
         const auto drawn = [&](PanelWidget widget, bool lit, bool backed) -> const Rml::Style::ComputedValues& {
@@ -172,7 +172,7 @@ TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_
         palette.shape      = shape;
         const BarLook look = LookOf(palette, settings);
         test::RmlSession rml;
-        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
         bar->Show();
         Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Weather));
         CHECK(widget != nullptr);
@@ -181,7 +181,7 @@ TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_
         c.title    = {Text("Clear")};
         c.subtitle = {Text("Firesday")};
         widget->SetClass(kHiddenClass, false);
-        widget->SetInnerRML(WidgetRml(c, look));
+        widget->SetInnerRML(WidgetRml(c, look, {}, {}));
         rml.context->Update();
         Rml::ElementList titles;
         widget->GetElementsByClassName(titles, "title");
@@ -200,7 +200,7 @@ TEST(a_target_without_its_background_looks_as_any_other_widget_lit_or_not)
     {
         const BarLook look = LookOf(PaletteOf(static_cast<BarTheme>(t)), settings);
         test::RmlSession rml;
-        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
         bar->Show();
         Rml::Element* target  = bar->GetElementById(WidgetId(BarWidget::Target));
         Rml::Element* weather = bar->GetElementById(WidgetId(BarWidget::Weather));

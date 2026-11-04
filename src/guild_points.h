@@ -32,15 +32,12 @@ namespace headsup
         bool operator==(const GuildPatterns&) const = default;
     };
 
-    // "Fishing" ... "Cooking", as the guild shops name them.
-    const char* CraftGuildName(int guild);
+    // The guild the shops name "Fishing" ... "Cooking".
     std::optional<int> CraftGuildNamed(std::string_view name);
     // The site's answer, or nothing for any other: a guild whose name is not its id's is left out.
     std::optional<GuildPatterns> ReadGuildPatterns(std::string_view json);
 
-    // The day in Japan a time is in, counted from the Unix epoch: the pattern changes with it.
-    int64_t JstDay(int64_t unixMs);
-    // The answer kept on disk: the day in Japan it was fetched on, then the site's text as it came.
+    // The answer kept on disk: the day in Japan it was fetched on (JstDay), then the site's text as it came.
     struct SavedGuildPatterns
     {
         int64_t day = 0;

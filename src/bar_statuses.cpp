@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <utility>
 
 namespace headsup
 {
@@ -80,6 +81,22 @@ namespace headsup
             PopupCell cell = Cell(std::move(text));
             cell.align     = Align::Right;
             return cell;
+        }
+
+        // Every status Phoenix has once by name, sorted by name, each with its name's first id.
+        using NamedId = std::pair<std::string, uint16_t>;
+        const std::vector<NamedId>& ByName()
+        {
+            static const std::vector<NamedId> byName = [] {
+                std::vector<NamedId> out;
+                for (const StatusRecord& record : StatusRecords())
+                    out.emplace_back(NameOf(record.id), record.id);
+                std::ranges::stable_sort(out, {}, &NamedId::first);
+                const auto repeats = std::ranges::unique(out, {}, &NamedId::first);
+                out.erase(repeats.begin(), repeats.end());
+                return out;
+            }();
+            return byName;
         }
     }
 
@@ -173,29 +190,24 @@ namespace headsup
             std::string name;
             Held held;
         };
-        std::vector<Entry> entries;
-        const auto add = [&](uint16_t id) {
-            std::string name = NameOf(id);
-            if (std::ranges::find(favoriteNames, name) != favoriteNames.end() ||
-                std::ranges::find(entries, name, &Entry::name) != entries.end())
-                return;
-            const Held held = HeldAs(named, name);
-            entries.push_back(Entry{id, std::move(name), held});
+        std::vector<Entry> held;
+        const auto listed = [&](const std::string& name) {
+            return std::ranges::find(favoriteNames, name) != favoriteNames.end() ||
+                   std::ranges::find(held, name, &Entry::name) != held.end();
         };
         for (const ActiveStatus& status : active)
-            add(status.id);
-        for (const StatusRecord& record : StatusRecords())
-            add(record.id);
-        std::ranges::sort(entries, [](const Entry& a, const Entry& b) {
-            return a.held.held != b.held.held ? a.held.held : a.name < b.name;
-        });
-        PopupRow list = Grid(kListColumns, entries.size() * kListColumns);
-        for (const Entry& entry : entries)
-        {
-            list.cells.push_back(Pressable(Icon::StarEmpty, Text("", Tone::Dim), kStatusFavoritePress + std::to_string(entry.id)));
-            list.cells.push_back(Cell(Text(entry.name)));
-            list.cells.push_back(Right(TimeOf(entry.held)));
-        }
+            if (std::string name = NameOf(status.id); !listed(name)) held.push_back(Entry{status.id, name, HeldAs(named, name)});
+        std::ranges::sort(held, {}, &Entry::name);
+        PopupRow list = Grid(kListColumns, (held.size() + ByName().size()) * kListColumns);
+        const auto add = [&](uint16_t id, const std::string& name, const Held& time) {
+            list.cells.push_back(Pressable(Icon::StarEmpty, Text("", Tone::Dim), kStatusFavoritePress + std::to_string(id)));
+            list.cells.push_back(Cell(Text(name)));
+            list.cells.push_back(Right(TimeOf(time)));
+        };
+        for (const Entry& entry : held)
+            add(entry.id, entry.name, entry.held);
+        for (const auto& [name, id] : ByName())
+            if (!listed(name)) add(id, name, Held{});
         list.nested   = true;
         list.scroll   = kStatusListKey;
         list.scrolled = scrolled;

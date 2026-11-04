@@ -21,6 +21,11 @@ using namespace headsup;
 
 namespace
 {
+    WidgetContent Content(PanelWidget widget, const BarState& state, const Settings& settings)
+    {
+        return BarWidgetContent(widget, state, settings, Panel(settings));
+    }
+
     constexpr uint32_t kBountyHunter = 17199648; // Goblin Bounty Hunter, zone 103: light -3, dark 0, the rest -2
 
     ActorInfo Goblin()
@@ -123,7 +128,7 @@ TEST(the_target_widget_shows_name_level_and_con_in_their_colors)
     const ActorInfo goblin = Goblin();
     BarState state;
     state.target          = &goblin;
-    const WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    const WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(w.shown && w.hasPopup);
     CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ});
     CHECK(w.title == (std::vector<Span>{{"Goblin Bounty Hunter", Tone::Own, 0xFF112233u}}));
@@ -137,10 +142,10 @@ TEST(show_icons_picks_a_mobs_icons_its_aggression_before_its_name_the_rest_after
     BarState state;
     state.target     = &goblin;
     WidgetOptions& o = settings.Widget(BarWidget::Target);
-    WidgetContent w  = BarWidgetContent(BarWidget::Target, state, settings);
+    WidgetContent w  = Content(BarWidget::Target, state, settings);
     CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.empty() && w.subtitleIcons.empty()); // as new
     o.targetIcons = kAllTargetIcons;
-    w             = BarWidgetContent(BarWidget::Target, state, settings);
+    w             = Content(BarWidget::Target, state, settings);
     std::vector<Icon> rest = EveryIcon(goblin);
     rest.erase(rest.begin()); // the aggression icon comes first
     CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.size() > 1 && w.titleIcons == rest);
@@ -151,7 +156,7 @@ TEST(show_icons_picks_a_mobs_icons_its_aggression_before_its_name_the_rest_after
             weak.push_back(all.icons[i].icon);
     CHECK(!weak.empty() && w.subtitleIcons == weak);
     o.targetIcons = DetectionBit(DetectionIcon::Link);
-    w             = BarWidgetContent(BarWidget::Target, state, settings);
+    w             = Content(BarWidget::Target, state, settings);
     CHECK(w.icons.empty() && w.titleIcons == std::vector<Icon>{Icon::Link} && w.subtitleIcons.empty());
 }
 
@@ -162,7 +167,7 @@ TEST(show_mob_level_off_leaves_out_a_mobs_level_and_con)
     BarState state;
     state.target = &goblin;
     settings.Widget(BarWidget::Target).targetMobLevel = false;
-    const WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    const WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(w.shown && w.subtitle.empty() && Joined(w.title) == "Goblin Bounty Hunter");
 }
 
@@ -184,7 +189,7 @@ TEST(visibility_hides_the_target_widget_for_each_kind_of_target_left_out)
         for (const auto& [kind, target] : kinds)
         {
             state.target = target;
-            CHECK_EQ(BarWidgetContent(BarWidget::Target, state, settings).shown, kind != left);
+            CHECK_EQ(Content(BarWidget::Target, state, settings).shown, kind != left);
         }
     }
 }
@@ -205,7 +210,7 @@ TEST(a_player_npc_or_pets_name_takes_its_entity_type_color)
     {
         std::snprintf(target->name, sizeof(target->name), "%s", "Someone");
         state.target = target;
-        CHECK(BarWidgetContent(BarWidget::Target, state, settings).title == (std::vector<Span>{{"Someone", Tone::Own, argb}}));
+        CHECK(Content(BarWidget::Target, state, settings).title == (std::vector<Span>{{"Someone", Tone::Own, argb}}));
     }
 }
 
@@ -213,20 +218,20 @@ TEST(no_target_reads_no_target_and_a_player_gets_only_a_name)
 {
     Settings settings;
     BarState state;
-    CHECK(BarWidgetContent(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No target", Tone::Dim}}));
-    CHECK(!BarWidgetContent(BarWidget::Target, state, settings).hasPopup);
+    CHECK(Content(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No target", Tone::Dim}}));
+    CHECK(!Content(BarWidget::Target, state, settings).hasPopup);
     CHECK(BarPopupContent(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No target", Tone::Dim}}));
     ActorInfo player;
     player.kind = EntityKind::Player;
     std::snprintf(player.name, sizeof(player.name), "%s", "Zinnia");
     state.target          = &player;
-    const WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    const WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(Joined(w.title) == "Zinnia" && w.subtitle.empty() && w.icons.empty() && !w.hasPopup);
     ActorInfo stranger = Goblin(); // a mob the Phoenix data does not have
     stranger.mob       = nullptr;
     stranger.level     = MakeLabel(nullptr, nullptr, 20);
     state.target       = &stranger;
-    const WidgetContent s = BarWidgetContent(BarWidget::Target, state, settings);
+    const WidgetContent s = Content(BarWidget::Target, state, settings);
     CHECK(Joined(s.title) == "Goblin Bounty Hunter" && Joined(s.subtitle) == stranger.level.text && !s.hasPopup);
     CHECK(s.icons.empty());
 }
@@ -240,7 +245,7 @@ TEST(a_dead_mob_with_data_keeps_its_aggro_icon_and_popup_but_has_no_level)
     dead.state.toughness          = LabelShade::Unknown;
     BarState state;
     state.target          = &dead;
-    const WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    const WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ});
     const uint32_t nameColor = ToArgb(settings.palette.aggression[static_cast<int>(Nature::Aggressive)]);
     CHECK(w.title == (std::vector<Span>{{"Goblin Bounty Hunter", Tone::Own, nameColor}}));
@@ -568,7 +573,7 @@ TEST(vanadiel_time_names_the_day_in_its_elements_color_and_the_moon)
     Settings settings;
     BarState state;
     state.unixMs          = 1791417600000LL; // Darksday 09:00, 64% waxing
-    const WidgetContent w = BarWidgetContent(BarWidget::VanaTime, state, settings);
+    const WidgetContent w = Content(BarWidget::VanaTime, state, settings);
     CHECK(w.title ==
           (std::vector<Span>{{"Darksday", Tone::Own, ElementColor(Element::Dark)}, {" 09:00", Tone::Normal}}));
     CHECK(w.subtitle == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Dim}}));
@@ -589,7 +594,7 @@ TEST(the_vanadiel_clock_shows_its_day_of_week_date_and_moon_phase_as_set)
     BarState state;
     state.unixMs = 1791417600000LL; // Darksday 1514/03/20 09:00, 64% waxing
     WidgetOptions& o = settings.Widget(BarWidget::VanaTime);
-    const auto shown = [&] { return BarWidgetContent(BarWidget::VanaTime, state, settings); };
+    const auto shown = [&] { return Content(BarWidget::VanaTime, state, settings); };
     o.vanaDate = true;
     CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20 Waxing Gibbous 64%", Tone::Dim}}));
     o.secondLine = false; // Show Moon Phase off: the date alone
@@ -605,13 +610,13 @@ TEST(the_zone_widget_names_the_zone_and_its_region)
     Settings settings;
     BarState state;
     state.zone = 103;
-    WidgetContent w = BarWidgetContent(BarWidget::Zone, state, settings);
+    WidgetContent w = Content(BarWidget::Zone, state, settings);
     CHECK(Joined(w.title) == "Valkurm Dunes" && Joined(w.subtitle) == "Zulkheim" && w.hasPopup);
     state.zone = 999;
-    w          = BarWidgetContent(BarWidget::Zone, state, settings);
+    w          = Content(BarWidget::Zone, state, settings);
     CHECK(Joined(w.title) == "Zone 999" && w.subtitle.empty());
     state.zone = 0;
-    w          = BarWidgetContent(BarWidget::Zone, state, settings);
+    w          = Content(BarWidget::Zone, state, settings);
     CHECK(Joined(w.title) == "-" && !w.hasPopup);
 }
 
@@ -619,13 +624,13 @@ TEST(gil_bags_and_earth_time)
 {
     Settings settings;
     BarState state;
-    CHECK(Joined(BarWidgetContent(BarWidget::Currency, state, settings).title) == "-");
+    CHECK(Joined(Content(BarWidget::Currency, state, settings).title) == "-");
     state.gil             = 1234567;
-    const WidgetContent g = BarWidgetContent(BarWidget::Currency, state, settings);
+    const WidgetContent g = Content(BarWidget::Currency, state, settings);
     CHECK(g.coin && Joined(g.title) == "1,234,567" && g.subtitle.empty() && g.hasPopup);
     state.bags[0]         = BagCount{45, 80};
     state.bags[5]         = BagCount{30, 30}; // a full satchel
-    const WidgetContent b = BarWidgetContent(BarWidget::Bags, state, settings);
+    const WidgetContent b = Content(BarWidget::Bags, state, settings);
     CHECK(Joined(b.title) == "45 / 80" && Joined(b.subtitle) == "Bags" && b.hasPopup);
     const PopupContent bagsPopup = BarPopupContent(BarWidget::Bags, state, settings);
     const PopupRow& rows         = bagsPopup.sections[0].rows[0];
@@ -638,7 +643,7 @@ TEST(gil_bags_and_earth_time)
     state.earthYear   = 2026;
     state.earthMonth  = 10;
     state.earthDay    = 8;
-    CHECK(Joined(BarWidgetContent(BarWidget::EarthTime, state, settings).title) == "21:07");
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "21:07");
     CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-08");
 }
 
@@ -661,12 +666,12 @@ TEST(each_widget_follows_its_switch_and_a_switched_off_one_builds_nothing)
     Settings settings;
     BarState state;
     state.zone = 103;
-    CHECK(BarWidgetContent(BarWidget::Currency, state, settings).shown);
+    CHECK(Content(BarWidget::Currency, state, settings).shown);
     for (WidgetOptions& each : settings.widgets)
         each.on = false;
     for (int i = 0; i < kBarWidgetCount; ++i)
     {
-        const WidgetContent w = BarWidgetContent(static_cast<BarWidget>(i), state, settings);
+        const WidgetContent w = Content(static_cast<BarWidget>(i), state, settings);
         CHECK(!w.shown && w.title.empty() && w.subtitle.empty() && w.icons.empty() && !w.coin && !w.hasPopup);
     }
 }
@@ -677,7 +682,7 @@ TEST(before_a_weather_is_known_the_widget_shows_the_days_likely_weather_and_its_
     BarState state;
     state.zone   = 103;              // Valkurm Dunes, day 0: sunshine 50%, dust storm 50%
     state.unixMs = kVanaEpochUnixMs; // day 0
-    const WidgetContent w = BarWidgetContent(BarWidget::Weather, state, settings);
+    const WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(w.shown && w.hasPopup && w.icons.empty());
     CHECK(Joined(w.title) == "Sunshine" && Joined(w.subtitle) == "50%");
 }
@@ -689,11 +694,11 @@ TEST(a_known_weather_shows_its_element_once_or_twice_and_only_its_chance_today)
     state.zone    = 103;
     state.unixMs  = kVanaEpochUnixMs;
     state.weather = Weather::DustStorm;
-    WidgetContent w = BarWidgetContent(BarWidget::Weather, state, settings);
+    WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(Joined(w.title) == "Dust Storm" && w.icons == (std::vector<Icon>{Icon::Earth}) &&
           Joined(w.subtitle) == "50%");
     state.weather = Weather::SandStorm;
-    w             = BarWidgetContent(BarWidget::Weather, state, settings);
+    w             = Content(BarWidget::Weather, state, settings);
     CHECK(w.icons == (std::vector<Icon>{Icon::Earth, Icon::Earth}));
 }
 
@@ -838,7 +843,7 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
         if (ZonesRolling(static_cast<Element>(e), 777).size() > ZonesRolling(most, 777).size()) most = static_cast<Element>(e);
     const std::map<std::string, std::string> picked{{"By Element", ElementName(most)}};
     state.pickedTabs = &picked;
-    const BarMetrics m = MetricsFor(45, BarShape::Pills);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
         return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
@@ -869,7 +874,7 @@ TEST(a_zone_without_a_calendar_or_weather_hides_the_widget)
     Settings settings;
     BarState state;
     state.zone = 999;
-    CHECK(!BarWidgetContent(BarWidget::Weather, state, settings).shown);
+    CHECK(!Content(BarWidget::Weather, state, settings).shown);
 }
 
 TEST(an_unknown_zone_has_no_weather_odds_of_its_own)
@@ -878,9 +883,9 @@ TEST(an_unknown_zone_has_no_weather_odds_of_its_own)
     BarState state;
     state.zone   = 0; // the data gives zone 0 calendar 0, which says Sunshine
     state.unixMs = kVanaEpochUnixMs;
-    CHECK(!BarWidgetContent(BarWidget::Weather, state, settings).shown);
+    CHECK(!Content(BarWidget::Weather, state, settings).shown);
     state.weather = Weather::DustStorm;
-    const WidgetContent w = BarWidgetContent(BarWidget::Weather, state, settings);
+    const WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(w.shown && Joined(w.title) == "Dust Storm" && w.icons == (std::vector<Icon>{Icon::Earth}));
     CHECK(w.subtitle.empty() && !w.hasPopup);
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
@@ -899,7 +904,7 @@ TEST(a_live_weather_outside_the_days_chances_still_shows)
     state.zone    = 103;
     state.unixMs  = kVanaEpochUnixMs;
     state.weather = Weather::Rain; // day 0 is Sunshine or Dust Storm
-    const WidgetContent w = BarWidgetContent(BarWidget::Weather, state, settings);
+    const WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(Joined(w.title) == "Rain" && w.icons == (std::vector<Icon>{Icon::Water}));
     CHECK(w.subtitle.empty()); // no chance of it today to give
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
@@ -911,16 +916,16 @@ TEST(the_zone_says_who_holds_its_region_once_known)
     Settings settings;
     BarState state;
     state.zone = 103; // Valkurm Dunes, Zulkheim (region 1)
-    CHECK(Joined(BarWidgetContent(BarWidget::Zone, state, settings).subtitle) == "Zulkheim");
+    CHECK(Joined(Content(BarWidget::Zone, state, settings).subtitle) == "Zulkheim");
     RegionOwners owners{};
     owners[1]    = Nation::Bastok;
     state.owners = owners;
-    const WidgetContent w = BarWidgetContent(BarWidget::Zone, state, settings);
+    const WidgetContent w = Content(BarWidget::Zone, state, settings);
     // Its crest and name after the region, as Show Conquest and Show Conquest Text are by default.
     CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {kDot, Tone::Dim}, Span{"", Tone::Normal, 0, GamePicture::BastokCrest},
                              {" Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
     state.zone = 230; // Southern San d'Oria: a city region, not in the conquest packet
-    CHECK(Joined(BarWidgetContent(BarWidget::Zone, state, settings).subtitle) == "San d'Oria");
+    CHECK(Joined(Content(BarWidget::Zone, state, settings).subtitle) == "San d'Oria");
 }
 
 TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_below_it)
@@ -934,7 +939,7 @@ TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_
     state.owners = owners;
     const Span crest{"", Tone::Normal, 0, GamePicture::BastokCrest}, bastok{" Bastok", Tone::Own, NationColor(Nation::Bastok)};
     const Span dunes{"Valkurm Dunes"}, region{"Zulkheim", Tone::Dim};
-    const auto shown = [&] { return BarWidgetContent(BarWidget::Zone, state, settings); };
+    const auto shown = [&] { return Content(BarWidget::Zone, state, settings); };
     o.zoneConquest = ConquestPlace::Left;
     CHECK(shown().title == (std::vector<Span>{crest, bastok, Text(" "), dunes}) && shown().subtitle == std::vector<Span>{region});
     o.zoneConquest = ConquestPlace::Right;
@@ -1178,7 +1183,7 @@ namespace
         const Settings& settings)
     {
         const bool helpBar = widget != BarWidget::GameHelp || (a.strip == b.strip && StripBagFill(a) == StripBagFill(b));
-        return helpBar && BarWidgetContent(widget, a, settings) == BarWidgetContent(widget, b, settings) &&
+        return helpBar && Content(widget, a, settings) == Content(widget, b, settings) &&
                (!open || BarPopupContent(*open, a, settings) == BarPopupContent(*open, b, settings));
     }
 }
@@ -1193,7 +1198,7 @@ TEST(the_bar_gathers_what_each_shown_widget_and_open_popup_reads_and_nothing_mor
         for (WidgetOptions& each : settings.widgets)
             each.on = false;
         settings.Widget(widget).on = true;
-        const bool hasPopup = BarWidgetContent(widget, full.state, settings).hasPopup;
+        const bool hasPopup = Content(widget, full.state, settings).hasPopup;
         for (const std::optional<PanelWidget> open : {std::optional<PanelWidget>(), std::optional<PanelWidget>(widget)})
         {
             if (open && !hasPopup) continue;
@@ -1234,7 +1239,7 @@ TEST(game_help_is_never_on_the_bar_and_its_popup_has_the_caption_over_the_help)
     Settings settings;
     BarState state;
     state.strip = StripText{"Commands", "Select a target to auto-attack."};
-    CHECK(!BarWidgetContent(BarWidget::GameHelp, state, settings).shown); // it has its own bar
+    CHECK(!Content(BarWidget::GameHelp, state, settings).shown); // it has its own bar
     const PopupContent p = BarPopupContent(BarWidget::GameHelp, state, settings);
     CHECK(Joined(p.title) == "Commands" && Lines(p.sections[0]) == (std::vector<std::string>{"Select a target to auto-attack."}));
     CHECK(!p.settings); // no cog: its settings are the Help Bar card's
@@ -1274,17 +1279,17 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
     state.unixMs    = 1791527400000 + 42000; // Friday 15:30:42 JST, Thursday 23:30:42 on the US Pacific coast
     state.earthYear = 2026, state.earthMonth = 10, state.earthDay = 9; // the computer's own: 08:30:42 in Berlin
     state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
-    WidgetContent w = BarWidgetContent(BarWidget::EarthTime, state, settings);
+    WidgetContent w = Content(BarWidget::EarthTime, state, settings);
     CHECK(w.shown && w.hasPopup && Joined(w.title) == "08:30" && w.subtitle.empty()); // not stacked unless asked
     settings.Widget(BarWidget::EarthTime).clockServerTime = true;
-    w                        = BarWidgetContent(BarWidget::EarthTime, state, settings);
+    w                        = Content(BarWidget::EarthTime, state, settings);
     CHECK(Joined(w.title) == "08:30" && w.subtitle == ListOf(Text("JST 15:30", Tone::Dim)));
     settings.Widget(BarWidget::EarthTime).clockSeconds = true; // the seconds are the upper line's
     settings.Widget(BarWidget::EarthTime).clock24      = false;
-    w                     = BarWidgetContent(BarWidget::EarthTime, state, settings);
+    w                     = Content(BarWidget::EarthTime, state, settings);
     CHECK(Joined(w.title) == "8:30:42 AM" && Joined(w.subtitle) == "JST 3:30 PM");
     settings.Widget(BarWidget::EarthTime).clockZone = ClockZone::UsPacific;
-    w                  = BarWidgetContent(BarWidget::EarthTime, state, settings);
+    w                  = Content(BarWidget::EarthTime, state, settings);
     CHECK(Joined(w.title) == "PDT 11:30:42 PM" && Joined(w.subtitle) == "JST 3:30 PM");
     // The popup has the server's clock and its resets whether stacked or not: 8h 29m 18s to Saturday 00:00 JST.
     for (const bool stacked : {true, false})
@@ -1302,9 +1307,9 @@ TEST(the_performance_widget_shows_frames_a_second_and_its_popup_the_frame_times)
     Settings settings;
     settings.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Fps);
     BarState state;
-    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "-");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "-");
     state.frames = FrameReport{1000.0 / 30.0, 120.0};
-    const WidgetContent w = BarWidgetContent(BarWidget::Performance, state, settings);
+    const WidgetContent w = Content(BarWidget::Performance, state, settings);
     CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "30 fps" && w.subtitle.empty());
     const PopupContent p = BarPopupContent(BarWidget::Performance, state, settings);
     CHECK(Joined(p.title) == "Performance");
@@ -1322,9 +1327,9 @@ TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_tho
     state.memory     = MemoryReport{1532, 2563, 4095};
     WidgetOptions& o = settings.Widget(BarWidget::Performance);
     // By default the rates, the game's meter and PlayOnline's messages, as the Connection widget showed.
-    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S 175  R 227  100%");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227  100%");
     o.perfParts = PerfBit(PerfPart::Fps) | PerfBit(PerfPart::Received) | PerfBit(PerfPart::Memory);
-    const std::string line = Joined(BarWidgetContent(BarWidget::Performance, state, settings).title);
+    const std::string line = Joined(Content(BarWidget::Performance, state, settings).title);
     CHECK(line.starts_with("30 fps  R 227  Mem ") && line.find("S ") == std::string::npos);
     CHECK(NeedsOf(settings, std::nullopt).frames && NeedsOf(settings, std::nullopt).connection &&
           NeedsOf(settings, std::nullopt).memory && !NeedsOf(settings, std::nullopt).cpu);
@@ -1335,16 +1340,31 @@ TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_tho
     CHECK(open.connection && open.memory && open.cpu && open.linuxxi);
 }
 
+TEST(the_performance_widgets_memory_turns_amber_then_red_as_the_space_left_runs_low)
+{
+    Settings settings;
+    settings.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Memory);
+    BarState state;
+    const auto used = [&](uint32_t leftMb) {
+        constexpr uint32_t kCeilingMb = 4095;
+        state.memory = MemoryReport{kCeilingMb - leftMb, leftMb, kCeilingMb};
+        return Content(BarWidget::Performance, state, settings).title.back();
+    };
+    CHECK(used(kLowLeftMb).tone == Tone::Normal);
+    CHECK(used(kLowLeftMb - 1) == Colored("3,584 MB", kWarningColor)); // 4,095 - 511
+    CHECK(used(kCriticalLeftMb - 1) == Colored("3,840 MB", kAlarmColor));
+}
+
 TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_of_either)
 {
     Settings settings;
     BarState state;
-    CHECK(Joined(BarWidgetContent(BarWidget::Job, state, settings).title) == "-"); // no job: the title screen
+    CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "-"); // no job: the title screen
     JobSample s;
     s.mainJob = 1, s.mainLevel = 30, s.subJob = 13, s.subLevel = 15;
     s.exp = 4140, s.expNeeded = 7600;
     state.job = JobReport{s, 18000.0};
-    const WidgetContent w = BarWidgetContent(BarWidget::Job, state, settings);
+    const WidgetContent w = Content(BarWidget::Job, state, settings);
     CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "WAR 30 / NIN 15" &&
           Joined(w.subtitle) == "3,460 EXP to next");
     CHECK(w.progress && std::fabs(*w.progress - 4140.0f / 7600.0f) < 1e-6f); // the bar under it
@@ -1355,8 +1375,8 @@ TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_o
 
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
-    CHECK(Joined(BarWidgetContent(BarWidget::Job, state, settings).subtitle) == "7 merits");
-    CHECK(BarWidgetContent(BarWidget::Job, state, settings).progress == 0.421f); // limit points to the next merit
+    CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "7 merits");
+    CHECK(Content(BarWidget::Job, state, settings).progress == 0.421f); // limit points to the next merit
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
           (std::vector<std::string>{"Merits 7 / 10", "Limit points 4,210 / 10,000", "Per hour -",
               "Limit Mode is off, so EXP does not become merits."}));
@@ -1369,7 +1389,7 @@ TEST(the_job_widget_says_one_merit_and_promises_no_merit_without_limit_mode)
     JobSample s;
     s.mainJob = 1, s.mainLevel = 75, s.merits = 1, s.meritsMax = 10, s.limitPoints = 100;
     state.job = JobReport{s, 5000.0};
-    CHECK(Joined(BarWidgetContent(BarWidget::Job, state, settings).subtitle) == "1 merit");
+    CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "1 merit");
     for (const std::string& line : Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]))
         CHECK(line.find("Next merit") == std::string::npos); // Limit Mode is off
     state.job->sample.limitMode = true;
@@ -1382,25 +1402,25 @@ TEST(the_performance_widget_shows_the_games_rates_on_one_line_and_turns_amber_th
     Settings settings;
     BarState state;
     state.connection = SteadyLink();
-    WidgetContent w  = BarWidgetContent(BarWidget::Performance, state, settings);
+    WidgetContent w  = Content(BarWidget::Performance, state, settings);
     CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "S 175  R 227  100%" && w.subtitle.empty());
     CHECK(w.title[1] == Text("175"));
 
     state.connection->silence = 3.0;
-    w = BarWidgetContent(BarWidget::Performance, state, settings);
+    w = Content(BarWidget::Performance, state, settings);
     CHECK(w.title[1] == Text("175")); // the game's counters still see data arrive
     state.connection->counters->received = 0;
-    w = BarWidgetContent(BarWidget::Performance, state, settings);
+    w = Content(BarWidget::Performance, state, settings);
     CHECK(w.title[1] == Colored("175", kWarningColor) && w.title[3] == Colored("0", kWarningColor));
 
     state.connection->silence          = 13.0;
     state.connection->counters->health = 94;
-    w = BarWidgetContent(BarWidget::Performance, state, settings);
+    w = Content(BarWidget::Performance, state, settings);
     CHECK(w.title[1] == Colored("175", kAlarmColor) && w.subtitle.empty());
 
     state.connection->counters.reset(); // the chain could not be read
     state.connection->silence = 0.3;
-    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S -  R -");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S -  R -");
 }
 
 TEST(the_performance_popup_gives_the_rates_ping_last_data_and_session_totals)
@@ -1447,7 +1467,7 @@ TEST(the_party_widget_counts_members_and_shows_the_lowest_hp_and_mp_in_your_zone
     settings.Widget(BarWidget::Party).on = true;
     BarState state;
     state.party           = FourMembers();
-    const WidgetContent w = BarWidgetContent(BarWidget::Party, state, settings);
+    const WidgetContent w = Content(BarWidget::Party, state, settings);
     CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "Party 4" &&
           Joined(w.subtitle) == "HP 42% \xC2\xB7 MP 18%");
     CHECK(w.subtitle[1] == Colored("42%", kWarningColor) && w.subtitle[4] == Colored("18%", kAlarmColor));
@@ -1455,10 +1475,10 @@ TEST(the_party_widget_counts_members_and_shows_the_lowest_hp_and_mp_in_your_zone
     state.party[1] = PartyMember{"Samurai", 12, 75, 1, 37, 1500, 0, 0, 100, 0, 103, true};
     state.party[2].reset();
     state.party[3].reset();
-    CHECK(Joined(BarWidgetContent(BarWidget::Party, state, settings).subtitle) == "HP 90%"); // no MP among them
+    CHECK(Joined(Content(BarWidget::Party, state, settings).subtitle) == "HP 90%"); // no MP among them
 
     state.party[1].reset();
-    const WidgetContent solo = BarWidgetContent(BarWidget::Party, state, settings);
+    const WidgetContent solo = Content(BarWidget::Party, state, settings);
     CHECK(Joined(solo.title) == "Solo" && solo.subtitle.empty() && !solo.hasPopup);
 }
 
@@ -1493,7 +1513,7 @@ TEST(a_member_zoning_or_in_another_zone_never_counts_toward_the_lowest_figures)
     state.party[0] = PartyMember{"Tanyrus", 4, 75, 3, 37, 1800, 900, 0, 80, 70, 103, true};
     state.party[1] = PartyMember{"Zoning", 3, 75, 4, 37, 0, 0, 0, 0, 0, 0, false};
     state.party[2] = PartyMember{"Away", 3, 75, 4, 37, 10, 10, 0, 1, 1, 50, false};
-    const WidgetContent w = BarWidgetContent(BarWidget::Party, state, settings);
+    const WidgetContent w = Content(BarWidget::Party, state, settings);
     CHECK(Joined(w.title) == "Party 3" && Joined(w.subtitle) == "HP 80% \xC2\xB7 MP 70%");
     PopupContent popup     = BarPopupContent(BarWidget::Party, state, settings);
     const PopupRow& zoning = popup.sections[0].rows[1];
@@ -1511,7 +1531,7 @@ TEST(a_dead_member_counts_and_turns_the_face_red)
     BarState state;
     state.party[0] = PartyMember{"Tanyrus", 4, 75, 3, 37, 1800, 900, 0, 80, 70, 103, true};
     state.party[1] = PartyMember{"Dead", 1, 75, 0, 0, 0, 0, 0, 0, 0, 103, true};
-    const WidgetContent w = BarWidgetContent(BarWidget::Party, state, settings);
+    const WidgetContent w = Content(BarWidget::Party, state, settings);
     CHECK(Joined(w.subtitle) == "HP 0% \xC2\xB7 MP 70%" && w.subtitle[1] == Colored("0%", kAlarmColor));
 }
 
@@ -1522,10 +1542,10 @@ TEST(the_figures_turn_amber_below_half_and_red_below_a_quarter)
     BarState state;
     state.party[0] = PartyMember{"Tanyrus", 4, 75, 3, 37, 1, 1, 0, 50, 25, 103, true};
     state.party[1] = PartyMember{"Other", 4, 75, 3, 37, 1, 1, 0, 100, 100, 103, true};
-    WidgetContent w = BarWidgetContent(BarWidget::Party, state, settings);
+    WidgetContent w = Content(BarWidget::Party, state, settings);
     CHECK(w.subtitle[1] == Text("50%") && w.subtitle[4] == Colored("25%", kWarningColor));
     state.party[0]->hpPercent = 49, state.party[0]->mpPercent = 24;
-    w = BarWidgetContent(BarWidget::Party, state, settings);
+    w = Content(BarWidget::Party, state, settings);
     CHECK(w.subtitle[1] == Colored("49%", kWarningColor) && w.subtitle[4] == Colored("24%", kAlarmColor));
 }
 
@@ -1536,7 +1556,7 @@ TEST(a_party_with_everyone_else_away_shows_only_your_own_figures)
     BarState state;
     state.party[0] = PartyMember{"Tanyrus", 1, 75, 13, 37, 1800, 0, 0, 90, 0, 103, true};
     state.party[1] = PartyMember{"Away", 4, 75, 3, 37, 100, 50, 0, 10, 5, 50, false};
-    const WidgetContent w = BarWidgetContent(BarWidget::Party, state, settings);
+    const WidgetContent w = Content(BarWidget::Party, state, settings);
     CHECK(Joined(w.title) == "Party 2" && Joined(w.subtitle) == "HP 90%");
 }
 
@@ -1547,7 +1567,7 @@ TEST(a_member_whose_data_has_not_arrived_is_left_out_of_the_lowest_and_shows_das
     BarState state;
     state.party[0] = PartyMember{"Tanyrus", 4, 75, 3, 37, 1800, 900, 0, 80, 70, 103, true};
     state.party[1] = PartyMember{"New", 0, 0, 0, 0, 0, 0, 0, 0, 0, 103, true}; // no job yet
-    const WidgetContent w = BarWidgetContent(BarWidget::Party, state, settings);
+    const WidgetContent w = Content(BarWidget::Party, state, settings);
     CHECK(Joined(w.title) == "Party 2" && Joined(w.subtitle) == "HP 80% \xC2\xB7 MP 70%");
     const PopupContent p = BarPopupContent(BarWidget::Party, state, settings);
     const PopupRow& grid = p.sections[0].rows[0];
@@ -1565,11 +1585,11 @@ TEST(a_checked_player_shows_their_jobs_and_a_popup_of_the_check)
     player.serverId = 0x01006A2B;
     std::snprintf(player.name, sizeof(player.name), "%s", "Tanyrus");
     state.target    = &player;
-    WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(Joined(w.title) == "Tanyrus" && w.subtitle.empty() && !w.hasPopup); // never checked: as before
     PlayerCheck check{InspectGeneral{0x01006A2B, 0x410, "Phoenix", 1, 13, 75, 37, 0}, InspectMessage{"Tanyrus", 206}};
     state.targetCheck = check;
-    w = BarWidgetContent(BarWidget::Target, state, settings);
+    w = Content(BarWidget::Target, state, settings);
     CHECK(Joined(w.subtitle) == "WAR 75 / NIN 37" && w.hasPopup);
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]) ==
           (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Linkshell Phoenix", "Title New Adventurer",
@@ -1582,7 +1602,7 @@ TEST(a_checked_player_shows_their_jobs_and_a_popup_of_the_check)
               "As of your check"}));
     check.general.mainJob = check.general.subJob = check.general.mainLevel = check.general.subLevel = 0;
     state.targetCheck = check; // anonymous
-    CHECK(Joined(BarWidgetContent(BarWidget::Target, state, settings).subtitle) == "? ? ?");
+    CHECK(Joined(Content(BarWidget::Target, state, settings).subtitle) == "? ? ?");
 }
 
 TEST(a_checked_players_title_shows_its_number_when_the_list_lacks_it_and_not_at_all_when_none)
@@ -1612,7 +1632,7 @@ TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_
     CHECK(NeedsOf(settings, PanelWidget{BarWidget::StatusTimers}).statuses);
     settings.statusPins = {kSignetEffect};
     CHECK(NeedsOf(settings, std::nullopt).statuses);
-    CHECK(Joined(BarWidgetContent(BarWidget::StatusTimers, state, settings).title) == "Signet 1h 42m");
+    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Signet 1h 42m");
     // Its popup's favorites are the settings', Signet and Sanction on a new install.
     const PopupContent p = BarPopupContent(BarWidget::StatusTimers, state, settings);
     CHECK(Joined(p.sections[0].rows[0].cells[2].text) == "Signet" && Joined(p.sections[0].rows[0].cells[6].text) == "Sanction");
@@ -1704,12 +1724,12 @@ TEST(the_currency_widget_shows_the_picked_currency)
     state.gil = 4751;
     const int notes = *CurrencyOfKey("allied_notes");
     settings.Widget(BarWidget::Currency).currency = notes;
-    WidgetContent w      = BarWidgetContent(BarWidget::Currency, state, settings);
+    WidgetContent w      = Content(BarWidget::Currency, state, settings);
     CHECK(!w.coin && Joined(w.title) == "-" && Joined(w.subtitle) == "Allied Notes"); // not sent yet
     for (std::optional<uint32_t>& amount : state.currencies)
         amount = 0; // the server sent them all, most at none
     state.currencies[notes] = 12000;
-    w = BarWidgetContent(BarWidget::Currency, state, settings);
+    w = Content(BarWidget::Currency, state, settings);
     CHECK(Joined(w.title) == "12,000" && w.hasPopup);
 }
 
@@ -1720,19 +1740,19 @@ TEST(the_target_says_how_far_it_is_after_its_name_unless_show_distance_is_off)
     BarState state;
     state.target         = &goblin;
     state.targetDistance = 12.34f;
-    const std::string name = Joined(BarWidgetContent(BarWidget::Target, state, Settings{}).title);
-    WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    const std::string name = Joined(Content(BarWidget::Target, state, Settings{}).title);
+    WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(w.title.back() == Text(" (12.3)", Tone::Dim));
     settings.Widget(BarWidget::Target).targetDistance = false;
-    w = BarWidgetContent(BarWidget::Target, state, settings);
+    w = Content(BarWidget::Target, state, settings);
     CHECK(Joined(w.title) + " (12.3)" == name);
     // Without a target, or a distance, there is nothing to measure.
     settings.Widget(BarWidget::Target).targetDistance = true;
     state.targetDistance.reset();
-    CHECK(Joined(BarWidgetContent(BarWidget::Target, state, settings).title) + " (12.3)" == name);
+    CHECK(Joined(Content(BarWidget::Target, state, settings).title) + " (12.3)" == name);
     state.target         = nullptr;
     state.targetDistance = 5.0f;
-    CHECK(Joined(BarWidgetContent(BarWidget::Target, state, settings).title) == "No target");
+    CHECK(Joined(Content(BarWidget::Target, state, settings).title) == "No target");
 }
 
 TEST(each_widget_can_drop_its_second_line_or_its_icons)
@@ -1746,17 +1766,17 @@ TEST(each_widget_can_drop_its_second_line_or_its_icons)
     state.target  = &goblin;
     state.gil     = 100;
     settings.Widget(BarWidget::Weather).secondLine = false;
-    WidgetContent w = BarWidgetContent(BarWidget::Weather, state, settings);
+    WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(w.subtitle.empty() && !w.icons.empty() && Joined(w.title) == "Dust Storm");
     settings.Widget(BarWidget::Weather).icons = false;
-    CHECK(BarWidgetContent(BarWidget::Weather, state, settings).icons.empty());
+    CHECK(Content(BarWidget::Weather, state, settings).icons.empty());
     // The Target's own settings say what its lines and icons show: these two leave it alone.
     settings.Widget(BarWidget::Target).secondLine = false;
     settings.Widget(BarWidget::Target).icons      = false;
-    w = BarWidgetContent(BarWidget::Target, state, settings);
+    w = Content(BarWidget::Target, state, settings);
     CHECK(!w.subtitle.empty() && !w.icons.empty());
     settings.Widget(BarWidget::Currency).icons = false;
-    w = BarWidgetContent(BarWidget::Currency, state, settings);
+    w = Content(BarWidget::Currency, state, settings);
     CHECK(!w.coin && Joined(w.title) == "100");
 }
 
@@ -1769,15 +1789,15 @@ TEST(the_job_widget_puts_its_exp_bar_under_beside_or_nowhere_and_can_show_levels
     s.exp = 3800, s.expNeeded = 7600;
     state.job = JobReport{s, std::nullopt};
     settings.Widget(BarWidget::Job).expBar = ExpBarPlace::Beside;
-    WidgetContent w = BarWidgetContent(BarWidget::Job, state, settings);
+    WidgetContent w = Content(BarWidget::Job, state, settings);
     CHECK(w.progress == 0.5f && w.progressBeside);
     settings.Widget(BarWidget::Job).expBar = ExpBarPlace::Off;
-    CHECK(!BarWidgetContent(BarWidget::Job, state, settings).progress);
+    CHECK(!Content(BarWidget::Job, state, settings).progress);
     settings.Widget(BarWidget::Job).jobNames = false;
-    CHECK(Joined(BarWidgetContent(BarWidget::Job, state, settings).title) == "Lv 30 / 15");
+    CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "Lv 30 / 15");
     s.subJob  = 0, s.subLevel = 0; // no support job yet
     state.job = JobReport{s, std::nullopt};
-    CHECK(Joined(BarWidgetContent(BarWidget::Job, state, settings).title) == "Lv 30");
+    CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "Lv 30");
 }
 
 TEST(the_job_widget_can_put_its_exp_first_or_show_it_alone)
@@ -1789,21 +1809,21 @@ TEST(the_job_widget_can_put_its_exp_first_or_show_it_alone)
     s.exp = 4140, s.expNeeded = 7600;
     state.job          = JobReport{s, std::nullopt};
     settings.Widget(BarWidget::Job).jobLayout = JobLayout::ExpFirst;
-    WidgetContent w    = BarWidgetContent(BarWidget::Job, state, settings);
+    WidgetContent w    = Content(BarWidget::Job, state, settings);
     CHECK(w.title == ListOf(Text("3,460 EXP to next"))); // the larger line, in the title's own tone
     CHECK(w.subtitle == ListOf(Text("WAR 30 / NIN 15", Tone::Dim)));
     CHECK(w.figures && w.hasPopup && w.progress && std::fabs(*w.progress - 4140.0f / 7600.0f) < 1e-6f);
     settings.Widget(BarWidget::Job).jobNames = false;
-    CHECK(Joined(BarWidgetContent(BarWidget::Job, state, settings).subtitle) == "Lv 30 / 15");
+    CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "Lv 30 / 15");
     settings.Widget(BarWidget::Job).jobLayout = JobLayout::ExpOnly;
-    w                  = BarWidgetContent(BarWidget::Job, state, settings);
+    w                  = Content(BarWidget::Job, state, settings);
     CHECK(Joined(w.title) == "3,460 EXP to next" && w.subtitle.empty() && w.progress.has_value());
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
-    w         = BarWidgetContent(BarWidget::Job, state, settings);
+    w         = Content(BarWidget::Job, state, settings);
     CHECK(w.title == ListOf(Text("7 merits")) && w.subtitle.empty() && w.progress == 0.421f);
     state.job.reset(); // the title screen
-    w = BarWidgetContent(BarWidget::Job, state, settings);
+    w = Content(BarWidget::Job, state, settings);
     CHECK(Joined(w.title) == "-" && w.subtitle.empty());
 }
 
@@ -1817,15 +1837,15 @@ TEST(the_clock_reads_in_the_zone_picked_for_it_with_that_zones_date_in_its_popup
     state.earthYear = 2026, state.earthMonth = 10, state.earthDay = 9; // the computer's own: 08:30:42 in Berlin
     state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
     CHECK(!settings.Widget(BarWidget::EarthTime).clockZone.has_value());
-    CHECK(Joined(BarWidgetContent(BarWidget::EarthTime, state, settings).title) == "08:30");
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "08:30");
     CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-09");
     settings.Widget(BarWidget::EarthTime).clockZone = ClockZone::UsPacific;
-    CHECK(Joined(BarWidgetContent(BarWidget::EarthTime, state, settings).title) == "PDT 23:30");
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "PDT 23:30");
     CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-08");
     settings.Widget(BarWidget::EarthTime).clockZone    = ClockZone::Japan;
     settings.Widget(BarWidget::EarthTime).clock24      = false;
     settings.Widget(BarWidget::EarthTime).clockSeconds = true;
-    CHECK(Joined(BarWidgetContent(BarWidget::EarthTime, state, settings).title) == "JST 3:30:42 PM");
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "JST 3:30:42 PM");
     CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-09");
 }
 
@@ -1857,7 +1877,7 @@ TEST(the_clocks_read_on_a_twelve_hour_clock_when_asked)
     settings.Widget(BarWidget::EarthTime).clock24 = false;
     BarState state;
     state.earthHour = 9, state.earthMinute = 30;
-    CHECK(Joined(BarWidgetContent(BarWidget::EarthTime, state, settings).title) == "9:30 AM");
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "9:30 AM");
 }
 
 TEST(the_clocks_add_seconds_when_asked)
@@ -1866,9 +1886,9 @@ TEST(the_clocks_add_seconds_when_asked)
     Settings settings;
     BarState state;
     state.earthHour = 9, state.earthMinute = 30, state.earthSecond = 7;
-    CHECK(Joined(BarWidgetContent(BarWidget::EarthTime, state, settings).title) == "09:30");
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "09:30");
     settings.Widget(BarWidget::EarthTime).clockSeconds = true;
-    CHECK(Joined(BarWidgetContent(BarWidget::EarthTime, state, settings).title) == "09:30:07");
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "09:30:07");
 }
 
 TEST(the_performance_widget_adds_its_ping_when_asked)
@@ -1878,11 +1898,11 @@ TEST(the_performance_widget_adds_its_ping_when_asked)
     state.connection = SteadyLink();
     uint8_t& parts   = settings.Widget(BarWidget::Performance).perfParts;
     parts            = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received);
-    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S 175  R 227");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227");
     parts |= PerfBit(PerfPart::Ping);
-    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S 175  R 227  48 ms");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227  48 ms");
     state.connection->latency.reset(); // not measured yet
-    CHECK(Joined(BarWidgetContent(BarWidget::Performance, state, settings).title) == "S 175  R 227");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227");
 }
 
 TEST(a_mobs_popup_lists_what_it_drops_at_its_treasure_hunter_0_chance_and_what_can_be_stolen)
@@ -1978,7 +1998,7 @@ TEST(a_qms_popup_says_what_to_trade_it_and_what_that_pops)
     BarState state;
     state.target   = &qm;
     state.itemName = NpcItemName;
-    CHECK(BarWidgetContent(BarWidget::Target, state, settings).hasPopup);
+    CHECK(Content(BarWidget::Target, state, settings).hasPopup);
     const PopupContent p = BarPopupContent(BarWidget::Target, state, settings);
     CHECK(Joined(p.title) == "???");
     CHECK(Headings(p) == (std::vector<std::string>{"", "Click", "Trade", "Pops"}));
@@ -2102,7 +2122,7 @@ TEST(an_npc_the_data_has_nothing_of_gets_only_its_name)
     const ActorInfo blank = NpcTarget(16781329, "Door");
     BarState state;
     state.target = &blank;
-    const WidgetContent w = BarWidgetContent(BarWidget::Target, state, settings);
+    const WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(Joined(w.title) == "Door" && !w.hasPopup);
     CHECK(BarPopupContent(BarWidget::Target, state, settings).sections.empty());
 }
@@ -2115,7 +2135,7 @@ TEST(a_shops_popup_lists_its_stock_with_prices)
     BarState state;
     state.target   = &maera;
     state.itemName = NpcItemName;
-    CHECK(BarWidgetContent(BarWidget::Target, state, settings).hasPopup);
+    CHECK(Content(BarWidget::Target, state, settings).hasPopup);
     const PopupContent p = BarPopupContent(BarWidget::Target, state, settings);
     CHECK(Headings(p) == (std::vector<std::string>{"", "Shop"}));
     CHECK(SectionLines(p, "Shop") == (std::vector<std::string>{"Potion 910 gil", "Ether 4,832 gil", "Antidote 316 gil",
@@ -2160,7 +2180,7 @@ TEST(an_npcs_popup_lists_its_quests_and_missions_with_their_logs)
     const ActorInfo gate = NpcTarget(16916828, "Gate of the Gods");
     BarState state;
     state.target = &gate;
-    CHECK(BarWidgetContent(BarWidget::Target, state, settings).hasPopup);
+    CHECK(Content(BarWidget::Target, state, settings).hasPopup);
     const PopupContent p = BarPopupContent(BarWidget::Target, state, settings);
     CHECK(Headings(p) == (std::vector<std::string>{"", "Quests", "Missions"}));
     CHECK(SectionLines(p, "Quests") == (std::vector<std::string>{"Apocalypse Nigh Jeuno"}));
@@ -2191,7 +2211,7 @@ TEST(battlefields_and_hidden_quests_have_sections_and_what_live_has_off_is_left_
     CHECK(SectionLines(p, "Missions").size() == 3);
     const ActorInfo retriever = NpcTarget(17105705, "Mystic Retriever"); // only in an RoV mission
     state.target              = &retriever;
-    CHECK(!BarWidgetContent(BarWidget::Target, state, settings).hasPopup);
+    CHECK(!Content(BarWidget::Target, state, settings).hasPopup);
 }
 
 TEST(what_an_npc_is_for_shows_as_tags_under_its_id)
@@ -2219,12 +2239,12 @@ TEST(each_copy_of_a_widget_shows_by_its_own_settings)
     const std::optional<PanelWidget> copy = CloneWidget(settings, BarWidget::Currency);
     CHECK(copy.has_value());
     settings.Widget(*copy).currency = 3;
-    const WidgetContent first = BarWidgetContent(BarWidget::Currency, state, settings), second = BarWidgetContent(*copy, state, settings);
+    const WidgetContent first = Content(BarWidget::Currency, state, settings), second = Content(*copy, state, settings);
     CHECK(first.coin && !second.coin && second.title.front().text == "50");
     // A copy not on the panel shows nothing, whatever it was set to.
     RemoveWidgetCopy(settings, *copy);
     settings.Widget(*copy).on = true;
-    CHECK(!BarWidgetContent(*copy, state, settings).shown);
+    CHECK(!Content(*copy, state, settings).shown);
 }
 
 TEST(what_the_plugin_gathers_follows_every_copy)
@@ -2271,18 +2291,18 @@ TEST(the_job_and_exp_widgets_bar_layout_is_its_exp_bar_by_its_own_settings)
     s.mainJob = 1, s.mainLevel = 30, s.exp = 12345, s.expNeeded = 20000;
     state.job = JobReport{s, std::nullopt};
     WidgetOptions& o = settings.Widget(BarWidget::Job);
-    CHECK(!BarWidgetContent(BarWidget::Job, state, settings).meter); // its lines on a new install
+    CHECK(!Content(BarWidget::Job, state, settings).meter); // its lines on a new install
     o.jobLayout    = JobLayout::Bar;
     o.expPlaces    = {ExpTextPlace::Off, ExpTextPlace::Off, ExpTextPlace::Left};
     o.expBarWidth  = 200;
     o.expBarHeight = 8;
-    const WidgetContent w = BarWidgetContent(BarWidget::Job, state, settings);
+    const WidgetContent w = Content(BarWidget::Job, state, settings);
     CHECK(w.shown && w.meter && w.meter->left.front().text == "61%" && w.meter->right.empty());
     CHECK(w.meter->width == 200 && w.meter->height == 8 && w.hasPopup);
     CHECK(NeedsOf(settings, std::nullopt).job);
     // The other layouts keep their own lines.
     o.jobLayout = JobLayout::JobsFirst;
-    CHECK_EQ(BarWidgetContent(BarWidget::Job, state, settings).subtitle.front().text, "7,655 EXP to next");
+    CHECK_EQ(Content(BarWidget::Job, state, settings).subtitle.front().text, "7,655 EXP to next");
 }
 
 TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)
@@ -2291,14 +2311,14 @@ TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)
     BarState state;
     state.bags[0] = BagCount{26, 30};
     state.bags[5] = BagCount{12, 80}; // the satchel
-    CHECK_EQ(BarWidgetContent(BarWidget::Bags, state, settings).title.front().text, "26 / 30");
+    CHECK_EQ(Content(BarWidget::Bags, state, settings).title.front().text, "26 / 30");
     settings.Widget(BarWidget::Bags).bag = 5;
-    const WidgetContent satchel = BarWidgetContent(BarWidget::Bags, state, settings);
+    const WidgetContent satchel = Content(BarWidget::Bags, state, settings);
     CHECK(satchel.title.front().text == "12 / 80" && satchel.subtitle.front().text == ContainerName(5));
     CHECK_EQ(NeedsOf(settings, std::nullopt).containers, 6);
     // A bag the character has no room in reads as nothing yet.
     settings.Widget(BarWidget::Bags).bag = 6;
-    CHECK_EQ(BarWidgetContent(BarWidget::Bags, state, settings).title.front().text, "-");
+    CHECK_EQ(Content(BarWidget::Bags, state, settings).title.front().text, "-");
 }
 
 TEST(a_targeted_players_jobs_show_from_whatever_knows_them_unless_switched_off)
@@ -2309,17 +2329,17 @@ TEST(a_targeted_players_jobs_show_from_whatever_knows_them_unless_switched_off)
     player.kind = EntityKind::Player;
     std::snprintf(player.name, sizeof(player.name), "%s", "Tanyrus");
     state.target = &player;
-    CHECK(BarWidgetContent(BarWidget::Target, state, settings).subtitle.empty()); // nothing known of them yet
+    CHECK(Content(BarWidget::Target, state, settings).subtitle.empty()); // nothing known of them yet
     player.jobs = PlayerJobs{1, 75, 13, 37}; // from a lookup, the party list or a check
-    CHECK_EQ(BarWidgetContent(BarWidget::Target, state, settings).subtitle.front().text, "WAR 75 / NIN 37");
+    CHECK_EQ(Content(BarWidget::Target, state, settings).subtitle.front().text, "WAR 75 / NIN 37");
     settings.Widget(BarWidget::Target).targetJobs = false;
-    CHECK(BarWidgetContent(BarWidget::Target, state, settings).subtitle.empty());
+    CHECK(Content(BarWidget::Target, state, settings).subtitle.empty());
     // An anonymous player's are the game's question marks.
     settings.Widget(BarWidget::Target).targetJobs = true;
     player.jobs.reset();
     player.status = PlayerStatus{};
     player.status->anonymous = true;
-    CHECK_EQ(BarWidgetContent(BarWidget::Target, state, settings).subtitle.front().text, "? ? ?");
+    CHECK_EQ(Content(BarWidget::Target, state, settings).subtitle.front().text, "? ? ?");
 }
 
 TEST(world_info_shows_conquest_info_counting_the_regions_of_the_nations_picked_and_its_popup_names_them)
@@ -2328,7 +2348,7 @@ TEST(world_info_shows_conquest_info_counting_the_regions_of_the_nations_picked_a
     BarState state;
     settings.Widget(BarWidget::World).on        = true;
     settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
-    CHECK_EQ(Joined(BarWidgetContent(BarWidget::World, state, settings).title), "-"); // before the standings come
+    CHECK_EQ(Joined(Content(BarWidget::World, state, settings).title), "-"); // before the standings come
     RegionOwners owners{};
     owners.fill(Nation::Beastmen);
     owners[0] = Nation::SanDoria;                         // Ronfaure
@@ -2337,7 +2357,7 @@ TEST(world_info_shows_conquest_info_counting_the_regions_of_the_nations_picked_a
     owners[18] = Nation::None;
     state.owners = owners;
     // Two by two, in lined-up columns, each its crest and count: San d'Oria and Bastok over Windurst and the beastmen.
-    const WidgetContent all = BarWidgetContent(BarWidget::World, state, settings);
+    const WidgetContent all = Content(BarWidget::World, state, settings);
     CHECK(all.cells && all.title.size() == 2 && all.subtitle.size() == 2);
     CHECK(all.title[0].text == " 1" && all.title[1].text == " 2" && all.subtitle[0].text == " 1" && all.subtitle[1].text == " 14");
     CHECK(all.title[0].picture == GamePicture::SanDoriaCrest && all.title[1].picture == GamePicture::BastokCrest &&
@@ -2345,12 +2365,12 @@ TEST(world_info_shows_conquest_info_counting_the_regions_of_the_nations_picked_a
     CHECK(all.title[1].argb == NationColor(Nation::Bastok) && all.hasPopup);
     // Or all four on one line.
     settings.Widget(BarWidget::World).conquestGrid = ConquestGrid::OneByFour;
-    const WidgetContent row = BarWidgetContent(BarWidget::World, state, settings);
+    const WidgetContent row = Content(BarWidget::World, state, settings);
     CHECK(row.cells && row.title.size() == 4 && row.subtitle.empty() && row.title[3].picture == GamePicture::BeastmenCrest);
     settings.Widget(BarWidget::World).conquestGrid = ConquestGrid::TwoByTwo;
     // Bastok alone: its name and count, and its regions in the popup.
     settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
-    CHECK_EQ(Joined(BarWidgetContent(BarWidget::World, state, settings).title), "Bastok 2");
+    CHECK_EQ(Joined(Content(BarWidget::World, state, settings).title), "Bastok 2");
     const PopupSection card = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
     CHECK(card.tabs.size() == 1 && card.tabs[0].name.text == "Bastok");
     CHECK(TabLines(card) == (std::vector<std::string>{"Gustaberg", "Derfland"}));
@@ -2420,10 +2440,10 @@ TEST(two_nations_picked_are_one_line_of_two_cells_and_one_is_its_name_over_the_w
     owners[3] = Nation::Bastok;
     state.owners = owners;
     settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok) | NationBit(Nation::Windurst);
-    const WidgetContent two = BarWidgetContent(BarWidget::World, state, settings);
+    const WidgetContent two = Content(BarWidget::World, state, settings);
     CHECK(two.cells && two.title.size() == 2 && two.subtitle.empty());
     settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
-    const WidgetContent one = BarWidgetContent(BarWidget::World, state, settings);
+    const WidgetContent one = Content(BarWidget::World, state, settings);
     CHECK(!one.cells && Joined(one.title) == "Bastok 1" && Joined(one.subtitle) == "Conquest");
 }
 
@@ -2457,14 +2477,14 @@ TEST(the_world_info_widget_tells_what_you_picked_with_its_countdown)
     state.unixMs = kEarthsdayTen;
     state.zone   = 79; // Caedarva Mire
     const auto shown = [&](WorldLine line) {
-        const WidgetContent w = BarWidgetContent(BarWidget::World, state, WorldShowing(line));
+        const WidgetContent w = Content(BarWidget::World, state, WorldShowing(line));
         return Joined(w.title) + " / " + Joined(w.subtitle);
     };
     // The airship's door opens at 28 s into the next cycle: 864 - 576 + 28 s from now.
     CHECK_EQ(shown(WorldLine::Departure), "Jeuno to San d'Oria / Boards in 5:16");
     // Its second line is dim, as every widget's is.
     for (int line = 0; line < kWorldLineCount; ++line)
-        for (const Span& span : BarWidgetContent(BarWidget::World, state, WorldShowing(static_cast<WorldLine>(line))).subtitle)
+        for (const Span& span : Content(BarWidget::World, state, WorldShowing(static_cast<WorldLine>(line))).subtitle)
             CHECK(span.tone == Tone::Dim);
     // Open until 21:00, 11 Vana'diel hours away.
     CHECK_EQ(shown(WorldLine::Guild), std::string("Woodworking / Open") + kDot + "closes in 26:24");
@@ -2659,7 +2679,7 @@ TEST(the_weather_popup_keeps_its_forecast_and_elements_in_one_column_at_one_widt
     state.unixMs = kVanaEpochUnixMs + 777LL * 3456 * 1000;
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
     CHECK(popup.oneColumn);
-    const BarMetrics m = MetricsFor(45, BarShape::Pills);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
         return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
@@ -2709,17 +2729,17 @@ TEST(a_combined_partner_can_leave_the_panel_or_the_popup_to_the_widget_it_follow
     CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
     settings.Widget(BarWidget::Bags).combineInPopup = false;
     CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections == bags.sections);
-    CHECK(BarWidgetContent(second, state, settings).shown); // still on the panel
+    CHECK(Content(second, state, settings).shown); // still on the panel
     // On the panel the first alone, the partner's popup still joined.
     settings.Widget(BarWidget::Bags).combineInPopup = true;
     settings.Widget(BarWidget::Bags).combineOnPanel = false;
-    const WidgetContent hidden = BarWidgetContent(second, state, settings);
+    const WidgetContent hidden = Content(second, state, settings);
     CHECK(!hidden.shown && hidden.hasPopup);
-    CHECK(BarWidgetContent(BarWidget::Bags, state, settings).shown);
+    CHECK(Content(BarWidget::Bags, state, settings).shown);
     CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
     // Not combined, the switches change nothing.
     settings.Widget(BarWidget::Bags).combine.reset();
-    CHECK(BarWidgetContent(second, state, settings).shown);
+    CHECK(Content(second, state, settings).shown);
 }
 
 TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)

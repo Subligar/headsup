@@ -922,7 +922,7 @@ TEST(an_edit_of_a_theme_color_makes_the_theme_custom_which_keeps_it)
     CHECK(w.settings.barTheme == BarTheme::Aurora && w.settings.customPalette == edited);
     w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
     w.Pass({{"theme-theme-look-theme-o-5", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::Custom && PaletteFor(w.settings) == edited);
+    CHECK(w.settings.barTheme == BarTheme::Custom && PaletteFor(w.settings, nullptr) == edited);
 }
 
 TEST(window_type_shows_while_the_games_art_is_in_use_and_picks_a_type_or_follows_the_game)

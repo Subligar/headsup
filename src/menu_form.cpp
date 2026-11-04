@@ -1972,7 +1972,7 @@ namespace headsup
                 for (BarWidget widget : SetupWidgetGroups()[g].widgets)
                 {
                     const LayoutOption& named = widgets[static_cast<size_t>(widget)];
-                    bool shown = Shown(c.s, widget);
+                    bool shown = AnyCopyShown(c.s, widget);
                     const bool was = shown;
                     c.form.Switch(Labeled(named.name, "setup-widget-" + std::to_string(static_cast<int>(widget))).c_str(), shown, named.tip);
                     if (shown == was) continue;

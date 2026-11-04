@@ -50,10 +50,10 @@ namespace
     }
 
     // Every cell's text in the popup, in order.
-    std::vector<std::string> Cells(const PopupContent& popup)
+    std::vector<std::string> Cells(const std::vector<PopupSection>& sections)
     {
         std::vector<std::string> cells;
-        for (const PopupSection& section : popup.sections)
+        for (const PopupSection& section : sections)
             for (const PopupRow& row : section.rows)
                 for (const PopupCell& cell : row.cells)
                     cells.push_back(Joined(cell.text));
@@ -91,44 +91,37 @@ TEST(a_processor_time_that_goes_back_reports_nothing)
     CHECK(!cpu.Percent().has_value());
 }
 
-TEST(the_widget_shows_the_space_used_over_the_space_left)
+TEST(the_figures_are_the_space_used)
 {
-    const WidgetContent none = MemoryWidget(std::nullopt);
-    CHECK(none.shown && !none.hasPopup && none.subtitle.empty());
-    const WidgetContent w = MemoryWidget(MemoryReport{1532, 2563, 4095});
-    CHECK(w.shown && w.hasPopup && w.figures);
-    CHECK(Joined(w.title).find("1,532") != std::string::npos);
-    CHECK(Joined(w.subtitle).find("2.5") != std::string::npos);
-    CHECK(Joined(MemoryWidget(Left(300)).subtitle).find("300") != std::string::npos);
+    CHECK_EQ(Joined(MemoryFigures(std::nullopt)), "-");
+    CHECK_EQ(Joined(MemoryFigures(MemoryReport{1532, 2563, 4095})), "1,532 MB");
 }
 
-TEST(the_widget_turns_amber_then_red_as_the_space_left_runs_low)
+TEST(the_figures_turn_amber_then_red_as_the_space_left_runs_low)
 {
     CHECK(HeadroomOf(Left(kLowLeftMb)) == Headroom::Plenty);
     CHECK(HeadroomOf(Left(kLowLeftMb - 1)) == Headroom::Low);
     CHECK(HeadroomOf(Left(kCriticalLeftMb)) == Headroom::Low);
     CHECK(HeadroomOf(Left(kCriticalLeftMb - 1)) == Headroom::Critical);
-    const WidgetContent plenty = MemoryWidget(Left(kLowLeftMb)), low = MemoryWidget(Left(kLowLeftMb - 1)),
-                        critical = MemoryWidget(Left(kCriticalLeftMb - 1));
-    CHECK(Colors(plenty.title) == std::vector<uint32_t>{0} && Colors(plenty.subtitle) == std::vector<uint32_t>{0});
-    CHECK(Colors(low.title) == std::vector<uint32_t>{0} && Colors(low.subtitle) == std::vector<uint32_t>{kWarningColor});
-    CHECK(Colors(critical.title) == std::vector<uint32_t>{kAlarmColor} && Colors(critical.subtitle) == std::vector<uint32_t>{kAlarmColor});
+    CHECK(Colors(MemoryFigures(Left(kLowLeftMb))) == std::vector<uint32_t>{0});
+    CHECK(Colors(MemoryFigures(Left(kLowLeftMb - 1))) == std::vector<uint32_t>{kWarningColor});
+    CHECK(Colors(MemoryFigures(Left(kCriticalLeftMb - 1))) == std::vector<uint32_t>{kAlarmColor});
 }
 
 TEST(the_popup_has_the_space_the_processor_and_the_frames)
 {
-    const PopupContent popup = MemoryPopup(MemoryReport{1532, 2563, 4095}, 18.0, FrameReport{1000.0 / 30.0, 120.0}, LinuxXIState{});
+    const std::vector<PopupSection> popup = MemorySections(MemoryReport{1532, 2563, 4095}, 18.0, FrameReport{1000.0 / 30.0, 120.0}, LinuxXIState{});
     const std::vector<std::string> cells = Cells(popup);
     CHECK(Has(cells, "1,532") && Has(cells, "2,563") && Has(cells, "4,095"));
     CHECK(Has(cells, "18%") && Has(cells, "30 fps") && Has(cells, "33.3 ms") && Has(cells, "120.0 ms"));
     CHECK(!Has(cells, "xiui"));
-    const std::vector<std::string> unread = Cells(MemoryPopup(MemoryReport{1532, 2563, 4095}, std::nullopt, std::nullopt, LinuxXIState{}));
+    const std::vector<std::string> unread = Cells(MemorySections(MemoryReport{1532, 2563, 4095}, std::nullopt, std::nullopt, LinuxXIState{}));
     CHECK(!Has(unread, "%") && !Has(unread, "fps"));
 }
 
 TEST(the_popup_lists_what_linuxxi_reports_with_each_addon_largest_first)
 {
-    const PopupContent popup = MemoryPopup(MemoryReport{1532, 2563, 4095}, 18.0, std::nullopt, LinuxXIState{TwoAddons(), std::nullopt});
+    const std::vector<PopupSection> popup = MemorySections(MemoryReport{1532, 2563, 4095}, 18.0, std::nullopt, LinuxXIState{TwoAddons(), std::nullopt});
     const std::vector<std::string> cells = Cells(popup);
     CHECK(Has(cells, "588") && Has(cells, "1,348") && Has(cells, "12 MB") && Has(cells, "2,055"));
     std::vector<std::string> addons;
@@ -143,7 +136,7 @@ TEST(a_fix_linuxxi_has_switched_off_or_not_started_says_so_in_amber)
     LinuxXIReport off = TwoAddons();
     off.flags         = kPoolHooked | kGraceActive; // both switched off
     std::vector<uint32_t> amber;
-    for (const PopupSection& section : MemoryPopup(std::nullopt, std::nullopt, std::nullopt, LinuxXIState{off, std::nullopt}).sections)
+    for (const PopupSection& section : MemorySections(std::nullopt, std::nullopt, std::nullopt, LinuxXIState{off, std::nullopt}))
         for (const PopupRow& row : section.rows)
             for (const PopupCell& cell : row.cells)
                 for (const Span& span : cell.text)
@@ -157,7 +150,7 @@ TEST(the_locale_fix_is_amber_only_while_switched_off)
         LinuxXIReport r = TwoAddons();
         r.flags         = flags;
         size_t amber    = 0;
-        for (const PopupSection& section : MemoryPopup(std::nullopt, std::nullopt, std::nullopt, LinuxXIState{r, std::nullopt}).sections)
+        for (const PopupSection& section : MemorySections(std::nullopt, std::nullopt, std::nullopt, LinuxXIState{r, std::nullopt}))
             for (const PopupRow& row : section.rows)
                 for (const PopupCell& cell : row.cells)
                     for (const Span& span : cell.text)
@@ -173,6 +166,6 @@ TEST(the_locale_fix_is_amber_only_while_switched_off)
 TEST(a_report_of_another_version_names_the_version)
 {
     const std::vector<std::string> cells =
-        Cells(MemoryPopup(MemoryReport{1532, 2563, 4095}, std::nullopt, std::nullopt, LinuxXIState{std::nullopt, 7}));
+        Cells(MemorySections(MemoryReport{1532, 2563, 4095}, std::nullopt, std::nullopt, LinuxXIState{std::nullopt, 7}));
     CHECK(Has(cells, "7"));
 }

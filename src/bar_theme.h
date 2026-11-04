@@ -65,33 +65,30 @@ namespace headsup
 
     // A fixed theme's palette; Custom's is the settings' own (PaletteFor in bar_look.h).
     const BarPalette& PaletteOf(BarTheme theme);
-    // The menu's name for a theme.
 
-    // Pixel sizes, following the bar's height H.
+    // Pixel sizes, each a share of the bar's height H (MetricsFor).
     struct BarMetrics
     {
         float height;       // H, clamped to kMinBarHeight..kMaxBarHeight
-        float title;        // 0.40 H or the set size at most: FitTextRow makes both lines smaller when their ink would
-                            // not fit
-        float subtitle;     // 0.33 H, or 0.33 / 0.40 of the set size, at most
+        float title;        // or the set size: the most, as FitTextRow makes both lines smaller when their ink would not fit
+        float subtitle;     // or its share of the set size: the most, as the title's is
         bool titleSet;      // a set size: FitTextRow keeps it and shrinks only the detail line, never the title
-        float icon;         // 0.50 H
-        float padding;      // 0.33 H inside a widget, left and right
-        float gap;          // 0.17 H between pills, around the target, after a widget's icons and around a popup
-        float cap;          // 0.64 H for an ornate end cap's width, 0.15 H clear either side of its diamond
-        float diamond;      // 0.22 H
-        float pillHeight;   // 0.80 H, rounded to whole pixels by PillRow
-        float pillRadius;   // 0.17 H
-        float below;        // 0.28 H for the glow or shadow under the strip
-        float popupText;    // 0.39 H, or the set size
-        float heading;      // 0.33 H, following the popup's text size
-        float popupPadding; // 0.36 H, following the popup's text size
-        float rowGap;       // 0.11 H between popup rows, following the popup's text size
-        float panelRadius;  // ornate 0.11 H, pills 0.28 H, following the popup's text size; none for the art's corners
+        float icon;
+        float padding;      // inside a widget, left and right
+        float gap;          // between pills, around the target, after a widget's icons and around a popup
+        float cap;          // an ornate end cap's width, with clear space either side of its diamond
+        float diamond;
+        float pillHeight;   // rounded to whole pixels by PillRow
+        float pillRadius;
+        float below;        // the glow or shadow under the strip
+        float popupText;    // or the set size
+        float heading;      // this and the rest follow the popup's text size
+        float popupPadding;
+        float rowGap;       // between popup rows
+        float panelRadius;  // by shape; none for the art's corners
         bool operator==(const BarMetrics&) const = default;
     };
-    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText = kAutoBarTextSize,
-        int popupText = kAutoPopupTextSize);
+    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText, int popupText);
 
     // Ornate titles are Marcellus SC; everything else is the bundled Barlow Condensed.
     const char* TitleFont(BarShape shape);

@@ -179,7 +179,7 @@ TEST(the_exp_says_what_it_is_set_to_earned_to_next_and_a_percent_in_that_order)
     };
     const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
     const auto title = [](const WidgetContent& w) { return w.title.front().text; };
-    CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst)), "7,655 EXP to next"); // as before
+    CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst, kDefaultExpText)), "7,655 EXP to next"); // as before
     CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst, bits({ExpText::Percent}))), "61%");
     CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst,
                  bits({ExpText::Percent, ExpText::Earned, ExpText::ToNext}))),
@@ -198,7 +198,7 @@ TEST(the_exp_says_what_it_is_set_to_earned_to_next_and_a_percent_in_that_order)
     for (const JobLayout layout : {JobLayout::JobsFirst, JobLayout::ExpFirst, JobLayout::ExpOnly})
     {
         const WidgetContent w = JobWidget(level30, ExpBarPlace::Under, true, layout, 0);
-        CHECK(w.title.size() == 1 && w.title.front().text == JobWidget(level30, ExpBarPlace::Under, true, JobLayout::JobsFirst).title.front().text);
+        CHECK(w.title.size() == 1 && w.title.front().text == JobWidget(level30, ExpBarPlace::Under, true, JobLayout::JobsFirst, kDefaultExpText).title.front().text);
         CHECK(w.title.front().tone == Tone::Normal && w.subtitle.empty() && w.progress.has_value());
     }
 }
@@ -213,7 +213,7 @@ TEST(the_exp_widget_is_its_bar_with_each_text_on_the_side_it_is_set_to)
     };
     const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
     const WidgetContent w =
-        ExpWidget(level30, {ExpTextPlace::Above, ExpTextPlace::Right, ExpTextPlace::Right}, 150, 6);
+        ExpWidget(level30, {ExpTextPlace::Above, ExpTextPlace::Right, ExpTextPlace::Right}, 150, 6, Align::Center);
     CHECK(w.meter && w.title.empty() && w.hasPopup);
     CHECK(std::fabs(w.meter->done - 12345.0f / 20000.0f) < 1e-6f && w.meter->width == 150 && w.meter->height == 6);
     CHECK_EQ(said(w.meter->above), "12,345 / 20,000 EXP");
@@ -221,12 +221,12 @@ TEST(the_exp_widget_is_its_bar_with_each_text_on_the_side_it_is_set_to)
     CHECK(w.meter->left.empty() && w.meter->below.empty());
     // At the cap the bar fills with limit points, and To Next says the merits.
     const WidgetContent capped =
-        ExpWidget(JobReport{AtCap(3, 4000), std::nullopt}, {ExpTextPlace::Left, ExpTextPlace::Below, ExpTextPlace::Off}, 150, 6);
+        ExpWidget(JobReport{AtCap(3, 4000), std::nullopt}, {ExpTextPlace::Left, ExpTextPlace::Below, ExpTextPlace::Off}, 150, 6, Align::Center);
     CHECK(capped.meter && std::fabs(capped.meter->done - 0.4f) < 1e-6f);
     CHECK_EQ(said(capped.meter->left), "4,000 / 10,000 LP");
     CHECK_EQ(said(capped.meter->below), "3 merits");
     CHECK(capped.meter->above.empty() && capped.meter->right.empty());
     // Before the server has sent the jobs, a dash.
-    const WidgetContent none = ExpWidget(std::nullopt, kDefaultExpPlaces, 150, 6);
+    const WidgetContent none = ExpWidget(std::nullopt, kDefaultExpPlaces, 150, 6, Align::Center);
     CHECK(!none.meter && none.title.front().text == "-");
 }
