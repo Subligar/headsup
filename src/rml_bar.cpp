@@ -30,7 +30,7 @@ namespace headsup
         m_Dividers = {};
         m_RightCap = nullptr;
         m_Help     = nullptr;
-        m_HelpRml.clear();
+        m_HelpDrawn.reset();
         ClosePopup();
     }
 
@@ -383,33 +383,36 @@ namespace headsup
             const float left           = HelpBarLeft(m);
             const float room           = HelpBarWidth(screenWidth, look.settings.helpBarWidth) - left -
                                2.0f * m.padding - (bagWidth > 0.0f ? bagWidth + m.gap : 0.0f);
-            const HelpBarText& text = m_HelpBar.Get(
+            const HelpBarFit& fit = m_HelpBar.Get(
                 HelpBarKey{*state.strip, captionFace.family, helpFace.family, WholePixels(captionFace.size),
                     WholePixels(helpFace.size), std::lround(std::floor(room * kFitSteps)),
                     std::lround(m.padding * kFitSteps)},
                 [&](const HelpBarKey& k) {
-                    return HelpBarLine(k.strip, static_cast<float>(k.room) / kFitSteps,
+                    HelpBarFit made{HelpBarLine(k.strip, static_cast<float>(k.room) / kFitSteps,
                         static_cast<float>(k.gap) / kFitSteps,
                         [&](const std::string& s) { return Width(host, s, captionFace); },
-                        [&](const std::string& s) { return Width(host, s, helpFace); });
+                        [&](const std::string& s) { return Width(host, s, helpFace); })};
+                    made.captionWidth = Width(host, made.text.caption, captionFace);
+                    made.helpWidth    = Width(host, made.text.help, helpFace);
+                    return made;
                 });
-            cut           = text.cut;
-            parts.caption = text.caption;
-            parts.help    = text.help;
+            cut           = fit.text.cut;
+            parts.caption = fit.text.caption;
+            parts.help    = fit.text.help;
             const float height = HelpBarHeight(look.settings.helpBarHeight, rows.helpBarHeight);
-            parts.row          = PlaceHelpBar(left, top, height, m.padding, m.gap,
-                Width(host, parts.caption, captionFace), bagWidth, Width(host, parts.help, helpFace));
+            parts.row          = PlaceHelpBar(left, top, height, m.padding, m.gap, fit.captionWidth, bagWidth, fit.helpWidth);
             // Where the player moved it from its place under the top bar.
             for (float* x : {&parts.row.box.x, &parts.row.captionX, &parts.row.bagX, &parts.row.helpX})
                 *x += offsetX;
         }
-        std::string rml = HelpBarRml(parts, look, rows.place);
-        if (m_Help != nullptr && rml != m_HelpRml)
+        const BarRect box = parts.row.box;
+        std::pair drawn{std::move(parts), look.settings.helpBarBackground};
+        if (m_Help != nullptr && drawn != m_HelpDrawn)
         {
-            m_Help->SetInnerRML(rml);
-            m_HelpRml = std::move(rml);
+            m_Help->SetInnerRML(HelpBarRml(drawn.first, look, rows.place));
+            m_HelpDrawn = std::move(drawn);
         }
-        return parts.row.box;
+        return box;
     }
 
     bool RmlBar::PopupDocumentFor(RmlHost& host, const BarLook& look)

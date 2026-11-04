@@ -123,6 +123,7 @@ namespace headsup
         HelpBarRow row;
         std::string caption, help;
         std::optional<Span> bag;
+        bool operator==(const HelpBarParts&) const = default;
     };
     std::string HelpBarRml(const HelpBarParts& parts, const BarLook& look, const BarTextPlace& place);
     constexpr const char* kHelpId = "help";

@@ -130,6 +130,11 @@ namespace headsup
         };
         // A popup's layout follows its content, its pin, the bar's height and shape and its text size, which pick its
         // sizes and fonts, and the room below the bar, which cuts it.
+        struct HelpBarFit
+        {
+            HelpBarText text;
+            float captionWidth = 0.0f, helpWidth = 0.0f;
+        };
         struct PopupKey
         {
             PopupContent content;
@@ -216,8 +221,9 @@ namespace headsup
         Rml::Element* m_RightCap = nullptr;
         std::optional<float> m_RightCapLeft;
         Rml::Element* m_Help = nullptr;
-        std::string m_HelpRml;
-        Memo<HelpBarKey, HelpBarText> m_HelpBar;
+        // What the help bar's markup was made from, with Background.
+        std::optional<std::pair<HelpBarParts, bool>> m_HelpDrawn;
+        Memo<HelpBarKey, HelpBarFit> m_HelpBar;
         Rml::ElementDocument* m_PopupDocument = nullptr;
         PopupDocumentKey m_PopupDocumentKey;
         Rml::Element* m_Popup = nullptr;
