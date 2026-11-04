@@ -473,7 +473,9 @@ namespace headsup
         }
     }
 
+#ifdef HEADSUP_DEV
     std::span<const uint32_t> NameHook::CallerReturns() const { return g_CallerReturns; }
+#endif
 
     void NameHook::SetDevice(IDirect3DDevice8* device) { g_Device = device; }
 
@@ -531,8 +533,10 @@ namespace headsup
             patches.push_back(Retarget(call, Address(call), Address(&HeadsUpEntityNameGate)));
         }
         if (const std::string failure = PutIn(patches); !failure.empty()) return failure;
-        m_Patches    = std::move(patches);
+        m_Patches = std::move(patches);
+#ifdef HEADSUP_DEV
         m_ModuleBase = moduleBase;
+#endif
         return "";
     }
 
@@ -997,6 +1001,7 @@ namespace headsup
         const ProcessMemory kProcessMemory{ProcessReadable, ProcessCopy};
     }
 
+#ifdef HEADSUP_DEV
     StripRead StripTextReader::Read(StripWindow window) const
     {
         const uint32_t slot   = window == StripWindow::Help ? m_Sites.helpSlot : m_Sites.titleSlot;
@@ -1008,6 +1013,7 @@ namespace headsup
             return StripRead{reader.Owner(), 0, {}, why};
         return StripRead{reader.Owner(), reader.Owner() + textAt, {object.begin(), object.end()}, ""};
     }
+#endif
 
     bool StripTextReader::Read(StripWindow window, StripObject& into)
     {

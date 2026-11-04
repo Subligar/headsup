@@ -57,8 +57,10 @@ namespace headsup
         std::string Stop();
         bool Running() const { return !m_Patches.empty(); }
 
+#ifdef HEADSUP_DEV
         uint32_t ModuleBase() const { return m_ModuleBase; }
         std::span<const uint32_t> CallerReturns() const;
+#endif
 
         // At the end of Present, once everything has read the frame's names: forget them, and say whose the next
         // frame's are.
@@ -74,7 +76,9 @@ namespace headsup
 
     private:
         std::vector<CodePatch> m_Patches; // the jump into the gate, then the calls into the entity wrapper
+#ifdef HEADSUP_DEV
         uint32_t m_ModuleBase = 0;
+#endif
     };
 
     // Sends the game's two target arrows through HeadsUp: the calls that draw them (native_locate.h) go to a gate that
@@ -217,6 +221,7 @@ namespace headsup
         std::vector<CodePatch> m_Patches;
     };
 
+#ifdef HEADSUP_DEV
     // One strip window's text object as read, or why not.
     struct StripRead
     {
@@ -225,6 +230,7 @@ namespace headsup
         std::vector<uint8_t> object; // kStripObjectBytes, empty when it could not be read
         std::string why;             // empty when read
     };
+#endif
 
     // The game's top-strip text (native_locate.h's LocateStripText), read on the game's thread at Present.
     class StripTextReader
@@ -232,9 +238,11 @@ namespace headsup
     public:
         // Finds the slots and offsets: "" when found, else why not.
         std::string Find();
+#ifdef HEADSUP_DEV
         // Each check fails closed: no slot, a 0 owner (the title screen, character select, a teardown), an owner
         // whose window record does not name the window, or memory that cannot be read. Every check, every call.
         StripRead Read(StripWindow window) const;
+#endif
         // Each frame: the window's text object into into, false when hidden. Memory is checked only where the chain
         // to it changed (StripWindowReader).
         bool Read(StripWindow window, StripObject& into);

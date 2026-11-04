@@ -17,8 +17,5 @@ namespace headsup
     // Every type counts: the caller reads this many vertices from the draw.
     uint32_t VertexCount(uint32_t primitiveType, uint32_t primitiveCount);
 
-    // x, y, z and rhw; the diffuse color, when present, follows.
-    constexpr uint32_t kPretransformedPositionBytes = 4 * sizeof(float);
-
     constexpr uint32_t kQuadVertices = 4;
 }
