@@ -1266,16 +1266,21 @@ namespace headsup
                 const std::span<const TravelRoute> routes = TravelRoutes();
                 for (size_t first = 0, last = 0; first < routes.size(); first = last)
                 {
+                    // The route, whether its ship arrives or departs next, and how long until it does.
+                    constexpr int kColumns = 3;
                     PopupTab kind{Text(routes[first].group), {}};
+                    PopupRow grid{RowKind::Grid, kColumns, {}};
                     for (last = first; last < routes.size() && std::string_view(routes[last].group) == routes[first].group; ++last)
                     {
-                        std::vector<Span> when = SailingText(routes[last], state.unixMs);
-                        PopupRow row = Labeled(routes[last].name, when.front());
-                        for (size_t s = 1; s < when.size(); ++s)
-                            row.cells.back().text.push_back(when[s]);
-                        row.nested = true;
-                        kind.rows.push_back(std::move(row));
+                        const Sailing next = NextSailing(routes[last], state.unixMs);
+                        PopupCell time     = Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn)));
+                        time.align         = Align::Right;
+                        grid.cells.push_back(Cell(Text(routes[last].name)));
+                        grid.cells.push_back(Cell(Text(next.boarding ? "Departs" : "Arrives", Tone::Dim)));
+                        grid.cells.push_back(std::move(time));
                     }
+                    grid.nested = true;
+                    kind.rows.push_back(std::move(grid));
                     ScrollsBy(kind.rows.front(), state, travel.heading + "/" + kind.name.text);
                     travel.tabs.push_back(std::move(kind));
                 }

@@ -2562,24 +2562,34 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
         kinds.push_back(tab.name.text);
     CHECK((kinds == std::vector<std::string>{"Airships", "Boats", "Manaclipper", "Barge"}));
     CHECK(first.tab == 0 && first.rows.empty());
-    // Each tab lists its kind's routes, set in.
+    // Each tab lists its kind's routes, set in, in three columns: the route, whether the ship arrives or departs
+    // next, and how long until it does, against the right.
     const auto airships = std::ranges::count_if(TravelRoutes(), [](const TravelRoute& r) { return std::string(r.group) == "Airships"; });
-    CHECK_EQ(first.tabs[0].rows.size(), static_cast<size_t>(airships));
-    for (const PopupRow& row : first.tabs[0].rows)
-        CHECK(row.nested);
-    const std::vector<std::string> routes = Lines(PopupSection{"", first.tabs[0].rows});
-    CHECK(std::ranges::find(routes, "Jeuno to San d'Oria Boards in 5:16") != routes.end());
+    const auto rows = [](const PopupTab& tab) {
+        CHECK(tab.rows.size() == 1 && tab.rows[0].kind == RowKind::Grid && tab.rows[0].columns == 3 && tab.rows[0].nested);
+        std::vector<std::array<std::string, 3>> out;
+        const std::vector<PopupCell>& cells = tab.rows[0].cells;
+        for (size_t i = 0; i + 2 < cells.size(); i += 3)
+        {
+            CHECK(cells[i + 2].align == Align::Right && cells[i + 2].text.size() == 1); // only the time ticks
+            out.push_back({Joined(cells[i].text), Joined(cells[i + 1].text), Joined(cells[i + 2].text)});
+        }
+        return out;
+    };
+    const auto route = [&](const PopupTab& tab, const char* name) {
+        for (const std::array<std::string, 3>& r : rows(tab))
+            if (r[0] == name) return r;
+        return std::array<std::string, 3>{};
+    };
+    CHECK_EQ(rows(first.tabs[0]).size(), static_cast<size_t>(airships));
+    CHECK((route(first.tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Arrives", "5:16"}));
     // Picking Boats picks its tab.
     std::map<std::string, std::string> picked{{"Travel", "Boats"}};
     state.pickedTabs = &picked;
     CHECK_EQ(travel().tab, static_cast<size_t>(1));
     picked["Travel"] = "Airships";
     state.unixMs = kVanaEpochUnixMs + 864LL * 1000 + 100 * 1000; // 100 s into a cycle: its door opened at 28 s
-    const std::vector<std::string> boarding = Lines(PopupSection{"", travel().tabs[0].rows});
-    CHECK(std::ranges::find(boarding, std::string("Jeuno to San d'Oria Boarding") + kDot + "leaves in 1:22") != boarding.end());
-    // The time is a span of its own, so only it moves as it ticks.
-    for (const PopupRow& row : travel().tabs[0].rows)
-        CHECK(row.cells.back().text.back().text.find(' ') == std::string::npos);
+    CHECK((route(travel().tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Departs", "1:22"}));
 }
 
 TEST(each_guild_has_a_tab_of_its_shops)
