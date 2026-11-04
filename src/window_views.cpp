@@ -112,15 +112,15 @@ namespace headsup
             by(button.place[3], keptY)};
     }
 
-    std::vector<ButtonSpot> ButtonSpots(uint32_t mcd, const ProcessMemory& memory)
+    size_t ButtonSpots(uint32_t mcd, const ProcessMemory& memory, std::span<ButtonSpot> out)
     {
         constexpr uint32_t kMcdList = 0x14, kNodeX = 0x2A, kNodeY = 0x2C;
         constexpr uint32_t kNodeBytes = kNodePlace + 4 * sizeof(int16_t);
         constexpr uint16_t kButtonKind = 1; // a node's first word
-        std::vector<ButtonSpot> buttons;
+        size_t count  = 0;
         uint32_t link = 0;
-        if (!Copy(memory, mcd + kMcdList, &link, sizeof(link))) return buttons;
-        for (size_t links = 0; link != 0 && links < kMaxListLinks; ++links)
+        if (!Copy(memory, mcd + kMcdList, &link, sizeof(link))) return 0;
+        for (size_t links = 0; link != 0 && count < out.size() && links < kMaxListLinks; ++links)
         {
             std::array<uint8_t, kLinkBytes> raw;
             if (!Copy(memory, link, raw.data(), raw.size())) break;
@@ -129,15 +129,15 @@ namespace headsup
             if (raw[kLinkSkip] == 0 && node != 0 && Copy(memory, node, entry.data(), entry.size()) &&
                 ReadAt<uint16_t>(entry.data(), 0) == kButtonKind)
             {
-                if (std::ranges::find(buttons, node, &ButtonSpot::node) != buttons.end()) break;
-                ButtonSpot& button = buttons.emplace_back(
-                    ButtonSpot{node, ReadAt<int16_t>(entry.data(), kNodeX), ReadAt<int16_t>(entry.data(), kNodeY)});
+                if (std::ranges::find(out.first(count), node, &ButtonSpot::node) != out.first(count).end()) break;
+                ButtonSpot& button = out[count++];
+                button = ButtonSpot{node, ReadAt<int16_t>(entry.data(), kNodeX), ReadAt<int16_t>(entry.data(), kNodeY)};
                 for (size_t edge = 0; edge < button.place.size(); ++edge)
                     button.place[edge] = ReadAt<int16_t>(entry.data(), kNodePlace + edge * sizeof(int16_t));
             }
             link = ReadAt<uint32_t>(raw.data(), kLinkNext);
         }
-        return buttons;
+        return count;
     }
 
     bool SwallowsClick(uint32_t message, int x, int y, std::span<const WindowRect> hidden)
@@ -159,26 +159,27 @@ namespace headsup
     FrameShifts ShiftsOf(std::span<const FrameWindow> frame, std::optional<int> chosen, std::optional<int> placedUnder,
         int band, int screenRight, int screenBottom)
     {
-        std::vector<FrameWindow> left, right;
-        for (const FrameWindow& w : frame)
-            (OnLeftSide(w.left, screenRight) ? left : right).push_back(w);
-        const std::optional<int> leftTop = FrameTop(left, screenBottom), rightTop = FrameTop(right, screenBottom);
         const std::optional<int> top = FrameTop(frame, screenBottom);
         if (!top) return {};
         const int viewShift = FrameShift(*top, chosen, placedUnder.value_or(band), band);
-        const auto own = [&](std::optional<int> sideTop) {
-            if (!sideTop || *sideTop == *top) return viewShift;
-            return FrameShift(*sideTop, std::nullopt, placedUnder.value_or(band), band);
-        };
-        const auto side = [&](std::span<const FrameWindow> windows, std::optional<int> sideTop) {
-            SideShift shift{own(sideTop), std::nullopt};
-            for (const FrameWindow& w : windows)
-                if (HangsInView(w, screenBottom) && w.top < kGameUnderStripRow)
+        // Read in place: the game's window draw calls this, where nothing may allocate.
+        const auto side = [&](bool leftSide) {
+            std::optional<int> sideTop;
+            SideShift shift;
+            for (const FrameWindow& w : frame)
+            {
+                if (OnLeftSide(w.left, screenRight) != leftSide || !HangsInView(w, screenBottom)) continue;
+                sideTop = std::min(sideTop.value_or(w.top), w.top);
+                if (w.top < kGameUnderStripRow)
                     shift.topRow = TopRow{std::min(shift.topRow ? shift.topRow->left : w.left, w.left),
                         std::max(shift.topRow ? shift.topRow->right : w.right, w.right)};
+            }
+            shift.shift = !sideTop || *sideTop == *top
+                              ? viewShift
+                              : FrameShift(*sideTop, std::nullopt, placedUnder.value_or(band), band);
             return shift;
         };
-        return {side(left, leftTop), side(right, rightTop)};
+        return {side(true), side(false)};
     }
 
     int FrameShifts::For(int windowLeft, int windowRight, int screenRight) const

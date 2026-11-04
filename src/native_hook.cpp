@@ -311,6 +311,7 @@ namespace headsup
         // The frame's windows from that list, read at its first window draw, and what they were found to need.
         std::array<OpenWindow, kMaxWindowKeys> g_OpenWindows{};
         std::array<FrameWindow, kMaxWindowKeys> g_FrameWindows{};
+        std::array<ButtonSpot, kMaxListLinks> g_Buttons{}; // the buttons of the window MoveTo moves
         uint32_t g_PlannedFrame = 0;     // the frame whose first window draw placed its windows
         WindowKeyList g_PlannedKeys;     // the windows shown at the last Present's plan
         FrameShifts g_FrameShifts;
@@ -335,7 +336,7 @@ namespace headsup
         __attribute__((thiscall)) void MouseOffUnlessKept(uintptr_t controller, int on)
         {
             const auto down = [](uint8_t vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; };
-            if (on == 0 && !g_KeepKeys.empty() && KeepsPointer(HeldKeys(down), g_KeepKeys)) return;
+            if (on == 0 && !g_KeepKeys.empty() && KeepsPointer(down, g_KeepKeys)) return;
             reinterpret_cast<MouseUseFn>(g_MouseUse)(controller, on);
         }
 
@@ -1176,7 +1177,8 @@ namespace headsup
             const bool readable             = copy != nullptr && Readable(copy, kWindowRectBytes);
             WindowRect kept{};
             if (readable) std::memcpy(kept.data(), copy, kWindowRectBytes);
-            for (const ButtonSpot& button : ButtonSpots(mcd, kProcessMemory))
+            const size_t buttons = ButtonSpots(mcd, kProcessMemory, g_Buttons);
+            for (const ButtonSpot& button : std::span(g_Buttons).first(buttons))
                 if (const auto place = PlaceKept(button, window[0], window[1]);
                     place && Readable(Pointer(button.node + kNodePlace), sizeof(*place)))
                     std::memcpy(reinterpret_cast<void*>(button.node + kNodePlace), place->data(), sizeof(*place));
