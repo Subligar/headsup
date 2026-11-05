@@ -454,9 +454,10 @@ namespace headsup
                ";margin-top:" + Px(-kContentInset) + ";}";
         css += ".mtext{position:absolute;white-space:pre;}";
         css += ".mbar{position:absolute;background-color:" + RcssColor(p.divider) + ";}";
-        // An EXP bar among a line's text: as long as kInlineBarEms of its letters, on their middle.
-        css += ".ibar{display:inline-block;vertical-align:middle;width:" + RcssNumber(kInlineBarEms) + "em;height:" +
-               RcssNumber(kInlineBarThick) + "em;background-color:" + RcssColor(p.divider) + ";}";
+        // An EXP bar among a line's text, on its letters' middle; its fill a block, as a span takes no width.
+        css += ".ibar{display:inline-block;vertical-align:middle;width:" + Px(InlineBarWidth(m)) + ";height:" +
+               Px(InlineBarThickness(m)) + ";background-color:" + RcssColor(p.divider) + ";}";
+        css += ".ibar .fill{display:block;}";
         // Progress is a gradient that pulses.
         css += ".fill{height:100%;decorator:horizontal-gradient(" + RcssColor(p.accent) + " " + RcssColor(p.accentEnd) +
                ");animation:1.8s sine-in-out infinite alternate pulse;}";

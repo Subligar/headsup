@@ -1329,7 +1329,7 @@ namespace headsup
             const auto flag = [&](const std::string& key, bool v) { StoreBool(store, CopyKey(key, w), v); };
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
-            text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
+            if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
             flag(widget + kBackgroundSuffix, o.background);
             StoreFloat(store, CopyKey(widget + kSpacingSuffix, w), static_cast<float>(o.spacing));
             StoreFloat(store, CopyKey(widget + kPaddingSuffix, w), static_cast<float>(o.padding));

@@ -772,7 +772,8 @@ namespace headsup
                     if (kind == BarWidget::EarthTime) form.Switch(label.c_str(), o.clockSeconds, row.tip);
                     break;
                 case WidgetTabsRow::Design:
-                    if (!bar) Designer(c, widget);
+                    // The EXP meter and World Info's conquest counts are laid out without a design.
+                    if (!bar && !(kind == BarWidget::World && o.worldLine == WorldLine::Conquest)) Designer(c, widget);
                     break;
                 case WidgetTabsRow::ExpMeter:
                     if (kind == BarWidget::Job) form.Switch(label.c_str(), o.expMeter, row.tip);

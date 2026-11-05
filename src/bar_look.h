@@ -102,11 +102,12 @@ namespace headsup
     constexpr float kCapScale      = 1.4f;  // an end cap's diamond, in diamonds
     constexpr float kLineIconGap   = 2.0f;  // pixels before an icon or coin among a line's text
     constexpr float kPictureGap    = 6.0f;  // before a game picture there
-    constexpr float kInlineBarEms  = 3.0f;  // an EXP bar there: this long, in its letters' size
-    constexpr float kInlineBarThick = 0.3f; // and this thick
     constexpr float kMeterTextGap  = 2.0f;  // between a meter's bar and the text above or below it
-    // The room a span's mark takes before its text, at letters size pixels tall.
-    float MarkWidth(const Span& span, float size);
+    // An EXP bar among a line's text: two bar heights long and a seventh of one thick, as the bar beside the text was.
+    float InlineBarWidth(const BarMetrics& metrics);
+    float InlineBarThickness(const BarMetrics& metrics);
+    // The room a span's mark takes before its text, at letters size pixels tall, an EXP bar barWidth.
+    float MarkWidth(const Span& span, float size, float barWidth);
     // What a widget's title and detail line can hold, for how far their ink reaches: capitals, figures (taller
     // than the capitals in Marcellus, and some descend), a "[S]" zone's brackets, the bags' slash, descenders
     // (Marcellus's Q and J too) and commas; the detail line's ascenders, descenders and comma. Popup text holds

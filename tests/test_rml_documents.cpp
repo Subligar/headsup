@@ -226,3 +226,35 @@ TEST(a_target_without_its_background_looks_as_any_other_widget_lit_or_not)
         CHECK_EQ(rml.Said(), "");
     }
 }
+
+TEST(an_exp_bar_in_a_widgets_line_draws_as_long_and_thick_as_the_old_bar_beside_the_text_filled_to_its_share)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
+        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
+    Settings settings;
+    const BarLook look = LookOf(settings.customPalette, settings);
+    test::RmlSession rml;
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Job));
+    WidgetContent c;
+    c.shown     = true;
+    Span exp    = Text("");
+    exp.bar     = 0.25f;
+    c.title     = {Text("WAR 30")};
+    c.subtitle  = {Text("1,200 EXP to next"), Text("  "), exp};
+    widget->SetClass(kHiddenClass, false);
+    widget->SetInnerRML(WidgetRml(c, look, {}, {}));
+    rml.context->Update();
+    Rml::ElementList bars, fills;
+    widget->GetElementsByClassName(bars, "ibar");
+    widget->GetElementsByClassName(fills, "fill");
+    CHECK(bars.size() == 1 && fills.size() == 1);
+    // At a 45 px bar: two bar heights long (90) and 0.14 of one thick (6), as the bar beside the text was.
+    const Rml::Vector2f track = bars.front()->GetBox().GetSize(Rml::BoxArea::Border);
+    CHECK_EQ(track.x, 90.0f);
+    CHECK_EQ(track.y, 6.0f);
+    const Rml::Vector2f fill = fills.front()->GetBox().GetSize(Rml::BoxArea::Border);
+    CHECK(std::abs(fill.x - track.x / 4.0f) < 1.0f && fill.y == track.y);
+    CHECK_EQ(rml.Said(), "");
+}

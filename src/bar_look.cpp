@@ -19,6 +19,9 @@ namespace headsup
         constexpr float kCardStep = 0.07f, kInsetShade = 0.4f, kLabelShare = 0.3f, kMutedShare = 0.4f;
         constexpr float kTitleScale      = 1.35f; // a popup title, in popupText
         constexpr float kCoinScale       = 0.75f; // gil's coin, in icons
+        constexpr float kInlineBarLength = 2.0f;  // an EXP bar among a line's text: this many bar heights long
+        constexpr float kInlineBarShare  = 0.14f; // and this thick, of the bar's height
+        constexpr float kLeastInlineBar  = 2.0f;
         constexpr float kFrameRadius     = 3.0f;  // the ornate target frame and hover tint
         constexpr int kLitTarget         = 2;     // a hovered ornate target's tint, in hover tints' alpha
         constexpr float kHelpPadShare    = 0.5f;   // of the gap: clear above and below the help bar's row
@@ -236,12 +239,19 @@ namespace headsup
 
     int CoinPixels(const BarMetrics& metrics) { return WholePixels(metrics.icon * kCoinScale); }
 
-    float MarkWidth(const Span& span, float size)
+    float InlineBarWidth(const BarMetrics& metrics) { return std::round(metrics.height * kInlineBarLength); }
+
+    float InlineBarThickness(const BarMetrics& metrics)
+    {
+        return std::max(kLeastInlineBar, std::round(metrics.height * kInlineBarShare));
+    }
+
+    float MarkWidth(const Span& span, float size, float barWidth)
     {
         const float side = std::round(size);
         return span.picture != GamePicture::None ? kPictureGap + side
                : span.icon || span.coin          ? kLineIconGap + side
-               : span.bar                        ? kInlineBarEms * size
+               : span.bar                        ? barWidth
                                                  : 0.0f;
     }
 

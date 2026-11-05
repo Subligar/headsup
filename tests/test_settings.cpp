@@ -1115,6 +1115,8 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     const Settings loaded = LoadSettings(saved);
     CHECK(loaded.Widget(BarWidget::Zone).design == s.Widget(BarWidget::Zone).design);
     CHECK(loaded.Widget(second).design == s.Widget(second).design);
+    // Game help has no parts, and no design to save.
+    CHECK(!saved.values.contains("barGameHelpDesign"));
     // A design a hand broke is made whole: every part once.
     saved.values["barZoneDesign"] = "name name";
     CHECK_EQ(DesignText(LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -crest -nation");

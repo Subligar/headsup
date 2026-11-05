@@ -143,5 +143,8 @@ TEST(a_narrow_target_cuts_its_name_wherever_it_sits)
     CHECK_EQ(WidestTextSpan({aggro, Text("Goblin Thug"), Text("  (4.2)", Tone::Dim)}), 1u);
     CHECK_EQ(WidestTextSpan({Text("  (4.2)", Tone::Dim), Text("  "), Text("Goblin Thug")}), 2u);
     CHECK_EQ(WidestTextSpan({aggro}), 1u);
+    // A short name beside a longer distance: the name is still the one cut, as the gaps and the dim distance are not.
+    CHECK_EQ(WidestTextSpan({Text("Bat", Tone::Own), Text("  (12.3)", Tone::Dim)}), 0u);
+    CHECK_EQ(WidestTextSpan({Text("  "), aggro, Text("  Crab")}), 2u);
     CHECK_EQ(WidestTextSpan({}), 0u);
 }

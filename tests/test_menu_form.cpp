@@ -1123,3 +1123,14 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     w.Pass({{base + "end-1", kDropEvent, weather}});
     CHECK_EQ(design(), "-nation name -crest | region");
 }
+
+TEST(world_infos_designer_hides_while_it_shows_the_conquest_counts_which_have_no_parts)
+{
+    Window w;
+    const PanelWidget world{BarWidget::World};
+    w.readings.settingsOf  = {world};
+    const std::string chip = "id=\"widgets-widgets-part-" + std::to_string(SlotOf(world)) + "-";
+    CHECK(Has(Block(w.Pass(), "widgets-widgets")->rml, chip.c_str()));
+    w.settings.Widget(world).worldLine = WorldLine::Conquest;
+    CHECK(!Has(Block(w.Pass(), "widgets-widgets")->rml, chip.c_str()));
+}

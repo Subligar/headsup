@@ -86,6 +86,7 @@ namespace headsup
     // What a part of icons shows while it has none now (no target, no weather yet); nothing for a part of text.
     PartMark DefaultMark(WidgetPart part);
 
-    // Which of a line's spans has the most letters, the one cut when the line is too long; the size when none has any.
+    // Which of a line's spans is cut when the line is too long: the one with the most letters, a dim one only when no
+    // other has any; the size when none has any.
     size_t WidestTextSpan(const std::vector<Span>& line);
 }
