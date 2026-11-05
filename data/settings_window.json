@@ -357,7 +357,7 @@
                 {"key": "second-line", "name": "Second Line"},
                 {"key": "show-region-name", "name": "Show Region Name", "tip": "The zone's region on the second line. Default is on."},
                 {"key": "show-conquest", "name": "Show Conquest", "tip": "The crest of the nation that holds the region, before the zone's name, after it, or below it. Default is Below."},
-                {"key": "show-conquest-text", "name": "Show Conquest Text", "tip": "The holding nation's name after its crest. The Beastmen have no crest, so their name is all there is to show. Default is on."},
+                {"key": "show-conquest-text", "name": "Show Conquest Text", "tip": "The holding nation's name after its crest. Default is on."},
                 {"key": "show-zone-id", "name": "Show Zone ID", "tip": "The zone's number after its name in the popup. Default is off."},
                 {"key": "moon-phase", "name": "Show Moon Phase", "tip": "The moon's phase and how full it is, on the second line. Default is on."},
                 {"key": "day-of-week", "name": "Show Day of Week", "tip": "Vana'diel's day before the time, in its element's color. Default is on."},

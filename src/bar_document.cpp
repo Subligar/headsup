@@ -182,8 +182,6 @@ namespace headsup
 
     std::string GamePictureSource(GamePicture picture)
     {
-        constexpr uint16_t kGoblinMask = 511;
-        if (picture == GamePicture::BeastmenCrest) return ItemSource(kGoblinMask);
         return std::string(kHostSource) + std::string(kGameKind) + kSeparator + std::to_string(static_cast<int>(picture));
     }
 
@@ -196,6 +194,7 @@ namespace headsup
                                       : crests && is(GamePicture::SanDoriaCrest)      ? &crests->sanDoria
                                       : crests && is(GamePicture::BastokCrest)        ? &crests->bastok
                                       : crests && is(GamePicture::WindurstCrest)      ? &crests->windurst
+                                      : crests && is(GamePicture::BeastmenCrest)      ? &crests->beastmen
                                                                                       : nullptr;
         if (picture == nullptr) return std::nullopt;
         Image image{picture->width, picture->height, std::vector<uint32_t>(picture->bgra.size() / sizeof(uint32_t))};

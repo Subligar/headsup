@@ -40,7 +40,7 @@ namespace headsup
         SanDoriaCrest,
         BastokCrest,
         WindurstCrest,
-        BeastmenCrest, // the Goblin Mask's item picture: the game's files have no Beastmen crest
+        BeastmenCrest,
     };
 
     struct Span

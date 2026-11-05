@@ -954,15 +954,15 @@ TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_
     CHECK(shown().subtitle == std::vector<Span>{crest});
     o.zoneConquest = ConquestPlace::Off;
     CHECK(shown().subtitle.empty());
-    // The Beastmen have no crest in the game's files: the Goblin Mask stands in for one.
+    // The Beastmen's crest, as the conquest map shows it.
     owners[1]          = Nation::Beastmen;
     state.owners       = owners;
     o.zoneConquest     = ConquestPlace::Right;
     o.zoneConquestText = true;
-    const Span mask{"", Tone::Normal, 0, GamePicture::BeastmenCrest};
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), mask, Span{" Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
+    const Span beastmen{"", Tone::Normal, 0, GamePicture::BeastmenCrest};
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), beastmen, Span{" Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
     o.zoneConquestText = false;
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), mask}));
+    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), beastmen}));
 }
 
 TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)

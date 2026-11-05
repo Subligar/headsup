@@ -209,6 +209,7 @@ namespace headsup
         constexpr std::string_view kSanDoriaCrestChunk = "scre", kSanDoriaCrest = "menu    scre    ";
         constexpr std::string_view kBastokCrestChunk   = "bcre", kBastokCrest   = "menu    bcre    ";
         constexpr std::string_view kWindurstCrestChunk = "wcre", kWindurstCrest = "menu    wcre    ";
+        constexpr std::string_view kBeastmenCrestChunk = "mcre", kBeastmenCrest = "menu    mcre    ";
         constexpr int kMailU = 32, kMessengerU = 48, kPlayOnlineV = 48, kPlayOnlineSide = 16;
 
         // What a picture chunk's header says, or why it is no picture.
@@ -543,9 +544,12 @@ namespace headsup
         Read<ColorPicture> sanDoria = NamedPicture(dat, kSanDoriaCrestChunk, kSanDoriaCrest, "San d'Oria's crest");
         Read<ColorPicture> bastok   = NamedPicture(dat, kBastokCrestChunk, kBastokCrest, "Bastok's crest");
         Read<ColorPicture> windurst = NamedPicture(dat, kWindurstCrestChunk, kWindurstCrest, "Windurst's crest");
-        for (Read<ColorPicture>* crest : {&sanDoria, &bastok, &windurst})
+        Read<ColorPicture> beastmen = NamedPicture(dat, kBeastmenCrestChunk, kBeastmenCrest, "the Beastmen's crest");
+        for (Read<ColorPicture>* crest : {&sanDoria, &bastok, &windurst, &beastmen})
             if (!crest->value) return {std::nullopt, std::move(crest->failure)};
-        return {NationCrests{std::move(*sanDoria.value), std::move(*bastok.value), std::move(*windurst.value)}, {}};
+        return {NationCrests{std::move(*sanDoria.value), std::move(*bastok.value), std::move(*windurst.value),
+                    std::move(*beastmen.value)},
+            {}};
     }
 
     Read<std::array<GlyphShape, kGlyphCount>> ReadGlyphShapes(std::span<const uint8_t> body, std::string_view picture, int width,
