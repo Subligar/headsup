@@ -185,7 +185,7 @@ PIECES = Pieces(
         'theme-files': Setting(unnamed=True, words={'save-as': True, 'name-hint': True, 'save': True, 'load': True}),
         'save-automatically': Setting(), 'save-changes': Setting(words={'save': True, 'revert': True}),
         'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
-        'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-text-size': Setting(), 'help-width': Setting(), 'help-height': Setting(),
+        'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
             'combine', 'combine-on-panel', 'combine-in-popup', 'second-line', 'show-region-name', 'show-conquest', 'show-conquest-text', 'show-zone-id', 'moon-phase', 'day-of-week', 'date', 'icons', 'background', 'spacing', 'padding', 'title-font', 'text-font', 'text-size', 'popup-text-size', 'visibility', 'show-icons', 'show-mob-level', 'show-distance', 'jobs', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'nations', 'conquest-grid', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', 'server-time', '24-hour',
             'seconds', 'layout', 'exp-text', 'exp-bar', 'exp-earned', 'exp-to-next', 'exp-percent', 'exp-align', 'bar-width', 'bar-height',

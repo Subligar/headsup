@@ -269,11 +269,6 @@ namespace headsup
     {
         return setting > kAutoHelpBarHeight ? static_cast<float>(setting) : fitted;
     }
-    float HelpBarWidth(float screenWidth, int percent)
-    {
-        const float share = static_cast<float>(percent) / static_cast<float>(kMaxHelpBarWidth);
-        return std::floor(screenWidth * share);
-    }
 
     BoxStyle PopupPanel(const BarLook& look)
     {

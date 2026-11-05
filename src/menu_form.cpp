@@ -1771,8 +1771,19 @@ namespace headsup
                 form.SliderInt(label.c_str(), s.helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize,
                     PixelsOr(Word(c, WindowWord::Auto), kAutoBarTextSize), tip);
                 break;
-            case SettingPiece::HelpWidth:
+            case SettingPiece::Anchor:
+            {
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
+                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
+                form.Segments(label.c_str(), s.helpBarAnchor, names.data(), kHelpAnchorCount, tip);
+                break;
+            }
+            case SettingPiece::FullWidth:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
+                form.Switch(label.c_str(), s.helpBarFullWidth, tip);
+                break;
+            case SettingPiece::HelpWidth:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on || s.helpBarFullWidth);
                 form.SliderInt(label.c_str(), s.helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth, [](int percent) { return Formatted("%d%%", percent); }, tip);
                 break;
             case SettingPiece::HelpHeight:

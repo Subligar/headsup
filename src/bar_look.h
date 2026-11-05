@@ -130,8 +130,6 @@ namespace headsup
     TextFace HelpFace(const BarLook& look);
     // Its set height, or fitted, as tall as its text.
     float HelpBarHeight(int setting, float fitted);
-    // The widest the help bar gets: its share of the screen's width.
-    float HelpBarWidth(float screenWidth, int percent);
     // The boxes a popup and the help bar are drawn with: a popup's panel with its outer border, a section's card (a
     // lift on the panel, rounded as a pill theme's panel is), a tag's pill height tall (the ornate themes keep their
     // gold edge around it), and the help bar's panel, bordered all round.

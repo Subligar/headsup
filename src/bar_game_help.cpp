@@ -1,9 +1,11 @@
 #include "bar_game_help.h"
 
 #include "bar_layout.h"
+#include "settings.h"
 #include "utf16.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace headsup
 {
@@ -69,11 +71,34 @@ namespace headsup
         return bar;
     }
 
-    HelpBarRow PlaceHelpBar(float left, float top, float height, float padding, float gap, float captionWidth,
-        float bagWidth, float helpWidth)
+    namespace
+    {
+        // How far a thing sits in from the left of a place spare pixels wider than it.
+        float AnchorShift(HelpAnchor anchor, float spare)
+        {
+            switch (anchor)
+            {
+            case HelpAnchor::Left: return 0.0f;
+            case HelpAnchor::Center: return std::round(spare / 2.0f);
+            case HelpAnchor::Right: return spare;
+            }
+            return 0.0f;
+        }
+    }
+
+    HelpBarSpan HelpBarRoom(float screenWidth, float margin, int percent, bool full, HelpAnchor anchor)
+    {
+        const float whole = screenWidth - 2.0f * margin;
+        const float share = static_cast<float>(percent) / static_cast<float>(kMaxHelpBarWidth);
+        const float width = full ? whole : std::min(std::floor(screenWidth * share) - margin, whole);
+        return HelpBarSpan{margin + AnchorShift(anchor, whole - width), width};
+    }
+
+    HelpBarRow PlaceHelpBar(HelpBarSpan room, HelpAnchor anchor, bool full, float top, float height, float padding,
+        float gap, float captionWidth, float bagWidth, float helpWidth)
     {
         HelpBarRow row;
-        const float start = left + padding;
+        const float start = padding;
         float x           = start + captionWidth;
         row.captionX      = start;
         if (bagWidth > 0.0f)
@@ -88,7 +113,14 @@ namespace headsup
             row.helpX = x;
             x += helpWidth;
         }
-        row.box = BarRect{left, top, x + padding - left, height};
+        const float rowWidth = x + padding;
+        const float boxWidth = full ? room.width : rowWidth;
+        const float boxX     = room.x + AnchorShift(anchor, room.width - boxWidth);
+        const float rowX     = boxX + AnchorShift(anchor, boxWidth - rowWidth);
+        row.captionX += rowX;
+        if (bagWidth > 0.0f) row.bagX += rowX;
+        if (helpWidth > 0.0f) row.helpX += rowX;
+        row.box = BarRect{boxX, top, boxWidth, height};
         return row;
     }
 

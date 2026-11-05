@@ -294,9 +294,6 @@ TEST(a_widgets_fonts_and_text_size_are_its_own_or_the_panels)
 
 TEST(the_help_bar_takes_its_set_width_text_size_and_height)
 {
-    CHECK(Near(HelpBarWidth(1920.0f, kDefaultHelpBarWidth), 960.0f));
-    CHECK(Near(HelpBarWidth(1920.0f, 25), 480.0f));
-    CHECK(Near(HelpBarWidth(1366.0f, 25), 341.0f));
     Settings settings;
     TextRow lines;
     lines.title = 16;

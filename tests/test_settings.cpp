@@ -1133,6 +1133,21 @@ TEST(separators_that_are_not_a_choice_keep_the_themes)
     CHECK(LoadSettings(store).barSeparators == BarSeparators::Theme);
 }
 
+TEST(the_help_bars_anchor_and_full_width_save_and_load_back_and_an_unknown_anchor_is_left)
+{
+    Settings s;
+    CHECK(s.helpBarAnchor == HelpAnchor::Left && !s.helpBarFullWidth);
+    s.helpBarAnchor    = HelpAnchor::Center;
+    s.helpBarFullWidth = true;
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK(saved.values["helpBarAnchor"] == "center" && saved.values["helpBarFullWidth"] == "true");
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.helpBarAnchor == HelpAnchor::Center && loaded.helpBarFullWidth);
+    saved.values["helpBarAnchor"] = "middle";
+    CHECK(LoadSettings(saved).helpBarAnchor == HelpAnchor::Left);
+}
+
 TEST(text_sizes_start_at_auto_and_clamp_to_their_range)
 {
     CHECK(Settings{}.barTextSize == kAutoBarTextSize && Settings{}.popupTextSize == kAutoPopupTextSize);

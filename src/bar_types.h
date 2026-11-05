@@ -27,6 +27,15 @@ namespace headsup
     };
     constexpr int kBarSeparatorsCount = static_cast<int>(BarSeparators::None) + 1;
 
+    // Which side of the screen the help bar keeps to, and where its text sits in a bar wider than it.
+    enum class HelpAnchor : uint8_t
+    {
+        Left,
+        Center,
+        Right,
+    };
+    constexpr int kHelpAnchorCount = static_cast<int>(HelpAnchor::Right) + 1;
+
     // Tables by BarWidget (settings keys, menu labels, defaults) hold one entry each; kDefaultLeft, kDefaultCenter and
     // kDefaultRight in bar_placement.cpp give the bar's first order; the player's is Settings::barSections.
     enum class BarWidget : uint8_t

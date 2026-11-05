@@ -47,7 +47,8 @@ namespace headsup
             {"gameWindowBorder", &Settings::gameWindowBorder}, {"fishBar", &Settings::fishBar},
             {"hideGameFishBar", &Settings::hideGameFishBar}, {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
-            {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground}};
+            {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
+            {"helpBarFullWidth", &Settings::helpBarFullWidth}};
 
         // Whole numbers are stored as floats, like every other number in settings.ini.
         struct IntKey
@@ -284,6 +285,8 @@ namespace headsup
             "australiaEastern"};
         constexpr const char* kBarSeparatorsKey                    = "barSeparators";
         const char* const kBarSeparatorsNames[kBarSeparatorsCount] = {"theme", "diamonds", "none"};
+        constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
+        const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
             "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
@@ -1236,6 +1239,7 @@ namespace headsup
         if (static_cast<int>(s.barSubtitle) >= kSubtitlePlaceCount) s.barSubtitle = d.barSubtitle;
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
         if (static_cast<int>(s.barSeparators) >= kBarSeparatorsCount) s.barSeparators = d.barSeparators;
+        if (static_cast<int>(s.helpBarAnchor) >= kHelpAnchorCount) s.helpBarAnchor = d.helpBarAnchor;
         ClampDesigner(s, d);
         for (StatusBadgeRule& status : s.statusBadges)
         {
@@ -1653,6 +1657,8 @@ namespace headsup
                 store.GetString(kBlueMagicLearnedKey, ""), static_cast<int>(s.blueMagicLearned)));
             s.barSeparators = static_cast<BarSeparators>(NameIndex(kBarSeparatorsNames, kBarSeparatorsCount,
                 store.GetString(kBarSeparatorsKey, ""), static_cast<int>(s.barSeparators)));
+            s.helpBarAnchor = static_cast<HelpAnchor>(NameIndex(kHelpAnchorNames, kHelpAnchorCount,
+                store.GetString(kHelpAnchorKey, ""), static_cast<int>(s.helpBarAnchor)));
             s.barSubtitle = static_cast<SubtitlePlace>(
                 NameIndex(kSubtitleNames, kSubtitlePlaceCount, store.GetString(kSubtitleKey, ""), static_cast<int>(s.barSubtitle)));
             std::array<std::string, kBarSectionCount> sections;
@@ -1741,6 +1747,7 @@ namespace headsup
         StoreFloat(store, kCustomThemeKey + std::string(kBorderSuffix), static_cast<float>(s.customPalette.border));
         StoreBool(store, kCustomThemeKey + std::string(kGradientSuffix), s.customPalette.gradient);
         store.Set(kBarSeparatorsKey, kBarSeparatorsNames[static_cast<int>(s.barSeparators)]);
+        store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
         store.Set(kMenuFontKey, s.menuFont.c_str());
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());
         store.Set(kFishBarLineKey, s.fishBarLine.c_str());

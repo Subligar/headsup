@@ -380,9 +380,10 @@ namespace headsup
             const TextFace captionFace = HelpCaptionFace(look), helpFace = HelpFace(look);
             parts.bag                  = StripBagFill(state);
             const float bagWidth       = parts.bag ? Width(host, parts.bag->text, captionFace) : 0.0f;
-            const float left           = HelpBarLeft(m);
-            const float room           = HelpBarWidth(screenWidth, look.settings.helpBarWidth) - left -
-                               2.0f * m.padding - (bagWidth > 0.0f ? bagWidth + m.gap : 0.0f);
+            const Settings& s          = look.settings;
+            const HelpBarSpan span =
+                HelpBarRoom(screenWidth, HelpBarLeft(m), s.helpBarWidth, s.helpBarFullWidth, s.helpBarAnchor);
+            const float room = span.width - 2.0f * m.padding - (bagWidth > 0.0f ? bagWidth + m.gap : 0.0f);
             const HelpBarFit& fit = m_HelpBar.Get(
                 HelpBarKey{*state.strip, captionFace.family, helpFace.family, WholePixels(captionFace.size),
                     WholePixels(helpFace.size), std::lround(std::floor(room * kFitSteps)),
@@ -400,7 +401,8 @@ namespace headsup
             parts.caption = fit.text.caption;
             parts.help    = fit.text.help;
             const float height = HelpBarHeight(look.settings.helpBarHeight, rows.helpBarHeight);
-            parts.row          = PlaceHelpBar(left, top, height, m.padding, m.gap, fit.captionWidth, bagWidth, fit.helpWidth);
+            parts.row          = PlaceHelpBar(span, s.helpBarAnchor, s.helpBarFullWidth, top, height, m.padding, m.gap,
+                         fit.captionWidth, bagWidth, fit.helpWidth);
             // Where the player moved it from its place under the top bar.
             for (float* x : {&parts.row.box.x, &parts.row.captionX, &parts.row.bagX, &parts.row.helpX})
                 *x += offsetX;
@@ -564,8 +566,11 @@ namespace headsup
             widgets.hasPopup[SlotOf(BarWidget::GameHelp)] = true;
         }
         if (settings.Widget(BarWidget::GameHelp).on)
-            m_HelpReach = BarRect{HelpBarLeft(m) + helpX, helpTop, HelpBarWidth(screenWidth, settings.helpBarWidth),
-                HelpBarHeight(settings.helpBarHeight, rows.helpBarHeight)};
+        {
+            const HelpBarSpan span = HelpBarRoom(screenWidth, HelpBarLeft(m), settings.helpBarWidth,
+                settings.helpBarFullWidth, settings.helpBarAnchor);
+            m_HelpReach = BarRect{span.x + helpX, helpTop, span.width, HelpBarHeight(settings.helpBarHeight, rows.helpBarHeight)};
+        }
         input.Frame(layout, widgets.hasPopup);
         std::vector<BarTabChip> chips;
         std::vector<BarScroll> scrolls;

@@ -323,6 +323,17 @@
             {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
             {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
             {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
+            {
+              "key": "anchor",
+              "name": "Anchor",
+              "tip": "Which side of the screen the help bar keeps to. Its text lines up the same way inside it. Default: Left.",
+              "options": [
+                {"name": "Left", "tip": "Against the screen's left edge, with its text on the left."},
+                {"name": "Center", "tip": "In the middle of the screen, with its text centered."},
+                {"name": "Right", "tip": "Against the screen's right edge, with its text on the right."}
+              ]
+            },
+            {"key": "full-width", "name": "Full Width", "tip": "The help bar takes the screen's whole width, however short its text. Default: Off."},
             {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
             {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
           ]
