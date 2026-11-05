@@ -281,7 +281,7 @@
               "key": "separators",
               "name": "Separators",
               "options": [
-                {"name": "Theme's"},
+                {"name": "Set by Theme"},
                 {"name": "Diamonds"},
                 {"name": "None"}
               ]
@@ -1332,7 +1332,7 @@
     {"key": "checks-none", "name": "None"},
     {"key": "checks-picked", "name": "{count} Picked"},
     {"key": "local", "name": "Local"},
-    {"key": "themes", "name": "Theme's"},
+    {"key": "themes", "name": "Set by Theme"},
     {"key": "default", "name": "Default"},
     {"key": "auto", "name": "Auto"},
     {"key": "reset-to-default", "tip": "Back to its default."},

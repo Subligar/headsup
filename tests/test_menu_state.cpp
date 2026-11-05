@@ -160,7 +160,7 @@ TEST(a_font_dropdown_lists_its_unset_choice_first_then_the_fonts)
     CHECK_EQ(FontShown(fonts, nullptr, "Comic Sans MS"), "Comic Sans MS");
     CHECK_EQ(FontShown(fonts, nullptr, ""), "");
     // Every entry stands for the font it is found by.
-    for (const char* unset : {static_cast<const char*>(nullptr), "Theme's"})
+    for (const char* unset : {static_cast<const char*>(nullptr), "Set by Theme"})
         for (int entry = 0; entry < FontEntryCount(fonts, unset); ++entry)
             CHECK_EQ(FontEntry(fonts, unset, FontOfEntry(fonts, unset, entry)), entry);
 }
