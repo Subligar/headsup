@@ -18,6 +18,7 @@ namespace headsup
         constexpr uint32_t kErrorColor = 0xFFE5534B; // a mistake said in the window, as the Widget Designer's
         // Setup's picture, 16:9 like its target: short enough that its first step fits the window's own size.
         constexpr float kPreviewTall  = 14.0f;
+        constexpr float kParagraphTall = 9.0f; // a box of several lines
         constexpr float kPreviewWide  = kPreviewTall * 16.0f / 9.0f;
         constexpr float kPadX         = 0.6f;  // a control's text from its sides
         constexpr float kHeadHeight   = 2.05f; // the window's title row
@@ -266,13 +267,15 @@ namespace headsup
         css += "input.range sliderarrowdec,input.range sliderarrowinc{width:0px;height:0px;}";
         css += ".val{position:absolute;left:0px;top:0px;width:100%;" + framed + "text-align:center;pointer-events:none;}";
         // Text boxes: the edge lights while one has the keyboard.
-        css += "input.text{box-sizing:border-box;height:" + frame + ";padding:0.2em " + Em(kPadX) + ";border-radius:" +
+        css += "input.text,textarea{box-sizing:border-box;height:" + frame + ";padding:0.2em " + Em(kPadX) + ";border-radius:" +
                radius + ";border:1px transparent;background-color:" + color(c.control) + ";color:" + color(c.text) +
                ";transition:border-color" + kEase + ";}";
-        css += "input.text:hover,input.text:focus{background-color:" + color(c.hover) + ";}";
-        css += "input.text:focus{border-color:" + color(Faded(c.accent, kFocus)) + ";}";
+        css += "input.text:hover,input.text:focus,textarea:hover,textarea:focus{background-color:" + color(c.hover) + ";}";
+        css += "input.text:focus,textarea:focus{border-color:" + color(Faded(c.accent, kFocus)) + ";}";
         css += "input.text:placeholder-shown{color:" + color(c.muted) + ";}";
-        css += "input.text selection{background-color:" + color(c.accentSoft) + ";}";
+        css += "input.text selection,textarea selection{background-color:" + color(c.accentSoft) + ";}";
+        css += "textarea{display:block;width:100%;height:" + Em(kParagraphTall) + ";margin-bottom:" + Em(kSpacing) +
+               ";overflow-y:auto;}";
         css += "input.num{width:" + Em(kNumberWidth) + ";}";
         css += std::string("input.num.") + kLiveClass + "{color:" + color(c.muted) + ";}";
         css += ".num-name{width:" + Em(kNumberName) + ";text-align:right;color:" + color(c.muted) + ";" + raised + "}";
@@ -352,6 +355,7 @@ namespace headsup
                ");}";
         css += ".btn.reset-all{height:" + Em(kTallButton) + ";" + line(kTallButton, kPillEdge) + "border-radius:" +
                Em(kTallButton / 2.0f) + ";text-transform:uppercase;}";
+        css += ".btn.wide{width:100%;}";
         css += ".btn.waiting{border-color:" + color(c.accent) + ";color:" + color(c.muted) + ";}";
         css += ".btn.round{width:" + frame + ";padding:0px;color:" + color(c.muted) + ";}";
         css += ".btn.step{position:relative;width:" + frame + ";padding:0px;border-radius:" + radius + ";background-color:" +
@@ -413,7 +417,7 @@ namespace headsup
         css += ".dchip{display:inline-block;margin-right:0.3em;}";
         css += ".dchip .dmark{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) + ";vertical-align:middle;margin-right:0.4em;}";
         css += ".design-line .tray-end{flex:1 1 2em;}";
-        css += ".design-error{margin-bottom:" + Em(kSpacing) + ";color:" + color(kErrorColor) + ";}";
+        css += ".error{margin-bottom:" + Em(kSpacing) + ";color:" + color(kErrorColor) + ";}";
         // What a control says under the pointer.
         css += std::string("#") + kMenuTipId + "{position:absolute;z-index:60;box-sizing:border-box;max-width:" +
                Em(kTipWidth) + ";padding:0.4em 0.6em;border-radius:" + radius + ";border:1px " + color(c.raisedEdge) +

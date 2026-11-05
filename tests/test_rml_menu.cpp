@@ -181,10 +181,11 @@ namespace
         // What a text box holds.
         std::string Typed(const std::string& id)
         {
-            auto* input = rmlui_dynamic_cast<Rml::ElementFormControlInput*>(Find(id));
-            if (input == nullptr) throw test::Failure{"the window has no text box " + id};
-            return input->GetValue();
+            auto* box = rmlui_dynamic_cast<Rml::ElementFormControl*>(Find(id));
+            if (box == nullptr) throw test::Failure{"the window has no text box " + id};
+            return box->GetValue();
         }
+        Rml::Element* Focused() { return m_Host.context->GetFocusElement(); }
 
         // Presses the left button on one control and lets it go on another, or that far from the first.
         bool Drag(const std::string& from, const std::string& onto) { return Drag(from, Center(onto) - Center(from)); }
@@ -977,6 +978,7 @@ TEST(every_dropdown_slider_row_of_choices_and_number_of_every_page_and_tab_sets_
     };
     for (const LayoutPage& info : kWindowLayout.pages)
     {
+        if (std::string_view(info.key) == "feedback") continue; // its form is sent, and sets nothing
         Window window;
         window.Page(info.key);
         // Every switch on, so that what a feature switched off on a new install hides is there to work.
@@ -1400,6 +1402,13 @@ TEST(every_control_of_every_page_takes_a_click_and_the_window_stands)
                 // What opened a list or a picker closes it again.
                 if (window.Find("popup") != nullptr && window.Find("popup")->IsVisible(true) && window.Shows(id)) window.Click(id);
                 CHECK(window.menu.open);
+                // Run Setup takes the window over, and leaving it closes the window: the pages after want it back.
+                if (window.menu.InSetup())
+                {
+                    window.Click("setup-buttons-leave");
+                    CHECK(!window.menu.InSetup());
+                    window.menu.open = true;
+                }
                 window.Page(page.key);
             }
             CHECK_EQ(window.Said(), "");
@@ -2265,4 +2274,43 @@ TEST(a_tag_in_a_line_has_no_tip_and_one_to_pick_from_does)
             if (chip->GetChild(i)->IsClassSet("part")) CHECK(!chip->GetChild(i)->HasAttribute("tip"));
     }
     CHECK(inLines > 0 && toPick > 0);
+}
+
+TEST(the_feedback_box_takes_several_lines_and_send_hands_them_over_once)
+{
+    Window window;
+    window.Page("feedback");
+    const std::string box = "feedback-feedback-form-feedback-text", send = "feedback-feedback-form-send-feedback";
+    window.Click(box);
+    window.Type("Names flicker");
+    window.Key(Rml::Input::KI_RETURN); // a new line, with the keyboard kept
+    window.Type("in Jeuno.");
+    CHECK(window.Find(box) == window.Focused());
+    window.Click(send);
+    const std::optional<FeedbackDraft> sent = window.menu.TakeFeedback();
+    CHECK(sent && sent->text == "Names flicker\nin Jeuno." && sent->type == FeedbackType::FeatureRequest);
+    CHECK(!window.menu.TakeFeedback());
+    window.menu.FeedbackAnswered(true);
+    window.Frames(2);
+    CHECK_EQ(window.Typed(box), std::string());
+}
+
+TEST(the_feedback_card_spans_its_box_and_button_across_and_puts_others_box_beside_the_topic)
+{
+    Window window;
+    window.Page("feedback");
+    const std::string card = "feedback-feedback-form";
+    const auto left  = [&](const std::string& id) { return window.Find(id)->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+    const auto width = [&](const std::string& id) { return window.Find(id)->GetBox().GetSize(Rml::BoxArea::Border).x; };
+    const auto top   = [&](const std::string& id) { return window.Find(id)->GetAbsoluteOffset(Rml::BoxArea::Border).y; };
+    const std::string box = card + "-feedback-text", send = card + "-send-feedback", topic = card + "-feedback-topic";
+    const float across = width(topic + "-label-row");
+    CHECK(width(box) > 0.95f * across && width(send) > 0.95f * across);
+    CHECK(window.Find(box)->GetBox().GetSize(Rml::BoxArea::Border).y > 4.0f * window.Find(send)->GetBox().GetSize(Rml::BoxArea::Border).y);
+    CHECK(top(box) < top(send));
+    window.Click(topic);
+    window.Click(topic + "-o-5");
+    CHECK(window.Shows(card + "-other"));
+    CHECK(left(card + "-other") >= left(topic) + width(topic));
+    CHECK(std::abs(top(card + "-other") - top(topic)) < 2.0f);
 }

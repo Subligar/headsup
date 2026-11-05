@@ -76,6 +76,9 @@ namespace headsup
         std::optional<std::string> TakeProfileNew();
         std::optional<std::string> TakeProfileRename();
         std::optional<std::string> TakeProfileDelete();
+        // Once after Send Feedback was pressed with the form filled: the feedback to send. Answered says how it went.
+        std::optional<FeedbackDraft> TakeFeedback();
+        void FeedbackAnswered(bool sent) { headsup::FeedbackAnswered(m_State, sent); }
         // Opens the window at the page named, as its sidebar spells it in lower case without spaces ("toppanel");
         // false for a name no page has.
         bool OpenPage(const std::string& name);

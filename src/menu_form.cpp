@@ -27,6 +27,9 @@ namespace headsup
         constexpr const char* kChip        = "btn raised chip";
         constexpr const char* kQuietChip   = "btn flat chip";
         constexpr const char* kResetPill   = "btn wash reset-all"; // a card's width, under the cards
+        constexpr const char* kSendPill    = "btn wash wide";
+        constexpr const char* kErrorNote   = "error";
+        constexpr const char* kFeedbackOtherId = "other";
         constexpr const char* kNavStart    = "nav-";
         constexpr const char* kSetupPageKey = "setup", *kSetupButtons = "buttons";
         constexpr int kNoOption = -1; // a choice whose settings no option holds
@@ -518,6 +521,43 @@ namespace headsup
             c.form.EndRow();
         }
 
+        // The topic, with a box beside it for what an Other topic is.
+        void FeedbackTopicRow(Context& c, const LayoutSetting& e, const std::string& label, const char* tip)
+        {
+            FeedbackDraft& draft = c.state.feedback;
+            const auto options   = c.layout.OptionsOf(e);
+            int picked           = static_cast<int>(draft.topic);
+            c.form.Row(label.c_str(), tip);
+            c.form.DropdownAt(label.c_str(), picked, 0, kFeedbackTopicCount - 1,
+                [&](int i) { return Words(options[static_cast<size_t>(i)].name); });
+            draft.topic = static_cast<FeedbackTopic>(picked);
+            if (draft.topic == FeedbackTopic::Other)
+                c.form.TextAt(kFeedbackOtherId, draft.other, nullptr, kControlWidth, true, kMostFeedbackOther);
+            c.form.EndRow();
+        }
+
+        // Send Feedback, across the card, with what became of the last press under it.
+        void SendFeedback(Context& c, const std::string& label, const char* tip)
+        {
+            MenuFormState& st = c.state;
+            c.form.Line();
+            if (c.form.Button(label.c_str(), label.c_str(), kSendPill, tip) && st.feedbackStatus != FeedbackStatus::Sending)
+            {
+                const bool filled = FeedbackFilled(st.feedback);
+                st.feedbackStatus = filled ? FeedbackStatus::Sending : FeedbackStatus::Missing;
+                st.feedbackRequested = filled;
+            }
+            c.form.EndLine();
+            switch (st.feedbackStatus)
+            {
+            case FeedbackStatus::None: break;
+            case FeedbackStatus::Missing: c.form.Note(Word(c, WindowWord::SendFeedbackMissing), kErrorNote); break;
+            case FeedbackStatus::Sending: c.form.Note(Word(c, WindowWord::SendFeedbackSending)); break;
+            case FeedbackStatus::Sent: c.form.Note(Word(c, WindowWord::SendFeedbackSent)); break;
+            case FeedbackStatus::Failed: c.form.Note(Word(c, WindowWord::SendFeedbackFailed), kErrorNote); break;
+            }
+        }
+
         // The profile in use, the others to use or delete, and a name to make a new one under or rename this one to.
         void ProfileFiles(Context& c)
         {
@@ -636,7 +676,7 @@ namespace headsup
             else if ((toggled || move) && c.state.partRefused == widget)
                 c.state.partRefused.reset();
             if (c.state.partRefused == widget)
-                form.Raw(std::string("<div class=\"design-error\">") + EscapedRml(Said(Word(c, WindowWord::WidgetTabsDesignLastOn))) +
+                form.Raw(std::string("<div class=\"error\">") + EscapedRml(Said(Word(c, WindowWord::WidgetTabsDesignLastOn))) +
                          "</div>");
         }
 
@@ -1931,6 +1971,22 @@ namespace headsup
                 form.Fade(false);
                 form.Switch(label.c_str(), s.enabled, tip);
                 break;
+            case SettingPiece::FeedbackType:
+                form.Fade(false);
+                OptionsDropdown(form, label, c.state.feedback.type, c.layout.OptionsOf(e), tip);
+                break;
+            case SettingPiece::FeedbackTopic:
+                form.Fade(false);
+                FeedbackTopicRow(c, e, label, tip);
+                break;
+            case SettingPiece::FeedbackText:
+                form.Fade(false);
+                form.Paragraph(label.c_str(), c.state.feedback.text, kMostFeedbackText);
+                break;
+            case SettingPiece::SendFeedback:
+                form.Fade(false);
+                SendFeedback(c, label, tip);
+                break;
             case SettingPiece::DebugReport:
                 form.Fade(!s.debugMode);
                 form.Line(s.debugMode ? "line" : (std::string("line ") + kOffClass).c_str());
@@ -2019,7 +2075,8 @@ namespace headsup
             case CardPiece::BaseGameUi:
             case CardPiece::ThemeColors:
             case CardPiece::SettingsWindow:
-            case CardPiece::Profiles: return {};
+            case CardPiece::Profiles:
+            case CardPiece::FeedbackForm: return {};
             case CardPiece::Reset: return {.bare = true};
             case CardPiece::Nameplates: return {false, !on, &s.nameplates};
             case CardPiece::OutlineStyle: return {false, !on, &s.outlines};
@@ -2266,6 +2323,12 @@ namespace headsup
             if (form.BeginCard(Labeled(Word(c, page.word), page.key).c_str(), nullptr, WordTip(c, page.word))) SetupStepCard(c, page);
             SetupButtons(c);
         }
+    }
+
+    void FeedbackAnswered(MenuFormState& state, bool sent)
+    {
+        state.feedbackStatus = sent ? FeedbackStatus::Sent : FeedbackStatus::Failed;
+        if (sent) state.feedback = {};
     }
 
     void EndSetup(Settings& s, MenuFormState& state, bool keep)

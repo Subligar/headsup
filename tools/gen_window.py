@@ -101,7 +101,7 @@ VISIBILITY_ROWS = {**rows('aggressive', 'passive', 'nm-aggressive', 'nm-passive'
 PIECES = Pieces(
     pages={'theme': 'Theme', 'entities': 'Entities', 'mobs': 'Mobs', 'players': 'Players', 'self': 'Self', 'npcs': 'Npcs', 'pets': 'Pets',
            'userinterface': 'UserInterface', 'toppanel': 'TopPanel', 'widgets': 'Widgets', 'mousecursor': 'MouseCursor',
-           'colors': 'Colors', 'configmenu': 'ConfigMenu'},
+           'colors': 'Colors', 'configmenu': 'ConfigMenu', 'feedback': 'Feedback'},
     cards={
         'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(),
         'colors-aggression': Card(), 'colors-toughness': Card(), 'colors-claim-status': Card(),
@@ -112,6 +112,7 @@ PIECES = Pieces(
         'screenshot-mode': Card(), 'window-groups': Card(), 'custom-game-ui': Card(), 'base-game-ui': Card(),
         'top-panel': Card(switch=True), 'theme-colors': Card(), 'help-bar': Card(switch=True), 'widgets': Card(), 'layout': Card(),
         'mouse-pointer': Card(), 'settings-window': Card(), 'profiles': Card(), 'reset': Card(), 'debug-mode': Card(switch=True),
+        'feedback-form': Card(),
     },
     settings={
         # Entities
@@ -198,6 +199,9 @@ PIECES = Pieces(
         'run-setup': Setting(),
         'reset-all-settings': Setting(words={'note': True, 'reset-everything': True, 'keep-them': True}),
         'debug-report': Setting(words={'watch': True, 'stop': True, 'saved': True}),
+        # Feedback
+        'feedback-type': Setting(options=3), 'feedback-topic': Setting(options=6), 'feedback-text': Setting(unnamed=True),
+        'send-feedback': Setting(words={'missing': True, 'sending': True, 'sent': True, 'failed': True}),
         'logging': Setting(words={'file': True}),
         'mobs-outlined': Setting(), 'meshes-outlined': Setting(), 'stencil-buffer': Setting(words={'available': True, 'missing': True}), 'nameplates': Setting(),
         'drawn': Setting(words={'in-scene': True, 'on-top': True}), 'game-s-names': Setting(words={'not-hooked': True}),

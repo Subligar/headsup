@@ -61,6 +61,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <chrono>
 #include <cstring>
 #include <deque>
@@ -350,6 +351,7 @@ class HeadsUp final : public IPlugin
     headsup::ConnectionMeter m_Connection;
     headsup::ServerPing m_Ping;
     headsup::WebGet m_TurnInFetch;                 // Phoenix's site, for today's guild point turn-ins
+    headsup::WebGet m_FeedbackPost;                // the Feedback page's, to the team's feedback service
     std::optional<headsup::GuildPatterns> m_TurnIns;
     std::optional<int64_t> m_TurnInsDay;           // the day in Japan they are for
     bool m_TurnInsRead = false, m_TurnInsFailed = false;
@@ -580,6 +582,7 @@ public:
         m_Fonts.Wait();
         m_Search.Stop();
         m_TurnInFetch.Stop();
+        m_FeedbackPost.Stop();
         m_Nameplates.Release();
         m_SetupPreview.Release();
         g_AfterGui = nullptr;
@@ -1123,6 +1126,14 @@ public:
         if (const std::optional<std::string> name = m_RmlMenu.TakeThemeRename(); name && RenameTheme(*name))
             m_SettingsChangedAt = now;
         if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
+        if (const std::optional<headsup::FeedbackDraft> feedback = m_RmlMenu.TakeFeedback())
+        {
+            char version[16];
+            const auto printed = std::to_chars(version, version + sizeof(version), kVersion);
+            m_FeedbackPost.Post(headsup::kFeedbackHost, headsup::kFeedbackPath,
+                headsup::FeedbackBody(*feedback, std::string_view(version, static_cast<size_t>(printed.ptr - version))));
+        }
+        if (const std::optional<headsup::WebGet::Answer> answer = m_FeedbackPost.Take()) m_RmlMenu.FeedbackAnswered(answer->ok);
         // The switch itself is always saved, so a profile keeps whether it saves by hand.
         if (m_Settings.autoSave != std::exchange(m_AutoSaveWas, m_Settings.autoSave) || m_RmlMenu.TakeSaveRequest())
             SaveSettings();

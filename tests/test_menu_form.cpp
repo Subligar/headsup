@@ -1134,16 +1134,16 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     // Off one by one until one is left: the last stays on, and the designer says why under its lines.
     w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneCrest), toggle(WidgetPart::ZoneRegion)});
     CHECK_EQ(design(), "-nation name -crest | -region");
-    CHECK(!Has(rml(w.Pass()), "design-error"));
+    CHECK(!Has(rml(w.Pass()), "class=\"error\""));
     const Form refused = w.Pass({toggle(WidgetPart::ZoneName)});
     CHECK_EQ(design(), "-nation name -crest | -region");
-    CHECK(Has(rml(refused), "design-error") && Has(rml(w.Pass()), "design-error"));
+    CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
     bool shownOn = false; // the toggle's last word on its look
     for (const FormValue& v : refused.values)
         if (v.id == chip(WidgetPart::ZoneName) + "-on" && v.kind == FormValueKind::Class && v.name == "on") shownOn = v.on;
     CHECK(shownOn);
     // The next toggle or move takes the message away.
-    CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "design-error"));
+    CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "class=\"error\""));
     CHECK_EQ(design(), "-nation name -crest | region");
     // Another widget's chip dropped here moves nothing.
     const std::string weather = "widgets-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
@@ -1161,4 +1161,53 @@ TEST(world_infos_designer_hides_while_it_shows_the_conquest_counts_which_have_no
     CHECK(Has(Block(w.Pass(), "widgets-widgets")->rml, chip.c_str()));
     w.settings.Widget(world).worldLine = WorldLine::Conquest;
     CHECK(!Has(Block(w.Pass(), "widgets-widgets")->rml, chip.c_str()));
+}
+
+TEST(feedback_is_sent_only_once_its_fields_are_filled_and_the_card_says_how_it_went)
+{
+    Window w;
+    w.state.page             = Page::Feedback;
+    const std::string card   = "feedback-feedback-form";
+    const std::string send   = card + "-send-feedback", text = card + "-feedback-text", topic = card + "-feedback-topic";
+    const std::string other  = card + "-other";
+    const auto says = [&](WindowWord word) { return Has(Block(w.Pass(), card.c_str())->rml, w.layout.WordOf(word).name); };
+    const auto shows = [&](const std::string& id) { return At(Block(w.Pass(), card.c_str()), id) != std::string::npos; };
+
+    w.Pass({{send, kClickEvent, ""}});
+    CHECK(!w.state.feedbackRequested && w.state.feedbackStatus == FeedbackStatus::Missing);
+    CHECK(says(WindowWord::SendFeedbackMissing));
+    w.Pass({{text, kChangeEvent, "Names flicker."}});
+    CHECK(w.state.feedback.text == "Names flicker." && !shows(other));
+    // Other wants words of its own, in a box that only it shows.
+    w.Pass({{topic, kClickEvent, ""}});
+    w.Pass({{topic + "-o-5", kClickEvent, ""}});
+    CHECK(w.state.feedback.topic == FeedbackTopic::Other && shows(other));
+    w.Pass({{send, kClickEvent, ""}});
+    CHECK(!w.state.feedbackRequested && w.state.feedbackStatus == FeedbackStatus::Missing);
+    w.Pass({{other, kChangeEvent, "Fishing"}, {send, kClickEvent, ""}});
+    CHECK(w.state.feedbackRequested && w.state.feedbackStatus == FeedbackStatus::Sending);
+    CHECK(says(WindowWord::SendFeedbackSending) && !says(WindowWord::SendFeedbackMissing));
+    // While it is on its way, another press sends nothing more.
+    w.state.feedbackRequested = false;
+    w.Pass({{send, kClickEvent, ""}});
+    CHECK(!w.state.feedbackRequested);
+
+    FeedbackAnswered(w.state, true);
+    CHECK(says(WindowWord::SendFeedbackSent));
+    CHECK(w.state.feedback.text.empty() && w.state.feedback.other.empty() && w.state.feedback.topic == FeedbackTopic::General);
+}
+
+TEST(feedback_the_service_did_not_take_is_kept_to_send_again)
+{
+    Window w;
+    w.state.page   = Page::Feedback;
+    w.state.feedback.text = "Names flicker.";
+    w.Pass({{"feedback-feedback-form-send-feedback", kClickEvent, ""}});
+    CHECK(w.state.feedbackRequested);
+    w.state.feedbackRequested = false;
+    FeedbackAnswered(w.state, false);
+    CHECK(w.state.feedbackStatus == FeedbackStatus::Failed && w.state.feedback.text == "Names flicker.");
+    CHECK(Has(Block(w.Pass(), "feedback-feedback-form")->rml, w.layout.WordOf(WindowWord::SendFeedbackFailed).name));
+    w.Pass({{"feedback-feedback-form-send-feedback", kClickEvent, ""}});
+    CHECK(w.state.feedbackRequested && w.state.feedbackStatus == FeedbackStatus::Sending);
 }

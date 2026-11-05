@@ -1,5 +1,6 @@
 #pragma once
 
+#include "feedback.h"
 #include "form.h"
 #include "menu_state.h"
 #include "settings.h"
@@ -118,6 +119,9 @@ namespace headsup
         std::vector<std::string> plateFonts, plateFontsFrom;
         bool setupBackup    = false;   // a run again started: the settings file is to be copied first
         bool closeRequested = false;   // Setup was skipped or cancelled, and the window closes
+        FeedbackDraft feedback;
+        FeedbackStatus feedbackStatus = FeedbackStatus::None;
+        bool feedbackRequested = false; // Send Feedback was pressed with the form filled: the plugin is to send it, once
 
         // What a page was in the middle of is dropped when it is left, by another page or by the window closing: a
         // row waiting for a key would take one pressed for the game, and a reset asked once would wait armed.
@@ -129,6 +133,9 @@ namespace headsup
             shotKeyCapture = {};
         }
     };
+
+    // What the feedback service said of the feedback sent: taken, it is cleared for the next.
+    void FeedbackAnswered(MenuFormState& state, bool sent);
 
     // Setup ended, never to open by itself again: Finish keeps the picks, and Skip, Cancel or the window's close
     // button put back the settings it opened with and close the window.

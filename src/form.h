@@ -281,7 +281,7 @@ namespace headsup
         // need. Returns the tab clicked, or picked.
         int Tabs(const char* id, int picked, const char* const* labels, int count, bool wrap = false);
         // A muted line inside the card, wrapped at its edge.
-        void Note(const char* text);
+        void Note(const char* text, const char* classes = "note");
         // A pill action on a line of its own.
         bool Action(const char* label, const char* tip = nullptr);
         // A label and a text that changes without the row changing: a reading, not a setting.
@@ -338,6 +338,8 @@ namespace headsup
         // text then holds. Live: true whenever a key changed it.
         bool TextAt(const char* id, std::string& text, const char* hint, float width, bool live = false,
             size_t most = 0);
+        // A box of several lines across the card, which text holds as it is typed. most: the characters it takes.
+        void Paragraph(const char* id, std::string& text, size_t most);
         // A design line's box: stretches of text to type in with its slots as chips between them, which take drops
         // and can be dragged. True when its text changed. draft keeps its caret, and says whether it has the keyboard.
         bool LineBox(const char* id, std::string& text, LineDraft& draft);

@@ -768,10 +768,10 @@ namespace headsup
         return chosen;
     }
 
-    void Form::Note(const char* text)
+    void Form::Note(const char* text, const char* classes)
     {
         const std::string note = Id(kNoteName);
-        Out() += "<div class=\"note\" id=\"" + note + "\">" + EscapedRml(text) + "</div>";
+        Out() += std::string("<div class=\"") + classes + "\" id=\"" + note + "\">" + EscapedRml(text) + "</div>";
         Set(note, FormValueKind::Class, kOffClass, {}, m_Off);
     }
 
@@ -833,6 +833,15 @@ namespace headsup
         Set(box, FormValueKind::Value, {}, text);
         Set(box, FormValueKind::Class, kOffClass, {}, m_Off);
         return took;
+    }
+
+    void Form::Paragraph(const char* id, std::string& text, size_t most)
+    {
+        const std::string box = Id(id);
+        if (const FormEvent* typed = Took(box, kChangeEvent); typed != nullptr && !m_Off) text = typed->value;
+        Out() += "<textarea id=\"" + box + "\" maxlength=\"" + std::to_string(most) + "\"></textarea>";
+        Set(box, FormValueKind::Value, {}, text);
+        Set(box, FormValueKind::Class, kOffClass, {}, m_Off);
     }
 
     namespace

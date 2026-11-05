@@ -9,6 +9,7 @@
 
 #include <RmlUi/Core/Elements/ElementFormControl.h>
 #include <RmlUi/Core/Elements/ElementFormControlInput.h>
+#include <RmlUi/Core/Elements/ElementFormControlTextArea.h>
 #include <RmlUi/Core/Factory.h>
 #include <RmlUi/Core/FontEngineInterface.h>
 #include <RmlUi/Core/StyleSheetContainer.h>
@@ -65,6 +66,7 @@ namespace headsup
         {
             return input != nullptr && input->GetAttribute<Rml::String>("type", "text") == "text";
         }
+        bool IsParagraph(Rml::Element* element) { return rmlui_dynamic_cast<Rml::ElementFormControlTextArea*>(element) != nullptr; }
 
         // A caret RmlUi counts in characters, as the byte it is before.
         size_t ByteOf(const std::string& text, int characters)
@@ -171,6 +173,11 @@ namespace headsup
     bool RmlMenu::TakeProfilesRequest() { return std::exchange(m_State.profilesRequested, false); }
     bool RmlMenu::TakeSaveRequest() { return std::exchange(m_State.saveRequested, false); }
     bool RmlMenu::TakeRevertRequest() { return std::exchange(m_State.revertRequested, false); }
+    std::optional<FeedbackDraft> RmlMenu::TakeFeedback()
+    {
+        if (!std::exchange(m_State.feedbackRequested, false)) return std::nullopt;
+        return m_State.feedback;
+    }
     std::optional<std::string> RmlMenu::TakeProfileUse() { return std::exchange(m_State.profileUse, std::nullopt); }
     std::optional<std::string> RmlMenu::TakeProfileNew() { return std::exchange(m_State.profileNew, std::nullopt); }
     std::optional<std::string> RmlMenu::TakeProfileRename() { return std::exchange(m_State.profileRename, std::nullopt); }
@@ -392,7 +399,11 @@ namespace headsup
                 auto* control = rmlui_dynamic_cast<Rml::ElementFormControl*>(element);
                 if (control == nullptr) continue;
                 // A text box being typed in keeps what is typed: it is set once it is left.
-                if (element == focus && IsText(AsInput(element))) continue;
+                if (element == focus && (IsText(AsInput(element)) || IsParagraph(element)))
+                {
+                    m_Applied.erase(key);
+                    continue;
+                }
                 if (control->GetValue() != value.text) control->SetValue(value.text);
                 break;
             }
@@ -589,7 +600,7 @@ namespace headsup
             }
             break;
         case Rml::EventId::Change:
-            if (AsInput(target) != nullptr)
+            if (AsInput(target) != nullptr || IsParagraph(target))
                 m_Events.push_back(FormEvent{id, kChangeEvent, event.GetParameter<Rml::String>("value", "")});
             break;
         case Rml::EventId::Focus:
@@ -616,9 +627,12 @@ namespace headsup
             }
             break;
         case Rml::EventId::Keydown:
-            if (Rml::ElementFormControlInput* input = AsInput(target); IsText(input))
+            // RmlUi leaves a box of several lines its line breaks to be typed, as a text input the host never sends.
+            if (const auto key = static_cast<Rml::Input::KeyIdentifier>(event.GetParameter<int>("key_identifier", 0));
+                IsParagraph(target) && (key == Rml::Input::KI_RETURN || key == Rml::Input::KI_NUMPADENTER))
+                target->GetContext()->ProcessTextInput('\n');
+            else if (Rml::ElementFormControlInput* input = AsInput(target); IsText(input))
             {
-                const auto key = static_cast<Rml::Input::KeyIdentifier>(event.GetParameter<int>("key_identifier", 0));
                 if (key == Rml::Input::KI_ESCAPE)
                 {
                     // Escape takes the typing back.

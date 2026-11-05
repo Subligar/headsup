@@ -639,6 +639,54 @@
           ]
         }
       ]
+    },
+    {
+      "key": "feedback",
+      "name": "Feedback",
+      "cards": [
+        {
+          "key": "feedback-form",
+          "name": "Feedback",
+          "description": "Have any suggestions for improvements, new features, or bugs to report? Let us know!",
+          "settings": [
+            {
+              "key": "feedback-type",
+              "name": "Type",
+              "tip": "What kind of feedback you are sending.",
+              "options": [
+                {"name": "Feature Request"},
+                {"name": "Suggestion"},
+                {"name": "Bug Report"}
+              ]
+            },
+            {
+              "key": "feedback-topic",
+              "name": "Topic",
+              "tip": "The part of HeadsUp it is about. With Other, say what in the box beside it.",
+              "options": [
+                {"name": "General"},
+                {"name": "Nameplates"},
+                {"name": "Outlines"},
+                {"name": "Top Panel"},
+                {"name": "User Interface"},
+                {"name": "Other (please specify)"}
+              ]
+            },
+            {"key": "feedback-text"},
+            {
+              "key": "send-feedback",
+              "name": "Send Feedback",
+              "tip": "Sends the HeadsUp team what you wrote, its type and topic, and your version of HeadsUp. Nothing else about you or your game is sent.",
+              "words": [
+                {"key": "missing", "name": "You must fill out all fields in order to send your feedback."},
+                {"key": "sending", "name": "Sending..."},
+                {"key": "sent", "name": "Sent. Thank you for your feedback!"},
+                {"key": "failed", "name": "Your feedback could not be sent. Please try again later."}
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "entity": {
