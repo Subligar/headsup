@@ -49,7 +49,7 @@
               "name": "Separator Style",
               "tip": "The shape of the top panel's separators, and what a dash (-) in a nameplate's design is drawn as.",
               "options": [
-                {"name": "No", "tip": "Does not replace dashes with anything."},
+                {"name": "Dash", "tip": "A plain dash: the top panel shows short lines, and a nameplate's dashes stay as they are."},
                 {"tip": "Dot"},
                 {"tip": "Square"},
                 {"tip": "Diamond"}
@@ -192,7 +192,7 @@
             {"key": "fishing-bar-x", "name": "X Position", "indent": true, "tip": "Pixels from the left of the screen to the bar. Auto centers it. Default: Auto."},
             {"key": "fishing-bar-y", "name": "Y Position", "indent": true, "tip": "Pixels from the top of the screen to the bar. Auto puts it low on the screen. Default: Auto."},
             {"key": "fishing-bar-draggable", "name": "Draggable", "indent": true, "tip": "On, you can drag the bar to move it while a fish is hooked. Off, clicks go through it to the game. Default: On."},
-            {"key": "fishing-bar-font", "name": "Font", "indent": true, "tip": "The font of the text over the bar. Default: the top panel's text font."},
+            {"key": "fishing-bar-font", "name": "Font", "indent": true, "tip": "The font of the text over the bar. Default: the top panel's Secondary Font."},
             {"key": "fishing-bar-text-size", "name": "Font Size", "indent": true, "tip": "The size of the text over the bar. Default: 15 px."},
             {"key": "fishing-bar-line", "name": "Text", "indent": true, "tip": "What the text over the bar says. Drag the buttons below into it, and write your own text around them. HeadsUp only says what the game has told you, never which fish it is."},
             {"key": "fish-color-by-catch", "name": "Color by Catch", "indent": true, "tip": "Colors the bar by what is on the line. A rod that could break comes first, then a line that could snap, then the size of the catch. Off, the bar keeps the theme's color. Default: On."},
