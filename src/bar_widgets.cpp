@@ -1709,6 +1709,21 @@ namespace headsup
         return w;
     }
 
+    std::array<PartMark, kWidgetPartCount> PartMarksNow(const std::vector<PanelWidget>& widgets, const BarState& state,
+        const Settings& settings)
+    {
+        std::array<PartMark, kWidgetPartCount> marks;
+        for (int p = 0; p < kWidgetPartCount; ++p)
+            marks[static_cast<size_t>(p)] = DefaultMark(static_cast<WidgetPart>(p));
+        for (const PanelWidget widget : widgets)
+        {
+            WidgetContent base;
+            for (const PartContent& part : PartsNow(widget, state, settings, base))
+                if (const std::optional<PartMark> mark = MarkOf(part.spans)) marks[static_cast<size_t>(part.part)] = *mark;
+        }
+        return marks;
+    }
+
     PopupContent PanelPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
     {
         const std::vector<PanelWidget> pill = Members(Panel(settings), head);

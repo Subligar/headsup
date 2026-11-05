@@ -2833,3 +2833,27 @@ TEST(the_standings_are_asked_for_while_the_zone_or_a_world_info_showing_conquest
     settings.Widget(BarWidget::Zone).on = true;
     CHECK(StandingsShown(settings));
 }
+
+TEST(a_designer_chip_shows_its_parts_picture_as_the_game_is_now_or_a_stand_in)
+{
+    Settings settings;
+    BarState state;
+    state.unixMs  = kVanaEpochUnixMs;
+    state.weather = Weather::DustStorm;
+    const auto mark = [](const std::array<PartMark, kWidgetPartCount>& marks, WidgetPart part) {
+        return marks[static_cast<size_t>(part)];
+    };
+    // The Weather's settings open: its icon is the dust storm's; the Target's, with no target, its stand-ins.
+    const auto marks = PartMarksNow({PanelWidget{BarWidget::Weather}, PanelWidget{BarWidget::Target}}, state, settings);
+    const std::vector<Icon> storm = Content(BarWidget::Weather, state, settings).icons; // the icon it leads with
+    CHECK(!storm.empty() && mark(marks, WidgetPart::WeatherIcon) == PartMark{storm.front()});
+    CHECK(mark(marks, WidgetPart::WeatherIcon) != DefaultMark(WidgetPart::WeatherIcon));
+    CHECK(mark(marks, WidgetPart::TargetAggro) == DefaultMark(WidgetPart::TargetAggro));
+    CHECK(mark(marks, WidgetPart::CurrencyCoin).coin);
+    CHECK(mark(marks, WidgetPart::WeatherName) == PartMark{});
+    // A mob targeted: its own aggression icon.
+    const ActorInfo goblin = Goblin();
+    state.target = &goblin;
+    CHECK(mark(PartMarksNow({PanelWidget{BarWidget::Target}}, state, settings), WidgetPart::TargetAggro) ==
+          PartMark{Icon::AggroNQ});
+}

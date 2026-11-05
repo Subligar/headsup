@@ -1044,7 +1044,7 @@ public:
         }
         const headsup::NameStats names = m_NameHook.Stats();
         if (m_RmlMenu.open) m_WindowPlaces = m_WindowHook.Places();
-        const headsup::MenuReadings readings{
+        headsup::MenuReadings readings{
             .outlinedMobs     = m_Tracker.OutlinedCount(),
             .meshes           = m_Outline.MeshesLastFrame(),
             .nameplates       = static_cast<uint32_t>(m_Nameplates.LastShown().size()),
@@ -1081,6 +1081,8 @@ public:
 #endif
             .settingsOf       = SettingsShownNow(),
         };
+        if (!readings.settingsOf.empty())
+            readings.partMarks = headsup::PartMarksNow(readings.settingsOf, BarStateNow(now), m_Settings);
         m_RmlMenu.settingsAt = m_RmlBar.SettingsBody();
         if (m_RmlMenu.Update(MenuHostNow(), m_Settings, readings, m_Fonts.Choices(m_Settings.defaultFont), kVersion))
         {

@@ -1085,3 +1085,41 @@ TEST(the_theme_is_never_faint_after_a_faint_setting)
     CHECK(ClassOn(form, "theme-theme-look-window-type-label-row", kOffClass));
     CHECK(!ClassOn(form, "theme-theme-look-theme-label-row", kOffClass));
 }
+
+TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone};
+    w.readings.settingsOf  = {zone};
+    const std::string base = "widgets-widgets-part-" + std::to_string(SlotOf(zone)) + "-";
+    const auto chip        = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
+    const auto toggle      = [&](WidgetPart part) { return FormEvent{chip(part) + "-on", kClickEvent, ""}; };
+    const auto rml         = [](const Form& form) { return Block(form, "widgets-widgets")->rml; };
+    const auto design      = [&] { return DesignText(w.settings.Widget(zone).design); };
+    const Form first = w.Pass();
+    CHECK(Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str()));
+    // A drop at a line's end moves the part there; on a chip, before it.
+    w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::ZoneCrest)}});
+    CHECK_EQ(design(), "name crest | region nation");
+    w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, chip(WidgetPart::ZoneNation)}});
+    CHECK_EQ(design(), "nation name crest | region");
+    // Off one by one until one is left: the last stays on, and the designer says why under its lines.
+    w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneCrest), toggle(WidgetPart::ZoneRegion)});
+    CHECK_EQ(design(), "-nation name -crest | -region");
+    CHECK(!Has(rml(w.Pass()), "design-error"));
+    const Form refused = w.Pass({toggle(WidgetPart::ZoneName)});
+    CHECK_EQ(design(), "-nation name -crest | -region");
+    CHECK(Has(rml(refused), "design-error") && Has(rml(w.Pass()), "design-error"));
+    bool shownOn = false; // the toggle's last word on its look
+    for (const FormValue& v : refused.values)
+        if (v.id == chip(WidgetPart::ZoneName) + "-on" && v.kind == FormValueKind::Class && v.name == "on") shownOn = v.on;
+    CHECK(shownOn);
+    // The next toggle or move takes the message away.
+    CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "design-error"));
+    CHECK_EQ(design(), "-nation name -crest | region");
+    // Another widget's chip dropped here moves nothing.
+    const std::string weather = "widgets-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
+                                std::to_string(static_cast<int>(WidgetPart::WeatherName));
+    w.Pass({{base + "end-1", kDropEvent, weather}});
+    CHECK_EQ(design(), "-nation name -crest | region");
+}
