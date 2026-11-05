@@ -529,6 +529,41 @@ namespace headsup
         return image;
     }
 
+    namespace
+    {
+        // Shares of a separator's size: a dot's width and a square's side, which weigh about a diamond's, and a dash's
+        // thickness.
+        constexpr float kDotShare = 0.75f, kSquareShare = 0.7f, kDashShare = 0.2f;
+    }
+
+    Image SeparatorImage(DashMark mark, int size, uint32_t color)
+    {
+        if (mark == DashMark::Diamond) return Diamond(size, color);
+        const int s = std::max(1, size);
+        Image image{s, s, std::vector<uint32_t>(static_cast<size_t>(s) * static_cast<size_t>(s), 0)};
+        const float half = static_cast<float>(s) / 2.0f;
+        const float dash = std::max(1.0f, std::round(static_cast<float>(s) * kDashShare)) / 2.0f;
+        const auto inside = [&](float x, float y) {
+            const float dx = std::fabs(x - half), dy = std::fabs(y - half);
+            switch (mark)
+            {
+            case DashMark::Dot: return std::hypot(dx, dy) <= half * kDotShare;
+            case DashMark::Square: return dx <= half * kSquareShare && dy <= half * kSquareShare;
+            case DashMark::None: return dy <= dash;
+            case DashMark::Diamond: break;
+            }
+            return false;
+        };
+        for (int y = 0; y < s; ++y)
+            for (int x = 0; x < s; ++x)
+            {
+                Paint paint;
+                paint.Over(Covered(x, y, kPixelSamples, inside), color);
+                image.argb[static_cast<size_t>(y * s + x)] = paint.Color();
+            }
+        return image;
+    }
+
     Image Coin(int size, uint32_t color)
     {
         const int s = std::max(2, size);

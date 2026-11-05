@@ -44,7 +44,7 @@ namespace headsup
             {"nameplates", &Settings::nameplates}, {"outlines", &Settings::outlines},
             {"outlineFadeIn", &Settings::outlineFadeIn}, {"cursorFloat", &Settings::cursorFloat},
             {"autoCheck", &Settings::autoCheck}, {"lookUpPlayers", &Settings::lookUpPlayers},
-            {"gameWindowBorder", &Settings::gameWindowBorder}, {"fishBar", &Settings::fishBar},
+            {"fishBar", &Settings::fishBar},
             {"hideGameFishBar", &Settings::hideGameFishBar}, {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
@@ -88,7 +88,6 @@ namespace headsup
             {"timerPercent", &Settings::timerPercent, kMinSizePercent, kMaxSizePercent, kPercentStep},
             {"phUpMinutes", &Settings::phUpMinutes, 0, kMaxUpMinutes},
             {"screenshotKey", &Settings::screenshotKey, 0, UINT8_MAX},
-            {"windowType", &Settings::windowType, kFollowGameWindow, kWindowTypes},
             {"menuX", &Settings::menuX, -kMaxMenuSide, kMaxMenuSide}, // dragged partly off the screen's left
             {"menuY", &Settings::menuY, 0, kMaxMenuSide}, {"menuWidth", &Settings::menuWidth, 0, kMaxMenuSide},
             {"menuHeight", &Settings::menuHeight, 0, kMaxMenuSide},
@@ -111,8 +110,6 @@ namespace headsup
             {kMenuFontSizeKey, &Settings::menuFontSize, kMinMenuFontSize, kMaxMenuFontSize},
             {kCursorHeightKey, &Settings::cursorHeight, kMinCursorSide, kMaxCursorSide},
             {kCursorEdgeKey, &Settings::cursorOutlineThickness, kMinCursorEdge, kMaxCursorEdge, kPercentStep}};
-        constexpr const char* kDashMarkKey = "dashMark";
-        const char* const kDashMarkNames[kDashMarkCount] = {"no", "dot", "square", "diamond"};
         constexpr const char* kCursorStyleKey = "cursorStyle";
         constexpr const char* kCursorFileKey  = "cursorFile";
         const char* const kCursorStyleNames[kCursorStyleCount] = {"vanilla", "triangle", "feather", "chocobo", "file"};
@@ -216,13 +213,17 @@ namespace headsup
         // those keys in the file, so a file that has it is not migrated over them.
         constexpr const char* kDesignsSavedKey = "nameplateDesigns";
         constexpr const char* kBarThemeKey = "barTheme";
-        const char* const kBarThemeNames[kBarThemeCount] = {"phoenixGold", "umbraDark", "phoenixRedOrnate",
-            "phoenixRedPills", "aurora", "custom", "gameWindow"};
+        const char* const kBarThemeNames[kBarThemeCount] = {"phoenixGold", "umbraDark", "phoenixRedOrnate", "aurora",
+            "custom", "gameWindow"};
         // The Custom theme: this before each of kPaletteColors' names, and its shape and border.
         constexpr const char* kCustomThemeKey = "customTheme";
         constexpr const char* kShapeSuffix = "Shape";
         constexpr const char* kBorderSuffix = "Border";
-        constexpr const char* kGradientSuffix = "Gradient";
+        constexpr const char* kBackgroundSuffix = "Background";
+        constexpr const char* kWindowTypeSuffix = "WindowType";
+        constexpr const char* kWindowBorderSuffix = "WindowBorder";
+        constexpr const char* kSeparatorSuffix = "Separator";
+        constexpr const char* kCustomThemeNameKey = "customThemeName";
         constexpr const char* kBarCurrencyKey = "barCurrency";
         constexpr const char* kBarBagKey      = "barBag";
         constexpr const char* kBarNationsKey  = "barNations";
@@ -1029,6 +1030,11 @@ namespace headsup
         return choices;
     }
 
+    const BarPalette& OwnPalette(const Settings& s)
+    {
+        return s.barTheme == BarTheme::Custom ? s.customPalette : PaletteOf(s.barTheme);
+    }
+
     bool UsesGameFont(const Settings& s)
     {
         const auto game = [](const std::string& font) { return GameFontVariantOf(font).has_value(); };
@@ -1183,12 +1189,13 @@ namespace headsup
         if (!pointerNamed) s.pointerFile.clear();
         if (static_cast<int>(s.pointerIcon) >= kPointerIconCount || (s.pointerIcon == PointerIcon::File && !pointerNamed))
             s.pointerIcon = d.pointerIcon;
-        if (static_cast<int>(s.dashMark) >= kDashMarkCount) s.dashMark = d.dashMark;
         ClampPick(s.cursorColor, d.cursorColor, CursorSources());
         ClampPick(s.cursorEdgeColor, d.cursorEdgeColor, CursorSources());
         if (static_cast<int>(s.barTheme) >= kBarThemeCount) s.barTheme = d.barTheme;
         if (static_cast<int>(s.customPalette.shape) >= kBarShapeCount) s.customPalette.shape = d.customPalette.shape;
         s.customPalette.border = std::clamp(s.customPalette.border, 0, kMaxStripBorder);
+        s.customPalette.windowType = std::clamp(s.customPalette.windowType, kFollowGameWindow, kWindowTypes);
+        if (!IsFolderFileName(s.customThemeName)) s.customThemeName = kUnnamedTheme;
         for (int slot = 0; slot < kPanelSlots; ++slot)
         {
             WidgetOptions& w = s.widgets[slot];
@@ -1514,8 +1521,6 @@ namespace headsup
                     NameIndex(kRankDisplayNames, kRankDisplayCount, display, static_cast<int>(s.rankDisplay)));
             else if (HeldSwitch(store, kOldShowRanksKey).value_or(false))
                 s.rankDisplay = RankDisplay::Rank;
-            s.dashMark     = static_cast<DashMark>(
-                NameIndex(kDashMarkNames, kDashMarkCount, store.GetString(kDashMarkKey, ""), static_cast<int>(s.dashMark)));
             s.cursorHeight = Rebased(store, kCursorHeightKey, kOldCursorSizeKey, s.cursorHeight, [](float size) { return size; });
             s.cursorWidth  = Rebased(store, kCursorWidthKey, kOldCursorSizeKey, s.cursorWidth, [&](float size) {
                 return static_cast<float>(NaturalCursorWidth(wasArrow ? CursorStyle::Triangle : CursorStyle::Feather, Whole(size)));
@@ -1567,7 +1572,13 @@ namespace headsup
             s.customPalette.shape = static_cast<BarShape>(NameIndex(kBarShapeNames, kBarShapeCount,
                 store.GetString((custom + kShapeSuffix).c_str(), ""), static_cast<int>(s.customPalette.shape)));
             s.customPalette.border = LoadInt(store, custom + kBorderSuffix, s.customPalette.border);
-            s.customPalette.gradient = HeldSwitch(store, custom + kGradientSuffix).value_or(s.customPalette.gradient);
+            s.customPalette.background = static_cast<BarBackground>(NameIndex(kBarBackgroundNames, kBarBackgroundCount,
+                store.GetString((custom + kBackgroundSuffix).c_str(), ""), static_cast<int>(s.customPalette.background)));
+            s.customPalette.windowType   = LoadInt(store, custom + kWindowTypeSuffix, s.customPalette.windowType);
+            s.customPalette.windowBorder = HeldSwitch(store, custom + kWindowBorderSuffix).value_or(s.customPalette.windowBorder);
+            s.customPalette.separator    = static_cast<DashMark>(NameIndex(kDashMarkNames, kDashMarkCount,
+                store.GetString((custom + kSeparatorSuffix).c_str(), ""), static_cast<int>(s.customPalette.separator)));
+            s.customThemeName = store.GetString(kCustomThemeNameKey, "");
             s.menuFont         = store.GetString(kMenuFontKey, s.menuFont.c_str());
             // By the font named: one whose Windows file was missing was drawn in Barlow Condensed, which nothing here knows.
             s.menuFontSize     = Rebased(store, kMenuFontSizeKey, kOldMenuScaleKey, s.menuFontSize, [&](float percent) {
@@ -1635,7 +1646,6 @@ namespace headsup
         store.Set(kPointerIconKey, kPointerIconNames[static_cast<int>(s.pointerIcon)]);
         store.Set(kPointerFileKey, s.pointerFile.c_str());
         store.Set(kRankDisplayKey, kRankDisplayNames[static_cast<int>(s.rankDisplay)]);
-        store.Set(kDashMarkKey, kDashMarkNames[static_cast<int>(s.dashMark)]);
         SavePick(store, kCursorPickKey, s.cursorColor);
         SavePick(store, kCursorEdgePickKey, s.cursorEdgeColor);
         store.Set(kBadgeFontKey, s.badgeFontName.c_str());
@@ -1665,7 +1675,12 @@ namespace headsup
             StoreHex(store, kCustomThemeKey + std::string(color.name), s.customPalette.*color.field);
         store.Set((kCustomThemeKey + std::string(kShapeSuffix)).c_str(), kBarShapeNames[static_cast<int>(s.customPalette.shape)]);
         StoreFloat(store, kCustomThemeKey + std::string(kBorderSuffix), static_cast<float>(s.customPalette.border));
-        StoreBool(store, kCustomThemeKey + std::string(kGradientSuffix), s.customPalette.gradient);
+        store.Set((kCustomThemeKey + std::string(kBackgroundSuffix)).c_str(),
+            kBarBackgroundNames[static_cast<int>(s.customPalette.background)]);
+        StoreFloat(store, kCustomThemeKey + std::string(kWindowTypeSuffix), static_cast<float>(s.customPalette.windowType));
+        StoreBool(store, kCustomThemeKey + std::string(kWindowBorderSuffix), s.customPalette.windowBorder);
+        store.Set((kCustomThemeKey + std::string(kSeparatorSuffix)).c_str(), kDashMarkNames[static_cast<int>(s.customPalette.separator)]);
+        store.Set(kCustomThemeNameKey, s.customThemeName.c_str());
         store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
         store.Set(kMenuFontKey, s.menuFont.c_str());
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());

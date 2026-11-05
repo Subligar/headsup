@@ -483,7 +483,7 @@ namespace headsup
             RowsFor(host, m, p.shape, settings.barTextSize, settings.helpBarTextSize, titleFont, detailFont);
         BarLook look{p, settings, m, PillRow(m), rows.lines, titleFont, p.shape == BarShape::Ornate, detailFont,
             std::nullopt};
-        if (p.shape == BarShape::Window && skin != nullptr) look.skin = FrameAsSet(settings, skin->frame);
+        if (UsesGameArt(settings) && skin != nullptr) look.skin = FrameAsSet(settings, skin->frame);
         m_TitlePixels  = look.lines.title;
         m_DetailPixels = look.lines.detail;
         m_BarBottom   = BarBottom(p, m);

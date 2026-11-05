@@ -279,7 +279,7 @@ namespace headsup
             .subtitle = ArgbOf(Shade(t, kSubtitleChroma, kSubtitleLight)), .divider = ArgbOf(Shade(t, 1.0f, kDividerLight)),
             .panelTop = ArgbOf(t.top, kPanelAlpha), .panelBottom = ArgbOf(t.bottom, kPanelAlpha), .panelBorder = frame,
             .panelOuter = 0, .text = text, .heading = accent, .tagFill = WithAlpha(accent, kTagAlpha), .tagBorder = 0,
-            .tagText = text, .highlight = WithAlpha(accent, kHighlightAlpha), .border = 0, .gradient = true};
+            .tagText = text, .highlight = WithAlpha(accent, kHighlightAlpha), .border = 0, .background = BarBackground::Window};
     }
 
     MenuColors SkinMenuColors(const WindowSkin& skin)

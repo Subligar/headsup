@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bar_types.h"
+#include "dash_mark.h"
 #include "fonts.h"
 
 #include <cstdint>
@@ -21,6 +22,12 @@ namespace headsup
     constexpr int kBarShapeCount = static_cast<int>(BarShape::Window) + 1;
     constexpr int kMaxStripBorder = 6; // rows of the strip's line at its foot
 
+    // What the strip is: one color, a gradient through three stops, or the game's window art.
+    enum class BarBackground : uint8_t { Plain, Gradient, Window };
+    constexpr int kBarBackgroundCount = static_cast<int>(BarBackground::Window) + 1;
+    constexpr int kWindowTypes      = 8; // the game's, in Config > Windows > Shared
+    constexpr int kFollowGameWindow = 0; // a Window Type setting's: the type the game is set to, where 1 to 8 pin one
+
     // D3DCOLORs (ARGB); 0 is none.
     struct BarPalette
     {
@@ -35,7 +42,10 @@ namespace headsup
         uint32_t text, heading, tagFill, tagBorder, tagText;
         uint32_t highlight; // over a hovered widget
         int border = 1;     // how many of the strip's last rows are bottomLine
-        bool gradient = true; // the strip runs through its three stops; one color, its top, when not
+        BarBackground background = BarBackground::Gradient; // Plain is stripTop alone
+        int windowType    = kFollowGameWindow; // the art's, for the Window background
+        bool windowBorder = true;              // the art's frame around the panel, the help bar and the popups
+        DashMark separator = DashMark::Diamond; // the panel's separators, and what a nameplate's dash is drawn as
         bool operator==(const BarPalette&) const = default;
     };
 
@@ -55,15 +65,18 @@ namespace headsup
         {"Heading", &BarPalette::heading}, {"TagFill", &BarPalette::tagFill}, {"TagBorder", &BarPalette::tagBorder},
         {"TagText", &BarPalette::tagText}, {"Highlight", &BarPalette::highlight}};
     inline constexpr const char* kBarShapeNames[kBarShapeCount] = {"ornate", "pills", "glass", "window"};
+    inline constexpr const char* kBarBackgroundNames[kBarBackgroundCount] = {"plain", "gradient", "window"};
+    inline constexpr const char* kDashMarkNames[kDashMarkCount] = {"no", "dot", "square", "diamond"};
 
     // A saved theme's file, in the themes folder: a [theme] section of its palette's parts by kPaletteColors' names,
-    // Shape, Border and Gradient. Read back, a part it lacks or that cannot be read is Phoenix Gold's, and a file of
-    // none of them is no theme.
+    // Shape, Border, Background, WindowType, WindowBorder and Separator. Read back, a part it lacks or that cannot be
+    // read is Phoenix Gold's, and a file of none of the colors is no theme.
     constexpr const char* kThemeExtensions[] = {".ini"};
     std::string ThemeFileText(const BarPalette& palette);
     std::optional<BarPalette> PaletteFromThemeFile(std::string_view file);
 
-    // A fixed theme's palette; Custom's is the settings' own (PaletteFor in bar_look.h).
+    // A fixed theme's palette; Custom's is the settings' own (PaletteFor in bar_look.h). Vanilla's is Phoenix Gold's
+    // colors on the art, for while the art's own are not read.
     const BarPalette& PaletteOf(BarTheme theme);
 
     // Pixel sizes, each a share of the bar's height H (MetricsFor).

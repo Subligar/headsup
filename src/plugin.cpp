@@ -439,7 +439,9 @@ class HeadsUp final : public IPlugin
     std::vector<std::string> m_LastOpen;      // the open windows it wrote last
     std::vector<std::string> m_SeenWindows;   // what the window hook has: the settings' windows and groups
     std::vector<std::string> m_CursorFiles;      // the cursors folder's, as the Target Cursor and Cursor Icon lists offer them
-    std::vector<std::string> m_ThemeFiles;       // the themes folder's, as Theme Colors' Load offers them
+    std::vector<std::string> m_ThemeFiles;       // the themes folder's, as the Theme dropdown offers them
+    // The custom theme as its file was last read or written: its name and palette.
+    std::optional<std::pair<std::string, headsup::BarPalette>> m_ThemeWritten;
     std::vector<std::string> m_ProfileNames;     // the profiles folder's, as the Profiles card offers them
     std::string m_Profile;   // the profile in use; empty for the settings.ini of before profiles
     std::string m_Character; // the character logged in, empty before one is
@@ -1067,6 +1069,7 @@ public:
             .windowPlaces     = &m_WindowPlaces,
             .cursorFiles      = &m_CursorFiles,
             .themeFiles       = &m_ThemeFiles,
+            .palette          = &headsup::PaletteFor(m_Settings, SkinNow()),
             .profiles         = &m_ProfileNames,
             .profile          = &m_Profile,
             .unsaved          = m_SettingsChangedAt.has_value(),
@@ -1115,8 +1118,9 @@ public:
 #endif
         if (m_RmlMenu.TakeCursorsRequest()) ScanCursors();
         if (m_RmlMenu.TakeThemesRequest()) ScanThemes();
-        if (const std::optional<std::string> name = m_RmlMenu.TakeThemeSave()) SaveTheme(*name);
         if (const std::optional<std::string> name = m_RmlMenu.TakeThemeLoad(); name && LoadTheme(*name))
+            m_SettingsChangedAt = now;
+        if (const std::optional<std::string> name = m_RmlMenu.TakeThemeRename(); name && RenameTheme(*name))
             m_SettingsChangedAt = now;
         if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
         // The switch itself is always saved, so a profile keeps whether it saves by hand.
@@ -1680,7 +1684,7 @@ private:
     void UpdateSkin()
     {
         if (!headsup::UsesGameArt(m_Settings)) return;
-        const int type    = headsup::SkinTypeOf(m_Settings.windowType, m_WindowTypeReader.Read());
+        const int type    = headsup::SkinTypeOf(headsup::OwnPalette(m_Settings).windowType, m_WindowTypeReader.Read());
         const float scale = m_MenuHeight > 0.0f ? m_Names.BackBufferHeight() / m_MenuHeight : 1.0f;
         if (m_SkinLook && type == m_SkinLook->frame.type && scale == m_SkinLook->frame.scale) return;
         const std::optional<headsup::WindowSkin>& skin = m_WindowSkins[static_cast<size_t>(type)];
@@ -2203,25 +2207,54 @@ private:
 
     void ScanThemes() { m_ThemeFiles = headsup::FolderFileNames(FolderEntries(ThemesFolder()), headsup::kThemeExtensions); }
 
-    void SaveTheme(const std::string& name)
+    std::string ThemePath(const std::string& name) { return ThemesFolder() + name + headsup::kThemeExtensions[0]; }
+
+    // Writes the custom theme in use to its file when it changed since it was read or written last.
+    void SaveCustomTheme()
     {
-        const std::string path = ThemesFolder() + name + headsup::kThemeExtensions[0];
-        Print(WriteText(path, headsup::ThemeFileText(m_Settings.customPalette)) ? "saved the Custom theme as " + name + "." : "could not save the theme " + path + ".");
-        ScanThemes();
+        if (m_Settings.barTheme != headsup::BarTheme::Custom) return;
+        const std::pair<std::string, headsup::BarPalette> now{m_Settings.customThemeName, m_Settings.customPalette};
+        if (m_ThemeWritten == now) return;
+        const std::string path = ThemePath(now.first);
+        if (!WriteText(path, headsup::ThemeFileText(now.second)))
+        {
+            Print("could not save the theme " + path + ".");
+            return;
+        }
+        m_ThemeWritten = now;
+        if (std::ranges::find(m_ThemeFiles, now.first) == m_ThemeFiles.end()) ScanThemes();
     }
 
-    // Makes a saved theme the Custom theme and picks it; false when the file gave no theme.
+    // Makes a saved theme the custom theme in use; false when the file gave no theme.
     bool LoadTheme(const std::string& name)
     {
-        const std::string path = ThemesFolder() + name + headsup::kThemeExtensions[0];
+        const std::string path = ThemePath(name);
         const std::optional<headsup::BarPalette> palette = headsup::PaletteFromThemeFile(ReadText(path));
         if (!palette)
         {
             Print("could not read a theme from " + path + ".");
             return false;
         }
-        m_Settings.customPalette = *palette;
-        m_Settings.barTheme      = headsup::BarTheme::Custom;
+        m_Settings.customPalette   = *palette;
+        m_Settings.customThemeName = name;
+        m_Settings.barTheme        = headsup::BarTheme::Custom;
+        m_ThemeWritten             = {name, *palette};
+        return true;
+    }
+
+    // Gives the custom theme in use a new name: its file is written under it and the old one goes.
+    bool RenameTheme(const std::string& name)
+    {
+        const std::string was = ThemePath(m_Settings.customThemeName);
+        if (!WriteText(ThemePath(name), headsup::ThemeFileText(m_Settings.customPalette)))
+        {
+            Print("could not save the theme " + ThemePath(name) + ".");
+            return false;
+        }
+        DeleteFileA(was.c_str());
+        m_Settings.customThemeName = name;
+        m_ThemeWritten             = {name, m_Settings.customPalette};
+        ScanThemes();
         return true;
     }
 
@@ -2506,6 +2539,7 @@ private:
     void SaveSettings()
     {
         const double before = Now();
+        SaveCustomTheme();
         const std::vector<headsup::KeyText>& keys = m_SavedKeys.Save(m_Settings);
         m_LastSaveKeys                            = keys.size();
         if (!keys.empty())

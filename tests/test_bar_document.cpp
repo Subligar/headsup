@@ -48,7 +48,8 @@ TEST(image_names_round_trip_to_their_images)
     const BarPalette& umbra = PaletteOf(BarTheme::UmbraDark);
     const std::string umbraStrip = "hu:strip/ff2b2b30/ff212125/ff17171a/ff000000/00000000/80000000/1/45/13";
     CHECK_EQ(StripSource(umbra, 45, 13), umbraStrip);
-    CHECK_EQ(DiamondSource(0xFFC9A24Au, 10), "hu:diamond/ffc9a24a/10");
+    CHECK_EQ(SeparatorSource(DashMark::Diamond, 0xFFC9A24Au, 10), "hu:diamond/ffc9a24a/10");
+    CHECK_EQ(SeparatorSource(DashMark::None, 0xFFC9A24Au, 10), "hu:dash/ffc9a24a/10");
     CHECK_EQ(CoinSource(17), "hu:coin/17");
     const std::optional<Image> icon = HostImage("hu:icon/4");
     CHECK(icon && icon->width == static_cast<int>(IconImage(Icon::Link).width));
@@ -57,7 +58,7 @@ TEST(image_names_round_trip_to_their_images)
     CHECK(strip->argb == StripColumn(45, 13, umbra.stripTop, umbra.stripMiddle, umbra.stripBottom, umbra.bottomLine,
                              umbra.underLine, umbra.below, umbra.border).argb);
     BarPalette flat = umbra, one = umbra; // no gradient: its top all the way down, the other stops kept
-    flat.gradient   = false;
+    flat.background = BarBackground::Plain;
     one.stripMiddle = one.stripBottom = umbra.stripTop;
     CHECK(StripSource(flat, 45, 13) == StripSource(one, 45, 13) && flat.stripBottom == umbra.stripBottom);
     BarPalette thick = umbra;
@@ -67,6 +68,15 @@ TEST(image_names_round_trip_to_their_images)
     const std::optional<Image> diamond = HostImage("hu:diamond/ffc9a24a/10");
     CHECK(diamond && diamond->width == 10 && diamond->height == 10);
     CHECK(diamond->argb[5 * 10 + 5] == 0xFFC9A24Au); // its middle pixel is solid in its color
+    // Each Separator Style draws its own: solid in its middle, and only the dash across the whole width.
+    for (const char* kind : {"dot", "square", "dash"})
+    {
+        const std::optional<Image> mark = HostImage(std::string("hu:") + kind + "/ffc9a24a/10");
+        CHECK(mark && mark->width == 10 && mark->argb[5 * 10 + 5] == 0xFFC9A24Au);
+        CHECK_EQ(mark->argb[5 * 10] == 0xFFC9A24Au, std::string(kind) == "dash"); // the left edge's middle
+        CHECK_EQ(mark->argb[0], 0u);                                             // a corner is clear
+    }
+    CHECK(!HostImage("hu:stars/ffc9a24a/10"));
     const std::optional<Image> coin = HostImage("hu:coin/17");
     CHECK(coin && coin->width == 17);
     CHECK(!HostImage("hu:icon/999") && !HostImage("hu:nothing") && !HostImage("icon.png") && !HostImage("hu:strip/9/45/13"));
@@ -114,6 +124,15 @@ TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
     CHECK(Has(rml, ".ornate .widget.target{border-width:1px;margin:0px;padding:0px 13.85px;"
                    "background-color:#c9a24a1a;border-color:#c9a24aff;border-radius:3px;}"));
     CHECK(Has(rml, ".ornate .widget.target.lit{background-color:#c9a24a34;")); // twice the tint
+}
+
+TEST(the_caps_and_dividers_take_the_themes_separator_style)
+{
+    Settings settings;
+    BarPalette dots = PaletteOf(BarTheme::PhoenixGold);
+    dots.separator  = DashMark::Dot;
+    const std::string rml = BarDocument(LookOf(dots, settings), Place());
+    CHECK(Has(rml, "hu:dot/ffc9a24a/14") && Has(rml, "hu:dot/ff8a6d2c/10") && !Has(rml, "hu:diamond/"));
 }
 
 TEST(a_pill_theme_frames_each_widget_and_its_caps_follow_the_settings)
@@ -300,7 +319,7 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
 TEST(the_popup_document_styles_its_faces_and_boxes_from_the_look)
 {
     Settings settings;
-    const BarLook look = LookOf(BarTheme::PhoenixRedPills, settings);
+    const BarLook look = LookOf(BarTheme::UmbraDark, settings);
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29, 0}, PopupFace{"Barlow Condensed", 18, 22, 0},
         PopupFace{"Barlow Condensed", 15, 18, 2}, PopupFace{"Barlow Condensed", 15, 18, 0}};
     const std::string rml = PopupDocument(look, faces);
@@ -312,10 +331,10 @@ TEST(the_popup_document_styles_its_faces_and_boxes_from_the_look)
     CHECK(Has(rml, ".tab{") && Has(rml, ".tab.lit{"));
     CHECK(Has(rml, ".track{") && Has(rml, ".thumb{"));
     // The panel: one fill top to bottom, the theme's faint edge, 0.28 of the popup's unit rounded.
-    CHECK(Has(rml, "#panel{position:absolute;left:0px;top:0px;box-sizing:border-box;border:1px #d2abab33;"
-                   "border-radius:12.6px;decorator:vertical-gradient(#180e0eff #180e0eff);}"));
+    CHECK(Has(rml, "#panel{position:absolute;left:0px;top:0px;box-sizing:border-box;border:1px #3a3a42ff;"
+                   "border-radius:12.6px;decorator:vertical-gradient(#1d1d21ff #1d1d21ff);}"));
     CHECK(Has(rml, ".card{box-sizing:border-box;border:1px #ffffff1e;border-radius:12.6px;background-color:#ffffff12;}"));
-    CHECK(Has(rml, ".tag{box-sizing:border-box;border:1px transparent;background-color:#321f1fff;}"));
+    CHECK(Has(rml, ".tag{box-sizing:border-box;border:1px transparent;background-color:#2c2c33ff;}"));
     CHECK(!Has(rml, IconSource(Icon::Star)));
 }
 
@@ -342,8 +361,7 @@ TEST(every_theme_eases_breathes_and_pulses_in_its_own_colors)
     // blue, the royal red into the ember, cyan into violet.
     for (const Lit& lit : {Lit{BarTheme::PhoenixGold, "from{border-color:#c9a24a59;}to{border-color:#efe3c6cc;}", "#c9a24aff #efe3c6ff"},
              Lit{BarTheme::UmbraDark, "from{border-color:#5b8def59;}to{border-color:#9cc2ffcc;}", "#5b8defff #9cc2ffff"},
-             Lit{BarTheme::PhoenixRedOrnate, "from{border-color:#c5515159;}to{border-color:#e06f5ecc;}", "#c55151ff #e06f5eff"},
-             Lit{BarTheme::PhoenixRedPills, "from{border-color:#c5515159;}to{border-color:#e06f5ecc;}", "#c55151ff #e06f5eff"},
+             Lit{BarTheme::PhoenixRed, "from{border-color:#c5515159;}to{border-color:#e06f5ecc;}", "#c55151ff #e06f5eff"},
              Lit{BarTheme::Aurora, "from{border-color:#5ee6ff59;}to{border-color:#b48cffcc;}", "#5ee6ffff #b48cffff"}})
     {
         const BarLook look    = LookOf(lit.theme, settings);
@@ -420,7 +438,9 @@ TEST(the_strip_and_the_popups_are_drawn_with_the_games_art_when_the_shape_is_win
         CHECK(rule(bar, name).find(SkinRules(*look.skin)) != std::string::npos);
     CHECK(rule(PopupDocument(look, faces), "#panel{").find(SkinRules(*look.skin)) != std::string::npos);
     // Border off: the same art without its edge, everywhere.
-    settings.gameWindowBorder = false;
+    settings.barTheme                   = BarTheme::Custom;
+    settings.customPalette.background   = BarBackground::Window;
+    settings.customPalette.windowBorder = false;
     CHECK(FrameAsSet(settings, *look.skin) == (SkinFrame{3, 1.0f, 0.5f, 1.0f}));
     // Without the art read, the shape draws its colors.
     look.skin = std::nullopt;

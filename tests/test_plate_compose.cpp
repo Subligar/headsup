@@ -378,9 +378,11 @@ TEST(only_a_dash_typed_in_a_design_is_drawn_as_the_mark_chosen)
     // The dashes between a range's ends are the tags' own text, not the design's.
     CHECK_EQ(level(), "Lv 17-20 " + diamond + " EP-EM");
     CHECK_EQ(ComposePlate(mob, kPlayer, s, kGame).lines[2].items[0].text, "Ga-Bhu");
-    s.dashMark = DashMark::Dot;
+    // The theme's Separator Style draws them.
+    s.barTheme                = BarTheme::Custom;
+    s.customPalette.separator = DashMark::Dot;
     CHECK_EQ(level(), "Lv 17-20 " + dot + " EP-EM");
-    s.dashMark = DashMark::None;
+    s.customPalette.separator = DashMark::None;
     CHECK_EQ(level(), "Lv 17-20 - EP-EM");
     // Each mark has a character of its own, none of them a dash, and a report reads them as dashes.
     CHECK(diamond != dot && diamond != "-" && dot != "-");

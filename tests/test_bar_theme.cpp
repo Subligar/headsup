@@ -21,10 +21,11 @@ TEST(each_theme_has_the_mockups_colors_and_shape)
     CHECK_EQ(gold.below, 0x59C9A24Au); // the gold glow at 35%
     const BarPalette& umbra = PaletteOf(BarTheme::UmbraDark);
     CHECK(umbra.shape == BarShape::Pills && umbra.accent == 0xFF5B8DEFu && umbra.pill == 0xFF222226u);
-    CHECK(PaletteOf(BarTheme::PhoenixRedOrnate).shape == BarShape::Ornate);
-    CHECK_EQ(PaletteOf(BarTheme::PhoenixRedOrnate).accent, 0xFFC55151u);
-    CHECK(PaletteOf(BarTheme::PhoenixRedPills).shape == BarShape::Pills);
-    CHECK_EQ(PaletteOf(BarTheme::PhoenixRedPills).pillBorder, 0x33D2ABABu); // #d2abab at 20%
+    CHECK(PaletteOf(BarTheme::PhoenixRed).shape == BarShape::Ornate);
+    CHECK_EQ(PaletteOf(BarTheme::PhoenixRed).accent, 0xFFC55151u);
+    // Vanilla is Phoenix Gold's colors on the game's art until the art's own are read.
+    const BarPalette& vanilla = PaletteOf(BarTheme::Vanilla);
+    CHECK(vanilla.background == BarBackground::Window && vanilla.shape == BarShape::Window && vanilla.accent == gold.accent);
     // Aurora is laid out as pills are, in its own slate and cyan.
     const BarPalette& aurora = PaletteOf(BarTheme::Aurora);
     CHECK(aurora.shape == BarShape::Glass && aurora.accent == 0xFF5EE6FFu && aurora.title == 0xFFEAF2FFu);
@@ -35,15 +36,21 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     BarPalette p = PaletteOf(BarTheme::UmbraDark);
     for (size_t i = 0; i < std::size(kPaletteColors); ++i)
         p.*kPaletteColors[i].field = 0x01020300u + static_cast<uint32_t>(i);
-    p.shape    = BarShape::Glass;
-    p.border   = 4;
-    p.gradient = false;
+    p.shape        = BarShape::Glass;
+    p.border       = 4;
+    p.background   = BarBackground::Window;
+    p.windowType   = 6;
+    p.windowBorder = false;
+    p.separator    = DashMark::Square;
     const std::string file = ThemeFileText(p);
     CHECK(PaletteFromThemeFile(file) == p);
     // A part it lacks, or cannot be read, is Phoenix Gold's; a file of none of its parts is no theme.
     const std::optional<BarPalette> partial = PaletteFromThemeFile("[theme]\nTitle=ff102030\nAccent=nonsense\n");
     CHECK(partial && partial->title == 0xFF102030u && partial->accent == PaletteOf(BarTheme::PhoenixGold).accent);
     CHECK(!PaletteFromThemeFile("[other]\nTitle=ff102030\n") && !PaletteFromThemeFile(""));
+    // A window type past the game's eight is its last; a background of no name is Phoenix Gold's.
+    const std::optional<BarPalette> wild = PaletteFromThemeFile("[theme]\nTitle=ff102030\nWindowType=40\nBackground=stars\n");
+    CHECK(wild && wild->windowType == kWindowTypes && wild->background == BarBackground::Gradient);
 }
 
 TEST(the_themes_folder_lists_its_theme_files_by_name)

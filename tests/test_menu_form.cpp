@@ -640,15 +640,16 @@ TEST(a_color_off_its_default_has_an_arrow_that_puts_it_back)
     CHECK(w.settings.weakBadgeColor == Settings{}.weakBadgeColor);
 }
 
-TEST(the_dash_mark_is_picked_from_a_list_whose_first_row_is_none)
+TEST(the_separator_style_is_picked_from_a_list_whose_first_row_is_none_and_is_the_themes)
 {
     Window w;
-    const char* list = "entities-nameplates-replace-dashes";
+    w.state.page     = Page::Theme;
+    const char* list = "theme-theme-colors-separator-style";
     const Form open  = w.Pass({{list, kClickEvent, ""}});
     CHECK(open.popup);
-    CHECK(ClassOn(open, "entities-nameplates-replace-dashes-o-3", "picked")); // the diamond, a new install's
-    CHECK(w.Pass({{"entities-nameplates-replace-dashes-o-0", kClickEvent, ""}}).changed);
-    CHECK(w.settings.dashMark == DashMark::None);
+    CHECK(ClassOn(open, "theme-theme-colors-separator-style-o-3", "picked")); // the diamond, Phoenix Gold's
+    CHECK(w.Pass({{"theme-theme-colors-separator-style-o-0", kClickEvent, ""}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Custom && OwnPalette(w.settings).separator == DashMark::None);
 }
 
 TEST(a_page_moved_in_the_layout_moves_in_the_sidebar_and_opens_by_its_key)
@@ -915,90 +916,104 @@ TEST(a_window_set_to_hide_goes_on_the_hidden_list_and_shows_no_place_until_kept_
     CHECK(w.settings.hiddenWindows.empty() && place(w.Pass()));
 }
 
-TEST(an_edit_of_a_theme_color_makes_the_theme_custom_which_keeps_it)
+TEST(an_edit_of_a_built_in_theme_makes_a_custom_copy_of_it_named_after_it)
 {
     Window w;
     w.state.page        = Page::Theme;
     w.settings.barTheme = BarTheme::UmbraDark;
+    const std::vector<std::string> files = {"umbra dark (custom)"}; // Windows tells no cases apart
+    w.readings.themeFiles = &files;
     const std::string accent = "theme-theme-colors-accent-theme-palette";
     w.Pass({{accent, kClickEvent, ""}});
     CHECK(w.Pass({{accent + "-p-r", kChangeEvent, "1"}}).changed);
-    BarPalette edited = PaletteOf(BarTheme::PhoenixGold); // Custom starts from the first theme, whichever is shown
+    BarPalette edited = PaletteOf(BarTheme::UmbraDark); // the theme shown, with the change
     edited.accent     = (edited.accent & 0xFF00FFFFu) | 0x00010000u;
     CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette == edited);
-    // Another theme picked leaves Custom's colors for when it is picked again.
-    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
-    w.Pass({{"theme-theme-look-theme-o-4", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::Aurora && w.settings.customPalette == edited);
+    CHECK_EQ(w.settings.customThemeName, std::string("Umbra Dark (custom 2)"));
+    // Another change is the custom theme's own.
+    w.Pass({{"theme-theme-colors-theme-border-thickness", kChangeEvent, "3"}});
+    CHECK(w.settings.customPalette.border == 3 && w.settings.customThemeName == "Umbra Dark (custom 2)");
+    // The list: the built-in themes, then the custom ones, the one in use among them before the folder is read.
+    const Form listed = w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    CHECK(w.state.themesRequested && listed.popup && Has(listed.popup->rml, "Custom Themes"));
+    CHECK(ClassOn(listed, "theme-theme-look-theme-o-6", "picked") && Has(listed.popup->rml, "Umbra Dark (custom 2)"));
+    w.Pass({{"theme-theme-look-theme-o-3", kClickEvent, ""}});
+    CHECK(w.settings.barTheme == BarTheme::Aurora && w.settings.customPalette.border == 3);
+    // A custom one picked is read in by the plugin.
     w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
     w.Pass({{"theme-theme-look-theme-o-5", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::Custom && PaletteFor(w.settings, nullptr) == edited);
+    CHECK(w.state.themeLoad == "umbra dark (custom)" && w.settings.barTheme == BarTheme::Aurora);
 }
 
-TEST(window_type_shows_while_the_games_art_is_in_use_and_picks_a_type_or_follows_the_game)
+TEST(the_built_in_list_has_no_custom_heading_without_custom_themes)
 {
     Window w;
-    w.state.page             = Page::Theme;
-    const std::string type   = "theme-theme-look-window-type";
-    const auto shown = [&] { return !ClassOn(w.Pass(), (type + "-label-row").c_str(), "off"); };
-    CHECK(!shown());
-    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
-    w.Pass({{"theme-theme-look-theme-o-6", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::GameWindow && shown());
-    w.Pass({{type, kClickEvent, ""}});
-    CHECK(w.Pass({{type + "-o-5", kClickEvent, ""}}).changed);
-    CHECK_EQ(w.settings.windowType, 5);
-    w.Pass({{type, kClickEvent, ""}});
-    w.Pass({{type + "-o-0", kClickEvent, ""}});
-    CHECK_EQ(w.settings.windowType, 0);
+    w.state.page      = Page::Theme;
+    const Form listed = w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    CHECK(listed.popup && Has(listed.popup->rml, "Built-in Themes") && !Has(listed.popup->rml, "Custom Themes"));
+    CHECK(Has(listed.popup->rml, "Vanilla") && !Has(listed.popup->rml, ">Custom<"));
 }
 
-TEST(the_theme_colors_card_sets_the_shape_the_border_and_one_color_or_a_gradient)
+TEST(window_type_shows_on_the_games_art_and_picks_a_type_or_follows_the_game)
+{
+    Window w;
+    w.state.page           = Page::Theme;
+    const std::string type = "theme-theme-colors-window-type";
+    const auto shown = [&] { return At(Block(w.Pass(), "theme-theme-colors"), type) != std::string::npos; };
+    CHECK(!shown());
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-4", kClickEvent, ""}});
+    CHECK(w.settings.barTheme == BarTheme::Vanilla && shown());
+    CHECK(w.Pass({{type, kChangeEvent, "5"}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customThemeName == "Vanilla (custom)");
+    CHECK_EQ(OwnPalette(w.settings).windowType, 5);
+    w.Pass({{type, kChangeEvent, "0"}});
+    CHECK_EQ(OwnPalette(w.settings).windowType, kFollowGameWindow);
+}
+
+TEST(the_background_style_shows_the_color_the_gradient_or_the_window_settings)
 {
     Window w;
     w.state.page = Page::Theme;
     const auto shows = [&](const char* key) {
-        return !ClassOn(w.Pass(), (std::string("theme-theme-colors-") + key + "-label-row").c_str(), "off");
+        return At(Block(w.Pass(), "theme-theme-colors"), std::string("theme-theme-colors-") + key) != std::string::npos;
     };
     BarPalette& p          = w.settings.customPalette;
     const BarPalette& gold = PaletteOf(BarTheme::PhoenixGold);
-    // Phoenix Gold's strip is a gradient: its top and bottom show, and no one background.
-    CHECK(shows("theme-top") && shows("theme-bottom") && !shows("theme-background"));
-    CHECK(w.Pass({{"theme-theme-colors-theme-gradient", kClickEvent, ""}}).changed);
-    CHECK(!p.gradient && w.settings.barTheme == BarTheme::Custom);
+    // Phoenix Gold's strip is a gradient: its top and bottom show, and no one color or window.
+    CHECK(shows("theme-top") && shows("theme-bottom") && !shows("theme-background") && !shows("window-border"));
+    CHECK(!shows("theme-name")); // a built-in theme has no name to change
+    CHECK(w.Pass({{"theme-theme-colors-background-style-s-0", kClickEvent, ""}}).changed);
+    CHECK(p.background == BarBackground::Plain && w.settings.barTheme == BarTheme::Custom && shows("theme-name"));
     CHECK(!shows("theme-top") && !shows("theme-bottom") && shows("theme-background"));
     // Its stops are kept for the gradient's return; edited, the middle stays halfway between the two.
-    w.Pass({{"theme-theme-colors-theme-gradient", kClickEvent, ""}});
-    CHECK(p.gradient && p.stripBottom == gold.stripBottom && shows("theme-top"));
+    w.Pass({{"theme-theme-colors-background-style-s-1", kClickEvent, ""}});
+    CHECK(p.background == BarBackground::Gradient && p.stripBottom == gold.stripBottom && shows("theme-top"));
     w.Pass({{"theme-theme-colors-theme-top", kClickEvent, ""}});
     w.Pass({{"theme-theme-colors-theme-top-p-a", kChangeEvent, "0"}});
     CHECK(p.stripTop == (gold.stripTop & 0x00FFFFFFu) && p.stripMiddle == 0x7F1A1510u);
-    w.Pass({{"theme-theme-colors-theme-border-thickness", kChangeEvent, "4"}});
-    CHECK_EQ(p.border, 4);
-    w.Pass({{"theme-theme-colors-theme-shape-s-2", kClickEvent, ""}});
-    CHECK(p.shape == BarShape::Glass);
+    w.Pass({{"theme-theme-colors-background-style-s-2", kClickEvent, ""}});
+    CHECK(p.background == BarBackground::Window && shows("window-type") && shows("window-border") && !shows("theme-top"));
 }
 
-TEST(a_theme_is_saved_under_a_name_it_can_have_and_loaded_from_the_list)
+TEST(a_custom_theme_takes_a_new_name_once_its_box_is_left_unless_it_cannot_have_it)
 {
     Window w;
-    w.state.page          = Page::Theme;
-    const Settings before = w.settings;
-    const char* name = "theme-theme-colors-theme-name";
-    const char* save = "theme-theme-colors-save-theme";
-    w.Pass({{save, kClickEvent, ""}});
-    CHECK(!w.state.themeSave);
-    w.Pass({{name, kChangeEvent, "a/b"}, {save, kClickEvent, ""}});
-    CHECK(!w.state.themeSave);
-    w.Pass({{name, kChangeEvent, "Dusk"}, {save, kClickEvent, ""}});
-    CHECK(w.state.themeSave == "Dusk");
+    w.state.page               = Page::Theme;
+    w.settings.barTheme        = BarTheme::Custom;
+    w.settings.customThemeName = "Dusk";
     const std::vector<std::string> files = {"Dawn", "Dusk"};
     w.readings.themeFiles = &files;
-    w.Pass({{"theme-theme-colors-theme-file", kClickEvent, ""}});
-    CHECK(w.state.themesRequested); // opened, the folder is read again
-    w.Pass({{"theme-theme-colors-theme-file-o-1", kClickEvent, ""}});
-    w.Pass({{"theme-theme-colors-load-theme", kClickEvent, ""}});
-    CHECK(w.state.themeLoad == "Dusk" && w.settings == before); // the plugin reads it in
+    const std::string box = "theme-theme-colors-theme-name";
+    w.Pass();
+    CHECK_EQ(w.state.themeName, std::string("Dusk"));
+    for (const char* refused : {"a/b", "dawn", ""})
+    {
+        w.Pass({{box, kCommitEvent, refused}});
+        CHECK(!w.state.themeRename && w.state.themeName == "Dusk");
+    }
+    w.Pass({{box, kCommitEvent, "Night"}});
+    CHECK(w.state.themeRename == "Night" && w.settings.customThemeName == "Dusk"); // the plugin renames its file
 }
 
 TEST(the_profiles_card_asks_the_plugin_to_use_make_rename_or_delete_a_profile)
@@ -1091,11 +1106,12 @@ TEST(the_theme_is_never_faint_after_a_faint_setting)
     Window w;
     w.state.page = Page::Theme;
     test::EditedLayout edited;
-    edited.MoveSetting("theme", "theme-look", 1); // after Window Type, which is faint without the game's art
-    w.layout       = edited.Layout();
-    const Form form = w.Pass();
-    CHECK(ClassOn(form, "theme-theme-look-window-type-label-row", kOffClass));
-    CHECK(!ClassOn(form, "theme-theme-look-theme-label-row", kOffClass));
+    edited.MoveSetting("theme", "theme-colors", 9); // after Border Color, which is faint with the panel off
+    w.layout            = edited.Layout();
+    w.settings.showBar  = false;
+    const Form form     = w.Pass();
+    CHECK(ClassOn(form, "theme-theme-colors-theme-border-color-label-row", kOffClass));
+    CHECK(!ClassOn(form, "theme-theme-colors-theme-label-row", kOffClass));
 }
 
 TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)

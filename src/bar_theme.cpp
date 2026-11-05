@@ -12,8 +12,16 @@ namespace headsup
     namespace
     {
         constexpr const char* kThemeSection = "theme";
-        constexpr const char* kShapeKey = "Shape", *kBorderKey = "Border", *kGradientKey = "Gradient";
+        constexpr const char* kShapeKey = "Shape", *kBorderKey = "Border", *kBackgroundKey = "Background";
+        constexpr const char* kWindowTypeKey = "WindowType", *kWindowBorderKey = "WindowBorder", *kSeparatorKey = "Separator";
         constexpr const char* kTrueText = "true", *kFalseText = "false";
+
+        template <typename Enum>
+        void Named(std::optional<std::string> text, const char* const* names, int count, Enum& value)
+        {
+            for (int i = 0; text && i < count; ++i)
+                if (*text == names[i]) value = static_cast<Enum>(i);
+        }
         constexpr int kHex = 16;
 
         std::optional<int> NumberIn(const std::optional<std::string>& text, int base)
@@ -52,12 +60,6 @@ namespace headsup
                 .panelTop = 0xF7291C1C, .panelBottom = 0xF7180E0E, .panelBorder = 0xFFC55151, .panelOuter = 0xFF3A1B1B,
                 .text = 0xFFF3E6E6, .heading = 0xFFD2ABAB, .tagFill = 0, .tagBorder = 0xFF6E3434, .tagText = 0xFFE8C9C9,
                 .highlight = 0x1AC55151},
-            {.shape = BarShape::Pills, .stripTop = 0xFF2E1C1C, .stripMiddle = 0xFF231515, .stripBottom = 0xFF180E0E,
-                .bottomLine = 0xFF000000, .underLine = 0, .below = 0x80000000, .accent = 0xFFC55151, .accentEnd = 0xFFE06F5E,
-                .pill = 0xFF291C1C, .pillBorder = 0x33D2ABAB, .title = 0xFFFFF8F8, .subtitle = 0xFF8A6B6B, .divider = 0,
-                .panelTop = 0xFF180E0E, .panelBottom = 0xFF180E0E, .panelBorder = 0x33D2ABAB, .panelOuter = 0,
-                .text = 0xFFFFF8F8, .heading = 0xFFD2ABAB, .tagFill = 0xFF321F1F, .tagBorder = 0, .tagText = 0xFFE8C9C9,
-                .highlight = 0xFF3A2525},
             {.shape = BarShape::Glass, .stripTop = 0xE6131C2B, .stripMiddle = 0xE60E1522, .stripBottom = 0xE60A0F18,
                 .bottomLine = 0xFF1B2636, .underLine = 0, .below = 0x595EE6FF, .accent = 0xFF5EE6FF, .accentEnd = 0xFFB48CFF,
                 .pill = 0x1AFFFFFF, .pillBorder = 0x24B8D8FF, .title = 0xFFEAF2FF, .subtitle = 0xFF8FA3BF, .divider = 0,
@@ -69,6 +71,13 @@ namespace headsup
 
     const BarPalette& PaletteOf(BarTheme theme)
     {
+        static const BarPalette vanilla = [] {
+            BarPalette p = kPalettes[static_cast<int>(BarTheme::PhoenixGold)];
+            p.shape      = BarShape::Window;
+            p.background = BarBackground::Window;
+            return p;
+        }();
+        if (theme == BarTheme::Vanilla) return vanilla;
         return kPalettes[std::clamp(static_cast<int>(theme), 0, kFixedThemeCount - 1)];
     }
 
@@ -104,7 +113,10 @@ namespace headsup
         }
         values.push_back({kShapeKey, kBarShapeNames[static_cast<int>(palette.shape)]});
         values.push_back({kBorderKey, std::to_string(palette.border)});
-        values.push_back({kGradientKey, palette.gradient ? kTrueText : kFalseText});
+        values.push_back({kBackgroundKey, kBarBackgroundNames[static_cast<int>(palette.background)]});
+        values.push_back({kWindowTypeKey, std::to_string(palette.windowType)});
+        values.push_back({kWindowBorderKey, palette.windowBorder ? kTrueText : kFalseText});
+        values.push_back({kSeparatorKey, kDashMarkNames[static_cast<int>(palette.separator)]});
         return WithIniValues("", kThemeSection, values);
     }
 
@@ -122,13 +134,15 @@ namespace headsup
                 palette.*color.field = value;
                 any                  = true;
             }
-        const std::optional<std::string> shape = IniValue(file, kThemeSection, kShapeKey);
-        for (int i = 0; shape && i < kBarShapeCount; ++i)
-            if (*shape == kBarShapeNames[i]) palette.shape = static_cast<BarShape>(i);
+        Named(IniValue(file, kThemeSection, kShapeKey), kBarShapeNames, kBarShapeCount, palette.shape);
+        Named(IniValue(file, kThemeSection, kBackgroundKey), kBarBackgroundNames, kBarBackgroundCount, palette.background);
+        Named(IniValue(file, kThemeSection, kSeparatorKey), kDashMarkNames, kDashMarkCount, palette.separator);
         if (const std::optional<int> border = NumberIn(IniValue(file, kThemeSection, kBorderKey), 10))
             palette.border = std::clamp(*border, 0, kMaxStripBorder);
-        if (const std::optional<std::string> gradient = IniValue(file, kThemeSection, kGradientKey))
-            palette.gradient = *gradient != kFalseText;
+        if (const std::optional<int> type = NumberIn(IniValue(file, kThemeSection, kWindowTypeKey), 10))
+            palette.windowType = std::clamp(*type, kFollowGameWindow, kWindowTypes);
+        if (const std::optional<std::string> frame = IniValue(file, kThemeSection, kWindowBorderKey))
+            palette.windowBorder = *frame != kFalseText;
         return any ? std::optional<BarPalette>(palette) : std::nullopt;
     }
 }

@@ -9,13 +9,12 @@ namespace headsup
     {
         PhoenixGold,
         UmbraDark,
-        PhoenixRedOrnate,
-        PhoenixRedPills,
-        Aurora, // glass, and a line of light under the strip
-        Custom,     // the player's own palette, Settings::customPalette
-        GameWindow, // the game's own window art, of the Window Type in use, and colors from it
+        PhoenixRed,
+        Aurora,  // glass, and a line of light under the strip
+        Custom,  // one of the player's own, Settings::customPalette, saved in the themes folder
+        Vanilla, // the game's own window art, of the Window Type the game is set to, and colors from it
     };
-    constexpr int kBarThemeCount   = static_cast<int>(BarTheme::GameWindow) + 1;
+    constexpr int kBarThemeCount   = static_cast<int>(BarTheme::Vanilla) + 1;
     constexpr int kFixedThemeCount = static_cast<int>(BarTheme::Custom); // those with a palette of their own
 
     // Where the panel shows separators, a bit each: between neighbouring widgets, and at its two ends.

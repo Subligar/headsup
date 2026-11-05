@@ -65,10 +65,10 @@ namespace headsup
         bool TakeExportRequest(); // the built-in layout is to be written out as a file
         // True once after a list of pictures (Target Cursor, Cursor Icon) was opened: read the cursors folder again.
         bool TakeCursorsRequest();
-        // Once each: the themes folder is to be read again, the Custom theme saved under a name, or a saved one read in.
+        // Once each: the themes folder is to be read again, a custom theme read in and picked, or the one in use renamed.
         bool TakeThemesRequest();
-        std::optional<std::string> TakeThemeSave();
         std::optional<std::string> TakeThemeLoad();
+        std::optional<std::string> TakeThemeRename();
         bool TakeProfilesRequest();
         bool TakeSaveRequest();
         bool TakeRevertRequest();

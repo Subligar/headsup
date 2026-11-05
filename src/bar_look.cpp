@@ -69,15 +69,10 @@ namespace headsup
 
     const BarPalette& PaletteFor(const Settings& settings, const GameSkinLook* skin)
     {
-        if (settings.barTheme == BarTheme::GameWindow) return skin != nullptr ? skin->palette : PaletteOf(kGameArtFallback);
-        return settings.barTheme == BarTheme::Custom ? settings.customPalette : PaletteOf(settings.barTheme);
+        return settings.barTheme == BarTheme::Vanilla && skin != nullptr ? skin->palette : OwnPalette(settings);
     }
 
-    bool UsesGameArt(const Settings& settings)
-    {
-        return settings.barTheme == BarTheme::GameWindow ||
-               (settings.barTheme == BarTheme::Custom && settings.customPalette.shape == BarShape::Window);
-    }
+    bool UsesGameArt(const Settings& settings) { return OwnPalette(settings).background == BarBackground::Window; }
 
     MenuTheme MenuThemeFor(const Settings& settings, const GameSkinLook* skin)
     {
@@ -94,8 +89,7 @@ namespace headsup
         case MenuTheme::GameWindow: return skin->menu;
         case MenuTheme::Phoenix: break;
         }
-        if (settings.barTheme == BarTheme::PhoenixRedOrnate || settings.barTheme == BarTheme::PhoenixRedPills)
-            return kPhoenixMenuColors;
+        if (settings.barTheme == BarTheme::PhoenixRed) return kPhoenixMenuColors;
         return MenuColorsFrom(PaletteFor(settings, skin));
     }
 
@@ -117,7 +111,7 @@ namespace headsup
 
     SkinFrame FrameAsSet(const Settings& settings, SkinFrame frame)
     {
-        if (!settings.gameWindowBorder) frame.edge = 0;
+        if (!OwnPalette(settings).windowBorder) frame.edge = 0;
         return frame;
     }
 

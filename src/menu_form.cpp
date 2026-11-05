@@ -387,10 +387,46 @@ namespace headsup
             }
         }
 
-        // The Custom theme's palette, edited: any change is the Custom theme's and picks it.
+        // The palette Customize Appearance shows: the custom theme's as it is now, or the built-in one's as the panel
+        // drew it (Vanilla's in the game's art's colors).
+        const BarPalette& ShownPalette(const Context& c)
+        {
+            if (c.s.barTheme == BarTheme::Custom || c.readings.palette == nullptr) return OwnPalette(c.s);
+            return *c.readings.palette;
+        }
+
+        const std::vector<std::string>& ThemeFiles(const Context& c)
+        {
+            static const std::vector<std::string> kNoThemes;
+            return c.readings.themeFiles != nullptr ? *c.readings.themeFiles : kNoThemes;
+        }
+
+        // Whether a theme's file has this name already: Windows does not tell the cases apart.
+        bool ThemeTaken(const Context& c, const std::string& name)
+        {
+            const auto lower = [](std::string text) {
+                std::ranges::transform(text, text.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+                return text;
+            };
+            return std::ranges::any_of(ThemeFiles(c), [&](const std::string& file) { return lower(file) == lower(name); });
+        }
+
+        // A built-in theme's copy's name: "Aurora (custom)", or with the first number free after it.
+        std::string CopyName(const Context& c, BarTheme theme)
+        {
+            const std::string base(Said(c.layout.OptionsOf(WindowList::BarTheme)[static_cast<size_t>(theme)].name));
+            std::string name = Filled(Said(Word(c, WindowWord::ThemeCopy)), kFileMark, base);
+            for (int n = 2; ThemeTaken(c, name); ++n)
+                name = Filled(Filled(Said(Word(c, WindowWord::ThemeCopyAgain)), kFileMark, base), kCountMark, std::to_string(n));
+            return name;
+        }
+
+        // A change to the theme's looks: a custom theme takes it, and the plugin saves its file with the settings; a
+        // built-in one becomes a new custom theme, its copy with the change, and that is picked.
         void EditTheme(Context& c, const BarPalette& edited)
         {
-            if (edited == c.s.customPalette) return;
+            if (edited == ShownPalette(c)) return;
+            if (c.s.barTheme != BarTheme::Custom) c.s.customThemeName = CopyName(c, c.s.barTheme);
             c.s.customPalette = edited;
             c.s.barTheme      = BarTheme::Custom;
         }
@@ -416,7 +452,7 @@ namespace headsup
         {
             Form& form = c.form;
             form.Fade(!BarOn(c.s));
-            BarPalette edited = c.s.customPalette;
+            BarPalette edited = ShownPalette(c);
             const auto rows   = c.layout.RowsOf(e);
             const size_t first = (rows.size() + 1) / 2;
             form.Raw("<div class=\"columns\"><div class=\"column\">");
@@ -431,30 +467,55 @@ namespace headsup
             EditTheme(c, edited);
         }
 
-        // Save the Custom theme under a name, or load one saved: the plugin reads and writes the files.
-        void ThemeFiles(Context& c)
+        // The theme picked: the built-in ones, then the player's own from the themes folder, the one in use among them
+        // even before the folder is read again.
+        void ThemeDropdown(Context& c, const std::string& label, const char* tip)
         {
-            Form& form = c.form;
-            form.Fade(!BarOn(c.s));
-            form.Row(Labeled(Word(c, WindowWord::ThemeFilesSaveAs), "save as").c_str(), WordTip(c, WindowWord::ThemeFilesSaveAs));
-            form.TextAt("theme name", c.state.themeName, Word(c, WindowWord::ThemeFilesNameHint), kFilterWidth, true, kMaxFileName);
-            if (form.Button(Word(c, WindowWord::ThemeFilesSave), "save theme") && IsFolderFileName(c.state.themeName))
-                c.state.themeSave = c.state.themeName;
-            form.EndRow();
-            static const std::vector<std::string> kNoThemes;
-            const std::vector<std::string>& files = c.readings.themeFiles != nullptr ? *c.readings.themeFiles : kNoThemes;
-            form.Row(Labeled(Word(c, WindowWord::ThemeFilesLoad), "load").c_str(), WordTip(c, WindowWord::ThemeFilesLoad));
-            if (!files.empty())
+            Settings& s = c.s;
+            const auto options = c.layout.OptionsOf(WindowList::BarTheme);
+            Form::ListGroup builtIn{std::string(Said(Word(c, WindowWord::ThemeBuiltIn))), {}, {}};
+            std::vector<BarTheme> themes;
+            for (int t = 0; t < kBarThemeCount; ++t)
+                if (static_cast<BarTheme>(t) != BarTheme::Custom)
+                {
+                    themes.push_back(static_cast<BarTheme>(t));
+                    builtIn.rows.push_back(Words(options[static_cast<size_t>(t)].name));
+                    builtIn.tips.push_back(Words(options[static_cast<size_t>(t)].tip));
+                }
+            Form::ListGroup custom{std::string(Said(Word(c, WindowWord::ThemeCustom))), ThemeFiles(c), {}};
+            if (s.barTheme == BarTheme::Custom && std::ranges::find(custom.rows, s.customThemeName) == custom.rows.end())
+                custom.rows.push_back(s.customThemeName);
+            const int customAt = static_cast<int>(themes.size());
+            int picked = s.barTheme == BarTheme::Custom
+                             ? customAt + static_cast<int>(std::ranges::find(custom.rows, s.customThemeName) - custom.rows.begin())
+                             : static_cast<int>(std::ranges::find(themes, s.barTheme) - themes.begin());
+            const std::string shown = s.barTheme == BarTheme::Custom ? s.customThemeName : builtIn.rows[static_cast<size_t>(picked)];
+            const Form::ListGroup groups[] = {builtIn, custom};
+            const int was = picked;
+            c.form.GroupedDropdown(label.c_str(), picked, groups, shown, tip);
+            if (c.form.Opened(label)) c.state.themesRequested = true;
+            if (picked == was) return;
+            if (picked < customAt)
+                s.barTheme = themes[static_cast<size_t>(picked)];
+            else if (const std::string& name = custom.rows[static_cast<size_t>(picked - customAt)]; name != s.customThemeName || s.barTheme != BarTheme::Custom)
+                c.state.themeLoad = name;
+        }
+
+        // The custom theme's name, renamed once the box is left: a name another theme has, or no file could take, is
+        // put back.
+        void ThemeName(Context& c, const std::string& label, const char* tip)
+        {
+            MenuFormState& st = c.state;
+            if (st.themeNameOf != c.s.customThemeName) st.themeName = st.themeNameOf = c.s.customThemeName;
+            c.form.Row(label.c_str(), tip);
+            if (c.form.TextAt(label.c_str(), st.themeName, nullptr, kControlWidth, false, kMaxFileName))
             {
-                const auto known = std::ranges::find(files, c.state.themePicked);
-                int picked       = known != files.end() ? static_cast<int>(known - files.begin()) : 0;
-                form.DropdownAt("theme file", picked, 0, static_cast<int>(files.size()) - 1,
-                    [&](int i) { return files[static_cast<size_t>(i)]; }, kFilterWidth);
-                c.state.themePicked = files[static_cast<size_t>(picked)];
-                if (form.Button(Word(c, WindowWord::ThemeFilesLoad), "load theme")) c.state.themeLoad = c.state.themePicked;
+                if (IsFolderFileName(st.themeName) && !ThemeTaken(c, st.themeName))
+                    st.themeRename = st.themeName;
+                else
+                    st.themeName = c.s.customThemeName;
             }
-            if (form.Opened("theme file")) c.state.themesRequested = true;
-            form.EndRow();
+            c.form.EndRow();
         }
 
         // The profile in use, the others to use or delete, and a name to make a new one under or rename this one to.
@@ -1306,16 +1367,6 @@ namespace headsup
                 form.Fade(!plates);
                 form.Switch(label.c_str(), s.lookUpPlayers, tip);
                 break;
-            case SettingPiece::ReplaceDashes:
-            {
-                form.Fade(!plates);
-                const auto options = c.layout.OptionsOf(e);
-                int dash           = static_cast<int>(s.dashMark);
-                form.MarkupDropdown(label.c_str(), dash, {Words(options[0].name), kDotMark, kSquareMark, kDiamondMark}, tip,
-                    [&](int mark) { return Words(options[static_cast<size_t>(mark)].tip); });
-                s.dashMark = static_cast<DashMark>(dash);
-                break;
-            }
             case SettingPiece::ScaleWithDistance:
                 form.Fade(!plates);
                 form.Switch(label.c_str(), s.scaleWithDistance, tip);
@@ -1623,15 +1674,7 @@ namespace headsup
             // Top Panel and Widgets
             case SettingPiece::Theme:
                 form.Fade(false);
-                OptionsDropdown(form, label, s.barTheme, c.layout.OptionsOf(WindowList::BarTheme), tip);
-                break;
-            case SettingPiece::WindowType:
-                form.Fade(!UsesGameArt(s));
-                OptionsDropdown(form, label, s.windowType, c.layout.OptionsOf(e), tip);
-                break;
-            case SettingPiece::WindowBorder:
-                form.Fade(!UsesGameArt(s));
-                form.Switch(label.c_str(), s.gameWindowBorder, tip);
+                ThemeDropdown(c, label, tip);
                 break;
             case SettingPiece::WidgetBackground:
                 form.Fade(!BarOn(s));
@@ -1698,47 +1741,77 @@ namespace headsup
                 form.Fade(!on);
                 form.Switch(label.c_str(), s.shiftVanillaUi, tip);
                 break;
-            // The Custom theme's colors, shown and edited as they are kept, whatever theme is picked.
-            case SettingPiece::ThemeShape:
+            // The theme's looks as the panel shows them; a change to a built-in theme's makes a custom theme of it.
+            case SettingPiece::ThemeName:
+                form.Fade(!BarOn(s));
+                if (s.barTheme == BarTheme::Custom) ThemeName(c, label, tip);
+                break;
+            case SettingPiece::BackgroundStyle:
             {
                 form.Fade(!BarOn(s));
-                BarPalette edited = s.customPalette;
+                BarPalette edited = ShownPalette(c);
                 const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
-                form.Segments(label.c_str(), edited.shape, names.data(), kBarShapeCount, tip);
+                form.Segments(label.c_str(), edited.background, names.data(), kBarBackgroundCount, tip);
                 EditTheme(c, edited);
                 break;
             }
             case SettingPiece::ThemeBackground:
             {
-                form.Fade(!BarOn(s) || s.customPalette.gradient);
-                BarPalette edited = s.customPalette;
-                form.ArgbSwatch(label.c_str(), edited.stripTop, tip);
-                EditTheme(c, edited);
-                break;
-            }
-            case SettingPiece::ThemeGradient:
-            {
                 form.Fade(!BarOn(s));
-                BarPalette edited = s.customPalette;
-                form.Switch(label.c_str(), edited.gradient, tip);
+                BarPalette edited = ShownPalette(c);
+                if (edited.background != BarBackground::Plain) break;
+                form.ArgbSwatch(label.c_str(), edited.stripTop, tip);
                 EditTheme(c, edited);
                 break;
             }
             case SettingPiece::ThemeTop:
             case SettingPiece::ThemeBottom:
             {
-                form.Fade(!BarOn(s) || !s.customPalette.gradient);
-                BarPalette edited = s.customPalette;
+                form.Fade(!BarOn(s));
+                BarPalette edited = ShownPalette(c);
+                if (edited.background != BarBackground::Gradient) break;
                 form.ArgbSwatch(label.c_str(), e.piece == SettingPiece::ThemeTop ? edited.stripTop : edited.stripBottom, tip);
-                if (edited == s.customPalette) break;
+                if (edited == ShownPalette(c)) break;
                 edited.stripMiddle = Halfway(edited.stripTop, edited.stripBottom);
+                EditTheme(c, edited);
+                break;
+            }
+            case SettingPiece::WindowType:
+            {
+                form.Fade(!BarOn(s));
+                BarPalette edited = ShownPalette(c);
+                if (edited.background != BarBackground::Window) break;
+                form.SliderInt(label.c_str(), edited.windowType, kFollowGameWindow, kWindowTypes,
+                    [&](int type) { return type == kFollowGameWindow ? std::string(Said(Word(c, WindowWord::Auto))) : std::to_string(type); },
+                    tip);
+                EditTheme(c, edited);
+                break;
+            }
+            case SettingPiece::WindowBorder:
+            {
+                form.Fade(!BarOn(s));
+                BarPalette edited = ShownPalette(c);
+                if (edited.background != BarBackground::Window) break;
+                form.Switch(label.c_str(), edited.windowBorder, tip);
+                EditTheme(c, edited);
+                break;
+            }
+            case SettingPiece::SeparatorStyle:
+            {
+                form.Fade(false);
+                BarPalette edited  = ShownPalette(c);
+                const auto options = c.layout.OptionsOf(e);
+                int dash           = static_cast<int>(edited.separator);
+                form.MarkupDropdown(label.c_str(), dash, {Words(options[0].name), kDotMark, kSquareMark, kDiamondMark}, tip,
+                    [&](int mark) { return Words(options[static_cast<size_t>(mark)].tip); });
+                edited.separator = static_cast<DashMark>(dash);
                 EditTheme(c, edited);
                 break;
             }
             case SettingPiece::ThemeBorderColor:
             {
                 form.Fade(!BarOn(s));
-                BarPalette edited = s.customPalette;
+                BarPalette edited = ShownPalette(c);
                 form.ArgbSwatch(label.c_str(), edited.bottomLine, tip);
                 EditTheme(c, edited);
                 break;
@@ -1746,13 +1819,12 @@ namespace headsup
             case SettingPiece::ThemeBorderThickness:
             {
                 form.Fade(!BarOn(s));
-                BarPalette edited = s.customPalette;
+                BarPalette edited = ShownPalette(c);
                 form.SliderInt(label.c_str(), edited.border, 0, kMaxStripBorder, Pixels, tip);
                 EditTheme(c, edited);
                 break;
             }
             case SettingPiece::ThemePalette: ThemePalette(c, e); break;
-            case SettingPiece::ThemeFiles: ThemeFiles(c); break;
             case SettingPiece::ProfileFiles: ProfileFiles(c); break;
             case SettingPiece::SaveAutomatically:
                 form.Fade(false);

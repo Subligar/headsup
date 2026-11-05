@@ -26,7 +26,7 @@ namespace headsup
     constexpr std::string_view kHostSource = "hu:";
     std::string IconSource(Icon icon);
     std::string StripSource(const BarPalette& palette, int rows, int belowRows);
-    std::string DiamondSource(uint32_t argb, int pixels);
+    std::string SeparatorSource(DashMark mark, uint32_t argb, int pixels);
     std::string CoinSource(int pixels);
     // A game item's picture, which only the plugin can make (from the game's resources), and the item a name is.
     std::string ItemSource(uint16_t item);

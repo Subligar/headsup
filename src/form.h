@@ -244,6 +244,15 @@ namespace headsup
             DropdownAt(label, value, first, last, text, width, nullptr, option);
             EndRow();
         }
+        // A dropdown of groups of rows, each group under its heading and one without rows left out. value: the row
+        // picked, counted through every group's; another than any row shows shown.
+        struct ListGroup
+        {
+            std::string heading;
+            std::vector<std::string> rows, tips;
+        };
+        void GroupedDropdown(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown,
+            const char* tip);
         // A dropdown whose rows, and the closed control, show RML of the page's own where the others show words.
         void MarkupDropdown(const char* label, int& value, const std::vector<std::string>& rows, const char* tip,
             const OptionTip& option = {});

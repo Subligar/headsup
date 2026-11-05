@@ -97,7 +97,7 @@ TEST(pills_section_headings_are_letter_spaced_and_nothing_else_is)
     Settings settings;
     const BarLook pills = LookOf(BarTheme::UmbraDark, settings), ornate = LookOf(BarTheme::PhoenixGold, settings);
     CHECK_EQ(pills.FaceOf(PopupFont::Heading).tracking, 2);
-    CHECK_EQ(LookOf(BarTheme::PhoenixRedPills, settings, {}, 36).FaceOf(PopupFont::Heading).tracking, 1);
+    CHECK_EQ(LookOf(BarTheme::UmbraDark, settings, {}, 36).FaceOf(PopupFont::Heading).tracking, 1);
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Pin})
         CHECK_EQ(pills.FaceOf(font).tracking, 0);
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Heading, PopupFont::Pin})
@@ -192,25 +192,30 @@ TEST(the_bar_takes_the_players_fonts_or_its_themes)
     CHECK(std::string(look.DetailFace().family) == "Verdana" && std::string(look.TitleFace(TwoLines()).family) == "Georgia");
 }
 
-TEST(the_games_art_is_in_use_for_its_theme_or_a_custom_theme_of_its_shape)
+TEST(the_games_art_is_in_use_for_vanilla_or_a_custom_theme_with_its_background)
 {
     Settings s;
     CHECK(!UsesGameArt(s));
-    s.barTheme = BarTheme::GameWindow;
+    s.barTheme = BarTheme::Vanilla;
     CHECK(UsesGameArt(s));
     s.barTheme = BarTheme::Custom;
     CHECK(!UsesGameArt(s));
-    s.customPalette.shape = BarShape::Window;
+    s.customPalette.shape = BarShape::Window; // the shape alone is not the art
+    CHECK(!UsesGameArt(s));
+    s.customPalette.background = BarBackground::Window;
     CHECK(UsesGameArt(s));
     s.barTheme = BarTheme::Aurora;
     CHECK(!UsesGameArt(s));
 }
 
-TEST(game_window_without_the_games_art_is_phoenix_gold)
+TEST(vanilla_without_the_games_art_is_phoenix_golds_colors_and_with_it_the_arts)
 {
     Settings s;
-    s.barTheme = BarTheme::GameWindow;
-    CHECK(PaletteFor(s, nullptr) == PaletteOf(BarTheme::PhoenixGold));
+    s.barTheme = BarTheme::Vanilla;
+    CHECK(PaletteFor(s, nullptr) == PaletteOf(BarTheme::Vanilla));
+    CHECK_EQ(PaletteFor(s, nullptr).accent, PaletteOf(BarTheme::PhoenixGold).accent);
+    const GameSkinLook skin{SkinFrame{2, 1.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors};
+    CHECK(PaletteFor(s, &skin) == PaletteOf(BarTheme::UmbraDark));
 }
 
 namespace
@@ -236,8 +241,8 @@ TEST(the_settings_window_takes_the_top_panels_theme)
     // Phoenix Gold, the default, gives a window lit in its gold.
     CHECK(MenuThemeFor(s, nullptr) == MenuTheme::Phoenix);
     CHECK_EQ(MenuColorsFor(s, nullptr).accent, PaletteOf(BarTheme::PhoenixGold).accent);
-    // The Phoenix Red themes keep the window drawn from phoenix-xi.com's palette, and Aurora its glass.
-    s.barTheme = BarTheme::PhoenixRedPills;
+    // Phoenix Red keeps the window drawn from phoenix-xi.com's palette, and Aurora its glass.
+    s.barTheme = BarTheme::PhoenixRed;
     CHECK(MenuColorsFor(s, nullptr) == kPhoenixMenuColors);
     s.barTheme = BarTheme::Aurora;
     CHECK(MenuThemeFor(s, nullptr) == MenuTheme::Aurora && MenuColorsFor(s, nullptr) == kAuroraMenuColors);
@@ -245,11 +250,11 @@ TEST(the_settings_window_takes_the_top_panels_theme)
     s.barTheme             = BarTheme::Custom;
     s.customPalette.accent = 0xFF12AB34;
     CHECK_EQ(MenuColorsFor(s, nullptr).accent, 0xFF12AB34u);
-    // The game's art, once read, for Game Window and a Custom theme of its shape; Phoenix Gold's colors until then.
+    // The game's art, once read, for Vanilla and a Custom theme on its art; Phoenix Gold's colors until then.
     const GameSkinLook skin{SkinFrame{2, 1.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors};
-    s.customPalette.shape = BarShape::Window;
+    s.customPalette.background = BarBackground::Window;
     CHECK(MenuThemeFor(s, &skin) == MenuTheme::GameWindow && MenuColorsFor(s, &skin) == kAuroraMenuColors);
-    s.barTheme = BarTheme::GameWindow;
+    s.barTheme = BarTheme::Vanilla;
     CHECK(MenuThemeFor(s, &skin) == MenuTheme::GameWindow);
     CHECK(MenuThemeFor(s, nullptr) == MenuTheme::Phoenix);
     CHECK_EQ(MenuColorsFor(s, nullptr).accent, PaletteOf(BarTheme::PhoenixGold).accent);

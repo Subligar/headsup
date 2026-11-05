@@ -35,6 +35,7 @@ namespace headsup
         const std::vector<WindowPlace>* windowPlaces = nullptr; // where each window seen last stood
         const std::vector<std::string>* cursorFiles = nullptr; // the cursors folder's files, without their extensions
         const std::vector<std::string>* themeFiles  = nullptr; // the themes folder's, the same way
+        const BarPalette* palette = nullptr; // the palette the panel was drawn in last frame, the game's art's for Vanilla
         const std::vector<std::string>* profiles    = nullptr; // the profiles folder's, the same way
         const std::string* profile = nullptr; // the profile in use, empty while the old settings.ini is
         bool unsaved = false; // changes not yet in the file
@@ -95,10 +96,10 @@ namespace headsup
         bool watchRequested = false; // the debug watch is to start, or stop
         bool exportRequested = false;
         bool cursorsRequested = false; // a list of pictures was opened: the cursors folder is to be read again
-        bool themesRequested  = false; // the list of saved themes was opened: the themes folder is to be read again
-        std::string themeName;   // typed to save the Custom theme under
-        std::string themePicked; // the saved theme picked to load
-        std::optional<std::string> themeSave, themeLoad; // what the plugin is to write or read in, once
+        bool themesRequested  = false; // the list of themes was opened: the themes folder is to be read again
+        std::string themeName, themeNameOf; // Theme Name's box, and the custom theme's name it was filled from
+        // What the plugin is to do once: read a custom theme in and pick it, or give the one in use a new name.
+        std::optional<std::string> themeLoad, themeRename;
         bool saveRequested = false, revertRequested = false; // by hand: write the changes, or drop them
         bool profilesRequested = false; // the list of profiles was opened: the profiles folder is to be read again
         std::string profileName;   // typed for a new profile, or the one in use's new name

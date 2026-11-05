@@ -934,12 +934,18 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     s.barTheme = BarTheme::Custom;
     for (size_t i = 0; i < std::size(kPaletteColors); ++i)
         s.customPalette.*kPaletteColors[i].field = 0x10203000u + static_cast<uint32_t>(i);
-    s.customPalette.shape    = BarShape::Glass;
-    s.customPalette.border   = 5;
-    s.customPalette.gradient = false;
+    s.customPalette.shape        = BarShape::Glass;
+    s.customPalette.border       = 5;
+    s.customPalette.background   = BarBackground::Window;
+    s.customPalette.windowType   = 3;
+    s.customPalette.windowBorder = false;
+    s.customPalette.separator    = DashMark::Dot;
+    s.customThemeName            = "Dusk";
     MapStore file;
     SaveSettings(s, file);
     CHECK(file.values["customThemeStripTop"] == "10203000" && file.values["customThemeShape"] == "glass");
+    CHECK(file.values["customThemeBackground"] == "window" && file.values["customThemeSeparator"] == "dot");
+    CHECK_EQ(file.values["customThemeName"], std::string("Dusk"));
     CHECK(LoadSettings(file) == s);
     MapStore fresh;
     CHECK(LoadSettings(fresh).customPalette == PaletteOf(BarTheme::PhoenixGold));
@@ -1014,9 +1020,8 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         BarTheme theme;
     };
     for (const Named& t : {Named{"phoenixGold", BarTheme::PhoenixGold}, Named{"umbraDark", BarTheme::UmbraDark},
-             Named{"phoenixRedOrnate", BarTheme::PhoenixRedOrnate},
-             Named{"phoenixRedPills", BarTheme::PhoenixRedPills}, Named{"aurora", BarTheme::Aurora},
-             Named{"custom", BarTheme::Custom}, Named{"gameWindow", BarTheme::GameWindow}})
+             Named{"phoenixRedOrnate", BarTheme::PhoenixRed}, Named{"aurora", BarTheme::Aurora},
+             Named{"custom", BarTheme::Custom}, Named{"gameWindow", BarTheme::Vanilla}})
     {
         MapStore store;
         store.values["barTheme"] = t.name;
@@ -1183,22 +1188,16 @@ TEST(the_settings_window_keeps_its_theme_and_its_place)
     CHECK(odd.menuWidth == 0 && odd.menuHeight == kMaxMenuSide);
 }
 
-TEST(the_window_type_is_kept)
+TEST(a_custom_themes_window_type_is_held_to_the_games_eight_and_a_name_no_file_can_have_is_its_default)
 {
     MapStore store;
-    store.values["windowType"] = "5";
-    const Settings s           = LoadSettings(store);
-    CHECK(s.windowType == 5);
-    MapStore saved;
-    SaveSettings(s, saved);
-    CHECK(saved.values["windowType"] == "5.0000");
-    // Past Type 8 is Type 8, below Follow Game is Follow Game, as is a new file.
-    store.values["windowType"] = "9";
-    CHECK_EQ(LoadSettings(store).windowType, kWindowTypes);
-    store.values["windowType"] = "-1";
-    CHECK_EQ(LoadSettings(store).windowType, 0);
-    MapStore empty;
-    CHECK_EQ(LoadSettings(empty).windowType, 0);
+    store.values["customThemeWindowType"] = "9";
+    store.values["customThemeName"]       = "a/b";
+    const Settings s = LoadSettings(store);
+    CHECK_EQ(s.customPalette.windowType, kWindowTypes);
+    CHECK_EQ(s.customThemeName, std::string(kUnnamedTheme));
+    store.values["customThemeWindowType"] = "-1";
+    CHECK_EQ(LoadSettings(store).customPalette.windowType, kFollowGameWindow);
 }
 
 TEST(a_menu_font_the_list_lacks_or_a_size_past_its_ends_keeps_the_defaults)
@@ -1392,7 +1391,6 @@ TEST(every_designer_key_round_trips)
     s.cursorColor     = ColorPick{ColorSource::Custom, {{0.9f, 0.8f, 0.1f}}};
     s.cursorStyle     = CursorStyle::File;
     s.cursorFile      = "My Cursor";
-    s.dashMark        = DashMark::Square;
     s.pointerIcon     = PointerIcon::File;
     s.pointerFile     = "Gold Arrow";
     MapStore store;
@@ -2277,14 +2275,7 @@ TEST(a_cursor_file_is_a_name_and_never_a_path)
     // A style no build knows is the default, and so is a dash mark.
     Settings wild;
     wild.cursorStyle = static_cast<CursorStyle>(9);
-    wild.dashMark    = static_cast<DashMark>(9);
     CHECK(Clamp(wild).cursorStyle == CursorStyle::Feather);
-    CHECK(Clamp(wild).dashMark == DashMark::Diamond);
-    // A file from before dashes had marks draws them as diamonds, as a new install does.
-    MapStore file = ReleaseFile();
-    CHECK(LoadSettings(file).dashMark == DashMark::Diamond);
-    file.values["dashMark"] = "no";
-    CHECK(LoadSettings(file).dashMark == DashMark::None);
 }
 
 TEST(the_mouse_pointer_is_one_icon_and_the_chocobo_switch_of_before_picks_the_chocobo)

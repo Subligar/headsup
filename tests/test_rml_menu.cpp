@@ -607,7 +607,8 @@ TEST(the_list_of_pages_scrolls_in_a_window_too_short_for_it)
 TEST(a_dash_mark_is_shown_as_its_shape_in_the_list_and_in_the_closed_control)
 {
     Window window;
-    const std::string list = "entities-nameplates-replace-dashes";
+    window.Page("theme");
+    const std::string list = "theme-theme-colors-separator-style";
     const auto shape = [&](const std::string& id) {
         Rml::ElementList shapes;
         window.Find(id)->GetElementsByClassName(shapes, "dash");
@@ -1381,10 +1382,10 @@ TEST(a_tip_stays_on_the_screen_and_off_the_pointer)
 
 TEST(every_control_of_every_page_takes_a_click_and_the_window_stands)
 {
-    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::Aurora, BarTheme::GameWindow})
+    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::Aurora, BarTheme::Vanilla})
     {
         Window window(theme);
-        if (theme == BarTheme::GameWindow)
+        if (theme == BarTheme::Vanilla)
             window.Skin(GameSkinLook{SkinFrame{0, 4.0f / 3.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors});
         for (const LayoutPage& page : kWindowLayout.pages)
         {
@@ -1670,7 +1671,7 @@ TEST(a_setting_of_something_switched_off_is_not_shown)
 
 TEST(the_game_window_theme_draws_the_window_in_the_art_and_its_colors)
 {
-    Window window(BarTheme::GameWindow);
+    Window window(BarTheme::Vanilla);
     const GameSkinLook look{SkinFrame{5, 1.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors};
     const MenuLook menu{MenuTheme::GameWindow, kBarlowCondensed, kMarcellusSC, 16, 0, false, look.menu, look.frame};
     const std::string style = MenuStyle(menu);
@@ -1745,7 +1746,7 @@ TEST(a_picked_choice_and_tab_take_dark_text_where_the_accent_is_bright)
         throw test::Failure{std::string("no picked ") + kind};
     };
     for (const auto [theme, bright] : {std::pair{BarTheme::PhoenixGold, true}, std::pair{BarTheme::UmbraDark, true},
-             std::pair{BarTheme::Aurora, true}, std::pair{BarTheme::PhoenixRedOrnate, false}})
+             std::pair{BarTheme::Aurora, true}, std::pair{BarTheme::PhoenixRed, false}})
     {
         Window window(theme);
         window.Page("toppanel");

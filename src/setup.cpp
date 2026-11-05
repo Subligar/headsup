@@ -31,10 +31,10 @@ namespace headsup
             s.barTheme = T;
         }
         const SetupOption kThemes[]{{"phoenix-gold", Theme<BarTheme::PhoenixGold>}, {"umbra-dark", Theme<BarTheme::UmbraDark>},
-            {"phoenix-red-ornate", Theme<BarTheme::PhoenixRedOrnate>}, {"phoenix-red-pills", Theme<BarTheme::PhoenixRedPills>},
-            {"aurora", Theme<BarTheme::Aurora>}, {"game-window", Theme<BarTheme::GameWindow>}};
+            {"phoenix-red", Theme<BarTheme::PhoenixRed>}, {"aurora", Theme<BarTheme::Aurora>},
+            {"vanilla", Theme<BarTheme::Vanilla>}};
         const SetupChoice kThemeChoices[]{{"theme", WindowWord::SetupChoiceTheme, WindowList::SetupTheme, kThemes}};
-        const SettingPiece kThemeSettings[]{SettingPiece::WindowType, SettingPiece::DefaultFont,
+        const SettingPiece kThemeSettings[]{SettingPiece::DefaultFont,
             SettingPiece::BaseFontSize, SettingPiece::BaseIconSize,
             SettingPiece::TextFont, SettingPiece::TextSize,
             SettingPiece::Size};

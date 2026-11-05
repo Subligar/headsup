@@ -101,6 +101,7 @@ namespace headsup
     // long, and with nothing in it that would lead out of the folder.
     constexpr size_t kMaxFileName = 64;
     bool IsFolderFileName(std::string_view name);
+    constexpr const char* kUnnamedTheme = "Custom"; // a custom theme's name where a file holds none
     // The mouse pointer: the game's own, PlayOnline's chocobo, or a cursor file of the player's.
     enum class PointerIcon : uint8_t { Vanilla, Chocobo, File };
     constexpr int kPointerIconCount = 3;
@@ -153,7 +154,10 @@ namespace headsup
         std::string badgeFontName; // badges' numbers; empty for the default font
         bool showBar       = true;
         BarTheme barTheme  = BarTheme::PhoenixGold;
-        BarPalette customPalette = PaletteOf(BarTheme::PhoenixGold); // the Custom theme's, kept while another is picked
+        // The custom theme in use, or the last one, kept while another is picked: its colors and looks as they are now,
+        // and the name of its file in the themes folder.
+        BarPalette customPalette = PaletteOf(BarTheme::PhoenixGold);
+        std::string customThemeName = kUnnamedTheme;
         int panelSeparators    = kAllSeparators; // by SeparatorBit, whatever the theme
         bool widgetBackground   = false; // every widget's pill or tint shown while not hovered, over the theme's look
         int barHeight      = 45; // pixels: the least at which titles are 13 px over 11 px detail lines
@@ -182,8 +186,6 @@ namespace headsup
         std::string menuFont = kDefaultMenuFont; // the settings window's text, by its kMenuFonts name
         int menuFontSize     = kDefaultMenuFontSize; // pixels: the settings window's text and everything sized by it
         int menuOpacity      = 100;              // percent
-        int windowType       = kFollowGameWindow; // the game's art drawn: the Window Type the game is set to, or 1 to 8
-        bool gameWindowBorder = true; // the art's frame around the top panel and the help bar
         // Where the player left the settings window, in pixels; no width for one never moved, which opens in the
         // screen's middle.
         int menuX = 0, menuY = 0, menuWidth = 0, menuHeight = 0;
@@ -242,7 +244,6 @@ namespace headsup
         int baseSize    = 15; // pixels: a line's text at 100 percent
         int baseIconSize = kDefaultIconSize; // and its icons
         int pearlOutline = 100;              // the linkpearl's outline, percent of XIUI's; 0 for none
-        DashMark dashMark = DashMark::Diamond; // what a dash typed in a design is drawn as
         bool autoCheck    = false; // every mob that comes near is checked by HeadsUp, for its exact level
         bool lookUpPlayers = false; // every player the server shows you is looked up by the search server, for their jobs
         std::string defaultFont = kDefaultFont;
@@ -301,6 +302,9 @@ namespace headsup
     std::vector<std::string> NameplateFontChoices(const std::vector<std::string>& fonts);
     // Whether a nameplate is set in the game's own font: the default, a line's or the badges'.
     bool UsesGameFont(const Settings& s);
+    // The theme picked, as far as the settings know it: Custom's palette, or a built-in one's (Vanilla's without the
+    // game's art, which PaletteFor in bar_look.h adds). Its background, window type, frame and separators are its own.
+    const BarPalette& OwnPalette(const Settings& s);
 
     // Key/value persistence: Ashita's configuration manager in the plugin, an in-memory map in tests.
     class SettingsStore

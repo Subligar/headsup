@@ -166,8 +166,8 @@ namespace headsup
     bool RmlMenu::TakeExportRequest() { return std::exchange(m_State.exportRequested, false); }
     bool RmlMenu::TakeCursorsRequest() { return std::exchange(m_State.cursorsRequested, false); }
     bool RmlMenu::TakeThemesRequest() { return std::exchange(m_State.themesRequested, false); }
-    std::optional<std::string> RmlMenu::TakeThemeSave() { return std::exchange(m_State.themeSave, std::nullopt); }
     std::optional<std::string> RmlMenu::TakeThemeLoad() { return std::exchange(m_State.themeLoad, std::nullopt); }
+    std::optional<std::string> RmlMenu::TakeThemeRename() { return std::exchange(m_State.themeRename, std::nullopt); }
     bool RmlMenu::TakeProfilesRequest() { return std::exchange(m_State.profilesRequested, false); }
     bool RmlMenu::TakeSaveRequest() { return std::exchange(m_State.saveRequested, false); }
     bool RmlMenu::TakeRevertRequest() { return std::exchange(m_State.revertRequested, false); }

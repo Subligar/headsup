@@ -413,6 +413,32 @@ namespace headsup
         EndRow();
     }
 
+    void Form::GroupedDropdown(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown,
+        const char* tip)
+    {
+        Row(label, tip);
+        const std::string control = Id(label);
+        if (ListControl(control, shown, kControlWidth))
+        {
+            std::string rml;
+            int index = 0;
+            for (const ListGroup& group : groups)
+            {
+                if (group.rows.empty()) continue;
+                rml += "<div class=\"opt-head\">" + EscapedRml(group.heading) + "</div>";
+                for (size_t i = 0; i < group.rows.size(); ++i, ++index)
+                    rml += ListRow(control, index, group.rows[i], index == value, i < group.tips.size() ? group.tips[i] : std::string());
+            }
+            int chosen = value;
+            if (ListChoice(control, std::move(rml), index, chosen) && chosen != value)
+            {
+                value   = chosen;
+                changed = true;
+            }
+        }
+        EndRow();
+    }
+
     std::string Form::ListRow(const std::string& control, int index, const std::string& name, bool picked,
         const std::string& tip, bool markup)
     {

@@ -304,7 +304,7 @@ namespace headsup
         // An NPC has no life to lose, whatever its health reads.
         const bool dead     = !st.alive && st.kind != EntityKind::Npc;
         const bool deadMob  = dead && st.kind == EntityKind::Mob;
-        const auto marked   = [dash = DashChar(s.dashMark)](std::string text) {
+        const auto marked   = [dash = DashChar(OwnPalette(s).separator)](std::string text) {
             std::ranges::replace(text, kDash, dash);
             return text;
         };

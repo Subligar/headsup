@@ -10,47 +10,51 @@
           "name": "Theme",
           "description": "The look of the top panel, this config menu, the fishing bar and many more parts of HeadsUp.",
           "settings": [
-            {"key": "theme", "name": "Theme", "tip": "The look of the top panel, its popups, this config window, the fishing bar and many more parts of HeadsUp."},
             {
-              "key": "window-type",
-              "name": "Window Type",
-              "indent": true,
-              "tip": "Which of the game's window frames the art is: the one picked in the game's Config, Windows, Shared, or one of the eight.",
-              "options": [
-                {"name": "Follow Game", "tip": "The Window Type the game is set to, followed as you change it."},
-                {"name": "Type 1"},
-                {"name": "Type 2"},
-                {"name": "Type 3"},
-                {"name": "Type 4"},
-                {"name": "Type 5"},
-                {"name": "Type 6"},
-                {"name": "Type 7"},
-                {"name": "Type 8"}
+              "key": "theme",
+              "name": "Theme",
+              "tip": "The look of the top panel, its popups, this config window, the fishing bar and many more parts of HeadsUp. Your own themes are listed under the built-in ones.",
+              "words": [
+                {"key": "built-in", "name": "Built-in Themes"},
+                {"key": "custom", "name": "Custom Themes"},
+                {"key": "copy", "name": "{file} (custom)"},
+                {"key": "copy-again", "name": "{file} (custom {count})"}
               ]
-            },
-            {"key": "window-border", "name": "Border", "indent": true, "tip": "A border around the top panel, the help bar, the popups, the fishing bar and this window, in the color of the game's window frame. Off, they are the window's background alone."}
+            }
           ]
         },
         {
           "key": "theme-colors",
-          "name": "Theme Colors",
-          "description": "Every part of the Custom theme, which starts as Phoenix Gold. It colors the top panel, the config menu and many more parts of HeadsUp. Changing one picks the Custom theme, and it keeps your changes while you pick another.",
+          "name": "Customize Appearance",
+          "description": "Every part of the theme in use. Changing one on a built-in theme makes a custom theme from it, named after it, and picks it. A custom theme saves each change as you make it, in config/headsup/themes.",
           "settings": [
+            {"key": "theme-name", "name": "Theme Name", "tip": "The custom theme's name, which is its file's name too. It changes once you click out of the box or close this window."},
             {
-              "key": "theme-shape",
-              "name": "Shape",
-              "tip": "How the widgets sit on the strip.",
+              "key": "background-style",
+              "name": "Background Style",
+              "tip": "What the top panel's strip is drawn with.",
               "options": [
-                {"name": "Ornate", "tip": "Diamonds between the widgets and a framed target, as Phoenix Gold has."},
-                {"name": "Pills", "tip": "Each widget in a rounded pill, as Umbra Dark has."},
-                {"name": "Glass", "tip": "Pills that show only when lit, a line of light under the strip and glass popups, as Aurora has."},
-                {"name": "Window", "tip": "The game's own window art under the strip and the popups, with pills only when lit, as Game Window has."}
+                {"name": "Plain", "tip": "One color, with its opacity."},
+                {"name": "Gradient", "tip": "A top color running into a bottom color."},
+                {"name": "Vanilla Window", "tip": "The game's own window art, of the Window Type below."}
               ]
             },
-            {"key": "theme-background", "name": "Background", "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
-            {"key": "theme-gradient", "name": "Gradient", "tip": "The strip runs from a top color to a bottom color."},
+            {"key": "theme-background", "name": "Background Color", "indent": true, "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
             {"key": "theme-top", "name": "Top Color", "indent": true, "tip": "The strip's color at its top, with its opacity."},
             {"key": "theme-bottom", "name": "Bottom Color", "indent": true, "tip": "The strip's color at its foot, with its opacity."},
+            {"key": "window-type", "name": "Window Type", "indent": true, "tip": "Which of the game's eight window frames the art is. Auto is the one picked in the game's Config, Windows, Shared, followed as you change it. Default: Auto."},
+            {"key": "window-border", "name": "Border", "indent": true, "tip": "A border around the top panel, the help bar, the popups, the fishing bar and this window, in the color of the game's window frame. Off, they are the window's background alone."},
+            {
+              "key": "separator-style",
+              "name": "Separator Style",
+              "tip": "The shape of the top panel's separators, and what a dash (-) in a nameplate's design is drawn as.",
+              "options": [
+                {"name": "No", "tip": "Does not replace dashes with anything."},
+                {"tip": "Dot"},
+                {"tip": "Square"},
+                {"tip": "Diamond"}
+              ]
+            },
             {"key": "theme-border-color", "name": "Border Color", "tip": "The line along the strip's foot."},
             {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels tall the line along the strip's foot is; 0 for none."},
             {
@@ -76,15 +80,6 @@
                 {"key": "tag-text", "name": "Tag Text"},
                 {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."}
               ]
-            },
-            {
-              "key": "theme-files",
-              "words": [
-                {"key": "save-as", "name": "Save As", "tip": "Saves the Custom theme under this name, in config/headsup/themes, over one of the same name."},
-                {"key": "name-hint", "name": "Name"},
-                {"key": "save", "name": "Save"},
-                {"key": "load", "name": "Load", "tip": "Makes a saved theme the Custom theme, and picks it."}
-              ]
             }
           ]
         }
@@ -103,17 +98,6 @@
             {"key": "base-font-size", "name": "Base Font Size", "tip": "The base font size for nameplate elements."},
             {"key": "base-icon-size", "name": "Base Icon Size", "tip": "The base icon size for nameplate elements."},
             {"key": "linkpearl-outline", "name": "Linkpearl Outline", "tip": "How thick the dark outline around a linkshell's pearl is: 100% is XIUI's, 0% none."},
-            {
-              "key": "replace-dashes",
-              "name": "Replace Dashes",
-              "tip": "Optionally, replaces all dashes (-) used in all nameplate design sections with a symbol.",
-              "options": [
-                {"name": "No", "tip": "Does not replace dashes with anything."},
-                {"tip": "Dot"},
-                {"tip": "Square"},
-                {"tip": "Diamond"}
-              ]
-            },
             {"key": "vertical-offset", "name": "Vertical Offset", "tip": "Offsets the entire nameplate upward by this many pixels."},
             {"key": "scale-with-distance", "name": "Scale with Distance", "tip": "Automatically scales nameplates based on distance to the player character."},
             {"key": "min-size", "name": "Min Scale", "indent": true, "tip": "The minimum scale for the nameplate. This affects its size when far away."},
@@ -975,11 +959,10 @@
       "options": [
         {"name": "Phoenix Gold", "tip": "An ornate strip in dark brown and gold, with diamonds between its widgets."},
         {"name": "Umbra Dark", "tip": "Each widget in a grey pill, lit in blue."},
-        {"name": "Phoenix Red, Ornate", "tip": "The ornate strip in Phoenix's dark red."},
-        {"name": "Phoenix Red, Pills", "tip": "Each widget in a pill, in Phoenix's dark red."},
+        {"name": "Phoenix Red", "tip": "The ornate strip in Phoenix's dark red."},
         {"name": "Aurora", "tip": "Slate glass, lit from cyan into violet."},
-        {"name": "Custom", "tip": "Your own colors and shape, from the Theme Colors card."},
-        {"name": "Game Window", "tip": "The game's own window art, of the Window Type below, in colors taken from it."}
+        {"name": "Custom", "tip": "One of your own themes, from the Customize Appearance card."},
+        {"name": "Vanilla", "tip": "The game's own window art, of the Window Type the game is set to, in colors taken from it."}
       ]
     },
     {
@@ -1103,10 +1086,9 @@
       "options": [
         {"name": "Phoenix Gold", "tip": "Gold on dark, with Phoenix's feather."},
         {"name": "Umbra Dark", "tip": "Plain and dark."},
-        {"name": "Phoenix Red Ornate", "tip": "Phoenix red with ornate edges."},
-        {"name": "Phoenix Red Pills", "tip": "Phoenix red, each widget in a pill."},
+        {"name": "Phoenix Red", "tip": "Phoenix red with ornate edges."},
         {"name": "Aurora", "tip": "Glass with a line of light under it."},
-        {"name": "Game Window", "tip": "The art of the game's own windows, in the Window Type you pick."}
+        {"name": "Vanilla", "tip": "The art of the game's own windows."}
       ]
     },
     {

@@ -75,10 +75,13 @@ Hover a widget for its popup, and click to keep it open.
 
 | Theme | Look |
 |---|---|
-| Phoenix Gold | Ornate, with diamonds and a framed target. The default |
+| Phoenix Gold | Ornate, with diamonds. The default |
 | Umbra Dark | Dark rounded pills |
-| Phoenix Red | The ornate or pill look in red |
+| Phoenix Red | The ornate look in red |
 | Aurora | Slate glass, lit from cyan into violet |
+| Vanilla | The game's own window art |
+
+Change anything in Customize Appearance and HeadsUp saves it as a theme of your own, which you pick from the same list.
 
 ## Settings
 

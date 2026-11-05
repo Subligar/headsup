@@ -315,6 +315,9 @@ namespace headsup
         css += ".opt{height:" + frame + ";" + framed + "padding:0px " + Em(kPadX) + ";border-radius:" + radius +
                ";white-space:nowrap;}";
         css += ".opt:hover,.opt.picked{background-color:" + color(c.accentSoft) + ";}";
+        // A group's heading in a list: muted capitals that take no click.
+        css += ".opt-head{height:" + frame + ";" + framed + "padding:0px " + Em(kPadX) + ";white-space:nowrap;color:" +
+               color(c.muted) + ";text-transform:uppercase;font-size:0.8em;}";
         css += ".dot{display:inline-block;width:" + Em(kChipDot) + ";height:" + Em(kChipDot) + ";border-radius:" +
                Em(kChipDot / 2.0f) + ";margin-right:0.5em;background-color:" + color(c.muted) + ";}";
         css += ".on .dot{background-color:" + color(c.accent) + ";}";

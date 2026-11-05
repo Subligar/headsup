@@ -16,9 +16,11 @@ namespace headsup
 {
     namespace
     {
-        constexpr std::string_view kIconKind = "icon", kStripKind = "strip", kDiamondKind = "diamond", kCoinKind = "coin",
+        constexpr std::string_view kIconKind = "icon", kStripKind = "strip", kCoinKind = "coin",
                                    kResetKind = "reset", kCogKind = "cog", kGameKind = "game",
                                    kItemKind = "item";
+        // A separator's, by DashMark.
+        constexpr std::string_view kSeparatorKinds[kDashMarkCount] = {"dash", "dot", "square", "diamond"};
         // RmlUi blurs a glow by a Gaussian of this share of its width; the bar's shadow is a CSS blur radius, twice
         // its Gaussian's.
         constexpr float kGlowSigmaPerWidth = 0.4f;
@@ -203,18 +205,20 @@ namespace headsup
     std::string StripSource(const BarPalette& palette, int rows, int belowRows)
     {
         std::string name = std::string(kHostSource) + std::string(kStripKind);
-        const uint32_t top = palette.stripTop, middle = palette.gradient ? palette.stripMiddle : top,
-                       bottom = palette.gradient ? palette.stripBottom : top;
+        // The art's palette runs through its stops where its art is not read.
+        const bool gradient = palette.background != BarBackground::Plain;
+        const uint32_t top = palette.stripTop, middle = gradient ? palette.stripMiddle : top,
+                       bottom = gradient ? palette.stripBottom : top;
         for (const uint32_t color : {top, middle, bottom, palette.bottomLine, palette.underLine, palette.below})
             name += kSeparator + Hex(color);
         return name + kSeparator + std::to_string(palette.border) + kSeparator + std::to_string(rows) + kSeparator +
                std::to_string(belowRows);
     }
 
-    std::string DiamondSource(uint32_t argb, int pixels)
+    std::string SeparatorSource(DashMark mark, uint32_t argb, int pixels)
     {
-        return std::string(kHostSource) + std::string(kDiamondKind) + kSeparator + Hex(argb) + kSeparator +
-               std::to_string(pixels);
+        return std::string(kHostSource) + std::string(kSeparatorKinds[static_cast<int>(mark)]) + kSeparator + Hex(argb) +
+               kSeparator + std::to_string(pixels);
     }
 
     std::string CoinSource(int pixels)
@@ -280,12 +284,15 @@ namespace headsup
             return StripColumn(static_cast<int>(*rows), static_cast<int>(*below), colors[0], colors[1], colors[2], colors[3],
                 colors[4], colors[5], static_cast<int>(*border));
         }
-        if ((kind == kDiamondKind || kind == kResetKind || kind == kCogKind) && parts.size() == 3)
+        const auto separator = std::ranges::find(kSeparatorKinds, kind);
+        if ((separator != std::end(kSeparatorKinds) || kind == kResetKind || kind == kCogKind) && parts.size() == 3)
         {
             const std::optional<uint32_t> color = number(1, kHexBase), pixels = number(2);
             if (!color || !pixels) return std::nullopt;
             const int size = static_cast<int>(*pixels);
-            return kind == kDiamondKind ? Diamond(size, *color) : kind == kResetKind ? ResetArrow(size, *color) : Cog(size, *color);
+            if (separator != std::end(kSeparatorKinds))
+                return SeparatorImage(static_cast<DashMark>(separator - std::begin(kSeparatorKinds)), size, *color);
+            return kind == kResetKind ? ResetArrow(size, *color) : Cog(size, *color);
         }
         if (kind == kCoinKind && parts.size() == 2)
         {
@@ -384,8 +391,8 @@ namespace headsup
         const float clear       = DiamondClearance(m);
         const int divider       = WholePixels(m.diamond), cap = WholePixels(m.diamond * kCapScale);
         const int coin          = CoinPixels(m);
-        const std::string capSource     = DiamondSource(p.accent, cap);
-        const std::string dividerSource = DiamondSource(look.ornate ? p.divider : p.accent, divider);
+        const std::string capSource     = SeparatorSource(p.separator, p.accent, cap);
+        const std::string dividerSource = SeparatorSource(p.separator, look.ornate ? p.divider : p.accent, divider);
         auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit); };
         auto square = [](float size) { return "width:" + Px(size) + ";height:" + Px(size) + ";"; };
         auto centered = [&](float size) { return Px(std::round(mid - size / 2.0f)); };
