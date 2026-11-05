@@ -316,7 +316,6 @@ class HeadsUp final : public IPlugin
     headsup::RmlMenu m_RmlMenu;
     bool m_RmlTried = false;
     headsup::BarClicks m_BarClicks{m_BarInput};
-    bool m_BarDrawn = false; // this frame
     headsup::PointerSwap m_Pointer;
     std::vector<HANDLE> m_LoadedFonts;
     headsup::NameHook m_NameHook;
@@ -954,7 +953,6 @@ public:
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
-        m_BarDrawn = false;
         if (!Logging()) CloseNotes();
         m_ArrowHook.Hide(m_Settings.enabled && m_Settings.cursorStyle != headsup::CursorStyle::Vanilla);
         LoadCursorFile();
@@ -972,6 +970,16 @@ public:
         UpdatePointer();
         HoldGameKeys(m_Rml.WantsText());
         m_NameHook.NewFrame(NameOwners());
+        DrawPanel();
+    }
+
+    // The panel draws in Present, so it stands where the host puts the plugins against ImGui: under it, as Ashita
+    // has them, or over it for a plugin Signet's /overimgui puts there.
+    void DrawPanel()
+    {
+        if (!g_BarOn || g_BarHidden || m_Shot.Hiding() || m_Device == nullptr || FAILED(m_Device->BeginScene())) return;
+        if (!WithQuadStates([&] { DrawBar(); })) BarNotDrawn();
+        m_Device->EndScene();
     }
 
     // The window hook: what to hide, place and shift of the game's windows, and which are open. The help bar's band.
@@ -1177,19 +1185,11 @@ public:
             m_Names.UseScene(m_NameHook.SceneTarget(), m_NameHook.SceneDepth());
             plates = m_Names.NamesThisFrame();
         }
-        const bool bar = g_BarOn && !g_BarHidden && !m_Shot.Hiding() && !std::exchange(m_BarDrawn, true);
         if (plates)
         {
             m_Names.FinishText();
-            const bool saved = WithSavedState([&] {
-                DrawNameplates(1.0f, 1.0f, false);
-                if (bar) DrawBar();
-            });
-            if (!saved) PlatesNotDrawn();
-            if (!saved && bar) BarNotDrawn();
+            if (!WithSavedState([&] { DrawNameplates(1.0f, 1.0f, false); })) PlatesNotDrawn();
         }
-        else if (bar && !WithQuadStates([&] { DrawBar(); }))
-            BarNotDrawn();
     }
 
     bool Direct3DDrawPrimitive(D3DPRIMITIVETYPE type, UINT startVertex, UINT primCount) override
