@@ -17,7 +17,6 @@ barTextFont=Bahnschrift
 barTheme=aurora
 barTitleFont=Bahnschrift
 barWorld=true
-barZoneSpacing=16.0000
 baseSize=16.0000
 clock24=false
 clockSeconds=true
