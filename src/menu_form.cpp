@@ -33,6 +33,18 @@ namespace headsup
         constexpr const char* kWidgetChip  = "chip "; // a tray chip's name in its card, before its widget's number
         constexpr const char* kChipToggle  = " on";   // after it, its toggle's
         constexpr const char* kChipClone   = " clone"; // and its clone button's
+        constexpr const char* kPartChip    = "part ";   // a designer chip's name, before its widget's slot and its part
+        constexpr int kChipCoinPixels      = 32;        // gil's coin on a designer chip, drawn smaller
+        constexpr int kFirstSense = static_cast<int>(DetectionIcon::Link); // Detection Icons' first, after the aggression
+
+        // The picture a designer chip shows before its name, or none.
+        std::string PartPicture(const PartMark& mark)
+        {
+            if (mark.icon) return IconSource(*mark.icon);
+            if (mark.picture != GamePicture::None) return GamePictureSource(mark.picture);
+            if (mark.coin) return CoinSource(kChipCoinPixels);
+            return {};
+        }
         constexpr const char* kWidgetNameClass = "caption widget-name"; // over each widget's settings in a combined popup
         constexpr float kAddWindowShare    = 0.8f;    // of a dropdown's width: a group's "+ Add Window"
         constexpr size_t kMaxFindText      = 31;      // letters of a window's name to look for
@@ -493,6 +505,80 @@ namespace headsup
             return widget.copy == 0 ? said : said + " " + std::to_string(widget.copy + 1);
         }
 
+        // A widget's parts as chips on its two lines, each with a toggle and its icon where it has one: a chip drags
+        // within its line or to the other, before the chip it is dropped on or to the end. The last part on cannot be
+        // switched off; trying says so under the lines until the next toggle or move.
+        void Designer(Context& c, PanelWidget widget)
+        {
+            Form& form          = c.form;
+            WidgetDesign& d     = c.s.Widget(widget).design;
+            const auto names    = c.layout.OptionsOf(WindowList::WidgetParts);
+            const std::string base = kPartChip + std::to_string(SlotOf(widget));
+            const std::string chipStart = form.Named(base) + "-";
+            struct Move
+            {
+                int line;
+                size_t index;
+                int toLine;
+                size_t at;
+            };
+            std::optional<Move> move; // applied after the lines are written, as the trays' drop is
+            bool toggled = false, refused = false;
+            const auto dropped = [&](const std::string& target, int toLine, size_t at) {
+                const FormEvent* event = form.Took(target, kDropEvent);
+                if (event == nullptr || event->value.compare(0, chipStart.size(), chipStart) != 0) return;
+                const int part = std::atoi(event->value.c_str() + chipStart.size());
+                for (int line = 0; line < kDesignLines; ++line)
+                    for (size_t i = 0; i < d.lines[static_cast<size_t>(line)].size(); ++i)
+                        if (static_cast<int>(d.lines[static_cast<size_t>(line)][i].part) == part) move = Move{line, i, toLine, at};
+            };
+            form.Raw("<div class=\"design\">");
+            for (int line = 0; line < kDesignLines; ++line)
+            {
+                std::vector<DesignChip>& chips = d.lines[static_cast<size_t>(line)];
+                form.Raw("<div class=\"tray design-line\">");
+                for (size_t i = 0; i < chips.size(); ++i)
+                {
+                    DesignChip& chip       = chips[i];
+                    const auto part        = static_cast<size_t>(chip.part);
+                    const std::string name = base + " " + std::to_string(part);
+                    const std::string id   = form.Id(name);
+                    form.Raw("<div class=\"btn raised wchip dchip drag\" id=\"" + id + "\"" + TipAttribute(names[part].tip) + ">");
+                    bool on = chip.on;
+                    form.CheckAt((name + kChipToggle).c_str(), on);
+                    if (on != chip.on)
+                    {
+                        toggled = true;
+                        if (on)
+                            chip.on = true;
+                        else if (!TurnOff(d, chip.part))
+                        {
+                            refused = true;
+                            form.Set(form.Named(name + kChipToggle), FormValueKind::Class, "on", {}, true);
+                        }
+                    }
+                    if (const std::string picture = PartPicture(c.readings.partMarks[part]); !picture.empty())
+                        form.Raw("<img class=\"dmark\" src=\"" + picture + "\"/>");
+                    form.Raw(EscapedRml(Said(names[part].name)) + "</div>");
+                    form.Set(id, FormValueKind::Class, "on", {}, chip.on);
+                    form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
+                    dropped(id, line, i);
+                }
+                const std::string end = form.Id(base + " end " + std::to_string(line));
+                form.Raw("<div class=\"tray-end\" id=\"" + end + "\"></div></div>");
+                dropped(end, line, chips.size());
+            }
+            form.Raw("</div>");
+            if (move && MovePart(d, move->line, move->index, move->toLine, move->at)) form.changed = true;
+            if (refused)
+                c.state.partRefused = widget;
+            else if ((toggled || move) && c.state.partRefused == widget)
+                c.state.partRefused.reset();
+            if (c.state.partRefused == widget)
+                form.Raw(std::string("<div class=\"design-error\">") + EscapedRml(Said(Word(c, WindowWord::WidgetTabsDesignLastOn))) +
+                         "</div>");
+        }
+
         // One widget's options: what it shows and its own settings, as the layout orders them, a row the widget has
         // nothing for left out; then its Clone and, on a copy, its Remove.
         void WidgetOptions(Context& c, const LayoutSetting& e, PanelWidget widget)
@@ -501,7 +587,7 @@ namespace headsup
             Settings& s = c.s;
             headsup::WidgetOptions& o = s.Widget(widget);
             const BarWidget kind      = widget.kind;
-            const bool bar            = kind == BarWidget::Job && o.jobLayout == JobLayout::Bar; // the EXP bar's own rows
+            const bool bar            = kind == BarWidget::Job && o.expMeter; // the EXP meter's own rows
             form.Note(c.layout.OptionsOf(WindowList::BarWidgets)[static_cast<size_t>(kind)].tip);
             const bool off = !BarOn(s) || !o.on;
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
@@ -535,37 +621,8 @@ namespace headsup
                         static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::CombineOnPanel ? o.combineOnPanel : o.combineInPopup,
                         row.tip);
                     break;
-                case WidgetTabsRow::SecondLine:
-                    if (HasSecondLine(kind)) form.Switch(label.c_str(), o.secondLine, row.tip);
-                    break;
-                case WidgetTabsRow::ShowRegionName:
-                    if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.secondLine, row.tip);
-                    break;
-                case WidgetTabsRow::ShowConquest:
-                    if (kind == BarWidget::Zone)
-                    {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ConquestPlace));
-                        form.Segments(label.c_str(), o.zoneConquest, names.data(), kConquestPlaceCount, row.tip);
-                    }
-                    break;
-                case WidgetTabsRow::ShowConquestText:
-                    if (kind == BarWidget::Zone && o.zoneConquest != ConquestPlace::Off)
-                        form.Switch(label.c_str(), o.zoneConquestText, row.tip);
-                    break;
                 case WidgetTabsRow::ShowZoneId:
                     if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, row.tip);
-                    break;
-                case WidgetTabsRow::MoonPhase:
-                    if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.secondLine, row.tip);
-                    break;
-                case WidgetTabsRow::DayOfWeek:
-                    if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.vanaWeekday, row.tip);
-                    break;
-                case WidgetTabsRow::Date:
-                    if (kind == BarWidget::VanaTime) form.Switch(label.c_str(), o.vanaDate, row.tip);
-                    break;
-                case WidgetTabsRow::Icons:
-                    if (HasIcons(kind)) form.Switch(label.c_str(), o.icons, row.tip);
                     break;
                 case WidgetTabsRow::Background:
                     form.Switch(label.c_str(), o.background, row.tip);
@@ -600,18 +657,14 @@ namespace headsup
                         o.targetShows = static_cast<uint8_t>(shows);
                     }
                     break;
-                case WidgetTabsRow::ShowIcons:
+                case WidgetTabsRow::DetectionIcons:
                     if (kind == BarWidget::Target)
-                        form.BitsDropdown(label.c_str(), o.targetIcons, c.layout.OptionsOf(WindowList::TargetIcons), row.tip);
-                    break;
-                case WidgetTabsRow::ShowMobLevel:
-                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetMobLevel, row.tip);
-                    break;
-                case WidgetTabsRow::ShowDistance:
-                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetDistance, row.tip);
-                    break;
-                case WidgetTabsRow::Jobs:
-                    if (kind == BarWidget::Target) form.Switch(label.c_str(), o.targetJobs, row.tip);
+                    {
+                        // The list leaves out the aggression, which is a part of its own.
+                        uint32_t senses = o.targetDetection >> kFirstSense;
+                        form.BitsDropdown(label.c_str(), senses, c.layout.OptionsOf(WindowList::DetectionIcons), row.tip);
+                        o.targetDetection = senses << kFirstSense;
+                    }
                     break;
                 case WidgetTabsRow::BlueMagic:
                     if (kind == BarWidget::Target) form.Switch(label.c_str(), s.blueMagic, row.tip);
@@ -712,34 +765,23 @@ namespace headsup
                         o.clockZone = ClockZoneOfChoice(zone);
                     }
                     break;
-                case WidgetTabsRow::ServerTime:
-                    if (kind == BarWidget::EarthTime) form.Switch(label.c_str(), o.clockServerTime, row.tip);
-                    break;
                 case WidgetTabsRow::N24Hour:
                     if (kind == BarWidget::EarthTime) form.Switch(label.c_str(), o.clock24, row.tip);
                     break;
                 case WidgetTabsRow::Seconds:
                     if (kind == BarWidget::EarthTime) form.Switch(label.c_str(), o.clockSeconds, row.tip);
                     break;
-                case WidgetTabsRow::Layout:
-                    if (kind == BarWidget::Job)
-                    {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::JobLayout));
-                        form.Segments(label.c_str(), o.jobLayout, names.data(), kJobLayoutCount, row.tip);
-                    }
+                case WidgetTabsRow::Design:
+                    if (!bar) Designer(c, widget);
+                    break;
+                case WidgetTabsRow::ExpMeter:
+                    if (kind == BarWidget::Job) form.Switch(label.c_str(), o.expMeter, row.tip);
                     break;
                 case WidgetTabsRow::ExpText:
                     if (kind == BarWidget::Job && !bar)
                     {
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ExpText));
                         form.Toggles(label.c_str(), o.expText, names.data(), kExpTextCount, row.tip);
-                    }
-                    break;
-                case WidgetTabsRow::ExpBar:
-                    if (kind == BarWidget::Job && !bar)
-                    {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ExpBar));
-                        form.Segments(label.c_str(), o.expBar, names.data(), kExpBarPlaceCount, row.tip);
                     }
                     break;
                 case WidgetTabsRow::ExpEarned:
@@ -772,13 +814,6 @@ namespace headsup
                     break;
                 case WidgetTabsRow::JobNames:
                     if (kind == BarWidget::Job && !bar) form.Switch(label.c_str(), o.jobNames, row.tip);
-                    break;
-                case WidgetTabsRow::PanelParts:
-                    if (kind == BarWidget::Performance)
-                    {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::PerfParts));
-                        form.Toggles(label.c_str(), o.perfParts, names.data(), kPerfPartCount, row.tip);
-                    }
                     break;
                 }
             }

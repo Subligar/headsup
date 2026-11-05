@@ -21,10 +21,6 @@ namespace headsup
         constexpr float kCoinScale       = 0.75f; // gil's coin, in icons
         constexpr float kFrameRadius     = 3.0f;  // the ornate target frame and hover tint
         constexpr int kLitTarget         = 2;     // a hovered ornate target's tint, in hover tints' alpha
-        constexpr float kProgressShare   = 0.05f; // of the bar's height, for a widget's progress bar
-        constexpr float kLeastProgress   = 2.0f;
-        constexpr float kBesideWidth     = 2.0f;  // a bar beside the text: this many bar heights long
-        constexpr float kBesideShare     = 0.14f; // and this tall, of the bar's height
         constexpr float kHelpPadShare    = 0.5f;   // of the gap: clear above and below the help bar's row
         constexpr int kOuterGap          = 2;          // an ornate popup's outer border
         constexpr uint32_t kCardFill     = 0x12FFFFFF; // a popup's section card: white over the panel, faintly
@@ -240,12 +236,14 @@ namespace headsup
 
     int CoinPixels(const BarMetrics& metrics) { return WholePixels(metrics.icon * kCoinScale); }
 
-    float ProgressHeight(const BarMetrics& metrics, bool beside)
+    float MarkWidth(const Span& span, float size)
     {
-        return std::max(kLeastProgress, std::round(metrics.height * (beside ? kBesideShare : kProgressShare)));
+        const float side = std::round(size);
+        return span.picture != GamePicture::None ? kPictureGap + side
+               : span.icon || span.coin          ? kLineIconGap + side
+               : span.bar                        ? kInlineBarEms * size
+                                                 : 0.0f;
     }
-
-    float BesideWidth(const BarMetrics& metrics) { return std::round(metrics.height * kBesideWidth); }
 
     float UnderLine(const BarPalette& palette) { return palette.underLine != 0 ? 1.0f : 0.0f; }
     float BarBottom(const BarPalette& palette, const BarMetrics& metrics) { return metrics.height + UnderLine(palette); }

@@ -15,6 +15,7 @@ namespace headsup
     {
         constexpr float kRunInset     = 0.3f;  // how much shorter a line box's stretches and chips are than the box
         constexpr float kSpacing      = 0.45f; // between rows
+        constexpr uint32_t kErrorColor = 0xFFE5534B; // a mistake said in the window, as the Widget Designer's
         // Setup's picture, 16:9 like its target: short enough that its first step fits the window's own size.
         constexpr float kPreviewTall  = 14.0f;
         constexpr float kPreviewWide  = kPreviewTall * 16.0f / 9.0f;
@@ -404,6 +405,12 @@ namespace headsup
         css += ".wclone:hover img{image-color:" + color(c.accent) + ";}";
         css += ".widget-name{color:" + color(c.text) + ";}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
+        // The Widget Designer: its two lines as trays of chips side by side, wrapping, each line's end taking a drop.
+        css += ".tray.design-line{display:flex;flex-wrap:wrap;margin-bottom:0.3em;}";
+        css += ".dchip{display:inline-block;margin-right:0.3em;}";
+        css += ".dchip .dmark{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) + ";vertical-align:middle;margin-right:0.4em;}";
+        css += ".design-line .tray-end{flex:1 1 2em;}";
+        css += ".design-error{margin-bottom:" + Em(kSpacing) + ";color:" + color(kErrorColor) + ";}";
         // What a control says under the pointer.
         css += std::string("#") + kMenuTipId + "{position:absolute;z-index:60;box-sizing:border-box;max-width:" +
                Em(kTipWidth) + ";padding:0.4em 0.6em;border-radius:" + radius + ";border:1px " + color(c.raisedEdge) +

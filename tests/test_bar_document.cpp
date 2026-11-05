@@ -131,32 +131,40 @@ TEST(a_pill_theme_frames_each_widget_and_has_no_caps)
     CHECK(Has(rml, "height:58px")); // no line under this strip
 }
 
-TEST(a_widgets_markup_has_its_icons_coin_lines_and_progress)
+TEST(a_widgets_markup_has_its_leading_icons_coin_lines_and_marks_inside_its_lines)
 {
     Settings settings;
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
     WidgetContent c;
-    c.shown      = true;
-    c.icons      = {Icon::Sight, Icon::Sound};
-    c.coin       = true;
-    c.title      = {Text("Rolanberry <Fields>"), Colored(" [S]", 0xFF6FE36Fu)};
-    c.subtitle   = {Text("Sandy", Tone::Dim)};
-    c.titleIcons = {Icon::Link};
-    c.progress   = 0.25f;
+    c.shown    = true;
+    c.icons    = {Icon::Sight, Icon::Sound};
+    c.coin     = true;
+    Span link  = Text("");
+    link.icon  = Icon::Link;
+    Span coin  = Text("12");
+    coin.coin  = true;
+    Span bar   = Text("");
+    bar.bar    = 0.4f;
+    c.title    = {Text("Rolanberry <Fields>"), Colored(" [S]", 0xFF6FE36Fu), link};
+    c.subtitle = {Text("Sandy", Tone::Dim), coin, bar};
     const std::string rml = WidgetRml(c, look, {}, {});
     CHECK(Has(rml, "<img class=\"icon\" src=\"hu:icon/5\"/>") && Has(rml, "hu:icon/7"));
     CHECK(Has(rml, "class=\"coin\"") && Has(rml, "hu:coin/17")); // 0.75 of 0.50 H: 16.875
     CHECK(Has(rml, "Rolanberry &lt;Fields&gt;") && Has(rml, "#6fe36fff") && Has(rml, "#efe3c6ff"));
-    CHECK(Has(rml, "<span class=\"line-icons\"><img class=\"line-icon\" src=\"hu:icon/4\"/></span>"));
-    CHECK(Has(rml, "<div class=\"title\">") && Has(rml, "class=\"detail\"") && Has(rml, "#a8936dff") && Has(rml, "Sandy"));
-    CHECK(Has(rml, "class=\"progress\"") && Has(rml, "width: 25%"));
-    c.progressBeside = true;
-    CHECK(Has(WidgetRml(c, look, {}, {}), "class=\"beside\"") && !Has(WidgetRml(c, look, {}, {}), "class=\"progress\""));
-    c.progress.reset();
+    // The link's icon after the title's text, inside the title's line.
+    const size_t title = rml.find("<div class=\"title\">"), detail = rml.find("class=\"detail\"");
+    CHECK(title != std::string::npos && detail != std::string::npos);
+    const size_t linkAt = rml.find("<img class=\"line-icon\" src=\"hu:icon/4\"/>");
+    CHECK(linkAt > rml.find("[S]") && linkAt < detail);
+    // The coin before its amount and the bar after it, filled 40%, on the second line.
+    const size_t coinAt = rml.find("<img class=\"line-icon\" src=\"hu:coin/", detail);
+    CHECK(coinAt != std::string::npos && coinAt < rml.find(">12<", detail));
+    CHECK(rml.find("class=\"ibar\"", detail) > rml.find(">12<", detail) && Has(rml, "width: 40%"));
+    CHECK(Has(rml, "#a8936dff") && Has(rml, "Sandy"));
     c.subtitle.clear();
     c.coin = false;
     const std::string bare = WidgetRml(c, look, {}, {});
-    CHECK(!Has(bare, "progress") && !Has(bare, "detail") && !Has(bare, "coin"));
+    CHECK(!Has(bare, "ibar") && !Has(bare, "detail") && !Has(bare, "coin"));
 }
 
 TEST(a_widget_of_figures_takes_the_detail_font_for_its_title)

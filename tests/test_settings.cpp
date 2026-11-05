@@ -341,16 +341,12 @@ helpBarY=8.0000
         s.barTheme     = BarTheme::UmbraDark;
         s.barSeparators = BarSeparators::None;
         s.Widget(BarWidget::Currency).currency   = *CurrencyOfKey("allied_notes");
-        s.Widget(BarWidget::EarthTime).clockServerTime = true; // the file's Server time widget was on
         s.menuFont         = "Tahoma";
         s.menuFontSize     = 21; // 125 percent of Ashita's 18 pixels, in Tahoma, which was drawn at 0.95 of its size
         s.moveGameHelp     = true;
         s.helpBarBackground = false;
         s.helpBarX         = 12;
         s.helpBarY         = 8;
-        s.Widget(BarWidget::Target).secondLine = false;
-        s.Widget(BarWidget::Currency).icons         = false;
-        s.Widget(BarWidget::Job).expBar     = ExpBarPlace::Beside;
         s.Widget(BarWidget::Job).jobNames   = false;
         s.Widget(BarWidget::EarthTime).clock24    = false;
         s.stackNames = true;
@@ -360,7 +356,6 @@ helpBarY=8.0000
         s.barSubtitle = SubtitlePlace::Before;
         s.cursorOutlineThickness = 120; // 60 of before
         s.Widget(BarWidget::EarthTime).clockSeconds  = true;
-        s.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Ping);
         s.barHeight    = 48;
         s.barTextSize   = 16;
         s.popupTextSize = 20;
@@ -407,7 +402,9 @@ helpBarY=8.0000
         "placeholderB", "iconGm", "iconMentor", "iconNewAdventurer", "iconLevelSync", "iconAway",
         "iconLinkshell", "iconBazaar", "iconSeekingParty", "iconGmShare", "iconMentorShare", "iconNewAdventurerShare",
         "iconLevelSyncShare", "iconAwayShare", "iconLinkshellShare", "iconBazaarShare", "iconSeekingPartyShare",
-        "playerIconMax", "mobId", "look"};
+        "playerIconMax", "mobId", "look",
+        // The Show settings each widget had before its design.
+        "barZoneLine2", "barZoneIcons", "barWeatherLine2", "barWeatherIcons", "barVanaTimeLine2", "barVanaTimeIcons", "barTargetLine2", "barTargetIcons", "barGilLine2", "barGilIcons", "barBagsLine2", "barBagsIcons", "barEarthTimeLine2", "barEarthTimeIcons", "barGameHelpLine2", "barGameHelpIcons", "barPerformanceLine2", "barPerformanceIcons", "barJobLine2", "barJobIcons", "barPartyLine2", "barPartyIcons", "barStatusTimersLine2", "barStatusTimersIcons", "expBar", "barPerformanceParts"};
 
     MapStore Parse(const char* file)
     {
@@ -1087,43 +1084,40 @@ TEST(the_bar_sections_load_by_name_and_keep_every_widget)
     CHECK(saved.values["barCenter"].empty() && saved.values["barLeft"].rfind("target zone", 0) == 0);
 }
 
-TEST(the_job_layout_and_the_clocks_zone_are_saved_by_name_and_an_unknown_name_keeps_the_default)
+TEST(the_clocks_zone_is_saved_by_name_and_an_unknown_name_keeps_the_default)
 {
     MapStore store;
-    store.values    = {{"jobLayout", "expOnly"}, {"clockZone", "usPacific"}};
+    store.values    = {{"clockZone", "usPacific"}};
     const Settings s = LoadSettings(store);
-    CHECK(s.Widget(BarWidget::Job).jobLayout == JobLayout::ExpOnly && s.Widget(BarWidget::EarthTime).clockZone == ClockZone::UsPacific);
+    CHECK(s.Widget(BarWidget::EarthTime).clockZone == ClockZone::UsPacific);
     MapStore saved;
     SaveSettings(s, saved);
-    CHECK(saved.values["jobLayout"] == "expOnly" && saved.values["clockZone"] == "usPacific");
+    CHECK(saved.values["clockZone"] == "usPacific");
     CHECK(LoadSettings(saved) == s);
     MapStore fresh;
     SaveSettings(Settings{}, fresh);
-    CHECK(fresh.values["jobLayout"] == "jobsFirst" && fresh.values["clockZone"] == "local");
-    store.values       = {{"jobLayout", "sideways"}, {"clockZone", "mars"}};
-    const Settings odd = LoadSettings(store);
-    CHECK(odd.Widget(BarWidget::Job).jobLayout == JobLayout::JobsFirst && !odd.Widget(BarWidget::EarthTime).clockZone.has_value());
-    store.values = {{"jobLayout", "expFirst"}, {"clockZone", "local"}};
-    CHECK(LoadSettings(store).Widget(BarWidget::Job).jobLayout == JobLayout::ExpFirst && !LoadSettings(store).Widget(BarWidget::EarthTime).clockZone.has_value());
+    CHECK(fresh.values["clockZone"] == "local");
+    store.values = {{"clockZone", "mars"}};
+    CHECK(!LoadSettings(store).Widget(BarWidget::EarthTime).clockZone.has_value());
 }
 
-TEST(a_file_that_showed_server_time_as_a_widget_of_its_own_has_the_clock_stack_it)
+TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
 {
-    MapStore fresh;
-    CHECK(!LoadSettings(fresh).Widget(BarWidget::EarthTime).clockServerTime);
-    MapStore shown;
-    shown.values = {{"barServerTime", "true"}};
-    CHECK(LoadSettings(shown).Widget(BarWidget::EarthTime).clockServerTime);
-    MapStore hidden;
-    hidden.values = {{"barServerTime", "false"}};
-    CHECK(!LoadSettings(hidden).Widget(BarWidget::EarthTime).clockServerTime);
-    MapStore decided; // the option's own key, once saved, is what counts
-    decided.values = {{"barServerTime", "true"}, {"clockServerTime", "false"}};
-    CHECK(!LoadSettings(decided).Widget(BarWidget::EarthTime).clockServerTime);
+    Settings s;
+    s.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "crest name | -region nation");
+    const PanelWidget second = *CloneWidget(s, BarWidget::Weather);
+    s.Widget(second).design  = DesignFrom(BarWidget::Weather, "weather | icon -chance");
     MapStore saved;
-    SaveSettings(LoadSettings(shown), saved);
-    CHECK(saved.values["clockServerTime"] == "true" && !saved.values.contains("barServerTime"));
-    CHECK(!saved.values.contains("serverClockZone") && !saved.values.contains("serverSeconds"));
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barZoneDesign"], "crest name | -region nation");
+    CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | icon -chance");
+    CHECK_EQ(saved.values["barWeatherDesign"], "icon weather | chance");
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(BarWidget::Zone).design == s.Widget(BarWidget::Zone).design);
+    CHECK(loaded.Widget(second).design == s.Widget(second).design);
+    // A design a hand broke is made whole: every part once.
+    saved.values["barZoneDesign"] = "name name";
+    CHECK_EQ(DesignText(LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -crest -nation");
 }
 
 TEST(separators_that_are_not_a_choice_keep_the_themes)
@@ -2640,12 +2634,12 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value() && s.Widget(*copy).on);
     s.Widget(*copy).currency = 3;
-    s.Widget(*copy).secondLine = false;
+    s.Widget(*copy).design = DesignFrom(BarWidget::Currency, "amount | -coin -currency");
     MapStore store;
     SaveSettings(s, store);
     CHECK_EQ(store.values["barCurrency"], std::string(kCurrencyTable[kGilCurrency].key)); // the first copy's, as ever
     CHECK_EQ(store.values["barCurrency_2"], std::string(kCurrencyTable[3].key));
-    CHECK_EQ(store.values["barGilLine2_2"], "false");
+    CHECK_EQ(store.values["barGilDesign_2"], "amount | -coin -currency");
     const Settings read = LoadSettings(store);
     CHECK(read.Widget(*copy) == s.Widget(*copy) && Placed(read.barSections, *copy));
     // Taken off, its settings go: put back, it is new.
@@ -2660,7 +2654,7 @@ TEST(a_clone_starts_with_every_setting_of_the_widget_it_copies_shown_and_combine
     WidgetOptions& gil = s.Widget(BarWidget::Currency);
     gil.on             = false;
     gil.currency       = 3;
-    gil.secondLine     = false;
+    gil.design         = DesignFrom(BarWidget::Currency, "amount | -coin -currency");
     gil.spacing        = 12;
     gil.titleFont      = "Cinzel";
     gil.combine        = PanelWidget{BarWidget::Bags};
@@ -2761,37 +2755,17 @@ TEST(a_widgets_popup_text_size_is_kept_for_each_copy_and_held_to_its_range)
     CHECK_EQ(held.Widget(*copy).popupTextSize, kPanelPopupTextSize);
 }
 
-TEST(the_vanadiel_clocks_day_of_week_and_date_are_kept_for_each_copy)
+TEST(the_zone_widgets_id_setting_is_kept_for_each_copy)
 {
     Settings s;
-    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::VanaTime);
-    CHECK(copy.has_value() && s.Widget(*copy).vanaWeekday && !s.Widget(*copy).vanaDate);
-    s.Widget(*copy).vanaWeekday = false;
-    s.Widget(*copy).vanaDate    = true;
-    MapStore store;
-    SaveSettings(s, store);
-    const Settings read = LoadSettings(store);
-    CHECK(!read.Widget(*copy).vanaWeekday && read.Widget(*copy).vanaDate);
-    CHECK(read.Widget(BarWidget::VanaTime).vanaWeekday && !read.Widget(BarWidget::VanaTime).vanaDate);
-}
-
-TEST(the_zone_widgets_conquest_and_id_settings_are_kept_for_each_copy)
-{
-    Settings s;
-    CHECK(s.Widget(BarWidget::Zone).zoneConquest == ConquestPlace::Below && s.Widget(BarWidget::Zone).zoneConquestText &&
-          !s.Widget(BarWidget::Zone).zoneId);
+    CHECK(!s.Widget(BarWidget::Zone).zoneId);
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Zone);
     CHECK(copy.has_value());
-    WidgetOptions& o   = s.Widget(*copy);
-    o.zoneConquest     = ConquestPlace::Left;
-    o.zoneConquestText = false;
-    o.zoneId           = true;
+    s.Widget(*copy).zoneId = true;
     MapStore store;
     SaveSettings(s, store);
     const Settings read = LoadSettings(store);
-    CHECK(read.Widget(*copy).zoneConquest == ConquestPlace::Left && !read.Widget(*copy).zoneConquestText &&
-          read.Widget(*copy).zoneId);
-    CHECK(read.Widget(BarWidget::Zone).zoneConquest == ConquestPlace::Below);
+    CHECK(read.Widget(*copy).zoneId && !read.Widget(BarWidget::Zone).zoneId);
 }
 
 TEST(show_background_is_kept_for_each_copy)
@@ -2848,21 +2822,21 @@ TEST(the_target_widgets_background_is_on_by_default_and_kept_off_once_turned_off
     CHECK(!LoadSettings(store).Widget(BarWidget::Target).background);
 }
 
-TEST(the_target_widgets_icons_visibility_and_mob_level_are_kept_and_held_to_their_range)
+TEST(the_target_widgets_detection_icons_and_visibility_are_kept_and_held_to_their_range)
 {
     Settings s;
-    WidgetOptions& target = s.Widget(BarWidget::Target);
-    target.targetIcons    = kTargetWeakIcons | DetectionBit(DetectionIcon::Sound);
-    target.targetShows    = TargetShowBit(TargetShow::Mobs);
-    target.targetMobLevel = false;
+    WidgetOptions& target  = s.Widget(BarWidget::Target);
+    CHECK(target.targetDetection == kDefaultDetection);
+    target.targetDetection = DetectionBit(DetectionIcon::Sound);
+    target.targetShows     = TargetShowBit(TargetShow::Mobs);
     MapStore store;
     SaveSettings(s, store);
     const WidgetOptions read = LoadSettings(store).Widget(BarWidget::Target);
-    CHECK(read.targetIcons == target.targetIcons && read.targetShows == target.targetShows && !read.targetMobLevel);
-    store.values["barTargetShowIcons"] = "99999";
+    CHECK(read.targetDetection == target.targetDetection && read.targetShows == target.targetShows);
+    store.values["barTargetDetection"] = "99999";
     store.values["barTargetShows"]     = "-3";
     const WidgetOptions held = LoadSettings(store).Widget(BarWidget::Target);
-    CHECK(held.targetIcons == kAllTargetIcons && held.targetShows == 0);
+    CHECK(held.targetDetection == kAllDetection && held.targetShows == 0);
 }
 
 TEST(the_job_and_exp_widgets_lines_and_bar_settings_are_kept)
@@ -2870,15 +2844,14 @@ TEST(the_job_and_exp_widgets_lines_and_bar_settings_are_kept)
     Settings s;
     CHECK(s.Widget(BarWidget::Job).expText == kDefaultExpText);
     WidgetOptions& exp = s.Widget(BarWidget::Job);
-    exp.jobLayout      = JobLayout::Bar;
+    exp.expMeter       = true;
     exp.expPlaces      = {ExpTextPlace::Above, ExpTextPlace::Off, ExpTextPlace::Left};
     exp.expBarWidth    = 250;
     exp.expBarHeight   = 3;
     exp.expAlign       = Align::Right;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(store.values["expBar"], "under");
-    CHECK_EQ(store.values["jobLayout"], "bar");
+    CHECK_EQ(store.values["jobExpMeter"], "true");
     const Settings read = LoadSettings(store);
     CHECK(read.Widget(BarWidget::Job) == s.Widget(BarWidget::Job));
     CHECK_EQ(store.values["barExpEarned"], "above");

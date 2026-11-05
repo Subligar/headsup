@@ -178,29 +178,45 @@ TEST(the_exp_says_what_it_is_set_to_earned_to_next_and_a_percent_in_that_order)
         return b;
     };
     const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
-    const auto title = [](const WidgetContent& w) { return w.title.front().text; };
-    CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst, kDefaultExpText)), "7,655 EXP to next"); // as before
-    CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst, bits({ExpText::Percent}))), "61%");
-    CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst,
-                 bits({ExpText::Percent, ExpText::Earned, ExpText::ToNext}))),
+    // What the EXP part says.
+    const auto exp = [](const JobReport& job, uint8_t expText) {
+        WidgetContent base;
+        for (const PartContent& part : JobParts(job, true, expText, base))
+            if (part.part == WidgetPart::JobExp) return part.spans.empty() ? std::string() : part.spans.front().text;
+        return std::string("no EXP part");
+    };
+    CHECK_EQ(exp(level30, kDefaultExpText), "7,655 EXP to next"); // as before
+    CHECK_EQ(exp(level30, bits({ExpText::Percent})), "61%");
+    CHECK_EQ(exp(level30, bits({ExpText::Percent, ExpText::Earned, ExpText::ToNext})),
         "12,345 / 20,000 EXP · 7,655 to next · 61%");
     // At the cap the points are limit points, after the merits.
     const JobReport capped{AtCap(3, 4000), std::nullopt};
-    CHECK_EQ(title(JobWidget(capped, ExpBarPlace::Under, true, JobLayout::ExpFirst, bits({ExpText::Earned, ExpText::Percent}))),
-        "3 merits · 4,000 / 10,000 LP · 40%");
+    CHECK_EQ(exp(capped, bits({ExpText::Earned, ExpText::Percent})), "3 merits · 4,000 / 10,000 LP · 40%");
     // To Next at the cap: the merits say how far along you are, as they always have.
-    CHECK_EQ(title(JobWidget(capped, ExpBarPlace::Under, true, JobLayout::ExpFirst, bits({ExpText::ToNext}))), "3 merits");
+    CHECK_EQ(exp(capped, bits({ExpText::ToNext})), "3 merits");
     // A percent is never rounded up to a level not reached.
-    CHECK_EQ(title(JobWidget(JobReport{Sample(30, 19999, 20000), std::nullopt}, ExpBarPlace::Under, true,
-                 JobLayout::ExpFirst, bits({ExpText::Percent}))),
-        "99%");
-    // Nothing picked: the jobs alone, on one line in any layout, the bar still under them.
-    for (const JobLayout layout : {JobLayout::JobsFirst, JobLayout::ExpFirst, JobLayout::ExpOnly})
-    {
-        const WidgetContent w = JobWidget(level30, ExpBarPlace::Under, true, layout, 0);
-        CHECK(w.title.size() == 1 && w.title.front().text == JobWidget(level30, ExpBarPlace::Under, true, JobLayout::JobsFirst, kDefaultExpText).title.front().text);
-        CHECK(w.title.front().tone == Tone::Normal && w.subtitle.empty() && w.progress.has_value());
-    }
+    CHECK_EQ(exp(JobReport{Sample(30, 19999, 20000), std::nullopt}, bits({ExpText::Percent})), "99%");
+    // Nothing picked: the EXP part has nothing to show, and the jobs show alone.
+    CHECK_EQ(exp(level30, 0), "");
+}
+
+TEST(the_job_widget_lays_out_its_jobs_exp_and_bar_as_its_design_says)
+{
+    const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
+    const auto shown = [&](std::string_view design) {
+        WidgetContent base;
+        base.shown = true;
+        std::vector<PartContent> parts = JobParts(level30, true, kDefaultExpText, base);
+        return ComposeContent(DesignFrom(BarWidget::Job, design), std::move(parts), base);
+    };
+    // The default: the jobs over the EXP, the bar after it, filled 61%.
+    const WidgetContent w = shown("jobs | exp bar");
+    CHECK(w.title.size() == 1 && w.subtitle.size() == 3 && w.subtitle[0].text == "7,655 EXP to next");
+    CHECK(w.subtitle[2].bar && *w.subtitle[2].bar > 0.6f && *w.subtitle[2].bar < 0.62f);
+    CHECK(w.hasPopup && w.figures);
+    // The bar first, then the EXP, on one line.
+    const WidgetContent first = shown("bar exp | -jobs");
+    CHECK(first.title.front().bar && first.title.back().text == "  7,655 EXP to next" && first.subtitle.empty());
 }
 
 TEST(the_exp_widget_is_its_bar_with_each_text_on_the_side_it_is_set_to)

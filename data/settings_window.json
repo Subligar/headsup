@@ -362,18 +362,11 @@
             {
               "key": "widget-tabs",
               "rows": [
+                {"key": "design", "name": "Widget Designer", "tip": "Each button is a part of the widget. Drag one to move it within or between the widget's two lines, and use its toggle to show or hide it."},
                 {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one popup for both. That widget leaves its own place. Default is None."},
                 {"key": "combine-on-panel", "name": "Show Combined on Panel", "tip": "Shows the combined widget in the pill. Off, only this widget shows on the top panel, and the other's popup still joins this one's. Default is on."},
                 {"key": "combine-in-popup", "name": "Show Combined in Popup", "tip": "Adds the combined widget's popup to this one's. Off, the popup shows this widget's alone, so a widget combined with a copy of itself is not listed twice. Default is on."},
-                {"key": "second-line", "name": "Second Line"},
-                {"key": "show-region-name", "name": "Show Region Name", "tip": "The zone's region on the second line. Default is on."},
-                {"key": "show-conquest", "name": "Show Conquest", "tip": "The crest of the nation that holds the region, before the zone's name, after it, or below it. Default is Below."},
-                {"key": "show-conquest-text", "name": "Show Conquest Text", "tip": "The holding nation's name after its crest. Default is on."},
                 {"key": "show-zone-id", "name": "Show Zone ID", "tip": "The zone's number after its name in the popup. Default is off."},
-                {"key": "moon-phase", "name": "Show Moon Phase", "tip": "The moon's phase and how full it is, on the second line. Default is on."},
-                {"key": "day-of-week", "name": "Show Day of Week", "tip": "Vana'diel's day before the time, in its element's color. Default is on."},
-                {"key": "date", "name": "Show Date", "tip": "Vana'diel's date on the second line, before the moon. Default is off."},
-                {"key": "icons", "name": "Icons"},
                 {"key": "background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it. Off, it shows only what the theme gives it. Default is off, and on for the Target."},
                 {"key": "spacing", "name": "Spacing", "tip": "More room between this widget and the widgets beside it. Default is the top panel's Widget Spacing."},
                 {"key": "padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default is the top panel's Widget Padding."},
@@ -382,10 +375,7 @@
                 {"key": "text-size", "name": "Text Size", "tip": "This widget's title size, with its second line to match. Default is the top panel's Text Size."},
                 {"key": "popup-text-size", "name": "Popup Text Size", "tip": "The text size of this widget's popup, its headings and spacing scaled to match. A combined popup takes the first widget's. Default is the top panel's Popup Size."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
-                {"key": "show-icons", "name": "Show Icons", "tip": "A mob's icons: its aggression before its name, the rest after it, and its weaknesses after its level. Default is its aggression alone."},
-                {"key": "show-mob-level", "name": "Show Mob Level", "tip": "A mob's level and how tough it is, under its name. Default is on."},
-                {"key": "show-distance", "name": "Show Distance", "tip": "How far your target is, in yalms, in parentheses after its name. Default is on."},
-                {"key": "jobs", "name": "Show Player Info", "tip": "A player's jobs and levels under their name, once HeadsUp knows them: from your party, a check, or Look Up Players. Default is on."},
+                {"key": "detection-icons", "name": "Detection Icons", "tip": "Which of a mob's icons the Detection part shows. Default is all of them."},
                 {"key": "blue-magic", "name": "Blue Magic", "tip": "In the popup, a mob's TP moves that a blue mage can learn are shown in the Blue Magic Color. Default is on."},
                 {"key": "blue-magic-color", "name": "Blue Magic Color", "tip": "The color of TP moves a blue mage can learn. Default is blue."},
                 {"key": "blue-magic-learned", "name": "Learned Blue Magic", "tip": "How a TP move whose blue magic you already know is shown: still blue with a star after it, or as plain text. Default is Star."},
@@ -399,25 +389,23 @@
                 {"key": "popup", "name": "Popup", "tip": "The parts its popup shows when you hover it."},
                 {"key": "bag", "name": "Bag", "tip": "The bag this widget shows on the panel. Hover it for every bag."},
                 {"key": "time-zone", "name": "Time Zone", "tip": "Local is your computer's. Another zone goes before the time, as in PDT 21:07."},
-                {"key": "server-time", "name": "Server Time", "tip": "Japan's time, which the server keeps and the resets go by, as a second line under your own."},
                 {"key": "24-hour", "name": "24-Hour"},
                 {"key": "seconds", "name": "Seconds", "tip": "On your own line."},
-                {"key": "layout", "name": "Layout", "tip": "Which is the larger line, your jobs and levels or your EXP, with the other under it; the EXP alone; or the EXP bar with its texts around it."},
-                {"key": "exp-text", "name": "EXP Text", "tip": "What the EXP says. At the level cap it is your limit points, after your merits. With none picked, your jobs show alone on one line."},
-                {"key": "exp-bar", "name": "EXP Bar"},
+                {"key": "exp-meter", "name": "EXP Meter", "tip": "Shows your EXP as a bar with its texts placed around it, in place of the widget's lines. Default is off."},
+                {"key": "exp-text", "name": "EXP Text", "tip": "What the EXP part says. At the level cap it is your limit points, after your merits."},
                 {"key": "exp-earned", "name": "Earned", "tip": "Where the EXP you have of this level, out of what it takes, goes around the bar. At the level cap it is your limit points."},
                 {"key": "exp-to-next", "name": "To Next", "tip": "Where the EXP left to the next level goes around the bar. At the level cap it is your merits."},
                 {"key": "exp-percent", "name": "Percent", "tip": "Where how much of the level you have, as a percent, goes around the bar."},
                 {"key": "exp-align", "name": "Text Align", "tip": "How the texts above and below the bar line up with it: at its left end, its middle or its right end. A text longer than the bar runs past it the other way. Default is Center."},
                 {"key": "bar-width", "name": "Bar Width", "tip": "How long the bar is."},
                 {"key": "bar-height", "name": "Bar Height", "tip": "How thick the bar is. It stays in the middle of the panel."},
-                {"key": "job-names", "name": "Job Names", "tip": "Off, the levels alone."},
-                {"key": "panel-parts", "name": "Shows", "tip": "What the widget shows on the panel, one after another."}
+                {"key": "job-names", "name": "Job Names", "tip": "Off, the levels alone."}
               ],
               "words": [
                 {"key": "clone", "name": "Clone This Widget", "tip": "Puts another of this widget on the panel after it, with all of this one's settings."},
                 {"key": "remove-copy", "name": "Remove This Copy", "tip": "Takes this copy off the panel. Its settings go with it."},
-                {"key": "combine-none", "name": "None"}
+                {"key": "combine-none", "name": "None"},
+                {"key": "design-last-on", "name": "At least one button must be enabled."}
               ]
             }
           ]
@@ -1028,18 +1016,6 @@
       ]
     },
     {
-      "key": "perf-parts",
-      "options": [
-        {"name": "FPS", "tip": "Frames per second."},
-        {"name": "Sent", "tip": "Bytes sent each second; amber or red when data stops."},
-        {"name": "Received", "tip": "Bytes received each second; amber or red when data stops."},
-        {"name": "Percent", "tip": "The game's own connection meter, as its readout shows it: 100% while data comes in, less once it stops."},
-        {"name": "Ping", "tip": "Your ping to the server. It shows once a few of the server's answers are timed."},
-        {"name": "Memory", "tip": "The game's memory used; amber, then red, as it runs low before it runs out at 4 GB."},
-        {"name": "Messages", "tip": "PlayOnline's mail and messenger icons while something waits, with how many."}
-      ]
-    },
-    {
       "key": "world-line",
       "options": [
         {"name": "Next Ship"},
@@ -1085,15 +1061,6 @@
       ]
     },
     {
-      "key": "job-layout",
-      "options": [
-        {"name": "Jobs First"},
-        {"name": "EXP First"},
-        {"name": "EXP Only"},
-        {"name": "Bar", "tip": "The EXP bar, with each text placed around it as you pick below."}
-      ]
-    },
-    {
       "key": "exp-place",
       "options": [
         {"name": "Off"},
@@ -1101,14 +1068,6 @@
         {"name": "Below"},
         {"name": "Left"},
         {"name": "Right"}
-      ]
-    },
-    {
-      "key": "exp-bar",
-      "options": [
-        {"name": "Under"},
-        {"name": "Beside"},
-        {"name": "Off"}
       ]
     },
     {
@@ -1290,9 +1249,8 @@
       ]
     },
     {
-      "key": "target-icons",
+      "key": "detection-icons",
       "options": [
-        {"name": "Aggression", "tip": "Whether it is aggressive or passive, before its name."},
         {"name": "Links", "tip": "It joins in when you fight one of its kind."},
         {"name": "Sight", "tip": "It sees you."},
         {"name": "True Sight", "tip": "It sees through invisible and sneak."},
@@ -1300,8 +1258,7 @@
         {"name": "Scent", "tip": "It smells you."},
         {"name": "Use of Spells", "tip": "Casting near it draws it."},
         {"name": "Use of Abilities", "tip": "Using an ability near it draws it."},
-        {"name": "Low Player HP", "tip": "Low HP near it draws it."},
-        {"name": "Weaknesses", "tip": "What it is weak to, after its level."}
+        {"name": "Low Player HP", "tip": "Low HP near it draws it."}
       ]
     },
     {
@@ -1312,19 +1269,56 @@
       ]
     },
     {
+      "key": "widget-parts",
+      "options": [
+        {"name": "Zone Name", "tip": "The zone you are in."},
+        {"name": "Region", "tip": "The zone's region."},
+        {"name": "Crest", "tip": "The crest of the nation that holds the region."},
+        {"name": "Nation", "tip": "The name of the nation that holds the region."},
+        {"name": "Weather Icon", "tip": "The weather's element."},
+        {"name": "Weather", "tip": "The weather now."},
+        {"name": "Chance", "tip": "Today's chance of this weather."},
+        {"name": "Day", "tip": "Vana'diel's day, in its element's color."},
+        {"name": "Time", "tip": "Vana'diel's time."},
+        {"name": "Date", "tip": "Vana'diel's date."},
+        {"name": "Moon", "tip": "The moon's phase and how full it is."},
+        {"name": "Aggression", "tip": "Whether a mob is aggressive or passive."},
+        {"name": "Name", "tip": "Your target's name."},
+        {"name": "Distance", "tip": "How far your target is, in yalms."},
+        {"name": "Detection", "tip": "How a mob detects you, as Detection Icons picks."},
+        {"name": "Level", "tip": "A mob's level and how tough it is."},
+        {"name": "Player Info", "tip": "A player's jobs and levels, once HeadsUp knows them: from your party, a check, or Look Up Players."},
+        {"name": "Weaknesses", "tip": "What a mob is weak to."},
+        {"name": "Coin", "tip": "Gil's coin, while the widget shows gil."},
+        {"name": "Amount", "tip": "How much you have."},
+        {"name": "Currency Name", "tip": "The currency's name, when it is not gil."},
+        {"name": "Count", "tip": "The bag's used and total slots."},
+        {"name": "Bag Name", "tip": "The bag's name."},
+        {"name": "Time", "tip": "The time in your time zone."},
+        {"name": "Server Time", "tip": "Japan's time, which the server keeps and the resets go by."},
+        {"name": "Jobs", "tip": "Your jobs and levels."},
+        {"name": "EXP", "tip": "What EXP Text picks. At the level cap, your merits and limit points."},
+        {"name": "EXP Bar", "tip": "How much of the level you have, as a bar."},
+        {"name": "FPS", "tip": "Frames per second."},
+        {"name": "Sent", "tip": "Bytes sent each second; amber or red when data stops."},
+        {"name": "Received", "tip": "Bytes received each second; amber or red when data stops."},
+        {"name": "Percent", "tip": "The game's own connection meter, as its readout shows it: 100% while data comes in, less once it stops."},
+        {"name": "Ping", "tip": "Your ping to the server. It shows once a few of the server's answers are timed."},
+        {"name": "Memory", "tip": "The game's memory used; amber, then red, as it runs low before it runs out at 4 GB."},
+        {"name": "Messages", "tip": "PlayOnline's mail and messenger icons while something waits, with how many."},
+        {"name": "Party Size", "tip": "How many are in your party, or Solo."},
+        {"name": "HP and MP", "tip": "The lowest HP and MP in your party."},
+        {"name": "Pinned Statuses", "tip": "The time left on each status you pin in the popup."},
+        {"name": "Icon", "tip": "The weather's element, when the widget shows a weather."},
+        {"name": "Main", "tip": "What Shows picks: the ship, weather, guild, RSE or moon."},
+        {"name": "Details", "tip": "Its countdown and details."}
+      ]
+    },
+    {
       "key": "conquest-grid",
       "options": [
         {"name": "2 x 2", "tip": "Two lines of two."},
         {"name": "1 x 4", "tip": "All on one line."}
-      ]
-    },
-    {
-      "key": "conquest-place",
-      "options": [
-        {"name": "Off", "tip": "Who holds the region is not shown."},
-        {"name": "Left", "tip": "Before the zone's name."},
-        {"name": "Right", "tip": "After the zone's name."},
-        {"name": "Below", "tip": "On the second line, after the region."}
       ]
     }
   ],

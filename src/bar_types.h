@@ -73,7 +73,6 @@ namespace headsup
     enum class PerfPart : uint8_t { Fps, Sent, Received, Percent, Ping, Memory, Messages };
     constexpr int kPerfPartCount = static_cast<int>(PerfPart::Messages) + 1;
     constexpr uint8_t PerfBit(PerfPart part) { return static_cast<uint8_t>(1u << static_cast<int>(part)); }
-    constexpr uint8_t kAllPerfParts     = (1u << kPerfPartCount) - 1;
     constexpr uint8_t kDefaultPerfParts = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received) |
                                           PerfBit(PerfPart::Percent) | PerfBit(PerfPart::Messages);
     constexpr int kContainerCount = 17; // Ashita's containers 0 (inventory) to 16 (wardrobe 8), the bags a widget can show
@@ -97,15 +96,6 @@ namespace headsup
     constexpr PanelWidget WidgetInSlot(int slot) { return PanelWidget{static_cast<BarWidget>(slot / kMostCopies), slot % kMostCopies}; }
     // The target has one frame the bar gives way around, and game help a bar of its own: neither has copies.
     constexpr bool HasCopies(BarWidget widget) { return widget != BarWidget::Target && widget != BarWidget::GameHelp; }
-    // Which widgets have a second line, or icons, that Second Line or Icons switches off. The Zone, the Vana'diel
-    // Clock and the Target say what their lines and icons show with settings of their own.
-    constexpr bool HasSecondLine(BarWidget w)
-    {
-        return w != BarWidget::EarthTime && w != BarWidget::Performance &&
-               w != BarWidget::GameHelp && w != BarWidget::VanaTime && w != BarWidget::Target &&
-               w != BarWidget::Zone;
-    }
-    constexpr bool HasIcons(BarWidget w) { return w == BarWidget::Weather || w == BarWidget::Currency || w == BarWidget::World; }
 
     // Where a widget's second line goes when the bar is too short for two: nowhere, or beside its title.
     enum class SubtitlePlace : uint8_t
@@ -115,26 +105,6 @@ namespace headsup
         After,
     };
     constexpr int kSubtitlePlaceCount = static_cast<int>(SubtitlePlace::After) + 1;
-
-    // Where the Job widget's EXP bar goes: under its text, beside it, or nowhere.
-    enum class ExpBarPlace : uint8_t
-    {
-        Under,
-        Beside,
-        Off,
-    };
-    constexpr int kExpBarPlaceCount = static_cast<int>(ExpBarPlace::Off) + 1;
-
-    // What the Job & EXP widget shows larger: its jobs and levels over its EXP, the EXP over them, or the EXP alone;
-    // or its EXP bar with each text placed around it.
-    enum class JobLayout : uint8_t
-    {
-        JobsFirst,
-        ExpFirst,
-        ExpOnly,
-        Bar,
-    };
-    constexpr int kJobLayoutCount = static_cast<int>(JobLayout::Bar) + 1;
 
     // What the EXP says, any of them in this order: what is earned of the level, what is left to the next, and the
     // share earned as a percent.

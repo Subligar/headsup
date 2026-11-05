@@ -140,19 +140,17 @@ namespace headsup
         return out;
     }
 
-    WidgetContent StatusTimersWidget(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& pins)
+    std::vector<Span> PinnedStatuses(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& pins)
     {
-        WidgetContent w;
-        w.shown    = true;
-        w.hasPopup = true;
+        std::vector<Span> line;
         const std::vector<Named> named = NamedAll(active);
         for (const uint16_t pin : pins)
         {
             const std::string name = NameOf(pin);
-            AddPart(w.title, ListOf(Text(name), Text(" " + TimeOf(HeldAs(named, name)).text, Tone::Dim)));
+            AddPart(line, ListOf(Text(name), Text(" " + TimeOf(HeldAs(named, name)).text, Tone::Dim)));
         }
-        if (w.title.empty()) w.title = ListOf(Text("Status Timers", Tone::Dim));
-        return w;
+        if (line.empty()) line = ListOf(Text("Status Timers", Tone::Dim));
+        return line;
     }
 
     PopupContent StatusTimersPopup(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& favorites,

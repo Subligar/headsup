@@ -231,26 +231,18 @@ namespace headsup
         constexpr const char* kWorldGuildKey    = "barWorldGuild";
         constexpr const char* kWorldSectionsKey = "barWorldSections";
         const char* const kWorldLineNames[kWorldLineCount] = {"departure", "weather", "guild", "rse", "moon", "conquest"};
-        constexpr const char* kClockServerTimeKey = "clockServerTime";
-        // Server time was a widget of its own, with this switch.
-        constexpr const char* kServerTimeWidgetKey = "barServerTime";
         constexpr const char* kTrue                = "true";
         constexpr const char* kAshitaTrue          = "1";
         constexpr const char* kClockZoneKey       = "clockZone"; // the Clock widget's: a kClockZoneNames or kLocalZone
         constexpr const char* kLocalZone          = "local";
-        constexpr const char* kJobLayoutKey       = "jobLayout";
-        const char* const kJobLayoutNames[kJobLayoutCount] = {"jobsFirst", "expFirst", "expOnly", "bar"};
-        constexpr const char* kTargetIconsKey    = "barTargetShowIcons";
+        constexpr const char* kExpMeterKey       = "jobExpMeter";
+        constexpr const char* kTargetDetectionKey = "barTargetDetection";
         constexpr const char* kTargetShowsKey    = "barTargetShows";
-        constexpr const char* kTargetMobLevelKey = "barTargetMobLevel";
-        constexpr const char* kTargetJobsKey     = "barTargetJobs";
-        constexpr const char* kTargetDistanceKey = "barTargetDistance";
         constexpr const char* kMenuFontKey      = "menuFont";
         constexpr const char* kBlueMagicLearnedKey = "blueMagicLearned";
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
-        constexpr const char* kSecondLineSuffix = "Line2";
-        constexpr const char* kIconsSuffix      = "Icons";
+        constexpr const char* kDesignSuffix     = "Design";
         constexpr const char* kBackgroundSuffix = "Background";
         constexpr const char* kSpacingSuffix    = "Spacing";
         constexpr const char* kCombineSuffix    = "Combine";
@@ -260,26 +252,18 @@ namespace headsup
         constexpr const char* kTextFontSuffix   = "TextFont";
         constexpr const char* kTextSizeSuffix   = "TextSize";
         constexpr const char* kPopupTextSizeSuffix = "PopupTextSize";
-        constexpr const char* kExpBarKey        = "expBar";
-        constexpr const char* kExpTextKey       = "expText";
-        const char* const kExpBarNames[kExpBarPlaceCount] = {"under", "beside", "off"};
         // The EXP widget's: a place for each ExpText, and its bar's size.
         const char* const kExpPlaceKeys[kExpTextCount] = {"barExpEarned", "barExpToNext", "barExpPercent"};
         const char* const kExpPlaceNames[kExpTextPlaceCount] = {"off", "above", "below", "left", "right"};
         constexpr const char* kExpBarWidthKey = "barExpBarWidth", *kExpBarHeightKey = "barExpBarHeight";
         constexpr const char* kExpAlignKey = "barExpAlign";
+        constexpr const char* kExpTextKey  = "expText";
         constexpr const char* kJobNamesKey  = "jobNames";
         constexpr const char* kSubtitleKey  = "barSubtitle";
         const char* const kSubtitleNames[kSubtitlePlaceCount] = {"hide", "before", "after"};
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
         constexpr const char* kZoneIdKey           = "zoneId";
-        constexpr const char* kZoneConquestKey     = "zoneConquest";
-        constexpr const char* kZoneConquestTextKey = "zoneConquestText";
-        const char* const kConquestPlaceNames[kConquestPlaceCount] = {"off", "left", "right", "below"};
-        constexpr const char* kVanaWeekdayKey  = "vanaWeekday";
-        constexpr const char* kVanaDateKey     = "vanaDate";
-        constexpr const char* kPerfPartsKey = "barPerformanceParts";
         const char* const kClockZoneNames[kClockZoneCount] = {"japan", "utc", "usEastern", "usCentral", "usMountain",
             "usArizona", "usPacific", "usAlaska", "usHawaii", "ukIreland", "centralEurope", "easternEurope",
             "australiaEastern"};
@@ -1214,9 +1198,11 @@ namespace headsup
         if (static_cast<int>(s.barTheme) >= kBarThemeCount) s.barTheme = d.barTheme;
         if (static_cast<int>(s.customPalette.shape) >= kBarShapeCount) s.customPalette.shape = d.customPalette.shape;
         s.customPalette.border = std::clamp(s.customPalette.border, 0, kMaxStripBorder);
-        for (WidgetOptions& w : s.widgets)
+        for (int slot = 0; slot < kPanelSlots; ++slot)
         {
+            WidgetOptions& w = s.widgets[slot];
             const WidgetOptions fresh;
+            w.design = Whole(WidgetInSlot(slot).kind, std::move(w.design));
             if (w.currency < 0 || w.currency >= kCurrencyCount) w.currency = fresh.currency;
             if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
             w.spacing = std::clamp(w.spacing, 0, kMaxWidgetSpacing);
@@ -1226,10 +1212,9 @@ namespace headsup
             for (std::string* font : {&w.titleFont, &w.textFont})
                 if (font->size() > kMaxFontName) font->clear();
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
-            if (static_cast<int>(w.expBar) >= kExpBarPlaceCount) w.expBar = fresh.expBar;
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
             w.expBarHeight = std::clamp(w.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight);
-            if (static_cast<int>(w.jobLayout) >= kJobLayoutCount) w.jobLayout = fresh.jobLayout;
+            w.targetDetection &= kAllDetection;
             if (static_cast<int>(w.worldLine) >= kWorldLineCount) w.worldLine = fresh.worldLine;
             if (w.worldRoute < 0 || w.worldRoute >= static_cast<int>(TravelRoutes().size())) w.worldRoute = fresh.worldRoute;
             if (w.worldGuild < 0 || w.worldGuild >= static_cast<int>(GuildShops().size())) w.worldGuild = fresh.worldGuild;
@@ -1264,8 +1249,7 @@ namespace headsup
             const auto text = [&](const char* key) { return store.GetString(CopyKey(key, w).c_str(), ""); };
             const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
-            o.secondLine = flag(widget + kSecondLineSuffix, o.secondLine);
-            o.icons      = flag(widget + kIconsSuffix, o.icons);
+            o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
             o.background = flag(widget + kBackgroundSuffix, o.background);
             o.spacing    = number(widget + kSpacingSuffix, o.spacing);
             o.padding    = number(widget + kPaddingSuffix, o.padding);
@@ -1303,15 +1287,8 @@ namespace headsup
             case BarWidget::Zone:
             {
                 o.zoneId = flag(kZoneIdKey, o.zoneId);
-                o.zoneConquest = static_cast<ConquestPlace>(
-                    NameIndex(kConquestPlaceNames, kConquestPlaceCount, text(kZoneConquestKey), static_cast<int>(o.zoneConquest)));
-                o.zoneConquestText = flag(kZoneConquestTextKey, o.zoneConquestText);
                 break;
             }
-            case BarWidget::VanaTime:
-                o.vanaWeekday = flag(kVanaWeekdayKey, o.vanaWeekday);
-                o.vanaDate    = flag(kVanaDateKey, o.vanaDate);
-                break;
             case BarWidget::EarthTime:
             {
                 // kClockZoneCount for a name of none of them, as kLocalZone is.
@@ -1319,15 +1296,12 @@ namespace headsup
                     o.clockZone = static_cast<ClockZone>(zone);
                 o.clock24      = flag(kClock24Key, o.clock24);
                 o.clockSeconds = flag(kClockSecondsKey, o.clockSeconds);
-                // A file from when Server time was a widget, and shown, has the Clock stack it.
-                o.clockServerTime = flag(kClockServerTimeKey, w.copy == 0 && store.GetString(kServerTimeWidgetKey, "") == kTrue);
                 break;
             }
             case BarWidget::Job:
             {
-                o.expBar = static_cast<ExpBarPlace>(NameIndex(kExpBarNames, kExpBarPlaceCount, text(kExpBarKey), static_cast<int>(o.expBar)));
-                o.expText = static_cast<uint8_t>(std::clamp(number(kExpTextKey, o.expText), 0, (1 << kExpTextCount) - 1));
-                o.jobLayout = static_cast<JobLayout>(NameIndex(kJobLayoutNames, kJobLayoutCount, text(kJobLayoutKey), static_cast<int>(o.jobLayout)));
+                o.expMeter = flag(kExpMeterKey, o.expMeter);
+                o.expText  = static_cast<uint8_t>(std::clamp(number(kExpTextKey, o.expText), 0, (1 << kExpTextCount) - 1));
                 o.jobNames = flag(kJobNamesKey, o.jobNames);
                 for (int t = 0; t < kExpTextCount; ++t)
                 {
@@ -1339,17 +1313,11 @@ namespace headsup
                 o.expAlign = static_cast<Align>(NameIndex(kAlignNames, kAlignCount, text(kExpAlignKey), static_cast<int>(o.expAlign)));
                 break;
             }
-            case BarWidget::Performance:
-                o.perfParts = static_cast<uint8_t>(std::clamp(number(kPerfPartsKey, o.perfParts), 0, static_cast<int>(kAllPerfParts)));
-                break;
             case BarWidget::Target:
-                o.targetIcons    = static_cast<uint32_t>(
-                    std::clamp(number(kTargetIconsKey, static_cast<int>(o.targetIcons)), 0, static_cast<int>(kAllTargetIcons)));
+                o.targetDetection = static_cast<uint32_t>(
+                    std::clamp(number(kTargetDetectionKey, static_cast<int>(o.targetDetection)), 0, static_cast<int>(kAllDetection)));
                 o.targetShows    = static_cast<uint8_t>(
                     std::clamp(number(kTargetShowsKey, o.targetShows), 0, static_cast<int>(kAllTargetShows)));
-                o.targetMobLevel = flag(kTargetMobLevelKey, o.targetMobLevel);
-                o.targetJobs     = flag(kTargetJobsKey, o.targetJobs);
-                o.targetDistance = flag(kTargetDistanceKey, o.targetDistance);
                 break;
             default: break;
             }
@@ -1361,8 +1329,7 @@ namespace headsup
             const auto flag = [&](const std::string& key, bool v) { StoreBool(store, CopyKey(key, w), v); };
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
-            flag(widget + kSecondLineSuffix, o.secondLine);
-            flag(widget + kIconsSuffix, o.icons);
+            text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
             flag(widget + kBackgroundSuffix, o.background);
             StoreFloat(store, CopyKey(widget + kSpacingSuffix, w), static_cast<float>(o.spacing));
             StoreFloat(store, CopyKey(widget + kPaddingSuffix, w), static_cast<float>(o.padding));
@@ -1388,23 +1355,15 @@ namespace headsup
                 break;
             case BarWidget::Zone:
                 flag(kZoneIdKey, o.zoneId);
-                text(kZoneConquestKey, kConquestPlaceNames[static_cast<int>(o.zoneConquest)]);
-                flag(kZoneConquestTextKey, o.zoneConquestText);
-                break;
-            case BarWidget::VanaTime:
-                flag(kVanaWeekdayKey, o.vanaWeekday);
-                flag(kVanaDateKey, o.vanaDate);
                 break;
             case BarWidget::EarthTime:
                 text(kClockZoneKey, o.clockZone ? kClockZoneNames[static_cast<int>(*o.clockZone)] : kLocalZone);
                 flag(kClock24Key, o.clock24);
                 flag(kClockSecondsKey, o.clockSeconds);
-                flag(kClockServerTimeKey, o.clockServerTime);
                 break;
             case BarWidget::Job:
-                text(kExpBarKey, kExpBarNames[static_cast<int>(o.expBar)]);
+                flag(kExpMeterKey, o.expMeter);
                 StoreFloat(store, CopyKey(kExpTextKey, w), static_cast<float>(o.expText));
-                text(kJobLayoutKey, kJobLayoutNames[static_cast<int>(o.jobLayout)]);
                 flag(kJobNamesKey, o.jobNames);
                 for (int t = 0; t < kExpTextCount; ++t)
                     text(kExpPlaceKeys[t], kExpPlaceNames[static_cast<int>(o.expPlaces[static_cast<size_t>(t)])]);
@@ -1412,13 +1371,9 @@ namespace headsup
                 StoreFloat(store, CopyKey(kExpBarHeightKey, w), static_cast<float>(o.expBarHeight));
                 text(kExpAlignKey, kAlignNames[static_cast<int>(o.expAlign)]);
                 break;
-            case BarWidget::Performance: StoreFloat(store, CopyKey(kPerfPartsKey, w), static_cast<float>(o.perfParts)); break;
             case BarWidget::Target:
-                StoreFloat(store, CopyKey(kTargetIconsKey, w), static_cast<float>(o.targetIcons));
+                StoreFloat(store, CopyKey(kTargetDetectionKey, w), static_cast<float>(o.targetDetection));
                 StoreFloat(store, CopyKey(kTargetShowsKey, w), static_cast<float>(o.targetShows));
-                flag(kTargetMobLevelKey, o.targetMobLevel);
-                flag(kTargetJobsKey, o.targetJobs);
-                flag(kTargetDistanceKey, o.targetDistance);
                 break;
             default: break;
             }
@@ -1430,6 +1385,7 @@ namespace headsup
         WidgetOptions o;
         o.on         = widget.copy > 0 || kBarWidgetDefaults[static_cast<int>(widget.kind)];
         o.background = widget.kind == BarWidget::Target; // its frame, always shown
+        o.design     = DefaultDesign(widget.kind);
         return o;
     }
 

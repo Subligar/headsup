@@ -135,29 +135,37 @@ TEST(the_target_widget_shows_name_level_and_con_in_their_colors)
     CHECK(w.subtitle == (std::vector<Span>{{"Lv 17-20 EP-EM", Tone::Own, 0xFF445566u}}));
 }
 
-TEST(show_icons_picks_a_mobs_icons_its_aggression_before_its_name_the_rest_after_and_weaknesses_after_its_level)
+TEST(a_mobs_aggression_detection_and_weaknesses_are_parts_of_the_targets_design)
 {
     Settings settings;
     const ActorInfo goblin = Goblin();
     BarState state;
     state.target     = &goblin;
     WidgetOptions& o = settings.Widget(BarWidget::Target);
-    WidgetContent w  = Content(BarWidget::Target, state, settings);
-    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.empty() && w.subtitleIcons.empty()); // as new
-    o.targetIcons = kAllTargetIcons;
-    w             = Content(BarWidget::Target, state, settings);
+    const auto icons = [](const std::vector<Span>& line) {
+        std::vector<Icon> out;
+        for (const Span& s : line)
+            if (s.icon) out.push_back(*s.icon);
+        return out;
+    };
+    WidgetContent w = Content(BarWidget::Target, state, settings);
+    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && icons(w.title).empty() && icons(w.subtitle).empty()); // as new
+    o.design          = DesignFrom(BarWidget::Target, "aggro name detection distance | level weak player");
+    o.targetDetection = kAllDetection;
+    w                 = Content(BarWidget::Target, state, settings);
     std::vector<Icon> rest = EveryIcon(goblin);
     rest.erase(rest.begin()); // the aggression icon comes first
-    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.size() > 1 && w.titleIcons == rest);
+    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && rest.size() > 1 && icons(w.title) == rest);
     std::vector<Icon> weak;
     const InfoIconSet all = InfoIconsFor(&ResistancesOf(*goblin.mob), BadgeRules{});
     for (int i = 0; i < all.count; ++i)
         if (all.icons[i].badge == BadgeKind::Weak || all.icons[i].badge == BadgeKind::WeakRank)
             weak.push_back(all.icons[i].icon);
-    CHECK(!weak.empty() && w.subtitleIcons == weak);
-    o.targetIcons = DetectionBit(DetectionIcon::Link);
-    w             = Content(BarWidget::Target, state, settings);
-    CHECK(w.icons.empty() && w.titleIcons == std::vector<Icon>{Icon::Link} && w.subtitleIcons.empty());
+    CHECK(!weak.empty() && icons(w.subtitle) == weak);
+    o.targetDetection = DetectionBit(DetectionIcon::Link);
+    o.design          = DesignFrom(BarWidget::Target, "name detection | level");
+    w                 = Content(BarWidget::Target, state, settings);
+    CHECK(w.icons.empty() && icons(w.title) == std::vector<Icon>{Icon::Link} && icons(w.subtitle).empty());
 }
 
 TEST(show_mob_level_off_leaves_out_a_mobs_level_and_con)
@@ -166,7 +174,7 @@ TEST(show_mob_level_off_leaves_out_a_mobs_level_and_con)
     const ActorInfo goblin = Goblin();
     BarState state;
     state.target = &goblin;
-    settings.Widget(BarWidget::Target).targetMobLevel = false;
+    settings.Widget(BarWidget::Target).design = DesignFrom(BarWidget::Target, "aggro name distance | -level player -weak");
     const WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(w.shown && w.subtitle.empty() && Joined(w.title) == "Goblin Bounty Hunter");
 }
@@ -575,7 +583,7 @@ TEST(vanadiel_time_names_the_day_in_its_elements_color_and_the_moon)
     state.unixMs          = 1791417600000LL; // Darksday 09:00, 64% waxing
     const WidgetContent w = Content(BarWidget::VanaTime, state, settings);
     CHECK(w.title ==
-          (std::vector<Span>{{"Darksday", Tone::Own, ElementColor(Element::Dark)}, {" 09:00", Tone::Normal}}));
+          (std::vector<Span>{{"Darksday", Tone::Own, ElementColor(Element::Dark)}, {"  09:00", Tone::Normal}}));
     CHECK(w.subtitle == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Dim}}));
     const PopupContent popup = BarPopupContent(BarWidget::VanaTime, state, settings);
     CHECK(Joined(popup.title) == "1514/03/20");
@@ -595,14 +603,18 @@ TEST(the_vanadiel_clock_shows_its_day_of_week_date_and_moon_phase_as_set)
     state.unixMs = 1791417600000LL; // Darksday 1514/03/20 09:00, 64% waxing
     WidgetOptions& o = settings.Widget(BarWidget::VanaTime);
     const auto shown = [&] { return Content(BarWidget::VanaTime, state, settings); };
-    o.vanaDate = true;
-    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20 Waxing Gibbous 64%", Tone::Dim}}));
-    o.secondLine = false; // Show Moon Phase off: the date alone
+    o.design = DesignFrom(BarWidget::VanaTime, "day time | date moon");
+    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}, {"  Waxing Gibbous 64%", Tone::Dim}}));
+    o.design = DesignFrom(BarWidget::VanaTime, "day time | date -moon"); // the date alone
     CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}}));
-    o.vanaDate = false;
+    o.design = DesignFrom(BarWidget::VanaTime, "day time | -date -moon");
     CHECK(shown().subtitle.empty());
-    o.vanaWeekday = false;
+    o.design = DesignFrom(BarWidget::VanaTime, "-day time | -date -moon");
     CHECK(shown().title == (std::vector<Span>{{"09:00", Tone::Normal}}));
+    // Moved: the moon first on the top line, the time under it.
+    o.design = DesignFrom(BarWidget::VanaTime, "moon | time");
+    CHECK(shown().title == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Normal}}));
+    CHECK(shown().subtitle == (std::vector<Span>{{"09:00", Tone::Dim}}));
 }
 
 TEST(the_zone_widget_names_the_zone_and_its_region)
@@ -921,14 +933,14 @@ TEST(the_zone_says_who_holds_its_region_once_known)
     owners[1]    = Nation::Bastok;
     state.owners = owners;
     const WidgetContent w = Content(BarWidget::Zone, state, settings);
-    // Its crest and name after the region, as Show Conquest and Show Conquest Text are by default.
-    CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {kDot, Tone::Dim}, Span{"", Tone::Normal, 0, GamePicture::BastokCrest},
-                             {" Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
+    // Its crest and name after the region, as the default design has them.
+    CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {"  ", Tone::Normal}, Span{"", Tone::Normal, 0, GamePicture::BastokCrest},
+                             {"  Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
     state.zone = 230; // Southern San d'Oria: a city region, not in the conquest packet
     CHECK(Joined(Content(BarWidget::Zone, state, settings).subtitle) == "San d'Oria");
 }
 
-TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_below_it)
+TEST(the_zones_design_puts_the_holders_crest_and_name_before_or_after_the_zone_or_below_it)
 {
     Settings settings;
     WidgetOptions& o = settings.Widget(BarWidget::Zone);
@@ -937,32 +949,27 @@ TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_
     RegionOwners owners{};
     owners[1]    = Nation::Bastok;
     state.owners = owners;
-    const Span crest{"", Tone::Normal, 0, GamePicture::BastokCrest}, bastok{" Bastok", Tone::Own, NationColor(Nation::Bastok)};
-    const Span dunes{"Valkurm Dunes"}, region{"Zulkheim", Tone::Dim};
-    const auto shown = [&] { return Content(BarWidget::Zone, state, settings); };
-    o.zoneConquest = ConquestPlace::Left;
-    CHECK(shown().title == (std::vector<Span>{crest, bastok, Text(" "), dunes}) && shown().subtitle == std::vector<Span>{region});
-    o.zoneConquest = ConquestPlace::Right;
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), crest, bastok}));
-    o.zoneConquestText = false; // the crest alone
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), crest}));
-    o.zoneConquest = ConquestPlace::Off;
-    CHECK(shown().title == std::vector<Span>{dunes} && shown().subtitle == std::vector<Span>{region});
-    // Show Region Name off: below, the crest has the second line to itself.
-    o.secondLine     = false;
-    o.zoneConquest   = ConquestPlace::Below;
-    CHECK(shown().subtitle == std::vector<Span>{crest});
-    o.zoneConquest = ConquestPlace::Off;
-    CHECK(shown().subtitle.empty());
+    const Span crest{"", Tone::Normal, 0, GamePicture::BastokCrest}, bastok{"  Bastok", Tone::Own, NationColor(Nation::Bastok)};
+    const Span dunes{"Valkurm Dunes"}, region{"Zulkheim", Tone::Dim}, gap{"  "};
+    const auto shown = [&](std::string_view design) {
+        o.design = DesignFrom(BarWidget::Zone, design);
+        return Content(BarWidget::Zone, state, settings);
+    };
+    CHECK(shown("crest nation name | region").title == (std::vector<Span>{crest, bastok, Text("  Valkurm Dunes")}));
+    CHECK(shown("crest nation name | region").subtitle == std::vector<Span>{region});
+    CHECK(shown("name crest nation | region").title == (std::vector<Span>{dunes, gap, crest, bastok}));
+    CHECK(shown("name crest -nation | region").title == (std::vector<Span>{dunes, gap, crest})); // the crest alone
+    CHECK(shown("name -crest -nation | region").title == std::vector<Span>{dunes});
+    // Without the region, the crest has the second line to itself.
+    CHECK(shown("name | -region crest -nation").subtitle == std::vector<Span>{crest});
+    CHECK(shown("name | -region -crest -nation").subtitle.empty());
     // The Beastmen's crest, as the conquest map shows it.
-    owners[1]          = Nation::Beastmen;
-    state.owners       = owners;
-    o.zoneConquest     = ConquestPlace::Right;
-    o.zoneConquestText = true;
+    owners[1]    = Nation::Beastmen;
+    state.owners = owners;
     const Span beastmen{"", Tone::Normal, 0, GamePicture::BeastmenCrest};
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), beastmen, Span{" Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
-    o.zoneConquestText = false;
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), beastmen}));
+    CHECK(shown("name crest nation | region").title ==
+          (std::vector<Span>{dunes, gap, beastmen, Span{"  Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
+    CHECK(shown("name crest -nation | region").title == (std::vector<Span>{dunes, gap, beastmen}));
 }
 
 TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
@@ -1281,7 +1288,7 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
     state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
     WidgetContent w = Content(BarWidget::EarthTime, state, settings);
     CHECK(w.shown && w.hasPopup && Joined(w.title) == "08:30" && w.subtitle.empty()); // not stacked unless asked
-    settings.Widget(BarWidget::EarthTime).clockServerTime = true;
+    settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, "time | server");
     w                        = Content(BarWidget::EarthTime, state, settings);
     CHECK(Joined(w.title) == "08:30" && w.subtitle == ListOf(Text("JST 15:30", Tone::Dim)));
     settings.Widget(BarWidget::EarthTime).clockSeconds = true; // the seconds are the upper line's
@@ -1294,7 +1301,7 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
     // The popup has the server's clock and its resets whether stacked or not: 8h 29m 18s to Saturday 00:00 JST.
     for (const bool stacked : {true, false})
     {
-        settings.Widget(BarWidget::EarthTime).clockServerTime = stacked;
+        settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, stacked ? "time | server" : "time | -server");
         const PopupContent p     = BarPopupContent(BarWidget::EarthTime, state, settings);
         CHECK(Joined(p.title) == "2026-10-08"); // the Pacific coast's date
         CHECK(p.sections.size() == 1 && Lines(p.sections[0]) == (std::vector<std::string>{"Server Time Friday 15:30 JST",
@@ -1305,7 +1312,7 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
 TEST(the_performance_widget_shows_frames_a_second_and_its_popup_the_frame_times)
 {
     Settings settings;
-    settings.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Fps);
+    settings.Widget(BarWidget::Performance).design = DesignFrom(BarWidget::Performance, "fps |");
     BarState state;
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "-");
     state.frames = FrameReport{1000.0 / 30.0, 120.0};
@@ -1328,12 +1335,17 @@ TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_tho
     WidgetOptions& o = settings.Widget(BarWidget::Performance);
     // By default the rates, the game's meter and PlayOnline's messages, as the Connection widget showed.
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227  100%");
-    o.perfParts = PerfBit(PerfPart::Fps) | PerfBit(PerfPart::Received) | PerfBit(PerfPart::Memory);
+    o.design = DesignFrom(BarWidget::Performance, "fps received memory |");
     const std::string line = Joined(Content(BarWidget::Performance, state, settings).title);
     CHECK(line.starts_with("30 fps  R 227  Mem ") && line.find("S ") == std::string::npos);
+    // In the design's order, on either line.
+    o.design = DesignFrom(BarWidget::Performance, "received | fps");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "R 227");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).subtitle) == "30 fps");
+    o.design = DesignFrom(BarWidget::Performance, "fps received memory |");
     CHECK(NeedsOf(settings, std::nullopt).frames && NeedsOf(settings, std::nullopt).connection &&
           NeedsOf(settings, std::nullopt).memory && !NeedsOf(settings, std::nullopt).cpu);
-    o.perfParts = PerfBit(PerfPart::Fps);
+    o.design = DesignFrom(BarWidget::Performance, "fps |");
     CHECK(!NeedsOf(settings, std::nullopt).connection && !NeedsOf(settings, std::nullopt).memory);
     // Its popup reads everything.
     const BarNeeds open = NeedsOf(settings, PanelWidget{BarWidget::Performance});
@@ -1343,7 +1355,7 @@ TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_tho
 TEST(the_performance_widgets_memory_turns_amber_then_red_as_the_space_left_runs_low)
 {
     Settings settings;
-    settings.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Memory);
+    settings.Widget(BarWidget::Performance).design = DesignFrom(BarWidget::Performance, "memory |");
     BarState state;
     const auto used = [&](uint32_t leftMb) {
         constexpr uint32_t kCeilingMb = 4095;
@@ -1366,8 +1378,8 @@ TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_o
     state.job = JobReport{s, 18000.0};
     const WidgetContent w = Content(BarWidget::Job, state, settings);
     CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "WAR 30 / NIN 15" &&
-          Joined(w.subtitle) == "3,460 EXP to next");
-    CHECK(w.progress && std::fabs(*w.progress - 4140.0f / 7600.0f) < 1e-6f); // the bar under it
+          Joined(w.subtitle) == "3,460 EXP to next  ");
+    CHECK(w.subtitle.back().bar && std::fabs(*w.subtitle.back().bar - 4140.0f / 7600.0f) < 1e-6f); // the bar after it
     CHECK(Joined(BarPopupContent(BarWidget::Job, state, settings).title) == "Job and EXP"); // words: the title font
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
           (std::vector<std::string>{"EXP 4,140 / 7,600", "To Next 3,460", "Per Hour 18,000", "Next Level in 11m 32s",
@@ -1375,8 +1387,8 @@ TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_o
 
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
-    CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "7 merits");
-    CHECK(Content(BarWidget::Job, state, settings).progress == 0.421f); // limit points to the next merit
+    CHECK(Content(BarWidget::Job, state, settings).subtitle.front().text == "7 merits");
+    CHECK(Content(BarWidget::Job, state, settings).subtitle.back().bar == 0.421f); // limit points to the next merit
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
           (std::vector<std::string>{"Merits 7 / 10", "Limit Points 4,210 / 10,000", "Per Hour -",
               "Limit Mode is off, so EXP does not become merits."}));
@@ -1389,7 +1401,7 @@ TEST(the_job_widget_says_one_merit_and_promises_no_merit_without_limit_mode)
     JobSample s;
     s.mainJob = 1, s.mainLevel = 75, s.merits = 1, s.meritsMax = 10, s.limitPoints = 100;
     state.job = JobReport{s, 5000.0};
-    CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "1 merit");
+    CHECK(Content(BarWidget::Job, state, settings).subtitle.front().text == "1 merit");
     for (const std::string& line : Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]))
         CHECK(line.find("Next merit") == std::string::npos); // Limit Mode is off
     state.job->sample.limitMode = true;
@@ -1733,7 +1745,7 @@ TEST(the_currency_widget_shows_the_picked_currency)
     CHECK(Joined(w.title) == "12,000" && w.hasPopup);
 }
 
-TEST(the_target_says_how_far_it_is_after_its_name_unless_show_distance_is_off)
+TEST(the_target_says_how_far_it_is_after_its_name_unless_its_distance_is_off)
 {
     Settings settings;
     const ActorInfo goblin = Goblin();
@@ -1742,14 +1754,14 @@ TEST(the_target_says_how_far_it_is_after_its_name_unless_show_distance_is_off)
     state.targetDistance = 12.34f;
     const std::string name = Joined(Content(BarWidget::Target, state, Settings{}).title);
     WidgetContent w = Content(BarWidget::Target, state, settings);
-    CHECK(w.title.back() == Text(" (12.3)", Tone::Dim));
-    settings.Widget(BarWidget::Target).targetDistance = false;
+    CHECK(w.title.back() == Text("  (12.3)", Tone::Dim));
+    settings.Widget(BarWidget::Target).design = DesignFrom(BarWidget::Target, "aggro name -distance | level player");
     w = Content(BarWidget::Target, state, settings);
-    CHECK(Joined(w.title) + " (12.3)" == name);
+    CHECK(Joined(w.title) + "  (12.3)" == name);
     // Without a target, or a distance, there is nothing to measure.
-    settings.Widget(BarWidget::Target).targetDistance = true;
+    settings.Widget(BarWidget::Target).design = DefaultDesign(BarWidget::Target);
     state.targetDistance.reset();
-    CHECK(Joined(Content(BarWidget::Target, state, settings).title) + " (12.3)" == name);
+    CHECK(Joined(Content(BarWidget::Target, state, settings).title) + "  (12.3)" == name);
     state.target         = nullptr;
     state.targetDistance = 5.0f;
     CHECK(Joined(Content(BarWidget::Target, state, settings).title) == "No Target");
@@ -1758,29 +1770,21 @@ TEST(the_target_says_how_far_it_is_after_its_name_unless_show_distance_is_off)
 TEST(each_widget_can_drop_its_second_line_or_its_icons)
 {
     Settings settings;
-    const ActorInfo goblin = Goblin();
     BarState state;
-    state.zone    = 103;
     state.unixMs  = kVanaEpochUnixMs;
     state.weather = Weather::DustStorm;
-    state.target  = &goblin;
     state.gil     = 100;
-    settings.Widget(BarWidget::Weather).secondLine = false;
+    settings.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "icon weather | -chance");
     WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(w.subtitle.empty() && !w.icons.empty() && Joined(w.title) == "Dust Storm");
-    settings.Widget(BarWidget::Weather).icons = false;
+    settings.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "-icon weather | -chance");
     CHECK(Content(BarWidget::Weather, state, settings).icons.empty());
-    // The Target's own settings say what its lines and icons show: these two leave it alone.
-    settings.Widget(BarWidget::Target).secondLine = false;
-    settings.Widget(BarWidget::Target).icons      = false;
-    w = Content(BarWidget::Target, state, settings);
-    CHECK(!w.subtitle.empty() && !w.icons.empty());
-    settings.Widget(BarWidget::Currency).icons = false;
+    settings.Widget(BarWidget::Currency).design = DesignFrom(BarWidget::Currency, "-coin amount | currency");
     w = Content(BarWidget::Currency, state, settings);
     CHECK(!w.coin && Joined(w.title) == "100");
 }
 
-TEST(the_job_widget_puts_its_exp_bar_under_beside_or_nowhere_and_can_show_levels_alone)
+TEST(the_job_widgets_design_places_its_exp_bar_anywhere_and_its_jobs_can_show_levels_alone)
 {
     Settings settings;
     BarState state;
@@ -1788,40 +1792,41 @@ TEST(the_job_widget_puts_its_exp_bar_under_beside_or_nowhere_and_can_show_levels
     s.mainJob = 1, s.mainLevel = 30, s.subJob = 13, s.subLevel = 15;
     s.exp = 3800, s.expNeeded = 7600;
     state.job = JobReport{s, std::nullopt};
-    settings.Widget(BarWidget::Job).expBar = ExpBarPlace::Beside;
+    WidgetOptions& o = settings.Widget(BarWidget::Job);
+    o.design        = DesignFrom(BarWidget::Job, "jobs bar | exp");
     WidgetContent w = Content(BarWidget::Job, state, settings);
-    CHECK(w.progress == 0.5f && w.progressBeside);
-    settings.Widget(BarWidget::Job).expBar = ExpBarPlace::Off;
-    CHECK(!Content(BarWidget::Job, state, settings).progress);
-    settings.Widget(BarWidget::Job).jobNames = false;
+    CHECK(w.title.back().bar == 0.5f && Joined(w.subtitle) == "3,800 EXP to next");
+    o.design = DesignFrom(BarWidget::Job, "jobs | exp -bar");
+    w        = Content(BarWidget::Job, state, settings);
+    CHECK(std::ranges::none_of(w.subtitle, [](const Span& span) { return span.bar.has_value(); }));
+    o.jobNames = false;
     CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "Lv 30 / 15");
     s.subJob  = 0, s.subLevel = 0; // no support job yet
     state.job = JobReport{s, std::nullopt};
     CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "Lv 30");
 }
 
-TEST(the_job_widget_can_put_its_exp_first_or_show_it_alone)
+TEST(the_job_widgets_design_can_put_its_exp_first_or_show_it_alone)
 {
     Settings settings;
     BarState state;
     JobSample s;
     s.mainJob = 1, s.mainLevel = 30, s.subJob = 13, s.subLevel = 15;
     s.exp = 4140, s.expNeeded = 7600;
-    state.job          = JobReport{s, std::nullopt};
-    settings.Widget(BarWidget::Job).jobLayout = JobLayout::ExpFirst;
-    WidgetContent w    = Content(BarWidget::Job, state, settings);
+    state.job        = JobReport{s, std::nullopt};
+    WidgetOptions& o = settings.Widget(BarWidget::Job);
+    o.design         = DesignFrom(BarWidget::Job, "exp | jobs -bar");
+    WidgetContent w  = Content(BarWidget::Job, state, settings);
     CHECK(w.title == ListOf(Text("3,460 EXP to next"))); // the larger line, in the title's own tone
     CHECK(w.subtitle == ListOf(Text("WAR 30 / NIN 15", Tone::Dim)));
-    CHECK(w.figures && w.hasPopup && w.progress && std::fabs(*w.progress - 4140.0f / 7600.0f) < 1e-6f);
-    settings.Widget(BarWidget::Job).jobNames = false;
-    CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "Lv 30 / 15");
-    settings.Widget(BarWidget::Job).jobLayout = JobLayout::ExpOnly;
-    w                  = Content(BarWidget::Job, state, settings);
-    CHECK(Joined(w.title) == "3,460 EXP to next" && w.subtitle.empty() && w.progress.has_value());
+    CHECK(w.figures && w.hasPopup);
+    o.design = DesignFrom(BarWidget::Job, "-jobs exp | -bar");
+    w        = Content(BarWidget::Job, state, settings);
+    CHECK(Joined(w.title) == "3,460 EXP to next" && w.subtitle.empty());
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
     w         = Content(BarWidget::Job, state, settings);
-    CHECK(w.title == ListOf(Text("7 merits")) && w.subtitle.empty() && w.progress == 0.421f);
+    CHECK(w.title == ListOf(Text("7 merits")) && w.subtitle.empty());
     state.job.reset(); // the title screen
     w = Content(BarWidget::Job, state, settings);
     CHECK(Joined(w.title) == "-" && w.subtitle.empty());
@@ -1861,10 +1866,10 @@ TEST(a_clock_in_a_picked_zone_is_read_from_the_time_alone_and_the_computers_from
     const BarNeeds zoned = NeedsOf(settings, std::nullopt);
     CHECK(zoned.unixTime && !zoned.localTime);
     settings.Widget(BarWidget::EarthTime).clockZone.reset();
-    settings.Widget(BarWidget::EarthTime).clockServerTime = true; // the server's line goes by the time, the computer's by its own
+    settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, "time | server"); // the server's line goes by the time, the computer's by its own
     const BarNeeds stacked   = NeedsOf(settings, std::nullopt);
     CHECK(stacked.unixTime && stacked.localTime);
-    settings.Widget(BarWidget::EarthTime).clockServerTime = false;
+    settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, "time | -server");
     const BarNeeds opened    = NeedsOf(settings, BarWidget::EarthTime); // the popup counts down to the resets
     CHECK(opened.unixTime && opened.localTime);
 }
@@ -1896,10 +1901,10 @@ TEST(the_performance_widget_adds_its_ping_when_asked)
     Settings settings;
     BarState state;
     state.connection = SteadyLink();
-    uint8_t& parts   = settings.Widget(BarWidget::Performance).perfParts;
-    parts            = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received);
+    WidgetDesign& design = settings.Widget(BarWidget::Performance).design;
+    design               = DesignFrom(BarWidget::Performance, "sent received |");
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227");
-    parts |= PerfBit(PerfPart::Ping);
+    design = DesignFrom(BarWidget::Performance, "sent received ping |");
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227  48 ms");
     state.connection->latency.reset(); // not measured yet
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227");
@@ -2292,7 +2297,7 @@ TEST(the_job_and_exp_widgets_bar_layout_is_its_exp_bar_by_its_own_settings)
     state.job = JobReport{s, std::nullopt};
     WidgetOptions& o = settings.Widget(BarWidget::Job);
     CHECK(!Content(BarWidget::Job, state, settings).meter); // its lines on a new install
-    o.jobLayout    = JobLayout::Bar;
+    o.expMeter     = true;
     o.expPlaces    = {ExpTextPlace::Off, ExpTextPlace::Off, ExpTextPlace::Left};
     o.expBarWidth  = 200;
     o.expBarHeight = 8;
@@ -2300,8 +2305,8 @@ TEST(the_job_and_exp_widgets_bar_layout_is_its_exp_bar_by_its_own_settings)
     CHECK(w.shown && w.meter && w.meter->left.front().text == "61%" && w.meter->right.empty());
     CHECK(w.meter->width == 200 && w.meter->height == 8 && w.hasPopup);
     CHECK(NeedsOf(settings, std::nullopt).job);
-    // The other layouts keep their own lines.
-    o.jobLayout = JobLayout::JobsFirst;
+    // Without the meter, its own lines.
+    o.expMeter = false;
     CHECK_EQ(Content(BarWidget::Job, state, settings).subtitle.front().text, "7,655 EXP to next");
 }
 
@@ -2332,10 +2337,10 @@ TEST(a_targeted_players_jobs_show_from_whatever_knows_them_unless_switched_off)
     CHECK(Content(BarWidget::Target, state, settings).subtitle.empty()); // nothing known of them yet
     player.jobs = PlayerJobs{1, 75, 13, 37}; // from a lookup, the party list or a check
     CHECK_EQ(Content(BarWidget::Target, state, settings).subtitle.front().text, "WAR 75 / NIN 37");
-    settings.Widget(BarWidget::Target).targetJobs = false;
+    settings.Widget(BarWidget::Target).design = DesignFrom(BarWidget::Target, "name | -player");
     CHECK(Content(BarWidget::Target, state, settings).subtitle.empty());
     // An anonymous player's are the game's question marks.
-    settings.Widget(BarWidget::Target).targetJobs = true;
+    settings.Widget(BarWidget::Target).design = DefaultDesign(BarWidget::Target);
     player.jobs.reset();
     player.status = PlayerStatus{};
     player.status->anonymous = true;

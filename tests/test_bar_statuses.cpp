@@ -77,13 +77,13 @@ TEST(status_names_are_phoenixs_and_one_it_lacks_has_none)
 TEST(the_panel_shows_each_pinned_status_with_its_time_left_and_its_name_while_none_is)
 {
     std::vector<ActiveStatus> active{{40, 1800.0}, {kSignetEffect, std::nullopt}};
-    CHECK(Joined(StatusTimersWidget(active, {}).title) == "Status Timers");
-    const WidgetContent w = StatusTimersWidget(active, {40, kSignetEffect, 33}); // Protect, Signet and Haste
-    CHECK(w.shown && w.hasPopup && Joined(w.title) == "Protect 30m 00s  Signet -  Haste 0s");
-    CHECK(w.title[1] == Text(" 30m 00s", Tone::Dim));
+    CHECK(Joined(PinnedStatuses(active, {})) == "Status Timers");
+    const std::vector<Span> line = PinnedStatuses(active, {40, kSignetEffect, 33}); // Protect, Signet and Haste
+    CHECK(Joined(line) == "Protect 30m 00s  Signet -  Haste 0s");
+    CHECK(line[1] == Text(" 30m 00s", Tone::Dim));
     // A status matches by name: Sleep II's time shows for a pinned Sleep.
     active.push_back(ActiveStatus{19, 60.0});
-    CHECK(Joined(StatusTimersWidget(active, {2}).title) == "Sleep 1m 00s");
+    CHECK(Joined(PinnedStatuses(active, {2})) == "Sleep 1m 00s");
 }
 
 TEST(the_popup_lists_your_favorites_with_pins_over_every_other_status_those_you_have_first)

@@ -187,9 +187,9 @@ PIECES = Pieces(
         'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
         'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
-            'combine', 'combine-on-panel', 'combine-in-popup', 'second-line', 'show-region-name', 'show-conquest', 'show-conquest-text', 'show-zone-id', 'moon-phase', 'day-of-week', 'date', 'icons', 'background', 'spacing', 'padding', 'title-font', 'text-font', 'text-size', 'popup-text-size', 'visibility', 'show-icons', 'show-mob-level', 'show-distance', 'jobs', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'nations', 'conquest-grid', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', 'server-time', '24-hour',
-            'seconds', 'layout', 'exp-text', 'exp-bar', 'exp-earned', 'exp-to-next', 'exp-percent', 'exp-align', 'bar-width', 'bar-height',
-            'job-names', 'panel-parts'), words={'clone': True, 'remove-copy': True, 'combine-none': True}),
+            'design', 'combine', 'combine-on-panel', 'combine-in-popup', 'show-zone-id', 'background', 'spacing', 'padding', 'title-font', 'text-font', 'text-size', 'popup-text-size', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'nations', 'conquest-grid', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', '24-hour',
+            'seconds', 'exp-meter', 'exp-text', 'exp-earned', 'exp-to-next', 'exp-percent', 'exp-align', 'bar-width', 'bar-height',
+            'job-names'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'design-last-on': True}),
         'trays': Setting(unnamed=True), 'reset-layout': Setting(),
         # Mouse Cursor and HeadsUp Config
         'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'keep-pointer': Setting(),
@@ -208,7 +208,7 @@ PIECES = Pieces(
         'plate-mode': List(4), 'outline-mode': List(4, extra={3: 'tipOnClaimRows'}), 'color-source': List(7),
         'show-condition': List(13), 'ornament-place': List(5), 'align': List(3), 'font-style': List(3),
         'smoothness': List(4), 'bar-theme': List(7), 'bar-sections': List(3),
-        'bar-widgets': List(13), 'perf-parts': List(7), 'plate-lines': List(3), 'job-layout': List(4), 'exp-bar': List(3), 'exp-text': List(3), 'exp-place': List(5), 'nations': List(4), 'world-line': List(6), 'world-sections': List(4), 'target-shows': List(5), 'conquest-place': List(4), 'conquest-grid': List(2), 'blue-learned': List(2), 'target-icons': List(10), 'tags': List(30),
+        'bar-widgets': List(13), 'plate-lines': List(3), 'exp-text': List(3), 'exp-place': List(5), 'nations': List(4), 'world-line': List(6), 'world-sections': List(4), 'target-shows': List(5), 'widget-parts': List(41), 'conquest-grid': List(2), 'blue-learned': List(2), 'detection-icons': List(8), 'tags': List(30),
         'setup-theme': List(6), 'setup-mob-plates': List(4), 'setup-mob-design': List(3), 'setup-outlines': List(4),
         'setup-outline-thickness': List(3), 'setup-cursor': List(4), 'setup-players': List(2), 'setup-self': List(3),
         'setup-player-icons': List(3), 'setup-line-kinds': List(3), 'setup-npcs': List(2), 'setup-pets': List(3), 'setup-panel': List(4), 'setup-nameplates': List(3), 'setup-pointer': List(2),

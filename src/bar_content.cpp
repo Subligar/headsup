@@ -14,7 +14,7 @@ namespace headsup
         constexpr const char* kPartGap = "  ";
         if (!line.empty())
         {
-            if (part.front().picture == GamePicture::None)
+            if (!HasMark(part.front()))
                 part.front().text = kPartGap + part.front().text;
             else
                 line.push_back(Text(kPartGap));
@@ -93,8 +93,6 @@ namespace headsup
     {
         std::vector<Span> second = std::move(content.subtitle);
         content.subtitle.clear();
-        std::vector<Icon> icons = std::move(content.subtitleIcons);
-        content.subtitleIcons.clear();
         if (place == SubtitlePlace::Hide || second.empty()) return;
         for (Span& s : second)
             if (s.tone == Tone::Normal) s.tone = Tone::Dim;
@@ -109,7 +107,6 @@ namespace headsup
             if (!title.empty()) title.back().text += " ";
             title.insert(title.end(), second.begin(), second.end());
         }
-        content.titleIcons.insert(content.titleIcons.end(), icons.begin(), icons.end());
     }
 
     std::string ClockText(int hour, int minute, bool twentyFour, int second)

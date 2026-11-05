@@ -1,6 +1,7 @@
 #pragma once
 
 #include "argb.h"
+#include "bar_design.h"
 #include "bar_placement.h"
 #include "bar_server_time.h"
 #include "bar_statuses.h"
@@ -44,16 +45,12 @@ namespace headsup
     constexpr int kMaxWidgetSpacing = 40; // pixels
     constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
     // Where the Zone widget shows who holds its region: not at all, before or after the zone's name, or under it.
-    enum class ConquestPlace : uint8_t { Off, Left, Right, Below };
-    constexpr int kConquestPlaceCount = 4;
     // The Target widget's Visibility: the targets it shows for.
     enum class TargetShow : uint8_t { NpcsObjects, Players, Mobs, Pets, NoTarget };
     constexpr int kTargetShowCount = 5;
     constexpr uint8_t TargetShowBit(TargetShow show) { return static_cast<uint8_t>(1u << static_cast<int>(show)); }
     constexpr uint8_t kAllTargetShows = (1u << kTargetShowCount) - 1;
     // Its Show Icons: the detection icons, then a mob's weaknesses after its level.
-    constexpr uint32_t kTargetWeakIcons = 1u << kDetectionIconCount;
-    constexpr uint32_t kAllTargetIcons  = kAllDetection | kTargetWeakIcons;
     // A widget's spacing and padding at their sliders' leftmost: the panel's.
     constexpr int kPanelSpacing = 0, kPanelPadding = kThemePadding;
     constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
@@ -66,8 +63,7 @@ namespace headsup
     struct WidgetOptions
     {
         bool on         = false;
-        bool secondLine = true;
-        bool icons      = true; // and gil's coin
+        WidgetDesign design; // what it shows on its two lines (NewWidget gives each kind its default)
         bool background = false; // its pill or tint shown while not hovered, as well as whatever the theme shows
         int spacing     = kPanelSpacing; // pixels more between it and each of its neighbours
         int padding     = kPanelPadding; // pixels from its sides to what it shows
@@ -81,26 +77,16 @@ namespace headsup
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         bool clock24         = true;                // its two lines
         bool clockSeconds    = false;               // its own line's seconds
-        bool clockServerTime = false;               // the server's time under its own
         bool zoneId          = false;               // Zone: its number after its name in the popup
-        ConquestPlace zoneConquest = ConquestPlace::Below; // and who holds its region, by their crest
-        bool zoneConquestText      = true;                 // and by name, after the crest
-        bool vanaWeekday     = true;                // Vana'diel Clock: the day before the time
-        bool vanaDate        = false;               // and the date before the moon
-        ExpBarPlace expBar   = ExpBarPlace::Under;  // Job & EXP
-        uint8_t expText      = kDefaultExpText;     // by ExpTextBit
-        ExpPlaces expPlaces  = kDefaultExpPlaces;   // its Bar layout: its texts around its bar
+        uint8_t expText      = kDefaultExpText;     // Job & EXP: what its EXP part says, by ExpTextBit
+        bool expMeter        = false;               // its EXP bar with each text placed around it
+        ExpPlaces expPlaces  = kDefaultExpPlaces;   // those places
         int expBarWidth      = kDefaultExpBarWidth;
         int expBarHeight     = kDefaultExpBarHeight;
         Align expAlign       = Align::Center;       // its texts above and below the bar, against it
-        JobLayout jobLayout  = JobLayout::JobsFirst;
         bool jobNames        = true;
-        uint8_t perfParts    = kDefaultPerfParts; // Performance: what it shows on the panel, by PerfBit
-        uint32_t targetIcons = DetectionBit(DetectionIcon::Aggro); // Target: a mob's icons, by DetectionBit and kTargetWeakIcons
+        uint32_t targetDetection = kDefaultDetection; // Target: the senses its Detection part shows, by DetectionBit
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
-        bool targetMobLevel  = true;  // a mob's level and con under its name
-        bool targetJobs      = true;  // and a player's jobs and levels, as far as they are known
-        bool targetDistance  = true;  // and how far it is, after its name
         WorldLine worldLine  = WorldLine::Departure; // World Info: what it tells on the panel
         int worldRoute       = 0;                    // its departure, by TravelRoutes
         Element worldElement = Element::Fire;        // its weather

@@ -2,6 +2,7 @@
 
 #include "argb.h"
 #include "bar_content.h"
+#include "bar_design.h"
 
 #include <array>
 #include <cstdint>
@@ -31,6 +32,7 @@ namespace headsup
     // From the main job, or a subjob with levels.
     bool UsesMp(const PartyMember& member);
 
-    WidgetContent PartyWidget(const Party& party);
+    // "Party 3" or "Solo", and the lowest HP and MP of the members here; base takes its popup in a party.
+    std::vector<PartContent> PartyParts(const Party& party, WidgetContent& base);
     PopupContent PartyPopup(const Party& party);
 }

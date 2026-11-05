@@ -43,14 +43,20 @@ namespace headsup
         BeastmenCrest,
     };
 
+    // Some text, and before it at most one mark: a game picture, an icon or gil's coin as tall as its letters, or an
+    // EXP bar filled to bar.
     struct Span
     {
         std::string text;
         Tone tone           = Tone::Normal;
         uint32_t argb       = 0;
         GamePicture picture = GamePicture::None;
+        std::optional<Icon> icon{};
+        bool coin = false;
+        std::optional<float> bar{};
         bool operator==(const Span&) const = default;
     };
+    constexpr bool HasMark(const Span& s) { return s.picture != GamePicture::None || s.icon || s.coin || s.bar; }
 
     // A bar in a widget's middle, filled to done of its width, with text on any side of it.
     struct Meter
@@ -65,16 +71,13 @@ namespace headsup
     struct WidgetContent
     {
         bool shown = false;
-        std::vector<Icon> icons; // before the text
-        bool coin = false;       // gil's coin before the text
+        std::vector<Icon> icons; // before the text, beside both lines
+        bool coin = false;       // gil's coin there
         std::vector<Span> title;
         std::vector<Span> subtitle; // empty: one line
-        std::vector<Icon> titleIcons, subtitleIcons; // after each line's text, as tall as its letters
         bool hasPopup = false;
         // The title holds figures, drawn in the detail font in every theme: an ornate title font's 0 reads as an O.
         bool figures = false;
-        std::optional<float> progress; // 0 to 1: a bar along the widget's foot, as EXP to the next level
-        bool progressBeside = false;   // the bar after the text instead, centered on the row
         // Each span of either line is a cell, and the cells at one place of their lines a column, the columns a gap
         // apart: the Conquest widget's two by two.
         bool cells = false;

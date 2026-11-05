@@ -44,6 +44,8 @@ namespace headsup
         bool exportable = false; // a developer's build, which can write its built-in layout out as a file
         // The widgets whose settings the panel's open popup shows, in its pill's order; none while it shows none.
         std::vector<PanelWidget> settingsOf;
+        // The picture each part's chip in the Widget Designer shows, as the game is now.
+        std::array<PartMark, kWidgetPartCount> partMarks{};
     };
 
     // The Game Windows card's own state: its filter and whether it lists every window.
@@ -86,6 +88,8 @@ namespace headsup
         // A widget whose settings the panel's popup is to show, or stop showing when it shows them: a chip clicked in
         // the Layout, a clone made, a copy removed. Once, for the plugin.
         std::optional<PanelWidget> settingsAsked;
+        // A widget whose designer was asked to switch off its last part: it says why under its lines.
+        std::optional<PanelWidget> partRefused;
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool watchRequested = false; // the debug watch is to start, or stop

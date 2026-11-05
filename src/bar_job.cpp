@@ -129,15 +129,9 @@ namespace headsup
         return total * kHour / span;
     }
 
-    WidgetContent JobWidget(const std::optional<JobReport>& job, ExpBarPlace bar, bool jobNames, JobLayout layout, uint8_t expText)
+    std::vector<PartContent> JobParts(const std::optional<JobReport>& job, bool jobNames, uint8_t expText, WidgetContent& base)
     {
-        WidgetContent w;
-        w.shown = true;
-        if (!job)
-        {
-            w.title = ListOf(Text("-"));
-            return w;
-        }
+        if (!job) return {};
         const JobSample& s = job->sample;
         Span jobs = Text(jobNames ? Jobs(s)
                                   : "Lv " + std::to_string(s.mainLevel) +
@@ -146,22 +140,17 @@ namespace headsup
                                                 : ""));
         // At the cap the merits always show, as they stand for what is left to the next.
         const std::string said = ExpSaid(s, AtCap(s) ? static_cast<uint8_t>(expText | ExpTextBit(ExpText::ToNext)) : expText);
-        w.progress = ExpDone(s);
-        if (said.empty())
-            w.title = ListOf(jobs); // no EXP text: the jobs alone, on one line
-        else
+        std::vector<PartContent> parts{{WidgetPart::JobJobs, ListOf(std::move(jobs))},
+            {WidgetPart::JobExp, said.empty() ? std::vector<Span>{} : ListOf(Text(said))}, {WidgetPart::JobBar, {}}};
+        if (const std::optional<float> done = ExpDone(s))
         {
-            Span exp      = Text(said);
-            Span& smaller = layout == JobLayout::JobsFirst ? exp : jobs;
-            smaller.tone  = Tone::Dim;
-            w.title       = ListOf(layout == JobLayout::JobsFirst ? jobs : exp);
-            if (layout != JobLayout::ExpOnly) w.subtitle = ListOf(smaller);
+            Span bar = Text("");
+            bar.bar  = *done;
+            parts.back().spans.push_back(bar);
         }
-        if (bar == ExpBarPlace::Off) w.progress.reset();
-        w.progressBeside = bar == ExpBarPlace::Beside;
-        w.hasPopup       = true;
-        w.figures        = true;
-        return w;
+        base.hasPopup = true;
+        base.figures  = true;
+        return parts;
     }
 
     WidgetContent ExpWidget(const std::optional<JobReport>& job, const ExpPlaces& places, int width, int height, Align align)

@@ -100,14 +100,13 @@ namespace headsup
     int CoinPixels(const BarMetrics& metrics);
     constexpr uint32_t kCoinColor  = 0xFFE8C35A;
     constexpr float kCapScale      = 1.4f;  // an end cap's diamond, in diamonds
-    constexpr float kLineIconGap   = 2.0f;  // pixels between the icons after a line's text
-    constexpr float kPictureGap    = 6.0f;  // before a game picture among a line's text
+    constexpr float kLineIconGap   = 2.0f;  // pixels before an icon or coin among a line's text
+    constexpr float kPictureGap    = 6.0f;  // before a game picture there
+    constexpr float kInlineBarEms  = 3.0f;  // an EXP bar there: this long, in its letters' size
+    constexpr float kInlineBarThick = 0.3f; // and this thick
     constexpr float kMeterTextGap  = 2.0f;  // between a meter's bar and the text above or below it
-    constexpr float kProgressInset = 2.0f;  // pixels from the pill row's foot, inside its border
-    // A widget's progress bar: a thin track along the pill row's foot, or a taller one beside the text.
-    float ProgressHeight(const BarMetrics& metrics, bool beside);
-    // A bar beside the text is this long.
-    float BesideWidth(const BarMetrics& metrics);
+    // The room a span's mark takes before its text, at letters size pixels tall.
+    float MarkWidth(const Span& span, float size);
     // What a widget's title and detail line can hold, for how far their ink reaches: capitals, figures (taller
     // than the capitals in Marcellus, and some descend), a "[S]" zone's brackets, the bags' slash, descenders
     // (Marcellus's Q and J too) and commas; the detail line's ascenders, descenders and comma. Popup text holds

@@ -77,17 +77,10 @@ namespace headsup
     {
         float width = 0.0f;
         for (const Span& s : spans)
-            width += (s.picture != GamePicture::None ? kPictureGap + std::round(face.size) : 0.0f) + Width(host, s.text, face);
+            width += MarkWidth(s, face.size) + Width(host, s.text, face);
         return width;
     }
 
-    float RmlBar::LineWidth(RmlHost& host, const std::vector<Span>& spans, const std::vector<Icon>& icons,
-        const TextFace& face) const
-    {
-        if (icons.empty()) return SpansWidth(host, spans, face);
-        const auto n = static_cast<float>(icons.size());
-        return SpansWidth(host, spans, face) + kLineIconGap * 2.0f + n * std::round(face.size) + (n - 1.0f) * kLineIconGap;
-    }
 
     char RmlBar::WidestDigitOf(RmlHost& host, const TextFace& face)
     {
@@ -99,14 +92,14 @@ namespace headsup
         return digit;
     }
 
-    float RmlBar::SteadyWidth(RmlHost& host, std::vector<Span> spans, const std::vector<Icon>& icons, const TextFace& face)
+    float RmlBar::SteadyWidth(RmlHost& host, std::vector<Span> spans, const TextFace& face)
     {
         // Never less than the line as it reads now, should a pair of its real figures kern wider.
-        const float shown = LineWidth(host, spans, icons, face);
+        const float shown = SpansWidth(host, spans, face);
         const char digit  = WidestDigitOf(host, face);
         for (Span& s : spans)
             s.text = SteadyFigures(s.text, digit);
-        return std::max(shown, LineWidth(host, spans, icons, face));
+        return std::max(shown, SpansWidth(host, spans, face));
     }
 
     const std::string& RmlBar::Fitted(RmlHost& host, Memo<FitKey, std::string>& memo, std::string text,
@@ -273,46 +266,46 @@ namespace headsup
                 shown.padded   = padding;
                 // A widget of cells is as wide as its columns; another as its longer line.
                 shown.columns = c.cells ? CellColumns(c, [&](bool title, const Span& span) {
-                    return SteadyWidth(host, {span}, {}, title && c.subtitle.empty() ? own.TitleFace(c) : own.DetailFace());
+                    return SteadyWidth(host, {span}, title && c.subtitle.empty() ? own.TitleFace(c) : own.DetailFace());
                 }) : std::vector<float>{};
-                const auto detail = [&](const std::vector<Span>& spans) { return SteadyWidth(host, spans, {}, own.MeterFace()); };
+                const auto detail = [&](const std::vector<Span>& spans) { return SteadyWidth(host, spans, own.MeterFace()); };
                 shown.meter = c.meter ? PlaceMeter(*c.meter, MeterWidths{detail(c.meter->above), detail(c.meter->below),
                                                                  detail(c.meter->left), detail(c.meter->right)}, m.gap)
                                       : MeterPlace{};
                 const float text = c.meter ? shown.meter.width
                                    : c.cells ? CellsWidth(shown.columns, m.gap)
-                                             : std::max(SteadyWidth(host, c.title, c.titleIcons, own.TitleFace(c)),
-                                                   own.lines.twoLines ? SteadyWidth(host, c.subtitle, c.subtitleIcons, own.DetailFace()) : 0.0f);
-                shown.natural  = 2.0f * padding + own.Leading(c) + text +
-                                (c.progress && c.progressBeside ? m.gap + BesideWidth(m) : 0.0f);
+                                             : std::max(SteadyWidth(host, c.title, own.TitleFace(c)),
+                                                   own.lines.twoLines ? SteadyWidth(host, c.subtitle, own.DetailFace()) : 0.0f);
+                shown.natural  = 2.0f * padding + own.Leading(c) + text;
             }
             natural[i] = shown.natural;
         }
-        // The target goes when its room cannot hold its padding, its icons and the start of its name.
+        // The target goes when its room cannot hold its padding, its icons and the start of its longest text.
         WidgetContent& target = widgets.contents[SlotOf(BarWidget::Target)];
         const BarLook targetLook  = LookOf(look, widgets, SlotOf(BarWidget::Target));
         const float targetPadding = WidgetPadding(m, look.settings, look.settings.Widget(BarWidget::Target));
+        const size_t targetName   = WidestTextSpan(target.title);
         const float targetMinimum =
             2.0f * targetPadding + targetLook.Leading(target) +
-            (target.title.empty() ? 0.0f
-                                  : Width(host, Shortest(target.title.front().text, kFewLetters), targetLook.TitleFace()));
+            (targetName >= target.title.size()
+                    ? 0.0f
+                    : Width(host, Shortest(target.title[targetName].text, kFewLetters), targetLook.TitleFace()));
         SharePopups(widgets.hasPopup, widgets.panel.group);
         const BarLayout layout = LayoutBar(screenWidth, m, look.palette.shape, natural, targetMinimum,
             widgets.panel.placement, look.settings.barSeparators, widgets.spacing, widgets.panel.group);
-        if (layout.targetWidth > 0.0f && layout.targetWidth < natural[SlotOf(BarWidget::Target)] &&
-            !target.title.empty())
+        if (layout.targetWidth > 0.0f && layout.targetWidth < natural[SlotOf(BarWidget::Target)])
         {
-            // Each line's icons keep their room; its text is cut.
-            const float room   = layout.targetWidth - 2.0f * targetPadding - targetLook.Leading(target);
-            std::string& title = target.title.front().text;
-            title = Fitted(host, m_TitleFit, std::move(title), targetLook.TitleFace(),
-                room - LineWidth(host, {}, target.titleIcons, targetLook.TitleFace()));
-            if (targetLook.lines.twoLines && !target.subtitle.empty())
-            {
-                std::string& detail = target.subtitle.front().text;
-                detail = Fitted(host, m_SubtitleFit, std::move(detail), targetLook.DetailFace(),
-                    room - LineWidth(host, {}, target.subtitleIcons, targetLook.DetailFace()));
-            }
+            // On each line the longest text is cut, as the name is; the rest keeps its room.
+            const float room = layout.targetWidth - 2.0f * targetPadding - targetLook.Leading(target);
+            const auto cut   = [&](std::vector<Span>& line, Memo<FitKey, std::string>& memo, const TextFace& face) {
+                const size_t at = WidestTextSpan(line);
+                if (at >= line.size()) return;
+                std::string& text = line[at].text;
+                const float rest  = SpansWidth(host, line, face) - Width(host, text, face);
+                text = Fitted(host, memo, std::move(text), face, room - rest);
+            };
+            cut(target.title, m_TitleFit, targetLook.TitleFace());
+            if (targetLook.lines.twoLines) cut(target.subtitle, m_SubtitleFit, targetLook.DetailFace());
         }
         return layout;
     }

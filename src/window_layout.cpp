@@ -56,8 +56,8 @@ namespace headsup
     static_assert(ListCount(WindowList::BarSections) == kBarSectionCount, "settings_window.json: bar-sections");
     static_assert(ListCount(WindowList::BarWidgets) == kBarWidgetCount, "settings_window.json: bar-widgets");
     static_assert(ListCount(WindowList::PlateLines) == kPlateLines, "settings_window.json: plate-lines");
-    static_assert(ListCount(WindowList::JobLayout) == kJobLayoutCount, "settings_window.json: job-layout");
-    static_assert(ListCount(WindowList::ExpBar) == kExpBarPlaceCount, "settings_window.json: exp-bar");
+    static_assert(ListCount(WindowList::WidgetParts) == kWidgetPartCount, "settings_window.json: widget-parts");
+    static_assert(ListCount(WindowList::DetectionIcons) == kDetectionIconCount - 1, "settings_window.json: detection-icons");
     static_assert(ListCount(WindowList::Tags) == kTagCount, "settings_window.json: tags");
     static_assert(OptionCount(SettingPiece::ReplaceDashes) == kDashMarkCount, "settings_window.json: replace-dashes");
     static_assert(OptionCount(SettingPiece::CursorStyle) == kCursorStyleCount, "settings_window.json: cursor-style");

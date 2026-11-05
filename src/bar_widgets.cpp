@@ -887,25 +887,40 @@ namespace headsup
                                              PerfBit(PerfPart::Percent) | PerfBit(PerfPart::Ping) |
                                              PerfBit(PerfPart::Messages);
 
-        // The frame rate, the connection and the memory, each part picked on one line.
-        WidgetContent PerformanceWidget(const BarState& state, uint8_t parts)
+        Span Mark(GamePicture picture) { return Span{"", Tone::Normal, 0, picture}; }
+        Span Mark(Icon icon)
         {
-            WidgetContent w;
-            w.shown    = true;
-            w.hasPopup = true;
-            w.figures  = true;
-            if ((parts & PerfBit(PerfPart::Fps)) != 0) AddPart(w.title, FpsFigures(state.frames));
-            if (const uint8_t net = parts & kConnectionParts; net != 0)
-                AddPart(w.title, ConnectionFigures(state.connection, net));
-            if ((parts & PerfBit(PerfPart::Memory)) != 0)
-            {
-                std::vector<Span> memory = ListOf(Text("Mem ", Tone::Dim));
-                for (Span& span : MemoryFigures(state.memory))
-                    memory.push_back(std::move(span));
-                AddPart(w.title, std::move(memory));
-            }
-            if (w.title.empty()) w.title = ListOf(Text("-"));
-            return w;
+            Span s = Text("");
+            s.icon = icon;
+            return s;
+        }
+        std::vector<Span> Marks(const Icon* icons, int count)
+        {
+            std::vector<Span> spans;
+            for (int i = 0; i < count; ++i)
+                spans.push_back(Mark(icons[i]));
+            return spans;
+        }
+
+        // Each PerfPart's widget part.
+        constexpr WidgetPart kPerfWidgetParts[kPerfPartCount] = {WidgetPart::PerfFps, WidgetPart::PerfSent,
+            WidgetPart::PerfReceived, WidgetPart::PerfPercent, WidgetPart::PerfPing, WidgetPart::PerfMemory,
+            WidgetPart::PerfMessages};
+
+        // The frame rate, each of the connection's figures and the memory.
+        std::vector<PartContent> PerformanceParts(const BarState& state, WidgetContent& base)
+        {
+            base.hasPopup = true;
+            base.figures  = true;
+            std::vector<PartContent> parts{{WidgetPart::PerfFps, FpsFigures(state.frames)}};
+            for (int p = 0; p < kPerfPartCount; ++p)
+                if (const uint8_t bit = PerfBit(static_cast<PerfPart>(p)); (bit & kConnectionParts) != 0 && state.connection)
+                    parts.push_back({kPerfWidgetParts[p], ConnectionFigures(state.connection, bit)});
+            std::vector<Span> memory = ListOf(Text("Mem ", Tone::Dim));
+            for (Span& span : MemoryFigures(state.memory))
+                memory.push_back(std::move(span));
+            parts.push_back({WidgetPart::PerfMemory, std::move(memory)});
+            return parts;
         }
 
         PopupContent PerformancePopup(const BarState& state)
@@ -918,12 +933,14 @@ namespace headsup
             return popup;
         }
 
-        WidgetContent WorldWidget(const BarState& state, const WidgetOptions& o)
+        // What World Info tells besides the conquest: its icon, its main line and its details.
+        std::vector<PartContent> WorldParts(const BarState& state, const WidgetOptions& o, WidgetContent& base)
         {
-            if (o.worldLine == WorldLine::Conquest) return ConquestCounts(state, o);
-            WidgetContent w;
-            w.shown    = true;
-            w.hasPopup = true;
+            base.hasPopup = true;
+            struct
+            {
+                std::vector<Span> icons, title, subtitle;
+            } w;
             switch (o.worldLine)
             {
             case WorldLine::Departure:
@@ -940,7 +957,7 @@ namespace headsup
                                                   std::to_string(here.next->percent) + "%"))
                                     : ListOf(Text(std::string(ElementName(o.worldElement)) + " Weather"));
                 if (here.next)
-                    if (const std::optional<Icon> icon = WeatherIcon(here.next->weather)) w.icons.push_back(*icon);
+                    if (const std::optional<Icon> icon = WeatherIcon(here.next->weather)) w.icons.push_back(Mark(*icon));
                 w.subtitle = ListOf(Text(here.when, Tone::Dim));
                 break;
             }
@@ -969,11 +986,12 @@ namespace headsup
                                          Countdown(SecondsToDay(state.unixMs, fullFirst ? full : fresh))));
                 break;
             }
-            case WorldLine::Conquest: break; // ConquestCounts, above
+            case WorldLine::Conquest: break; // ConquestCounts, in ContentOf
             }
             for (Span& span : w.subtitle)
                 span.tone = Tone::Dim;
-            return w;
+            return {{WidgetPart::WorldIcon, std::move(w.icons)}, {WidgetPart::WorldMain, std::move(w.title)},
+                {WidgetPart::WorldDetails, std::move(w.subtitle)}};
         }
 
         size_t ScrolledBy(const BarState& state, const std::string& key)
@@ -1367,11 +1385,67 @@ namespace headsup
                 bag.max == 0 ? Tone::Dim : bag.used >= bag.max ? Tone::Resist : Tone::Normal);
         }
 
-        WidgetContent ContentOf(PanelWidget widget, const BarState& state, const Settings& settings)
+        std::vector<PartContent> TargetParts(const BarState& state, const Settings& settings, const WidgetOptions& o,
+            WidgetContent& base)
         {
-            WidgetContent w;
-            w.shown = Shows(settings, widget);
-            if (!w.shown) return w;
+            if ((o.targetShows & TargetShowBit(TargetShowOf(state.target))) == 0)
+            {
+                base.shown = false;
+                return {};
+            }
+            if (state.target == nullptr) return {{WidgetPart::TargetName, ListOf(Text("No Target", Tone::Dim))}};
+            std::vector<PartContent> parts;
+            if (TargetShowOf(state.target) != TargetShow::Mobs)
+            {
+                parts.push_back({WidgetPart::TargetName, ListOf(Colored(state.target->name,
+                                                             ToArgb(settings.palette.type[static_cast<int>(TypeOf(state.target->state))])))});
+                if (state.target->kind == EntityKind::Player)
+                {
+                    // What is known of their jobs, the newest first; a check alone has a popup to show.
+                    const std::optional<PlayerJobs>& jobs = state.target->jobs;
+                    std::string said;
+                    if (jobs && jobs->mainJob != 0)
+                        said = JobsText(jobs->mainJob, jobs->mainLevel, jobs->subJob, jobs->subLevel);
+                    else if (state.target->status && state.target->status->anonymous)
+                        said = kAnonymousJobs;
+                    else if (state.targetCheck)
+                        said = CheckedJobs(state.targetCheck->general);
+                    if (!said.empty()) parts.push_back({WidgetPart::TargetPlayer, ListOf(Text(said))});
+                    base.hasPopup = state.targetCheck.has_value();
+                }
+                base.hasPopup = base.hasPopup || NpcOf(state.target) != nullptr;
+            }
+            else
+            {
+                const IconSet aggro = IconsFor(state.target->mob, DetectionBit(DetectionIcon::Aggro));
+                const IconSet senses = IconsFor(state.target->mob, o.targetDetection & ~DetectionBit(DetectionIcon::Aggro));
+                parts.push_back({WidgetPart::TargetAggro, Marks(aggro.icons, aggro.count)});
+                parts.push_back({WidgetPart::TargetDetection, Marks(senses.icons, senses.count)});
+                parts.push_back({WidgetPart::TargetName, ListOf(Colored(state.target->name, NameColor(*state.target, settings)))});
+                if (HasLevel(*state.target))
+                    parts.push_back({WidgetPart::TargetLevel,
+                        ListOf(Colored(state.target->level.text, ShadeColor(*state.target, settings)))});
+                if (IsMob(state.target))
+                {
+                    // Weaknesses by SDT or rank, as the badges find them by default.
+                    std::vector<Span> weak;
+                    const InfoIconSet found = InfoIconsFor(&ResistancesOf(*state.target->mob), BadgeRules{});
+                    for (int i = 0; i < found.count; ++i)
+                        if (found.icons[i].badge == BadgeKind::Weak || found.icons[i].badge == BadgeKind::WeakRank)
+                            weak.push_back(Mark(found.icons[i].icon));
+                    parts.push_back({WidgetPart::TargetWeak, std::move(weak)});
+                }
+                base.hasPopup = IsMob(state.target); // a mob the data lacks gets its name, level and con, no popup
+            }
+            if (state.targetDistance && std::isfinite(*state.targetDistance))
+                parts.push_back({WidgetPart::TargetDistance, ListOf(Text("(" + Printed("%.1f", *state.targetDistance) + ")", Tone::Dim))});
+            return parts;
+        }
+
+        // What each part of a widget shows now, base taking whether it shows at all, its popup and its figures.
+        std::vector<PartContent> PartsNow(PanelWidget widget, const BarState& state, const Settings& settings,
+            WidgetContent& base)
+        {
             const WidgetOptions& o = settings.Widget(widget);
             switch (widget.kind)
             {
@@ -1379,162 +1453,100 @@ namespace headsup
             {
                 const ZoneRecord* zone = KnownZone(state.zone);
                 const std::string_view region = ZoneRegion(zone);
-                w.title = ListOf(Text(ZoneTitle(state.zone)));
-                if (o.secondLine && !region.empty()) w.subtitle = ListOf(Text(std::string(region), Tone::Dim));
-                // Who holds its region, as its crest and its name after it.
-                std::vector<Span> holder;
-                if (const Nation owner = OwnerOf(zone, state); owner != Nation::None && o.zoneConquest != ConquestPlace::Off)
+                std::vector<PartContent> parts{{WidgetPart::ZoneName, ListOf(Text(ZoneTitle(state.zone)))},
+                    {WidgetPart::ZoneRegion, region.empty() ? std::vector<Span>{} : ListOf(Text(std::string(region)))}};
+                // Who holds its region, by their crest and by name.
+                if (const Nation owner = OwnerOf(zone, state); owner != Nation::None)
                 {
-                    const GamePicture crest = NationCrest(owner);
-                    if (crest != GamePicture::None) holder.push_back(Span{"", Tone::Normal, 0, crest});
-                    if (o.zoneConquestText)
-                        holder.push_back(Colored((holder.empty() ? "" : " ") + std::string(NationName(owner)), NationColor(owner)));
+                    if (const GamePicture crest = NationCrest(owner); crest != GamePicture::None)
+                        parts.push_back({WidgetPart::ZoneCrest, ListOf(Mark(crest))});
+                    parts.push_back({WidgetPart::ZoneNation, ListOf(Colored(std::string(NationName(owner)), NationColor(owner)))});
                 }
-                if (!holder.empty())
-                    switch (o.zoneConquest)
-                    {
-                    case ConquestPlace::Left:
-                        holder.push_back(Text(" "));
-                        w.title.insert(w.title.begin(), holder.begin(), holder.end());
-                        break;
-                    case ConquestPlace::Right:
-                        w.title.push_back(Text(" "));
-                        w.title.insert(w.title.end(), holder.begin(), holder.end());
-                        break;
-                    case ConquestPlace::Below:
-                        if (!w.subtitle.empty()) w.subtitle.push_back(Text(kDot, Tone::Dim));
-                        w.subtitle.insert(w.subtitle.end(), holder.begin(), holder.end());
-                        break;
-                    case ConquestPlace::Off: break;
-                    }
-                w.hasPopup = state.zone != 0;
-                break;
+                base.hasPopup = state.zone != 0;
+                return parts;
             }
             case BarWidget::Weather:
             {
                 const std::optional<WeatherOdds> today = OddsOn(state, VanaAt(state.unixMs).day);
                 if (!state.weather && !today)
                 {
-                    w.shown = false;
-                    break;
+                    base.shown = false;
+                    return {};
                 }
                 const Weather now = state.weather ? *state.weather : today->normal;
-                if (const std::optional<Icon> icon = WeatherIcon(now)) w.icons.assign(IsDoubleWeather(now) ? 2 : 1, *icon);
-                w.title = ListOf(Text(WeatherName(now)));
+                std::vector<PartContent> parts{{WidgetPart::WeatherIcon, {}}, {WidgetPart::WeatherName, ListOf(Text(WeatherName(now)))}};
+                if (const std::optional<Icon> icon = WeatherIcon(now))
+                    parts.front().spans.assign(IsDoubleWeather(now) ? 2 : 1, Mark(*icon));
                 // Today's chance of it; the forecast is in the popup.
                 for (const WeatherChance& c : today ? Chances(*today) : WeatherChances{})
-                    if (c.weather == now) w.subtitle = ListOf(Text(std::to_string(c.percent) + "%", Tone::Dim));
-                w.hasPopup = today.has_value();
-                break;
+                    if (c.weather == now) parts.push_back({WidgetPart::WeatherChance, ListOf(Text(std::to_string(c.percent) + "%"))});
+                base.hasPopup = today.has_value();
+                return parts;
             }
             case BarWidget::VanaTime:
             {
                 const VanaTime t = VanaAt(state.unixMs);
-                const std::string time = HourMinute(t.hour, t.minute);
-                w.title = o.vanaWeekday ? ListOf(WeekdayText(t), Text(" " + time)) : ListOf(Text(time));
-                std::string line = o.vanaDate ? VanaDate(t) : std::string();
-                if (o.secondLine) line += (line.empty() ? "" : " ") + MoonText(t) + " " + std::to_string(t.moonPercent) + "%";
-                if (!line.empty()) w.subtitle = ListOf(Text(line, Tone::Dim));
-                w.hasPopup = true;
-                break;
+                base.hasPopup    = true;
+                return {{WidgetPart::VanaDay, ListOf(WeekdayText(t))}, {WidgetPart::VanaTime, ListOf(Text(HourMinute(t.hour, t.minute)))},
+                    {WidgetPart::VanaDate, ListOf(Text(VanaDate(t)))},
+                    {WidgetPart::VanaMoon, ListOf(Text(MoonText(t) + " " + std::to_string(t.moonPercent) + "%"))}};
             }
-            case BarWidget::Target:
-                if ((o.targetShows & TargetShowBit(TargetShowOf(state.target))) == 0)
-                    w.shown = false;
-                else if (state.target == nullptr)
-                    w.title = ListOf(Text("No Target", Tone::Dim));
-                else if (TargetShowOf(state.target) != TargetShow::Mobs)
-                {
-                    w.title = ListOf(Colored(state.target->name,
-                        ToArgb(settings.palette.type[static_cast<int>(TypeOf(state.target->state))])));
-                    if (state.target->kind == EntityKind::Player)
-                    {
-                        // What is known of their jobs, the newest first; a check alone has a popup to show.
-                        const std::optional<PlayerJobs>& jobs = state.target->jobs;
-                        std::string said;
-                        if (jobs && jobs->mainJob != 0)
-                            said = JobsText(jobs->mainJob, jobs->mainLevel, jobs->subJob, jobs->subLevel);
-                        else if (state.target->status && state.target->status->anonymous)
-                            said = kAnonymousJobs;
-                        else if (state.targetCheck)
-                            said = CheckedJobs(state.targetCheck->general);
-                        if (o.targetJobs && !said.empty()) w.subtitle = ListOf(Text(said, Tone::Dim));
-                        w.hasPopup = state.targetCheck.has_value();
-                    }
-                    w.hasPopup = w.hasPopup || NpcOf(state.target) != nullptr;
-                }
-                else
-                {
-                    // Its aggression before its name, the rest of its icons after it, as Show Icons picks them.
-                    const IconSet aggro = IconsFor(state.target->mob, o.targetIcons & DetectionBit(DetectionIcon::Aggro));
-                    const IconSet rest  = IconsFor(state.target->mob, o.targetIcons & kAllDetection & ~DetectionBit(DetectionIcon::Aggro));
-                    w.icons.assign(aggro.icons, aggro.icons + aggro.count);
-                    w.titleIcons.assign(rest.icons, rest.icons + rest.count);
-                    w.title = ListOf(Colored(state.target->name, NameColor(*state.target, settings)));
-                    if (o.targetMobLevel && HasLevel(*state.target))
-                        w.subtitle = ListOf(Colored(state.target->level.text, ShadeColor(*state.target, settings)));
-                    if ((o.targetIcons & kTargetWeakIcons) != 0 && IsMob(state.target))
-                    {
-                        // Weaknesses by SDT or rank, as the badges find them by default.
-                        const InfoIconSet found = InfoIconsFor(&ResistancesOf(*state.target->mob), BadgeRules{});
-                        for (int i = 0; i < found.count; ++i)
-                            if (found.icons[i].badge == BadgeKind::Weak || found.icons[i].badge == BadgeKind::WeakRank)
-                                w.subtitleIcons.push_back(found.icons[i].icon);
-                    }
-                    w.hasPopup = IsMob(state.target); // a mob the data lacks gets its name, level and con, no popup
-                }
-                if (w.shown && state.target != nullptr && o.targetDistance && state.targetDistance &&
-                    std::isfinite(*state.targetDistance))
-                    w.title.push_back(Text(" (" + Printed("%.1f", *state.targetDistance) + ")", Tone::Dim));
-                break;
+            case BarWidget::Target: return TargetParts(state, settings, o, base);
             case BarWidget::Currency:
             {
                 // The picked currency; gil with its coin.
-                const int picked = o.currency;
-                if (picked == kGilCurrency)
+                base.hasPopup = true;
+                if (o.currency == kGilCurrency)
                 {
-                    w.coin  = true;
-                    w.title = ListOf(Text(state.gil ? Grouped(*state.gil) : "-"));
+                    Span coin = Text("");
+                    coin.coin = true;
+                    return {{WidgetPart::CurrencyCoin, ListOf(coin)},
+                        {WidgetPart::CurrencyAmount, ListOf(Text(state.gil ? Grouped(*state.gil) : "-"))}};
                 }
-                else
-                {
-                    const std::optional<uint32_t>& amount = state.currencies[picked];
-                    w.title    = ListOf(Text(amount ? Grouped(*amount) : "-"));
-                    w.subtitle = ListOf(Text(kCurrencyTable[picked].name, Tone::Dim));
-                }
-                w.hasPopup = true;
-                break;
+                const std::optional<uint32_t>& amount = state.currencies[o.currency];
+                return {{WidgetPart::CurrencyAmount, ListOf(Text(amount ? Grouped(*amount) : "-"))},
+                    {WidgetPart::CurrencyName, ListOf(Text(kCurrencyTable[o.currency].name))}};
             }
             case BarWidget::Bags:
             {
                 const std::optional<BagCount>& bag = state.bags[o.bag];
-                w.title    = ListOf(bag ? BagFill(*bag) : Text("-"));
-                w.subtitle = ListOf(Text(o.bag == static_cast<int>(kInventory) ? "Bags" : ContainerName(o.bag), Tone::Dim));
-                w.hasPopup = true;
-                break;
+                base.hasPopup = true;
+                return {{WidgetPart::BagCount, ListOf(bag ? BagFill(*bag) : Text("-"))},
+                    {WidgetPart::BagName, ListOf(Text(o.bag == static_cast<int>(kInventory) ? "Bags" : ContainerName(o.bag)))}};
             }
             case BarWidget::EarthTime:
-                w.title    = ListOf(Text(o.clockZone
-                        ? ZoneClockText(ZoneAt(*o.clockZone, state.unixMs), o.clock24, o.clockSeconds)
-                        : ClockText(state.earthHour, state.earthMinute, o.clock24, o.clockSeconds ? state.earthSecond : -1)));
-                if (o.clockServerTime)
-                    w.subtitle = ListOf(Text(ZoneClockText(ZoneAt(ClockZone::Japan, state.unixMs), o.clock24, false), Tone::Dim));
-                w.hasPopup = true;
-                break;
-            case BarWidget::GameHelp:
-                return WidgetContent{};
-            case BarWidget::Performance:
-                return PerformanceWidget(state, o.perfParts);
-            case BarWidget::Job:
-                return o.jobLayout == JobLayout::Bar ? ExpWidget(state.job, o.expPlaces, o.expBarWidth, o.expBarHeight, o.expAlign)
-                                                     : JobWidget(state.job, o.expBar, o.jobNames, o.jobLayout, o.expText);
-            case BarWidget::Party:
-                return PartyWidget(state.party);
+                base.hasPopup = true;
+                return {{WidgetPart::ClockTime,
+                            ListOf(Text(o.clockZone ? ZoneClockText(ZoneAt(*o.clockZone, state.unixMs), o.clock24, o.clockSeconds)
+                                                    : ClockText(state.earthHour, state.earthMinute, o.clock24,
+                                                          o.clockSeconds ? state.earthSecond : -1)))},
+                    {WidgetPart::ClockServer, ListOf(Text(ZoneClockText(ZoneAt(ClockZone::Japan, state.unixMs), o.clock24, false)))}};
+            case BarWidget::GameHelp: return {};
+            case BarWidget::Performance: return PerformanceParts(state, base);
+            case BarWidget::Job: return JobParts(state.job, o.jobNames, o.expText, base);
+            case BarWidget::Party: return PartyParts(state.party, base);
             case BarWidget::StatusTimers:
-                return StatusTimersWidget(state.statuses, settings.statusPins);
-            case BarWidget::World:
-                return WorldWidget(state, o);
+                base.hasPopup = true;
+                return {{WidgetPart::StatusPins, PinnedStatuses(state.statuses, settings.statusPins)}};
+            case BarWidget::World: return WorldParts(state, o, base);
             }
+            return {};
+        }
+
+        WidgetContent ContentOf(PanelWidget widget, const BarState& state, const Settings& settings)
+        {
+            WidgetContent base;
+            base.shown = Shows(settings, widget);
+            const WidgetOptions& o = settings.Widget(widget);
+            if (widget.kind == BarWidget::GameHelp) return WidgetContent{}; // its own bar, never a widget
+            if (!base.shown) return base;
+            if (widget.kind == BarWidget::Job && o.expMeter)
+                return ExpWidget(state.job, o.expPlaces, o.expBarWidth, o.expBarHeight, o.expAlign);
+            if (widget.kind == BarWidget::World && o.worldLine == WorldLine::Conquest) return ConquestCounts(state, o);
+            std::vector<PartContent> parts = PartsNow(widget, state, settings, base);
+            if (!base.shown) return base;
+            WidgetContent w = ComposeContent(o.design, std::move(parts), std::move(base));
+            if (w.title.empty() && w.icons.empty() && !w.coin) w.title = ListOf(Text("-"));
             return w;
         }
     }
@@ -1646,7 +1658,7 @@ namespace headsup
         bool zonedClock = false, localClock = false, serverClock = false;
         EachShownCopy(settings, BarWidget::EarthTime, [&](const WidgetOptions& o) {
             (o.clockZone ? zonedClock : localClock) = true;
-            serverClock = serverClock || o.clockServerTime;
+            serverClock = serverClock || PartOn(o.design, WidgetPart::ClockServer);
         });
         // World Info reads the zone for a weather on the panel.
         bool worldWeather = false;
@@ -1662,7 +1674,10 @@ namespace headsup
         needs.strip      = shown(BarWidget::GameHelp);
         // The Performance widget reads what its copies show on the panel, and everything for its popup.
         uint8_t perf = 0;
-        EachShownCopy(settings, BarWidget::Performance, [&](const WidgetOptions& o) { perf |= o.perfParts; });
+        EachShownCopy(settings, BarWidget::Performance, [&](const WidgetOptions& o) {
+            for (int p = 0; p < kPerfPartCount; ++p)
+                if (PartOn(o.design, kPerfWidgetParts[p])) perf |= PerfBit(static_cast<PerfPart>(p));
+        });
         const bool perfPopup = opened(BarWidget::Performance);
         needs.conquest   = opened(BarWidget::World) || opened(BarWidget::Currency);
         needs.frames     = (perf & PerfBit(PerfPart::Fps)) != 0 || perfPopup;
@@ -1686,25 +1701,11 @@ namespace headsup
     WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings,
         const PanelGroups& panel)
     {
-        // Each widget's own content, less its second line or icons where they are switched off.
-        WidgetContent w        = ContentOf(widget, state, settings);
+        WidgetContent w = ContentOf(widget, state, settings);
         // Combined, the widget before it in its pill may keep it off the panel; its popup still joins the pill's.
         if (const std::optional<PanelWidget> before = CombinedBefore(panel, widget);
             before && !settings.Widget(*before).combineOnPanel)
             w.shown = false;
-        const WidgetOptions& o = settings.Widget(widget);
-        if (!o.secondLine && HasSecondLine(widget.kind))
-        {
-            w.subtitle.clear();
-            w.subtitleIcons.clear();
-        }
-        if (!o.icons && HasIcons(widget.kind))
-        {
-            w.icons.clear();
-            w.titleIcons.clear();
-            w.subtitleIcons.clear();
-            w.coin = false;
-        }
         return w;
     }
 

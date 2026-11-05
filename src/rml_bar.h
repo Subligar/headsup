@@ -201,11 +201,9 @@ namespace headsup
 
         float Width(RmlHost& host, const std::string& text, const TextFace& face) const;
         float SpansWidth(RmlHost& host, const std::vector<Span>& spans, const TextFace& face) const;
-        float LineWidth(RmlHost& host, const std::vector<Span>& spans, const std::vector<Icon>& icons,
-            const TextFace& face) const;
         // The room a widget's line takes: its width with every figure as wide as the font's widest, so a clock or a
         // counter ticking does not move the widgets beside it.
-        float SteadyWidth(RmlHost& host, std::vector<Span> spans, const std::vector<Icon>& icons, const TextFace& face);
+        float SteadyWidth(RmlHost& host, std::vector<Span> spans, const TextFace& face);
         char WidestDigitOf(RmlHost& host, const TextFace& face);
         const std::string& Fitted(RmlHost& host, Memo<FitKey, std::string>& memo, std::string text, const TextFace& face,
             float room);

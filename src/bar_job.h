@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bar_content.h"
+#include "bar_design.h"
 #include "bar_types.h"
 
 #include <cstdint>
@@ -65,11 +66,10 @@ namespace headsup
         bool operator==(const JobReport&) const = default;
     };
 
-    // jobNames off: the levels alone, "Lv 30 / 15". layout: which of the jobs and the EXP is the title, the other
-    // under it, or the EXP alone.
-    // expText: ExpTextBit of each part the EXP says; none, and it says EXP.
-    WidgetContent JobWidget(const std::optional<JobReport>& job, ExpBarPlace bar, bool jobNames, JobLayout layout,
-        uint8_t expText);
+    // jobNames off: the levels alone, "Lv 30 / 15". expText: ExpTextBit of each thing the EXP part says.
+    // base takes its popup and figures while there is a job to show.
+    std::vector<PartContent> JobParts(const std::optional<JobReport>& job, bool jobNames, uint8_t expText,
+        WidgetContent& base);
     // The EXP widget: its bar width by height pixels, each text on the side places puts it.
     WidgetContent ExpWidget(const std::optional<JobReport>& job, const ExpPlaces& places, int width, int height,
         Align align);

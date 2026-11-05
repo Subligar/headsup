@@ -75,12 +75,17 @@ namespace headsup
             return value;
         }
 
-        // A span's game picture, before its text.
-        std::string Picture(const Span& span)
+        // A span's mark, before its text.
+        std::string Picture(const Span& span, const BarLook& look)
         {
-            return span.picture != GamePicture::None
-                       ? "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"/>"
-                       : std::string();
+            if (span.picture != GamePicture::None)
+                return "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"/>";
+            if (span.icon) return "<img class=\"line-icon\" src=\"" + IconSource(*span.icon) + "\"/>";
+            if (span.coin) return "<img class=\"line-icon\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
+            if (span.bar)
+                return "<span class=\"ibar\"><span class=\"fill\" style=\"width: " +
+                       RcssNumber(std::clamp(*span.bar, 0.0f, 1.0f) * kPercentWhole) + "%\"></span></span>";
+            return {};
         }
 
         std::string Spans(const std::vector<Span>& spans, const BarLook& look)
@@ -88,7 +93,7 @@ namespace headsup
             std::string rml;
             for (const Span& span : spans)
             {
-                rml += Picture(span);
+                rml += Picture(span, look);
                 if (!span.text.empty())
                     rml += "<span style=\"color:" + RcssColor(look.BarColor(span)) + ";\">" + EscapedRml(span.text) + "</span>";
             }
@@ -101,23 +106,15 @@ namespace headsup
             std::string rml;
             for (size_t i = 0; i < spans.size() && i < columns.size(); ++i)
                 rml += "<span class=\"cell\" style=\"width:" + Px(columns[i] + (i + 1 < spans.size() ? look.metrics.gap : 0.0f)) +
-                       ";color:" + RcssColor(look.BarColor(spans[i])) + ";\">" + Picture(spans[i]) + EscapedRml(spans[i].text) + "</span>";
+                       ";color:" + RcssColor(look.BarColor(spans[i])) + ";\">" + Picture(spans[i], look) + EscapedRml(spans[i].text) + "</span>";
             return rml;
         }
 
-        std::string Line(const char* classes, const std::vector<Span>& spans, const std::vector<Icon>& icons,
-            const BarLook& look, const std::vector<float>& columns = {})
+        std::string Line(const char* classes, const std::vector<Span>& spans, const BarLook& look,
+            const std::vector<float>& columns = {})
         {
-            std::string rml = std::string("<div class=\"") + classes + "\"><span class=\"t\">" +
-                              (columns.empty() ? Spans(spans, look) : Cells(spans, look, columns)) + "</span>";
-            if (!icons.empty())
-            {
-                rml += "<span class=\"line-icons\">";
-                for (const Icon icon : icons)
-                    rml += "<img class=\"line-icon\" src=\"" + IconSource(icon) + "\"/>";
-                rml += "</span>";
-            }
-            return rml + "</div>";
+            return std::string("<div class=\"") + classes + "\"><span class=\"t\">" +
+                   (columns.empty() ? Spans(spans, look) : Cells(spans, look, columns)) + "</span></div>";
         }
 
         // A box's fill, edge and corners as BoxOf gives them; no box is a clear one, its room kept.
@@ -332,7 +329,7 @@ namespace headsup
             css += ".pills .widget.target,.pills .widget.backed{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
             css += ".pills .widget.lit{background-color:" + RcssColor(Faded(cyan, 0x2E)) + ";border-color:" +
                    RcssColor(Faded(cyan, 0xB3)) + ";}";
-            css += ".progress,.beside,.mbar{background-color:#ffffff1f;}";
+            css += ".ibar,.mbar{background-color:#ffffff1f;}";
             return css;
         }
     }
@@ -388,7 +385,6 @@ namespace headsup
         const float clear       = DiamondClearance(m);
         const int divider       = WholePixels(m.diamond), cap = WholePixels(m.diamond * kCapScale);
         const int coin          = CoinPixels(m);
-        const float underHeight = ProgressHeight(m, false), besideHeight = ProgressHeight(m, true);
         const std::string capSource     = DiamondSource(p.accent, cap);
         const std::string dividerSource = DiamondSource(look.ornate ? p.divider : p.accent, divider);
         auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit); };
@@ -442,29 +438,25 @@ namespace headsup
                RcssColor(Faded(p.accent, kLitGlow)) + ");}";
 
         css += ".content{position:relative;top:" + Px(-kContentLift) + ";height:100%;}";
-        css += ".icon,.coin,.text,.beside,.line-icons,.line-icon,.t{display:inline-block;vertical-align:top;}";
+        css += ".icon,.coin,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
         css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
                Px(m.gap) + ";}";
         css += ".coin{" + square(static_cast<float>(coin)) + "margin-top:" +
                Px(std::round(mid - static_cast<float>(coin) / 2.0f) - rowTop) + ";margin-right:" + Px(m.gap) + ";}";
         css += ".t{white-space:pre;}";
         css += ".cell{display:inline-block;white-space:pre;}";
-        css += ".line-icons{margin-left:" + Px(kLineIconGap) + ";}";
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";
         css += TextRules("", look.titleFont, look.detailFont, lines, place, rowTop);
         for (const WidgetText& text : own)
             css += TextRules("#" + WidgetId(text.widget) + " ", text.titleFont, text.detailFont, text.lines, text.place, rowTop);
-        css += ".progress{position:absolute;left:0px;right:0px;top:" +
-               Px(row.y + row.height - kProgressInset - underHeight - rowTop) + ";height:" + Px(underHeight) +
-               ";background-color:" + RcssColor(p.divider) + ";}";
         css += ".meter{display:inline-block;vertical-align:top;position:relative;height:" + Px(row.height) +
                ";margin-top:" + Px(-kContentInset) + ";}";
         css += ".mtext{position:absolute;white-space:pre;}";
         css += ".mbar{position:absolute;background-color:" + RcssColor(p.divider) + ";}";
-        css += ".beside{margin-left:" + Px(m.gap) + ";width:" + Px(BesideWidth(m)) + ";height:" + Px(besideHeight) +
-               ";margin-top:" + Px(std::round(row.y + (row.height - besideHeight) / 2.0f) - rowTop) +
-               ";background-color:" + RcssColor(p.divider) + ";}";
+        // An EXP bar among a line's text: as long as kInlineBarEms of its letters, on their middle.
+        css += ".ibar{display:inline-block;vertical-align:middle;width:" + RcssNumber(kInlineBarEms) + "em;height:" +
+               RcssNumber(kInlineBarThick) + "em;background-color:" + RcssColor(p.divider) + ";}";
         // Progress is a gradient that pulses.
         css += ".fill{height:100%;decorator:horizontal-gradient(" + RcssColor(p.accent) + " " + RcssColor(p.accentEnd) +
                ");animation:1.8s sine-in-out infinite alternate pulse;}";
@@ -741,15 +733,8 @@ namespace headsup
                                   (alone ? " alone" : content.cells ? " cells" : "");
         static const std::vector<float> kNoColumns;
         const std::vector<float>& laid = content.cells ? columns : kNoColumns;
-        rml += Line(title.c_str(), content.title, content.titleIcons, look, laid);
-        if (!alone) rml += Line(content.figures ? "detail fig" : "detail", content.subtitle, content.subtitleIcons, look, laid);
-        rml += "</div>";
-        if (content.progress)
-        {
-            const float done = std::clamp(*content.progress, 0.0f, 1.0f) * kPercentWhole;
-            rml += std::string("<div class=\"") + (content.progressBeside ? "beside" : "progress") +
-                   "\"><div class=\"fill\" style=\"width: " + RcssNumber(done) + "%\"></div></div>";
-        }
-        return rml + "</div>";
+        rml += Line(title.c_str(), content.title, look, laid);
+        if (!alone) rml += Line(content.figures ? "detail fig" : "detail", content.subtitle, look, laid);
+        return rml + "</div></div>";
     }
 }
