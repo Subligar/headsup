@@ -15,16 +15,18 @@ namespace
 {
     bool Near(float a, float b) { return std::fabs(a - b) < 0.01f; }
 
-    constexpr std::array<float, kPanelSlots> kNoSpacing{};
+    // Separators as each shape drew them before they were the player's: ornate's diamonds and caps, pills' none.
+    int ShapeSeparators(BarShape shape) { return shape == BarShape::Ornate ? kAllSeparators : 0; }
+    constexpr int kBetween = SeparatorBit(Separator::Between), kCaps = SeparatorBit(Separator::EndCaps);
 
     // LayoutBar on the default panel, each widget in a pill of its own, unless the test says otherwise.
     BarLayout Layout(float screenWidth, const BarMetrics& metrics, BarShape shape,
         const std::array<float, kPanelSlots>& natural, float targetMinimum,
-        const BarPlacement& placement = DefaultPlacement(), BarSeparators separators = BarSeparators::Theme,
-        const std::array<float, kPanelSlots>& spacing = kNoSpacing,
-        const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups())
+        const BarPlacement& placement = DefaultPlacement(), std::optional<int> separators = std::nullopt,
+        float spacing = 0.0f, const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups())
     {
-        return LayoutBar(screenWidth, metrics, shape, natural, targetMinimum, placement, separators, spacing, groups);
+        return LayoutBar(screenWidth, metrics, shape, natural, targetMinimum, placement,
+            separators.value_or(ShapeSeparators(shape)), spacing, groups);
     }
 
     std::array<float, kPanelSlots> Widths(float zone, float weather, float vana, float target, float gil,
@@ -40,8 +42,8 @@ namespace
     }
 
     // Natural widths, a 36 px bar.
-    const BarMetrics kPills  = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
-    const BarMetrics kOrnate = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics kPills  = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics kOrnate = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
 }
 
 TEST(pills_put_the_groups_at_the_edges_and_the_target_in_the_middle)
@@ -488,7 +490,7 @@ TEST(pill_rows_are_whole_pixels_centered_above_the_strips_bottom_line)
     for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
+            const BarMetrics m = MetricsFor(h, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
             const BarRow row   = PillRow(m);
             const float above = row.y, below = (m.height - 1.0f) - (row.y + row.height); // the last row is the line
             CHECK(Near(row.y, std::round(row.y)) && Near(row.height, std::round(row.height)));
@@ -506,128 +508,77 @@ TEST(a_titles_descenders_stay_clear_of_its_detail_line_and_both_inside_the_pill)
     for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m  = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
-            const BarRow row    = PillRow(m);
-            const TextRow t     = FitTextRow(m, FakeInk);
-            const LineInk title = FakeInk(true, t.title);
+            const BarMetrics m   = MetricsFor(h, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+            const BarRow row     = PillRow(m);
+            const TextRow t      = FitTextRow(m, FakeInk);
+            const LineInk title  = FakeInk(true, t.title), detail = FakeInk(false, t.detail);
+            const LineInk alone  = FakeInk(true, t.alone);
             // Inside the pill's 1 px border, the ink keeps clear space above and below.
             const float margin = std::max(2.0f, 0.06f * row.height);
             const float inTop = row.y + 1.0f, inBottom = row.y + row.height - 1.0f;
-            if (h >= 36) CHECK(t.twoLines);
-            if (t.twoLines)
-            {
-                const LineInk detail = FakeInk(false, t.detail);
-                CHECK(t.title > t.detail && t.detail >= 9);
-                CHECK(t.title <= WholePixels(m.title) && t.detail <= WholePixels(m.subtitle));
-                const float above = (t.titleY + title.top) - inTop;
-                const float below = inBottom - (t.detailY + detail.bottom);
-                CHECK(above >= margin - 0.01f && below >= margin - 0.01f && std::fabs(above - below) <= 1.01f);
-                // Three rows clear from the title's descenders to the detail's capitals: two still read as touching.
-                CHECK((t.detailY + detail.top) - (t.titleY + title.bottom) >= 3.0f - 0.01f);
-            }
-            // A title alone (gil, the clock, or every title when two lines do not fit): all its ink inside.
-            const float aloneTop = t.aloneY + title.top, aloneBottom = t.aloneY + title.bottom;
-            CHECK(aloneTop >= inTop + margin - 0.01f && aloneBottom <= inBottom - margin + 0.01f);
+            CHECK(t.title > t.detail);
+            CHECK(t.title <= WholePixels(m.title) && t.detail <= WholePixels(m.subtitle));
+            const float above = (t.titleY + title.top) - inTop;
+            const float below = inBottom - (t.detailY + detail.bottom);
+            CHECK(above >= margin - 0.01f && below >= margin - 0.01f && std::fabs(above - below) <= 1.01f);
+            // Three rows clear from the title's descenders to the detail's capitals: two still read as touching.
+            CHECK((t.detailY + detail.top) - (t.titleY + title.bottom) >= 3.0f - 0.01f);
+            // A title alone (gil, the clock): all its ink inside.
+            CHECK(t.aloneY + alone.top >= inTop + margin - 0.01f && t.aloneY + alone.bottom <= inBottom - margin + 0.01f);
         }
 }
 
-TEST(a_row_too_short_for_two_lines_kept_apart_shows_titles_alone_at_full_size)
+TEST(a_short_row_shrinks_both_lines_together_and_a_title_alone_keeps_its_full_size)
 {
     for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
     {
-        const BarMetrics m = MetricsFor(24, shape, kAutoBarTextSize, kAutoPopupTextSize);
+        const BarMetrics m = MetricsFor(24, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
         const TextRow t    = FitTextRow(m, FakeInk);
-        CHECK(!t.twoLines);
-        CHECK_EQ(t.title, WholePixels(m.title));
+        CHECK(t.title < WholePixels(m.title) && t.detail < WholePixels(m.subtitle));
+        CHECK(std::fabs(static_cast<float>(t.detail) / static_cast<float>(t.title) - m.subtitle / m.title) < 0.15f);
+        CHECK_EQ(t.alone, WholePixels(m.title));
         // Its capitals centered in the pill, within a pixel.
-        const LineInk title = FakeInk(true, t.title);
+        const LineInk alone = FakeInk(true, t.alone);
         const BarRow row    = PillRow(m);
-        const float above = (t.aloneY + title.top) - row.y, below = row.y + row.height - (t.aloneY + title.baseline);
+        const float above = (t.aloneY + alone.top) - row.y, below = row.y + row.height - (t.aloneY + alone.baseline);
         CHECK(std::fabs(above - below) <= 1.01f);
     }
 }
 
-// Small text is hard to read: a detail line under 9 px is not worth drawing, and a taller bar never gets smaller
-// titles, except where it gains room for a detail line under them.
-TEST(no_line_is_under_9_px_and_a_taller_bar_never_shrinks_the_titles)
+TEST(a_taller_bar_never_shrinks_a_line)
 {
     for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
     {
-        int twoLines = 0, compact = 0;
+        TextRow last;
         for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         {
-            const TextRow t = FitTextRow(MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize), FakeInk);
-            CHECK(t.title >= 9);
-            if (t.twoLines)
-            {
-                CHECK(t.detail >= 9);
-                CHECK(t.title >= twoLines);
-                twoLines = t.title;
-            }
-            else
-            {
-                CHECK(t.title >= compact);
-                compact = t.title;
-            }
+            const TextRow t = FitTextRow(MetricsFor(h, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize), FakeInk);
+            CHECK(t.title >= last.title && t.detail >= last.detail && t.alone >= last.alone);
+            last = t;
         }
     }
 }
 
-// Gil and the clock have no detail line: they take the row's title size, and their capitals are centered in the pill.
-TEST(a_title_without_a_detail_line_takes_the_rows_title_size_centered)
-{
-    for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
-        for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
-        {
-            const BarMetrics m  = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
-            const BarRow row    = PillRow(m);
-            const TextRow t     = FitTextRow(m, FakeInk);
-            const LineInk title = FakeInk(true, t.title);
-            const float above = (t.aloneY + title.top) - row.y;
-            const float below = row.y + row.height - (t.aloneY + title.baseline);
-            CHECK(std::fabs(above - below) <= 1.01f);
-        }
-}
-
-// A meter's text beside its bar is in the detail size, or the title's where the row holds one line, its capitals
-// centered on the row as the bar is.
+// A meter's text beside its bar is in the detail size, its capitals centered on the row as the bar is.
 TEST(the_text_beside_a_meter_has_its_capitals_on_the_rows_middle)
 {
     for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
+            const BarMetrics m = MetricsFor(h, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
             const BarRow row   = PillRow(m);
             const TextRow t    = FitTextRow(m, FakeInk);
-            CHECK_EQ(t.side, t.twoLines ? t.detail : t.title); // at Auto
-            const LineInk side = FakeInk(!t.twoLines, t.side);
+            CHECK_EQ(t.side, t.detail);
+            const LineInk side = FakeInk(false, t.side);
             const float above = (t.sideY + side.top) - row.y, below = row.y + row.height - (t.sideY + side.baseline);
             CHECK(std::fabs(above - below) <= 0.01f);
         }
 }
 
-// A meter's texts at a set size are that size while it fits, a pixel a step: no jump where the row goes to one line.
-TEST(a_meters_texts_at_a_set_size_are_that_size)
-{
-    for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
-    {
-        int last = 0;
-        for (int size = 10; size <= 24; ++size)
-        {
-            const TextRow t = FitTextRow(MetricsFor(45, shape, size, kAutoPopupTextSize), FakeInk);
-            CHECK_EQ(t.side, t.title);
-            if (t.twoLines) CHECK_EQ(t.side, size);
-            CHECK(t.side >= last && t.side <= last + 1 + (last == 0 ? size : 0));
-            last = t.side;
-        }
-    }
-}
-
 TEST(text_shrinks_only_when_its_ink_would_not_fit)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
     const TextRow roomy = FitTextRow(m, SmallInk);
-    CHECK(roomy.twoLines);
     CHECK_EQ(roomy.title, WholePixels(m.title));
     CHECK_EQ(roomy.detail, WholePixels(m.subtitle));
     const TextRow tight = FitTextRow(m, FakeInk); // the full sizes leave no gap between the lines
@@ -1141,18 +1092,25 @@ TEST(the_right_section_keeps_a_gap_from_the_left_or_its_inner_widget_goes)
     CheckApartAndInside(l, screen, sides);
 }
 
-TEST(separators_follow_the_theme_until_the_player_picks)
+TEST(end_caps_take_the_room_between_the_panels_edges_and_its_sections)
 {
-    CHECK(DiamondsOn(BarSeparators::Theme, BarShape::Ornate) && !DiamondsOn(BarSeparators::Theme, BarShape::Pills));
-    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
-        CHECK(DiamondsOn(BarSeparators::Diamonds, shape) && !DiamondsOn(BarSeparators::None, shape));
+    for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
+    {
+        const auto widths = Widths(100, 80, 120, 200, 90, 60, 50);
+        const BarLayout caps = Layout(1920.0f, metrics, shape, widths, 0.0f, DefaultPlacement(), kCaps);
+        const BarLayout none = Layout(1920.0f, metrics, shape, widths, 0.0f, DefaultPlacement(), 0);
+        CHECK(Near(RectOf(caps, BarWidget::Zone)->x, metrics.cap) && Near(RectOf(none, BarWidget::Zone)->x, metrics.gap));
+        const BarRect& clock = *RectOf(caps, BarWidget::EarthTime);
+        CHECK(Near(clock.x + clock.width, 1920.0f - metrics.cap));
+        CHECK(caps.dividers.empty() && none.dividers.empty());
+    }
 }
 
 TEST(pills_with_diamonds_center_one_in_a_wider_gap_between_neighbours_of_a_section)
 {
     const float g = kPills.gap, d = static_cast<float>(WholePixels(kPills.diamond));
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f,
-        DefaultPlacement(), BarSeparators::Diamonds);
+        DefaultPlacement(), kBetween);
     const BarRect& zone = *RectOf(l, BarWidget::Zone);
     const BarRect& weather = *RectOf(l, BarWidget::Weather);
     CHECK(Near(weather.x, zone.x + zone.width + g + d + g)); // a gap, the diamond, a gap
@@ -1168,8 +1126,7 @@ TEST(ornate_without_diamonds_keeps_its_widgets_where_they_were)
 {
     const auto widths = Widths(100, 80, 120, 200, 90, 60, 50);
     const BarLayout with = Layout(1920.0f, kOrnate, BarShape::Ornate, widths, 0.0f);
-    const BarLayout none = Layout(1920.0f, kOrnate, BarShape::Ornate, widths, 0.0f, DefaultPlacement(),
-        BarSeparators::None);
+    const BarLayout none = Layout(1920.0f, kOrnate, BarShape::Ornate, widths, 0.0f, DefaultPlacement(), kCaps);
     CHECK(none.dividers.empty() && with.dividers.size() == 4);
     for (size_t i = 0; i < with.widgets.size(); ++i)
         CHECK(with.widgets[i].rect == none.widgets[i].rect);
@@ -1178,7 +1135,7 @@ TEST(ornate_without_diamonds_keeps_its_widgets_where_they_were)
 TEST(diamonds_divide_neighbours_within_each_section_and_never_between_sections)
 {
     const auto center = Sections({BarWidget::Zone}, {BarWidget::Currency, BarWidget::Bags}, {BarWidget::EarthTime});
-    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, SomeWidths(), 0.0f, center, BarSeparators::Diamonds);
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, SomeWidths(), 0.0f, center, kBetween);
     CHECK(l.dividers.size() == 1); // between gil and bags, in the center
     CHECK(l.dividers[0] > RectOf(l, BarWidget::Currency)->x && l.dividers[0] < RectOf(l, BarWidget::Bags)->x);
 }
@@ -1187,60 +1144,37 @@ TEST(a_bar_text_size_that_fits_is_drawn_and_one_that_does_not_is_shrunk_to_what_
 {
     for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
     {
-        const TextRow roomy = FitTextRow(MetricsFor(64, shape, 16, kAutoBarTextSize), FakeInk);
-        CHECK(roomy.twoLines && roomy.title == 16 && roomy.detail == WholePixels(16.0f * 0.33f / 0.40f));
-        const BarMetrics small = MetricsFor(24, shape, kMaxBarTextSize, kAutoBarTextSize);
+        const TextRow roomy = FitTextRow(MetricsFor(64, shape, 16, kAutoBarTextSize, kAutoBarTextSize), FakeInk);
+        CHECK(roomy.title == 16 && roomy.alone == 16 && roomy.detail == WholePixels(16.0f * 0.33f / 0.40f));
+        const BarMetrics small = MetricsFor(24, shape, kMaxBarTextSize, kAutoBarTextSize, kAutoBarTextSize);
         const TextRow tight    = FitTextRow(small, FakeInk);
-        CHECK(tight.title < kMaxBarTextSize);
-        // As large as the row holds: what fits at Auto's size for this height, no less.
-        CHECK(tight.title >= FitTextRow(MetricsFor(24, shape, kAutoBarTextSize, kAutoPopupTextSize), FakeInk).title);
+        CHECK(tight.title < kMaxBarTextSize && tight.alone < kMaxBarTextSize);
+        // As large as the row holds alone: what fits at Auto's size for this height, no less.
+        CHECK(tight.alone >= FitTextRow(MetricsFor(24, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize), FakeInk).alone);
         const BarRow row = PillRow(small);
-        const LineInk ink = FakeInk(true, tight.title);
-        const float y     = tight.twoLines ? tight.titleY : tight.aloneY;
-        CHECK(y + ink.top >= row.y && y + ink.bottom <= row.y + row.height); // its ink inside the row
+        const LineInk ink = FakeInk(true, tight.alone);
+        CHECK(tight.aloneY + ink.top >= row.y && tight.aloneY + ink.bottom <= row.y + row.height);
     }
 }
 
-TEST(a_set_bar_text_size_is_drawn_at_that_size_alone_when_two_lines_do_not_fit)
+TEST(set_main_and_secondary_sizes_shrink_together_when_both_lines_do_not_fit)
 {
     for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
     {
-        const BarRow row = PillRow(MetricsFor(45, shape, kAutoBarTextSize, kAutoPopupTextSize));
-        for (const int size : {16, 24})
-        {
-            const TextRow t = FitTextRow(MetricsFor(45, shape, size, kAutoBarTextSize), FakeInk);
-            CHECK_EQ(t.title, size);
-            const LineInk title = FakeInk(true, size);
-            if (t.twoLines)
-            {
-                CHECK(t.detail >= 9 && t.detail <= WholePixels(static_cast<float>(size) * 0.33f / 0.40f));
-                const LineInk detail = FakeInk(false, t.detail);
-                CHECK(t.titleY + title.top >= row.y && t.detailY + detail.bottom <= row.y + row.height);
-            }
-            else
-                CHECK(t.aloneY + title.top >= row.y && t.aloneY + title.bottom <= row.y + row.height);
-        }
-        // The row holds 28 px of ink (36 less its border and 3 px margins). A 24 px title's ink is 22.8 px: not even a
-        // 9 px detail line (8.55) fits 3 px under it, so it shows alone.
-        CHECK(!FitTextRow(MetricsFor(45, shape, 24, kAutoBarTextSize), FakeInk).twoLines);
-    }
-}
-
-TEST(a_set_bar_text_size_keeps_its_title_and_shrinks_only_the_detail_line_to_fit)
-{
-    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
-    {
-        // As Auto at 45 px: two lines, a 14 px title over a detail line of at least 9 px.
-        const TextRow fourteen = FitTextRow(MetricsFor(45, shape, 14, kAutoBarTextSize), FakeInk);
-        CHECK(fourteen.twoLines && fourteen.title == 14 && fourteen.detail >= 9);
-        // 16 px over its 13 px share needs 15.2 + 12.35 + 3 of the 28 px; the detail takes the most that fits under the
-        // title, 28 - 15.2 - 3 = 9.8 px of ink, a 10 px line.
-        const TextRow sixteen = FitTextRow(MetricsFor(45, shape, 16, kAutoBarTextSize), FakeInk);
-        CHECK(sixteen.twoLines && sixteen.title == 16);
-        CHECK_EQ(sixteen.detail, 10);
-        const BarRow row     = PillRow(MetricsFor(45, shape, kAutoBarTextSize, kAutoPopupTextSize));
-        const LineInk detail = FakeInk(false, sixteen.detail);
-        CHECK(sixteen.detailY + detail.bottom <= row.y + row.height);
+        // 14 over 11 fits the 45 px bar's 28 px of ink as they are.
+        const TextRow fits = FitTextRow(MetricsFor(45, shape, 14, 11, kAutoBarTextSize), FakeInk);
+        CHECK(fits.title == 14 && fits.detail == 11 && fits.alone == 14);
+        // 20 over 16 needs 19 + 15.2 + 3: both come down by the same share until they fit, the title alone stays.
+        const TextRow tight = FitTextRow(MetricsFor(45, shape, 20, 16, kAutoBarTextSize), FakeInk);
+        CHECK(tight.title < 20 && tight.detail < 16 && tight.alone == 20);
+        CHECK(std::fabs(static_cast<float>(tight.detail) / static_cast<float>(tight.title) - 0.8f) < 0.06f);
+        const BarRow row     = PillRow(MetricsFor(45, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize));
+        const LineInk title  = FakeInk(true, tight.title), detail = FakeInk(false, tight.detail);
+        CHECK(tight.titleY + title.top >= row.y && tight.detailY + detail.bottom <= row.y + row.height);
+        CHECK((tight.detailY + detail.top) - (tight.titleY + title.bottom) >= 3.0f - 0.01f);
+        // Secondary at Auto is the Main size's share; set, it is its own whatever the Main size.
+        CHECK_EQ(FitTextRow(MetricsFor(64, shape, 16, kAutoBarTextSize, kAutoBarTextSize), FakeInk).detail, 13);
+        CHECK_EQ(FitTextRow(MetricsFor(64, shape, kAutoBarTextSize, 10, kAutoBarTextSize), FakeInk).detail, 10);
     }
 }
 
@@ -1249,12 +1183,13 @@ TEST(a_larger_bar_text_size_never_draws_smaller_titles)
     for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
         for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         {
-            int last = 0;
+            int last = 0, lastAlone = 0;
             for (int size = kAutoBarTextSize + 1; size <= kMaxBarTextSize; ++size)
             {
-                const int drawn = FitTextRow(MetricsFor(h, shape, size, kAutoBarTextSize), FakeInk).title;
-                CHECK(drawn >= last && drawn <= size);
-                last = drawn;
+                const TextRow t = FitTextRow(MetricsFor(h, shape, size, kAutoBarTextSize, kAutoBarTextSize), FakeInk);
+                CHECK(t.title >= last && t.title <= size && t.alone >= lastAlone && t.alone <= size);
+                last      = t.title;
+                lastAlone = t.alone;
             }
         }
 }
@@ -1273,15 +1208,13 @@ TEST(each_copy_of_a_widget_takes_a_place_of_its_own)
     CHECK(Near(second->width, 70.0f) && Near(second->x, first->x + first->width + kPills.gap)); // right after it
 }
 
-TEST(a_widgets_own_spacing_adds_room_between_it_and_each_neighbour)
+TEST(widget_spacing_adds_room_between_every_widget_and_each_neighbour)
 {
     const std::array<float, kPanelSlots> natural = Widths(100, 80, 120, 200, 90, 60, 50);
-    std::array<float, kPanelSlots> spacing{};
-    spacing[SlotOf(BarWidget::Weather)] = 10.0f;
     for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
     {
         const BarLayout plain = Layout(1920.0f, metrics, shape, natural, 0.0f);
-        const BarLayout spaced = Layout(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), BarSeparators::Theme, spacing);
+        const BarLayout spaced = Layout(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), std::nullopt, 5.0f);
         CHECK(Near(RectOf(spaced, BarWidget::Zone)->x, RectOf(plain, BarWidget::Zone)->x));
         CHECK(Near(RectOf(spaced, BarWidget::Weather)->x, RectOf(plain, BarWidget::Weather)->x + 10.0f));
         CHECK(Near(RectOf(spaced, BarWidget::VanaTime)->x, RectOf(plain, BarWidget::VanaTime)->x + 20.0f));
@@ -1308,8 +1241,8 @@ namespace
         return Combine(p, links);
     }
 
-    BarLayout CombinedBar(float screen, BarShape shape, const BarMetrics& m, BarSeparators separators = BarSeparators::Theme,
-                          const std::array<float, kPanelSlots>& spacing = kNoSpacing)
+    BarLayout CombinedBar(float screen, BarShape shape, const BarMetrics& m, std::optional<int> separators = std::nullopt,
+                          float spacing = 0.0f)
     {
         const PanelGroups g = Combined();
         return Layout(screen, m, shape, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f, g.placement, separators, spacing,
@@ -1320,11 +1253,9 @@ namespace
 TEST(combined_widgets_touch_with_no_gap_or_diamond_between_them)
 {
     for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
-        for (const BarSeparators separators : {BarSeparators::Theme, BarSeparators::Diamonds, BarSeparators::None})
+        for (const int separators : {0, kBetween, kCaps, kBetween | kCaps})
         {
-            std::array<float, kPanelSlots> spacing{};
-            spacing[SlotOf(BarWidget::Zone)] = 10.0f;
-            spacing[SlotOf(BarWidget::Weather)] = 10.0f;
+            const float spacing = 10.0f;
             const BarLayout l = CombinedBar(1920.0f, shape, metrics, separators, spacing);
             const BarRect zone = *RectOf(l, BarWidget::Zone), weather = *RectOf(l, BarWidget::Weather);
             const BarRect bags = *RectOf(l, BarWidget::Bags), gil = *RectOf(l, BarWidget::Currency);
@@ -1338,7 +1269,7 @@ TEST(combined_widgets_touch_with_no_gap_or_diamond_between_them)
             CHECK(Near(RectOf(l, BarWidget::VanaTime)->x, weather.x + weather.width + apart));
             for (const float divider : l.dividers)
                 CHECK(!Near(divider, weather.x) && !Near(divider, gil.x));
-            if (DiamondsOn(separators, shape)) CHECK_EQ(l.dividers.size(), static_cast<size_t>(2)); // one a side
+            if ((separators & kBetween) != 0) CHECK_EQ(l.dividers.size(), static_cast<size_t>(2)); // one a side
         }
 }
 
@@ -1358,7 +1289,7 @@ TEST(a_combined_pill_that_does_not_fit_goes_whole)
         std::vector<PanelWidget>{}};
     const PanelGroups cg = Combine(p, links);
     const BarLayout center = Layout(2.0f * g + 100.0f + g + 80.0f + 60.0f, kPills, BarShape::Pills,
-        Widths(100, 80, 120, 0, 0, 0, 0), 0.0f, cg.placement, BarSeparators::Theme, kNoSpacing, cg.group);
+        Widths(100, 80, 120, 0, 0, 0, 0), 0.0f, cg.placement, std::nullopt, 0.0f, cg.group);
     CHECK(RectOf(center, BarWidget::Zone) != nullptr);
     CHECK(RectOf(center, BarWidget::Weather) == nullptr && RectOf(center, BarWidget::VanaTime) == nullptr);
     CHECK(left.dividers.empty() && right.dividers.empty());
@@ -1387,7 +1318,7 @@ TEST(a_combined_pill_hovers_and_pins_as_one_widget_named_by_its_first)
     CHECK(input.Pinned() == std::optional<PanelWidget>(BarWidget::Zone));
     const PanelGroups g = Combined();
     const BarLayout hiddenZone = Layout(1920.0f, kPills, BarShape::Pills, Widths(0, 80, 120, 200, 90, 60, 50), 0.0f,
-        g.placement, BarSeparators::Theme, kNoSpacing, g.group);
+        g.placement, std::nullopt, 0.0f, g.group);
     input.Frame(hiddenZone, popups);
     CHECK(input.Pinned() == std::optional<PanelWidget>(BarWidget::Zone));
 }

@@ -1060,6 +1060,7 @@ public:
             .level            = m_Player.level,
             .sitting          = m_Player.sitting,
             .barTitlePixels   = m_RmlBar.TitlePixels(),
+            .barDetailPixels  = m_RmlBar.DetailPixels(),
             .windowsBand      = m_WindowHook.WindowsBand(),
             .barBand          = band.value_or(headsup::HelpBand{}).topBar,
             .seenWindows      = &m_SeenWindows,
@@ -2059,7 +2060,7 @@ private:
             if (what == "moves") m_Settings.shiftVanillaUi = value != 0;
             if (what == "theme") m_Settings.barTheme = static_cast<headsup::BarTheme>(value);
             if (what == "height") m_Settings.barHeight = value;
-            if (what == "seps") m_Settings.barSeparators = static_cast<headsup::BarSeparators>(value);
+            if (what == "seps") m_Settings.panelSeparators = value;
             if (what == "text") m_Settings.barTextSize = value;
             if (what == "popuptext") m_Settings.popupTextSize = value;
             m_Settings          = headsup::Clamp(m_Settings);

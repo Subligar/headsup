@@ -70,9 +70,8 @@ namespace headsup
     struct BarMetrics
     {
         float height;       // H, clamped to kMinBarHeight..kMaxBarHeight
-        float title;        // or the set size: the most, as FitTextRow makes both lines smaller when their ink would not fit
-        float subtitle;     // or its share of the set size: the most, as the title's is
-        bool titleSet;      // a set size: FitTextRow keeps it and shrinks only the detail line, never the title
+        float title;        // or the Main size: the most, as FitTextRow makes both lines smaller when their ink would not fit
+        float subtitle;     // or the Secondary size, else its share of the Main size: the most, as the title's is
         float icon;
         float padding;      // inside a widget, left and right
         float gap;          // between pills, around the target, after a widget's icons and around a popup
@@ -88,7 +87,7 @@ namespace headsup
         float panelRadius;  // by shape; none for the art's corners
         bool operator==(const BarMetrics&) const = default;
     };
-    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText, int popupText);
+    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText, int detailText, int popupText);
 
     // Ornate titles are Marcellus SC; everything else is the bundled Barlow Condensed.
     const char* TitleFont(BarShape shape);

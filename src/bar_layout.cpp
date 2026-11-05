@@ -20,9 +20,8 @@ namespace headsup
         constexpr float kMinInkMargin = 2.0f; // pixels
         constexpr float kLineGap     = 0.08f; // H from the title's descenders to the detail's top, when there is room
         constexpr float kMinLineGap  = 3.0f;  // pixels: two clear rows between them still read as touching
-        constexpr int kMinDetail     = 9;     // pixels, the smallest detail line worth drawing
-        constexpr float kShrinkStep  = 0.02f; // both lines get smaller together by this share of their size at a time
-        constexpr int kShrinkSteps   = 25;    // to half at most
+        // The detail's share of a title, as a float, can fall either side of a half: this rounds every size alike.
+        constexpr float kShareSlack  = 0.001f;
 
         float Width(const std::array<float, kPanelSlots>& natural, PanelWidget w)
         {
@@ -38,17 +37,16 @@ namespace headsup
         struct Spacing
         {
             float between = 0.0f, frameClear = 0.0f;
-            const std::array<float, kPanelSlots>* own = nullptr; // each widget's room more
+            float room = 0.0f; // every widget's room more on each side
             const std::array<PanelWidget, kPanelSlots>* groups = nullptr;
             bool Together(PanelWidget a, PanelWidget b) const { return (*groups)[SlotOf(a)] == (*groups)[SlotOf(b)]; }
             float Frame(PanelWidget w) const { return w.kind == BarWidget::Target ? frameClear : 0.0f; }
-            float Room(PanelWidget w) const { return (*own)[SlotOf(w)]; }
             float Apart(PanelWidget a, PanelWidget b) const
             {
-                return Together(a, b) ? 0.0f : between + Frame(a) + Frame(b) + Room(a) + Room(b);
+                return Together(a, b) ? 0.0f : between + Frame(a) + Frame(b) + 2.0f * room;
             }
             // From a's edge: the middle of what is between them, but for a's frame's clear space.
-            float Middle(PanelWidget a, PanelWidget b) const { return Frame(a) + (between + Room(a) + Room(b)) / 2.0f; }
+            float Middle(PanelWidget a) const { return Frame(a) + between / 2.0f + room; }
         };
 
         struct Group
@@ -86,7 +84,7 @@ namespace headsup
                     break;
                 }
                 if (!first && diamonds && !spacing.Together(g.widgets.back().widget, w))
-                    g.dividers.push_back(at + dir * spacing.Middle(g.widgets.back().widget, w));
+                    g.dividers.push_back(at + dir * spacing.Middle(g.widgets.back().widget));
                 const float x       = dir > 0.0f ? at + gap : at - gap - width;
                 const bool isTarget = w.kind == BarWidget::Target; // framed on the pill row in every shape
                 const PanelWidget head = (*spacing.groups)[SlotOf(w)];
@@ -121,18 +119,18 @@ namespace headsup
 
     BarLayout LayoutBar(float screenWidth, const BarMetrics& m, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
-                        const BarPlacement& placement, BarSeparators separators,
-                        const std::array<float, kPanelSlots>& spacing,
+                        const BarPlacement& placement, int separators, float spacing,
                         const std::array<PanelWidget, kPanelSlots>& groups)
     {
         const bool ornate   = shape == BarShape::Ornate;
-        const bool diamonds = DiamondsOn(separators, shape);
+        const bool diamonds = (separators & SeparatorBit(Separator::Between)) != 0;
         // Ornate neighbours abut, a diamond on their boundary, the tints keeping clear of it. Pills sit a gap apart; a
         // diamond between them takes its width and a gap on either side.
         const float pillGap = diamonds ? 2.0f * m.gap + static_cast<float>(WholePixels(m.diamond)) : m.gap;
-        const Spacing apart{.between = ornate ? 0.0f : pillGap, .frameClear = ornate ? DiamondClearance(m) : 0.0f, .own = &spacing,
+        const Spacing apart{.between = ornate ? 0.0f : pillGap, .frameClear = ornate ? DiamondClearance(m) : 0.0f, .room = spacing,
             .groups = &groups};
-        const float edge    = ornate ? m.cap : m.gap; // between a section and the screen's edge
+        const bool caps     = (separators & SeparatorBit(Separator::EndCaps)) != 0;
+        const float edge    = caps ? m.cap : m.gap; // between a section and the screen's edge
         const BarRow pill   = PillRow(m);
         const float rowY    = ornate ? 0.0f : pill.y;
         const float rowH    = ornate ? m.height : pill.height;
@@ -221,11 +219,6 @@ namespace headsup
         return l;
     }
 
-    bool DiamondsOn(BarSeparators separators, BarShape shape)
-    {
-        return separators == BarSeparators::Diamonds || (separators == BarSeparators::Theme && shape == BarShape::Ornate);
-    }
-
     float DiamondClearance(const BarMetrics& m)
     {
         return static_cast<float>(WholePixels(m.diamond)) / 2.0f + kDiamondGap;
@@ -250,50 +243,33 @@ namespace headsup
         TextRow t;
         LineInk title, detail;
         float spare = 0.0f; // for the gap
-        // A set size is the player's title: only its detail line gets smaller, a pixel at a time down to the floor.
-        const int steps = m.titleSet ? WholePixels(m.subtitle) - kMinDetail : kShrinkSteps;
-        for (int step = 0; step <= steps; ++step)
+        // A pixel of the title at a time, the detail line keeping its share of it, so a larger size or a taller bar
+        // never draws either line smaller.
+        const float share = m.subtitle / m.title;
+        for (t.title = std::max(1, WholePixels(m.title));; --t.title)
         {
-            const float scale = 1.0f - kShrinkStep * static_cast<float>(step);
-            t.title           = WholePixels(m.titleSet ? m.title : m.title * scale);
-            const int share   = m.titleSet ? WholePixels(m.subtitle) - step : WholePixels(m.subtitle * scale);
-            t.detail          = std::min(share, t.title - 1);
-            if (t.detail < kMinDetail) break;
-            title  = ink(true, t.title);
-            detail = ink(false, t.detail);
-            spare  = room - (title.bottom - title.top) - (detail.bottom - detail.top);
-            if (spare >= kMinLineGap)
-            {
-                t.twoLines = true;
-                break;
-            }
+            t.detail = std::max(1, WholePixels(share * static_cast<float>(t.title) + kShareSlack));
+            title    = ink(true, t.title);
+            detail   = ink(false, t.detail);
+            spare    = room - (title.bottom - title.top) - (detail.bottom - detail.top);
+            if (spare >= kMinLineGap || t.title == 1) break;
         }
-        if (t.twoLines)
-        {
-            const float gap   = std::min(spare, maxGap);
-            const float block = (title.bottom - title.top) + gap + (detail.bottom - detail.top);
-            const float top   = row.y + kBorder + (inside - block) / 2.0f; // of the title's ink
-            t.titleY          = top - title.top;
-            t.detailY         = top + (title.bottom - title.top) + gap - detail.top;
-        }
-        else
-        {
-            // Too short a row for two lines kept apart: titles alone, as large as their ink fits.
-            t.detail = 0;
-            for (t.title = WholePixels(m.title); t.title > 1; --t.title)
-                if (const LineInk alone = ink(true, t.title); alone.bottom - alone.top <= room) break;
-            title = ink(true, t.title);
-        }
-        // A title alone: its capitals centered, raised if its descenders would come too near the bottom.
-        const float centered = row.y + (row.height - (title.baseline - title.top)) / 2.0f;
-        const float lowest   = row.y + row.height - kBorder - margin - (title.bottom - title.top);
-        t.aloneY             = std::min(centered, lowest) - title.top;
-        // A meter's texts at a size the player set are that size, as far as the row lets the title be; at Auto, the
-        // detail line's.
-        const bool asTitle   = m.titleSet || !t.twoLines;
-        const LineInk side   = asTitle ? title : detail;
-        t.side               = asTitle ? t.title : t.detail;
-        t.sideY              = row.y + (row.height - (side.baseline - side.top)) / 2.0f - side.top;
+        const float gap   = std::clamp(spare, 0.0f, maxGap);
+        const float block = (title.bottom - title.top) + gap + (detail.bottom - detail.top);
+        const float top   = row.y + kBorder + (inside - block) / 2.0f; // of the title's ink
+        t.titleY          = top - title.top;
+        t.detailY         = top + (title.bottom - title.top) + gap - detail.top;
+        // A title alone: as large as its ink fits, its capitals centered, raised if its descenders would come too near
+        // the bottom.
+        LineInk alone;
+        for (t.alone = WholePixels(m.title); t.alone > 1; --t.alone)
+            if (alone = ink(true, t.alone); alone.bottom - alone.top <= room) break;
+        alone = ink(true, t.alone);
+        const float centered = row.y + (row.height - (alone.baseline - alone.top)) / 2.0f;
+        const float lowest   = row.y + row.height - kBorder - margin - (alone.bottom - alone.top);
+        t.aloneY             = std::min(centered, lowest) - alone.top;
+        t.side               = t.detail;
+        t.sideY              = row.y + (row.height - (detail.baseline - detail.top)) / 2.0f - detail.top;
         return t;
     }
 

@@ -343,34 +343,33 @@ namespace headsup
             auto square = [](float size) { return "width:" + Px(size) + ";height:" + Px(size) + ";"; };
             std::string css;
             css += scope + ".title{" + LineRules(titleFont, lines.title, place.title, rowTop) + "}";
+            css += scope + ".title.alone{" + LineRules(titleFont, lines.alone, place.alone, rowTop) + "}";
             // A meter's texts are in the detail font; those beside its bar have their ink on the row's middle.
             css += scope + ".mtext{" + FaceRules(detailFont, lines.side, place.side.height) + ShadowEffect(lines.side) + "}";
             css += scope + ".mside{top:" + Px(std::round(place.side.top) - (rowTop - kContentInset)) + ";}";
-            css += scope + ".title.alone{margin-top:" + Px(std::round(place.title.aloneTop) - rowTop) + ";}";
             css += scope + ".title.figures{" + LineRules(detailFont, lines.title, place.figures, rowTop) + "}";
-            css += scope + ".title.figures.alone{margin-top:" + Px(std::round(place.figures.aloneTop) - rowTop) + ";}";
+            css += scope + ".title.figures.alone{" + LineRules(detailFont, lines.alone, place.figuresAlone, rowTop) + "}";
             css += scope + ".title .line-icon{" + square(static_cast<float>(lines.title)) + "margin-top:" + Px(place.title.iconDrop) + ";}";
+            css += scope + ".title.alone .line-icon{" + square(static_cast<float>(lines.alone)) + "margin-top:" + Px(place.alone.iconDrop) + ";}";
             css += scope + ".title.figures .line-icon{margin-top:" + Px(place.figures.iconDrop) + ";}";
-            if (lines.twoLines)
-            {
-                const float underTitle   = std::round(place.title.top) + static_cast<float>(place.title.height);
-                const float underFigures = std::round(place.figures.top) + static_cast<float>(place.figures.height);
-                css += scope + ".detail{" + LineRules(detailFont, lines.detail, place.detail, underTitle) + "}";
-                css += scope + ".detail.fig{margin-top:" + Px(std::round(place.detail.top) - underFigures) + ";}";
-                css += scope + ".detail .line-icon{" + square(static_cast<float>(lines.detail)) + "margin-top:" +
-                       Px(place.detail.iconDrop) + ";}";
-                // A widget of cells draws its top line at the detail size too, so a picture is as big on either line.
-                const float smaller = std::round(static_cast<float>(lines.title - lines.detail) / 2.0f);
-                css += scope + ".title.cells{font-size:" + Px(static_cast<float>(lines.detail)) + ";}";
-                css += scope + ".title.cells .line-icon{" + square(static_cast<float>(lines.detail)) + "margin-top:" +
-                       Px(place.title.iconDrop + smaller) + ";}";
-                css += scope + ".title.figures.cells .line-icon{margin-top:" + Px(place.figures.iconDrop + smaller) + ";}";
-            }
+            css += scope + ".title.figures.alone .line-icon{margin-top:" + Px(place.figuresAlone.iconDrop) + ";}";
+            const float underTitle   = std::round(place.title.top) + static_cast<float>(place.title.height);
+            const float underFigures = std::round(place.figures.top) + static_cast<float>(place.figures.height);
+            css += scope + ".detail{" + LineRules(detailFont, lines.detail, place.detail, underTitle) + "}";
+            css += scope + ".detail.fig{margin-top:" + Px(std::round(place.detail.top) - underFigures) + ";}";
+            css += scope + ".detail .line-icon{" + square(static_cast<float>(lines.detail)) + "margin-top:" +
+                   Px(place.detail.iconDrop) + ";}";
+            // A widget of cells draws its top line at the detail size too, so a picture is as big on either line.
+            const float smaller = std::round(static_cast<float>(lines.title - lines.detail) / 2.0f);
+            css += scope + ".title.cells{font-size:" + Px(static_cast<float>(lines.detail)) + ";}";
+            css += scope + ".title.cells .line-icon{" + square(static_cast<float>(lines.detail)) + "margin-top:" +
+                   Px(place.title.iconDrop + smaller) + ";}";
+            css += scope + ".title.figures.cells .line-icon{margin-top:" + Px(place.figures.iconDrop + smaller) + ";}";
             return css;
         }
     }
 
-    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own)
+    std::string BarDocument(const BarLook& look, const BarTextPlace& place)
     {
         const BarPalette& p  = look.palette;
         const BarMetrics& m  = look.metrics;
@@ -448,8 +447,6 @@ namespace headsup
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";
         css += TextRules("", look.titleFont, look.detailFont, lines, place, rowTop);
-        for (const WidgetText& text : own)
-            css += TextRules("#" + WidgetId(text.widget) + " ", text.titleFont, text.detailFont, text.lines, text.place, rowTop);
         css += ".meter{display:inline-block;vertical-align:top;position:relative;height:" + Px(row.height) +
                ";margin-top:" + Px(-kContentInset) + ";}";
         css += ".mtext{position:absolute;white-space:pre;}";
@@ -480,7 +477,7 @@ namespace headsup
         std::string rml = "<rml><head><style>" + css + "</style></head><body class=\"" + shape.substr(1) + "\">";
         rml += std::string("<div id=\"") + kStripId + "\"></div>";
         if (glass) rml += "<div class=\"glint a\"></div><div class=\"glint b\"></div><div class=\"glint c\"></div>";
-        if (look.ornate)
+        if ((look.settings.panelSeparators & SeparatorBit(Separator::EndCaps)) != 0)
             rml += "<img class=\"cap\" id=\"cap-left\" src=\"" + capSource + "\"/><img class=\"cap\" id=\"" + kRightCapId +
                    "\" src=\"" + capSource + "\"/>";
         for (int d = 0; d < kDividerCount; ++d)
@@ -699,7 +696,7 @@ namespace headsup
     std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns,
         const MeterPlace& meter)
     {
-        const bool alone = !look.lines.twoLines || content.subtitle.empty();
+        const bool alone = content.subtitle.empty();
         std::string rml  = "<div class=\"content\">";
         if (content.meter)
         {

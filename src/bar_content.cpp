@@ -89,26 +89,6 @@ namespace headsup
         return text;
     }
 
-    void OneLine(WidgetContent& content, SubtitlePlace place)
-    {
-        std::vector<Span> second = std::move(content.subtitle);
-        content.subtitle.clear();
-        if (place == SubtitlePlace::Hide || second.empty()) return;
-        for (Span& s : second)
-            if (s.tone == Tone::Normal) s.tone = Tone::Dim;
-        std::vector<Span>& title = content.title;
-        if (place == SubtitlePlace::Before)
-        {
-            second.back().text += " ";
-            title.insert(title.begin(), second.begin(), second.end());
-        }
-        else
-        {
-            if (!title.empty()) title.back().text += " ";
-            title.insert(title.end(), second.begin(), second.end());
-        }
-    }
-
     std::string ClockText(int hour, int minute, bool twentyFour, int second)
     {
         char seconds[16] = "";

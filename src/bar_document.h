@@ -40,40 +40,29 @@ namespace headsup
     std::optional<Image> GamePictureImage(const std::optional<PlayOnlineIcons>& icons, const std::optional<NationCrests>& crests,
         std::string_view name);
 
-    // A line of a widget as RmlUi lays it out: its line box's height, where its top goes from the strip's top (over
-    // a detail line, and alone), and how far under that top the icons after its text start.
+    // A line of a widget as RmlUi lays it out: its line box's height, where its top goes from the strip's top, and how
+    // far under that top the icons after its text start.
     struct BarLinePlace
     {
         int height     = 0;
-        float top      = 0.0f, aloneTop = 0.0f;
+        float top      = 0.0f;
         float iconDrop = 0.0f;
         bool operator==(const BarLinePlace&) const = default;
     };
     // Where the widgets' lines go so their ink lands on the rows the bar's text row gives: a title in the title
-    // font, a title of figures in the detail font, a detail line, and a meter's text beside its bar.
+    // font and a title of figures in the detail font, over a detail line and alone, a detail line, and a meter's text
+    // beside its bar.
     struct BarTextPlace
     {
-        BarLinePlace title, figures, detail, side;
+        BarLinePlace title, figures, alone, figuresAlone, detail, side;
         BarLinePlace helpCaption, help; // the help bar's, at its own text size
         bool operator==(const BarTextPlace&) const = default;
     };
 
-    // A widget's own text, where its fonts or size are not the bar's: those fonts, and the text row and places they
-    // come to.
-    struct WidgetText
-    {
-        PanelWidget widget;
-        const char* titleFont  = nullptr; // interned, as the bar's are
-        const char* detailFont = nullptr;
-        TextRow lines;
-        BarTextPlace place;
-        bool operator==(const WidgetText&) const = default;
-    };
-
-    // The bar's markup and style: the strip across the screen, the ornate caps, a divider for each pair of
-    // neighbours and every placed widget's element, all sized from the look, with the text rules of each widget in
-    // own under its id. The widgets and dividers carry the hidden class and no place: the plugin shows and places them.
-    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own);
+    // The bar's markup and style: the strip across the screen, the end caps when the settings show them, a divider
+    // for each pair of neighbours and every placed widget's element, all sized from the look. The widgets and dividers
+    // carry the hidden class and no place: the plugin shows and places them.
+    std::string BarDocument(const BarLook& look, const BarTextPlace& place);
     std::string WidgetId(PanelWidget widget);
     // A widget's margin and padding on one side as its element takes them, for a room from its edge to what it
     // shows: inside a pill's or a frame's border, or past a plain ornate widget's margin. A side it shares in a

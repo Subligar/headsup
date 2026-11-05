@@ -18,17 +18,16 @@ namespace
 
     BarLook LookOf(const BarPalette& p, const Settings& settings)
     {
-        const BarMetrics m  = MetricsFor(kBarHeight, p.shape, kAutoBarTextSize, kAutoPopupTextSize);
-        return BarLook{p, settings, m, PillRow(m), TextRow{13, 11, true, 10.0f, 24.0f, 12.0f},
+        const BarMetrics m  = MetricsFor(kBarHeight, p.shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+        return BarLook{p, settings, m, PillRow(m), TextRow{13, 11, 10.0f, 24.0f, 13, 12.0f},
             BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate, BarTextFont(settings), std::nullopt};
     }
 }
 
 TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
 {
-    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-        BarLinePlace{14, 23.0f, 0.0f, 3.0f},
-            BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29, 0}, PopupFace{"Barlow Condensed", 18, 22, 0},
         PopupFace{"Barlow Condensed", 15, 18, 2}, PopupFace{"Barlow Condensed", 15, 18, 0}};
     Settings settings;
@@ -61,7 +60,7 @@ TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
         BarLook look = LookOf(d.palette, settings);
         look.skin    = d.skin;
         test::RmlSession rml;
-        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
         Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
         CHECK(bar != nullptr && popups != nullptr);
         bar->Show();
@@ -78,15 +77,14 @@ TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
 
 TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complaint)
 {
-    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-        BarLinePlace{14, 23.0f, 0.0f, 3.0f},
-            BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
     Settings settings;
     for (int t = 0; t < kFixedThemeCount; ++t)
     {
         test::RmlSession rml;
         Rml::ElementDocument* bar =
-            rml.context->LoadDocumentFromMemory(BarDocument(LookOf(PaletteOf(static_cast<BarTheme>(t)), settings), place, {}), "bar");
+            rml.context->LoadDocumentFromMemory(BarDocument(LookOf(PaletteOf(static_cast<BarTheme>(t)), settings), place), "bar");
         bar->Show();
         Rml::Element* target = bar->GetElementById(WidgetId(BarWidget::Target));
         CHECK(target != nullptr);
@@ -107,8 +105,8 @@ TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complain
 
 TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it_unlit)
 {
-    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
     Settings settings;
     std::vector<BarPalette> palettes;
     for (int t = 0; t < kFixedThemeCount; ++t)
@@ -123,17 +121,17 @@ TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it
     {
         const BarLook look = LookOf(palette, settings);
         test::RmlSession rml;
-        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
         bar->Show();
         // Each widget as the panel marks it.
         const auto drawn = [&](PanelWidget widget, bool lit, bool backed) -> const Rml::Style::ComputedValues& {
-            settings.Widget(widget).background = backed;
+            settings.widgetBackground          = backed;
             const PanelGroups panel            = Panel(settings);
             Rml::Element* element              = bar->GetElementById(WidgetId(widget));
             CHECK(element != nullptr);
             element->SetClass(kHiddenClass, false);
             element->SetClass(kFlatClass, FlatPill(look, panel, widget));
-            element->SetClass(kBackedClass, BackedPill(settings, panel, widget));
+            element->SetClass(kBackedClass, backed);
             element->SetClass(kLitClass, lit);
             for (int update = 0; update < 3; ++update)
             {
@@ -163,8 +161,8 @@ TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it
 
 TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_shape)
 {
-    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
     Settings settings;
     for (const BarShape shape : {BarShape::Ornate, BarShape::Pills, BarShape::Glass, BarShape::Window})
     {
@@ -172,7 +170,7 @@ TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_
         palette.shape      = shape;
         const BarLook look = LookOf(palette, settings);
         test::RmlSession rml;
-        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
         bar->Show();
         Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Weather));
         CHECK(widget != nullptr);
@@ -193,14 +191,14 @@ TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_
 
 TEST(a_target_without_its_background_looks_as_any_other_widget_lit_or_not)
 {
-    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
     Settings settings;
     for (int t = 0; t < kFixedThemeCount; ++t)
     {
         const BarLook look = LookOf(PaletteOf(static_cast<BarTheme>(t)), settings);
         test::RmlSession rml;
-        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
         bar->Show();
         Rml::Element* target  = bar->GetElementById(WidgetId(BarWidget::Target));
         Rml::Element* weather = bar->GetElementById(WidgetId(BarWidget::Weather));
@@ -229,12 +227,12 @@ TEST(a_target_without_its_background_looks_as_any_other_widget_lit_or_not)
 
 TEST(an_exp_bar_in_a_widgets_line_draws_as_long_and_thick_as_the_old_bar_beside_the_text_filled_to_its_share)
 {
-    const BarTextPlace place{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-        BarLinePlace{14, 23.0f, 0.0f, 3.0f}, BarLinePlace{14, 15.0f, 15.0f, 3.0f}, {}, {}};
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
     Settings settings;
     const BarLook look = LookOf(settings.customPalette, settings);
     test::RmlSession rml;
-    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {}), "bar");
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
     bar->Show();
     Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Job));
     WidgetContent c;

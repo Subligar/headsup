@@ -48,7 +48,7 @@ namespace headsup
             {"hideGameFishBar", &Settings::hideGameFishBar}, {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
-            {"helpBarFullWidth", &Settings::helpBarFullWidth}};
+            {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"widgetBackground", &Settings::widgetBackground}};
 
         // Whole numbers are stored as floats, like every other number in settings.ini.
         struct IntKey
@@ -70,8 +70,10 @@ namespace headsup
             {"maxElements", &Settings::maxElements, 0, kElementCount},
             {"barHeight", &Settings::barHeight, kMinBarHeight, kMaxBarHeight},
             {"barTextSize", &Settings::barTextSize, kAutoBarTextSize, kMaxBarTextSize},
+            {"barDetailTextSize", &Settings::barDetailTextSize, kAutoBarTextSize, kMaxBarTextSize},
             {"barWidgetSpacing", &Settings::barWidgetSpacing, 0, kMaxWidgetSpacing},
             {"barWidgetPadding", &Settings::barWidgetPadding, kThemePadding, kMaxWidgetPadding},
+            {"panelSeparators", &Settings::panelSeparators, 0, kAllSeparators},
             {"popupTextSize", &Settings::popupTextSize, kAutoPopupTextSize, kMaxBarTextSize},
             {"helpBarTextSize", &Settings::helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize},
             {"helpBarWidth", &Settings::helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth},
@@ -243,15 +245,8 @@ namespace headsup
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
         constexpr const char* kDesignSuffix     = "Design";
-        constexpr const char* kBackgroundSuffix = "Background";
-        constexpr const char* kSpacingSuffix    = "Spacing";
         constexpr const char* kCombineSuffix    = "Combine";
         constexpr const char* kCombineOnPanelSuffix = "CombineOnPanel", *kCombineInPopupSuffix = "CombineInPopup";
-        constexpr const char* kPaddingSuffix    = "Padding";
-        constexpr const char* kTitleFontSuffix  = "TitleFont";
-        constexpr const char* kTextFontSuffix   = "TextFont";
-        constexpr const char* kTextSizeSuffix   = "TextSize";
-        constexpr const char* kPopupTextSizeSuffix = "PopupTextSize";
         // The EXP widget's: a place for each ExpText, and its bar's size.
         const char* const kExpPlaceKeys[kExpTextCount] = {"barExpEarned", "barExpToNext", "barExpPercent"};
         const char* const kExpPlaceNames[kExpTextPlaceCount] = {"off", "above", "below", "left", "right"};
@@ -259,16 +254,12 @@ namespace headsup
         constexpr const char* kExpAlignKey = "barExpAlign";
         constexpr const char* kExpTextKey  = "expText";
         constexpr const char* kJobNamesKey  = "jobNames";
-        constexpr const char* kSubtitleKey  = "barSubtitle";
-        const char* const kSubtitleNames[kSubtitlePlaceCount] = {"hide", "before", "after"};
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
         constexpr const char* kZoneIdKey           = "zoneId";
         const char* const kClockZoneNames[kClockZoneCount] = {"japan", "utc", "usEastern", "usCentral", "usMountain",
             "usArizona", "usPacific", "usAlaska", "usHawaii", "ukIreland", "centralEurope", "easternEurope",
             "australiaEastern"};
-        constexpr const char* kBarSeparatorsKey                    = "barSeparators";
-        const char* const kBarSeparatorsNames[kBarSeparatorsCount] = {"theme", "diamonds", "none"};
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
@@ -1205,12 +1196,6 @@ namespace headsup
             w.design = Whole(WidgetInSlot(slot).kind, std::move(w.design));
             if (w.currency < 0 || w.currency >= kCurrencyCount) w.currency = fresh.currency;
             if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
-            w.spacing = std::clamp(w.spacing, 0, kMaxWidgetSpacing);
-            w.padding = w.padding < 0 ? kPanelPadding : std::min(w.padding, kMaxWidgetPadding);
-            w.textSize = std::clamp(w.textSize, kPanelTextSize, kMaxBarTextSize);
-            w.popupTextSize = std::clamp(w.popupTextSize, kPanelPopupTextSize, kMaxBarTextSize);
-            for (std::string* font : {&w.titleFont, &w.textFont})
-                if (font->size() > kMaxFontName) font->clear();
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
             w.expBarHeight = std::clamp(w.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight);
@@ -1221,9 +1206,7 @@ namespace headsup
             if (static_cast<int>(w.worldElement) >= kElementCount) w.worldElement = fresh.worldElement;
             w.worldSections &= kAllWorldSections;
         }
-        if (static_cast<int>(s.barSubtitle) >= kSubtitlePlaceCount) s.barSubtitle = d.barSubtitle;
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
-        if (static_cast<int>(s.barSeparators) >= kBarSeparatorsCount) s.barSeparators = d.barSeparators;
         if (static_cast<int>(s.helpBarAnchor) >= kHelpAnchorCount) s.helpBarAnchor = d.helpBarAnchor;
         ClampDesigner(s, d);
         for (StatusBadgeRule& status : s.statusBadges)
@@ -1250,13 +1233,6 @@ namespace headsup
             const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
             o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
-            o.background = flag(widget + kBackgroundSuffix, o.background);
-            o.spacing    = number(widget + kSpacingSuffix, o.spacing);
-            o.padding    = number(widget + kPaddingSuffix, o.padding);
-            o.titleFont  = text((widget + kTitleFontSuffix).c_str());
-            o.textFont   = text((widget + kTextFontSuffix).c_str());
-            o.textSize   = number(widget + kTextSizeSuffix, o.textSize);
-            o.popupTextSize = number(widget + kPopupTextSizeSuffix, o.popupTextSize);
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
             o.combineOnPanel = flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
             o.combineInPopup = flag(widget + kCombineInPopupSuffix, o.combineInPopup);
@@ -1330,13 +1306,6 @@ namespace headsup
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
             if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
-            flag(widget + kBackgroundSuffix, o.background);
-            StoreFloat(store, CopyKey(widget + kSpacingSuffix, w), static_cast<float>(o.spacing));
-            StoreFloat(store, CopyKey(widget + kPaddingSuffix, w), static_cast<float>(o.padding));
-            text((widget + kTitleFontSuffix).c_str(), o.titleFont.c_str());
-            text((widget + kTextFontSuffix).c_str(), o.textFont.c_str());
-            StoreFloat(store, CopyKey(widget + kTextSizeSuffix, w), static_cast<float>(o.textSize));
-            StoreFloat(store, CopyKey(widget + kPopupTextSizeSuffix, w), static_cast<float>(o.popupTextSize));
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
             flag(widget + kCombineInPopupSuffix, o.combineInPopup);
@@ -1384,7 +1353,6 @@ namespace headsup
     {
         WidgetOptions o;
         o.on         = widget.copy > 0 || kBarWidgetDefaults[static_cast<int>(widget.kind)];
-        o.background = widget.kind == BarWidget::Target; // its frame, always shown
         o.design     = DefaultDesign(widget.kind);
         return o;
     }
@@ -1611,12 +1579,8 @@ namespace headsup
             s.fishBarLine  = store.GetString(kFishBarLineKey, s.fishBarLine.c_str());
             s.blueMagicLearned = static_cast<BlueLearned>(NameIndex(kBlueLearnedNames, kBlueLearnedCount,
                 store.GetString(kBlueMagicLearnedKey, ""), static_cast<int>(s.blueMagicLearned)));
-            s.barSeparators = static_cast<BarSeparators>(NameIndex(kBarSeparatorsNames, kBarSeparatorsCount,
-                store.GetString(kBarSeparatorsKey, ""), static_cast<int>(s.barSeparators)));
             s.helpBarAnchor = static_cast<HelpAnchor>(NameIndex(kHelpAnchorNames, kHelpAnchorCount,
                 store.GetString(kHelpAnchorKey, ""), static_cast<int>(s.helpBarAnchor)));
-            s.barSubtitle = static_cast<SubtitlePlace>(
-                NameIndex(kSubtitleNames, kSubtitlePlaceCount, store.GetString(kSubtitleKey, ""), static_cast<int>(s.barSubtitle)));
             std::array<std::string, kBarSectionCount> sections;
             for (int i = 0; i < kBarSectionCount; ++i)
                 sections[i] = store.GetString(kBarSectionKeys[i], "");
@@ -1702,7 +1666,6 @@ namespace headsup
         store.Set((kCustomThemeKey + std::string(kShapeSuffix)).c_str(), kBarShapeNames[static_cast<int>(s.customPalette.shape)]);
         StoreFloat(store, kCustomThemeKey + std::string(kBorderSuffix), static_cast<float>(s.customPalette.border));
         StoreBool(store, kCustomThemeKey + std::string(kGradientSuffix), s.customPalette.gradient);
-        store.Set(kBarSeparatorsKey, kBarSeparatorsNames[static_cast<int>(s.barSeparators)]);
         store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
         store.Set(kMenuFontKey, s.menuFont.c_str());
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());
@@ -1712,7 +1675,6 @@ namespace headsup
         for (int slot = 0; slot < kPanelSlots; ++slot)
             if (const PanelWidget w = WidgetInSlot(slot); w.copy == 0 || Placed(s.barSections, w))
                 SaveWidget(store, w, s.widgets[slot]);
-        store.Set(kSubtitleKey, kSubtitleNames[static_cast<int>(s.barSubtitle)]);
         for (int i = 0; i < kBarSectionCount; ++i)
             store.Set(kBarSectionKeys[i], PlacementNames(s.barSections[i]).c_str());
         store.Set(kPinnedWindowsKey, WindowPlaceText(s.pinnedWindows).c_str());

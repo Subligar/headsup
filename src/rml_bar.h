@@ -39,8 +39,9 @@ namespace headsup
         std::optional<BarRect> HelpBarReach() const { return m_HelpReach; }
         // The top bar's bottom, its under line counted, while it draws; 0 while it does not.
         float BarBottomNow() const { return m_BarBottom; }
-        // The title size the last frame drew, 0 before one and while the bar is off.
+        // The title and detail sizes the last frame drew, 0 before one and while the bar is off.
         int TitlePixels() const { return m_TitlePixels; }
+        int DetailPixels() const { return m_DetailPixels; }
         // Where the open popup's settings go on the screen while it shows them, in back buffer pixels.
         std::optional<BarRect> SettingsBody() const { return m_SettingsBody; }
 
@@ -72,7 +73,7 @@ namespace headsup
             BarTextPlace place{};
             const char* titleFont  = nullptr;
             const char* detailFont = nullptr;
-            std::vector<WidgetText> own;
+            int separators = 0;
             std::optional<SkinFrame> skin;
             bool operator==(const DocumentKey&) const = default;
         };
@@ -115,8 +116,6 @@ namespace headsup
             std::array<WidgetContent, kPanelSlots> contents;
             std::array<bool, kPanelSlots> hasPopup{}; // a combined pill's first widget's when any of its widgets has one
             PanelGroups panel;                        // the panel as it is drawn, its widgets combined
-            std::array<float, kPanelSlots> spacing{}; // each widget's own room more beside it
-            std::array<std::optional<WidgetText>, kPanelSlots> text; // a widget's own, where it has fonts or a size of its own
         };
         // The help bar's text follows the game's, its fonts and their sizes, and the room its lines and its caption
         // have beside the bag's count.
@@ -172,16 +171,9 @@ namespace headsup
             const char* titleFont, const char* detailFont);
         Rows MakeRows(RmlHost& host, const BarMetrics& metrics, const char* titleFont, const char* detailFont,
             int helpText = kAutoBarTextSize);
-        // The same for a widget's own text, kept for each one asked for while it is asked for.
-        const Rows& WidgetRowsFor(RmlHost& host, const BarMetrics& metrics, BarShape shape, int barText, const char* titleFont,
-            const char* detailFont);
-        // The widgets with text of their own, as the document's rules and their content take it.
-        void OwnText(RmlHost& host, const BarLook& look, const Settings& settings, Widgets& widgets);
-        // The look a widget is measured and written in: the bar's, with its own text where it has some.
-        static BarLook LookOf(const BarLook& look, const Widgets& widgets, int slot);
-        BarLinePlace PlaceLine(RmlHost& host, const char* family, int pixels, const char* glyphs, float top, float aloneTop);
+        BarLinePlace PlaceLine(RmlHost& host, const char* family, int pixels, const char* glyphs, float top);
         // Builds the document again when what it is made from changed. False when RmlUi refused it.
-        bool Document(RmlHost& host, const BarLook& look, const BarTextPlace& place, const Widgets& widgets);
+        bool Document(RmlHost& host, const BarLook& look, const BarTextPlace& place);
         BarLayout PlaceWidgets(RmlHost& host, const BarLook& look, const BarState& state, float screenWidth,
             Widgets& widgets);
         void ShowWidgets(const BarLook& look, const BarLayout& layout, const Widgets& widgets, const BarInput& input,
@@ -210,7 +202,6 @@ namespace headsup
 
         GdiText m_Gdi; // the bar's text rows are sized by GDI's ink, as the bar drawn with it is
         Memo<LinesKey, Rows> m_Rows;
-        std::vector<std::pair<LinesKey, Rows>> m_WidgetRows, m_WidgetRowsBefore; // this frame's, and the last frame's
         Rml::ElementDocument* m_Document = nullptr;
         DocumentKey m_DocumentKey;
         bool m_Visible = false;
@@ -240,6 +231,6 @@ namespace headsup
         std::optional<BarRect> m_HelpReach;
         float m_BarBottom = 0.0f;
         std::optional<BarRect> m_SettingsBody;
-        int m_TitlePixels = 0;
+        int m_TitlePixels = 0, m_DetailPixels = 0;
     };
 }

@@ -18,14 +18,11 @@ namespace headsup
     constexpr int kBarThemeCount   = static_cast<int>(BarTheme::GameWindow) + 1;
     constexpr int kFixedThemeCount = static_cast<int>(BarTheme::Custom); // those with a palette of their own
 
-    // What divides neighbouring widgets: the theme's own (ornate diamonds, pills none), or the player's pick.
-    enum class BarSeparators : uint8_t
-    {
-        Theme,
-        Diamonds,
-        None,
-    };
-    constexpr int kBarSeparatorsCount = static_cast<int>(BarSeparators::None) + 1;
+    // Where the panel shows separators, a bit each: between neighbouring widgets, and at its two ends.
+    enum class Separator : uint8_t { Between, EndCaps };
+    constexpr int kSeparatorCount = static_cast<int>(Separator::EndCaps) + 1;
+    constexpr uint8_t SeparatorBit(Separator part) { return static_cast<uint8_t>(1u << static_cast<int>(part)); }
+    constexpr uint8_t kAllSeparators = (1u << kSeparatorCount) - 1;
 
     // Which side of the screen the help bar keeps to, and where its text sits in a bar wider than it.
     enum class HelpAnchor : uint8_t
@@ -96,15 +93,6 @@ namespace headsup
     constexpr PanelWidget WidgetInSlot(int slot) { return PanelWidget{static_cast<BarWidget>(slot / kMostCopies), slot % kMostCopies}; }
     // The target has one frame the bar gives way around, and game help a bar of its own: neither has copies.
     constexpr bool HasCopies(BarWidget widget) { return widget != BarWidget::Target && widget != BarWidget::GameHelp; }
-
-    // Where a widget's second line goes when the bar is too short for two: nowhere, or beside its title.
-    enum class SubtitlePlace : uint8_t
-    {
-        Hide,
-        Before,
-        After,
-    };
-    constexpr int kSubtitlePlaceCount = static_cast<int>(SubtitlePlace::After) + 1;
 
     // What the EXP says, any of them in this order: what is earned of the level, what is left to the next, and the
     // share earned as a percent.

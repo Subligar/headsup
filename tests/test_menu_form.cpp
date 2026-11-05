@@ -159,9 +159,21 @@ TEST(a_pages_controls_change_the_settings_they_show)
     Window w;
     w.state.page = Page::TopPanel;
     CHECK(w.settings.showBar && w.settings.barHeight == 45);
-    const Form form = w.Pass({{"toppanel-top-panel-height", kChangeEvent, "52"},
-        {"toppanel-top-panel-separators-s-2", kClickEvent, ""}});
-    CHECK(form.changed && w.settings.barHeight == 52 && w.settings.barSeparators == BarSeparators::None);
+    const Form form = w.Pass({{"toppanel-top-panel-height", kChangeEvent, "52"}});
+    CHECK(form.changed && w.settings.barHeight == 52);
+    // Show Separator's Never clears the rest; another check then takes Never off.
+    const std::string separators = "toppanel-top-panel-show-separator";
+    CHECK_EQ(w.settings.panelSeparators, kAllSeparators);
+    w.Pass({{separators, kClickEvent, ""}});
+    w.Pass({{separators + "-o-0", kClickEvent, ""}});
+    CHECK_EQ(w.settings.panelSeparators, 0);
+    w.Pass({{separators + "-o-0", kClickEvent, ""}}); // Never stays while nothing else is checked
+    CHECK_EQ(w.settings.panelSeparators, 0);
+    w.Pass({{separators + "-o-2", kClickEvent, ""}});
+    CHECK_EQ(w.settings.panelSeparators, static_cast<int>(SeparatorBit(Separator::EndCaps)));
+    w.Pass({{separators + "-o-1", kClickEvent, ""}});
+    CHECK_EQ(w.settings.panelSeparators, kAllSeparators);
+    w.Pass({{separators, kClickEvent, ""}});
     // With the panel switched off by its card's checkbox, its settings are faint and take nothing.
     const Form off = w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}, {"toppanel-top-panel-height", kChangeEvent, "30"}});
     CHECK(off.changed && !w.settings.showBar && w.settings.barHeight == 52);
@@ -225,8 +237,8 @@ TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under
     const Form two        = w.Pass();
     CHECK(settings(two) != two.blocks.end());
     const std::string& rml = settings(two)->rml;
-    const auto first = rml.find("spacing-" + std::string(BarWidgetName(left[0].kind)));
-    const auto second = rml.find("spacing-" + std::string(BarWidgetName(left[1].kind)));
+    const auto first = rml.find("part-" + std::to_string(SlotOf(left[0])) + "-");
+    const auto second = rml.find("part-" + std::to_string(SlotOf(left[1])) + "-");
     CHECK(first != std::string::npos && second != std::string::npos && first < second);
     size_t names = 0;
     for (size_t at = 0; (at = rml.find("widget-name", at)) != std::string::npos; ++at)

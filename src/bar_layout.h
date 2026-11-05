@@ -48,18 +48,15 @@ namespace headsup
     // How far a frame or a hover tint keeps from the x of an ornate divider: half its diamond, drawn whole pixels wide,
     // and clear space.
     float DiamondClearance(const BarMetrics& metrics);
-    // Whether diamonds divide neighbours in a section: the player's pick, or the shape's own.
-    bool DiamondsOn(BarSeparators separators, BarShape shape);
 
     // A widget's text: its title's and detail line's pixel sizes, and their line boxes' tops from the strip's top.
     struct TextRow
     {
         int title = 0, detail = 0;
-        bool twoLines = false;               // false: the row is too short for both, and titles show alone
         float titleY = 0.0f, detailY = 0.0f; // the title over the detail line
-        float aloneY = 0.0f;                 // a title without one
-        // A meter's texts: the title's size when the player set it or the row holds one line, else the detail's; those
-        // beside its bar with their capitals on the row's middle.
+        int alone    = 0;                    // a title without one: its own size, as large as one line fits
+        float aloneY = 0.0f;
+        // A meter's texts, at the detail line's size; those beside its bar with their capitals on the row's middle.
         int side     = 0;
         float sideY  = 0.0f;
         bool operator==(const TextRow&) const = default;
@@ -67,28 +64,27 @@ namespace headsup
     // Placed by their ink, which ink gives for the title's or the detail's font at a size: the title's top to the
     // detail's bottom, with a few clear pixels between the title's descenders and the detail's top, centered in the
     // pill row inside its border with clear space above and below; a title alone, its top to its baseline centered and
-    // all of its ink inside. The sizes are the metrics', made smaller together only as far as that needs; when the
-    // detail line would need to be smaller than the least worth drawing, the titles show alone, as large as fits. A set
-    // title size (titleSet) is never made smaller to keep two lines: the detail line alone shrinks, to that least,
-    // before the titles show alone.
+    // all of its ink inside. The sizes are the metrics', both lines made smaller together only as far as that needs,
+    // and a title alone only as far as it needs on its own.
     TextRow FitTextRow(const BarMetrics& metrics, FunctionRef<LineInk(bool title, int pixels)> ink);
 
-    // natural: each widget's width by SlotOf, 0 for one not shown. The left section starts after the left end cap
-    // (ornate) or a gap (pills), the right one ends before the right one, and the center one is centered as a group
+    // natural: each widget's width by SlotOf, 0 for one not shown. separators: by SeparatorBit, the diamonds between
+    // neighbours and the end caps. The left section starts after the left end cap or a gap, the right one ends before
+    // the right one, and the center one is centered as a group
     // in what is left. When the bar is too narrow, the target gives way first, wherever it sits: it shrinks, in whole
     // pixels, down to targetMinimum (or all of its width when that is less), then goes. Then a left widget that would
     // pass the screen's edge goes with the rest of its section, the right section loses widgets from its inner end
     // where they would reach the left, and the center loses them from its end; the target then takes back the room
     // those leave. In ornate, the target's frame keeps DiamondClearance from the diamond on a
     // neighbour's edge. Pills with diamonds sit a gap, the diamond and a gap apart.
-    // spacing: each widget's room more between it and each neighbour, by SlotOf; an ornate diamond stands in the middle
-    // of the room it is in.
+    // spacing: every widget's room more between it and each neighbour; an ornate diamond stands in the middle of the
+    // room it is in.
     // groups: by SlotOf, the first widget of each one's pill (PanelGroups). The widgets of a pill touch, with no gap,
     // room or diamond between them, and are placed or dropped together.
     BarLayout LayoutBar(float screenWidth, const BarMetrics& metrics, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
-                        const BarPlacement& placement, BarSeparators separators,
-                        const std::array<float, kPanelSlots>& spacing, const std::array<PanelWidget, kPanelSlots>& groups);
+                        const BarPlacement& placement, int separators, float spacing,
+                        const std::array<PanelWidget, kPanelSlots>& groups);
     // The widget under the point, or for a combined pill its first widget, which names the pill's popup.
     std::optional<PanelWidget> WidgetAt(const BarLayout& layout, float x, float y);
     const BarRect* RectOf(const BarLayout& layout, PanelWidget widget);

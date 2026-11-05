@@ -51,10 +51,6 @@ namespace headsup
     constexpr uint8_t TargetShowBit(TargetShow show) { return static_cast<uint8_t>(1u << static_cast<int>(show)); }
     constexpr uint8_t kAllTargetShows = (1u << kTargetShowCount) - 1;
     // Its Show Icons: the detection icons, then a mob's weaknesses after its level.
-    // A widget's spacing and padding at their sliders' leftmost: the panel's.
-    constexpr int kPanelSpacing = 0, kPanelPadding = kThemePadding;
-    constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
-    constexpr int kPanelPopupTextSize = kAutoPopupTextSize; // and its popup's: the panel's Popup Size
 
     // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
     enum class ConquestGrid : uint8_t { TwoByTwo, OneByFour };
@@ -64,12 +60,6 @@ namespace headsup
     {
         bool on         = false;
         WidgetDesign design; // what it shows on its two lines (NewWidget gives each kind its default)
-        bool background = false; // its pill or tint shown while not hovered, as well as whatever the theme shows
-        int spacing     = kPanelSpacing; // pixels more between it and each of its neighbours
-        int padding     = kPanelPadding; // pixels from its sides to what it shows
-        std::string titleFont, textFont;  // its own, as the panel's; empty for the panel's
-        int textSize    = kPanelTextSize; // its title's, or the panel's
-        int popupTextSize = kPanelPopupTextSize; // its popup's, or the panel's Popup Size
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
         uint8_t nations = kAllNations;              // World Info's conquest: whose regions it counts, by NationBit
@@ -164,9 +154,11 @@ namespace headsup
         bool showBar       = true;
         BarTheme barTheme  = BarTheme::PhoenixGold;
         BarPalette customPalette = PaletteOf(BarTheme::PhoenixGold); // the Custom theme's, kept while another is picked
-        BarSeparators barSeparators = BarSeparators::Theme;
+        int panelSeparators    = kAllSeparators; // by SeparatorBit, whatever the theme
+        bool widgetBackground   = false; // every widget's pill or tint shown while not hovered, over the theme's look
         int barHeight      = 45; // pixels: the least at which titles are 13 px over 11 px detail lines
-        int barTextSize    = kAutoBarTextSize; // the bar's title size, or Auto
+        int barTextSize    = kAutoBarTextSize; // Main Font Size: a widget's top line, or a line alone; or Auto
+        int barDetailTextSize = kAutoBarTextSize; // Secondary Font Size: its second line; or Auto, a share of the Main
         std::string barTitleFont; // widget titles and popup headings; empty for the theme's
         std::string barTextFont;  // details, figures and popup text; empty for the theme's
         int barWidgetSpacing = 0;             // every widget's, unless it has its own
@@ -214,7 +206,6 @@ namespace headsup
         Color fishMonsterColor = {{0.61f, 0.31f, 0.85f}};
         Color fishLineColor    = {{1.00f, 0.55f, 0.10f}};
         Color fishRodColor     = {{0.88f, 0.19f, 0.19f}};
-        SubtitlePlace barSubtitle = SubtitlePlace::After; // a widget's second line on a bar too short for two
         BarPlacement barSections = DefaultPlacement(); // where each widget sits, by BarSection
         bool hideHelpBar = false; // skip the game's own help bar across the top of the screen
         bool hideNetstat = false; // and its connection readout (S, R and %) at the top right

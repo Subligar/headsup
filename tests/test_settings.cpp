@@ -236,7 +236,8 @@ look=fantasy
 keepPointerKeys=11 1B 51
 showBar=false
 barTheme=umbraDark
-barSeparators=none
+panelSeparators=2.0000
+widgetBackground=true
 barCurrency=allied_notes
 serverClockZone=usPacific
 menuFont=Tahoma
@@ -292,7 +293,7 @@ hideInEvent=true
 debugMode=true
 barTitleFont=Cinzel
 barTextFont=
-barSubtitle=before
+barDetailTextSize=12.0000
 cursorOutline=60.0000
 untargetedOpacity=40.0000
 clockSeconds=true
@@ -339,7 +340,8 @@ helpBarY=8.0000
         s.badgeFontName       = "Tahoma";
         s.showBar      = false;
         s.barTheme     = BarTheme::UmbraDark;
-        s.barSeparators = BarSeparators::None;
+        s.panelSeparators = SeparatorBit(Separator::EndCaps);
+        s.widgetBackground = true;
         s.Widget(BarWidget::Currency).currency   = *CurrencyOfKey("allied_notes");
         s.menuFont         = "Tahoma";
         s.menuFontSize     = 21; // 125 percent of Ashita's 18 pixels, in Tahoma, which was drawn at 0.95 of its size
@@ -353,7 +355,7 @@ helpBarY=8.0000
         s.hideInEvent = true;
         s.debugMode = true;
         s.barTitleFont = "Cinzel";
-        s.barSubtitle = SubtitlePlace::Before;
+        s.barDetailTextSize = 12;
         s.cursorOutlineThickness = 120; // 60 of before
         s.Widget(BarWidget::EarthTime).clockSeconds  = true;
         s.barHeight    = 48;
@@ -1122,11 +1124,11 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     CHECK_EQ(DesignText(LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -crest -nation");
 }
 
-TEST(separators_that_are_not_a_choice_keep_the_themes)
+TEST(separators_out_of_their_bits_are_held_to_them)
 {
     MapStore store;
-    store.values["barSeparators"] = "stars";
-    CHECK(LoadSettings(store).barSeparators == BarSeparators::Theme);
+    store.values["panelSeparators"] = "9";
+    CHECK_EQ(LoadSettings(store).panelSeparators, kAllSeparators);
 }
 
 TEST(the_help_bars_anchor_and_full_width_save_and_load_back_and_an_unknown_anchor_is_left)
@@ -2657,8 +2659,7 @@ TEST(a_clone_starts_with_every_setting_of_the_widget_it_copies_shown_and_combine
     gil.on             = false;
     gil.currency       = 3;
     gil.design         = DesignFrom(BarWidget::Currency, "amount | -coin -currency");
-    gil.spacing        = 12;
-    gil.titleFont      = "Cinzel";
+    gil.zoneId         = true;
     gil.combine        = PanelWidget{BarWidget::Bags};
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value());
@@ -2717,46 +2718,6 @@ TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_tak
     CHECK(offers(BarWidget::Party, BarWidget::Weather));
 }
 
-TEST(a_widgets_spacing_and_padding_are_kept_for_each_copy_and_held_to_their_range)
-{
-    Settings s;
-    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Bags);
-    CHECK(copy.has_value());
-    s.Widget(BarWidget::Bags).spacing = 12;
-    s.Widget(*copy).padding           = 3;
-    MapStore store;
-    SaveSettings(s, store);
-    const Settings read = LoadSettings(store);
-    CHECK_EQ(read.Widget(BarWidget::Bags).spacing, 12);
-    CHECK_EQ(read.Widget(BarWidget::Bags).padding, kPanelPadding);
-    CHECK_EQ(read.Widget(*copy).padding, 3);
-    store.values["barBagsSpacing"] = "500";
-    store.values["barBagsPadding_2"] = "-9";
-    const Settings held = LoadSettings(store);
-    CHECK_EQ(held.Widget(BarWidget::Bags).spacing, kMaxWidgetSpacing);
-    CHECK_EQ(held.Widget(*copy).padding, kPanelPadding);
-}
-
-TEST(a_widgets_popup_text_size_is_kept_for_each_copy_and_held_to_its_range)
-{
-    Settings s;
-    CHECK_EQ(s.Widget(BarWidget::Bags).popupTextSize, kPanelPopupTextSize);
-    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Bags);
-    CHECK(copy.has_value());
-    s.Widget(*copy).popupTextSize = 22;
-    MapStore store;
-    SaveSettings(s, store);
-    CHECK_EQ(store.values["barBagsPopupTextSize_2"], "22.0000");
-    const Settings read = LoadSettings(store);
-    CHECK_EQ(read.Widget(*copy).popupTextSize, 22);
-    CHECK_EQ(read.Widget(BarWidget::Bags).popupTextSize, kPanelPopupTextSize);
-    store.values["barBagsPopupTextSize"]   = "500";
-    store.values["barBagsPopupTextSize_2"] = "3";
-    const Settings held = LoadSettings(store);
-    CHECK_EQ(held.Widget(BarWidget::Bags).popupTextSize, kMaxBarTextSize);
-    CHECK_EQ(held.Widget(*copy).popupTextSize, kPanelPopupTextSize);
-}
-
 TEST(the_zone_widgets_id_setting_is_kept_for_each_copy)
 {
     Settings s;
@@ -2768,18 +2729,6 @@ TEST(the_zone_widgets_id_setting_is_kept_for_each_copy)
     SaveSettings(s, store);
     const Settings read = LoadSettings(store);
     CHECK(read.Widget(*copy).zoneId && !read.Widget(BarWidget::Zone).zoneId);
-}
-
-TEST(show_background_is_kept_for_each_copy)
-{
-    Settings s;
-    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Weather);
-    CHECK(copy.has_value());
-    s.Widget(*copy).background = true;
-    MapStore store;
-    SaveSettings(s, store);
-    const Settings read = LoadSettings(store);
-    CHECK(read.Widget(*copy).background && !read.Widget(BarWidget::Weather).background);
 }
 
 TEST(the_panels_widget_spacing_and_padding_are_kept_and_held_to_their_range)
@@ -2795,33 +2744,6 @@ TEST(the_panels_widget_spacing_and_padding_are_kept_and_held_to_their_range)
     store.values["barWidgetPadding"] = "-9";
     const Settings held = LoadSettings(store);
     CHECK(held.barWidgetSpacing == kMaxWidgetSpacing && held.barWidgetPadding == kThemePadding);
-}
-
-TEST(a_widgets_own_fonts_and_text_size_are_kept_and_default_to_the_panels)
-{
-    Settings s;
-    CHECK(s.Widget(BarWidget::Zone).titleFont.empty() && s.Widget(BarWidget::Zone).textSize == kPanelTextSize);
-    s.Widget(BarWidget::Zone).titleFont = "Cinzel";
-    s.Widget(BarWidget::Zone).textFont  = "Arial";
-    s.Widget(BarWidget::Zone).textSize  = 18;
-    MapStore store;
-    SaveSettings(s, store);
-    const Settings read = LoadSettings(store);
-    CHECK(read.Widget(BarWidget::Zone) == s.Widget(BarWidget::Zone));
-    store.values["barZoneTextSize"] = "99";
-    CHECK_EQ(LoadSettings(store).Widget(BarWidget::Zone).textSize, kMaxBarTextSize);
-    store.values["barZoneTextSize"] = "2";
-    CHECK_EQ(LoadSettings(store).Widget(BarWidget::Zone).textSize, kPanelTextSize);
-}
-
-TEST(the_target_widgets_background_is_on_by_default_and_kept_off_once_turned_off)
-{
-    Settings s;
-    CHECK(s.Widget(BarWidget::Target).background && !s.Widget(BarWidget::Currency).background);
-    s.Widget(BarWidget::Target).background = false;
-    MapStore store;
-    SaveSettings(s, store);
-    CHECK(!LoadSettings(store).Widget(BarWidget::Target).background);
 }
 
 TEST(the_target_widgets_detection_icons_and_visibility_are_kept_and_held_to_their_range)

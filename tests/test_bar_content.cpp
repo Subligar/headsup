@@ -32,26 +32,6 @@ TEST(printed_text_is_one_value_in_a_printf_format)
     CHECK_EQ(Printed("%03X", 0x2Au), std::string("02A"));
 }
 
-TEST(a_widget_on_one_line_puts_its_second_line_beside_its_title_or_leaves_it_off)
-{
-    WidgetContent bags;
-    bags.title         = {Span{"27/30"}};
-    Span invite = Text("");
-    invite.icon = Icon::Invite;
-    bags.subtitle      = {Span{"Bags"}, invite};
-    WidgetContent after = bags;
-    OneLine(after, SubtitlePlace::After);
-    CHECK(after.title.size() == 3 && after.title[0].text == "27/30 " && after.title[1].text == "Bags");
-    CHECK(after.title[1].tone == Tone::Dim && after.subtitle.empty() && after.title[2].icon == Icon::Invite);
-    WidgetContent before = bags;
-    OneLine(before, SubtitlePlace::Before);
-    CHECK(before.title[0].text == "Bags" && before.title[1].icon == Icon::Invite && before.title[1].text == " " &&
-          before.title[2].text == "27/30");
-    WidgetContent hidden = bags;
-    OneLine(hidden, SubtitlePlace::Hide);
-    CHECK(hidden.title.size() == 1 && hidden.subtitle.empty());
-}
-
 TEST(a_lines_figures_are_measured_as_its_fonts_widest_digit_so_a_ticking_clock_keeps_one_width)
 {
     CHECK_EQ(SteadyFigures("Lightsday 14:43", '8'), std::string("Lightsday 88:88"));

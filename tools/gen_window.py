@@ -172,8 +172,8 @@ PIECES = Pieces(
         'window-list': Setting(unnamed=True, words={'note': True, 'find': True, 'name-hint': True, 'all-windows': False,
                                                     'hide': True, 'keep': True, 'row-tip': False}),
         # Top Panel and Widgets
-        'theme': Setting(), 'window-type': Setting(options=9), 'window-border': Setting(), 'separators': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
-        'height': Setting(), 'text-size': Setting(words={'fits': True}), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'one-line': Setting(options=3), 'popup-size': Setting(),
+        'theme': Setting(), 'window-type': Setting(options=9), 'window-border': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
+        'height': Setting(), 'text-size': Setting(words={'fits': True}), 'detail-size': Setting(words={'fits': True}), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'popup-size': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
         'theme-shape': Setting(options=4), 'theme-background': Setting(), 'theme-gradient': Setting(),
         'theme-top': Setting(), 'theme-bottom': Setting(), 'theme-border-color': Setting(),
@@ -187,7 +187,7 @@ PIECES = Pieces(
         'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
         'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
-            'design', 'combine', 'combine-on-panel', 'combine-in-popup', 'show-zone-id', 'background', 'spacing', 'padding', 'title-font', 'text-font', 'text-size', 'popup-text-size', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'nations', 'conquest-grid', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', '24-hour',
+            'design', 'combine', 'combine-on-panel', 'combine-in-popup', 'show-zone-id', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'nations', 'conquest-grid', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', '24-hour',
             'seconds', 'exp-meter', 'exp-text', 'exp-earned', 'exp-to-next', 'exp-percent', 'exp-align', 'bar-width', 'bar-height',
             'job-names'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'design-last-on': True}),
         'trays': Setting(unnamed=True), 'reset-layout': Setting(),

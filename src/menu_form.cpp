@@ -624,31 +624,6 @@ namespace headsup
                 case WidgetTabsRow::ShowZoneId:
                     if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, row.tip);
                     break;
-                case WidgetTabsRow::Background:
-                    form.Switch(label.c_str(), o.background, row.tip);
-                    break;
-                case WidgetTabsRow::Spacing:
-                    form.SliderInt(label.c_str(), o.spacing, kPanelSpacing, kMaxWidgetSpacing,
-                        PixelsOr(Word(c, WindowWord::Default), kPanelSpacing), row.tip);
-                    break;
-                case WidgetTabsRow::Padding:
-                    form.SliderInt(label.c_str(), o.padding, kPanelPadding, kMaxWidgetPadding,
-                        PixelsOr(Word(c, WindowWord::Default), kPanelPadding), row.tip);
-                    break;
-                case WidgetTabsRow::TitleFont:
-                    form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, Word(c, WindowWord::Default));
-                    break;
-                case WidgetTabsRow::TextFont:
-                    form.FontDropdown(label.c_str(), o.textFont, c.fonts, row.tip, Word(c, WindowWord::Default));
-                    break;
-                case WidgetTabsRow::TextSize:
-                    form.SliderInt(label.c_str(), o.textSize, kPanelTextSize, kMaxBarTextSize,
-                        PixelsOr(Word(c, WindowWord::Default), kPanelTextSize), row.tip);
-                    break;
-                case WidgetTabsRow::PopupTextSize:
-                    form.SliderInt(label.c_str(), o.popupTextSize, kPanelPopupTextSize, kMaxBarTextSize,
-                        PixelsOr(Word(c, WindowWord::Default), kPanelPopupTextSize), row.tip);
-                    break;
                 case WidgetTabsRow::Visibility:
                     if (kind == BarWidget::Target)
                     {
@@ -1658,11 +1633,18 @@ namespace headsup
                 form.Fade(!UsesGameArt(s));
                 form.Switch(label.c_str(), s.gameWindowBorder, tip);
                 break;
-            case SettingPiece::Separators:
-            {
+            case SettingPiece::WidgetBackground:
                 form.Fade(!BarOn(s));
-                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
-                form.Segments(label.c_str(), s.barSeparators, names.data(), kBarSeparatorsCount, tip);
+                form.Switch(label.c_str(), s.widgetBackground, tip);
+                break;
+            case SettingPiece::ShowSeparator:
+            {
+                // Never is the first check, on alone when nothing else is; picking it clears the rest.
+                form.Fade(!BarOn(s));
+                const uint32_t shown = s.panelSeparators == 0 ? 1u : static_cast<uint32_t>(s.panelSeparators) << 1;
+                uint32_t bits        = shown;
+                form.BitsDropdown(label.c_str(), bits, c.layout.OptionsOf(e), tip);
+                if (bits != shown) s.panelSeparators = (bits & ~shown & 1u) != 0 ? 0 : static_cast<int>(bits >> 1);
                 break;
             }
             case SettingPiece::TitleFont:
@@ -1678,15 +1660,20 @@ namespace headsup
                 form.SliderInt(label.c_str(), s.barHeight, kMinBarHeight, kMaxBarHeight, Pixels, tip);
                 break;
             case SettingPiece::TextSize:
+            case SettingPiece::DetailSize:
             {
                 form.Fade(!BarOn(s));
+                const bool main   = e.piece == SettingPiece::TextSize;
+                const int drawn   = main ? r.barTitlePixels : r.barDetailPixels;
                 const auto textSize = [&](int px) {
-                    if (px == kAutoBarTextSize || r.barTitlePixels <= 0 || r.barTitlePixels == px)
+                    if (px == kAutoBarTextSize || drawn <= 0 || drawn == px)
                         return PixelsOr(Word(c, WindowWord::Auto), kAutoBarTextSize)(px);
-                    return Filled(Filled(Said(Word(c, WindowWord::TextSizeFits)), kCountMark, std::to_string(px)), kTotalMark,
-                        std::to_string(r.barTitlePixels));
+                    return Filled(Filled(Said(Word(c, main ? WindowWord::TextSizeFits : WindowWord::DetailSizeFits)),
+                                      kCountMark, std::to_string(px)),
+                        kTotalMark, std::to_string(drawn));
                 };
-                form.SliderInt(label.c_str(), s.barTextSize, kAutoBarTextSize, kMaxBarTextSize, textSize, tip);
+                form.SliderInt(label.c_str(), main ? s.barTextSize : s.barDetailTextSize, kAutoBarTextSize, kMaxBarTextSize,
+                    textSize, tip);
                 break;
             }
             case SettingPiece::WidgetSpacing:
@@ -1698,13 +1685,6 @@ namespace headsup
                 form.SliderInt(label.c_str(), s.barWidgetPadding, kThemePadding, kMaxWidgetPadding,
                     PixelsOr(Word(c, WindowWord::Themes), kThemePadding), tip);
                 break;
-            case SettingPiece::OneLine:
-            {
-                form.Fade(!BarOn(s));
-                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
-                form.Segments(label.c_str(), s.barSubtitle, names.data(), kSubtitlePlaceCount, tip);
-                break;
-            }
             case SettingPiece::PopupSize:
                 form.Fade(!BarOn(s));
                 form.SliderInt(label.c_str(), s.popupTextSize, kAutoPopupTextSize, kMaxBarTextSize,

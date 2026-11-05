@@ -61,8 +61,7 @@ namespace headsup
     static_assert(ListCount(WindowList::Tags) == kTagCount, "settings_window.json: tags");
     static_assert(OptionCount(SettingPiece::ReplaceDashes) == kDashMarkCount, "settings_window.json: replace-dashes");
     static_assert(OptionCount(SettingPiece::CursorStyle) == kCursorStyleCount, "settings_window.json: cursor-style");
-    static_assert(OptionCount(SettingPiece::Separators) == kBarSeparatorsCount, "settings_window.json: separators");
-    static_assert(OptionCount(SettingPiece::OneLine) == kSubtitlePlaceCount, "settings_window.json: one-line");
+    static_assert(OptionCount(SettingPiece::ShowSeparator) == kSeparatorCount + 1, "settings_window.json: show-separator");
     static_assert(RowCount(SettingPiece::AggressionColors) == kNatureCount, "settings_window.json: aggression-colors");
     static_assert(RowCount(SettingPiece::ToughnessColors) == kLabelShadeCount, "settings_window.json: toughness-colors");
     static_assert(OptionCount(SettingPiece::PointerIcon) == kPointerIconCount, "settings_window.json: pointer-icon");

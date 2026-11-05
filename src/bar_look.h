@@ -39,7 +39,6 @@ namespace headsup
         uint32_t BarColor(const Span& span) const;
         uint32_t PopupColor(const Span& span) const;
         // A widget's title and detail line.
-        TextFace TitleFace() const;
         // A widget's title: in the detail font at the title's size for a widget of figures, in the title face else.
         TextFace TitleFace(const WidgetContent& content) const;
         TextFace DetailFace() const;
@@ -64,24 +63,11 @@ namespace headsup
     MenuColors MenuColorsFrom(const BarPalette& palette);
     // The game's art as the settings draw it: without its border while Border is off.
     SkinFrame FrameAsSet(const Settings& settings, SkinFrame frame);
-    // A widget's own title and text fonts, or the panel's: one pointer per name, as BarTitleFont and BarTextFont give.
-    const char* WidgetTitleFont(const Settings& settings, BarShape shape, const WidgetOptions& options);
-    const char* WidgetTextFont(const Settings& settings, const WidgetOptions& options);
-    // Its title size setting: its own, or the panel's.
-    int WidgetTextSize(const Settings& settings, const WidgetOptions& options);
-    // Its popup's text size: its own, or the panel's Popup Size.
-    int WidgetPopupTextSize(const Settings& settings, const WidgetOptions& options);
-    // The look a widget's popup is drawn in: the panel's, at the widget's popup text size. A combined popup is the
-    // widget's that owns the pill.
-    BarLook PopupLook(const BarLook& look, PanelWidget widget);
-    // The room from a widget's sides to what it shows: its own, or the panel's, which may be the theme's.
-    float WidgetPadding(const BarMetrics& metrics, const Settings& settings, const WidgetOptions& options);
-    // Whether a pill shows only while lit: the theme gives none of its widgets a box then and none shows its background.
+    // The room from a widget's sides to what it shows: the panel's Widget Padding, which may be the theme's.
+    float WidgetPadding(const BarMetrics& metrics, const Settings& settings);
+    // Whether a pill shows only while lit: the theme gives none of its widgets a box then and Show Widget Background
+    // is off.
     bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head);
-    // Whether any widget in a pill has Show Background on.
-    bool BackedPill(const Settings& settings, const PanelGroups& panel, PanelWidget head);
-    // The room more between a widget and each neighbour: its own, or the panel's.
-    float WidgetSpacing(const Settings& settings, const WidgetOptions& options);
 
     // What Game Window looks as while the game's art is not read.
     constexpr BarTheme kGameArtFallback = BarTheme::PhoenixGold;

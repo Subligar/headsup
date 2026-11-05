@@ -72,7 +72,7 @@ namespace headsup
         return kPalettes[std::clamp(static_cast<int>(theme), 0, kFixedThemeCount - 1)];
     }
 
-    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText, int popupText)
+    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText, int detailText, int popupText)
     {
         const float h = static_cast<float>(std::clamp(barHeight, kMinBarHeight, kMaxBarHeight));
         // A set popup size stands for the height whose Auto popup text it is, so the whole popup scales together.
@@ -80,8 +80,10 @@ namespace headsup
         const bool setBar    = barText > kAutoBarTextSize;
         const float title    = setBar ? static_cast<float>(barText) : kTitleShare * h;
         // At Auto a share of H: taken through the title, it could round a pixel the other way.
-        const float subtitle = setBar ? title * kDetailShare / kTitleShare : kDetailShare * h;
-        return BarMetrics{.height = h, .title = title, .subtitle = subtitle, .titleSet = setBar,
+        const float subtitle = detailText > kAutoBarTextSize ? static_cast<float>(detailText)
+                               : setBar                      ? title * kDetailShare / kTitleShare
+                                                             : kDetailShare * h;
+        return BarMetrics{.height = h, .title = title, .subtitle = subtitle,
             .icon = kIconShare * h, .padding = kPaddingShare * h, .gap = kGapShare * h, .cap = kCapShare * h,
             .diamond = kDiamondShare * h, .pillHeight = kPillHeightShare * h, .pillRadius = kPillRadiusShare * h,
             .below = kBelowShare * h, .popupText = kPopupTextShare * u, .heading = kHeadingShare * u,

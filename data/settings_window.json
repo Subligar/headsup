@@ -277,39 +277,39 @@
           "name": "Top Panel",
           "description": "Hover a widget for details; click it to keep them open. The Widgets page has each one's options.",
           "settings": [
+            {"key": "widget-background", "name": "Show Widget Background", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: Off."},
             {
-              "key": "separators",
-              "name": "Separators",
+              "key": "show-separator",
+              "name": "Show Separator",
+              "tip": "Where the top panel shows its separators, whatever the theme. Separator Style on the Theme page picks their shape. Default: Between Widgets and End Caps.",
               "options": [
-                {"name": "Set by Theme"},
-                {"name": "Diamonds"},
-                {"name": "None"}
+                {"name": "Never", "tip": "No separators. Picking it clears the others."},
+                {"name": "Between Widgets", "tip": "A separator between each widget and the next."},
+                {"name": "End Caps", "tip": "A separator at the far left and far right of the top panel."}
               ]
             },
-            {"key": "title-font", "name": "Title Font"},
-            {"key": "text-font", "name": "Default Font"},
+            {"key": "title-font", "name": "Main Font", "tip": "The font of each widget's top line, of a widget on one line, and of the pop-outs' headings. Default: the theme's."},
+            {"key": "text-font", "name": "Secondary Font", "tip": "The font of each widget's second line, its numbers and the pop-outs' text. Default: the theme's."},
             {"key": "height", "name": "Height"},
             {
               "key": "text-size",
-              "name": "Base Font Size",
-              "tip": "Auto follows the height. Too large for two lines, the second line goes as One Line says.",
+              "name": "Main Font Size",
+              "tip": "The size of each widget's top line, and of a widget that has buttons on one line only. Auto follows the height. When the top panel is too short, both lines get smaller together until they fit. Default: Auto.",
               "words": [
                 {"key": "fits", "name": "{count} px ({total} fits)"}
               ]
             },
-            {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Each widget can set its own on the Widgets page. Default is 0 px."},
-            {"key": "widget-padding", "name": "Widget Padding", "tip": "The room inside every widget, from its edges to its text. Each widget can set its own on the Widgets page. Default is the theme's own."},
             {
-              "key": "one-line",
-              "name": "One Line",
-              "tip": "On a bar too short for two lines, each widget's second line goes before or after its title, or is left off.",
-              "options": [
-                {"name": "Hide"},
-                {"name": "Before"},
-                {"name": "After"}
+              "key": "detail-size",
+              "name": "Secondary Font Size",
+              "tip": "The size of each widget's second line, used only when both of its lines have a button turned on. Auto is a share of the Main Font Size. Default: Auto.",
+              "words": [
+                {"key": "fits", "name": "{count} px ({total} fits)"}
               ]
             },
-            {"key": "popup-size", "name": "Popup Size", "tip": "Auto follows the height."},
+            {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Default: 0 px."},
+            {"key": "widget-padding", "name": "Widget Padding", "tip": "The room inside every widget, from its edges to its text. Default: the theme's own."},
+            {"key": "popup-size", "name": "Pop-out Font Size", "tip": "The size of the text in the widgets' pop-outs. Auto follows the height. Default: Auto."},
             {"key": "hide-readout", "name": "Hide Readout", "tip": "The game's S, R and % numbers at the top right."},
             {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
           ]
@@ -367,13 +367,6 @@
                 {"key": "combine-on-panel", "name": "Show Combined on Panel", "tip": "Shows the combined widget in the pill. Off, only this widget shows on the top panel, and the other's popup still joins this one's. Default is on."},
                 {"key": "combine-in-popup", "name": "Show Combined in Popup", "tip": "Adds the combined widget's popup to this one's. Off, the popup shows this widget's alone, so a widget combined with a copy of itself is not listed twice. Default is on."},
                 {"key": "show-zone-id", "name": "Show Zone ID", "tip": "The zone's number after its name in the popup. Default is off."},
-                {"key": "background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it. Off, it shows only what the theme gives it. Default is off, and on for the Target."},
-                {"key": "spacing", "name": "Spacing", "tip": "More room between this widget and the widgets beside it. Default is the top panel's Widget Spacing."},
-                {"key": "padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default is the top panel's Widget Padding."},
-                {"key": "title-font", "name": "Title Font", "tip": "This widget's title. Default is the top panel's Title Font."},
-                {"key": "text-font", "name": "Text Font", "tip": "This widget's second line and numbers. Default is the top panel's Text Font."},
-                {"key": "text-size", "name": "Text Size", "tip": "This widget's title size, with its second line to match. Default is the top panel's Text Size."},
-                {"key": "popup-text-size", "name": "Popup Text Size", "tip": "The text size of this widget's popup, its headings and spacing scaled to match. A combined popup takes the first widget's. Default is the top panel's Popup Size."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
                 {"key": "detection-icons", "name": "Detection Icons", "tip": "Which of a mob's icons the Detection part shows. Default is all of them."},
                 {"key": "blue-magic", "name": "Blue Magic", "tip": "In the popup, a mob's TP moves that a blue mage can learn are shown in the Blue Magic Color. Default is on."},

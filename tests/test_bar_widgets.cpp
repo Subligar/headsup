@@ -855,7 +855,7 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
         if (ZonesRolling(static_cast<Element>(e), 777).size() > ZonesRolling(most, 777).size()) most = static_cast<Element>(e);
     const std::map<std::string, std::string> picked{{"By Element", ElementName(most)}};
     state.pickedTabs = &picked;
-    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
         return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
@@ -2745,7 +2745,7 @@ TEST(the_weather_popup_keeps_its_forecast_and_elements_in_one_column_at_one_widt
     state.unixMs = kVanaEpochUnixMs + 777LL * 3456 * 1000;
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
     CHECK(popup.oneColumn);
-    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
         return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};

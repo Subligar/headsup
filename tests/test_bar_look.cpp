@@ -16,12 +16,21 @@ namespace
     BarLook LookOf(BarTheme theme, const Settings& settings, TextRow lines = {}, int height = 45)
     {
         const BarPalette& p = PaletteOf(theme);
-        const BarMetrics m  = MetricsFor(height, p.shape, kAutoBarTextSize, kAutoPopupTextSize);
+        const BarMetrics m  = MetricsFor(height, p.shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
         return BarLook{p, settings, m, PillRow(m), lines, BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate,
             BarTextFont(settings), std::nullopt};
     }
 
     bool Family(const TextFace& face, const char* family) { return std::string(face.family) == family; }
+
+    // A widget with both its lines: its title is in the two-line size.
+    WidgetContent TwoLines()
+    {
+        WidgetContent content;
+        content.title    = {Span{"Bags"}};
+        content.subtitle = {Span{"27/30"}};
+        return content;
+    }
 }
 
 TEST(the_custom_theme_takes_the_settings_palette_and_starts_as_phoenix_gold)
@@ -75,8 +84,8 @@ TEST(ornate_popups_head_their_sections_in_the_title_font_and_pills_popups_in_the
     CHECK(Near(ornate.FaceOf(PopupFont::Text).size, 17.55f) && Near(ornate.FaceOf(PopupFont::Heading).size, 14.85f) &&
           Near(ornate.FaceOf(PopupFont::Title).size, 23.69f));
     // A widget's title in the shape's title font, its detail line in Barlow, at the sizes their row fitted.
-    CHECK(Family(ornate.TitleFace(), "Marcellus SC") && ornate.TitleFace().size == 14.0f);
-    CHECK(Family(pills.TitleFace(), "Barlow Condensed") && pills.TitleFace().size == 13.0f);
+    CHECK(Family(ornate.TitleFace(TwoLines()), "Marcellus SC") && ornate.TitleFace(TwoLines()).size == 14.0f);
+    CHECK(Family(pills.TitleFace(TwoLines()), "Barlow Condensed") && pills.TitleFace(TwoLines()).size == 13.0f);
     CHECK(Family(ornate.DetailFace(), "Barlow Condensed") && ornate.DetailFace().size == 11.0f);
 }
 
@@ -93,7 +102,7 @@ TEST(pills_section_headings_are_letter_spaced_and_nothing_else_is)
         CHECK_EQ(pills.FaceOf(font).tracking, 0);
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Heading, PopupFont::Pin})
         CHECK_EQ(ornate.FaceOf(font).tracking, 0);
-    CHECK(pills.TitleFace().tracking == 0 && pills.DetailFace().tracking == 0);
+    CHECK(pills.TitleFace(TwoLines()).tracking == 0 && pills.DetailFace().tracking == 0);
     for (const BarLook* look : {&pills, &ornate})
         CHECK(look->FaceOf(PopupFont::Pin).family == look->FaceOf(PopupFont::Heading).family &&
               look->FaceOf(PopupFont::Pin).size == look->FaceOf(PopupFont::Heading).size);
@@ -157,10 +166,12 @@ TEST(a_widget_of_figures_draws_its_title_in_the_detail_font_in_every_theme)
     figures.figures = true;
     for (int theme = 0; theme < kFixedThemeCount; ++theme)
     {
-        const BarLook look = LookOf(static_cast<BarTheme>(theme), settings, TextRow{14, 11, true});
-        CHECK(Family(look.TitleFace(figures), "Barlow Condensed") && look.TitleFace(figures).size == 14.0f);
+        const BarLook look = LookOf(static_cast<BarTheme>(theme), settings, TextRow{.title = 14, .detail = 11, .alone = 17});
+        CHECK(Family(look.TitleFace(figures), "Barlow Condensed") && look.TitleFace(figures).size == 17.0f);
         CHECK(look.TitleFace(figures).tracking == 0);
-        CHECK(Family(look.TitleFace(words), look.TitleFace().family) && look.TitleFace(words).size == 14.0f);
+        // Alone, a title takes the size of a line alone; over a second line, the two-line size.
+        CHECK(Family(look.TitleFace(words), look.TitleFace(TwoLines()).family) && look.TitleFace(words).size == 17.0f);
+        CHECK_EQ(look.TitleFace(TwoLines()).size, 14.0f);
     }
     CHECK(Family(LookOf(BarTheme::PhoenixGold, settings).TitleFace(words), "Marcellus SC"));
 }
@@ -178,7 +189,7 @@ TEST(the_bar_takes_the_players_fonts_or_its_themes)
     BarTitleFont(settings, BarShape::Ornate);
     CHECK(std::string(title) == "Cinzel"); // an earlier name stays where caches keep it
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
-    CHECK(std::string(look.DetailFace().family) == "Verdana" && std::string(look.TitleFace().family) == "Georgia");
+    CHECK(std::string(look.DetailFace().family) == "Verdana" && std::string(look.TitleFace(TwoLines()).family) == "Georgia");
 }
 
 TEST(the_games_art_is_in_use_for_its_theme_or_a_custom_theme_of_its_shape)
@@ -258,38 +269,13 @@ TEST(a_window_from_a_panels_colors_reads_well_and_steps_up_from_its_page)
     }
 }
 
-TEST(a_widget_is_padded_and_spaced_as_the_panel_says_unless_it_has_its_own)
+TEST(a_widget_is_padded_as_the_panel_says_or_as_the_theme_does)
 {
-    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
     Settings s;
-    WidgetOptions o;
-    CHECK_EQ(WidgetPadding(m, s, o), m.padding); // the theme's
-    CHECK_EQ(WidgetSpacing(s, o), 0.0f);
+    CHECK_EQ(WidgetPadding(m, s), m.padding); // the theme's
     s.barWidgetPadding = 6;
-    s.barWidgetSpacing = 10;
-    CHECK_EQ(WidgetPadding(m, s, o), 6.0f);
-    CHECK_EQ(WidgetSpacing(s, o), 10.0f);
-    o.padding = 4;
-    o.spacing = 3;
-    CHECK_EQ(WidgetPadding(m, s, o), 4.0f);
-    CHECK_EQ(WidgetSpacing(s, o), 3.0f);
-}
-
-TEST(a_widgets_fonts_and_text_size_are_its_own_or_the_panels)
-{
-    Settings settings;
-    settings.barTitleFont = "Cinzel";
-    settings.barTextSize  = 14;
-    WidgetOptions o;
-    CHECK_EQ(std::string(WidgetTitleFont(settings, BarShape::Pills, o)), "Cinzel");
-    CHECK(WidgetTextFont(settings, o) == BarTextFont(settings));
-    CHECK_EQ(WidgetTextSize(settings, o), 14);
-    o.titleFont = "Arial";
-    o.textFont  = "Arial";
-    o.textSize  = 20;
-    CHECK(WidgetTitleFont(settings, BarShape::Pills, o) == WidgetTextFont(settings, o)); // one pointer per name
-    CHECK_EQ(std::string(WidgetTextFont(settings, o)), "Arial");
-    CHECK_EQ(WidgetTextSize(settings, o), 20);
+    CHECK_EQ(WidgetPadding(m, s), 6.0f);
 }
 
 TEST(the_help_bar_takes_its_set_width_text_size_and_height)
@@ -316,23 +302,4 @@ TEST(the_fishing_bars_font_is_its_own_or_the_panels_text_font)
     CHECK(std::string(FishBarFont(settings)) == "Georgia");
     settings.fishBarFont = "Verdana";
     CHECK(std::string(FishBarFont(settings)) == "Verdana");
-}
-
-TEST(a_widgets_popup_follows_popup_size_until_it_sets_its_own)
-{
-    Settings s;
-    s.barHeight     = 45;
-    s.popupTextSize = 18;
-    const BarLook look = LookOf(BarTheme::PhoenixGold, s);
-    const PanelWidget zone{BarWidget::Zone}, bags{BarWidget::Bags};
-    CHECK_EQ(WidgetPopupTextSize(s, s.Widget(zone)), 18);
-    CHECK(Near(PopupLook(look, zone).metrics.popupText, 18.0f));
-    s.Widget(zone).popupTextSize = 26;
-    CHECK_EQ(WidgetPopupTextSize(s, s.Widget(zone)), 26);
-    const BarLook own = PopupLook(look, zone), other = PopupLook(look, bags);
-    CHECK(Near(own.metrics.popupText, 26.0f));
-    CHECK(Near(other.metrics.popupText, 18.0f));            // the others keep Popup Size
-    CHECK(own.metrics.heading > other.metrics.heading);       // the whole popup scales, its headings too
-    CHECK(own.metrics.popupPadding > other.metrics.popupPadding);
-    CHECK(Near(own.metrics.title, look.metrics.title));       // and the panel's own sizes stay
 }

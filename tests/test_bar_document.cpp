@@ -12,8 +12,8 @@ namespace
 {
     BarLook LookOf(const BarPalette& p, const Settings& settings)
     {
-        const BarMetrics m  = MetricsFor(45, p.shape, kAutoBarTextSize, kAutoPopupTextSize);
-        return BarLook{p, settings, m, PillRow(m), TextRow{13, 11, true, 10.0f, 24.0f, 12.0f},
+        const BarMetrics m  = MetricsFor(45, p.shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+        return BarLook{p, settings, m, PillRow(m), TextRow{13, 11, 10.0f, 24.0f, 13, 12.0f},
             BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate, BarTextFont(settings), std::nullopt};
     }
     BarLook LookOf(BarTheme theme, const Settings& settings) { return LookOf(PaletteOf(theme), settings); }
@@ -21,9 +21,9 @@ namespace
     // Line boxes 16 and 14 px tall, the title's top at row 9 over a detail at row 23, or alone at row 14.
     BarTextPlace Place()
     {
-        return BarTextPlace{BarLinePlace{16, 9.0f, 14.0f, 2.0f}, BarLinePlace{17, 8.0f, 13.0f, 1.0f},
-            BarLinePlace{14, 23.0f, 0.0f, 3.0f},
-            BarLinePlace{14, 15.0f, 15.0f, 3.0f}, BarLinePlace{16, 0.0f, 0.0f, 0.0f}, BarLinePlace{17, 0.0f, 0.0f, 0.0f}};
+        return BarTextPlace{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+            BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f},
+            BarLinePlace{16, 0.0f, 0.0f}, BarLinePlace{17, 0.0f, 0.0f}};
     }
 
     bool Has(const std::string& text, std::string_view part) { return text.find(part) != std::string::npos; }
@@ -86,7 +86,7 @@ TEST(image_names_round_trip_to_their_images)
 TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
 {
     Settings settings;
-    const std::string rml = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place(), {});
+    const std::string rml = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place());
     CHECK(Has(rml, "<rml>") && Has(rml, "</rml>") && Has(rml, "<body class=\"ornate\">"));
     CHECK(Has(rml, StripSource(PaletteOf(BarTheme::PhoenixGold), 45, 13).c_str())); // 45 rows and 0.28 H below
     CHECK(Has(rml, "height:59px")); // those, and the gold theme's line under the strip
@@ -106,7 +106,7 @@ TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
     // The pill row is 36 px from row 4: content starts at row 5, so a title at row 9 sits 4 px under it, alone 9,
     // and the detail at row 23 comes 23 - (9 + 16) = -2 px after the title's line.
     CHECK(Has(rml, ".widget{position:absolute;top:4px;height:36px;"));
-    CHECK(Has(rml, "line-height:16px;margin-top:4px;") && Has(rml, ".title.alone{margin-top:9px;}"));
+    CHECK(Has(rml, "line-height:16px;margin-top:4px;") && Has(rml, "font-size:13px;line-height:16px;margin-top:9px;"));
     CHECK(Has(rml, "line-height:14px;margin-top:-2px;"));
     // After a title of figures, whose line is 17 px from row 8: 23 - 25 again.
     CHECK(Has(rml, ".detail.fig{margin-top:-2px;}"));
@@ -116,10 +116,12 @@ TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
     CHECK(Has(rml, ".ornate .widget.target.lit{background-color:#c9a24a34;")); // twice the tint
 }
 
-TEST(a_pill_theme_frames_each_widget_and_has_no_caps)
+TEST(a_pill_theme_frames_each_widget_and_its_caps_follow_the_settings)
 {
     Settings settings;
-    const std::string rml = BarDocument(LookOf(BarTheme::UmbraDark, settings), Place(), {});
+    CHECK(Has(BarDocument(LookOf(BarTheme::UmbraDark, settings), Place()), "cap-right\" src"));
+    settings.panelSeparators = SeparatorBit(Separator::Between);
+    const std::string rml = BarDocument(LookOf(BarTheme::UmbraDark, settings), Place());
     CHECK(Has(rml, "<body class=\"pills\">") && !Has(rml, "cap-right\" src"));
     // 0.17 H corners, the pill's fill and edge.
     CHECK(Has(rml, ".pills .widget{background-color:#222226ff;border-color:#3a3a42ff;border-radius:7.65px;}"));
@@ -187,7 +189,7 @@ TEST(a_widget_of_figures_takes_the_detail_font_for_its_title)
 TEST(the_bars_text_carries_its_shadow)
 {
     Settings settings;
-    const std::string rml = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place(), {});
+    const std::string rml = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place());
     // A 13 px title's shadow blurs 0.12 of its height: a Gaussian of 0.78 px, which RmlUi makes from a width of 2.
     // Once in place and once a pixel down, at 60%.
     CHECK(Has(rml, "font-effect:glow(0px 2px 0px 1px #00000099),glow(0px 2px 0px 0px #00000099);"));
@@ -213,7 +215,7 @@ TEST(the_help_bar_is_its_box_and_its_three_texts_centered_on_the_row)
     CHECK(!Has(HelpBarRml(parts, look, Place()), "help-box"));
     parts.row = HelpBarRow{};
     CHECK(HelpBarRml(parts, look, Place()).empty());
-    const std::string document = BarDocument(look, Place(), {});
+    const std::string document = BarDocument(look, Place());
     CHECK(Has(document, "id=\"help\"") && Has(document, ".help-box{"));
     CHECK(Has(document, "decorator:vertical-gradient(#1c160ff7 #0c0a08f7)"));
 }
@@ -222,9 +224,9 @@ TEST(the_help_bars_text_is_the_bars_title_size_or_its_own)
 {
     Settings settings;
     // The look's title is 13 px; the help's line boxes are 16 and 17 px.
-    CHECK(Has(BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place(), {}), "font-size:13px;line-height:16px;"));
+    CHECK(Has(BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place()), "font-size:13px;line-height:16px;"));
     settings.helpBarTextSize = 21;
-    const std::string document = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place(), {});
+    const std::string document = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place());
     CHECK(Has(document, "font-size:21px;line-height:16px;") && Has(document, "font-size:21px;line-height:17px;"));
 }
 
@@ -345,7 +347,7 @@ TEST(every_theme_eases_breathes_and_pulses_in_its_own_colors)
              Lit{BarTheme::Aurora, "from{border-color:#5ee6ff59;}to{border-color:#b48cffcc;}", "#5ee6ffff #b48cffff"}})
     {
         const BarLook look    = LookOf(lit.theme, settings);
-        const std::string rml = BarDocument(look, Place(), {});
+        const std::string rml = BarDocument(look, Place());
         // Widgets ease into their lit look, the target's frame breathes until it is lit (its border eases no other
         // way), and progress is a gradient that pulses.
         CHECK(Has(rml, "transition:background-color 0.2s cubic-out,border-color 0.2s cubic-out;"));
@@ -369,7 +371,7 @@ TEST(the_line_of_light_and_the_glass_are_the_glass_shapes_alone)
 {
     Settings settings;
     const BarLook aurora  = LookOf(BarTheme::Aurora, settings);
-    const std::string rml = BarDocument(aurora, Place(), {});
+    const std::string rml = BarDocument(aurora, Place());
     // The strip's foot: a line of light, cyan to violet, fading out to both sides.
     CHECK(Has(rml, "<div class=\"glint a\"></div><div class=\"glint b\"></div><div class=\"glint c\"></div>"));
     CHECK(Has(rml, ".glint.a{left:0%;width:30%;decorator:horizontal-gradient(#5ee6ff00 #5ee6ffff);}"));
@@ -381,16 +383,16 @@ TEST(the_line_of_light_and_the_glass_are_the_glass_shapes_alone)
         "#panel{background-color:transparent;decorator:vertical-gradient(#1b2740f2 #0c1220f2);border-color:#5ee6ff40;}"));
     // The others keep their strips and panels.
     const BarLook gold = LookOf(BarTheme::PhoenixGold, settings);
-    CHECK(!Has(BarDocument(gold, Place(), {}), "glint"));
+    CHECK(!Has(BarDocument(gold, Place()), "glint"));
     CHECK(!Has(PopupDocument(gold, faces), "background-color:transparent;decorator:vertical-gradient(#1b2740f2"));
     CHECK(Has(PopupDocument(gold, faces), "decorator:vertical-gradient(#1c160ff7 #0c0a08f7);"));
     // It is the shape's, whatever the colors: Phoenix Gold's as glass has them, Aurora's as pills has neither.
     BarPalette glassGold = PaletteOf(BarTheme::PhoenixGold), pillAurora = PaletteOf(BarTheme::Aurora);
     glassGold.shape      = BarShape::Glass;
     pillAurora.shape     = BarShape::Pills;
-    CHECK(Has(BarDocument(LookOf(glassGold, settings), Place(), {}), "glint"));
+    CHECK(Has(BarDocument(LookOf(glassGold, settings), Place()), "glint"));
     CHECK(Has(PopupDocument(LookOf(glassGold, settings), faces), "#panel{background-color:transparent;"));
-    CHECK(!Has(BarDocument(LookOf(pillAurora, settings), Place(), {}), "glint"));
+    CHECK(!Has(BarDocument(LookOf(pillAurora, settings), Place()), "glint"));
     CHECK(!Has(PopupDocument(LookOf(pillAurora, settings), faces), "#panel{background-color:transparent;"));
 }
 
@@ -401,7 +403,7 @@ TEST(the_strip_and_the_popups_are_drawn_with_the_games_art_when_the_shape_is_win
     palette.shape      = BarShape::Window;
     BarLook look       = LookOf(palette, settings);
     look.skin          = SkinFrame{3, 1.0f, 0.5f, 1.0f, palette.panelBorder};
-    const std::string bar = BarDocument(look, Place(), {});
+    const std::string bar = BarDocument(look, Place());
     CHECK(bar.find(SkinSource(3, SkinPiece::Back, kSkinTile)) != std::string::npos);
     CHECK(bar.find("hu:strip") == std::string::npos);
     // The art is the bar's own height, so the widgets centered in the bar are centered in the frame: no room for the
@@ -422,27 +424,23 @@ TEST(the_strip_and_the_popups_are_drawn_with_the_games_art_when_the_shape_is_win
     CHECK(FrameAsSet(settings, *look.skin) == (SkinFrame{3, 1.0f, 0.5f, 1.0f}));
     // Without the art read, the shape draws its colors.
     look.skin = std::nullopt;
-    CHECK(BarDocument(look, Place(), {}).find("hu:strip") != std::string::npos);
-    CHECK(BarDocument(look, Place(), {}).find("hu:skin") == std::string::npos);
+    CHECK(BarDocument(look, Place()).find("hu:strip") != std::string::npos);
+    CHECK(BarDocument(look, Place()).find("hu:skin") == std::string::npos);
     CHECK(PopupDocument(look, faces).find("hu:skin") == std::string::npos);
 }
 
-TEST(a_widget_with_text_of_its_own_has_rules_of_its_own_under_its_id)
+TEST(a_title_alone_is_drawn_at_its_own_size_and_place)
 {
     Settings settings;
-    const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
-    const PanelWidget gil{BarWidget::Currency, 1};
-    // Its own fonts at 20 px titles over 15 px details, a line box 24 px tall from row 6.
-    const WidgetText own{gil, kCinzel, kMarcellusSC, TextRow{20, 15, true, 6.0f, 26.0f, 12.0f},
-        BarTextPlace{BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{24, 6.0f, 12.0f, 2.0f}, BarLinePlace{18, 26.0f, 0.0f, 2.0f}, BarLinePlace{18, 16.0f, 16.0f, 2.0f}, {}, {}}};
-    const std::string rml = BarDocument(look, Place(), {own});
-    CHECK(Has(rml, "#w-gil-2 .title{font-family:\"Cinzel\";font-size:20px;line-height:24px;"));
-    CHECK(Has(rml, "#w-gil-2 .detail{font-family:\"Marcellus SC\";font-size:15px;"));
-    CHECK(!Has(rml, "#w-gil .title") && !Has(BarDocument(look, Place(), {}), "#w-gil-2 .title"));
-    // A widget's own row without room for two lines has its title alone: no detail rules of its own.
-    WidgetText alone = own;
-    alone.lines.twoLines = false;
-    CHECK(!Has(BarDocument(look, Place(), {alone}), "#w-gil-2 .detail{"));
+    BarLook look     = LookOf(BarTheme::PhoenixGold, settings);
+    look.lines.alone = 18; // a short row: two lines at 13 and 11 px, a line alone larger
+    BarTextPlace place = Place();
+    place.alone        = BarLinePlace{22, 11.0f, 2.0f};
+    const std::string rml = BarDocument(look, place);
+    const std::string font = BarTitleFont(settings, look.palette.shape);
+    CHECK(Has(rml, ".title.alone{font-family:\"" + font + "\";font-size:18px;line-height:22px;"));
+    CHECK(Has(rml, ".title{font-family:\"" + font + "\";font-size:13px;line-height:16px;"));
+    CHECK(Has(rml, ".title.alone .line-icon{width:18px;height:18px;"));
 }
 
 TEST(a_widget_of_cells_lays_each_in_its_column_a_gap_apart)
@@ -479,7 +477,7 @@ TEST(a_widget_of_cells_on_two_lines_draws_its_top_line_at_the_detail_size_so_its
     c.title    = {Span{" 8", Tone::Normal, 0, GamePicture::SanDoriaCrest}, Span{" 4", Tone::Normal, 0, GamePicture::BastokCrest}};
     c.subtitle = {Span{" 2", Tone::Normal, 0, GamePicture::WindurstCrest}, Span{" 5", Tone::Normal, 0, GamePicture::BeastmenCrest}};
     CHECK(Has(WidgetRml(c, look, {30.0f, 30.0f}, {}), "<div class=\"title figures cells\">"));
-    const std::string css = BarDocument(look, Place(), {});
+    const std::string css = BarDocument(look, Place());
     CHECK(Has(css, ".title.cells{font-size:" + Px(static_cast<float>(look.lines.detail)) + ";}"));
     CHECK(Has(css, ".title.cells .line-icon{width:" + Px(static_cast<float>(look.lines.detail)) + ";height:" +
                        Px(static_cast<float>(look.lines.detail)) + ";"));
@@ -552,15 +550,10 @@ TEST(a_meters_texts_are_measured_in_the_face_they_are_drawn_in)
 {
     Settings settings;
     BarLook look = LookOf(BarTheme::PhoenixGold, settings);
-    for (const bool twoLines : {true, false})
-    {
-        // On a row of one line they take the title's size.
-        look.lines.twoLines = twoLines;
-        look.lines.side     = twoLines ? look.lines.detail : look.lines.title;
-        const TextFace face = look.MeterFace();
-        const std::string rule = ".mtext{font-family:\"" + std::string(face.family) + "\";font-size:" + Px(face.size) + ";";
-        CHECK(Has(BarDocument(look, Place(), {}), rule.c_str()));
-    }
+    look.lines.side        = 12;
+    const TextFace face    = look.MeterFace();
+    const std::string rule = ".mtext{font-family:\"" + std::string(face.family) + "\";font-size:" + Px(face.size) + ";";
+    CHECK(face.size == 12.0f && Has(BarDocument(look, Place()), rule.c_str()));
 }
 
 TEST(a_meters_bar_and_the_texts_over_and_under_it_are_centered_on_the_row_with_its_side_texts_by_it)
@@ -606,7 +599,7 @@ TEST(a_side_shared_in_a_combined_pill_keeps_its_text_where_it_was_and_draws_no_e
     for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark, BarTheme::Aurora})
     {
         const BarLook look = LookOf(theme, Settings{});
-        const std::string css = BarDocument(look, Place(), {});
+        const std::string css = BarDocument(look, Place());
         for (const BarWidget kind : {BarWidget::Zone, BarWidget::Currency})
         {
             const WidgetSide own = SideOf(look, kind, kRoom, false), shared = SideOf(look, kind, kRoom, true);

@@ -121,54 +121,15 @@ namespace headsup
         return frame;
     }
 
-    const char* WidgetTitleFont(const Settings& settings, BarShape shape, const WidgetOptions& options)
+    float WidgetPadding(const BarMetrics& metrics, const Settings& settings)
     {
-        return options.titleFont.empty() ? BarTitleFont(settings, shape) : Interned(options.titleFont);
-    }
-
-    const char* WidgetTextFont(const Settings& settings, const WidgetOptions& options)
-    {
-        return options.textFont.empty() ? BarTextFont(settings) : Interned(options.textFont);
-    }
-
-    int WidgetTextSize(const Settings& settings, const WidgetOptions& options)
-    {
-        return options.textSize == kPanelTextSize ? settings.barTextSize : options.textSize;
-    }
-
-    int WidgetPopupTextSize(const Settings& settings, const WidgetOptions& options)
-    {
-        return options.popupTextSize == kPanelPopupTextSize ? settings.popupTextSize : options.popupTextSize;
-    }
-
-    BarLook PopupLook(const BarLook& look, PanelWidget widget)
-    {
-        const Settings& s = look.settings;
-        BarLook own       = look;
-        own.metrics = MetricsFor(s.barHeight, look.palette.shape, s.barTextSize, WidgetPopupTextSize(s, s.Widget(widget)));
-        return own;
-    }
-
-    float WidgetPadding(const BarMetrics& metrics, const Settings& settings, const WidgetOptions& options)
-    {
-        const int padding = options.padding == kPanelPadding ? settings.barWidgetPadding : options.padding;
-        return padding == kThemePadding ? metrics.padding : static_cast<float>(padding);
+        return settings.barWidgetPadding == kThemePadding ? metrics.padding : static_cast<float>(settings.barWidgetPadding);
     }
 
     bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head)
     {
-        return !look.ornate && !BackedPill(look.settings, panel, head) &&
+        return !look.ornate && !look.settings.widgetBackground &&
                std::ranges::none_of(Members(panel, head), [&](PanelWidget member) { return look.BoxOf(member.kind, false).has_value(); });
-    }
-
-    bool BackedPill(const Settings& settings, const PanelGroups& panel, PanelWidget head)
-    {
-        return std::ranges::any_of(Members(panel, head), [&](PanelWidget member) { return settings.Widget(member).background; });
-    }
-
-    float WidgetSpacing(const Settings& settings, const WidgetOptions& options)
-    {
-        return static_cast<float>(options.spacing == kPanelSpacing ? settings.barWidgetSpacing : options.spacing);
     }
 
     const char* BarTitleFont(const Settings& settings, BarShape shape)
@@ -186,11 +147,10 @@ namespace headsup
         return settings.fishBarFont.empty() ? BarTextFont(settings) : Interned(settings.fishBarFont);
     }
 
-    TextFace BarLook::TitleFace() const { return TextFace{titleFont, static_cast<float>(lines.title)}; }
-
     TextFace BarLook::TitleFace(const WidgetContent& content) const
     {
-        return content.figures ? TextFace{detailFont, static_cast<float>(lines.title)} : TitleFace();
+        const auto size = static_cast<float>(content.subtitle.empty() ? lines.alone : lines.title);
+        return TextFace{content.figures ? detailFont : titleFont, size};
     }
 
     TextFace BarLook::DetailFace() const { return TextFace{detailFont, static_cast<float>(lines.detail)}; }
