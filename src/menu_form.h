@@ -149,7 +149,7 @@ namespace headsup
 
     // The block of the settings the panel's popup shows, whether the window is open or not: each widget's under its
     // name when there are more than one. Nothing while it shows none.
-    constexpr const char* kWidgetSettingsBlock = "widgets"; // its controls' ids are the Widgets card's
+    constexpr const char* kWidgetSettingsBlock = "widgets"; // its controls' ids are the Widgets card's, on the Top Panel page
     void BuildWidgetSettings(Form& form, Settings& settings, const MenuReadings& readings, MenuFormState& state,
         const std::vector<std::string>& fonts, const std::vector<std::string>& menuFonts,
         const WindowLayout& layout = kWindowLayout);

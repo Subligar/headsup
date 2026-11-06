@@ -2431,7 +2431,7 @@ namespace headsup
         const LayoutSetting* tabs = layout.SettingOf(SettingPiece::WidgetTabs);
         if (readings.settingsOf.empty() || state.setup || tabs == nullptr) return;
         form.layout  = &layout;
-        form.pageKey = layout.PageOf(Page::Widgets).key;
+        form.pageKey = layout.PageOf(Page::TopPanel).key;
         Context c{form, s, readings, state, fonts, menuFonts, layout, std::nullopt};
         form.Fade(false);
         form.BeginBare(kWidgetSettingsBlock);

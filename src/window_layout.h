@@ -22,7 +22,6 @@ namespace headsup
         Pets,
         UserInterface,
         TopPanel,
-        Widgets,
         MouseCursor,
         Colors,
         Theme,

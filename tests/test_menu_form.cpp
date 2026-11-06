@@ -192,11 +192,11 @@ TEST(a_pages_controls_change_the_settings_they_show)
 TEST(a_widgets_chip_dropped_on_another_goes_before_it)
 {
     Window w;
-    w.state.page = Page::Widgets;
+    w.state.page = Page::TopPanel;
     const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
     CHECK(left.size() >= 2);
-    const std::string first  = "widgets-layout-chip-" + std::to_string(SlotOf(left[0]));
-    const std::string second = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const std::string first  = "toppanel-layout-chip-" + std::to_string(SlotOf(left[0]));
+    const std::string second = "toppanel-layout-chip-" + std::to_string(SlotOf(left[1]));
     const Form form = w.Pass({{first, kDropEvent, second}});
     const std::vector<PanelWidget>& now = w.settings.barSections[static_cast<int>(BarSection::Left)];
     CHECK(form.changed && now[0] == left[1] && now[1] == left[0]);
@@ -205,10 +205,10 @@ TEST(a_widgets_chip_dropped_on_another_goes_before_it)
 TEST(a_click_on_a_chip_that_is_on_asks_for_its_settings_and_one_on_its_toggle_or_that_is_off_does_not)
 {
     Window w;
-    w.state.page = Page::Widgets;
+    w.state.page = Page::TopPanel;
     const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
-    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id); };
     const Form form = w.Pass({{chip, kClickEvent, ""}});
     CHECK(w.state.settingsAsked == left[1] && !form.scrollToTop);
     CHECK(settings(form) == form.blocks.end()); // the page has none: the panel's popup shows them, once it does
@@ -222,10 +222,10 @@ TEST(a_click_on_a_chip_that_is_on_asks_for_its_settings_and_one_on_its_toggle_or
 TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under_its_name)
 {
     Window w;
-    w.state.page = Page::Widgets;
+    w.state.page = Page::TopPanel;
     const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[0]));
-    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(left[0]));
+    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id); };
     w.readings.settingsOf = {left[0]};
     const Form one        = w.Pass();
     CHECK(settings(one) != one.blocks.end() && settings(one)->popout);
@@ -246,7 +246,7 @@ TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under
     CHECK_EQ(names, static_cast<size_t>(2));
     // The settings have no Clone: the Layout card's chip has it, and a click on it asks for the clone's settings.
     CHECK(!Has(rml, "clone"));
-    w.state.page = Page::Widgets;
+    w.state.page = Page::TopPanel;
     w.Pass({{chip + "-clone", kClickEvent, ""}});
     CHECK(w.state.settingsAsked && w.state.settingsAsked->kind == left[0].kind && w.state.settingsAsked->copy == 1);
     CHECK(Placed(w.settings.barSections, *w.state.settingsAsked));
@@ -438,7 +438,7 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
     CHECK(w.settings.enabled && config.changed);
     // With the top panel off, its widgets' page has nothing to set either.
     w.settings.showBar = false;
-    w.state.page       = Page::Widgets;
+    w.state.page       = Page::TopPanel;
     CHECK_EQ(shown(w.Pass()).size(), size_t{1});
     CHECK(shown(w.Pass()) != off);
 }
@@ -1119,10 +1119,10 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     Window w;
     const PanelWidget zone{BarWidget::Zone};
     w.readings.settingsOf  = {zone};
-    const std::string base = "widgets-widgets-part-" + std::to_string(SlotOf(zone)) + "-";
+    const std::string base = "toppanel-widgets-part-" + std::to_string(SlotOf(zone)) + "-";
     const auto chip        = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
     const auto toggle      = [&](WidgetPart part) { return FormEvent{chip(part) + "-on", kClickEvent, ""}; };
-    const auto rml         = [](const Form& form) { return Block(form, "widgets-widgets")->rml; };
+    const auto rml         = [](const Form& form) { return Block(form, "toppanel-widgets")->rml; };
     const auto design      = [&] { return DesignText(w.settings.Widget(zone).design); };
     const Form first = w.Pass();
     CHECK(Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str()));
@@ -1146,7 +1146,7 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "class=\"error\""));
     CHECK_EQ(design(), "-nation name -crest | region");
     // Another widget's chip dropped here moves nothing.
-    const std::string weather = "widgets-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
+    const std::string weather = "toppanel-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
                                 std::to_string(static_cast<int>(WidgetPart::WeatherName));
     w.Pass({{base + "end-1", kDropEvent, weather}});
     CHECK_EQ(design(), "-nation name -crest | region");
@@ -1157,10 +1157,10 @@ TEST(world_infos_designer_hides_while_it_shows_the_conquest_counts_which_have_no
     Window w;
     const PanelWidget world{BarWidget::World};
     w.readings.settingsOf  = {world};
-    const std::string chip = "id=\"widgets-widgets-part-" + std::to_string(SlotOf(world)) + "-";
-    CHECK(Has(Block(w.Pass(), "widgets-widgets")->rml, chip.c_str()));
+    const std::string chip = "id=\"toppanel-widgets-part-" + std::to_string(SlotOf(world)) + "-";
+    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, chip.c_str()));
     w.settings.Widget(world).worldLine = WorldLine::Conquest;
-    CHECK(!Has(Block(w.Pass(), "widgets-widgets")->rml, chip.c_str()));
+    CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, chip.c_str()));
 }
 
 TEST(feedback_is_sent_only_once_its_fields_are_filled_and_the_card_says_how_it_went)

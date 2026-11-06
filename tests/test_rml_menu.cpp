@@ -1905,18 +1905,18 @@ TEST(a_lines_arrows_swap_it_with_the_one_above_or_below_and_the_ends_have_only_o
 TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
 {
     Window window;
-    window.Page("widgets");
+    window.Page("toppanel");
     const PanelWidget copy{BarWidget::Currency, 1};
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
-    const std::string copyChip = "widgets-layout-chip-" + std::to_string(SlotOf(copy));
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
+    const std::string copyChip = "toppanel-layout-chip-" + std::to_string(SlotOf(copy));
     CHECK(!window.Shows(chip + "-remove")); // the first copy is never taken off
     CHECK(window.Click(chip + "-clone"));
     CHECK(Placed(window.settings.barSections, copy));
     CHECK(window.Shows(copyChip) && window.Shows(copyChip + "-remove"));
     // The clone's settings show at once: a currency picked there is the clone's.
     CHECK(window.shown == copy);
-    window.Click("widgets-widgets-currency-gil-2");
-    CHECK(window.Click("widgets-widgets-currency-gil-2-o-1"));
+    window.Click("toppanel-widgets-currency-gil-2");
+    CHECK(window.Click("toppanel-widgets-currency-gil-2-o-1"));
     CHECK(window.settings.Widget(copy).currency == 1 && window.settings.Widget(BarWidget::Currency).currency == kGilCurrency);
     // Taken off, its settings give way to the first copy's.
     CHECK(window.Click(copyChip + "-remove"));
@@ -1927,11 +1927,11 @@ TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
 TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_second_click_takes_them_away)
 {
     Window window;
-    window.Page("widgets");
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
-    CHECK(!window.Shows("widgets-widgets-currency-gil"));
+    window.Page("toppanel");
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
+    CHECK(!window.Shows("toppanel-widgets-currency-gil"));
     window.Click(chip);
-    CHECK(window.shown == BarWidget::Currency && window.Shows("widgets-widgets-currency-gil"));
+    CHECK(window.shown == BarWidget::Currency && window.Shows("toppanel-widgets-currency-gil"));
     CHECK(window.Find(chip)->IsClassSet("picked"));
     // In a document of their own over the popup's room, as wide as it and no wider, which say how tall they are.
     Rml::Element* view = window.Find(kMenuViewBodyId);
@@ -1944,14 +1944,14 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     // With the window closed they work on, their dropdown too.
     window.menu.open = false;
     window.Frames(2);
-    CHECK(!window.Shows(chip) && window.Shows("widgets-widgets-currency-gil"));
-    window.Click("widgets-widgets-currency-gil");
-    CHECK(window.Click("widgets-widgets-currency-gil-o-1"));
+    CHECK(!window.Shows(chip) && window.Shows("toppanel-widgets-currency-gil"));
+    window.Click("toppanel-widgets-currency-gil");
+    CHECK(window.Click("toppanel-widgets-currency-gil-o-1"));
     CHECK(window.settings.Widget(BarWidget::Currency).currency == 1);
     window.menu.open = true;
     window.Frames(2);
     window.Click(chip);
-    CHECK(!window.shown && !window.Shows("widgets-widgets-currency-gil"));
+    CHECK(!window.shown && !window.Shows("toppanel-widgets-currency-gil"));
     CHECK_EQ(window.Said(), "");
 }
 
@@ -1960,15 +1960,15 @@ TEST(the_world_info_widget_offers_the_pick_for_what_it_shows)
     Window window;
     WidgetOptions& world = window.settings.Widget(BarWidget::World);
     world.on             = true;
-    window.Page("widgets");
-    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::World)));
-    CHECK(window.Shows("widgets-widgets-ship-world") && !window.Shows("widgets-widgets-element-world"));
-    window.Click("widgets-widgets-shows-world");
-    CHECK(window.Click("widgets-widgets-shows-world-o-1"));
+    window.Page("toppanel");
+    window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::World)));
+    CHECK(window.Shows("toppanel-widgets-ship-world") && !window.Shows("toppanel-widgets-element-world"));
+    window.Click("toppanel-widgets-shows-world");
+    CHECK(window.Click("toppanel-widgets-shows-world-o-1"));
     CHECK(world.worldLine == WorldLine::Weather);
-    CHECK(window.Shows("widgets-widgets-element-world") && !window.Shows("widgets-widgets-ship-world"));
-    window.Click("widgets-widgets-element-world");
-    CHECK(window.Click("widgets-widgets-element-world-o-4"));
+    CHECK(window.Shows("toppanel-widgets-element-world") && !window.Shows("toppanel-widgets-ship-world"));
+    window.Click("toppanel-widgets-element-world");
+    CHECK(window.Click("toppanel-widgets-element-world-o-4"));
     CHECK(world.worldElement == Element::Lightning);
     CHECK_EQ(window.Said(), "");
 }

@@ -175,7 +175,7 @@
         {
           "key": "top-panel",
           "name": "Top Panel",
-          "description": "Hover a widget for details; click it to keep them open. The Widgets page has each one's options.",
+          "description": "Hover a widget for details; click it to keep them open. Its cog opens its options.",
           "settings": [
             {"key": "widget-background", "name": "Show Widget Backgrounds", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: Off."},
             {
@@ -223,17 +223,10 @@
             {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
             {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
           ]
-        }
-      ]
-    },
-    {
-      "key": "widgets",
-      "name": "Widgets",
-      "child": true,
-      "cards": [
+        },
         {
           "key": "layout",
-          "name": "Layout",
+          "name": "Widget Layout",
           "description": "Drag a widget to move it, and click one that is on to open its settings in its pop-out on the top panel. Click it again to close them. Its toggle turns it on and off. You can also open a widget's settings from the cog in its pop-out.",
           "settings": [
             {"key": "trays"},
