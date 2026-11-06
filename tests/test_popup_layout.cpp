@@ -116,6 +116,23 @@ TEST(the_title_sits_beside_its_icon_inside_the_padding)
     CHECK(title.x > icon->x + icon->width);
 }
 
+TEST(a_subtitle_sits_under_the_title_outside_any_card_and_above_the_cards)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate);
+    PopupContent content = Sample();
+    content.subtitle     = {{"Zulkheim", Tone::Dim}};
+    const PopupLayout l  = LayoutPopup(content, m, BarShape::Ornate, false, Fake);
+    const auto sub = std::ranges::find_if(l.pieces, [](const PopupPiece& p) { return p.span.text == "Zulkheim"; });
+    CHECK(sub != l.pieces.end() && sub->font == PopupFont::Text && Near(sub->x, m.popupPadding));
+    CHECK(sub->y >= l.lines[0].bottom);
+    for (const PopupPiece& p : l.pieces)
+    {
+        if (p.kind == PopupPiece::Kind::Card) CHECK(p.y >= sub->y + sub->height); // the cards start below it
+    }
+    const PopupLayout plain = LayoutPopup(Sample(), m, BarShape::Ornate, false, Fake);
+    CHECK(l.height > plain.height);
+}
+
 TEST(grid_columns_line_up_and_the_popup_wraps_its_contents)
 {
     const BarMetrics m  = MetricsFor(36, BarShape::Ornate);

@@ -942,8 +942,8 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     state.zone = 103; // Valkurm Dunes, Zulkheim (region 1)
     const PopupContent dunes = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(dunes.title == ListOf(Text("Valkurm Dunes"), Text(" (Zone #103)", Tone::Dim)));
-    // Its region by name alone, in the dim tone the word Region was in.
-    CHECK(dunes.sections.size() == 1 && dunes.sections[0].rows[0].cells[0].text == ListOf(Text("Zulkheim", Tone::Dim)));
+    // Its region by name alone, dim, right under the title rather than in a card.
+    CHECK(dunes.subtitle == ListOf(Text("Zulkheim", Tone::Dim)) && dunes.sections.empty());
     RegionOwners owners{};
     owners[1]    = Nation::Bastok;
     state.owners = owners; // who holds it is on the bar, and in the popup only beside its share
@@ -951,10 +951,10 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     state.zone = 230; // Southern San d'Oria: a city region, outside the conquest
     const PopupContent city = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(Joined(city.title) == "Southern San d'Oria (Zone #230)");
-    CHECK(city.sections.size() == 1 && Lines(city.sections[0]) == (std::vector<std::string>{"San d'Oria"}));
+    CHECK(Joined(city.subtitle) == "San d'Oria" && city.sections.empty());
     state.zone = 999; // past the data: its number is its title already, and it has no region
     const PopupContent unknown = BarPopupContent(BarWidget::Zone, state, settings);
-    CHECK(Joined(unknown.title) == "Zone 999" && unknown.sections.empty());
+    CHECK(Joined(unknown.title) == "Zone 999" && unknown.subtitle.empty() && unknown.sections.empty());
 }
 
 TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
@@ -972,7 +972,7 @@ TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
     const PopupContent popup       = BarPopupContent(BarWidget::Zone, state, settings);
     const PopupSection* influence = Section(popup, "Influence");
     CHECK(influence != nullptr);
-    CHECK(Lines(popup.sections[0]) == (std::vector<std::string>{"Ronfaure"}));
+    CHECK(Joined(popup.subtitle) == "Ronfaure");
     CHECK(Lines(*influence) == (std::vector<std::string>{"San d'Oria 61%", "Bastok 21%", "Windurst 11%", "Beastmen 5%",
                                    "Tally in 2d 8h"}));
     for (const PopupRow& row : influence->rows)

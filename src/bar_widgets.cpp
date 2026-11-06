@@ -1745,6 +1745,8 @@ namespace headsup
                         joined.title.push_back(Text(kDot, Tone::Dim));
                     joined.title.insert(joined.title.end(), own.title.begin(), own.title.end());
                     titles.push_back(std::move(own.title));
+                    if (!joined.subtitle.empty() && !own.subtitle.empty()) joined.subtitle.push_back(Text(kDot, Tone::Dim));
+                    joined.subtitle.insert(joined.subtitle.end(), own.subtitle.begin(), own.subtitle.end());
                 }
                 for (PopupSection& section : own.sections)
                     if (std::ranges::find(joined.sections, section) == joined.sections.end())
@@ -1803,7 +1805,7 @@ namespace headsup
             popup.title = ListOf(Text(ZoneTitle(state.zone)));
             // A zone past the data has its number for a title already.
             if (zone != nullptr) popup.title.push_back(Text(" (Zone #" + std::to_string(state.zone) + ")", Tone::Dim));
-            if (!region.empty()) popup.sections.push_back(PopupSection{"", ListOf(Line(Cell(Text(std::string(region), Tone::Dim))))});
+            if (!region.empty()) popup.subtitle = ListOf(Text(std::string(region), Tone::Dim));
             if (InConquest(zone) && state.shares)
             {
                 PopupSection influence{"Influence", {}};

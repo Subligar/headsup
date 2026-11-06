@@ -145,6 +145,7 @@ namespace headsup
     {
         std::optional<Icon> icon;
         std::vector<Span> title;
+        std::vector<Span> subtitle; // a line right under the title, outside any card
         std::vector<PopupSection> sections;
         bool oneColumn = false; // its cards down one column, however tall
         bool settings  = true;  // its widget's settings show in place of it behind a cog: Game help's are in their own card

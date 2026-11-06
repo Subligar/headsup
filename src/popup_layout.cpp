@@ -698,6 +698,19 @@ namespace headsup
         }
         l.lines.push_back(PopupLine{pad + rowHeight});
         float top = pad + rowHeight + metrics.rowGap;
+        if (!content.subtitle.empty())
+        {
+            float sx = pad, subHeight = 0.0f;
+            for (const Span& s : content.subtitle)
+            {
+                const TextSize t = measure(s, PopupFont::Text);
+                l.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, sx, top, t.width, t.height, s, PopupFont::Text});
+                sx += t.width;
+                subHeight = std::max(subHeight, t.height);
+            }
+            titleWidth = std::max(titleWidth, sx - pad);
+            top += subHeight + metrics.rowGap;
+        }
 
         float width = std::max({unit * kMinWidth, titleWidth, least - 2.0f * pad});
         if (settings)
