@@ -36,6 +36,7 @@ namespace headsup
         constexpr const char* kWidgetChip  = "chip "; // a tray chip's name in its card, before its widget's number
         constexpr const char* kChipToggle  = " on";   // after it, its toggle's
         constexpr const char* kChipClone   = " clone"; // and its clone button's
+        constexpr const char* kChipRemove  = " remove"; // and a copy's remove button's
         constexpr const char* kPartChip    = "part ";   // a designer chip's name, before its widget's slot and its part
         constexpr int kChipCoinPixels      = 32;        // gil's coin on a designer chip, drawn smaller
         constexpr int kFirstSense = static_cast<int>(DetectionIcon::Link); // Detection Icons' first, after the aggression
@@ -898,15 +899,6 @@ namespace headsup
                     break;
                 }
             }
-            if (!HasCopies(kind)) return;
-            form.Fade(!BarOn(s));
-            if (widget.copy > 0 && form.Button(Word(c, WindowWord::WidgetTabsRemoveCopy), ("remove copy" + scope).c_str(),
-                                       kRaisedPill, WordTip(c, WindowWord::WidgetTabsRemoveCopy)))
-            {
-                RemoveWidgetCopy(s, widget);
-                c.state.settingsAsked = PanelWidget{kind};
-                form.changed          = true;
-            }
         }
 
         // The settings of each widget the panel's popup shows, under its name when there are more than one.
@@ -922,8 +914,8 @@ namespace headsup
 
         // Left, Center and Right as trays sunk into the card, each holding its widgets as raised chips in bar order:
         // a chip drags to another place or tray, and a click on one that is on opens its popup on the panel on its
-        // settings, or closes it when it shows them already. Its toggle turns it on and off, and the button at its
-        // right clones it.
+        // settings, or closes it when it shows them already. Its toggle turns it on and off, the button at its right
+        // clones it, and on a copy the one left of that takes it off.
         void Trays(Context& c)
         {
             struct Drop
@@ -937,7 +929,7 @@ namespace headsup
             Settings& s = c.s;
             form.Fade(!BarOn(s));
             std::optional<Drop> drop; // applied after the trays are written, so no list changes under its own loop
-            std::optional<PanelWidget> clone; // the same
+            std::optional<PanelWidget> clone, remove; // the same
             const std::string chipStart = form.Named(kWidgetChip) + "-";
             const auto sections         = c.layout.OptionsOf(WindowList::BarSections);
             const auto widgets          = c.layout.OptionsOf(WindowList::BarWidgets);
@@ -961,18 +953,21 @@ namespace headsup
                 {
                     const int w          = SlotOf(held[i]);
                     const std::string id = form.Id(kWidgetChip + std::to_string(w));
-                    form.Raw("<div class=\"btn raised wchip drag\" id=\"" + id + "\"" +
-                             TipAttribute(widgets[static_cast<size_t>(held[i].kind)].tip) + ">");
+                    // Two lines: its toggle with its clone and, on a copy, its remove at the right; then its name.
+                    form.Raw("<div class=\"btn raised wchip wtwo drag\" id=\"" + id + "\"" +
+                             TipAttribute(widgets[static_cast<size_t>(held[i].kind)].tip) + "><div class=\"wtop\">");
                     const bool was = s.widgets[w].on;
                     form.CheckAt((kWidgetChip + std::to_string(w) + kChipToggle).c_str(), s.widgets[w].on);
-                    if (HasCopies(held[i].kind))
-                    {
-                        const std::string cloneId = form.Id(kWidgetChip + std::to_string(w) + kChipClone);
-                        form.Raw("<div class=\"wclone\" id=\"" + cloneId + "\"" + TipAttribute(WordTip(c, WindowWord::WidgetTabsClone)) +
-                                 "><img src=\"" + IconSource(Icon::Clone) + "\"/></div>");
-                        if (!form.Off() && form.Clicked(cloneId)) clone = held[i];
-                    }
-                    form.Raw(EscapedRml(CopyName(c, held[i])) + "</div>");
+                    const auto action = [&](const char* name, Icon icon, WindowWord word) {
+                        const std::string actionId = form.Id(kWidgetChip + std::to_string(w) + name);
+                        form.Raw("<div class=\"wclone\" id=\"" + actionId + "\"" + TipAttribute(WordTip(c, word)) +
+                                 "><img src=\"" + IconSource(icon) + "\"/></div>");
+                        return !form.Off() && form.Clicked(actionId);
+                    };
+                    // Floated right, so the first is the rightmost.
+                    if (HasCopies(held[i].kind) && action(kChipClone, Icon::Clone, WindowWord::WidgetTabsClone)) clone = held[i];
+                    if (held[i].copy > 0 && action(kChipRemove, Icon::Delete, WindowWord::WidgetTabsRemoveCopy)) remove = held[i];
+                    form.Raw("</div><div class=\"wname\">" + EscapedRml(CopyName(c, held[i])) + "</div></div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
                     if (!form.Off() && was && s.widgets[w].on && form.Clicked(id)) c.state.settingsAsked = held[i];
                     form.Set(id, FormValueKind::Class, "on", {}, s.widgets[w].on);
@@ -991,6 +986,14 @@ namespace headsup
             {
                 c.state.settingsAsked = *added;
                 form.changed          = true;
+            }
+            if (remove)
+            {
+                // Its settings, if they showed, give way to the first copy's.
+                if (std::ranges::find(c.readings.settingsOf, *remove) != c.readings.settingsOf.end())
+                    c.state.settingsAsked = PanelWidget{remove->kind};
+                RemoveWidgetCopy(s, *remove);
+                form.changed = true;
             }
         }
 

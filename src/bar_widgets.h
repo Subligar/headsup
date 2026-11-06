@@ -113,6 +113,11 @@ namespace headsup
     // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
     // off. The last pin stays, by its pin or its star: Refused.
     enum class PressResult : uint8_t { None, Changed, Refused };
+    // What a popup's clone and remove chips tell, then the widget's slot.
+    constexpr const char* kWidgetClonePress = "widget clone ", *kWidgetRemovePress = "widget remove ";
+    // Clones the widget a press names or takes its copy off: the widget whose settings show next, the clone or the
+    // first copy; nothing for any other press, or when nothing changed.
+    std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press);
     PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
     // Whether the panel shows the conquest standings: the Zone widget, or a World Info showing Conquest Info.
     bool StandingsShown(const Settings& settings);

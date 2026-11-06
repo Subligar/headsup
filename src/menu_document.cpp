@@ -410,6 +410,13 @@ namespace headsup
                color(c.muted) + ";}";
         css += ".wclone:hover img{image-color:" + color(c.accent) + ";}";
         css += ".widget-name{color:" + color(c.text) + ";}";
+        // A tray's chip in two lines: its toggle and buttons, then its name. A press on a line is the chip's own: on a
+        // box inside the dragged chip, RmlUi made no click of it.
+        css += ".wchip.wtwo{height:auto;line-height:" + Em(kChipLine) + ";padding:" + Em(kChipLinePad) + " 0.7em;}";
+        css += ".wtwo .wtop{display:block;height:" + Em(kChipLine) + ";pointer-events:none;}";
+        css += ".wtwo .wclone{height:" + Em(kChipLine) + ";pointer-events:auto;}";
+        css += ".wtwo .check{pointer-events:auto;}";
+        css += ".wtwo .wname{display:block;height:" + Em(kChipLine) + ";white-space:nowrap;pointer-events:none;}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
         // The Widget Designer: its two lines as trays of chips side by side, wrapping, each line's end taking a drop.
         css += ".tray.design-line{display:flex;flex-wrap:wrap;margin-bottom:0.3em;}";

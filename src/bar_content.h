@@ -148,6 +148,8 @@ namespace headsup
         std::vector<PopupSection> sections;
         bool oneColumn = false; // its cards down one column, however tall
         bool settings  = true;  // its widget's settings show in place of it behind a cog: Game help's are in their own card
+        // While its settings show, what its title's clone and remove chips tell when pressed; empty for none.
+        std::string clonePress{}, removePress{};
         bool operator==(const PopupContent&) const = default;
     };
 

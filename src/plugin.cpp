@@ -961,7 +961,12 @@ public:
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
         for (const std::string& press : m_BarInput.TakePresses())
-            switch (headsup::ApplyPopupPress(m_Settings, press,
+            if (const std::optional<headsup::PanelWidget> next = headsup::ApplyWidgetPress(m_Settings, press))
+            {
+                m_SettingsChangedAt = now;
+                m_BarInput.ShowSettings(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)]);
+            }
+            else switch (headsup::ApplyPopupPress(m_Settings, press,
                 static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1)))
             {
             case headsup::PressResult::Changed: m_SettingsChangedAt = now; break;

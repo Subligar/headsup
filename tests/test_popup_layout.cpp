@@ -1103,3 +1103,39 @@ TEST(status_timers_favorites_time_lines_up_with_the_lists_and_their_pin_sits_clo
     const float pinToStar = icons[1]->x - icons[0]->x - icons[0]->width, starToName = signet->x - icons[1]->x - icons[1]->width;
     CHECK(pinToStar > 0.0f && pinToStar < starToName / 2.0f);
 }
+
+TEST(while_its_settings_show_a_widgets_clone_and_remove_chips_sit_left_of_the_cog_and_press_what_they_say)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+    PopupContent content = Sample();
+    content.clonePress   = "widget clone 4";
+    content.removePress  = "widget remove 17";
+    const auto pressed = [](const PopupLayout& l, const std::string& tells) -> const PopupTabChip* {
+        for (const PopupTabChip& chip : l.chips)
+            if (chip.press && chip.tab == tells) return &chip;
+        return nullptr;
+    };
+    // Only while the settings show.
+    const PopupLayout shut = LayoutPopup(content, m, BarShape::Pills, false, Fake);
+    CHECK(pressed(shut, "widget clone 4") == nullptr && pressed(shut, "widget remove 17") == nullptr);
+    const PopupLayout set = LayoutPopup(content, m, BarShape::Pills, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 200.0f});
+    const PopupTabChip *clone = pressed(set, "widget clone 4"), *remove = pressed(set, "widget remove 17");
+    CHECK(clone != nullptr && remove != nullptr);
+    // Round, as tall as the cog's, a cell's gap apart in a row: remove, clone, cog, pin.
+    const float gap = 0.6f * m.popupText;
+    CHECK(Near(clone->width, set.cog.width) && Near(clone->height, set.cog.height) && Near(clone->y, set.cog.y));
+    CHECK(Near(clone->x + clone->width + gap, set.cog.x) && Near(remove->x + remove->width + gap, clone->x));
+    std::vector<const PopupPiece*> on;
+    for (const PopupPiece& p : set.pieces)
+        if (p.kind == PopupPiece::Kind::Icon && p.tinted && p.x > remove->x && p.x + p.width < clone->x + clone->width)
+            on.push_back(&p);
+    std::ranges::sort(on, {}, &PopupPiece::x);
+    std::vector<Icon> marks;
+    for (const PopupPiece* p : on)
+        marks.push_back(p->icon);
+    CHECK((marks == std::vector<Icon>{Icon::Delete, Icon::Clone}));
+    // The first copy of a widget has no remove chip.
+    content.removePress.clear();
+    const PopupLayout first = LayoutPopup(content, m, BarShape::Pills, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 200.0f});
+    CHECK(pressed(first, "widget clone 4") != nullptr && first.chips.size() == 1);
+}

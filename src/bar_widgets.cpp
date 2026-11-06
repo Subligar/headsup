@@ -1738,27 +1738,57 @@ namespace headsup
         return marks;
     }
 
+    namespace
+    {
+        // Every popup of a pill's widgets, joined.
+        PopupContent JoinedPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
+        {
+            const std::vector<PanelWidget> pill = Members(Panel(settings), head);
+            if (pill.size() <= 1) return BarPopupContent(head, state, settings);
+            PopupContent joined;
+            joined.oneColumn = true;
+            for (size_t i = 0; i < pill.size(); ++i)
+            {
+                const PanelWidget w = pill[i];
+                if (!ContentOf(w, state, settings).hasPopup) continue;
+                if (i > 0 && !settings.Widget(pill[i - 1]).combineInPopup) continue;
+                PopupContent own = BarPopupContent(w, state, settings);
+                if (joined.title.empty())
+                    joined.icon = own.icon;
+                else if (!own.title.empty())
+                    joined.title.push_back(Text(kDot, Tone::Dim));
+                joined.title.insert(joined.title.end(), own.title.begin(), own.title.end());
+                joined.sections.insert(joined.sections.end(), own.sections.begin(), own.sections.end());
+                joined.oneColumn = joined.oneColumn && own.oneColumn;
+            }
+            return joined;
+        }
+    }
+
+    std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press)
+    {
+        for (const std::string_view kind : {kWidgetClonePress, kWidgetRemovePress})
+        {
+            if (!press.starts_with(kind)) continue;
+            const std::string number(press.substr(kind.size()));
+            char* end         = nullptr;
+            const long slot   = std::strtol(number.c_str(), &end, 10);
+            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return std::nullopt;
+            const PanelWidget widget = WidgetInSlot(static_cast<int>(slot));
+            if (kind == kWidgetClonePress) return HasCopies(widget.kind) ? CloneWidget(settings, widget) : std::nullopt;
+            if (widget.copy == 0 || !Placed(settings.barSections, widget)) return std::nullopt;
+            RemoveWidgetCopy(settings, widget);
+            return PanelWidget{widget.kind};
+        }
+        return std::nullopt;
+    }
+
     PopupContent PanelPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
     {
-        const std::vector<PanelWidget> pill = Members(Panel(settings), head);
-        if (pill.size() <= 1) return BarPopupContent(head, state, settings);
-        PopupContent joined;
-        joined.oneColumn = true;
-        for (size_t i = 0; i < pill.size(); ++i)
-        {
-            const PanelWidget w = pill[i];
-            if (!ContentOf(w, state, settings).hasPopup) continue;
-            if (i > 0 && !settings.Widget(pill[i - 1]).combineInPopup) continue;
-            PopupContent own = BarPopupContent(w, state, settings);
-            if (joined.title.empty())
-                joined.icon = own.icon;
-            else if (!own.title.empty())
-                joined.title.push_back(Text(kDot, Tone::Dim));
-            joined.title.insert(joined.title.end(), own.title.begin(), own.title.end());
-            joined.sections.insert(joined.sections.end(), own.sections.begin(), own.sections.end());
-            joined.oneColumn = joined.oneColumn && own.oneColumn;
-        }
-        return joined;
+        PopupContent content = JoinedPopupContent(head, state, settings);
+        if (HasCopies(head.kind)) content.clonePress = kWidgetClonePress + std::to_string(SlotOf(head));
+        if (head.copy > 0) content.removePress = kWidgetRemovePress + std::to_string(SlotOf(head));
+        return content;
     }
 
     PopupContent BarPopupContent(PanelWidget widget, const BarState& state, const Settings& settings)

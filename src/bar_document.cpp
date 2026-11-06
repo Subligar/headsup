@@ -645,6 +645,7 @@ namespace headsup
             case PopupPiece::Kind::Tab:
             case PopupPiece::Kind::PinChip:
             case PopupPiece::Kind::CogChip:
+            case PopupPiece::Kind::ActionChip:
                 rml += std::string("<div class=\"p tab") + (piece.open ? " lit" : "") + "\" style=\"" +
                        BoxAt(piece.x, piece.y, piece.width, piece.height) + "border-radius:" + Px(piece.height / 2.0f) +
                        ";\"></div>";

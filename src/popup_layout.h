@@ -40,6 +40,7 @@ namespace headsup
             Picture,     // a picture from the game's files, as an icon is drawn
             PinChip,     // the pin's round chip, drawn as a tab's; open while pinned
             CogChip,     // the settings chip left of the pin, drawn as a tab's; open while the settings show
+            ActionChip,  // the clone or remove chip left of the cog while the settings show, drawn as a tab's
             Cog,         // the cog on it
         };
         Kind kind = Kind::Text;

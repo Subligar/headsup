@@ -1674,6 +1674,21 @@ TEST(a_statuss_star_and_pin_add_it_and_take_it_off_and_its_star_takes_its_pin_to
         CHECK(ApplyPopupPress(s, bad, Nation::None) == PressResult::None);
 }
 
+TEST(a_widgets_clone_and_remove_presses_clone_it_or_take_the_copy_off_and_name_whose_settings_show_next)
+{
+    Settings s;
+    const PanelWidget zone{BarWidget::Zone};
+    const PopupContent first = PanelPopupContent(zone, BarState{}, s);
+    CHECK(first.removePress.empty() && !first.clonePress.empty()); // the first copy is never taken off
+    const std::optional<PanelWidget> copy = ApplyWidgetPress(s, first.clonePress);
+    CHECK(copy && copy->kind == BarWidget::Zone && copy->copy == 1 && Placed(s.barSections, *copy) && s.Widget(*copy).on);
+    const PopupContent second = PanelPopupContent(*copy, BarState{}, s);
+    CHECK(ApplyWidgetPress(s, second.removePress) == zone && !Placed(s.barSections, *copy));
+    CHECK(!ApplyWidgetPress(s, "widget remove 999") && !ApplyWidgetPress(s, "widget clone x") && !ApplyWidgetPress(s, "status pin 40"));
+    // The game's help has no copies.
+    CHECK(PanelPopupContent(BarWidget::GameHelp, BarState{}, s).clonePress.empty());
+}
+
 TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by_name)
 {
     // A grid's lines, its cells' texts a space apart.
@@ -2809,11 +2824,15 @@ TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with
     std::vector<PopupSection> sections = bags.sections;
     sections.insert(sections.end(), gil.sections.begin(), gil.sections.end());
     CHECK(both.sections == sections);
-    // A widget alone has its own popup.
-    CHECK(PanelPopupContent(BarWidget::VanaTime, state, settings) == BarPopupContent(BarWidget::VanaTime, state, settings));
+    // A widget alone has its own popup, with its clone chip.
+    PopupContent alone = BarPopupContent(BarWidget::VanaTime, state, settings);
+    alone.clonePress   = std::string(kWidgetClonePress) + std::to_string(SlotOf(BarWidget::VanaTime));
+    CHECK(PanelPopupContent(BarWidget::VanaTime, state, settings) == alone);
     // A combined pill whose first widget is switched off has its partner's popup alone.
     settings.Widget(BarWidget::Bags).on = false;
-    CHECK(PanelPopupContent(BarWidget::Bags, state, settings) == gil);
+    PopupContent partner = gil;
+    partner.clonePress   = std::string(kWidgetClonePress) + std::to_string(SlotOf(BarWidget::Bags)); // the pill's
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings) == partner);
 }
 
 TEST(a_combined_partner_can_leave_the_panel_or_the_popup_to_the_widget_it_follows)

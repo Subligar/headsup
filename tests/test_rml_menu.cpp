@@ -1907,18 +1907,20 @@ TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
     Window window;
     window.Page("widgets");
     const PanelWidget copy{BarWidget::Currency, 1};
-    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)));
-    CHECK(!window.Shows("widgets-widgets-remove-copy-gil"));
-    CHECK(window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)) + "-clone"));
+    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
+    const std::string copyChip = "widgets-layout-chip-" + std::to_string(SlotOf(copy));
+    CHECK(!window.Shows(chip + "-remove")); // the first copy is never taken off
+    CHECK(window.Click(chip + "-clone"));
     CHECK(Placed(window.settings.barSections, copy));
-    CHECK(window.Shows("widgets-layout-chip-" + std::to_string(SlotOf(copy))));
+    CHECK(window.Shows(copyChip) && window.Shows(copyChip + "-remove"));
     // The clone's settings show at once: a currency picked there is the clone's.
-    CHECK(window.Shows("widgets-widgets-remove-copy-gil-2"));
+    CHECK(window.shown == copy);
     window.Click("widgets-widgets-currency-gil-2");
     CHECK(window.Click("widgets-widgets-currency-gil-2-o-1"));
     CHECK(window.settings.Widget(copy).currency == 1 && window.settings.Widget(BarWidget::Currency).currency == kGilCurrency);
-    CHECK(window.Click("widgets-widgets-remove-copy-gil-2"));
-    CHECK(!Placed(window.settings.barSections, copy));
+    // Taken off, its settings give way to the first copy's.
+    CHECK(window.Click(copyChip + "-remove"));
+    CHECK(!Placed(window.settings.barSections, copy) && window.shown == PanelWidget{BarWidget::Currency});
     CHECK_EQ(window.Said(), "");
 }
 
