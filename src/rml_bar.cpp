@@ -296,6 +296,9 @@ namespace headsup
             Set(shown.element, Rml::PropertyId::MarginRight, shown.marginRight, after.margin);
             Set(shown.element, Rml::PropertyId::PaddingLeft, shown.paddingLeft, before.padding);
             Set(shown.element, Rml::PropertyId::PaddingRight, shown.paddingRight, after.padding);
+            const int section = PlaceOf(widgets.panel.placement, widget).first;
+            for (int k = 0; k < kBarSectionCount; ++k)
+                shown.element->SetClass(SectionClass(static_cast<BarSection>(k)), k == section);
             shown.element->SetClass(kJoinBeforeClass, joins.before);
             shown.element->SetClass(kJoinAfterClass, joins.after);
             const PanelWidget head = widgets.panel.group[w];

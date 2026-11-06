@@ -84,6 +84,8 @@ namespace headsup
     // Shares its pill with the widget before it, or after it, and has no edge or round corners on that side.
     constexpr const char* kJoinBeforeClass = "join-before";
     constexpr const char* kJoinAfterClass  = "join-after";
+    // A widget's class for the section it is in, whose side of the panel its content lines up with.
+    const char* SectionClass(BarSection section);
     // A meter's texts as wide as they are drawn, and where its parts go across it: its bar after barX, the texts
     // above and below centered on the bar.
     struct MeterWidths
