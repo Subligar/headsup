@@ -690,7 +690,6 @@ namespace headsup
             headsup::WidgetOptions& o = s.Widget(widget);
             const BarWidget kind      = widget.kind;
             const bool bar            = kind == BarWidget::Job && o.expMeter; // the EXP meter's own rows
-            form.Note(c.layout.OptionsOf(WindowList::BarWidgets)[static_cast<size_t>(kind)].tip);
             const bool off = !BarOn(s) || !o.on;
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
             const std::string scope = std::string(" ") + BarWidgetName(kind) + (widget.copy > 0 ? " " + std::to_string(widget.copy + 1) : "");
