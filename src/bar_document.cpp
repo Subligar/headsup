@@ -443,7 +443,8 @@ namespace headsup
         css += std::string(".widget.") + kLitClass + " .title{font-effect:glow(0px 3px 0px 0px " +
                RcssColor(Faded(p.accent, kLitGlow)) + ");}";
 
-        css += ".content{position:relative;top:" + Px(-kContentLift) + ";height:100%;}";
+        // A widget's content in the middle of its box, each of its lines in the middle of the widest.
+        css += ".content{position:relative;top:" + Px(-kContentLift) + ";height:100%;text-align:center;}";
         css += ".icon,.coin,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
         css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
                Px(m.gap) + ";}";
