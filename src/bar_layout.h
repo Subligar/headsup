@@ -84,7 +84,16 @@ namespace headsup
     BarLayout LayoutBar(float screenWidth, const BarMetrics& metrics, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
                         const BarPlacement& placement, int separators, float spacing,
-                        const std::array<PanelWidget, kPanelSlots>& groups, const std::array<float, kPanelSlots>& linked = {});
+                        const std::array<PanelWidget, kPanelSlots>& groups);
+    // A widget's padding inside its box on each side: padding, but none where it shares its pill with the shown widget
+    // before it, and its Linked Padding (linked, by SlotOf) where it shares it with the one after. shown is above 0
+    // for a widget with something to show.
+    struct WidgetPads
+    {
+        float left = 0.0f, right = 0.0f;
+    };
+    std::array<WidgetPads, kPanelSlots> PillPads(const BarPlacement& placement, const std::array<PanelWidget, kPanelSlots>& groups,
+        const std::array<float, kPanelSlots>& shown, const std::array<float, kPanelSlots>& linked, float padding);
     // The widget under the point, or for a combined pill its first widget, which names the pill's popup.
     std::optional<PanelWidget> WidgetAt(const BarLayout& layout, float x, float y);
     const BarRect* RectOf(const BarLayout& layout, PanelWidget widget);

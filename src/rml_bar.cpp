@@ -216,12 +216,10 @@ namespace headsup
             widgets.hasPopup[i] = c.hasPopup; // kept off the panel, a combined widget's popup still joins its pill's
             if (!c.shown) continue;
             Shown& shown        = m_Shown[i];
-            const float padding = WidgetPadding(m, look.settings);
-            if (!shown.measured || !(shown.content == c) || shown.padded != padding)
+            if (!shown.measured || !(shown.content == c))
             {
                 shown.content  = c;
                 shown.measured = true;
-                shown.padded   = padding;
                 // A widget of cells is as wide as its columns; another as its longer line.
                 shown.columns = c.cells ? CellColumns(c, [&](bool title, const Span& span) {
                     return SteadyWidth(host, {span}, title && c.subtitle.empty() ? look.TitleFace(c) : look.DetailFace(), bar);
@@ -234,27 +232,35 @@ namespace headsup
                                    : c.cells ? CellsWidth(shown.columns, m.gap)
                                              : std::max(SteadyWidth(host, c.title, look.TitleFace(c), bar),
                                                    c.subtitle.empty() ? 0.0f : SteadyWidth(host, c.subtitle, look.DetailFace(), bar));
-                shown.natural  = 2.0f * padding + look.Leading(c) + text;
+                shown.natural  = look.Leading(c) + text;
             }
             natural[i] = shown.natural;
         }
+        const std::array<WidgetPads, kPanelSlots> pads =
+            PillPads(widgets.panel.placement, widgets.panel.group, natural, LinkedRoom(look.settings), WidgetPadding(m, look.settings));
+        for (int i = 0; i < kPanelSlots; ++i)
+        {
+            m_Shown[i].pads = pads[static_cast<size_t>(i)];
+            if (natural[i] > 0.0f) natural[i] += pads[static_cast<size_t>(i)].left + pads[static_cast<size_t>(i)].right;
+        }
         // The target goes when its room cannot hold its padding, its icons and the start of its longest text.
         WidgetContent& target = widgets.contents[SlotOf(BarWidget::Target)];
-        const float targetPadding = WidgetPadding(m, look.settings);
-        const size_t targetName   = WidestTextSpan(target.title);
+        const WidgetPads targetPads = pads[SlotOf(BarWidget::Target)];
+        const float targetPadding   = targetPads.left + targetPads.right;
+        const size_t targetName     = WidestTextSpan(target.title);
         const float targetMinimum =
-            2.0f * targetPadding + look.Leading(target) +
+            targetPadding + look.Leading(target) +
             (targetName >= target.title.size()
                     ? 0.0f
                     : Width(host, Shortest(target.title[targetName].text, kFewLetters), look.TitleFace(target)));
         SharePopups(widgets.hasPopup, widgets.panel.group);
         const BarLayout layout = LayoutBar(screenWidth, m, look.palette.shape, natural, targetMinimum,
             widgets.panel.placement, look.settings.panelSeparators, static_cast<float>(look.settings.barWidgetSpacing),
-            widgets.panel.group, LinkedRoom(look.settings));
+            widgets.panel.group);
         if (layout.targetWidth > 0.0f && layout.targetWidth < natural[SlotOf(BarWidget::Target)])
         {
             // On each line the longest text is cut, as the name is; the rest keeps its room.
-            const float room = layout.targetWidth - 2.0f * targetPadding - look.Leading(target);
+            const float room = layout.targetWidth - targetPadding - look.Leading(target);
             const auto cut   = [&](std::vector<Span>& line, Memo<FitKey, std::string>& memo, const TextFace& face) {
                 const size_t at = WidestTextSpan(line);
                 if (at >= line.size()) return;
@@ -282,8 +288,8 @@ namespace headsup
             if (rect == nullptr) continue;
             // A plain ornate widget keeps the divider's clear space as its margin, but where it shares its pill.
             const PillJoins joins = JoinsOf(layout, widget);
-            const WidgetSide before = SideOf(look, widget, shown.padded, joins.before);
-            const WidgetSide after  = SideOf(look, widget, shown.padded, joins.after);
+            const WidgetSide before = SideOf(look, widget, shown.pads.left, joins.before);
+            const WidgetSide after  = SideOf(look, widget, shown.pads.right, joins.after);
             Set(shown.element, Rml::PropertyId::Left, shown.left, rect->x);
             Set(shown.element, Rml::PropertyId::Width, shown.width, rect->width - before.margin - after.margin);
             Set(shown.element, Rml::PropertyId::MarginLeft, shown.marginLeft, before.margin);

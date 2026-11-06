@@ -79,8 +79,8 @@ namespace headsup
         {
             Rml::Element* element = nullptr;
             WidgetContent content; // as the widget gave it, which its natural width was measured from
-            float natural = 0.0f;
-            float padded  = 0.0f; // the room from its edges to what it shows, that natural was measured with
+            float natural = 0.0f; // what it shows, without its padding
+            WidgetPads pads;      // the room from its edges to what it shows
             std::vector<float> columns; // a widget of cells', as measured
             MeterPlace meter;           // a meter's
             bool measured = false;

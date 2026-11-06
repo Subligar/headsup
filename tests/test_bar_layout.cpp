@@ -1255,23 +1255,26 @@ TEST(combined_widgets_touch_with_no_gap_or_diamond_between_them)
         }
 }
 
-TEST(a_linked_widgets_padding_puts_that_much_room_between_it_and_the_widget_it_pulls)
+TEST(a_linked_pills_widgets_keep_no_padding_between_them_but_the_linked_padding)
 {
-    for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
-    {
-        const PanelGroups g = Combined();
-        std::array<float, kPanelSlots> linked{};
-        linked[SlotOf(BarWidget::Zone)] = 12.0f; // after Zone, before the Weather it pulls
-        linked[SlotOf(BarWidget::Bags)] = 7.0f;  // after Bags, before Gil, on the right, placed from the screen's edge
-        const BarLayout l = LayoutBar(1920.0f, metrics, shape, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f, g.placement,
-            ShapeSeparators(shape), 0.0f, g.group, linked);
-        const BarRect zone = *RectOf(l, BarWidget::Zone), weather = *RectOf(l, BarWidget::Weather);
-        const BarRect bags = *RectOf(l, BarWidget::Bags), gil = *RectOf(l, BarWidget::Currency);
-        CHECK(Near(weather.x, zone.x + zone.width + 12.0f));
-        CHECK(Near(gil.x, bags.x + bags.width + 7.0f));
-        CHECK(Near(RectOf(l, BarWidget::EarthTime)->x + RectOf(l, BarWidget::EarthTime)->width,
-            RectOf(CombinedBar(1920.0f, shape, metrics), BarWidget::EarthTime)->x + 50.0f)); // the edge holds
-    }
+    const PanelGroups g = Combined();
+    std::array<float, kPanelSlots> linked{}, shown{};
+    linked[SlotOf(BarWidget::Zone)] = 12.0f; // after Zone, before the Weather it pulls
+    linked[SlotOf(BarWidget::Bags)] = 7.0f;  // after Bags, before Gil
+    for (const BarWidget w : {BarWidget::Zone, BarWidget::Weather, BarWidget::Job, BarWidget::Target, BarWidget::Currency,
+             BarWidget::Bags, BarWidget::EarthTime})
+        shown[SlotOf(w)] = 1.0f;
+    constexpr float kPad = 9.0f;
+    const std::array<WidgetPads, kPanelSlots> pads = PillPads(g.placement, g.group, shown, linked, kPad);
+    const auto of = [&](BarWidget w) { return pads[SlotOf(w)]; };
+    CHECK(of(BarWidget::Zone).left == kPad && of(BarWidget::Zone).right == 12.0f);
+    CHECK(of(BarWidget::Weather).left == 0.0f && of(BarWidget::Weather).right == kPad);
+    CHECK(of(BarWidget::Bags).left == kPad && of(BarWidget::Bags).right == 7.0f);
+    CHECK(of(BarWidget::Currency).left == 0.0f && of(BarWidget::Currency).right == kPad);
+    CHECK(of(BarWidget::Job).left == kPad && of(BarWidget::Job).right == kPad); // in a pill of its own
+    // A widget of the pill with nothing to show leaves its neighbour the edge.
+    shown[SlotOf(BarWidget::Weather)] = 0.0f;
+    CHECK(PillPads(g.placement, g.group, shown, linked, kPad)[SlotOf(BarWidget::Zone)].right == kPad);
 }
 
 TEST(a_combined_pill_that_does_not_fit_goes_whole)
