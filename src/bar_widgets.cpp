@@ -730,6 +730,11 @@ namespace headsup
             return Colored(WeekdayName(t.weekday), ElementColor(WeekdayElement(t.weekday)));
         }
 
+        std::string VanaClock(int64_t unixMs)
+        {
+            const VanaTime t = VanaAt(unixMs);
+            return HourMinute(t.hour, t.minute);
+        }
         std::string MoonText(const VanaTime& t) { return MoonPhaseName(t.moonPercent, t.moonDirection); }
 
         std::string VanaDate(const VanaTime& t)
@@ -1520,7 +1525,12 @@ namespace headsup
                             ListOf(Text(o.clockZone ? ZoneClockText(ZoneAt(*o.clockZone, state.unixMs), o.clock24, o.clockSeconds)
                                                     : ClockText(state.earthHour, state.earthMinute, o.clock24,
                                                           o.clockSeconds ? state.earthSecond : -1)))},
-                    {WidgetPart::ClockServer, ListOf(Text(ZoneClockText(ZoneAt(ClockZone::Japan, state.unixMs), o.clock24, false)))}};
+                    {WidgetPart::ClockServer,
+                        ListOf(Text(o.clockSecondZone ? ZoneClockText(ZoneAt(*o.clockSecondZone, state.unixMs), o.clock24, false)
+                                                      : LocalZoneName(state.unixMs, state.earthYear, state.earthMonth,
+                                                            state.earthDay, state.earthHour, state.earthMinute) +
+                                                            " " + ClockText(state.earthHour, state.earthMinute, o.clock24, -1)))},
+                    {WidgetPart::ClockVana, ListOf(Text(VanaClock(state.unixMs)))}};
             case BarWidget::GameHelp: return {};
             case BarWidget::Performance: return PerformanceParts(state, base);
             case BarWidget::Job: return JobParts(state.job, o.jobNames, o.expText, base);
@@ -1658,7 +1668,10 @@ namespace headsup
         bool zonedClock = false, localClock = false, serverClock = false;
         EachShownCopy(settings, BarWidget::EarthTime, [&](const WidgetOptions& o) {
             (o.clockZone ? zonedClock : localClock) = true;
-            serverClock = serverClock || PartOn(o.design, WidgetPart::ClockServer);
+            // The computer's zone is named by comparing its time with the time alone.
+            const bool second = PartOn(o.design, WidgetPart::ClockServer);
+            serverClock = serverClock || second || PartOn(o.design, WidgetPart::ClockVana);
+            localClock  = localClock || (second && !o.clockSecondZone);
         });
         // World Info reads the zone for a weather on the panel.
         bool worldWeather = false;

@@ -126,6 +126,24 @@ namespace headsup
             static_cast<int>(inDay % kMsPerMinute / kMsPerSecond), static_cast<int>(date.year), date.month, date.day};
     }
 
+    std::string LocalZoneName(int64_t unixMs, int year, int month, int day, int hour, int minute)
+    {
+        const int64_t localMs = DaysFromCivil(year, month, day) * kMsPerDay + hour * kMsPerHour + minute * kMsPerMinute;
+        const auto ahead      = static_cast<int>(FloorDiv(localMs - FloorDiv(unixMs, kMsPerMinute) * kMsPerMinute, kMsPerMinute));
+        // A zone in daylight saving first: US Pacific's summer is Arizona's whole year, and more play on the coast.
+        for (const bool summer : {true, false})
+            for (const ZoneRule& z : kZones)
+            {
+                const bool daylight = Daylight(z, unixMs);
+                if (daylight == summer && z.standardMinutes + (daylight ? kHourMinutes : 0) == ahead)
+                    return daylight ? z.daylight : z.standard;
+            }
+        const int minutes = ahead < 0 ? -ahead : ahead;
+        std::string name  = std::string("UTC") + (ahead < 0 ? "-" : "+") + std::to_string(minutes / kHourMinutes);
+        if (minutes % kHourMinutes != 0) name += ":" + std::to_string(minutes % kHourMinutes);
+        return name;
+    }
+
     const char* JstWeekdayName(int weekday) { return kWeekdays[((weekday % kDaysPerWeek) + kDaysPerWeek) % kDaysPerWeek]; }
 
     double SecondsToDailyReset(int64_t unixMs) { return SecondsTo(JstDay(unixMs) + 1, unixMs); }

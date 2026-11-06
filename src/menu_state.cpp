@@ -54,10 +54,11 @@ namespace headsup
         return static_cast<ClockZone>(choice - 1);
     }
 
-    std::string ClockZoneChoiceName(int choice, const WindowLayout& layout)
+    std::string ClockZoneChoiceName(int choice, const WindowLayout& layout, const std::string& localZone)
     {
-        const std::optional<ClockZone> zone = ClockZoneOfChoice(choice);
-        return zone ? ClockZoneName(*zone) : layout.WordOf(WindowWord::Local).name;
+        if (const std::optional<ClockZone> zone = ClockZoneOfChoice(choice)) return ClockZoneName(*zone);
+        const std::string automatic = layout.WordOf(WindowWord::Local).name;
+        return localZone.empty() ? automatic : automatic + " (" + localZone + ")";
     }
 
     std::string ShowSummary(const LineShow& show, std::span<const ShowCondition> offered, const WindowLayout& layout)

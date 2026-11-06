@@ -1110,6 +1110,8 @@ public:
             .exportable       = true,
 #endif
             .settingsOf       = SettingsShownNow(),
+            .partMarks        = {},
+            .localZone        = LocalZoneNow(),
         };
         if (!readings.settingsOf.empty())
             readings.partMarks = headsup::PartMarksNow(readings.settingsOf, BarStateNow(now), m_Settings);
@@ -2987,6 +2989,16 @@ private:
     }
 
     // Your own title is the client's; another player's comes with a check of them.
+    static std::string LocalZoneNow()
+    {
+        const auto clock          = std::chrono::system_clock::now();
+        const std::time_t seconds = std::chrono::system_clock::to_time_t(clock);
+        const std::tm* local      = std::localtime(&seconds);
+        return local == nullptr ? std::string()
+                                : headsup::LocalZoneName(UnixMsOf(clock), local->tm_year + 1900, local->tm_mon + 1,
+                                      local->tm_mday, local->tm_hour, local->tm_min);
+    }
+
     uint32_t TitleOf(bool self, uint32_t serverId, IPlayer* player) const
     {
         if (self) return player->GetTitle();

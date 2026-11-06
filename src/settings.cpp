@@ -237,6 +237,7 @@ namespace headsup
         constexpr const char* kTrue                = "true";
         constexpr const char* kAshitaTrue          = "1";
         constexpr const char* kClockZoneKey       = "clockZone"; // the Clock widget's: a kClockZoneNames or kLocalZone
+        constexpr const char* kClockSecondZoneKey = "clockSecondZone"; // its Secondary Timezone's, the same way
         constexpr const char* kLocalZone          = "local";
         constexpr const char* kExpMeterKey       = "jobExpMeter";
         constexpr const char* kTargetDetectionKey = "barTargetDetection";
@@ -1203,6 +1204,7 @@ namespace headsup
             if (w.currency < 0 || w.currency >= kCurrencyCount) w.currency = fresh.currency;
             if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
+            if (w.clockSecondZone && static_cast<int>(*w.clockSecondZone) >= kClockZoneCount) w.clockSecondZone = fresh.clockSecondZone;
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
             w.expBarHeight = std::clamp(w.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight);
             w.targetDetection &= kAllDetection;
@@ -1275,6 +1277,11 @@ namespace headsup
                 // kClockZoneCount for a name of none of them, as kLocalZone is.
                 if (const int zone = NameIndex(kClockZoneNames, kClockZoneCount, text(kClockZoneKey), kClockZoneCount); zone < kClockZoneCount)
                     o.clockZone = static_cast<ClockZone>(zone);
+                const std::string second = text(kClockSecondZoneKey);
+                if (const int zone = NameIndex(kClockZoneNames, kClockZoneCount, second, kClockZoneCount); zone < kClockZoneCount)
+                    o.clockSecondZone = static_cast<ClockZone>(zone);
+                else if (second == kLocalZone)
+                    o.clockSecondZone.reset();
                 o.clock24      = flag(kClock24Key, o.clock24);
                 o.clockSeconds = flag(kClockSecondsKey, o.clockSeconds);
                 break;
@@ -1331,6 +1338,7 @@ namespace headsup
                 break;
             case BarWidget::EarthTime:
                 text(kClockZoneKey, o.clockZone ? kClockZoneNames[static_cast<int>(*o.clockZone)] : kLocalZone);
+                text(kClockSecondZoneKey, o.clockSecondZone ? kClockZoneNames[static_cast<int>(*o.clockSecondZone)] : kLocalZone);
                 flag(kClock24Key, o.clock24);
                 flag(kClockSecondsKey, o.clockSeconds);
                 break;

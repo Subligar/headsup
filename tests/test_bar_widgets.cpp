@@ -1872,6 +1872,31 @@ TEST(a_clock_in_a_picked_zone_is_read_from_the_time_alone_and_the_computers_from
     CHECK(opened.unixTime && opened.localTime);
 }
 
+TEST(the_clocks_secondary_line_reads_in_its_own_zone_and_vanadiels_time_is_a_part_too)
+{
+    Settings settings;
+    BarState state;
+    state.unixMs    = 1791527400000 + 42000; // Friday 15:30:42 JST
+    state.earthYear = 2026, state.earthMonth = 10, state.earthDay = 9; // the computer's own: 08:30:42 in Berlin
+    state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
+    WidgetOptions& o = settings.Widget(BarWidget::EarthTime);
+    CHECK(o.clockSecondZone == ClockZone::Japan);
+    o.design        = DesignFrom(BarWidget::EarthTime, "time | server");
+    o.clockSecondZone = ClockZone::UsPacific;
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle) == "PDT 23:30");
+    o.clockSecondZone.reset(); // Automatic: the computer's, named
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle) == "CEST 08:30");
+    o.design = DesignFrom(BarWidget::EarthTime, "time vana | -server");
+    const VanaTime t       = VanaAt(state.unixMs);
+    const std::string both = Joined(Content(BarWidget::EarthTime, state, settings).title);
+    CHECK(both.starts_with("08:30") && both.ends_with(" " + Printed("%02d", t.hour) + ":" + Printed("%02d", t.minute)));
+    for (WidgetOptions& each : settings.widgets)
+        each.on = false;
+    o.on = true;
+    o.design = DesignFrom(BarWidget::EarthTime, "-time vana | -server");
+    CHECK(NeedsOf(settings, std::nullopt).unixTime);
+}
+
 TEST(the_clocks_read_on_a_twelve_hour_clock_when_asked)
 {
     CHECK(ClockText(21, 7, true) == "21:07" && ClockText(21, 7, false) == "9:07 PM");

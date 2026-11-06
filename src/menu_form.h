@@ -48,6 +48,7 @@ namespace headsup
         std::vector<PanelWidget> settingsOf;
         // The picture each part's chip in the Widget Designer shows, as the game is now.
         std::array<PartMark, kWidgetPartCount> partMarks{};
+        std::string localZone; // the computer's time zone, as LocalZoneName names it
     };
 
     // The Game Windows card's own state: its filter and whether it lists every window.

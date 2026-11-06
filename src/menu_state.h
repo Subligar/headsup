@@ -35,7 +35,8 @@ namespace headsup
     constexpr int kClockZoneChoices = kClockZoneCount + 1;
     int ClockZoneChoice(const std::optional<ClockZone>& zone);
     std::optional<ClockZone> ClockZoneOfChoice(int choice);
-    std::string ClockZoneChoiceName(int choice, const WindowLayout& layout);
+    // Automatic, the computer's own, is named with its zone: "Automatic (PDT)".
+    std::string ClockZoneChoiceName(int choice, const WindowLayout& layout, const std::string& localZone);
 
     // What the Show dropdown reads when closed: Always, the one condition checked, how many are, or Never. Only the
     // conditions the kind is offered count.

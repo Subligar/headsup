@@ -829,13 +829,16 @@ namespace headsup
                         o.bag = bags[static_cast<size_t>(choice)];
                     }
                     break;
-                case WidgetTabsRow::TimeZone:
+                case WidgetTabsRow::LocalTimezone:
+                case WidgetTabsRow::SecondaryTimezone:
                     if (kind == BarWidget::EarthTime)
                     {
-                        int zone = ClockZoneChoice(o.clockZone);
+                        std::optional<ClockZone>& picked =
+                            static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::LocalTimezone ? o.clockZone : o.clockSecondZone;
+                        int zone = ClockZoneChoice(picked);
                         form.NumberDropdown(label.c_str(), zone, 0, kClockZoneChoices - 1,
-                            [&](int choice) { return ClockZoneChoiceName(choice, c.layout); }, row.tip);
-                        o.clockZone = ClockZoneOfChoice(zone);
+                            [&](int choice) { return ClockZoneChoiceName(choice, c.layout, c.readings.localZone); }, row.tip);
+                        picked = ClockZoneOfChoice(zone);
                     }
                     break;
                 case WidgetTabsRow::N24Hour:

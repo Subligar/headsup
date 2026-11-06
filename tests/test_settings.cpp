@@ -1106,6 +1106,14 @@ TEST(the_clocks_zone_is_saved_by_name_and_an_unknown_name_keeps_the_default)
     CHECK(fresh.values["clockZone"] == "local");
     store.values = {{"clockZone", "mars"}};
     CHECK(!LoadSettings(store).Widget(BarWidget::EarthTime).clockZone.has_value());
+    // The secondary zone is Japan's until another is picked, Automatic included.
+    CHECK(fresh.values["clockSecondZone"] == "japan");
+    Settings automatic;
+    automatic.Widget(BarWidget::EarthTime).clockSecondZone.reset();
+    MapStore second;
+    SaveSettings(automatic, second);
+    CHECK(second.values["clockSecondZone"] == "local");
+    CHECK(!LoadSettings(second).Widget(BarWidget::EarthTime).clockSecondZone.has_value());
 }
 
 TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)

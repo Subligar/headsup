@@ -249,18 +249,20 @@ TEST(the_sync_dropdown_lists_no_then_its_targets)
     CHECK(!names(0, 0) && !names(0, 2) && !SyncEntryLabel(targets, 0, kWindowLayout).empty());
 }
 
-TEST(the_clocks_zone_dropdown_lists_local_first_and_then_every_zone)
+TEST(the_clocks_zone_dropdown_lists_automatic_with_the_computers_zone_first_and_then_every_zone)
 {
+    const std::string automatic = kWindowLayout.WordOf(WindowWord::Local).name;
     CHECK_EQ(kClockZoneChoices, kClockZoneCount + 1);
-    CHECK(ClockZoneChoiceName(0, kWindowLayout) == kWindowLayout.WordOf(WindowWord::Local).name);
-    CHECK(ClockZoneChoiceName(1, kWindowLayout) == ClockZoneName(ClockZone(0)));
+    CHECK(ClockZoneChoiceName(0, kWindowLayout, "PDT") == automatic + " (PDT)");
+    CHECK(ClockZoneChoiceName(0, kWindowLayout, "") == automatic); // the computer gave no time
+    CHECK(ClockZoneChoiceName(1, kWindowLayout, "PDT") == ClockZoneName(ClockZone(0)));
     CHECK(ClockZoneChoice(std::nullopt) == 0 && !ClockZoneOfChoice(0).has_value());
     CHECK(!ClockZoneOfChoice(-1).has_value() && !ClockZoneOfChoice(kClockZoneChoices).has_value());
     for (int z = 0; z < kClockZoneCount; ++z)
     {
         const auto zone = static_cast<ClockZone>(z);
         CHECK(ClockZoneOfChoice(ClockZoneChoice(zone)) == zone);
-        CHECK(ClockZoneChoiceName(ClockZoneChoice(zone), kWindowLayout) == ClockZoneName(zone));
+        CHECK(ClockZoneChoiceName(ClockZoneChoice(zone), kWindowLayout, "PDT") == ClockZoneName(zone));
     }
 }
 

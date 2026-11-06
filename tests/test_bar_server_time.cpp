@@ -72,3 +72,14 @@ TEST(a_clock_zone_follows_its_daylight_saving_rule)
     CHECK(ZoneAt(ClockZone::UsEastern, kUsFallBack - 1) == (ZoneTime{6, 1, 59, "EDT"}));
     CHECK(ZoneAt(ClockZone::UsEastern, kUsFallBack) == (ZoneTime{6, 1, 0, "EST"}));
 }
+
+TEST(the_computers_zone_is_named_by_the_first_zone_its_offset_matches_now_else_by_its_offset)
+{
+    // Friday 15:30 JST is 08:30 in Berlin (CEST, two hours ahead of UTC), and Eastern Europe's winter is too.
+    CHECK(LocalZoneName(kFriday1530Jst, 2026, 10, 9, 8, 30) == "CEST");
+    CHECK(LocalZoneName(kFriday1530Jst, 2026, 10, 8, 23, 30) == "PDT");
+    CHECK(LocalZoneName(kFriday1530Jst, 2026, 10, 9, 15, 30) == "JST");
+    // India and Brazil, in none of the zones offered.
+    CHECK(LocalZoneName(kFriday1530Jst, 2026, 10, 9, 12, 0) == "UTC+5:30");
+    CHECK(LocalZoneName(kFriday1530Jst, 2026, 10, 9, 3, 30) == "UTC-3");
+}
