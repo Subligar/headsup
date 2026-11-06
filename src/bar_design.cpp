@@ -13,7 +13,7 @@ namespace headsup
         constexpr P kTarget[] = {P::TargetAggro, P::TargetName, P::TargetDistance, P::TargetDetection, P::TargetLevel,
             P::TargetPlayer, P::TargetWeak};
         constexpr P kCurrency[] = {P::CurrencyCoin, P::CurrencyAmount, P::CurrencyName};
-        constexpr P kBags[]   = {P::BagCount, P::BagName};
+        constexpr P kBags[]   = {P::BagIcon, P::BagCount, P::BagName};
         constexpr P kClock[]  = {P::ClockTime, P::ClockServer};
         constexpr P kJob[]    = {P::JobJobs, P::JobExp, P::JobBar};
         constexpr P kPerf[]   = {P::PerfFps, P::PerfSent, P::PerfReceived, P::PerfPercent, P::PerfPing, P::PerfMemory,
@@ -25,14 +25,14 @@ namespace headsup
         // By WidgetPart.
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
             "chance", "day", "time", "date", "moon", "aggro", "name", "distance", "detection", "level", "player", "weak",
-            "coin", "amount", "currency", "count", "bag", "time", "server", "jobs", "exp", "bar",
+            "coin", "amount", "currency", "count", "bag", "icon", "time", "server", "jobs", "exp", "bar",
             "fps", "sent", "received", "percent", "ping", "memory", "messages", "count", "health", "pins", "icon",
             "main", "details"};
 
         // As each widget showed before it had a design.
         constexpr const char* kDefaults[kBarWidgetCount] = {"name | region crest nation", "icon weather | chance",
             "day time | -date moon", "aggro name distance -detection | level player -weak", "coin amount | currency",
-            "count | bag", "time | -server", "", "-fps sent received percent -ping -memory messages |",
+            "icon count | bag", "time | -server", "", "-fps sent received percent -ping -memory messages |",
             "jobs | exp bar", "count | health", "pins |", "icon main | details"};
 
         constexpr char kLineBreak = '|', kOffMark = '-', kSpace = ' ';
@@ -206,6 +206,7 @@ namespace headsup
         case WidgetPart::WorldIcon: return PartMark{Icon::Fire};
         case WidgetPart::TargetAggro: return PartMark{Icon::AggroNQ};
         case WidgetPart::TargetDetection: return PartMark{Icon::Sight};
+        case WidgetPart::BagIcon: return PartMark{Icon::Bag};
         case WidgetPart::ZoneCrest: return PartMark{std::nullopt, GamePicture::SanDoriaCrest};
         case WidgetPart::PerfMessages: return PartMark{std::nullopt, GamePicture::PlayOnlineMail};
         case WidgetPart::CurrencyCoin: return PartMark{std::nullopt, GamePicture::None, true};

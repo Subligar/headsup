@@ -38,6 +38,7 @@ ICONS = [(name, f'third_party/mobdb-icons/{name}.png', '') for name in
     ('StarEmpty', 'resources/icons/star_unfilled.png', 'not a favorite'),
     ('Clone', 'resources/icons/copy.png', 'clones a widget'),
     ('Flag', 'resources/icons/flag.png', 'a region with no supply run yet'),
+    ('Bag', 'resources/icons/bag.png', "the Inventory widget's bag"),
 ]
 # An icon is drawn at about a quarter of its pixels with linear filtering and no smaller copies, which mixes the clear
 # pixels two out from its edge into it: those take the colors beside them, so the edge keeps its own.

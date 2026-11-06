@@ -1511,8 +1511,8 @@ namespace headsup
             {
                 const std::optional<BagCount>& bag = state.bags[o.bag];
                 base.hasPopup = true;
-                return {{WidgetPart::BagCount, ListOf(bag ? BagFill(*bag) : Text("-"))},
-                    {WidgetPart::BagName, ListOf(Text(o.bag == static_cast<int>(kInventory) ? "Bags" : ContainerName(o.bag)))}};
+                return {{WidgetPart::BagIcon, ListOf(Mark(Icon::Bag))}, {WidgetPart::BagCount, ListOf(bag ? BagFill(*bag) : Text("-"))},
+                    {WidgetPart::BagName, ListOf(Text(ContainerName(o.bag)))}};
             }
             case BarWidget::EarthTime:
                 base.hasPopup = true;
@@ -1855,7 +1855,7 @@ namespace headsup
         case BarWidget::Currency: return CurrencyPopup(state, settings);
         case BarWidget::Bags:
         {
-            popup.title   = ListOf(Text("Bags"));
+            popup.title   = ListOf(Text("Inventory"));
             PopupRow grid = Grid(kBagColumns, kBagColumns * kContainerCount);
             for (const int c : BagChoices())
             {

@@ -643,8 +643,10 @@ TEST(gil_bags_and_earth_time)
     state.bags[0]         = BagCount{45, 80};
     state.bags[5]         = BagCount{30, 30}; // a full satchel
     const WidgetContent b = Content(BarWidget::Bags, state, settings);
-    CHECK(Joined(b.title) == "45 / 80" && Joined(b.subtitle) == "Bags" && b.hasPopup);
+    CHECK(Joined(b.title) == "45 / 80" && Joined(b.subtitle) == "Inventory" && b.hasPopup);
+    CHECK(b.icons.size() == 1 && b.icons[0] == Icon::Bag); // its bag leads both lines
     const PopupContent bagsPopup = BarPopupContent(BarWidget::Bags, state, settings);
+    CHECK(Joined(bagsPopup.title) == "Inventory");
     const PopupRow& rows         = bagsPopup.sections[0].rows[0];
     CHECK(rows.kind == RowKind::Grid && rows.columns == 2 && rows.cells.size() == 6); // Storage too, with no room
     CHECK(Joined(rows.cells[2].text) == "Storage");

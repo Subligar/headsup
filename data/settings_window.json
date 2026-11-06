@@ -1028,7 +1028,7 @@
         {"name": "Vana'diel Clock", "tip": "The Vana'diel day, time and moon."},
         {"name": "Target", "tip": "Your target's name, level and con. Hover a mob for its details."},
         {"name": "Currency", "tip": "Gil, or another currency. Hover for your favorite currencies and every other one, with a star to keep one at the top."},
-        {"name": "Bags", "tip": "How full your inventory is. Hover for every bag."},
+        {"name": "Inventory", "tip": "How full your inventory is. Hover for every bag."},
         {"name": "Clock", "tip": "Your computer's time, or another time zone's, over the server's if you like. Hover for the daily reset and conquest tally."},
         {"name": "Game Help", "tip": "The game's help text, in a bar of its own under the top panel."},
         {"name": "Performance", "tip": "Frames per second, bytes sent and received each second, your ping and the game's memory, as you pick. Amber or red when data stops or memory runs low. Hover for your ping, the last server data, PlayOnline messages, the processor, the frames and the LinuxXI plugin's figures."},
@@ -1238,8 +1238,8 @@
     {
       "key": "setup-panel",
       "options": [
-        {"name": "Full", "tip": "The zone, weather, both clocks, your job, target, gil and bags, your frame rate, connection, distance and the game's help line."},
-        {"name": "Simple", "tip": "The zone, Vana'diel's time, your job, target, gil and bags."},
+        {"name": "Full", "tip": "The zone, weather, both clocks, your job, target, gil and inventory, your frame rate, connection, distance and the game's help line."},
+        {"name": "Simple", "tip": "The zone, Vana'diel's time, your job, target, gil and inventory."},
         {"name": "Minimal", "tip": "The zone, Vana'diel's time and your target."},
         {"name": "No Top Panel", "tip": "No Top Panel. You can turn it on again in the settings window."}
       ]
@@ -1256,7 +1256,7 @@
       "options": [
         {"name": "Where You Are", "tip": "The zone, its weather and what is around you."},
         {"name": "Time", "tip": "Vana'diel's time and yours."},
-        {"name": "You", "tip": "Your job, experience, gil, bags, party and target."},
+        {"name": "You", "tip": "Your job, experience, gil, inventory, party and target."},
         {"name": "System", "tip": "Your frame rate, connection, memory and the game's help line."}
       ]
     },
@@ -1316,6 +1316,7 @@
         {"name": "Currency Name", "tip": "The currency's name, when it is not gil."},
         {"name": "Count", "tip": "The bag's used and total slots."},
         {"name": "Bag Name", "tip": "The bag's name."},
+        {"name": "Bag Icon", "tip": "A bag's picture."},
         {"name": "Time", "tip": "The time in your time zone."},
         {"name": "Server Time", "tip": "Japan's time, which the server keeps and the resets go by."},
         {"name": "Jobs", "tip": "Your jobs and levels."},

@@ -21,7 +21,7 @@ namespace headsup
         VanaDay, VanaTime, VanaDate, VanaMoon,
         TargetAggro, TargetName, TargetDistance, TargetDetection, TargetLevel, TargetPlayer, TargetWeak,
         CurrencyCoin, CurrencyAmount, CurrencyName,
-        BagCount, BagName,
+        BagCount, BagName, BagIcon,
         ClockTime, ClockServer,
         JobJobs, JobExp, JobBar,
         PerfFps, PerfSent, PerfReceived, PerfPercent, PerfPing, PerfMemory, PerfMessages,
