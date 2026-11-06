@@ -13,7 +13,7 @@
             {
               "key": "theme",
               "name": "Theme",
-              "tip": "The look of the top panel, its popups, this config window, the fishing bar and many more parts of HeadsUp. Your own themes are listed under the built-in ones.",
+              "tip": "The look of the top panel, its pop-outs, this config window, the fishing bar and many more parts of HeadsUp. Your own themes are listed under the built-in ones.",
               "words": [
                 {"key": "built-in", "name": "Built-in Themes"},
                 {"key": "custom", "name": "Custom Themes"},
@@ -43,7 +43,7 @@
             {"key": "theme-top", "name": "Top Color", "indent": true, "tip": "The strip's color at its top, with its opacity."},
             {"key": "theme-bottom", "name": "Bottom Color", "indent": true, "tip": "The strip's color at its foot, with its opacity."},
             {"key": "window-type", "name": "Window Type", "indent": true, "tip": "Which of the game's eight window frames the art is. Auto is the one picked in the game's Config, Windows, Shared, followed as you change it. Default: Auto."},
-            {"key": "window-border", "name": "Border", "indent": true, "tip": "A border around the top panel, the help bar, the popups, the fishing bar and this window, in the color of the game's window frame. Off, they are the window's background alone."},
+            {"key": "window-border", "name": "Border", "indent": true, "tip": "A border around the top panel, the help bar, the pop-outs, the fishing bar and this window, in the color of the game's window frame. Off, they are the window's background alone."},
             {
               "key": "separator-style",
               "name": "Separator Style",
@@ -67,15 +67,15 @@
                 {"key": "pill", "name": "Pill", "tip": "A widget's pill."},
                 {"key": "pill-border", "name": "Pill Border"},
                 {"key": "title", "name": "Title", "tip": "A widget's title on the strip."},
-                {"key": "subtitle", "name": "Subtitle", "tip": "A widget's second line, and dim text in popups."},
+                {"key": "subtitle", "name": "Subtitle", "tip": "A widget's second line, and dim text in pop-outs."},
                 {"key": "divider", "name": "Divider", "tip": "The diamonds between widgets on an ornate strip."},
-                {"key": "panel-top", "name": "Popup Top", "tip": "A popup's color at its top."},
-                {"key": "panel-bottom", "name": "Popup Bottom", "tip": "A popup's color at its foot."},
-                {"key": "panel-border", "name": "Popup Border"},
-                {"key": "panel-outer", "name": "Popup Outer Border", "tip": "A ring around an ornate popup's border; clear for none."},
-                {"key": "text", "name": "Popup Text"},
-                {"key": "heading", "name": "Popup Heading"},
-                {"key": "tag-fill", "name": "Tag Fill", "tip": "The small labels in popups."},
+                {"key": "panel-top", "name": "Pop-out Top", "tip": "A pop-out's color at its top."},
+                {"key": "panel-bottom", "name": "Pop-out Bottom", "tip": "A pop-out's color at its foot."},
+                {"key": "panel-border", "name": "Pop-out Border"},
+                {"key": "panel-outer", "name": "Pop-out Outer Border", "tip": "A ring around an ornate pop-out's border; clear for none."},
+                {"key": "text", "name": "Pop-out Text"},
+                {"key": "heading", "name": "Pop-out Heading"},
+                {"key": "tag-fill", "name": "Tag Fill", "tip": "The small labels in pop-outs."},
                 {"key": "tag-border", "name": "Tag Border"},
                 {"key": "tag-text", "name": "Tag Text"},
                 {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."}
@@ -332,7 +332,7 @@
         {
           "key": "layout",
           "name": "Layout",
-          "description": "Drag a widget to move it, and click one that is on to open its settings in its popup on the top panel. Click it again to close them. Its toggle turns it on and off. You can also open a widget's settings from the cog in its popup.",
+          "description": "Drag a widget to move it, and click one that is on to open its settings in its pop-out on the top panel. Click it again to close them. Its toggle turns it on and off. You can also open a widget's settings from the cog in its pop-out.",
           "settings": [
             {"key": "trays"},
             {"key": "reset-layout", "name": "Reset Layout", "tip": "Puts every widget back in its first place and takes off any copies. Switches stay."}
@@ -341,28 +341,28 @@
         {
           "key": "widgets",
           "name": "Widgets",
-          "description": "Each widget's settings, in its popup on the top panel.",
+          "description": "Each widget's settings, in its pop-out on the top panel.",
           "settings": [
             {
               "key": "widget-tabs",
               "rows": [
                 {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
-                {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one popup for both. That widget leaves its own place. Default is None."},
-                {"key": "combine-on-panel", "name": "Show Combined on Panel", "tip": "Shows the combined widget in the pill. Off, only this widget shows on the top panel, and the other's popup still joins this one's. Default is on."},
-                {"key": "combine-in-popup", "name": "Show Combined in Popup", "tip": "Adds the combined widget's popup to this one's. Off, the popup shows this widget's alone, so a widget combined with a copy of itself is not listed twice. Default is on."},
+                {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one pop-out for both. That widget leaves its own place. Default is None."},
+                {"key": "combine-on-panel", "name": "Show Combined on Panel", "tip": "Shows the combined widget in the pill. Off, only this widget shows on the top panel, and the other's pop-out still joins this one's. Default is on."},
+                {"key": "combine-in-popup", "name": "Show Combined in Pop-out", "tip": "Adds the combined widget's pop-out to this one's. Off, the pop-out shows this widget's alone, so a widget combined with a copy of itself is not listed twice. Default is on."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
                 {"key": "detection-icons", "name": "Detection Icons", "tip": "Which of a mob's icons the Detection part shows. Default is all of them."},
-                {"key": "blue-magic", "name": "Blue Magic", "tip": "In the popup, a mob's TP moves that a blue mage can learn are shown in the Blue Magic Color. Default is on."},
+                {"key": "blue-magic", "name": "Blue Magic", "tip": "In the pop-out, a mob's TP moves that a blue mage can learn are shown in the Blue Magic Color. Default is on."},
                 {"key": "blue-magic-color", "name": "Blue Magic Color", "tip": "The color of TP moves a blue mage can learn. Default is blue."},
                 {"key": "blue-magic-learned", "name": "Learned Blue Magic", "tip": "How a TP move whose blue magic you already know is shown: still blue with a star after it, or as plain text. Default is Star."},
                 {"key": "currency", "name": "Currency"},
-                {"key": "nations", "name": "Nations", "tip": "Whose regions the widget counts when it shows Conquest Info, and its popup lists."},
+                {"key": "nations", "name": "Nations", "tip": "Whose regions the widget counts when it shows Conquest Info, and its pop-out lists."},
                 {"key": "conquest-grid", "name": "Layout", "tip": "How the nations are laid out when it shows more than one: two lines of two, or all on one line. Default is 2 x 2."},
                 {"key": "shows", "name": "Shows", "tip": "What the widget tells on the panel, with a countdown. Add a copy to show another."},
                 {"key": "ship", "name": "Ship", "tip": "The boat or airship whose next departure the widget shows."},
                 {"key": "element", "name": "Element", "tip": "Shows when that element's weather can next roll in the zone you are in, and its chance that day."},
                 {"key": "guild", "name": "Guild", "tip": "The guild shop whose hours the widget shows."},
-                {"key": "popup", "name": "Popup", "tip": "The parts its popup shows when you hover it."},
+                {"key": "popup", "name": "Pop-out", "tip": "The parts its pop-out shows when you hover it."},
                 {"key": "bag", "name": "Bag", "tip": "The bag this widget shows on the panel. Hover it for every bag."},
                 {"key": "local-timezone", "name": "Local Timezone", "tip": "The zone of the Local Time button. Automatic is your computer's. Another zone goes before the time, as in PDT 21:07. Default is Automatic."},
                 {"key": "secondary-timezone", "name": "Secondary Timezone", "tip": "The zone of the Secondary Timezone button, which goes before its time, as in JST 13:07. Default is Japan (JST), the server's time, which the daily reset and the conquest tally go by."},
@@ -1288,7 +1288,7 @@
       "key": "blue-learned",
       "options": [
         {"name": "Star", "tip": "Still blue, with a star after it."},
-        {"name": "Plain Text", "tip": "In the popup's usual color, like any other TP move."}
+        {"name": "Plain Text", "tip": "In the pop-out's usual color, like any other TP move."}
       ]
     },
     {
@@ -1333,7 +1333,7 @@
         {"name": "Messages", "tip": "PlayOnline's mail and messenger icons while something waits, with how many."},
         {"name": "Party Size", "tip": "How many are in your party, or Solo."},
         {"name": "HP and MP", "tip": "The lowest HP and MP in your party."},
-        {"name": "Pinned Statuses", "tip": "The time left on each status you pin in the popup."},
+        {"name": "Pinned Statuses", "tip": "The time left on each status you pin in the pop-out."},
         {"name": "Icon", "tip": "The weather's element, when the widget shows a weather."},
         {"name": "Main", "tip": "What Shows picks: the ship, weather, guild, RSE or moon."},
         {"name": "Details", "tip": "Its countdown and details."}

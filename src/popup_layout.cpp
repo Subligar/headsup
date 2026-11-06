@@ -633,8 +633,7 @@ namespace headsup
             rowHeight = std::max(rowHeight, t.height);
         }
         float titleWidth = x - pad;
-        // The pin: a round chip at the title row's right edge with the pin alone in it, empty, or filled and lit while
-        // pinned. The settings chip is a round one left of it.
+        // The pin: a round chip at the title row's right edge with the pin alone in it, grayed until pinned. The settings chip is a round one left of it.
         std::optional<size_t> pinChip, cogChip;
         if (!content.title.empty() || content.icon || !content.sections.empty() || settings)
         {
@@ -645,8 +644,8 @@ namespace headsup
             chip.font = PopupFont::Pin;
             l.pieces.push_back(std::move(chip));
             PopupPiece picture{PopupPiece::Kind::Icon, (side - mark) / 2.0f, pad + (side - mark) / 2.0f, mark, mark,
-                Span{"", Tone::Heading, 0}, PopupFont::Pin};
-            picture.icon   = pinned ? Icon::Pinned : Icon::Pin;
+                Span{"", pinned ? Tone::Heading : Tone::Dim, 0}, PopupFont::Pin};
+            picture.icon   = Icon::Pinned;
             picture.tinted = true;
             l.pieces.push_back(std::move(picture));
             titleWidth += unit * kCellGap + side;

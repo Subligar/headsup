@@ -32,8 +32,7 @@ ICONS = [(name, f'third_party/mobdb-icons/{name}.png', '') for name in
 ] + [(name, f'third_party/mobdb-icons/Immune{name}.png', '') for name in
      ['LightSleep', 'DarkSleep', 'Gravity', 'Bind', 'Stun', 'Silence', 'Paralyze', 'Blind', 'Slow', 'Poison', 'Elegy',
       'Requiem', 'Petrify']] + [
-    ('Pin', 'resources/icons/pin.png', 'on a popup not pinned'),
-    ('Pinned', 'resources/icons/pinned.png', 'on a pinned popup'),
+    ('Pinned', 'resources/icons/pinned.png', 'a pin, grayed until pinned'),
     ('Star', 'resources/icons/star_filled.png', 'a favorite'),
     ('StarEmpty', 'resources/icons/star_unfilled.png', 'not a favorite'),
     ('Clone', 'resources/icons/copy.png', 'clones a widget'),

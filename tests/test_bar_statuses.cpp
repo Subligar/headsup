@@ -93,8 +93,8 @@ TEST(the_popup_lists_your_favorites_with_pins_over_every_other_status_those_you_
     CHECK(Joined(p.title) == "Status Timers" && p.sections.size() == 2);
     const PopupRow& top = p.sections[0].rows[0];
     CHECK(top.columns == 4 && top.cells.size() == 8);
-    // Signet: an unlit pin, a star, its name and 0, as you do not have it.
-    CHECK(top.cells[0].icon == Icon::Pin && top.cells[0].press == std::string(kStatusPinPress) + "253");
+    // Signet: a grayed pin, a star, its name and 0, as you do not have it.
+    CHECK(top.cells[0].icon == Icon::Pinned && top.cells[0].tint->tone == Tone::Dim && top.cells[0].press == std::string(kStatusPinPress) + "253");
     CHECK(top.cells[1].icon == Icon::Star && top.cells[1].press == std::string(kStatusFavoritePress) + "253");
     CHECK(Joined(top.cells[2].text) == "Signet" && Joined(top.cells[3].text) == "0s" && top.cells[3].align == Align::Right);
     CHECK(top.cells[4].icon == Icon::Pinned && Joined(top.cells[7].text) == "30m 00s"); // Protect, pinned

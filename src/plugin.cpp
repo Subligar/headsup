@@ -767,7 +767,7 @@ public:
             Print("/hu debug: write what every outline and nameplate show to logs/headsup");
             Print("/hu setup: walk through the main settings again, with a preview of each");
             Print("/hu menu <page>: open the settings at a page, such as entities, mobs or toppanel");
-            Print("/hu popup <widget> | off: pin a widget's popup open, such as zone or vanatime");
+            Print("/hu popup <widget> | off: pin a widget's pop-out open, such as zone or vanatime");
             Print("/hu windowlog [stop]: write which game windows are open, as it changes, to logs/headsup/windows.log");
 #ifdef HEADSUP_DEV
             Print("/hu drawdump [seconds | watch | stop]: write every draw call of one frame to logs/headsup after the delay, or watch every frame for name glitches until stopped");
@@ -1925,7 +1925,7 @@ private:
     void HookPresent(IDirect3DDevice8* device)
     {
         if (!PatchSlot(g_PresentSlot, device, kPresentSlot, reinterpret_cast<void*>(&HookedPresent), g_RealPresent))
-            Note("the top panel's popups draw under other addons' windows: Present could not be hooked.");
+            Note("the top panel's pop-outs draw under other addons' windows: Present could not be hooked.");
         else if (g_PresentSlot != nullptr)
             g_AfterGui = [] { if (g_Plugin != nullptr) g_Plugin->DrawOverGui(); };
     }

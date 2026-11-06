@@ -173,7 +173,7 @@ namespace headsup
                 const std::string name = NameOf(id);
                 favoriteNames.push_back(name);
                 const bool pinned = std::ranges::find(pins, id) != pins.end();
-                grid.cells.push_back(Pressable(pinned ? Icon::Pinned : Icon::Pin, Text("", pinned ? Tone::Heading : Tone::Dim),
+                grid.cells.push_back(Pressable(Icon::Pinned, Text("", pinned ? Tone::Heading : Tone::Dim),
                     kStatusPinPress + std::to_string(id)));
                 grid.cells.push_back(Pressable(Icon::Star, Colored("", kStarColor), kStatusFavoritePress + std::to_string(id)));
                 grid.cells.push_back(Cell(Text(name)));

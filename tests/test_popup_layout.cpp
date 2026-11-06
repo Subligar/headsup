@@ -627,8 +627,8 @@ TEST(a_titled_popup_has_a_round_pin_chip_at_the_top_right_with_its_pin_alone_fil
             CHECK(chip != nullptr && mark != nullptr && chip->open == lit);
             CHECK(Near(l->pin.width, l->pin.height)); // round
             CHECK(Near(l->pin.x + l->pin.width, l->width - m.popupPadding) && Near(l->pin.y, m.popupPadding));
-            // The empty pin, or the filled one while pinned, in the middle of the chip.
-            CHECK(mark->icon == (lit ? Icon::Pinned : Icon::Pin));
+            // The pin, grayed until pinned, in the middle of the chip.
+            CHECK(mark->icon == Icon::Pinned && mark->span.tone == (lit ? Tone::Heading : Tone::Dim));
             CHECK(Near(mark->x - chip->x, chip->x + chip->width - mark->x - mark->width) &&
                   Near(mark->y - chip->y, chip->y + chip->height - mark->y - mark->height) && mark->width < chip->width);
         }
