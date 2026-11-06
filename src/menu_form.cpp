@@ -849,7 +849,11 @@ namespace headsup
                     break;
                 case WidgetTabsRow::Design:
                     // The EXP meter and World Info's conquest counts are laid out without a design.
-                    if (!bar && !(kind == BarWidget::World && o.worldLine == WorldLine::Conquest)) Designer(c, widget);
+                    if (!bar && !(kind == BarWidget::World && o.worldLine == WorldLine::Conquest))
+                    {
+                        form.Note(row.tip); // the Widget Designer's description
+                        Designer(c, widget);
+                    }
                     break;
                 case WidgetTabsRow::ExpMeter:
                     if (kind == BarWidget::Job) form.Switch(label.c_str(), o.expMeter, row.tip);
