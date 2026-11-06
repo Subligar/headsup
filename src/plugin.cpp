@@ -225,12 +225,14 @@ namespace
     bool KnowsSpell(uint16_t spell) { return g_Player != nullptr && g_Player->HasSpell(spell); }
 
     headsup::GamePresses g_GamePresses; // what the game got of each button, for OnMouse
+    POINT g_LastMove{-1, -1};           // the client position of the last mouse move a message gave
 
     // HeadsUp's own answer for a mouse message: true when the game must not get it.
     bool KeepMouse(uint32_t message, WPARAM wParam, LPARAM lParam, bool blocked)
     {
         const auto clientX = static_cast<int16_t>(LOWORD(lParam));
         const auto clientY = static_cast<int16_t>(HIWORD(lParam));
+        if (message == WM_MOUSEMOVE) g_LastMove = {clientX, clientY};
         const float x      = static_cast<float>(clientX) * g_BarScaleX;
         const float y      = static_cast<float>(clientY) * g_BarScaleY;
         // RmlUi's overlay lies over every window: what it takes, nothing under it sees.
@@ -324,6 +326,7 @@ class HeadsUp final : public IPlugin
     headsup::WindowHook m_WindowHook;
     bool m_WindowHookTried = false; // it patches the game's code, so it starts only once someone wants it
     headsup::PointerFix m_PointerFix;
+    POINT m_LastPointer{-1, -1}; // Windows' pointer in the client area at the last frame
     headsup::StripTextReader m_StripText;
     std::optional<std::string> m_StripTextFound; // Find's result once looked for, said by the dev dump
     headsup::StripObject m_HelpBytes{}, m_TitleBytes{}; // this frame's
@@ -934,9 +937,21 @@ public:
                 g_BarScaleX = m_Names.BackBufferWidth() / static_cast<float>(client.right);
                 g_BarScaleY = m_Names.BackBufferHeight() / static_cast<float>(client.bottom);
                 // No message says the pointer left the client area, and in windowed modes the game never moves Windows'.
-                if (POINT pointer{}; GetCursorPos(&pointer) && ScreenToClient(g_GameWindow, &pointer) &&
-                                     !PtInRect(&client, pointer))
-                    m_BarInput.Leave();
+                // A Windows tester's borderless window got no mouse moves in its top 18 px while no game menu was open,
+                // so a move of Windows' pointer that no message gave counts as one. Linkpearl's moves are messages alone.
+                POINT screen{}, pointer{};
+                if (GetCursorPos(&screen) && (pointer = screen, ScreenToClient(g_GameWindow, &pointer)))
+                {
+                    if (!PtInRect(&client, pointer))
+                        m_BarInput.Leave();
+                    else if ((pointer.x != m_LastPointer.x || pointer.y != m_LastPointer.y) &&
+                             (pointer.x != g_LastMove.x || pointer.y != g_LastMove.y) && WindowFromPoint(screen) == g_GameWindow)
+                    {
+                        const WPARAM buttons = (GetKeyState(VK_LBUTTON) < 0 ? MK_LBUTTON : 0) | (GetKeyState(VK_RBUTTON) < 0 ? MK_RBUTTON : 0);
+                        KeepMouse(WM_MOUSEMOVE, buttons, MAKELPARAM(pointer.x, pointer.y), false);
+                    }
+                    m_LastPointer = pointer;
+                }
             }
         }
         UpdateSkin();
