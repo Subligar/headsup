@@ -522,7 +522,12 @@ TEST(a_titles_descenders_stay_clear_of_its_detail_line_and_both_inside_the_pill)
             CHECK(t.title <= WholePixels(m.title) && t.detail <= WholePixels(m.subtitle));
             const float above = (t.titleY + title.top) - inTop;
             const float below = inBottom - (t.detailY + detail.bottom);
-            CHECK(above >= margin - 0.01f && below >= margin - 0.01f && std::fabs(above - below) <= 1.01f);
+            CHECK(above >= margin - 0.01f && below >= margin - 0.01f);
+            // The title's top and the detail's baseline centered, as two lines read without the detail's descenders,
+            // unless that would bring the descenders nearer the bottom than the margin.
+            const float underBaseline = inBottom - (t.detailY + detail.baseline);
+            CHECK(std::fabs(above - underBaseline) <= 1.01f || below <= std::ceil(margin) + 0.01f);
+            CHECK(underBaseline < below + (detail.bottom - detail.baseline) + 0.01f);
             // Three rows clear from the title's descenders to the detail's capitals: two still read as touching.
             CHECK((t.detailY + detail.top) - (t.titleY + title.bottom) >= 3.0f - 0.01f);
             // A title alone (gil, the clock): all its ink inside.

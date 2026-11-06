@@ -258,7 +258,11 @@ namespace headsup
         }
         const float gap   = std::clamp(spare, 0.0f, maxGap);
         const float block = (title.bottom - title.top) + gap + (detail.bottom - detail.top);
-        const float top   = row.y + kPillBorder + (inside - block) / 2.0f; // of the title's ink
+        // The title's ink top to the detail's baseline centered, as the eye reads two lines, but the detail's descenders
+        // no nearer the bottom than the margin.
+        const float read     = block - (detail.bottom - detail.baseline);
+        const float even     = row.y + kPillBorder + (inside - read) / 2.0f;
+        const float top      = std::min(even, row.y + kPillBorder + inside - margin - block); // of the title's ink
         t.titleY          = top - title.top;
         t.detailY         = top + (title.bottom - title.top) + gap - detail.top;
         // A title alone: as large as its ink fits, its capitals centered, raised if its descenders would come too near
