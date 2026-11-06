@@ -681,6 +681,17 @@ TEST(an_empty_popup_is_just_its_padding_and_minimum_width)
     CHECK(Near(l.height, 2.0f * m.popupPadding));
 }
 
+TEST(every_section_is_a_card_with_or_without_a_heading)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate);
+    const PopupLayout l = LayoutPopup(OneRow(PopupRow{RowKind::Line, 0, {Word("Zulkheim")}}), m, BarShape::Ornate, false, Fake);
+    const std::vector<const PopupPiece*> cards = Of(l, PopupPiece::Kind::Card);
+    const PopupPiece* word = Find(l, "Zulkheim");
+    CHECK(cards.size() == 1 && word != nullptr);
+    CHECK(word->x > cards[0]->x && word->y > cards[0]->y && word->x + word->width < cards[0]->x + cards[0]->width);
+    CHECK(Of(l, PopupPiece::Kind::Text).size() == 2); // the title and the word: no heading
+}
+
 TEST(rows_without_cells_add_no_pieces_and_a_grid_without_cells_does_not_divide_by_zero)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Ornate);
@@ -703,7 +714,7 @@ TEST(a_grid_without_columns_is_one_line_of_cells)
                         BarShape::Ornate, false, Fake);
         std::vector<const PopupPiece*> words;
         for (const PopupPiece& p : l.pieces)
-            if (p.font == PopupFont::Text) words.push_back(&p);
+            if (p.kind == PopupPiece::Kind::Text && p.font == PopupFont::Text) words.push_back(&p);
         CHECK_EQ(words.size(), static_cast<size_t>(3));
         CHECK(Near(words[0]->y, words[1]->y) && Near(words[1]->y, words[2]->y));
         CHECK(words[1]->x > words[0]->x + words[0]->width && words[2]->x > words[1]->x + words[1]->width);

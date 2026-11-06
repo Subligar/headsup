@@ -134,10 +134,11 @@ namespace headsup
         {
             const float unit = metrics.popupText;
             Block b;
-            b.card = !section.heading.empty();
-            b.pad  = b.card ? std::round(unit * kCardPad) : 0.0f;
+            // Every section is a card; one without a heading is its rows alone.
+            b.card = true;
+            b.pad  = std::round(unit * kCardPad);
             float y = b.pad, contentWidth = 0.0f;
-            if (b.card)
+            if (!section.heading.empty())
             {
                 Span heading     = HeadingSpan(section.heading, ornate);
                 const TextSize t = measure(heading, PopupFont::Heading);
@@ -709,23 +710,19 @@ namespace headsup
             PlaceChips(l, chips, pad, unit);
             return l;
         }
-        // The rows under the title, then the cards.
-        std::vector<Block> loose;
-        for (const PopupSection& section : content.sections)
-            if (section.heading.empty()) loose.push_back(LayoutSection(section, metrics, ornate, measure));
-        float cardsTop = top;
-        for (const Block& b : loose)
-        {
-            width = std::max(width, b.width);
-            cardsTop += b.height + metrics.rowGap;
-        }
-        // The most a column of cards may run, with the padding under it: a card taller goes on in another column.
-        const float tall = room - cardsTop - pad;
+        // The cards under the title. The most a column of them may run, with the padding under it: a card taller goes
+        // on in another column.
+        const float tall = room - top - pad;
         std::vector<Block> cards;
         for (const PopupSection& section : content.sections)
-            if (!section.heading.empty())
-                for (const PopupSection& part : SplitToFit(section, tall, metrics, ornate, measure))
-                    cards.push_back(LayoutCard(part, metrics, ornate, measure));
+        {
+            // A card of nothing would be an empty bubble.
+            if (section.heading.empty() && section.tabs.empty() &&
+                std::ranges::all_of(section.rows, [](const PopupRow& row) { return row.cells.empty(); }))
+                continue;
+            for (const PopupSection& part : SplitToFit(section, tall, metrics, ornate, measure))
+                cards.push_back(LayoutCard(part, metrics, ornate, measure));
+        }
 
         float lowest = top;
         if (std::ranges::any_of(cards, [](const Block& b) { return b.beside; }))
@@ -743,11 +740,6 @@ namespace headsup
                     whole = std::max(whole, cards[i].width);
             width = std::max({width, whole, half > 0.0f ? 2.0f * half + cardGap : 0.0f});
             half  = (width - cardGap) / 2.0f;
-            for (Block& b : loose)
-            {
-                Place(b, pad, top, width, l.lines.size(), l);
-                top += b.height + metrics.rowGap;
-            }
             float y = top;
             for (size_t i = 0; i < cards.size(); ++i)
             {
@@ -816,11 +808,6 @@ namespace headsup
             if (all < width) columnWidths.front() += width - all; // a wide title widens the first column
             width = std::max(width, all);
 
-            for (Block& b : loose)
-            {
-                Place(b, pad, top, width, l.lines.size(), l);
-                top += b.height + metrics.rowGap;
-            }
             std::vector<float> columnX(starts.size(), pad), columnY(starts.size(), top);
             for (size_t c = 1; c < starts.size(); ++c)
                 columnX[c] = columnX[c - 1] + columnWidths[c - 1] + cardGap;
