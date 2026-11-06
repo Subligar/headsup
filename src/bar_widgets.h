@@ -113,6 +113,9 @@ namespace headsup
     // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
     // off. The last pin stays, by its pin or its star: Refused.
     enum class PressResult : uint8_t { None, Changed, Refused };
+    // A weather's icons as Use Custom Icons picks them: HeadsUp's own picture, or the game's element icon, twice for a
+    // double weather; none for a weather that has none of the kind picked.
+    std::vector<Icon> WeatherIcons(Weather weather, CustomIcons use);
     // What a popup's clone and remove chips tell, then the widget's slot.
     constexpr const char* kWidgetClonePress = "widget clone ", *kWidgetRemovePress = "widget remove ";
     // Clones the widget a press names or takes its copy off: the widget whose settings show next, the clone or the

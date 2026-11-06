@@ -8,8 +8,7 @@ namespace headsup
     {
         using P = WidgetPart;
         constexpr P kZone[]   = {P::ZoneName, P::ZoneRegion, P::ZoneCrest, P::ZoneNation};
-        constexpr P kWeather[] = {P::WeatherIcon, P::WeatherName, P::WeatherChance};
-        constexpr P kVana[]   = {P::VanaDay, P::VanaTime, P::VanaDate, P::VanaMoon};
+        constexpr P kWeather[] = {P::WeatherIcon, P::WeatherName, P::VanaDate, P::VanaDay, P::VanaTime, P::VanaMoon};
         constexpr P kTarget[] = {P::TargetAggro, P::TargetName, P::TargetDistance, P::TargetDetection, P::TargetLevel,
             P::TargetPlayer, P::TargetWeak};
         constexpr P kCurrency[] = {P::CurrencyCoin, P::CurrencyAmount, P::CurrencyName};
@@ -24,15 +23,14 @@ namespace headsup
 
         // By WidgetPart.
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
-            "chance", "day", "time", "date", "moon", "aggro", "name", "distance", "detection", "level", "player", "weak",
+            "date", "day", "time", "moon", "aggro", "name", "distance", "detection", "level", "player", "weak",
             "coin", "amount", "currency", "count", "bag", "icon", "time", "server", "vana", "jobs", "exp", "bar",
             "fps", "sent", "received", "percent", "ping", "memory", "messages", "count", "health", "pins", "icon",
             "main", "details"};
 
         // As each widget showed before it had a design.
-        constexpr const char* kDefaults[kBarWidgetCount] = {"name | region crest nation", "icon weather | chance",
-            "day time | -date moon", "aggro name distance -detection | level player -weak", "coin amount | currency",
-            "icon count | bag", "time | -server -vana", "", "-fps sent received percent -ping -memory messages |",
+        constexpr const char* kDefaults[kBarWidgetCount] = {"name | region crest nation", "icon weather | day time -date -moon",
+            "aggro name distance -detection | level player -weak", "coin amount | currency", "icon count | bag", "time | -server -vana", "", "-fps sent received percent -ping -memory messages |",
             "jobs | exp bar", "count | health", "pins |", "icon main | details"};
 
         constexpr char kLineBreak = '|', kOffMark = '-', kSpace = ' ';
@@ -69,7 +67,6 @@ namespace headsup
         {
         case BarWidget::Zone: return kZone;
         case BarWidget::Weather: return kWeather;
-        case BarWidget::VanaTime: return kVana;
         case BarWidget::Target: return kTarget;
         case BarWidget::Currency: return kCurrency;
         case BarWidget::Bags: return kBags;

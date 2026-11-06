@@ -100,30 +100,30 @@ namespace
     std::vector<PartContent> WeatherParts()
     {
         return {{WidgetPart::WeatherIcon, {IconSpan(Icon::Fire)}}, {WidgetPart::WeatherName, {Text("Hot Spells")}},
-            {WidgetPart::WeatherChance, {Text("35%", Tone::Dim)}}};
+            {WidgetPart::VanaMoon, {Text("35%", Tone::Dim)}}};
     }
 }
 
 TEST(icon_parts_first_on_the_top_line_lead_and_elsewhere_sit_inline)
 {
-    const WidgetContent leading = Composed(BarWidget::Weather, "icon weather | chance", WeatherParts());
+    const WidgetContent leading = Composed(BarWidget::Weather, "icon weather | moon", WeatherParts());
     CHECK((leading.icons == std::vector<Icon>{Icon::Fire}));
     CHECK((leading.title == std::vector<Span>{Text("Hot Spells")}));
     CHECK((leading.subtitle == std::vector<Span>{Text("35%", Tone::Dim)}));
     // After the name the icon is part of the line, a part's gap before it.
-    const WidgetContent after = Composed(BarWidget::Weather, "weather icon | chance", WeatherParts());
+    const WidgetContent after = Composed(BarWidget::Weather, "weather icon | moon", WeatherParts());
     CHECK(after.icons.empty());
     CHECK((after.title == std::vector<Span>{Text("Hot Spells"), Text("  "), IconSpan(Icon::Fire)}));
     // On the second line too.
-    const WidgetContent below = Composed(BarWidget::Weather, "weather | chance icon", WeatherParts());
+    const WidgetContent below = Composed(BarWidget::Weather, "weather | moon icon", WeatherParts());
     CHECK(below.icons.empty() && below.subtitle.back() == IconSpan(Icon::Fire));
     // Off, nowhere.
-    CHECK(Composed(BarWidget::Weather, "-icon weather | chance", WeatherParts()).icons.empty());
+    CHECK(Composed(BarWidget::Weather, "-icon weather | moon", WeatherParts()).icons.empty());
 }
 
 TEST(an_empty_first_line_lets_the_second_draw_alone)
 {
-    const WidgetContent w = Composed(BarWidget::Weather, "-weather | chance", WeatherParts());
+    const WidgetContent w = Composed(BarWidget::Weather, "-weather | moon", WeatherParts());
     CHECK((w.title == std::vector<Span>{Text("35%", Tone::Dim)}) && w.subtitle.empty());
 }
 

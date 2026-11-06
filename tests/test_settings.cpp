@@ -299,7 +299,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather vanaTime job party statusTimers world
+barLeft=zone weather job party statusTimers world
 barCenter=
 barRight=target gil bags performance earthTime
 hideHelpBar=true
@@ -406,7 +406,7 @@ helpBarY=8.0000
         "iconLevelSyncShare", "iconAwayShare", "iconLinkshellShare", "iconBazaarShare", "iconSeekingPartyShare",
         "playerIconMax", "mobId", "look",
         // The Show settings each widget had before its design.
-        "barZoneLine2", "barZoneIcons", "barWeatherLine2", "barWeatherIcons", "barVanaTimeLine2", "barVanaTimeIcons", "barTargetLine2", "barTargetIcons", "barGilLine2", "barGilIcons", "barBagsLine2", "barBagsIcons", "barEarthTimeLine2", "barEarthTimeIcons", "barGameHelpLine2", "barGameHelpIcons", "barPerformanceLine2", "barPerformanceIcons", "barJobLine2", "barJobIcons", "barPartyLine2", "barPartyIcons", "barStatusTimersLine2", "barStatusTimersIcons", "expBar", "barPerformanceParts"};
+        "barZoneLine2", "barZoneIcons", "barWeatherLine2", "barWeatherIcons", "barVanaTime", "barVanaTimeLine2", "barVanaTimeIcons", "barTargetLine2", "barTargetIcons", "barGilLine2", "barGilIcons", "barBagsLine2", "barBagsIcons", "barEarthTimeLine2", "barEarthTimeIcons", "barGameHelpLine2", "barGameHelpIcons", "barPerformanceLine2", "barPerformanceIcons", "barJobLine2", "barJobIcons", "barPartyLine2", "barPartyIcons", "barStatusTimersLine2", "barStatusTimersIcons", "expBar", "barPerformanceParts"};
 
     MapStore Parse(const char* file)
     {
@@ -1030,7 +1030,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         SaveSettings(LoadSettings(store), saved);
         CHECK(saved.values["barTheme"] == t.name);
     }
-    const char* const widgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
+    const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
         "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld"}; // in BarWidget's order
     static_assert(std::size(widgetKeys) == kBarWidgetCount);
     for (int w = 0; w < kBarWidgetCount; ++w)
@@ -1121,12 +1121,12 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     Settings s;
     s.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "crest name | -region nation");
     const PanelWidget second = *CloneWidget(s, BarWidget::Weather);
-    s.Widget(second).design  = DesignFrom(BarWidget::Weather, "weather | icon -chance");
+    s.Widget(second).design  = DesignFrom(BarWidget::Weather, "weather | icon -date -day -time -moon");
     MapStore saved;
     SaveSettings(s, saved);
     CHECK_EQ(saved.values["barZoneDesign"], "crest name | -region nation");
-    CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | icon -chance");
-    CHECK_EQ(saved.values["barWeatherDesign"], "icon weather | chance");
+    CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | icon -date -day -time -moon");
+    CHECK_EQ(saved.values["barWeatherDesign"], "icon weather | day time -date -moon");
     const Settings loaded = LoadSettings(saved);
     CHECK(loaded.Widget(BarWidget::Zone).design == s.Widget(BarWidget::Zone).design);
     CHECK(loaded.Widget(second).design == s.Widget(second).design);

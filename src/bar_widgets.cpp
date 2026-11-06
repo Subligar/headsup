@@ -772,6 +772,13 @@ namespace headsup
             return InConquest(zone) && state.owners ? (*state.owners)[zone->region] : Nation::None;
         }
 
+        // By Weather: HeadsUp's own picture of each.
+        constexpr Icon kCustomWeather[kWeatherCount] = {Icon::WeatherFair, Icon::WeatherSunny, Icon::WeatherCloudy,
+            Icon::WeatherFoggy, Icon::WeatherHeatSpell, Icon::WeatherHeatSpell, Icon::WeatherRain, Icon::WeatherSqualls,
+            Icon::WeatherDustStorm, Icon::WeatherDustStorm, Icon::WeatherWindy, Icon::WeatherGales, Icon::WeatherSnow,
+            Icon::WeatherBlizzard, Icon::WeatherThunder, Icon::WeatherThunderstorms, Icon::WeatherAurora,
+            Icon::WeatherAurora, Icon::WeatherGloom, Icon::WeatherGloom};
+
         std::optional<Icon> WeatherIcon(Weather weather)
         {
             const std::optional<Element> element = WeatherElement(weather);
@@ -1462,29 +1469,22 @@ namespace headsup
             }
             case BarWidget::Weather:
             {
-                const std::optional<WeatherOdds> today = OddsOn(state, VanaAt(state.unixMs).day);
-                if (!state.weather && !today)
-                {
-                    base.shown = false;
-                    return {};
-                }
-                const Weather now = state.weather ? *state.weather : today->normal;
-                std::vector<PartContent> parts{{WidgetPart::WeatherIcon, {}}, {WidgetPart::WeatherName, ListOf(Text(WeatherName(now)))}};
-                if (const std::optional<Icon> icon = WeatherIcon(now))
-                    parts.front().spans.assign(IsDoubleWeather(now) ? 2 : 1, Mark(*icon));
-                // Today's chance of it; the forecast is in the popup.
-                for (const WeatherChance& c : today ? Chances(*today) : WeatherChances{})
-                    if (c.weather == now) parts.push_back({WidgetPart::WeatherChance, ListOf(Text(std::to_string(c.percent) + "%"))});
-                base.hasPopup = today.has_value();
-                return parts;
-            }
-            case BarWidget::VanaTime:
-            {
+                // The weather now, or the day's likeliest before it is known; Vana'diel's date, day, time and moon.
                 const VanaTime t = VanaAt(state.unixMs);
-                base.hasPopup    = true;
-                return {{WidgetPart::VanaDay, ListOf(WeekdayText(t))}, {WidgetPart::VanaTime, ListOf(Text(HourMinute(t.hour, t.minute)))},
-                    {WidgetPart::VanaDate, ListOf(Text(VanaDate(t)))},
+                const std::optional<WeatherOdds> today = OddsOn(state, t.day);
+                std::vector<PartContent> parts{{WidgetPart::WeatherIcon, {}}, {WidgetPart::WeatherName, {}},
+                    {WidgetPart::VanaDate, ListOf(Text(VanaDate(t)))}, {WidgetPart::VanaDay, ListOf(WeekdayText(t))},
+                    {WidgetPart::VanaTime, ListOf(Text(HourMinute(t.hour, t.minute)))},
                     {WidgetPart::VanaMoon, ListOf(Text(MoonText(t) + " " + std::to_string(t.moonPercent) + "%"))}};
+                if (state.weather || today)
+                {
+                    const Weather now = state.weather ? *state.weather : today->normal;
+                    for (const Icon icon : WeatherIcons(now, o.weatherIcons))
+                        parts[0].spans.push_back(Mark(icon));
+                    parts[1].spans = ListOf(Text(WeatherName(now)));
+                }
+                base.hasPopup = true;
+                return parts;
             }
             case BarWidget::Target: return TargetParts(state, settings, o, base);
             case BarWidget::Currency:
@@ -1668,7 +1668,7 @@ namespace headsup
         bool worldWeather = false;
         EachShownCopy(settings, BarWidget::World,
             [&](const WidgetOptions& o) { worldWeather = worldWeather || o.worldLine == WorldLine::Weather; });
-        needs.unixTime   = shown(BarWidget::Weather) || shown(BarWidget::VanaTime) || zonedClock || serverClock ||
+        needs.unixTime   = shown(BarWidget::Weather) || zonedClock || serverClock ||
                            shown(BarWidget::World) || opened(BarWidget::EarthTime) ||
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
         needs.localTime  = localClock;
@@ -1755,6 +1755,15 @@ namespace headsup
         }
     }
 
+    std::vector<Icon> WeatherIcons(Weather weather, CustomIcons use)
+    {
+        const std::optional<Icon> game = WeatherIcon(weather);
+        if (use == CustomIcons::Always || (use == CustomIcons::NoVanilla && !game))
+            return {kCustomWeather[std::clamp(static_cast<int>(weather), 0, kWeatherCount - 1)]};
+        if (!game) return {};
+        return std::vector<Icon>(IsDoubleWeather(weather) ? 2 : 1, *game);
+    }
+
     std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press)
     {
         for (const std::string_view kind : {kWidgetClonePress, kWidgetRemovePress})
@@ -1815,74 +1824,59 @@ namespace headsup
         case BarWidget::Weather:
         {
             const VanaTime t = VanaAt(state.unixMs);
-            // No title: the weather now is on the panel, and the forecast names the zone it is for.
-            std::array<WeatherChances, kForecastDays> days{};
-            bool oneWeather = true;  // on every day
-            bool fogs       = false; // a day can roll a weather fog takes the place of in the small hours
-            for (int d = 0; d < kForecastDays; ++d)
-            {
-                const std::optional<WeatherOdds> odds = OddsOn(state, t.day + static_cast<uint32_t>(d));
-                days[d]    = odds ? Chances(*odds) : WeatherChances{};
-                oneWeather = oneWeather && days[d].count == 1;
-                for (const WeatherChance& chance : days[d])
-                    fogs = fogs || chance.weather == Weather::None || chance.weather == Weather::Sunshine ||
-                           chance.weather == Weather::Clouds;
-            }
-            // Phoenix's notes in a narrow column at the right, a line beside each day from the first, a blank line
-            // between two notes.
-            std::vector<std::string> notes;
-            const auto note = [&notes](std::string first, std::string second) {
-                if (!notes.empty()) notes.emplace_back();
-                notes.push_back(std::move(first));
-                notes.push_back(std::move(second));
+            const std::optional<WeatherOdds> odds = OddsOn(state, t.day);
+            const WeatherChances today = odds ? Chances(*odds) : WeatherChances{};
+            const auto iconOf = [&](Weather weather) {
+                const std::vector<Icon> icons = WeatherIcons(weather, o.weatherIcons);
+                return icons.empty() ? std::nullopt : std::optional(icons.front());
             };
-            // One weather on every day (Phoenix's static zones: Promyvion, Temenos): rolling again changes nothing.
-            if (!oneWeather) note("Phoenix rolls the weather again", "every 3 to 30 Earth minutes.");
-            if (fogs) note("From 2:00 to 7:00 outside towns,", "sunshine and clouds turn to fog.");
-            const int columns = kForecastColumns + (notes.empty() ? 0 : 1);
-            PopupRow grid     = Grid(columns, kForecastDays * columns);
-            for (int d = 0; d < kForecastDays; ++d)
+            const auto chanceOf = [](const WeatherChance& c) {
+                return std::string(WeatherName(c.weather)) + " " + std::to_string(c.percent) + "%";
+            };
+            // The weather now for a title, with its icon and today's chance of it.
+            if (state.weather || odds)
             {
+                const Weather now = state.weather ? *state.weather : odds->normal;
+                std::string title = WeatherName(now);
+                for (const WeatherChance& c : today)
+                    if (c.weather == now) title += " (" + std::to_string(c.percent) + "%)";
+                popup.title = ListOf(Text(title));
+                popup.icon  = iconOf(now);
+            }
+            // Today: Vana'diel's date, day, time and moon, what is next, and the zone's weathers today.
+            PopupSection day{"Today", ListOf(LineOf(VanaDate(t)),
+                Line(Cell(ListOf(WeekdayText(t), Text(" " + HourMinute(t.hour, t.minute))))),
+                LineOf(MoonText(t) + " (" + std::to_string(t.moonPercent) + "%)"),
+                LineOf("Next Day in " + Countdown(SecondsToNextDay(state.unixMs)), Tone::Dim),
+                LineOf("Next Phase in " + Countdown(SecondsToNextPhase(state.unixMs)), Tone::Dim))};
+            for (const WeatherChance& c : today)
+                day.rows.push_back(Line(Cell(Text(chanceOf(c)), iconOf(c.weather))));
+            // The days after it, beside it: each day and its chances, likeliest first.
+            PopupRow grid = Grid(kForecastColumns, (kForecastDays - 1) * kForecastColumns);
+            for (int d = 1; d < kForecastDays; ++d)
+            {
+                const std::optional<WeatherOdds> later = OddsOn(state, t.day + static_cast<uint32_t>(d));
+                const WeatherChances chances = later ? Chances(*later) : WeatherChances{};
                 const int weekday = (t.weekday + d) % kVanaDaysPerWeek;
                 const std::string name = WeekdayName(weekday);
-                PopupCell day = Cell(Colored(d == 0 ? "Today (" + name + ")" : d == 1 ? "Tomorrow (" + name + ")" : name,
-                    ElementColor(WeekdayElement(weekday))));
-                day.align = Align::Right;
-                grid.cells.push_back(std::move(day));
+                PopupCell named = Cell(Colored(d == 1 ? "Tomorrow (" + name + ")" : name, ElementColor(WeekdayElement(weekday))));
+                named.align = Align::Right;
+                grid.cells.push_back(std::move(named));
                 for (int c = 0; c < kForecastColumns - 1; ++c)
                 {
                     PopupCell weather;
-                    if (c < days[d].count)
-                    {
-                        const WeatherChance& chance = days[d].chances[c];
-                        weather = Cell(Text(std::string(WeatherName(chance.weather)) + " " + std::to_string(chance.percent) + "%"),
-                            WeatherIcon(chance.weather));
-                    }
+                    if (c < chances.count) weather = Cell(Text(chanceOf(chances.chances[c])), iconOf(chances.chances[c].weather));
                     weather.align = Align::Center;
                     grid.cells.push_back(std::move(weather));
                 }
-                if (!notes.empty())
-                    grid.cells.push_back(static_cast<size_t>(d) < notes.size() && !notes[d].empty()
-                                             ? Cell(Text(notes[d], Tone::Dim))
-                                             : PopupCell{});
             }
             // Zone 0 is the data's "unknown": the heading names no zone for it.
             const ZoneRecord* zone = state.zone != 0 ? ZoneById(state.zone) : nullptr;
-            popup.sections = ListOf(PopupSection{zone != nullptr ? "Forecast (" + std::string(zone->name) + ")" : "Forecast",
-                                        ListOf(std::move(grid))},
-                ByElement(state, t.day));
+            PopupSection forecast{zone != nullptr ? "Weather Forecast (" + std::string(zone->name) + ")" : "Weather Forecast",
+                ListOf(std::move(grid))};
+            forecast.beside = true;
+            popup.sections  = ListOf(std::move(day), std::move(forecast), ByElement(state, t.day));
             popup.oneColumn = true;
-            break;
-        }
-        case BarWidget::VanaTime:
-        {
-            const VanaTime t = VanaAt(state.unixMs);
-            popup.title      = ListOf(Text(VanaDate(t)));
-            popup.sections   = ListOf(PopupSection{"",
-                ListOf(Line(Cell(ListOf(WeekdayText(t), Text(" " + HourMinute(t.hour, t.minute))))),
-                    LineOf(MoonText(t) + " (" + std::to_string(t.moonPercent) + "%)"),
-                    LineOf("Next Day in " + Countdown(SecondsToNextDay(state.unixMs)), Tone::Dim),
-                    LineOf("Next Phase in " + Countdown(SecondsToNextPhase(state.unixMs)), Tone::Dim))});
             break;
         }
         case BarWidget::Target: return TargetPopup(state, settings);

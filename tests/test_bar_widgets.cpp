@@ -68,14 +68,6 @@ namespace
         return nullptr;
     }
 
-    // The weather popup's forecast card, its heading naming the zone.
-    const PopupSection* Forecast(const PopupContent& popup)
-    {
-        for (const PopupSection& s : popup.sections)
-            if (s.heading.starts_with("Forecast")) return &s;
-        return nullptr;
-    }
-
     // Each row of a section as one line of text: its cells' text joined.
     std::vector<std::string> Lines(const PopupSection& section)
     {
@@ -576,45 +568,30 @@ TEST(an_immunity_shows_a_cross_in_its_status_and_an_icon_under_immune)
         CHECK(cell.immune && cell.icon.has_value() && cell.text.empty());
 }
 
-TEST(vanadiel_time_names_the_day_in_its_elements_color_and_the_moon)
+TEST(the_forecast_shows_vanadiels_date_day_time_and_moon_as_its_design_sets)
 {
     Settings settings;
     BarState state;
-    state.unixMs          = 1791417600000LL; // Darksday 09:00, 64% waxing
-    const WidgetContent w = Content(BarWidget::VanaTime, state, settings);
-    CHECK(w.title ==
-          (std::vector<Span>{{"Darksday", Tone::Own, ElementColor(Element::Dark)}, {"  09:00", Tone::Normal}}));
-    CHECK(w.subtitle == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Dim}}));
-    const PopupContent popup = BarPopupContent(BarWidget::VanaTime, state, settings);
-    CHECK(Joined(popup.title) == "1514/03/20");
-    std::string all;
-    for (const PopupRow& row : popup.sections[0].rows)
-        for (const PopupCell& cell : row.cells)
-            all += Joined(cell.text) + "|";
-    CHECK(all.find("Waxing Gibbous (64%)") != std::string::npos);
-    CHECK(all.find("Next Day in 36:00") != std::string::npos);
-    CHECK(all.find("Next Phase in 10:12:00") != std::string::npos);
-}
-
-TEST(the_vanadiel_clock_shows_its_day_of_week_date_and_moon_phase_as_set)
-{
-    Settings settings;
-    BarState state;
-    state.unixMs = 1791417600000LL; // Darksday 1514/03/20 09:00, 64% waxing
-    WidgetOptions& o = settings.Widget(BarWidget::VanaTime);
-    const auto shown = [&] { return Content(BarWidget::VanaTime, state, settings); };
-    o.design = DesignFrom(BarWidget::VanaTime, "day time | date moon");
+    state.unixMs = 1791417600000LL; // Darksday 1514/03/20 09:00, 64% waxing; no zone, so no weather
+    WidgetOptions& o = settings.Widget(BarWidget::Weather);
+    const auto shown = [&] { return Content(BarWidget::Weather, state, settings); };
+    const WidgetContent w = shown(); // icon weather | day time: no weather, so its line gives way to the next
+    CHECK(w.shown && w.hasPopup && w.icons.empty() && w.subtitle.empty());
+    CHECK(w.title == (std::vector<Span>{{"Darksday", Tone::Own, ElementColor(Element::Dark)}, {"  09:00", Tone::Normal}}));
+    o.design = DesignFrom(BarWidget::Weather, "day time | date moon");
     CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}, {"  Waxing Gibbous 64%", Tone::Dim}}));
-    o.design = DesignFrom(BarWidget::VanaTime, "day time | date -moon"); // the date alone
-    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}}));
-    o.design = DesignFrom(BarWidget::VanaTime, "day time | -date -moon");
-    CHECK(shown().subtitle.empty());
-    o.design = DesignFrom(BarWidget::VanaTime, "-day time | -date -moon");
-    CHECK(shown().title == (std::vector<Span>{{"09:00", Tone::Normal}}));
-    // Moved: the moon first on the top line, the time under it.
-    o.design = DesignFrom(BarWidget::VanaTime, "moon | time");
+    o.design = DesignFrom(BarWidget::Weather, "moon | time");
     CHECK(shown().title == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Normal}}));
     CHECK(shown().subtitle == (std::vector<Span>{{"09:00", Tone::Dim}}));
+    // Its pop-out's Today card has them all, and what comes next.
+    const PopupContent popup  = BarPopupContent(BarWidget::Weather, state, settings);
+    const PopupSection* today = Section(popup, "Today");
+    CHECK(today != nullptr);
+    std::string all;
+    for (const PopupRow& row : today->rows)
+        for (const PopupCell& cell : row.cells)
+            all += Joined(cell.text) + "|";
+    CHECK(all == "1514/03/20|Darksday 09:00|Waxing Gibbous (64%)|Next Day in 36:00|Next Phase in 10:12:00|");
 }
 
 TEST(the_zone_widget_names_the_zone_and_its_region)
@@ -690,60 +667,71 @@ TEST(each_widget_follows_its_switch_and_a_switched_off_one_builds_nothing)
     }
 }
 
-TEST(before_a_weather_is_known_the_widget_shows_the_days_likely_weather_and_its_chance)
+TEST(before_a_weather_is_known_the_widget_shows_the_days_likely_weather)
 {
     Settings settings;
     BarState state;
     state.zone   = 103;              // Valkurm Dunes, day 0: sunshine 50%, dust storm 50%
     state.unixMs = kVanaEpochUnixMs; // day 0
     const WidgetContent w = Content(BarWidget::Weather, state, settings);
-    CHECK(w.shown && w.hasPopup && w.icons.empty());
-    CHECK(Joined(w.title) == "Sunshine" && Joined(w.subtitle) == "50%");
+    CHECK(w.shown && w.hasPopup && w.icons == (std::vector<Icon>{Icon::WeatherSunny}));
+    CHECK(Joined(w.title) == "Sunshine");
 }
 
-TEST(a_known_weather_shows_its_element_once_or_twice_and_only_its_chance_today)
+TEST(use_custom_icons_picks_headsups_pictures_or_the_games_element_icons)
 {
+    // Always: HeadsUp's own, one for a double weather too.
+    CHECK(WeatherIcons(Weather::DustStorm, CustomIcons::Always) == (std::vector<Icon>{Icon::WeatherDustStorm}));
+    CHECK(WeatherIcons(Weather::SandStorm, CustomIcons::Always) == (std::vector<Icon>{Icon::WeatherDustStorm}));
+    CHECK(WeatherIcons(Weather::None, CustomIcons::Always) == (std::vector<Icon>{Icon::WeatherFair}));
+    CHECK(WeatherIcons(Weather::Darkness, CustomIcons::Always) == (std::vector<Icon>{Icon::WeatherGloom}));
+    // Never: the game's element, twice for a double weather, and nothing for a weather of no element.
+    CHECK(WeatherIcons(Weather::DustStorm, CustomIcons::Never) == (std::vector<Icon>{Icon::Earth}));
+    CHECK(WeatherIcons(Weather::SandStorm, CustomIcons::Never) == (std::vector<Icon>{Icon::Earth, Icon::Earth}));
+    CHECK(WeatherIcons(Weather::Sunshine, CustomIcons::Never).empty());
+    // When No Vanilla Icon: the element where there is one.
+    CHECK(WeatherIcons(Weather::Rain, CustomIcons::NoVanilla) == (std::vector<Icon>{Icon::Water}));
+    CHECK(WeatherIcons(Weather::Clouds, CustomIcons::NoVanilla) == (std::vector<Icon>{Icon::WeatherCloudy}));
+    // Each weather has its own picture by the card's names.
+    for (int w = 0; w < kWeatherCount; ++w)
+        CHECK_EQ(WeatherIcons(static_cast<Weather>(w), CustomIcons::Always).size(), static_cast<size_t>(1));
+    // The widget and its pop-out follow the setting.
     Settings settings;
     BarState state;
     state.zone    = 103;
     state.unixMs  = kVanaEpochUnixMs;
-    state.weather = Weather::DustStorm;
-    WidgetContent w = Content(BarWidget::Weather, state, settings);
-    CHECK(Joined(w.title) == "Dust Storm" && w.icons == (std::vector<Icon>{Icon::Earth}) &&
-          Joined(w.subtitle) == "50%");
     state.weather = Weather::SandStorm;
-    w             = Content(BarWidget::Weather, state, settings);
-    CHECK(w.icons == (std::vector<Icon>{Icon::Earth, Icon::Earth}));
+    settings.Widget(BarWidget::Weather).weatherIcons = CustomIcons::Never;
+    CHECK(Content(BarWidget::Weather, state, settings).icons == (std::vector<Icon>{Icon::Earth, Icon::Earth}));
+    CHECK(BarPopupContent(BarWidget::Weather, state, settings).icon == std::optional<Icon>(Icon::Earth));
 }
 
-TEST(the_forecast_covers_today_and_four_more_days)
+TEST(the_forecast_pop_out_has_the_weather_for_a_title_today_beside_the_next_four_days)
 {
     Settings settings;
     BarState state;
     state.zone   = 103;
     state.unixMs = kVanaEpochUnixMs;
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* forecast = Section(popup, "Forecast (Valkurm Dunes)");
-    CHECK(forecast != nullptr && forecast == &popup.sections.front()); // first, under no title
-    CHECK(popup.title.empty() && !popup.icon);
-    // Each day, its three chances, and Phoenix's notes in a column at the right.
-    CHECK(forecast->rows[0].kind == RowKind::Grid && forecast->rows[0].columns == 5);
+    CHECK(Joined(popup.title) == "Sunshine (50%)" && popup.icon == std::optional<Icon>(Icon::WeatherSunny));
+    // Today first, the forecast beside it, then the elements.
+    const PopupSection* today    = Section(popup, "Today");
+    const PopupSection* forecast = Section(popup, "Weather Forecast (Valkurm Dunes)");
+    CHECK(today == &popup.sections[0] && forecast == &popup.sections[1] && forecast->beside && !today->beside);
+    CHECK(Joined(today->rows[5].cells[0].text) == "Sunshine 50%" && Joined(today->rows[6].cells[0].text) == "Dust Storm 50%");
+    CHECK(today->rows[6].cells[0].icon == std::optional<Icon>(Icon::WeatherDustStorm));
+    // Each day from tomorrow, its chances, and no notes.
+    CHECK(forecast->rows[0].kind == RowKind::Grid && forecast->rows[0].columns == 4);
     const std::vector<PopupCell>& cells = forecast->rows[0].cells;
-    CHECK(cells.size() == 25);
-    CHECK(Joined(cells[0].text) == "Today (Firesday)");
-    CHECK(Joined(cells[1].text) == "Sunshine 50%" && Joined(cells[2].text) == "Dust Storm 50%");
-    CHECK(cells[3].text.empty()); // the day has two chances
-    CHECK(Joined(cells[5].text) == "Tomorrow (Earthsday)"); // day 1
-    CHECK(Joined(cells[10].text) == "Watersday");           // day 2: calendar 0x0421, Sunshine 100%
-    CHECK(Joined(cells[11].text) == "Sunshine 100%");
-    CHECK(cells[12].text.empty() && cells[13].text.empty());
-    CHECK(Joined(cells[20].text) == "Iceday");              // day 4: calendar 0x0442, Sunshine 50% and Clouds 50%
-    CHECK(Joined(cells[21].text) == "Sunshine 50%" && Joined(cells[22].text) == "Clouds 50%");
-    CHECK(cells[23].text.empty());
-    // The days against their column's right, the weathers in the middle of theirs, each with its element.
-    for (size_t i = 0; i < cells.size(); i += 5)
+    CHECK(cells.size() == 16);
+    CHECK(Joined(cells[0].text) == "Tomorrow (Earthsday)"); // day 1
+    CHECK(Joined(cells[4].text) == "Watersday");            // day 2: calendar 0x0421, Sunshine 100%
+    CHECK(Joined(cells[5].text) == "Sunshine 100%" && cells[6].text.empty() && cells[7].text.empty());
+    CHECK(Joined(cells[12].text) == "Iceday");              // day 4: calendar 0x0442, Sunshine 50% and Clouds 50%
+    CHECK(Joined(cells[13].text) == "Sunshine 50%" && Joined(cells[14].text) == "Clouds 50%");
+    // The days against their column's right, the weathers in the middle of theirs.
+    for (size_t i = 0; i < cells.size(); i += 4)
         CHECK(cells[i].align == Align::Right && cells[i + 1].align == Align::Center && cells[i + 3].align == Align::Center);
-    CHECK(cells[2].icon == std::optional<Icon>(Icon::Earth) && !cells[1].icon); // dust storm's earth; sunshine has none
 }
 
 TEST(the_forecast_names_the_weekdays_past_the_weeks_end)
@@ -754,38 +742,53 @@ TEST(the_forecast_names_the_weekdays_past_the_weeks_end)
     state.unixMs = 1009831536000LL; // epoch day 6, a Lightsday: the epoch and six days of 3456 Earth seconds
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
     std::vector<std::string> days;
-    const std::vector<PopupCell>& cells = Forecast(popup)->rows[0].cells;
-    for (size_t i = 0; i < cells.size(); i += 5) // the day cells come first in each row of five
+    const std::vector<PopupCell>& cells = Section(popup, "Weather Forecast (Valkurm Dunes)")->rows[0].cells;
+    for (size_t i = 0; i < cells.size(); i += 4) // the day cells come first in each row of four
         days.push_back(Joined(cells[i].text));
-    CHECK(days ==
-          (std::vector<std::string>{"Today (Lightsday)", "Tomorrow (Darksday)", "Firesday", "Earthsday", "Watersday"}));
+    CHECK(days == (std::vector<std::string>{"Tomorrow (Darksday)", "Firesday", "Earthsday", "Watersday"}));
 }
 
-TEST(the_reroll_note_is_in_earth_minutes_and_left_out_where_the_weather_never_changes)
+TEST(a_zone_without_a_calendar_or_weather_shows_vanadiels_time_alone)
 {
-    // data/phoenix_weather.tsv: Temenos (zone 37) has calendar 11, one day of Stellar Glare three times, which
-    // Phoenix sets once and never rolls again; Valkurm Dunes rolls between Sunshine and Dust Storm on day 0.
     Settings settings;
     BarState state;
+    state.zone   = 999;
     state.unixMs = kVanaEpochUnixMs;
-    state.zone   = 103;
-    const PopupContent dunes = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupRow& grid     = Forecast(dunes)->rows[0];
-    CHECK_EQ(Forecast(dunes)->rows.size(), static_cast<size_t>(1)); // the notes beside the days, not under them
-    // Each note on two short lines beside the days, a blank line between them, so the column stays narrow.
-    CHECK(Joined(grid.cells[4].text) == "Phoenix rolls the weather again");
-    CHECK(Joined(grid.cells[9].text) == "every 3 to 30 Earth minutes.");
-    CHECK(grid.cells[14].text.empty());
-    // Phoenix's UpdateWeather turns a roll of no weather, sunshine or clouds into fog from 2:00 to 7:00 outside towns.
-    CHECK(Joined(grid.cells[19].text) == "From 2:00 to 7:00 outside towns,");
-    CHECK(Joined(grid.cells[24].text) == "sunshine and clouds turn to fog.");
-    CHECK(grid.cells[4].text.front().tone == Tone::Dim && grid.cells[24].text.front().tone == Tone::Dim);
-    state.zone = 37;
-    const PopupContent temenos   = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* forecast = Forecast(temenos);
-    CHECK(forecast->heading == "Forecast (Temenos)");
-    CHECK(forecast->rows.size() == 1 && forecast->rows[0].columns == 4); // neither note: Stellar Glare is all it has
-    CHECK(Joined(forecast->rows[0].cells[1].text) == "Stellar Glare 100%");
+    const WidgetContent w = Content(BarWidget::Weather, state, settings);
+    CHECK(w.shown && w.icons.empty() && Joined(w.title) == "Firesday  00:00");
+    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
+    CHECK(popup.title.empty() && !popup.icon && Section(popup, "Today") != nullptr);
+}
+
+TEST(an_unknown_zone_has_no_weather_odds_of_its_own)
+{
+    Settings settings;
+    BarState state;
+    state.zone   = 0; // the data gives zone 0 calendar 0, which says Sunshine
+    state.unixMs = kVanaEpochUnixMs;
+    CHECK(Content(BarWidget::Weather, state, settings).icons.empty());
+    state.weather = Weather::DustStorm;
+    const WidgetContent w = Content(BarWidget::Weather, state, settings);
+    CHECK(w.shown && Joined(w.title) == "Dust Storm" && w.icons == (std::vector<Icon>{Icon::WeatherDustStorm}));
+    const PopupContent popup     = BarPopupContent(BarWidget::Weather, state, settings);
+    const PopupSection* forecast = Section(popup, "Weather Forecast");
+    CHECK(forecast != nullptr && Joined(popup.title) == "Dust Storm"); // no chance of it to give
+    const std::vector<PopupCell>& cells = forecast->rows[0].cells;
+    for (size_t i = 0; i < cells.size(); ++i)
+        if (i % 4 != 0) CHECK(cells[i].text.empty()); // the days alone
+}
+
+TEST(a_live_weather_outside_the_days_chances_still_shows)
+{
+    Settings settings;
+    BarState state;
+    state.zone    = 103;
+    state.unixMs  = kVanaEpochUnixMs;
+    state.weather = Weather::Rain; // day 0 is Sunshine or Dust Storm
+    const WidgetContent w = Content(BarWidget::Weather, state, settings);
+    CHECK(Joined(w.title) == "Rain" && w.icons == (std::vector<Icon>{Icon::WeatherRain}));
+    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
+    CHECK(Joined(popup.title) == "Rain" && Joined(Section(popup, "Today")->rows[5].cells[0].text) == "Sunshine 50%");
 }
 
 TEST(the_weather_popup_has_a_tab_for_each_element_of_the_zones_that_can_roll_it_today_and_tomorrow)
@@ -881,48 +884,6 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
     state.scrolled = &scrolled;
     const PopupLayout end = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, BarShape::Pills, false, measure, room);
     CHECK(shows(end, last) && end.height <= room + 0.01f);
-}
-
-TEST(a_zone_without_a_calendar_or_weather_hides_the_widget)
-{
-    Settings settings;
-    BarState state;
-    state.zone = 999;
-    CHECK(!Content(BarWidget::Weather, state, settings).shown);
-}
-
-TEST(an_unknown_zone_has_no_weather_odds_of_its_own)
-{
-    Settings settings;
-    BarState state;
-    state.zone   = 0; // the data gives zone 0 calendar 0, which says Sunshine
-    state.unixMs = kVanaEpochUnixMs;
-    CHECK(!Content(BarWidget::Weather, state, settings).shown);
-    state.weather = Weather::DustStorm;
-    const WidgetContent w = Content(BarWidget::Weather, state, settings);
-    CHECK(w.shown && Joined(w.title) == "Dust Storm" && w.icons == (std::vector<Icon>{Icon::Earth}));
-    CHECK(w.subtitle.empty() && !w.hasPopup);
-    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* forecast = Forecast(popup);
-    CHECK(forecast != nullptr && forecast->heading == "Forecast");
-    const std::vector<PopupCell>& cells = forecast->rows[0].cells;
-    const auto columns = static_cast<size_t>(forecast->rows[0].columns);
-    for (size_t i = 0; i < cells.size(); ++i)
-        if (i % columns != 0 && i % columns != 4) CHECK(cells[i].text.empty()); // days first, notes last
-}
-
-TEST(a_live_weather_outside_the_days_chances_still_shows)
-{
-    Settings settings;
-    BarState state;
-    state.zone    = 103;
-    state.unixMs  = kVanaEpochUnixMs;
-    state.weather = Weather::Rain; // day 0 is Sunshine or Dust Storm
-    const WidgetContent w = Content(BarWidget::Weather, state, settings);
-    CHECK(Joined(w.title) == "Rain" && w.icons == (std::vector<Icon>{Icon::Water}));
-    CHECK(w.subtitle.empty()); // no chance of it today to give
-    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(Joined(Forecast(popup)->rows[0].cells[1].text) == "Sunshine 50%");
 }
 
 TEST(the_zone_says_who_holds_its_region_once_known)
@@ -1097,7 +1058,8 @@ namespace
             state.owners  = owners;
             state.shares =
                 RegionShares{{{Nation::Bastok, 52}, {Nation::SanDoria, 30}, {Nation::Windurst, 10}, {Nation::Beastmen, 8}}};
-            state.weather = Weather::DustStorm;
+            // No weather yet: the Forecast shows the zone's likeliest, so it reads the zone.
+            state.weather.reset();
             state.strip    = StripText{"Mog Wardrobe 8", "Help on the selected item"};
             state.stripBag = BagCount{3, 80};
             state.frames   = FrameReport{1000.0 / 30.0, 120.0};
@@ -2786,7 +2748,7 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
     CHECK(guilds.tabs[guilds.tab].name.text == "Tenshodo" && guilds.tabs[guilds.tab].rows.size() == 2);
 }
 
-TEST(the_weather_popup_keeps_its_forecast_and_elements_in_one_column_at_one_width)
+TEST(the_forecast_pop_out_puts_today_beside_the_forecast_over_the_elements)
 {
     Settings settings;
     BarState state;
@@ -2803,8 +2765,10 @@ TEST(the_weather_popup_keeps_its_forecast_and_elements_in_one_column_at_one_widt
     const PopupLayout l = LayoutPopup(popup, m, BarShape::Pills, false, measure, 1000.0f);
     for (const PopupPiece& p : l.pieces)
         if (p.kind == PopupPiece::Kind::Card) cards.push_back(&p);
-    CHECK_EQ(cards.size(), static_cast<size_t>(2));
-    CHECK(cards[0]->x == cards[1]->x && cards[0]->width == cards[1]->width && cards[1]->y > cards[0]->y);
+    CHECK_EQ(cards.size(), static_cast<size_t>(3));
+    CHECK(cards[0]->y == cards[1]->y && cards[1]->x > cards[0]->x + cards[0]->width && cards[0]->height == cards[1]->height);
+    CHECK(cards[2]->y > cards[0]->y + cards[0]->height && cards[2]->x == cards[0]->x &&
+          cards[2]->width > cards[0]->width + cards[1]->width);
 }
 
 TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with_one)
@@ -2825,9 +2789,9 @@ TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with
     sections.insert(sections.end(), gil.sections.begin(), gil.sections.end());
     CHECK(both.sections == sections);
     // A widget alone has its own popup, with its clone chip.
-    PopupContent alone = BarPopupContent(BarWidget::VanaTime, state, settings);
-    alone.clonePress   = std::string(kWidgetClonePress) + std::to_string(SlotOf(BarWidget::VanaTime));
-    CHECK(PanelPopupContent(BarWidget::VanaTime, state, settings) == alone);
+    PopupContent alone = BarPopupContent(BarWidget::EarthTime, state, settings);
+    alone.clonePress   = std::string(kWidgetClonePress) + std::to_string(SlotOf(BarWidget::EarthTime));
+    CHECK(PanelPopupContent(BarWidget::EarthTime, state, settings) == alone);
     // A combined pill whose first widget is switched off has its partner's popup alone.
     settings.Widget(BarWidget::Bags).on = false;
     PopupContent partner = gil;

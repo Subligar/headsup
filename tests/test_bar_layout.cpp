@@ -34,7 +34,7 @@ namespace
     {
         std::array<float, kPanelSlots> widths{};
         const std::pair<BarWidget, float> each[] = {{BarWidget::Zone, zone}, {BarWidget::Weather, weather},
-            {BarWidget::VanaTime, vana}, {BarWidget::Target, target}, {BarWidget::Currency, gil}, {BarWidget::Bags, bags},
+            {BarWidget::Job, vana}, {BarWidget::Target, target}, {BarWidget::Currency, gil}, {BarWidget::Bags, bags},
             {BarWidget::EarthTime, earth}};
         for (const auto& [widget, width] : each)
             widths[SlotOf(widget)] = width;
@@ -52,7 +52,7 @@ TEST(pills_put_the_groups_at_the_edges_and_the_target_in_the_middle)
     CHECK(Near(l.height, 36.0f) && l.widgets.size() == 6);
     const float g = kPills.gap;
     CHECK(l.widgets[0].widget == BarWidget::Zone && Near(l.widgets[0].rect.x, g));
-    CHECK(l.widgets[1].widget == BarWidget::VanaTime && Near(l.widgets[1].rect.x, g + 100.0f + g)); // weather is off
+    CHECK(l.widgets[1].widget == BarWidget::Job && Near(l.widgets[1].rect.x, g + 100.0f + g)); // weather is off
     CHECK(Near(RectOf(l, BarWidget::EarthTime)->x + 50.0f, 1920.0f - g));
     CHECK(Near(RectOf(l, BarWidget::Bags)->x + 60.0f, 1920.0f - g - 50.0f - g));
     CHECK(Near(RectOf(l, BarWidget::Target)->x, 860.0f) && Near(l.targetWidth, 200.0f));
@@ -61,7 +61,7 @@ TEST(pills_put_the_groups_at_the_edges_and_the_target_in_the_middle)
     std::vector<PanelWidget> order;
     for (const PlacedWidget& p : l.widgets)
         order.push_back(p.widget);
-    CHECK(order == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::VanaTime, BarWidget::Target, BarWidget::Currency,
+    CHECK(order == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Job, BarWidget::Target, BarWidget::Currency,
                                            BarWidget::Bags, BarWidget::EarthTime})); // in bar order
 }
 
@@ -74,7 +74,7 @@ TEST(ornate_starts_after_the_caps_and_divides_neighbours_with_diamonds)
     CHECK(l.dividers.size() == 4); // two between three on the left, two on the right
     CHECK(Near(l.dividers[0], kOrnate.cap + 100.0f));
     // Each on the boundary between two neighbours: the start of the later one.
-    CHECK(Near(l.dividers[1], RectOf(l, BarWidget::VanaTime)->x));
+    CHECK(Near(l.dividers[1], RectOf(l, BarWidget::Job)->x));
     CHECK(Near(l.dividers[2], RectOf(l, BarWidget::Bags)->x));
     CHECK(Near(l.dividers[3], RectOf(l, BarWidget::EarthTime)->x));
     CHECK(Near(RectOf(l, BarWidget::Target)->height, PillRow(kOrnate).height)); // the target's frame
@@ -118,7 +118,7 @@ TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
     popups[SlotOf(BarWidget::Target)]   = true;
-    popups[SlotOf(BarWidget::VanaTime)] = true;
+    popups[SlotOf(BarWidget::Job)] = true;
     BarInput input;
     input.Frame(l, popups);
     input.Move(960.0f, 18.0f);
@@ -143,9 +143,9 @@ TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
     CHECK(input.Pinned() == BarWidget::Target);
     input.Move(960.0f, 700.0f);
     CHECK(input.Open() == BarWidget::Target); // stays
-    const BarRect vana = *RectOf(l, BarWidget::VanaTime);
+    const BarRect vana = *RectOf(l, BarWidget::Job);
     input.Move(vana.x + 5.0f, 18.0f);
-    CHECK(input.Open() == BarWidget::VanaTime); // hovering another shows it
+    CHECK(input.Open() == BarWidget::Job); // hovering another shows it
     input.Move(960.0f, 700.0f);
     CHECK(input.Open() == BarWidget::Target); // back to the pinned one
     input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
@@ -225,7 +225,7 @@ TEST(pinning_another_widget_moves_the_pin)
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
     popups[SlotOf(BarWidget::Target)]   = true;
-    popups[SlotOf(BarWidget::VanaTime)] = true;
+    popups[SlotOf(BarWidget::Job)] = true;
     BarInput input;
     input.Frame(l, popups);
     const BarRect pin{1100.0f, 52.0f, 50.0f, 20.0f};
@@ -234,11 +234,11 @@ TEST(pinning_another_widget_moves_the_pin)
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true));
     CHECK(input.Pinned() == BarWidget::Target);
     // Another's popup shows while it is hovered, and its own chip moves the pin to it.
-    const BarRect vana = *RectOf(l, BarWidget::VanaTime), vanaPin{vana.x + 200.0f, 52.0f, 50.0f, 20.0f};
+    const BarRect vana = *RectOf(l, BarWidget::Job), vanaPin{vana.x + 200.0f, 52.0f, 50.0f, 20.0f};
     input.Move(vana.x + 5.0f, 18.0f);
     input.SetPopup(BarRect{vana.x, 44.0f, 300.0f, 200.0f}, {}, {}, vanaPin);
     CHECK(input.Press(vanaPin.x + 5.0f, vanaPin.y + 5.0f, true));
-    CHECK(input.Pinned() == BarWidget::VanaTime);
+    CHECK(input.Pinned() == BarWidget::Job);
     // A press on another widget on the bar moves the pin to it too.
     CHECK(input.Press(960.0f, 18.0f, true));
     CHECK(input.Pinned() == BarWidget::Target);
@@ -249,7 +249,7 @@ TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
     popups[SlotOf(BarWidget::Target)]   = true;
-    popups[SlotOf(BarWidget::VanaTime)] = true;
+    popups[SlotOf(BarWidget::Job)] = true;
     BarInput input;
     input.Frame(l, popups);
     const BarRect popup{760.0f, 44.0f, 400.0f, 300.0f}, pin{1100.0f, 52.0f, 50.0f, 20.0f}, cog{1074.0f, 52.0f, 20.0f, 20.0f};
@@ -260,9 +260,9 @@ TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)
     CHECK(input.SettingsShown() == BarWidget::Target && input.Pinned() == BarWidget::Target);
     input.Move(960.0f, 700.0f);
     CHECK(input.SettingsShown() == BarWidget::Target); // it stays as the pointer goes
-    const BarRect vana = *RectOf(l, BarWidget::VanaTime);
+    const BarRect vana = *RectOf(l, BarWidget::Job);
     input.Move(vana.x + 5.0f, 18.0f);
-    CHECK(input.Open() == BarWidget::VanaTime && !input.SettingsShown()); // another's popup, as it is
+    CHECK(input.Open() == BarWidget::Job && !input.SettingsShown()); // another's popup, as it is
     input.SetPopup(BarRect{vana.x, 44.0f, 300.0f, 200.0f});
     input.Move(960.0f, 700.0f);
     input.SetPopup(popup, {}, {}, pin, cog);
@@ -290,12 +290,12 @@ TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)
     CHECK(input.Pinned() == BarWidget::Target);
     input.Pin(std::nullopt);
     // As the settings window asks: shown and pinned, then closed.
-    input.ShowSettings(BarWidget::VanaTime);
-    CHECK(input.SettingsShown() == BarWidget::VanaTime && input.Pinned() == BarWidget::VanaTime);
+    input.ShowSettings(BarWidget::Job);
+    CHECK(input.SettingsShown() == BarWidget::Job && input.Pinned() == BarWidget::Job);
     input.ShowSettings(std::nullopt);
     CHECK(!input.Pinned() && !input.SettingsShown());
     // A pin moved by a command ends them too.
-    input.ShowSettings(BarWidget::VanaTime);
+    input.ShowSettings(BarWidget::Job);
     input.Pin(BarWidget::Target);
     CHECK(!input.SettingsShown());
 }
@@ -380,8 +380,10 @@ TEST(a_shrunk_target_with_fractional_widths_stays_between_the_groups)
         float leftEnd = 0.0f, rightStart = screen;
         for (const PlacedWidget& p : l.widgets)
         {
-            if (p.widget.kind < BarWidget::Target) leftEnd = std::max(leftEnd, p.rect.x + p.rect.width);
-            if (p.widget.kind > BarWidget::Target) rightStart = std::min(rightStart, p.rect.x);
+            const auto& left = DefaultPlacement()[static_cast<int>(BarSection::Left)];
+            const bool onLeft = std::ranges::find(left, p.widget) != left.end();
+            if (onLeft) leftEnd = std::max(leftEnd, p.rect.x + p.rect.width);
+            if (!onLeft && p.widget.kind != BarWidget::Target) rightStart = std::min(rightStart, p.rect.x);
         }
         CHECK(target->x >= leftEnd + kPills.gap - 0.01f);
         CHECK(target->x + target->width <= rightStart - kPills.gap + 0.01f);
@@ -422,7 +424,7 @@ TEST(leaving_the_game_closes_a_hovered_popup_until_the_pointer_is_back_and_keeps
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
     popups[SlotOf(BarWidget::Target)]   = true;
-    popups[SlotOf(BarWidget::VanaTime)] = true;
+    popups[SlotOf(BarWidget::Job)] = true;
     const BarRect popup{760.0f, 44.0f, 400.0f, 300.0f};
     BarInput input;
     input.Frame(l, popups);
@@ -442,9 +444,9 @@ TEST(leaving_the_game_closes_a_hovered_popup_until_the_pointer_is_back_and_keeps
     CHECK(!input.Open().has_value() && !input.Hovered().has_value());
     input.Move(960.0f, 18.0f);
     input.Pin(BarWidget::Target);
-    const BarRect vana = *RectOf(l, BarWidget::VanaTime);
+    const BarRect vana = *RectOf(l, BarWidget::Job);
     input.Move(vana.x + 5.0f, 18.0f);
-    CHECK(input.Open() == BarWidget::VanaTime);
+    CHECK(input.Open() == BarWidget::Job);
     input.Leave();
     CHECK(input.Open() == BarWidget::Target && input.Pinned() == BarWidget::Target);
 }
@@ -1027,9 +1029,9 @@ TEST(a_target_that_gave_way_comes_back_into_the_room_the_dropped_widgets_left)
     CHECK(RectOf(l, BarWidget::Currency) == nullptr);
     const BarRect* target = RectOf(l, BarWidget::Target);
     CHECK(target != nullptr);
-    const float room = RectOf(l, BarWidget::Bags)->x - g - (RectOf(l, BarWidget::VanaTime)->x + 120.0f) - g;
+    const float room = RectOf(l, BarWidget::Bags)->x - g - (RectOf(l, BarWidget::Job)->x + 120.0f) - g;
     CHECK(Near(room, 70.5f) && Near(l.targetWidth, std::floor(room)) && target && Near(target->width, 70.0f));
-    CHECK(target && target->x >= RectOf(l, BarWidget::VanaTime)->x + 120.0f + g - 0.01f);
+    CHECK(target && target->x >= RectOf(l, BarWidget::Job)->x + 120.0f + g - 0.01f);
     CheckApartAndInside(l, screen);
 }
 
@@ -1059,7 +1061,7 @@ TEST(a_target_in_a_side_section_also_takes_back_the_room_a_dropped_neighbour_lef
     // target. Against every widget it would keep floor(S - 420 - 7g) px, under 40; gil needs S >= 420 + 6g and goes;
     // without it the target has S - 330 - 6g = 70.5 px between Vana'diel time and bags.
     const float screen = 400.5f + 6.0f * g;
-    const auto right   = Sections({BarWidget::Zone, BarWidget::VanaTime}, {},
+    const auto right   = Sections({BarWidget::Zone, BarWidget::Job}, {},
         {BarWidget::Target, BarWidget::Currency, BarWidget::Bags, BarWidget::EarthTime});
     const BarLayout l  = Layout(screen, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 40.0f, right);
     CHECK(RectOf(l, BarWidget::Currency) == nullptr && RectOf(l, BarWidget::Target) != nullptr);
@@ -1197,7 +1199,7 @@ TEST(widget_spacing_adds_room_between_every_widget_and_each_neighbour)
         const BarLayout spaced = Layout(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), std::nullopt, 5.0f);
         CHECK(Near(RectOf(spaced, BarWidget::Zone)->x, RectOf(plain, BarWidget::Zone)->x));
         CHECK(Near(RectOf(spaced, BarWidget::Weather)->x, RectOf(plain, BarWidget::Weather)->x + 10.0f));
-        CHECK(Near(RectOf(spaced, BarWidget::VanaTime)->x, RectOf(plain, BarWidget::VanaTime)->x + 20.0f));
+        CHECK(Near(RectOf(spaced, BarWidget::Job)->x, RectOf(plain, BarWidget::Job)->x + 20.0f));
         // An ornate divider stands in the middle of the room it is in.
         if (shape == BarShape::Ornate)
         {
@@ -1215,7 +1217,7 @@ namespace
         CombineLinks links{};
         links[SlotOf(BarWidget::Zone)] = BarWidget::Weather;
         links[SlotOf(BarWidget::Bags)] = BarWidget::Currency;
-        const BarPlacement p{std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather, BarWidget::VanaTime},
+        const BarPlacement p{std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather, BarWidget::Job},
             std::vector<PanelWidget>{BarWidget::Target},
             std::vector<PanelWidget>{BarWidget::Currency, BarWidget::Bags, BarWidget::EarthTime}};
         return Combine(p, links);
@@ -1244,9 +1246,9 @@ TEST(combined_widgets_touch_with_no_gap_or_diamond_between_them)
             // Between groups, as between any neighbours: here Weather's own room and the gap or diamond.
             const BarLayout alone = Layout(1920.0f, metrics, shape, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f,
                 DefaultPlacement(), separators, spacing);
-            const float apart = RectOf(alone, BarWidget::VanaTime)->x - RectOf(alone, BarWidget::Weather)->x -
+            const float apart = RectOf(alone, BarWidget::Job)->x - RectOf(alone, BarWidget::Weather)->x -
                                 RectOf(alone, BarWidget::Weather)->width;
-            CHECK(Near(RectOf(l, BarWidget::VanaTime)->x, weather.x + weather.width + apart));
+            CHECK(Near(RectOf(l, BarWidget::Job)->x, weather.x + weather.width + apart));
             for (const float divider : l.dividers)
                 CHECK(!Near(divider, weather.x) && !Near(divider, gil.x));
             if ((separators & kBetween) != 0) CHECK_EQ(l.dividers.size(), static_cast<size_t>(2)); // one a side
@@ -1283,14 +1285,14 @@ TEST(a_combined_pill_that_does_not_fit_goes_whole)
     CHECK(RectOf(right, BarWidget::Bags) == nullptr && RectOf(right, BarWidget::Currency) == nullptr);
     // The center drops a combined pill whole from its end.
     CombineLinks links{};
-    links[SlotOf(BarWidget::Weather)] = BarWidget::VanaTime;
-    const BarPlacement p{std::vector<PanelWidget>{}, std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather, BarWidget::VanaTime},
+    links[SlotOf(BarWidget::Weather)] = BarWidget::Job;
+    const BarPlacement p{std::vector<PanelWidget>{}, std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather, BarWidget::Job},
         std::vector<PanelWidget>{}};
     const PanelGroups cg = Combine(p, links);
     const BarLayout center = Layout(2.0f * g + 100.0f + g + 80.0f + 60.0f, kPills, BarShape::Pills,
         Widths(100, 80, 120, 0, 0, 0, 0), 0.0f, cg.placement, std::nullopt, 0.0f, cg.group);
     CHECK(RectOf(center, BarWidget::Zone) != nullptr);
-    CHECK(RectOf(center, BarWidget::Weather) == nullptr && RectOf(center, BarWidget::VanaTime) == nullptr);
+    CHECK(RectOf(center, BarWidget::Weather) == nullptr && RectOf(center, BarWidget::Job) == nullptr);
     CHECK(left.dividers.empty() && right.dividers.empty());
 }
 
@@ -1328,7 +1330,7 @@ TEST(a_widget_in_a_combined_pill_knows_which_sides_it_shares)
     const auto joins = [&](BarWidget w) { const PillJoins j = JoinsOf(l, w); return std::pair{j.before, j.after}; };
     CHECK(joins(BarWidget::Zone) == std::pair(false, true));
     CHECK(joins(BarWidget::Weather) == std::pair(true, false));
-    CHECK(joins(BarWidget::VanaTime) == std::pair(false, false));
+    CHECK(joins(BarWidget::Job) == std::pair(false, false));
     CHECK(joins(BarWidget::Bags) == std::pair(false, true));
     CHECK(joins(BarWidget::Currency) == std::pair(true, false));
 }

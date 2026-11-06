@@ -64,6 +64,7 @@ namespace headsup
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
         uint8_t nations = kAllNations;              // World Info's conquest: whose regions it counts, by NationBit
         ConquestGrid conquestGrid = ConquestGrid::TwoByTwo; // and how several are laid out
+        CustomIcons weatherIcons = CustomIcons::Always; // Forecast: its weather pictures
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         std::optional<ClockZone> clockSecondZone = ClockZone::Japan; // its Secondary Timezone part's, the same way
         bool clock24         = true;                // its two lines

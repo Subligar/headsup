@@ -258,6 +258,7 @@
                 {"key": "blue-magic-learned", "name": "Learned Blue Magic", "tip": "How a TP move whose blue magic you already know is shown: still blue with a star after it, or as plain text. Default is Star."},
                 {"key": "currency", "name": "Currency"},
                 {"key": "nations", "name": "Nations", "tip": "Whose regions the widget counts when it shows Conquest Info, and its pop-out lists."},
+                {"key": "custom-icons", "name": "Use Custom Icons", "tip": "When the widget and its pop-out show HeadsUp's own weather pictures in place of the game's element icons. Default is Always."},
                 {"key": "conquest-grid", "name": "Layout", "tip": "How the nations are laid out when it shows more than one: two lines of two, or all on one line. Default is 2 x 2."},
                 {"key": "shows", "name": "Shows", "tip": "What the widget tells on the panel, with a countdown. Add a copy to show another."},
                 {"key": "ship", "name": "Ship", "tip": "The boat or airship whose next departure the widget shows."},
@@ -1010,8 +1011,7 @@
       "key": "bar-widgets",
       "options": [
         {"name": "Zone", "tip": "The zone, its region and who holds it. Hover for the influence there and the conquest tally."},
-        {"name": "Weather", "tip": "The weather now and today's chance of it. Hover for the forecast, and for the zones that can roll each element today and tomorrow."},
-        {"name": "Vana'diel Clock", "tip": "The Vana'diel day, time and moon."},
+        {"name": "Forecast", "tip": "The weather now and Vana'diel's date, day, time and moon. Hover for today, the forecast, and the zones that can roll each element today and tomorrow."},
         {"name": "Target", "tip": "Your target's name, level and con. Hover a mob for its details."},
         {"name": "Currency", "tip": "Gil, or another currency. Hover for your favorite currencies and every other one, with a star to keep one at the top."},
         {"name": "Inventory", "tip": "How full your inventory is. Hover for every bag."},
@@ -1225,8 +1225,8 @@
       "key": "setup-panel",
       "options": [
         {"name": "Full", "tip": "The zone, weather, both clocks, your job, target, gil and inventory, your frame rate, connection, distance and the game's help line."},
-        {"name": "Simple", "tip": "The zone, Vana'diel's time, your job, target, gil and inventory."},
-        {"name": "Minimal", "tip": "The zone, Vana'diel's time and your target."},
+        {"name": "Simple", "tip": "The zone, the weather with Vana'diel's time, your job, target, gil and inventory."},
+        {"name": "Minimal", "tip": "The zone, the weather with Vana'diel's time, and your target."},
         {"name": "No Top Panel", "tip": "No Top Panel. You can turn it on again in the settings window."}
       ]
     },
@@ -1241,7 +1241,7 @@
       "key": "setup-widget-groups",
       "options": [
         {"name": "Where You Are", "tip": "The zone, its weather and what is around you."},
-        {"name": "Time", "tip": "Vana'diel's time and yours."},
+        {"name": "Time", "tip": "Your computer's time."},
         {"name": "You", "tip": "Your job, experience, gil, inventory, party and target."},
         {"name": "System", "tip": "Your frame rate, connection, memory and the game's help line."}
       ]
@@ -1283,13 +1283,12 @@
         {"name": "Region Name", "tip": "The zone's region."},
         {"name": "Conquest Icon", "tip": "The crest of the nation that holds the region."},
         {"name": "Conquest Nation", "tip": "The name of the nation that holds the region."},
-        {"name": "Weather Icon", "tip": "The weather's element."},
-        {"name": "Weather", "tip": "The weather now."},
-        {"name": "Chance", "tip": "Today's chance of this weather."},
-        {"name": "Day", "tip": "Vana'diel's day, in its element's color."},
-        {"name": "Time", "tip": "Vana'diel's time."},
-        {"name": "Date", "tip": "Vana'diel's date."},
-        {"name": "Moon", "tip": "The moon's phase and how full it is."},
+        {"name": "Weather Icon", "tip": "The weather's picture, as Use Custom Icons picks it."},
+        {"name": "Weather Name", "tip": "The weather now."},
+        {"name": "Vana'diel Date", "tip": "Vana'diel's date."},
+        {"name": "Vana'diel Weekday", "tip": "Vana'diel's day, in its element's color."},
+        {"name": "Vana'diel Time", "tip": "Vana'diel's time."},
+        {"name": "Moon Phase", "tip": "The moon's phase and how full it is."},
         {"name": "Aggression", "tip": "Whether a mob is aggressive or passive."},
         {"name": "Name", "tip": "Your target's name."},
         {"name": "Distance", "tip": "How far your target is, in yalms."},
@@ -1322,6 +1321,14 @@
         {"name": "Icon", "tip": "The weather's element, when the widget shows a weather."},
         {"name": "Main", "tip": "What Shows picks: the ship, weather, guild, RSE or moon."},
         {"name": "Details", "tip": "Its countdown and details."}
+      ]
+    },
+    {
+      "key": "custom-icons",
+      "options": [
+        {"name": "Never", "tip": "Always the game's element icons. A weather the game has no icon for shows none."},
+        {"name": "When No Vanilla Icon", "tip": "The game's element icons, and HeadsUp's own pictures for clear, sunshine, clouds and fog, which have none."},
+        {"name": "Always", "tip": "HeadsUp's own pictures for every weather."}
       ]
     },
     {

@@ -228,6 +228,8 @@ namespace headsup
         constexpr const char* kBarBagKey      = "barBag";
         constexpr const char* kBarNationsKey  = "barNations";
         constexpr const char* kConquestGridKey = "barConquestGrid";
+        constexpr const char* kWeatherIconsKey = "weatherIcons"; // the Forecast widget's, by kCustomIconsNames
+        const char* const kCustomIconsNames[kCustomIconsCount] = {"never", "missing", "always"};
         constexpr const char* kWorldLineKey     = "barWorldLine";
         constexpr const char* kWorldRouteKey    = "barWorldRoute";
         constexpr const char* kWorldElementKey  = "barWorldElement";
@@ -263,7 +265,7 @@ namespace headsup
             "australiaEastern"};
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
-        const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
+        const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
             "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
@@ -1204,6 +1206,7 @@ namespace headsup
             if (w.currency < 0 || w.currency >= kCurrencyCount) w.currency = fresh.currency;
             if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
+            if (static_cast<int>(w.weatherIcons) >= kCustomIconsCount) w.weatherIcons = fresh.weatherIcons;
             if (w.clockSecondZone && static_cast<int>(*w.clockSecondZone) >= kClockZoneCount) w.clockSecondZone = fresh.clockSecondZone;
             w.linkPadding  = std::clamp(w.linkPadding, 0, kMaxWidgetSpacing);
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
@@ -1252,6 +1255,10 @@ namespace headsup
                 if (const std::optional<int> currency = CurrencyOfKey(text(kBarCurrencyKey))) o.currency = *currency;
                 break;
             case BarWidget::Bags: o.bag = number(kBarBagKey, o.bag); break;
+            case BarWidget::Weather:
+                o.weatherIcons = static_cast<CustomIcons>(
+                    NameIndex(kCustomIconsNames, kCustomIconsCount, text(kWeatherIconsKey), static_cast<int>(o.weatherIcons)));
+                break;
             case BarWidget::World:
             {
                 o.nations = static_cast<uint8_t>(std::clamp(number(kBarNationsKey, o.nations), 0, static_cast<int>(kAllNations)));
@@ -1326,6 +1333,7 @@ namespace headsup
             {
             case BarWidget::Currency: text(kBarCurrencyKey, kCurrencyTable[o.currency].key); break;
             case BarWidget::Bags: StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag)); break;
+            case BarWidget::Weather: text(kWeatherIconsKey, kCustomIconsNames[static_cast<int>(o.weatherIcons)]); break;
             case BarWidget::World:
                 StoreFloat(store, CopyKey(kBarNationsKey, w), static_cast<float>(o.nations));
                 StoreFloat(store, CopyKey(kConquestGridKey, w), static_cast<float>(o.conquestGrid));

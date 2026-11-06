@@ -771,6 +771,16 @@ namespace headsup
                         form.Toggles(label.c_str(), o.nations, names.data(), kContenderNations, row.tip);
                     }
                     break;
+                case WidgetTabsRow::CustomIcons:
+                    if (kind == BarWidget::Weather)
+                    {
+                        int use = static_cast<int>(o.weatherIcons);
+                        form.NumberDropdown(label.c_str(), use, 0, kCustomIconsCount - 1,
+                            [&](int i) { return std::string(c.layout.OptionsOf(WindowList::CustomIcons)[static_cast<size_t>(i)].name); },
+                            row.tip);
+                        o.weatherIcons = static_cast<CustomIcons>(use);
+                    }
+                    break;
                 case WidgetTabsRow::ConquestGrid:
                     if (kind == BarWidget::World && o.worldLine == WorldLine::Conquest)
                     {

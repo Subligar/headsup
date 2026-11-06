@@ -38,7 +38,6 @@ namespace headsup
     {
         Zone,
         Weather,
-        VanaTime,
         Target,
         Currency,
         Bags,
@@ -54,7 +53,7 @@ namespace headsup
     // Which widgets a new settings file shows, by BarWidget. to_array takes its size from the list, so a widget added
     // to BarWidget without a default here fails the assert.
     constexpr auto kBarWidgetDefaults =
-        std::to_array<bool>({true, true, true, true, true, true, true, true, true, true, false, false, false});
+        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false});
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
     constexpr uint8_t kAllNations = 0x0F; // World Info's conquest: a bit each for the three nations and the beastmen
@@ -123,6 +122,11 @@ namespace headsup
     // A bar or popup text size setting's leftmost position, Auto: the size follows the bar height. Set sizes run from
     // the next pixel, the fonts' readable floor and the bar's smallest detail line.
     constexpr int kAutoBarTextSize = 8, kMaxBarTextSize = 32; // pixels
+    // Use Custom Icons: when the Forecast widget shows HeadsUp's own weather pictures in place of the game's element
+    // icons.
+    enum class CustomIcons : uint8_t { Never, NoVanilla, Always };
+    constexpr int kCustomIconsCount = static_cast<int>(CustomIcons::Always) + 1;
+
     // Font Size Ratio: the Main line's size over the Secondary's. Its slider has 1 at its middle, steps of
     // kFontRatioStepBelow under it and kFontRatioStepAbove over it.
     constexpr float kMinFontRatio = 0.2f, kMaxFontRatio = 2.0f, kDefaultFontRatio = 1.2f;

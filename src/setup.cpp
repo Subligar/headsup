@@ -179,8 +179,8 @@ namespace headsup
                 if (kBarWidgetDefaults[static_cast<size_t>(w)]) shown.push_back(static_cast<BarWidget>(w));
             PanelOf(s, shown);
         }
-        constexpr BarWidget kSimplePanel[]{BarWidget::Zone, BarWidget::VanaTime, BarWidget::Job, BarWidget::Target, BarWidget::Currency, BarWidget::Bags};
-        constexpr BarWidget kMinimalPanel[]{BarWidget::Zone, BarWidget::VanaTime, BarWidget::Target};
+        constexpr BarWidget kSimplePanel[]{BarWidget::Zone, BarWidget::Weather, BarWidget::Job, BarWidget::Target, BarWidget::Currency, BarWidget::Bags};
+        constexpr BarWidget kMinimalPanel[]{BarWidget::Zone, BarWidget::Weather, BarWidget::Target};
         // The widgets are kept, for the panel turned back on in the settings window to show as it did.
         const SetupOption kPanels[]{{"full", DefaultPanel}, {"simple", [](Settings& s) { PanelOf(s, kSimplePanel); }},
             {"minimal", [](Settings& s) { PanelOf(s, kMinimalPanel); }}, {"hidden", [](Settings& s) { s.showBar = false; }}};
@@ -209,7 +209,7 @@ namespace headsup
         static_assert(std::size(kPages) == kSetupSteps);
 
         constexpr BarWidget kWhere[]{BarWidget::Zone, BarWidget::Weather, BarWidget::World};
-        constexpr BarWidget kTime[]{BarWidget::VanaTime, BarWidget::EarthTime};
+        constexpr BarWidget kTime[]{BarWidget::EarthTime};
         constexpr BarWidget kYou[]{BarWidget::Job, BarWidget::Currency, BarWidget::Bags, BarWidget::Party, BarWidget::Target};
         constexpr BarWidget kSystem[]{BarWidget::Performance, BarWidget::GameHelp, BarWidget::StatusTimers};
         const SetupWidgetGroup kWidgetGroups[]{{"where", kWhere}, {"time", kTime}, {"you", kYou}, {"system", kSystem}};
