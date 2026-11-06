@@ -148,8 +148,11 @@ namespace headsup
         bool Dragging() const { return m_Drag.has_value(); }
         void DragTo(float y);
         void EndDrag() { m_Drag.reset(); }
-        // How many lines each part has been scrolled since loading, by its key.
+        // How many lines each part of the open popup has been scrolled, by its key: back to the top once it closes.
         const std::map<std::string, size_t>& Scrolled() const { return m_Scrolled; }
+        // A press in the open popup was refused, which it says until it closes.
+        void Refuse() { m_Refused = true; }
+        bool Refused() const { return m_Refused; }
         void Move(float x, float y);
         // The pointer is off the game: over an Ashita window or out of the client area, where no move reports it.
         void Leave();
@@ -215,6 +218,7 @@ namespace headsup
         };
         std::optional<Drag> m_Drag;
         std::map<std::string, size_t> m_Scrolled;
+        bool m_Refused = false;
         float m_X = kAway, m_Y = kAway;
         std::optional<PanelWidget> m_Under;  // the widget under the pointer
         std::optional<PanelWidget> m_Hover;  // the popup hovering keeps open

@@ -1638,10 +1638,11 @@ TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_
     state.statuses = {ActiveStatus{kSignetEffect, 6130.0}};
     CHECK(!NeedsOf(settings, std::nullopt).statuses); // off on a new install
     settings.Widget(BarWidget::StatusTimers).on = true;
+    CHECK(NeedsOf(settings, std::nullopt).statuses); // Signet is pinned
+    settings.statusPins.clear();
     CHECK(!NeedsOf(settings, std::nullopt).statuses); // nothing pinned to show
     CHECK(NeedsOf(settings, PanelWidget{BarWidget::StatusTimers}).statuses);
     settings.statusPins = {kSignetEffect};
-    CHECK(NeedsOf(settings, std::nullopt).statuses);
     CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Signet 1h 42m");
     // Its popup's favorites are the settings', Signet and Sanction on a new install.
     const PopupContent p = BarPopupContent(BarWidget::StatusTimers, state, settings);
@@ -1651,17 +1652,26 @@ TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_
 TEST(a_statuss_star_and_pin_add_it_and_take_it_off_and_its_star_takes_its_pin_too)
 {
     Settings s;
-    CHECK(ApplyPopupPress(s, std::string(kStatusFavoritePress) + "40", Nation::None));
+    CHECK((s.statusPins == std::vector<uint16_t>{kSignetEffect})); // Signet is pinned on a new install
+    const auto press = [&](const char* kind, uint16_t id) {
+        return ApplyPopupPress(s, std::string(kind) + std::to_string(id), Nation::None);
+    };
+    CHECK(press(kStatusFavoritePress, 40) == PressResult::Changed);
     CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect, 40}));
-    CHECK(ApplyPopupPress(s, std::string(kStatusPinPress) + "40", Nation::None));
-    CHECK(ApplyPopupPress(s, std::string(kStatusPinPress) + "253", Nation::None));
-    CHECK((s.statusPins == std::vector<uint16_t>{40, kSignetEffect}));
-    CHECK(ApplyPopupPress(s, std::string(kStatusPinPress) + "253", Nation::None));
+    CHECK(press(kStatusPinPress, 40) == PressResult::Changed);
+    CHECK((s.statusPins == std::vector<uint16_t>{kSignetEffect, 40}));
+    CHECK(press(kStatusPinPress, kSignetEffect) == PressResult::Changed);
     CHECK((s.statusPins == std::vector<uint16_t>{40}));
-    CHECK(ApplyPopupPress(s, std::string(kStatusFavoritePress) + "40", Nation::None));
-    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) && s.statusPins.empty());
+    // The last pin stays, by its pin or by its star, which would take it off too.
+    CHECK(press(kStatusPinPress, 40) == PressResult::Refused);
+    CHECK(press(kStatusFavoritePress, 40) == PressResult::Refused);
+    CHECK((s.statusPins == std::vector<uint16_t>{40}) && s.statusFavorites.size() == 3);
+    CHECK(press(kStatusPinPress, kSignetEffect) == PressResult::Changed);
+    CHECK(press(kStatusFavoritePress, 40) == PressResult::Changed);
+    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) &&
+          (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
     for (const char* bad : {"status favorite ", "status favorite 4x", "status pin 65000", "status pin 99999999"})
-        CHECK(!ApplyPopupPress(s, bad, Nation::None));
+        CHECK(ApplyPopupPress(s, bad, Nation::None) == PressResult::None);
 }
 
 TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by_name)
@@ -1715,15 +1725,16 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
 TEST(a_currencys_star_adds_it_to_the_favorites_and_takes_it_off)
 {
     Settings s;
-    CHECK(ApplyPopupPress(s, "favorite sparks", Nation::Bastok));
+    CHECK(ApplyPopupPress(s, "favorite sparks", Nation::Bastok) == PressResult::Changed);
     CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "cp_bastok", "sparks"}));
-    CHECK(ApplyPopupPress(s, "favorite cp_bastok", Nation::Bastok));
+    CHECK(ApplyPopupPress(s, "favorite cp_bastok", Nation::Bastok) == PressResult::Changed);
     CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "sparks"}));
-    CHECK(!ApplyPopupPress(s, "favorite nothing", Nation::Bastok) && !ApplyPopupPress(s, "something else", Nation::Bastok));
+    CHECK(ApplyPopupPress(s, "favorite nothing", Nation::Bastok) == PressResult::None &&
+          ApplyPopupPress(s, "something else", Nation::Bastok) == PressResult::None);
     CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "sparks"}));
     // Before your nation is known, its points stay yours, whichever nation that turns out to be.
     Settings early;
-    CHECK(ApplyPopupPress(early, "favorite sparks", Nation::None));
+    CHECK(ApplyPopupPress(early, "favorite sparks", Nation::None) == PressResult::Changed);
     CHECK((early.currencyFavorites == std::vector<std::string>{"gil", kYourConquestPoints, "sparks"}));
 }
 

@@ -1602,7 +1602,7 @@ namespace headsup
         return std::nullopt;
     }
 
-    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
+    PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
     {
         // A status's star or pin; a status taken off the favorites leaves the panel too, as only they have pins.
         for (const std::string_view kind : {kStatusFavoritePress, kStatusPinPress})
@@ -1612,21 +1612,22 @@ namespace headsup
             char* end           = nullptr;
             const unsigned long id = std::strtoul(number.c_str(), &end, 10);
             if (number.empty() || *end != '\0' || id > UINT16_MAX || *StatusName(static_cast<uint16_t>(id)) == '\0')
-                return false;
+                return PressResult::None;
             const auto status = static_cast<uint16_t>(id);
             std::vector<uint16_t>& list = kind == kStatusPinPress ? settings.statusPins : settings.statusFavorites;
             if (const auto at = std::ranges::find(list, status); at != list.end())
             {
+                if (settings.statusPins == std::vector<uint16_t>{status}) return PressResult::Refused;
                 list.erase(at);
                 if (kind == kStatusFavoritePress) std::erase(settings.statusPins, status);
             }
             else
                 list.push_back(status);
-            return true;
+            return PressResult::Changed;
         }
-        if (!press.starts_with(kFavoritePress)) return false;
+        if (!press.starts_with(kFavoritePress)) return PressResult::None;
         const std::string key(press.substr(std::string_view(kFavoritePress).size()));
-        if (!CurrencyOfKey(key)) return false;
+        if (!CurrencyOfKey(key)) return PressResult::None;
         // Your nation's points by their own key once it is known, so its star takes them off.
         std::vector<std::string> favorites;
         for (const std::string& held : settings.currencyFavorites)
@@ -1640,7 +1641,7 @@ namespace headsup
         else
             favorites.push_back(key);
         settings.currencyFavorites = std::move(favorites);
-        return true;
+        return PressResult::Changed;
     }
 
     bool StandingsShown(const Settings& settings)
@@ -1905,7 +1906,7 @@ namespace headsup
             return PartyPopup(state.party);
         case BarWidget::StatusTimers:
             return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins,
-                ScrolledBy(state, kStatusListKey));
+                ScrolledBy(state, kStatusListKey), state.pinRefused);
         case BarWidget::World:
             return WorldPopup(state, o);
         }

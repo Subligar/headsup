@@ -271,17 +271,27 @@ namespace headsup
                 const bool pair = row.kind == RowKind::Pair && row.cells.size() == 2;
                 const float gap = unit * (tags ? kTagGap : pair ? kPairGap : kCellGap);
                 // A socket's rows as far in from its right as from its left.
-                const float indent = row.nested ? inset : 0.0f;
+                const float indent = row.nested || row.inset ? inset : 0.0f;
                 cells.clear();
                 columns = grid ? runColumns[r] : std::vector<float>{};
-                float rowWidth = indent + (row.nested ? inset : 0.0f);
+                float rowWidth = 2.0f * indent;
                 for (size_t i = 0; i < row.cells.size(); ++i)
                 {
                     const TextSize s = cells.emplace_back(CellSize(row.cells[i], unit, measure));
                     if (!grid) rowWidth += (tags ? Framed(s, unit) : s).width + (i > 0 ? gap : 0.0f);
                 }
                 const float columnGap = unit * kColumnGap;
-                if (grid && row.spread && columns.size() % 2 == 1)
+                // Two columns of nothing but icons sit as close as an icon to its text.
+                const auto iconsOnly = [&](size_t column) {
+                    for (size_t i = column; i < row.cells.size(); i += columns.size())
+                        if (!row.cells[i].icon || !row.cells[i].text.empty() || row.cells[i].star) return false;
+                    return true;
+                };
+                std::vector<float> gaps(columns.size(), columnGap);
+                for (size_t c = 0; c + 1 < columns.size(); ++c)
+                    if (iconsOnly(c) && iconsOnly(c + 1)) gaps[c] = unit * kIconGap;
+                if (grid && row.spread && columns.size() % 2 == 1 && row.cells.size() > columns.size() / 2 &&
+                    row.cells[columns.size() / 2].align == Align::Center)
                 {
                     // The middle column just right of the card's middle: room for the wider side on either half.
                     const size_t middle = columns.size() / 2;
@@ -293,9 +303,8 @@ namespace headsup
                 }
                 else
                 {
-                    for (const float c : columns)
-                        rowWidth += c;
-                    if (grid) rowWidth += columnGap * static_cast<float>(columns.size() - 1);
+                    for (size_t c = 0; c < columns.size(); ++c)
+                        rowWidth += columns[c] + (c + 1 < columns.size() ? gaps[c] : 0.0f);
                 }
                 contentWidth = std::max(contentWidth, rowWidth);
                 if (row.nested && !socket)
@@ -402,14 +411,14 @@ namespace headsup
                     const bool spread = grid && row.spread && cell.align != Align::Left;
                     if ((pair && i == 1) || (spread && cell.align == Align::Right))
                     {
-                        b.values.push_back(Block::Value{first, b.pieces.size(), cx, row.nested ? inset : 0.0f});
+                        b.values.push_back(Block::Value{first, b.pieces.size(), cx, indent});
                         for (size_t v = first; v < b.pieces.size(); ++v)
                             b.pieces[v].right = b.pieces[v].kind == PopupPiece::Kind::Text;
                     }
                     else if (spread)
                         b.values.push_back(Block::Value{first, b.pieces.size(), (start + cx) / 2.0f - unit * kMiddleRight, 0.0f, true});
                     lineHeight = std::max(lineHeight, size.height);
-                    x += grid ? columns[i % columns.size()] + unit * kColumnGap : size.width + gap;
+                    x += grid ? columns[i % columns.size()] + gaps[i % columns.size()] : size.width + gap;
                 }
                 if (shown) y += lineHeight + metrics.rowGap;
             }

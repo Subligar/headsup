@@ -431,6 +431,11 @@ namespace headsup
             m_Hover = m_Under;
         else if (!(m_Hover && m_HasPopup[SlotOf(*m_Hover)] && InPopupColumn(m_X, m_Y)))
             m_Hover.reset();
+        if (!Open())
+        {
+            m_Scrolled.clear();
+            m_Refused = false;
+        }
     }
 
     bool BarInput::InPopupColumn(float x, float y) const

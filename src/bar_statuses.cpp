@@ -154,7 +154,7 @@ namespace headsup
     }
 
     PopupContent StatusTimersPopup(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& favorites,
-        const std::vector<uint16_t>& pins, size_t scrolled)
+        const std::vector<uint16_t>& pins, size_t scrolled, bool refused)
     {
         PopupContent popup;
         popup.title = ListOf(Text("Status Timers"));
@@ -162,6 +162,7 @@ namespace headsup
         // Favorites: a pin, a star, the name and the time, matched by name as the panel's are.
         constexpr int kFavoriteColumns = 4, kListColumns = 3;
         PopupSection top;
+        if (refused) top.rows.push_back(Line(Cell(Colored("Must have at least one status pinned.", kErrorColor))));
         std::vector<std::string> favoriteNames;
         if (favorites.empty())
             top.rows.push_back(LineOf("Click a status's star to keep it here, then its pin to show it on the panel.", Tone::Dim));
@@ -179,6 +180,8 @@ namespace headsup
                 grid.cells.push_back(Cell(Text(name)));
                 grid.cells.push_back(Right(TimeOf(HeldAs(named, name))));
             }
+            // Its times against the right edge, as far in as the list's below.
+            grid.spread = grid.inset = true;
             top.rows.push_back(std::move(grid));
         }
         // Every other status once by name, those you have first, each part by name.
@@ -207,6 +210,7 @@ namespace headsup
         for (const auto& [name, id] : ByName())
             if (!listed(name)) add(id, name, Held{});
         list.nested   = true;
+        list.spread   = true;
         list.scroll   = kStatusListKey;
         list.scrolled = scrolled;
         PopupSection all;

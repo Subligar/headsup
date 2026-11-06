@@ -961,9 +961,13 @@ public:
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
         for (const std::string& press : m_BarInput.TakePresses())
-            if (headsup::ApplyPopupPress(m_Settings, press,
-                    static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1)))
-                m_SettingsChangedAt = now;
+            switch (headsup::ApplyPopupPress(m_Settings, press,
+                static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1)))
+            {
+            case headsup::PressResult::Changed: m_SettingsChangedAt = now; break;
+            case headsup::PressResult::Refused: m_BarInput.Refuse(); break;
+            case headsup::PressResult::None: break;
+            }
         if (const bool fishing = m_Settings.enabled && m_Settings.fishBar; m_Rml.Running() &&
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
@@ -2688,6 +2692,7 @@ private:
         s.shares   = m_GameState.Shares();
         s.pickedTabs = &m_BarInput.PickedTabs();
         s.scrolled   = &m_BarInput.Scrolled();
+        s.pinRefused = m_BarInput.Refused();
         if (needs.conquest)
         {
             // Ashita's nation is 0 for San d'Oria to 2 for Windurst.

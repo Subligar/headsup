@@ -114,7 +114,8 @@ namespace headsup
         std::vector<PopupCell> cells;
         bool nested = false; // set in a socket with the nested rows beside it, as a tab's rows are
         bool header = false; // Grid: its first line heads its columns, and each group of them set side by side
-        bool spread = false; // Grid: a right-aligned column at the card's right edge, a centered one right of middle
+        bool spread = false; // Grid: a right-aligned column at the card's right edge, a centered middle one right of middle
+        bool inset  = false; // in from the card's sides as far as a socket's rows, to line up with a socket under it
         // A socket's first row: what its scrolling is kept by, and how many of its lines it is scrolled past.
         std::string scroll{};
         size_t scrolled = 0;

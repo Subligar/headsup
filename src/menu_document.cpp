@@ -15,7 +15,6 @@ namespace headsup
     {
         constexpr float kRunInset     = 0.3f;  // how much shorter a line box's stretches and chips are than the box
         constexpr float kSpacing      = 0.45f; // between rows
-        constexpr uint32_t kErrorColor = 0xFFE5534B; // a mistake said in the window, as the Widget Designer's
         // Setup's picture, 16:9 like its target: short enough that its first step fits the window's own size.
         constexpr float kPreviewTall  = 14.0f;
         constexpr float kParagraphTall = 9.0f; // a box of several lines

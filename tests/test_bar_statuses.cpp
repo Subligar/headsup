@@ -110,4 +110,10 @@ TEST(the_popup_lists_your_favorites_with_pins_over_every_other_status_those_you_
     CHECK(list.cells[0].icon == Icon::StarEmpty && list.cells[0].press == std::string(kStatusFavoritePress) + "33");
     // No favorites: a line saying how to keep one.
     CHECK(StatusTimersPopup(active, {}, {}, 0).sections[0].rows[0].kind == RowKind::Line);
+    // A refused unpin says why just under the title, in the error red.
+    const PopupContent refused = StatusTimersPopup(active, {kSignetEffect}, {kSignetEffect}, 0, true);
+    const PopupRow& why        = refused.sections[0].rows[0];
+    CHECK(Joined(why.cells[0].text) == "Must have at least one status pinned." && why.cells[0].text[0].tone == Tone::Own &&
+          why.cells[0].text[0].argb == kErrorColor);
+    CHECK(refused.sections[0].rows[1].kind == RowKind::Grid);
 }

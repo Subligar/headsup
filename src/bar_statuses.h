@@ -47,7 +47,7 @@ namespace headsup
     // The pinned statuses on one line, each with its time left, matched by name; its name while none is pinned.
     std::vector<Span> PinnedStatuses(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& pins);
     // Your favorites, each with its pin and star, over every other status in a scrolling list scrolled this many
-    // lines: those you have first, the rest by name, one line a name.
+    // lines: those you have first, the rest by name, one line a name. refused: the last pin was kept, which it says.
     PopupContent StatusTimersPopup(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& favorites,
-        const std::vector<uint16_t>& pins, size_t scrolled);
+        const std::vector<uint16_t>& pins, size_t scrolled, bool refused = false);
 }

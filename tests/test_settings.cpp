@@ -2860,7 +2860,7 @@ TEST(the_currency_favorites_are_kept_in_order_and_an_unknown_or_repeated_one_is_
 TEST(the_status_favorites_and_pins_are_kept_and_an_unknown_or_repeated_one_is_left_out)
 {
     Settings s;
-    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) && s.statusPins.empty());
+    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) && (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
     s.statusFavorites = {40, 33};
     s.statusPins      = {33};
     MapStore store;

@@ -1,3 +1,4 @@
+#include "bar_statuses.h"
 #include "popup_layout.h"
 #include "test.h"
 
@@ -1082,4 +1083,23 @@ TEST(a_spread_grid_keeps_its_right_column_at_the_cards_edge_and_its_centered_one
             CHECK(Near(said.x + said.width / 2.0f, card.x + card.width / 2.0f + m.popupText));
             CHECK(said.x > from.x + from.width && said.x + said.width < time.x);
         }
+}
+
+TEST(status_timers_favorites_time_lines_up_with_the_lists_and_their_pin_sits_close_to_its_star)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+    const std::vector<ActiveStatus> active{{40, 1800.0}, {33, 90.0}}; // Protect and Haste
+    const PopupLayout l = LayoutPopup(StatusTimersPopup(active, {kSignetEffect, 40}, {40}, 0), m, BarShape::Ornate, false, Fake);
+    const PopupPiece *favorite = Find(l, "30m 00s"), *listed = Find(l, "1m 30s");
+    CHECK(favorite != nullptr && listed != nullptr);
+    CHECK(Near(favorite->x + favorite->width, listed->x + listed->width));
+    // Signet's pin and star, then its name.
+    std::vector<const PopupPiece*> icons;
+    for (const PopupPiece& p : l.pieces)
+        if (p.kind == PopupPiece::Kind::Icon && p.tinted && (p.icon == Icon::Pinned || p.icon == Icon::Star) && p.y > l.pin.y + l.pin.height)
+            icons.push_back(&p);
+    const PopupPiece* signet = Find(l, "Signet");
+    CHECK(icons.size() >= 2 && signet != nullptr && icons[0]->icon == Icon::Pinned && icons[1]->icon == Icon::Star);
+    const float pinToStar = icons[1]->x - icons[0]->x - icons[0]->width, starToName = signet->x - icons[1]->x - icons[1]->width;
+    CHECK(pinToStar > 0.0f && pinToStar < starToName / 2.0f);
 }

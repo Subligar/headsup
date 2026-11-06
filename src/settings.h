@@ -136,7 +136,7 @@ namespace headsup
         std::vector<std::string> currencyFavorites{kCurrencyTable[kGilCurrency].key, kYourConquestPoints};
         // The Status Timers popup's favorites at its top, and those of them it shows on the panel, by status id.
         std::vector<uint16_t> statusFavorites{kSignetEffect, kSanctionEffect};
-        std::vector<uint16_t> statusPins;
+        std::vector<uint16_t> statusPins{kSignetEffect};
         bool enabled       = true;
         bool autoSave      = true; // off, changes wait for Save in the settings window, and Revert drops them
         int outlineThickness = 100; // percent of kOutlineUnitPx

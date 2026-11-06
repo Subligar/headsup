@@ -81,6 +81,7 @@ namespace headsup
         LinuxXIState linuxxi;
         const std::map<std::string, std::string>* pickedTabs = nullptr; // the tab the player picked in a card, by its heading
         const std::map<std::string, size_t>* scrolled        = nullptr; // lines a part of a popup is scrolled past, by its key
+        bool pinRefused = false; // Status Timers kept its last pin since its popup opened
         const GuildPatterns* turnIns = nullptr; // today's guild point turn-ins, once fetched
         bool turnInsFailed = false;             // the last fetch got no answer
         std::optional<CraftRanks> crafts;       // yours, once the server sent them
@@ -110,8 +111,9 @@ namespace headsup
     BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open);
     // Does to the settings what a press on a popup's pressable cell told (PopupCell::press): a currency's or a
     // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
-    // off. False when it changed nothing.
-    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
+    // off. The last pin stays, by its pin or its star: Refused.
+    enum class PressResult : uint8_t { None, Changed, Refused };
+    PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
     // Whether the panel shows the conquest standings: the Zone widget, or a World Info showing Conquest Info.
     bool StandingsShown(const Settings& settings);
     // Whether the open popup shows a widget's: its own, or a combined pill's with that widget in it.

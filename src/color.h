@@ -18,6 +18,8 @@ namespace headsup
         constexpr float kFull = 255.0f;
         return {{Channel(rgb, kRedShift) / kFull, Channel(rgb, kGreenShift) / kFull, Channel(rgb, kBlueShift) / kFull}};
     }
+    // A mistake or refusal told in the window or a pop-out, as the Widget Designer's.
+    constexpr uint32_t kErrorColor = 0xFFE5534B;
     // Phoenix's royal red, the accent of its own theme (phoenix-platform's --phoenix-accent).
     constexpr uint32_t kPhoenixRed = 0xC55151;
 }

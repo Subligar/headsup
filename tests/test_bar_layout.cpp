@@ -762,6 +762,20 @@ TEST(the_wheel_over_a_popups_scrolling_area_scrolls_it_three_lines_a_notch)
     CHECK(!wheel(1) && c.input.Scrolled().at("By Element/Dark") == 4);
 }
 
+TEST(a_closed_popup_opens_again_scrolled_to_its_top_and_without_its_refusal)
+{
+    Clicks c;
+    CHECK(!c.Take(WM_MOUSEMOVE, kOnBarY));
+    c.input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {},
+        {BarScroll{"Status Timers", BarRect{770.0f, 150.0f, 380.0f, 120.0f}, 7, BarRect{1140.0f, 155.0f, 10.0f, 110.0f}, 30.0f}});
+    CHECK(!c.Take(WM_MOUSEMOVE, 200.0f));
+    CHECK(c.clicks.Take(WM_MOUSEWHEEL, static_cast<uint32_t>(static_cast<uint16_t>(-120)) << 16, 0.0f, 0.0f, true, false, false));
+    c.input.Refuse();
+    CHECK(c.input.Scrolled().at("Status Timers") == 3 && c.input.Refused());
+    CHECK(!c.Take(WM_MOUSEMOVE, kGameY)); // away: it closes
+    CHECK(!c.input.Open().has_value() && c.input.Scrolled().empty() && !c.input.Refused());
+}
+
 TEST(the_scrollbar_drags_its_thumb_and_a_press_on_its_track_jumps_there)
 {
     Clicks c;
