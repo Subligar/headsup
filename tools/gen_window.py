@@ -188,7 +188,7 @@ PIECES = Pieces(
         'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
         'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
-            'design', 'combine', 'combine-on-panel', 'combine-in-popup', 'show-zone-id', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'nations', 'conquest-grid', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', '24-hour',
+            'design', 'combine', 'combine-on-panel', 'combine-in-popup', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'nations', 'conquest-grid', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', '24-hour',
             'seconds', 'exp-meter', 'exp-text', 'exp-earned', 'exp-to-next', 'exp-percent', 'exp-align', 'bar-width', 'bar-height',
             'job-names'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'design-last-on': True}),
         'trays': Setting(unnamed=True), 'reset-layout': Setting(),

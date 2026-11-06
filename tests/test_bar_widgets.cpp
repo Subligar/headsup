@@ -977,9 +977,8 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     Settings settings;
     BarState state;
     state.zone = 103; // Valkurm Dunes, Zulkheim (region 1)
-    settings.Widget(BarWidget::Zone).zoneId = true;
     const PopupContent dunes = BarPopupContent(BarWidget::Zone, state, settings);
-    CHECK(dunes.title == ListOf(Text("Valkurm Dunes"), Text(" 103", Tone::Dim)));
+    CHECK(dunes.title == ListOf(Text("Valkurm Dunes"), Text(" (Zone #103)", Tone::Dim)));
     // Its region by name alone, in the dim tone the word Region was in.
     CHECK(dunes.sections.size() == 1 && dunes.sections[0].rows[0].cells[0].text == ListOf(Text("Zulkheim", Tone::Dim)));
     RegionOwners owners{};
@@ -988,11 +987,8 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     CHECK(BarPopupContent(BarWidget::Zone, state, settings) == dunes);
     state.zone = 230; // Southern San d'Oria: a city region, outside the conquest
     const PopupContent city = BarPopupContent(BarWidget::Zone, state, settings);
-    CHECK(Joined(city.title) == "Southern San d'Oria 230");
+    CHECK(Joined(city.title) == "Southern San d'Oria (Zone #230)");
     CHECK(city.sections.size() == 1 && Lines(city.sections[0]) == (std::vector<std::string>{"San d'Oria"}));
-    // Show Zone ID is off on a new install: the name alone.
-    settings.Widget(BarWidget::Zone).zoneId = false;
-    CHECK(Joined(BarPopupContent(BarWidget::Zone, state, settings).title) == "Southern San d'Oria");
     state.zone = 999; // past the data: its number is its title already, and it has no region
     const PopupContent unknown = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(Joined(unknown.title) == "Zone 999" && unknown.sections.empty());

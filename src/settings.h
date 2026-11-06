@@ -67,7 +67,6 @@ namespace headsup
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         bool clock24         = true;                // its two lines
         bool clockSeconds    = false;               // its own line's seconds
-        bool zoneId          = false;               // Zone: its number after its name in the popup
         uint8_t expText      = kDefaultExpText;     // Job & EXP: what its EXP part says, by ExpTextBit
         bool expMeter        = false;               // its EXP bar with each text placed around it
         ExpPlaces expPlaces  = kDefaultExpPlaces;   // those places

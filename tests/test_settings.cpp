@@ -2650,7 +2650,6 @@ TEST(a_clone_starts_with_every_setting_of_the_widget_it_copies_shown_and_combine
     gil.on             = false;
     gil.currency       = 3;
     gil.design         = DesignFrom(BarWidget::Currency, "amount | -coin -currency");
-    gil.zoneId         = true;
     gil.combine        = PanelWidget{BarWidget::Bags};
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value());
@@ -2707,19 +2706,6 @@ TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_tak
     CHECK(!offers(BarWidget::Weather, BarWidget::Party)); // Zone has it
     CHECK(!offers(BarWidget::Party, BarWidget::Zone));    // a ring
     CHECK(offers(BarWidget::Party, BarWidget::Weather));
-}
-
-TEST(the_zone_widgets_id_setting_is_kept_for_each_copy)
-{
-    Settings s;
-    CHECK(!s.Widget(BarWidget::Zone).zoneId);
-    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Zone);
-    CHECK(copy.has_value());
-    s.Widget(*copy).zoneId = true;
-    MapStore store;
-    SaveSettings(s, store);
-    const Settings read = LoadSettings(store);
-    CHECK(read.Widget(*copy).zoneId && !read.Widget(BarWidget::Zone).zoneId);
 }
 
 TEST(the_panels_widget_spacing_and_padding_are_kept_and_held_to_their_range)

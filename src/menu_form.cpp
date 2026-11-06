@@ -722,9 +722,6 @@ namespace headsup
                         static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::CombineOnPanel ? o.combineOnPanel : o.combineInPopup,
                         row.tip);
                     break;
-                case WidgetTabsRow::ShowZoneId:
-                    if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, row.tip);
-                    break;
                 case WidgetTabsRow::Visibility:
                     if (kind == BarWidget::Target)
                     {

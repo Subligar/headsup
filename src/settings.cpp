@@ -257,7 +257,6 @@ namespace headsup
         constexpr const char* kJobNamesKey  = "jobNames";
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
-        constexpr const char* kZoneIdKey           = "zoneId";
         const char* const kClockZoneNames[kClockZoneCount] = {"japan", "utc", "usEastern", "usCentral", "usMountain",
             "usArizona", "usPacific", "usAlaska", "usHawaii", "ukIreland", "centralEurope", "easternEurope",
             "australiaEastern"};
@@ -1269,7 +1268,6 @@ namespace headsup
             }
             case BarWidget::Zone:
             {
-                o.zoneId = flag(kZoneIdKey, o.zoneId);
                 break;
             }
             case BarWidget::EarthTime:
@@ -1330,7 +1328,6 @@ namespace headsup
                 StoreFloat(store, CopyKey(kWorldSectionsKey, w), static_cast<float>(o.worldSections));
                 break;
             case BarWidget::Zone:
-                flag(kZoneIdKey, o.zoneId);
                 break;
             case BarWidget::EarthTime:
                 text(kClockZoneKey, o.clockZone ? kClockZoneNames[static_cast<int>(*o.clockZone)] : kLocalZone);

@@ -1759,7 +1759,7 @@ namespace headsup
             const std::string_view region = ZoneRegion(zone);
             popup.title = ListOf(Text(ZoneTitle(state.zone)));
             // A zone past the data has its number for a title already.
-            if (zone != nullptr && o.zoneId) popup.title.push_back(Text(" " + std::to_string(state.zone), Tone::Dim));
+            if (zone != nullptr) popup.title.push_back(Text(" (Zone #" + std::to_string(state.zone) + ")", Tone::Dim));
             if (!region.empty()) popup.sections.push_back(PopupSection{"", ListOf(Line(Cell(Text(std::string(region), Tone::Dim))))});
             if (InConquest(zone) && state.shares)
             {
