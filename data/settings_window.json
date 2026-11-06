@@ -1030,7 +1030,7 @@
         {"name": "Target", "tip": "Your target's name, level and con. Hover a mob for its details."},
         {"name": "Currency", "tip": "Gil, or another currency. Hover for your favorite currencies and every other one, with a star to keep one at the top."},
         {"name": "Inventory", "tip": "How full your inventory is. Hover for every bag."},
-        {"name": "Clock", "tip": "Your computer's time, or another time zone's, over the server's if you like. Hover for the daily reset and conquest tally."},
+        {"name": "Clock", "tip": "Your computer's time or another time zone's, with a second zone's time or Vana'diel's if you like. Hover for the daily reset and conquest tally."},
         {"name": "Game Help", "tip": "The game's help text, in a bar of its own under the top panel."},
         {"name": "Performance", "tip": "Frames per second, bytes sent and received each second, your ping and the game's memory, as you pick. Amber or red when data stops or memory runs low. Hover for your ping, the last server data, PlayOnline messages, the processor, the frames and the LinuxXI plugin's figures."},
         {"name": "Job & EXP", "tip": "Jobs, levels and EXP to the next level, with a bar; or the EXP bar alone with its texts around it. Hover for EXP per hour."},
