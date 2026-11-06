@@ -80,8 +80,8 @@ TEST(the_bars_sizes_follow_its_height_and_the_pop_outs_their_own)
             const BarMetrics m = MetricsFor(h, shape);
             const float H = static_cast<float>(h), u = 12.0f / 0.39f; // the height whose share 12 px is
             CHECK(Near(m.title, 0.40f * H) && Near(m.subtitle, 0.40f * H / 1.2f) && Near(m.gap, 0.17f * H));
-            CHECK(Near(m.popupText, 12.0f) && Near(m.popupTitle, 14.0f));
-            CHECK(Near(m.heading, 0.33f * u) && Near(m.popupPadding, 0.36f * u) && Near(m.rowGap, 0.11f * u));
+            CHECK(Near(m.popupText, 14.0f) && Near(m.popupTitle, 18.0f) && Near(m.heading, 16.0f));
+            CHECK(Near(m.popupPadding, 0.36f * u) && Near(m.rowGap, 0.11f * u));
             CHECK(Near(m.panelRadius, (shape == BarShape::Ornate ? 0.11f : 0.28f) * u));
         }
 }
@@ -102,7 +102,7 @@ TEST(the_pop_out_scale_scales_every_pop_out_size_and_the_bar_keeps_its_own)
 {
     const BarMetrics small = MetricsFor(64, BarShape::Pills, kDefaultFontRatio, 0.5f);
     const BarMetrics big   = MetricsFor(24, BarShape::Pills, kDefaultFontRatio, 2.0f);
-    CHECK(Near(small.popupText, 6.0f) && Near(small.popupTitle, 7.0f) && Near(big.popupText, 24.0f) && Near(big.popupTitle, 28.0f));
+    CHECK(Near(small.popupText, 7.0f) && Near(small.popupTitle, 9.0f) && Near(big.popupText, 28.0f) && Near(big.popupTitle, 36.0f));
     const BarMetrics one = MetricsFor(45, BarShape::Pills);
     CHECK(Near(big.popupPadding, 2.0f * one.popupPadding) && Near(big.heading, 2.0f * one.heading) &&
           Near(big.rowGap, 2.0f * one.rowGap) && Near(big.panelRadius, 2.0f * one.panelRadius));

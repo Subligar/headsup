@@ -95,13 +95,14 @@ namespace headsup
         float below;        // the glow or shadow under the strip
         float popupText;    // kPopupTextPixels times Pop-out Scale
         float popupTitle;   // kPopupTitlePixels times it
-        float heading;      // this and the rest follow the popup's text size
+        float heading;      // kPopupHeadingPixels times Pop-out Scale; the rest follow the spacing
         float popupPadding;
         float rowGap;       // between popup rows
         float panelRadius;  // by shape; none for the art's corners
         bool operator==(const BarMetrics&) const = default;
     };
-    constexpr float kPopupTextPixels = 12.0f, kPopupTitlePixels = 14.0f; // a pop-out's at a Pop-out Scale of 1
+    // A pop-out's text, title and card headings at a Pop-out Scale of 1, and the text size its spacing is set by.
+    constexpr float kPopupTextPixels = 14.0f, kPopupTitlePixels = 18.0f, kPopupHeadingPixels = 16.0f, kPopupSpacingPixels = 12.0f;
     constexpr float kPillBorder      = 1.0f;                           // a pill's or frame's
     BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio = kDefaultFontRatio,
         float popupScale = kDefaultPopupScale, int iconScale = kDefaultIconScale);

@@ -38,7 +38,7 @@ namespace headsup
         constexpr float kTitleShare = 0.40f, kPopupTextShare = 0.39f;
         constexpr float kPaddingShare = 0.33f, kGapShare = 0.17f, kCapShare = 0.64f;
         constexpr float kDiamondShare = 0.22f, kPillHeightShare = 0.80f, kPillRadiusShare = 0.17f, kBelowShare = 0.28f;
-        constexpr float kHeadingShare = 0.33f, kPopupPaddingShare = 0.36f, kRowGapShare = 0.11f;
+        constexpr float kPopupPaddingShare = 0.36f, kRowGapShare = 0.11f;
         constexpr float kOrnateRadiusShare = 0.11f, kPillsRadiusShare = 0.28f;
 
         // Alpha is the first byte: 0x1A is 10%, 0x33 20%, 0x59 35%, 0x80 50% and 0xF7 97%.
@@ -86,14 +86,14 @@ namespace headsup
     {
         const float h = static_cast<float>(std::clamp(barHeight, kMinBarHeight, kMaxBarHeight));
         // The pop-out's sizes stand for the height whose share its text is, so the whole pop-out scales together.
-        const float popupText = kPopupTextPixels * popupScale, u = popupText / kPopupTextShare;
+        const float popupText = kPopupTextPixels * popupScale, u = kPopupSpacingPixels * popupScale / kPopupTextShare;
         const float title     = kTitleShare * h;
         const float pill      = kPillHeightShare * h;
         return BarMetrics{.height = h, .title = title, .subtitle = title / fontRatio,
             .icon = static_cast<float>(iconScale) / 100.0f * (std::round(pill) - 2.0f * kPillBorder), .padding = kPaddingShare * h,
             .gap = kGapShare * h, .cap = kCapShare * h, .diamond = kDiamondShare * h, .pillHeight = pill,
             .pillRadius = kPillRadiusShare * h, .below = kBelowShare * h, .popupText = popupText,
-            .popupTitle = kPopupTitlePixels * popupScale, .heading = kHeadingShare * u, .popupPadding = kPopupPaddingShare * u,
+            .popupTitle = kPopupTitlePixels * popupScale, .heading = kPopupHeadingPixels * popupScale, .popupPadding = kPopupPaddingShare * u,
             .rowGap = kRowGapShare * u,
             .panelRadius = (shape == BarShape::Ornate ? kOrnateRadiusShare : shape == BarShape::Window ? 0.0f : kPillsRadiusShare) * u};
     }

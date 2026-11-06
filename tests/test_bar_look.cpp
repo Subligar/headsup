@@ -81,9 +81,9 @@ TEST(ornate_popups_head_their_sections_in_the_title_font_and_pills_popups_in_the
           Family(ornate.FaceOf(PopupFont::Text), "Barlow Condensed"));
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Heading})
         CHECK(Family(pills.FaceOf(font), "Barlow Condensed"));
-    // A pop-out's text 12 px and title 14 px at a Pop-out Scale of 1; headings 0.33 of the unit 12 px is 0.39 of.
-    CHECK(Near(ornate.FaceOf(PopupFont::Text).size, 12.0f) && Near(ornate.FaceOf(PopupFont::Heading).size, 0.33f * 12.0f / 0.39f) &&
-          Near(ornate.FaceOf(PopupFont::Title).size, 14.0f));
+    // A pop-out's text 14 px, its card headings 16 px and its title 18 px at a Pop-out Scale of 1.
+    CHECK(Near(ornate.FaceOf(PopupFont::Text).size, 14.0f) && Near(ornate.FaceOf(PopupFont::Heading).size, 16.0f) &&
+          Near(ornate.FaceOf(PopupFont::Title).size, 18.0f));
     // A widget's title in the shape's title font, its detail line in Barlow, at the sizes their row fitted.
     CHECK(Family(ornate.TitleFace(TwoLines()), "Marcellus SC") && ornate.TitleFace(TwoLines()).size == 14.0f);
     CHECK(Family(pills.TitleFace(TwoLines()), "Barlow Condensed") && pills.TitleFace(TwoLines()).size == 13.0f);
@@ -93,12 +93,12 @@ TEST(ornate_popups_head_their_sections_in_the_title_font_and_pills_popups_in_the
 TEST(pills_section_headings_are_letter_spaced_and_nothing_else_is)
 {
     // Spec, Shapes: pills popups have "uppercase, letter-spaced section headings"; the approved mockup spaces them
-    // 1.2 px at 10.5 px, which is 2 px for 15 px headings (a Pop-out Scale of 1.5) and 1 px for the 10 px ones at 1.
+    // 1.2 px at 10.5 px, which is 3 px for 24 px headings (a Pop-out Scale of 1.5) and 2 px for the 16 px ones at 1.
     // The pinned mark takes the headings' family and size, set solid as in the mockup.
     Settings settings;
     const BarLook pills = LookOf(BarTheme::UmbraDark, settings, {}, 45, 1.5f), ornate = LookOf(BarTheme::PhoenixGold, settings);
-    CHECK_EQ(pills.FaceOf(PopupFont::Heading).tracking, 2);
-    CHECK_EQ(LookOf(BarTheme::UmbraDark, settings).FaceOf(PopupFont::Heading).tracking, 1);
+    CHECK_EQ(pills.FaceOf(PopupFont::Heading).tracking, 3);
+    CHECK_EQ(LookOf(BarTheme::UmbraDark, settings).FaceOf(PopupFont::Heading).tracking, 2);
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Pin})
         CHECK_EQ(pills.FaceOf(font).tracking, 0);
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Heading, PopupFont::Pin})
