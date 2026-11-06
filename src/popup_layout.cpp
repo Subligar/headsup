@@ -740,19 +740,19 @@ namespace headsup
         float lowest = top;
         if (std::ranges::any_of(cards, [](const Block& b) { return b.beside; }))
         {
-            // In rows: a card beside the one before shares its row, the two as wide as each other and as tall as the
-            // taller one's tallest tab, so a tab picked moves nothing; a card alone fills the width.
-            float half = 0.0f, whole = 0.0f;
+            // In rows: a card beside the one before shares its row, the first at its own width and the second taking
+            // the rest, the two as tall as the taller one's tallest tab, so a tab picked moves nothing; a card alone
+            // fills the width.
+            float whole = 0.0f;
             for (size_t i = 0; i < cards.size(); ++i)
                 if (i + 1 < cards.size() && cards[i + 1].beside)
                 {
-                    half = std::max({half, cards[i].width, cards[i + 1].width});
+                    whole = std::max(whole, cards[i].width + cardGap + cards[i + 1].width);
                     ++i;
                 }
                 else
                     whole = std::max(whole, cards[i].width);
-            width = std::max({width, whole, half > 0.0f ? 2.0f * half + cardGap : 0.0f});
-            half  = (width - cardGap) / 2.0f;
+            width = std::max(width, whole);
             float y = top;
             for (size_t i = 0; i < cards.size(); ++i)
             {
@@ -760,8 +760,9 @@ namespace headsup
                 {
                     const float tall = std::max({cards[i].reserve, cards[i + 1].reserve, cards[i].height, cards[i + 1].height});
                     cards[i].height = cards[i + 1].height = tall;
-                    Place(cards[i], pad, y, half, l.lines.size(), l);
-                    Place(cards[i + 1], pad + half + cardGap, y, half, l.lines.size(), l);
+                    const float first = cards[i].width;
+                    Place(cards[i], pad, y, first, l.lines.size(), l);
+                    Place(cards[i + 1], pad + first + cardGap, y, width - first - cardGap, l.lines.size(), l);
                     y += tall + cardGap;
                     ++i;
                     continue;

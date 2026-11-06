@@ -583,15 +583,16 @@ TEST(the_forecast_shows_vanadiels_date_day_time_and_moon_as_its_design_sets)
     o.design = DesignFrom(BarWidget::Weather, "moon | time");
     CHECK(shown().title == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Normal}}));
     CHECK(shown().subtitle == (std::vector<Span>{{"09:00", Tone::Dim}}));
-    // Its pop-out's Today card has them all, and what comes next.
+    // Its pop-out's Today card has the date in its heading, the rest in its rows with what comes next beside each.
     const PopupContent popup  = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* today = Section(popup, "Today");
+    const PopupSection* today = Section(popup, "Today (1514/03/20)");
     CHECK(today != nullptr);
     std::string all;
     for (const PopupRow& row : today->rows)
         for (const PopupCell& cell : row.cells)
             all += Joined(cell.text) + "|";
-    CHECK(all == "1514/03/20|Darksday 09:00|Waxing Gibbous (64%)|Next Day in 36:00|Next Phase in 10:12:00|");
+    CHECK(all == "Darksday 09:00 (Next Day in 36:00)|Waxing Gibbous, 64% (Next Phase in 10:12:00)|");
+    CHECK(today->rows[0].cells[0].text.back().tone == Tone::Dim && today->rows[1].cells[0].text.back().tone == Tone::Dim);
 }
 
 TEST(the_zone_widget_names_the_zone_and_its_region)
@@ -715,11 +716,15 @@ TEST(the_forecast_pop_out_has_the_weather_for_a_title_today_beside_the_next_four
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
     CHECK(Joined(popup.title) == "Sunshine (50%)" && popup.icon == std::optional<Icon>(Icon::WeatherSunny));
     // Today first, the forecast beside it, then the elements.
-    const PopupSection* today    = Section(popup, "Today");
+    const PopupSection* today    = &popup.sections[0];
     const PopupSection* forecast = Section(popup, "Weather Forecast (Valkurm Dunes)");
-    CHECK(today == &popup.sections[0] && forecast == &popup.sections[1] && forecast->beside && !today->beside);
-    CHECK(Joined(today->rows[5].cells[0].text) == "Sunshine 50%" && Joined(today->rows[6].cells[0].text) == "Dust Storm 50%");
-    CHECK(today->rows[6].cells[0].icon == std::optional<Icon>(Icon::WeatherDustStorm));
+    CHECK(today->heading.starts_with("Today (") && forecast == &popup.sections[1] && forecast->beside && !today->beside);
+    // Today's weathers between the day and time and the moon.
+    CHECK(Joined(today->rows[1].cells[0].text) == "Sunshine 50%" && Joined(today->rows[2].cells[0].text) == "Dust Storm 50%");
+    CHECK(today->rows[2].cells[0].icon == std::optional<Icon>(Icon::WeatherDustStorm));
+    CHECK(Joined(today->rows[3].cells[0].text).starts_with(Joined(ListOf(Text(MoonPhaseName(VanaAt(state.unixMs).moonPercent,
+        VanaAt(state.unixMs).moonDirection))))));
+    CHECK(today->rows.size() == 4);
     // Each day from tomorrow, its chances, and no notes.
     CHECK(forecast->rows[0].kind == RowKind::Grid && forecast->rows[0].columns == 4);
     const std::vector<PopupCell>& cells = forecast->rows[0].cells;
@@ -757,7 +762,7 @@ TEST(a_zone_without_a_calendar_or_weather_shows_vanadiels_time_alone)
     const WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(w.shown && w.icons.empty() && Joined(w.title) == "Firesday  00:00");
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(popup.title.empty() && !popup.icon && Section(popup, "Today") != nullptr);
+    CHECK(popup.title.empty() && !popup.icon && popup.sections[0].heading.starts_with("Today ("));
 }
 
 TEST(an_unknown_zone_has_no_weather_odds_of_its_own)
@@ -788,7 +793,7 @@ TEST(a_live_weather_outside_the_days_chances_still_shows)
     const WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(Joined(w.title) == "Rain" && w.icons == (std::vector<Icon>{Icon::WeatherRain}));
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(Joined(popup.title) == "Rain" && Joined(Section(popup, "Today")->rows[5].cells[0].text) == "Sunshine 50%");
+    CHECK(Joined(popup.title) == "Rain" && Joined(popup.sections[0].rows[1].cells[0].text) == "Sunshine 50%");
 }
 
 TEST(the_weather_popup_has_a_tab_for_each_element_of_the_zones_that_can_roll_it_today_and_tomorrow)

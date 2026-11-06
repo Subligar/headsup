@@ -1845,14 +1845,14 @@ namespace headsup
                 popup.title = ListOf(Text(title));
                 popup.icon  = iconOf(now);
             }
-            // Today: Vana'diel's date, day, time and moon, what is next, and the zone's weathers today.
-            PopupSection day{"Today", ListOf(LineOf(VanaDate(t)),
-                Line(Cell(ListOf(WeekdayText(t), Text(" " + HourMinute(t.hour, t.minute))))),
-                LineOf(MoonText(t) + " (" + std::to_string(t.moonPercent) + "%)"),
-                LineOf("Next Day in " + Countdown(SecondsToNextDay(state.unixMs)), Tone::Dim),
-                LineOf("Next Phase in " + Countdown(SecondsToNextPhase(state.unixMs)), Tone::Dim))};
+            // Today, by Vana'diel's date: the day and time, the zone's weathers today, then the moon, each with what is next.
+            PopupSection day{"Today (" + VanaDate(t) + ")", ListOf(Line(Cell(ListOf(WeekdayText(t),
+                Text(" " + HourMinute(t.hour, t.minute)),
+                Text(" (Next Day in " + Countdown(SecondsToNextDay(state.unixMs)) + ")", Tone::Dim)))))};
             for (const WeatherChance& c : today)
                 day.rows.push_back(Line(Cell(Text(chanceOf(c)), iconOf(c.weather))));
+            day.rows.push_back(Line(Cell(ListOf(Text(MoonText(t) + ", " + std::to_string(t.moonPercent) + "%"),
+                Text(" (Next Phase in " + Countdown(SecondsToNextPhase(state.unixMs)) + ")", Tone::Dim)))));
             // The days after it, beside it: each day and its chances, likeliest first.
             PopupRow grid = Grid(kForecastColumns, (kForecastDays - 1) * kForecastColumns);
             for (int d = 1; d < kForecastDays; ++d)

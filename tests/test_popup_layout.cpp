@@ -383,7 +383,7 @@ TEST(a_sockets_rows_keep_as_much_room_on_their_right_as_on_their_left)
             CHECK(p.x + p.width <= sock.x + sock.width - (name.x - sock.x) + 0.01f);
 }
 
-TEST(a_card_beside_another_shares_its_row_at_one_width_and_height_and_one_alone_fills_the_width)
+TEST(a_card_beside_another_shares_its_row_at_one_height_and_one_alone_fills_the_width)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);
     std::vector<std::vector<const PopupPiece*>> layouts;
@@ -407,9 +407,9 @@ TEST(a_card_beside_another_shares_its_row_at_one_width_and_height_and_one_alone_
     {
         CHECK_EQ(cards.size(), static_cast<size_t>(3));
         const PopupPiece &travel = *cards[0], &calendar = *cards[1], &guilds = *cards[2];
-        // Travel and Calendar side by side, as wide and as tall as each other.
+        // Travel and Calendar side by side, as tall as each other.
         CHECK(Near(travel.y, calendar.y) && calendar.x > travel.x + travel.width);
-        CHECK(Near(travel.width, calendar.width) && Near(travel.height, calendar.height));
+        CHECK(Near(travel.height, calendar.height));
         // Guilds under both, from the first's left to the second's right.
         CHECK(guilds.y >= travel.y + travel.height && Near(guilds.x, travel.x) &&
               Near(guilds.x + guilds.width, calendar.x + calendar.width));
@@ -419,6 +419,24 @@ TEST(a_card_beside_another_shares_its_row_at_one_width_and_height_and_one_alone_
         CHECK(Near(layouts[0][i]->x, layouts[1][i]->x) && Near(layouts[0][i]->y, layouts[1][i]->y) &&
               Near(layouts[0][i]->width, layouts[1][i]->width));
     CHECK(Near(layouts[0][0]->height, layouts[1][0]->height));
+}
+
+TEST(a_card_keeps_its_own_width_and_the_one_beside_it_takes_the_rest_of_the_row)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupContent c;
+    c.title = {{"Sunshine", Tone::Normal}};
+    c.sections.push_back(PopupSection{"Today", {Labeled("Firesday", Text("12:00"))}});
+    PopupSection forecast{"Weather Forecast", {Labeled("A day with a far longer forecast than today has", Text("50%"))}};
+    forecast.beside = true;
+    c.sections.push_back(forecast);
+    const PopupLayout l = LayoutPopup(c, m, BarShape::Pills, false, Fake);
+    const std::vector<const PopupPiece*> cards = Of(l, PopupPiece::Kind::Card);
+    CHECK_EQ(cards.size(), static_cast<size_t>(2));
+    const PopupPiece &today = *cards[0], &later = *cards[1];
+    CHECK(today.width < later.width && Near(today.height, later.height));
+    CHECK(Near(later.x + later.width, l.width - m.popupPadding)); // to the popup's right padding
+    CHECK(AllInside(l, m));
 }
 
 TEST(tabs_are_one_width_spread_across_the_card_in_one_row_or_two)
