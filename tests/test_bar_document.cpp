@@ -12,7 +12,7 @@ namespace
 {
     BarLook LookOf(const BarPalette& p, const Settings& settings)
     {
-        const BarMetrics m  = MetricsFor(45, p.shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+        const BarMetrics m  = MetricsFor(45, p.shape);
         return BarLook{p, settings, m, PillRow(m), TextRow{13, 11, 10.0f, 24.0f, 13, 12.0f},
             BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate, BarTextFont(settings), std::nullopt};
     }
@@ -330,10 +330,10 @@ TEST(the_popup_document_styles_its_faces_and_boxes_from_the_look)
     CHECK(Has(rml, ".socket{box-sizing:border-box;border:1px;border-color:#00000059 #ffffff14 #ffffff14 #00000059;"));
     CHECK(Has(rml, ".tab{") && Has(rml, ".tab.lit{"));
     CHECK(Has(rml, ".track{") && Has(rml, ".thumb{"));
-    // The panel: one fill top to bottom, the theme's faint edge, 0.28 of the popup's unit rounded.
+    // The panel: one fill top to bottom, the theme's faint edge, 0.28 of the popup's unit (12 px over 0.39) rounded.
     CHECK(Has(rml, "#panel{position:absolute;left:0px;top:0px;box-sizing:border-box;border:1px #3a3a42ff;"
-                   "border-radius:12.6px;decorator:vertical-gradient(#1d1d21ff #1d1d21ff);}"));
-    CHECK(Has(rml, ".card{box-sizing:border-box;border:1px #ffffff1e;border-radius:12.6px;background-color:#ffffff12;}"));
+                   "border-radius:8.62px;decorator:vertical-gradient(#1d1d21ff #1d1d21ff);}"));
+    CHECK(Has(rml, ".card{box-sizing:border-box;border:1px #ffffff1e;border-radius:8.62px;background-color:#ffffff12;}"));
     CHECK(Has(rml, ".tag{box-sizing:border-box;border:1px transparent;background-color:#2c2c33ff;}"));
     CHECK(!Has(rml, IconSource(Icon::Star)));
 }

@@ -123,7 +123,27 @@ namespace headsup
     // A bar or popup text size setting's leftmost position, Auto: the size follows the bar height. Set sizes run from
     // the next pixel, the fonts' readable floor and the bar's smallest detail line.
     constexpr int kAutoBarTextSize = 8, kMaxBarTextSize = 32; // pixels
-    // The popup text size's Auto sits a pixel higher: at 9 px a popup's icons come 2 px from their numbers, which reads
-    // as touching, so its set sizes start at 10.
-    constexpr int kAutoPopupTextSize = kAutoBarTextSize + 1;
+    // Font Size Ratio: the Main line's size over the Secondary's. Its slider has 1 at its middle, steps of
+    // kFontRatioStepBelow under it and kFontRatioStepAbove over it.
+    constexpr float kMinFontRatio = 0.2f, kMaxFontRatio = 2.0f, kDefaultFontRatio = 1.2f;
+    constexpr int kFontRatioSteps = 20; // a side
+    constexpr float kFontRatioStepBelow = (1.0f - kMinFontRatio) / kFontRatioSteps;
+    constexpr float kFontRatioStepAbove = (kMaxFontRatio - 1.0f) / kFontRatioSteps;
+    // Its slider's positions, 0 to 2 * kFontRatioSteps: the ratio at one, and the nearest to a ratio.
+    constexpr float FontRatioAt(int position)
+    {
+        return position <= kFontRatioSteps ? kMinFontRatio + kFontRatioStepBelow * static_cast<float>(position)
+                                           : 1.0f + kFontRatioStepAbove * static_cast<float>(position - kFontRatioSteps);
+    }
+    constexpr int FontRatioPosition(float ratio)
+    {
+        const float steps = ratio <= 1.0f ? (ratio - kMinFontRatio) / kFontRatioStepBelow
+                                          : static_cast<float>(kFontRatioSteps) + (ratio - 1.0f) / kFontRatioStepAbove;
+        const int position = static_cast<int>(steps + 0.5f);
+        return position < 0 ? 0 : position > 2 * kFontRatioSteps ? 2 * kFontRatioSteps : position;
+    }
+    // Pop-out Scale, times the pop-out's own sizes.
+    constexpr float kMinPopupScale = 0.2f, kMaxPopupScale = 2.0f, kDefaultPopupScale = 1.0f;
+    // Icon Scale: a widget's icons, in percent of the most its widget holds.
+    constexpr int kMinIconScale = 20, kMaxIconScale = 100, kDefaultIconScale = 65;
 }

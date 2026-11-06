@@ -13,10 +13,11 @@ namespace
 {
     bool Near(float a, float b) { return std::fabs(a - b) < 0.01f; }
 
-    BarLook LookOf(BarTheme theme, const Settings& settings, TextRow lines = {}, int height = 45)
+    BarLook LookOf(BarTheme theme, const Settings& settings, TextRow lines = {}, int height = 45,
+        float popupScale = kDefaultPopupScale)
     {
         const BarPalette& p = PaletteOf(theme);
-        const BarMetrics m  = MetricsFor(height, p.shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+        const BarMetrics m  = MetricsFor(height, p.shape, kDefaultFontRatio, popupScale);
         return BarLook{p, settings, m, PillRow(m), lines, BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate,
             BarTextFont(settings), std::nullopt};
     }
@@ -80,9 +81,9 @@ TEST(ornate_popups_head_their_sections_in_the_title_font_and_pills_popups_in_the
           Family(ornate.FaceOf(PopupFont::Text), "Barlow Condensed"));
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Heading})
         CHECK(Family(pills.FaceOf(font), "Barlow Condensed"));
-    // At 45 px: popup text 0.39 H, headings 0.33 H, a popup's title 1.35 times its text.
-    CHECK(Near(ornate.FaceOf(PopupFont::Text).size, 17.55f) && Near(ornate.FaceOf(PopupFont::Heading).size, 14.85f) &&
-          Near(ornate.FaceOf(PopupFont::Title).size, 23.69f));
+    // A pop-out's text 12 px and title 14 px at a Pop-out Scale of 1; headings 0.33 of the unit 12 px is 0.39 of.
+    CHECK(Near(ornate.FaceOf(PopupFont::Text).size, 12.0f) && Near(ornate.FaceOf(PopupFont::Heading).size, 0.33f * 12.0f / 0.39f) &&
+          Near(ornate.FaceOf(PopupFont::Title).size, 14.0f));
     // A widget's title in the shape's title font, its detail line in Barlow, at the sizes their row fitted.
     CHECK(Family(ornate.TitleFace(TwoLines()), "Marcellus SC") && ornate.TitleFace(TwoLines()).size == 14.0f);
     CHECK(Family(pills.TitleFace(TwoLines()), "Barlow Condensed") && pills.TitleFace(TwoLines()).size == 13.0f);
@@ -92,12 +93,12 @@ TEST(ornate_popups_head_their_sections_in_the_title_font_and_pills_popups_in_the
 TEST(pills_section_headings_are_letter_spaced_and_nothing_else_is)
 {
     // Spec, Shapes: pills popups have "uppercase, letter-spaced section headings"; the approved mockup spaces them
-    // 1.2 px at 10.5 px, which is 2 px for the 15 px headings at 45 px and 1 px for the 12 px ones at 36 px. The
-    // pinned mark takes the headings' family and size, set solid as in the mockup.
+    // 1.2 px at 10.5 px, which is 2 px for 15 px headings (a Pop-out Scale of 1.5) and 1 px for the 10 px ones at 1.
+    // The pinned mark takes the headings' family and size, set solid as in the mockup.
     Settings settings;
-    const BarLook pills = LookOf(BarTheme::UmbraDark, settings), ornate = LookOf(BarTheme::PhoenixGold, settings);
+    const BarLook pills = LookOf(BarTheme::UmbraDark, settings, {}, 45, 1.5f), ornate = LookOf(BarTheme::PhoenixGold, settings);
     CHECK_EQ(pills.FaceOf(PopupFont::Heading).tracking, 2);
-    CHECK_EQ(LookOf(BarTheme::UmbraDark, settings, {}, 36).FaceOf(PopupFont::Heading).tracking, 1);
+    CHECK_EQ(LookOf(BarTheme::UmbraDark, settings).FaceOf(PopupFont::Heading).tracking, 1);
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Pin})
         CHECK_EQ(pills.FaceOf(font).tracking, 0);
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Heading, PopupFont::Pin})
@@ -114,7 +115,7 @@ TEST(a_widgets_text_starts_after_its_icons_and_coin_each_with_a_gap)
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
     WidgetContent weather;
     weather.icons = {Icon::Lightning, Icon::Lightning};
-    CHECK(Near(look.Leading(weather), 2.0f * (22.5f + 7.65f))); // icons 0.50 H, gaps 0.17 H
+    CHECK(Near(look.Leading(weather), 2.0f * (0.65f * 34.0f + 7.65f))); // icons 65% of the pill's 34 px inside, gaps 0.17 H
     CHECK(Near(look.Leading(WidgetContent{}), 0.0f));
     // Gil's coin is drawn 17 px wide at 45 px (0.375 H, whole pixels), and its amount starts a gap after that.
     WidgetContent gil;
@@ -276,7 +277,7 @@ TEST(a_window_from_a_panels_colors_reads_well_and_steps_up_from_its_page)
 
 TEST(a_widget_is_padded_as_the_panel_says_or_as_the_theme_does)
 {
-    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills);
     Settings s;
     CHECK_EQ(WidgetPadding(m, s), m.padding); // the theme's
     s.barWidgetPadding = 6;

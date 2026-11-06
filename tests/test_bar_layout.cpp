@@ -42,8 +42,8 @@ namespace
     }
 
     // Natural widths, a 36 px bar.
-    const BarMetrics kPills  = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
-    const BarMetrics kOrnate = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics kPills  = MetricsFor(36, BarShape::Pills);
+    const BarMetrics kOrnate = MetricsFor(36, BarShape::Ornate);
 }
 
 TEST(pills_put_the_groups_at_the_edges_and_the_target_in_the_middle)
@@ -490,7 +490,7 @@ TEST(pill_rows_are_whole_pixels_centered_above_the_strips_bottom_line)
     for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m = MetricsFor(h, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+            const BarMetrics m = MetricsFor(h, shape);
             const BarRow row   = PillRow(m);
             const float above = row.y, below = (m.height - 1.0f) - (row.y + row.height); // the last row is the line
             CHECK(Near(row.y, std::round(row.y)) && Near(row.height, std::round(row.height)));
@@ -508,7 +508,7 @@ TEST(a_titles_descenders_stay_clear_of_its_detail_line_and_both_inside_the_pill)
     for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m   = MetricsFor(h, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+            const BarMetrics m   = MetricsFor(h, shape);
             const BarRow row     = PillRow(m);
             const TextRow t      = FitTextRow(m, FakeInk);
             const LineInk title  = FakeInk(true, t.title), detail = FakeInk(false, t.detail);
@@ -532,7 +532,7 @@ TEST(a_short_row_shrinks_both_lines_together_and_a_title_alone_keeps_its_full_si
 {
     for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
     {
-        const BarMetrics m = MetricsFor(24, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+        const BarMetrics m = MetricsFor(24, shape);
         const TextRow t    = FitTextRow(m, FakeInk);
         CHECK(t.title < WholePixels(m.title) && t.detail < WholePixels(m.subtitle));
         CHECK(std::fabs(static_cast<float>(t.detail) / static_cast<float>(t.title) - m.subtitle / m.title) < 0.15f);
@@ -552,7 +552,7 @@ TEST(a_taller_bar_never_shrinks_a_line)
         TextRow last;
         for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         {
-            const TextRow t = FitTextRow(MetricsFor(h, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize), FakeInk);
+            const TextRow t = FitTextRow(MetricsFor(h, shape), FakeInk);
             CHECK(t.title >= last.title && t.detail >= last.detail && t.alone >= last.alone);
             last = t;
         }
@@ -565,7 +565,7 @@ TEST(the_text_beside_a_meter_has_its_capitals_on_the_rows_middle)
     for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m = MetricsFor(h, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+            const BarMetrics m = MetricsFor(h, shape);
             const BarRow row   = PillRow(m);
             const TextRow t    = FitTextRow(m, FakeInk);
             CHECK_EQ(t.side, t.detail);
@@ -577,7 +577,7 @@ TEST(the_text_beside_a_meter_has_its_capitals_on_the_rows_middle)
 
 TEST(text_shrinks_only_when_its_ink_would_not_fit)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
     const TextRow roomy = FitTextRow(m, SmallInk);
     CHECK_EQ(roomy.title, WholePixels(m.title));
     CHECK_EQ(roomy.detail, WholePixels(m.subtitle));
@@ -1154,58 +1154,24 @@ TEST(diamonds_divide_neighbours_within_each_section_and_never_between_sections)
     CHECK(l.dividers[0] > RectOf(l, BarWidget::Currency)->x && l.dividers[0] < RectOf(l, BarWidget::Bags)->x);
 }
 
-TEST(a_bar_text_size_that_fits_is_drawn_and_one_that_does_not_is_shrunk_to_what_fits)
+TEST(both_lines_shrink_together_keeping_the_font_size_ratio_when_they_do_not_fit)
 {
     for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
     {
-        const TextRow roomy = FitTextRow(MetricsFor(64, shape, 16, kAutoBarTextSize, kAutoBarTextSize), FakeInk);
-        CHECK(roomy.title == 16 && roomy.alone == 16 && roomy.detail == WholePixels(16.0f * 0.33f / 0.40f));
-        const BarMetrics small = MetricsFor(24, shape, kMaxBarTextSize, kAutoBarTextSize, kAutoBarTextSize);
-        const TextRow tight    = FitTextRow(small, FakeInk);
-        CHECK(tight.title < kMaxBarTextSize && tight.alone < kMaxBarTextSize);
-        // As large as the row holds alone: what fits at Auto's size for this height, no less.
-        CHECK(tight.alone >= FitTextRow(MetricsFor(24, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize), FakeInk).alone);
-        const BarRow row = PillRow(small);
-        const LineInk ink = FakeInk(true, tight.alone);
-        CHECK(tight.aloneY + ink.top >= row.y && tight.aloneY + ink.bottom <= row.y + row.height);
+        // Ratio 1 on a 45 px bar: 18 over 18 needs more than its 28 px of ink, so both come down, the same size.
+        const TextRow even = FitTextRow(MetricsFor(45, shape, 1.0f), FakeInk);
+        CHECK(even.title < 18 && even.title == even.detail && even.alone == 18);
+        // Ratio 0.5: the second line twice the first, both down by the same share.
+        const TextRow tall = FitTextRow(MetricsFor(45, shape, 0.5f), FakeInk);
+        CHECK(tall.detail > tall.title && std::fabs(static_cast<float>(tall.detail) / static_cast<float>(tall.title) - 2.0f) < 0.25f);
+        const BarRow row    = PillRow(MetricsFor(45, shape));
+        const LineInk title = FakeInk(true, tall.title), detail = FakeInk(false, tall.detail);
+        CHECK(tall.titleY + title.top >= row.y && tall.detailY + detail.bottom <= row.y + row.height);
+        CHECK((tall.detailY + detail.top) - (tall.titleY + title.bottom) >= 3.0f - 0.01f);
+        // Ratio 2 on a tall bar fits as it is: the second line half the first.
+        const TextRow small = FitTextRow(MetricsFor(64, shape, 2.0f), FakeInk);
+        CHECK(small.title == WholePixels(0.40f * 64.0f) && small.detail == WholePixels(0.40f * 64.0f / 2.0f));
     }
-}
-
-TEST(set_main_and_secondary_sizes_shrink_together_when_both_lines_do_not_fit)
-{
-    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
-    {
-        // 14 over 11 fits the 45 px bar's 28 px of ink as they are.
-        const TextRow fits = FitTextRow(MetricsFor(45, shape, 14, 11, kAutoBarTextSize), FakeInk);
-        CHECK(fits.title == 14 && fits.detail == 11 && fits.alone == 14);
-        // 20 over 16 needs 19 + 15.2 + 3: both come down by the same share until they fit, the title alone stays.
-        const TextRow tight = FitTextRow(MetricsFor(45, shape, 20, 16, kAutoBarTextSize), FakeInk);
-        CHECK(tight.title < 20 && tight.detail < 16 && tight.alone == 20);
-        CHECK(std::fabs(static_cast<float>(tight.detail) / static_cast<float>(tight.title) - 0.8f) < 0.06f);
-        const BarRow row     = PillRow(MetricsFor(45, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize));
-        const LineInk title  = FakeInk(true, tight.title), detail = FakeInk(false, tight.detail);
-        CHECK(tight.titleY + title.top >= row.y && tight.detailY + detail.bottom <= row.y + row.height);
-        CHECK((tight.detailY + detail.top) - (tight.titleY + title.bottom) >= 3.0f - 0.01f);
-        // Secondary at Auto is the Main size's share; set, it is its own whatever the Main size.
-        CHECK_EQ(FitTextRow(MetricsFor(64, shape, 16, kAutoBarTextSize, kAutoBarTextSize), FakeInk).detail, 13);
-        CHECK_EQ(FitTextRow(MetricsFor(64, shape, kAutoBarTextSize, 10, kAutoBarTextSize), FakeInk).detail, 10);
-    }
-}
-
-TEST(a_larger_bar_text_size_never_draws_smaller_titles)
-{
-    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
-        for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
-        {
-            int last = 0, lastAlone = 0;
-            for (int size = kAutoBarTextSize + 1; size <= kMaxBarTextSize; ++size)
-            {
-                const TextRow t = FitTextRow(MetricsFor(h, shape, size, kAutoBarTextSize, kAutoBarTextSize), FakeInk);
-                CHECK(t.title >= last && t.title <= size && t.alone >= lastAlone && t.alone <= size);
-                last      = t.title;
-                lastAlone = t.alone;
-            }
-        }
 }
 
 TEST(each_copy_of_a_widget_takes_a_place_of_its_own)

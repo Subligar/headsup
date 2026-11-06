@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <cmath>
 #include <cstdio>
 #include <vector>
 
@@ -34,8 +35,8 @@ namespace headsup
         }
 
         // BarMetrics' shares of H; from heading on, of the H the popup's text size stands for.
-        constexpr float kTitleShare = 0.40f, kDetailShare = 0.33f, kPopupTextShare = 0.39f;
-        constexpr float kIconShare = 0.50f, kPaddingShare = 0.33f, kGapShare = 0.17f, kCapShare = 0.64f;
+        constexpr float kTitleShare = 0.40f, kPopupTextShare = 0.39f;
+        constexpr float kPaddingShare = 0.33f, kGapShare = 0.17f, kCapShare = 0.64f;
         constexpr float kDiamondShare = 0.22f, kPillHeightShare = 0.80f, kPillRadiusShare = 0.17f, kBelowShare = 0.28f;
         constexpr float kHeadingShare = 0.33f, kPopupPaddingShare = 0.36f, kRowGapShare = 0.11f;
         constexpr float kOrnateRadiusShare = 0.11f, kPillsRadiusShare = 0.28f;
@@ -81,22 +82,19 @@ namespace headsup
         return kPalettes[std::clamp(static_cast<int>(theme), 0, kFixedThemeCount - 1)];
     }
 
-    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText, int detailText, int popupText)
+    BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio, float popupScale, int iconScale)
     {
         const float h = static_cast<float>(std::clamp(barHeight, kMinBarHeight, kMaxBarHeight));
-        // A set popup size stands for the height whose Auto popup text it is, so the whole popup scales together.
-        const float u = popupText > kAutoPopupTextSize ? static_cast<float>(popupText) / kPopupTextShare : h;
-        const bool setBar    = barText > kAutoBarTextSize;
-        const float title    = setBar ? static_cast<float>(barText) : kTitleShare * h;
-        // At Auto a share of H: taken through the title, it could round a pixel the other way.
-        const float subtitle = detailText > kAutoBarTextSize ? static_cast<float>(detailText)
-                               : setBar                      ? title * kDetailShare / kTitleShare
-                                                             : kDetailShare * h;
-        return BarMetrics{.height = h, .title = title, .subtitle = subtitle,
-            .icon = kIconShare * h, .padding = kPaddingShare * h, .gap = kGapShare * h, .cap = kCapShare * h,
-            .diamond = kDiamondShare * h, .pillHeight = kPillHeightShare * h, .pillRadius = kPillRadiusShare * h,
-            .below = kBelowShare * h, .popupText = kPopupTextShare * u, .heading = kHeadingShare * u,
-            .popupPadding = kPopupPaddingShare * u, .rowGap = kRowGapShare * u,
+        // The pop-out's sizes stand for the height whose share its text is, so the whole pop-out scales together.
+        const float popupText = kPopupTextPixels * popupScale, u = popupText / kPopupTextShare;
+        const float title     = kTitleShare * h;
+        const float pill      = kPillHeightShare * h;
+        return BarMetrics{.height = h, .title = title, .subtitle = title / fontRatio,
+            .icon = static_cast<float>(iconScale) / 100.0f * (std::round(pill) - 2.0f * kPillBorder), .padding = kPaddingShare * h,
+            .gap = kGapShare * h, .cap = kCapShare * h, .diamond = kDiamondShare * h, .pillHeight = pill,
+            .pillRadius = kPillRadiusShare * h, .below = kBelowShare * h, .popupText = popupText,
+            .popupTitle = kPopupTitlePixels * popupScale, .heading = kHeadingShare * u, .popupPadding = kPopupPaddingShare * u,
+            .rowGap = kRowGapShare * u,
             .panelRadius = (shape == BarShape::Ornate ? kOrnateRadiusShare : shape == BarShape::Window ? 0.0f : kPillsRadiusShare) * u};
     }
 

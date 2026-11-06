@@ -18,7 +18,7 @@ namespace
 
     BarLook LookOf(const BarPalette& p, const Settings& settings)
     {
-        const BarMetrics m  = MetricsFor(kBarHeight, p.shape, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
+        const BarMetrics m  = MetricsFor(kBarHeight, p.shape);
         return BarLook{p, settings, m, PillRow(m), TextRow{13, 11, 10.0f, 24.0f, 13, 12.0f},
             BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate, BarTextFont(settings), std::nullopt};
     }

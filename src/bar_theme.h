@@ -83,9 +83,9 @@ namespace headsup
     struct BarMetrics
     {
         float height;       // H, clamped to kMinBarHeight..kMaxBarHeight
-        float title;        // or the Main size: the most, as FitTextRow makes both lines smaller when their ink would not fit
-        float subtitle;     // or the Secondary size, else its share of the Main size: the most, as the title's is
-        float icon;
+        float title;        // the most, as FitTextRow makes both lines smaller when their ink would not fit
+        float subtitle;     // the title over the Font Size Ratio: the most, as the title's is
+        float icon;         // Icon Scale's share of the pill's inside
         float padding;      // inside a widget, left and right
         float gap;          // between pills, around the target, after a widget's icons and around a popup
         float cap;          // an ornate end cap's width, with clear space either side of its diamond
@@ -93,14 +93,18 @@ namespace headsup
         float pillHeight;   // rounded to whole pixels by PillRow
         float pillRadius;
         float below;        // the glow or shadow under the strip
-        float popupText;    // or the set size
+        float popupText;    // kPopupTextPixels times Pop-out Scale
+        float popupTitle;   // kPopupTitlePixels times it
         float heading;      // this and the rest follow the popup's text size
         float popupPadding;
         float rowGap;       // between popup rows
         float panelRadius;  // by shape; none for the art's corners
         bool operator==(const BarMetrics&) const = default;
     };
-    BarMetrics MetricsFor(int barHeight, BarShape shape, int barText, int detailText, int popupText);
+    constexpr float kPopupTextPixels = 12.0f, kPopupTitlePixels = 14.0f; // a pop-out's at a Pop-out Scale of 1
+    constexpr float kPillBorder      = 1.0f;                           // a pill's or frame's
+    BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio = kDefaultFontRatio,
+        float popupScale = kDefaultPopupScale, int iconScale = kDefaultIconScale);
 
     // Ornate titles are Marcellus SC; everything else is the bundled Barlow Condensed.
     const char* TitleFont(BarShape shape);

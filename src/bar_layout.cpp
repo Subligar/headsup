@@ -15,7 +15,6 @@ namespace headsup
     {
         constexpr const char* kEllipsis = "...";
         constexpr float kBottomLine  = 1.0f;  // the strip's last row is a line
-        constexpr float kBorder      = 1.0f;  // a pill's or frame's
         constexpr float kInkMargin   = 0.06f; // the ink's clear space inside a pill, of its height
         constexpr float kMinInkMargin = 2.0f; // pixels
         constexpr float kLineGap     = 0.08f; // H from the title's descenders to the detail's top, when there is room
@@ -118,7 +117,7 @@ namespace headsup
         // them, keeps all of it.
         float InkMargin(float rowHeight) { return std::ceil(std::max(kMinInkMargin, kInkMargin * rowHeight)); }
 
-        float InkRoom(float rowHeight) { return rowHeight - 2.0f * kBorder - 2.0f * InkMargin(rowHeight); }
+        float InkRoom(float rowHeight) { return rowHeight - 2.0f * kPillBorder - 2.0f * InkMargin(rowHeight); }
     }
 
     BarLayout LayoutBar(float screenWidth, const BarMetrics& m, BarShape shape,
@@ -238,7 +237,7 @@ namespace headsup
     TextRow FitTextRow(const BarMetrics& m, FunctionRef<LineInk(bool title, int pixels)> ink)
     {
         const BarRow row    = PillRow(m);
-        const float inside  = row.height - 2.0f * kBorder;
+        const float inside  = row.height - 2.0f * kPillBorder;
         const float margin  = InkMargin(row.height);
         // The margin grows a pixel a side at a time, so a row a pixel taller can have a pixel less room for the ink: a
         // row takes no more than the next one's, and a taller bar never gets smaller text.
@@ -260,7 +259,7 @@ namespace headsup
         }
         const float gap   = std::clamp(spare, 0.0f, maxGap);
         const float block = (title.bottom - title.top) + gap + (detail.bottom - detail.top);
-        const float top   = row.y + kBorder + (inside - block) / 2.0f; // of the title's ink
+        const float top   = row.y + kPillBorder + (inside - block) / 2.0f; // of the title's ink
         t.titleY          = top - title.top;
         t.detailY         = top + (title.bottom - title.top) + gap - detail.top;
         // A title alone: as large as its ink fits, its capitals centered, raised if its descenders would come too near
@@ -270,7 +269,7 @@ namespace headsup
             if (alone = ink(true, t.alone); alone.bottom - alone.top <= room) break;
         alone = ink(true, t.alone);
         const float centered = row.y + (row.height - (alone.baseline - alone.top)) / 2.0f;
-        const float lowest   = row.y + row.height - kBorder - margin - (alone.bottom - alone.top);
+        const float lowest   = row.y + row.height - kPillBorder - margin - (alone.bottom - alone.top);
         t.aloneY             = std::min(centered, lowest) - alone.top;
         t.side               = t.detail;
         t.sideY              = row.y + (row.height - (detail.baseline - detail.top)) / 2.0f - detail.top;

@@ -69,12 +69,10 @@ namespace headsup
             {"elementResistRank", &Settings::elementResistRank, kMinResistRank, kNoResistRank},
             {"maxElements", &Settings::maxElements, 0, kElementCount},
             {"barHeight", &Settings::barHeight, kMinBarHeight, kMaxBarHeight},
-            {"barTextSize", &Settings::barTextSize, kAutoBarTextSize, kMaxBarTextSize},
-            {"barDetailTextSize", &Settings::barDetailTextSize, kAutoBarTextSize, kMaxBarTextSize},
+            {"barIconScale", &Settings::barIconScale, kMinIconScale, kMaxIconScale, kPercentStep},
             {"barWidgetSpacing", &Settings::barWidgetSpacing, 0, kMaxWidgetSpacing},
             {"barWidgetPadding", &Settings::barWidgetPadding, kThemePadding, kMaxWidgetPadding},
             {"panelSeparators", &Settings::panelSeparators, 0, kAllSeparators},
-            {"popupTextSize", &Settings::popupTextSize, kAutoPopupTextSize, kMaxBarTextSize},
             {"helpBarTextSize", &Settings::helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize},
             {"helpBarWidth", &Settings::helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth},
             {"helpBarHeight", &Settings::helpBarHeight, kAutoHelpBarHeight, kMaxHelpBarHeight},
@@ -131,7 +129,9 @@ namespace headsup
             float Settings::*field;
             float lo, hi;
         };
-        constexpr FloatKey kFloats[] = {{"maxDistance", &Settings::maxDistance, kMinOutlineDistance, kMaxOutlineDistance}};
+        constexpr FloatKey kFloats[] = {{"maxDistance", &Settings::maxDistance, kMinOutlineDistance, kMaxOutlineDistance},
+            {"barFontRatio", &Settings::barFontRatio, kMinFontRatio, kMaxFontRatio},
+            {"popupScale", &Settings::popupScale, kMinPopupScale, kMaxPopupScale}};
 
         struct ColorKey
         {

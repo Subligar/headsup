@@ -142,10 +142,10 @@ namespace headsup
         return line;
     }
 
-    const RmlBar::Rows& RmlBar::RowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, int barText, int helpText,
+    const RmlBar::Rows& RmlBar::RowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, float fontRatio, int helpText,
         const char* titleFont, const char* detailFont)
     {
-        return m_Rows.Get(LinesKey{m.height, shape, barText, titleFont, detailFont, helpText},
+        return m_Rows.Get(LinesKey{m.height, shape, fontRatio, titleFont, detailFont, helpText},
             [&](const LinesKey&) { return MakeRows(host, m, titleFont, detailFont, helpText); });
     }
 
@@ -475,26 +475,23 @@ namespace headsup
         if (!BarOn(settings) || !host.Running() || screenWidth <= 0.0f)
         {
             Close();
-            m_TitlePixels = m_DetailPixels = 0;
             input.Frame(BarLayout{}, {});
             input.SetPopup(BarRect{});
             return;
         }
         const BarPalette& p = PaletteFor(settings, skin);
-        const BarMetrics m  = MetricsFor(settings.barHeight, p.shape, settings.barTextSize, settings.barDetailTextSize,
-            settings.popupTextSize);
+        const BarMetrics m  = MetricsFor(settings.barHeight, p.shape, settings.barFontRatio, settings.popupScale,
+            settings.barIconScale);
         // The player's fonts where RmlUi can read them, the theme's where it cannot.
         const char* titleFont = BarTitleFont(settings, p.shape);
         if (!host.EnsureFont(titleFont)) titleFont = TitleFont(p.shape);
         const char* detailFont = BarTextFont(settings);
         if (!host.EnsureFont(detailFont)) detailFont = kDetailFont;
         const Rows& rows =
-            RowsFor(host, m, p.shape, settings.barTextSize, settings.helpBarTextSize, titleFont, detailFont);
+            RowsFor(host, m, p.shape, settings.barFontRatio, settings.helpBarTextSize, titleFont, detailFont);
         BarLook look{p, settings, m, PillRow(m), rows.lines, titleFont, p.shape == BarShape::Ornate, detailFont,
             std::nullopt};
         if (UsesGameArt(settings) && skin != nullptr) look.skin = FrameAsSet(settings, skin->frame);
-        m_TitlePixels  = look.lines.title;
-        m_DetailPixels = look.lines.detail;
         m_BarBottom   = BarBottom(p, m);
         Widgets widgets;
         if (!Document(host, look, rows.place))

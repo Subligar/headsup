@@ -17,7 +17,6 @@ namespace headsup
         // and the alphas of the edges and the soft accent, as the Phoenix window has them.
         constexpr uint32_t kMenuPageAlpha = 0xF7, kMenuEdgeAlpha = 0x24, kMenuRaisedAlpha = 0x3D, kMenuSoftAlpha = 0x47;
         constexpr float kCardStep = 0.07f, kInsetShade = 0.4f, kLabelShare = 0.3f, kMutedShare = 0.4f;
-        constexpr float kTitleScale      = 1.35f; // a popup title, in popupText
         constexpr float kCoinScale       = 0.75f; // gil's coin, in icons
         constexpr float kInlineBarLength = 2.0f;  // an EXP bar among a line's text: this many bar heights long
         constexpr float kInlineBarShare  = 0.14f; // and this thick, of the bar's height
@@ -155,7 +154,7 @@ namespace headsup
     {
         switch (font)
         {
-        case PopupFont::Title: return TextFace{titleFont, metrics.popupText * kTitleScale};
+        case PopupFont::Title: return TextFace{titleFont, metrics.popupTitle};
         case PopupFont::Heading:
         {
             const auto pixels  = static_cast<float>(WholePixels(metrics.heading));

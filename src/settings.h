@@ -161,13 +161,13 @@ namespace headsup
         int panelSeparators    = kAllSeparators; // by SeparatorBit, whatever the theme
         bool widgetBackground   = false; // every widget's pill or tint shown while not hovered, over the theme's look
         int barHeight      = 45; // pixels: the least at which titles are 13 px over 11 px detail lines
-        int barTextSize    = kAutoBarTextSize; // Main Font Size: a widget's top line, or a line alone; or Auto
-        int barDetailTextSize = kAutoBarTextSize; // Secondary Font Size: its second line; or Auto, a share of the Main
+        float barFontRatio = kDefaultFontRatio; // a widget's top line's size over its second line's
+        int barIconScale   = kDefaultIconScale; // its icons, in percent of the most it holds
         std::string barTitleFont; // widget titles and popup headings; empty for the theme's
         std::string barTextFont;  // details, figures and popup text; empty for the theme's
         int barWidgetSpacing = 0;             // every widget's, unless it has its own
         int barWidgetPadding = kThemePadding; // likewise
-        int popupTextSize  = kAutoPopupTextSize; // the popups' text size, or Auto
+        float popupScale   = kDefaultPopupScale; // the pop-outs' sizes, times their own
         std::array<WidgetOptions, kPanelSlots> widgets = DefaultWidgets(); // by SlotOf; a copy not placed has none
         std::vector<WindowPlace> pinnedWindows;  // game windows the player put at places of their own, never shifted
         std::vector<std::string> hiddenWindows;  // game windows drawn as nothing, by short name

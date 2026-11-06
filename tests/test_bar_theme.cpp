@@ -61,55 +61,59 @@ TEST(the_themes_folder_lists_its_theme_files_by_name)
 
 TEST(sizes_follow_the_bar_height)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
-    CHECK(Near(m.height, 36.0f) && Near(m.title, 14.4f) && Near(m.subtitle, 11.88f) && Near(m.icon, 18.0f));
+    const BarMetrics m = MetricsFor(36, BarShape::Ornate);
+    // An icon at 65% of the pill's inside: 29 px rounded, less a pixel of border a side.
+    CHECK(Near(m.height, 36.0f) && Near(m.title, 14.4f) && Near(m.subtitle, 12.0f) && Near(m.icon, 0.65f * 27.0f));
     // The pill leaves room above and below it for its text; the end cap, room either side of its diamond.
     CHECK(Near(m.pillHeight, 28.8f) && Near(m.cap, 23.04f));
-    CHECK(Near(MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize).panelRadius, 10.08f) && Near(m.panelRadius, 3.96f));
-    CHECK(Near(MetricsFor(200, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize).height, 64.0f) && Near(MetricsFor(1, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize).height, 24.0f));
+    CHECK(Near(MetricsFor(36, BarShape::Pills).panelRadius, 0.28f * 12.0f / 0.39f) && Near(m.panelRadius, 0.11f * 12.0f / 0.39f));
+    CHECK(Near(MetricsFor(200, BarShape::Pills).height, 64.0f) && Near(MetricsFor(1, BarShape::Pills).height, 24.0f));
     CHECK(std::string(TitleFont(BarShape::Ornate)) == "Marcellus SC" &&
           std::string(TitleFont(BarShape::Pills)) == kDetailFont);
 }
 
-TEST(auto_text_sizes_are_the_heights_as_before)
+TEST(the_bars_sizes_follow_its_height_and_the_pop_outs_their_own)
 {
     for (const int h : {24, 36, 45, 64})
         for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
         {
-            const BarMetrics m = MetricsFor(h, shape, kAutoBarTextSize, kAutoBarTextSize, kAutoBarTextSize);
-            const float H      = static_cast<float>(h);
-            CHECK(Near(m.title, 0.40f * H) && Near(m.subtitle, 0.33f * H) && Near(m.popupText, 0.39f * H));
-            CHECK(Near(m.heading, 0.33f * H) && Near(m.popupPadding, 0.36f * H) && Near(m.rowGap, 0.11f * H));
-            CHECK(Near(m.panelRadius, (shape == BarShape::Ornate ? 0.11f : 0.28f) * H));
-            CHECK(Near(m.icon, 0.50f * H) && Near(m.gap, 0.17f * H)); // the bar's own sizes never change
+            const BarMetrics m = MetricsFor(h, shape);
+            const float H = static_cast<float>(h), u = 12.0f / 0.39f; // the height whose share 12 px is
+            CHECK(Near(m.title, 0.40f * H) && Near(m.subtitle, 0.40f * H / 1.2f) && Near(m.gap, 0.17f * H));
+            CHECK(Near(m.popupText, 12.0f) && Near(m.popupTitle, 14.0f));
+            CHECK(Near(m.heading, 0.33f * u) && Near(m.popupPadding, 0.36f * u) && Near(m.rowGap, 0.11f * u));
+            CHECK(Near(m.panelRadius, (shape == BarShape::Ornate ? 0.11f : 0.28f) * u));
         }
 }
 
-TEST(a_set_bar_text_size_is_the_titles_and_the_detail_line_keeps_its_share)
+TEST(the_font_size_ratio_divides_the_second_lines_size)
 {
-    const BarMetrics m = MetricsFor(45, BarShape::Ornate, 16, kAutoBarTextSize, kAutoBarTextSize);
-    CHECK(Near(m.title, 16.0f) && Near(m.subtitle, 16.0f * 0.33f / 0.40f));
-    CHECK(Near(m.popupText, 0.39f * 45.0f)); // the popups keep theirs
+    CHECK(Near(MetricsFor(45, BarShape::Ornate, 1.0f).subtitle, 18.0f));
+    CHECK(Near(MetricsFor(45, BarShape::Ornate, 2.0f).subtitle, 9.0f) && Near(MetricsFor(45, BarShape::Ornate, 0.5f).subtitle, 36.0f));
+    CHECK(Near(MetricsFor(45, BarShape::Ornate, 0.5f).title, 18.0f)); // the main line keeps its own
+    // Its slider: 1 in the middle, the ends 0.2 and 2, and each position back where it was.
+    CHECK(Near(FontRatioAt(kFontRatioSteps), 1.0f) && Near(FontRatioAt(0), 0.2f) && Near(FontRatioAt(2 * kFontRatioSteps), 2.0f));
+    for (int position = 0; position <= 2 * kFontRatioSteps; ++position)
+        CHECK_EQ(FontRatioPosition(FontRatioAt(position)), position);
+    CHECK(FontRatioPosition(kDefaultFontRatio) > kFontRatioSteps && FontRatioPosition(9.0f) == 2 * kFontRatioSteps);
 }
 
-TEST(a_set_popup_text_size_scales_the_popup_and_the_height_no_longer_does)
+TEST(the_pop_out_scale_scales_every_pop_out_size_and_the_bar_keeps_its_own)
 {
-    const BarMetrics low = MetricsFor(24, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, 18);
-    const BarMetrics high = MetricsFor(64, BarShape::Pills, kAutoBarTextSize, kAutoBarTextSize, 18);
-    const float u = 18.0f / 0.39f; // the height whose Auto popup text is 18 px
-    for (const BarMetrics* m : {&low, &high})
-    {
-        CHECK(Near(m->popupText, 18.0f) && Near(m->heading, 0.33f * u) && Near(m->popupPadding, 0.36f * u));
-        CHECK(Near(m->rowGap, 0.11f * u) && Near(m->panelRadius, 0.28f * u));
-    }
-    CHECK(Near(low.title, 0.40f * 24.0f) && Near(high.title, 0.40f * 64.0f)); // the bar keeps its own
+    const BarMetrics small = MetricsFor(64, BarShape::Pills, kDefaultFontRatio, 0.5f);
+    const BarMetrics big   = MetricsFor(24, BarShape::Pills, kDefaultFontRatio, 2.0f);
+    CHECK(Near(small.popupText, 6.0f) && Near(small.popupTitle, 7.0f) && Near(big.popupText, 24.0f) && Near(big.popupTitle, 28.0f));
+    const BarMetrics one = MetricsFor(45, BarShape::Pills);
+    CHECK(Near(big.popupPadding, 2.0f * one.popupPadding) && Near(big.heading, 2.0f * one.heading) &&
+          Near(big.rowGap, 2.0f * one.rowGap) && Near(big.panelRadius, 2.0f * one.panelRadius));
+    CHECK(Near(small.title, 0.40f * 64.0f) && Near(big.title, 0.40f * 24.0f));
 }
 
-TEST(a_popup_text_size_at_its_auto_position_follows_the_height)
+TEST(icons_take_their_scale_of_the_most_a_pill_holds)
 {
-    const BarMetrics autoSize = MetricsFor(45, BarShape::Ornate, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize);
-    CHECK(Near(autoSize.popupText, 0.39f * 45.0f) && Near(autoSize.popupPadding, 0.36f * 45.0f));
-    CHECK(Near(MetricsFor(45, BarShape::Ornate, kAutoBarTextSize, kAutoBarTextSize, kAutoPopupTextSize + 1).popupText, 10.0f));
+    // A 45 px bar's pill is 36 px: 34 inside its borders.
+    CHECK(Near(MetricsFor(45, BarShape::Pills, kDefaultFontRatio, kDefaultPopupScale, 100).icon, 34.0f));
+    CHECK(Near(MetricsFor(45, BarShape::Pills, kDefaultFontRatio, kDefaultPopupScale, 50).icon, 17.0f));
 }
 
 TEST(a_theme_file_keeps_the_window_shape)

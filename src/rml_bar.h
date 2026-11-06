@@ -39,9 +39,6 @@ namespace headsup
         std::optional<BarRect> HelpBarReach() const { return m_HelpReach; }
         // The top bar's bottom, its under line counted, while it draws; 0 while it does not.
         float BarBottomNow() const { return m_BarBottom; }
-        // The title and detail sizes the last frame drew, 0 before one and while the bar is off.
-        int TitlePixels() const { return m_TitlePixels; }
-        int DetailPixels() const { return m_DetailPixels; }
         // Where the open popup's settings go on the screen while it shows them, in back buffer pixels.
         std::optional<BarRect> SettingsBody() const { return m_SettingsBody; }
 
@@ -51,7 +48,7 @@ namespace headsup
         {
             float height   = 0.0f;
             BarShape shape = BarShape::Ornate;
-            int barText    = kAutoBarTextSize;
+            float fontRatio = kDefaultFontRatio;
             const char* titleFont  = nullptr; // interned by BarTitleFont and BarTextFont: one pointer per name
             const char* detailFont = nullptr;
             int helpText = kAutoBarTextSize;
@@ -167,7 +164,7 @@ namespace headsup
             float drop    = 0.0f;
         };
 
-        const Rows& RowsFor(RmlHost& host, const BarMetrics& metrics, BarShape shape, int barText, int helpText,
+        const Rows& RowsFor(RmlHost& host, const BarMetrics& metrics, BarShape shape, float fontRatio, int helpText,
             const char* titleFont, const char* detailFont);
         Rows MakeRows(RmlHost& host, const BarMetrics& metrics, const char* titleFont, const char* detailFont,
             int helpText = kAutoBarTextSize);
@@ -231,6 +228,5 @@ namespace headsup
         std::optional<BarRect> m_HelpReach;
         float m_BarBottom = 0.0f;
         std::optional<BarRect> m_SettingsBody;
-        int m_TitlePixels = 0, m_DetailPixels = 0;
     };
 }

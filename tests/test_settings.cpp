@@ -243,8 +243,8 @@ serverClockZone=usPacific
 menuFont=Tahoma
 menuScale=125.0000
 barHeight=48.0000
-barTextSize=16.0000
-popupTextSize=20.0000
+barFontRatio=0.5000
+popupScale=1.5000
 barZone=false
 barWeather=false
 barVanaTime=false
@@ -293,7 +293,7 @@ hideInEvent=true
 debugMode=true
 barTitleFont=Cinzel
 barTextFont=
-barDetailTextSize=12.0000
+barIconScale=80.0000
 cursorOutline=60.0000
 untargetedOpacity=40.0000
 clockSeconds=true
@@ -355,12 +355,12 @@ helpBarY=8.0000
         s.hideInEvent = true;
         s.debugMode = true;
         s.barTitleFont = "Cinzel";
-        s.barDetailTextSize = 12;
+        s.barIconScale = 80;
         s.cursorOutlineThickness = 120; // 60 of before
         s.Widget(BarWidget::EarthTime).clockSeconds  = true;
         s.barHeight    = 48;
-        s.barTextSize   = 16;
-        s.popupTextSize = 20;
+        s.barFontRatio = 0.5f;
+        s.popupScale   = 1.5f;
         s.hideHelpBar  = true;
         s.hideNetstat  = true;
         s.screenshotKey       = 0x79; // F10
@@ -1159,20 +1159,16 @@ TEST(the_help_bars_anchor_and_full_width_save_and_load_back_and_an_unknown_ancho
     CHECK(LoadSettings(saved).helpBarAnchor == HelpAnchor::Left);
 }
 
-TEST(text_sizes_start_at_auto_and_clamp_to_their_range)
+TEST(the_font_ratio_pop_out_scale_and_icon_scale_hold_to_their_ranges)
 {
-    CHECK(Settings{}.barTextSize == kAutoBarTextSize && Settings{}.popupTextSize == kAutoPopupTextSize);
+    const Settings d;
+    CHECK(d.barFontRatio == kDefaultFontRatio && d.popupScale == kDefaultPopupScale && d.barIconScale == kDefaultIconScale);
     MapStore store;
-    store.values["barTextSize"]   = "3";
-    store.values["popupTextSize"] = "90";
+    store.values["barFontRatio"] = "9";
+    store.values["popupScale"]   = "0.01";
+    store.values["barIconScale"] = "3";
     const Settings s = LoadSettings(store);
-    CHECK(s.barTextSize == kAutoBarTextSize && s.popupTextSize == kMaxBarTextSize);
-    // A 9 px popup puts its icons 2 px from their numbers, which reads as touching: set popup sizes start at 10.
-    store.values["popupTextSize"] = "3";
-    CHECK_EQ(LoadSettings(store).popupTextSize, kAutoPopupTextSize);
-    store.values["popupTextSize"] = "10";
-    CHECK_EQ(LoadSettings(store).popupTextSize, 10);
-    CHECK_EQ(kAutoPopupTextSize + 1, 10);
+    CHECK(s.barFontRatio == kMaxFontRatio && s.popupScale == kMinPopupScale && s.barIconScale == kMinIconScale);
 }
 
 TEST(the_settings_window_keeps_its_theme_and_its_place)

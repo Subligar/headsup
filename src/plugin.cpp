@@ -1096,8 +1096,6 @@ public:
             .hidden           = names.hidden,
             .level            = m_Player.level,
             .sitting          = m_Player.sitting,
-            .barTitlePixels   = m_RmlBar.TitlePixels(),
-            .barDetailPixels  = m_RmlBar.DetailPixels(),
             .windowsBand      = m_WindowHook.WindowsBand(),
             .barBand          = band.value_or(headsup::HelpBand{}).topBar,
             .seenWindows      = &m_SeenWindows,
@@ -2093,8 +2091,7 @@ private:
             m_Played.push_back(PlayedInput{true, 0, kKeys.at(args[3]), 1});
             m_Played.push_back(PlayedInput{true, 0, kKeys.at(args[3]), static_cast<LPARAM>(kUp)});
         }
-        else if (what == "theme" || what == "height" || what == "seps" || what == "text" || what == "popuptext" ||
-                 what == "moves")
+        else if (what == "theme" || what == "height" || what == "seps" || what == "moves")
         {
             // A bar setting by number, saved as a change in the window is.
             const int value = static_cast<int>(number(3));
@@ -2102,8 +2099,6 @@ private:
             if (what == "theme") m_Settings.barTheme = static_cast<headsup::BarTheme>(value);
             if (what == "height") m_Settings.barHeight = value;
             if (what == "seps") m_Settings.panelSeparators = value;
-            if (what == "text") m_Settings.barTextSize = value;
-            if (what == "popuptext") m_Settings.popupTextSize = value;
             m_Settings          = headsup::Clamp(m_Settings);
             m_SettingsChangedAt = Now();
         }

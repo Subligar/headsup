@@ -1757,23 +1757,21 @@ namespace headsup
                 form.Fade(!BarOn(s));
                 form.SliderInt(label.c_str(), s.barHeight, kMinBarHeight, kMaxBarHeight, Pixels, tip);
                 break;
-            case SettingPiece::TextSize:
-            case SettingPiece::DetailSize:
+            case SettingPiece::FontRatio:
             {
+                // 1 in the slider's middle: a step a side for each of kFontRatioSteps.
                 form.Fade(!BarOn(s));
-                const bool main   = e.piece == SettingPiece::TextSize;
-                const int drawn   = main ? r.barTitlePixels : r.barDetailPixels;
-                const auto textSize = [&](int px) {
-                    if (px == kAutoBarTextSize || drawn <= 0 || drawn == px)
-                        return PixelsOr(Word(c, WindowWord::Auto), kAutoBarTextSize)(px);
-                    return Filled(Filled(Said(Word(c, main ? WindowWord::TextSizeFits : WindowWord::DetailSizeFits)),
-                                      kCountMark, std::to_string(px)),
-                        kTotalMark, std::to_string(drawn));
-                };
-                form.SliderInt(label.c_str(), main ? s.barTextSize : s.barDetailTextSize, kAutoBarTextSize, kMaxBarTextSize,
-                    textSize, tip);
+                int position     = FontRatioPosition(s.barFontRatio);
+                const int before = position;
+                form.SliderInt(label.c_str(), position, 0, 2 * kFontRatioSteps,
+                    [](int p) { return Printed("%.2fx", FontRatioAt(p)); }, tip);
+                if (position != before) s.barFontRatio = FontRatioAt(position);
                 break;
             }
+            case SettingPiece::IconScale:
+                form.Fade(!BarOn(s));
+                form.SliderPercent(label.c_str(), s.barIconScale, kMinIconScale, kMaxIconScale, tip);
+                break;
             case SettingPiece::WidgetSpacing:
                 form.Fade(!BarOn(s));
                 form.SliderInt(label.c_str(), s.barWidgetSpacing, 0, kMaxWidgetSpacing, Pixels, tip);
@@ -1783,10 +1781,9 @@ namespace headsup
                 form.SliderInt(label.c_str(), s.barWidgetPadding, kThemePadding, kMaxWidgetPadding,
                     PixelsOr(Word(c, WindowWord::Themes), kThemePadding), tip);
                 break;
-            case SettingPiece::PopupSize:
+            case SettingPiece::PopupScale:
                 form.Fade(!BarOn(s));
-                form.SliderInt(label.c_str(), s.popupTextSize, kAutoPopupTextSize, kMaxBarTextSize,
-                    PixelsOr(Word(c, WindowWord::Auto), kAutoPopupTextSize), tip);
+                form.SliderFloat(label.c_str(), s.popupScale, kMinPopupScale, kMaxPopupScale, "%.1fx", tip);
                 break;
             case SettingPiece::HideReadout:
                 form.Fade(!on);

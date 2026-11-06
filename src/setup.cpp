@@ -36,7 +36,7 @@ namespace headsup
         const SetupChoice kThemeChoices[]{{"theme", WindowWord::SetupChoiceTheme, WindowList::SetupTheme, kThemes}};
         const SettingPiece kThemeSettings[]{SettingPiece::DefaultFont,
             SettingPiece::BaseFontSize, SettingPiece::BaseIconSize,
-            SettingPiece::TextFont, SettingPiece::TextSize,
+            SettingPiece::TextFont, SettingPiece::FontRatio,
             SettingPiece::Size};
 
         // The mob rows of what would attack you, notorious monsters and their placeholders, and claimed mobs.

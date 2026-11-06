@@ -28,7 +28,6 @@ namespace headsup
         uint32_t names = 0, replaced = 0, hidden = 0; // the game's names, those HeadsUp drew, those no one drew
         int level = 0;             // yours; 0 while unknown
         bool sitting = false;
-        int barTitlePixels = 0, barDetailPixels = 0; // the line sizes the bar drew last frame, 0 when it is off
         // In the game's menu pixels: the line the game's windows went under last frame, and the panel's own lowest
         // reach without its help line; 0 while the panel is off.
         int windowsBand = 0, barBand = 0;

@@ -159,7 +159,6 @@ playersRowPartyMemberColorG=0.697363913
 playersRowPartyMemberColorR=0.0548364185
 playersRowPartyMemberOutline=shown
 pointerIcon=chocobo
-popupTextSize=15.0000
 scaleMax=175.0000
 scaleMin=75.0000
 selfLine1Glow=0.0000

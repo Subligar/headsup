@@ -169,99 +169,15 @@
     {"key": "npcs", "name": "NPCs", "child": true},
     {"key": "pets", "name": "Pets", "child": true},
     {
-      "key": "userinterface",
-      "name": "User Interface",
-      "cards": [
-        {
-          "key": "screenshot-mode",
-          "name": "Screenshot Mode",
-          "description": "Every name, the top panel and every addon window go, as with /hu screenshot. Ashita's /screenshot hide turns it on by itself for its picture.",
-          "settings": [
-            {"key": "key", "name": "Key", "tip": "Turns screenshot mode on and off. The game sees the key too, so pick one it does not use."},
-            {"key": "hide-game-windows", "name": "Hide Game Windows", "tip": "The game's own windows and chat go too."}
-          ]
-        },
-        {
-          "key": "custom-game-ui",
-          "name": "Custom Game UI",
-          "description": "HeadsUp's own versions of parts of the game's UI. Each keeps working when you hide the game's window it belongs to.",
-          "settings": [
-            {"key": "fishing-bar", "name": "Fishing Bar", "tip": "The fish's stamina while you fight it. The game draws its bar in the party window, so it goes when that window is hidden. It shows only while a fish is hooked: drag it where you want it then."},
-            {"key": "fishing-bar-width", "name": "Width", "indent": true, "tip": "How wide the fishing bar is."},
-            {"key": "fishing-bar-height", "name": "Height", "indent": true, "tip": "How tall the fishing bar is, its frame counted. Default: 18 px."},
-            {"key": "fishing-bar-x", "name": "X Position", "indent": true, "tip": "Pixels from the left of the screen to the bar. Auto centers it. Default: Auto."},
-            {"key": "fishing-bar-y", "name": "Y Position", "indent": true, "tip": "Pixels from the top of the screen to the bar. Auto puts it low on the screen. Default: Auto."},
-            {"key": "fishing-bar-draggable", "name": "Draggable", "indent": true, "tip": "On, you can drag the bar to move it while a fish is hooked. Off, clicks go through it to the game. Default: On."},
-            {"key": "fishing-bar-font", "name": "Font", "indent": true, "tip": "The font of the text over the bar. Default: the top panel's Secondary Font."},
-            {"key": "fishing-bar-text-size", "name": "Font Size", "indent": true, "tip": "The size of the text over the bar. Default: 15 px."},
-            {"key": "fishing-bar-line", "name": "Text", "indent": true, "tip": "What the text over the bar says. Drag the buttons below into it, and write your own text around them. HeadsUp only says what the game has told you, never which fish it is."},
-            {"key": "fish-color-by-catch", "name": "Color by Catch", "indent": true, "tip": "Colors the bar by what is on the line. A rod that could break comes first, then a line that could snap, then the size of the catch. Off, the bar keeps the theme's color. Default: On."},
-            {"key": "fish-small-color", "name": "Small Fish", "indent": true, "tip": "The bar's color for a small fish."},
-            {"key": "fish-large-color", "name": "Large Fish", "indent": true, "tip": "The bar's color for a large fish."},
-            {"key": "fish-item-color", "name": "Item", "indent": true, "tip": "The bar's color for an item."},
-            {"key": "fish-monster-color", "name": "Monster", "indent": true, "tip": "The bar's color for a monster. Default: purple."},
-            {"key": "fish-line-color", "name": "Line Break", "indent": true, "tip": "The bar's color when your line could snap, which the game warns of with a bad feeling. Default: orange."},
-            {"key": "fish-rod-color", "name": "Rod Break", "indent": true, "tip": "The bar's color when your rod could break, which the game warns of with a terrible feeling. Default: red."},
-            {"key": "hide-game-fish-bar", "name": "Hide the Game's Fish Bar", "tip": "While a fish is hooked, the game's own fish bar at the top of the screen is not drawn. The party window still shows."}
-          ]
-        },
-        {
-          "key": "base-game-ui",
-          "name": "Base Game UI",
-          "settings": [
-            {"key": "game-help", "name": "Game Help", "tip": "The game's own help bar goes under the top panel, and the windows under it. Off while it is hidden."},
-            {"key": "auto-adjust", "name": "Auto Adjust Windows", "tip": "Places every menu's windows right under the top panel as it is now, for the game help on and off. Your own shifts go."},
-            {
-              "key": "window-defaults",
-              "words": [
-                {"key": "headsup-defaults", "name": "HeadsUp Defaults", "tip": "Every menu's windows under the top panel as HeadsUp places them. Your shifts and places are cleared."},
-                {"key": "headsup-help", "name": "HeadsUp Help", "tip": "HeadsUp's help text in place of the game's help bar, which is hidden, and the windows as HeadsUp places them."},
-                {"key": "game-defaults", "name": "Game Defaults", "tip": "Every window where the game puts it: nothing moved, no places of your own."}
-              ]
-            },
-            {
-              "key": "window-list",
-              "words": [
-                {"key": "note", "name": "X and Y put a window at a place of your own on the screen, in the game's menu pixels from the top left; a window you place is not shifted. Type a number, then Enter; the arrow lets it go."},
-                {"key": "find", "name": "Find"},
-                {"key": "name-hint", "name": "Name"},
-                {"key": "all-windows", "tip": "Every window the game has, not only the named ones and yours."},
-                {"key": "hide", "name": "Hide"},
-                {"key": "keep", "name": "Keep"},
-                {"key": "row-tip", "tip": "Keep draws it as the game does, at the X and Y you give it; Hide draws nothing of it and lets no click through to it. Its keys still work, so Escape closes a hidden menu."}
-              ]
-            }
-          ]
-        },
-        {
-          "key": "window-groups",
-          "name": "Window Groups",
-          "settings": [
-            {
-              "key": "groups",
-              "words": [
-                {"key": "note", "name": "The windows each menu opens move together by one shift, so they keep their places beside each other. Your own shift replaces the default, which brings the menu's highest window to Windows Start At. Type a number, then Enter."},
-                {"key": "help-on", "name": "Game Help On", "tip": "The shifts while the game's help shows under the top panel: its help line, or the game's own help bar."},
-                {"key": "help-off", "name": "Game Help Off", "tip": "The shifts while no help shows under the top panel."},
-                {"key": "starts-at", "name": "Windows Start At", "tip": "Where each menu's highest window goes, in the game's menu pixels from the top of the screen."},
-                {"key": "row-tip", "tip": "Its shift down from where the game puts its windows, up when below zero."}
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
       "key": "toppanel",
       "name": "Top Panel",
-      "child": true,
       "cards": [
         {
           "key": "top-panel",
           "name": "Top Panel",
           "description": "Hover a widget for details; click it to keep them open. The Widgets page has each one's options.",
           "settings": [
-            {"key": "widget-background", "name": "Show Widget Background", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: Off."},
+            {"key": "widget-background", "name": "Show Widget Backgrounds", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: Off."},
             {
               "key": "show-separator",
               "name": "Show Separator",
@@ -274,27 +190,13 @@
             },
             {"key": "title-font", "name": "Main Font", "tip": "The font of each widget's top line, of a widget on one line, and of the pop-outs' headings. Default: the theme's."},
             {"key": "text-font", "name": "Secondary Font", "tip": "The font of each widget's second line, its numbers and the pop-outs' text. Default: the theme's."},
-            {"key": "height", "name": "Height"},
-            {
-              "key": "text-size",
-              "name": "Main Font Size",
-              "tip": "The size of each widget's top line, and of a widget that has buttons on one line only. Auto follows the height. When the top panel is too short, both lines get smaller together until they fit. Default: Auto.",
-              "words": [
-                {"key": "fits", "name": "{count} px ({total} fits)"}
-              ]
-            },
-            {
-              "key": "detail-size",
-              "name": "Secondary Font Size",
-              "tip": "The size of each widget's second line, used only when both of its lines have a button turned on. Auto is a share of the Main Font Size. Default: Auto.",
-              "words": [
-                {"key": "fits", "name": "{count} px ({total} fits)"}
-              ]
-            },
+            {"key": "height", "name": "Panel Height", "tip": "How tall the top panel is. The text and icons of every widget grow and shrink with it."},
+            {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of the main line's text to the size of the secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Both lines grow or shrink together to fit the Panel Height. Default: 1.20x."},
+            {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of the icons in widgets. At 100% an icon is as tall as its widget can hold. Default: 65%."},
             {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Default: 0 px."},
             {"key": "widget-padding", "name": "Widget Padding", "tip": "The room inside every widget, from its edges to its text. Default: the theme's own."},
-            {"key": "popup-size", "name": "Pop-out Font Size", "tip": "The size of the text in the widgets' pop-outs. Auto follows the height. Default: Auto."},
-            {"key": "hide-readout", "name": "Hide Readout", "tip": "The game's S, R and % numbers at the top right."},
+            {"key": "popup-scale", "name": "Pop-out Scale", "tip": "Makes the widgets' pop-outs and everything in them larger or smaller. At 1x a pop-out's title is 14 px and its text 12 px. Default: 1.0x."},
+            {"key": "hide-readout", "name": "Hide Server Info", "tip": "The game's S, R and % numbers at the top right."},
             {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
           ]
         },
@@ -383,6 +285,89 @@
                 {"key": "combine-none", "name": "None"},
                 {"key": "link-disabled", "name": "(disabled)"},
                 {"key": "design-last-on", "name": "At least one button must be enabled."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "userinterface",
+      "name": "User Interface",
+      "cards": [
+        {
+          "key": "screenshot-mode",
+          "name": "Screenshot Mode",
+          "description": "Every name, the top panel and every addon window go, as with /hu screenshot. Ashita's /screenshot hide turns it on by itself for its picture.",
+          "settings": [
+            {"key": "key", "name": "Key", "tip": "Turns screenshot mode on and off. The game sees the key too, so pick one it does not use."},
+            {"key": "hide-game-windows", "name": "Hide Game Windows", "tip": "The game's own windows and chat go too."}
+          ]
+        },
+        {
+          "key": "custom-game-ui",
+          "name": "Custom Game UI",
+          "description": "HeadsUp's own versions of parts of the game's UI. Each keeps working when you hide the game's window it belongs to.",
+          "settings": [
+            {"key": "fishing-bar", "name": "Fishing Bar", "tip": "The fish's stamina while you fight it. The game draws its bar in the party window, so it goes when that window is hidden. It shows only while a fish is hooked: drag it where you want it then."},
+            {"key": "fishing-bar-width", "name": "Width", "indent": true, "tip": "How wide the fishing bar is."},
+            {"key": "fishing-bar-height", "name": "Height", "indent": true, "tip": "How tall the fishing bar is, its frame counted. Default: 18 px."},
+            {"key": "fishing-bar-x", "name": "X Position", "indent": true, "tip": "Pixels from the left of the screen to the bar. Auto centers it. Default: Auto."},
+            {"key": "fishing-bar-y", "name": "Y Position", "indent": true, "tip": "Pixels from the top of the screen to the bar. Auto puts it low on the screen. Default: Auto."},
+            {"key": "fishing-bar-draggable", "name": "Draggable", "indent": true, "tip": "On, you can drag the bar to move it while a fish is hooked. Off, clicks go through it to the game. Default: On."},
+            {"key": "fishing-bar-font", "name": "Font", "indent": true, "tip": "The font of the text over the bar. Default: the top panel's Secondary Font."},
+            {"key": "fishing-bar-text-size", "name": "Font Size", "indent": true, "tip": "The size of the text over the bar. Default: 15 px."},
+            {"key": "fishing-bar-line", "name": "Text", "indent": true, "tip": "What the text over the bar says. Drag the buttons below into it, and write your own text around them. HeadsUp only says what the game has told you, never which fish it is."},
+            {"key": "fish-color-by-catch", "name": "Color by Catch", "indent": true, "tip": "Colors the bar by what is on the line. A rod that could break comes first, then a line that could snap, then the size of the catch. Off, the bar keeps the theme's color. Default: On."},
+            {"key": "fish-small-color", "name": "Small Fish", "indent": true, "tip": "The bar's color for a small fish."},
+            {"key": "fish-large-color", "name": "Large Fish", "indent": true, "tip": "The bar's color for a large fish."},
+            {"key": "fish-item-color", "name": "Item", "indent": true, "tip": "The bar's color for an item."},
+            {"key": "fish-monster-color", "name": "Monster", "indent": true, "tip": "The bar's color for a monster. Default: purple."},
+            {"key": "fish-line-color", "name": "Line Break", "indent": true, "tip": "The bar's color when your line could snap, which the game warns of with a bad feeling. Default: orange."},
+            {"key": "fish-rod-color", "name": "Rod Break", "indent": true, "tip": "The bar's color when your rod could break, which the game warns of with a terrible feeling. Default: red."},
+            {"key": "hide-game-fish-bar", "name": "Hide the Game's Fish Bar", "tip": "While a fish is hooked, the game's own fish bar at the top of the screen is not drawn. The party window still shows."}
+          ]
+        },
+        {
+          "key": "base-game-ui",
+          "name": "Base Game UI",
+          "settings": [
+            {"key": "game-help", "name": "Game Help", "tip": "The game's own help bar goes under the top panel, and the windows under it. Off while it is hidden."},
+            {"key": "auto-adjust", "name": "Auto Adjust Windows", "tip": "Places every menu's windows right under the top panel as it is now, for the game help on and off. Your own shifts go."},
+            {
+              "key": "window-defaults",
+              "words": [
+                {"key": "headsup-defaults", "name": "HeadsUp Defaults", "tip": "Every menu's windows under the top panel as HeadsUp places them. Your shifts and places are cleared."},
+                {"key": "headsup-help", "name": "HeadsUp Help", "tip": "HeadsUp's help text in place of the game's help bar, which is hidden, and the windows as HeadsUp places them."},
+                {"key": "game-defaults", "name": "Game Defaults", "tip": "Every window where the game puts it: nothing moved, no places of your own."}
+              ]
+            },
+            {
+              "key": "window-list",
+              "words": [
+                {"key": "note", "name": "X and Y put a window at a place of your own on the screen, in the game's menu pixels from the top left; a window you place is not shifted. Type a number, then Enter; the arrow lets it go."},
+                {"key": "find", "name": "Find"},
+                {"key": "name-hint", "name": "Name"},
+                {"key": "all-windows", "tip": "Every window the game has, not only the named ones and yours."},
+                {"key": "hide", "name": "Hide"},
+                {"key": "keep", "name": "Keep"},
+                {"key": "row-tip", "tip": "Keep draws it as the game does, at the X and Y you give it; Hide draws nothing of it and lets no click through to it. Its keys still work, so Escape closes a hidden menu."}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "window-groups",
+          "name": "Window Groups",
+          "settings": [
+            {
+              "key": "groups",
+              "words": [
+                {"key": "note", "name": "The windows each menu opens move together by one shift, so they keep their places beside each other. Your own shift replaces the default, which brings the menu's highest window to Windows Start At. Type a number, then Enter."},
+                {"key": "help-on", "name": "Game Help On", "tip": "The shifts while the game's help shows under the top panel: its help line, or the game's own help bar."},
+                {"key": "help-off", "name": "Game Help Off", "tip": "The shifts while no help shows under the top panel."},
+                {"key": "starts-at", "name": "Windows Start At", "tip": "Where each menu's highest window goes, in the game's menu pixels from the top of the screen."},
+                {"key": "row-tip", "tip": "Its shift down from where the game puts its windows, up when below zero."}
               ]
             }
           ]

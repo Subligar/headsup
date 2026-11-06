@@ -174,7 +174,7 @@ PIECES = Pieces(
                                                     'hide': True, 'keep': True, 'row-tip': False}),
         # Top Panel and Widgets
         'theme': Setting(words={'built-in': True, 'custom': True, 'copy': True, 'copy-again': True}), 'window-type': Setting(), 'window-border': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
-        'height': Setting(), 'text-size': Setting(words={'fits': True}), 'detail-size': Setting(words={'fits': True}), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'popup-size': Setting(),
+        'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'popup-scale': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
         'theme-name': Setting(), 'background-style': Setting(options=3),
         'separator-style': Setting(options=4, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
