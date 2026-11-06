@@ -148,7 +148,11 @@ namespace headsup
     {
         if (widgets.empty()) return std::nullopt;
         Rml::Element* shown = m_ViewShown && widgets == m_ViewFor ? m_ViewBody->GetFirstChild() : nullptr;
-        return SettingsRoom{std::round(kSettingsWidth * static_cast<float>(settings.menuFontSize)),
+        // Side by side, each a box with its padding.
+        const float across = static_cast<float>(std::min(widgets.size(), kSettingsAcross));
+        const float ems    = widgets.size() > 1 ? across * (kSettingsWidth + 2.0f * kSettingsBoxPad) + (across - 1.0f) * kSettingsBoxGap
+                                                : kSettingsWidth;
+        return SettingsRoom{std::round(ems * static_cast<float>(settings.menuFontSize)),
             shown != nullptr ? std::ceil(shown->GetBox().GetSize(Rml::BoxArea::Border).y) : 0.0f};
     }
 

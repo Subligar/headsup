@@ -248,7 +248,7 @@ namespace headsup
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
         constexpr const char* kDesignSuffix     = "Design";
         constexpr const char* kCombineSuffix    = "Combine";
-        constexpr const char* kCombineOnPanelSuffix = "CombineOnPanel", *kCombineInPopupSuffix = "CombineInPopup";
+        constexpr const char* kLinkPaddingSuffix = "LinkPadding";
         // The EXP widget's: a place for each ExpText, and its bar's size.
         const char* const kExpPlaceKeys[kExpTextCount] = {"barExpEarned", "barExpToNext", "barExpPercent"};
         const char* const kExpPlaceNames[kExpTextPlaceCount] = {"off", "above", "below", "left", "right"};
@@ -1205,6 +1205,7 @@ namespace headsup
             if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
             if (w.clockSecondZone && static_cast<int>(*w.clockSecondZone) >= kClockZoneCount) w.clockSecondZone = fresh.clockSecondZone;
+            w.linkPadding  = std::clamp(w.linkPadding, 0, kMaxWidgetSpacing);
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
             w.expBarHeight = std::clamp(w.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight);
             w.targetDetection &= kAllDetection;
@@ -1222,6 +1223,8 @@ namespace headsup
             status.weakRank   = std::clamp(status.weakRank, kNoWeakRank, kMaxWeakRank);
             status.resistRank = std::clamp(status.resistRank, kMinResistRank, kNoResistRank);
         }
+        // A linked widget sits just after its own in the layout too, as the panel draws it.
+        s.barSections = Panel(s).placement;
         return s;
     }
 
@@ -1242,8 +1245,7 @@ namespace headsup
             o.on         = flag(widget, o.on);
             o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
-            o.combineOnPanel = flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
-            o.combineInPopup = flag(widget + kCombineInPopupSuffix, o.combineInPopup);
+            o.linkPadding = number(widget + kLinkPaddingSuffix, o.linkPadding);
             switch (w.kind)
             {
             case BarWidget::Currency:
@@ -1319,8 +1321,7 @@ namespace headsup
             flag(widget, o.on);
             if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
-            flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
-            flag(widget + kCombineInPopupSuffix, o.combineInPopup);
+            StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
             switch (w.kind)
             {
             case BarWidget::Currency: text(kBarCurrencyKey, kCurrencyTable[o.currency].key); break;
@@ -1434,6 +1435,14 @@ namespace headsup
         for (int slot = 0; slot < kPanelSlots; ++slot)
             links[slot] = s.widgets[slot].combine;
         return Combine(s.barSections, links);
+    }
+
+    std::vector<PanelWidget> PillSettings(const Settings& s, PanelWidget head)
+    {
+        std::vector<PanelWidget> on;
+        for (const PanelWidget w : Members(Panel(s), head))
+            if (s.Widget(w).on) on.push_back(w);
+        return on.empty() ? std::vector<PanelWidget>{head} : on;
     }
 
     namespace

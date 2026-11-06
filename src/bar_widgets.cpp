@@ -758,16 +758,6 @@ namespace headsup
         }
 
 
-        // The widget just before this one in its combined pill, whose Combine pulled it there; none for a widget alone
-        // or first in its pill.
-        std::optional<PanelWidget> CombinedBefore(const PanelGroups& panel, PanelWidget widget)
-        {
-            const std::vector<PanelWidget> pill = Members(panel, panel.group[SlotOf(widget)]);
-            const auto at = std::ranges::find(pill, widget);
-            if (at == pill.end() || at == pill.begin()) return std::nullopt;
-            return *(at - 1);
-        }
-
         std::vector<Nation> PickedNations(uint8_t bits)
         {
             std::vector<Nation> picked;
@@ -1712,15 +1702,9 @@ namespace headsup
         return needs;
     }
 
-    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings,
-        const PanelGroups& panel)
+    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings)
     {
-        WidgetContent w = ContentOf(widget, state, settings);
-        // Combined, the widget before it in its pill may keep it off the panel; its popup still joins the pill's.
-        if (const std::optional<PanelWidget> before = CombinedBefore(panel, widget);
-            before && !settings.Widget(*before).combineOnPanel)
-            w.shown = false;
-        return w;
+        return ContentOf(widget, state, settings);
     }
 
     std::array<PartMark, kWidgetPartCount> PartMarksNow(const std::vector<PanelWidget>& widgets, const BarState& state,
@@ -1740,25 +1724,31 @@ namespace headsup
 
     namespace
     {
-        // Every popup of a pill's widgets, joined.
+        // Every popup of a pill's widgets, joined: a title or card shown already, as two copies of a widget have, is
+        // left out.
         PopupContent JoinedPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
         {
             const std::vector<PanelWidget> pill = Members(Panel(settings), head);
             if (pill.size() <= 1) return BarPopupContent(head, state, settings);
             PopupContent joined;
             joined.oneColumn = true;
-            for (size_t i = 0; i < pill.size(); ++i)
+            std::vector<std::vector<Span>> titles;
+            for (const PanelWidget w : pill)
             {
-                const PanelWidget w = pill[i];
                 if (!ContentOf(w, state, settings).hasPopup) continue;
-                if (i > 0 && !settings.Widget(pill[i - 1]).combineInPopup) continue;
                 PopupContent own = BarPopupContent(w, state, settings);
-                if (joined.title.empty())
-                    joined.icon = own.icon;
-                else if (!own.title.empty())
-                    joined.title.push_back(Text(kDot, Tone::Dim));
-                joined.title.insert(joined.title.end(), own.title.begin(), own.title.end());
-                joined.sections.insert(joined.sections.end(), own.sections.begin(), own.sections.end());
+                if (!own.title.empty() && std::ranges::find(titles, own.title) == titles.end())
+                {
+                    if (joined.title.empty())
+                        joined.icon = own.icon;
+                    else
+                        joined.title.push_back(Text(kDot, Tone::Dim));
+                    joined.title.insert(joined.title.end(), own.title.begin(), own.title.end());
+                    titles.push_back(std::move(own.title));
+                }
+                for (PopupSection& section : own.sections)
+                    if (std::ranges::find(joined.sections, section) == joined.sections.end())
+                        joined.sections.push_back(std::move(section));
                 joined.oneColumn = joined.oneColumn && own.oneColumn;
             }
             return joined;

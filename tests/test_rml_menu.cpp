@@ -100,7 +100,7 @@ namespace
                 m_Rml.complaints.seconds += kFrameSeconds;
                 // As the plugin does: the panel's popup shows a placed pill's settings, at the room they took last.
                 if (shown && !Placed(settings.barSections, *shown)) shown.reset();
-                m_Readings.settingsOf = shown ? Members(Panel(settings), *shown) : std::vector<PanelWidget>{};
+                m_Readings.settingsOf = shown ? PillSettings(settings, *shown) : std::vector<PanelWidget>{};
                 const std::optional<SettingsRoom> room = menu.RoomFor(m_Readings.settingsOf, settings);
                 menu.settingsAt = room ? std::optional(BarRect{kSettingsX, kSettingsY, room->width, kSettingsHeight}) : std::nullopt;
                 changed = menu.Update(m_Host, settings, m_Readings, m_Fonts, kVersion) || changed;

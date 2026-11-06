@@ -1287,6 +1287,25 @@ TEST(combined_widgets_touch_with_no_gap_or_diamond_between_them)
         }
 }
 
+TEST(a_linked_widgets_padding_puts_that_much_room_between_it_and_the_widget_it_pulls)
+{
+    for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
+    {
+        const PanelGroups g = Combined();
+        std::array<float, kPanelSlots> linked{};
+        linked[SlotOf(BarWidget::Zone)] = 12.0f; // after Zone, before the Weather it pulls
+        linked[SlotOf(BarWidget::Bags)] = 7.0f;  // after Bags, before Gil, on the right, placed from the screen's edge
+        const BarLayout l = LayoutBar(1920.0f, metrics, shape, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f, g.placement,
+            ShapeSeparators(shape), 0.0f, g.group, linked);
+        const BarRect zone = *RectOf(l, BarWidget::Zone), weather = *RectOf(l, BarWidget::Weather);
+        const BarRect bags = *RectOf(l, BarWidget::Bags), gil = *RectOf(l, BarWidget::Currency);
+        CHECK(Near(weather.x, zone.x + zone.width + 12.0f));
+        CHECK(Near(gil.x, bags.x + bags.width + 7.0f));
+        CHECK(Near(RectOf(l, BarWidget::EarthTime)->x + RectOf(l, BarWidget::EarthTime)->width,
+            RectOf(CombinedBar(1920.0f, shape, metrics), BarWidget::EarthTime)->x + 50.0f)); // the edge holds
+    }
+}
+
 TEST(a_combined_pill_that_does_not_fit_goes_whole)
 {
     // Room on the left for Zone but not Weather beside it: both go, and the right side's Bags and Gil go together.

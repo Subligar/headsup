@@ -128,9 +128,8 @@ namespace headsup
     std::array<PartMark, kWidgetPartCount> PartMarksNow(const std::vector<PanelWidget>& widgets, const BarState& state,
         const Settings& settings);
 
-    // Game help is never shown on the bar: it has a bar of its own, under the top bar. panel: Panel(settings).
-    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings,
-        const PanelGroups& panel);
+    // Game help is never shown on the bar: it has a bar of its own, under the top bar.
+    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings);
     // The used and total slots of the bag the game's caption names, as the Bags widget writes them.
     std::optional<Span> StripBagFill(const BarState& state);
     PopupContent BarPopupContent(PanelWidget widget, const BarState& state, const Settings& settings);

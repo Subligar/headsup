@@ -1281,7 +1281,7 @@ private:
     std::vector<headsup::PanelWidget> SettingsShownNow() const
     {
         const std::optional<headsup::PanelWidget> shown = m_BarInput.SettingsShown();
-        return shown ? headsup::Members(headsup::Panel(m_Settings), *shown) : std::vector<headsup::PanelWidget>{};
+        return shown ? headsup::PillSettings(m_Settings, *shown) : std::vector<headsup::PanelWidget>{};
     }
 
     std::optional<headsup::HelpBand> HelpBandNow() const

@@ -79,12 +79,12 @@ namespace headsup
     // neighbour's edge. Pills with diamonds sit a gap, the diamond and a gap apart.
     // spacing: every widget's room more between it and each neighbour; an ornate diamond stands in the middle of the
     // room it is in.
-    // groups: by SlotOf, the first widget of each one's pill (PanelGroups). The widgets of a pill touch, with no gap,
-    // room or diamond between them, and are placed or dropped together.
+    // groups: by SlotOf, the first widget of each one's pill (PanelGroups). The widgets of a pill have no gap, room
+    // or diamond between them, only linked's room after each (by SlotOf), and are placed or dropped together.
     BarLayout LayoutBar(float screenWidth, const BarMetrics& metrics, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
                         const BarPlacement& placement, int separators, float spacing,
-                        const std::array<PanelWidget, kPanelSlots>& groups);
+                        const std::array<PanelWidget, kPanelSlots>& groups, const std::array<float, kPanelSlots>& linked = {});
     // The widget under the point, or for a combined pill its first widget, which names the pill's popup.
     std::optional<PanelWidget> WidgetAt(const BarLayout& layout, float x, float y);
     const BarRect* RectOf(const BarLayout& layout, PanelWidget widget);

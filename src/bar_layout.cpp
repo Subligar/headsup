@@ -39,11 +39,13 @@ namespace headsup
             float between = 0.0f, frameClear = 0.0f;
             float room = 0.0f; // every widget's room more on each side
             const std::array<PanelWidget, kPanelSlots>* groups = nullptr;
+            const std::array<float, kPanelSlots>* linked = nullptr; // by SlotOf: the room after it in its pill
             bool Together(PanelWidget a, PanelWidget b) const { return (*groups)[SlotOf(a)] == (*groups)[SlotOf(b)]; }
             float Frame(PanelWidget w) const { return w.kind == BarWidget::Target ? frameClear : 0.0f; }
-            float Apart(PanelWidget a, PanelWidget b) const
+            // left is the one placed further left.
+            float Apart(PanelWidget left, PanelWidget right) const
             {
-                return Together(a, b) ? 0.0f : between + Frame(a) + Frame(b) + 2.0f * room;
+                return Together(left, right) ? (*linked)[SlotOf(left)] : between + Frame(left) + Frame(right) + 2.0f * room;
             }
             // From a's edge: the middle of what is between them, but for a's frame's clear space.
             float Middle(PanelWidget a) const { return Frame(a) + between / 2.0f + room; }
@@ -71,7 +73,9 @@ namespace headsup
                 const float width = Width(widths, w);
                 if (width <= 0.0f) continue;
                 const bool first = g.widgets.empty();
-                const float gap  = first ? 0.0f : spacing.Apart(g.widgets.back().widget, w);
+                const float gap  = first ? 0.0f
+                                         : dir > 0.0f ? spacing.Apart(g.widgets.back().widget, w)
+                                                      : spacing.Apart(w, g.widgets.back().widget);
                 if (width > (limit - at) * dir - gap + kFitSlack)
                 {
                     for (PanelWidget next = w; !g.widgets.empty() && spacing.Together(g.widgets.back().widget, next);)
@@ -120,7 +124,7 @@ namespace headsup
     BarLayout LayoutBar(float screenWidth, const BarMetrics& m, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
                         const BarPlacement& placement, int separators, float spacing,
-                        const std::array<PanelWidget, kPanelSlots>& groups)
+                        const std::array<PanelWidget, kPanelSlots>& groups, const std::array<float, kPanelSlots>& linked)
     {
         const bool ornate   = shape == BarShape::Ornate;
         const bool diamonds = (separators & SeparatorBit(Separator::Between)) != 0;
@@ -128,7 +132,7 @@ namespace headsup
         // diamond between them takes its width and a gap on either side.
         const float pillGap = diamonds ? 2.0f * m.gap + static_cast<float>(WholePixels(m.diamond)) : m.gap;
         const Spacing apart{.between = ornate ? 0.0f : pillGap, .frameClear = ornate ? DiamondClearance(m) : 0.0f, .room = spacing,
-            .groups = &groups};
+            .groups = &groups, .linked = &linked};
         const bool caps     = (separators & SeparatorBit(Separator::EndCaps)) != 0;
         const float edge    = caps ? m.cap : m.gap; // between a section and the screen's edge
         const BarRow pill   = PillRow(m);

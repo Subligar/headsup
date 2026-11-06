@@ -83,7 +83,7 @@ namespace headsup
         int worldGuild       = 0;                    // its guild shop, by GuildShops
         uint8_t worldSections = kAllWorldSections;   // its popup's parts, by WorldBit
         std::optional<PanelWidget> combine;          // shown right after it in its pill, with one popup (Combine)
-        bool combineOnPanel = true, combineInPopup = true; // that widget's place on the panel and cards in the popup
+        int linkPadding = 0; // pixels between it and the widget it combines with
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.
@@ -281,6 +281,8 @@ namespace headsup
     void RemoveWidgetCopy(Settings& s, PanelWidget widget);
     // The panel as it is drawn, each widget's combine pulling its partner after it.
     PanelGroups Panel(const Settings& s);
+    // The widgets whose settings a pill's popup shows: those of its widgets that are on, or its first alone.
+    std::vector<PanelWidget> PillSettings(const Settings& s, PanelWidget head);
     // What a widget can be combined with, in the panel's order: every placed widget that combines, but itself, one
     // another widget has, and one whose own links lead back to it.
     std::vector<PanelWidget> CombineChoices(const Settings& s, PanelWidget widget);

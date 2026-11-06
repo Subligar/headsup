@@ -23,7 +23,7 @@ namespace
 {
     WidgetContent Content(PanelWidget widget, const BarState& state, const Settings& settings)
     {
-        return BarWidgetContent(widget, state, settings, Panel(settings));
+        return BarWidgetContent(widget, state, settings);
     }
 
     constexpr uint32_t kBountyHunter = 17199648; // Goblin Bounty Hunter, zone 103: light -3, dark 0, the rest -2
@@ -2835,30 +2835,50 @@ TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with
     CHECK(PanelPopupContent(BarWidget::Bags, state, settings) == partner);
 }
 
-TEST(a_combined_partner_can_leave_the_panel_or_the_popup_to_the_widget_it_follows)
+TEST(two_linked_copies_of_a_widget_show_its_title_and_cards_once)
 {
-    // Bags combined with a second Bags: the popup would list every bag twice.
+    // Zone linked with a second Zone: the same zone, region and influence.
     Settings settings;
     BarState state;
-    const PanelWidget second{BarWidget::Bags, 1};
+    state.zone = 103;
+    const PanelWidget second{BarWidget::Zone, 1};
     settings.barSections[0].push_back(second);
     settings.Widget(second).on               = true;
-    settings.Widget(BarWidget::Bags).combine = second;
-    const PopupContent bags = BarPopupContent(BarWidget::Bags, state, settings);
-    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
-    settings.Widget(BarWidget::Bags).combineInPopup = false;
-    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections == bags.sections);
-    CHECK(Content(second, state, settings).shown); // still on the panel
-    // On the panel the first alone, the partner's popup still joined.
-    settings.Widget(BarWidget::Bags).combineInPopup = true;
-    settings.Widget(BarWidget::Bags).combineOnPanel = false;
-    const WidgetContent hidden = Content(second, state, settings);
-    CHECK(!hidden.shown && hidden.hasPopup);
-    CHECK(Content(BarWidget::Bags, state, settings).shown);
-    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
-    // Not combined, the switches change nothing.
-    settings.Widget(BarWidget::Bags).combine.reset();
-    CHECK(Content(second, state, settings).shown);
+    settings.Widget(BarWidget::Zone).combine = second;
+    const PopupContent zone   = BarPopupContent(BarWidget::Zone, state, settings);
+    const PopupContent linked = PanelPopupContent(BarWidget::Zone, state, settings);
+    CHECK(linked.title == zone.title && linked.sections == zone.sections);
+    CHECK(Content(second, state, settings).shown); // on the panel, beside the first
+    // Two widgets of a kind with different cards keep both.
+    settings.Widget(BarWidget::Currency).combine = PanelWidget{BarWidget::Bags};
+    const PopupContent gilBags = PanelPopupContent(BarWidget::Currency, state, settings);
+    CHECK(gilBags.sections.size() == BarPopupContent(BarWidget::Currency, state, settings).sections.size() +
+                                         BarPopupContent(BarWidget::Bags, state, settings).sections.size());
+}
+
+TEST(a_link_puts_the_linked_widget_just_after_its_own_in_the_saved_layout)
+{
+    Settings s;
+    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Currency}; // Gil sits on the right
+    const Settings clamped = Clamp(s);
+    CHECK(clamped.barSections == Panel(s).placement);
+    const std::vector<PanelWidget>& left = clamped.barSections[static_cast<int>(BarSection::Left)];
+    const auto zone = std::ranges::find(left, PanelWidget{BarWidget::Zone});
+    CHECK(zone != left.end() && zone + 1 != left.end() && *(zone + 1) == PanelWidget{BarWidget::Currency});
+}
+
+TEST(a_linked_pills_settings_are_its_widgets_that_are_on)
+{
+    Settings s;
+    s.Widget(BarWidget::Bags).combine     = PanelWidget{BarWidget::Currency};
+    s.Widget(BarWidget::Currency).combine = PanelWidget{BarWidget::EarthTime};
+    CHECK((PillSettings(s, BarWidget::Bags) == std::vector<PanelWidget>{BarWidget::Bags, BarWidget::Currency, BarWidget::EarthTime}));
+    s.Widget(BarWidget::Currency).on = false;
+    CHECK((PillSettings(s, BarWidget::Bags) == std::vector<PanelWidget>{BarWidget::Bags, BarWidget::EarthTime}));
+    s.Widget(BarWidget::EarthTime).on = false; // one left on: as a widget alone
+    CHECK((PillSettings(s, BarWidget::Bags) == std::vector<PanelWidget>{BarWidget::Bags}));
+    s.Widget(BarWidget::Bags).on = false; // none on: the pill's own
+    CHECK((PillSettings(s, BarWidget::Bags) == std::vector<PanelWidget>{BarWidget::Bags}));
 }
 
 TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)

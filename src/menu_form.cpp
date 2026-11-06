@@ -709,19 +709,18 @@ namespace headsup
                     int picked    = at == choices.end() ? 0 : static_cast<int>(at - choices.begin()) + 1;
                     form.NumberDropdown(label.c_str(), picked, 0, static_cast<int>(choices.size()),
                         [&](int i) {
-                            return i == 0 ? std::string(Word(c, WindowWord::WidgetTabsCombineNone))
-                                          : CopyName(c, choices[static_cast<size_t>(i - 1)]);
+                            if (i == 0) return std::string(Word(c, WindowWord::WidgetTabsCombineNone));
+                            const PanelWidget choice = choices[static_cast<size_t>(i - 1)];
+                            return CopyName(c, choice) +
+                                   (s.Widget(choice).on ? "" : " " + std::string(Word(c, WindowWord::WidgetTabsLinkDisabled)));
                         },
                         row.tip);
                     o.combine = picked == 0 ? std::nullopt : std::optional<PanelWidget>(choices[static_cast<size_t>(picked - 1)]);
                     break;
                 }
-                case WidgetTabsRow::CombineOnPanel:
-                case WidgetTabsRow::CombineInPopup:
+                case WidgetTabsRow::LinkedPadding:
                     if (!o.combine || CombineChoices(s, widget).empty()) break;
-                    form.Switch(label.c_str(),
-                        static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::CombineOnPanel ? o.combineOnPanel : o.combineInPopup,
-                        row.tip);
+                    form.SliderInt(label.c_str(), o.linkPadding, 0, kMaxWidgetSpacing, Pixels, row.tip);
                     break;
                 case WidgetTabsRow::Visibility:
                     if (kind == BarWidget::Target)
@@ -901,15 +900,24 @@ namespace headsup
             }
         }
 
-        // The settings of each widget the panel's popup shows, under its name when there are more than one.
+        // The settings of each widget the panel's popup shows; more than one, each in a box under its name, up to
+        // kSettingsAcross a row.
         void PopupSettings(Context& c, const LayoutSetting& tabs)
         {
+            const bool boxed = c.readings.settingsOf.size() > 1;
+            if (boxed) c.form.Raw("<div class=\"wcols\">");
             for (const PanelWidget widget : c.readings.settingsOf)
             {
                 c.form.Fade(false);
-                if (c.readings.settingsOf.size() > 1) c.form.Caption(CopyName(c, widget).c_str(), kWidgetNameClass);
+                if (boxed)
+                {
+                    c.form.Raw("<div class=\"wbox\">");
+                    c.form.Caption(CopyName(c, widget).c_str(), kWidgetNameClass);
+                }
                 WidgetOptions(c, tabs, widget);
+                if (boxed) c.form.Raw("</div>");
             }
+            if (boxed) c.form.Raw("</div>");
         }
 
         // Left, Center and Right as trays sunk into the card, each holding its widgets as raised chips in bar order:

@@ -8,6 +8,15 @@ namespace headsup
 {
     namespace
     {
+        // Each widget's Linked Padding, by SlotOf.
+        std::array<float, kPanelSlots> LinkedRoom(const Settings& settings)
+        {
+            std::array<float, kPanelSlots> room{};
+            for (int slot = 0; slot < kPanelSlots; ++slot)
+                room[static_cast<size_t>(slot)] = static_cast<float>(settings.widgets[static_cast<size_t>(slot)].linkPadding);
+            return room;
+        }
+
         constexpr float kFitSteps = 10.0f; // a fitted text's room is kept in tenths of a pixel
         constexpr int kFewLetters = 3;     // the least of the target's name worth its room on the bar
         constexpr const char* kDocumentName      = "top panel";
@@ -203,7 +212,7 @@ namespace headsup
         for (int i = 0; i < kPanelSlots; ++i)
         {
             WidgetContent& c = widgets.contents[i];
-            c                = BarWidgetContent(WidgetInSlot(i), state, look.settings, widgets.panel);
+            c                = BarWidgetContent(WidgetInSlot(i), state, look.settings);
             widgets.hasPopup[i] = c.hasPopup; // kept off the panel, a combined widget's popup still joins its pill's
             if (!c.shown) continue;
             Shown& shown        = m_Shown[i];
@@ -241,7 +250,7 @@ namespace headsup
         SharePopups(widgets.hasPopup, widgets.panel.group);
         const BarLayout layout = LayoutBar(screenWidth, m, look.palette.shape, natural, targetMinimum,
             widgets.panel.placement, look.settings.panelSeparators, static_cast<float>(look.settings.barWidgetSpacing),
-            widgets.panel.group);
+            widgets.panel.group, LinkedRoom(look.settings));
         if (layout.targetWidth > 0.0f && layout.targetWidth < natural[SlotOf(BarWidget::Target)])
         {
             // On each line the longest text is cut, as the name is; the rest keeps its room.

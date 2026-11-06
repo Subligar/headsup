@@ -410,6 +410,12 @@ namespace headsup
                color(c.muted) + ";}";
         css += ".wclone:hover img{image-color:" + color(c.accent) + ";}";
         css += ".widget-name{color:" + color(c.text) + ";}";
+        // A linked pill's settings: a box a widget, kSettingsAcross a row.
+        css += ".wcols{display:flex;flex-wrap:wrap;align-items:flex-start;}";
+        css += ".wbox{box-sizing:border-box;width:" + Em(kSettingsWidth + 2.0f * kSettingsBoxPad) + ";padding:" + Em(kSettingsBoxPad) +
+               ";margin:0px 0px " + Em(kSettingsBoxGap) + " " + Em(kSettingsBoxGap) + ";border:1px " + color(c.border) +
+               ";border-radius:" + Em(kCardRadius) + ";background-color:" + color(c.inset) + ";}";
+        css += ".wbox:nth-child(" + std::to_string(kSettingsAcross) + "n+1){margin-left:0px;}";
         // A tray's chip in two lines: its toggle and buttons, then its name. A press on a line is the chip's own: on a
         // box inside the dragged chip, RmlUi made no click of it.
         css += ".wchip.wtwo{height:auto;line-height:" + Em(kChipLine) + ";padding:" + Em(kChipLinePad) + " 0.7em;}";

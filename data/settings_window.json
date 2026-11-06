@@ -347,9 +347,8 @@
               "key": "widget-tabs",
               "rows": [
                 {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
-                {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one pop-out for both. That widget leaves its own place. Default is None."},
-                {"key": "combine-on-panel", "name": "Show Combined on Panel", "tip": "Shows the combined widget in the pill. Off, only this widget shows on the top panel, and the other's pop-out still joins this one's. Default is on."},
-                {"key": "combine-in-popup", "name": "Show Combined in Pop-out", "tip": "Adds the combined widget's pop-out to this one's. Off, the pop-out shows this widget's alone, so a widget combined with a copy of itself is not listed twice. Default is on."},
+                {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
+                {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is 0 px."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
                 {"key": "detection-icons", "name": "Detection Icons", "tip": "Which of a mob's icons the Detection part shows. Default is all of them."},
                 {"key": "blue-magic", "name": "Blue Magic", "tip": "In the pop-out, a mob's TP moves that a blue mage can learn are shown in the Blue Magic Color. Default is on."},
@@ -382,6 +381,7 @@
                 {"key": "clone", "name": "Clone This Widget", "tip": "Puts another of this widget on the panel after it, with all of this one's settings."},
                 {"key": "remove-copy", "name": "Remove This Copy", "tip": "Takes this copy off the panel. Its settings go with it."},
                 {"key": "combine-none", "name": "None"},
+                {"key": "link-disabled", "name": "(disabled)"},
                 {"key": "design-last-on", "name": "At least one button must be enabled."}
               ]
             }
