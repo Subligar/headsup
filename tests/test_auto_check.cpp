@@ -289,3 +289,14 @@ TEST(simplelogs_line_for_a_mob_with_a_plural_name_is_kept_out_too)
     CHECK(checks.OwnReport("The \x1F\x45Midnight Wings\x1E\x01' strength is impossible to gauge!", 10.2));
     CHECK(checks.OwnReport("The \x1F\x45Midnight Wings\x1E\x01 strength is impossible to gauge!", 10.2));
 }
+
+TEST(after_your_level_changes_a_mob_asked_about_a_moment_ago_is_asked_again)
+{
+    AutoCheck checks;
+    const std::vector<CheckCandidate> mobs{Mob(kCrab, 8.0f)};
+    CHECK(checks.Due(mobs, 100.0).has_value());
+    CHECK(checks.TakeAnswer(CheckAnswer{kCrab, true}, 100.2));
+    CHECK(!checks.Due(mobs, 101.0)); // its answer, dropped, would come back only after kAskAgain
+    checks.AskAgain();
+    CHECK(checks.Due(mobs, 101.0).has_value());
+}

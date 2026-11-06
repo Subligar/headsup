@@ -118,5 +118,7 @@ namespace headsup
         if (!m_Waiting.contains(serverId)) m_Asked.erase(serverId);
     }
 
+    void AutoCheck::AskAgain() { m_Asked.clear(); }
+
     void AutoCheck::Clear() { *this = AutoCheck{}; }
 }

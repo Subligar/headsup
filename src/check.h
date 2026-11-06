@@ -50,6 +50,9 @@ namespace headsup
         const CheckResult* Result(uint32_t serverId, double now) const;
         // The mob was seen dead: its next spawn rolls a new level.
         void Forget(uint32_t serverId);
+        // Your main job level now, 0 while unknown. A con is judged against your level, so a sync, a level up or a
+        // job change drops every result; true when it did.
+        bool LevelIs(int playerLevel);
 
     private:
         struct Stored
@@ -58,5 +61,6 @@ namespace headsup
             double expires;
         };
         std::unordered_map<uint32_t, Stored> m_Results;
+        int m_Level = 0;
     };
 }

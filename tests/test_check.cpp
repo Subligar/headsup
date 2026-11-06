@@ -113,3 +113,15 @@ TEST(a_defeat_or_a_fall_names_the_mob_that_died)
     CHECK(!ParseMobDeath(defeated.data(), 0x19).has_value());
     CHECK(!ParseMobDeath(nullptr, 0x1C).has_value());
 }
+
+TEST(a_change_of_your_level_drops_every_result_its_con_was_judged_by)
+{
+    CheckResults results;
+    CHECK(!results.LevelIs(20)); // the first level known judges nothing held
+    results.Received(Checked(kMob, 22, Con::DecentChallenge), 300.0, 0.0);
+    CHECK(!results.LevelIs(20));
+    CHECK(!results.LevelIs(0)); // zoning or logging in reads 0: no level is no change
+    CHECK(results.Result(kMob, 1.0) != nullptr);
+    CHECK(results.LevelIs(15)); // synced down: the held con is against level 20
+    CHECK(results.Result(kMob, 1.0) == nullptr);
+}

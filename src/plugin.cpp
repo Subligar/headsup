@@ -3015,6 +3015,7 @@ private:
         m_Pets.clear();
         m_Checkable.clear();
         const bool autoChecks = m_Settings.enabled && m_Settings.autoCheck;
+        if (m_Checks.LevelIs(player->GetMainJobLevel())) m_AutoCheck.AskAgain();
         for (uint32_t i = 0; i < count; ++i)
         {
             if (entity->GetRawEntity(i) == nullptr) continue;
