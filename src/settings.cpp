@@ -251,6 +251,8 @@ namespace headsup
         constexpr const char* kDesignSuffix     = "Design";
         constexpr const char* kCombineSuffix    = "Combine";
         constexpr const char* kLinkPaddingSuffix = "LinkPadding";
+        constexpr const char* kIconSideSuffix    = "Icon";
+        const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
         // The EXP widget's: a place for each ExpText, and its bar's size.
         const char* const kExpPlaceKeys[kExpTextCount] = {"barExpEarned", "barExpToNext", "barExpPercent"};
         const char* const kExpPlaceNames[kExpTextPlaceCount] = {"off", "above", "below", "left", "right"};
@@ -1207,6 +1209,7 @@ namespace headsup
             if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
             if (static_cast<int>(w.weatherIcons) >= kCustomIconsCount) w.weatherIcons = fresh.weatherIcons;
+            if (static_cast<int>(w.iconSide) >= kIconSideCount) w.iconSide = fresh.iconSide;
             if (w.clockSecondZone && static_cast<int>(*w.clockSecondZone) >= kClockZoneCount) w.clockSecondZone = fresh.clockSecondZone;
             w.linkPadding  = std::clamp(w.linkPadding, 0, kMaxWidgetSpacing);
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
@@ -1249,6 +1252,9 @@ namespace headsup
             o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
             o.linkPadding = number(widget + kLinkPaddingSuffix, o.linkPadding);
+            if (IconPartOf(w.kind))
+                o.iconSide = static_cast<IconSide>(NameIndex(kIconSideNames, kIconSideCount,
+                    text((widget + kIconSideSuffix).c_str()), static_cast<int>(o.iconSide)));
             switch (w.kind)
             {
             case BarWidget::Currency:
@@ -1329,6 +1335,7 @@ namespace headsup
             if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
+            if (IconPartOf(w.kind)) text((widget + kIconSideSuffix).c_str(), kIconSideNames[static_cast<int>(o.iconSide)]);
             switch (w.kind)
             {
             case BarWidget::Currency: text(kBarCurrencyKey, kCurrencyTable[o.currency].key); break;

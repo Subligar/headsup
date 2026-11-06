@@ -1545,8 +1545,22 @@ namespace headsup
             if (widget.kind == BarWidget::World && o.worldLine == WorldLine::Conquest) return ConquestCounts(state, o);
             std::vector<PartContent> parts = PartsNow(widget, state, settings, base);
             if (!base.shown) return base;
+            // The widget's icon goes beside both lines, where its Icon setting puts it.
+            if (const std::optional<WidgetPart> icon = IconPartOf(widget.kind))
+                if (const auto part = std::ranges::find(parts, *icon, &PartContent::part); part != parts.end())
+                {
+                    if (o.iconSide != IconSide::Hide)
+                        for (const Span& s : part->spans)
+                        {
+                            if (s.icon) base.icons.push_back(*s.icon);
+                            if (s.coin) base.coin = true;
+                            if (s.picture != GamePicture::None) base.picture = s.picture;
+                        }
+                    base.iconsRight = o.iconSide == IconSide::Right;
+                    parts.erase(part);
+                }
             WidgetContent w = ComposeContent(o.design, std::move(parts), std::move(base));
-            if (w.title.empty() && w.icons.empty() && !w.coin) w.title = ListOf(Text("-"));
+            if (w.title.empty() && w.icons.empty() && !w.coin && w.picture == GamePicture::None) w.title = ListOf(Text("-"));
             return w;
         }
     }

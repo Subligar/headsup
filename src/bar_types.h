@@ -126,6 +126,9 @@ namespace headsup
     // icons.
     enum class CustomIcons : uint8_t { Never, NoVanilla, Always };
     constexpr int kCustomIconsCount = static_cast<int>(CustomIcons::Always) + 1;
+    // Where a widget's icon goes: nowhere, before its text or after it.
+    enum class IconSide : uint8_t { Hide, Left, Right };
+    constexpr int kIconSideCount = static_cast<int>(IconSide::Right) + 1;
 
     // Font Size Ratio: the Main line's size over the Secondary's. Its slider has 1 at its middle, steps of
     // kFontRatioStepBelow under it and kFontRatioStepAbove over it.

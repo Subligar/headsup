@@ -45,7 +45,7 @@ namespace headsup
         // A meter's texts: the detail font at the side line's size, the title's on a row of one line.
         TextFace MeterFace() const;
         TextFace FaceOf(PopupFont font) const;
-        // The icons and coin before a widget's text.
+        // The icons, picture and coin beside a widget's text.
         float Leading(const WidgetContent& content) const;
         // How a widget's box is drawn, or nothing for none. lit: hovered or open, with a popup. Ornate: the target's
         // frame and a lit widget's tint. Pills: every widget's pill, zone and Earth time flat until lit.

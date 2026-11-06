@@ -7,19 +7,19 @@ namespace headsup
     namespace
     {
         using P = WidgetPart;
-        constexpr P kZone[]   = {P::ZoneName, P::ZoneRegion, P::ZoneCrest, P::ZoneNation};
-        constexpr P kWeather[] = {P::WeatherIcon, P::WeatherName, P::VanaDate, P::VanaDay, P::VanaTime, P::VanaMoon};
-        constexpr P kTarget[] = {P::TargetAggro, P::TargetName, P::TargetDistance, P::TargetDetection, P::TargetLevel,
+        constexpr P kZone[]   = {P::ZoneName, P::ZoneRegion, P::ZoneNation};
+        constexpr P kWeather[] = {P::WeatherName, P::VanaDate, P::VanaDay, P::VanaTime, P::VanaMoon};
+        constexpr P kTarget[] = {P::TargetName, P::TargetDistance, P::TargetDetection, P::TargetLevel,
             P::TargetPlayer, P::TargetWeak};
-        constexpr P kCurrency[] = {P::CurrencyCoin, P::CurrencyAmount, P::CurrencyName};
-        constexpr P kBags[]   = {P::BagIcon, P::BagCount, P::BagName};
+        constexpr P kCurrency[] = {P::CurrencyAmount, P::CurrencyName};
+        constexpr P kBags[]   = {P::BagCount, P::BagName};
         constexpr P kClock[]  = {P::ClockTime, P::ClockServer, P::ClockVana};
         constexpr P kJob[]    = {P::JobJobs, P::JobExp, P::JobBar};
         constexpr P kPerf[]   = {P::PerfFps, P::PerfSent, P::PerfReceived, P::PerfPercent, P::PerfPing, P::PerfMemory,
             P::PerfMessages};
         constexpr P kParty[]  = {P::PartyCount, P::PartyHealth};
         constexpr P kStatus[] = {P::StatusPins};
-        constexpr P kWorld[]  = {P::WorldIcon, P::WorldMain, P::WorldDetails};
+        constexpr P kWorld[]  = {P::WorldMain, P::WorldDetails};
 
         // By WidgetPart.
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
@@ -29,9 +29,9 @@ namespace headsup
             "main", "details"};
 
         // As each widget showed before it had a design.
-        constexpr const char* kDefaults[kBarWidgetCount] = {"name | region crest nation", "icon weather | day time -date -moon",
-            "aggro name distance -detection | level player -weak", "coin amount | currency", "icon count | bag", "time | -server -vana", "", "-fps sent received percent -ping -memory messages |",
-            "jobs | exp bar", "count | health", "pins |", "icon main | details"};
+        constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation", "weather | day time -date -moon",
+            "name distance -detection | level player -weak", "amount | currency", "count | bag", "time | -server -vana", "", "-fps sent received percent -ping -memory messages |",
+            "jobs | exp bar", "count | health", "pins |", "main | details"};
 
         constexpr char kLineBreak = '|', kOffMark = '-', kSpace = ' ';
 
@@ -58,6 +58,20 @@ namespace headsup
                 text.remove_prefix(at + 1);
             }
             return design;
+        }
+    }
+
+    std::optional<WidgetPart> IconPartOf(BarWidget kind)
+    {
+        switch (kind)
+        {
+        case BarWidget::Zone: return P::ZoneCrest;
+        case BarWidget::Weather: return P::WeatherIcon;
+        case BarWidget::Target: return P::TargetAggro;
+        case BarWidget::Currency: return P::CurrencyCoin;
+        case BarWidget::Bags: return P::BagIcon;
+        case BarWidget::World: return P::WorldIcon;
+        default: return std::nullopt;
         }
     }
 

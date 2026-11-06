@@ -31,9 +31,24 @@ TEST(every_widget_but_game_help_has_parts_and_a_default_design_holding_each_once
     }
 }
 
+TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
+{
+    CHECK(IconPartOf(BarWidget::Zone) == std::optional(WidgetPart::ZoneCrest));
+    CHECK(IconPartOf(BarWidget::Weather) == std::optional(WidgetPart::WeatherIcon));
+    CHECK(IconPartOf(BarWidget::Target) == std::optional(WidgetPart::TargetAggro));
+    CHECK(IconPartOf(BarWidget::Currency) == std::optional(WidgetPart::CurrencyCoin));
+    CHECK(IconPartOf(BarWidget::Bags) == std::optional(WidgetPart::BagIcon));
+    CHECK(!IconPartOf(BarWidget::Performance) && !IconPartOf(BarWidget::GameHelp));
+    for (int k = 0; k < kBarWidgetCount; ++k)
+    {
+        const auto kind = static_cast<BarWidget>(k);
+        if (const std::optional<WidgetPart> icon = IconPartOf(kind)) CHECK(std::ranges::find(PartsOf(kind), *icon) == PartsOf(kind).end());
+    }
+}
+
 TEST(a_design_saves_as_text_and_loads_back)
 {
-    CHECK_EQ(DesignText(DefaultDesign(BarWidget::Zone)), "name | region crest nation");
+    CHECK_EQ(DesignText(DefaultDesign(BarWidget::Zone)), "name | region nation");
     CHECK_EQ(DesignText(DefaultDesign(BarWidget::EarthTime)), "time | -server -vana");
     const char* const job = "-jobs exp bar |";
     CHECK_EQ(DesignText(DesignFrom(BarWidget::Job, job)), job);
@@ -48,28 +63,27 @@ TEST(a_design_saves_as_text_and_loads_back)
 
 TEST(a_design_from_text_keeps_each_part_once_and_adds_the_missing_off)
 {
-    const WidgetDesign d = DesignFrom(BarWidget::Zone, "crest crest nonsense amount | name");
-    CHECK((d.lines[0] == std::vector<DesignChip>{{WidgetPart::ZoneCrest, true}}));
-    CHECK((d.lines[1] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneRegion, false},
-                             {WidgetPart::ZoneNation, false}}));
+    const WidgetDesign d = DesignFrom(BarWidget::Zone, "nation nation nonsense amount crest | name");
+    CHECK((d.lines[0] == std::vector<DesignChip>{{WidgetPart::ZoneNation, true}}));
+    CHECK((d.lines[1] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneRegion, false}}));
     // Never all off: the first part comes back on.
-    const WidgetDesign off = DesignFrom(BarWidget::Zone, "-name -region -crest -nation |");
+    const WidgetDesign off = DesignFrom(BarWidget::Zone, "-name -region -nation |");
     CHECK(PartOn(off, WidgetPart::ZoneName) && !PartOn(off, WidgetPart::ZoneRegion));
 }
 
 TEST(a_part_moves_within_and_across_lines)
 {
-    WidgetDesign d = DefaultDesign(BarWidget::Zone); // name | region crest nation
-    CHECK(MovePart(d, 1, 2, 0, 0)); // the nation before the name
-    CHECK_EQ(DesignText(d), "nation name | region crest");
-    CHECK(MovePart(d, 0, 0, 1, 2)); // and back to the end of line 2
-    CHECK_EQ(DesignText(d), "name | region crest nation");
-    CHECK(MovePart(d, 1, 0, 1, 3)); // the region to the end of its own line
-    CHECK_EQ(DesignText(d), "name | crest nation region");
+    WidgetDesign d = DefaultDesign(BarWidget::Zone); // name | region nation
+    CHECK(MovePart(d, 1, 1, 0, 0)); // the nation before the name
+    CHECK_EQ(DesignText(d), "nation name | region");
+    CHECK(MovePart(d, 0, 0, 1, 1)); // and back to the end of line 2
+    CHECK_EQ(DesignText(d), "name | region nation");
+    CHECK(MovePart(d, 1, 0, 1, 2)); // the region to the end of its own line
+    CHECK_EQ(DesignText(d), "name | nation region");
     CHECK(!MovePart(d, 1, 0, 1, 0)); // onto its own place
     CHECK(!MovePart(d, 1, 0, 1, 1)); // or just after itself
     CHECK(!MovePart(d, 0, 5, 1, 0)); // a part that is not there
-    CHECK_EQ(DesignText(d), "name | crest nation region");
+    CHECK_EQ(DesignText(d), "name | nation region");
 }
 
 TEST(the_last_part_on_cannot_be_turned_off)
@@ -99,26 +113,31 @@ namespace
 
     std::vector<PartContent> WeatherParts()
     {
-        return {{WidgetPart::WeatherIcon, {IconSpan(Icon::Fire)}}, {WidgetPart::WeatherName, {Text("Hot Spells")}},
-            {WidgetPart::VanaMoon, {Text("35%", Tone::Dim)}}};
+        return {{WidgetPart::WeatherName, {Text("Hot Spells")}}, {WidgetPart::VanaMoon, {Text("35%", Tone::Dim)}}};
+    }
+
+    std::vector<PartContent> TargetParts()
+    {
+        return {{WidgetPart::TargetDetection, {IconSpan(Icon::Sight)}}, {WidgetPart::TargetName, {Text("Goblin")}},
+            {WidgetPart::TargetLevel, {Text("Lv. 12", Tone::Dim)}}};
     }
 }
 
 TEST(icon_parts_first_on_the_top_line_lead_and_elsewhere_sit_inline)
 {
-    const WidgetContent leading = Composed(BarWidget::Weather, "icon weather | moon", WeatherParts());
-    CHECK((leading.icons == std::vector<Icon>{Icon::Fire}));
-    CHECK((leading.title == std::vector<Span>{Text("Hot Spells")}));
-    CHECK((leading.subtitle == std::vector<Span>{Text("35%", Tone::Dim)}));
+    const WidgetContent leading = Composed(BarWidget::Target, "detection name | level", TargetParts());
+    CHECK((leading.icons == std::vector<Icon>{Icon::Sight}));
+    CHECK((leading.title == std::vector<Span>{Text("Goblin")}));
+    CHECK((leading.subtitle == std::vector<Span>{Text("Lv. 12", Tone::Dim)}));
     // After the name the icon is part of the line, a part's gap before it.
-    const WidgetContent after = Composed(BarWidget::Weather, "weather icon | moon", WeatherParts());
+    const WidgetContent after = Composed(BarWidget::Target, "name detection | level", TargetParts());
     CHECK(after.icons.empty());
-    CHECK((after.title == std::vector<Span>{Text("Hot Spells"), Text("  "), IconSpan(Icon::Fire)}));
+    CHECK((after.title == std::vector<Span>{Text("Goblin"), Text("  "), IconSpan(Icon::Sight)}));
     // On the second line too.
-    const WidgetContent below = Composed(BarWidget::Weather, "weather | moon icon", WeatherParts());
-    CHECK(below.icons.empty() && below.subtitle.back() == IconSpan(Icon::Fire));
+    const WidgetContent below = Composed(BarWidget::Target, "name | level detection", TargetParts());
+    CHECK(below.icons.empty() && below.subtitle.back() == IconSpan(Icon::Sight));
     // Off, nowhere.
-    CHECK(Composed(BarWidget::Weather, "-icon weather | moon", WeatherParts()).icons.empty());
+    CHECK(Composed(BarWidget::Target, "-detection name | level", TargetParts()).icons.empty());
 }
 
 TEST(an_empty_first_line_lets_the_second_draw_alone)
@@ -130,9 +149,8 @@ TEST(an_empty_first_line_lets_the_second_draw_alone)
 TEST(a_part_with_nothing_to_show_takes_no_gap)
 {
     // Gil has no currency name.
-    const std::vector<PartContent> gil = {{WidgetPart::CurrencyCoin, {}}, {WidgetPart::CurrencyAmount, {Text("1,200")}},
-        {WidgetPart::CurrencyName, {}}};
-    const WidgetContent w = Composed(BarWidget::Currency, "amount coin currency |", gil);
+    const std::vector<PartContent> gil = {{WidgetPart::CurrencyAmount, {Text("1,200")}}, {WidgetPart::CurrencyName, {}}};
+    const WidgetContent w = Composed(BarWidget::Currency, "amount currency |", gil);
     CHECK((w.title == std::vector<Span>{Text("1,200")}) && w.subtitle.empty() && !w.coin);
 }
 

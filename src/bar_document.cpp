@@ -450,6 +450,7 @@ namespace headsup
                Px(m.gap) + ";}";
         css += ".coin{" + square(static_cast<float>(coin)) + "margin-top:" +
                Px(std::round(mid - static_cast<float>(coin) / 2.0f) - rowTop) + ";margin-right:" + Px(m.gap) + ";}";
+        css += ".icon.right,.coin.right{margin-right:0px;margin-left:" + Px(m.gap) + ";}";
         css += ".t{white-space:pre;}";
         css += ".cell{display:inline-block;white-space:pre;}";
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
@@ -732,9 +733,14 @@ namespace headsup
             rml += text(m.right, "mtext mside", "left:" + Px(meter.barX + bar + look.metrics.gap) + ";" + by);
             return rml + "</div></div>";
         }
+        std::string icons;
+        const std::string side = content.iconsRight ? " right" : "";
+        if (content.picture != GamePicture::None)
+            icons += "<img class=\"icon pic" + side + "\" src=\"" + GamePictureSource(content.picture) + "\"/>";
         for (const Icon icon : content.icons)
-            rml += "<img class=\"icon\" src=\"" + IconSource(icon) + "\"/>";
-        if (content.coin) rml += "<img class=\"coin\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
+            icons += "<img class=\"icon" + side + "\" src=\"" + IconSource(icon) + "\"/>";
+        if (content.coin) icons += "<img class=\"coin" + side + "\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
+        if (!content.iconsRight) rml += icons;
         rml += "<div class=\"text\">";
         const std::string title = std::string("title") + (content.figures ? " figures" : "") +
                                   (alone ? " alone" : content.cells ? " cells" : "");
@@ -742,6 +748,8 @@ namespace headsup
         const std::vector<float>& laid = content.cells ? columns : kNoColumns;
         rml += Line(title.c_str(), content.title, look, laid);
         if (!alone) rml += Line(content.figures ? "detail fig" : "detail", content.subtitle, look, laid);
-        return rml + "</div></div>";
+        rml += "</div>";
+        if (content.iconsRight) rml += icons;
+        return rml + "</div>";
     }
 }

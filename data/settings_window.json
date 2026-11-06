@@ -242,6 +242,7 @@
               "key": "widget-tabs",
               "rows": [
                 {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
+                {"key": "icon", "name": "Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is Show on Left."},
                 {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
                 {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is 0 px."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
@@ -1322,6 +1323,14 @@
         {"name": "Never", "tip": "Always the game's element icons. A weather the game has no icon for shows none."},
         {"name": "When No Vanilla Icon", "tip": "The game's element icons, and HeadsUp's own pictures for clear, sunshine, clouds and fog, which have none."},
         {"name": "Always", "tip": "HeadsUp's own pictures for every weather."}
+      ]
+    },
+    {
+      "key": "icon-sides",
+      "options": [
+        {"name": "Hide"},
+        {"name": "Show on Left"},
+        {"name": "Show on Right"}
       ]
     },
     {

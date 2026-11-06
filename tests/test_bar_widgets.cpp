@@ -127,7 +127,7 @@ TEST(the_target_widget_shows_name_level_and_con_in_their_colors)
     CHECK(w.subtitle == (std::vector<Span>{{"Lv 17-20 EP-EM", Tone::Own, 0xFF445566u}}));
 }
 
-TEST(a_mobs_aggression_detection_and_weaknesses_are_parts_of_the_targets_design)
+TEST(a_mobs_aggression_is_the_targets_icon_and_detection_and_weaknesses_are_parts_of_its_design)
 {
     Settings settings;
     const ActorInfo goblin = Goblin();
@@ -142,7 +142,7 @@ TEST(a_mobs_aggression_detection_and_weaknesses_are_parts_of_the_targets_design)
     };
     WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && icons(w.title).empty() && icons(w.subtitle).empty()); // as new
-    o.design          = DesignFrom(BarWidget::Target, "aggro name detection distance | level weak player");
+    o.design          = DesignFrom(BarWidget::Target, "name detection distance | level weak player");
     o.targetDetection = kAllDetection;
     w                 = Content(BarWidget::Target, state, settings);
     std::vector<Icon> rest = EveryIcon(goblin);
@@ -156,6 +156,7 @@ TEST(a_mobs_aggression_detection_and_weaknesses_are_parts_of_the_targets_design)
     CHECK(!weak.empty() && icons(w.subtitle) == weak);
     o.targetDetection = DetectionBit(DetectionIcon::Link);
     o.design          = DesignFrom(BarWidget::Target, "name detection | level");
+    o.iconSide        = IconSide::Hide;
     w                 = Content(BarWidget::Target, state, settings);
     CHECK(w.icons.empty() && icons(w.title) == std::vector<Icon>{Icon::Link} && icons(w.subtitle).empty());
 }
@@ -901,14 +902,46 @@ TEST(the_zone_says_who_holds_its_region_once_known)
     owners[1]    = Nation::Bastok;
     state.owners = owners;
     const WidgetContent w = Content(BarWidget::Zone, state, settings);
-    // Its crest and name after the region, as the default design has them.
-    CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {"  ", Tone::Normal}, Span{"", Tone::Normal, 0, GamePicture::BastokCrest},
-                             {"  Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
+    // Its name after the region, as the default design has it, and its crest for the widget's icon.
+    CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {"  Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
+    CHECK(w.picture == GamePicture::BastokCrest);
     state.zone = 230; // Southern San d'Oria: a city region, not in the conquest packet
     CHECK(Joined(Content(BarWidget::Zone, state, settings).subtitle) == "San d'Oria");
+    CHECK(Content(BarWidget::Zone, state, settings).picture == GamePicture::None);
 }
 
-TEST(the_zones_design_puts_the_holders_crest_and_name_before_or_after_the_zone_or_below_it)
+TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
+{
+    Settings settings;
+    BarState state;
+    state.zone = 103;
+    RegionOwners owners{};
+    owners[1]    = Nation::Bastok;
+    state.owners = owners;
+    WidgetOptions& zone = settings.Widget(BarWidget::Zone);
+    CHECK(zone.iconSide == IconSide::Left);
+    WidgetContent w = Content(BarWidget::Zone, state, settings);
+    CHECK(w.picture == GamePicture::BastokCrest && !w.iconsRight);
+    zone.iconSide = IconSide::Right;
+    w = Content(BarWidget::Zone, state, settings);
+    CHECK(w.picture == GamePicture::BastokCrest && w.iconsRight);
+    zone.iconSide = IconSide::Hide;
+    CHECK(Content(BarWidget::Zone, state, settings).picture == GamePicture::None);
+    // The bag's icon and gil's coin the same way.
+    WidgetOptions& bags = settings.Widget(BarWidget::Bags);
+    CHECK(Content(BarWidget::Bags, state, settings).icons == std::vector<Icon>{Icon::Bag});
+    bags.iconSide = IconSide::Hide;
+    CHECK(Content(BarWidget::Bags, state, settings).icons.empty());
+    WidgetOptions& gil = settings.Widget(BarWidget::Currency);
+    state.gil = 1200;
+    CHECK(Content(BarWidget::Currency, state, settings).coin);
+    gil.iconSide = IconSide::Right;
+    CHECK(Content(BarWidget::Currency, state, settings).coin && Content(BarWidget::Currency, state, settings).iconsRight);
+    gil.iconSide = IconSide::Hide;
+    CHECK(!Content(BarWidget::Currency, state, settings).coin);
+}
+
+TEST(the_zones_design_puts_the_holders_name_before_or_after_the_zone_or_below_it)
 {
     Settings settings;
     WidgetOptions& o = settings.Widget(BarWidget::Zone);
@@ -917,27 +950,21 @@ TEST(the_zones_design_puts_the_holders_crest_and_name_before_or_after_the_zone_o
     RegionOwners owners{};
     owners[1]    = Nation::Bastok;
     state.owners = owners;
-    const Span crest{"", Tone::Normal, 0, GamePicture::BastokCrest}, bastok{"  Bastok", Tone::Own, NationColor(Nation::Bastok)};
-    const Span dunes{"Valkurm Dunes"}, region{"Zulkheim", Tone::Dim}, gap{"  "};
+    const Span dunes{"Valkurm Dunes"}, region{"Zulkheim", Tone::Dim};
     const auto shown = [&](std::string_view design) {
         o.design = DesignFrom(BarWidget::Zone, design);
         return Content(BarWidget::Zone, state, settings);
     };
-    CHECK(shown("crest nation name | region").title == (std::vector<Span>{crest, bastok, Text("  Valkurm Dunes")}));
-    CHECK(shown("crest nation name | region").subtitle == std::vector<Span>{region});
-    CHECK(shown("name crest nation | region").title == (std::vector<Span>{dunes, gap, crest, bastok}));
-    CHECK(shown("name crest -nation | region").title == (std::vector<Span>{dunes, gap, crest})); // the crest alone
-    CHECK(shown("name -crest -nation | region").title == std::vector<Span>{dunes});
-    // Without the region, the crest has the second line to itself.
-    CHECK(shown("name | -region crest -nation").subtitle == std::vector<Span>{crest});
-    CHECK(shown("name | -region -crest -nation").subtitle.empty());
+    CHECK(shown("nation name | region").title ==
+          (std::vector<Span>{{"Bastok", Tone::Own, NationColor(Nation::Bastok)}, Text("  Valkurm Dunes")}));
+    CHECK(shown("nation name | region").subtitle == std::vector<Span>{region});
+    CHECK(shown("name nation | region").title == (std::vector<Span>{dunes, {"  Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
+    CHECK(shown("name -nation | region").title == std::vector<Span>{dunes});
+    CHECK(shown("name | -region -nation").subtitle.empty());
     // The Beastmen's crest, as the conquest map shows it.
     owners[1]    = Nation::Beastmen;
     state.owners = owners;
-    const Span beastmen{"", Tone::Normal, 0, GamePicture::BeastmenCrest};
-    CHECK(shown("name crest nation | region").title ==
-          (std::vector<Span>{dunes, gap, beastmen, Span{"  Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
-    CHECK(shown("name crest -nation | region").title == (std::vector<Span>{dunes, gap, beastmen}));
+    CHECK(shown("name | region").picture == GamePicture::BeastmenCrest);
 }
 
 TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
@@ -1765,12 +1792,12 @@ TEST(each_widget_can_drop_its_second_line_or_its_icons)
     state.unixMs  = kVanaEpochUnixMs;
     state.weather = Weather::DustStorm;
     state.gil     = 100;
-    settings.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "icon weather | -chance");
+    settings.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "weather | -day -time");
     WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(w.subtitle.empty() && !w.icons.empty() && Joined(w.title) == "Dust Storm");
-    settings.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "-icon weather | -chance");
+    settings.Widget(BarWidget::Weather).iconSide = IconSide::Hide;
     CHECK(Content(BarWidget::Weather, state, settings).icons.empty());
-    settings.Widget(BarWidget::Currency).design = DesignFrom(BarWidget::Currency, "-coin amount | currency");
+    settings.Widget(BarWidget::Currency).iconSide = IconSide::Hide;
     w = Content(BarWidget::Currency, state, settings);
     CHECK(!w.coin && Joined(w.title) == "100");
 }

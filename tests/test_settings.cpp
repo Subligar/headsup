@@ -1119,14 +1119,14 @@ TEST(the_clocks_zone_is_saved_by_name_and_an_unknown_name_keeps_the_default)
 TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
 {
     Settings s;
-    s.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "crest name | -region nation");
+    s.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "nation name | -region");
     const PanelWidget second = *CloneWidget(s, BarWidget::Weather);
-    s.Widget(second).design  = DesignFrom(BarWidget::Weather, "weather | icon -date -day -time -moon");
+    s.Widget(second).design  = DesignFrom(BarWidget::Weather, "weather | -date -day -time -moon");
     MapStore saved;
     SaveSettings(s, saved);
-    CHECK_EQ(saved.values["barZoneDesign"], "crest name | -region nation");
-    CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | icon -date -day -time -moon");
-    CHECK_EQ(saved.values["barWeatherDesign"], "icon weather | day time -date -moon");
+    CHECK_EQ(saved.values["barZoneDesign"], "nation name | -region");
+    CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | -date -day -time -moon");
+    CHECK_EQ(saved.values["barWeatherDesign"], "weather | day time -date -moon");
     const Settings loaded = LoadSettings(saved);
     CHECK(loaded.Widget(BarWidget::Zone).design == s.Widget(BarWidget::Zone).design);
     CHECK(loaded.Widget(second).design == s.Widget(second).design);
@@ -1134,7 +1134,25 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     CHECK(!saved.values.contains("barGameHelpDesign"));
     // A design a hand broke is made whole: every part once.
     saved.values["barZoneDesign"] = "name name";
-    CHECK_EQ(DesignText(LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -crest -nation");
+    CHECK_EQ(DesignText(LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
+}
+
+TEST(each_widgets_icon_side_saves_under_its_own_key_and_loads_back)
+{
+    Settings s;
+    s.Widget(BarWidget::Zone).iconSide = IconSide::Right;
+    const PanelWidget second = *CloneWidget(s, BarWidget::Bags);
+    s.Widget(second).iconSide = IconSide::Hide;
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barZoneIcon"], "right");
+    CHECK_EQ(saved.values["barBagsIcon_2"], "hide");
+    CHECK_EQ(saved.values["barBagsIcon"], "left");
+    CHECK(!saved.values.contains("barPerformanceIcon")); // it has no icon
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(BarWidget::Zone).iconSide == IconSide::Right && loaded.Widget(second).iconSide == IconSide::Hide);
+    saved.values["barZoneIcon"] = "nonsense";
+    CHECK(LoadSettings(saved).Widget(BarWidget::Zone).iconSide == IconSide::Left);
 }
 
 TEST(separators_out_of_their_bits_are_held_to_them)
@@ -2633,12 +2651,12 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value() && s.Widget(*copy).on);
     s.Widget(*copy).currency = 3;
-    s.Widget(*copy).design = DesignFrom(BarWidget::Currency, "amount | -coin -currency");
+    s.Widget(*copy).design = DesignFrom(BarWidget::Currency, "amount | -currency");
     MapStore store;
     SaveSettings(s, store);
     CHECK_EQ(store.values["barCurrency"], std::string(kCurrencyTable[kGilCurrency].key)); // the first copy's, as ever
     CHECK_EQ(store.values["barCurrency_2"], std::string(kCurrencyTable[3].key));
-    CHECK_EQ(store.values["barGilDesign_2"], "amount | -coin -currency");
+    CHECK_EQ(store.values["barGilDesign_2"], "amount | -currency");
     const Settings read = LoadSettings(store);
     CHECK(read.Widget(*copy) == s.Widget(*copy) && Placed(read.barSections, *copy));
     // Taken off, its settings go: put back, it is new.
@@ -2653,7 +2671,7 @@ TEST(a_clone_starts_with_every_setting_of_the_widget_it_copies_shown_and_combine
     WidgetOptions& gil = s.Widget(BarWidget::Currency);
     gil.on             = false;
     gil.currency       = 3;
-    gil.design         = DesignFrom(BarWidget::Currency, "amount | -coin -currency");
+    gil.design         = DesignFrom(BarWidget::Currency, "amount | -currency");
     gil.combine        = PanelWidget{BarWidget::Bags};
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value());

@@ -152,6 +152,24 @@ TEST(a_pill_theme_frames_each_widget_and_its_caps_follow_the_settings)
     CHECK(Has(rml, "height:58px")); // no line under this strip
 }
 
+TEST(a_widgets_icon_on_the_right_comes_after_its_lines_and_a_picture_is_drawn_as_an_icon)
+{
+    Settings settings;
+    const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
+    WidgetContent c;
+    c.shown   = true;
+    c.picture = GamePicture::BastokCrest;
+    c.title   = {Text("Valkurm Dunes")};
+    std::string rml = WidgetRml(c, look, {}, {});
+    const size_t picture = rml.find("class=\"icon pic\""), text = rml.find("class=\"text\"");
+    CHECK(picture != std::string::npos && picture < text);
+    c.iconsRight = true;
+    rml = WidgetRml(c, look, {}, {});
+    CHECK(rml.find("class=\"icon pic right\"") > rml.find("Valkurm Dunes"));
+    // Its room counts toward the widget's width either side.
+    CHECK(look.Leading(c) > 0.0f);
+}
+
 TEST(a_widgets_markup_has_its_leading_icons_coin_lines_and_marks_inside_its_lines)
 {
     Settings settings;

@@ -1114,6 +1114,22 @@ TEST(the_theme_is_never_faint_after_a_faint_setting)
     CHECK(!ClassOn(form, "theme-theme-colors-theme-label-row", kOffClass));
 }
 
+TEST(a_widget_with_an_icon_has_a_row_putting_it_left_right_or_nowhere)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone};
+    w.readings.settingsOf = {zone};
+    const std::string row = "toppanel-widgets-icon-zone";
+    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, (row + "-s-2").c_str()));
+    w.Pass({{row + "-s-2", kClickEvent, ""}});
+    CHECK(w.settings.Widget(zone).iconSide == IconSide::Right);
+    w.Pass({{row + "-s-0", kClickEvent, ""}});
+    CHECK(w.settings.Widget(zone).iconSide == IconSide::Hide);
+    // A widget without an icon has no such row.
+    w.readings.settingsOf = {PanelWidget{BarWidget::Performance}};
+    CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "-icon-performance"));
+}
+
 TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
 {
     Window w;
@@ -1125,18 +1141,19 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     const auto rml         = [](const Form& form) { return Block(form, "toppanel-widgets")->rml; };
     const auto design      = [&] { return DesignText(w.settings.Widget(zone).design); };
     const Form first = w.Pass();
-    CHECK(Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str()));
+    CHECK(Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneNation) + "\"").c_str()));
+    CHECK(!Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str())); // its Icon setting has it
     // A drop at a line's end moves the part there; on a chip, before it.
-    w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::ZoneCrest)}});
-    CHECK_EQ(design(), "name crest | region nation");
+    w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::ZoneNation)}});
+    CHECK_EQ(design(), "name nation | region");
     w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, chip(WidgetPart::ZoneNation)}});
-    CHECK_EQ(design(), "nation name crest | region");
+    CHECK_EQ(design(), "nation name | region");
     // Off one by one until one is left: the last stays on, and the designer says why under its lines.
-    w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneCrest), toggle(WidgetPart::ZoneRegion)});
-    CHECK_EQ(design(), "-nation name -crest | -region");
+    w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneRegion)});
+    CHECK_EQ(design(), "-nation name | -region");
     CHECK(!Has(rml(w.Pass()), "class=\"error\""));
     const Form refused = w.Pass({toggle(WidgetPart::ZoneName)});
-    CHECK_EQ(design(), "-nation name -crest | -region");
+    CHECK_EQ(design(), "-nation name | -region");
     CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
     bool shownOn = false; // the toggle's last word on its look
     for (const FormValue& v : refused.values)
@@ -1144,12 +1161,12 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK(shownOn);
     // The next toggle or move takes the message away.
     CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "class=\"error\""));
-    CHECK_EQ(design(), "-nation name -crest | region");
+    CHECK_EQ(design(), "-nation name | region");
     // Another widget's chip dropped here moves nothing.
     const std::string weather = "toppanel-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
                                 std::to_string(static_cast<int>(WidgetPart::WeatherName));
     w.Pass({{base + "end-1", kDropEvent, weather}});
-    CHECK_EQ(design(), "-nation name -crest | region");
+    CHECK_EQ(design(), "-nation name | region");
 }
 
 TEST(world_infos_designer_hides_while_it_shows_the_conquest_counts_which_have_no_parts)

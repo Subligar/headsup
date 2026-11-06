@@ -169,7 +169,8 @@ namespace headsup
 
     float BarLook::Leading(const WidgetContent& content) const
     {
-        return static_cast<float>(content.icons.size()) * (metrics.icon + metrics.gap) +
+        const size_t icons = content.icons.size() + (content.picture != GamePicture::None ? 1 : 0);
+        return static_cast<float>(icons) * (metrics.icon + metrics.gap) +
                (content.coin ? static_cast<float>(CoinPixels(metrics)) + metrics.gap : 0.0f);
     }
 

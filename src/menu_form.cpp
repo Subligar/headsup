@@ -856,6 +856,15 @@ namespace headsup
                 case WidgetTabsRow::Seconds:
                     if (kind == BarWidget::EarthTime) form.Switch(label.c_str(), o.clockSeconds, row.tip);
                     break;
+                case WidgetTabsRow::Icon:
+                    // Named after its widget's icon, as the Widget Designer's button for it was.
+                    if (const std::optional<WidgetPart> icon = IconPartOf(kind))
+                    {
+                        const LayoutOption& part = c.layout.OptionsOf(WindowList::WidgetParts)[static_cast<size_t>(*icon)];
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::IconSides));
+                        form.Segments(Labeled(part.name, row.key, scope).c_str(), o.iconSide, names.data(), kIconSideCount, row.tip);
+                    }
+                    break;
                 case WidgetTabsRow::Design:
                     // The EXP meter and World Info's conquest counts are laid out without a design.
                     if (!bar && !(kind == BarWidget::World && o.worldLine == WorldLine::Conquest))

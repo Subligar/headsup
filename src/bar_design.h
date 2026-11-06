@@ -45,6 +45,9 @@ namespace headsup
     };
 
     std::span<const WidgetPart> PartsOf(BarWidget kind); // none for the game's help
+    // The part that is the widget's icon, placed by its Icon setting rather than in its design; none for a widget
+    // without one.
+    std::optional<WidgetPart> IconPartOf(BarWidget kind);
     WidgetDesign DefaultDesign(BarWidget kind);
     // A part's name in the settings file, one of its widget's alone. Saved: never rename one.
     const char* PartFileName(WidgetPart part);
