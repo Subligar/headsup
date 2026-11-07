@@ -117,12 +117,10 @@ TEST(a_widgets_text_starts_after_its_icons_and_coin_each_with_a_gap)
     gil.coin = true;
     CHECK_EQ(CoinPixels(look.metrics), 17);
     CHECK(Near(look.Leading(gil), 17.0f + 7.65f));
-    // A zone's crest is a little smaller than an icon, 85% of it in whole pixels, and still follows Icon Scale.
+    // A zone's crest has an icon's room (its adjustment draws it smaller inside it).
     WidgetContent zone;
     zone.picture = GamePicture::BastokCrest;
-    CHECK_EQ(CrestPixels(look.metrics), 19); // 0.85 of 22.1
-    CHECK(Near(look.Leading(zone), 19.0f + 7.65f));
-    CHECK_EQ(CrestPixels(MetricsFor(45, BarShape::Ornate, kDefaultFontRatio, kDefaultPopupScale, 100)), 29); // 0.85 of 34
+    CHECK(Near(look.Leading(zone), 0.65f * 34.0f + 7.65f));
 }
 
 TEST(the_ornate_target_is_framed_and_a_lit_widget_tinted)

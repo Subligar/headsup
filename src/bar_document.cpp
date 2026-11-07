@@ -1,5 +1,7 @@
 #include "bar_document.h"
 
+#include "icon_adjust.h"
+
 #include "argb.h"
 #include "bar_layout.h"
 #include "bar_placement.h"
@@ -83,8 +85,9 @@ namespace headsup
         std::string Picture(const Span& span, const BarLook& look)
         {
             if (span.picture != GamePicture::None)
-                return "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"/>";
-            if (span.icon) return "<img class=\"line-icon\" src=\"" + IconSource(*span.icon) + "\"/>";
+                return "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"" +
+                       AdjustStyle(AdjustOf(span.picture)) + "/>";
+            if (span.icon) return "<img class=\"line-icon\" src=\"" + IconSource(*span.icon) + "\"" + AdjustStyle(AdjustOf(*span.icon)) + "/>";
             if (span.item != 0) return "<img class=\"line-icon\" src=\"" + ItemSource(span.item) + "\"/>";
             if (span.coin) return "<img class=\"line-icon\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
             if (span.bar)
@@ -499,8 +502,6 @@ namespace headsup
         css += ".icon,.coin,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
         css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
                Px(m.gap) + ";}";
-        const auto crest = static_cast<float>(CrestPixels(m));
-        css += ".icon.pic{" + square(crest) + "margin-top:" + Px(std::round(mid - crest / 2.0f) - rowTop) + ";}";
         css += ".coin{" + square(static_cast<float>(coin)) + "margin-top:" +
                Px(std::round(mid - static_cast<float>(coin) / 2.0f) - rowTop) + ";margin-right:" + Px(m.gap) + ";}";
         css += ".icon.right,.coin.right{margin-right:0px;margin-left:" + Px(m.gap) + ";}";
@@ -661,7 +662,7 @@ namespace headsup
                 break;
             case PopupPiece::Kind::Icon:
                 rml += "<img class=\"p\" src=\"" + IconSource(piece.icon) + "\" style=\"" + place + "width:" +
-                       Px(piece.width) + ";height:" + Px(piece.height) + ";" +
+                       Px(piece.width) + ";height:" + Px(piece.height) + ";" + AdjustRules(AdjustOf(piece.icon)) +
                        (piece.tinted ? "image-color:" + RcssColor(color) + ";" : std::string()) + "\"/>";
                 break;
             case PopupPiece::Kind::Item:
@@ -670,7 +671,7 @@ namespace headsup
                 break;
             case PopupPiece::Kind::Picture:
                 rml += "<img class=\"p\" src=\"" + GamePictureSource(piece.picture) + "\" style=\"" + place + "width:" +
-                       Px(piece.width) + ";height:" + Px(piece.height) + ";\"/>";
+                       Px(piece.width) + ";height:" + Px(piece.height) + ";" + AdjustRules(AdjustOf(piece.picture)) + "\"/>";
                 break;
             case PopupPiece::Kind::Cog:
             {
@@ -684,7 +685,7 @@ namespace headsup
                 const int pixels = WholePixels(piece.width);
                 rml += "<img class=\"p\" src=\"" + IconSource(Icon::Star) + "\" style=\"" + place +
                        size(static_cast<float>(pixels), static_cast<float>(pixels)) + "image-color:" + RcssColor(kStarColor) +
-                       ";\"/>";
+                       ";" + AdjustRules(AdjustOf(Icon::Star)) + "\"/>";
                 break;
             }
             case PopupPiece::Kind::Sign:
@@ -761,9 +762,10 @@ namespace headsup
         std::string icons;
         const std::string side = content.iconsRight ? " right" : "";
         if (content.picture != GamePicture::None)
-            icons += "<img class=\"icon pic" + side + "\" src=\"" + GamePictureSource(content.picture) + "\"/>";
+            icons += "<img class=\"icon pic" + side + "\" src=\"" + GamePictureSource(content.picture) + "\"" +
+                     AdjustStyle(AdjustOf(content.picture)) + "/>";
         for (const Icon icon : content.icons)
-            icons += "<img class=\"icon" + side + "\" src=\"" + IconSource(icon) + "\"/>";
+            icons += "<img class=\"icon" + side + "\" src=\"" + IconSource(icon) + "\"" + AdjustStyle(AdjustOf(icon)) + "/>";
         if (content.coin) icons += "<img class=\"coin" + side + "\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
         if (!content.iconsRight) rml += icons;
         rml += "<div class=\"text\">";

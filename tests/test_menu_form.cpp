@@ -1411,3 +1411,19 @@ TEST(feedback_the_service_did_not_take_is_kept_to_send_again)
     w.Pass({{"feedback-feedback-form-send-feedback", kClickEvent, ""}});
     CHECK(w.state.feedbackRequested && w.state.feedbackStatus == FeedbackStatus::Sending);
 }
+
+TEST(a_designer_buttons_picture_is_drawn_with_its_icons_adjustment)
+{
+    Window w;
+    const PanelWidget world{BarWidget::World};
+    w.settings.Widget(world).on = true;
+    w.readings.settingsOf       = {world};
+    w.readings.partMarks[static_cast<size_t>(WidgetPart::WorldBastok)] = PartMark{std::nullopt, GamePicture::BastokCrest};
+    w.readings.partMarks[static_cast<size_t>(WidgetPart::WorldShip)]   = PartMark{Icon::Star};
+    const Form form = w.Pass();
+    const std::string& rml = std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    // Bastok's crest at 85% of its room, the star as it is.
+    CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + GamePictureSource(GamePicture::BastokCrest) +
+                    "\" style=\"transform:scale(0.85);\"/>").c_str()));
+    CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + IconSource(Icon::Star) + "\"/>").c_str()));
+}

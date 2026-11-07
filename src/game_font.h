@@ -117,6 +117,10 @@ namespace headsup
         ColorPicture mail, messenger;
     };
     Read<PlayOnlineIcons> ReadPlayOnlineIcons(std::span<const uint8_t> dat);
+    // The crests' chunks in 51.DAT, each named for its picture's first four letters, which the icon adjustments name
+    // them by.
+    constexpr std::string_view kSanDoriaCrestChunk = "scre", kBastokCrestChunk = "bcre", kWindurstCrestChunk = "wcre",
+                               kBeastmenCrestChunk = "mcre", kJeunoCrestChunk = "jcre", kAhtUrhganCrestChunk = "acre";
     // The crests the game's conquest map shows, and Jeuno's and Aht Urhgan's from its region maps, out of a whole 51.DAT.
     struct NationCrests
     {

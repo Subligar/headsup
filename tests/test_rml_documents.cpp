@@ -464,3 +464,81 @@ TEST(a_widgets_alignment_puts_its_content_and_its_lines_against_that_side_whatev
         CHECK_EQ(rml.Said(), "");
     }
 }
+
+TEST(an_adjusted_icon_draws_moved_or_sized_in_its_own_room_in_the_bar_and_the_pop_outs)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    test::RmlSession rml;
+    // Where a point drawn at x, y of an element's box sits, as a share of its size from its top left corner.
+    const auto drawnAt = [](Rml::Element* e, float x, float y) {
+        const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border), size = e->GetBox().GetSize(Rml::BoxArea::Border);
+        Rml::Vector2f point{at.x + x, at.y + y};
+        CHECK(e->Project(point));
+        return Rml::Vector2f{(point.x - at.x) / size.x, (point.y - at.y) / size.y};
+    };
+    const auto near = [](Rml::Vector2f a, float x, float y) { return std::fabs(a.x - x) < 0.01f && std::fabs(a.y - y) < 0.01f; };
+    const auto size = [](Rml::Element* e) { return e->GetBox().GetSize(Rml::BoxArea::Border); };
+
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Bags));
+    widget->SetClass(kHiddenClass, false);
+    WidgetContent c;
+    c.shown   = true;
+    c.picture = GamePicture::BastokCrest;
+    c.icons   = {Icon::Bag, Icon::Clock, Icon::Star};
+    c.title   = {Span{"", Tone::Normal, 0, GamePicture::WindurstCrest}, Text("20 / 30")};
+    widget->SetInnerRML(WidgetRml(c, look, {}));
+    // RmlUi works out a transform as it draws.
+    rml.context->Update();
+    rml.context->Render();
+    Rml::ElementList icons, inline_;
+    widget->GetElementsByClassName(icons, "icon");
+    widget->GetElementsByClassName(inline_, "line-icon");
+    CHECK_EQ(icons.size(), static_cast<size_t>(4));
+    CHECK_EQ(inline_.size(), static_cast<size_t>(1));
+    // The crests at 85% of their room around its middle, wherever they are, as they read larger than an icon.
+    const Rml::Vector2f crest = size(icons[0]);
+    CHECK(near(drawnAt(icons[0], crest.x * 0.075f, crest.y * 0.075f), 0.0f, 0.0f));
+    const Rml::Vector2f windurst = size(inline_[0]);
+    CHECK(near(drawnAt(inline_[0], windurst.x * 0.925f, windurst.y * 0.925f), 1.0f, 1.0f));
+    // The bag a pixel down, at its size; the clock at 80% of its room; the star as it is.
+    CHECK(near(drawnAt(icons[1], 0.0f, 1.0f), 0.0f, 0.0f));
+    const Rml::Vector2f bag = size(icons[1]);
+    CHECK(near(drawnAt(icons[1], bag.x, bag.y + 1.0f), 1.0f, 1.0f));
+    const Rml::Vector2f clock = size(icons[2]);
+    CHECK(near(drawnAt(icons[2], clock.x * 0.1f, clock.y * 0.1f), 0.0f, 0.0f));
+    CHECK(near(drawnAt(icons[3], 0.0f, 0.0f), 0.0f, 0.0f));
+    // Their rooms are an icon's, all alike.
+    CHECK_EQ(crest.x, bag.x);
+    CHECK_EQ(clock.x, bag.x);
+
+    // A pop-out's the same way.
+    PopupFaces faces;
+    for (PopupFace& face : faces)
+        face = PopupFace{look.detailFont, 14, 16, 0.0f};
+    PopupLayout layout;
+    layout.width  = 200.0f;
+    layout.height = 100.0f;
+    PopupPiece clockPiece{PopupPiece::Kind::Icon, 10.0f, 10.0f, 20.0f, 20.0f, {}};
+    clockPiece.icon = Icon::Clock;
+    PopupPiece crestPiece{PopupPiece::Kind::Picture, 40.0f, 10.0f, 20.0f, 20.0f, {}};
+    crestPiece.picture = GamePicture::SanDoriaCrest;
+    layout.pieces = {clockPiece, crestPiece};
+    Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
+    popups->Show();
+    Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+    popup->SetClass(kPopupClass, true);
+    popup->SetInnerRML(PopupRml(layout, look, faces));
+    rml.context->Update();
+    rml.context->Render();
+    Rml::ElementList pictures;
+    popup->GetElementsByTagName(pictures, "img");
+    CHECK_EQ(pictures.size(), static_cast<size_t>(2));
+    CHECK(near(drawnAt(pictures[0], 2.0f, 2.0f), 0.0f, 0.0f));
+    CHECK(near(drawnAt(pictures[1], 1.5f, 1.5f), 0.0f, 0.0f));
+    CHECK_EQ(rml.Said(), "");
+}

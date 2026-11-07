@@ -2,6 +2,7 @@
 
 #include "bar_document.h"
 #include "bar_theme.h"
+#include "icon_adjust.h"
 #include "cursor_picture.h"
 #include "icons.h"
 #include "menu_text.h"
@@ -680,8 +681,10 @@ namespace headsup
                             form.Set(form.Named(name + kChipToggle), FormValueKind::Class, "on", {}, true);
                         }
                     }
-                    if (const std::string picture = PartPicture(c.readings.partMarks[part]); !picture.empty())
-                        form.Raw("<img class=\"dmark\" src=\"" + picture + "\"/>");
+                    const PartMark& mark = c.readings.partMarks[part];
+                    if (const std::string picture = PartPicture(mark); !picture.empty())
+                        form.Raw("<img class=\"dmark\" src=\"" + picture + "\"" +
+                                 AdjustStyle(mark.icon ? AdjustOf(*mark.icon) : AdjustOf(mark.picture)) + "/>");
                     form.Raw(EscapedRml(Said(names[part].name)) + "</div>");
                     form.Set(id, FormValueKind::Class, "on", {}, chip.on);
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
@@ -981,7 +984,7 @@ namespace headsup
                     const auto action = [&](const char* name, Icon icon, WindowWord word) {
                         const std::string actionId = form.Id(kWidgetChip + std::to_string(w) + name);
                         form.Raw("<div class=\"wclone\" id=\"" + actionId + "\"" + TipAttribute(WordTip(c, word)) +
-                                 "><img src=\"" + IconSource(icon) + "\"/></div>");
+                                 "><img src=\"" + IconSource(icon) + "\"" + AdjustStyle(AdjustOf(icon)) + "/></div>");
                         return !form.Off() && form.Clicked(actionId);
                     };
                     // Floated right, so the first is the rightmost.

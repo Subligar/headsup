@@ -4,6 +4,7 @@
 
 #include "argb.h"
 #include "bar_document.h"
+#include "icon_adjust.h"
 #include "menu_text.h"
 #include "settings.h"
 
@@ -869,7 +870,7 @@ namespace headsup
             const std::optional<Icon> icon = TagIcon(tag);
             return std::string("<div class=\"") + classes + "\" id=\"" + id + "\" " + kCarriesAttribute + "=\"" +
                    EscapedRml(TagName(tag)) + "\"" + TipAttribute(tip) + ">" +
-                   (icon ? "<img src=\"" + IconSource(*icon) + "\"/>" : std::string()) + EscapedRml(Said(word.name)) + "</div>";
+                   (icon ? "<img src=\"" + IconSource(*icon) + "\"" + AdjustStyle(AdjustOf(*icon)) + "/>" : std::string()) + EscapedRml(Said(word.name)) + "</div>";
         }
 
         // The id of one tag of a line's chip, which is the chip's own while the chip holds no other.

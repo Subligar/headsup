@@ -196,6 +196,16 @@ class GenIcons(unittest.TestCase):
         self.assertIn('        Ability, // job abilities and weapon skills', ids)
         self.assertIn(f'constexpr int kIconCount = {len(names)};', ids)
 
+    def test_each_icons_file_name_follows_the_enums_order_and_no_two_icons_share_one(self):
+        ids = gen.generate_ids()
+        files = ids.split('kIconFiles[] = {')[1].split('};')[0]
+        self.assertEqual(re.findall(r'"([^"]+)"', files), [path.rsplit('/', 1)[1] for _, path, _ in gen.ICONS])
+        self.assertIn('"bag.png"', files)
+        self.assertIn('"ImmuneSleep.png"', files)
+        twice = gen.ICONS + [('Again', 'resources/icons/weather/bag.png', '')]
+        with self.assertRaises(gen.IconError):
+            gen.generate_ids(twice)
+
     def test_mobdbs_damage_and_status_icons_come_after_the_player_icons(self):
         names = [name for name, _, _ in gen.ICONS]
         self.assertEqual(names[names.index('LevelSync') + 1:names.index('Petrify') + 1], [
