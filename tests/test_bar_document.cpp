@@ -126,6 +126,20 @@ TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
     CHECK(Has(rml, ".ornate .widget.target.lit{background-color:#c9a24a34;")); // twice the tint
 }
 
+TEST(a_strip_with_nothing_fading_below_it_is_as_tall_as_its_image)
+{
+    // A theme copied from Vanilla has the art's palette, with nothing below the strip: on a gradient, its strip
+    // element was the glow's rows taller than its image, which stretched the strip down over them.
+    Settings settings;
+    BarPalette p = PaletteOf(BarTheme::UmbraDark);
+    p.below      = 0;
+    const std::string rml = BarDocument(LookOf(p, settings), Place());
+    const std::string source = StripSource(p, 45, 0);
+    CHECK(Has(rml, "height:45px;decorator:image(\"" + source + "\");"));
+    const std::optional<Image> strip = HostImage(source);
+    CHECK(strip && strip->height == 45);
+}
+
 TEST(the_caps_and_dividers_take_the_themes_separator_style)
 {
     Settings settings;
