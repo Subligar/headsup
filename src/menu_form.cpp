@@ -762,14 +762,6 @@ namespace headsup
                         form.NumberDropdown(label.c_str(), o.currency, kGilCurrency, kCurrencyCount - 1,
                             [](int currency) { return std::string(kCurrencyTable[currency].name); }, row.tip);
                     break;
-                case WidgetTabsRow::Nations:
-                    if (kind == BarWidget::World &&
-                        (o.worldLine == WorldLine::Conquest || (o.worldSections & WorldBit(WorldSection::Conquest)) != 0))
-                    {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Nations));
-                        form.Toggles(label.c_str(), o.nations, names.data(), kContenderNations, row.tip);
-                    }
-                    break;
                 case WidgetTabsRow::CustomIcons:
                     if (kind == BarWidget::Weather)
                     {
@@ -780,52 +772,19 @@ namespace headsup
                         o.weatherIcons = static_cast<CustomIcons>(use);
                     }
                     break;
-                case WidgetTabsRow::ConquestGrid:
-                    if (kind == BarWidget::World && o.worldLine == WorldLine::Conquest)
-                    {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ConquestGrid));
-                        form.Segments(label.c_str(), o.conquestGrid, names.data(), kConquestGridCount, row.tip);
-                    }
-                    break;
-                case WidgetTabsRow::Shows:
-                    if (kind == BarWidget::World)
-                    {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::WorldLine));
-                        int line = static_cast<int>(o.worldLine);
-                        form.NumberDropdown(label.c_str(), line, 0, kWorldLineCount - 1,
-                            [&](int l) { return std::string(names[static_cast<size_t>(l)]); }, row.tip);
-                        o.worldLine = static_cast<WorldLine>(line);
-                    }
-                    break;
                 case WidgetTabsRow::Ship:
-                    if (kind == BarWidget::World && o.worldLine == WorldLine::Departure)
+                    if (kind == BarWidget::World)
                         form.NumberDropdown(label.c_str(), o.worldRoute, 0, static_cast<int>(TravelRoutes().size()) - 1,
                             [](int r) { return std::string(TravelRoutes()[static_cast<size_t>(r)].name); }, row.tip);
                     break;
-                case WidgetTabsRow::Element:
-                    if (kind == BarWidget::World && o.worldLine == WorldLine::Weather)
-                    {
-                        int element = static_cast<int>(o.worldElement);
-                        form.NumberDropdown(label.c_str(), element, 0, kElementCount - 1,
-                            [](int e) { return std::string(ElementName(static_cast<Element>(e))); }, row.tip);
-                        o.worldElement = static_cast<Element>(element);
-                    }
-                    break;
                 case WidgetTabsRow::Guild:
-                    if (kind == BarWidget::World && o.worldLine == WorldLine::Guild)
+                    if (kind == BarWidget::World)
                         form.NumberDropdown(label.c_str(), o.worldGuild, 0, static_cast<int>(GuildShops().size()) - 1,
                             [](int g) {
                                 const GuildShop& shop = GuildShops()[static_cast<size_t>(g)];
                                 return std::string(shop.guild) + ": " + shop.shops + " (" + shop.zone + ")";
                             },
                             row.tip);
-                    break;
-                case WidgetTabsRow::Popup:
-                    if (kind == BarWidget::World)
-                    {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::WorldSections));
-                        form.Toggles(label.c_str(), o.worldSections, names.data(), kWorldSectionCount, row.tip);
-                    }
                     break;
                 case WidgetTabsRow::Bag:
                     if (kind == BarWidget::Bags)
@@ -866,8 +825,8 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::Design:
-                    // The EXP meter and World Info's conquest counts are laid out without a design.
-                    if (!bar && !(kind == BarWidget::World && o.worldLine == WorldLine::Conquest))
+                    // The EXP meter is laid out without a design.
+                    if (!bar)
                     {
                         form.Note(row.tip); // the Widget Designer's description
                         Designer(c, widget);

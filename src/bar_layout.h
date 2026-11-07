@@ -8,6 +8,7 @@
 
 #include <array>
 #include <map>
+#include <set>
 #include <optional>
 #include <string>
 #include <utility>
@@ -125,6 +126,7 @@ namespace headsup
         BarRect rect;
         std::string tab;
         bool press = false; // a pressable cell: a press tells the plugin its tab
+        bool fleeting = false; // its pick is forgotten once the popup closes
     };
     // A part of the open popup the wheel scrolls, where it was drawn, and how many lines it scrolls.
     struct BarScroll
@@ -217,6 +219,7 @@ namespace headsup
         BarRect m_Popup;
         std::vector<BarTabChip> m_Chips;
         std::map<std::string, std::string> m_Tabs;
+        std::set<std::string> m_Fleeting; // the cards in m_Tabs whose picks go when the popup closes
         std::vector<std::string> m_Presses;
         std::vector<BarScroll> m_Scrolls;
         BarRect m_PinChip, m_CogChip;

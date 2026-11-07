@@ -118,6 +118,7 @@ namespace headsup
         bool header = false; // Grid: its first line heads its columns, and each group of them set side by side
         bool spread = false; // Grid: a right-aligned column at the card's right edge, a centered middle one right of middle
         bool inset  = false; // in from the card's sides as far as a socket's rows, to line up with a socket under it
+        bool roomy  = false; // Grid: its columns further apart
         // A socket's first row: what its scrolling is kept by, and how many of its lines it is scrolled past.
         std::string scroll{};
         size_t scrolled = 0;
@@ -144,6 +145,9 @@ namespace headsup
         // without it. Collapsed, it shows its heading alone.
         std::string collapsePress{};
         bool collapsed = false;
+        bool under = false; // in the column of the card before it, under it: after a card beside, a column beside a card
+        size_t tabsAcross = 0; // its tabs a row; 0 for as many as fit
+        bool tabEachOpen  = false; // its tab is tab again each time the popup opens, until another is picked
         bool operator==(const PopupSection&) const = default;
     };
 
@@ -161,6 +165,9 @@ namespace headsup
     };
 
     constexpr const char* kDot = " \xC2\xB7 "; // a middle dot between two parts of a line
+    // What a card is kept by (its picked tab, its scrolling, whether it is collapsed): its heading without what is in
+    // brackets, which can change while it shows, as the tally's countdown in the Conquest card's does.
+    inline std::string_view CardKey(std::string_view heading) { return heading.substr(0, heading.find(" (")); }
     // Units of time, one place for every widget's clocks and spans.
     constexpr int64_t kMsPerSecond = 1000, kSecondsPerMinute = 60, kSecondsPerHour = 3600, kSecondsPerDay = 86400;
     constexpr int64_t kMsPerMinute = kMsPerSecond * kSecondsPerMinute, kMsPerHour = kMsPerSecond * kSecondsPerHour,

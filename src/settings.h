@@ -53,8 +53,6 @@ namespace headsup
     // Its Show Icons: the detection icons, then a mob's weaknesses after its level.
 
     // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
-    enum class ConquestGrid : uint8_t { TwoByTwo, OneByFour };
-    constexpr int kConquestGridCount = 2;
     // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
     struct WidgetOptions
     {
@@ -62,8 +60,6 @@ namespace headsup
         WidgetDesign design; // what it shows on its two lines (NewWidget gives each kind its default)
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
-        uint8_t nations = kAllNations;              // World Info's conquest: whose regions it counts, by NationBit
-        ConquestGrid conquestGrid = ConquestGrid::TwoByTwo; // and how several are laid out
         CustomIcons weatherIcons = CustomIcons::Always; // Forecast: its weather pictures
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         std::optional<ClockZone> clockSecondZone = ClockZone::Japan; // its Secondary Timezone part's, the same way
@@ -78,11 +74,8 @@ namespace headsup
         bool jobNames        = true;
         uint32_t targetDetection = kDefaultDetection; // Target: the senses its Detection part shows, by DetectionBit
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
-        WorldLine worldLine  = WorldLine::Departure; // World Info: what it tells on the panel
-        int worldRoute       = 0;                    // its departure, by TravelRoutes
-        Element worldElement = Element::Fire;        // its weather
-        int worldGuild       = 0;                    // its guild shop, by GuildShops
-        uint8_t worldSections = kAllWorldSections;   // its popup's parts, by WorldBit
+        int worldRoute       = 0;                    // World Info: its Tracked Ship, by TravelRoutes
+        int worldGuild       = 0;                    // its Tracked Guild, by GuildShops
         std::optional<PanelWidget> combine;          // shown right after it in its pill, with one popup (Combine)
         int linkPadding = 0; // pixels between it and the widget it combines with
         IconSide iconSide = IconSide::Left; // its icon's, for a widget with one (IconPartOf)

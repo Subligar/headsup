@@ -1955,21 +1955,17 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     CHECK_EQ(window.Said(), "");
 }
 
-TEST(the_world_info_widget_offers_the_pick_for_what_it_shows)
+TEST(the_world_info_widget_offers_its_tracked_ship_and_guild)
 {
     Window window;
     WidgetOptions& world = window.settings.Widget(BarWidget::World);
     world.on             = true;
     window.Page("toppanel");
     window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::World)));
-    CHECK(window.Shows("toppanel-widgets-ship-world") && !window.Shows("toppanel-widgets-element-world"));
-    window.Click("toppanel-widgets-shows-world");
-    CHECK(window.Click("toppanel-widgets-shows-world-o-1"));
-    CHECK(world.worldLine == WorldLine::Weather);
-    CHECK(window.Shows("toppanel-widgets-element-world") && !window.Shows("toppanel-widgets-ship-world"));
-    window.Click("toppanel-widgets-element-world");
-    CHECK(window.Click("toppanel-widgets-element-world-o-4"));
-    CHECK(world.worldElement == Element::Lightning);
+    CHECK(window.Shows("toppanel-widgets-ship-world") && window.Shows("toppanel-widgets-guild-world"));
+    window.Click("toppanel-widgets-ship-world");
+    CHECK(window.Click("toppanel-widgets-ship-world-o-2"));
+    CHECK_EQ(world.worldRoute, 2);
     CHECK_EQ(window.Said(), "");
 }
 

@@ -19,19 +19,21 @@ namespace headsup
             P::PerfMessages};
         constexpr P kParty[]  = {P::PartyCount, P::PartyHealth};
         constexpr P kStatus[] = {P::StatusPins};
-        constexpr P kWorld[]  = {P::WorldMain, P::WorldDetails};
+        constexpr P kWorld[]  = {P::WorldShip, P::WorldGuild, P::WorldRse, P::WorldMoon, P::WorldSanDoria, P::WorldBastok,
+            P::WorldWindurst, P::WorldBeastmen};
 
         // By WidgetPart.
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
             "date", "day", "time", "moon", "aggro", "name", "distance", "detection", "level", "player", "weak",
             "coin", "amount", "currency", "count", "bag", "icon", "time", "server", "vana", "jobs", "exp", "bar",
-            "fps", "sent", "received", "percent", "ping", "memory", "messages", "count", "health", "pins", "icon",
-            "main", "details"};
+            "fps", "sent", "received", "percent", "ping", "memory", "messages", "count", "health", "pins", "ship",
+            "guild", "rse", "moon", "sandoria", "bastok", "windurst", "beastmen"};
 
         // As each widget showed before it had a design.
         constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation", "weather | day time -date -moon",
             "name distance -detection | level player -weak", "amount | currency", "count | bag", "time | -server -vana", "", "-fps sent received percent -ping -memory messages |",
-            "jobs | exp bar", "count | health", "pins |", "main | details"};
+            "jobs | exp bar", "count | health", "pins |",
+            "ship | -guild -rse -moon -sandoria -bastok -windurst -beastmen"};
 
         constexpr char kLineBreak = '|', kOffMark = '-', kSpace = ' ';
 
@@ -70,7 +72,6 @@ namespace headsup
         case BarWidget::Target: return P::TargetAggro;
         case BarWidget::Currency: return P::CurrencyCoin;
         case BarWidget::Bags: return P::BagIcon;
-        case BarWidget::World: return P::WorldIcon;
         default: return std::nullopt;
         }
     }
@@ -213,12 +214,15 @@ namespace headsup
         switch (part)
         {
         case WidgetPart::WeatherIcon:
-        case WidgetPart::TargetWeak:
-        case WidgetPart::WorldIcon: return PartMark{Icon::Fire};
+        case WidgetPart::TargetWeak: return PartMark{Icon::Fire};
         case WidgetPart::TargetAggro: return PartMark{Icon::AggroNQ};
         case WidgetPart::TargetDetection: return PartMark{Icon::Sight};
         case WidgetPart::BagIcon: return PartMark{Icon::Bag};
-        case WidgetPart::ZoneCrest: return PartMark{std::nullopt, GamePicture::SanDoriaCrest};
+        case WidgetPart::ZoneCrest:
+        case WidgetPart::WorldSanDoria: return PartMark{std::nullopt, GamePicture::SanDoriaCrest};
+        case WidgetPart::WorldBastok: return PartMark{std::nullopt, GamePicture::BastokCrest};
+        case WidgetPart::WorldWindurst: return PartMark{std::nullopt, GamePicture::WindurstCrest};
+        case WidgetPart::WorldBeastmen: return PartMark{std::nullopt, GamePicture::BeastmenCrest};
         case WidgetPart::PerfMessages: return PartMark{std::nullopt, GamePicture::PlayOnlineMail};
         case WidgetPart::CurrencyCoin: return PartMark{std::nullopt, GamePicture::None, true};
         default: return {};

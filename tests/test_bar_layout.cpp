@@ -159,6 +159,25 @@ TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
     CHECK(input.Press(5.0f, 30.0f, false)); // a right press on the strip is the bar's too
 }
 
+TEST(a_fleeting_cards_pick_is_forgotten_once_the_popup_closes_and_another_cards_is_kept)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    input.Move(960.0f, 18.0f);
+    const BarRect bastok{770.0f, 100.0f, 60.0f, 20.0f}, boats{770.0f, 200.0f, 60.0f, 20.0f};
+    BarTabChip nation{"Conquest", bastok, "Bastok"};
+    nation.fleeting = true;
+    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {nation, BarTabChip{"Travel", boats, "Boats"}});
+    input.Move(780.0f, 110.0f);
+    CHECK(input.Press(780.0f, 110.0f, true) && input.Press(780.0f, 210.0f, true));
+    CHECK(input.PickedTabs().at("Conquest") == "Bastok" && input.PickedTabs().at("Travel") == "Boats");
+    input.Leave(); // the popup closes
+    CHECK(!input.PickedTabs().contains("Conquest") && input.PickedTabs().at("Travel") == "Boats");
+}
+
 TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)
 {
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);

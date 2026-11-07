@@ -2807,21 +2807,17 @@ TEST(the_world_info_widget_keeps_its_picks_by_name)
 {
     Settings s;
     WidgetOptions& world = s.Widget(BarWidget::World);
-    CHECK(!world.on && world.worldLine == WorldLine::Departure && world.worldSections == kAllWorldSections);
-    world.on            = true;
-    world.worldLine     = WorldLine::Guild;
-    world.worldRoute    = 3;
-    world.worldElement  = Element::Lightning;
-    world.worldGuild    = 5;
-    world.worldSections = WorldBit(WorldSection::Travel) | WorldBit(WorldSection::Calendar);
+    CHECK(!world.on);
+    world.on         = true;
+    world.worldRoute = 3;
+    world.worldGuild = 5;
+    world.design     = DesignFrom(BarWidget::World, "guild bastok | -ship -rse -moon -sandoria -windurst -beastmen");
     MapStore store;
     SaveSettings(s, store);
     CHECK(LoadSettings(store).Widget(BarWidget::World) == world);
     // Its picks are saved by what players read, so a refresh that adds a route keeps the one picked.
     CHECK_EQ(store.values["barWorldRoute"], TravelRoutes()[3].name);
     CHECK_EQ(store.values["barWorldGuild"], GuildShops()[5].shops);
-    CHECK_EQ(store.values["barWorldElement"], "Lightning");
-    CHECK_EQ(store.values["barWorldLine"], "guild");
     // A name no longer in the data leaves the default.
     store.values["barWorldRoute"] = "Jeuno to Mars";
     CHECK_EQ(LoadSettings(store).Widget(BarWidget::World).worldRoute, 0);

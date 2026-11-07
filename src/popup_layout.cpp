@@ -16,6 +16,7 @@ namespace headsup
         constexpr float kStar        = 0.85f; // a starred cell's star, about as tall as a capital
         constexpr float kCellGap     = 0.6f;  // between cells of a line
         constexpr float kColumnGap   = 0.8f;
+        constexpr float kRoomyColumnGap = 1.4f; // a roomy grid's
         constexpr float kMiddleRight = 1.0f;  // a spread grid's centered column, right of the card's middle
         constexpr float kPairGap     = 1.2f;  // the least between a pair's label and its value
         constexpr float kTagPadX     = 0.6f, kTagPadY = 0.4f, kTagGap = 0.3f; // from a tag's ink to its frame
@@ -102,6 +103,7 @@ namespace headsup
                 float gap;             // between it and the next in its row
                 float left = 0.0f, width = 0.0f; // from the card's left, once spread
                 size_t parts = 1;                // the pieces after its frame: its icon, if it has one, and its name
+                bool fleeting = false;           // its card's tab is picked anew each time the popup opens
             };
             std::vector<Chip> chips;
             struct Press
@@ -130,6 +132,7 @@ namespace headsup
             bool card     = false;
             float reserve = 0.0f; // its height with its tallest tab picked, which sets its column
             bool beside   = false; // in one row with the card before it
+            bool under    = false; // under the card before it, in its column
         };
 
         Block LayoutSection(const PopupSection& section, const BarMetrics& metrics, bool ornate, SpanMeasure measure)
@@ -188,7 +191,9 @@ namespace headsup
                     widest = std::max(widest, framed.width);
                     tall   = std::max(tall, framed.height);
                 }
-                const size_t count = section.tabs.size(), lines = (count + kMostTabsInRow - 1) / kMostTabsInRow;
+                const size_t count = section.tabs.size();
+                const size_t lines = section.tabsAcross > 0 ? (count + section.tabsAcross - 1) / section.tabsAcross
+                                                            : (count + kMostTabsInRow - 1) / kMostTabsInRow;
                 const size_t across = (count + lines - 1) / lines;
                 contentWidth = std::max(contentWidth, static_cast<float>(across) * (widest + gap) - gap);
                 for (size_t i = 0; i < count; ++i)
@@ -198,8 +203,9 @@ namespace headsup
                     const TextSize framed = Framed(size, unit);
                     const float top       = y + static_cast<float>(i / across) * (tall + gap);
                     const float inside    = top + framed.inkTop - size.inkTop; // where its icon and name start
-                    b.chips.push_back(Block::Chip{section.heading, tab.name.text, b.pieces.size(), i % across, across,
+                    b.chips.push_back(Block::Chip{std::string(CardKey(section.heading)), tab.name.text, b.pieces.size(), i % across, across,
                         std::min(across, count - i / across * across), top, tall, size.width, gap});
+                    b.chips.back().fleeting = section.tabEachOpen;
                     PopupPiece chip{PopupPiece::Kind::Tab, 0.0f, top, widest, tall, {}};
                     chip.open = i == picked;
                     b.pieces.push_back(std::move(chip));
@@ -306,7 +312,7 @@ namespace headsup
                     const TextSize s = cells.emplace_back(CellSize(row.cells[i], unit, measure));
                     if (!grid) rowWidth += (tags ? Framed(s, unit) : s).width + (i > 0 ? gap : 0.0f);
                 }
-                const float columnGap = unit * kColumnGap;
+                const float columnGap = unit * (row.roomy ? kRoomyColumnGap : kColumnGap);
                 // Two columns of nothing but icons sit as close as an icon to its text.
                 const auto iconsOnly = [&](size_t column) {
                     for (size_t i = column; i < row.cells.size(); i += columns.size())
@@ -489,7 +495,7 @@ namespace headsup
             }
             for (Block::Chip& chip : b.chips)
                 l.chips.push_back(PopupTabChip{std::move(chip.key), x + chip.left, y + chip.y, chip.width, chip.height, line,
-                    std::move(chip.tab)});
+                    std::move(chip.tab), false, chip.fleeting});
             for (Block::Press& press : b.presses)
                 if (press.fromRight > 0.0f) press.x = width - press.fromRight;
             for (Block::Press& press : b.presses)
@@ -507,6 +513,7 @@ namespace headsup
         {
             Block b  = LayoutSection(section, metrics, ornate, measure);
             b.beside = section.beside;
+            b.under  = section.under;
             PopupSection each = section;
             for (size_t tab = 0; tab < std::max<size_t>(section.tabs.size(), 1); ++tab)
             {
@@ -767,15 +774,26 @@ namespace headsup
         float lowest = top;
         if (std::ranges::any_of(cards, [](const Block& b) { return b.beside; }))
         {
-            // In rows: a card beside the one before shares its row, the first at its own width and the second taking
-            // the rest, the two as tall as the taller one's tallest tab, so a tab picked moves nothing; a card alone
-            // fills the width.
+            // In rows: a card beside the one before shares its row, the first at its own width and the second, with the
+            // cards under it in its column, taking the rest. The row is as tall as the taller side, each card counted at
+            // its tallest tab so a tab picked moves nothing, the last card of the column taking what is left of it; a card
+            // alone fills the width.
+            const auto tallest = [](const Block& b) { return std::max(b.reserve, b.height); };
+            const auto columnEnd = [&](size_t i) { // one past the last card of the column beside card i
+                size_t end = i + 2;
+                while (end < cards.size() && cards[end].under) ++end;
+                return end;
+            };
             float whole = 0.0f;
             for (size_t i = 0; i < cards.size(); ++i)
                 if (i + 1 < cards.size() && cards[i + 1].beside)
                 {
-                    whole = std::max(whole, cards[i].width + cardGap + cards[i + 1].width);
-                    ++i;
+                    const size_t end = columnEnd(i);
+                    float column     = 0.0f;
+                    for (size_t c = i + 1; c < end; ++c)
+                        column = std::max(column, cards[c].width);
+                    whole = std::max(whole, cards[i].width + cardGap + column);
+                    i     = end - 1;
                 }
                 else
                     whole = std::max(whole, cards[i].width);
@@ -785,13 +803,23 @@ namespace headsup
             {
                 if (i + 1 < cards.size() && cards[i + 1].beside)
                 {
-                    const float tall = std::max({cards[i].reserve, cards[i + 1].reserve, cards[i].height, cards[i + 1].height});
-                    cards[i].height = cards[i + 1].height = tall;
-                    const float first = cards[i].width;
+                    const size_t end = columnEnd(i);
+                    float column     = -cardGap;
+                    for (size_t c = i + 1; c < end; ++c)
+                        column += tallest(cards[c]) + cardGap;
+                    const float tall  = std::max(tallest(cards[i]), column);
+                    const float first = cards[i].width, rest = width - first - cardGap;
+                    cards[i].height   = tall;
                     Place(cards[i], pad, y, first, l.lines.size(), l);
-                    Place(cards[i + 1], pad + first + cardGap, y, width - first - cardGap, l.lines.size(), l);
+                    float at = y;
+                    for (size_t c = i + 1; c < end; ++c)
+                    {
+                        cards[c].height = c + 1 == end ? y + tall - at : tallest(cards[c]);
+                        Place(cards[c], pad + first + cardGap, at, rest, l.lines.size(), l);
+                        at += cards[c].height + cardGap;
+                    }
                     y += tall + cardGap;
-                    ++i;
+                    i = end - 1;
                     continue;
                 }
                 Place(cards[i], pad, y, width, l.lines.size(), l);

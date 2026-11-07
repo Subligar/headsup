@@ -251,14 +251,9 @@
                 {"key": "blue-magic-color", "name": "Blue Magic Color", "tip": "The color of TP moves a blue mage can learn. Default is blue."},
                 {"key": "blue-magic-learned", "name": "Learned Blue Magic", "tip": "How a TP move whose blue magic you already know is shown: still blue with a star after it, or as plain text. Default is Star."},
                 {"key": "currency", "name": "Currency"},
-                {"key": "nations", "name": "Nations", "tip": "Whose regions the widget counts when it shows Conquest Info, and its pop-out lists."},
                 {"key": "custom-icons", "name": "Use Custom Icons", "tip": "When the widget and its pop-out show HeadsUp's own weather pictures in place of the game's element icons. Default is Always."},
-                {"key": "conquest-grid", "name": "Layout", "tip": "How the nations are laid out when it shows more than one: two lines of two, or all on one line. Default is 2 x 2."},
-                {"key": "shows", "name": "Shows", "tip": "What the widget tells on the panel, with a countdown. Add a copy to show another."},
-                {"key": "ship", "name": "Ship", "tip": "The boat or airship whose next departure the widget shows."},
-                {"key": "element", "name": "Element", "tip": "Shows when that element's weather can next roll in the zone you are in, and its chance that day."},
-                {"key": "guild", "name": "Guild", "tip": "The guild shop whose hours the widget shows."},
-                {"key": "popup", "name": "Pop-out", "tip": "The parts its pop-out shows when you hover it."},
+                {"key": "ship", "name": "Tracked Ship", "tip": "The boat or airship whose next sailing the Ship button shows."},
+                {"key": "guild", "name": "Tracked Guild", "tip": "The guild shop whose hours the Guild button shows."},
                 {"key": "bag", "name": "Bag", "tip": "The bag this widget shows on the panel. Hover it for every bag."},
                 {"key": "local-timezone", "name": "Local Timezone", "tip": "The zone of the Local Time button. Automatic is your computer's. Another zone goes before the time, as in PDT 21:07. Default is Automatic."},
                 {"key": "secondary-timezone", "name": "Secondary Timezone", "tip": "The zone of the Secondary Timezone button, which goes before its time, as in JST 13:07. Default is Japan (JST), the server's time, which the daily reset and the conquest tally go by."},
@@ -1019,35 +1014,6 @@
       ]
     },
     {
-      "key": "world-line",
-      "options": [
-        {"name": "Next Ship"},
-        {"name": "Weather"},
-        {"name": "Guild Hours"},
-        {"name": "RSE"},
-        {"name": "Moon"},
-        {"name": "Conquest Info"}
-      ]
-    },
-    {
-      "key": "world-sections",
-      "options": [
-        {"name": "Travel"},
-        {"name": "Guilds"},
-        {"name": "Calendar"},
-        {"name": "Conquest"}
-      ]
-    },
-    {
-      "key": "nations",
-      "options": [
-        {"name": "San d'Oria"},
-        {"name": "Bastok"},
-        {"name": "Windurst"},
-        {"name": "Beastmen"}
-      ]
-    },
-    {
       "key": "exp-text",
       "options": [
         {"name": "Earned", "tip": "The EXP you have of this level, out of what it takes."},
@@ -1312,9 +1278,14 @@
         {"name": "Party Size", "tip": "How many are in your party, or Solo."},
         {"name": "HP and MP", "tip": "The lowest HP and MP in your party."},
         {"name": "Pinned Statuses", "tip": "The time left on each status you pin in the pop-out."},
-        {"name": "Icon", "tip": "The weather's element, when the widget shows a weather."},
-        {"name": "Main", "tip": "What Shows picks: the ship, weather, guild, RSE or moon."},
-        {"name": "Details", "tip": "Its countdown and details."}
+        {"name": "Ship", "tip": "Your Tracked Ship's next sailing and how long until it."},
+        {"name": "Guild", "tip": "Your Tracked Guild's shop: open or closed, and how long until that changes."},
+        {"name": "RSE", "tip": "This week's Race-Specific Equipment race, where, and when it ends."},
+        {"name": "Moon", "tip": "The moon's phase, and how long until it is next full or new."},
+        {"name": "San d'Oria", "tip": "San d'Oria's crest and how many regions it holds."},
+        {"name": "Bastok", "tip": "Bastok's crest and how many regions it holds."},
+        {"name": "Windurst", "tip": "Windurst's crest and how many regions it holds."},
+        {"name": "Beastmen", "tip": "The beastmen's crest and how many regions they hold."}
       ]
     },
     {
@@ -1331,13 +1302,6 @@
         {"name": "Hide"},
         {"name": "Show on Left"},
         {"name": "Show on Right"}
-      ]
-    },
-    {
-      "key": "conquest-grid",
-      "options": [
-        {"name": "2 x 2", "tip": "Two lines of two."},
-        {"name": "1 x 4", "tip": "All on one line."}
       ]
     }
   ],

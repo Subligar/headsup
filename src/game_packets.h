@@ -84,7 +84,7 @@ namespace headsup
         uint8_t percent = 0;
         bool operator==(const RegionShare&) const = default;
     };
-    constexpr int kContenderNations = 4; // San d'Oria to the beastmen, as kAllNations has them
+    constexpr int kContenderNations = 4; // San d'Oria to the beastmen
     // The largest share first, equal shares in Nation's order.
     using RegionShares = std::array<RegionShare, kContenderNations>;
     // Nothing for a short packet, or for shares of more than 100 in all, which a layout other than Phoenix's would

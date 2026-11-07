@@ -1169,15 +1169,16 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK_EQ(design(), "-nation name | region");
 }
 
-TEST(world_infos_designer_hides_while_it_shows_the_conquest_counts_which_have_no_parts)
+TEST(world_infos_designer_has_a_button_for_each_thing_it_can_tell_and_each_nation)
 {
     Window w;
     const PanelWidget world{BarWidget::World};
     w.readings.settingsOf  = {world};
     const std::string chip = "id=\"toppanel-widgets-part-" + std::to_string(SlotOf(world)) + "-";
-    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, chip.c_str()));
-    w.settings.Widget(world).worldLine = WorldLine::Conquest;
-    CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, chip.c_str()));
+    const std::string rml  = Block(w.Pass(), "toppanel-widgets")->rml;
+    for (const WidgetPart part : {WidgetPart::WorldShip, WidgetPart::WorldGuild, WidgetPart::WorldRse, WidgetPart::WorldMoon,
+             WidgetPart::WorldSanDoria, WidgetPart::WorldBastok, WidgetPart::WorldWindurst, WidgetPart::WorldBeastmen})
+        CHECK(Has(rml, (chip + std::to_string(static_cast<int>(part)) + "\"").c_str()));
 }
 
 TEST(feedback_is_sent_only_once_its_fields_are_filled_and_the_card_says_how_it_went)

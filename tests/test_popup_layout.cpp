@@ -469,6 +469,60 @@ TEST(a_card_keeps_its_own_width_and_the_one_beside_it_takes_the_rest_of_the_row)
     CHECK(AllInside(l, m));
 }
 
+TEST(cards_under_the_one_beside_another_make_a_column_as_tall_as_the_card_beside_it)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const auto lines = [](size_t count) {
+        std::vector<PopupRow> rows;
+        for (size_t i = 0; i < count; ++i)
+            rows.push_back(Labeled("Region", Text(std::to_string(i))));
+        return rows;
+    };
+    for (const size_t tall : {12u, 1u}) // the card beside the column taller, then the column
+    {
+        PopupContent c;
+        c.title = {{"World Info", Tone::Normal}};
+        c.sections.push_back(PopupSection{"Conquest", lines(tall)});
+        PopupSection travel{"Travel", lines(3)};
+        travel.beside = true;
+        PopupSection calendar{"Calendar", lines(2)};
+        calendar.under = true;
+        c.sections.push_back(travel);
+        c.sections.push_back(calendar);
+        c.sections.push_back(PopupSection{"Guilds", lines(1)});
+        const PopupLayout l = LayoutPopup(c, m, BarShape::Pills, false, Fake);
+        CHECK(AllInside(l, m));
+        const std::vector<const PopupPiece*> cards = Of(l, PopupPiece::Kind::Card);
+        CHECK_EQ(cards.size(), static_cast<size_t>(4));
+        const PopupPiece &conquest = *cards[0], &shipCard = *cards[1], &days = *cards[2], &guilds = *cards[3];
+        // Travel beside Conquest, the Calendar under it in its column, the column's bottom at Conquest's.
+        CHECK(shipCard.x > conquest.x + conquest.width && Near(shipCard.y, conquest.y));
+        CHECK(Near(days.x, shipCard.x) && Near(days.width, shipCard.width) && days.y > shipCard.y + shipCard.height);
+        CHECK(Near(days.y + days.height, conquest.y + conquest.height));
+        // Guilds under them all, across the row.
+        CHECK(guilds.y > conquest.y + conquest.height && Near(guilds.x + guilds.width, shipCard.x + shipCard.width));
+    }
+}
+
+TEST(a_card_can_put_its_tabs_two_to_a_row)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupContent c;
+    c.title = {{"World Info", Tone::Normal}};
+    PopupSection conquest{"Conquest", {}};
+    for (const char* name : {"Windurst", "San d'Oria", "Bastok", "Beastmen"})
+        conquest.tabs.push_back(PopupTab{Text(name), {LineOf("Region")}});
+    conquest.tabsAcross = 2;
+    c.sections.push_back(conquest);
+    const PopupLayout l = LayoutPopup(c, m, BarShape::Pills, false, Fake);
+    std::vector<const PopupTabChip*> chips;
+    for (const PopupTabChip& chip : l.chips)
+        if (!chip.press) chips.push_back(&chip);
+    CHECK_EQ(chips.size(), static_cast<size_t>(4));
+    CHECK(Near(chips[0]->y, chips[1]->y) && chips[2]->y > chips[0]->y && Near(chips[2]->y, chips[3]->y));
+    CHECK(Near(chips[0]->x, chips[2]->x) && chips[0]->key == "Conquest" && chips[0]->tab == "Windurst");
+}
+
 TEST(tabs_are_one_width_spread_across_the_card_in_one_row_or_two)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);

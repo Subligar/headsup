@@ -463,6 +463,8 @@ namespace headsup
         {
             m_Scrolled.clear();
             m_Refused = false;
+            for (const std::string& card : std::exchange(m_Fleeting, {}))
+                m_Tabs.erase(card);
         }
     }
 
@@ -506,7 +508,10 @@ namespace headsup
                     if (chip.press)
                         m_Presses.push_back(chip.tab);
                     else
+                    {
                         m_Tabs[chip.key] = chip.tab;
+                        if (chip.fleeting) m_Fleeting.insert(chip.key);
+                    }
                     return true;
                 }
             if (m_PinChip.Contains(x, y))

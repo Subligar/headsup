@@ -56,14 +56,6 @@ namespace headsup
         std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false});
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
-    constexpr uint8_t kAllNations = 0x0F; // World Info's conquest: a bit each for the three nations and the beastmen
-    // What the World Info widget tells on the panel, and the parts of its popup, a bit each.
-    enum class WorldLine : uint8_t { Departure, Weather, Guild, Rse, Moon, Conquest };
-    constexpr int kWorldLineCount = static_cast<int>(WorldLine::Conquest) + 1;
-    enum class WorldSection : uint8_t { Travel, Guilds, Calendar, Conquest };
-    constexpr int kWorldSectionCount     = static_cast<int>(WorldSection::Conquest) + 1;
-    constexpr uint8_t kAllWorldSections  = (1u << kWorldSectionCount) - 1;
-    constexpr uint8_t WorldBit(WorldSection section) { return static_cast<uint8_t>(1u << static_cast<int>(section)); }
     // What the Performance widget shows on the panel, a bit each, in this order on its line.
     enum class PerfPart : uint8_t { Fps, Sent, Received, Percent, Ping, Memory, Messages };
     constexpr int kPerfPartCount = static_cast<int>(PerfPart::Messages) + 1;

@@ -71,24 +71,6 @@ namespace headsup
 
     const char* ElementName(Element element) { return kElementNames[static_cast<int>(element) % kElementCount]; }
 
-    std::optional<ElementWeather> NextElementWeather(const ZoneRecord& zone, Element element, uint32_t today)
-    {
-        for (uint32_t day = today; day < today + kWeatherDays; ++day)
-        {
-            const std::optional<WeatherOdds> odds = WeatherOn(zone, day);
-            if (!odds) return std::nullopt;
-            ElementWeather found{day};
-            for (const WeatherChance& chance : Chances(*odds))
-            {
-                if (WeatherElement(chance.weather) != element) continue;
-                if (found.percent == 0) found.weather = chance.weather; // likeliest first
-                found.percent += chance.percent;
-            }
-            if (found.percent > 0) return found;
-        }
-        return std::nullopt;
-    }
-
     std::vector<ZoneRoll> ZonesRolling(Element element, uint32_t day)
     {
         std::vector<ZoneRoll> rolls;

@@ -26,9 +26,9 @@ namespace headsup
         PerfFps, PerfSent, PerfReceived, PerfPercent, PerfPing, PerfMemory, PerfMessages,
         PartyCount, PartyHealth,
         StatusPins,
-        WorldIcon, WorldMain, WorldDetails,
+        WorldShip, WorldGuild, WorldRse, WorldMoon, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
     };
-    constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::WorldDetails) + 1;
+    constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::WorldBeastmen) + 1;
 
     struct DesignChip
     {

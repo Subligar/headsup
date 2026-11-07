@@ -83,9 +83,9 @@ namespace
     }
 
     // World Info's Conquest card, and the lines of its picked tab.
-    const PopupSection& ConquestCard(const PopupContent& popup)
+    PopupSection ConquestCard(const PopupContent& popup)
     {
-        return *std::ranges::find(popup.sections, std::string("Conquest"), &PopupSection::heading);
+        return *std::ranges::find_if(popup.sections, [](const PopupSection& s) { return CardKey(s.heading) == "Conquest"; });
     }
     std::vector<std::string> TabLines(const PopupSection& card)
     {
@@ -2414,12 +2414,13 @@ TEST(a_targeted_players_jobs_show_from_whatever_knows_them_unless_switched_off)
     CHECK_EQ(Content(BarWidget::Target, state, settings).subtitle.front().text, "? ? ?");
 }
 
-TEST(world_info_shows_conquest_info_counting_the_regions_of_the_nations_picked_and_its_popup_names_them)
+TEST(world_infos_nation_buttons_show_each_crest_and_the_regions_it_holds_and_its_popup_names_them)
 {
     Settings settings;
     BarState state;
-    settings.Widget(BarWidget::World).on        = true;
-    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
+    WidgetOptions& o = settings.Widget(BarWidget::World);
+    o.on             = true;
+    o.design         = DesignFrom(BarWidget::World, "sandoria bastok windurst beastmen | -ship -guild -rse -moon");
     CHECK_EQ(Joined(Content(BarWidget::World, state, settings).title), "-"); // before the standings come
     RegionOwners owners{};
     owners.fill(Nation::Beastmen);
@@ -2428,24 +2429,26 @@ TEST(world_info_shows_conquest_info_counting_the_regions_of_the_nations_picked_a
     owners[5] = Nation::Windurst;
     owners[18] = Nation::None;
     state.owners = owners;
-    // Two by two, in lined-up columns, each its crest and count: San d'Oria and Bastok over Windurst and the beastmen.
-    const WidgetContent all = Content(BarWidget::World, state, settings);
-    CHECK(all.cells && all.title.size() == 2 && all.subtitle.size() == 2);
-    CHECK(all.title[0].text == " 1" && all.title[1].text == " 2" && all.subtitle[0].text == " 1" && all.subtitle[1].text == " 14");
-    CHECK(all.title[0].picture == GamePicture::SanDoriaCrest && all.title[1].picture == GamePicture::BastokCrest &&
-          all.subtitle[0].picture == GamePicture::WindurstCrest && all.subtitle[1].picture == GamePicture::BeastmenCrest);
-    CHECK(all.title[1].argb == NationColor(Nation::Bastok) && all.hasPopup);
-    // Or all four on one line.
-    settings.Widget(BarWidget::World).conquestGrid = ConquestGrid::OneByFour;
-    const WidgetContent row = Content(BarWidget::World, state, settings);
-    CHECK(row.cells && row.title.size() == 4 && row.subtitle.empty() && row.title[3].picture == GamePicture::BeastmenCrest);
-    settings.Widget(BarWidget::World).conquestGrid = ConquestGrid::TwoByTwo;
-    // Bastok alone: its name and count, and its regions in the popup.
-    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
-    CHECK_EQ(Joined(Content(BarWidget::World, state, settings).title), "Bastok 2");
+    // Each its crest and count, in its color, on the line the design puts it.
+    std::vector<Span> counts;
+    for (const Span& span : Content(BarWidget::World, state, settings).title)
+        if (span.picture != GamePicture::None) counts.push_back(span);
+    CHECK(counts.size() == 4);
+    CHECK(counts[0].text == " 1" && counts[1].text == " 2" && counts[2].text == " 1" && counts[3].text == " 14");
+    CHECK(counts[0].picture == GamePicture::SanDoriaCrest && counts[1].picture == GamePicture::BastokCrest &&
+          counts[2].picture == GamePicture::WindurstCrest && counts[3].picture == GamePicture::BeastmenCrest);
+    CHECK(counts[1].argb == NationColor(Nation::Bastok));
+    // Bastok alone.
+    o.design = DesignFrom(BarWidget::World, "bastok | -ship -guild -rse -moon -sandoria -windurst -beastmen");
+    const WidgetContent bastok = Content(BarWidget::World, state, settings);
+    CHECK(bastok.title.size() == 1 && bastok.title[0].text == " 2" && bastok.hasPopup);
+    // The popup has every nation's regions, a tab each.
     const PopupSection card = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
-    CHECK(card.tabs.size() == 1 && card.tabs[0].name.text == "Bastok");
-    CHECK(TabLines(card) == (std::vector<std::string>{"Gustaberg", "Derfland"}));
+    CHECK(card.tabs.size() == 4 && card.tabs[1].name.text == "Bastok");
+    std::map<std::string, std::string> picked{{"Conquest", "Bastok"}};
+    state.pickedTabs = &picked;
+    CHECK(TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings))) ==
+          (std::vector<std::string>{"Gustaberg", "Derfland"}));
 }
 
 TEST(the_bags_popup_always_lists_storage_and_never_the_temporary_items)
@@ -2476,14 +2479,12 @@ TEST(the_bags_popup_always_lists_storage_and_never_the_temporary_items)
 TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
 {
     Settings settings;
-    settings.Widget(BarWidget::World).on        = true;
-    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
+    settings.Widget(BarWidget::World).on = true;
     BarState state;
     RegionOwners owners{};
     owners[3] = owners[4] = Nation::Bastok; // Gustaberg and Derfland
     state.owners = owners;
     state.nation = Nation::Bastok;
-    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
     // Before an overseer has told: one line says how to learn them.
     OutpostRuns runs;
     state.outposts = &runs;
@@ -2503,51 +2504,40 @@ TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
     CHECK(!flagged(rows[0]) && flagged(rows[1]));
     CHECK(rows[1].cells.back().icon == Icon::Flag); // after the name
     // Another nation's regions are not yours to run supplies to.
-    settings.Widget(BarWidget::World).nations = kAllNations;
     owners[0] = Nation::SanDoria;
     state.owners = owners;
     const PopupSection all = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
-    CHECK(all.tabs.size() == 4 && all.tabs[0].name.text == "San d'Oria");
-    CHECK((Lines(PopupSection{"", all.tabs[0].rows}) == std::vector<std::string>{"Ronfaure"}));
+    CHECK(all.tabs.size() == 4 && all.tabs[1].name.text == "San d'Oria");
+    CHECK((Lines(PopupSection{"", all.tabs[1].rows}) == std::vector<std::string>{"Ronfaure"}));
 }
 
-TEST(world_infos_conquest_card_opens_on_your_nations_tab_until_another_is_picked)
+TEST(world_infos_conquest_card_has_your_nation_first_picked_anew_each_time_and_its_tabs_two_by_two)
 {
     Settings settings;
     settings.Widget(BarWidget::World).on = true;
     BarState state;
+    state.unixMs = kVanaEpochUnixMs;
     RegionOwners owners{};
     state.owners = owners;
     const auto card = [&] { return ConquestCard(BarPopupContent(BarWidget::World, state, settings)); };
-    CHECK_EQ(card().tab, static_cast<size_t>(0)); // no nation known: the first
-    state.nation = Nation::Bastok;
+    const auto names = [](const PopupSection& c) {
+        std::vector<std::string> out;
+        for (const PopupTab& tab : c.tabs)
+            out.push_back(tab.name.text);
+        return out;
+    };
+    CHECK((names(card()) == std::vector<std::string>{"San d'Oria", "Bastok", "Windurst", "Beastmen"})); // no nation known
+    CHECK_EQ(card().tab, static_cast<size_t>(0));
+    state.nation = Nation::Windurst;
     const PopupSection yours = card();
-    CHECK_EQ(yours.tabs.at(yours.tab).name.text, "Bastok");
-    std::map<std::string, std::string> picked{{"Conquest", "Windurst"}};
+    CHECK((names(yours) == std::vector<std::string>{"Windurst", "San d'Oria", "Bastok", "Beastmen"}));
+    CHECK(yours.tab == 0 && yours.tabsAcross == 2 && yours.tabEachOpen);
+    // Its heading counts down to the tally, which the card and its picks are kept by without.
+    CHECK_EQ(yours.heading, "Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")");
+    std::map<std::string, std::string> picked{{"Conquest", "Bastok"}};
     state.pickedTabs = &picked;
     const PopupSection other = card();
-    CHECK_EQ(other.tabs.at(other.tab).name.text, "Windurst");
-    // Your nation left out by the widget's Nations: the first.
-    picked.clear();
-    settings.Widget(BarWidget::World).nations = NationBit(Nation::SanDoria) | NationBit(Nation::Windurst);
-    CHECK_EQ(card().tab, static_cast<size_t>(0));
-}
-
-TEST(two_nations_picked_are_one_line_of_two_cells_and_one_is_its_name_over_the_widgets)
-{
-    Settings settings;
-    settings.Widget(BarWidget::World).on        = true;
-    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
-    BarState state;
-    RegionOwners owners{};
-    owners[3] = Nation::Bastok;
-    state.owners = owners;
-    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok) | NationBit(Nation::Windurst);
-    const WidgetContent two = Content(BarWidget::World, state, settings);
-    CHECK(two.cells && two.title.size() == 2 && two.subtitle.empty());
-    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
-    const WidgetContent one = Content(BarWidget::World, state, settings);
-    CHECK(!one.cells && Joined(one.title) == "Bastok 1" && Joined(one.subtitle) == "Conquest");
+    CHECK_EQ(other.tabs.at(other.tab).name.text, "Bastok");
 }
 
 namespace
@@ -2561,93 +2551,77 @@ namespace
             if (std::string(items[i].*field) == name) return static_cast<int>(i);
         return -1;
     }
-    Settings WorldShowing(WorldLine line)
+    Settings WorldShowing(std::string_view design)
     {
         Settings settings;
         WidgetOptions& o = settings.Widget(BarWidget::World);
         o.on             = true;
-        o.worldLine      = line;
+        o.design         = DesignFrom(BarWidget::World, design);
         o.worldRoute     = IndexOf(TravelRoutes(), "Jeuno to San d'Oria", &TravelRoute::name);
         o.worldGuild     = IndexOf(GuildShops(), "Chaupire", &GuildShop::shops);
-        o.worldElement   = Element::Water;
         return settings;
     }
 }
 
-TEST(the_world_info_widget_tells_what_you_picked_with_its_countdown)
+TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
-    state.zone   = 79; // Caedarva Mire
-    const auto shown = [&](WorldLine line) {
-        const WidgetContent w = Content(BarWidget::World, state, WorldShowing(line));
-        return Joined(w.title) + " / " + Joined(w.subtitle);
+    const auto shown = [&](std::string_view part) {
+        const WidgetContent w = Content(BarWidget::World, state, WorldShowing(std::string(part) + " |"));
+        return Joined(w.title);
     };
     // The airship's door opens at 28 s into the next cycle: 864 - 576 + 28 s from now.
-    CHECK_EQ(shown(WorldLine::Departure), "Jeuno to San d'Oria / Boards in 5:16");
-    // Its second line is dim, as every widget's is.
-    for (int line = 0; line < kWorldLineCount; ++line)
-        for (const Span& span : Content(BarWidget::World, state, WorldShowing(static_cast<WorldLine>(line))).subtitle)
-            CHECK(span.tone == Tone::Dim);
+    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria  Boards in 5:16");
     // Open until 21:00, 11 Vana'diel hours away.
-    CHECK_EQ(shown(WorldLine::Guild), std::string("Woodworking / Open") + kDot + "closes in 26:24");
+    CHECK_EQ(shown("guild"), std::string("Woodworking  Open") + kDot + "closes in 26:24");
     // Week 1: Hume Female in Gusgen Mines, until day 16.
-    CHECK_EQ(shown(WorldLine::Rse), std::string("Hume Female / Gusgen Mines") + kDot + "ends in 6:19:12");
+    CHECK_EQ(shown("rse"), std::string("Hume Female  Gusgen Mines") + kDot + "ends in 6:19:12");
     // Day 9 is 12% and waxing; full on day 46.
-    CHECK_EQ(shown(WorldLine::Moon), "Waxing Crescent 12% / Full moon in 35:07:12");
-    const std::optional<ElementWeather> rain = NextElementWeather(*ZoneById(79), Element::Water, VanaAt(kEarthsdayTen).day);
-    const std::string when = rain->day == VanaAt(kEarthsdayTen).day ? "Can Roll Here Now"
-                                                                     : "Here in " + Countdown(SecondsToDay(kEarthsdayTen, rain->day));
-    CHECK_EQ(shown(WorldLine::Weather), std::string(WeatherName(rain->weather)) + " " + std::to_string(rain->percent) + "% / " + when);
-    // A zone that never rolls it.
-    state.zone = 100; // West Ronfaure: sunshine and clouds only
-    CHECK_EQ(shown(WorldLine::Weather), "Water Weather / Not in This Zone");
+    CHECK_EQ(shown("moon"), "Waxing Crescent 12%  Full moon in 35:07:12");
+    // The name in the line's tone, the countdown dim.
+    const WidgetContent ship = Content(BarWidget::World, state, WorldShowing("ship |"));
+    CHECK(ship.title.front().tone == Tone::Normal && ship.title.back().tone == Tone::Dim);
+    // Two on the panel at once, a line each.
+    const WidgetContent both = Content(BarWidget::World, state, WorldShowing("ship | guild"));
+    CHECK(Joined(both.title).starts_with("Jeuno") && Joined(both.subtitle).starts_with("Woodworking"));
 }
 
-TEST(the_world_info_popup_has_the_parts_you_picked)
+TEST(the_world_info_popup_has_conquest_beside_travel_over_the_calendar_and_guilds_under_them)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
     state.zone   = 79;
-    Settings settings = WorldShowing(WorldLine::Departure);
-    const auto headings = [&] {
-        std::vector<std::string> out;
-        for (const PopupSection& section : BarPopupContent(BarWidget::World, state, settings).sections)
-            out.push_back(section.heading);
-        return out;
-    };
-    CHECK((headings() == std::vector<std::string>{"Travel", "Calendar", "Guilds", "Conquest"}));
-    // The calendar beside the ships, Guilds and Conquest under both; without the ships it stands alone.
-    const PopupContent all = BarPopupContent(BarWidget::World, state, settings);
-    CHECK(!all.sections[0].beside && all.sections[1].beside && !all.sections[2].beside && !all.sections[3].beside);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Calendar) | WorldBit(WorldSection::Guilds);
-    CHECK(!BarPopupContent(BarWidget::World, state, settings).sections[0].beside);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Calendar);
-    CHECK((headings() == std::vector<std::string>{"Calendar"}));
-    const PopupContent calendar = BarPopupContent(BarWidget::World, state, settings);
-    const std::vector<std::string> lines = Lines(calendar.sections[0]);
-    // Who, then where and when on the right, the time last and alone.
+    const Settings settings = WorldShowing("ship |");
+    const PopupContent all  = BarPopupContent(BarWidget::World, state, settings);
+    std::vector<std::string> headings;
+    for (const PopupSection& section : all.sections)
+        headings.push_back(std::string(CardKey(section.heading)));
+    CHECK((headings == std::vector<std::string>{"Conquest", "Travel", "Calendar", "Guilds"}));
+    CHECK(!all.sections[0].beside && all.sections[1].beside && all.sections[2].under && !all.sections[3].beside &&
+          !all.sections[3].under);
+    const std::vector<std::string> lines = Lines(all.sections[2]);
+    // Who, then where and when on the right, the time last and alone; the tally is in the Conquest card's heading.
+    CHECK_EQ(lines.size(), static_cast<size_t>(4));
     CHECK_EQ(lines[0], "RSE Hume Female Gusgen Mines");
     CHECK_EQ(lines[1], std::string("Next RSE Elvaan Male ") + RseAt(kEarthsdayTen, 1).place + kDot + "6:19:12");
     CHECK_EQ(lines[2], "Full Moon 35:07:12");
     // The next new moon is day 88.
     CHECK_EQ(lines[3], "New Moon " + Countdown(SecondsToDay(kEarthsdayTen, 88)));
-    CHECK_EQ(lines[4], "Conquest Tally " + Countdown(SecondsToTally(kEarthsdayTen)));
-    for (const PopupRow& row : calendar.sections[0].rows)
+    for (const PopupRow& row : all.sections[2].rows)
     {
         CHECK(row.kind == RowKind::Pair);
         CHECK(row.cells[0].text.front().tone == Tone::Dim); // the line's name
     }
-    CHECK_EQ(calendar.sections[0].rows[1].cells[1].text.back().text, "6:19:12");
+    CHECK_EQ(all.sections[2].rows[1].cells[1].text.back().text, "6:19:12");
 }
 
 TEST(each_kind_of_ship_has_a_tab_of_its_routes)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
-    Settings settings = WorldShowing(WorldLine::Departure);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Travel);
-    const auto travel = [&] { return BarPopupContent(BarWidget::World, state, settings).sections.at(0); };
+    const Settings settings = WorldShowing("ship |");
+    const auto travel = [&] { return BarPopupContent(BarWidget::World, state, settings).sections.at(1); };
     // A tab a kind, the first picked until another is.
     const PopupSection first = travel();
     CHECK_EQ(first.heading, "Travel");
@@ -2657,16 +2631,16 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
     CHECK((kinds == std::vector<std::string>{"Airships", "Boats", "Manaclipper", "Barge"}));
     CHECK(first.tab == 0 && first.rows.empty());
     // Each tab lists its kind's routes, set in, in three columns: the route, whether the ship arrives or departs
-    // next, and how long until it does, against the right.
+    // next against its right, and how long until it does against its left.
     const auto airships = std::ranges::count_if(TravelRoutes(), [](const TravelRoute& r) { return std::string(r.group) == "Airships"; });
     const auto rows = [](const PopupTab& tab) {
         CHECK(tab.rows.size() == 1 && tab.rows[0].kind == RowKind::Grid && tab.rows[0].columns == 3 && tab.rows[0].nested &&
-              tab.rows[0].spread);
+              !tab.rows[0].spread);
         std::vector<std::array<std::string, 3>> out;
         const std::vector<PopupCell>& cells = tab.rows[0].cells;
         for (size_t i = 0; i + 2 < cells.size(); i += 3)
         {
-            CHECK(cells[i + 1].align == Align::Center && cells[i + 2].align == Align::Right && cells[i + 2].text.size() == 1);
+            CHECK(cells[i + 1].align == Align::Right && cells[i + 2].align == Align::Left && cells[i + 2].text.size() == 1);
             out.push_back({Joined(cells[i].text), Joined(cells[i + 1].text), Joined(cells[i + 2].text)});
         }
         return out;
@@ -2677,31 +2651,29 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
         return std::array<std::string, 3>{};
     };
     CHECK_EQ(rows(first.tabs[0]).size(), static_cast<size_t>(airships));
-    CHECK((route(first.tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Arrives", "5:16"}));
+    CHECK((route(first.tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Arrives in", "5:16"}));
     // Picking Boats picks its tab.
     std::map<std::string, std::string> picked{{"Travel", "Boats"}};
     state.pickedTabs = &picked;
     CHECK_EQ(travel().tab, static_cast<size_t>(1));
     picked["Travel"] = "Airships";
     state.unixMs = kVanaEpochUnixMs + 864LL * 1000 + 100 * 1000; // 100 s into a cycle: its door opened at 28 s
-    CHECK((route(travel().tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Departs", "1:22"}));
+    CHECK((route(travel().tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Departs in", "1:22"}));
 }
 
-TEST(each_guild_has_a_tab_of_its_shops)
+TEST(each_guild_has_a_tab_of_its_shops_hours_in_columns)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
-    Settings settings = WorldShowing(WorldLine::Departure);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Guilds);
-    const auto guilds = [&] { return BarPopupContent(BarWidget::World, state, settings).sections.at(0); };
+    const Settings settings = WorldShowing("ship |");
+    const auto guilds = [&] { return BarPopupContent(BarWidget::World, state, settings).sections.at(3); };
     // A tab a guild, in the shops' order; no goblins selling chips among them.
     std::vector<std::string> names;
-    std::map<std::string, std::pair<int, int>> open; // each guild's open shops and all its shops
+    std::map<std::string, int> count; // each guild's shops
     for (const GuildShop& shop : GuildShops())
     {
         if (names.empty() || names.back() != shop.guild) names.push_back(shop.guild);
-        open[shop.guild].first += GuildAt(shop, state.unixMs).open;
-        ++open[shop.guild].second;
+        ++count[shop.guild];
     }
     CHECK(std::ranges::find(names, "Chips") == names.end());
     const PopupSection section = guilds();
@@ -2711,38 +2683,38 @@ TEST(each_guild_has_a_tab_of_its_shops)
     {
         const PopupTab& tab = section.tabs[i];
         CHECK(tab.name == Text(names[i])); // every tab in one color
-        CHECK_EQ(Lines(PopupSection{"", tab.rows}).front(),
-            "Open " + std::to_string(open[names[i]].first) + " of " + std::to_string(open[names[i]].second));
+        // A title over the box of hours, with no count of the open ones.
+        CHECK(!tab.rows[0].nested && tab.rows[0].cells[0].text == ListOf(Text("Shop Hours", Tone::Heading)));
     }
-    // Each shop's hours, then who and where, set in under the count.
+    // Each shop's hours: open or closed against the right, when that changes in the middle, and who and where.
     const std::map<std::string, std::string> picked{{"Guilds", "Woodworking"}};
     state.pickedTabs = &picked;
     const PopupSection woodworking = guilds();
-    const PopupRow& grid           = woodworking.tabs[woodworking.tab].rows[1]; // after the count, before the turn-ins
+    const PopupRow& grid           = woodworking.tabs[woodworking.tab].rows[1];
     CHECK(woodworking.tabs[woodworking.tab].name.text == "Woodworking");
-    CHECK(grid.nested && grid.kind == RowKind::Grid && grid.columns == 2);
-    CHECK_EQ(grid.cells.size(), static_cast<size_t>(2 * open["Woodworking"].second));
+    CHECK(grid.nested && grid.kind == RowKind::Grid && grid.columns == 3);
+    CHECK_EQ(grid.cells.size(), static_cast<size_t>(3 * count["Woodworking"]));
     const auto at = std::ranges::find_if(grid.cells, [](const PopupCell& c) { return Joined(c.text) == "Chaupire, Northern San d'Oria"; });
-    CHECK(at != grid.cells.end() && (at - grid.cells.begin()) % 2 == 1);
-    // Its hours before it: open until 21:00, 11 Vana'diel hours away, as the panel line says.
-    CHECK_EQ(Joined((at - 1)->text), std::string("Open") + kDot + "closes in 26:24");
+    CHECK(at != grid.cells.end() && (at - grid.cells.begin()) % 3 == 2 && at->align == Align::Left);
+    // Open until 21:00, 11 Vana'diel hours away.
+    CHECK(Joined((at - 2)->text) == "Open" && (at - 2)->align == Align::Right);
+    CHECK(Joined((at - 1)->text) == "closes in 26:24" && (at - 1)->align == Align::Center);
 }
 
 TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_lit)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
-    Settings settings = WorldShowing(WorldLine::Departure);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Guilds);
+    const Settings settings = WorldShowing("ship |");
     const std::map<std::string, std::string> picked{{"Guilds", "Fishing"}};
     state.pickedTabs = &picked;
     const auto fishing = [&] {
-        const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(0);
+        const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(3);
         return guilds.tabs[guilds.tab].rows;
     };
-    // The shops in one socket, the turn-ins under a line of their own in another.
+    // The shops in one socket under their title, the turn-ins under a line of their own in another.
     std::vector<PopupRow> rows = fishing();
-    CHECK(rows.size() == 4 && rows[0].nested && rows[1].nested && !rows[2].nested && rows[3].nested);
+    CHECK(rows.size() == 4 && !rows[0].nested && rows[1].nested && !rows[2].nested && rows[3].nested);
     CHECK_EQ(Lines(PopupSection{"", {rows[2]}}).front(), "Today's Turn-Ins");
     // Not fetched yet, it says so.
     CHECK_EQ(Lines(PopupSection{"", {rows[3]}}).front(), "They come from phoenix-xi.com");
@@ -2764,6 +2736,8 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
     // that row is yours, starred and lit.
     PopupRow day = grid();
     CHECK(day.kind == RowKind::Grid && day.columns == 6 && day.nested && day.header && day.scroll == "Guilds/Fishing/Turn-ins");
+    CHECK(day.roomy); // its columns further apart than the shops'
+
     CHECK_EQ(day.cells.size(), static_cast<size_t>(6 * 9));
     CHECK(text(day, 0, 0) == "Rank" && text(day, 0, 1) == "NQ Item" && text(day, 0, 2) == "Points" &&
           text(day, 0, 3) == "HQ Item" && text(day, 0, 4) == "Points" && text(day, 0, 5) == "Max Points");
@@ -2800,7 +2774,7 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
     // A guild that takes no turn-ins has none.
     const std::map<std::string, std::string> pickedTenshodo{{"Guilds", "Tenshodo"}};
     state.pickedTabs = &pickedTenshodo;
-    const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(0);
+    const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(3);
     CHECK(guilds.tabs[guilds.tab].name.text == "Tenshodo" && guilds.tabs[guilds.tab].rows.size() == 2);
 }
 
@@ -2920,13 +2894,13 @@ TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)
     CHECK(!NeedsOf(settings, BarWidget::Weather).conquest);
 }
 
-TEST(the_standings_are_asked_for_while_the_zone_or_a_world_info_showing_conquest_info_is_on_the_panel)
+TEST(the_standings_are_asked_for_while_the_zone_or_a_world_info_showing_a_nation_is_on_the_panel)
 {
     Settings settings;
     settings.Widget(BarWidget::Zone).on  = false;
     settings.Widget(BarWidget::World).on = true;
     CHECK(!StandingsShown(settings)); // its next ship
-    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
+    settings.Widget(BarWidget::World).design = DesignFrom(BarWidget::World, "ship | windurst");
     CHECK(StandingsShown(settings));
     settings.Widget(BarWidget::World).on = false;
     CHECK(!StandingsShown(settings));

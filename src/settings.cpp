@@ -227,16 +227,10 @@ namespace headsup
         constexpr const char* kCustomThemeNameKey = "customThemeName";
         constexpr const char* kBarCurrencyKey = "barCurrency";
         constexpr const char* kBarBagKey      = "barBag";
-        constexpr const char* kBarNationsKey  = "barNations";
-        constexpr const char* kConquestGridKey = "barConquestGrid";
         constexpr const char* kWeatherIconsKey = "weatherIcons"; // the Forecast widget's, by kCustomIconsNames
         const char* const kCustomIconsNames[kCustomIconsCount] = {"never", "missing", "always"};
-        constexpr const char* kWorldLineKey     = "barWorldLine";
         constexpr const char* kWorldRouteKey    = "barWorldRoute";
-        constexpr const char* kWorldElementKey  = "barWorldElement";
         constexpr const char* kWorldGuildKey    = "barWorldGuild";
-        constexpr const char* kWorldSectionsKey = "barWorldSections";
-        const char* const kWorldLineNames[kWorldLineCount] = {"departure", "weather", "guild", "rse", "moon", "conquest"};
         constexpr const char* kTrue                = "true";
         constexpr const char* kAshitaTrue          = "1";
         constexpr const char* kClockZoneKey       = "clockZone"; // the Clock widget's: a kClockZoneNames or kLocalZone
@@ -1216,11 +1210,8 @@ namespace headsup
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
             w.expBarHeight = std::clamp(w.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight);
             w.targetDetection &= kAllDetection;
-            if (static_cast<int>(w.worldLine) >= kWorldLineCount) w.worldLine = fresh.worldLine;
             if (w.worldRoute < 0 || w.worldRoute >= static_cast<int>(TravelRoutes().size())) w.worldRoute = fresh.worldRoute;
             if (w.worldGuild < 0 || w.worldGuild >= static_cast<int>(GuildShops().size())) w.worldGuild = fresh.worldGuild;
-            if (static_cast<int>(w.worldElement) >= kElementCount) w.worldElement = fresh.worldElement;
-            w.worldSections &= kAllWorldSections;
         }
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
         if (static_cast<int>(s.helpBarAnchor) >= kHelpAnchorCount) s.helpBarAnchor = d.helpBarAnchor;
@@ -1268,20 +1259,11 @@ namespace headsup
                 break;
             case BarWidget::World:
             {
-                o.nations = static_cast<uint8_t>(std::clamp(number(kBarNationsKey, o.nations), 0, static_cast<int>(kAllNations)));
-                o.conquestGrid = static_cast<ConquestGrid>(
-                    std::clamp(number(kConquestGridKey, static_cast<int>(o.conquestGrid)), 0, kConquestGridCount - 1));
-                const std::string line = text(kWorldLineKey), route = text(kWorldRouteKey), guild = text(kWorldGuildKey);
-                const std::string element = text(kWorldElementKey);
-                o.worldLine = static_cast<WorldLine>(NameIndex(kWorldLineNames, kWorldLineCount, line, static_cast<int>(o.worldLine)));
+                const std::string route = text(kWorldRouteKey), guild = text(kWorldGuildKey);
                 for (size_t r = 0; r < TravelRoutes().size(); ++r)
                     if (route == TravelRoutes()[r].name) o.worldRoute = static_cast<int>(r);
                 for (size_t g = 0; g < GuildShops().size(); ++g)
                     if (guild == GuildShops()[g].shops) o.worldGuild = static_cast<int>(g);
-                for (int e = 0; e < kElementCount; ++e)
-                    if (element == ElementName(static_cast<Element>(e))) o.worldElement = static_cast<Element>(e);
-                o.worldSections = static_cast<uint8_t>(
-                    std::clamp(number(kWorldSectionsKey, o.worldSections), 0, static_cast<int>(kAllWorldSections)));
                 break;
             }
             case BarWidget::Zone:
@@ -1343,13 +1325,8 @@ namespace headsup
             case BarWidget::Bags: StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag)); break;
             case BarWidget::Weather: text(kWeatherIconsKey, kCustomIconsNames[static_cast<int>(o.weatherIcons)]); break;
             case BarWidget::World:
-                StoreFloat(store, CopyKey(kBarNationsKey, w), static_cast<float>(o.nations));
-                StoreFloat(store, CopyKey(kConquestGridKey, w), static_cast<float>(o.conquestGrid));
-                text(kWorldLineKey, kWorldLineNames[static_cast<int>(o.worldLine)]);
                 text(kWorldRouteKey, TravelRoutes()[static_cast<size_t>(o.worldRoute)].name);
-                text(kWorldElementKey, ElementName(o.worldElement));
                 text(kWorldGuildKey, GuildShops()[static_cast<size_t>(o.worldGuild)].shops);
-                StoreFloat(store, CopyKey(kWorldSectionsKey, w), static_cast<float>(o.worldSections));
                 break;
             case BarWidget::Zone:
                 break;

@@ -50,7 +50,7 @@ namespace headsup
             {kTraitRegain, "Regain"}, {kTraitShadows, "Shadows"}, {kTraitCounter, "Counter"}};
         constexpr int kWholeAbsorb = 100; // percent
         constexpr int kForecastDays = 5, kForecastColumns = 4;
-        constexpr int kWorldGuildColumns   = 2; // a shop's hours now, and who and where
+        constexpr int kWorldGuildColumns   = 3; // a shop open or closed, when that changes, and who and where
         constexpr int kZoneRollColumns     = 3; // a zone, and its chance of the element today and tomorrow
         constexpr int kTurnInColumns       = 6; // a rank, its item and its points, its high quality's, and the most a day
         constexpr uint16_t kGilItem  = 0xFFFF;
@@ -758,14 +758,6 @@ namespace headsup
         }
 
 
-        std::vector<Nation> PickedNations(uint8_t bits)
-        {
-            std::vector<Nation> picked;
-            for (const Nation nation : {Nation::SanDoria, Nation::Bastok, Nation::Windurst, Nation::Beastmen})
-                if (bits & NationBit(nation)) picked.push_back(nation);
-            return picked;
-        }
-
         // Who holds the zone's region; no one before a conquest update or outside the conquest regions.
         Nation OwnerOf(const ZoneRecord* zone, const BarState& state)
         {
@@ -817,54 +809,8 @@ namespace headsup
             return spans;
         }
 
-        // The element's next weather in the zone: its likeliest, with the element's chance that day.
-        struct ZoneWeather
-        {
-            std::optional<ElementWeather> next;
-            std::string when;
-        };
-        ZoneWeather WeatherHere(uint16_t zoneId, Element element, int64_t unixMs)
-        {
-            const ZoneRecord* zone = KnownZone(zoneId);
-            const uint32_t today   = VanaAt(unixMs).day;
-            ZoneWeather here{zone ? NextElementWeather(*zone, element, today) : std::nullopt, "Not in This Zone"};
-            if (here.next)
-                here.when = here.next->day == today ? "Can Roll Here Now" : "Here in " + Countdown(SecondsToDay(unixMs, here.next->day));
-            return here;
-        }
-
         // How many regions each picked nation holds: a nation alone by its name; several by their crests, each count
         // in its color, two to a line in columns.
-        WidgetContent ConquestCounts(const BarState& state, const WidgetOptions& o)
-        {
-            WidgetContent w;
-            w.shown    = true;
-            w.subtitle = ListOf(Text("Conquest", Tone::Dim));
-            w.hasPopup = true;
-            if (!state.owners)
-            {
-                w.title = ListOf(Text("-"));
-                return w;
-            }
-            const std::vector<Nation> picked = PickedNations(o.nations);
-            w.cells = picked.size() > 1; // its counts alone, without its name under them
-            if (w.cells) w.subtitle.clear();
-            constexpr size_t kTwoByTwo = 2; // nations a line
-            const size_t perLine = o.conquestGrid == ConquestGrid::OneByFour ? picked.size() : kTwoByTwo;
-            for (size_t i = 0; i < picked.size(); ++i)
-            {
-                const Nation nation = picked[i];
-                const std::string regions = std::to_string(std::ranges::count(*state.owners, nation));
-                Span count = Colored(picked.size() == 1 ? std::string(NationName(nation)) + " " + regions : " " + regions,
-                    NationColor(nation));
-                if (picked.size() > 1) count.picture = NationCrest(nation);
-                (i < perLine ? w.title : w.subtitle).push_back(count);
-            }
-            if (w.title.empty()) w.title = ListOf(Text("-"));
-            w.figures = true;
-            return w;
-        }
-
         constexpr const char* kFavoritePress = "favorite "; // a currency's star tells this, then the currency's key
 
         std::optional<int> NationPoints(Nation nation)
@@ -935,65 +881,49 @@ namespace headsup
             return popup;
         }
 
-        // What World Info tells besides the conquest: its icon, its main line and its details.
+        // What World Info can tell, a part each: the Tracked Ship's next sailing, the Tracked Guild's hours, the RSE and
+        // the moon, each its name and then its countdown, and each nation's crest and how many regions it holds.
         std::vector<PartContent> WorldParts(const BarState& state, const WidgetOptions& o, WidgetContent& base)
         {
             base.hasPopup = true;
-            struct
+            const auto told = [](std::vector<Span> name, std::vector<Span> details) {
+                name.push_back(Text("  "));
+                for (Span& span : details)
+                {
+                    span.tone = Tone::Dim;
+                    name.push_back(std::move(span));
+                }
+                return name;
+            };
+            const TravelRoute& route = TravelRoutes()[static_cast<size_t>(o.worldRoute)];
+            const GuildShop& shop    = GuildShops()[static_cast<size_t>(o.worldGuild)];
+            const Rse rse            = RseAt(state.unixMs);
+            const VanaTime t         = VanaAt(state.unixMs);
+            const uint32_t full      = NextMoonDay(t.day, true), fresh = NextMoonDay(t.day, false);
+            const bool fullFirst     = full < fresh;
+            std::vector<PartContent> parts{
+                {WidgetPart::WorldShip, told(ListOf(Text(route.name)), SailingText(route, state.unixMs))},
+                {WidgetPart::WorldGuild, told(ListOf(Text(shop.guild)), GuildText(shop, state.unixMs))},
+                {WidgetPart::WorldRse, told(ListOf(Text(rse.race)),
+                    ListOf(Text(rse.place), Text(kDot), Text("ends in " + Countdown(rse.endsIn))))},
+                {WidgetPart::WorldMoon, told(ListOf(Text(std::string(MoonPhaseName(t.moonPercent, t.moonDirection)) + " " +
+                                                     std::to_string(t.moonPercent) + "%")),
+                    ListOf(Text(std::string(fullFirst ? "Full" : "New") + " moon in " +
+                                Countdown(SecondsToDay(state.unixMs, fullFirst ? full : fresh)))))}};
+            for (int n = 0; n < kContenderNations; ++n)
             {
-                std::vector<Span> icons, title, subtitle;
-            } w;
-            switch (o.worldLine)
-            {
-            case WorldLine::Departure:
-            {
-                const TravelRoute& route = TravelRoutes()[static_cast<size_t>(o.worldRoute)];
-                w.title    = ListOf(Text(route.name));
-                w.subtitle = SailingText(route, state.unixMs);
-                break;
+                const auto nation = static_cast<Nation>(static_cast<int>(Nation::SanDoria) + n);
+                const auto part   = static_cast<WidgetPart>(static_cast<int>(WidgetPart::WorldSanDoria) + n);
+                std::vector<Span> count;
+                if (state.owners)
+                {
+                    Span held    = Colored(" " + std::to_string(std::ranges::count(*state.owners, nation)), NationColor(nation));
+                    held.picture = NationCrest(nation);
+                    count.push_back(std::move(held));
+                }
+                parts.push_back({part, std::move(count)});
             }
-            case WorldLine::Weather:
-            {
-                const ZoneWeather here = WeatherHere(state.zone, o.worldElement, state.unixMs);
-                w.title = here.next ? ListOf(Text(std::string(WeatherName(here.next->weather)) + " " +
-                                                  std::to_string(here.next->percent) + "%"))
-                                    : ListOf(Text(std::string(ElementName(o.worldElement)) + " Weather"));
-                if (here.next)
-                    if (const std::optional<Icon> icon = WeatherIcon(here.next->weather)) w.icons.push_back(Mark(*icon));
-                w.subtitle = ListOf(Text(here.when, Tone::Dim));
-                break;
-            }
-            case WorldLine::Guild:
-            {
-                const GuildShop& shop = GuildShops()[static_cast<size_t>(o.worldGuild)];
-                w.title    = ListOf(Text(shop.guild));
-                w.subtitle = GuildText(shop, state.unixMs);
-                break;
-            }
-            case WorldLine::Rse:
-            {
-                const Rse rse = RseAt(state.unixMs);
-                w.title    = ListOf(Text(rse.race));
-                w.subtitle = ListOf(Text(rse.place), Text(kDot, Tone::Dim), Text("ends in " + Countdown(rse.endsIn)));
-                break;
-            }
-            case WorldLine::Moon:
-            {
-                const VanaTime t     = VanaAt(state.unixMs);
-                const uint32_t full  = NextMoonDay(t.day, true), fresh = NextMoonDay(t.day, false);
-                const bool fullFirst = full < fresh;
-                w.title    = ListOf(Text(std::string(MoonPhaseName(t.moonPercent, t.moonDirection)) + " " +
-                                         std::to_string(t.moonPercent) + "%"));
-                w.subtitle = ListOf(Text(std::string(fullFirst ? "Full" : "New") + " moon in " +
-                                         Countdown(SecondsToDay(state.unixMs, fullFirst ? full : fresh))));
-                break;
-            }
-            case WorldLine::Conquest: break; // ConquestCounts, in ContentOf
-            }
-            for (Span& span : w.subtitle)
-                span.tone = Tone::Dim;
-            return {{WidgetPart::WorldIcon, std::move(w.icons)}, {WidgetPart::WorldMain, std::move(w.title)},
-                {WidgetPart::WorldDetails, std::move(w.subtitle)}};
+            return parts;
         }
 
         size_t ScrolledBy(const BarState& state, const std::string& key)
@@ -1014,7 +944,7 @@ namespace headsup
         size_t Picked(const BarState& state, const PopupSection& section, size_t fallback = 0)
         {
             if (state.pickedTabs == nullptr) return fallback;
-            const auto picked = state.pickedTabs->find(section.heading);
+            const auto picked = state.pickedTabs->find(std::string(CardKey(section.heading)));
             if (picked == state.pickedTabs->end()) return fallback;
             const auto tab = std::ranges::find(section.tabs, picked->second, [](const PopupTab& t) { return t.name.text; });
             return tab == section.tabs.end() ? fallback : static_cast<size_t>(tab - section.tabs.begin());
@@ -1135,6 +1065,7 @@ namespace headsup
             PopupRow grid = Grid(kTurnInColumns, (kExpert - kNovice + 2) * kTurnInColumns);
             grid.nested   = true;
             grid.header   = true;
+            grid.roomy    = true;
             ScrollsBy(grid, state, "Guilds/" + guild + "/Turn-ins");
             for (const char* heading : {"Rank", "NQ Item", "Points", "HQ Item", "Points", "Max Points"})
                 grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
@@ -1231,17 +1162,23 @@ namespace headsup
             return popup;
         }
 
-        // The regions each picked nation holds, a tab each. Your nation's say which outposts you have not run supplies to,
-        // as far as overseers told.
-        PopupSection ConquestSection(const BarState& state, const WidgetOptions& o)
+        // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
+        // opens. Your nation's say which outposts you have not run supplies to, as far as overseers told.
+        PopupSection ConquestSection(const BarState& state)
         {
-            PopupSection conquest{"Conquest", {}};
+            PopupSection conquest{"Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")", {}};
+            conquest.tabsAcross  = 2;
+            conquest.tabEachOpen = true;
             if (!state.owners)
             {
                 conquest.rows.push_back(LineOf("The standings show once the server sends them.", Tone::Dim));
                 return conquest;
             }
-            for (const Nation nation : PickedNations(o.nations))
+            std::vector<Nation> nations;
+            if (state.nation && *state.nation >= Nation::SanDoria && *state.nation <= Nation::Windurst) nations.push_back(*state.nation);
+            for (const Nation nation : {Nation::SanDoria, Nation::Bastok, Nation::Windurst, Nation::Beastmen})
+                if (std::ranges::find(nations, nation) == nations.end()) nations.push_back(nation);
+            for (const Nation nation : nations)
             {
                 const bool yours = state.nation == nation && state.outposts != nullptr;
                 bool unknown     = false;
@@ -1267,45 +1204,40 @@ namespace headsup
                     held.rows.push_back(LineOf("Talk to a conquest overseer in your nation's city to see your supply runs.", Tone::Dim));
                 for (PopupRow& row : held.rows)
                     row.nested = true;
-                ScrollsBy(held.rows.front(), state, conquest.heading + "/" + held.name.text);
+                ScrollsBy(held.rows.front(), state, std::string(CardKey(conquest.heading)) + "/" + held.name.text);
                 conquest.tabs.push_back(std::move(held));
             }
-            // Your nation's tab until another is picked.
-            const auto yours = std::ranges::find(conquest.tabs, state.nation ? std::string(NationName(*state.nation)) : "",
-                [](const PopupTab& tab) { return tab.name.text; });
-            conquest.tab = Picked(state, conquest, yours == conquest.tabs.end() ? 0 : static_cast<size_t>(yours - conquest.tabs.begin()));
+            conquest.tab = Picked(state, conquest);
             return conquest;
         }
 
-        PopupContent WorldPopup(const BarState& state, const WidgetOptions& o)
+        // The Conquest card, Travel and the Calendar in a column beside it, and Guilds under them all.
+        PopupContent WorldPopup(const BarState& state)
         {
             PopupContent popup;
             popup.title = ListOf(Text("World Info"));
-            const auto picked = [&](WorldSection section) { return (o.worldSections & WorldBit(section)) != 0; };
-            if (picked(WorldSection::Travel))
+            popup.sections.push_back(ConquestSection(state));
             {
                 // A tab for each kind of ship, its routes together in the data.
                 PopupSection travel{"Travel", {}};
+                travel.beside = true;
                 const std::span<const TravelRoute> routes = TravelRoutes();
                 for (size_t first = 0, last = 0; first < routes.size(); first = last)
                 {
-                    // The route, whether its ship arrives or departs next, and how long until it does.
+                    // The route, whether its ship arrives or departs next against how long until it does.
                     constexpr int kColumns = 3;
                     PopupTab kind{Text(routes[first].group), {}};
                     PopupRow grid{RowKind::Grid, kColumns, {}};
                     for (last = first; last < routes.size() && std::string_view(routes[last].group) == routes[first].group; ++last)
                     {
                         const Sailing next = NextSailing(routes[last], state.unixMs);
-                        PopupCell time     = Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn)));
-                        time.align         = Align::Right;
-                        PopupCell stage    = Cell(Text(next.boarding ? "Departs" : "Arrives", Tone::Dim));
-                        stage.align        = Align::Center;
+                        PopupCell stage    = Cell(Text(next.boarding ? "Departs in" : "Arrives in", Tone::Dim));
+                        stage.align        = Align::Right;
                         grid.cells.push_back(Cell(Text(routes[last].name)));
                         grid.cells.push_back(std::move(stage));
-                        grid.cells.push_back(std::move(time));
+                        grid.cells.push_back(Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn))));
                     }
                     grid.nested = true;
-                    grid.spread = true; // the times against the card's right edge, the stages in its middle
                     kind.rows.push_back(std::move(grid));
                     ScrollsBy(kind.rows.front(), state, travel.heading + "/" + kind.name.text);
                     travel.tabs.push_back(std::move(kind));
@@ -1313,12 +1245,11 @@ namespace headsup
                 travel.tab = Picked(state, travel);
                 popup.sections.push_back(std::move(travel));
             }
-            if (picked(WorldSection::Calendar))
             {
                 const Rse now = RseAt(state.unixMs), next = RseAt(state.unixMs, 1);
                 const uint32_t today = VanaAt(state.unixMs).day;
                 PopupSection calendar{"Calendar", {}};
-                calendar.beside = picked(WorldSection::Travel); // the ships and the calendar in one row, Guilds under
+                calendar.under = true;
                 // Each line's name and who on the left; where and when on the right, the time last.
                 const auto race = [](const char* label, const Rse& rse) {
                     PopupRow row = Labeled(label, Text(rse.place));
@@ -1333,32 +1264,33 @@ namespace headsup
                 const auto until = [](const char* label, double seconds) { return Labeled(label, Text(Countdown(seconds))); };
                 calendar.rows.push_back(until("Full Moon", SecondsToDay(state.unixMs, NextMoonDay(today, true))));
                 calendar.rows.push_back(until("New Moon", SecondsToDay(state.unixMs, NextMoonDay(today, false))));
-                calendar.rows.push_back(until("Conquest Tally", SecondsToTally(state.unixMs)));
                 popup.sections.push_back(std::move(calendar));
             }
-            if (picked(WorldSection::Guilds))
             {
-                // A tab for each guild, its shops together in the data: how many are open, then each shop's hours, and
-                // who and where.
+                // A tab for each guild, its shops together in the data: each shop's hours in columns, open or closed
+                // against when that changes and where, then a craft's turn-ins.
                 PopupSection guilds{"Guilds", {}};
                 const std::span<const GuildShop> shops = GuildShops();
                 for (size_t first = 0, last = 0; first < shops.size(); first = last)
                 {
-                    int open = 0;
-                    for (last = first; last < shops.size() && std::string_view(shops[last].guild) == shops[first].guild; ++last)
-                        open += GuildAt(shops[last], state.unixMs).open;
+                    for (last = first; last < shops.size() && std::string_view(shops[last].guild) == shops[first].guild; ++last) {}
                     PopupTab guild{Text(shops[first].guild), {}};
-                    PopupRow count = Labeled("Open", Text(std::to_string(open) + " of " + std::to_string(last - first)));
-                    count.nested   = true;
-                    ScrollsBy(count, state, guilds.heading + "/" + shops[first].guild);
-                    guild.rows.push_back(std::move(count));
+                    guild.rows.push_back(LineOf("Shop Hours", Tone::Heading));
                     PopupRow grid = Grid(kWorldGuildColumns, (last - first) * kWorldGuildColumns);
                     grid.nested   = true;
                     for (size_t i = first; i < last; ++i)
                     {
-                        grid.cells.push_back(Cell(GuildText(shops[i], state.unixMs)));
+                        const GuildHours hours = GuildAt(shops[i], state.unixMs);
+                        PopupCell now = Cell(Text(hours.open ? "Open" : hours.holiday ? "Holiday" : "Closed",
+                            hours.open ? Tone::Normal : Tone::Dim));
+                        now.align = Align::Right;
+                        PopupCell change = Cell(Text((hours.open ? "closes in " : "opens in ") + Countdown(hours.changeIn)));
+                        change.align = Align::Center;
+                        grid.cells.push_back(std::move(now));
+                        grid.cells.push_back(std::move(change));
                         grid.cells.push_back(Cell(Text(std::string(shops[i].shops) + ", " + shops[i].zone, Tone::Dim)));
                     }
+                    ScrollsBy(grid, state, guilds.heading + "/" + shops[first].guild);
                     guild.rows.push_back(std::move(grid));
                     if (const std::optional<int> craft = CraftGuildNamed(shops[first].guild))
                         for (PopupRow& row : TurnIns(state, *craft, shops[first].guild))
@@ -1368,7 +1300,6 @@ namespace headsup
                 guilds.tab = Picked(state, guilds);
                 popup.sections.push_back(std::move(guilds));
             }
-            if (picked(WorldSection::Conquest)) popup.sections.push_back(ConquestSection(state, o));
             return popup;
         }
 
@@ -1542,7 +1473,6 @@ namespace headsup
             if (!base.shown) return base;
             if (widget.kind == BarWidget::Job && o.expMeter)
                 return ExpWidget(state.job, o.expPlaces, o.expBarWidth, o.expBarHeight, o.expAlign);
-            if (widget.kind == BarWidget::World && o.worldLine == WorldLine::Conquest) return ConquestCounts(state, o);
             std::vector<PartContent> parts = PartsNow(widget, state, settings, base);
             if (!base.shown) return base;
             // The widget's icon goes beside both lines, where its Icon setting puts it.
@@ -1662,7 +1592,10 @@ namespace headsup
     {
         bool shown = AnyCopyShown(settings, BarWidget::Zone);
         EachShownCopy(settings, BarWidget::World,
-            [&](const WidgetOptions& o) { shown = shown || o.worldLine == WorldLine::Conquest; });
+            [&](const WidgetOptions& o) {
+                for (int n = 0; n < kContenderNations; ++n)
+                    shown = shown || PartOn(o.design, static_cast<WidgetPart>(static_cast<int>(WidgetPart::WorldSanDoria) + n));
+            });
         return shown;
     }
 
@@ -1688,15 +1621,11 @@ namespace headsup
             serverClock = serverClock || second || PartOn(o.design, WidgetPart::ClockVana);
             localClock  = localClock || (second && !o.clockSecondZone);
         });
-        // World Info reads the zone for a weather on the panel.
-        bool worldWeather = false;
-        EachShownCopy(settings, BarWidget::World,
-            [&](const WidgetOptions& o) { worldWeather = worldWeather || o.worldLine == WorldLine::Weather; });
         needs.unixTime   = shown(BarWidget::Weather) || zonedClock || serverClock ||
                            shown(BarWidget::World) || opened(BarWidget::EarthTime) ||
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
         needs.localTime  = localClock;
-        needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather) || worldWeather;
+        needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather);
         needs.target     = shown(BarWidget::Target);
         needs.gil        = shown(BarWidget::Currency);
         needs.strip      = shown(BarWidget::GameHelp);
@@ -1810,7 +1739,7 @@ namespace headsup
 
     std::string CollapseKey(PanelWidget head, std::string_view heading)
     {
-        heading = heading.substr(0, heading.find(" ("));
+        heading = CardKey(heading);
         std::string key = PanelWidgetName(head) + ".";
         for (const char c : heading)
             key += c == ' ' ? '-' : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
@@ -1964,7 +1893,7 @@ namespace headsup
             return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins,
                 ScrolledBy(state, kStatusListKey), state.pinRefused);
         case BarWidget::World:
-            return WorldPopup(state, o);
+            return WorldPopup(state);
         }
         return popup;
     }
