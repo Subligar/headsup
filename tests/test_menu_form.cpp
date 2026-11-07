@@ -612,6 +612,23 @@ TEST(one_nameplate_opacity_card_sits_under_nameplates_on_the_entities_page)
     }
 }
 
+TEST(the_fishing_bar_page_shows_its_bars_settings_only_for_headsups_fish_stamina_and_places_it_on_the_screen)
+{
+    Window w;
+    w.state.page           = Page::FishingBar;
+    w.readings.screenWidth = 1920;
+    w.readings.screenHeight = 1080;
+    w.settings.fishStamina = FishBarShown::Vanilla;
+    const std::string card = "fishingbar-fishing-appearance", pick = card + "-fishing-bar", width = card + "-fishing-bar-width";
+    CHECK(At(Block(w.Pass(), card.c_str()), width) == std::string::npos);
+    CHECK(w.Pass({{pick, kClickEvent, ""}}).popup);
+    CHECK(w.Pass({{pick + "-o-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.fishStamina == FishBarShown::HeadsUp);
+    CHECK(At(Block(w.Pass(), card.c_str()), width) != std::string::npos);
+    w.Pass({{card + "-fishing-bar-x", kChangeEvent, "5000"}, {card + "-fishing-bar-y", kChangeEvent, "5000"}});
+    CHECK(w.settings.fishBarX == 1920 && w.settings.fishBarY == 1080);
+}
+
 TEST(the_pages_of_the_kinds_with_status_icons_set_how_many_a_nameplate_shows)
 {
     Window w;

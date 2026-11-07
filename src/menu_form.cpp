@@ -1611,43 +1611,41 @@ namespace headsup
                 break;
             case SettingPiece::FishingBar:
                 form.Fade(false);
-                form.Switch(label.c_str(), s.fishBar, tip);
-                break;
-            case SettingPiece::HideGameFishBar:
-                form.Fade(false);
-                form.Switch(label.c_str(), s.hideGameFishBar, tip);
+                OptionsDropdown(form, label, s.fishStamina, c.layout.OptionsOf(e), tip);
                 break;
             case SettingPiece::FishingBarWidth:
-                form.Fade(!s.fishBar);
+                form.Fade(false);
                 form.SliderInt(label.c_str(), s.fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth, Pixels, tip);
                 break;
             case SettingPiece::FishingBarHeight:
-                form.Fade(!s.fishBar);
+                form.Fade(false);
                 form.SliderInt(label.c_str(), s.fishBarHeight, kMinFishBarHeight, kMaxFishBarHeight, Pixels, tip);
                 break;
             case SettingPiece::FishingBarX:
             case SettingPiece::FishingBarY:
             {
-                form.Fade(!s.fishBar);
-                int& side = e.piece == SettingPiece::FishingBarX ? s.fishBarX : s.fishBarY;
-                form.SliderInt(label.c_str(), side, kFishBarUnplaced, kMaxFishBarPlace,
+                form.Fade(false);
+                const bool across = e.piece == SettingPiece::FishingBarX;
+                int& side         = across ? s.fishBarX : s.fishBarY;
+                const int screen  = across ? r.screenWidth : r.screenHeight;
+                form.SliderInt(label.c_str(), side, kFishBarUnplaced, screen > 0 ? screen : kMaxFishBarPlace,
                     PixelsOr(Word(c, WindowWord::Auto), kFishBarUnplaced), tip);
                 break;
             }
             case SettingPiece::FishingBarDraggable:
-                form.Fade(!s.fishBar);
+                form.Fade(false);
                 form.Switch(label.c_str(), s.fishBarDraggable, tip);
                 break;
             case SettingPiece::FishingBarFont:
-                form.Fade(!s.fishBar);
+                form.Fade(false);
                 form.FontDropdown(label.c_str(), s.fishBarFont, c.fonts, tip, Word(c, WindowWord::Themes));
                 break;
             case SettingPiece::FishingBarTextSize:
-                form.Fade(!s.fishBar);
+                form.Fade(false);
                 form.SliderInt(label.c_str(), s.fishBarTextSize, kMinFishTextSize, kMaxFishTextSize, Pixels, tip);
                 break;
             case SettingPiece::FishingBarLine:
-                form.Fade(!s.fishBar);
+                form.Fade(false);
                 form.Line("line design");
                 form.Caption(label.c_str(), "line-name");
                 form.LineBox("fish line", s.fishBarLine, c.state.fishLine);
@@ -1658,7 +1656,7 @@ namespace headsup
                 form.EndLine();
                 break;
             case SettingPiece::FishColorByCatch:
-                form.Fade(!s.fishBar);
+                form.Fade(false);
                 form.Switch(label.c_str(), s.fishColorByCatch, tip);
                 break;
             case SettingPiece::FishSmallColor:
@@ -1668,7 +1666,7 @@ namespace headsup
             case SettingPiece::FishLineColor:
             case SettingPiece::FishRodColor:
             {
-                form.Fade(!s.fishBar || !s.fishColorByCatch);
+                form.Fade(!s.fishColorByCatch);
                 const auto colorOf = [](SettingPiece piece) {
                     switch (piece)
                     {
@@ -2098,7 +2096,7 @@ namespace headsup
             case CardPiece::WidgetAppearance:
             case CardPiece::PopupAppearance: return {false, !BarOn(s)};
             case CardPiece::DebugMode: return {false, false, &s.debugMode};
-            case CardPiece::CustomGameUi: return {false, !on};
+            case CardPiece::FishingAppearance: return {false, !on};
             }
             return {};
         }
@@ -2394,6 +2392,9 @@ namespace headsup
             for (const LayoutSetting& setting : layout.SettingsOf(card))
             {
                 if ((setting.kinds & kinds) == 0 || (setting.entity && !c.kind)) continue;
+                if (card.piece == CardPiece::FishingAppearance && setting.piece != SettingPiece::FishingBar &&
+                    s.fishStamina != FishBarShown::HeadsUp)
+                    continue;
                 form.Indent(setting.indent);
                 DrawSetting(c, setting);
                 form.Indent(false);

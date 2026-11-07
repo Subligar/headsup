@@ -27,6 +27,7 @@ namespace headsup
         ConfigMenu,
         Feedback,
         HelpBar,
+        FishingBar,
         VanillaUi,
     };
     constexpr int kPageCount = static_cast<int>(Page::VanillaUi) + 1;

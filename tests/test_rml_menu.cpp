@@ -410,6 +410,13 @@ TEST(text_in_a_box_stands_in_its_middle_by_its_fonts_capitals)
     }
 }
 
+TEST(every_page_fits_the_sidebar_of_a_window_at_its_first_size)
+{
+    Window window;
+    Rml::Element* sidebar = window.Find(kMenuSidebarId);
+    CHECK(sidebar->GetScrollHeight() <= sidebar->GetClientHeight());
+}
+
 TEST(a_pages_name_stays_on_one_line_under_the_pointer_and_its_highlight_goes_on_past_it)
 {
     auto left  = [](Rml::Element* element) { return element->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
@@ -748,8 +755,8 @@ TEST(a_tag_chip_dropped_goes_in_after_what_it_lands_on)
 TEST(the_fishing_bars_chips_drop_into_its_text)
 {
     Window window;
-    window.Page("userinterface");
-    const std::string box = "userinterface-custom-game-ui-fish-line";
+    window.Page("fishingbar");
+    const std::string box = "fishingbar-fishing-appearance-fish-line";
     std::string& text     = window.settings.fishBarLine;
     text                  = "$size";
     window.Frames(2);

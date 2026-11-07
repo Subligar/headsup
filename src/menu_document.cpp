@@ -23,7 +23,7 @@ namespace headsup
         constexpr float kHeadHeight   = 2.05f; // the window's title row
         constexpr float kScrollbar    = 0.7f;
         constexpr float kPopupTall    = 18.0f; // the most of a dropdown's list shown before it scrolls
-        constexpr float kNavHeight    = 2.0f;
+        constexpr float kNavHeight    = 1.85f; // each page in the sidebar: short enough that all fit a window at its first size
         constexpr float kNavGap       = 0.2f;  // between two pages of the sidebar
         constexpr float kNavSlide     = 0.35f; // how far a page's name moves under the pointer
         constexpr float kToggleKnob   = kToggleHeight - 2.0f * kToggleInset; // its peg's height

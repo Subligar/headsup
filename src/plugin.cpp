@@ -979,7 +979,7 @@ public:
             case headsup::PressResult::Refused: m_BarInput.Refuse(); break;
             case headsup::PressResult::None: break;
             }
-        if (const bool fishing = m_Settings.enabled && m_Settings.fishBar; m_Rml.Running() &&
+        if (const bool fishing = m_Settings.enabled && m_Settings.fishStamina == headsup::FishBarShown::HeadsUp; m_Rml.Running() &&
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
@@ -1025,7 +1025,8 @@ public:
         const bool movesWindows = (band && band->bottom != 0 && m_Settings.shiftVanillaUi) ||
                                   !m_Settings.pinnedWindows.empty() || m_Settings.moveGameHelp ||
                                   !m_Settings.hiddenWindows.empty();
-        const bool fishBarHidden = m_Settings.enabled && m_Settings.hideGameFishBar && FishNow().has_value();
+        const bool fishBarHidden =
+            m_Settings.enabled && m_Settings.fishStamina != headsup::FishBarShown::Vanilla && FishNow().has_value();
         // The panel also needs the hook to know when the game's map covers it.
         if ((hidden.Any() || movesWindows || g_BarOn || fishBarHidden) && !std::exchange(m_WindowHookTried, true))
         {
@@ -1098,6 +1099,8 @@ public:
             .sitting          = m_Player.sitting,
             .windowsBand      = m_WindowHook.WindowsBand(),
             .barBand          = band.value_or(headsup::HelpBand{}).topBar,
+            .screenWidth      = m_Rml.Overlay() != nullptr ? m_Rml.Overlay()->GetDimensions().x : 0,
+            .screenHeight     = m_Rml.Overlay() != nullptr ? m_Rml.Overlay()->GetDimensions().y : 0,
             .seenWindows      = &m_SeenWindows,
             .windowPlaces     = &m_WindowPlaces,
             .cursorFiles      = &m_CursorFiles,

@@ -99,6 +99,9 @@ namespace headsup
     bool IsFolderFileName(std::string_view name);
     constexpr const char* kUnnamedTheme = "Custom"; // a custom theme's name where a file holds none
     // The mouse pointer: the game's own, PlayOnline's chocobo, or a cursor file of the player's.
+    // Which fish stamina bar shows while a fish is hooked: none, the game's, or HeadsUp's in place of the game's.
+    enum class FishBarShown : uint8_t { Hidden, Vanilla, HeadsUp };
+    constexpr int kFishStaminaCount = 3;
     enum class PointerIcon : uint8_t { Vanilla, Chocobo, File };
     constexpr int kPointerIconCount = 3;
     constexpr int kMinCursorSide = 4, kMaxCursorSide = 64; // pixels: the target cursor's width and height
@@ -191,8 +194,7 @@ namespace headsup
         // Where the player left the settings window, in pixels; no width for one never moved, which opens in the
         // screen's middle.
         int menuX = 0, menuY = 0, menuWidth = 0, menuHeight = 0;
-        bool fishBar     = true; // HeadsUp's own bar of a hooked fish's stamina
-        bool hideGameFishBar = true; // and the game's dropped
+        FishBarShown fishStamina = FishBarShown::HeadsUp;
         int fishBarWidth = 300;
         int fishBarX = kFishBarUnplaced, fishBarY = kFishBarUnplaced;
         int fishBarHeight   = kDefaultFishBarHeight;

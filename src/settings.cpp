@@ -44,8 +44,8 @@ namespace headsup
             {"nameplates", &Settings::nameplates}, {"outlines", &Settings::outlines},
             {"outlineFadeIn", &Settings::outlineFadeIn}, {"cursorFloat", &Settings::cursorFloat},
             {"autoCheck", &Settings::autoCheck}, {"lookUpPlayers", &Settings::lookUpPlayers},
-            {"fishBar", &Settings::fishBar},
-            {"hideGameFishBar", &Settings::hideGameFishBar}, {"fishBarDraggable", &Settings::fishBarDraggable},
+
+            {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
             {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"widgetBackground", &Settings::widgetBackground}};
@@ -268,6 +268,8 @@ namespace headsup
         const char* const kClockZoneNames[kClockZoneCount] = {"japan", "utc", "usEastern", "usCentral", "usMountain",
             "usArizona", "usPacific", "usAlaska", "usHawaii", "ukIreland", "centralEurope", "easternEurope",
             "australiaEastern"};
+        constexpr const char* kFishStaminaKey                   = "fishStamina";
+        const char* const kFishStaminaNames[kFishStaminaCount]  = {"hide", "vanilla", "headsup"};
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
@@ -1624,6 +1626,8 @@ namespace headsup
                 store.GetString(kBlueMagicLearnedKey, ""), static_cast<int>(s.blueMagicLearned)));
             s.helpBarAnchor = static_cast<HelpAnchor>(NameIndex(kHelpAnchorNames, kHelpAnchorCount,
                 store.GetString(kHelpAnchorKey, ""), static_cast<int>(s.helpBarAnchor)));
+            s.fishStamina = static_cast<FishBarShown>(NameIndex(kFishStaminaNames, kFishStaminaCount,
+                store.GetString(kFishStaminaKey, ""), static_cast<int>(s.fishStamina)));
             std::array<std::string, kBarSectionCount> sections;
             for (int i = 0; i < kBarSectionCount; ++i)
                 sections[i] = store.GetString(kBarSectionKeys[i], "");
@@ -1715,6 +1719,7 @@ namespace headsup
         store.Set((kCustomThemeKey + std::string(kSeparatorSuffix)).c_str(), kDashMarkNames[static_cast<int>(s.customPalette.separator)]);
         store.Set(kCustomThemeNameKey, s.customThemeName.c_str());
         store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
+        store.Set(kFishStaminaKey, kFishStaminaNames[static_cast<int>(s.fishStamina)]);
         store.Set(kMenuFontKey, s.menuFont.c_str());
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());
         store.Set(kFishBarLineKey, s.fishBarLine.c_str());
