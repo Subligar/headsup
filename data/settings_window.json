@@ -278,6 +278,25 @@
       "name": "User Interface",
       "cards": [
         {
+          "key": "mouse-pointer",
+          "name": "Mouse Pointer",
+          "settings": [
+            {
+              "key": "pointer-icon",
+              "name": "Cursor Icon",
+              "tip": "What the mouse cursor looks like. You can place cursor files in the config/headsup/cursors folder and they will appear in the drop-down menu as options.",
+              "options": [
+                {"name": "Vanilla", "tip": "Changes nothing about the mouse cursor, keeping its vanilla appearance."},
+                {"name": "Chocobo", "tip": "Replaces the mouse cursor with the Chocobo cursor from PlayOnline."},
+                {"tip": "Replaces the mouse cursor with this file from the config/headsup/cursors folder."}
+              ]
+            },
+            {"key": "pointer-size", "name": "Cursor Size", "tip": "How large the mouse cursor is, the game's own included."},
+            {"key": "pointer-fix", "name": "Pointer Fix", "tip": "Keeps the game's pointer under yours after a resize, and clicks where you click. It also shows the pointer again over Ashita's windows."},
+            {"key": "keep-pointer", "name": "Keep Pointer", "tip": "The game hides its pointer when a key runs a command. While only these keys are held, it stays."}
+          ]
+        },
+        {
           "key": "screenshot-mode",
           "name": "Screenshot Mode",
           "description": "Every name, the top panel and every addon window go, as with /hu screenshot. Ashita's /screenshot hide turns it on by itself for its picture.",
@@ -309,7 +328,45 @@
             {"key": "fish-rod-color", "name": "Rod Break", "indent": true, "tip": "The bar's color when your rod could break, which the game warns of with a terrible feeling. Default: red."},
             {"key": "hide-game-fish-bar", "name": "Hide the Game's Fish Bar", "tip": "While a fish is hooked, the game's own fish bar at the top of the screen is not drawn. The party window still shows."}
           ]
-        },
+        }
+      ]
+    },
+    {
+      "key": "helpbar",
+      "name": "Help Bar",
+      "child": true,
+      "cards": [
+        {
+          "key": "help-bar",
+          "name": "Help Bar",
+          "description": "The game's help text, in a bar of its own under the top panel.",
+          "settings": [
+            {"key": "hide-game-help", "name": "Hide Game Help", "tip": "The game's own help bar, which the top panel covers."},
+            {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
+            {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
+            {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
+            {
+              "key": "anchor",
+              "name": "Anchor",
+              "tip": "Which side of the screen the help bar keeps to. Its text lines up the same way inside it. Default: Left.",
+              "options": [
+                {"name": "Left", "tip": "Against the screen's left edge, with its text on the left."},
+                {"name": "Center", "tip": "In the middle of the screen, with its text centered."},
+                {"name": "Right", "tip": "Against the screen's right edge, with its text on the right."}
+              ]
+            },
+            {"key": "full-width", "name": "Full Width", "tip": "The help bar takes the screen's whole width, however short its text. Default: Off."},
+            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
+            {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "vanillaui",
+      "name": "Vanilla UI",
+      "child": true,
+      "cards": [
         {
           "key": "base-game-ui",
           "name": "Base Game UI",
@@ -352,63 +409,6 @@
                 {"key": "row-tip", "tip": "Its shift down from where the game puts its windows, up when below zero."}
               ]
             }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "helpbar",
-      "name": "Help Bar",
-      "child": true,
-      "cards": [
-        {
-          "key": "help-bar",
-          "name": "Help Bar",
-          "description": "The game's help text, in a bar of its own under the top panel.",
-          "settings": [
-            {"key": "hide-game-help", "name": "Hide Game Help", "tip": "The game's own help bar, which the top panel covers."},
-            {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
-            {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
-            {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
-            {
-              "key": "anchor",
-              "name": "Anchor",
-              "tip": "Which side of the screen the help bar keeps to. Its text lines up the same way inside it. Default: Left.",
-              "options": [
-                {"name": "Left", "tip": "Against the screen's left edge, with its text on the left."},
-                {"name": "Center", "tip": "In the middle of the screen, with its text centered."},
-                {"name": "Right", "tip": "Against the screen's right edge, with its text on the right."}
-              ]
-            },
-            {"key": "full-width", "name": "Full Width", "tip": "The help bar takes the screen's whole width, however short its text. Default: Off."},
-            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
-            {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
-          ]
-        }
-      ]
-    },
-    {
-      "key": "mousecursor",
-      "name": "Mouse Cursor",
-      "child": true,
-      "cards": [
-        {
-          "key": "mouse-pointer",
-          "name": "Mouse Pointer",
-          "settings": [
-            {
-              "key": "pointer-icon",
-              "name": "Cursor Icon",
-              "tip": "What the mouse cursor looks like. You can place cursor files in the config/headsup/cursors folder and they will appear in the drop-down menu as options.",
-              "options": [
-                {"name": "Vanilla", "tip": "Changes nothing about the mouse cursor, keeping its vanilla appearance."},
-                {"name": "Chocobo", "tip": "Replaces the mouse cursor with the Chocobo cursor from PlayOnline."},
-                {"tip": "Replaces the mouse cursor with this file from the config/headsup/cursors folder."}
-              ]
-            },
-            {"key": "pointer-size", "name": "Cursor Size", "tip": "How large the mouse cursor is, the game's own included."},
-            {"key": "pointer-fix", "name": "Pointer Fix", "tip": "Keeps the game's pointer under yours after a resize, and clicks where you click. It also shows the pointer again over Ashita's windows."},
-            {"key": "keep-pointer", "name": "Keep Pointer", "tip": "The game hides its pointer when a key runs a command. While only these keys are held, it stays."}
           ]
         }
       ]

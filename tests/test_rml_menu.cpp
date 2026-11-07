@@ -577,8 +577,8 @@ TEST(a_row_left_waiting_for_a_key_waits_no_longer_once_its_page_or_the_window_is
     CHECK_EQ(window.settings.screenshotKey, 0);
     // Waited for on its page, the key is taken; and one the row already holds is no change.
     window.held.clear();
-    window.Page("mousecursor");
-    const std::string keep = "mousecursor-mouse-pointer-keep-pointer-add";
+    window.Page("userinterface");
+    const std::string keep = "userinterface-mouse-pointer-keep-pointer-add";
     window.Click(keep);
     window.held = {kLetterA};
     CHECK(window.Frames(2));
@@ -859,8 +859,8 @@ TEST(a_window_closed_while_a_box_has_the_keyboard_keeps_what_was_typed_and_takes
 TEST(a_box_typed_in_keeps_the_keyboard_when_what_it_filters_is_listed_anew)
 {
     Window window;
-    window.Page("userinterface");
-    const std::string find = "userinterface-base-game-ui-find-window";
+    window.Page("vanillaui");
+    const std::string find = "vanillaui-base-game-ui-find-window";
     window.Click(find);
     for (const char* letter : {"e", "q", "u"})
         window.Type(letter); // a frame after each: the list under the box changes with every letter
@@ -913,7 +913,7 @@ TEST(escape_gives_a_box_back_what_it_held_and_a_click_beside_a_lines_stretches_t
 TEST(every_switch_of_every_page_flips_a_setting_of_its_own_and_flips_it_back)
 {
     // Not settings: what the window itself is showing.
-    const std::vector<std::string> windowsOwn{"userinterface-base-game-ui-all-windows"};
+    const std::vector<std::string> windowsOwn{"vanillaui-base-game-ui-all-windows"};
     for (const LayoutPage& info : kWindowLayout.pages)
     {
         Window window;
@@ -985,7 +985,7 @@ TEST(every_dropdown_slider_row_of_choices_and_number_of_every_page_and_tab_sets_
         for (int pass = 0; pass < 3; ++pass)
             for (Rml::Element* element : window.OfClass("check"))
                 if (!element->GetId().empty() && !element->IsClassSet("on") && window.Shows(element->GetId()) &&
-                    element->GetId() != "userinterface-base-game-ui-all-windows")
+                    element->GetId() != "vanillaui-base-game-ui-all-windows")
                     window.Click(element->GetId());
         const Settings fresh = window.settings;
         const std::map<std::string, std::string> saved = Saved(fresh);

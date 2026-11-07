@@ -91,7 +91,7 @@ Change anything in Customize Appearance and HeadsUp saves it as a theme of your 
 |---|---|
 | Theme | The look of the top panel, this window, the fishing bar and more |
 | Nameplates & Outlines | Nameplates, outlines and the target cursor, with a page for Mobs, Players, Self, NPCs and Pets |
-| User Interface | Screenshot mode, moving the game's windows and a fishing bar of HeadsUp's own, with the Top Panel, Widgets and Mouse Cursor pages |
+| User Interface | The mouse cursor, screenshot mode and a fishing bar of HeadsUp's own, with the Help Bar page and the Vanilla UI page for moving the game's windows |
 | Colors | The colors for aggression, toughness, claims, targeting and each kind of entity |
 | HeadsUp Config | Turning HeadsUp off, a report for bug reports, and the window's own look |
 

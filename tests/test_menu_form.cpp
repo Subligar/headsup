@@ -87,7 +87,7 @@ TEST(the_palettes_are_on_their_own_colors_page_after_the_mouse_cursor)
     const Form entities    = w.Pass();
     const std::string side = entities.blocks.front().rml;
     CHECK(Has(side, "<div class=\"nav\" id=\"nav-colors\">"));
-    CHECK(side.find("id=\"nav-mousecursor\"") < side.find("id=\"nav-colors\"") &&
+    CHECK(side.find("id=\"nav-vanillaui\"") < side.find("id=\"nav-colors\"") &&
           side.find("id=\"nav-colors\"") < side.find("id=\"nav-configmenu\""));
     const char* kPalettes[] = {
         "colors-aggression", "colors-toughness", "colors-claim-status", "colors-targeting", "colors-entity-type"};
@@ -394,7 +394,7 @@ TEST(a_build_that_exports_its_layout_has_an_export_button_after_the_report_and_t
 TEST(a_key_row_takes_the_next_key_pressed_that_was_not_held)
 {
     Window w;
-    w.state.page = Page::MouseCursor;
+    w.state.page = Page::UserInterface;
     std::vector<uint8_t> down = {0x11}; // Ctrl is held as the button is clicked
     const auto pass = [&](std::vector<FormEvent> events) {
         Form form(std::move(events), w.state.form,
@@ -403,7 +403,7 @@ TEST(a_key_row_takes_the_next_key_pressed_that_was_not_held)
         return form.changed;
     };
     const size_t before = w.settings.keepPointerKeys.size();
-    pass({{"mousecursor-mouse-pointer-keep-pointer-add", kClickEvent, ""}});
+    pass({{"userinterface-mouse-pointer-keep-pointer-add", kClickEvent, ""}});
     CHECK(w.state.keyCapture.on);
     pass({});
     CHECK(w.state.keyCapture.on && w.settings.keepPointerKeys.size() == before); // Ctrl was held already
@@ -517,8 +517,8 @@ TEST(the_cursor_icon_list_has_vanilla_the_chocobo_then_the_folders_files)
     Window w;
     const std::vector<std::string> files{"Gold Arrow", "sword"};
     w.readings.cursorFiles = &files;
-    w.state.page           = Page::MouseCursor;
-    const std::string list = "mousecursor-mouse-pointer-pointer-icon";
+    w.state.page           = Page::UserInterface;
+    const std::string list = "userinterface-mouse-pointer-pointer-icon";
     const auto option      = [&](int n) { return list + "-o-" + std::to_string(n); };
     const Form open        = w.Pass({{list, kClickEvent, ""}});
     CHECK(open.popup && w.state.cursorsRequested); // opening it asks for the folder to be read again
@@ -728,15 +728,15 @@ TEST(a_setting_is_indented_where_the_layout_says_so)
 TEST(renaming_a_page_a_card_and_a_setting_changes_no_control_id)
 {
     test::EditedLayout edited;
-    edited.RenamePage("mousecursor", "Pointer");
+    edited.RenamePage("userinterface", "Pointer");
     edited.RenameCard("mouse-pointer", "Mouse");
     edited.RenameSetting("pointer-fix", "a fix of the pointer"); // shown as written, small letters and all
     Window w;
     w.layout     = edited.Layout();
-    w.state.page = Page::MouseCursor;
-    const Form form = w.Pass({{"mousecursor-mouse-pointer-pointer-fix", kClickEvent, ""}});
+    w.state.page = Page::UserInterface;
+    const Form form = w.Pass({{"userinterface-mouse-pointer-pointer-fix", kClickEvent, ""}});
     CHECK(form.changed && !w.settings.fixPointer);
-    const FormBlock* card = Block(form, "mousecursor-mouse-pointer");
+    const FormBlock* card = Block(form, "userinterface-mouse-pointer");
     CHECK(card != nullptr && Has(card->rml, ">Mouse<") && Has(card->rml, ">a fix of the pointer<"));
     CHECK(Has(form.blocks.front().rml, ">Pointer<"));
 }
@@ -755,8 +755,8 @@ TEST(a_setting_moved_to_another_card_works_there_and_sets_only_its_own_key)
     // It comes first in its new card, and is gone from its old one.
     const FormBlock* card = Block(form, "configmenu-settings-window");
     CHECK(At(card, "configmenu-settings-window-pointer-fix") < At(card, "configmenu-settings-window-font"));
-    w.state.page = Page::MouseCursor;
-    CHECK(At(Block(w.Pass(), "mousecursor-mouse-pointer"), "mousecursor-mouse-pointer-pointer-fix") == std::string::npos);
+    w.state.page = Page::UserInterface;
+    CHECK(At(Block(w.Pass(), "userinterface-mouse-pointer"), "userinterface-mouse-pointer-pointer-fix") == std::string::npos);
 }
 
 TEST(a_setting_moved_to_another_page_hides_as_it_would_at_home)
@@ -856,8 +856,8 @@ namespace
         return {};
     }
     // Status, whose highest window, the portrait, the game puts at 16.
-    const std::string kStatusShift = "userinterface-window-groups-status-shift";
-    const std::string kStatusReset = "userinterface-window-groups-status-reset";
+    const std::string kStatusShift = "vanillaui-window-groups-status-shift";
+    const std::string kStatusReset = "vanillaui-window-groups-status-reset";
     constexpr int kPortraitTop     = 16;
     constexpr auto kOn = static_cast<size_t>(HelpMode::On), kOff = static_cast<size_t>(HelpMode::Off);
 }
@@ -865,7 +865,7 @@ namespace
 TEST(a_views_shift_shows_its_default_until_one_is_typed_for_the_help_mode_shown_and_its_arrow_puts_it_back)
 {
     Window w;
-    w.state.page = Page::UserInterface;
+    w.state.page = Page::VanillaUi;
     const int on = w.settings.placedUnder[kOn], off = w.settings.placedUnder[kOff];
     CHECK(WindowHelpMode(w.settings) == HelpMode::On);
     CHECK_EQ(ValueOn(w.Pass(), kStatusShift), std::to_string(on - kPortraitTop));
@@ -875,9 +875,9 @@ TEST(a_views_shift_shows_its_default_until_one_is_typed_for_the_help_mode_shown_
     CHECK(w.settings.viewShifts[kOn] == typed && w.settings.viewShifts[kOff].empty());
     CHECK(!ClassOn(w.Pass(), kStatusReset.c_str(), "hidden"));
     // The other mode's shifts, picked by its button, are its own.
-    w.Pass({{"userinterface-window-groups-help-off", kClickEvent, ""}});
+    w.Pass({{"vanillaui-window-groups-help-off", kClickEvent, ""}});
     CHECK_EQ(ValueOn(w.Pass(), kStatusShift), std::to_string(off - kPortraitTop));
-    w.Pass({{"userinterface-window-groups-help-on", kClickEvent, ""}});
+    w.Pass({{"vanillaui-window-groups-help-on", kClickEvent, ""}});
     CHECK(w.Pass({{kStatusReset, kClickEvent, ""}}).changed);
     CHECK(w.settings.viewShifts[kOn].empty());
     // The default typed is no shift of the player's.
@@ -889,8 +889,8 @@ TEST(a_views_shift_shows_its_default_until_one_is_typed_for_the_help_mode_shown_
 TEST(auto_adjust_places_the_views_under_the_line_the_windows_last_went_under)
 {
     Window w;
-    w.state.page = Page::UserInterface;
-    const char* button = "userinterface-base-game-ui-auto-adjust";
+    w.state.page = Page::VanillaUi;
+    const char* button = "vanillaui-base-game-ui-auto-adjust";
     const Settings before = w.settings;
     w.Pass({{button, kClickEvent, ""}}); // no frame of windows placed yet
     CHECK(w.settings == before);
@@ -906,10 +906,10 @@ TEST(auto_adjust_places_the_views_under_the_line_the_windows_last_went_under)
 TEST(a_typed_x_puts_a_window_where_it_stands_but_for_that_and_its_arrow_lets_it_go)
 {
     Window w;
-    w.state.page = Page::UserInterface;
+    w.state.page = Page::VanillaUi;
     const std::vector<WindowPlace> now = {{"statcom", 16, 64}};
     w.readings.windowPlaces = &now;
-    const std::string x = "userinterface-base-game-ui-x-statcom", arrow = "userinterface-base-game-ui-place-statcom";
+    const std::string x = "vanillaui-base-game-ui-x-statcom", arrow = "vanillaui-base-game-ui-place-statcom";
     const Form shown = w.Pass();
     CHECK(ValueOn(shown, x) == "16" && ClassOn(shown, x.c_str(), "live") && ClassOn(shown, arrow.c_str(), "hidden"));
     CHECK(w.Pass({{x, kCommitEvent, "300"}}).changed);
@@ -927,24 +927,24 @@ TEST(shift_vanilla_ui_is_the_top_panels_one_switch_and_off_leaves_auto_adjust_no
     CHECK(At(Block(w.Pass(), "toppanel-top-panel"), "toppanel-top-panel-shift-vanilla-ui") != std::string::npos);
     CHECK(w.Pass({{"toppanel-top-panel-shift-vanilla-ui", kClickEvent, ""}}).changed);
     CHECK(!w.settings.shiftVanillaUi);
-    w.state.page           = Page::UserInterface;
+    w.state.page           = Page::VanillaUi;
     w.readings.windowsBand = 80;
     w.readings.barBand     = 50;
     const Settings before  = w.settings;
-    w.Pass({{"userinterface-base-game-ui-auto-adjust", kClickEvent, ""}});
+    w.Pass({{"vanillaui-base-game-ui-auto-adjust", kClickEvent, ""}});
     CHECK(w.settings == before);
     const Form page = w.Pass();
-    CHECK(At(Block(page, "userinterface-base-game-ui"), "userinterface-base-game-ui-move-windows") == std::string::npos);
-    CHECK(At(Block(page, "userinterface-base-game-ui"), "userinterface-base-game-ui-keep-clear") == std::string::npos);
+    CHECK(At(Block(page, "vanillaui-base-game-ui"), "vanillaui-base-game-ui-move-windows") == std::string::npos);
+    CHECK(At(Block(page, "vanillaui-base-game-ui"), "vanillaui-base-game-ui-keep-clear") == std::string::npos);
 }
 
 TEST(a_window_set_to_hide_goes_on_the_hidden_list_and_shows_no_place_until_kept_again)
 {
     Window w;
-    w.state.page     = Page::UserInterface;
-    const char* keep = "userinterface-base-game-ui-keep-statcom";
+    w.state.page     = Page::VanillaUi;
+    const char* keep = "vanillaui-base-game-ui-keep-statcom";
     const auto place = [](const Form& form) {
-        return At(Block(form, "userinterface-base-game-ui"), "userinterface-base-game-ui-x-statcom") != std::string::npos;
+        return At(Block(form, "vanillaui-base-game-ui"), "vanillaui-base-game-ui-x-statcom") != std::string::npos;
     };
     const Form kept = w.Pass();
     CHECK(ClassOn(kept, keep, "on") && place(kept));
@@ -1125,8 +1125,8 @@ TEST(the_nameplate_fonts_lead_with_the_games_font_and_the_top_panels_leave_it_ou
 TEST(the_cursor_size_slider_sets_the_pointers_size)
 {
     Window w;
-    w.state.page = Page::MouseCursor;
-    CHECK(w.Pass({{"mousecursor-mouse-pointer-pointer-size", kChangeEvent, "150"}}).changed);
+    w.state.page = Page::UserInterface;
+    CHECK(w.Pass({{"userinterface-mouse-pointer-pointer-size", kChangeEvent, "150"}}).changed);
     CHECK_EQ(w.settings.pointerSize, 150);
 }
 

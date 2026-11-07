@@ -53,7 +53,7 @@ TEST(the_kind_pages_know_their_kind)
         {Page::Self, PlateKind::Self}, {Page::Npcs, PlateKind::Npcs}, {Page::Pets, PlateKind::Pets}};
     for (const auto& [page, kind] : kinds)
         CHECK(KindOfPage(page) == kind);
-    for (const Page page : {Page::Entities, Page::UserInterface, Page::TopPanel, Page::MouseCursor,
+    for (const Page page : {Page::Entities, Page::UserInterface, Page::TopPanel, Page::VanillaUi,
              Page::ConfigMenu})
         CHECK(!KindOfPage(page));
 }

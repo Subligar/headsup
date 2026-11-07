@@ -100,7 +100,7 @@ VISIBILITY_ROWS = {**rows('aggressive', 'passive', 'nm-aggressive', 'nm-passive'
 
 PIECES = Pieces(
     pages={'theme': 'Theme', 'entities': 'Entities', 'mobs': 'Mobs', 'players': 'Players', 'self': 'Self', 'npcs': 'Npcs', 'pets': 'Pets',
-           'userinterface': 'UserInterface', 'helpbar': 'HelpBar', 'toppanel': 'TopPanel', 'mousecursor': 'MouseCursor',
+           'userinterface': 'UserInterface', 'helpbar': 'HelpBar', 'vanillaui': 'VanillaUi', 'toppanel': 'TopPanel',
            'colors': 'Colors', 'configmenu': 'ConfigMenu', 'feedback': 'Feedback'},
     cards={
         'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(),
