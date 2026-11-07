@@ -950,6 +950,12 @@ namespace headsup
             return tab == section.tabs.end() ? fallback : static_cast<size_t>(tab - section.tabs.begin());
         }
 
+        // "Rain (50%)".
+        std::string WeatherChanceText(const WeatherChance& c)
+        {
+            return std::string(WeatherName(c.weather)) + " (" + std::to_string(c.percent) + "%)";
+        }
+
         // A zone's weathers of an element on a day, likeliest first, after the likeliest one's icon; a dash for none.
         PopupCell RollCell(const ZoneRoll* roll)
         {
@@ -958,7 +964,7 @@ namespace headsup
             for (const WeatherChance& chance : roll->weathers)
             {
                 if (!text.empty()) text.push_back(Text(kDot, Tone::Dim));
-                text.push_back(Text(std::string(WeatherName(chance.weather)) + " " + std::to_string(chance.percent) + "%"));
+                text.push_back(Text(WeatherChanceText(chance)));
             }
             return Cell(std::move(text), WeatherIcon(roll->weathers.front().weather));
         }
@@ -1825,9 +1831,6 @@ namespace headsup
                 const std::vector<Icon> icons = WeatherIcons(weather, o.weatherIcons);
                 return icons.empty() ? std::nullopt : std::optional(icons.front());
             };
-            const auto chanceOf = [](const WeatherChance& c) {
-                return std::string(WeatherName(c.weather)) + " " + std::to_string(c.percent) + "%";
-            };
             // The weather now for a title, with its icon and today's chance of it.
             if (state.weather || odds)
             {
@@ -1842,8 +1845,14 @@ namespace headsup
             PopupSection day{"Today (" + VanaDate(t) + ")", ListOf(Line(Cell(ListOf(WeekdayText(t),
                 Text(" " + HourMinute(t.hour, t.minute)),
                 Text(" (Next Day in " + Countdown(SecondsToNextDay(state.unixMs)) + ")", Tone::Dim)))))};
+            // Its weathers on one line, a slash between them.
+            PopupRow weathers{RowKind::Line, 0, {}};
             for (const WeatherChance& c : today)
-                day.rows.push_back(Line(Cell(Text(chanceOf(c)), iconOf(c.weather))));
+            {
+                if (!weathers.cells.empty()) weathers.cells.push_back(Cell(Text("/", Tone::Dim)));
+                weathers.cells.push_back(Cell(Text(WeatherChanceText(c)), iconOf(c.weather)));
+            }
+            if (!weathers.cells.empty()) day.rows.push_back(std::move(weathers));
             day.rows.push_back(Line(Cell(ListOf(Text(MoonText(t) + ", " + std::to_string(t.moonPercent) + "%"),
                 Text(" (Next Phase in " + Countdown(SecondsToNextPhase(state.unixMs)) + ")", Tone::Dim)))));
             // The days after it, beside it: each day and its chances, likeliest first.
@@ -1854,14 +1863,14 @@ namespace headsup
                 const WeatherChances chances = later ? Chances(*later) : WeatherChances{};
                 const int weekday = (t.weekday + d) % kVanaDaysPerWeek;
                 const std::string name = WeekdayName(weekday);
-                PopupCell named = Cell(Colored(d == 1 ? "Tomorrow (" + name + ")" : name, ElementColor(WeekdayElement(weekday))));
+                PopupCell named = Cell(Colored(d == 1 ? name + " (Tomorrow)" : name, ElementColor(WeekdayElement(weekday))));
                 named.align = Align::Right;
                 grid.cells.push_back(std::move(named));
                 for (int c = 0; c < kForecastColumns - 1; ++c)
                 {
                     PopupCell weather;
-                    if (c < chances.count) weather = Cell(Text(chanceOf(chances.chances[c])), iconOf(chances.chances[c].weather));
-                    weather.align = Align::Center;
+                    if (c < chances.count) weather = Cell(Text(WeatherChanceText(chances.chances[c])), iconOf(chances.chances[c].weather));
+                    weather.align = Align::Left;
                     grid.cells.push_back(std::move(weather));
                 }
             }

@@ -720,24 +720,26 @@ TEST(the_forecast_pop_out_has_the_weather_for_a_title_today_beside_the_next_four
     const PopupSection* today    = &popup.sections[0];
     const PopupSection* forecast = Section(popup, "Weather Forecast (Valkurm Dunes)");
     CHECK(today->heading.starts_with("Today (") && forecast == &popup.sections[1] && forecast->beside && !today->beside);
-    // Today's weathers between the day and time and the moon.
-    CHECK(Joined(today->rows[1].cells[0].text) == "Sunshine 50%" && Joined(today->rows[2].cells[0].text) == "Dust Storm 50%");
-    CHECK(today->rows[2].cells[0].icon == std::optional<Icon>(Icon::WeatherDustStorm));
-    CHECK(Joined(today->rows[3].cells[0].text).starts_with(Joined(ListOf(Text(MoonPhaseName(VanaAt(state.unixMs).moonPercent,
+    // Today's weathers on one line between the day and time and the moon, a slash between them.
+    const std::vector<PopupCell>& weathers = today->rows[1].cells;
+    CHECK(weathers.size() == 3 && Joined(weathers[0].text) == "Sunshine (50%)" && Joined(weathers[1].text) == "/" &&
+          Joined(weathers[2].text) == "Dust Storm (50%)");
+    CHECK(weathers[2].icon == std::optional<Icon>(Icon::WeatherDustStorm));
+    CHECK(Joined(today->rows[2].cells[0].text).starts_with(Joined(ListOf(Text(MoonPhaseName(VanaAt(state.unixMs).moonPercent,
         VanaAt(state.unixMs).moonDirection))))));
-    CHECK(today->rows.size() == 4);
+    CHECK(today->rows.size() == 3);
     // Each day from tomorrow, its chances, and no notes.
     CHECK(forecast->rows[0].kind == RowKind::Grid && forecast->rows[0].columns == 4);
     const std::vector<PopupCell>& cells = forecast->rows[0].cells;
     CHECK(cells.size() == 16);
-    CHECK(Joined(cells[0].text) == "Tomorrow (Earthsday)"); // day 1
+    CHECK(Joined(cells[0].text) == "Earthsday (Tomorrow)"); // day 1
     CHECK(Joined(cells[4].text) == "Watersday");            // day 2: calendar 0x0421, Sunshine 100%
-    CHECK(Joined(cells[5].text) == "Sunshine 100%" && cells[6].text.empty() && cells[7].text.empty());
+    CHECK(Joined(cells[5].text) == "Sunshine (100%)" && cells[6].text.empty() && cells[7].text.empty());
     CHECK(Joined(cells[12].text) == "Iceday");              // day 4: calendar 0x0442, Sunshine 50% and Clouds 50%
-    CHECK(Joined(cells[13].text) == "Sunshine 50%" && Joined(cells[14].text) == "Clouds 50%");
-    // The days against their column's right, the weathers in the middle of theirs.
+    CHECK(Joined(cells[13].text) == "Sunshine (50%)" && Joined(cells[14].text) == "Clouds (50%)");
+    // The days against their column's right, the weathers against their columns' left.
     for (size_t i = 0; i < cells.size(); i += 4)
-        CHECK(cells[i].align == Align::Right && cells[i + 1].align == Align::Center && cells[i + 3].align == Align::Center);
+        CHECK(cells[i].align == Align::Right && cells[i + 1].align == Align::Left && cells[i + 3].align == Align::Left);
 }
 
 TEST(each_headed_card_of_a_pop_out_collapses_by_its_press_and_stays_collapsed_across_days)
@@ -788,7 +790,7 @@ TEST(the_forecast_names_the_weekdays_past_the_weeks_end)
     const std::vector<PopupCell>& cells = Section(popup, "Weather Forecast (Valkurm Dunes)")->rows[0].cells;
     for (size_t i = 0; i < cells.size(); i += 4) // the day cells come first in each row of four
         days.push_back(Joined(cells[i].text));
-    CHECK(days == (std::vector<std::string>{"Tomorrow (Darksday)", "Firesday", "Earthsday", "Watersday"}));
+    CHECK(days == (std::vector<std::string>{"Darksday (Tomorrow)", "Firesday", "Earthsday", "Watersday"}));
 }
 
 TEST(a_zone_without_a_calendar_or_weather_shows_vanadiels_time_alone)
@@ -831,7 +833,7 @@ TEST(a_live_weather_outside_the_days_chances_still_shows)
     const WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(Joined(w.title) == "Rain" && w.icons == (std::vector<Icon>{Icon::WeatherRain}));
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(Joined(popup.title) == "Rain" && Joined(popup.sections[0].rows[1].cells[0].text) == "Sunshine 50%");
+    CHECK(Joined(popup.title) == "Rain" && Joined(popup.sections[0].rows[1].cells[0].text) == "Sunshine (50%)");
 }
 
 TEST(the_weather_popup_has_a_tab_for_each_element_of_the_zones_that_can_roll_it_today_and_tomorrow)
@@ -885,7 +887,7 @@ TEST(the_weather_popup_has_a_tab_for_each_element_of_the_zones_that_can_roll_it_
     const ZoneRoll top = ZonesRolling(Element::Ice, today).front();
     std::string shares;
     for (const WeatherChance& w : top.weathers)
-        shares += (shares.empty() ? "" : kDot) + std::string(WeatherName(w.weather)) + " " + std::to_string(w.percent) + "%";
+        shares += (shares.empty() ? "" : kDot) + std::string(WeatherName(w.weather)) + " (" + std::to_string(w.percent) + "%)";
     const size_t row = static_cast<size_t>(std::ranges::find(order, top.zone) - order.begin());
     CHECK(row < order.size());
     CHECK_EQ(Joined(grid.cells[3 * (row + 1) + 1].text), shares);
