@@ -225,7 +225,7 @@ namespace headsup
         constexpr const char* kBorderSuffix = "Border";
         constexpr const char* kBackgroundSuffix = "Background";
         constexpr const char* kWindowTypeSuffix = "WindowType";
-        constexpr const char* kWindowBorderSuffix = "WindowBorder";
+        constexpr const char* kRoundingSuffix = "Rounding";
         constexpr const char* kSeparatorSuffix = "Separator";
         constexpr const char* kCustomThemeNameKey = "customThemeName";
         constexpr const char* kBarCurrencyKey = "barCurrency";
@@ -1204,6 +1204,7 @@ namespace headsup
         if (static_cast<int>(s.barTheme) >= kBarThemeCount) s.barTheme = d.barTheme;
         if (static_cast<int>(s.customPalette.shape) >= kBarShapeCount) s.customPalette.shape = d.customPalette.shape;
         s.customPalette.border = std::clamp(s.customPalette.border, 0, kMaxStripBorder);
+        s.customPalette.rounding = std::clamp(s.customPalette.rounding, kShapeRounding, kMaxRounding);
         s.customPalette.windowType = std::clamp(s.customPalette.windowType, kFollowGameWindow, kWindowTypes);
         if (!IsFolderFileName(s.customThemeName)) s.customThemeName = kUnnamedTheme;
         for (int slot = 0; slot < kPanelSlots; ++slot)
@@ -1625,7 +1626,7 @@ namespace headsup
             s.customPalette.background = static_cast<BarBackground>(NameIndex(kBarBackgroundNames, kBarBackgroundCount,
                 store.GetString((custom + kBackgroundSuffix).c_str(), ""), static_cast<int>(s.customPalette.background)));
             s.customPalette.windowType   = LoadInt(store, custom + kWindowTypeSuffix, s.customPalette.windowType);
-            s.customPalette.windowBorder = HeldSwitch(store, custom + kWindowBorderSuffix).value_or(s.customPalette.windowBorder);
+            s.customPalette.rounding     = LoadInt(store, custom + kRoundingSuffix, s.customPalette.rounding);
             s.customPalette.separator    = static_cast<DashMark>(NameIndex(kDashMarkNames, kDashMarkCount,
                 store.GetString((custom + kSeparatorSuffix).c_str(), ""), static_cast<int>(s.customPalette.separator)));
             s.customThemeName = store.GetString(kCustomThemeNameKey, "");
@@ -1731,7 +1732,7 @@ namespace headsup
         store.Set((kCustomThemeKey + std::string(kBackgroundSuffix)).c_str(),
             kBarBackgroundNames[static_cast<int>(s.customPalette.background)]);
         StoreFloat(store, kCustomThemeKey + std::string(kWindowTypeSuffix), static_cast<float>(s.customPalette.windowType));
-        StoreBool(store, kCustomThemeKey + std::string(kWindowBorderSuffix), s.customPalette.windowBorder);
+        StoreFloat(store, kCustomThemeKey + std::string(kRoundingSuffix), static_cast<float>(s.customPalette.rounding));
         store.Set((kCustomThemeKey + std::string(kSeparatorSuffix)).c_str(), kDashMarkNames[static_cast<int>(s.customPalette.separator)]);
         store.Set(kCustomThemeNameKey, s.customThemeName.c_str());
         store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);

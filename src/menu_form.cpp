@@ -445,8 +445,9 @@ namespace headsup
             &BarPalette::accent, &BarPalette::accentEnd, &BarPalette::pill, &BarPalette::pillBorder, &BarPalette::title,
             &BarPalette::subtitle, &BarPalette::divider, &BarPalette::panelTop, &BarPalette::panelBottom,
             &BarPalette::panelBorder, &BarPalette::panelOuter, &BarPalette::text, &BarPalette::heading,
-            &BarPalette::tagFill, &BarPalette::tagBorder, &BarPalette::tagText, &BarPalette::highlight};
-        static_assert(std::size(kThemeRowFields) == static_cast<size_t>(ThemePaletteRow::Highlight) + 1);
+            &BarPalette::tagFill, &BarPalette::tagBorder, &BarPalette::tagText, &BarPalette::highlight,
+            &BarPalette::bottomLine};
+        static_assert(std::size(kThemeRowFields) == static_cast<size_t>(ThemePaletteRow::BorderColor) + 1);
 
         void ThemePalette(Context& c, const LayoutSetting& e)
         {
@@ -460,10 +461,30 @@ namespace headsup
             {
                 if (i == first) form.Raw("</div><div class=\"column second\">");
                 const LayoutRow& row = rows[i];
+                // The art's frame is in the window type's own color.
+                const bool art = edited.background == BarBackground::Window;
+                if (art && row.row == static_cast<uint16_t>(ThemePaletteRow::BorderColor)) continue;
                 form.ArgbSwatch(Labeled(row.name, row.key, std::string(" ") + e.key).c_str(), edited.*kThemeRowFields[row.row],
                     row.tip);
             }
             form.Raw("</div></div>");
+            EditTheme(c, edited);
+        }
+
+        // Set only when moved: a percent cannot say every alpha exactly.
+        void ThemeOpacity(Context& c, const std::string& label, std::initializer_list<uint32_t BarPalette::*> colors, const char* tip)
+        {
+            BarPalette edited = ShownPalette(c);
+            if (edited.background == BarBackground::Window) return; // the art has no colors of the theme's
+            constexpr float kFullAlpha = static_cast<float>(kOpaqueAlpha);
+            int percent = static_cast<int>(std::lround(Channel(edited.**colors.begin(), kAlphaShift) * kPercent / kFullAlpha));
+            const int was = percent;
+            // By whole percents: RmlUi would move a value between its steps onto one and say so, as if dragged.
+            c.form.SliderInt(label.c_str(), percent, 0, kMaxOpacity, [](int shown) { return Formatted("%d%%", shown); }, tip);
+            if (percent == was) return;
+            const auto alpha = static_cast<uint32_t>(std::lround(static_cast<float>(percent) / kPercent * kFullAlpha));
+            for (uint32_t BarPalette::* const color : colors)
+                edited.*color = (edited.*color & ~kAlphaMask) | alpha << kAlphaShift;
             EditTheme(c, edited);
         }
 
@@ -1860,15 +1881,6 @@ namespace headsup
                 EditTheme(c, edited);
                 break;
             }
-            case SettingPiece::WindowBorder:
-            {
-                form.Fade(!BarOn(s));
-                BarPalette edited = ShownPalette(c);
-                if (edited.background != BarBackground::Window) break;
-                form.Switch(label.c_str(), edited.windowBorder, tip);
-                EditTheme(c, edited);
-                break;
-            }
             case SettingPiece::SeparatorStyle:
             {
                 form.Fade(false);
@@ -1881,14 +1893,6 @@ namespace headsup
                 EditTheme(c, edited);
                 break;
             }
-            case SettingPiece::ThemeBorderColor:
-            {
-                form.Fade(!BarOn(s));
-                BarPalette edited = ShownPalette(c);
-                form.ArgbSwatch(label.c_str(), edited.bottomLine, tip);
-                EditTheme(c, edited);
-                break;
-            }
             case SettingPiece::ThemeBorderThickness:
             {
                 form.Fade(!BarOn(s));
@@ -1897,6 +1901,23 @@ namespace headsup
                 EditTheme(c, edited);
                 break;
             }
+            case SettingPiece::ThemeRounding:
+            {
+                form.Fade(!BarOn(s));
+                BarPalette edited = ShownPalette(c);
+                form.SliderInt(label.c_str(), edited.rounding, kShapeRounding, kMaxRounding,
+                    PixelsOr(Word(c, WindowWord::Auto), kShapeRounding), tip);
+                EditTheme(c, edited);
+                break;
+            }
+            case SettingPiece::BackgroundOpacity:
+                form.Fade(!BarOn(s));
+                ThemeOpacity(c, label, {&BarPalette::stripTop, &BarPalette::stripMiddle, &BarPalette::stripBottom}, tip);
+                break;
+            case SettingPiece::PopupOpacity:
+                form.Fade(!BarOn(s));
+                ThemeOpacity(c, label, {&BarPalette::panelTop, &BarPalette::panelBottom}, tip);
+                break;
             case SettingPiece::ThemePalette: ThemePalette(c, e); break;
             case SettingPiece::ProfileFiles: ProfileFiles(c); break;
             case SettingPiece::SaveAutomatically:

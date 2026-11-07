@@ -1066,7 +1066,8 @@ TEST(the_background_style_shows_the_color_the_gradient_or_the_window_settings)
     BarPalette& p          = w.settings.customPalette;
     const BarPalette& gold = PaletteOf(BarTheme::PhoenixGold);
     // Phoenix Gold's strip is a gradient: its top and bottom show, and no one color or window.
-    CHECK(shows("theme-top") && shows("theme-bottom") && !shows("theme-background") && !shows("window-border"));
+    CHECK(shows("theme-top") && shows("theme-bottom") && !shows("theme-background"));
+    CHECK(shows("border-color-theme-palette") && shows("background-opacity") && shows("popup-opacity"));
     CHECK(!shows("theme-name")); // a built-in theme has no name to change
     CHECK(w.Pass({{"theme-theme-colors-background-style-s-0", kClickEvent, ""}}).changed);
     CHECK(p.background == BarBackground::Plain && w.settings.barTheme == BarTheme::Custom && shows("theme-name"));
@@ -1082,7 +1083,57 @@ TEST(the_background_style_shows_the_color_the_gradient_or_the_window_settings)
     w.Pass({{"theme-theme-colors-theme-middle-p-a", kChangeEvent, "0"}});
     CHECK(p.stripMiddle == (gold.stripMiddle & 0x00FFFFFFu));
     w.Pass({{"theme-theme-colors-background-style-s-2", kClickEvent, ""}});
-    CHECK(p.background == BarBackground::Window && shows("window-type") && shows("window-border") && !shows("theme-top"));
+    CHECK(p.background == BarBackground::Window && shows("window-type") && !shows("theme-top"));
+    // The art's frame is Border Thickness's alone, in the window type's color: no Border Color, and no opacity.
+    CHECK(shows("theme-border-thickness") && !shows("border-color-theme-palette"));
+    CHECK(!shows("background-opacity") && !shows("popup-opacity"));
+}
+
+TEST(border_color_is_the_last_color_of_the_themes_second_column)
+{
+    Window w;
+    w.state.page             = Page::Theme;
+    const std::string border = "theme-theme-colors-border-color-theme-palette";
+    const Form form          = w.Pass();
+    const FormBlock* card    = Block(form, "theme-theme-colors");
+    CHECK(At(card, "theme-theme-colors-highlight-theme-palette") < At(card, border));
+    w.Pass({{border, kClickEvent, ""}});
+    CHECK(w.Pass({{border + "-p-r", kChangeEvent, "1"}}).changed);
+    CHECK_EQ(w.settings.customPalette.bottomLine, (PaletteOf(BarTheme::PhoenixGold).bottomLine & 0xFF00FFFFu) | 0x00010000u);
+}
+
+TEST(the_themes_corner_rounding_starts_at_its_shapes_own_and_edits_a_copy)
+{
+    Window w;
+    w.state.page           = Page::Theme;
+    const std::string rounding = "theme-theme-colors-theme-rounding";
+    const FormBlock* card  = Block(w.Pass(), "theme-theme-colors");
+    CHECK(At(card, "theme-theme-colors-theme-border-thickness") < At(card, rounding));
+    CHECK(w.Pass({{rounding, kChangeEvent, "6"}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.rounding == 6);
+    w.Pass({{rounding, kChangeEvent, std::to_string(kShapeRounding)}});
+    CHECK_EQ(w.settings.customPalette.rounding, kShapeRounding);
+}
+
+TEST(the_themes_opacities_set_the_alpha_of_the_strip_and_of_the_pop_outs)
+{
+    Window w;
+    w.state.page        = Page::Theme;
+    w.settings.barTheme = BarTheme::Aurora; // a strip at 90% and pop-outs at 95%, which a percent cannot say exactly
+    w.Pass();
+    // As RmlUi says a slider's value each time it is set: its own value changes nothing.
+    w.Pass({{"theme-theme-colors-background-opacity", kChangeEvent, "90"}, {"theme-theme-colors-popup-opacity", kChangeEvent, "95"}});
+    CHECK(w.settings.barTheme == BarTheme::Aurora); // shown, not changed
+    CHECK(w.Pass({{"theme-theme-colors-background-opacity", kChangeEvent, "50"}}).changed);
+    const BarPalette& aurora = PaletteOf(BarTheme::Aurora);
+    const BarPalette& p      = w.settings.customPalette;
+    const uint32_t half      = 0x80000000u; // 50% of 255, rounded
+    CHECK(w.settings.barTheme == BarTheme::Custom && p.stripTop == ((aurora.stripTop & 0x00FFFFFFu) | half));
+    CHECK(p.stripMiddle == ((aurora.stripMiddle & 0x00FFFFFFu) | half) && p.stripBottom == ((aurora.stripBottom & 0x00FFFFFFu) | half));
+    CHECK(p.panelTop == aurora.panelTop);
+    w.Pass({{"theme-theme-colors-popup-opacity", kChangeEvent, "40"}});
+    const uint32_t forty = 102u << 24; // 40% of 255
+    CHECK(p.panelTop == ((aurora.panelTop & 0x00FFFFFFu) | forty) && p.panelBottom == ((aurora.panelBottom & 0x00FFFFFFu) | forty));
 }
 
 TEST(a_custom_theme_takes_a_new_name_once_its_box_is_left_unless_it_cannot_have_it)
@@ -1195,11 +1246,11 @@ TEST(the_theme_is_never_faint_after_a_faint_setting)
     Window w;
     w.state.page = Page::Theme;
     test::EditedLayout edited;
-    edited.MoveSetting("theme", "theme-colors", 9); // after Border Color, which is faint with the panel off
+    edited.MoveSetting("theme", "theme-colors", 10); // after Border Thickness, which is faint with the panel off
     w.layout            = edited.Layout();
     w.settings.showBar  = false;
     const Form form     = w.Pass();
-    CHECK(ClassOn(form, "theme-theme-colors-theme-border-color-label-row", kOffClass));
+    CHECK(ClassOn(form, "theme-theme-colors-theme-border-thickness-label-row", kOffClass));
     CHECK(!ClassOn(form, "theme-theme-colors-theme-label-row", kOffClass));
 }
 

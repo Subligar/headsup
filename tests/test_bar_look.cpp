@@ -13,13 +13,18 @@ namespace
 {
     bool Near(float a, float b) { return std::fabs(a - b) < 0.01f; }
 
+    BarLook LookOf(const BarPalette& p, const Settings& settings, TextRow lines = {}, int height = 45,
+        float popupScale = kDefaultPopupScale)
+    {
+        const BarMetrics m = MetricsFor(height, p.shape, kDefaultFontRatio, popupScale);
+        return BarLook{p, settings, m, PillRow(m), lines, BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate,
+            BarTextFont(settings), std::nullopt};
+    }
+
     BarLook LookOf(BarTheme theme, const Settings& settings, TextRow lines = {}, int height = 45,
         float popupScale = kDefaultPopupScale)
     {
-        const BarPalette& p = PaletteOf(theme);
-        const BarMetrics m  = MetricsFor(height, p.shape, kDefaultFontRatio, popupScale);
-        return BarLook{p, settings, m, PillRow(m), lines, BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate,
-            BarTextFont(settings), std::nullopt};
+        return LookOf(PaletteOf(theme), settings, lines, height, popupScale);
     }
 
     bool Family(const TextFace& face, const char* family) { return std::string(face.family) == family; }
@@ -309,6 +314,22 @@ TEST(widgets_pop_outs_and_their_sections_are_rounded_as_set_or_as_the_theme_does
         CHECK(settings.widgetRounding == kThemeRounding && widget > 0.0f && popup > 0.0f && card > 0.0f);
         CHECK(Near(widget, theme == BarTheme::PhoenixGold ? 3.0f : own.metrics.pillRadius) && Near(popup, own.metrics.panelRadius));
     }
+}
+
+TEST(a_themes_own_corner_rounding_rounds_whatever_is_set_by_theme)
+{
+    Settings settings;
+    BarPalette p = PaletteOf(BarTheme::PhoenixGold);
+    CHECK_EQ(p.rounding, kShapeRounding);
+    p.rounding = 7;
+    const BarLook look = LookOf(p, settings);
+    CHECK(Near(look.BoxOf(BarWidget::Target, true)->radius, 7.0f) && Near(PopupPanel(look).radius, 7.0f));
+    CHECK(Near(PopupCard(look).radius, 7.0f) && Near(HelpBarPanel(look).radius, 7.0f));
+    // A rounding of their own still wins.
+    settings.widgetRounding = 2;
+    const BarLook own = LookOf(p, settings);
+    CHECK(Near(own.BoxOf(BarWidget::Target, true)->radius, 2.0f));
+    CHECK(Near(PopupPanel(own).radius, 7.0f));
 }
 
 TEST(a_widget_is_padded_as_the_panel_says_or_as_the_theme_does)

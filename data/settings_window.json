@@ -42,10 +42,10 @@
             },
             {"key": "theme-background", "name": "Background Color", "indent": true, "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
             {"key": "theme-top", "name": "Top Color", "indent": true, "tip": "The strip's color at its top, with its opacity."},
-            {"key": "theme-middle", "name": "Middle Color", "tip": "The panel's color just past halfway down its gradient."},
+            {"key": "theme-middle", "name": "Middle Color", "indent": true, "tip": "The panel's color just past halfway down its gradient."},
             {"key": "theme-bottom", "name": "Bottom Color", "indent": true, "tip": "The strip's color at its foot, with its opacity."},
+            {"key": "background-opacity", "name": "Background Opacity", "indent": true, "tip": "How much of the game shows through the top panel's strip. At 100% none of it does."},
             {"key": "window-type", "name": "Window Type", "indent": true, "tip": "Which of the game's eight window frames the art is. Auto is the one picked in the game's Config, Windows, Shared, followed as you change it. Default: Auto."},
-            {"key": "window-border", "name": "Border", "indent": true, "tip": "A border around the top panel, the help bar, the pop-outs, the fishing bar and this window, in the color of the game's window frame. Off, they are the window's background alone."},
             {
               "key": "separator-style",
               "name": "Separator Style",
@@ -57,8 +57,9 @@
                 {"tip": "Diamond"}
               ]
             },
-            {"key": "theme-border-color", "name": "Border Color", "tip": "The line along the strip's foot."},
-            {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels tall the line along the strip's foot is; 0 for none."},
+            {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels thick the border is: the line along the strip's foot, or with Vanilla Window the frame around the top panel, the help bar, the pop-outs, the fishing bar and this window. 0 for none."},
+            {"key": "theme-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets, the pop-outs, their sections and the help bar are, wherever those are Set by Theme. Auto keeps the corners of the theme's own style. Default: Auto."},
+            {"key": "popup-opacity", "name": "Pop-out Opacity", "tip": "How much of the game shows through the pop-outs. At 100% none of it does."},
             {
               "key": "theme-palette",
               "rows": [
@@ -80,7 +81,8 @@
                 {"key": "tag-fill", "name": "Tag Fill", "tip": "The small labels in pop-outs."},
                 {"key": "tag-border", "name": "Tag Border"},
                 {"key": "tag-text", "name": "Tag Text"},
-                {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."}
+                {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."},
+                {"key": "border-color", "name": "Border Color", "tip": "The line along the strip's foot."}
               ]
             }
           ]

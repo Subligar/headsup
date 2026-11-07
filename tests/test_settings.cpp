@@ -938,7 +938,7 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     s.customPalette.border       = 5;
     s.customPalette.background   = BarBackground::Window;
     s.customPalette.windowType   = 3;
-    s.customPalette.windowBorder = false;
+    s.customPalette.rounding     = 12;
     s.customPalette.separator    = DashMark::Dot;
     s.customThemeName            = "Dusk";
     MapStore file;
@@ -952,8 +952,10 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     MapStore garbled;
     garbled.values["customThemeAccent"] = "not a color";
     garbled.values["customThemeBorder"] = "99";
+    garbled.values["customThemeRounding"] = "-5";
     const Settings read = LoadSettings(garbled);
     CHECK(read.customPalette.accent == PaletteOf(BarTheme::PhoenixGold).accent && read.customPalette.border == kMaxStripBorder);
+    CHECK_EQ(read.customPalette.rounding, kShapeRounding);
 }
 
 TEST(the_windows_help_mode_follows_the_panels_help_line_and_the_games_own_strip)

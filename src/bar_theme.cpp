@@ -1,6 +1,7 @@
 #include "bar_theme.h"
 
 #include "ini_text.h"
+#include "skin_frame.h"
 
 #include <algorithm>
 #include <charconv>
@@ -14,9 +15,8 @@ namespace headsup
     {
         constexpr const char* kThemeSection = "theme";
         constexpr const char* kShapeKey = "Shape", *kBorderKey = "Border", *kBackgroundKey = "Background";
-        constexpr const char* kWindowTypeKey = "WindowType", *kWindowBorderKey = "WindowBorder", *kSeparatorKey = "Separator";
+        constexpr const char* kWindowTypeKey = "WindowType", *kRoundingKey = "Rounding", *kSeparatorKey = "Separator";
         constexpr const char* kParentKey = "Parent";
-        constexpr const char* kTrueText = "true", *kFalseText = "false";
 
         template <typename Enum>
         void Named(std::optional<std::string> text, const char* const* names, int count, Enum& value)
@@ -77,6 +77,7 @@ namespace headsup
             BarPalette p = kPalettes[static_cast<int>(BarTheme::PhoenixGold)];
             p.shape      = BarShape::Window;
             p.background = BarBackground::Window;
+            p.border     = kSkinEdge;
             p.parent     = BarTheme::Vanilla;
             return p;
         }();
@@ -117,7 +118,7 @@ namespace headsup
         values.push_back({kBorderKey, std::to_string(palette.border)});
         values.push_back({kBackgroundKey, kBarBackgroundNames[static_cast<int>(palette.background)]});
         values.push_back({kWindowTypeKey, std::to_string(palette.windowType)});
-        values.push_back({kWindowBorderKey, palette.windowBorder ? kTrueText : kFalseText});
+        values.push_back({kRoundingKey, std::to_string(palette.rounding)});
         values.push_back({kSeparatorKey, kDashMarkNames[static_cast<int>(palette.separator)]});
         values.push_back({kParentKey, kBarThemeNames[static_cast<int>(palette.parent)]});
         return WithIniValues("", kThemeSection, values);
@@ -146,8 +147,8 @@ namespace headsup
             palette.border = std::clamp(*border, 0, kMaxStripBorder);
         if (const std::optional<int> type = NumberIn(IniValue(file, kThemeSection, kWindowTypeKey), 10))
             palette.windowType = std::clamp(*type, kFollowGameWindow, kWindowTypes);
-        if (const std::optional<std::string> frame = IniValue(file, kThemeSection, kWindowBorderKey))
-            palette.windowBorder = *frame != kFalseText;
+        if (const std::optional<int> rounding = NumberIn(IniValue(file, kThemeSection, kRoundingKey), 10))
+            palette.rounding = std::clamp(*rounding, kShapeRounding, kMaxRounding);
         return any ? std::optional<BarPalette>(palette) : std::nullopt;
     }
 }

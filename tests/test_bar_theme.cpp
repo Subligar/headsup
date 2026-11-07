@@ -1,5 +1,6 @@
 #include "bar_theme.h"
 #include "cursor_picture.h"
+#include "skin_frame.h"
 #include "test.h"
 
 #include <cmath>
@@ -26,6 +27,7 @@ TEST(each_theme_has_the_mockups_colors_and_shape)
     // Vanilla is Phoenix Gold's colors on the game's art until the art's own are read.
     const BarPalette& vanilla = PaletteOf(BarTheme::Vanilla);
     CHECK(vanilla.background == BarBackground::Window && vanilla.shape == BarShape::Window && vanilla.accent == gold.accent);
+    CHECK_EQ(vanilla.border, kSkinEdge); // the art's own edge, drawn by Border Thickness
     // Aurora is laid out as pills are, in its own slate and cyan.
     const BarPalette& aurora = PaletteOf(BarTheme::Aurora);
     CHECK(aurora.shape == BarShape::Glass && aurora.accent == 0xFF5EE6FFu && aurora.title == 0xFFEAF2FFu);
@@ -40,7 +42,7 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     p.border       = 4;
     p.background   = BarBackground::Window;
     p.windowType   = 6;
-    p.windowBorder = false;
+    p.rounding     = 9;
     p.separator    = DashMark::Square;
     p.parent       = BarTheme::Vanilla;
     const std::string file = ThemeFileText(p);
@@ -52,6 +54,9 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     // A window type past the game's eight is its last; a background of no name is Phoenix Gold's.
     const std::optional<BarPalette> wild = PaletteFromThemeFile("[theme]\nTitle=ff102030\nWindowType=40\nBackground=stars\n");
     CHECK(wild && wild->windowType == kWindowTypes && wild->background == BarBackground::Gradient);
+    // A rounding past the most is the most, and none read is the shape's own.
+    const std::optional<BarPalette> round = PaletteFromThemeFile("[theme]\nTitle=ff102030\nRounding=99\n");
+    CHECK(round && round->rounding == kMaxRounding && partial->rounding == kShapeRounding);
 }
 
 TEST(the_themes_folder_lists_its_theme_files_by_name)

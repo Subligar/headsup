@@ -44,7 +44,7 @@ namespace headsup
 
     constexpr int kMaxWidgetSpacing = 40; // pixels
     constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
-    constexpr int kThemeRounding = -1, kMaxRounding = 32;     // a corner's radius in pixels, or the theme's own
+    constexpr int kThemeRounding = -1; // a corner's radius in pixels up to kMaxRounding, or the theme's own
     // Where the Zone widget shows who holds its region: not at all, before or after the zone's name, or under it.
     // The Target widget's Visibility: the targets it shows for.
     enum class TargetShow : uint8_t { NpcsObjects, Players, Mobs, Pets, NoTarget };

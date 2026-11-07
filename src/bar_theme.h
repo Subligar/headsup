@@ -20,7 +20,8 @@ namespace headsup
     };
 
     constexpr int kBarShapeCount = static_cast<int>(BarShape::Window) + 1;
-    constexpr int kMaxStripBorder = 6; // rows of the strip's line at its foot
+    constexpr int kMaxStripBorder = 6; // rows of the strip's line at its foot, or the art's edge in pixels
+    constexpr int kShapeRounding = -1, kMaxRounding = 32; // a corner's radius in pixels, or the shape's own
 
     // What the strip is: one color, a gradient through three stops, or the game's window art.
     enum class BarBackground : uint8_t { Plain, Gradient, Window };
@@ -41,10 +42,10 @@ namespace headsup
         uint32_t panelTop, panelBottom, panelBorder, panelOuter;
         uint32_t text, heading, tagFill, tagBorder, tagText;
         uint32_t highlight; // over a hovered widget
-        int border = 1;     // how many of the strip's last rows are bottomLine
+        int border = 1;     // how many of the strip's last rows are bottomLine, or how wide the art's edge is
+        int rounding = kShapeRounding; // the corners of whatever is rounded by the theme
         BarBackground background = BarBackground::Gradient; // Plain is stripTop alone
         int windowType    = kFollowGameWindow; // the art's, for the Window background
-        bool windowBorder = true;              // the art's frame around the panel, the help bar and the popups
         DashMark separator = DashMark::Diamond; // the panel's separators, and what a nameplate's dash is drawn as
         BarTheme parent    = BarTheme::PhoenixGold; // a custom theme's: the built-in one it was first copied from
         bool operator==(const BarPalette&) const = default;
@@ -72,7 +73,7 @@ namespace headsup
         "custom", "gameWindow"};
 
     // A saved theme's file, in the themes folder: a [theme] section of its palette's parts by kPaletteColors' names,
-    // Shape, Border, Background, WindowType, WindowBorder, Separator and Parent. Read back, a part it lacks or that cannot be
+    // Shape, Border, Rounding, Background, WindowType, Separator and Parent. Read back, a part it lacks or that cannot be
     // read is Phoenix Gold's, and a file of none of the colors is no theme.
     constexpr const char* kThemeExtensions[] = {".ini"};
     std::string ThemeFileText(const BarPalette& palette);

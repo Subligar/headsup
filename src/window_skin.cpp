@@ -279,7 +279,7 @@ namespace headsup
             .subtitle = ArgbOf(Shade(t, kSubtitleChroma, kSubtitleLight)), .divider = ArgbOf(Shade(t, 1.0f, kDividerLight)),
             .panelTop = ArgbOf(t.top, kPanelAlpha), .panelBottom = ArgbOf(t.bottom, kPanelAlpha), .panelBorder = frame,
             .panelOuter = 0, .text = text, .heading = accent, .tagFill = WithAlpha(accent, kTagAlpha), .tagBorder = 0,
-            .tagText = text, .highlight = WithAlpha(accent, kHighlightAlpha), .border = 0, .background = BarBackground::Window};
+            .tagText = text, .highlight = WithAlpha(accent, kHighlightAlpha), .border = kSkinEdge, .background = BarBackground::Window};
     }
 
     MenuColors SkinMenuColors(const WindowSkin& skin)
@@ -314,7 +314,8 @@ namespace headsup
     std::string SkinRules(const SkinFrame& f)
     {
         return "box-sizing:border-box;decorator:" + Fill(f) + ";" +
-               (f.edge != 0 ? "border:" + RcssNumber(kSkinEdge) + "px " + RcssColor(f.edge) + ";" : std::string("border-width:0px;"));
+               (f.edge != 0 ? "border:" + RcssNumber(static_cast<float>(f.width)) + "px " + RcssColor(f.edge) + ";"
+                            : std::string("border-width:0px;"));
     }
 
     int SkinTypeOf(int windowType, std::optional<int> gameType)

@@ -492,11 +492,15 @@ TEST(the_strip_and_the_popups_are_drawn_with_the_games_art_when_the_shape_is_win
     for (const char* name : {"#strip{", ".help-box{"})
         CHECK(rule(bar, name).find(SkinRules(*look.skin)) != std::string::npos);
     CHECK(rule(PopupDocument(look, faces), "#panel{").find(SkinRules(*look.skin)) != std::string::npos);
-    // Border off: the same art without its edge, everywhere.
-    settings.barTheme                   = BarTheme::Custom;
-    settings.customPalette.background   = BarBackground::Window;
-    settings.customPalette.windowBorder = false;
-    CHECK(FrameAsSet(settings, *look.skin) == (SkinFrame{3, 1.0f, 0.5f, 1.0f}));
+    // The edge is Border Thickness's pixels wide, and none at 0: the same art without its edge, everywhere.
+    settings.barTheme                 = BarTheme::Custom;
+    settings.customPalette.background = BarBackground::Window;
+    settings.customPalette.border     = 0;
+    CHECK(FrameAsSet(settings, *look.skin) == (SkinFrame{3, 1.0f, 0.5f, 1.0f, 0, 0}));
+    settings.customPalette.border = 5;
+    const SkinFrame thick         = FrameAsSet(settings, *look.skin);
+    CHECK(thick == (SkinFrame{3, 1.0f, 0.5f, 1.0f, palette.panelBorder, 5}));
+    CHECK(Has(SkinRules(thick), "border:5px " + RcssColor(palette.panelBorder) + ";"));
     // Without the art read, the shape draws its colors.
     look.skin = std::nullopt;
     CHECK(BarDocument(look, Place()).find("hu:strip") != std::string::npos);
