@@ -49,6 +49,21 @@ namespace headsup
             return element;
         }
 
+        // In a designer line's gaps: the first button on the pointer's row past it or on a row below, else the line's
+        // end (its last child).
+        Rml::Element* DesignSlotAt(Rml::Element* line, Rml::Vector2f at)
+        {
+            for (int i = 0; i < line->GetNumChildren(); ++i)
+            {
+                Rml::Element* chip = line->GetChild(i);
+                if (!chip->IsClassSet(kDesignChipClass)) continue;
+                const Rml::Vector2f top  = chip->GetAbsoluteOffset(Rml::BoxArea::Border);
+                const Rml::Vector2f size = chip->GetBox().GetSize(Rml::BoxArea::Border);
+                if (at.y < top.y + size.y && (at.y < top.y || at.x < top.x + size.x / 2.0f)) return chip;
+            }
+            return line->GetNumChildren() > 0 ? line->GetChild(line->GetNumChildren() - 1) : line;
+        }
+
         Rml::ElementFormControlInput* AsInput(Rml::Element* element)
         {
             return rmlui_dynamic_cast<Rml::ElementFormControlInput*>(element);
@@ -548,6 +563,9 @@ namespace headsup
         Rml::Element* named = WithId(hovered);
         for (Rml::Element* up = hovered; up != nullptr; up = up->GetParentNode())
             if (up->IsClassSet(kGhostSlotClass)) named = up;
+        if (hovered != nullptr && hovered->IsClassSet(kDesignLineClass))
+            named = DesignSlotAt(hovered, Rml::Vector2f(static_cast<float>(event.GetParameter<int>("mouse_x", 0)),
+                                              static_cast<float>(event.GetParameter<int>("mouse_y", 0))));
         FormEvent drop{named != nullptr ? named->GetId() : std::string(), type, dragged->GetId(),
             dragged->GetAttribute<Rml::String>(kCarriesAttribute, "")};
         const float x = static_cast<float>(event.GetParameter<int>("mouse_x", 0));

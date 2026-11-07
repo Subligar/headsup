@@ -147,6 +147,8 @@ TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
     CHECK(input.Pinned() == BarWidget::Target);
     CHECK(input.Press(960.0f, 18.0f, true)); // and unpins it
     CHECK(!input.Pinned().has_value());
+    input.Move(960.0f, 700.0f);
+    input.Move(960.0f, 18.0f); // hovered again
     CHECK(input.Press(960.0f, 200.0f, true)); // the popup's, and no pin
     CHECK(!input.Pinned().has_value());
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its pin chip pins it
@@ -167,6 +169,27 @@ TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
     CHECK(input.Press(gil.x + 5.0f, 18.0f, true)); // the bar's, but gil has no popup
     CHECK(!input.Pinned().has_value());
     CHECK(input.Press(5.0f, 30.0f, false)); // a right press on the strip is the bar's too
+}
+
+TEST(a_popup_unpinned_from_its_widget_hides_until_the_pointer_leaves_the_widget_and_comes_back)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    input.Move(960.0f, 18.0f);
+    CHECK(input.Press(960.0f, 18.0f, true) && input.Pinned() == BarWidget::Target);
+    CHECK(input.Press(960.0f, 18.0f, true) && !input.Pinned());
+    CHECK(!input.Open()); // gone, though the pointer is still on the widget
+    input.Move(965.0f, 20.0f);
+    CHECK(!input.Open());
+    input.Move(960.0f, 700.0f);
+    input.Move(960.0f, 18.0f);
+    CHECK(input.Open() == BarWidget::Target); // back once it left and came back
+    // Or a press pins it again at once.
+    CHECK(input.Press(960.0f, 18.0f, true) && input.Press(960.0f, 18.0f, true) && !input.Open());
+    CHECK(input.Press(960.0f, 18.0f, true) && input.Open() == BarWidget::Target && input.Pinned() == BarWidget::Target);
 }
 
 TEST(a_fleeting_cards_pick_is_forgotten_once_the_popup_closes_and_another_cards_is_kept)
@@ -211,6 +234,12 @@ TEST(a_popup_shows_where_it_is_dragged_else_at_its_kept_spot_else_under_its_widg
     const PopupSpot kept{120, 80, true, true};
     CHECK(PopupAt(under, std::nullopt, kept, W, H) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
     CHECK(PopupAt(under, BarRect{400.0f, 500.0f, 300.0f, 200.0f}, kept, W, H) == (BarRect{400.0f, 500.0f, 300.0f, 200.0f}));
+    // Open, it stays across where it opened while its widget changes width, on the screen, and grows from there.
+    CHECK(PopupAt(under, std::nullopt, std::nullopt, W, H, 700.0f) == (BarRect{700.0f, 44.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(BarRect{800.0f, 44.0f, 500.0f, 200.0f}, std::nullopt, std::nullopt, W, H, 1600.0f) ==
+          (BarRect{1420.0f, 44.0f, 500.0f, 200.0f}));
+    // A spot of its own wins over where it opened.
+    CHECK(PopupAt(under, std::nullopt, kept, W, H, 700.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
 }
 
 TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
@@ -237,6 +266,14 @@ TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
     const std::optional<std::pair<PanelWidget, BarRect>> moved = input.TakeMoved();
     CHECK(moved && moved->first == PanelWidget{BarWidget::Target} && moved->second == (BarRect{860.0f, 144.0f, 400.0f, 300.0f}));
     CHECK(!input.TakeMoved() && !input.DraggedPopup(BarWidget::Target));
+}
+
+TEST(popups_shown_after_the_one_whose_settings_show_go_over_its_settings)
+{
+    const std::vector<PanelWidget> shown{BarWidget::Zone, BarWidget::Job, BarWidget::Bags, BarWidget::Target};
+    CHECK(OverSettings(shown, std::nullopt) == (std::vector<bool>{false, false, false, false}));
+    CHECK(OverSettings(shown, PanelWidget{BarWidget::Job}) == (std::vector<bool>{false, false, true, true}));
+    CHECK(OverSettings(shown, PanelWidget{BarWidget::Target}) == (std::vector<bool>{false, false, false, false}));
 }
 
 TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)

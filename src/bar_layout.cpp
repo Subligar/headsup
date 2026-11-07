@@ -374,6 +374,18 @@ namespace headsup
         return BarRect{x, y, width, std::max(0.0f, std::min(height, PopupRoom(barHeight, screenHeight, gap, ring)))};
     }
 
+    std::vector<bool> OverSettings(const std::vector<PanelWidget>& shown, std::optional<PanelWidget> settings)
+    {
+        std::vector<bool> over;
+        bool past = false;
+        for (const PanelWidget pill : shown)
+        {
+            over.push_back(past);
+            past = past || pill == settings;
+        }
+        return over;
+    }
+
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight)
     {
         const bool right = popup.x + popup.width / 2.0f > screenWidth / 2.0f;
@@ -392,11 +404,14 @@ namespace headsup
     }
 
     BarRect PopupAt(const BarRect& underWidget, const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot,
-        float screenWidth, float screenHeight)
+        float screenWidth, float screenHeight, std::optional<float> keptX)
     {
         const std::optional<PopupSpot> at =
             dragged ? std::optional(PopupSpot{static_cast<int>(dragged->x), static_cast<int>(dragged->y)}) : spot;
-        return at ? PlaceAtSpot(*at, underWidget.width, underWidget.height, screenWidth, screenHeight) : underWidget;
+        if (at) return PlaceAtSpot(*at, underWidget.width, underWidget.height, screenWidth, screenHeight);
+        BarRect rect = underWidget;
+        if (keptX) rect.x = std::clamp(*keptX, 0.0f, std::max(0.0f, screenWidth - rect.width));
+        return rect;
     }
 
     float PopupRoom(float barHeight, float screenHeight, float gap, float ring)
@@ -551,7 +566,8 @@ namespace headsup
     void BarInput::Reevaluate()
     {
         m_Under = WidgetAt(m_Layout, m_X, m_Y);
-        if (m_Under && m_HasPopup[SlotOf(*m_Under)])
+        if (m_Dismissed != m_Under) m_Dismissed.reset();
+        if (m_Under && m_HasPopup[SlotOf(*m_Under)] && m_Under != m_Dismissed)
             m_Hover = m_Under;
         else if (!(m_Hover && m_HasPopup[SlotOf(*m_Hover)] && InHoverColumn(m_X, m_Y)))
             m_Hover.reset();
@@ -587,6 +603,14 @@ namespace headsup
         if (under && m_HasPopup[SlotOf(*under)])
         {
             TogglePin(*under);
+            // Unpinned there, it goes at once, though the pointer is still on the widget.
+            if (IsPinned(*under))
+                m_Dismissed.reset();
+            else
+            {
+                m_Dismissed = under;
+                m_Hover.reset();
+            }
             return true;
         }
         const PopupPlace* place = under ? nullptr : PlaceAt(x, y);

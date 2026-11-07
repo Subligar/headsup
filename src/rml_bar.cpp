@@ -21,6 +21,7 @@ namespace headsup
         constexpr int kFewLetters = 3;     // the least of the target's name worth its room on the bar
         constexpr const char* kDocumentName      = "top panel";
         constexpr const char* kPopupDocumentName = "top panel popup";
+        constexpr int kOverSettings = 10; // the upper popups' document, over the settings view's
 
         void Set(Rml::Element* element, Rml::PropertyId property, std::optional<float>& was, float value)
         {
@@ -45,8 +46,9 @@ namespace headsup
 
     void RmlBar::ClosePopup()
     {
-        if (m_PopupDocument != nullptr) m_PopupDocument->Close();
-        m_PopupDocument = nullptr;
+        for (Rml::ElementDocument*& document : m_PopupDocuments)
+            if (document != nullptr) document->Close();
+        m_PopupDocuments = {};
         m_Popups        = {};
         m_SettingsBody.reset();
     }
@@ -370,7 +372,7 @@ namespace headsup
     bool RmlBar::PopupDocumentFor(RmlHost& host, const BarLook& look)
     {
         PopupDocumentKey key{look.palette, look.metrics, look.titleFont, look.detailFont, look.skin};
-        if (m_PopupDocument != nullptr && key == m_PopupDocumentKey) return true;
+        if (m_PopupDocuments[0] != nullptr && key == m_PopupDocumentKey) return true;
         ClosePopup();
         for (int f = 0; f < kPopupFontCount; ++f)
         {
@@ -379,11 +381,19 @@ namespace headsup
             const FaceLine& line = FaceLineOf(host, face.family, pixels);
             m_PopupFaces[f]      = PopupFace{face.family, pixels, line.rmlHeight, face.tracking, line.drop};
         }
-        m_PopupDocument =
-            host.Overlay()->LoadDocumentFromMemory(PopupDocument(look, m_PopupFaces), kPopupDocumentName);
-        if (m_PopupDocument == nullptr) return false;
+        for (Rml::ElementDocument*& document : m_PopupDocuments)
+        {
+            document = host.Overlay()->LoadDocumentFromMemory(PopupDocument(look, m_PopupFaces), kPopupDocumentName);
+            if (document == nullptr)
+            {
+                ClosePopup();
+                return false;
+            }
+            document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        }
+        m_PopupDocuments[1]->SetProperty(Rml::PropertyId::ZIndex,
+            Rml::Property(static_cast<float>(kMenuViewZ + kOverSettings), Rml::Unit::NUMBER));
         m_PopupDocumentKey = std::move(key);
-        m_PopupDocument->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
         return true;
     }
 
@@ -393,9 +403,13 @@ namespace headsup
         m_SettingsBody.reset();
         std::vector<PopupPlace> places;
         std::array<bool, kPanelSlots> shown{};
-        for (const PanelWidget pill : input.Shown())
-            if (std::optional<PopupPlace> place = ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, pill))
+        const std::vector<PanelWidget> order = input.Shown();
+        const std::vector<bool> over         = OverSettings(order, input.SettingsShown());
+        for (size_t i = 0; i < order.size(); ++i)
+            if (std::optional<PopupPlace> place =
+                    ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, order[i], over[i]))
             {
+                const PanelWidget pill = order[i];
                 shown[SlotOf(pill)] = true;
                 // Drawn in the order shown, the last on top, as input finds them.
                 m_Popups[SlotOf(pill)].element->SetProperty(Rml::PropertyId::ZIndex,
@@ -405,27 +419,46 @@ namespace headsup
         for (int slot = 0; slot < kPanelSlots; ++slot)
         {
             Popup& popup = m_Popups[static_cast<size_t>(slot)];
-            if (shown[static_cast<size_t>(slot)] || popup.element == nullptr) continue;
-            popup.element->SetClass(kHiddenClass, true);
-            popup.element->SetClass(kOpenClass, false);
+            if (shown[static_cast<size_t>(slot)]) continue;
+            for (Rml::Element* element : popup.elements)
+                if (element != nullptr)
+                {
+                    element->SetClass(kHiddenClass, true);
+                    element->SetClass(kOpenClass, false);
+                }
             popup.shown = false;
         }
         return places;
     }
 
     std::optional<PopupPlace> RmlBar::ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
-        const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden, PanelWidget open)
+        const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden, PanelWidget open,
+        bool over)
     {
         const std::optional<BarRect> anchor = GroupRect(layout, open);
         if (!anchor || !PopupDocumentFor(host, look)) return std::nullopt;
         Popup& popup = m_Popups[SlotOf(open)];
-        if (popup.element == nullptr)
+        Rml::Element*& element = popup.elements[over ? 1 : 0];
+        if (element == nullptr)
         {
-            popup.element = m_PopupDocument->AppendChild(m_PopupDocument->CreateElement("div"));
-            popup.element->SetClass(kPopupClass, true);
-            popup.marked = false;
+            Rml::ElementDocument* document = m_PopupDocuments[over ? 1 : 0];
+            element = document->AppendChild(document->CreateElement("div"));
+            element->SetClass(kPopupClass, true);
+        }
+        if (popup.element != element)
+        {
+            // Moved over or under the settings: drawn anew in the other document.
+            if (popup.element != nullptr)
+            {
+                popup.element->SetClass(kHiddenClass, true);
+                popup.element->SetClass(kOpenClass, false);
+            }
+            popup.element = element;
+            popup.marked  = false;
+            popup.left = popup.top = popup.width = popup.height = std::nullopt;
         }
         const bool settings = input.SettingsShown() == open;
+        if (!popup.shown) popup.keptX.reset();
         if (!popup.shown || popup.settings != settings)
         {
             popup.widest = 0.0f;
@@ -460,8 +493,13 @@ namespace headsup
             return cut;
         });
         popup.widest = std::max(popup.widest, pl.width);
-        const BarRect rect = PopupAt(PlacePopup(*anchor, barBottom, pl.width, pl.height, screenWidth, screenHeight, m.gap, out),
-            input.DraggedPopup(open), look.settings.Widget(open).popupSpot, screenWidth, screenHeight);
+        const BarRect under = PlacePopup(*anchor, barBottom, pl.width, pl.height, screenWidth, screenHeight, m.gap, out);
+        const std::optional<BarRect> dragged     = input.DraggedPopup(open);
+        const std::optional<PopupSpot>& spot     = look.settings.Widget(open).popupSpot;
+        // Placed by a drag or a spot, it opens under its widget again once that is reset.
+        if (dragged || spot) popup.keptX.reset();
+        else if (!popup.keptX) popup.keptX = under.x;
+        const BarRect rect = PopupAt(under, dragged, spot, screenWidth, screenHeight, popup.keptX);
         if (fresh || !popup.marked)
         {
             popup.element->SetInnerRML(PopupRml(pl, look, m_PopupFaces));

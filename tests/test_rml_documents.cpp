@@ -76,6 +76,52 @@ TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
     }
 }
 
+TEST(a_widgets_content_sits_in_the_middle_of_a_wider_box_with_its_lines_against_its_sections_side)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    for (const BarSection section : {BarSection::Left, BarSection::Center, BarSection::Right})
+    {
+        test::RmlSession rml;
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(LookOf(PaletteOf(BarTheme::UmbraDark), settings), place), "bar");
+        bar->Show();
+        Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Bags));
+        widget->SetClass(kHiddenClass, false);
+        widget->SetClass(SectionClass(section), true);
+        widget->SetProperty(Rml::PropertyId::Width, Rml::Property(300.0f, Rml::Unit::PX));
+        WidgetContent c;
+        c.shown    = true;
+        c.icons    = {Icon::Bag};
+        c.title    = {Text("20 / 30")};
+        c.subtitle = {Text("Inventory and more")};
+        widget->SetInnerRML(WidgetRml(c, LookOf(PaletteOf(BarTheme::UmbraDark), settings), {}));
+        rml.context->Update();
+        Rml::ElementList icons, titles, details;
+        widget->GetElementsByClassName(icons, "icon");
+        widget->GetElementsByClassName(titles, "title");
+        widget->GetElementsByClassName(details, "detail");
+        const float boxLeft = widget->GetAbsoluteOffset(Rml::BoxArea::Content).x;
+        const float boxRight = boxLeft + widget->GetBox().GetSize(Rml::BoxArea::Content).x;
+        const float first = icons.front()->GetAbsoluteOffset(Rml::BoxArea::Border).x;
+        const float title = titles.front()->GetAbsoluteOffset(Rml::BoxArea::Border).x + titles.front()->GetBox().GetSize(Rml::BoxArea::Border).x;
+        const float detail = details.front()->GetAbsoluteOffset(Rml::BoxArea::Border).x + details.front()->GetBox().GetSize(Rml::BoxArea::Border).x;
+        const float last = std::max(title, detail);
+        // As much room before the icon as after the longer line, whatever the section.
+        CHECK(std::fabs((first - boxLeft) - (boxRight - last)) <= 1.0f);
+        CHECK(first - boxLeft > 20.0f);
+        // The shorter title lines up with the detail line on the section's side: its left, its middle or its right.
+        const float titleLeft = titles.front()->GetAbsoluteOffset(Rml::BoxArea::Border).x, detailLeft = details.front()->GetAbsoluteOffset(Rml::BoxArea::Border).x;
+        Rml::Element* titleText = titles.front()->GetFirstChild();
+        const float inkLeft = titleText->GetAbsoluteOffset(Rml::BoxArea::Border).x, inkRight = inkLeft + titleText->GetBox().GetSize(Rml::BoxArea::Border).x;
+        CHECK(std::fabs(titleLeft - detailLeft) <= 1.0f);
+        if (section == BarSection::Left) CHECK(std::fabs(inkLeft - detailLeft) <= 1.0f);
+        if (section == BarSection::Right) CHECK(std::fabs(inkRight - detail) <= 1.0f);
+        if (section == BarSection::Center) CHECK(std::fabs((inkLeft - detailLeft) - (detail - inkRight)) <= 1.0f);
+        CHECK_EQ(rml.Said(), "");
+    }
+}
+
 TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complaint)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},

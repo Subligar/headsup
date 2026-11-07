@@ -105,14 +105,17 @@ namespace headsup
     PillJoins JoinsOf(const BarLayout& layout, PanelWidget widget);
     // A combined pill has a popup when any of its widgets has one: its first widget's hasPopup says so.
     void SharePopups(std::array<bool, kPanelSlots>& hasPopup, const std::array<PanelWidget, kPanelSlots>& groups);
+    // By the popups shown, bottom to top: whether each is drawn over the settings shown in the popup of settings, as
+    // every popup shown after that one is.
+    std::vector<bool> OverSettings(const std::vector<PanelWidget>& shown, std::optional<PanelWidget> settings);
     // A dragged popup's spot, by which half of the screen its middle is in across and down.
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight);
     // A popup of this size at the spot, its kept edges where the spot says, moved onto the screen if it would leave it.
     BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight);
     // Where a popup placed under its widget shows: where it is being dragged, else at the spot it was left, pinned or
-    // not.
+    // not, else across at keptX, where it opened, so a widget changing width while it is open does not move it.
     BarRect PopupAt(const BarRect& underWidget, const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot,
-        float screenWidth, float screenHeight);
+        float screenWidth, float screenHeight, std::optional<float> keptX = std::nullopt);
     // Under its widget below the bar, moved inward from the screen's sides, its height cut at the bottom: a ring
     // drawn ring pixels around it stays gap from the bar and the screen's edges.
     BarRect PlacePopup(const BarRect& widget, float barHeight, float width, float height, float screenWidth,
@@ -253,6 +256,7 @@ namespace headsup
         float m_X = kAway, m_Y = kAway;
         std::optional<PanelWidget> m_Under;  // the widget under the pointer
         std::optional<PanelWidget> m_Hover;  // the popup hovering keeps open
+        std::optional<PanelWidget> m_Dismissed; // unpinned from its widget: no hover until the pointer leaves it
         std::vector<PanelWidget> m_Pinned;   // in the order pinned
         std::optional<PanelWidget> m_Settings; // a pinned pill, while its popup shows its settings
         bool m_PinnedForSettings = false;      // its pin came with its settings, and goes when they close

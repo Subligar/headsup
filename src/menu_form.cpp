@@ -638,14 +638,14 @@ namespace headsup
             for (int line = 0; line < kDesignLines; ++line)
             {
                 std::vector<DesignChip>& chips = d.lines[static_cast<size_t>(line)];
-                form.Raw("<div class=\"tray design-line\">");
+                form.Raw(std::string("<div class=\"tray ") + kDesignLineClass + "\">");
                 for (size_t i = 0; i < chips.size(); ++i)
                 {
                     DesignChip& chip       = chips[i];
                     const auto part        = static_cast<size_t>(chip.part);
                     const std::string name = base + " " + std::to_string(part);
                     const std::string id   = form.Id(name);
-                    form.Raw("<div class=\"btn raised wchip dchip drag\" id=\"" + id + "\"" + TipAttribute(names[part].tip) + ">");
+                    form.Raw(std::string("<div class=\"btn raised wchip ") + kDesignChipClass + " drag\" id=\"" + id + "\"" + TipAttribute(names[part].tip) + ">");
                     // A Pinned Status button is on while a status is pinned at its rank, which its pin sets.
                     const auto pin = static_cast<size_t>(chip.part) - static_cast<size_t>(WidgetPart::StatusPin1);
                     const bool pinned = widget.kind == BarWidget::StatusTimers;

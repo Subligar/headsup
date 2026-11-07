@@ -449,7 +449,7 @@ namespace headsup
         // The window's style, its body made a clear box over the panel's popup, which draws the ground.
         return MenuStyle(look) +
                "body{width:auto;height:auto;min-width:0px;min-height:0px;padding:0px;background-color:transparent;"
-               "decorator:none;border-width:0px;border-radius:0px;z-index:20;}body.open{animation:none;}#" +
+               "decorator:none;border-width:0px;border-radius:0px;z-index:" + std::to_string(kMenuViewZ) + ";}body.open{animation:none;}#" +
                kMenuViewBodyId + "{overflow-y:auto;}";
     }
 

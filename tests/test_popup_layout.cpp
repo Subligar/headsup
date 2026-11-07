@@ -146,7 +146,7 @@ TEST(a_pinned_popup_moved_from_its_place_has_a_reset_chip_left_of_its_cog)
     const PopupLayout pinned = LayoutPopup(content, m, BarShape::Pills, true, Fake);
     const PopupTabChip* reset = pressed(pinned);
     CHECK(reset != nullptr);
-    const float gap = 0.6f * m.popupText;
+    const float gap = 0.25f * m.popupText;
     CHECK(Near(reset->width, pinned.cog.width) && Near(reset->y, pinned.cog.y) && Near(reset->x + reset->width + gap, pinned.cog.x));
     // Its icon alone in it.
     CHECK(std::ranges::any_of(pinned.pieces, [](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Reset; }));
@@ -850,9 +850,9 @@ TEST(the_cog_chip_sits_left_of_the_pin_and_settings_take_the_room_they_ask_in_pl
     const BarMetrics m  = MetricsFor(36, BarShape::Pills);
     const float pad     = m.popupPadding;
     const PopupLayout l = LayoutPopup(Sample(), m, BarShape::Pills, false, Fake);
-    // A round chip as tall as the pin's, beside it with a cell's gap, its cog inside it; not lit.
+    // A round chip as tall as the pin's, beside it, its cog inside it; not lit.
     CHECK(l.cog.width > 0.0f && Near(l.cog.width, l.cog.height) && Near(l.cog.height, l.pin.height) && Near(l.cog.y, l.pin.y));
-    CHECK(Near(l.cog.x + l.cog.width + 0.6f * m.popupText, l.pin.x));
+    CHECK(Near(l.cog.x + l.cog.width + 0.25f * m.popupText, l.pin.x)); // a quarter of a line apart: less than cells
     const std::vector<const PopupPiece*> chips = Of(l, PopupPiece::Kind::CogChip), cogs = Of(l, PopupPiece::Kind::Cog);
     CHECK(chips.size() == 1 && cogs.size() == 1 && !chips[0]->open);
     CHECK(cogs[0]->x > l.cog.x && cogs[0]->x + cogs[0]->width < l.cog.x + l.cog.width);
@@ -1340,7 +1340,7 @@ TEST(while_its_settings_show_a_widgets_clone_and_remove_chips_sit_left_of_the_co
     const PopupTabChip *clone = pressed(set, "widget clone 4"), *remove = pressed(set, "widget remove 17");
     CHECK(clone != nullptr && remove != nullptr);
     // Round, as tall as the cog's, a cell's gap apart in a row: remove, clone, cog, pin.
-    const float gap = 0.6f * m.popupText;
+    const float gap = 0.25f * m.popupText;
     CHECK(Near(clone->width, set.cog.width) && Near(clone->height, set.cog.height) && Near(clone->y, set.cog.y));
     CHECK(Near(clone->x + clone->width + gap, set.cog.x) && Near(remove->x + remove->width + gap, clone->x));
     std::vector<const PopupPiece*> on;

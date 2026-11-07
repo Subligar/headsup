@@ -2312,3 +2312,31 @@ TEST(the_feedback_card_spans_its_box_and_button_across_and_puts_others_box_besid
     CHECK(left(card + "-other") >= left(topic) + width(topic));
     CHECK(std::abs(top(card + "-other") - top(topic)) < 2.0f);
 }
+
+TEST(a_designer_button_dropped_in_the_gap_between_two_buttons_goes_between_them)
+{
+    Window window;
+    const PanelWidget job{BarWidget::Job};
+    window.settings.Widget(job).on     = true;
+    window.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs earned tonext | percent bar");
+    window.shown = job;
+    window.Frames(3);
+    Rml::ElementList lines;
+    window.Find(kMenuViewBodyId)->GetElementsByClassName(lines, "design-line");
+    CHECK(lines.size() == 2);
+    std::vector<Rml::Element*> top;
+    for (int i = 0; i < lines[0]->GetNumChildren(); ++i)
+        if (lines[0]->GetChild(i)->IsClassSet("dchip")) top.push_back(lines[0]->GetChild(i));
+    Rml::Element* percent = nullptr;
+    for (int i = 0; i < lines[1]->GetNumChildren(); ++i)
+        if (lines[1]->GetChild(i)->IsClassSet("dchip") && percent == nullptr) percent = lines[1]->GetChild(i);
+    CHECK(top.size() == 3 && percent != nullptr);
+    // In the gap after Job Info, at its middle.
+    const float gapLeft  = top[0]->GetAbsoluteOffset(Rml::BoxArea::Border).x + top[0]->GetBox().GetSize(Rml::BoxArea::Border).x;
+    const float gapRight = top[1]->GetAbsoluteOffset(Rml::BoxArea::Border).x;
+    CHECK(gapRight - gapLeft >= 2.0f);
+    const Rml::Vector2f gap{(gapLeft + gapRight) / 2.0f, window.Center(top[0]->GetId()).y};
+    CHECK(window.Drag(percent->GetId(), gap - window.Center(percent->GetId())));
+    window.Frames(2);
+    CHECK_EQ(DesignText(window.settings.Widget(job).design), "jobs percent earned tonext | bar");
+}

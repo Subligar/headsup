@@ -182,10 +182,11 @@ namespace headsup
         // went, with its cards' tabs and the parts that scroll at their places on the screen.
         std::vector<PopupPlace> ShowPopups(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden);
-        // One pill's popup, as ShowPopups places it; nothing when its pill is not on the bar.
+        // One pill's popup, as ShowPopups places it; nothing when its pill is not on the bar. over: drawn over the
+        // settings another popup shows.
         std::optional<PopupPlace> ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-            PanelWidget open);
+            PanelWidget open, bool over);
         bool PopupDocumentFor(RmlHost& host, const BarLook& look);
         void ClosePopup();
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);
@@ -212,12 +213,14 @@ namespace headsup
         // What the help bar's markup was made from, with Background.
         std::optional<std::pair<HelpBarParts, bool>> m_HelpDrawn;
         Memo<HelpBarKey, HelpBarFit> m_HelpBar;
-        Rml::ElementDocument* m_PopupDocument = nullptr;
+        // The popups' documents: under the settings a popup shows, and over them for the popups shown after that one.
+        std::array<Rml::ElementDocument*, 2> m_PopupDocuments{};
         PopupDocumentKey m_PopupDocumentKey;
         // Each pill's popup, by its first widget's SlotOf.
         struct Popup
         {
-            Rml::Element* element = nullptr;
+            Rml::Element* element = nullptr;                   // the one of elements in use
+            std::array<Rml::Element*, 2> elements{};           // in each of m_PopupDocuments, made as needed
             bool marked = false; // its markup is the layout's
             std::optional<float> left, top, width, height;
             Memo<PopupKey, PopupLayout> layout;
@@ -225,6 +228,7 @@ namespace headsup
             // or its settings' (settings), apart.
             bool shown = false, settings = false;
             float widest = 0.0f;
+            std::optional<float> keptX; // where across it opened under its widget, which it keeps while open
             // Each popup font's widths of the texts it measured, its figures at the font's widest digit.
             std::array<std::unordered_map<std::string, float>, kPopupFontCount> widths;
         };

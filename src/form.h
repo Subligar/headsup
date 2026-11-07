@@ -86,6 +86,9 @@ namespace headsup
     // own tag held, which would leave its place.
     constexpr const char* kGhostClass    = "ghost";
     constexpr const char* kGhostSlotClass = "ghost-slot", *kGhostTextClass = "ghost-text"; // its place, and the letters before it
+    // A Widget Designer line: a drop on it but on none of its buttons goes before the button after the pointer, or on
+    // its end.
+    constexpr const char* kDesignLineClass = "design-line", *kDesignChipClass = "dchip";
     // On a stretch split by a held tag: the bytes of it that stand before the tag, which it does not show.
     constexpr const char* kSplitAttribute = "split";
     constexpr const char* kReplacedClass = "replaced";

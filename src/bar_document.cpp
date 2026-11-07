@@ -456,12 +456,12 @@ namespace headsup
         css += std::string(".widget.") + kLitClass + " .title{font-effect:glow(0px 3px 0px 0px " +
                RcssColor(Faded(p.accent, kLitGlow)) + ");}";
 
-        // A widget's content against its box's side that its section is on, or in its middle in the center, and each of
-        // its lines the same way against the widest.
-        css += ".content{position:relative;top:" + Px(-kContentLift) + ";height:100%;}";
+        // A widget's content in the middle of its box, which can be wider (figures are measured at their widest digit),
+        // and each of its lines against the widest on the side its section is on.
+        css += ".content{position:relative;top:" + Px(-kContentLift) + ";height:100%;text-align:center;}";
         for (const auto& [section, align] : {std::pair{BarSection::Left, "left"}, std::pair{BarSection::Center, "center"},
                  std::pair{BarSection::Right, "right"}})
-            css += std::string(".widget.") + SectionClass(section) + " .content{text-align:" + align + ";}";
+            css += std::string(".widget.") + SectionClass(section) + " .text{text-align:" + align + ";}";
         css += ".icon,.coin,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
         css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
                Px(m.gap) + ";}";

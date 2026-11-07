@@ -170,12 +170,12 @@ TEST(a_widgets_icon_on_the_right_comes_after_its_lines_and_a_picture_is_drawn_as
     CHECK(look.Leading(c) > 0.0f);
 }
 
-TEST(a_widgets_content_lines_up_with_the_side_of_the_panel_its_section_is_on)
+TEST(a_widgets_lines_line_up_with_the_side_of_the_panel_its_section_is_on)
 {
     const BarLook look    = LookOf(BarTheme::UmbraDark, Settings{});
     const std::string css = BarDocument(look, Place());
     const auto rule = [&](BarSection section) {
-        return std::string(".widget.") + SectionClass(section) + " .content{text-align:";
+        return std::string(".widget.") + SectionClass(section) + " .text{text-align:";
     };
     CHECK(Has(css, (rule(BarSection::Left) + "left;").c_str()));
     CHECK(Has(css, (rule(BarSection::Center) + "center;").c_str()));

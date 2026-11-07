@@ -15,6 +15,7 @@ namespace headsup
         constexpr float kIconGap     = 0.3f;
         constexpr float kStar        = 0.85f; // a starred cell's star, about as tall as a capital
         constexpr float kCellGap     = 0.6f;  // between cells of a line
+        constexpr float kTitleChipGap = 0.25f; // between the round buttons at the title's right
         constexpr float kColumnGap   = 0.8f;
         constexpr float kRoomyColumnGap = 1.4f; // a roomy grid's
         constexpr float kMiddleRight = 1.0f;  // a spread grid's centered column, right of the card's middle
@@ -652,7 +653,7 @@ namespace headsup
                 PopupPiece& chip = l.pieces[at.piece];
                 chip.x           = right - chip.width;
                 l.pieces[at.piece + 1].x += chip.x;
-                right            = chip.x - unit * kCellGap;
+                right            = chip.x - unit * kTitleChipGap;
                 const BarRect rect{chip.x, chip.y, chip.width, chip.height};
                 if (chip.kind == PopupPiece::Kind::PinChip) l.pin = rect;
                 else if (chip.kind == PopupPiece::Kind::CogChip) l.cog = rect;
@@ -714,7 +715,7 @@ namespace headsup
             l.pieces.push_back(std::move(cog));
             l.pieces.push_back(PopupPiece{PopupPiece::Kind::Cog, (side - mark) / 2.0f, pad + (side - mark) / 2.0f, mark, mark, {},
                 PopupFont::Pin});
-            titleWidth += unit * kCellGap + side;
+            titleWidth += unit * kTitleChipGap + side;
             for (const auto& [press, icon] : {std::pair{&content.resetPress, Icon::Reset}, std::pair{&content.clonePress, Icon::Clone},
                      std::pair{&content.removePress, Icon::Delete}})
             {
@@ -729,7 +730,7 @@ namespace headsup
                 picture.icon   = icon;
                 picture.tinted = true;
                 l.pieces.push_back(std::move(picture));
-                titleWidth += unit * kCellGap + side;
+                titleWidth += unit * kTitleChipGap + side;
             }
         }
         l.lines.push_back(PopupLine{pad + rowHeight});
