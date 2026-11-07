@@ -237,6 +237,7 @@
               "rows": [
                 {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
                 {"key": "icon", "name": "Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is Show on Left."},
+                {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is on."},
                 {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
                 {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is 0 px."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
@@ -1262,7 +1263,7 @@
       "options": [
         {"name": "Zone Name", "tip": "The zone you are in."},
         {"name": "Region Name", "tip": "The zone's region."},
-        {"name": "Conquest Icon", "tip": "The crest of the nation that holds the region."},
+        {"name": "Conquest Icon", "tip": "The crest of the nation that holds the region; Jeuno's in Jeuno, and Aht Urhgan's in the regions of its Besieged map."},
         {"name": "Conquest Nation", "tip": "The name of the nation that holds the region."},
         {"name": "Weather Icon", "tip": "The weather's picture, as Use Custom Icons picks it."},
         {"name": "Weather Name", "tip": "The weather now."},

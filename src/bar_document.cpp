@@ -204,6 +204,8 @@ namespace headsup
                                       : crests && is(GamePicture::BastokCrest)        ? &crests->bastok
                                       : crests && is(GamePicture::WindurstCrest)      ? &crests->windurst
                                       : crests && is(GamePicture::BeastmenCrest)      ? &crests->beastmen
+                                      : crests && is(GamePicture::JeunoCrest)         ? &crests->jeuno
+                                      : crests && is(GamePicture::AhtUrhganCrest)     ? &crests->ahtUrhgan
                                                                                       : nullptr;
         if (picture == nullptr) return std::nullopt;
         Image image{picture->width, picture->height, std::vector<uint32_t>(picture->bgra.size() / sizeof(uint32_t))};
@@ -465,6 +467,8 @@ namespace headsup
         css += ".icon,.coin,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
         css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
                Px(m.gap) + ";}";
+        const auto crest = static_cast<float>(CrestPixels(m));
+        css += ".icon.pic{" + square(crest) + "margin-top:" + Px(std::round(mid - crest / 2.0f) - rowTop) + ";}";
         css += ".coin{" + square(static_cast<float>(coin)) + "margin-top:" +
                Px(std::round(mid - static_cast<float>(coin) / 2.0f) - rowTop) + ";margin-right:" + Px(m.gap) + ";}";
         css += ".icon.right,.coin.right{margin-right:0px;margin-left:" + Px(m.gap) + ";}";

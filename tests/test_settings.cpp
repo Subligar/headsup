@@ -2797,6 +2797,16 @@ TEST(the_job_and_exp_widgets_job_text_and_bar_settings_are_kept)
     CHECK(!clamped.expBarText && clamped.jobText == JobText::MainSub);
 }
 
+TEST(the_zone_widgets_show_zone_id_in_header_is_kept)
+{
+    Settings s;
+    s.Widget(BarWidget::Zone).zoneId = false;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["zoneId"], "false");
+    CHECK(!LoadSettings(store).Widget(BarWidget::Zone).zoneId);
+}
+
 TEST(the_bags_widgets_bag_is_kept_and_one_past_the_last_reads_as_the_inventory)
 {
     Settings s;

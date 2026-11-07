@@ -80,6 +80,8 @@ namespace headsup
 
     // Gil's coin, in whole pixels.
     int CoinPixels(const BarMetrics& metrics);
+    // A zone's crest, a little smaller than an icon, in whole pixels.
+    int CrestPixels(const BarMetrics& metrics);
     constexpr uint32_t kCoinColor  = 0xFFE8C35A;
     constexpr float kCapScale      = 1.4f;  // an end cap's diamond, in diamonds
     constexpr float kLineIconGap   = 2.0f;  // pixels before an icon or coin among a line's text

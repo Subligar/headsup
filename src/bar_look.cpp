@@ -18,6 +18,7 @@ namespace headsup
         constexpr uint32_t kMenuPageAlpha = 0xF7, kMenuEdgeAlpha = 0x24, kMenuRaisedAlpha = 0x3D, kMenuSoftAlpha = 0x47;
         constexpr float kCardStep = 0.07f, kInsetShade = 0.4f, kLabelShare = 0.3f, kMutedShare = 0.4f;
         constexpr float kCoinScale       = 0.75f; // gil's coin, in icons
+        constexpr float kCrestScale      = 0.85f; // a zone's crest, in icons
         constexpr float kFrameRadius     = 3.0f;  // the ornate target frame and hover tint
         constexpr int kLitTarget         = 2;     // a hovered ornate target's tint, in hover tints' alpha
         constexpr float kHelpPadShare    = 0.5f;   // of the gap: clear above and below the help bar's row
@@ -167,8 +168,8 @@ namespace headsup
 
     float BarLook::Leading(const WidgetContent& content) const
     {
-        const size_t icons = content.icons.size() + (content.picture != GamePicture::None ? 1 : 0);
-        return static_cast<float>(icons) * (metrics.icon + metrics.gap) +
+        return static_cast<float>(content.icons.size()) * (metrics.icon + metrics.gap) +
+               (content.picture != GamePicture::None ? static_cast<float>(CrestPixels(metrics)) + metrics.gap : 0.0f) +
                (content.coin ? static_cast<float>(CoinPixels(metrics)) + metrics.gap : 0.0f);
     }
 
@@ -191,6 +192,8 @@ namespace headsup
     }
 
     int CoinPixels(const BarMetrics& metrics) { return WholePixels(metrics.icon * kCoinScale); }
+
+    int CrestPixels(const BarMetrics& metrics) { return WholePixels(metrics.icon * kCrestScale); }
 
     float MarkWidth(const Span& span, float size)
     {

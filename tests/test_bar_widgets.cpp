@@ -1012,6 +1012,13 @@ TEST(the_zones_design_puts_the_holders_name_before_or_after_the_zone_or_below_it
     owners[1]    = Nation::Beastmen;
     state.owners = owners;
     CHECK(shown("name | region").picture == GamePicture::BeastmenCrest);
+    // Jeuno's crest in Jeuno, and Aht Urhgan's in its Besieged regions: a crest alone, with no nation named.
+    state.zone = 244; // Upper Jeuno
+    CHECK(shown("name | region nation").picture == GamePicture::JeunoCrest && shown("name | region nation").subtitle.size() == 1);
+    state.zone = 50; // Aht Urhgan Whitegate, West Aht Urhgan
+    CHECK(shown("name | region").picture == GamePicture::AhtUrhganCrest);
+    state.zone = 230; // Southern San d'Oria: no crest
+    CHECK(shown("name | region").picture == GamePicture::None);
 }
 
 TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
@@ -1034,6 +1041,11 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     state.zone = 999; // past the data: its number is its title already, and it has no region
     const PopupContent unknown = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(Joined(unknown.title) == "Zone 999" && unknown.subtitle.empty() && unknown.sections.empty());
+    // Show Zone ID in Header off: the name alone.
+    settings.Widget(BarWidget::Zone).zoneId = false;
+    state.zone = 103;
+    CHECK(BarPopupContent(BarWidget::Zone, state, settings).title == ListOf(Text("Valkurm Dunes")));
+    CHECK(Settings{}.Widget(BarWidget::Zone).zoneId);
 }
 
 TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)

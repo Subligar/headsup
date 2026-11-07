@@ -461,8 +461,9 @@ TEST(the_nations_crests_are_their_own_pictures_in_the_menu_dat)
         return Chunk(chunk, 0x20, PictureBody(32, 32, "DXT1", blocks, 0xA1, name));
     };
     const Bytes sandy = crest("scre", "menu    scre    ", 0xF800), bastok = crest("bcre", "menu    bcre    ", 0x07E0),
-                windy = crest("wcre", "menu    wcre    ", 0x001F), beastmen = crest("mcre", "menu    mcre    ", 0xFFFF);
-    const Read<NationCrests> read = ReadNationCrests(sandy + bastok + windy + beastmen);
+                windy = crest("wcre", "menu    wcre    ", 0x001F), beastmen = crest("mcre", "menu    mcre    ", 0xFFFF),
+                jeuno = crest("jcre", "menu    jcre    ", 0xF81F), ahtUrhgan = crest("acre", "menu    acre    ", 0x07FF);
+    const Read<NationCrests> read = ReadNationCrests(sandy + bastok + windy + beastmen + jeuno + ahtUrhgan);
     CHECK(read.value && read.failure.empty());
     const auto first = [](const ColorPicture& p) { return std::array{p.bgra[0], p.bgra[1], p.bgra[2]}; };
     CHECK(read.value->sanDoria.width == 32 && read.value->sanDoria.height == 32);
@@ -470,7 +471,9 @@ TEST(the_nations_crests_are_their_own_pictures_in_the_menu_dat)
     CHECK(first(read.value->bastok) == (std::array<uint8_t, 3>{0, 255, 0}));
     CHECK(first(read.value->windurst) == (std::array<uint8_t, 3>{255, 0, 0}));
     CHECK(first(read.value->beastmen) == (std::array<uint8_t, 3>{255, 255, 255}));
+    CHECK(first(read.value->jeuno) == (std::array<uint8_t, 3>{255, 0, 255}));
+    CHECK(first(read.value->ahtUrhgan) == (std::array<uint8_t, 3>{255, 255, 0}));
     // One missing, and none is read: the chat line says which.
-    const Read<NationCrests> partial = ReadNationCrests(sandy + windy + beastmen);
+    const Read<NationCrests> partial = ReadNationCrests(sandy + windy + beastmen + jeuno + ahtUrhgan);
     CHECK(!partial.value && !partial.failure.empty());
 }

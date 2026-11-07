@@ -820,6 +820,9 @@ namespace headsup
                 case WidgetTabsRow::Seconds:
                     if (kind == BarWidget::EarthTime) form.Switch(label.c_str(), o.clockSeconds, row.tip);
                     break;
+                case WidgetTabsRow::ShowZoneId:
+                    if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, row.tip);
+                    break;
                 case WidgetTabsRow::Icon:
                     // Named after its widget's icon, as the Widget Designer's button for it was.
                     if (const std::optional<WidgetPart> icon = IconPartOf(kind))

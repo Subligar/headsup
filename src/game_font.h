@@ -117,10 +117,10 @@ namespace headsup
         ColorPicture mail, messenger;
     };
     Read<PlayOnlineIcons> ReadPlayOnlineIcons(std::span<const uint8_t> dat);
-    // The crests the game's conquest map shows, out of a whole 51.DAT.
+    // The crests the game's conquest map shows, and Jeuno's and Aht Urhgan's from its region maps, out of a whole 51.DAT.
     struct NationCrests
     {
-        ColorPicture sanDoria, bastok, windurst, beastmen;
+        ColorPicture sanDoria, bastok, windurst, beastmen, jeuno, ahtUrhgan;
     };
     Read<NationCrests> ReadNationCrests(std::span<const uint8_t> dat);
     // The glyphs of a shapes chunk, each drawn from the picture of that name, which is width by height.

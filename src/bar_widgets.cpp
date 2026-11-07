@@ -759,6 +759,15 @@ namespace headsup
 
 
         // Who holds the zone's region; no one before a conquest update or outside the conquest regions.
+        // Jeuno's crest in Jeuno, and Aht Urhgan's in the regions of its Besieged map, as the game's region maps show them.
+        GamePicture HomeCrest(const ZoneRecord* zone)
+        {
+            if (zone == nullptr) return GamePicture::None;
+            if (zone->region == kJeunoRegion) return GamePicture::JeunoCrest;
+            if (zone->region >= kFirstAhtUrhganRegion && zone->region <= kLastAhtUrhganRegion) return GamePicture::AhtUrhganCrest;
+            return GamePicture::None;
+        }
+
         Nation OwnerOf(const ZoneRecord* zone, const BarState& state)
         {
             return InConquest(zone) && state.owners ? (*state.owners)[zone->region] : Nation::None;
@@ -1394,13 +1403,15 @@ namespace headsup
                 const std::string_view region = ZoneRegion(zone);
                 std::vector<PartContent> parts{{WidgetPart::ZoneName, ListOf(Text(ZoneTitle(state.zone)))},
                     {WidgetPart::ZoneRegion, region.empty() ? std::vector<Span>{} : ListOf(Text(std::string(region)))}};
-                // Who holds its region, by their crest and by name.
+                // Who holds its region, by their crest and by name; Jeuno's and Aht Urhgan's crests alone in their own.
                 if (const Nation owner = OwnerOf(zone, state); owner != Nation::None)
                 {
                     if (const GamePicture crest = NationCrest(owner); crest != GamePicture::None)
                         parts.push_back({WidgetPart::ZoneCrest, ListOf(Mark(crest))});
                     parts.push_back({WidgetPart::ZoneNation, ListOf(Colored(std::string(NationName(owner)), NationColor(owner)))});
                 }
+                else if (const GamePicture crest = HomeCrest(zone); crest != GamePicture::None)
+                    parts.push_back({WidgetPart::ZoneCrest, ListOf(Mark(crest))});
                 base.hasPopup = state.zone != 0;
                 return parts;
             }
@@ -1803,7 +1814,7 @@ namespace headsup
             const std::string_view region = ZoneRegion(zone);
             popup.title = ListOf(Text(ZoneTitle(state.zone)));
             // A zone past the data has its number for a title already.
-            if (zone != nullptr) popup.title.push_back(Text(" (Zone #" + std::to_string(state.zone) + ")", Tone::Dim));
+            if (zone != nullptr && o.zoneId) popup.title.push_back(Text(" (Zone #" + std::to_string(state.zone) + ")", Tone::Dim));
             if (!region.empty()) popup.subtitle = ListOf(Text(std::string(region), Tone::Dim));
             if (InConquest(zone) && state.shares)
             {

@@ -210,6 +210,8 @@ namespace headsup
         constexpr std::string_view kBastokCrestChunk   = "bcre", kBastokCrest   = "menu    bcre    ";
         constexpr std::string_view kWindurstCrestChunk = "wcre", kWindurstCrest = "menu    wcre    ";
         constexpr std::string_view kBeastmenCrestChunk = "mcre", kBeastmenCrest = "menu    mcre    ";
+        constexpr std::string_view kJeunoCrestChunk    = "jcre", kJeunoCrest    = "menu    jcre    ";
+        constexpr std::string_view kAhtUrhganCrestChunk = "acre", kAhtUrhganCrest = "menu    acre    ";
         constexpr int kMailU = 32, kMessengerU = 48, kPlayOnlineV = 48, kPlayOnlineSide = 16;
 
         // What a picture chunk's header says, or why it is no picture.
@@ -545,10 +547,12 @@ namespace headsup
         Read<ColorPicture> bastok   = NamedPicture(dat, kBastokCrestChunk, kBastokCrest, "Bastok's crest");
         Read<ColorPicture> windurst = NamedPicture(dat, kWindurstCrestChunk, kWindurstCrest, "Windurst's crest");
         Read<ColorPicture> beastmen = NamedPicture(dat, kBeastmenCrestChunk, kBeastmenCrest, "the Beastmen's crest");
-        for (Read<ColorPicture>* crest : {&sanDoria, &bastok, &windurst, &beastmen})
+        Read<ColorPicture> jeuno    = NamedPicture(dat, kJeunoCrestChunk, kJeunoCrest, "Jeuno's crest");
+        Read<ColorPicture> ahtUrhgan = NamedPicture(dat, kAhtUrhganCrestChunk, kAhtUrhganCrest, "Aht Urhgan's crest");
+        for (Read<ColorPicture>* crest : {&sanDoria, &bastok, &windurst, &beastmen, &jeuno, &ahtUrhgan})
             if (!crest->value) return {std::nullopt, std::move(crest->failure)};
         return {NationCrests{std::move(*sanDoria.value), std::move(*bastok.value), std::move(*windurst.value),
-                    std::move(*beastmen.value)},
+                    std::move(*beastmen.value), std::move(*jeuno.value), std::move(*ahtUrhgan.value)},
             {}};
     }
 

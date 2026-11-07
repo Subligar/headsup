@@ -41,6 +41,8 @@ namespace headsup
         BastokCrest,
         WindurstCrest,
         BeastmenCrest,
+        JeunoCrest,
+        AhtUrhganCrest,
     };
 
     // An EXP bar among a line's text: width by height pixels, filled to done of its width, its text in its middle.

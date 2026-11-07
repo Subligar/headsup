@@ -566,7 +566,8 @@ TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_wha
     // The nations' crests, each its own.
     const NationCrests crests{ColorPicture{"menu    scre    ", 1, 1, {7, 8, 9, 255}},
         ColorPicture{"menu    bcre    ", 1, 1, {10, 11, 12, 255}}, ColorPicture{"menu    wcre    ", 1, 1, {13, 14, 15, 255}},
-        ColorPicture{"menu    mcre    ", 1, 1, {16, 17, 18, 255}}};
+        ColorPicture{"menu    mcre    ", 1, 1, {16, 17, 18, 255}}, ColorPicture{"menu    jcre    ", 1, 1, {19, 20, 21, 255}},
+        ColorPicture{"menu    acre    ", 1, 1, {22, 23, 24, 255}}};
     const std::optional<Image> bastok = GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::BastokCrest));
     CHECK(bastok && bastok->argb == std::vector<uint32_t>{0xFF0C0B0Au});
     CHECK(GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::WindurstCrest))->argb ==
@@ -574,6 +575,9 @@ TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_wha
     CHECK(!GamePictureImage(std::nullopt, std::nullopt, GamePictureSource(GamePicture::SanDoriaCrest)));
     CHECK(GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::BeastmenCrest))->argb ==
           std::vector<uint32_t>{0xFF121110u});
+    CHECK(GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::JeunoCrest))->argb == std::vector<uint32_t>{0xFF151413u});
+    CHECK(GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::AhtUrhganCrest))->argb ==
+          std::vector<uint32_t>{0xFF181716u});
 }
 
 TEST(a_side_shared_in_a_combined_pill_keeps_its_text_where_it_was_and_draws_no_edge)
