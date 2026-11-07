@@ -484,8 +484,10 @@ namespace headsup
         const auto out        = static_cast<float>(OuterPad(PopupPanel(look)));
         const float barBottom = open.kind == BarWidget::GameHelp ? anchor->y + anchor->height : BarBottom(p, m);
         const bool pinned     = input.IsPinned(open);
+        // Dragged or left somewhere, it is cut to the room there, not under the bar.
+        const std::optional<PopupSpot> placed = PlacedSpot(input.DraggedPopup(open), look.settings.Widget(open).popupSpot);
         PopupKey key{PanelPopupContent(open, state, look.settings), pinned, m.height, m.popupText,
-            PopupRoom(barBottom, screenHeight, m.gap, out), popup.widest,
+            placed ? SpotRoom(*placed, screenHeight) : PopupRoom(barBottom, screenHeight, m.gap, out), popup.widest,
             settings ? std::optional(settingsRoom.value_or(SettingsRoom{})) : std::nullopt};
         bool fresh            = false;
         const PopupLayout& pl = popup.layout.Get(std::move(key), [&](const PopupKey& k) {
@@ -496,12 +498,10 @@ namespace headsup
         });
         popup.widest = std::max(popup.widest, pl.width);
         const BarRect under = PlacePopup(*anchor, barBottom, pl.width, pl.height, screenWidth, screenHeight, m.gap, out);
-        const std::optional<BarRect> dragged     = input.DraggedPopup(open);
-        const std::optional<PopupSpot>& spot     = look.settings.Widget(open).popupSpot;
         // Placed by a drag or a spot, it opens under its widget again once that is reset.
-        if (dragged || spot) popup.keptX.reset();
+        if (placed) popup.keptX.reset();
         else if (!popup.keptX) popup.keptX = under.x;
-        const BarRect rect = PopupAt(under, dragged, spot, screenWidth, screenHeight, popup.keptX);
+        const BarRect rect = PopupAt(under, pl.height, placed, screenWidth, screenHeight, popup.keptX);
         if (fresh || !popup.marked)
         {
             popup.element->SetInnerRML(PopupRml(pl, look, m_PopupFaces));

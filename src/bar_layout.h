@@ -108,14 +108,20 @@ namespace headsup
     // By the popups shown, bottom to top: whether each is drawn over the settings shown in the popup of settings, as
     // every popup shown after that one is.
     std::vector<bool> OverSettings(const std::vector<PanelWidget>& shown, std::optional<PanelWidget> settings);
-    // A dragged popup's spot, by which half of the screen its middle is in across and down.
+    // A dragged popup's spot, by which half of the screen its middle is in across and down. One reaching the screen's
+    // bottom, cut to the room below its top, is kept by its top: kept by its bottom it would grow up past where it was left.
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight);
     // A popup of this size at the spot, its kept edges where the spot says, moved onto the screen if it would leave it.
     BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight);
-    // Where a popup placed under its widget shows: where it is being dragged, else at the spot it was left, pinned or
-    // not, else across at keptX, where it opened, so a widget changing width while it is open does not move it.
-    BarRect PopupAt(const BarRect& underWidget, const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot,
-        float screenWidth, float screenHeight, std::optional<float> keptX = std::nullopt);
+    // Where a popup is placed instead of under its widget: by its top left where it is being dragged, else at the spot
+    // it was left, pinned or not; nothing for under its widget.
+    std::optional<PopupSpot> PlacedSpot(const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot);
+    // The height a popup placed at the spot is cut to: the screen's below its top, or above its bottom.
+    float SpotRoom(const PopupSpot& spot, float screenHeight);
+    // Where a popup shows: placed, at its height, else under its widget, across at keptX, where it opened, so a widget
+    // changing width while it is open does not move it.
+    BarRect PopupAt(const BarRect& underWidget, float height, const std::optional<PopupSpot>& placed, float screenWidth,
+        float screenHeight, std::optional<float> keptX = std::nullopt);
     // Under its widget below the bar, moved inward from the screen's sides, its height cut at the bottom: a ring
     // drawn ring pixels around it stays gap from the bar and the screen's edges.
     BarRect PlacePopup(const BarRect& widget, float barHeight, float width, float height, float screenWidth,

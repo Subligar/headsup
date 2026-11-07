@@ -230,16 +230,44 @@ TEST(a_popup_shows_where_it_is_dragged_else_at_its_kept_spot_else_under_its_widg
 {
     constexpr float W = 1920.0f, H = 1080.0f;
     const BarRect under{800.0f, 44.0f, 300.0f, 200.0f};
-    CHECK(PopupAt(under, std::nullopt, std::nullopt, W, H) == under);
+    CHECK(!PlacedSpot(std::nullopt, std::nullopt));
+    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H) == under);
     const PopupSpot kept{120, 80, true, true};
-    CHECK(PopupAt(under, std::nullopt, kept, W, H) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
-    CHECK(PopupAt(under, BarRect{400.0f, 500.0f, 300.0f, 200.0f}, kept, W, H) == (BarRect{400.0f, 500.0f, 300.0f, 200.0f}));
+    CHECK(PlacedSpot(std::nullopt, kept) == kept);
+    CHECK(PopupAt(under, 200.0f, kept, W, H) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+    // Dragged, by its top left, wherever it was kept.
+    const std::optional<PopupSpot> dragged = PlacedSpot(BarRect{400.0f, 500.0f, 300.0f, 200.0f}, kept);
+    CHECK(dragged == (PopupSpot{400, 500, false, false}));
+    CHECK(PopupAt(under, 200.0f, dragged, W, H) == (BarRect{400.0f, 500.0f, 300.0f, 200.0f}));
     // Open, it stays across where it opened while its widget changes width, on the screen, and grows from there.
-    CHECK(PopupAt(under, std::nullopt, std::nullopt, W, H, 700.0f) == (BarRect{700.0f, 44.0f, 300.0f, 200.0f}));
-    CHECK(PopupAt(BarRect{800.0f, 44.0f, 500.0f, 200.0f}, std::nullopt, std::nullopt, W, H, 1600.0f) ==
+    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H, 700.0f) == (BarRect{700.0f, 44.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(BarRect{800.0f, 44.0f, 500.0f, 200.0f}, 200.0f, std::nullopt, W, H, 1600.0f) ==
           (BarRect{1420.0f, 44.0f, 500.0f, 200.0f}));
     // A spot of its own wins over where it opened.
-    CHECK(PopupAt(under, std::nullopt, kept, W, H, 700.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, kept, W, H, 700.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+}
+
+TEST(a_popup_cut_to_the_room_under_the_bar_drags_down_as_far_as_it_is_put_cut_to_the_room_below_it)
+{
+    // The card "General Changes": pop-outs moved no more than a few pixels. One taller than the room under a 34 px bar
+    // was cut to that room, and kept on the screen at that height it could go no lower than 2 gaps under the bar.
+    constexpr float W = 1920.0f, H = 1080.0f, bar = 34.0f, gap = 6.0f;
+    const float underBar = PopupRoom(bar, H, gap, 0.0f);
+    const BarRect under  = PlacePopup(BarRect{900.0f, 3.0f, 100.0f, 29.0f}, bar, 400.0f, 1500.0f, W, H, gap, 0.0f);
+    CHECK(Near(under.height, underBar));
+    // Dragged 300 px down, its top goes there and its room is the screen below it.
+    const std::optional<PopupSpot> placed = PlacedSpot(BarRect{under.x, under.y + 300.0f, under.width, under.height}, std::nullopt);
+    const float room = SpotRoom(*placed, H);
+    CHECK(Near(room, H - under.y - 300.0f));
+    const BarRect dragged = PopupAt(under, room, placed, W, H);
+    CHECK(Near(dragged.y, under.y + 300.0f) && Near(dragged.height, room));
+    // Let go there it stays there: reaching the screen's bottom, it is kept by its top, with the same room.
+    const PopupSpot left = SpotOf(dragged, W, H);
+    CHECK(!left.fromBottom && Near(SpotRoom(left, H), room) && PopupAt(under, room, left, W, H) == dragged);
+    // One that fits, let go in the lower half, is kept by its bottom and has the room above that.
+    const BarRect low{100.0f, 600.0f, under.width, 300.0f};
+    const PopupSpot bottom = SpotOf(low, W, H);
+    CHECK(bottom.fromBottom && Near(SpotRoom(bottom, H), 900.0f) && PopupAt(under, 300.0f, bottom, W, H) == low);
 }
 
 TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
@@ -262,9 +290,11 @@ TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
     CHECK(input.Press(800.0f, 50.0f, true) && input.Dragging());
     input.DragTo(900.0f, 150.0f);
     CHECK(input.DraggedPopup(BarWidget::Target) == std::optional<BarRect>(BarRect{860.0f, 144.0f, 400.0f, 300.0f}));
+    // Where the frame showed it, cut to the room below, is where it was left.
+    SetPopup(input, BarRect{860.0f, 144.0f, 400.0f, 250.0f});
     input.EndDrag();
     const std::optional<std::pair<PanelWidget, BarRect>> moved = input.TakeMoved();
-    CHECK(moved && moved->first == PanelWidget{BarWidget::Target} && moved->second == (BarRect{860.0f, 144.0f, 400.0f, 300.0f}));
+    CHECK(moved && moved->first == PanelWidget{BarWidget::Target} && moved->second == (BarRect{860.0f, 144.0f, 400.0f, 250.0f}));
     CHECK(!input.TakeMoved() && !input.DraggedPopup(BarWidget::Target));
 }
 

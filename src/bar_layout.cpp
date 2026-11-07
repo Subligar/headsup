@@ -389,7 +389,7 @@ namespace headsup
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight)
     {
         const bool right = popup.x + popup.width / 2.0f > screenWidth / 2.0f;
-        const bool lower = popup.y + popup.height / 2.0f > screenHeight / 2.0f;
+        const bool lower = popup.y + popup.height / 2.0f > screenHeight / 2.0f && popup.y + popup.height < screenHeight;
         return PopupSpot{static_cast<int>(std::lround(right ? screenWidth - popup.x - popup.width : popup.x)),
             static_cast<int>(std::lround(lower ? screenHeight - popup.y - popup.height : popup.y)), right, lower};
     }
@@ -403,12 +403,20 @@ namespace headsup
             std::clamp(spot.fromBottom ? screenHeight - y - height : y, 0.0f, screenHeight - height), width, height};
     }
 
-    BarRect PopupAt(const BarRect& underWidget, const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot,
-        float screenWidth, float screenHeight, std::optional<float> keptX)
+    std::optional<PopupSpot> PlacedSpot(const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot)
     {
-        const std::optional<PopupSpot> at =
-            dragged ? std::optional(PopupSpot{static_cast<int>(dragged->x), static_cast<int>(dragged->y)}) : spot;
-        if (at) return PlaceAtSpot(*at, underWidget.width, underWidget.height, screenWidth, screenHeight);
+        return dragged ? std::optional(PopupSpot{static_cast<int>(dragged->x), static_cast<int>(dragged->y)}) : spot;
+    }
+
+    float SpotRoom(const PopupSpot& spot, float screenHeight)
+    {
+        return screenHeight - static_cast<float>(std::max(0, spot.y));
+    }
+
+    BarRect PopupAt(const BarRect& underWidget, float height, const std::optional<PopupSpot>& placed, float screenWidth,
+        float screenHeight, std::optional<float> keptX)
+    {
+        if (placed) return PlaceAtSpot(*placed, underWidget.width, height, screenWidth, screenHeight);
         BarRect rect = underWidget;
         if (keptX) rect.x = std::clamp(*keptX, 0.0f, std::max(0.0f, screenWidth - rect.width));
         return rect;
@@ -543,7 +551,9 @@ namespace headsup
 
     void BarInput::EndDrag()
     {
-        if (m_PopupDrag) m_Moved = std::pair{m_PopupDrag->pill, m_PopupDrag->at};
+        if (m_PopupDrag)
+            for (const PopupPlace& place : m_Popups)
+                if (place.pill == m_PopupDrag->pill) m_Moved = std::pair{place.pill, place.rect};
         m_Drag.reset();
         m_PopupDrag.reset();
     }
