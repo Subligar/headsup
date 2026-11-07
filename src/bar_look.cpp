@@ -269,7 +269,7 @@ namespace headsup
     BoxStyle HelpBarPanel(const BarLook& look)
     {
         const BarPalette& p = look.palette;
-        return BoxStyle{.radius = Rounded(kThemeRounding, p, look.metrics.panelRadius), .top = p.panelTop,
+        return BoxStyle{.radius = Rounded(look.settings.helpBarRounding, p, look.metrics.panelRadius), .top = p.panelTop,
             .bottom = p.panelBottom, .border = p.panelBorder};
     }
 

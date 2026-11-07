@@ -175,6 +175,7 @@ namespace headsup
         int widgetRounding  = kThemeRounding; // the widgets' boxes' corners
         int popupRounding   = kThemeRounding; // the pop-outs'
         int sectionRounding = kThemeRounding; // their sections'
+        int helpBarRounding = kThemeRounding; // the help bar's
         std::array<WidgetOptions, kPanelSlots> widgets = DefaultWidgets(); // by SlotOf; a copy not placed has none
         std::vector<WindowPlace> pinnedWindows;  // game windows the player put at places of their own, never shifted
         std::vector<std::string> hiddenWindows;  // game windows drawn as nothing, by short name

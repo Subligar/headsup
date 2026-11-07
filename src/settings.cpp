@@ -75,6 +75,7 @@ namespace headsup
             {"widgetRounding", &Settings::widgetRounding, kThemeRounding, kMaxRounding},
             {"popupRounding", &Settings::popupRounding, kThemeRounding, kMaxRounding},
             {"sectionRounding", &Settings::sectionRounding, kThemeRounding, kMaxRounding},
+            {"helpBarRounding", &Settings::helpBarRounding, kThemeRounding, kMaxRounding},
             {"panelSeparators", &Settings::panelSeparators, 0, kAllSeparators},
             {"helpBarTextSize", &Settings::helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize},
             {"helpBarWidth", &Settings::helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth},

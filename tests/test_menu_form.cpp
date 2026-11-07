@@ -1136,6 +1136,14 @@ TEST(the_themes_opacities_set_the_alpha_of_the_strip_and_of_the_pop_outs)
     CHECK(p.panelTop == ((aurora.panelTop & 0x00FFFFFFu) | forty) && p.panelBottom == ((aurora.panelBottom & 0x00FFFFFFu) | forty));
 }
 
+TEST(the_help_bar_has_a_corner_rounding_of_its_own)
+{
+    Window w;
+    w.state.page = Page::HelpBar;
+    CHECK(w.Pass({{"helpbar-help-bar-help-rounding", kChangeEvent, "8"}}).changed);
+    CHECK_EQ(w.settings.helpBarRounding, 8);
+}
+
 TEST(a_custom_theme_takes_a_new_name_once_its_box_is_left_unless_it_cannot_have_it)
 {
     Window w;

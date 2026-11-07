@@ -320,12 +320,13 @@
       "cards": [
         {
           "key": "help-bar",
-          "name": "Help Bar",
+          "name": "Appearance",
           "description": "The game's help text, in a bar of its own under the top panel.",
           "settings": [
             {"key": "hide-game-help", "name": "Hide Game Help", "tip": "The game's own help bar, which the top panel covers."},
             {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
             {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
+            {"key": "help-rounding", "name": "Corner Rounding", "tip": "How round the help bar's corners are. Set by Theme keeps the theme's own. Default: Set by Theme."},
             {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
             {
               "key": "anchor",

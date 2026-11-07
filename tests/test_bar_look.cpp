@@ -316,6 +316,16 @@ TEST(widgets_pop_outs_and_their_sections_are_rounded_as_set_or_as_the_theme_does
     }
 }
 
+TEST(the_help_bar_is_rounded_as_set_or_as_the_theme_does)
+{
+    Settings settings;
+    CHECK_EQ(settings.helpBarRounding, kThemeRounding);
+    const BarLook own = LookOf(BarTheme::UmbraDark, settings);
+    CHECK(Near(HelpBarPanel(own).radius, own.metrics.panelRadius));
+    settings.helpBarRounding = 9;
+    CHECK(Near(HelpBarPanel(LookOf(BarTheme::UmbraDark, settings)).radius, 9.0f));
+}
+
 TEST(a_themes_own_corner_rounding_rounds_whatever_is_set_by_theme)
 {
     Settings settings;
@@ -326,9 +336,10 @@ TEST(a_themes_own_corner_rounding_rounds_whatever_is_set_by_theme)
     CHECK(Near(look.BoxOf(BarWidget::Target, true)->radius, 7.0f) && Near(PopupPanel(look).radius, 7.0f));
     CHECK(Near(PopupCard(look).radius, 7.0f) && Near(HelpBarPanel(look).radius, 7.0f));
     // A rounding of their own still wins.
-    settings.widgetRounding = 2;
+    settings.widgetRounding  = 2;
+    settings.helpBarRounding = 0;
     const BarLook own = LookOf(p, settings);
-    CHECK(Near(own.BoxOf(BarWidget::Target, true)->radius, 2.0f));
+    CHECK(Near(own.BoxOf(BarWidget::Target, true)->radius, 2.0f) && Near(HelpBarPanel(own).radius, 0.0f));
     CHECK(Near(PopupPanel(own).radius, 7.0f));
 }
 

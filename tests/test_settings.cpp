@@ -1213,6 +1213,7 @@ TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges
     store.values["widgetRounding"]   = "-9";
     store.values["popupRounding"]    = "999";
     store.values["sectionRounding"]  = "12";
+    store.values["helpBarRounding"]  = "40";
     const Settings s = LoadSettings(store);
     CHECK(s.barFontRatio == kMaxFontRatio && s.popupTextScale == kMinPopupScale && s.barIconScale == kMinIconScale);
     // A pop-out is never narrower or shorter than its own size (the user's 1.0x), whatever its text is.
@@ -1220,6 +1221,7 @@ TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges
     store.values["popupWidthScale"] = "0.3";
     CHECK(LoadSettings(store).popupWidthScale == 1.0f);
     CHECK(s.widgetRounding == kThemeRounding && s.popupRounding == kMaxRounding && s.sectionRounding == 12);
+    CHECK(d.helpBarRounding == kThemeRounding && s.helpBarRounding == kMaxRounding);
 }
 
 TEST(the_settings_window_keeps_its_theme_and_its_place)

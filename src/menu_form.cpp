@@ -1948,6 +1948,11 @@ namespace headsup
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
                 form.Switch(label.c_str(), s.helpBarBackground, tip);
                 break;
+            case SettingPiece::HelpRounding:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on || !s.helpBarBackground);
+                form.SliderInt(label.c_str(), s.helpBarRounding, kThemeRounding, kMaxRounding,
+                    PixelsOr(Word(c, WindowWord::Themes), kThemeRounding), tip);
+                break;
             case SettingPiece::HelpTextSize:
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
                 form.SliderInt(label.c_str(), s.helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize,
