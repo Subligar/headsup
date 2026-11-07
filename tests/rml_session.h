@@ -1,9 +1,11 @@
 #pragma once
 
 #include "fonts.h"
+#include "test.h"
 
 #include <RmlUi/Core.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <map>
@@ -11,6 +13,25 @@
 
 namespace test
 {
+    // A bundled font's capital height in pixels at a size: its OS/2 table's sCapHeight over the head's units per em.
+    inline float CapHeight(const char* family, float pixels)
+    {
+        size_t count                      = 0;
+        const headsup::BundledFont* fonts = headsup::BundledFonts(count);
+        const headsup::BundledFont* font  = std::find_if(fonts, fonts + count, [&](const headsup::BundledFont& f) { return std::string(f.family) == family; });
+        CHECK(font != fonts + count);
+        const unsigned char* data = font->data;
+        const auto u16 = [&](size_t at) { return static_cast<unsigned>(data[at] << 8 | data[at + 1]); };
+        const auto table = [&](const char* tag) {
+            for (unsigned i = 0; i < u16(4); ++i)
+                if (std::equal(tag, tag + 4, data + 12 + 16 * i)) return static_cast<size_t>(u16(12 + 16 * i + 8)) << 16 | u16(12 + 16 * i + 10);
+            return size_t{0};
+        };
+        const size_t head = table("head"), os2 = table("OS/2");
+        CHECK(head != 0 && os2 != 0 && u16(os2) >= 2);
+        return static_cast<float>(static_cast<int16_t>(u16(os2 + 88))) * pixels / static_cast<float>(u16(head + 18));
+    }
+
     // RmlUi asks for geometry and textures and is given handles that draw nothing.
     class NoRender : public Rml::RenderInterface
     {

@@ -40,20 +40,12 @@ namespace headsup
             switch (text)
             {
             case ExpText::Earned: return OutOf(earned, whole) + " " + unit;
-            case ExpText::ToNext: return Grouped(whole > earned ? whole - earned : 0) + " " + unit + " to next";
+            case ExpText::ToNext: return Grouped(whole > earned ? whole - earned : 0) + " til next level";
             case ExpText::Percent:
                 return std::to_string(whole > 0 ? static_cast<uint64_t>(std::min(earned, whole)) * kWholePercent / whole : 0) + "%";
+            case ExpText::Jobs: break;
             }
             return {};
-        }
-
-        // What a text says of the EXP; at the cap the points are limit points and the merits stand for what is left to
-        // the next.
-        std::string ExpSaid(const JobSample& s, ExpText text)
-        {
-            if (!AtCap(s)) return ExpPart(s.exp, s.expNeeded, "EXP", text);
-            if (text == ExpText::ToNext) return std::to_string(s.merits) + (s.merits == 1 ? " merit" : " merits");
-            return ExpPart(std::min(s.limitPoints, kLimitPointsPerMerit), kLimitPointsPerMerit, "LP", text);
         }
 
         std::string JobsAs(const JobSample& s, JobText text)
@@ -68,6 +60,16 @@ namespace headsup
             case JobText::LevelFirst: return level + " " + main + (sub.empty() ? "" : " / " + sub);
             }
             return {};
+        }
+
+        // What a text says of the EXP, or the jobs as job writes them; at the cap the points are limit points and the
+        // merits stand for what is left to the next.
+        std::string ExpSaid(const JobSample& s, ExpText text, JobText job = JobText::MainSub)
+        {
+            if (text == ExpText::Jobs) return JobsAs(s, job);
+            if (!AtCap(s)) return ExpPart(s.exp, s.expNeeded, "EXP", text);
+            if (text == ExpText::ToNext) return std::to_string(s.merits) + (s.merits == 1 ? " merit" : " merits");
+            return ExpPart(std::min(s.limitPoints, kLimitPointsPerMerit), kLimitPointsPerMerit, "LP", text);
         }
 
         // How full the bar is: of the level, or of the next merit at the cap; nothing without a level's worth.
@@ -153,7 +155,8 @@ namespace headsup
         if (const std::optional<float> done = ExpDone(s))
         {
             Span bar = Text("");
-            bar.bar  = InlineBar{*done, o.expBarWidth, o.expBarHeight, o.expBarText ? ExpSaid(s, *o.expBarText) : ""};
+            bar.bar  = InlineBar{*done, o.expBarWidth, o.expBarHeight, o.expBarText ? ExpSaid(s, *o.expBarText, o.jobText) : "",
+                 o.expBarTextAlign};
             parts.back().spans.push_back(bar);
         }
         base.hasPopup = true;

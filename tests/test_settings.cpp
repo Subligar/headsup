@@ -2821,8 +2821,15 @@ TEST(the_job_and_exp_widgets_job_text_and_bar_settings_are_kept)
     job.expBarHeight   = 3;
     job.expBarText     = ExpText::Percent;
     job.jobText        = JobText::LevelFirst;
+    CHECK(job.expBarTextAlign == Align::Center);
+    job.expBarTextAlign = Align::Right;
     MapStore store;
     SaveSettings(s, store);
+    CHECK(store.values["barExpBarTextAlign"] == "right");
+    CHECK(LoadSettings(store).Widget(BarWidget::Job) == s.Widget(BarWidget::Job));
+    job.expBarText = ExpText::Jobs; // the bar can say the jobs as Job Text does
+    SaveSettings(s, store);
+    CHECK(store.values["barExpBarText"] == "jobs");
     CHECK(LoadSettings(store).Widget(BarWidget::Job) == s.Widget(BarWidget::Job));
     // Back to none, and none is kept too.
     job.expBarText.reset();
@@ -2833,7 +2840,9 @@ TEST(the_job_and_exp_widgets_job_text_and_bar_settings_are_kept)
     store.values["barExpBarHeight"] = "0";
     store.values["barExpBarText"]   = "sideways";
     store.values["jobText"]         = "diagonal";
+    store.values["barExpBarTextAlign"] = "justify";
     const WidgetOptions clamped = LoadSettings(store).Widget(BarWidget::Job);
+    CHECK(clamped.expBarTextAlign == Align::Center);
     CHECK(clamped.expBarWidth == kMaxExpBarWidth && clamped.expBarHeight == kMinExpBarHeight);
     CHECK(!clamped.expBarText && clamped.jobText == JobText::MainSub);
 }

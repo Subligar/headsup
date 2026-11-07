@@ -299,43 +299,82 @@ TEST(a_target_without_its_background_looks_as_any_other_widget_lit_or_not)
     }
 }
 
-TEST(an_exp_bar_in_a_widgets_line_draws_as_long_and_thick_as_the_old_bar_beside_the_text_filled_to_its_share)
+TEST(an_exp_bar_in_a_widgets_line_stands_on_its_texts_capitals_middle_with_its_own_text_on_the_lines_baseline)
 {
-    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
-        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
     Settings settings;
     const BarLook look = LookOf(settings.customPalette, settings);
     test::RmlSession rml;
+    Rml::FontEngineInterface* engine = Rml::GetFontEngineInterface();
+    const auto metricsAt = [&](int pixels) -> const Rml::FontMetrics& {
+        return engine->GetFontMetrics(engine->GetFontFaceHandle(Rml::StringUtilities::ToLower(look.detailFont),
+            Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal, pixels));
+    };
+    // Each line as RmlUi lays it out, its capitals' middle where the font's capital height puts it over the baseline.
+    const auto placed = [&](int pixels, float top) {
+        const Rml::FontMetrics& m = metricsAt(pixels);
+        BarLinePlace line{static_cast<int>(std::lround(m.ascent + m.descent)), top, 1.0f};
+        const float baseline = (static_cast<float>(line.height) - m.ascent - m.descent) / 2.0f + m.ascent;
+        line.capsMiddle      = baseline - test::CapHeight(look.detailFont, static_cast<float>(pixels)) / 2.0f;
+        return line;
+    };
+    BarTextPlace place;
+    place.figures = placed(look.lines.title, 8.0f);
+    place.detail  = placed(look.lines.detail, 23.0f);
     Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
     bar->Show();
     Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Job));
-    WidgetContent c;
-    c.shown     = true;
-    Span exp    = Text("");
-    exp.bar     = InlineBar{0.25f, 120, 14, "25%"};
-    c.title     = {Text("WAR 30")};
-    c.subtitle  = {Text("1,200 EXP to next"), Text("  "), exp};
     widget->SetClass(kHiddenClass, false);
-    widget->SetInnerRML(WidgetRml(c, look, {}));
-    rml.context->Update();
-    Rml::ElementList bars, fills, texts;
-    widget->GetElementsByClassName(bars, "ibar");
-    widget->GetElementsByClassName(fills, "fill");
-    widget->GetElementsByClassName(texts, "btext");
-    CHECK(bars.size() == 1 && fills.size() == 1 && texts.size() == 1);
-    // As long and thick as the widget's settings say, filled a quarter.
-    const Rml::Vector2f track = bars.front()->GetBox().GetSize(Rml::BoxArea::Border);
-    CHECK_EQ(track.x, 120.0f);
-    CHECK_EQ(track.y, 14.0f);
-    const Rml::Vector2f fill = fills.front()->GetBox().GetSize(Rml::BoxArea::Border);
-    CHECK(std::abs(fill.x - track.x / 4.0f) < 1.0f && fill.y == track.y);
-    // Its text over the whole bar, centered across it and on one line as tall as it.
-    Rml::Element* text = texts.front();
-    CHECK(text->GetAbsoluteOffset(Rml::BoxArea::Border) == bars.front()->GetAbsoluteOffset(Rml::BoxArea::Border));
-    CHECK(text->GetBox().GetSize(Rml::BoxArea::Border) == track);
-    CHECK(text->GetComputedValues().text_align() == Rml::Style::TextAlign::Center);
-    CHECK_EQ(text->GetComputedValues().line_height().value, 14.0f);
-    CHECK_EQ(text->GetInnerRML(), "25%");
+    const auto top = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).y; };
+    // Where RmlUi puts the baseline of a line of text in an element: half its leading and its font's ascent down.
+    const auto baselineOf = [&](Rml::Element* e, int pixels) {
+        const Rml::FontMetrics& m = metricsAt(pixels);
+        return top(e) + (e->GetLineHeight() - m.ascent - m.descent) / 2.0f + m.ascent;
+    };
+    for (const bool onTitle : {true, false})
+        for (const Align align : {Align::Left, Align::Center, Align::Right})
+        {
+            WidgetContent c;
+            c.shown    = true;
+            c.figures  = true; // as the Job & EXP widget's are
+            Span exp   = Text("");
+            exp.bar    = InlineBar{0.25f, 120, 14, "25%", align};
+            const std::vector<Span> line{Text("1,200 til next level"), Text("  "), exp};
+            c.title    = onTitle ? line : ListOf(Text("WAR 30"));
+            c.subtitle = onTitle ? ListOf(Text("WAR 30")) : line;
+            widget->SetInnerRML(WidgetRml(c, look, {}));
+            rml.context->Update();
+            Rml::ElementList bars, tracks, fills, texts, lines;
+            widget->GetElementsByClassName(bars, "ibar");
+            widget->GetElementsByClassName(tracks, "track");
+            widget->GetElementsByClassName(fills, "fill");
+            widget->GetElementsByClassName(texts, "btext");
+            widget->GetElementsByClassName(lines, "t");
+            CHECK(bars.size() == 1 && tracks.size() == 1 && fills.size() == 1 && texts.size() == 1 && lines.size() == 2);
+            const int pixels   = onTitle ? look.lines.title : look.lines.detail;
+            Rml::Element* text = lines[onTitle ? 0 : 1];
+            // As long and thick as the widget's settings say, filled a quarter.
+            const Rml::Vector2f track = tracks.front()->GetBox().GetSize(Rml::BoxArea::Border);
+            CHECK_EQ(track.x, 120.0f);
+            CHECK_EQ(track.y, 14.0f);
+            const Rml::Vector2f fill = fills.front()->GetBox().GetSize(Rml::BoxArea::Border);
+            CHECK(std::abs(fill.x - track.x / 4.0f) < 1.0f && fill.y == track.y);
+            // Its middle on the middle of the capitals and figures beside it (the card "Job and EXP Widget": it sat
+            // on the lower case's middle, low of the figures).
+            const float capsMiddle = baselineOf(text, pixels) - test::CapHeight(look.detailFont, static_cast<float>(pixels)) / 2.0f;
+            CHECK(std::abs(top(tracks.front()) + track.y / 2.0f - capsMiddle) <= 0.5f);
+            // Its text on the line's own baseline, across the bar's width, lined up as Bar Text Alignment says.
+            Rml::Element* said = texts.front();
+            CHECK(std::abs(baselineOf(said, pixels) - baselineOf(text, pixels)) <= 0.01f);
+            CHECK_EQ(said->GetBox().GetSize(Rml::BoxArea::Border).x, track.x);
+            CHECK(said->GetAbsoluteOffset(Rml::BoxArea::Border).x == tracks.front()->GetAbsoluteOffset(Rml::BoxArea::Border).x);
+            const Rml::Style::TextAlign wanted = align == Align::Left ? Rml::Style::TextAlign::Left
+                                                 : align == Align::Right ? Rml::Style::TextAlign::Right
+                                                                         : Rml::Style::TextAlign::Center;
+            CHECK(said->GetComputedValues().text_align() == wanted);
+            CHECK_EQ(said->GetInnerRML(), "25%");
+            // The bar takes no more height than its line had.
+            CHECK_EQ(text->GetBox().GetSize(Rml::BoxArea::Border).y, text->GetLineHeight());
+        }
     CHECK_EQ(rml.Said(), "");
 }
 

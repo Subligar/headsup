@@ -19,6 +19,7 @@ namespace headsup
 
         constexpr float kFitSteps = 10.0f; // a fitted text's room is kept in tenths of a pixel
         constexpr int kFewLetters = 3;     // the least of the target's name worth its room on the bar
+        constexpr const char* kCapital = "H"; // its ink is a font's capitals'
         constexpr const char* kDocumentName      = "top panel";
         constexpr const char* kPopupDocumentName = "top panel popup";
         constexpr int kOverSettings = 10; // the upper popups' document, over the settings view's
@@ -138,6 +139,8 @@ namespace headsup
         // The icons after a line's text are centered on the line GDI draws, as tall as its letters' size.
         const float icon = std::round(static_cast<float>(pixels));
         line.iconDrop    = std::round(std::round(top) + (static_cast<float>(height) - icon) / 2.0f) - std::round(line.top);
+        const LineInk capital = m_Gdi.FontInk(family, pixels, kCapital);
+        line.capsMiddle       = baseline - (capital.baseline - capital.top) / 2.0f;
         return line;
     }
 

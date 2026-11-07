@@ -180,7 +180,7 @@ TEST(each_exp_button_says_its_own_text_and_at_the_cap_the_limit_points_and_merit
     };
     const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
     CHECK_EQ(said(level30, WidgetPart::JobEarned), "12,345 / 20,000 EXP");
-    CHECK_EQ(said(level30, WidgetPart::JobToNext), "7,655 EXP to next");
+    CHECK_EQ(said(level30, WidgetPart::JobToNext), "7,655 til next level");
     CHECK_EQ(said(level30, WidgetPart::JobPercent), "61%");
     // At the cap the points are limit points, and what is left to the next is the merits.
     const JobReport capped{AtCap(3, 4000), std::nullopt};
@@ -232,8 +232,29 @@ TEST(the_exp_bar_is_its_set_size_filled_with_the_text_bar_text_picks_in_its_midd
     CHECK(none.width == 150 && none.height == 12 && none.text.empty());
     CHECK(std::fabs(none.done - 12345.0f / 20000.0f) < 1e-6f);
     CHECK_EQ(bar(ExpText::Earned).text, "12,345 / 20,000 EXP");
-    CHECK_EQ(bar(ExpText::ToNext).text, "7,655 EXP to next");
+    CHECK_EQ(bar(ExpText::ToNext).text, "7,655 til next level");
     CHECK_EQ(bar(ExpText::Percent).text, "61%");
+    // Job Text on the bar: the jobs as Job Text says them, whatever Job Info shows.
+    CHECK_EQ(bar(ExpText::Jobs).text, "WAR 30 / NIN 15");
+}
+
+TEST(the_exp_bars_text_says_the_jobs_as_job_text_writes_them_and_lines_up_as_bar_text_alignment_says)
+{
+    const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
+    WidgetOptions o;
+    o.expBarText = ExpText::Jobs;
+    o.jobText    = JobText::LevelFirst;
+    o.jobNames   = false; // Job Names is Job Info's
+    const auto bar = [&] {
+        WidgetContent base;
+        for (const PartContent& part : JobParts(level30, o, base))
+            if (part.part == WidgetPart::JobBar) return *part.spans.front().bar;
+        return InlineBar{};
+    };
+    CHECK_EQ(bar().text, "30 WAR / NIN");
+    CHECK(bar().align == Align::Center);
+    o.expBarTextAlign = Align::Left;
+    CHECK(bar().align == Align::Left);
 }
 
 TEST(the_job_widget_lays_out_its_jobs_exp_and_bar_as_its_design_says)
@@ -248,7 +269,7 @@ TEST(the_job_widget_lays_out_its_jobs_exp_and_bar_as_its_design_says)
     // The default: the jobs over the EXP to the next level, the bar after it.
     const WidgetContent w = shown("");
     CHECK(w.title.size() == 1 && w.title[0].text == "WAR 30 / NIN 15");
-    CHECK(w.subtitle.size() == 3 && w.subtitle[0].text == "7,655 EXP to next" && w.subtitle[2].bar);
+    CHECK(w.subtitle.size() == 3 && w.subtitle[0].text == "7,655 til next level" && w.subtitle[2].bar);
     CHECK(w.hasPopup && w.figures);
     // The bar first, then the percent and the earned EXP, on one line.
     const WidgetContent first = shown("bar percent earned | -jobs");

@@ -31,24 +31,6 @@ namespace
     constexpr double kFrameSeconds = 1.0 / 30.0; // the game's frame
     constexpr const char* kLongFont = "Franklin Gothic Demi Condensed"; // a family too long for its dropdown
 
-    // A bundled font's capital height in pixels at a size: its OS/2 table's sCapHeight over the head's units per em.
-    float CapHeight(const char* family, float pixels)
-    {
-        size_t count             = 0;
-        const BundledFont* fonts = BundledFonts(count);
-        const BundledFont* font  = std::find_if(fonts, fonts + count, [&](const BundledFont& f) { return std::string(f.family) == family; });
-        CHECK(font != fonts + count);
-        const unsigned char* data = font->data;
-        const auto u16 = [&](size_t at) { return static_cast<unsigned>(data[at] << 8 | data[at + 1]); };
-        const auto table = [&](const char* tag) {
-            for (unsigned i = 0; i < u16(4); ++i)
-                if (std::equal(tag, tag + 4, data + 12 + 16 * i)) return static_cast<size_t>(u16(12 + 16 * i + 8)) << 16 | u16(12 + 16 * i + 10);
-            return size_t{0};
-        };
-        const size_t head = table("head"), os2 = table("OS/2");
-        CHECK(head != 0 && os2 != 0 && u16(os2) >= 2);
-        return static_cast<float>(static_cast<int16_t>(u16(os2 + 88))) * pixels / static_cast<float>(u16(head + 18));
-    }
     // How far below the middle of a box a line of capitals stands: RmlUi puts a line's baseline half the leading and
     // the font's ascent under the line's top.
     float CapsBelowMiddle(Rml::Element* text, Rml::Element* box, float capHeight)
@@ -396,7 +378,7 @@ TEST(text_in_a_box_stands_in_its_middle_by_its_fonts_capitals)
         Window window(BarTheme::PhoenixGold, size.font);
         window.settings.menuFontSize = size.pixels;
         window.Frames(2);
-        const float cap = CapHeight(size.font, static_cast<float>(size.pixels));
+        const float cap = test::CapHeight(size.font, static_cast<float>(size.pixels));
         const std::pair<const char*, const char*> boxed[] = {
             {"entities-nameplates-vertical-offset-val", "entities-nameplates-vertical-offset-box"},
             {"entities-nameplates-default-font-val", "entities-nameplates-default-font"},

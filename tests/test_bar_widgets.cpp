@@ -1451,7 +1451,7 @@ TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_o
     state.job = JobReport{s, 18000.0};
     const WidgetContent w = Content(BarWidget::Job, state, settings);
     CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "WAR 30 / NIN 15" &&
-          Joined(w.subtitle) == "3,460 EXP to next  ");
+          Joined(w.subtitle) == "3,460 til next level  ");
     CHECK(w.subtitle.back().bar && std::fabs(w.subtitle.back().bar->done - 4140.0f / 7600.0f) < 1e-6f); // the bar after it
     CHECK(Joined(BarPopupContent(BarWidget::Job, state, settings).title) == "Job and EXP"); // words: the title font
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
@@ -1955,7 +1955,7 @@ TEST(the_job_widgets_design_places_its_exp_bar_anywhere_and_its_jobs_can_show_le
     WidgetOptions& o = settings.Widget(BarWidget::Job);
     o.design        = DesignFrom(BarWidget::Job, "jobs bar | tonext");
     WidgetContent w = Content(BarWidget::Job, state, settings);
-    CHECK(w.title.back().bar->done == 0.5f && Joined(w.subtitle) == "3,800 EXP to next");
+    CHECK(w.title.back().bar->done == 0.5f && Joined(w.subtitle) == "3,800 til next level");
     o.design = DesignFrom(BarWidget::Job, "jobs | tonext -bar");
     w        = Content(BarWidget::Job, state, settings);
     CHECK(std::ranges::none_of(w.subtitle, [](const Span& span) { return span.bar.has_value(); }));
@@ -1977,12 +1977,12 @@ TEST(the_job_widgets_design_can_put_its_exp_first_or_show_it_alone)
     WidgetOptions& o = settings.Widget(BarWidget::Job);
     o.design         = DesignFrom(BarWidget::Job, "tonext | jobs -bar");
     WidgetContent w  = Content(BarWidget::Job, state, settings);
-    CHECK(w.title == ListOf(Text("3,460 EXP to next"))); // the larger line, in the title's own tone
+    CHECK(w.title == ListOf(Text("3,460 til next level"))); // the larger line, in the title's own tone
     CHECK(w.subtitle == ListOf(Text("WAR 30 / NIN 15", Tone::Dim)));
     CHECK(w.figures && w.hasPopup);
     o.design = DesignFrom(BarWidget::Job, "-jobs tonext | -bar");
     w        = Content(BarWidget::Job, state, settings);
-    CHECK(Joined(w.title) == "3,460 EXP to next" && w.subtitle.empty());
+    CHECK(Joined(w.title) == "3,460 til next level" && w.subtitle.empty());
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
     w         = Content(BarWidget::Job, state, settings);

@@ -40,13 +40,14 @@ namespace headsup
     std::optional<Image> GamePictureImage(const std::optional<PlayOnlineIcons>& icons, const std::optional<NationCrests>& crests,
         std::string_view name);
 
-    // A line of a widget as RmlUi lays it out: its line box's height, where its top goes from the strip's top, and how
-    // far under that top the icons after its text start.
+    // A line of a widget as RmlUi lays it out: its line box's height, where its top goes from the strip's top, how
+    // far under that top the icons after its text start, and how far its capitals' middle is, where an EXP bar's goes.
     struct BarLinePlace
     {
-        int height     = 0;
-        float top      = 0.0f;
-        float iconDrop = 0.0f;
+        int height       = 0;
+        float top        = 0.0f;
+        float iconDrop   = 0.0f;
+        float capsMiddle = 0.0f;
         bool operator==(const BarLinePlace&) const = default;
     };
     // Where the widgets' lines go so their ink lands on the rows the bar's text row gives: a title in the title

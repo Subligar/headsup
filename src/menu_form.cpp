@@ -902,13 +902,20 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::JobText:
-                    if (jobs && o.jobNames)
+                    if ((jobs && o.jobNames) || (bar && o.expBarText == ExpText::Jobs))
                     {
                         int text = static_cast<int>(o.jobText);
                         form.NumberDropdown(label.c_str(), text, 0, kJobTextCount - 1,
                             [&](int i) { return std::string(c.layout.OptionsOf(WindowList::JobText)[static_cast<size_t>(i)].name); },
                             row.tip);
                         o.jobText = static_cast<JobText>(text);
+                    }
+                    break;
+                case WidgetTabsRow::BarTextAlign:
+                    if (bar)
+                    {
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Align));
+                        form.Segments(label.c_str(), o.expBarTextAlign, names.data(), kAlignCount, row.tip);
                     }
                     break;
                 case WidgetTabsRow::BarWidth:

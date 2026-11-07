@@ -260,7 +260,8 @@ namespace headsup
         constexpr const char* kExpBarWidthKey = "barExpBarWidth", *kExpBarHeightKey = "barExpBarHeight";
         constexpr const char* kExpBarTextKey  = "barExpBarText";
         constexpr const char* kNoExpBarText   = "none";
-        const char* const kExpTextNames[kExpTextCount] = {"earned", "toNext", "percent"};
+        const char* const kExpTextNames[kExpTextCount] = {"earned", "toNext", "percent", "jobs"};
+        constexpr const char* kExpBarTextAlignKey = "barExpBarTextAlign"; // by kAlignNames
         constexpr const char* kJobNamesKey  = "jobNames";
         constexpr const char* kZoneIdKey    = "zoneId";
         constexpr const char* kMemTextKey   = "memText";
@@ -1338,6 +1339,8 @@ namespace headsup
                     o.expBarText.reset();
                 else if (const int at = NameIndex(kExpTextNames, kExpTextCount, barText, -1); at >= 0)
                     o.expBarText = static_cast<ExpText>(at);
+                o.expBarTextAlign = static_cast<Align>(
+                    NameIndex(kAlignNames, kAlignCount, text(kExpBarTextAlignKey), static_cast<int>(o.expBarTextAlign)));
                 break;
             }
             case BarWidget::Target:
@@ -1397,6 +1400,7 @@ namespace headsup
                 StoreFloat(store, CopyKey(kExpBarWidthKey, w), static_cast<float>(o.expBarWidth));
                 StoreFloat(store, CopyKey(kExpBarHeightKey, w), static_cast<float>(o.expBarHeight));
                 text(kExpBarTextKey, o.expBarText ? kExpTextNames[static_cast<int>(*o.expBarText)] : kNoExpBarText);
+                text(kExpBarTextAlignKey, kAlignNames[static_cast<int>(o.expBarTextAlign)]);
                 break;
             case BarWidget::Target:
                 StoreFloat(store, CopyKey(kTargetDetectionKey, w), static_cast<float>(o.targetDetection));

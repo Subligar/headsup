@@ -84,14 +84,16 @@ namespace headsup
     // The target has one frame the bar gives way around, and game help a bar of its own: neither has copies.
     constexpr bool HasCopies(BarWidget widget) { return widget != BarWidget::Target && widget != BarWidget::GameHelp; }
 
-    // What an EXP text says: what is earned of the level, what is left to the next, or the share earned as a percent.
+    // What an EXP text says: what is earned of the level, what is left to the next, or the share earned as a percent;
+    // the EXP bar's can say the jobs too, as Job Text writes them.
     enum class ExpText : uint8_t
     {
         Earned,
         ToNext,
         Percent,
+        Jobs,
     };
-    constexpr int kExpTextCount = static_cast<int>(ExpText::Percent) + 1;
+    constexpr int kExpTextCount = static_cast<int>(ExpText::Jobs) + 1;
     // How the Job & EXP widget's Job Info says the jobs: "WAR 75 / NIN 37", "WAR 75" or "75 WAR / NIN".
     enum class JobText : uint8_t
     {

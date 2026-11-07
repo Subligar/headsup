@@ -51,6 +51,8 @@ namespace headsup
         constexpr float kContentInset  = 1.0f;
         // And everything in it stands a pixel higher than its lines' places, where it reads as centered in the pill.
         constexpr float kContentLift   = 1.0f;
+        const char* const kTextAligns[kAlignCount] = {"left", "center", "right"}; // by Align
+        constexpr float kBarTextInset = 2.0f; // an EXP bar's text from its ends, in pixels
 
         std::string Hex(uint32_t value)
         {
@@ -94,12 +96,13 @@ namespace headsup
             {
                 const InlineBar& bar = *span.bar;
                 const auto height    = static_cast<float>(bar.height);
-                std::string rml = "<span class=\"ibar\" style=\"width:" + Px(static_cast<float>(bar.width)) + ";height:" +
-                                  Px(height) + ";\"><span class=\"fill\" style=\"width: " +
-                                  RcssNumber(std::clamp(bar.done, 0.0f, 1.0f) * kPercentWhole) + "%\"></span>";
+                std::string rml = "<span class=\"ibar\" style=\"width:" + Px(static_cast<float>(bar.width)) +
+                                  ";\"><span class=\"track\" style=\"height:" + Px(height) + ";margin-top:" +
+                                  Px(-height / 2.0f) + ";\"><span class=\"fill\" style=\"width: " +
+                                  RcssNumber(std::clamp(bar.done, 0.0f, 1.0f) * kPercentWhole) + "%\"></span></span>";
                 if (!bar.text.empty())
-                    rml += "<span class=\"btext\" style=\"line-height:" + Px(height) + ";color:" +
-                           RcssColor(look.BarColor(Span{bar.text})) + ";\">" + EscapedRml(bar.text) + "</span>";
+                    rml += "<span class=\"btext\" style=\"text-align:" + std::string(kTextAligns[static_cast<int>(bar.align)]) +
+                           ";color:" + RcssColor(look.BarColor(Span{bar.text})) + ";\">" + EscapedRml(bar.text) + "</span>";
                 return rml + "</span>";
             }
             return {};
@@ -384,7 +387,7 @@ namespace headsup
             css += ".pills .widget.target,.pills .widget.backed{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
             css += ".pills .widget.lit{background-color:" + RcssColor(Faded(cyan, 0x2E)) + ";border-color:" +
                    RcssColor(Faded(cyan, 0xB3)) + ";}";
-            css += ".ibar{background-color:#ffffff1f;}";
+            css += ".ibar .track{background-color:#ffffff1f;}";
             return css;
         }
     }
@@ -417,6 +420,11 @@ namespace headsup
             css += scope + ".title.cells .line-icon{" + square(static_cast<float>(lines.detail)) + "margin-top:" +
                    Px(place.title.iconDrop + smaller) + ";}";
             css += scope + ".title.figures.cells .line-icon{margin-top:" + Px(place.figures.iconDrop + smaller) + ";}";
+            // An EXP bar's middle on its line's capitals.
+            for (const auto& [line, at] : {std::pair{".title", &place.title}, std::pair{".title.alone", &place.alone},
+                     std::pair{".title.figures", &place.figures}, std::pair{".title.figures.alone", &place.figuresAlone},
+                     std::pair{".detail", &place.detail}})
+                css += scope + line + " .track{top:" + Px(at->capsMiddle) + ";}";
             return css;
         }
     }
@@ -510,12 +518,13 @@ namespace headsup
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";
         css += TextRules("", look.titleFont, look.detailFont, lines, place, rowTop);
-        // An EXP bar among a line's text, on its letters' middle; its fill a block, as a span takes no width, and its
-        // text over it, in its middle.
-        css += ".ibar{display:inline-block;vertical-align:middle;position:relative;background-color:" +
-               RcssColor(p.divider) + ";}";
+        // An EXP bar among a line's text, taking no height of its line: its track from its capitals' middle up and down
+        // (TextRules), its fill a block, as a span takes no width, and its text over it on the line's own baseline.
+        css += ".ibar{display:inline-block;vertical-align:top;position:relative;height:0px;}";
+        css += ".ibar .track{position:absolute;left:0px;width:100%;background-color:" + RcssColor(p.divider) + ";}";
         css += ".ibar .fill{display:block;}";
-        css += ".ibar .btext{position:absolute;left:0px;top:0px;width:100%;height:100%;text-align:center;white-space:pre;}";
+        css += ".ibar .btext{position:absolute;left:0px;top:0px;width:100%;white-space:pre;box-sizing:border-box;padding:0px " +
+               Px(kBarTextInset) + ";}";
         // Progress is a gradient that pulses.
         css += ".fill{height:100%;decorator:horizontal-gradient(" + RcssColor(p.accent) + " " + RcssColor(p.accentEnd) +
                ");animation:1.8s sine-in-out infinite alternate pulse;}";

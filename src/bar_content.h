@@ -45,12 +45,13 @@ namespace headsup
         AhtUrhganCrest,
     };
 
-    // An EXP bar among a line's text: width by height pixels, filled to done of its width, its text in its middle.
+    // An EXP bar among a line's text: width by height pixels, filled to done of its width, its text across it.
     struct InlineBar
     {
         float done = 0.0f;
         int width = 0, height = 0;
         std::string text;
+        Align align = Align::Center; // its text's
         bool operator==(const InlineBar&) const = default;
     };
 

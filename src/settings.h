@@ -72,7 +72,8 @@ namespace headsup
         DateFormat dateFormat = DateFormat::MonthDayYear; // how its Local Date button writes the date
         int expBarWidth      = kDefaultExpBarWidth;  // Job & EXP: its EXP Bar's
         int expBarHeight     = kDefaultExpBarHeight;
-        std::optional<ExpText> expBarText;           // what its EXP Bar says in its middle; none for nothing
+        std::optional<ExpText> expBarText;           // what its EXP Bar says; none for nothing
+        Align expBarTextAlign = Align::Center;       // where on the bar it says it
         bool jobNames        = true;
         JobText jobText      = JobText::MainSub;     // how its Job Info says the jobs
         uint32_t targetDetection = kDefaultDetection; // Target: the senses its Detection part shows, by DetectionBit

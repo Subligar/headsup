@@ -262,11 +262,12 @@
                 {"key": "seconds", "name": "Seconds", "tip": "Adds seconds to the Local Time button and to the time in the pop-out's title."},
                 {"key": "date-format", "name": "Date Format", "tip": "How the Local Date button writes the date. Default is MM/DD/YYYY."},
                 {"key": "job-names", "name": "Job Names", "tip": "Off, the levels alone."},
-                {"key": "job-text", "name": "Job Text", "tip": "How Job Info shows your jobs and levels. Default is Main 75 / Sub 37."},
                 {"key": "bar-width", "name": "Bar Width", "tip": "How long the EXP Bar is. Default is 100 px."},
                 {"key": "bar-height", "name": "Bar Height", "tip": "How thick the EXP Bar is. Default is 6 px."},
-                {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows in its middle. Default is None."},
-                {"key": "mem-text", "name": "Show Mem Text", "tip": "Puts \"Mem\" before the Memory button's figures. Off, the figures alone. Default is off."}
+                {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows on it. Default is None."},
+                {"key": "bar-text-align", "name": "Bar Text Alignment", "tip": "Puts the EXP Bar's text at its left or right end, or in its middle. Default is Center."},
+                {"key": "mem-text", "name": "Show Mem Text", "tip": "Puts \"Mem\" before the Memory button's figures. Off, the figures alone. Default is off."},
+                {"key": "job-text", "name": "Job Text", "tip": "How Job Info and the EXP Bar's Job Text write your jobs and levels. Default is Main 75 / Sub 37."}
               ],
               "words": [
                 {"key": "clone", "name": "Clone This Widget", "tip": "Puts another of this widget on the panel after it, with all of this one's settings."},
@@ -1083,7 +1084,8 @@
         {"name": "None", "tip": "Nothing on the bar."},
         {"name": "Earned EXP", "tip": "The EXP you have of this level, out of what it takes. At the level cap, your limit points."},
         {"name": "EXP Til Next Level", "tip": "The EXP left to the next level. At the level cap, your merits."},
-        {"name": "EXP Percentage", "tip": "How much of the level you have, as a percent."}
+        {"name": "EXP Percentage", "tip": "How much of the level you have, as a percent."},
+        {"name": "Job Text", "tip": "Your jobs and levels, as Job Text writes them."}
       ]
     },
     {

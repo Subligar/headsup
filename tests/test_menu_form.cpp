@@ -290,6 +290,29 @@ TEST(the_job_widgets_bar_rows_show_with_its_exp_bar_and_job_text_with_its_job_in
     CHECK(Has(shown, "job-names") && !Has(shown, "job-text"));
 }
 
+TEST(job_text_shows_for_a_bar_saying_the_jobs_without_job_info_and_comes_last)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on = true;
+    w.readings.settingsOf     = {job};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext bar");
+    std::string shown = rows();
+    CHECK(Has(shown, "bar-text-align") && !Has(shown, "job-text"));
+    w.settings.Widget(job).expBarText = ExpText::Jobs;
+    shown = rows();
+    CHECK(Has(shown, "job-text"));
+    // Job Text is the widget's last setting.
+    for (const char* key : {"bar-width", "bar-height", "bar-text", "bar-text-align"})
+        CHECK(shown.find(key) < shown.find("job-text"));
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext -bar");
+    CHECK(!Has(rows(), "bar-text-align"));
+}
+
 TEST(the_clocks_zones_show_with_their_buttons_and_date_format_with_local_date_written_in_todays_date)
 {
     Window w;
