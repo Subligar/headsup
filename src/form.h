@@ -197,7 +197,10 @@ namespace headsup
         void BeginBlock(const char* id);
         // A card, its title row folding it; an enabled checkbox sits at the title's right, and what the card is for
         // is written under the title. False when it is folded, with nothing more to do; true, with EndCard to call.
-        bool BeginCard(const char* title, bool* enabled = nullptr, const char* about = nullptr);
+        // reset: the card has an arrow at its header's right that puts it back to its defaults, shown while differs,
+        // and set when it was clicked.
+        bool BeginCard(const char* title, bool* enabled = nullptr, const char* about = nullptr, bool* reset = nullptr,
+            bool differs = false);
         // A block with the id a card of that title would have and no title or card of its own; EndCard ends it.
         void BeginBare(const char* title);
         void EndCard();

@@ -44,6 +44,7 @@ namespace headsup
 
     constexpr int kMaxWidgetSpacing = 40; // pixels
     constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
+    constexpr int kThemeRounding = -1, kMaxRounding = 32;     // a corner's radius in pixels, or the theme's own
     // Where the Zone widget shows who holds its region: not at all, before or after the zone's name, or under it.
     // The Target widget's Visibility: the targets it shows for.
     enum class TargetShow : uint8_t { NpcsObjects, Players, Mobs, Pets, NoTarget };
@@ -162,7 +163,12 @@ namespace headsup
         std::string barTextFont;  // details, figures and popup text; empty for the theme's
         int barWidgetSpacing = 0;             // every widget's, unless it has its own
         int barWidgetPadding = kThemePadding; // likewise
-        float popupScale   = kDefaultPopupScale; // the pop-outs' sizes, times their own
+        float popupTextScale   = kDefaultPopupScale; // the pop-outs' text sizes, times their own
+        float popupWidthScale  = kDefaultPopupScale; // each pop-out's sections, and so the pop-out, this much wider
+        float popupHeightScale = kDefaultPopupScale; // and taller
+        int widgetRounding  = kThemeRounding; // the widgets' boxes' corners
+        int popupRounding   = kThemeRounding; // the pop-outs'
+        int sectionRounding = kThemeRounding; // their sections'
         std::array<WidgetOptions, kPanelSlots> widgets = DefaultWidgets(); // by SlotOf; a copy not placed has none
         std::vector<WindowPlace> pinnedWindows;  // game windows the player put at places of their own, never shifted
         std::vector<std::string> hiddenWindows;  // game windows drawn as nothing, by short name

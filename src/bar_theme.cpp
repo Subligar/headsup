@@ -82,20 +82,22 @@ namespace headsup
         return kPalettes[std::clamp(static_cast<int>(theme), 0, kFixedThemeCount - 1)];
     }
 
-    BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio, float popupScale, int iconScale)
+    BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio, float popupTextScale, int iconScale, float popupWidth,
+        float popupHeight)
     {
         const float h = static_cast<float>(std::clamp(barHeight, kMinBarHeight, kMaxBarHeight));
-        // The pop-out's sizes stand for the height whose share its text is, so the whole pop-out scales together.
-        const float popupText = kPopupTextPixels * popupScale, u = kPopupSpacingPixels * popupScale / kPopupTextShare;
+        // The pop-out's spacing stands for the height whose share its text is at a Text Scale of 1.
+        const float popupText = kPopupTextPixels * popupTextScale, u = kPopupSpacingPixels / kPopupTextShare;
         const float title     = kTitleShare * h;
         const float pill      = kPillHeightShare * h;
         return BarMetrics{.height = h, .title = title, .subtitle = title / fontRatio,
             .icon = static_cast<float>(iconScale) / 100.0f * (std::round(pill) - 2.0f * kPillBorder), .padding = kPaddingShare * h,
             .gap = kGapShare * h, .cap = kCapShare * h, .diamond = kDiamondShare * h, .pillHeight = pill,
             .pillRadius = kPillRadiusShare * h, .below = kBelowShare * h, .popupText = popupText,
-            .popupTitle = kPopupTitlePixels * popupScale, .heading = kPopupHeadingPixels * popupScale, .popupPadding = kPopupPaddingShare * u,
-            .rowGap = kRowGapShare * u,
-            .panelRadius = (shape == BarShape::Ornate ? kOrnateRadiusShare : shape == BarShape::Window ? 0.0f : kPillsRadiusShare) * u};
+            .popupTitle = kPopupTitlePixels * popupTextScale, .heading = kPopupHeadingPixels * popupTextScale,
+            .popupPadding = kPopupPaddingShare * u, .rowGap = kRowGapShare * u,
+            .panelRadius = (shape == BarShape::Ornate ? kOrnateRadiusShare : shape == BarShape::Window ? 0.0f : kPillsRadiusShare) * u,
+            .popupWidth = popupWidth, .popupHeight = popupHeight};
     }
 
     const char* TitleFont(BarShape shape) { return shape == BarShape::Ornate ? kMarcellusSC : kDetailFont; }

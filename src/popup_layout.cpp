@@ -771,7 +771,13 @@ namespace headsup
                 std::ranges::all_of(section.rows, [](const PopupRow& row) { return row.cells.empty(); }))
                 continue;
             for (const PopupSection& part : SplitToFit(section, tall, metrics, ornate, measure))
-                cards.push_back(LayoutCard(part, metrics, ornate, measure));
+            {
+                // Width and Height make each card's box larger or smaller; its text stays the size it is.
+                Block& b = cards.emplace_back(LayoutCard(part, metrics, ornate, measure));
+                b.width *= metrics.popupWidth;
+                b.height *= metrics.popupHeight;
+                b.reserve *= metrics.popupHeight;
+            }
         }
 
         float lowest = top;

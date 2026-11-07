@@ -1758,7 +1758,7 @@ TEST(a_picked_choice_and_tab_take_dark_text_where_the_accent_is_bright)
              std::pair{BarTheme::Aurora, true}, std::pair{BarTheme::PhoenixRed, false}})
     {
         Window window(theme);
-        window.Page("toppanel");
+        window.Page("helpbar");
         window.Frames(kPastEasing);
         CHECK_EQ(pickedText(window, "seg") < 0.2f, bright);
         window.Page("mobs");

@@ -154,7 +154,7 @@ namespace headsup
         m_CardId = id;
     }
 
-    bool Form::BeginCard(const char* title, bool* enabled, const char* about)
+    bool Form::BeginCard(const char* title, bool* enabled, const char* about, bool* reset, bool differs)
     {
         m_CardId = Slug(pageKey + "/" + std::string(IdName(title)));
         blocks.push_back(FormBlock{m_CardId, {}, false});
@@ -182,6 +182,7 @@ namespace headsup
             Set(check + "-state", FormValueKind::Text, {}, word);
             Set(check, FormValueKind::Class, "on", {}, *enabled);
         }
+        if (reset != nullptr) *reset = ResetAt("reset", differs);
         Out() += "</div>";
         if (!open) return false;
         Out() += "<div class=\"card-body\">";

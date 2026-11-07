@@ -1751,10 +1751,30 @@ namespace headsup
                 form.SliderInt(label.c_str(), s.barWidgetPadding, kThemePadding, kMaxWidgetPadding,
                     PixelsOr(Word(c, WindowWord::Themes), kThemePadding), tip);
                 break;
-            case SettingPiece::PopupScale:
+            case SettingPiece::TextScale:
                 form.Fade(!BarOn(s));
-                form.SliderFloat(label.c_str(), s.popupScale, kMinPopupScale, kMaxPopupScale, "%.1fx", tip);
+                form.SliderFloat(label.c_str(), s.popupTextScale, kMinPopupScale, kMaxPopupScale, "%.1fx", tip);
                 break;
+            case SettingPiece::PopupWidth:
+                form.Fade(!BarOn(s));
+                form.SliderFloat(label.c_str(), s.popupWidthScale, kMinPopupScale, kMaxPopupScale, "%.1fx", tip);
+                break;
+            case SettingPiece::PopupHeight:
+                form.Fade(!BarOn(s));
+                form.SliderFloat(label.c_str(), s.popupHeightScale, kMinPopupScale, kMaxPopupScale, "%.1fx", tip);
+                break;
+            case SettingPiece::CornerRounding:
+            case SettingPiece::PopupRounding:
+            case SettingPiece::SectionRounding:
+            {
+                int& rounding = e.piece == SettingPiece::CornerRounding ? s.widgetRounding
+                                : e.piece == SettingPiece::PopupRounding ? s.popupRounding
+                                                                               : s.sectionRounding;
+                form.Fade(!BarOn(s));
+                form.SliderInt(label.c_str(), rounding, kThemeRounding, kMaxRounding,
+                    PixelsOr(Word(c, WindowWord::Themes), kThemeRounding), tip);
+                break;
+            }
             case SettingPiece::HideReadout:
                 form.Fade(!on);
                 form.Switch(label.c_str(), s.hideNetstat, tip);
@@ -1903,14 +1923,6 @@ namespace headsup
                 break;
             case SettingPiece::WidgetTabs: break; // in the panel's popup, by BuildWidgetSettings
             case SettingPiece::Trays: Trays(c); break;
-            case SettingPiece::ResetLayout:
-                form.Fade(!BarOn(s));
-                if (form.Action(label.c_str(), tip) && s.barSections != DefaultPlacement())
-                {
-                    s.barSections = DefaultPlacement();
-                    form.changed  = true;
-                }
-                break;
             // Mouse Cursor and HeadsUp Config
             case SettingPiece::PointerIcon:
             {
@@ -2083,7 +2095,9 @@ namespace headsup
             case CardPiece::TopPanel: return {false, !on, &s.showBar};
             case CardPiece::HelpBar: return {false, !BarOn(s), &s.Widget(BarWidget::GameHelp).on};
             case CardPiece::Widgets: return {.skipped = true}; // in the panel's popup, by BuildWidgetSettings
-            case CardPiece::Layout: return {false, !BarOn(s)};
+            case CardPiece::Layout:
+            case CardPiece::WidgetAppearance:
+            case CardPiece::PopupAppearance: return {false, !BarOn(s)};
             case CardPiece::DebugMode: return {false, false, &s.debugMode};
             case CardPiece::CustomGameUi: return {false, !on};
             }
@@ -2361,10 +2375,22 @@ namespace headsup
             const CardState own = CardStateOf(card.piece, c);
             if (own.skipped) continue;
             form.Fade(own.off);
+            // Widget Layout's arrow puts every widget back in its first place and takes off any copies.
+            const bool layoutCard = card.piece == CardPiece::Layout;
+            bool reset            = false;
             if (own.bare)
                 form.BeginBare(Labeled(card.name, card.key).c_str());
-            else if (!form.BeginCard(Labeled(card.name, card.key).c_str(), own.enabled, card.about))
-                continue;
+            else
+            {
+                const bool open = form.BeginCard(Labeled(card.name, card.key).c_str(), own.enabled, card.about,
+                    layoutCard ? &reset : nullptr, layoutCard && s.barSections != DefaultPlacement());
+                if (reset)
+                {
+                    s.barSections = DefaultPlacement();
+                    form.changed  = true;
+                }
+                if (!open) continue;
+            }
             CardNote(card.piece, c);
             for (const LayoutSetting& setting : layout.SettingsOf(card))
             {

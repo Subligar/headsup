@@ -98,15 +98,20 @@ TEST(the_font_size_ratio_divides_the_second_lines_size)
     CHECK(FontRatioPosition(kDefaultFontRatio) > kFontRatioSteps && FontRatioPosition(9.0f) == 2 * kFontRatioSteps);
 }
 
-TEST(the_pop_out_scale_scales_every_pop_out_size_and_the_bar_keeps_its_own)
+TEST(the_pop_out_text_scale_scales_its_text_alone_and_the_bar_keeps_its_own)
 {
     const BarMetrics small = MetricsFor(64, BarShape::Pills, kDefaultFontRatio, 0.5f);
     const BarMetrics big   = MetricsFor(24, BarShape::Pills, kDefaultFontRatio, 2.0f);
     CHECK(Near(small.popupText, 7.0f) && Near(small.popupTitle, 9.0f) && Near(big.popupText, 28.0f) && Near(big.popupTitle, 36.0f));
     const BarMetrics one = MetricsFor(45, BarShape::Pills);
-    CHECK(Near(big.popupPadding, 2.0f * one.popupPadding) && Near(big.heading, 2.0f * one.heading) &&
-          Near(big.rowGap, 2.0f * one.rowGap) && Near(big.panelRadius, 2.0f * one.panelRadius));
+    CHECK(Near(big.heading, 2.0f * one.heading));
+    // The pop-out's own padding, row gaps and corners stay as they are.
+    CHECK(Near(big.popupPadding, one.popupPadding) && Near(big.rowGap, one.rowGap) && Near(big.panelRadius, one.panelRadius));
     CHECK(Near(small.title, 0.40f * 64.0f) && Near(big.title, 0.40f * 24.0f));
+    // Width and Height are carried for the layout.
+    const BarMetrics boxed = MetricsFor(45, BarShape::Pills, kDefaultFontRatio, kDefaultPopupScale, kDefaultIconScale, 1.5f, 0.5f);
+    CHECK(Near(boxed.popupWidth, 1.5f) && Near(boxed.popupHeight, 0.5f) && Near(boxed.popupText, one.popupText));
+    CHECK(Near(one.popupWidth, 1.0f) && Near(one.popupHeight, 1.0f));
 }
 
 TEST(icons_take_their_scale_of_the_most_a_pill_holds)

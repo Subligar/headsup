@@ -100,7 +100,7 @@ VISIBILITY_ROWS = {**rows('aggressive', 'passive', 'nm-aggressive', 'nm-passive'
 
 PIECES = Pieces(
     pages={'theme': 'Theme', 'entities': 'Entities', 'mobs': 'Mobs', 'players': 'Players', 'self': 'Self', 'npcs': 'Npcs', 'pets': 'Pets',
-           'userinterface': 'UserInterface', 'toppanel': 'TopPanel', 'mousecursor': 'MouseCursor',
+           'userinterface': 'UserInterface', 'helpbar': 'HelpBar', 'toppanel': 'TopPanel', 'mousecursor': 'MouseCursor',
            'colors': 'Colors', 'configmenu': 'ConfigMenu', 'feedback': 'Feedback'},
     cards={
         'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(),
@@ -110,7 +110,7 @@ PIECES = Pieces(
         'ornament': Card(), 'nameplate-opacity': Card(), 'detection-icons': Card(), 'badges': Card(),
         'weaknesses': Card(), 'statuses': Card(), 'placeholder-timers': Card(),
         'screenshot-mode': Card(), 'window-groups': Card(), 'custom-game-ui': Card(), 'base-game-ui': Card(),
-        'top-panel': Card(switch=True), 'theme-colors': Card(), 'help-bar': Card(switch=True), 'widgets': Card(), 'layout': Card(),
+        'top-panel': Card(switch=True), 'theme-colors': Card(), 'help-bar': Card(switch=True), 'widgets': Card(), 'layout': Card(), 'widget-appearance': Card(), 'popup-appearance': Card(),
         'mouse-pointer': Card(), 'settings-window': Card(), 'profiles': Card(), 'reset': Card(), 'debug-mode': Card(switch=True),
         'feedback-form': Card(),
     },
@@ -174,7 +174,7 @@ PIECES = Pieces(
                                                     'hide': True, 'keep': True, 'row-tip': False}),
         # Top Panel and Widgets
         'theme': Setting(words={'built-in': True, 'custom': True, 'copy': True, 'copy-again': True}), 'window-type': Setting(), 'window-border': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
-        'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'popup-scale': Setting(),
+        'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'corner-rounding': Setting(), 'text-scale': Setting(), 'popup-width': Setting(), 'popup-height': Setting(), 'popup-rounding': Setting(), 'section-rounding': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
         'theme-name': Setting(), 'background-style': Setting(options=3),
         'separator-style': Setting(options=4, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
@@ -190,7 +190,7 @@ PIECES = Pieces(
         'widget-tabs': Setting(unnamed=True, rows=rows(
             'design', 'icon', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
             'seconds', 'job-names', 'job-text', 'bar-width', 'bar-height', 'bar-text'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),
-        'trays': Setting(unnamed=True), 'reset-layout': Setting(),
+        'trays': Setting(unnamed=True),
         # Mouse Cursor and HeadsUp Config
         'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'keep-pointer': Setting(),
         'enable-headsup': Setting(), 'font': Setting(), 'size': Setting(),

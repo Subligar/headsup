@@ -72,6 +72,9 @@ namespace headsup
             {"barIconScale", &Settings::barIconScale, kMinIconScale, kMaxIconScale, kPercentStep},
             {"barWidgetSpacing", &Settings::barWidgetSpacing, 0, kMaxWidgetSpacing},
             {"barWidgetPadding", &Settings::barWidgetPadding, kThemePadding, kMaxWidgetPadding},
+            {"widgetRounding", &Settings::widgetRounding, kThemeRounding, kMaxRounding},
+            {"popupRounding", &Settings::popupRounding, kThemeRounding, kMaxRounding},
+            {"sectionRounding", &Settings::sectionRounding, kThemeRounding, kMaxRounding},
             {"panelSeparators", &Settings::panelSeparators, 0, kAllSeparators},
             {"helpBarTextSize", &Settings::helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize},
             {"helpBarWidth", &Settings::helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth},
@@ -131,7 +134,9 @@ namespace headsup
         };
         constexpr FloatKey kFloats[] = {{"maxDistance", &Settings::maxDistance, kMinOutlineDistance, kMaxOutlineDistance},
             {"barFontRatio", &Settings::barFontRatio, kMinFontRatio, kMaxFontRatio},
-            {"popupScale", &Settings::popupScale, kMinPopupScale, kMaxPopupScale}};
+            {"popupTextScale", &Settings::popupTextScale, kMinPopupScale, kMaxPopupScale},
+            {"popupWidthScale", &Settings::popupWidthScale, kMinPopupScale, kMaxPopupScale},
+            {"popupHeightScale", &Settings::popupHeightScale, kMinPopupScale, kMaxPopupScale}};
 
         struct ColorKey
         {

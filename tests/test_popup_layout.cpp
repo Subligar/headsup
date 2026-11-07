@@ -521,6 +521,24 @@ TEST(a_collapsed_card_keeps_its_width_and_is_only_as_tall_as_its_heading_beside_
     CHECK(AllInside(shut, m));
 }
 
+TEST(the_pop_out_width_and_height_scale_each_card_and_leave_its_text_alone)
+{
+    const BarMetrics one = MetricsFor(36, BarShape::Pills);
+    const BarMetrics big = MetricsFor(36, BarShape::Pills, kDefaultFontRatio, kDefaultPopupScale, kDefaultIconScale, 2.0f, 1.5f);
+    PopupContent c;
+    c.title = {{"Zone", Tone::Normal}}; // narrower than its cards
+    c.sections.push_back(PopupSection{"Elements", {Labeled("A row far wider than the title", Text("+30%"))}});
+    c.sections.push_back(PopupSection{"Immune", {Labeled("Another wide row of its own", Text("Bind"))}});
+    const PopupLayout a = LayoutPopup(c, one, BarShape::Pills, false, Fake), b = LayoutPopup(c, big, BarShape::Pills, false, Fake);
+    const std::vector<const PopupPiece*> was = Of(a, PopupPiece::Kind::Card), now = Of(b, PopupPiece::Kind::Card);
+    CHECK(was.size() == now.size() && !was.empty());
+    for (size_t i = 0; i < was.size(); ++i)
+        CHECK(Near(now[i]->width, 2.0f * was[i]->width) && Near(now[i]->height, 1.5f * was[i]->height));
+    CHECK(b.width > a.width && b.height > a.height);
+    const PopupPiece &t0 = *Find(a, "+30%"), &t1 = *Find(b, "+30%");
+    CHECK(Near(t0.width, t1.width) && Near(t0.height, t1.height));
+}
+
 TEST(a_collapsed_card_in_a_column_keeps_its_width)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);

@@ -28,6 +28,9 @@ namespace headsup
         // The pills' section headings' letter-spacing, in their size: the approved mockup's 1.2 px at 10.5 px.
         constexpr float kHeadingTracking = 1.2f / 10.5f;
 
+        // A corner's radius as set, or the theme's own.
+        float Rounded(int setting, float theme) { return setting == kThemeRounding ? theme : static_cast<float>(setting); }
+
         const char* Interned(const std::string& name)
         {
             static std::set<std::string> names; // a set's names never move
@@ -177,12 +180,13 @@ namespace headsup
             if (!isTarget && !lit) return std::nullopt;
             // The target's frame always has the tint, so a hovered one has more of it.
             const uint32_t fill = isTarget && lit ? AlphaTimes(palette.highlight, kLitTarget) : palette.highlight;
-            return BoxStyle{.radius = kFrameRadius, .top = fill, .bottom = fill, .border = isTarget ? palette.accent : 0u};
+            return BoxStyle{.radius = Rounded(settings.widgetRounding, kFrameRadius), .top = fill, .bottom = fill,
+                .border = isTarget ? palette.accent : 0u};
         }
         const bool flat = widget == BarWidget::Zone || widget == BarWidget::EarthTime;
         if (flat && !lit) return std::nullopt;
         const uint32_t fill = lit ? palette.highlight : palette.pill;
-        return BoxStyle{.radius = metrics.pillRadius, .top = fill, .bottom = fill,
+        return BoxStyle{.radius = Rounded(settings.widgetRounding, metrics.pillRadius), .top = fill, .bottom = fill,
             .border = isTarget || lit ? palette.accent : palette.pillBorder};
     }
 
@@ -223,14 +227,14 @@ namespace headsup
     BoxStyle PopupPanel(const BarLook& look)
     {
         const BarPalette& p = look.palette;
-        return BoxStyle{.radius = look.metrics.panelRadius, .top = p.panelTop, .bottom = p.panelBottom,
-            .border = p.panelBorder, .outer = p.panelOuter, .outerGap = kOuterGap};
+        return BoxStyle{.radius = Rounded(look.settings.popupRounding, look.metrics.panelRadius), .top = p.panelTop,
+            .bottom = p.panelBottom, .border = p.panelBorder, .outer = p.panelOuter, .outerGap = kOuterGap};
     }
 
     BoxStyle PopupCard(const BarLook& look)
     {
-        return BoxStyle{.radius = std::max(look.metrics.panelRadius, kCardRadius), .top = kCardFill, .bottom = kCardFill,
-            .border = kCardEdge};
+        return BoxStyle{.radius = Rounded(look.settings.sectionRounding, std::max(look.metrics.panelRadius, kCardRadius)),
+            .top = kCardFill, .bottom = kCardFill, .border = kCardEdge};
     }
 
     BoxStyle PopupTag(const BarLook& look, float height)

@@ -244,7 +244,7 @@ menuFont=Tahoma
 menuScale=125.0000
 barHeight=48.0000
 barFontRatio=0.5000
-popupScale=1.5000
+popupTextScale=1.5000
 barZone=false
 barWeather=false
 barVanaTime=false
@@ -360,7 +360,7 @@ helpBarY=8.0000
         s.Widget(BarWidget::EarthTime).clockSeconds  = true;
         s.barHeight    = 48;
         s.barFontRatio = 0.5f;
-        s.popupScale   = 1.5f;
+        s.popupTextScale = 1.5f;
         s.hideHelpBar  = true;
         s.hideNetstat  = true;
         s.screenshotKey       = 0x79; // F10
@@ -1177,16 +1177,25 @@ TEST(the_help_bars_anchor_and_full_width_save_and_load_back_and_an_unknown_ancho
     CHECK(LoadSettings(saved).helpBarAnchor == HelpAnchor::Left);
 }
 
-TEST(the_font_ratio_pop_out_scale_and_icon_scale_hold_to_their_ranges)
+TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges)
 {
     const Settings d;
-    CHECK(d.barFontRatio == kDefaultFontRatio && d.popupScale == kDefaultPopupScale && d.barIconScale == kDefaultIconScale);
+    CHECK(d.barFontRatio == kDefaultFontRatio && d.popupTextScale == kDefaultPopupScale && d.barIconScale == kDefaultIconScale);
+    CHECK(d.popupWidthScale == kDefaultPopupScale && d.popupHeightScale == kDefaultPopupScale);
+    CHECK(d.widgetRounding == kThemeRounding && d.popupRounding == kThemeRounding && d.sectionRounding == kThemeRounding);
     MapStore store;
-    store.values["barFontRatio"] = "9";
-    store.values["popupScale"]   = "0.01";
-    store.values["barIconScale"] = "3";
+    store.values["barFontRatio"]     = "9";
+    store.values["popupTextScale"]   = "0.01";
+    store.values["popupWidthScale"]  = "7";
+    store.values["popupHeightScale"] = "0.01";
+    store.values["barIconScale"]     = "3";
+    store.values["widgetRounding"]   = "-9";
+    store.values["popupRounding"]    = "999";
+    store.values["sectionRounding"]  = "12";
     const Settings s = LoadSettings(store);
-    CHECK(s.barFontRatio == kMaxFontRatio && s.popupScale == kMinPopupScale && s.barIconScale == kMinIconScale);
+    CHECK(s.barFontRatio == kMaxFontRatio && s.popupTextScale == kMinPopupScale && s.barIconScale == kMinIconScale);
+    CHECK(s.popupWidthScale == kMaxPopupScale && s.popupHeightScale == kMinPopupScale);
+    CHECK(s.widgetRounding == kThemeRounding && s.popupRounding == kMaxRounding && s.sectionRounding == 12);
 }
 
 TEST(the_settings_window_keeps_its_theme_and_its_place)

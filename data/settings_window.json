@@ -174,10 +174,9 @@
       "cards": [
         {
           "key": "top-panel",
-          "name": "Top Panel",
+          "name": "Panel Appearance",
           "description": "Hover a widget for details; click it to keep them open. Its cog opens its options.",
           "settings": [
-            {"key": "widget-background", "name": "Show Widget Backgrounds", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: Off."},
             {
               "key": "show-separator",
               "name": "Show Separator",
@@ -188,40 +187,10 @@
                 {"name": "End Caps", "tip": "A separator at the far left and far right of the top panel."}
               ]
             },
-            {"key": "title-font", "name": "Main Font", "tip": "The font of each widget's top line, of a widget on one line, and of the pop-outs' headings. Default: the theme's."},
-            {"key": "text-font", "name": "Secondary Font", "tip": "The font of each widget's second line, its numbers and the pop-outs' text. Default: the theme's."},
             {"key": "height", "name": "Panel Height", "tip": "How tall the top panel is. The text and icons of every widget grow and shrink with it."},
-            {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of the main line's text to the size of the secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Both lines grow or shrink together to fit the Panel Height. Default: 1.20x."},
-            {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of the icons in widgets. At 100% an icon is as tall as its widget can hold. Default: 65%."},
             {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Default: 0 px."},
-            {"key": "widget-padding", "name": "Widget Padding", "tip": "The room inside every widget, from its edges to its text. Default: the theme's own."},
-            {"key": "popup-scale", "name": "Pop-out Scale", "tip": "Makes the widgets' pop-outs and everything in them larger or smaller. At 1x a pop-out's title is 14 px and its text 12 px. Default: 1.0x."},
             {"key": "hide-readout", "name": "Hide Server Info", "tip": "The game's S, R and % numbers at the top right."},
             {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
-          ]
-        },
-        {
-          "key": "help-bar",
-          "name": "Help Bar",
-          "description": "The game's help text, in a bar of its own under the top panel.",
-          "settings": [
-            {"key": "hide-game-help", "name": "Hide Game Help", "tip": "The game's own help bar, which the top panel covers."},
-            {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
-            {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
-            {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
-            {
-              "key": "anchor",
-              "name": "Anchor",
-              "tip": "Which side of the screen the help bar keeps to. Its text lines up the same way inside it. Default: Left.",
-              "options": [
-                {"name": "Left", "tip": "Against the screen's left edge, with its text on the left."},
-                {"name": "Center", "tip": "In the middle of the screen, with its text centered."},
-                {"name": "Right", "tip": "Against the screen's right edge, with its text on the right."}
-              ]
-            },
-            {"key": "full-width", "name": "Full Width", "tip": "The help bar takes the screen's whole width, however short its text. Default: Off."},
-            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
-            {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
           ]
         },
         {
@@ -229,8 +198,33 @@
           "name": "Widget Layout",
           "description": "Drag a widget to move it, and click one that is on to open its settings in its pop-out on the top panel. Click it again to close them. Its toggle turns it on and off. You can also open a widget's settings from the cog in its pop-out.",
           "settings": [
-            {"key": "trays"},
-            {"key": "reset-layout", "name": "Reset Layout", "tip": "Puts every widget back in its first place and takes off any copies. Switches stay."}
+            {"key": "trays"}
+          ]
+        },
+        {
+          "key": "widget-appearance",
+          "name": "Widget Appearance",
+          "description": "How every widget on the top panel looks.",
+          "settings": [
+            {"key": "widget-padding", "name": "Padding", "tip": "The room inside every widget, from its edges to its text. Default: the theme's own."},
+            {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of the icons in widgets. At 100% an icon is as tall as its widget can hold. Default: 65%."},
+            {"key": "widget-background", "name": "Show Background", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: Off."},
+            {"key": "title-font", "name": "Primary Font", "tip": "The font of each widget's top line, of a widget on one line, and of the pop-outs' headings. Default: the theme's."},
+            {"key": "text-font", "name": "Secondary Font", "tip": "The font of each widget's second line, its numbers and the pop-outs' text. Default: the theme's."},
+            {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of the primary line's text to the size of the secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Both lines grow or shrink together to fit the Panel Height. Default: 1.20x."},
+            {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets' backgrounds are. Set by Theme keeps the theme's own. Default: Set by Theme."}
+          ]
+        },
+        {
+          "key": "popup-appearance",
+          "name": "Pop-out Appearance",
+          "description": "How the widgets' pop-outs look.",
+          "settings": [
+            {"key": "text-scale", "name": "Text Scale", "tip": "Makes the text in the pop-outs larger or smaller. At 1x a pop-out's title is 18 px, its section titles 16 px and its text 14 px. Default: 1.0x."},
+            {"key": "popup-width", "name": "Width", "tip": "Makes each pop-out and its sections wider or narrower, without changing the text. Below 1x, text that no longer fits runs past its section. Default: 1.0x."},
+            {"key": "popup-height", "name": "Height", "tip": "Makes each pop-out and its sections taller or shorter, without changing the text. Default: 1.0x."},
+            {"key": "popup-rounding", "name": "Pop-out Rounding", "tip": "How round the corners of the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."},
+            {"key": "section-rounding", "name": "Section Rounding", "tip": "How round the corners of the sections in the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."}
           ]
         },
         {
@@ -357,6 +351,37 @@
                 {"key": "row-tip", "tip": "Its shift down from where the game puts its windows, up when below zero."}
               ]
             }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "helpbar",
+      "name": "Help Bar",
+      "child": true,
+      "cards": [
+        {
+          "key": "help-bar",
+          "name": "Help Bar",
+          "description": "The game's help text, in a bar of its own under the top panel.",
+          "settings": [
+            {"key": "hide-game-help", "name": "Hide Game Help", "tip": "The game's own help bar, which the top panel covers."},
+            {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
+            {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
+            {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
+            {
+              "key": "anchor",
+              "name": "Anchor",
+              "tip": "Which side of the screen the help bar keeps to. Its text lines up the same way inside it. Default: Left.",
+              "options": [
+                {"name": "Left", "tip": "Against the screen's left edge, with its text on the left."},
+                {"name": "Center", "tip": "In the middle of the screen, with its text centered."},
+                {"name": "Right", "tip": "Against the screen's right edge, with its text on the right."}
+              ]
+            },
+            {"key": "full-width", "name": "Full Width", "tip": "The help bar takes the screen's whole width, however short its text. Default: Off."},
+            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
+            {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
           ]
         }
       ]

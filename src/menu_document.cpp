@@ -183,6 +183,7 @@ namespace headsup
                ";font-family:\"" + look.titleFont + "\";font-size:" + Em(kCardTitleScale) + ";color:" + color(c.heading) +
                ";transition:color" + kEase + ";}";
         css += ".card-head:hover .card-title{color:" + color(c.accent) + ";}";
+        css += ".card-head .reset{position:absolute;right:" + Em(kCardPad) + ";top:" + Em((kHeaderRow - kFrame) / 2.0f) + ";}";
         css += ".check.card-on{position:absolute;right:" + Em(kCardPad) + ";top:" + Em((kHeaderRow - kToggleHeight) / 2.0f) +
                ";width:" + Em(kCardToggleWidth) + ";}";
         css += ".card-body{padding:0px " + Em(kCardPad) + " " + Em(kCardPad * 0.6f) + " " + Em(kCardPad) +

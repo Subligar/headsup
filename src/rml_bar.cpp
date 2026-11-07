@@ -502,8 +502,8 @@ namespace headsup
             return;
         }
         const BarPalette& p = PaletteFor(settings, skin);
-        const BarMetrics m  = MetricsFor(settings.barHeight, p.shape, settings.barFontRatio, settings.popupScale,
-            settings.barIconScale);
+        const BarMetrics m  = MetricsFor(settings.barHeight, p.shape, settings.barFontRatio, settings.popupTextScale,
+            settings.barIconScale, settings.popupWidthScale, settings.popupHeightScale);
         // The player's fonts where RmlUi can read them, the theme's where it cannot.
         const char* titleFont = BarTitleFont(settings, p.shape);
         if (!host.EnsureFont(titleFont)) titleFont = TitleFont(p.shape);

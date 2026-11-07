@@ -143,7 +143,7 @@ namespace headsup
         const int position = static_cast<int>(steps + 0.5f);
         return position < 0 ? 0 : position > 2 * kFontRatioSteps ? 2 * kFontRatioSteps : position;
     }
-    // Pop-out Scale, times the pop-out's own sizes.
+    // A pop-out's Text Scale, Width and Height, times its own sizes.
     constexpr float kMinPopupScale = 0.2f, kMaxPopupScale = 2.0f, kDefaultPopupScale = 1.0f;
     // Icon Scale: a widget's icons, in percent of the most its widget holds.
     constexpr int kMinIconScale = 20, kMaxIconScale = 100, kDefaultIconScale = 65;

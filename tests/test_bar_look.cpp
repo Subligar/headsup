@@ -275,6 +275,27 @@ TEST(a_window_from_a_panels_colors_reads_well_and_steps_up_from_its_page)
     }
 }
 
+TEST(widgets_pop_outs_and_their_sections_are_rounded_as_set_or_as_the_theme_does)
+{
+    Settings settings;
+    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark})
+    {
+        const BarLook own = LookOf(theme, settings);
+        const float widget = own.BoxOf(BarWidget::Target, true)->radius, popup = PopupPanel(own).radius,
+                    card   = PopupCard(own).radius;
+        Settings set = settings;
+        set.widgetRounding  = 11;
+        set.popupRounding   = 0;
+        set.sectionRounding = 20;
+        const BarLook rounded = LookOf(theme, set);
+        CHECK(Near(rounded.BoxOf(BarWidget::Target, true)->radius, 11.0f) && Near(rounded.BoxOf(BarWidget::Bags, true)->radius, 11.0f));
+        CHECK(Near(PopupPanel(rounded).radius, 0.0f) && Near(PopupCard(rounded).radius, 20.0f));
+        // The theme's own, by default.
+        CHECK(settings.widgetRounding == kThemeRounding && widget > 0.0f && popup > 0.0f && card > 0.0f);
+        CHECK(Near(widget, theme == BarTheme::PhoenixGold ? 3.0f : own.metrics.pillRadius) && Near(popup, own.metrics.panelRadius));
+    }
+}
+
 TEST(a_widget_is_padded_as_the_panel_says_or_as_the_theme_does)
 {
     const BarMetrics m = MetricsFor(45, BarShape::Pills);

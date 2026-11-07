@@ -277,6 +277,21 @@ TEST(the_job_widgets_bar_rows_show_with_its_exp_bar_and_job_text_with_its_job_in
     CHECK(Has(shown, "job-names") && !Has(shown, "job-text"));
 }
 
+TEST(the_widget_layout_cards_reset_arrow_shows_once_it_was_changed_and_puts_every_widget_back)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const char* reset = "toppanel-layout-reset";
+    const auto hidden = [&] { return ClassOn(w.Pass(), reset, kHiddenClass); };
+    CHECK(hidden());
+    MoveWidget(w.settings.barSections, BarSection::Center, 0, BarSection::Right, 0);
+    CHECK(!hidden());
+    w.Pass({{reset, kClickEvent, ""}});
+    CHECK(w.settings.barSections == DefaultPlacement());
+    // The card stays open: the arrow is no click on its head.
+    CHECK(!w.state.form.collapsed.contains("toppanel-layout"));
+}
+
 TEST(the_reset_card_asks_twice)
 {
     Window w;
@@ -1103,7 +1118,7 @@ TEST(the_nameplate_fonts_lead_with_the_games_font_and_the_top_panels_leave_it_ou
     w.Pass({{"entities-nameplates-default-font-o-1", kClickEvent, ""}});
     CHECK(w.settings.defaultFont == kGameFontNarrowName);
     w.state.page = Page::TopPanel;
-    const Form open = w.Pass({{"toppanel-top-panel-title-font", kClickEvent, ""}});
+    const Form open = w.Pass({{"toppanel-widget-appearance-title-font", kClickEvent, ""}});
     CHECK(open.popup && Has(open.popup->rml, "Arial") && !Has(open.popup->rml, kGameFontName));
 }
 
