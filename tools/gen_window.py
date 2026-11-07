@@ -189,7 +189,7 @@ PIECES = Pieces(
         'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-rounding': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
             'design', 'icon', 'alignment', 'show-zone-id', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
-            'seconds', 'job-names', 'job-text', 'bar-width', 'bar-height', 'bar-text'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),
+            'seconds', 'job-names', 'job-text', 'bar-width', 'bar-height', 'bar-text', 'mem-text'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),
         'trays': Setting(unnamed=True),
         # Mouse Cursor and HeadsUp Config
         'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'keep-pointer': Setting(),

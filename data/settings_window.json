@@ -264,7 +264,8 @@
                 {"key": "job-text", "name": "Job Text", "tip": "How Job Info shows your jobs and levels. Default is Main 75 / Sub 37."},
                 {"key": "bar-width", "name": "Bar Width", "tip": "How long the EXP Bar is. Default is 100 px."},
                 {"key": "bar-height", "name": "Bar Height", "tip": "How thick the EXP Bar is. Default is 6 px."},
-                {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows in its middle. Default is None."}
+                {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows in its middle. Default is None."},
+                {"key": "mem-text", "name": "Show Mem Text", "tip": "Puts \"Mem\" before the Memory button's figures. Off, the figures alone. Default is off."}
               ],
               "words": [
                 {"key": "clone", "name": "Clone This Widget", "tip": "Puts another of this widget on the panel after it, with all of this one's settings."},

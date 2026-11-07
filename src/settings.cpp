@@ -263,6 +263,7 @@ namespace headsup
         const char* const kExpTextNames[kExpTextCount] = {"earned", "toNext", "percent"};
         constexpr const char* kJobNamesKey  = "jobNames";
         constexpr const char* kZoneIdKey    = "zoneId";
+        constexpr const char* kMemTextKey   = "memText";
         constexpr const char* kJobTextKey   = "jobText";
         const char* const kJobTextNames[kJobTextCount] = {"mainSub", "main", "levelFirst"};
         constexpr const char* kClock24Key   = "clock24";
@@ -1305,6 +1306,9 @@ namespace headsup
             case BarWidget::Zone:
                 o.zoneId = flag(kZoneIdKey, o.zoneId);
                 break;
+            case BarWidget::Performance:
+                o.memText = flag(kMemTextKey, o.memText);
+                break;
             case BarWidget::EarthTime:
             {
                 // kClockZoneCount for a name of none of them, as kLocalZone is.
@@ -1371,6 +1375,9 @@ namespace headsup
                 break;
             case BarWidget::Zone:
                 flag(kZoneIdKey, o.zoneId);
+                break;
+            case BarWidget::Performance:
+                flag(kMemTextKey, o.memText);
                 break;
             case BarWidget::EarthTime:
                 text(kClockZoneKey, o.clockZone ? kClockZoneNames[static_cast<int>(*o.clockZone)] : kLocalZone);

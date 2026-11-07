@@ -64,6 +64,7 @@ namespace headsup
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
         CustomIcons weatherIcons = CustomIcons::Always; // Forecast: its weather pictures
         bool zoneId = true;                         // Zone: its number after its name in the pop-out's header
+        bool memText = false;                       // Performance: "Mem" before its Memory button's figures
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         std::optional<ClockZone> clockSecondZone = ClockZone::Japan; // its Secondary Timezone part's, the same way
         bool clock24         = true;                // its two lines

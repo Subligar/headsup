@@ -2833,6 +2833,17 @@ TEST(the_zone_widgets_show_zone_id_in_header_is_kept)
     CHECK(!LoadSettings(store).Widget(BarWidget::Zone).zoneId);
 }
 
+TEST(the_performance_widgets_show_mem_text_starts_off_and_is_kept)
+{
+    Settings s;
+    CHECK(!s.Widget(BarWidget::Performance).memText);
+    s.Widget(BarWidget::Performance).memText = true;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["memText"], "true");
+    CHECK(LoadSettings(store).Widget(BarWidget::Performance).memText);
+}
+
 TEST(the_bags_widgets_bag_is_kept_and_one_past_the_last_reads_as_the_inventory)
 {
     Settings s;

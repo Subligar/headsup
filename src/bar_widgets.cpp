@@ -858,8 +858,8 @@ namespace headsup
             WidgetPart::PerfReceived, WidgetPart::PerfPercent, WidgetPart::PerfMemory,
             WidgetPart::PerfMessages};
 
-        // The frame rate, each of the connection's figures and the memory.
-        std::vector<PartContent> PerformanceParts(const BarState& state, WidgetContent& base)
+        // The frame rate, each of the connection's figures and the memory, after "Mem" with Show Mem Text.
+        std::vector<PartContent> PerformanceParts(const BarState& state, const WidgetOptions& o, WidgetContent& base)
         {
             base.hasPopup = true;
             base.figures  = true;
@@ -867,7 +867,7 @@ namespace headsup
             for (int p = 0; p < kPerfPartCount; ++p)
                 if (const uint8_t bit = PerfBit(static_cast<PerfPart>(p)); (bit & kConnectionParts) != 0 && state.connection)
                     parts.push_back({kPerfWidgetParts[p], ConnectionFigures(state.connection, bit)});
-            std::vector<Span> memory = ListOf(Text("Mem ", Tone::Dim));
+            std::vector<Span> memory = o.memText ? ListOf(Text("Mem ", Tone::Dim)) : std::vector<Span>{};
             for (Span& span : MemoryFigures(state.memory))
                 memory.push_back(std::move(span));
             parts.push_back({WidgetPart::PerfMemory, std::move(memory)});
@@ -1478,7 +1478,7 @@ namespace headsup
                                                             " " + ClockText(state.earthHour, state.earthMinute, o.clock24, -1)))},
                     {WidgetPart::ClockVana, ListOf(Text(VanaClock(state.unixMs)))}};
             case BarWidget::GameHelp: return {};
-            case BarWidget::Performance: return PerformanceParts(state, base);
+            case BarWidget::Performance: return PerformanceParts(state, o, base);
             case BarWidget::Job: return JobParts(state.job, o, base);
             case BarWidget::Party: return PartyParts(state.party, base);
             case BarWidget::StatusTimers:

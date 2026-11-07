@@ -1427,3 +1427,23 @@ TEST(a_designer_buttons_picture_is_drawn_with_its_icons_adjustment)
                     "\" style=\"transform:scale(0.85);\"/>").c_str()));
     CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + IconSource(Icon::Star) + "\"/>").c_str()));
 }
+
+TEST(show_mem_text_shows_with_the_performance_widgets_memory_button_and_switches_its_label)
+{
+    Window w;
+    const PanelWidget performance{BarWidget::Performance};
+    w.settings.Widget(performance).on = true;
+    w.readings.settingsOf             = {performance};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(performance).design = DesignFrom(BarWidget::Performance, "fps -memory |");
+    CHECK(!Has(rows(), "mem-text"));
+    w.settings.Widget(performance).design = DesignFrom(BarWidget::Performance, "fps memory |");
+    const std::string shown = rows();
+    CHECK(Has(shown, "mem-text"));
+    CHECK(!w.settings.Widget(performance).memText);
+    w.Pass({{"toppanel-widgets-mem-text-performance", kClickEvent, ""}});
+    CHECK(w.settings.Widget(performance).memText);
+}

@@ -911,6 +911,10 @@ namespace headsup
                 case WidgetTabsRow::JobNames:
                     if (jobs) form.Switch(label.c_str(), o.jobNames, row.tip);
                     break;
+                case WidgetTabsRow::MemText:
+                    if (kind == BarWidget::Performance && PartOn(o.design, WidgetPart::PerfMemory))
+                        form.Switch(label.c_str(), o.memText, row.tip);
+                    break;
                 }
             }
         }

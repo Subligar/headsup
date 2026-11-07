@@ -1386,8 +1386,15 @@ TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_tho
     // By default the rates, the game's meter and PlayOnline's messages, as the Connection widget showed.
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227  100%");
     o.design = DesignFrom(BarWidget::Performance, "fps received memory |");
+    o.memText = true;
     const std::string line = Joined(Content(BarWidget::Performance, state, settings).title);
     CHECK(line.starts_with("30 fps  R 227  Mem ") && line.find("S ") == std::string::npos);
+    // Without Show Mem Text, the memory's figures alone.
+    o.memText = false;
+    const std::string bare = Joined(Content(BarWidget::Performance, state, settings).title);
+    std::string unlabeled = line;
+    unlabeled.erase(unlabeled.find("Mem "), std::string_view("Mem ").size());
+    CHECK_EQ(bare, unlabeled);
     // In the design's order, on either line.
     o.design = DesignFrom(BarWidget::Performance, "received | fps");
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "R 227");
