@@ -1123,19 +1123,10 @@ namespace headsup
             {
                 const std::optional<int> c = ResolvedCurrency(picked[i], yours);
                 const std::optional<uint32_t> amount = !c ? std::nullopt : *c == kGilCurrency ? state.gil : state.currencies[*c];
-                std::vector<Span> icon;
-                if (c == kGilCurrency) icon.push_back(coin);
-                for (const Nation nation : {Nation::SanDoria, Nation::Bastok, Nation::Windurst})
-                    if (c && c == NationPoints(nation)) icon.push_back(Mark(NationCrest(nation)));
-                if (c && kCurrencyTable[*c].item != 0)
-                {
-                    Span item = Text("");
-                    item.item = kCurrencyTable[*c].item;
-                    icon.push_back(item);
-                }
+                const Span icon = CurrencyMark(picked[i], yours);
                 parts.push_back({names[i], ListOf(Text(CurrencyName(picked[i], yours)))});
                 parts.push_back({amounts[i], ListOf(Text(amount ? Grouped(*amount) : "-"))});
-                parts.push_back({icons[i], std::move(icon)});
+                parts.push_back({icons[i], HasMark(icon) ? ListOf(icon) : std::vector<Span>{}});
             }
             return parts;
         }
@@ -1155,13 +1146,19 @@ namespace headsup
                 star.tint  = favorite ? Colored("", kStarColor) : Text("", Tone::Dim);
                 star.press = kFavoritePress + std::string(kCurrencyTable[c].key);
                 grid.cells.push_back(std::move(star));
+                const Span mark = CurrencyMark(c, Nation::None);
+                PopupCell picture;
+                picture.coin    = mark.coin;
+                picture.picture = mark.picture;
+                picture.item    = mark.item;
+                grid.cells.push_back(std::move(picture));
                 grid.cells.push_back(Cell(Text(kCurrencyTable[c].name)));
                 const std::optional<uint32_t> held = amount(c);
                 PopupCell value = Cell(held ? Text(Grouped(*held)) : Text("-", Tone::Dim));
                 value.align     = Align::Right;
                 grid.cells.push_back(std::move(value));
             };
-            constexpr int kColumns = 3; // the star, the name and the amount
+            constexpr int kColumns = 4; // the star, the picture, the name and the amount
             PopupSection top{"Favorites", {}};
             if (favorites.empty())
                 top.rows.push_back(LineOf("Click a currency's star to keep it here.", Tone::Dim));
@@ -1170,6 +1167,9 @@ namespace headsup
                 PopupRow grid = Grid(kColumns, favorites.size() * kColumns);
                 for (const int c : favorites)
                     add(grid, c);
+                grid.nested = true;
+                grid.spread = true;
+                ScrollsBy(grid, state, top.heading);
                 top.rows.push_back(std::move(grid));
             }
             PopupSection all{"All Currencies", {}};
@@ -1191,6 +1191,7 @@ namespace headsup
                 for (const int c : order)
                     add(grid, c);
                 grid.nested = true;
+                grid.spread = true;
                 tab.rows.push_back(std::move(grid));
                 ScrollsBy(tab.rows.front(), state, all.heading + "/" + tab.name.text);
                 all.tabs.push_back(std::move(tab));
@@ -1556,6 +1557,18 @@ namespace headsup
     }
 
     uint32_t ElementColor(Element element) { return kElementColors[static_cast<int>(element)]; }
+
+    Span CurrencyMark(int currency, Nation yours)
+    {
+        Span mark                  = Text("");
+        const std::optional<int> c = ResolvedCurrency(currency, yours);
+        if (!c) return mark;
+        mark.coin = *c == kGilCurrency;
+        mark.item = kCurrencyTable[*c].item;
+        for (const Nation nation : {Nation::SanDoria, Nation::Bastok, Nation::Windurst})
+            if (c == NationPoints(nation)) mark.picture = NationCrest(nation);
+        return mark;
+    }
 
     std::optional<Span> StripBagFill(const BarState& state)
     {

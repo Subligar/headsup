@@ -682,6 +682,13 @@ namespace headsup
                 rml += "<img class=\"p\" src=\"" + GamePictureSource(piece.picture) + "\" style=\"" + place + "width:" +
                        Px(piece.width) + ";height:" + Px(piece.height) + ";" + AdjustRules(AdjustOf(piece.picture)) + "\"/>";
                 break;
+            case PopupPiece::Kind::Coin:
+            {
+                const int pixels = WholePixels(piece.width);
+                rml += "<img class=\"p\" src=\"" + CoinSource(pixels) + "\" style=\"" + place +
+                       size(static_cast<float>(pixels), static_cast<float>(pixels)) + "\"/>";
+                break;
+            }
             case PopupPiece::Kind::Cog:
             {
                 const int pixels = WholePixels(piece.width);

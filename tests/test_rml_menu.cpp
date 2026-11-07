@@ -1,6 +1,8 @@
 #include "rml_menu.h"
 
+#include "bar_document.h"
 #include "bar_look.h"
+#include "currencies.h"
 #include "fonts.h"
 #include "game_font.h"
 #include "layout_edit.h"
@@ -1942,6 +1944,34 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     window.Frames(2);
     window.Click(chip);
     CHECK(!window.shown && !window.Shows("toppanel-widgets-currency-1-gil"));
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(the_currency_dropdowns_show_each_currencys_picture_left_of_its_name_in_a_column)
+{
+    Window window;
+    window.Page("toppanel");
+    window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)));
+    const std::vector<int> choices = CurrencyChoices(Nation::None); // the window's readings know no nation
+    const std::string coin         = CoinSource(0);
+    for (const std::string list : {"toppanel-widgets-currency-1-gil", "toppanel-widgets-currency-2-gil"})
+    {
+        window.Click(list);
+        const auto row = [&](const char* key) {
+            const int currency = *CurrencyOfKey(key);
+            return window.Find(list + "-o-" + std::to_string(std::ranges::find(choices, currency) - choices.begin()));
+        };
+        const auto source = [](Rml::Element* r) { return r->GetFirstChild()->GetAttribute<Rml::String>("src", ""); };
+        CHECK(source(row("gil")).starts_with(coin.substr(0, coin.size() - 1))); // the coin, at whatever size
+        CHECK(source(row("cp_bastok")) == GamePictureSource(GamePicture::BastokCrest));
+        CHECK(source(row("beastmen_seals")) == ItemSource(1126));
+        // One with none keeps the picture's room, so every name starts in one column.
+        CHECK(source(row("allied_notes")).empty());
+        const auto nameX = [](Rml::Element* r) { return r->GetChild(1)->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+        CHECK(std::fabs(nameX(row("allied_notes")) - nameX(row("gil"))) < 0.5f);
+        CHECK(nameX(row("gil")) > row("gil")->GetFirstChild()->GetAbsoluteOffset(Rml::BoxArea::Border).x);
+        window.Click(list); // closes it
+    }
     CHECK_EQ(window.Said(), "");
 }
 

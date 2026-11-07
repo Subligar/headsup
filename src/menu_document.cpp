@@ -428,7 +428,9 @@ namespace headsup
         // The Widget Designer: its two lines as trays of chips side by side, wrapping, each line's end taking a drop.
         css += ".tray.design-line{display:flex;flex-wrap:wrap;margin-bottom:0.3em;}";
         css += ".dchip{display:inline-block;margin-right:0.3em;}";
-        css += ".dchip .dmark{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) + ";vertical-align:middle;margin-right:0.4em;}";
+        // A designer chip's picture, and a currency's in its dropdown, where one with none keeps the room.
+        css += ".dchip .dmark,.omark{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) + ";vertical-align:middle;margin-right:0.4em;}";
+        css += ".omark{display:inline-block;}";
         css += ".design-line .tray-end{flex:1 1 2em;}";
         css += ".error{margin-bottom:" + Em(kSpacing) + ";color:" + color(kErrorColor) + ";}";
         // What a control says under the pointer.

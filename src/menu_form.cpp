@@ -50,6 +50,19 @@ namespace headsup
             if (mark.coin) return CoinSource(kChipCoinPixels);
             return {};
         }
+        // A currency as its dropdown's row shows it: its picture, or the room of one, then its name.
+        std::string CurrencyRow(int currency, Nation yours)
+        {
+            const Span mark = CurrencyMark(currency, yours);
+            const std::string source = mark.coin                        ? CoinSource(kChipCoinPixels)
+                                       : mark.picture != GamePicture::None ? GamePictureSource(mark.picture)
+                                       : mark.item != 0                    ? ItemSource(mark.item)
+                                                                           : std::string();
+            const std::string picture = source.empty() ? "<div class=\"omark\"></div>"
+                                                       : "<img class=\"omark\" src=\"" + source + "\"" +
+                                                             AdjustStyle(AdjustOf(mark.picture)) + "/>";
+            return picture + EscapedRml(CurrencyName(currency, yours));
+        }
         constexpr const char* kWidgetNameClass = "caption widget-name"; // over each widget's settings in a combined popup
         constexpr float kAddWindowShare    = 0.8f;    // of a dropdown's width: a group's "+ Add Window"
         constexpr size_t kMaxFindText      = 31;      // letters of a window's name to look for
@@ -794,8 +807,10 @@ namespace headsup
                         const int shown = NationPoints(yours) == currency ? kYourConquestCurrency : currency;
                         int picked      = static_cast<int>(std::ranges::find(choices, shown) - choices.begin());
                         const int was   = picked;
-                        form.NumberDropdown(label.c_str(), picked, 0, static_cast<int>(choices.size()) - 1,
-                            [&](int i) { return CurrencyName(choices[static_cast<size_t>(i)], yours); }, row.tip);
+                        std::vector<std::string> rows;
+                        for (const int choice : choices)
+                            rows.push_back(CurrencyRow(choice, yours));
+                        form.MarkupDropdown(label.c_str(), picked, rows, row.tip);
                         if (picked != was) currency = choices[static_cast<size_t>(picked)];
                     }
                     break;

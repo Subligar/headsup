@@ -38,7 +38,7 @@ namespace headsup
         TextSize CellSize(const PopupCell& cell, float unit, SpanMeasure measure)
         {
             TextSize size;
-            const bool pictured = cell.icon || cell.item != 0 || cell.picture != GamePicture::None;
+            const bool pictured = cell.icon || cell.item != 0 || cell.picture != GamePicture::None || cell.coin;
             if (pictured) size = TextSize{unit * kCellIcon, unit * kCellIcon, 0.0f, unit * kCellIcon};
             bool inked = pictured;
             for (const Span& span : cell.text)
@@ -312,10 +312,11 @@ namespace headsup
                     if (!grid) rowWidth += (tags ? Framed(s, unit) : s).width + (i > 0 ? gap : 0.0f);
                 }
                 const float columnGap = unit * (row.roomy ? kRoomyColumnGap : kColumnGap);
-                // Two columns of nothing but icons sit as close as an icon to its text.
+                // Two columns of nothing but icons and pictures (a currency's star, then its coin, crest or none) sit as
+                // close as an icon to its text.
                 const auto iconsOnly = [&](size_t column) {
                     for (size_t i = column; i < row.cells.size(); i += columns.size())
-                        if (!row.cells[i].icon || !row.cells[i].text.empty() || row.cells[i].star) return false;
+                        if (!row.cells[i].text.empty() || row.cells[i].star) return false;
                     return true;
                 };
                 std::vector<float> gaps(columns.size(), columnGap);
@@ -409,6 +410,12 @@ namespace headsup
                         PopupPiece picture{PopupPiece::Kind::Picture, cx, cy, s, s, {}};
                         picture.picture = cell.picture;
                         b.pieces.push_back(std::move(picture));
+                        cx += s + (cell.text.empty() ? 0.0f : unit * kIconGap);
+                    }
+                    else if (cell.coin)
+                    {
+                        const float s = unit * kCellIcon;
+                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Coin, cx, cy, s, s, {}});
                         cx += s + (cell.text.empty() ? 0.0f : unit * kIconGap);
                     }
                     else if (cell.icon)

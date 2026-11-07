@@ -144,6 +144,9 @@ namespace headsup
     // The popup a pill opens, named by its first widget: that widget's, or for a combined pill each of its widgets'
     // that is shown and has one, their titles joined and their cards one after another.
     PopupContent PanelPopupContent(PanelWidget head, const BarState& state, const Settings& settings);
+    // A widget's currency's picture (kCurrencyTable's place, or kYourConquestCurrency) as a span of no text: gil's coin,
+    // a nation's crest for its conquest points, or the game's item; one with none has no mark (HasMark).
+    Span CurrencyMark(int currency, Nation yours);
     // The element colors of the weekdays and weather, from the spec.
     uint32_t ElementColor(Element element);
 }

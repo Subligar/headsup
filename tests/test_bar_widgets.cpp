@@ -1809,7 +1809,11 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     // By default gil and your nation's conquest points, each starred; a star's press takes it off.
     const PopupRow& top = p.sections[0].rows[0];
     CHECK((gridLines(top) == std::vector<std::string>{"Gil 4,751", "Conquest Points (Bastok) -"}));
-    CHECK(top.cells[0].icon == Icon::Star && top.cells[0].press == "favorite gil" && top.cells[2].align == Align::Right);
+    CHECK(top.cells[0].icon == Icon::Star && top.cells[0].press == "favorite gil" && top.cells[3].align == Align::Right);
+    // Each currency's picture in a column of its own after its star: gil's coin, a nation's crest.
+    CHECK(top.columns == 4 && top.cells[1].coin && top.cells[1].text.empty() && top.cells[5].picture == GamePicture::BastokCrest);
+    // In a socket that scrolls, as All Currencies' are, their amounts at its right.
+    CHECK(top.nested && top.scroll == "Favorites" && top.spread);
     const PopupSection& all = p.sections[1];
     CHECK(all.tabs.size() == 2 && all.tabs[0].name.text == "By Amount" && all.tabs[1].name.text == "Alphabetically");
     CHECK((Lines(all) == std::vector<std::string>{"Their amounts show once the server sends them."}));
@@ -1825,7 +1829,12 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     CHECK(lines.size() == static_cast<size_t>(kCurrencyCount) && byAmount.nested && !byAmount.scroll.empty());
     CHECK((std::vector<std::string>(lines.begin(), lines.begin() + 4) ==
            std::vector<std::string>{"Allied Notes 12,000", "Gil 4,751", "Sparks of Eminence 350", "Ancient Beastcoins 0"}));
-    CHECK(byAmount.cells[0].icon == Icon::StarEmpty && byAmount.cells[3].icon == Icon::Star); // Gil's
+    CHECK(byAmount.cells[0].icon == Icon::StarEmpty && byAmount.cells[4].icon == Icon::Star); // Gil's
+    CHECK(byAmount.spread && byAmount.cells[5].coin);
+    // A currency with no picture leaves its place in the column empty.
+    CHECK(byAmount.cells[1] == PopupCell{});
+    const auto row = std::ranges::find_if(byAmount.cells, [](const PopupCell& c) { return Joined(c.text) == "Beastmen's Seals"; });
+    CHECK(row != byAmount.cells.end() && (row - 1)->item == 1126); // the Beastmen's Seal item, by item_basic.sql
     const std::map<std::string, std::string> picked{{"All Currencies", "Alphabetically"}};
     state.pickedTabs = &picked;
     p = BarPopupContent(BarWidget::Currency, state, settings);
@@ -1880,9 +1889,14 @@ TEST(the_currency_widget_shows_two_currencies_and_your_nations_points_without_it
     w                = Content(BarWidget::Currency, state, settings);
     CHECK(w.title.size() == 1 && w.title[0].item == 1126); // the Beastmen's Seal item, by item_basic.sql
     CHECK(w.subtitle.size() == 1 && w.subtitle[0].picture == GamePicture::BastokCrest);
-    o.iconSide = IconSide::Hide; // gil's coin from its icon alone, first on the line, goes beside both lines
+    // Gil's is the Coin Icon's coin, on its own line wherever it is, and apart from the Coin Icon: either, both or none.
     o.currency = kGilCurrency;
-    CHECK(Content(BarWidget::Currency, state, settings).coin);
+    for (const IconSide side : {IconSide::Left, IconSide::Hide})
+    {
+        o.iconSide = side;
+        w          = Content(BarWidget::Currency, state, settings);
+        CHECK(w.coin == (side == IconSide::Left) && w.title.size() == 1 && w.title[0].coin);
+    }
     o.currency = notes;
     w          = Content(BarWidget::Currency, state, settings);
     CHECK(!w.coin && std::ranges::none_of(w.title, [](const Span& s) { return s.item != 0; }));

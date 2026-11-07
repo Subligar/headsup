@@ -179,16 +179,12 @@ namespace headsup
             {
                 const auto part = std::ranges::find(parts, chip.part, &PartContent::part);
                 if (!chip.on || part == parts.end() || part->spans.empty()) continue;
-                const bool marksAlone = std::ranges::all_of(part->spans, [](const Span& s) {
-                    return (s.icon || s.coin) && s.text.empty();
-                });
-                if (line == 0 && placed[0].empty() && marksAlone)
+                // A currency's coin stays on its line, apart from the Coin Icon.
+                const bool iconsAlone = std::ranges::all_of(part->spans, [](const Span& s) { return s.icon && s.text.empty(); });
+                if (line == 0 && placed[0].empty() && iconsAlone)
                 {
                     for (const Span& s : part->spans)
-                        if (s.icon)
-                            base.icons.push_back(*s.icon);
-                        else
-                            base.coin = true;
+                        base.icons.push_back(*s.icon);
                     continue;
                 }
                 placed[static_cast<size_t>(line)].push_back(std::move(part->spans));

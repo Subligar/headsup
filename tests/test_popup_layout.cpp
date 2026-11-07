@@ -1,4 +1,5 @@
 #include "bar_statuses.h"
+#include "currencies.h"
 #include "popup_layout.h"
 #include "test.h"
 
@@ -1435,4 +1436,40 @@ TEST(while_its_settings_show_a_widgets_clone_and_remove_chips_sit_left_of_the_co
     content.removePress.clear();
     const PopupLayout first = LayoutPopup(content, m, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 200.0f});
     CHECK(pressed(first, "widget clone 4") != nullptr && first.chips.size() == 1);
+}
+
+TEST(the_currency_popups_favorites_scroll_as_all_currencies_do_with_amounts_at_the_right_and_icons_in_a_column)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    Settings settings;
+    BarState state;
+    state.gil    = 4751;
+    state.nation = Nation::Bastok;
+    for (std::optional<uint32_t>& amount : state.currencies)
+        amount = 0;
+    state.currencies[*CurrencyOfKey("cp_bastok")] = 350;
+    const PopupLayout l = LayoutPopup(BarPopupContent(BarWidget::Currency, state, settings), m, false, Fake);
+    // Each list in a socket of its own.
+    const std::vector<const PopupPiece*> sockets = Of(l, PopupPiece::Kind::Socket);
+    CHECK_EQ(sockets.size(), static_cast<size_t>(2));
+    // Gil and Bastok's points in both lists, their amounts against the same right edge, their names in one column.
+    std::vector<const PopupPiece*> gil, points, gilName, notesName;
+    for (const PopupPiece& p : l.pieces)
+    {
+        if (p.span.text == "4,751") gil.push_back(&p);
+        if (p.span.text == "350") points.push_back(&p);
+        if (p.span.text == "Gil") gilName.push_back(&p);
+        if (p.span.text == "Allied Notes") notesName.push_back(&p);
+    }
+    CHECK(gil.size() == 2 && points.size() == 2 && gilName.size() == 2 && notesName.size() == 1);
+    for (const std::vector<const PopupPiece*>& amounts : {gil, points})
+    {
+        const float favorites = amounts[0]->x + amounts[0]->width, all = amounts[1]->x + amounts[1]->width;
+        CHECK(Near(favorites, all) && amounts[0]->right && amounts[1]->right);
+    }
+    CHECK(Near(gilName[0]->x, gilName[1]->x) && Near(gilName[1]->x, notesName[0]->x));
+    // The pictures sit left of the names, between the stars and them: gil's coin, Bastok's crest.
+    const std::vector<const PopupPiece*> coins = Of(l, PopupPiece::Kind::Coin), crests = Of(l, PopupPiece::Kind::Picture);
+    CHECK(coins.size() == 2 && !crests.empty());
+    CHECK(coins[0]->x + coins[0]->width < gilName[0]->x && coins[0]->x > sockets[0]->x);
 }
