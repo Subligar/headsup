@@ -100,3 +100,19 @@ TEST(a_key_to_press_is_a_real_key_with_its_sides_as_one_or_none)
     CHECK_EQ(BindableKey(999), 0);
     CHECK_EQ(BindableKey(-1), 0);
 }
+
+TEST(lock_cursor_to_window_clips_to_the_games_client_area_while_it_has_the_focus_and_lets_go_only_of_its_own_clip)
+{
+    const ScreenRect game{100, 50, 1380, 770}, screen{0, 0, 2560, 1440}, moved{200, 50, 1480, 770};
+    // Focused with the setting on: clipped to the game, again once the game moves or something else clips.
+    CHECK(CursorClipStep(true, game, screen, false) == ClipStep::Clip);
+    CHECK(CursorClipStep(true, game, game, true) == ClipStep::Keep);
+    CHECK(CursorClipStep(true, moved, game, true) == ClipStep::Clip);
+    // A game window with no client area (minimized) is no place to keep the pointer.
+    CHECK(CursorClipStep(true, ScreenRect{}, screen, false) == ClipStep::Keep);
+    CHECK(CursorClipStep(true, ScreenRect{}, game, true) == ClipStep::Release);
+    // Out of focus, or the setting off: HeadsUp lets go of its own clip, and leaves anyone else's alone.
+    CHECK(CursorClipStep(false, game, game, true) == ClipStep::Release);
+    CHECK(CursorClipStep(false, game, game, false) == ClipStep::Keep);
+    CHECK(CursorClipStep(false, game, screen, false) == ClipStep::Keep);
+}

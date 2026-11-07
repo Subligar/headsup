@@ -231,6 +231,7 @@ namespace headsup
         std::string pointerFile; // a File pointer's name in the cursors folder, without its extension
         int pointerSize = kMinPointerSize; // percent, the game's own pointer included
         bool fixPointer        = true;  // the game reads the mouse in its true client area and syncs its pointer before clicks
+        bool lockCursor        = false; // Windows' pointer kept inside the game's window while it has the focus
         int cursorWidth        = DefaultCursorWidth(); // pixels
         int cursorHeight       = kDefaultCursorHeight;
         int cursorOutlineThickness = 100; // percent: its edge, a twentieth of its height at 100

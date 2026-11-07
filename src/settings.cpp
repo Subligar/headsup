@@ -34,7 +34,7 @@ namespace headsup
         constexpr const char* kEnabledKey = "enabled"; // in every file any build saved: what tells a file from none
         constexpr BoolKey kBools[] = {{kEnabledKey, &Settings::enabled}, {"autoSave", &Settings::autoSave}, {"phTimers", &Settings::phTimers},
             {"scaleWithDistance", &Settings::scaleWithDistance},
-            {"fixPointer", &Settings::fixPointer}, {"countYourAccuracy", &Settings::countAccuracy}, {"showBar", &Settings::showBar},
+            {"fixPointer", &Settings::fixPointer}, {"lockCursor", &Settings::lockCursor}, {"countYourAccuracy", &Settings::countAccuracy}, {"showBar", &Settings::showBar},
             {"hideHelpBar", &Settings::hideHelpBar}, {"hideNetstat", &Settings::hideNetstat},
             {"screenshotHidesGame", &Settings::screenshotHidesGame},
             {"stackNames", &Settings::stackNames}, {"stackLine", &Settings::stackLine}, {"hideInEvent", &Settings::hideInEvent},

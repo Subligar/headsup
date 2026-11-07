@@ -192,7 +192,7 @@ PIECES = Pieces(
             'seconds', 'job-names', 'job-text', 'bar-width', 'bar-height', 'bar-text', 'mem-text'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),
         'trays': Setting(unnamed=True),
         # Mouse Cursor and HeadsUp Config
-        'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'keep-pointer': Setting(),
+        'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'lock-cursor': Setting(), 'keep-pointer': Setting(),
         'enable-headsup': Setting(), 'font': Setting(), 'size': Setting(),
         'window-opacity': Setting(),
         'reset-all-settings': Setting(words={'note': True, 'reset-everything': True, 'keep-them': True}),

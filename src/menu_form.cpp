@@ -2004,6 +2004,10 @@ namespace headsup
                 form.Fade(!on);
                 form.Switch(label.c_str(), s.fixPointer, tip);
                 break;
+            case SettingPiece::LockCursor:
+                form.Fade(!on);
+                form.Switch(label.c_str(), s.lockCursor, tip);
+                break;
             case SettingPiece::KeepPointer:
                 form.Fade(!on);
                 Keys(c, label, tip, s.keepPointerKeys, kMaxKeptKeys, c.state.keyCapture);

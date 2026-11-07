@@ -2833,6 +2833,17 @@ TEST(the_zone_widgets_show_zone_id_in_header_is_kept)
     CHECK(!LoadSettings(store).Widget(BarWidget::Zone).zoneId);
 }
 
+TEST(lock_cursor_to_window_starts_off_and_is_kept)
+{
+    Settings s;
+    CHECK(!s.lockCursor);
+    s.lockCursor = true;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["lockCursor"], "true");
+    CHECK(LoadSettings(store).lockCursor);
+}
+
 TEST(the_performance_widgets_show_mem_text_starts_off_and_is_kept)
 {
     Settings s;

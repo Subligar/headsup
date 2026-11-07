@@ -60,4 +60,22 @@ namespace headsup
         return any;
     }
     constexpr size_t kMaxKeptKeys = 32;
+
+    // A rectangle of the screen, as Windows' RECT is.
+    struct ScreenRect
+    {
+        long left = 0, top = 0, right = 0, bottom = 0;
+        bool operator==(const ScreenRect&) const = default;
+    };
+    // What Lock Cursor to Window does to Windows' pointer clip this frame: clip it to the game's client area while
+    // locked (the setting on and the game focused) and that area is not empty, let go of the clip HeadsUp made once
+    // not, and keep the clip as it is otherwise, someone else's included. current is the clip now; clipped, whether
+    // HeadsUp's is on.
+    enum class ClipStep : uint8_t
+    {
+        Keep,
+        Clip,
+        Release,
+    };
+    ClipStep CursorClipStep(bool locked, const ScreenRect& client, const ScreenRect& current, bool clipped);
 }

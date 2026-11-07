@@ -325,6 +325,7 @@ class HeadsUp final : public IPlugin
     headsup::WindowHook m_WindowHook;
     bool m_WindowHookTried = false; // it patches the game's code, so it starts only once someone wants it
     headsup::PointerFix m_PointerFix;
+    bool m_CursorClipped = false; // Windows' pointer held in the game's window by Lock Cursor to Window
     POINT m_LastPointer{-1, -1}; // Windows' pointer in the client area at the last frame
     headsup::StripTextReader m_StripText;
     std::optional<std::string> m_StripTextFound; // Find's result once looked for, said by the dev dump
@@ -563,6 +564,7 @@ public:
         SavePending();
         SetScreenshot(false);
         HoldGameKeys(false);
+        LockCursor(false);
         m_AshitaCore->GetInputManager()->GetMouse()->RemoveCallback(kName);
         m_AshitaCore->GetInputManager()->GetKeyboard()->RemoveCallback(kName);
         g_Rml = nullptr;
@@ -998,6 +1000,7 @@ public:
         UpdateMenu(now, drewInScene, band);
         if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
         UpdatePointer();
+        LockCursor(m_Settings.enabled && m_Settings.lockCursor);
         HoldGameKeys(m_Rml.WantsText());
         m_NameHook.NewFrame(NameOwners());
         DrawPanel();
@@ -2635,6 +2638,34 @@ private:
         headsup::PlayerStatus status = headsup::WithPacketStatus(memory, m_GameState.PlayerStatusOf(index, m_SelfIndex));
         status.levelSync             = m_GameState.SyncOf(index).synced || m_BuffSynced.count(index) != 0;
         return status;
+    }
+
+    // Each frame, as the window moves, resizes and gains or loses the focus. Windows may drop a clip on its own
+    // (another window's, a focus change), so it is checked against the clip now and made again. Unseen under Wine.
+    void LockCursor(bool on)
+    {
+        RECT client{};
+        POINT origin{};
+        headsup::ScreenRect area;
+        const bool focused = g_GameWindow != nullptr && GetForegroundWindow() == g_GameWindow;
+        if (focused && GetClientRect(g_GameWindow, &client) && ClientToScreen(g_GameWindow, &origin))
+            area = {origin.x, origin.y, origin.x + client.right, origin.y + client.bottom};
+        RECT now{};
+        if (!GetClipCursor(&now)) return;
+        switch (headsup::CursorClipStep(on && focused, area, {now.left, now.top, now.right, now.bottom}, m_CursorClipped))
+        {
+        case headsup::ClipStep::Clip:
+        {
+            const RECT clip{area.left, area.top, area.right, area.bottom};
+            m_CursorClipped = ClipCursor(&clip) != 0;
+            break;
+        }
+        case headsup::ClipStep::Release:
+            ClipCursor(nullptr);
+            m_CursorClipped = false;
+            break;
+        case headsup::ClipStep::Keep: break;
+        }
     }
 
     void UpdatePointer()
