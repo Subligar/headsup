@@ -623,7 +623,6 @@
           "key": "reset",
           "name": "Reset",
           "settings": [
-            {"key": "run-setup", "name": "Run Setup", "tip": "Walks you through the main settings again, with a preview of each. It starts from your settings as they are and changes only what you pick. Your settings are saved to a file first, so Cancel can put them back."},
             {
               "key": "reset-all-settings",
               "name": "Reset All Settings",

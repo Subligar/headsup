@@ -2116,13 +2116,11 @@ TEST(closing_the_window_during_setup_is_skipping_it)
     CHECK(window.settings.barTheme == BarTheme::PhoenixGold && window.settings.setupDone);
 }
 
-TEST(run_setup_on_the_config_page_opens_setup_as_a_run_again)
+TEST(the_config_page_offers_no_way_into_setup)
 {
     Window window;
     window.Page("configmenu");
-    CHECK(!window.Click("configmenu-reset-run-setup"));
-    CHECK(window.menu.InSetup());
-    CHECK(window.Shows("nav-setup-welcome"));
+    CHECK(window.Shows("configmenu-reset-reset-all-settings") && !window.Shows("configmenu-reset-run-setup"));
 }
 
 TEST(every_setup_step_builds_in_every_theme_without_a_complaint)

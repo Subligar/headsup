@@ -1959,10 +1959,6 @@ namespace headsup
                 form.Fade(false);
                 form.SliderPercent(label.c_str(), s.menuOpacity, kMinMenuOpacity, kMaxOpacity, tip);
                 break;
-            case SettingPiece::RunSetup:
-                form.Fade(false);
-                if (form.Button(label.c_str(), label.c_str(), kResetPill, tip)) c.state.setup = SetupRun{SetupStep::Welcome, true, false, s};
-                break;
             case SettingPiece::ResetAllSettings: ResetAll(c, e); break;
             case SettingPiece::EnableHeadsup:
                 form.Fade(false);

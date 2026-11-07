@@ -427,7 +427,6 @@ class HeadsUp final : public IPlugin
     // The game's tables of where its files are and of players' models, read when Setup's preview first wants a model.
     std::optional<headsup::FileTables> m_FileTables;
     std::optional<headsup::PlayerTables> m_PlayerTables;
-    bool m_OfferSetup = false; // the settings file was missing at load: Setup opens once the player is in game
     headsup::CursorTargets m_CursorTargets;
     float m_MenuWidth   = 0.0f;
     // The windows the hook moves, as last given it (none until the first frame), and those it has seen.
@@ -666,8 +665,10 @@ public:
             SetScreenshot(!m_Screenshot);
         else if (args[1] == "debug")
             m_DebugPending = true;
+#ifdef HEADSUP_DEV
         else if (args[1] == "setup")
             m_RmlMenu.StartSetup(m_Settings, true);
+#endif
         else if (args[1] == "rml")
         {
             if (!m_Rml.Running())
@@ -761,11 +762,11 @@ public:
             Print("/hu on | /hu off: turn all of HeadsUp (outlines, nameplates, the top panel and the rest) on or off");
             Print("/hu screenshot: hide every name, HeadsUp's bar and menu and every addon window until it is run again; bind it with /bind");
             Print("/hu debug: write what every outline and nameplate show to logs/headsup");
-            Print("/hu setup: walk through the main settings again, with a preview of each");
             Print("/hu menu <page>: open the settings at a page, such as entities, mobs or toppanel");
             Print("/hu popup <widget> | off: pin a widget's pop-out open, such as zone or vanatime");
             Print("/hu windowlog [stop]: write which game windows are open, as it changes, to logs/headsup/windows.log");
 #ifdef HEADSUP_DEV
+            Print("/hu setup: walk through the main settings again, with a preview of each");
             Print("/hu drawdump [seconds | watch | stop]: write every draw call of one frame to logs/headsup after the delay, or watch every frame for name glitches until stopped");
             Print("/hu codedump: write the client's loaded image to logs/headsup");
             Print("/hu windowowners: write each open game window's owner, its class and its layout's first bytes to logs/headsup");
@@ -994,7 +995,7 @@ public:
         static const std::vector<uint8_t> kNoKeys;
         m_PointerFix.KeepPointerFor(m_Settings.enabled ? m_Settings.keepPointerKeys : kNoKeys);
         g_SyncClicks = m_Settings.enabled && m_Settings.fixPointer;
-        UpdateMenu(now, loginStatus, drewInScene, band);
+        UpdateMenu(now, drewInScene, band);
         if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
         UpdatePointer();
         HoldGameKeys(m_Rml.WantsText());
@@ -1075,15 +1076,9 @@ public:
     }
 
     // The settings window, and what it hands back: saves, reverts, profile and theme picks.
-    void UpdateMenu(double now, uint8_t loginStatus, bool drewInScene, const std::optional<headsup::HelpBand>& band)
+    void UpdateMenu(double now, bool drewInScene, const std::optional<headsup::HelpBand>& band)
     {
         if (!m_Rml.Running()) return;
-        if (m_OfferSetup && loginStatus == headsup::kLoginInGame && !m_Player.inEvent &&
-            m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0)
-        {
-            m_OfferSetup = false;
-            if (!m_Settings.setupDone) m_RmlMenu.StartSetup(m_Settings, false);
-        }
         const headsup::NameStats names = m_NameHook.Stats();
         if (m_RmlMenu.open) m_WindowPlaces = m_WindowHook.Places();
         headsup::MenuReadings readings{
@@ -2449,10 +2444,7 @@ private:
         const auto used = m_CharacterProfiles.byCharacter.find(character);
         const std::string profile = used != m_CharacterProfiles.byCharacter.end() ? used->second : character;
         if (!Exists(ProfileFile(profile))) CopySettingsTo(profile);
-        // A new install's Setup is still owed, now on the character's profile.
-        const bool offer = m_OfferSetup;
         UseProfile(profile);
-        m_OfferSetup = m_OfferSetup || offer;
     }
 
     void NewProfile(const std::string& name)
@@ -2500,8 +2492,7 @@ private:
         // Ashita keeps a loaded file's values after the plugin unloads: without this, a file deleted since would load
         // as it was. A missing file is fine: every value keeps its default.
         config->Delete(kConfigAlias);
-        m_OfferSetup = !Exists(file);
-        if (!config->Load(kConfigAlias, SettingsPath().c_str()) && !m_OfferSetup)
+        if (const bool missing = !Exists(file); !config->Load(kConfigAlias, SettingsPath().c_str()) && !missing)
             Print("could not read " + file + "; using the defaults, which a change in the menu will write into that file");
         m_Settings    = m_SavedKeys.Load();
         m_AutoSaveWas = m_Settings.autoSave;

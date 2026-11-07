@@ -195,7 +195,6 @@ PIECES = Pieces(
         'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'keep-pointer': Setting(),
         'enable-headsup': Setting(), 'font': Setting(), 'size': Setting(),
         'window-opacity': Setting(),
-        'run-setup': Setting(),
         'reset-all-settings': Setting(words={'note': True, 'reset-everything': True, 'keep-them': True}),
         'debug-report': Setting(words={'watch': True, 'stop': True, 'saved': True}),
         # Feedback
