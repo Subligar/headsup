@@ -160,6 +160,7 @@ namespace headsup
         constexpr const char* kScaleCursorKey = "scaleCursor";
         constexpr const char* kKeepPointerKey = "keepPointerKeys"; // hex virtual-key codes, a space apart
         constexpr const char* kCurrencyFavoritesKey = "currencyFavorites"; // kCurrencyTable's keys, a space apart
+        constexpr const char* kCollapsedKey = "popupCollapsed"; // the collapsed pop-out cards' keys, a space apart
         constexpr const char* kStatusFavoritesKey = "statusFavorites", *kStatusPinsKey = "statusPins"; // status ids
 
         std::string SpaceApart(const std::vector<std::string>& words)
@@ -1576,6 +1577,12 @@ namespace headsup
                                                                                  s.currencyFavorites.end())
                         s.currencyFavorites.push_back(key);
             }
+            {
+                std::istringstream words(store.GetString(kCollapsedKey, ""));
+                s.collapsedSections.clear();
+                for (std::string key; words >> key;)
+                    if (std::ranges::find(s.collapsedSections, key) == s.collapsedSections.end()) s.collapsedSections.push_back(key);
+            }
             s.statusFavorites = StatusIds(store.GetString(kStatusFavoritesKey, SpaceApart(s.statusFavorites).c_str()));
             s.statusPins      = StatusIds(store.GetString(kStatusPinsKey, SpaceApart(s.statusPins).c_str()));
             std::istringstream keys(store.GetString(kKeepPointerKey, ""));
@@ -1690,6 +1697,7 @@ namespace headsup
         }
         store.Set(kKeepPointerKey, keys.c_str());
         store.Set(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str());
+        store.Set(kCollapsedKey, SpaceApart(s.collapsedSections).c_str());
         store.Set(kStatusFavoritesKey, SpaceApart(s.statusFavorites).c_str());
         store.Set(kStatusPinsKey, SpaceApart(s.statusPins).c_str());
         for (int i = 0; i < kStatusRankCount; ++i)

@@ -136,6 +136,7 @@ namespace headsup
     {
         // The Currency popup's favorites at its top, by kCurrencyTable's key or kYourConquestPoints, in this order.
         std::vector<std::string> currencyFavorites{kCurrencyTable[kGilCurrency].key, kYourConquestPoints};
+        std::vector<std::string> collapsedSections; // the pop-out cards collapsed, by CollapseKey
         // The Status Timers popup's favorites at its top, and those of them it shows on the panel, by status id.
         std::vector<uint16_t> statusFavorites{kSignetEffect, kSanctionEffect};
         std::vector<uint16_t> statusPins{kSignetEffect};

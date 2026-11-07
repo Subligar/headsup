@@ -740,6 +740,30 @@ TEST(the_forecast_pop_out_has_the_weather_for_a_title_today_beside_the_next_four
         CHECK(cells[i].align == Align::Right && cells[i + 1].align == Align::Center && cells[i + 3].align == Align::Center);
 }
 
+TEST(each_headed_card_of_a_pop_out_collapses_by_its_press_and_stays_collapsed_across_days)
+{
+    Settings settings;
+    BarState state;
+    state.zone   = 103;
+    state.unixMs = kVanaEpochUnixMs;
+    PopupContent popup = PanelPopupContent(BarWidget::Weather, state, settings);
+    const PopupSection& today = popup.sections[0];
+    CHECK(!today.collapsePress.empty() && !today.collapsed);
+    for (const PopupSection& section : popup.sections)
+        CHECK(section.heading.empty() || !section.collapsePress.empty());
+    const std::string press = today.collapsePress;
+    CHECK(ApplyPopupPress(settings, press, Nation::None) == PressResult::Changed);
+    popup = PanelPopupContent(BarWidget::Weather, state, settings);
+    CHECK(popup.sections[0].collapsed && !popup.sections[1].collapsed);
+    // The next day's Today card, under another date, is the same card.
+    state.unixMs += kMsPerDay;
+    popup = PanelPopupContent(BarWidget::Weather, state, settings);
+    CHECK(popup.sections[0].collapsed && popup.sections[0].collapsePress == press);
+    // Pressed again, it opens.
+    CHECK(ApplyPopupPress(settings, press, Nation::None) == PressResult::Changed);
+    CHECK(!PanelPopupContent(BarWidget::Weather, state, settings).sections[0].collapsed);
+}
+
 TEST(the_forecast_names_the_weekdays_past_the_weeks_end)
 {
     Settings settings;
@@ -2819,15 +2843,22 @@ TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with
     CHECK(both.title == title);
     std::vector<PopupSection> sections = bags.sections;
     sections.insert(sections.end(), gil.sections.begin(), gil.sections.end());
+    // Each headed card collapses under the pill's first widget's name.
+    for (PopupSection& section : sections)
+        if (!section.heading.empty()) section.collapsePress = kCollapsePress + CollapseKey(BarWidget::Bags, section.heading);
     CHECK(both.sections == sections);
     // A widget alone has its own popup, with its clone chip.
     PopupContent alone = BarPopupContent(BarWidget::EarthTime, state, settings);
     alone.clonePress   = std::string(kWidgetClonePress) + std::to_string(SlotOf(BarWidget::EarthTime));
+    for (PopupSection& section : alone.sections)
+        if (!section.heading.empty()) section.collapsePress = kCollapsePress + CollapseKey(BarWidget::EarthTime, section.heading);
     CHECK(PanelPopupContent(BarWidget::EarthTime, state, settings) == alone);
     // A combined pill whose first widget is switched off has its partner's popup alone.
     settings.Widget(BarWidget::Bags).on = false;
     PopupContent partner = gil;
     partner.clonePress   = std::string(kWidgetClonePress) + std::to_string(SlotOf(BarWidget::Bags)); // the pill's
+    for (PopupSection& section : partner.sections)
+        if (!section.heading.empty()) section.collapsePress = kCollapsePress + CollapseKey(BarWidget::Bags, section.heading);
     CHECK(PanelPopupContent(BarWidget::Bags, state, settings) == partner);
 }
 

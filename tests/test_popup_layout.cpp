@@ -133,6 +133,36 @@ TEST(a_subtitle_sits_under_the_title_outside_any_card_and_above_the_cards)
     CHECK(l.height > plain.height);
 }
 
+TEST(a_headed_card_has_a_collapse_chip_at_its_right_and_collapsed_shows_its_heading_alone)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupContent content = Sample();
+    content.sections[0].collapsePress = "collapse weather.elements";
+    const auto pressed = [](const PopupLayout& l) -> const PopupTabChip* {
+        for (const PopupTabChip& chip : l.chips)
+            if (chip.press && chip.tab == "collapse weather.elements") return &chip;
+        return nullptr;
+    };
+    const PopupLayout open = LayoutPopup(content, m, BarShape::Pills, false, Fake);
+    const PopupTabChip* chip = pressed(open);
+    CHECK(chip != nullptr);
+    const PopupPiece& card = *Of(open, PopupPiece::Kind::Card).front();
+    const PopupPiece& heading = *Find(open, "ELEMENTS");
+    // On the heading's line, against the card's right padding, showing a minus while open.
+    CHECK(Near(chip->x + chip->width, card.x + card.width - 0.4f * m.popupText) || chip->x + chip->width <= card.x + card.width);
+    CHECK(chip->x > heading.x + heading.width && chip->y < heading.y + heading.height && chip->y + chip->height > heading.y);
+    CHECK(Find(open, "\xE2\x80\x93") != nullptr && Find(open, "+30%") != nullptr);
+    // Collapsed: the heading and a plus, none of its rows, and a shorter card.
+    content.sections[0].collapsed = true;
+    const PopupLayout shut = LayoutPopup(content, m, BarShape::Pills, false, Fake);
+    CHECK(pressed(shut) != nullptr && Find(shut, "+") != nullptr && Find(shut, "+30%") == nullptr);
+    CHECK(Find(shut, "ELEMENTS") != nullptr);
+    CHECK(Of(shut, PopupPiece::Kind::Card).front()->height < card.height);
+    CHECK(AllInside(shut, m));
+    // A card without a press has no chip.
+    CHECK(pressed(LayoutPopup(Sample(), m, BarShape::Pills, false, Fake)) == nullptr);
+}
+
 TEST(grid_columns_line_up_and_the_popup_wraps_its_contents)
 {
     const BarMetrics m  = MetricsFor(36, BarShape::Ornate);

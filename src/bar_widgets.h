@@ -118,6 +118,10 @@ namespace headsup
     std::vector<Icon> WeatherIcons(Weather weather, CustomIcons use);
     // What a popup's clone and remove chips tell, then the widget's slot.
     constexpr const char* kWidgetClonePress = "widget clone ", *kWidgetRemovePress = "widget remove ";
+    constexpr const char* kCollapsePress = "collapse "; // and the card's CollapseKey
+    // A pop-out card's name in Settings::collapsedSections: its pill's and its heading's without what is in brackets,
+    // so the Today card is one card whatever the date. One word: lower case, a '-' for each space.
+    std::string CollapseKey(PanelWidget head, std::string_view heading);
     // Clones the widget a press names or takes its copy off: the widget whose settings show next, the clone or the
     // first copy; nothing for any other press, or when nothing changed.
     std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press);

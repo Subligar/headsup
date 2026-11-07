@@ -23,6 +23,7 @@ namespace headsup
         constexpr float kCardGap     = 0.45f; // between cards, and between the columns of them
         constexpr float kMinWidth    = 12.0f; // popupText, so a short popup is not a sliver
         constexpr float kPinChip     = 1.4f;  // the round pin chip's side, in popup text sizes
+        constexpr const char* kCollapseDash = "\xE2\x80\x93"; // an en dash: on an open card's collapse chip
         constexpr float kMarkShare   = 0.7f;  // the pin or cog, of its chip's height
         constexpr float kSocketInset = 0.9f;  // a socket's rows from its left and right edges
         constexpr float kSocketPad   = 0.35f; // above and below a socket's rows
@@ -107,6 +108,7 @@ namespace headsup
             {
                 std::string tells;
                 float x, y, width, height; // from the card's top-left
+                float fromRight = 0.0f;    // above 0: its left edge from the card's right, once its width is known
             };
             std::vector<Press> presses; // pressable cells
             std::vector<size_t> sockets; // pieces to widen to the card's inside once its width is known
@@ -145,7 +147,30 @@ namespace headsup
                 contentWidth     = t.width + t.overhang;
                 b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, b.pad, y, t.width, t.height, std::move(heading),
                     PopupFont::Heading});
+                // Its collapse chip, round and as tall as the heading, against the card's right padding: a dash while
+                // open, a plus while collapsed.
+                if (!section.collapsePress.empty())
+                {
+                    const float side = std::round(t.height);
+                    contentWidth += unit * kCellGap + side;
+                    b.anchors.push_back(Block::Anchor{b.pieces.size(), b.pad + side});
+                    PopupPiece chip{PopupPiece::Kind::ActionChip, 0.0f, y, side, side, {}};
+                    chip.font = PopupFont::Pin;
+                    b.pieces.push_back(std::move(chip));
+                    Span sign{section.collapsed ? "+" : kCollapseDash, Tone::Heading, 0};
+                    const TextSize st = measure(sign, PopupFont::Heading);
+                    b.anchors.push_back(Block::Anchor{b.pieces.size(), b.pad + (side + st.width) / 2.0f});
+                    b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, 0.0f, y + (side - st.height) / 2.0f, st.width,
+                        st.height, std::move(sign), PopupFont::Heading});
+                    b.presses.push_back(Block::Press{section.collapsePress, 0.0f, y, side, side, b.pad + side});
+                }
                 y += t.height + metrics.rowGap;
+                if (section.collapsed)
+                {
+                    b.width  = contentWidth + 2.0f * b.pad;
+                    b.height = y - metrics.rowGap + b.pad;
+                    return b;
+                }
             }
             // The section's rows, then its picked tab's.
             std::vector<PopupRow> rows = section.rows;
@@ -465,6 +490,8 @@ namespace headsup
             for (Block::Chip& chip : b.chips)
                 l.chips.push_back(PopupTabChip{std::move(chip.key), x + chip.left, y + chip.y, chip.width, chip.height, line,
                     std::move(chip.tab)});
+            for (Block::Press& press : b.presses)
+                if (press.fromRight > 0.0f) press.x = width - press.fromRight;
             for (Block::Press& press : b.presses)
                 l.chips.push_back(PopupTabChip{{}, x + press.x, y + press.y, press.width, press.height, line,
                     std::move(press.tells), true});

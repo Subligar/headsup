@@ -1629,6 +1629,16 @@ namespace headsup
                 list.push_back(status);
             return PressResult::Changed;
         }
+        if (press.starts_with(kCollapsePress))
+        {
+            const std::string key(press.substr(std::string_view(kCollapsePress).size()));
+            if (key.empty() || key.find(' ') != std::string::npos) return PressResult::None;
+            if (const auto at = std::ranges::find(settings.collapsedSections, key); at != settings.collapsedSections.end())
+                settings.collapsedSections.erase(at);
+            else
+                settings.collapsedSections.push_back(key);
+            return PressResult::Changed;
+        }
         if (!press.starts_with(kFavoritePress)) return PressResult::None;
         const std::string key(press.substr(std::string_view(kFavoritePress).size()));
         if (!CurrencyOfKey(key)) return PressResult::None;
@@ -1798,9 +1808,25 @@ namespace headsup
         return std::nullopt;
     }
 
+    std::string CollapseKey(PanelWidget head, std::string_view heading)
+    {
+        heading = heading.substr(0, heading.find(" ("));
+        std::string key = PanelWidgetName(head) + ".";
+        for (const char c : heading)
+            key += c == ' ' ? '-' : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return key;
+    }
+
     PopupContent PanelPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
     {
         PopupContent content = JoinedPopupContent(head, state, settings);
+        for (PopupSection& section : content.sections)
+        {
+            if (section.heading.empty()) continue;
+            const std::string key = CollapseKey(head, section.heading);
+            section.collapsePress = kCollapsePress + key;
+            section.collapsed     = std::ranges::find(settings.collapsedSections, key) != settings.collapsedSections.end();
+        }
         if (HasCopies(head.kind)) content.clonePress = kWidgetClonePress + std::to_string(SlotOf(head));
         if (head.copy > 0) content.removePress = kWidgetRemovePress + std::to_string(SlotOf(head));
         return content;

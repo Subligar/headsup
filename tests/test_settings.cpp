@@ -2871,6 +2871,17 @@ TEST(the_currency_favorites_are_kept_in_order_and_an_unknown_or_repeated_one_is_
     CHECK(LoadSettings(store).currencyFavorites.empty()); // every star taken off
 }
 
+TEST(the_collapsed_pop_out_cards_save_and_load_back)
+{
+    Settings s;
+    CHECK(s.collapsedSections.empty());
+    s.collapsedSections = {"weather.today", "zone.influence"};
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["popupCollapsed"], "weather.today zone.influence");
+    CHECK((LoadSettings(store).collapsedSections == std::vector<std::string>{"weather.today", "zone.influence"}));
+}
+
 TEST(the_status_favorites_and_pins_are_kept_and_an_unknown_or_repeated_one_is_left_out)
 {
     Settings s;

@@ -139,7 +139,11 @@ namespace headsup
         std::vector<PopupRow> rows;
         std::vector<PopupTab> tabs{}; // under the heading, a click picking one, by the heading
         size_t tab = 0;               // the picked one, whose rows follow the section's own
-        bool beside = false; // in one row with the card before it, the two as wide and as tall as each other
+        bool beside = false; // in one row with the card before it, the two as tall as each other
+        // A headed card's chip at its heading's right tells this when pressed, which collapses or opens it; none
+        // without it. Collapsed, it shows its heading alone.
+        std::string collapsePress{};
+        bool collapsed = false;
         bool operator==(const PopupSection&) const = default;
     };
 
