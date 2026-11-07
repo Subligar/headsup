@@ -898,7 +898,7 @@ public:
         g_BarHidden = m_UiHidden;
         // Opening Region Info asks the server for the conquest standings; HeadsUp asks the same once per zone-in, and
         // again while the Zone or World Info popup shows them.
-        const auto opened = [&](headsup::BarWidget w) { return headsup::PopupShows(m_Settings, m_BarInput.Open(), w); };
+        const auto opened = [&](headsup::BarWidget w) { return headsup::PopupShows(m_Settings, m_BarInput.Shown(), w); };
         if (m_GameState.ConquestRequestDue(now,
                 g_BarOn &&
                     headsup::StandingsShown(m_Settings) &&
@@ -2692,7 +2692,7 @@ private:
 
     headsup::BarState BarStateNow(double now)
     {
-        const headsup::BarNeeds needs = headsup::NeedsOf(m_Settings, m_BarInput.Open());
+        const headsup::BarNeeds needs = headsup::NeedsOf(m_Settings, m_BarInput.Shown());
         headsup::BarState s;
         s.weather = WeatherNow();
         s.owners   = m_GameState.Owners();

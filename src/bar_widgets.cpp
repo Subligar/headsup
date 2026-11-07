@@ -1608,17 +1608,18 @@ namespace headsup
         return shown;
     }
 
-    bool PopupShows(const Settings& settings, std::optional<PanelWidget> open, BarWidget widget)
+    bool PopupShows(const Settings& settings, const std::vector<PanelWidget>& shown, BarWidget widget)
     {
-        if (!open) return false;
-        if (open->kind == widget) return true;
-        return std::ranges::any_of(Members(Panel(settings), *open), [&](PanelWidget w) { return w.kind == widget; });
+        return std::ranges::any_of(shown, [&](PanelWidget open) {
+            return open.kind == widget ||
+                   std::ranges::any_of(Members(Panel(settings), open), [&](PanelWidget w) { return w.kind == widget; });
+        });
     }
 
-    BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open)
+    BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing)
     {
         const auto shown  = [&](BarWidget widget) { return AnyCopyShown(settings, widget); };
-        const auto opened = [&](BarWidget widget) { return PopupShows(settings, open, widget); };
+        const auto opened = [&](BarWidget widget) { return PopupShows(settings, showing, widget); };
         BarNeeds needs;
         // A Clock in a zone of its own goes by the time alone, as its server line and its popup's resets do; in the
         // computer's zone, by what Windows makes of the time.

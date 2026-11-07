@@ -354,7 +354,7 @@ TEST(the_popup_document_styles_its_faces_and_boxes_from_the_look)
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29, 0}, PopupFace{"Barlow Condensed", 18, 22, 0},
         PopupFace{"Barlow Condensed", 15, 18, 2}, PopupFace{"Barlow Condensed", 15, 18, 0}};
     const std::string rml = PopupDocument(look, faces);
-    CHECK(Has(rml, "pointer-events:none") && Has(rml, "<div id=\"popup\" class=\"hidden\"></div>"));
+    CHECK(Has(rml, "pointer-events:none") && Has(rml, "<body></body>"));
     CHECK(Has(rml, ".f0{font-family:\"Barlow Condensed\";font-size:24px;line-height:29px;letter-spacing:0px;"));
     CHECK(Has(rml, ".f2{font-family:\"Barlow Condensed\";font-size:15px;line-height:18px;letter-spacing:2px;"));
     // A tab's rows sit sunk into the card: darker, its upper edges dark and its lower ones lit.
@@ -409,8 +409,8 @@ TEST(every_theme_eases_breathes_and_pulses_in_its_own_colors)
         CHECK(Has(rml, "@keyframes pulse{from{opacity:0.65;}to{opacity:1;}}"));
         // A popup drops in from its widget.
         const std::string popup = PopupDocument(look, faces);
-        CHECK(Has(popup, "#popup{position:absolute;transform-origin:50% 0%;}"));
-        CHECK(Has(popup, "#popup.open{animation:0.2s cubic-out drop-in;}"));
+        CHECK(Has(popup, ".popup{position:absolute;transform-origin:50% 0%;}"));
+        CHECK(Has(popup, ".popup.open{animation:0.2s cubic-out drop-in;}"));
         CHECK(Has(popup, "@keyframes drop-in{from{opacity:0;transform:translateY(-10px) scale(0.96);}to{opacity:1;"
                          "transform:translateY(0px) scale(1);}}"));
     }

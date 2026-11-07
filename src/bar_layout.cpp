@@ -421,20 +421,71 @@ namespace headsup
     {
         m_Layout   = layout;
         m_HasPopup = hasPopup;
-        if (m_Pinned && !GroupRect(m_Layout, *m_Pinned)) Pin(std::nullopt);
+        std::erase_if(m_Pinned, [&](PanelWidget pill) { return !GroupRect(m_Layout, pill); });
+        if (m_Settings && !IsPinned(*m_Settings)) m_Settings.reset();
         Reevaluate();
     }
 
-    void BarInput::SetPopup(const BarRect& popup, std::vector<BarTabChip> chips, std::vector<BarScroll> scrolls,
-        const BarRect& pin, const BarRect& cog, const BarRect& grip)
+    void BarInput::SetPopups(std::vector<PopupPlace> popups)
     {
-        m_Popup   = popup;
-        m_PinChip = pin;
-        m_CogChip = cog;
-        m_Grip    = grip;
-        m_Chips   = std::move(chips);
-        m_Scrolls = std::move(scrolls);
+        m_Popups = std::move(popups);
         Reevaluate();
+    }
+
+    std::vector<PanelWidget> BarInput::Shown() const
+    {
+        std::vector<PanelWidget> shown = m_Pinned;
+        if (m_Hover && !IsPinned(*m_Hover)) shown.push_back(*m_Hover);
+        return shown;
+    }
+
+    void BarInput::Pin(std::optional<PanelWidget> widget)
+    {
+        m_Settings.reset();
+        m_PinnedForSettings = false;
+        m_Hover.reset();
+        if (!widget)
+        {
+            m_Pinned.clear();
+            return;
+        }
+        std::erase(m_Pinned, *widget);
+        m_Pinned.push_back(*widget);
+    }
+
+    void BarInput::ShowSettings(std::optional<PanelWidget> pill)
+    {
+        if (!pill)
+        {
+            if (m_Settings && m_PinnedForSettings) std::erase(m_Pinned, *m_Settings);
+            m_Settings.reset();
+            m_PinnedForSettings = false;
+            return;
+        }
+        const bool held = IsPinned(*pill);
+        Pin(pill);
+        m_Settings          = pill;
+        m_PinnedForSettings = !held;
+    }
+
+    void BarInput::TogglePin(PanelWidget pill)
+    {
+        if (m_Settings == pill)
+        {
+            m_Settings.reset();
+            m_PinnedForSettings = false;
+        }
+        if (IsPinned(pill))
+            std::erase(m_Pinned, pill);
+        else
+            m_Pinned.push_back(pill);
+    }
+
+    const PopupPlace* BarInput::PlaceAt(float x, float y) const
+    {
+        for (auto place = m_Popups.rbegin(); place != m_Popups.rend(); ++place)
+            if ((IsPinned(place->pill) || m_Hover == place->pill) && place->rect.Contains(x, y)) return &*place;
+        return nullptr;
     }
 
     void BarInput::DragTo(float x, float y)
@@ -446,12 +497,14 @@ namespace headsup
             return;
         }
         if (!m_Drag) return;
-        for (const BarScroll& scroll : m_Scrolls)
-            if (scroll.key == m_Drag->key && scroll.track.height > scroll.thumb)
-            {
-                const float along = (y - m_Drag->grab - scroll.track.y) / (scroll.track.height - scroll.thumb);
-                m_Scrolled[scroll.key] = static_cast<size_t>(std::lround(std::clamp(along, 0.0f, 1.0f) * static_cast<float>(scroll.most)));
-            }
+        for (const PopupPlace& place : m_Popups)
+            for (const BarScroll& scroll : place.scrolls)
+                if (scroll.key == m_Drag->key && scroll.track.height > scroll.thumb)
+                {
+                    const float along = (y - m_Drag->grab - scroll.track.y) / (scroll.track.height - scroll.thumb);
+                    m_Scrolled[scroll.key] =
+                        static_cast<size_t>(std::lround(std::clamp(along, 0.0f, 1.0f) * static_cast<float>(scroll.most)));
+                }
     }
 
     void BarInput::EndDrag()
@@ -461,15 +514,16 @@ namespace headsup
         m_PopupDrag.reset();
     }
 
-    std::optional<BarRect> BarInput::DraggedPopup() const
+    std::optional<BarRect> BarInput::DraggedPopup(PanelWidget pill) const
     {
-        return m_PopupDrag ? std::optional(m_PopupDrag->at) : std::nullopt;
+        return m_PopupDrag && m_PopupDrag->pill == pill ? std::optional(m_PopupDrag->at) : std::nullopt;
     }
 
     bool BarInput::Wheel(int notches)
     {
-        if (!InPopup(m_X, m_Y)) return false;
-        for (const BarScroll& scroll : m_Scrolls)
+        const PopupPlace* place = PlaceAt(m_X, m_Y);
+        if (place == nullptr) return false;
+        for (const BarScroll& scroll : place->scrolls)
             if (scroll.rect.Contains(m_X, m_Y))
             {
                 const long now = static_cast<long>(std::min(m_Scrolled[scroll.key], scroll.most)) + kLinesPerNotch * notches;
@@ -493,9 +547,9 @@ namespace headsup
         m_Under = WidgetAt(m_Layout, m_X, m_Y);
         if (m_Under && m_HasPopup[SlotOf(*m_Under)])
             m_Hover = m_Under;
-        else if (!(m_Hover && m_HasPopup[SlotOf(*m_Hover)] && InPopupColumn(m_X, m_Y)))
+        else if (!(m_Hover && m_HasPopup[SlotOf(*m_Hover)] && InHoverColumn(m_X, m_Y)))
             m_Hover.reset();
-        if (!Open())
+        if (Shown().empty())
         {
             m_Scrolled.clear();
             m_Refused = false;
@@ -504,75 +558,72 @@ namespace headsup
         }
     }
 
-    bool BarInput::InPopupColumn(float x, float y) const
+    bool BarInput::InHoverColumn(float x, float y) const
     {
-        return BarRect{m_Popup.x, 0.0f, m_Popup.width, m_Popup.y + m_Popup.height}.Contains(x, y);
+        for (const PopupPlace& place : m_Popups)
+            if (place.pill == m_Hover &&
+                BarRect{place.rect.x, 0.0f, place.rect.width, place.rect.y + place.rect.height}.Contains(x, y))
+                return true;
+        return false;
     }
 
     bool BarInput::Over(float x, float y) const
     {
-        return (y >= 0.0f && y < m_Layout.height) || WidgetAt(m_Layout, x, y) || (Open() && m_Popup.Contains(x, y));
+        return (y >= 0.0f && y < m_Layout.height) || WidgetAt(m_Layout, x, y) || InPopup(x, y);
     }
 
     bool BarInput::Press(float x, float y, bool left)
     {
         if (!Over(x, y)) return false;
         if (!left) return true;
+        const std::optional<PanelWidget> under = WidgetAt(m_Layout, x, y);
         // The widget on the bar pins and unpins its popup, as its pin chip does.
-        if (const std::optional<PanelWidget> under = WidgetAt(m_Layout, x, y); under && m_HasPopup[SlotOf(*under)])
+        if (under && m_HasPopup[SlotOf(*under)])
         {
-            m_Pinned = m_Pinned == under ? std::nullopt : under;
-            m_Settings.reset();
-            m_PinnedForSettings = false;
+            TogglePin(*under);
+            return true;
         }
-        else if (!under && Open() && m_Popup.Contains(x, y))
-        {
-            for (const BarScroll& scroll : m_Scrolls)
-                if (scroll.track.Contains(x, y) && scroll.most > 0)
-                {
-                    const size_t now = std::min(m_Scrolled[scroll.key], scroll.most);
-                    const float top  = scroll.track.y + (scroll.track.height - scroll.thumb) * static_cast<float>(now) /
-                                                           static_cast<float>(scroll.most);
-                    const bool held  = y >= top && y < top + scroll.thumb;
-                    m_Drag           = Drag{scroll.key, held ? y - top : scroll.thumb / 2.0f};
-                    DragTo(x, y);
-                    return true;
-                }
-            for (const BarTabChip& chip : m_Chips)
-                if (chip.rect.Contains(x, y))
-                {
-                    if (chip.press)
-                        m_Presses.push_back(chip.tab);
-                    else
-                    {
-                        m_Tabs[chip.key] = chip.tab;
-                        if (chip.fleeting) m_Fleeting.insert(chip.key);
-                    }
-                    return true;
-                }
-            if (m_PinChip.Contains(x, y))
+        const PopupPlace* place = under ? nullptr : PlaceAt(x, y);
+        if (place == nullptr) return true;
+        for (const BarScroll& scroll : place->scrolls)
+            if (scroll.track.Contains(x, y) && scroll.most > 0)
             {
-                m_Pinned = m_Pinned == Open() ? std::nullopt : Open();
-                m_Settings.reset();
-                m_PinnedForSettings = false;
+                const size_t now = std::min(m_Scrolled[scroll.key], scroll.most);
+                const float top  = scroll.track.y + (scroll.track.height - scroll.thumb) * static_cast<float>(now) /
+                                                       static_cast<float>(scroll.most);
+                const bool held  = y >= top && y < top + scroll.thumb;
+                m_Drag           = Drag{scroll.key, held ? y - top : scroll.thumb / 2.0f};
+                DragTo(x, y);
+                return true;
             }
-            else if (m_CogChip.Contains(x, y))
+        for (const BarTabChip& chip : place->chips)
+            if (chip.rect.Contains(x, y))
             {
-                if (SettingsShown())
-                {
-                    m_Settings.reset();
-                    if (m_PinnedForSettings) m_Pinned.reset();
-                    m_PinnedForSettings = false;
-                }
+                if (chip.press)
+                    m_Presses.push_back(chip.tab);
                 else
                 {
-                    m_PinnedForSettings = m_Pinned != Open();
-                    m_Settings = m_Pinned = Open();
+                    m_Tabs[chip.key] = chip.tab;
+                    if (chip.fleeting) m_Fleeting.insert(chip.key);
                 }
+                return true;
             }
-            else if (m_Pinned && m_Pinned == Open() && m_Grip.Contains(x, y))
-                m_PopupDrag = PopupDrag{*m_Pinned, m_Popup, x - m_Popup.x, y - m_Popup.y};
+        const PanelWidget pill = place->pill;
+        if (place->pin.Contains(x, y))
+            TogglePin(pill);
+        else if (place->cog.Contains(x, y))
+        {
+            if (SettingsShown() == pill)
+                ShowSettings(std::nullopt);
+            else
+            {
+                m_PinnedForSettings = !IsPinned(pill);
+                if (m_PinnedForSettings) m_Pinned.push_back(pill);
+                m_Settings = pill;
+            }
         }
+        else if (IsPinned(pill) && place->grip.Contains(x, y))
+            m_PopupDrag = PopupDrag{pill, place->rect, x - place->rect.x, y - place->rect.y};
         return true;
     }
 

@@ -139,7 +139,7 @@ namespace headsup
     // The panel's text shadow as a font effect, for text of that many pixels.
     std::string ShadowEffect(int pixels);
     constexpr const char* kOpenClass = "open"; // on a popup while it shows, so what it does as it opens plays each time
-    constexpr const char* kPopupId = "popup";
+    constexpr const char* kPopupClass = "popup"; // each pill's popup's element
     // A laid out popup's markup, from its top left corner: its panel, then each piece where the layout put it.
     std::string PopupRml(const PopupLayout& layout, const BarLook& look, const PopupFaces& faces);
 }

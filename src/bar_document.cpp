@@ -554,8 +554,8 @@ namespace headsup
         css += "div{display:block;}";
         css += std::string(".") + kHiddenClass + "{display:none;}";
         // A popup drops in from its widget.
-        css += std::string("#") + kPopupId + "{position:absolute;transform-origin:50% 0%;}";
-        css += std::string("#") + kPopupId + "." + kOpenClass + "{animation:0.2s cubic-out drop-in;}";
+        css += std::string(".") + kPopupClass + "{position:absolute;transform-origin:50% 0%;}";
+        css += std::string(".") + kPopupClass + "." + kOpenClass + "{animation:0.2s cubic-out drop-in;}";
         css += "@keyframes drop-in{from{opacity:0;transform:translateY(-10px) scale(0.96);}to{opacity:1;"
                "transform:translateY(0px) scale(1);}}";
         css += ".p{position:absolute;white-space:pre;}";
@@ -586,8 +586,7 @@ namespace headsup
             css += "#panel{background-color:transparent;decorator:vertical-gradient(" + RcssColor(kGlassTop) + " " +
                    RcssColor(kGlassFoot) + ");border-color:" + RcssColor(Faded(look.palette.accent, kGlassFrame)) + ";}";
         }
-        return "<rml><head><style>" + css + "</style></head><body><div id=\"" + kPopupId + "\" class=\"" + kHiddenClass +
-               "\"></div></body></rml>";
+        return "<rml><head><style>" + css + "</style></head><body></body></rml>";
     }
 
     std::string PopupRml(const PopupLayout& layout, const BarLook& look, const PopupFaces& faces)

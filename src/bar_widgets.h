@@ -108,7 +108,7 @@ namespace headsup
         bool conquest   = false; // your nation and supply runs, for World Info's conquest and Currency's points
         int containers = 0; // bags from 0 up to this
     };
-    BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open);
+    BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing); // showing: the popups shown
     // Does to the settings what a press on a popup's pressable cell told (PopupCell::press): a currency's or a
     // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
     // off. The last pin stays, by its pin or its star: Refused.
@@ -130,7 +130,7 @@ namespace headsup
     // Whether the panel shows the conquest standings: the Zone widget, or a World Info showing Conquest Info.
     bool StandingsShown(const Settings& settings);
     // Whether the open popup shows a widget's: its own, or a combined pill's with that widget in it.
-    bool PopupShows(const Settings& settings, std::optional<PanelWidget> open, BarWidget widget);
+    bool PopupShows(const Settings& settings, const std::vector<PanelWidget>& shown, BarWidget widget);
 
     // The picture each part's chip in the Widget Designer shows: the one these widgets show now, else its stand-in.
     std::array<PartMark, kWidgetPartCount> PartMarksNow(const std::vector<PanelWidget>& widgets, const BarState& state,

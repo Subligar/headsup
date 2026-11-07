@@ -1238,7 +1238,7 @@ TEST(the_bar_gathers_what_each_shown_widget_and_open_popup_reads_and_nothing_mor
         for (const std::optional<PanelWidget> open : {std::optional<PanelWidget>(), std::optional<PanelWidget>(widget)})
         {
             if (open && !hasPopup) continue;
-            const BarNeeds needs = NeedsOf(settings, open);
+            const BarNeeds needs = NeedsOf(settings, open ? std::vector<PanelWidget>{*open} : std::vector<PanelWidget>{});
             CHECK(SameShown(widget, open, full.state, Gathered(full.state, needs), settings));
             for (const BarNeeds& less : EachOneLess(needs))
                 CHECK(!SameShown(widget, open, full.state, Gathered(full.state, less), settings));
@@ -1249,12 +1249,12 @@ TEST(the_bar_gathers_what_each_shown_widget_and_open_popup_reads_and_nothing_mor
 TEST(the_other_bags_are_gathered_only_while_their_popup_is_open)
 {
     Settings settings;
-    CHECK(NeedsOf(settings, std::nullopt).containers == 1);
-    CHECK(NeedsOf(settings, BarWidget::Target).containers == 1);
-    CHECK(NeedsOf(settings, BarWidget::Bags).containers == kContainerCount);
+    CHECK(NeedsOf(settings, {}).containers == 1);
+    CHECK(NeedsOf(settings, {BarWidget::Target}).containers == 1);
+    CHECK(NeedsOf(settings, {BarWidget::Bags}).containers == kContainerCount);
     for (WidgetOptions& each : settings.widgets)
         each.on = false;
-    const BarNeeds none = NeedsOf(settings, BarWidget::Bags); // a popup open as its widget is switched off
+    const BarNeeds none = NeedsOf(settings, {BarWidget::Bags}); // a popup open as its widget is switched off
     CHECK(!none.unixTime && !none.localTime && !none.zone && !none.target && !none.gil && none.containers == 0);
 }
 
@@ -1372,12 +1372,12 @@ TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_tho
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "R 227");
     CHECK(Joined(Content(BarWidget::Performance, state, settings).subtitle) == "30 fps");
     o.design = DesignFrom(BarWidget::Performance, "fps received memory |");
-    CHECK(NeedsOf(settings, std::nullopt).frames && NeedsOf(settings, std::nullopt).connection &&
-          NeedsOf(settings, std::nullopt).memory && !NeedsOf(settings, std::nullopt).cpu);
+    CHECK(NeedsOf(settings, {}).frames && NeedsOf(settings, {}).connection &&
+          NeedsOf(settings, {}).memory && !NeedsOf(settings, {}).cpu);
     o.design = DesignFrom(BarWidget::Performance, "fps |");
-    CHECK(!NeedsOf(settings, std::nullopt).connection && !NeedsOf(settings, std::nullopt).memory);
+    CHECK(!NeedsOf(settings, {}).connection && !NeedsOf(settings, {}).memory);
     // Its popup reads everything.
-    const BarNeeds open = NeedsOf(settings, PanelWidget{BarWidget::Performance});
+    const BarNeeds open = NeedsOf(settings, {PanelWidget{BarWidget::Performance}});
     CHECK(open.connection && open.memory && open.cpu && open.linuxxi);
 }
 
@@ -1667,12 +1667,12 @@ TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_
     Settings settings;
     BarState state;
     state.statuses = {ActiveStatus{kSignetEffect, 6130.0}};
-    CHECK(!NeedsOf(settings, std::nullopt).statuses); // off on a new install
+    CHECK(!NeedsOf(settings, {}).statuses); // off on a new install
     settings.Widget(BarWidget::StatusTimers).on = true;
-    CHECK(NeedsOf(settings, std::nullopt).statuses); // Signet is pinned
+    CHECK(NeedsOf(settings, {}).statuses); // Signet is pinned
     settings.statusPins.clear();
-    CHECK(!NeedsOf(settings, std::nullopt).statuses); // nothing pinned to show
-    CHECK(NeedsOf(settings, PanelWidget{BarWidget::StatusTimers}).statuses);
+    CHECK(!NeedsOf(settings, {}).statuses); // nothing pinned to show
+    CHECK(NeedsOf(settings, {PanelWidget{BarWidget::StatusTimers}}).statuses);
     settings.statusPins = {kSignetEffect};
     CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Signet 1h 42m");
     // Its popup's favorites are the settings', Signet and Sanction on a new install.
@@ -1915,17 +1915,17 @@ TEST(a_clock_in_a_picked_zone_is_read_from_the_time_alone_and_the_computers_from
     for (WidgetOptions& each : settings.widgets)
         each.on = false;
     settings.Widget(BarWidget::EarthTime).on = true;
-    const BarNeeds own = NeedsOf(settings, std::nullopt);
+    const BarNeeds own = NeedsOf(settings, {});
     CHECK(own.localTime && !own.unixTime);
     settings.Widget(BarWidget::EarthTime).clockZone   = ClockZone::Utc;
-    const BarNeeds zoned = NeedsOf(settings, std::nullopt);
+    const BarNeeds zoned = NeedsOf(settings, {});
     CHECK(zoned.unixTime && !zoned.localTime);
     settings.Widget(BarWidget::EarthTime).clockZone.reset();
     settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, "time | server"); // the server's line goes by the time, the computer's by its own
-    const BarNeeds stacked   = NeedsOf(settings, std::nullopt);
+    const BarNeeds stacked   = NeedsOf(settings, {});
     CHECK(stacked.unixTime && stacked.localTime);
     settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, "time | -server");
-    const BarNeeds opened    = NeedsOf(settings, BarWidget::EarthTime); // the popup counts down to the resets
+    const BarNeeds opened    = NeedsOf(settings, {BarWidget::EarthTime}); // the popup counts down to the resets
     CHECK(opened.unixTime && opened.localTime);
 }
 
@@ -1951,7 +1951,7 @@ TEST(the_clocks_secondary_line_reads_in_its_own_zone_and_vanadiels_time_is_a_par
         each.on = false;
     o.on = true;
     o.design = DesignFrom(BarWidget::EarthTime, "-time vana | -server");
-    CHECK(NeedsOf(settings, std::nullopt).unixTime);
+    CHECK(NeedsOf(settings, {}).unixTime);
 }
 
 TEST(the_clocks_read_on_a_twelve_hour_clock_when_asked)
@@ -2340,11 +2340,11 @@ TEST(what_the_plugin_gathers_follows_every_copy)
     const std::optional<PanelWidget> clock = CloneWidget(settings, BarWidget::EarthTime);
     CHECK(clock.has_value());
     settings.Widget(*clock).clockZone = ClockZone::Utc;
-    const BarNeeds needs = NeedsOf(settings, std::nullopt);
+    const BarNeeds needs = NeedsOf(settings, {});
     CHECK(needs.unixTime && !needs.localTime); // only the copy shows, in a zone of its own
     settings.Widget(BarWidget::EarthTime).on = true;
-    CHECK(NeedsOf(settings, std::nullopt).localTime);
-    CHECK(NeedsOf(settings, PanelWidget{BarWidget::Bags, 2}).containers == 0); // Bags is off, any copy of it
+    CHECK(NeedsOf(settings, {}).localTime);
+    CHECK(NeedsOf(settings, {PanelWidget{BarWidget::Bags, 2}}).containers == 0); // Bags is off, any copy of it
 }
 
 TEST(the_bags_popup_lists_mog_safe_2_only_once_it_holds_something)
@@ -2384,7 +2384,7 @@ TEST(the_job_and_exp_widgets_bar_layout_is_its_exp_bar_by_its_own_settings)
     const WidgetContent w = Content(BarWidget::Job, state, settings);
     CHECK(w.shown && w.meter && w.meter->left.front().text == "61%" && w.meter->right.empty());
     CHECK(w.meter->width == 200 && w.meter->height == 8 && w.hasPopup);
-    CHECK(NeedsOf(settings, std::nullopt).job);
+    CHECK(NeedsOf(settings, {}).job);
     // Without the meter, its own lines.
     o.expMeter = false;
     CHECK_EQ(Content(BarWidget::Job, state, settings).subtitle.front().text, "7,655 EXP to next");
@@ -2400,7 +2400,7 @@ TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)
     settings.Widget(BarWidget::Bags).bag = 5;
     const WidgetContent satchel = Content(BarWidget::Bags, state, settings);
     CHECK(satchel.title.front().text == "12 / 80" && satchel.subtitle.front().text == ContainerName(5));
-    CHECK_EQ(NeedsOf(settings, std::nullopt).containers, 6);
+    CHECK_EQ(NeedsOf(settings, {}).containers, 6);
     // A bag the character has no room in reads as nothing yet.
     settings.Widget(BarWidget::Bags).bag = 6;
     CHECK_EQ(Content(BarWidget::Bags, state, settings).title.front().text, "-");
@@ -2902,9 +2902,9 @@ TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)
     settings.Widget(BarWidget::World).on      = true;
     settings.Widget(BarWidget::Zone).combine  = PanelWidget{BarWidget::World};
     settings.Widget(BarWidget::Currency).combine   = PanelWidget{BarWidget::Bags};
-    CHECK(NeedsOf(settings, BarWidget::Zone).conquest);
-    CHECK(NeedsOf(settings, BarWidget::Currency).containers == kContainerCount);
-    CHECK(!NeedsOf(settings, BarWidget::Weather).conquest);
+    CHECK(NeedsOf(settings, {BarWidget::Zone}).conquest);
+    CHECK(NeedsOf(settings, {BarWidget::Currency}).containers == kContainerCount);
+    CHECK(!NeedsOf(settings, {BarWidget::Weather}).conquest);
 }
 
 TEST(the_standings_are_asked_for_while_the_zone_or_a_world_info_showing_a_nation_is_on_the_panel)

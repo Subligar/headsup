@@ -66,7 +66,8 @@ TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
         bar->Show();
         popups->Show();
         // A popup that opens: what a theme does as one opens is read only then.
-        Rml::Element* popup = popups->GetElementById(kPopupId);
+        Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+        popup->SetClass(kPopupClass, true);
         CHECK(popup != nullptr);
         popup->SetClass(kOpenClass, true);
         rml.context->Update();
