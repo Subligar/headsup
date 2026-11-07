@@ -93,6 +93,9 @@ namespace headsup
         // What the server told you of the fish on your line last: from its bite until the next.
         const FishCatch& Fish() const { return m_Fish; }
 
+        // From a zone-in until the server has sent every bag, the last of what it sends you then: your jobs, gil, bags
+        // and nation in the game's memory are empty or partway filled meanwhile.
+        bool Loading() const { return m_Loading; }
         const CurrencyValues& Currencies() const { return m_Currencies; }
         // Your craft ranks, from the last skills packet; none before one, or since another character zoned in.
         const std::optional<CraftRanks>& Crafts() const { return m_Crafts; }
@@ -120,6 +123,7 @@ namespace headsup
         CurrencyValues m_Currencies{}; // kept across zoning, not across characters
         std::optional<CraftRanks> m_Crafts;
         bool m_CurrenciesOwed = true;
+        bool m_Loading        = false; // loaded mid-game, a zone-in long past
         std::optional<double> m_CurrenciesAsked;
         std::optional<InspectMessage> m_CheckMessage;              // waits for its general part
         std::unordered_map<uint32_t, PlayerCheck> m_PlayerChecks; // by server id, kept across zoning

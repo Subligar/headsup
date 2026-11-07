@@ -128,6 +128,22 @@ TEST(a_zone_in_forgets_other_players_and_everyones_sync_names_the_weather_and_sa
     CHECK(game.ZoneWeather() == Weather::Rain);
 }
 
+TEST(your_data_loads_from_a_zone_in_until_the_server_says_every_bag_is_sent)
+{
+    // Phoenix's s2c 0x01D (GP_SERV_COMMAND_ITEM_SAME): State at 0x04, 0 after each bag, 1 once all are sent.
+    const auto bagsSent = [](uint8_t state) { return Blank(0x01D, 0x0C).Put(0x04, state); };
+    GameState game;
+    CHECK(!game.Loading()); // loaded mid-game
+    Feed(game, ZoneIn(kRain));
+    CHECK(game.Loading());
+    Feed(game, bagsSent(0));
+    CHECK(game.Loading());
+    Feed(game, Cut(bagsSent(1), 0x04)); // too short to say
+    CHECK(game.Loading());
+    Feed(game, bagsSent(1));
+    CHECK(!game.Loading());
+}
+
 TEST(the_craft_ranks_are_the_last_skills_packets_and_go_with_the_character)
 {
     GameState game;

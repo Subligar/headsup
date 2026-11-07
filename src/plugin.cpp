@@ -310,6 +310,8 @@ class HeadsUp final : public IPlugin
     std::vector<headsup::TimerLine> m_TimerLines;
     uint16_t m_SelfIndex = 0;
     uint16_t m_Zone      = 0; // this frame
+    headsup::Nation m_Nation = headsup::Nation::None; // NationNow's
+    headsup::CharacterReadings m_Held; // the panel's readings of you, kept while you zone
     headsup::OutlineRenderer m_Outline;
     headsup::GameNames m_Names;
     headsup::NameplateRenderer m_Nameplates;
@@ -2140,10 +2142,17 @@ private:
         if (g_PresentSlot == nullptr) m_Rml.RenderOverlay();
     }
 
-    // Ashita's nation is 0 for San d'Oria to 2 for Windurst.
-    headsup::Nation NationNow() const
+    bool PlayerLoaded() const
     {
-        return static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1);
+        return m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0 && !m_GameState.Loading();
+    }
+
+    // Ashita's nation is 0 for San d'Oria to 2 for Windurst, and 0 while your data loads, so it is kept from before.
+    headsup::Nation NationNow()
+    {
+        if (PlayerLoaded())
+            m_Nation = static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1);
+        return m_Nation;
     }
 
     // RmlUi starts once the back buffer's size is known, and follows it after.
@@ -2741,6 +2750,13 @@ private:
     }
 
     headsup::BarState BarStateNow(double now)
+    {
+        headsup::BarState s = BarStateRead(now);
+        headsup::HoldWhileLoading(s, m_Held, PlayerLoaded());
+        return s;
+    }
+
+    headsup::BarState BarStateRead(double now)
     {
         const headsup::BarNeeds needs = headsup::NeedsOf(m_Settings, m_BarInput.Shown());
         headsup::BarState s;

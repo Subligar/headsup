@@ -13,6 +13,8 @@ namespace headsup
     namespace
     {
         constexpr uint32_t kZoneInWeather = 0x68, kZoneInPlayer = 0x04, kZoneInZone = 0x30, kWeatherNumber = 0x08;
+        constexpr uint32_t kBagsSentState = 0x04;
+        constexpr uint8_t kAllBagsSent    = 1;
         constexpr uint32_t kTalkWho = 0x04, kTalkNumMessage = 0x0A, kTalkNumWorkMessage = 0x1A;
         constexpr uint16_t kTalkNameBit = 0x8000;
         constexpr uint32_t kFirstOwner = 0x1D, kRegionStride = 4;
@@ -54,6 +56,11 @@ namespace headsup
     {
         if (data == nullptr || size < kZoneInZone + sizeof(uint16_t)) return std::nullopt;
         return ReadAt<uint16_t>(data, kZoneInZone);
+    }
+
+    bool ParseAllBagsSent(const uint8_t* data, uint32_t size)
+    {
+        return data != nullptr && size > kBagsSentState && data[kBagsSentState] == kAllBagsSent;
     }
 
     std::optional<TalkMessage> ParseTalkMessage(uint16_t id, const uint8_t* data, uint32_t size)

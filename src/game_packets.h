@@ -13,6 +13,7 @@
 namespace headsup
 {
     constexpr uint16_t kZoneInPacket         = 0x00A; // server to client: entering a zone
+    constexpr uint16_t kBagsSentPacket       = 0x01D; // server to client: a bag, or every bag, is sent (ITEM_SAME)
     constexpr uint16_t kWeatherPacket        = 0x057; // server to client: the zone's weather changed
     constexpr uint16_t kSkillsPacket         = 0x062; // server to client: your skills, the crafts' ranks among them
     constexpr uint16_t kConquestPacket       = 0x05E; // server to client: the conquest standings
@@ -45,6 +46,8 @@ namespace headsup
     std::optional<uint32_t> ParseZoneInPlayer(const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x00A: the zone's number (ZoneNo) at 0x30.
     std::optional<uint16_t> ParseZoneInZone(const uint8_t* data, uint32_t size);
+    // Phoenix's s2c 0x01D: State at 0x04 is 1 (AllLoaded) once every bag is sent, which it sends last at a zone-in.
+    bool ParseAllBagsSent(const uint8_t* data, uint32_t size);
     // A kTalkNumPacket's or kTalkNumWorkPacket's message number in the zone's dialog and whose it is (UniqueNo, at
     // 0x04): MesNum at 0x0A or 0x1A, its top bit (show the speaker's name) dropped.
     struct TalkMessage

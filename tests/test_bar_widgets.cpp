@@ -654,6 +654,48 @@ TEST(gil_is_only_the_gil_item_and_a_bag_without_room_is_none)
     CHECK(!BagOf(0, 0).has_value()); // locked
 }
 
+// While you change zones the game empties your job, gil and status icons and refills the bags one item at a time.
+TEST(while_your_data_loads_the_panel_keeps_what_it_last_read_and_the_status_timers_run_on)
+{
+    Settings settings;
+    JobSample war;
+    war.mainJob = 1, war.mainLevel = 30, war.subJob = 13, war.subLevel = 15;
+    BarState loaded;
+    loaded.unixMs     = 1'800'000'000'000;
+    loaded.zone       = 103;
+    loaded.weather    = Weather::Rain;
+    loaded.gil        = 1234567;
+    loaded.bags[0]    = BagCount{45, 80};
+    loaded.job        = JobReport{war, std::nullopt};
+    loaded.statuses   = {{33, 120.0}, {40, std::nullopt}}; // Haste with two minutes left, and Protect untimed
+    CharacterReadings held;
+    BarState first = loaded;
+    HoldWhileLoading(first, held, true);
+    CHECK(Joined(Content(BarWidget::Currency, first, settings).title) == "1,234,567");
+
+    BarState zoning;
+    zoning.unixMs  = loaded.unixMs + 5'000;
+    zoning.bags[0] = BagCount{3, 80}; // the first items back
+    HoldWhileLoading(zoning, held, false);
+    CHECK(Joined(Content(BarWidget::Currency, zoning, settings).title) == "1,234,567");
+    CHECK(Joined(Content(BarWidget::Bags, zoning, settings).title) == "45 / 80");
+    CHECK(Joined(Content(BarWidget::Job, zoning, settings).title) == "WAR 30 / NIN 15");
+    CHECK(zoning.zone == 103 && zoning.weather == Weather::Rain);
+    CHECK(zoning.statuses == (std::vector<ActiveStatus>{{33, 115.0}, {40, std::nullopt}}));
+    CHECK(zoning.unixMs == loaded.unixMs + 5'000); // the clock is not held
+
+    BarState arrived;
+    arrived.unixMs  = zoning.unixMs + 1'000;
+    arrived.zone    = 104;
+    arrived.gil     = 1234000;
+    arrived.bags[0] = BagCount{44, 80};
+    HoldWhileLoading(arrived, held, true);
+    CHECK(Joined(Content(BarWidget::Bags, arrived, settings).title) == "44 / 80");
+    BarState again;
+    HoldWhileLoading(again, held, false);
+    CHECK(again.zone == 104 && again.gil == 1234000u && !again.job.has_value()); // held from the newest loaded frame
+}
+
 TEST(each_widget_follows_its_switch_and_a_switched_off_one_builds_nothing)
 {
     Settings settings;

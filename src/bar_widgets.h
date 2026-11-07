@@ -87,6 +87,21 @@ namespace headsup
         std::optional<CraftRanks> crafts;       // yours, once the server sent them
     };
 
+    // What the panel reads of your character, which the game empties or fills partway while you change zones.
+    struct CharacterReadings
+    {
+        uint16_t zone = 0;
+        std::optional<Weather> weather;
+        std::optional<JobReport> job;
+        std::optional<uint32_t> gil;
+        std::array<std::optional<BagCount>, kContainerCount> bags{};
+        std::vector<ActiveStatus> statuses;
+        int64_t unixMs = 0; // when the statuses were read
+    };
+    // Loaded, held takes state's readings; while loading, state shows held's instead, their status timers run down
+    // since.
+    void HoldWhileLoading(BarState& state, CharacterReadings& held, bool loaded);
+
     // The parts of BarState that the shown widgets and the open popup read, for the plugin to gather only those; it
     // always copies the weather, the owners and the shares, which GameState keeps from packets.
     struct BarNeeds

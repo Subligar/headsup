@@ -1692,6 +1692,24 @@ namespace headsup
         });
     }
 
+    void HoldWhileLoading(BarState& state, CharacterReadings& held, bool loaded)
+    {
+        if (loaded)
+        {
+            held = {state.zone, state.weather, state.job, state.gil, state.bags, state.statuses, state.unixMs};
+            return;
+        }
+        const double since = static_cast<double>(state.unixMs - held.unixMs) / kMsPerSecond;
+        state.zone     = held.zone;
+        state.weather  = held.weather;
+        state.job      = held.job;
+        state.gil      = held.gil;
+        state.bags     = held.bags;
+        state.statuses = held.statuses;
+        for (ActiveStatus& status : state.statuses)
+            if (status.secondsLeft) status.secondsLeft = std::max(0.0, *status.secondsLeft - since);
+    }
+
     BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing)
     {
         const auto shown  = [&](BarWidget widget) { return AnyCopyShown(settings, widget); };
