@@ -1187,14 +1187,17 @@ TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges
     store.values["barFontRatio"]     = "9";
     store.values["popupTextScale"]   = "0.01";
     store.values["popupWidthScale"]  = "7";
-    store.values["popupHeightScale"] = "0.01";
+    store.values["popupHeightScale"] = "0.5";
     store.values["barIconScale"]     = "3";
     store.values["widgetRounding"]   = "-9";
     store.values["popupRounding"]    = "999";
     store.values["sectionRounding"]  = "12";
     const Settings s = LoadSettings(store);
     CHECK(s.barFontRatio == kMaxFontRatio && s.popupTextScale == kMinPopupScale && s.barIconScale == kMinIconScale);
-    CHECK(s.popupWidthScale == kMaxPopupScale && s.popupHeightScale == kMinPopupScale);
+    // A pop-out is never narrower or shorter than its own size (the user's 1.0x), whatever its text is.
+    CHECK(s.popupWidthScale == kMaxPopupScale && s.popupHeightScale == 1.0f);
+    store.values["popupWidthScale"] = "0.3";
+    CHECK(LoadSettings(store).popupWidthScale == 1.0f);
     CHECK(s.widgetRounding == kThemeRounding && s.popupRounding == kMaxRounding && s.sectionRounding == 12);
 }
 

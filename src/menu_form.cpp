@@ -1775,11 +1775,11 @@ namespace headsup
                 break;
             case SettingPiece::PopupWidth:
                 form.Fade(!BarOn(s));
-                form.SliderFloat(label.c_str(), s.popupWidthScale, kMinPopupScale, kMaxPopupScale, "%.1fx", tip);
+                form.SliderFloat(label.c_str(), s.popupWidthScale, kMinPopupBoxScale, kMaxPopupScale, "%.1fx", tip);
                 break;
             case SettingPiece::PopupHeight:
                 form.Fade(!BarOn(s));
-                form.SliderFloat(label.c_str(), s.popupHeightScale, kMinPopupScale, kMaxPopupScale, "%.1fx", tip);
+                form.SliderFloat(label.c_str(), s.popupHeightScale, kMinPopupBoxScale, kMaxPopupScale, "%.1fx", tip);
                 break;
             case SettingPiece::CornerRounding:
             case SettingPiece::PopupRounding:

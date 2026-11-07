@@ -135,8 +135,8 @@ namespace headsup
         constexpr FloatKey kFloats[] = {{"maxDistance", &Settings::maxDistance, kMinOutlineDistance, kMaxOutlineDistance},
             {"barFontRatio", &Settings::barFontRatio, kMinFontRatio, kMaxFontRatio},
             {"popupTextScale", &Settings::popupTextScale, kMinPopupScale, kMaxPopupScale},
-            {"popupWidthScale", &Settings::popupWidthScale, kMinPopupScale, kMaxPopupScale},
-            {"popupHeightScale", &Settings::popupHeightScale, kMinPopupScale, kMaxPopupScale}};
+            {"popupWidthScale", &Settings::popupWidthScale, kMinPopupBoxScale, kMaxPopupScale},
+            {"popupHeightScale", &Settings::popupHeightScale, kMinPopupBoxScale, kMaxPopupScale}};
 
         struct ColorKey
         {

@@ -223,8 +223,8 @@
           "description": "How the widgets' pop-outs look.",
           "settings": [
             {"key": "text-scale", "name": "Text Scale", "tip": "Makes the text in the pop-outs larger or smaller. At 1x a pop-out's title is 18 px, its section titles 16 px and its text 14 px. Default: 1.0x."},
-            {"key": "popup-width", "name": "Width", "tip": "Makes each pop-out and its sections wider or narrower, without changing the text. Below 1x, text that no longer fits runs past its section. Default: 1.0x."},
-            {"key": "popup-height", "name": "Height", "tip": "Makes each pop-out and its sections taller or shorter, without changing the text. Default: 1.0x."},
+            {"key": "popup-width", "name": "Width", "tip": "Makes each pop-out and its sections wider, without changing the text. Default: 1.0x."},
+            {"key": "popup-height", "name": "Height", "tip": "Makes each pop-out and its sections taller, without changing the text. Default: 1.0x."},
             {"key": "popup-rounding", "name": "Pop-out Rounding", "tip": "How round the corners of the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."},
             {"key": "section-rounding", "name": "Section Rounding", "tip": "How round the corners of the sections in the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."}
           ]
