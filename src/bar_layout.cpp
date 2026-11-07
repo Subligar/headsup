@@ -237,7 +237,6 @@ namespace headsup
     {
         const BarRow row    = PillRow(m);
         const float inside  = row.height - 2.0f * kPillBorder;
-        const float margin  = InkMargin(row.height);
         // The margin grows a pixel a side at a time, so a row a pixel taller can have a pixel less room for the ink: a
         // row takes no more than the next one's, and a taller bar never gets smaller text.
         const float room    = std::min(InkRoom(row.height), InkRoom(row.height + 1.0f));
@@ -258,21 +257,22 @@ namespace headsup
         }
         const float gap   = std::clamp(spare, 0.0f, maxGap);
         const float block = (title.bottom - title.top) + gap + (detail.bottom - detail.top);
-        // The title's ink top to the detail's baseline centered, as the eye reads two lines, but the detail's descenders
-        // no nearer the bottom than the margin.
+        // The title's ink top to the detail's baseline centered, as the eye reads two lines, the detail's descenders
+        // hanging into the clear space under them but never past the border. Raised to keep them out of it, lines
+        // without descenders read a pixel high.
         const float read     = block - (detail.bottom - detail.baseline);
         const float even     = row.y + kPillBorder + (inside - read) / 2.0f;
-        const float top      = std::min(even, row.y + kPillBorder + inside - margin - block); // of the title's ink
+        const float top      = std::min(even, row.y + kPillBorder + inside - block); // of the title's ink
         t.titleY          = top - title.top;
         t.detailY         = top + (title.bottom - title.top) + gap - detail.top;
-        // A title alone: as large as its ink fits, its capitals centered, raised if its descenders would come too near
-        // the bottom.
+        // A title alone: as large as its ink fits, its capitals centered, raised only if its descenders would pass the
+        // border.
         LineInk alone;
         for (t.alone = WholePixels(m.title); t.alone > 1; --t.alone)
             if (alone = ink(true, t.alone); alone.bottom - alone.top <= room) break;
         alone = ink(true, t.alone);
         const float centered = row.y + (row.height - (alone.baseline - alone.top)) / 2.0f;
-        const float lowest   = row.y + row.height - kPillBorder - margin - (alone.bottom - alone.top);
+        const float lowest   = row.y + row.height - kPillBorder - (alone.bottom - alone.top);
         t.aloneY             = std::min(centered, lowest) - alone.top;
         return t;
     }

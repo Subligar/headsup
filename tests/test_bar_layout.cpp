@@ -711,23 +711,24 @@ TEST(a_titles_descenders_stay_clear_of_its_detail_line_and_both_inside_the_pill)
             const TextRow t      = FitTextRow(m, FakeInk);
             const LineInk title  = FakeInk(true, t.title), detail = FakeInk(false, t.detail);
             const LineInk alone  = FakeInk(true, t.alone);
-            // Inside the pill's 1 px border, the ink keeps clear space above and below.
+            // Inside the pill's 1 px border, the ink keeps clear space above; descenders may hang into it below.
             const float margin = std::max(2.0f, 0.06f * row.height);
             const float inTop = row.y + 1.0f, inBottom = row.y + row.height - 1.0f;
             CHECK(t.title > t.detail);
             CHECK(t.title <= WholePixels(m.title) && t.detail <= WholePixels(m.subtitle));
             const float above = (t.titleY + title.top) - inTop;
             const float below = inBottom - (t.detailY + detail.bottom);
-            CHECK(above >= margin - 0.01f && below >= margin - 0.01f);
+            CHECK(above >= margin - 0.01f && below >= 0.0f);
             // The title's top and the detail's baseline centered, as two lines read without the detail's descenders,
-            // unless that would bring the descenders nearer the bottom than the margin.
+            // at every height (the card "General Changes": two lines a pixel higher than one at some heights).
             const float underBaseline = inBottom - (t.detailY + detail.baseline);
-            CHECK(std::fabs(above - underBaseline) <= 1.01f || below <= std::ceil(margin) + 0.01f);
-            CHECK(underBaseline < below + (detail.bottom - detail.baseline) + 0.01f);
+            CHECK(std::fabs(above - underBaseline) <= 0.01f);
             // Three rows clear from the title's descenders to the detail's capitals: two still read as touching.
             CHECK((t.detailY + detail.top) - (t.titleY + title.bottom) >= 3.0f - 0.01f);
-            // A title alone (gil, the clock): all its ink inside.
-            CHECK(t.aloneY + alone.top >= inTop + margin - 0.01f && t.aloneY + alone.bottom <= inBottom - margin + 0.01f);
+            // A title alone (gil, the clock): its capitals centered the same way, all its ink inside.
+            const float aloneAbove = (t.aloneY + alone.top) - inTop, aloneUnder = inBottom - (t.aloneY + alone.baseline);
+            CHECK(std::fabs(aloneAbove - aloneUnder) <= 0.01f);
+            CHECK(aloneAbove >= margin - 0.01f && t.aloneY + alone.bottom <= inBottom + 0.01f);
         }
 }
 
