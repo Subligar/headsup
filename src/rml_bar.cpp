@@ -290,6 +290,8 @@ namespace headsup
             const int section = PlaceOf(widgets.panel.placement, widget).first;
             for (int k = 0; k < kBarSectionCount; ++k)
                 shown.element->SetClass(SectionClass(static_cast<BarSection>(k)), k == section);
+            for (int k = static_cast<int>(WidgetAlign::Left); k < kWidgetAlignCount; ++k)
+                shown.element->SetClass(AlignClass(static_cast<WidgetAlign>(k)), k == static_cast<int>(look.settings.Widget(widget).align));
             shown.element->SetClass(kJoinBeforeClass, joins.before);
             shown.element->SetClass(kJoinAfterClass, joins.after);
             const PanelWidget head = widgets.panel.group[w];

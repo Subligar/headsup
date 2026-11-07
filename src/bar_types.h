@@ -123,6 +123,9 @@ namespace headsup
     // Where a widget's icon goes: nowhere, before its text or after it.
     enum class IconSide : uint8_t { Hide, Left, Right };
     constexpr int kIconSideCount = static_cast<int>(IconSide::Right) + 1;
+    // Which side of its box a widget's content and lines go against: its section's, or one of its own.
+    enum class WidgetAlign : uint8_t { Location, Left, Center, Right };
+    constexpr int kWidgetAlignCount = static_cast<int>(WidgetAlign::Right) + 1;
 
     // Font Size Ratio: the Main line's size over the Secondary's. Its slider has 1 at its middle, steps of
     // kFontRatioStepBelow under it and kFontRatioStepAbove over it.

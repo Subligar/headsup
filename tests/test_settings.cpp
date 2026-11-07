@@ -1155,6 +1155,25 @@ TEST(each_widgets_icon_side_saves_under_its_own_key_and_loads_back)
     CHECK(LoadSettings(saved).Widget(BarWidget::Zone).iconSide == IconSide::Left);
 }
 
+TEST(each_widgets_alignment_saves_under_its_own_key_and_loads_back_set_by_location_by_default)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::Zone).align == WidgetAlign::Location);
+    s.Widget(BarWidget::Zone).align = WidgetAlign::Right;
+    const PanelWidget second = *CloneWidget(s, BarWidget::Bags);
+    s.Widget(second).align = WidgetAlign::Center;
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barZoneAlign"], "right");
+    CHECK_EQ(saved.values["barBagsAlign_2"], "center");
+    CHECK_EQ(saved.values["barBagsAlign"], "location");
+    CHECK(!saved.values.contains("barGameHelpAlign")); // its text is the help bar's, placed by its Anchor
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(BarWidget::Zone).align == WidgetAlign::Right && loaded.Widget(second).align == WidgetAlign::Center);
+    saved.values["barZoneAlign"] = "nonsense";
+    CHECK(LoadSettings(saved).Widget(BarWidget::Zone).align == WidgetAlign::Location);
+}
+
 TEST(separators_out_of_their_bits_are_held_to_them)
 {
     MapStore store;

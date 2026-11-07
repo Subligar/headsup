@@ -348,6 +348,12 @@ namespace headsup
         return kClasses[static_cast<int>(section)];
     }
 
+    const char* AlignClass(WidgetAlign align)
+    {
+        constexpr const char* kClasses[kWidgetAlignCount] = {"", "align-left", "align-center", "align-right"};
+        return kClasses[static_cast<int>(align)];
+    }
+
     WidgetSide SideOf(const BarLook& look, PanelWidget widget, float room, bool shared)
     {
         if (shared) return WidgetSide{0.0f, room};
@@ -485,6 +491,11 @@ namespace headsup
         for (const auto& [section, align] : {std::pair{BarSection::Left, "left"}, std::pair{BarSection::Center, "center"},
                  std::pair{BarSection::Right, "right"}})
             css += std::string(".widget.") + SectionClass(section) + " .text{text-align:" + align + ";}";
+        // Its own Alignment puts both against one side.
+        for (const auto& [align, side] : {std::pair{WidgetAlign::Left, "left"}, std::pair{WidgetAlign::Center, "center"},
+                 std::pair{WidgetAlign::Right, "right"}})
+            css += std::string(".widget.") + AlignClass(align) + " .content,.widget." + AlignClass(align) + " .text{text-align:" +
+                   side + ";}";
         css += ".icon,.coin,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
         css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
                Px(m.gap) + ";}";

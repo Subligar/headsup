@@ -250,9 +250,11 @@ namespace headsup
         constexpr const char* kCombineSuffix    = "Combine";
         constexpr const char* kLinkPaddingSuffix = "LinkPadding";
         constexpr const char* kIconSideSuffix    = "Icon";
+        constexpr const char* kAlignSuffix       = "Align";
         constexpr const char* kPopupSpotSuffix   = "PopupSpot"; // "left 10 top 200" or "right 120 bottom 80"
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
         const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
+        const char* const kWidgetAlignNames[kWidgetAlignCount] = {"location", "left", "center", "right"};
         // The EXP widget's: a place for each ExpText, and its bar's size.
         constexpr const char* kExpBarWidthKey = "barExpBarWidth", *kExpBarHeightKey = "barExpBarHeight";
         constexpr const char* kExpBarTextKey  = "barExpBarText";
@@ -1215,6 +1217,7 @@ namespace headsup
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
             if (static_cast<int>(w.weatherIcons) >= kCustomIconsCount) w.weatherIcons = fresh.weatherIcons;
             if (static_cast<int>(w.iconSide) >= kIconSideCount) w.iconSide = fresh.iconSide;
+            if (static_cast<int>(w.align) >= kWidgetAlignCount) w.align = fresh.align;
             if (w.clockSecondZone && static_cast<int>(*w.clockSecondZone) >= kClockZoneCount) w.clockSecondZone = fresh.clockSecondZone;
             w.linkPadding  = std::clamp(w.linkPadding, 0, kMaxWidgetSpacing);
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
@@ -1269,6 +1272,9 @@ namespace headsup
             if (IconPartOf(w.kind))
                 o.iconSide = static_cast<IconSide>(NameIndex(kIconSideNames, kIconSideCount,
                     text((widget + kIconSideSuffix).c_str()), static_cast<int>(o.iconSide)));
+            if (w.kind != BarWidget::GameHelp)
+                o.align = static_cast<WidgetAlign>(NameIndex(kWidgetAlignNames, kWidgetAlignCount,
+                    text((widget + kAlignSuffix).c_str()), static_cast<int>(o.align)));
             switch (w.kind)
             {
             case BarWidget::Currency:
@@ -1343,6 +1349,7 @@ namespace headsup
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
             if (IconPartOf(w.kind)) text((widget + kIconSideSuffix).c_str(), kIconSideNames[static_cast<int>(o.iconSide)]);
+            if (w.kind != BarWidget::GameHelp) text((widget + kAlignSuffix).c_str(), kWidgetAlignNames[static_cast<int>(o.align)]);
             const std::optional<PopupSpot>& spot = o.popupSpot;
             text((widget + kPopupSpotSuffix).c_str(),
                 spot ? (std::string(spot->fromRight ? kSpotRight : kSpotLeft) + " " + std::to_string(spot->x) + " " +

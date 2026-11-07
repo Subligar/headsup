@@ -417,3 +417,50 @@ TEST(the_settings_window_draws_over_the_lower_popups_and_its_settings_view_and_u
     const auto z = [](Rml::ElementDocument* d) { return d->GetComputedValues().z_index().value; };
     CHECK(z(popups) < z(window) && z(window) < z(view));
 }
+
+TEST(a_widgets_alignment_puts_its_content_and_its_lines_against_that_side_whatever_its_section)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    for (const WidgetAlign align : {WidgetAlign::Left, WidgetAlign::Center, WidgetAlign::Right})
+    {
+        test::RmlSession rml;
+        const BarLook look        = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        bar->Show();
+        Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Bags));
+        widget->SetClass(kHiddenClass, false);
+        // In the left section, which would put its lines against the left.
+        widget->SetClass(SectionClass(BarSection::Left), true);
+        widget->SetClass(AlignClass(align), true);
+        widget->SetProperty(Rml::PropertyId::Width, Rml::Property(300.0f, Rml::Unit::PX));
+        WidgetContent c;
+        c.shown    = true;
+        c.icons    = {Icon::Bag};
+        c.title    = {Text("20 / 30")};
+        c.subtitle = {Text("Inventory and more")};
+        widget->SetInnerRML(WidgetRml(c, look, {}));
+        rml.context->Update();
+        Rml::ElementList icons, titles, details;
+        widget->GetElementsByClassName(icons, "icon");
+        widget->GetElementsByClassName(titles, "title");
+        widget->GetElementsByClassName(details, "detail");
+        const auto left  = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+        const auto right = [&](Rml::Element* e) { return left(e) + e->GetBox().GetSize(Rml::BoxArea::Border).x; };
+        const float boxLeft = widget->GetAbsoluteOffset(Rml::BoxArea::Content).x;
+        const float boxRight = boxLeft + widget->GetBox().GetSize(Rml::BoxArea::Content).x;
+        Rml::Element* title = titles.front()->GetFirstChild();
+        const float first = left(icons.front()), last = std::max(right(titles.front()), right(details.front()));
+        if (align == WidgetAlign::Left)
+            CHECK(std::fabs(first - boxLeft) <= 1.0f && std::fabs(left(title) - left(details.front())) <= 1.0f);
+        if (align == WidgetAlign::Right)
+            CHECK(std::fabs(last - boxRight) <= 1.0f && std::fabs(right(title) - right(details.front())) <= 1.0f);
+        if (align == WidgetAlign::Center)
+        {
+            CHECK(std::fabs((first - boxLeft) - (boxRight - last)) <= 1.0f && first - boxLeft > 20.0f);
+            CHECK(std::fabs((left(title) - left(details.front())) - (right(details.front()) - right(title))) <= 1.0f);
+        }
+        CHECK_EQ(rml.Said(), "");
+    }
+}

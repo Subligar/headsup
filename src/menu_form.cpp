@@ -840,6 +840,16 @@ namespace headsup
                         form.Segments(Labeled(part.name, row.key, scope).c_str(), o.iconSide, names.data(), kIconSideCount, row.tip);
                     }
                     break;
+                case WidgetTabsRow::Alignment:
+                    if (kind != BarWidget::GameHelp)
+                    {
+                        int picked = static_cast<int>(o.align);
+                        form.NumberDropdown(label.c_str(), picked, 0, kWidgetAlignCount - 1,
+                            [&](int i) { return std::string(c.layout.OptionsOf(WindowList::WidgetAligns)[static_cast<size_t>(i)].name); },
+                            row.tip);
+                        o.align = static_cast<WidgetAlign>(picked);
+                    }
+                    break;
                 case WidgetTabsRow::Design:
                     // the Widget Designer's description
                     form.Note(kind == BarWidget::StatusTimers ? Word(c, WindowWord::WidgetTabsDesignStatusTimers) : row.tip);

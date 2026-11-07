@@ -80,6 +80,7 @@ namespace headsup
         std::optional<PanelWidget> combine;          // shown right after it in its pill, with one popup (Combine)
         int linkPadding = 0; // pixels between it and the widget it combines with
         IconSide iconSide = IconSide::Left; // its icon's, for a widget with one (IconPartOf)
+        WidgetAlign align = WidgetAlign::Location; // all but Game Help's, whose text is the help bar's
         std::optional<PopupSpot> popupSpot; // where its pop-out shows while pinned; none for under its pill
         bool operator==(const WidgetOptions&) const = default;
     };
