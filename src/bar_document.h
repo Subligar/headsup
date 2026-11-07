@@ -110,7 +110,7 @@ namespace headsup
     struct PopupFace
     {
         std::string family;
-        int pixels = 0, line = 0, tracking = 0;
+        int pixels = 0, line = 0;
         float drop = 0.0f;
         bool operator==(const PopupFace&) const = default;
     };

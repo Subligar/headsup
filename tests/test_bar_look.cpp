@@ -90,20 +90,10 @@ TEST(ornate_popups_head_their_sections_in_the_title_font_and_pills_popups_in_the
     CHECK(Family(ornate.DetailFace(), "Barlow Condensed") && ornate.DetailFace().size == 11.0f);
 }
 
-TEST(pills_section_headings_are_letter_spaced_and_nothing_else_is)
+TEST(the_pinned_mark_takes_the_headings_family_and_size)
 {
-    // Spec, Shapes: pills popups have "uppercase, letter-spaced section headings"; the approved mockup spaces them
-    // 1.2 px at 10.5 px, which is 3 px for 24 px headings (a Pop-out Scale of 1.5) and 2 px for the 16 px ones at 1.
-    // The pinned mark takes the headings' family and size, set solid as in the mockup.
     Settings settings;
     const BarLook pills = LookOf(BarTheme::UmbraDark, settings, {}, 45, 1.5f), ornate = LookOf(BarTheme::PhoenixGold, settings);
-    CHECK_EQ(pills.FaceOf(PopupFont::Heading).tracking, 3);
-    CHECK_EQ(LookOf(BarTheme::UmbraDark, settings).FaceOf(PopupFont::Heading).tracking, 2);
-    for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Pin})
-        CHECK_EQ(pills.FaceOf(font).tracking, 0);
-    for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Heading, PopupFont::Pin})
-        CHECK_EQ(ornate.FaceOf(font).tracking, 0);
-    CHECK(pills.TitleFace(TwoLines()).tracking == 0 && pills.DetailFace().tracking == 0);
     for (const BarLook* look : {&pills, &ornate})
         CHECK(look->FaceOf(PopupFont::Pin).family == look->FaceOf(PopupFont::Heading).family &&
               look->FaceOf(PopupFont::Pin).size == look->FaceOf(PopupFont::Heading).size);
@@ -175,7 +165,6 @@ TEST(a_widget_of_figures_draws_its_title_in_the_detail_font_in_every_theme)
     {
         const BarLook look = LookOf(static_cast<BarTheme>(theme), settings, TextRow{.title = 14, .detail = 11, .alone = 17});
         CHECK(Family(look.TitleFace(figures), "Barlow Condensed") && look.TitleFace(figures).size == 17.0f);
-        CHECK(look.TitleFace(figures).tracking == 0);
         // Alone, a title takes the size of a line alone; over a second line, the two-line size.
         CHECK(Family(look.TitleFace(words), look.TitleFace(TwoLines()).family) && look.TitleFace(words).size == 17.0f);
         CHECK_EQ(look.TitleFace(TwoLines()).size, 14.0f);

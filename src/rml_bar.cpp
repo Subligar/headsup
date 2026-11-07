@@ -78,7 +78,7 @@ namespace headsup
 
     float RmlBar::Width(RmlHost& host, const std::string& text, const TextFace& face) const
     {
-        return host.TextWidth(text, face.family, WholePixels(face.size), static_cast<float>(face.tracking));
+        return host.TextWidth(text, face.family, WholePixels(face.size));
     }
 
     float RmlBar::SpansWidth(RmlHost& host, const std::vector<Span>& spans, const TextFace& face) const
@@ -379,7 +379,7 @@ namespace headsup
             const TextFace face  = look.FaceOf(static_cast<PopupFont>(f));
             const int pixels     = WholePixels(face.size);
             const FaceLine& line = FaceLineOf(host, face.family, pixels);
-            m_PopupFaces[f]      = PopupFace{face.family, pixels, line.rmlHeight, face.tracking, line.drop};
+            m_PopupFaces[f]      = PopupFace{face.family, pixels, line.rmlHeight, line.drop};
         }
         for (Rml::ElementDocument*& document : m_PopupDocuments)
         {
@@ -482,13 +482,13 @@ namespace headsup
         const auto out        = static_cast<float>(OuterPad(PopupPanel(look)));
         const float barBottom = open.kind == BarWidget::GameHelp ? anchor->y + anchor->height : BarBottom(p, m);
         const bool pinned     = input.IsPinned(open);
-        PopupKey key{PanelPopupContent(open, state, look.settings), pinned, m.height, m.popupText, p.shape,
+        PopupKey key{PanelPopupContent(open, state, look.settings), pinned, m.height, m.popupText,
             PopupRoom(barBottom, screenHeight, m.gap, out), popup.widest,
             settings ? std::optional(settingsRoom.value_or(SettingsRoom{})) : std::nullopt};
         bool fresh            = false;
         const PopupLayout& pl = popup.layout.Get(std::move(key), [&](const PopupKey& k) {
             fresh           = true;
-            PopupLayout cut = LayoutPopup(k.content, m, p.shape, k.pinned, measure, k.room, k.least, k.settings);
+            PopupLayout cut = LayoutPopup(k.content, m, k.pinned, measure, k.room, k.least, k.settings);
             CutPopup(cut, k.room, m.popupPadding);
             return cut;
         });

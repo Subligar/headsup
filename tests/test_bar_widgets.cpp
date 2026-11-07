@@ -915,7 +915,7 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
         return std::ranges::any_of(l.pieces, [&](const PopupPiece& p) { return p.span.text == text; });
     };
     const std::string key = std::string("By Element/") + ElementName(most);
-    PopupLayout l = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, BarShape::Pills, false, measure, room);
+    PopupLayout l = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, false, measure, room);
     const size_t all = l.pieces.size();
     CutPopup(l, room, m.popupPadding);
     CHECK(l.height <= room + 0.01f && l.pieces.size() == all);
@@ -927,7 +927,7 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
     CHECK(!shows(l, last));
     const std::map<std::string, size_t> scrolled{{key, l.scrolls.front().most}};
     state.scrolled = &scrolled;
-    const PopupLayout end = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, BarShape::Pills, false, measure, room);
+    const PopupLayout end = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, false, measure, room);
     CHECK(shows(end, last) && end.height <= room + 0.01f);
 }
 
@@ -2862,7 +2862,7 @@ TEST(the_forecast_pop_out_puts_today_beside_the_forecast_over_the_elements)
         return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
     };
     std::vector<const PopupPiece*> cards;
-    const PopupLayout l = LayoutPopup(popup, m, BarShape::Pills, false, measure, 1000.0f);
+    const PopupLayout l = LayoutPopup(popup, m, false, measure, 1000.0f);
     for (const PopupPiece& p : l.pieces)
         if (p.kind == PopupPiece::Kind::Card) cards.push_back(&p);
     CHECK_EQ(cards.size(), static_cast<size_t>(3));

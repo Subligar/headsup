@@ -1,7 +1,6 @@
 #include "popup_layout.h"
 
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 #include <optional>
 
@@ -34,17 +33,6 @@ namespace headsup
         constexpr float kScrollbar        = 0.25f; // a scrollbar's width
         constexpr size_t kMostTabsInRow   = 6;     // a card's tabs share rows of no more than this, evenly
 
-        std::string Upper(std::string text)
-        {
-            for (char& c : text)
-                c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-            return text;
-        }
-
-        Span HeadingSpan(const std::string& heading, bool ornate)
-        {
-            return Span{ornate ? heading : Upper(heading), Tone::Heading, 0};
-        }
 
         // Its ink from the cell's top: the icon's, and its text's font's.
         TextSize CellSize(const PopupCell& cell, float unit, SpanMeasure measure)
@@ -145,7 +133,7 @@ namespace headsup
             return cell;
         }
 
-        Block LayoutSection(const PopupSection& section, const BarMetrics& metrics, bool ornate, SpanMeasure measure)
+        Block LayoutSection(const PopupSection& section, const BarMetrics& metrics, SpanMeasure measure)
         {
             const float unit = metrics.popupText;
             Block b;
@@ -155,7 +143,7 @@ namespace headsup
             float y = b.pad, contentWidth = 0.0f;
             if (!section.heading.empty())
             {
-                Span heading     = HeadingSpan(section.heading, ornate);
+                Span heading{section.heading, Tone::Heading, 0};
                 const TextSize t = measure(heading, PopupFont::Heading);
                 contentWidth     = t.width + t.overhang;
                 b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, b.pad, y, t.width, t.height, std::move(heading),
@@ -530,9 +518,9 @@ namespace headsup
         }
         // A card as LayoutSection lays it out, as wide as with its widest tab picked, so its chips wrap the same
         // whichever is, and with its reserve: its height with its tallest tab picked. Collapsed, it keeps its open width.
-        Block LayoutCard(const PopupSection& section, const BarMetrics& metrics, bool ornate, SpanMeasure measure)
+        Block LayoutCard(const PopupSection& section, const BarMetrics& metrics, SpanMeasure measure)
         {
-            Block b     = LayoutSection(section, metrics, ornate, measure);
+            Block b     = LayoutSection(section, metrics, measure);
             b.beside    = section.beside;
             b.under     = section.under;
             b.collapsed = section.collapsed && !section.heading.empty();
@@ -541,7 +529,7 @@ namespace headsup
             for (size_t tab = 0; tab < std::max<size_t>(section.tabs.size(), 1); ++tab)
             {
                 each.tab           = tab;
-                const Block picked = LayoutSection(each, metrics, ornate, measure);
+                const Block picked = LayoutSection(each, metrics, measure);
                 b.reserve          = b.collapsed ? b.height : std::max(b.reserve, picked.height);
                 b.width            = std::max(b.width, picked.width);
             }
@@ -583,7 +571,7 @@ namespace headsup
         // A card that would run taller than tall: its long grids' lines set side by side in it, as few groups as fit;
         // failing that, cut into parts that fit between its rows, a grid's lines counting as rows, each part keeping
         // the heading. A row taller than tall alone is a part of its own.
-        std::vector<PopupSection> SplitToFit(const PopupSection& section, float tall, const BarMetrics& metrics, bool ornate,
+        std::vector<PopupSection> SplitToFit(const PopupSection& section, float tall, const BarMetrics& metrics,
                                          SpanMeasure measure)
         {
             // As tall as it can be: with its tallest tab picked, so picking another never sets it differently.
@@ -592,7 +580,7 @@ namespace headsup
                 for (size_t tab = 0; tab < std::max<size_t>(variant.tabs.size(), 1); ++tab)
                 {
                     variant.tab = tab;
-                    most        = std::max(most, LayoutSection(variant, metrics, ornate, measure).height);
+                    most        = std::max(most, LayoutSection(variant, metrics, measure).height);
                 }
                 return most;
             };
@@ -639,12 +627,12 @@ namespace headsup
                 }
             }
             // A card's height is its empty card's and each row's, a gap before each.
-            const float empty = LayoutSection(PopupSection{section.heading, {}}, metrics, ornate, measure).height;
+            const float empty = LayoutSection(PopupSection{section.heading, {}}, metrics, measure).height;
             std::vector<PopupSection> parts{PopupSection{section.heading, {}}};
             float height = empty;
             for (PopupRow& row : rows)
             {
-                const float more = metrics.rowGap + LayoutSection(PopupSection{"", ListOf(row)}, metrics, ornate, measure).height;
+                const float more = metrics.rowGap + LayoutSection(PopupSection{"", ListOf(row)}, metrics, measure).height;
                 if (!parts.back().rows.empty() && height + more > tall)
                 {
                     parts.push_back(PopupSection{section.heading, {}});
@@ -684,11 +672,10 @@ namespace headsup
         }
     }
 
-    PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, BarShape shape, bool pinned,
+    PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, bool pinned,
                             SpanMeasure measure, float room, float least, std::optional<SettingsRoom> settings)
     {
         const float unit = metrics.popupText, pad = metrics.popupPadding, cardGap = std::round(unit * kCardGap);
-        const bool ornate = shape == BarShape::Ornate;
         PopupLayout l;
         // The title row: its icon, its text and the pin, which goes to the right edge once it is known.
         float x = pad, rowHeight = 0.0f;
@@ -793,10 +780,10 @@ namespace headsup
             if (section.heading.empty() && section.tabs.empty() &&
                 std::ranges::all_of(section.rows, [](const PopupRow& row) { return row.cells.empty(); }))
                 continue;
-            for (const PopupSection& part : SplitToFit(section, tall, metrics, ornate, measure))
+            for (const PopupSection& part : SplitToFit(section, tall, metrics, measure))
             {
                 // Width and Height make each card's box larger or smaller; its text stays the size it is.
-                Block& b = cards.emplace_back(LayoutCard(part, metrics, ornate, measure));
+                Block& b = cards.emplace_back(LayoutCard(part, metrics, measure));
                 b.width *= metrics.popupWidth;
                 b.height *= metrics.popupHeight;
                 b.reserve *= metrics.popupHeight;

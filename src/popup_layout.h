@@ -17,7 +17,7 @@ namespace headsup
     {
         Title,   // TitleFont, larger than popupText
         Text,    // the detail font at popupText
-        Heading, // TitleFont at heading size; uppercase and letter-spaced in the detail font for pills
+        Heading, // TitleFont at heading size
         Pin,     // the pinned mark: a heading's font and size, set solid
     };
 
@@ -126,7 +126,7 @@ namespace headsup
     // the settings chip left of it, lit while settings show. It is never narrower than least, its cards widening to
     // fill it. With settings, their room is left under the title in place of the sections, no taller than room leaves.
     constexpr float kTwoColumnsAbove = 24.0f;
-    PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, BarShape shape, bool pinned,
+    PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, bool pinned,
                             SpanMeasure measure, float room = std::numeric_limits<float>::infinity(), float least = 0.0f,
                             std::optional<SettingsRoom> settings = std::nullopt);
     // A layout taller than height keeps the title and the cards that end padding or more above it, and shrinks to

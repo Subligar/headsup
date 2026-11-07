@@ -123,8 +123,8 @@ namespace headsup
             long room = 0, gap = 0; // in tenths of a pixel
             bool operator==(const HelpBarKey&) const = default;
         };
-        // A popup's layout follows its content, its pin, the bar's height and shape and its text size, which pick its
-        // sizes and fonts, and the room below the bar, which cuts it.
+        // A popup's layout follows its content, its pin, the bar's height and its text size, which pick its sizes,
+        // and the room below the bar, which cuts it.
         struct HelpBarFit
         {
             HelpBarText text;
@@ -136,7 +136,6 @@ namespace headsup
             bool pinned     = false;
             float height    = 0.0f;
             float popupText = 0.0f;
-            BarShape shape  = BarShape::Ornate;
             float room      = 0.0f;
             float least     = 0.0f;
             std::optional<SettingsRoom> settings;

@@ -321,8 +321,8 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     minus.span              = Text(kOpenSign, Tone::Heading);
     layout.pieces = {card, title, value, icon, mark, star, rule, tag, socket, time, tab, track, thumb, item, plus, minus};
     // The title's line box starts 2 px under where the layout put its line; the text's, at it.
-    const PopupFaces faces = {PopupFace{"Marcellus SC", 24, 29, 0, 2.0f}, PopupFace{"Barlow Condensed", 18, 22, 0, 0.0f},
-        PopupFace{"Marcellus SC", 15, 18, 0, 0.0f}, PopupFace{"Marcellus SC", 15, 18, 0, 0.0f}};
+    const PopupFaces faces = {PopupFace{"Marcellus SC", 24, 29, 2.0f}, PopupFace{"Barlow Condensed", 18, 22, 0.0f},
+        PopupFace{"Marcellus SC", 15, 18, 0.0f}, PopupFace{"Marcellus SC", 15, 18, 0.0f}};
     const std::string rml = PopupRml(layout, look, faces);
     // The gold theme's panel has a second border 2 px outside it.
     CHECK(Has(rml, "<div id=\"outer\" style=\"left:-3px;top:-3px;width:226px;height:126px;\"></div>"));
@@ -360,12 +360,13 @@ TEST(the_popup_document_styles_its_faces_and_boxes_from_the_look)
 {
     Settings settings;
     const BarLook look = LookOf(BarTheme::UmbraDark, settings);
-    const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29, 0}, PopupFace{"Barlow Condensed", 18, 22, 0},
-        PopupFace{"Barlow Condensed", 15, 18, 2}, PopupFace{"Barlow Condensed", 15, 18, 0}};
+    const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29}, PopupFace{"Barlow Condensed", 18, 22},
+        PopupFace{"Barlow Condensed", 15, 18}, PopupFace{"Barlow Condensed", 15, 18}};
     const std::string rml = PopupDocument(look, faces);
     CHECK(Has(rml, "pointer-events:none") && Has(rml, "<body></body>"));
-    CHECK(Has(rml, ".f0{font-family:\"Barlow Condensed\";font-size:24px;line-height:29px;letter-spacing:0px;"));
-    CHECK(Has(rml, ".f2{font-family:\"Barlow Condensed\";font-size:15px;line-height:18px;letter-spacing:2px;"));
+    CHECK(Has(rml, ".f0{font-family:\"Barlow Condensed\";font-size:24px;line-height:29px;"));
+    CHECK(Has(rml, ".f2{font-family:\"Barlow Condensed\";font-size:15px;line-height:18px;"));
+    CHECK(!Has(rml, "letter-spacing"));
     // A tab's rows sit sunk into the card: darker, its upper edges dark and its lower ones lit.
     CHECK(Has(rml, ".socket{box-sizing:border-box;border:1px;border-color:#00000059 #ffffff14 #ffffff14 #00000059;"));
     CHECK(Has(rml, ".tab{") && Has(rml, ".tab.lit{"));
@@ -389,8 +390,8 @@ TEST(an_items_picture_is_named_by_its_id_for_the_plugin_to_serve)
 TEST(every_theme_eases_breathes_and_pulses_in_its_own_colors)
 {
     Settings settings;
-    const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29, 0}, PopupFace{"Barlow Condensed", 18, 22, 0},
-        PopupFace{"Barlow Condensed", 15, 18, 2}, PopupFace{"Barlow Condensed", 15, 18, 0}};
+    const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29}, PopupFace{"Barlow Condensed", 18, 22},
+        PopupFace{"Barlow Condensed", 15, 18}, PopupFace{"Barlow Condensed", 15, 18}};
     struct Lit
     {
         BarTheme theme;
@@ -434,8 +435,8 @@ TEST(the_line_of_light_and_the_glass_are_the_glass_shapes_alone)
     CHECK(Has(rml, "<div class=\"glint a\"></div><div class=\"glint b\"></div><div class=\"glint c\"></div>"));
     CHECK(Has(rml, ".glint.a{left:0%;width:30%;decorator:horizontal-gradient(#5ee6ff00 #5ee6ffff);}"));
     CHECK(Has(rml, ".glint.c{left:70%;width:30%;decorator:horizontal-gradient(#b48cffff #b48cff00);}"));
-    const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29, 0}, PopupFace{"Barlow Condensed", 18, 22, 0},
-        PopupFace{"Barlow Condensed", 15, 18, 2}, PopupFace{"Barlow Condensed", 15, 18, 0}};
+    const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29}, PopupFace{"Barlow Condensed", 18, 22},
+        PopupFace{"Barlow Condensed", 15, 18}, PopupFace{"Barlow Condensed", 15, 18}};
     // The panel is glass, lighter at its top, in a frame of the accent at a quarter.
     CHECK(Has(PopupDocument(aurora, faces),
         "#panel{background-color:transparent;decorator:vertical-gradient(#1b2740f2 #0c1220f2);border-color:#5ee6ff40;}"));

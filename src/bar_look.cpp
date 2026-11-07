@@ -26,8 +26,6 @@ namespace headsup
         constexpr uint32_t kCardFill     = 0x12FFFFFF; // a popup's section card: white over the panel, faintly
         constexpr uint32_t kCardEdge     = 0x1EFFFFFF;
         constexpr float kCardRadius      = 6.0f;
-        // The pills' section headings' letter-spacing, in their size: the approved mockup's 1.2 px at 10.5 px.
-        constexpr float kHeadingTracking = 1.2f / 10.5f;
 
         constexpr uint32_t MenuColors::*kMenuColorFields[] = {&MenuColors::background, &MenuColors::card,
             &MenuColors::control, &MenuColors::hover, &MenuColors::inset, &MenuColors::border, &MenuColors::raisedEdge,
@@ -175,11 +173,6 @@ namespace headsup
         {
         case PopupFont::Title: return TextFace{titleFont, metrics.popupTitle};
         case PopupFont::Heading:
-        {
-            const auto pixels  = static_cast<float>(WholePixels(metrics.heading));
-            const int tracking = ornate ? 0 : static_cast<int>(std::lround(pixels * kHeadingTracking));
-            return TextFace{titleFont, metrics.heading, tracking};
-        }
         case PopupFont::Pin: return TextFace{titleFont, metrics.heading};
         case PopupFont::Text: break;
         }

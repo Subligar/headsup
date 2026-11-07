@@ -28,8 +28,8 @@ TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
         BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
-    const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29, 0}, PopupFace{"Barlow Condensed", 18, 22, 0},
-        PopupFace{"Barlow Condensed", 15, 18, 2}, PopupFace{"Barlow Condensed", 15, 18, 0}};
+    const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29}, PopupFace{"Barlow Condensed", 18, 22},
+        PopupFace{"Barlow Condensed", 15, 18}, PopupFace{"Barlow Condensed", 15, 18}};
     Settings settings;
     std::vector<BarPalette> palettes;
     for (int t = 0; t < kFixedThemeCount; ++t)
@@ -336,4 +336,64 @@ TEST(an_exp_bar_in_a_widgets_line_draws_as_long_and_thick_as_the_old_bar_beside_
     CHECK_EQ(text->GetComputedValues().line_height().value, 14.0f);
     CHECK_EQ(text->GetInnerRML(), "25%");
     CHECK_EQ(rml.Said(), "");
+}
+
+TEST(a_pop_outs_title_card_heading_and_text_draw_at_18_16_and_14_px_and_a_heading_never_wider_than_its_title)
+{
+    // The user's sizes at a Text Scale of 1: the title 18 px, a card's heading 16 px, its text 14 px. Each word is
+    // the same in all three, so the smaller size must draw it narrower.
+    constexpr const char* kWord = "Conquest";
+    Settings settings;
+    for (const BarTheme theme : {BarTheme::UmbraDark, BarTheme::PhoenixGold})
+    {
+        test::RmlSession rml;
+        const BarLook look = LookOf(PaletteOf(theme), settings);
+        Rml::FontEngineInterface* engine = Rml::GetFontEngineInterface();
+        PopupFaces faces;
+        for (int f = 0; f < kPopupFontCount; ++f)
+        {
+            const TextFace face = look.FaceOf(static_cast<PopupFont>(f));
+            const auto pixels   = static_cast<int>(std::lround(face.size));
+            const Rml::FontMetrics& m = engine->GetFontMetrics(engine->GetFontFaceHandle(Rml::StringUtilities::ToLower(face.family),
+                Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal, pixels));
+            faces[static_cast<size_t>(f)] = PopupFace{face.family, pixels, static_cast<int>(std::lround(m.ascent + m.descent)), 0.0f};
+        }
+        const auto measure = [&](const Span& s, PopupFont f) {
+            const PopupFace& face = faces[static_cast<size_t>(f)];
+            static const Rml::String kNoLanguage;
+            const Rml::TextShapingContext shaping{kNoLanguage, Rml::Style::Direction::Auto, Rml::Style::FontKerning::Auto, 0.0f};
+            const Rml::FontFaceHandle handle = engine->GetFontFaceHandle(Rml::StringUtilities::ToLower(face.family),
+                Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal, face.pixels);
+            const auto line = static_cast<float>(face.line);
+            return TextSize{static_cast<float>(engine->GetStringWidth(handle, s.text, shaping)), line, 0.2f * line, line};
+        };
+        PopupContent content;
+        content.title = {Text(kWord)};
+        content.sections.push_back(PopupSection{kWord, {PopupRow{RowKind::Line, 0, {PopupCell{std::nullopt, false, {Text(kWord)}}}}}});
+        const PopupLayout layout = LayoutPopup(content, look.metrics, false, measure);
+        Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
+        popups->Show();
+        Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+        popup->SetClass(kPopupClass, true);
+        popup->SetInnerRML(PopupRml(layout, look, faces));
+        rml.context->Update();
+        struct Drawn
+        {
+            float pixels = 0.0f, width = 0.0f;
+        };
+        const auto drawn = [&](PopupFont font) {
+            Rml::ElementList found;
+            popup->GetElementsByClassName(found, "f" + std::to_string(static_cast<int>(font)));
+            for (Rml::Element* e : found)
+                if (e->GetInnerRML() == kWord)
+                    return Drawn{e->GetComputedValues().font_size(), static_cast<float>(Rml::ElementUtilities::GetStringWidth(e, Rml::String(kWord)))};
+            return Drawn{};
+        };
+        const Drawn title = drawn(PopupFont::Title), heading = drawn(PopupFont::Heading), text = drawn(PopupFont::Text);
+        CHECK_EQ(title.pixels, 18.0f);
+        CHECK_EQ(heading.pixels, 16.0f);
+        CHECK_EQ(text.pixels, 14.0f);
+        CHECK(text.width > 0.0f && text.width < heading.width && heading.width < title.width);
+        CHECK_EQ(rml.Said(), "");
+    }
 }

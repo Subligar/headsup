@@ -591,7 +591,7 @@ namespace headsup
         css += ".p{position:absolute;white-space:pre;}";
         for (int f = 0; f < kPopupFontCount; ++f)
             css += ".f" + std::to_string(f) + "{" + FaceRules(faces[f].family, faces[f].pixels, faces[f].line) +
-                   "letter-spacing:" + Px(static_cast<float>(faces[f].tracking)) + ";" + ShadowEffect(faces[f].pixels) + "}";
+                   ShadowEffect(faces[f].pixels) + "}";
         if (panel.outer != 0)
             css += "#outer{position:absolute;box-sizing:border-box;border:1px " + RcssColor(panel.outer) +
                    ";border-radius:" + Px(panel.radius + static_cast<float>(OuterPad(panel))) + ";}";

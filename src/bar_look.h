@@ -14,12 +14,11 @@
 
 namespace headsup
 {
-    // A text's font family, pixel size and letter-spacing.
+    // A text's font family and pixel size.
     struct TextFace
     {
         const char* family = nullptr;
         float size         = 0.0f;
-        int tracking       = 0; // pixels after each letter
     };
 
     // A frame's palette, sizes and fonts: what every part of the bar is drawn with.
