@@ -43,8 +43,17 @@ namespace headsup
         BeastmenCrest,
     };
 
+    // An EXP bar among a line's text: width by height pixels, filled to done of its width, its text in its middle.
+    struct InlineBar
+    {
+        float done = 0.0f;
+        int width = 0, height = 0;
+        std::string text;
+        bool operator==(const InlineBar&) const = default;
+    };
+
     // Some text, and before it at most one mark: a game picture, an icon or gil's coin as tall as its letters, or an
-    // EXP bar filled to bar.
+    // EXP bar.
     struct Span
     {
         std::string text;
@@ -53,20 +62,10 @@ namespace headsup
         GamePicture picture = GamePicture::None;
         std::optional<Icon> icon{};
         bool coin = false;
-        std::optional<float> bar{};
+        std::optional<InlineBar> bar{};
         bool operator==(const Span&) const = default;
     };
     constexpr bool HasMark(const Span& s) { return s.picture != GamePicture::None || s.icon || s.coin || s.bar; }
-
-    // A bar in a widget's middle, filled to done of its width, with text on any side of it.
-    struct Meter
-    {
-        float done = 0.0f;
-        int width = 0, height = 0; // pixels
-        std::vector<Span> above, below, left, right;
-        Align align = Align::Center; // the texts above and below, against the bar
-        bool operator==(const Meter&) const = default;
-    };
 
     struct WidgetContent
     {
@@ -83,7 +82,6 @@ namespace headsup
         // Each span of either line is a cell, and the cells at one place of their lines a column, the columns a gap
         // apart: the Conquest widget's two by two.
         bool cells = false;
-        std::optional<Meter> meter; // in place of the lines
         bool operator==(const WidgetContent&) const = default;
     };
 

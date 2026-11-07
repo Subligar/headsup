@@ -84,8 +84,7 @@ namespace headsup
     // The target has one frame the bar gives way around, and game help a bar of its own: neither has copies.
     constexpr bool HasCopies(BarWidget widget) { return widget != BarWidget::Target && widget != BarWidget::GameHelp; }
 
-    // What the EXP says, any of them in this order: what is earned of the level, what is left to the next, and the
-    // share earned as a percent.
+    // What an EXP text says: what is earned of the level, what is left to the next, or the share earned as a percent.
     enum class ExpText : uint8_t
     {
         Earned,
@@ -93,20 +92,14 @@ namespace headsup
         Percent,
     };
     constexpr int kExpTextCount = static_cast<int>(ExpText::Percent) + 1;
-    constexpr uint8_t ExpTextBit(ExpText part) { return static_cast<uint8_t>(1u << static_cast<int>(part)); }
-    constexpr uint8_t kDefaultExpText = ExpTextBit(ExpText::ToNext);
-    // Where the Job & EXP widget's Bar layout puts each of its texts around its bar.
-    enum class ExpTextPlace : uint8_t
+    // How the Job & EXP widget's Job Info says the jobs: "WAR 75 / NIN 37", "WAR 75" or "75 WAR / NIN".
+    enum class JobText : uint8_t
     {
-        Off,
-        Above,
-        Below,
-        Left,
-        Right,
+        MainSub,
+        Main,
+        LevelFirst,
     };
-    constexpr int kExpTextPlaceCount = static_cast<int>(ExpTextPlace::Right) + 1;
-    using ExpPlaces                  = std::array<ExpTextPlace, kExpTextCount>; // by ExpText
-    constexpr ExpPlaces kDefaultExpPlaces{ExpTextPlace::Off, ExpTextPlace::Right, ExpTextPlace::Off};
+    constexpr int kJobTextCount = static_cast<int>(JobText::LevelFirst) + 1;
     constexpr int kMinExpBarWidth = 40, kMaxExpBarWidth = 400, kDefaultExpBarWidth = 100;  // pixels
     constexpr int kMinExpBarHeight = 2, kMaxExpBarHeight = 16, kDefaultExpBarHeight = 6;   // pixels
 

@@ -42,8 +42,6 @@ namespace headsup
         // A widget's title: in the detail font at the title's size for a widget of figures, in the title face else.
         TextFace TitleFace(const WidgetContent& content) const;
         TextFace DetailFace() const;
-        // A meter's texts: the detail font at the side line's size, the title's on a row of one line.
-        TextFace MeterFace() const;
         TextFace FaceOf(PopupFont font) const;
         // The icons, picture and coin beside a widget's text.
         float Leading(const WidgetContent& content) const;
@@ -86,12 +84,8 @@ namespace headsup
     constexpr float kCapScale      = 1.4f;  // an end cap's diamond, in diamonds
     constexpr float kLineIconGap   = 2.0f;  // pixels before an icon or coin among a line's text
     constexpr float kPictureGap    = 6.0f;  // before a game picture there
-    constexpr float kMeterTextGap  = 2.0f;  // between a meter's bar and the text above or below it
-    // An EXP bar among a line's text: two bar heights long and a seventh of one thick, as the bar beside the text was.
-    float InlineBarWidth(const BarMetrics& metrics);
-    float InlineBarThickness(const BarMetrics& metrics);
-    // The room a span's mark takes before its text, at letters size pixels tall, an EXP bar barWidth.
-    float MarkWidth(const Span& span, float size, float barWidth);
+    // The room a span's mark takes before its text, at letters size pixels tall.
+    float MarkWidth(const Span& span, float size);
     // What a widget's title and detail line can hold, for how far their ink reaches: capitals, figures (taller
     // than the capitals in Marcellus, and some descend), a "[S]" zone's brackets, the bags' slash, descenders
     // (Marcellus's Q and J too) and commas; the detail line's ascenders, descenders and comma. Popup text holds

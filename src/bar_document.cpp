@@ -86,8 +86,17 @@ namespace headsup
             if (span.icon) return "<img class=\"line-icon\" src=\"" + IconSource(*span.icon) + "\"/>";
             if (span.coin) return "<img class=\"line-icon\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
             if (span.bar)
-                return "<span class=\"ibar\"><span class=\"fill\" style=\"width: " +
-                       RcssNumber(std::clamp(*span.bar, 0.0f, 1.0f) * kPercentWhole) + "%\"></span></span>";
+            {
+                const InlineBar& bar = *span.bar;
+                const auto height    = static_cast<float>(bar.height);
+                std::string rml = "<span class=\"ibar\" style=\"width:" + Px(static_cast<float>(bar.width)) + ";height:" +
+                                  Px(height) + ";\"><span class=\"fill\" style=\"width: " +
+                                  RcssNumber(std::clamp(bar.done, 0.0f, 1.0f) * kPercentWhole) + "%\"></span>";
+                if (!bar.text.empty())
+                    rml += "<span class=\"btext\" style=\"line-height:" + Px(height) + ";color:" +
+                           RcssColor(look.BarColor(Span{bar.text})) + ";\">" + EscapedRml(bar.text) + "</span>";
+                return rml + "</span>";
+            }
             return {};
         }
 
@@ -343,7 +352,7 @@ namespace headsup
             css += ".pills .widget.target,.pills .widget.backed{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
             css += ".pills .widget.lit{background-color:" + RcssColor(Faded(cyan, 0x2E)) + ";border-color:" +
                    RcssColor(Faded(cyan, 0xB3)) + ";}";
-            css += ".ibar,.mbar{background-color:#ffffff1f;}";
+            css += ".ibar{background-color:#ffffff1f;}";
             return css;
         }
     }
@@ -358,9 +367,6 @@ namespace headsup
             std::string css;
             css += scope + ".title{" + LineRules(titleFont, lines.title, place.title, rowTop) + "}";
             css += scope + ".title.alone{" + LineRules(titleFont, lines.alone, place.alone, rowTop) + "}";
-            // A meter's texts are in the detail font; those beside its bar have their ink on the row's middle.
-            css += scope + ".mtext{" + FaceRules(detailFont, lines.side, place.side.height) + ShadowEffect(lines.side) + "}";
-            css += scope + ".mside{top:" + Px(std::round(place.side.top) - (rowTop - kContentInset)) + ";}";
             css += scope + ".title.figures{" + LineRules(detailFont, lines.title, place.figures, rowTop) + "}";
             css += scope + ".title.figures.alone{" + LineRules(detailFont, lines.alone, place.figuresAlone, rowTop) + "}";
             css += scope + ".title .line-icon{" + square(static_cast<float>(lines.title)) + "margin-top:" + Px(place.title.iconDrop) + ";}";
@@ -467,14 +473,12 @@ namespace headsup
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";
         css += TextRules("", look.titleFont, look.detailFont, lines, place, rowTop);
-        css += ".meter{display:inline-block;vertical-align:top;position:relative;height:" + Px(row.height) +
-               ";margin-top:" + Px(-kContentInset) + ";}";
-        css += ".mtext{position:absolute;white-space:pre;}";
-        css += ".mbar{position:absolute;background-color:" + RcssColor(p.divider) + ";}";
-        // An EXP bar among a line's text, on its letters' middle; its fill a block, as a span takes no width.
-        css += ".ibar{display:inline-block;vertical-align:middle;width:" + Px(InlineBarWidth(m)) + ";height:" +
-               Px(InlineBarThickness(m)) + ";background-color:" + RcssColor(p.divider) + ";}";
+        // An EXP bar among a line's text, on its letters' middle; its fill a block, as a span takes no width, and its
+        // text over it, in its middle.
+        css += ".ibar{display:inline-block;vertical-align:middle;position:relative;background-color:" +
+               RcssColor(p.divider) + ";}";
         css += ".ibar .fill{display:block;}";
+        css += ".ibar .btext{position:absolute;left:0px;top:0px;width:100%;height:100%;text-align:center;white-space:pre;}";
         // Progress is a gradient that pulses.
         css += ".fill{height:100%;decorator:horizontal-gradient(" + RcssColor(p.accent) + " " + RcssColor(p.accentEnd) +
                ");animation:1.8s sine-in-out infinite alternate pulse;}";
@@ -714,51 +718,10 @@ namespace headsup
         return columns.empty() ? 0.0f : total + gap * static_cast<float>(columns.size() - 1);
     }
 
-    MeterPlace PlaceMeter(const Meter& meter, const MeterWidths& text, float gap)
-    {
-        const auto bar    = static_cast<float>(meter.width);
-        const auto beside = [&](float width) { return width > 0.0f ? width + gap : 0.0f; };
-        // A text above or below wider than the bar runs past it away from the side it lines up with.
-        const float past  = std::max({0.0f, text.above - bar, text.below - bar});
-        const float share = meter.align == Align::Center ? past / 2.0f : past;
-        const float left  = std::max(beside(text.left), meter.align == Align::Left ? 0.0f : share);
-        const float right = std::max(beside(text.right), meter.align == Align::Right ? 0.0f : share);
-        const auto at     = [&](float width) {
-            return meter.align == Align::Left ? left : meter.align == Align::Right ? left + bar - width : left + (bar - width) / 2.0f;
-        };
-        return MeterPlace{left + bar + right, left, at(text.above), at(text.below)};
-    }
-
-    std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns,
-        const MeterPlace& meter)
+    std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns)
     {
         const bool alone = content.subtitle.empty();
         std::string rml  = "<div class=\"content\">";
-        if (content.meter)
-        {
-            const Meter& m   = *content.meter;
-            const auto bar   = static_cast<float>(m.width), thick = static_cast<float>(m.height);
-            // The bar and the texts over and under it centered on the row together: half a line of text and its gap
-            // off the middle with text on one side only. The texts beside it move with it.
-            const float middle = std::round((look.row.height - thick) / 2.0f);
-            const float off    = (static_cast<float>(look.lines.side) + kMeterTextGap) / 2.0f *
-                              static_cast<float>(static_cast<int>(!m.above.empty()) - static_cast<int>(!m.below.empty()));
-            const float top    = std::round((look.row.height - thick) / 2.0f + off);
-            const std::string by = "margin-top:" + Px(top - middle) + ";";
-            const float done = std::clamp(m.done, 0.0f, 1.0f) * kPercentWhole;
-            const auto text  = [&](const std::vector<Span>& spans, const char* classes, const std::string& place) {
-                return spans.empty() ? std::string()
-                                     : std::string("<div class=\"") + classes + "\" style=\"" + place + "\">" + Spans(spans, look) + "</div>";
-            };
-            rml += "<div class=\"meter\" style=\"width:" + Px(meter.width) + ";\">";
-            rml += "<div class=\"mbar\" style=\"left:" + Px(meter.barX) + ";top:" + Px(top) + ";width:" + Px(bar) +
-                   ";height:" + Px(thick) + ";\"><div class=\"fill\" style=\"width: " + RcssNumber(done) + "%\"></div></div>";
-            rml += text(m.above, "mtext", "left:" + Px(meter.aboveX) + ";bottom:" + Px(look.row.height - top + kMeterTextGap) + ";");
-            rml += text(m.below, "mtext", "left:" + Px(meter.belowX) + ";top:" + Px(top + thick + kMeterTextGap) + ";");
-            rml += text(m.left, "mtext mside", "right:" + Px(meter.width - meter.barX + look.metrics.gap) + ";" + by);
-            rml += text(m.right, "mtext mside", "left:" + Px(meter.barX + bar + look.metrics.gap) + ";" + by);
-            return rml + "</div></div>";
-        }
         std::string icons;
         const std::string side = content.iconsRight ? " right" : "";
         if (content.picture != GamePicture::None)

@@ -252,6 +252,31 @@ TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under
     CHECK(Placed(w.settings.barSections, *w.state.settingsAsked));
 }
 
+TEST(the_job_widgets_bar_rows_show_with_its_exp_bar_and_job_text_with_its_job_info)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on = true;
+    w.readings.settingsOf     = {job};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs | tonext bar");
+    std::string shown = rows();
+    for (const char* key : {"bar-width", "bar-height", "bar-text", "job-names", "job-text"})
+        CHECK(Has(shown, key));
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext -bar");
+    shown = rows();
+    for (const char* key : {"bar-width", "bar-height", "bar-text", "job-names", "job-text"})
+        CHECK(!Has(shown, key));
+    // Job Text names the jobs, so it goes with Job Names off.
+    w.settings.Widget(job).design   = DesignFrom(BarWidget::Job, "jobs | tonext");
+    w.settings.Widget(job).jobNames = false;
+    shown = rows();
+    CHECK(Has(shown, "job-names") && !Has(shown, "job-text"));
+}
+
 TEST(the_reset_card_asks_twice)
 {
     Window w;

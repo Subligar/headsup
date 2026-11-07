@@ -274,8 +274,6 @@ namespace headsup
         const float centered = row.y + (row.height - (alone.baseline - alone.top)) / 2.0f;
         const float lowest   = row.y + row.height - kPillBorder - margin - (alone.bottom - alone.top);
         t.aloneY             = std::min(centered, lowest) - alone.top;
-        t.side               = t.detail;
-        t.sideY              = row.y + (row.height - (detail.baseline - detail.top)) / 2.0f - detail.top;
         return t;
     }
 

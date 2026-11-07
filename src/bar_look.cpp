@@ -18,9 +18,6 @@ namespace headsup
         constexpr uint32_t kMenuPageAlpha = 0xF7, kMenuEdgeAlpha = 0x24, kMenuRaisedAlpha = 0x3D, kMenuSoftAlpha = 0x47;
         constexpr float kCardStep = 0.07f, kInsetShade = 0.4f, kLabelShare = 0.3f, kMutedShare = 0.4f;
         constexpr float kCoinScale       = 0.75f; // gil's coin, in icons
-        constexpr float kInlineBarLength = 2.0f;  // an EXP bar among a line's text: this many bar heights long
-        constexpr float kInlineBarShare  = 0.14f; // and this thick, of the bar's height
-        constexpr float kLeastInlineBar  = 2.0f;
         constexpr float kFrameRadius     = 3.0f;  // the ornate target frame and hover tint
         constexpr int kLitTarget         = 2;     // a hovered ornate target's tint, in hover tints' alpha
         constexpr float kHelpPadShare    = 0.5f;   // of the gap: clear above and below the help bar's row
@@ -148,8 +145,6 @@ namespace headsup
 
     TextFace BarLook::DetailFace() const { return TextFace{detailFont, static_cast<float>(lines.detail)}; }
 
-    TextFace BarLook::MeterFace() const { return TextFace{detailFont, static_cast<float>(lines.side)}; }
-
     TextFace BarLook::FaceOf(PopupFont font) const
     {
         switch (font)
@@ -193,19 +188,12 @@ namespace headsup
 
     int CoinPixels(const BarMetrics& metrics) { return WholePixels(metrics.icon * kCoinScale); }
 
-    float InlineBarWidth(const BarMetrics& metrics) { return std::round(metrics.height * kInlineBarLength); }
-
-    float InlineBarThickness(const BarMetrics& metrics)
-    {
-        return std::max(kLeastInlineBar, std::round(metrics.height * kInlineBarShare));
-    }
-
-    float MarkWidth(const Span& span, float size, float barWidth)
+    float MarkWidth(const Span& span, float size)
     {
         const float side = std::round(size);
         return span.picture != GamePicture::None ? kPictureGap + side
                : span.icon || span.coin          ? kLineIconGap + side
-               : span.bar                        ? barWidth
+               : span.bar                        ? static_cast<float>(span.bar->width)
                                                  : 0.0f;
     }
 

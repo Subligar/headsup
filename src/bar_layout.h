@@ -57,9 +57,6 @@ namespace headsup
         float titleY = 0.0f, detailY = 0.0f; // the title over the detail line
         int alone    = 0;                    // a title without one: its own size, as large as one line fits
         float aloneY = 0.0f;
-        // A meter's texts, at the detail line's size; those beside its bar with their capitals on the row's middle.
-        int side     = 0;
-        float sideY  = 0.0f;
         bool operator==(const TextRow&) const = default;
     };
     // Placed by their ink, which ink gives for the title's or the detail's font at a size: the title's top to the

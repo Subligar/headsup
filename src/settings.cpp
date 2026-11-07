@@ -236,7 +236,6 @@ namespace headsup
         constexpr const char* kClockZoneKey       = "clockZone"; // the Clock widget's: a kClockZoneNames or kLocalZone
         constexpr const char* kClockSecondZoneKey = "clockSecondZone"; // its Secondary Timezone's, the same way
         constexpr const char* kLocalZone          = "local";
-        constexpr const char* kExpMeterKey       = "jobExpMeter";
         constexpr const char* kTargetDetectionKey = "barTargetDetection";
         constexpr const char* kTargetShowsKey    = "barTargetShows";
         constexpr const char* kMenuFontKey      = "menuFont";
@@ -251,12 +250,13 @@ namespace headsup
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
         const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
         // The EXP widget's: a place for each ExpText, and its bar's size.
-        const char* const kExpPlaceKeys[kExpTextCount] = {"barExpEarned", "barExpToNext", "barExpPercent"};
-        const char* const kExpPlaceNames[kExpTextPlaceCount] = {"off", "above", "below", "left", "right"};
         constexpr const char* kExpBarWidthKey = "barExpBarWidth", *kExpBarHeightKey = "barExpBarHeight";
-        constexpr const char* kExpAlignKey = "barExpAlign";
-        constexpr const char* kExpTextKey  = "expText";
+        constexpr const char* kExpBarTextKey  = "barExpBarText";
+        constexpr const char* kNoExpBarText   = "none";
+        const char* const kExpTextNames[kExpTextCount] = {"earned", "toNext", "percent"};
         constexpr const char* kJobNamesKey  = "jobNames";
+        constexpr const char* kJobTextKey   = "jobText";
+        const char* const kJobTextNames[kJobTextCount] = {"mainSub", "main", "levelFirst"};
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
         const char* const kClockZoneNames[kClockZoneCount] = {"japan", "utc", "usEastern", "usCentral", "usMountain",
@@ -1300,17 +1300,14 @@ namespace headsup
             }
             case BarWidget::Job:
             {
-                o.expMeter = flag(kExpMeterKey, o.expMeter);
-                o.expText  = static_cast<uint8_t>(std::clamp(number(kExpTextKey, o.expText), 0, (1 << kExpTextCount) - 1));
                 o.jobNames = flag(kJobNamesKey, o.jobNames);
-                for (int t = 0; t < kExpTextCount; ++t)
-                {
-                    ExpTextPlace& place = o.expPlaces[static_cast<size_t>(t)];
-                    place = static_cast<ExpTextPlace>(NameIndex(kExpPlaceNames, kExpTextPlaceCount, text(kExpPlaceKeys[t]), static_cast<int>(place)));
-                }
+                o.jobText  = static_cast<JobText>(NameIndex(kJobTextNames, kJobTextCount, text(kJobTextKey), static_cast<int>(o.jobText)));
                 o.expBarWidth  = number(kExpBarWidthKey, o.expBarWidth);
                 o.expBarHeight = number(kExpBarHeightKey, o.expBarHeight);
-                o.expAlign = static_cast<Align>(NameIndex(kAlignNames, kAlignCount, text(kExpAlignKey), static_cast<int>(o.expAlign)));
+                if (const std::string barText = text(kExpBarTextKey); barText == kNoExpBarText)
+                    o.expBarText.reset();
+                else if (const int at = NameIndex(kExpTextNames, kExpTextCount, barText, -1); at >= 0)
+                    o.expBarText = static_cast<ExpText>(at);
                 break;
             }
             case BarWidget::Target:
@@ -1356,14 +1353,11 @@ namespace headsup
                 flag(kClockSecondsKey, o.clockSeconds);
                 break;
             case BarWidget::Job:
-                flag(kExpMeterKey, o.expMeter);
-                StoreFloat(store, CopyKey(kExpTextKey, w), static_cast<float>(o.expText));
                 flag(kJobNamesKey, o.jobNames);
-                for (int t = 0; t < kExpTextCount; ++t)
-                    text(kExpPlaceKeys[t], kExpPlaceNames[static_cast<int>(o.expPlaces[static_cast<size_t>(t)])]);
+                text(kJobTextKey, kJobTextNames[static_cast<int>(o.jobText)]);
                 StoreFloat(store, CopyKey(kExpBarWidthKey, w), static_cast<float>(o.expBarWidth));
                 StoreFloat(store, CopyKey(kExpBarHeightKey, w), static_cast<float>(o.expBarHeight));
-                text(kExpAlignKey, kAlignNames[static_cast<int>(o.expAlign)]);
+                text(kExpBarTextKey, o.expBarText ? kExpTextNames[static_cast<int>(*o.expBarText)] : kNoExpBarText);
                 break;
             case BarWidget::Target:
                 StoreFloat(store, CopyKey(kTargetDetectionKey, w), static_cast<float>(o.targetDetection));

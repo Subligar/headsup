@@ -1408,16 +1408,16 @@ TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_o
     const WidgetContent w = Content(BarWidget::Job, state, settings);
     CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "WAR 30 / NIN 15" &&
           Joined(w.subtitle) == "3,460 EXP to next  ");
-    CHECK(w.subtitle.back().bar && std::fabs(*w.subtitle.back().bar - 4140.0f / 7600.0f) < 1e-6f); // the bar after it
+    CHECK(w.subtitle.back().bar && std::fabs(w.subtitle.back().bar->done - 4140.0f / 7600.0f) < 1e-6f); // the bar after it
     CHECK(Joined(BarPopupContent(BarWidget::Job, state, settings).title) == "Job and EXP"); // words: the title font
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
-          (std::vector<std::string>{"EXP 4,140 / 7,600", "To Next 3,460", "Per Hour 18,000", "Next Level in 11m 32s",
+          (std::vector<std::string>{"Earned EXP 4,140 / 7,600", "Til Next Level 3,460", "EXP Per Hour 18,000", "Next Level in 11m 32s",
               "Limit Points 0 / 10,000"})); // 7,600 - 4,140 = 3,460; at 18,000 an hour that is 692 s
 
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
     CHECK(Content(BarWidget::Job, state, settings).subtitle.front().text == "7 merits");
-    CHECK(Content(BarWidget::Job, state, settings).subtitle.back().bar == 0.421f); // limit points to the next merit
+    CHECK(Content(BarWidget::Job, state, settings).subtitle.back().bar->done == 0.421f); // limit points to the next merit
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
           (std::vector<std::string>{"Merits 7 / 10", "Limit Points 4,210 / 10,000", "Per Hour -",
               "Limit Mode is off, so EXP does not become merits."}));
@@ -1870,10 +1870,10 @@ TEST(the_job_widgets_design_places_its_exp_bar_anywhere_and_its_jobs_can_show_le
     s.exp = 3800, s.expNeeded = 7600;
     state.job = JobReport{s, std::nullopt};
     WidgetOptions& o = settings.Widget(BarWidget::Job);
-    o.design        = DesignFrom(BarWidget::Job, "jobs bar | exp");
+    o.design        = DesignFrom(BarWidget::Job, "jobs bar | tonext");
     WidgetContent w = Content(BarWidget::Job, state, settings);
-    CHECK(w.title.back().bar == 0.5f && Joined(w.subtitle) == "3,800 EXP to next");
-    o.design = DesignFrom(BarWidget::Job, "jobs | exp -bar");
+    CHECK(w.title.back().bar->done == 0.5f && Joined(w.subtitle) == "3,800 EXP to next");
+    o.design = DesignFrom(BarWidget::Job, "jobs | tonext -bar");
     w        = Content(BarWidget::Job, state, settings);
     CHECK(std::ranges::none_of(w.subtitle, [](const Span& span) { return span.bar.has_value(); }));
     o.jobNames = false;
@@ -1892,12 +1892,12 @@ TEST(the_job_widgets_design_can_put_its_exp_first_or_show_it_alone)
     s.exp = 4140, s.expNeeded = 7600;
     state.job        = JobReport{s, std::nullopt};
     WidgetOptions& o = settings.Widget(BarWidget::Job);
-    o.design         = DesignFrom(BarWidget::Job, "exp | jobs -bar");
+    o.design         = DesignFrom(BarWidget::Job, "tonext | jobs -bar");
     WidgetContent w  = Content(BarWidget::Job, state, settings);
     CHECK(w.title == ListOf(Text("3,460 EXP to next"))); // the larger line, in the title's own tone
     CHECK(w.subtitle == ListOf(Text("WAR 30 / NIN 15", Tone::Dim)));
     CHECK(w.figures && w.hasPopup);
-    o.design = DesignFrom(BarWidget::Job, "-jobs exp | -bar");
+    o.design = DesignFrom(BarWidget::Job, "-jobs tonext | -bar");
     w        = Content(BarWidget::Job, state, settings);
     CHECK(Joined(w.title) == "3,460 EXP to next" && w.subtitle.empty());
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
@@ -2388,28 +2388,6 @@ TEST(the_bags_popup_lists_mog_safe_2_only_once_it_holds_something)
     CHECK(listed("Inventory") && !listed("Mog Safe 2"));
     state.bags[kMogSafe2] = BagCount{3, 50};
     CHECK(listed("Mog Safe 2"));
-}
-
-TEST(the_job_and_exp_widgets_bar_layout_is_its_exp_bar_by_its_own_settings)
-{
-    Settings settings;
-    BarState state;
-    JobSample s;
-    s.mainJob = 1, s.mainLevel = 30, s.exp = 12345, s.expNeeded = 20000;
-    state.job = JobReport{s, std::nullopt};
-    WidgetOptions& o = settings.Widget(BarWidget::Job);
-    CHECK(!Content(BarWidget::Job, state, settings).meter); // its lines on a new install
-    o.expMeter     = true;
-    o.expPlaces    = {ExpTextPlace::Off, ExpTextPlace::Off, ExpTextPlace::Left};
-    o.expBarWidth  = 200;
-    o.expBarHeight = 8;
-    const WidgetContent w = Content(BarWidget::Job, state, settings);
-    CHECK(w.shown && w.meter && w.meter->left.front().text == "61%" && w.meter->right.empty());
-    CHECK(w.meter->width == 200 && w.meter->height == 8 && w.hasPopup);
-    CHECK(NeedsOf(settings, {}).job);
-    // Without the meter, its own lines.
-    o.expMeter = false;
-    CHECK_EQ(Content(BarWidget::Job, state, settings).subtitle.front().text, "7,655 EXP to next");
 }
 
 TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)

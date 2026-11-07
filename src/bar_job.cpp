@@ -33,33 +33,41 @@ namespace headsup
 
         constexpr int kWholePercent    = 100;
 
-        // The parts picked of points earned out of whole: the unit (EXP or LP) after the first number, and a percent
-        // never above what is earned.
-        std::string ExpParts(uint32_t earned, uint32_t whole, const char* unit, uint8_t parts)
+        // What one text says of points earned out of whole, in unit (EXP or LP); a percent is never above what is
+        // earned.
+        std::string ExpPart(uint32_t earned, uint32_t whole, const char* unit, ExpText text)
         {
-            std::vector<std::string> said;
-            bool named = false;
-            const auto unitOnce = [&]() { return std::exchange(named, true) ? std::string() : std::string(" ") + unit; };
-            if (parts & ExpTextBit(ExpText::Earned)) said.push_back(OutOf(earned, whole) + unitOnce());
-            if (parts & ExpTextBit(ExpText::ToNext))
-                said.push_back(Grouped(whole > earned ? whole - earned : 0) + unitOnce() + " to next");
-            if (parts & ExpTextBit(ExpText::Percent))
-                said.push_back(std::to_string(whole > 0 ? static_cast<uint64_t>(std::min(earned, whole)) * kWholePercent / whole : 0) + "%");
-            std::string text;
-            for (const std::string& part : said)
-                text += (text.empty() ? "" : kDot) + part;
-            return text;
+            switch (text)
+            {
+            case ExpText::Earned: return OutOf(earned, whole) + " " + unit;
+            case ExpText::ToNext: return Grouped(whole > earned ? whole - earned : 0) + " " + unit + " to next";
+            case ExpText::Percent:
+                return std::to_string(whole > 0 ? static_cast<uint64_t>(std::min(earned, whole)) * kWholePercent / whole : 0) + "%";
+            }
+            return {};
         }
 
-        // What parts say of the EXP; at the cap the merits stand for what is left to the next, and the rest are limit
-        // points.
-        std::string ExpSaid(const JobSample& s, uint8_t parts)
+        // What a text says of the EXP; at the cap the points are limit points and the merits stand for what is left to
+        // the next.
+        std::string ExpSaid(const JobSample& s, ExpText text)
         {
-            if (!AtCap(s)) return ExpParts(s.exp, s.expNeeded, "EXP", parts);
-            const std::string points = ExpParts(std::min(s.limitPoints, kLimitPointsPerMerit), kLimitPointsPerMerit, "LP",
-                static_cast<uint8_t>(parts & ~ExpTextBit(ExpText::ToNext)));
-            if (!(parts & ExpTextBit(ExpText::ToNext))) return points;
-            return std::to_string(s.merits) + (s.merits == 1 ? " merit" : " merits") + (points.empty() ? "" : kDot + points);
+            if (!AtCap(s)) return ExpPart(s.exp, s.expNeeded, "EXP", text);
+            if (text == ExpText::ToNext) return std::to_string(s.merits) + (s.merits == 1 ? " merit" : " merits");
+            return ExpPart(std::min(s.limitPoints, kLimitPointsPerMerit), kLimitPointsPerMerit, "LP", text);
+        }
+
+        std::string JobsAs(const JobSample& s, JobText text)
+        {
+            const std::string main = JobName(s.mainJob), sub = s.subLevel > 0 ? JobName(s.subJob) : "";
+            if (main.empty()) return "-";
+            const std::string level = std::to_string(s.mainLevel);
+            switch (text)
+            {
+            case JobText::MainSub: return Jobs(s);
+            case JobText::Main: return main + " " + level;
+            case JobText::LevelFirst: return level + " " + main + (sub.empty() ? "" : " / " + sub);
+            }
+            return {};
         }
 
         // How full the bar is: of the level, or of the next merit at the cap; nothing without a level's worth.
@@ -129,58 +137,28 @@ namespace headsup
         return total * kHour / span;
     }
 
-    std::vector<PartContent> JobParts(const std::optional<JobReport>& job, bool jobNames, uint8_t expText, WidgetContent& base)
+    std::vector<PartContent> JobParts(const std::optional<JobReport>& job, const WidgetOptions& o, WidgetContent& base)
     {
         if (!job) return {};
         const JobSample& s = job->sample;
-        Span jobs = Text(jobNames ? Jobs(s)
-                                  : "Lv " + std::to_string(s.mainLevel) +
-                                        (s.subLevel > 0 && !std::string(JobName(s.subJob)).empty()
-                                                ? " / " + std::to_string(s.subLevel)
-                                                : ""));
-        // At the cap the merits always show, as they stand for what is left to the next.
-        const std::string said = ExpSaid(s, AtCap(s) ? static_cast<uint8_t>(expText | ExpTextBit(ExpText::ToNext)) : expText);
+        Span jobs = Text(o.jobNames ? JobsAs(s, o.jobText)
+                                    : "Lv " + std::to_string(s.mainLevel) +
+                                          (s.subLevel > 0 && !std::string(JobName(s.subJob)).empty()
+                                                  ? " / " + std::to_string(s.subLevel)
+                                                  : ""));
         std::vector<PartContent> parts{{WidgetPart::JobJobs, ListOf(std::move(jobs))},
-            {WidgetPart::JobExp, said.empty() ? std::vector<Span>{} : ListOf(Text(said))}, {WidgetPart::JobBar, {}}};
+            {WidgetPart::JobEarned, ListOf(Text(ExpSaid(s, ExpText::Earned)))},
+            {WidgetPart::JobToNext, ListOf(Text(ExpSaid(s, ExpText::ToNext)))},
+            {WidgetPart::JobPercent, ListOf(Text(ExpSaid(s, ExpText::Percent)))}, {WidgetPart::JobBar, {}}};
         if (const std::optional<float> done = ExpDone(s))
         {
             Span bar = Text("");
-            bar.bar  = *done;
+            bar.bar  = InlineBar{*done, o.expBarWidth, o.expBarHeight, o.expBarText ? ExpSaid(s, *o.expBarText) : ""};
             parts.back().spans.push_back(bar);
         }
         base.hasPopup = true;
         base.figures  = true;
         return parts;
-    }
-
-    WidgetContent ExpWidget(const std::optional<JobReport>& job, const ExpPlaces& places, int width, int height, Align align)
-    {
-        WidgetContent w;
-        w.shown = true;
-        if (!job)
-        {
-            w.title = ListOf(Text("-"));
-            return w;
-        }
-        Meter m;
-        m.done   = ExpDone(job->sample).value_or(0.0f);
-        m.width  = width;
-        m.height = height;
-        m.align  = align;
-        const auto side = [&](ExpTextPlace place, std::vector<Span>& spans) {
-            uint8_t parts = 0;
-            for (int t = 0; t < kExpTextCount; ++t)
-                if (places[static_cast<size_t>(t)] == place) parts |= ExpTextBit(static_cast<ExpText>(t));
-            if (const std::string said = ExpSaid(job->sample, parts); !said.empty()) spans = ListOf(Text(said));
-        };
-        side(ExpTextPlace::Above, m.above);
-        side(ExpTextPlace::Below, m.below);
-        side(ExpTextPlace::Left, m.left);
-        side(ExpTextPlace::Right, m.right);
-        w.meter    = std::move(m);
-        w.hasPopup = true;
-        w.figures  = true;
-        return w;
     }
 
     PopupContent JobPopup(const std::optional<JobReport>& job)
@@ -203,9 +181,9 @@ namespace headsup
         }
         else
         {
-            rows.rows.push_back(Labeled("EXP", Text(OutOf(s.exp, s.expNeeded))));
-            rows.rows.push_back(Labeled("To Next", Text(Grouped(ToNext(s)))));
-            rows.rows.push_back(Labeled("Per Hour", PerHourText(job->perHour)));
+            rows.rows.push_back(Labeled("Earned EXP", Text(OutOf(s.exp, s.expNeeded))));
+            rows.rows.push_back(Labeled("Til Next Level", Text(Grouped(ToNext(s)))));
+            rows.rows.push_back(Labeled("EXP Per Hour", PerHourText(job->perHour)));
             if (job->perHour)
                 rows.rows.push_back(Labeled("Next Level in", Text(SpanText(ToNext(s) * kHour / *job->perHour))));
             rows.rows.push_back(Labeled("Limit Points", Text(OutOf(s.limitPoints, kLimitPointsPerMerit))));

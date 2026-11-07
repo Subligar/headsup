@@ -65,13 +65,11 @@ namespace headsup
         std::optional<ClockZone> clockSecondZone = ClockZone::Japan; // its Secondary Timezone part's, the same way
         bool clock24         = true;                // its two lines
         bool clockSeconds    = false;               // its own line's seconds
-        uint8_t expText      = kDefaultExpText;     // Job & EXP: what its EXP part says, by ExpTextBit
-        bool expMeter        = false;               // its EXP bar with each text placed around it
-        ExpPlaces expPlaces  = kDefaultExpPlaces;   // those places
-        int expBarWidth      = kDefaultExpBarWidth;
+        int expBarWidth      = kDefaultExpBarWidth;  // Job & EXP: its EXP Bar's
         int expBarHeight     = kDefaultExpBarHeight;
-        Align expAlign       = Align::Center;       // its texts above and below the bar, against it
+        std::optional<ExpText> expBarText;           // what its EXP Bar says in its middle; none for nothing
         bool jobNames        = true;
+        JobText jobText      = JobText::MainSub;     // how its Job Info says the jobs
         uint32_t targetDetection = kDefaultDetection; // Target: the senses its Detection part shows, by DetectionBit
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
         int worldRoute       = 0;                    // World Info: its Tracked Ship, by TravelRoutes

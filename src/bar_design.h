@@ -22,7 +22,7 @@ namespace headsup
         CurrencyCoin, CurrencyAmount, CurrencyName,
         BagCount, BagName, BagIcon,
         ClockTime, ClockServer, ClockVana,
-        JobJobs, JobExp, JobBar,
+        JobJobs, JobEarned, JobToNext, JobPercent, JobBar,
         PerfFps, PerfSent, PerfReceived, PerfPercent, PerfPing, PerfMemory, PerfMessages,
         PartyCount, PartyHealth,
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,

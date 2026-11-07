@@ -693,7 +693,8 @@ namespace headsup
             Settings& s = c.s;
             headsup::WidgetOptions& o = s.Widget(widget);
             const BarWidget kind      = widget.kind;
-            const bool bar            = kind == BarWidget::Job && o.expMeter; // the EXP meter's own rows
+            const bool jobs = kind == BarWidget::Job && PartOn(o.design, WidgetPart::JobJobs);
+            const bool bar  = kind == BarWidget::Job && PartOn(o.design, WidgetPart::JobBar);
             const bool off = !BarOn(s) || !o.on;
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
             const std::string scope = std::string(" ") + BarWidgetName(kind) + (widget.copy > 0 ? " " + std::to_string(widget.copy + 1) : "");
@@ -829,42 +830,29 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::Design:
-                    // The EXP meter is laid out without a design.
-                    if (!bar)
-                    {
-                        // the Widget Designer's description
-                        form.Note(kind == BarWidget::StatusTimers ? Word(c, WindowWord::WidgetTabsDesignStatusTimers) : row.tip);
-                        Designer(c, widget);
-                    }
+                    // the Widget Designer's description
+                    form.Note(kind == BarWidget::StatusTimers ? Word(c, WindowWord::WidgetTabsDesignStatusTimers) : row.tip);
+                    Designer(c, widget);
                     break;
-                case WidgetTabsRow::ExpMeter:
-                    if (kind == BarWidget::Job) form.Switch(label.c_str(), o.expMeter, row.tip);
-                    break;
-                case WidgetTabsRow::ExpText:
-                    if (kind == BarWidget::Job && !bar)
-                    {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ExpText));
-                        form.Toggles(label.c_str(), o.expText, names.data(), kExpTextCount, row.tip);
-                    }
-                    break;
-                case WidgetTabsRow::ExpEarned:
-                case WidgetTabsRow::ExpToNext:
-                case WidgetTabsRow::ExpPercent:
+                case WidgetTabsRow::BarText:
                     if (bar)
                     {
-                        const auto which   = static_cast<WidgetTabsRow>(row.row);
-                        const ExpText text = which == WidgetTabsRow::ExpEarned ? ExpText::Earned
-                                             : which == WidgetTabsRow::ExpToNext ? ExpText::ToNext
-                                                                                 : ExpText::Percent;
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::ExpPlace));
-                        form.Segments(label.c_str(), o.expPlaces[static_cast<size_t>(text)], names.data(), kExpTextPlaceCount, row.tip);
+                        // 0 is None, then each text from 1.
+                        int text = o.expBarText ? static_cast<int>(*o.expBarText) + 1 : 0;
+                        form.NumberDropdown(label.c_str(), text, 0, kExpTextCount,
+                            [&](int i) { return std::string(c.layout.OptionsOf(WindowList::ExpBarText)[static_cast<size_t>(i)].name); },
+                            row.tip);
+                        o.expBarText = text == 0 ? std::nullopt : std::optional(static_cast<ExpText>(text - 1));
                     }
                     break;
-                case WidgetTabsRow::ExpAlign:
-                    if (bar)
+                case WidgetTabsRow::JobText:
+                    if (jobs && o.jobNames)
                     {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Align));
-                        form.Segments(label.c_str(), o.expAlign, names.data(), kAlignCount, row.tip);
+                        int text = static_cast<int>(o.jobText);
+                        form.NumberDropdown(label.c_str(), text, 0, kJobTextCount - 1,
+                            [&](int i) { return std::string(c.layout.OptionsOf(WindowList::JobText)[static_cast<size_t>(i)].name); },
+                            row.tip);
+                        o.jobText = static_cast<JobText>(text);
                     }
                     break;
                 case WidgetTabsRow::BarWidth:
@@ -876,7 +864,7 @@ namespace headsup
                         form.SliderInt(label.c_str(), o.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight, Pixels, row.tip);
                     break;
                 case WidgetTabsRow::JobNames:
-                    if (kind == BarWidget::Job && !bar) form.Switch(label.c_str(), o.jobNames, row.tip);
+                    if (jobs) form.Switch(label.c_str(), o.jobNames, row.tip);
                     break;
                 }
             }

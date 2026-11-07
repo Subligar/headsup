@@ -27,7 +27,7 @@ namespace
 TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
-        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 24, 29, 0}, PopupFace{"Barlow Condensed", 18, 22, 0},
         PopupFace{"Barlow Condensed", 15, 18, 2}, PopupFace{"Barlow Condensed", 15, 18, 0}};
     Settings settings;
@@ -79,7 +79,7 @@ TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
 TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complaint)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
-        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
     Settings settings;
     for (int t = 0; t < kFixedThemeCount; ++t)
     {
@@ -107,7 +107,7 @@ TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complain
 TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it_unlit)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
-        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
     Settings settings;
     std::vector<BarPalette> palettes;
     for (int t = 0; t < kFixedThemeCount; ++t)
@@ -163,7 +163,7 @@ TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it
 TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_shape)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
-        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
     Settings settings;
     for (const BarShape shape : {BarShape::Ornate, BarShape::Pills, BarShape::Glass, BarShape::Window})
     {
@@ -180,7 +180,7 @@ TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_
         c.title    = {Text("Clear")};
         c.subtitle = {Text("Firesday")};
         widget->SetClass(kHiddenClass, false);
-        widget->SetInnerRML(WidgetRml(c, look, {}, {}));
+        widget->SetInnerRML(WidgetRml(c, look, {}));
         rml.context->Update();
         Rml::ElementList titles;
         widget->GetElementsByClassName(titles, "title");
@@ -193,7 +193,7 @@ TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_
 TEST(a_target_without_its_background_looks_as_any_other_widget_lit_or_not)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
-        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
     Settings settings;
     for (int t = 0; t < kFixedThemeCount; ++t)
     {
@@ -229,7 +229,7 @@ TEST(a_target_without_its_background_looks_as_any_other_widget_lit_or_not)
 TEST(an_exp_bar_in_a_widgets_line_draws_as_long_and_thick_as_the_old_bar_beside_the_text_filled_to_its_share)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
-        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f}, {}, {}};
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
     Settings settings;
     const BarLook look = LookOf(settings.customPalette, settings);
     test::RmlSession rml;
@@ -239,21 +239,29 @@ TEST(an_exp_bar_in_a_widgets_line_draws_as_long_and_thick_as_the_old_bar_beside_
     WidgetContent c;
     c.shown     = true;
     Span exp    = Text("");
-    exp.bar     = 0.25f;
+    exp.bar     = InlineBar{0.25f, 120, 14, "25%"};
     c.title     = {Text("WAR 30")};
     c.subtitle  = {Text("1,200 EXP to next"), Text("  "), exp};
     widget->SetClass(kHiddenClass, false);
-    widget->SetInnerRML(WidgetRml(c, look, {}, {}));
+    widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
-    Rml::ElementList bars, fills;
+    Rml::ElementList bars, fills, texts;
     widget->GetElementsByClassName(bars, "ibar");
     widget->GetElementsByClassName(fills, "fill");
-    CHECK(bars.size() == 1 && fills.size() == 1);
-    // At a 45 px bar: two bar heights long (90) and 0.14 of one thick (6), as the bar beside the text was.
+    widget->GetElementsByClassName(texts, "btext");
+    CHECK(bars.size() == 1 && fills.size() == 1 && texts.size() == 1);
+    // As long and thick as the widget's settings say, filled a quarter.
     const Rml::Vector2f track = bars.front()->GetBox().GetSize(Rml::BoxArea::Border);
-    CHECK_EQ(track.x, 90.0f);
-    CHECK_EQ(track.y, 6.0f);
+    CHECK_EQ(track.x, 120.0f);
+    CHECK_EQ(track.y, 14.0f);
     const Rml::Vector2f fill = fills.front()->GetBox().GetSize(Rml::BoxArea::Border);
     CHECK(std::abs(fill.x - track.x / 4.0f) < 1.0f && fill.y == track.y);
+    // Its text over the whole bar, centered across it and on one line as tall as it.
+    Rml::Element* text = texts.front();
+    CHECK(text->GetAbsoluteOffset(Rml::BoxArea::Border) == bars.front()->GetAbsoluteOffset(Rml::BoxArea::Border));
+    CHECK(text->GetBox().GetSize(Rml::BoxArea::Border) == track);
+    CHECK(text->GetComputedValues().text_align() == Rml::Style::TextAlign::Center);
+    CHECK_EQ(text->GetComputedValues().line_height().value, 14.0f);
+    CHECK_EQ(text->GetInnerRML(), "25%");
     CHECK_EQ(rml.Said(), "");
 }

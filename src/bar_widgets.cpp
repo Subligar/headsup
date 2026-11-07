@@ -1454,7 +1454,7 @@ namespace headsup
                     {WidgetPart::ClockVana, ListOf(Text(VanaClock(state.unixMs)))}};
             case BarWidget::GameHelp: return {};
             case BarWidget::Performance: return PerformanceParts(state, base);
-            case BarWidget::Job: return JobParts(state.job, o.jobNames, o.expText, base);
+            case BarWidget::Job: return JobParts(state.job, o, base);
             case BarWidget::Party: return PartyParts(state.party, base);
             case BarWidget::StatusTimers:
                 base.hasPopup = true;
@@ -1477,8 +1477,6 @@ namespace headsup
             const WidgetOptions& o = settings.Widget(widget);
             if (widget.kind == BarWidget::GameHelp) return WidgetContent{}; // its own bar, never a widget
             if (!base.shown) return base;
-            if (widget.kind == BarWidget::Job && o.expMeter)
-                return ExpWidget(state.job, o.expPlaces, o.expBarWidth, o.expBarHeight, o.expAlign);
             std::vector<PartContent> parts = PartsNow(widget, state, settings, base);
             if (!base.shown) return base;
             // The widget's icon goes beside both lines, where its Icon setting puts it.

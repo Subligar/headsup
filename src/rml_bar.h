@@ -82,7 +82,6 @@ namespace headsup
             float natural = 0.0f; // what it shows, without its padding
             WidgetPads pads;      // the room from its edges to what it shows
             std::vector<float> columns; // a widget of cells', as measured
-            MeterPlace meter;           // a meter's
             bool measured = false;
             WidgetContent drawn; // as its markup was made from: the target's is cut to its room
             bool marked = false; // its markup is drawn's
@@ -192,10 +191,10 @@ namespace headsup
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);
 
         float Width(RmlHost& host, const std::string& text, const TextFace& face) const;
-        float SpansWidth(RmlHost& host, const std::vector<Span>& spans, const TextFace& face, float barWidth) const;
+        float SpansWidth(RmlHost& host, const std::vector<Span>& spans, const TextFace& face) const;
         // The room a widget's line takes: its width with every figure as wide as the font's widest, so a clock or a
         // counter ticking does not move the widgets beside it.
-        float SteadyWidth(RmlHost& host, std::vector<Span> spans, const TextFace& face, float barWidth);
+        float SteadyWidth(RmlHost& host, std::vector<Span> spans, const TextFace& face);
         char WidestDigitOf(RmlHost& host, const TextFace& face);
         const std::string& Fitted(RmlHost& host, Memo<FitKey, std::string>& memo, std::string text, const TextFace& face,
             float room);

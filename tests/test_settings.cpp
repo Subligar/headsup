@@ -2762,34 +2762,30 @@ TEST(the_target_widgets_detection_icons_and_visibility_are_kept_and_held_to_thei
     CHECK(held.targetDetection == kAllDetection && held.targetShows == 0);
 }
 
-TEST(the_job_and_exp_widgets_lines_and_bar_settings_are_kept)
+TEST(the_job_and_exp_widgets_job_text_and_bar_settings_are_kept)
 {
     Settings s;
-    CHECK(s.Widget(BarWidget::Job).expText == kDefaultExpText);
-    WidgetOptions& exp = s.Widget(BarWidget::Job);
-    exp.expMeter       = true;
-    exp.expPlaces      = {ExpTextPlace::Above, ExpTextPlace::Off, ExpTextPlace::Left};
-    exp.expBarWidth    = 250;
-    exp.expBarHeight   = 3;
-    exp.expAlign       = Align::Right;
+    CHECK(!s.Widget(BarWidget::Job).expBarText && s.Widget(BarWidget::Job).jobText == JobText::MainSub);
+    WidgetOptions& job = s.Widget(BarWidget::Job);
+    job.expBarWidth    = 250;
+    job.expBarHeight   = 3;
+    job.expBarText     = ExpText::Percent;
+    job.jobText        = JobText::LevelFirst;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(store.values["jobExpMeter"], "true");
-    const Settings read = LoadSettings(store);
-    CHECK(read.Widget(BarWidget::Job) == s.Widget(BarWidget::Job));
-    CHECK_EQ(store.values["barExpEarned"], "above");
-    CHECK_EQ(store.values["barExpAlign"], "right");
-    CHECK(Settings{}.Widget(BarWidget::Job).expAlign == Align::Center);
-    // A size past the slider's ends reads as that end; an unknown place as the default's.
+    CHECK(LoadSettings(store).Widget(BarWidget::Job) == s.Widget(BarWidget::Job));
+    // Back to none, and none is kept too.
+    job.expBarText.reset();
+    SaveSettings(s, store);
+    CHECK(!LoadSettings(store).Widget(BarWidget::Job).expBarText);
+    // A size past the slider's ends reads as that end; an unknown text or job text as the default's.
     store.values["barExpBarWidth"]  = "9999";
     store.values["barExpBarHeight"] = "0";
-    store.values["barExpPercent"]   = "sideways";
-    store.values["barExpAlign"]     = "diagonal";
-    const Settings reread        = LoadSettings(store);
-    const WidgetOptions& clamped = reread.Widget(BarWidget::Job);
+    store.values["barExpBarText"]   = "sideways";
+    store.values["jobText"]         = "diagonal";
+    const WidgetOptions clamped = LoadSettings(store).Widget(BarWidget::Job);
     CHECK(clamped.expBarWidth == kMaxExpBarWidth && clamped.expBarHeight == kMinExpBarHeight);
-    CHECK(clamped.expPlaces[static_cast<int>(ExpText::Percent)] == kDefaultExpPlaces[static_cast<int>(ExpText::Percent)]);
-    CHECK(clamped.expAlign == Align::Center);
+    CHECK(!clamped.expBarText && clamped.jobText == JobText::MainSub);
 }
 
 TEST(the_bags_widgets_bag_is_kept_and_one_past_the_last_reads_as_the_inventory)

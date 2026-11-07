@@ -50,7 +50,7 @@ TEST(a_design_saves_as_text_and_loads_back)
 {
     CHECK_EQ(DesignText(DefaultDesign(BarWidget::Zone)), "name | region nation");
     CHECK_EQ(DesignText(DefaultDesign(BarWidget::EarthTime)), "time | -server -vana");
-    const char* const job = "-jobs exp bar |";
+    const char* const job = "-jobs tonext bar | -earned -percent";
     CHECK_EQ(DesignText(DesignFrom(BarWidget::Job, job)), job);
     for (int k = 0; k < kBarWidgetCount; ++k)
     {

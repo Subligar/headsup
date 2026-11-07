@@ -169,35 +169,71 @@ TEST(exp_per_hour_is_taken_at_the_last_whole_second_so_its_figure_changes_once_a
     CHECK_EQ(*t.PerHour(630.5), 400.0 * 3600.0 / 600.0);
 }
 
-TEST(the_exp_says_what_it_is_set_to_earned_to_next_and_a_percent_in_that_order)
+TEST(each_exp_button_says_its_own_text_and_at_the_cap_the_limit_points_and_merits)
 {
-    const auto bits = [](std::initializer_list<ExpText> parts) {
-        uint8_t b = 0;
-        for (const ExpText part : parts)
-            b |= ExpTextBit(part);
-        return b;
+    // What a part says, with the widget's defaults.
+    const auto said = [](const JobReport& job, WidgetPart which) {
+        WidgetContent base;
+        for (const PartContent& part : JobParts(job, WidgetOptions{}, base))
+            if (part.part == which) return part.spans.empty() ? std::string() : part.spans.front().text;
+        return std::string("no such part");
     };
     const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
-    // What the EXP part says.
-    const auto exp = [](const JobReport& job, uint8_t expText) {
-        WidgetContent base;
-        for (const PartContent& part : JobParts(job, true, expText, base))
-            if (part.part == WidgetPart::JobExp) return part.spans.empty() ? std::string() : part.spans.front().text;
-        return std::string("no EXP part");
-    };
-    CHECK_EQ(exp(level30, kDefaultExpText), "7,655 EXP to next"); // as before
-    CHECK_EQ(exp(level30, bits({ExpText::Percent})), "61%");
-    CHECK_EQ(exp(level30, bits({ExpText::Percent, ExpText::Earned, ExpText::ToNext})),
-        "12,345 / 20,000 EXP · 7,655 to next · 61%");
-    // At the cap the points are limit points, after the merits.
+    CHECK_EQ(said(level30, WidgetPart::JobEarned), "12,345 / 20,000 EXP");
+    CHECK_EQ(said(level30, WidgetPart::JobToNext), "7,655 EXP to next");
+    CHECK_EQ(said(level30, WidgetPart::JobPercent), "61%");
+    // At the cap the points are limit points, and what is left to the next is the merits.
     const JobReport capped{AtCap(3, 4000), std::nullopt};
-    CHECK_EQ(exp(capped, bits({ExpText::Earned, ExpText::Percent})), "3 merits · 4,000 / 10,000 LP · 40%");
-    // To Next at the cap: the merits say how far along you are, as they always have.
-    CHECK_EQ(exp(capped, bits({ExpText::ToNext})), "3 merits");
+    CHECK_EQ(said(capped, WidgetPart::JobEarned), "4,000 / 10,000 LP");
+    CHECK_EQ(said(capped, WidgetPart::JobToNext), "3 merits");
+    CHECK_EQ(said(capped, WidgetPart::JobPercent), "40%");
     // A percent is never rounded up to a level not reached.
-    CHECK_EQ(exp(JobReport{Sample(30, 19999, 20000), std::nullopt}, bits({ExpText::Percent})), "99%");
-    // Nothing picked: the EXP part has nothing to show, and the jobs show alone.
-    CHECK_EQ(exp(level30, 0), "");
+    CHECK_EQ(said(JobReport{Sample(30, 19999, 20000), std::nullopt}, WidgetPart::JobPercent), "99%");
+}
+
+TEST(job_text_puts_the_jobs_and_levels_in_the_order_it_names)
+{
+    const auto said = [](JobSample sample, JobText text, bool names = true) {
+        WidgetOptions o;
+        o.jobText  = text;
+        o.jobNames = names;
+        WidgetContent base;
+        for (const PartContent& part : JobParts(JobReport{sample, std::nullopt}, o, base))
+            if (part.part == WidgetPart::JobJobs) return part.spans.front().text;
+        return std::string("no jobs part");
+    };
+    const JobSample s = Sample(30, 0, 1000); // WAR 30 / NIN 15
+    CHECK_EQ(said(s, JobText::MainSub), "WAR 30 / NIN 15");
+    CHECK_EQ(said(s, JobText::Main), "WAR 30");
+    CHECK_EQ(said(s, JobText::LevelFirst), "30 WAR / NIN");
+    // Without a subjob, the main job alone.
+    JobSample alone = s;
+    alone.subLevel  = 0;
+    CHECK_EQ(said(alone, JobText::LevelFirst), "30 WAR");
+    CHECK_EQ(said(alone, JobText::MainSub), "WAR 30");
+    // Job Names off: the levels alone, whatever the text.
+    CHECK_EQ(said(s, JobText::LevelFirst, false), "Lv 30 / 15");
+}
+
+TEST(the_exp_bar_is_its_set_size_filled_with_the_text_bar_text_picks_in_its_middle)
+{
+    const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
+    const auto bar = [&](std::optional<ExpText> text) {
+        WidgetOptions o;
+        o.expBarWidth  = 150;
+        o.expBarHeight = 12;
+        o.expBarText   = text;
+        WidgetContent base;
+        for (const PartContent& part : JobParts(level30, o, base))
+            if (part.part == WidgetPart::JobBar) return *part.spans.front().bar;
+        return InlineBar{};
+    };
+    const InlineBar none = bar(std::nullopt);
+    CHECK(none.width == 150 && none.height == 12 && none.text.empty());
+    CHECK(std::fabs(none.done - 12345.0f / 20000.0f) < 1e-6f);
+    CHECK_EQ(bar(ExpText::Earned).text, "12,345 / 20,000 EXP");
+    CHECK_EQ(bar(ExpText::ToNext).text, "7,655 EXP to next");
+    CHECK_EQ(bar(ExpText::Percent).text, "61%");
 }
 
 TEST(the_job_widget_lays_out_its_jobs_exp_and_bar_as_its_design_says)
@@ -206,43 +242,19 @@ TEST(the_job_widget_lays_out_its_jobs_exp_and_bar_as_its_design_says)
     const auto shown = [&](std::string_view design) {
         WidgetContent base;
         base.shown = true;
-        std::vector<PartContent> parts = JobParts(level30, true, kDefaultExpText, base);
+        std::vector<PartContent> parts = JobParts(level30, WidgetOptions{}, base);
         return ComposeContent(DesignFrom(BarWidget::Job, design), std::move(parts), base);
     };
-    // The default: the jobs over the EXP, the bar after it, filled 61%.
-    const WidgetContent w = shown("jobs | exp bar");
-    CHECK(w.title.size() == 1 && w.subtitle.size() == 3 && w.subtitle[0].text == "7,655 EXP to next");
-    CHECK(w.subtitle[2].bar && *w.subtitle[2].bar > 0.6f && *w.subtitle[2].bar < 0.62f);
+    // The default: the jobs over the EXP to the next level, the bar after it.
+    const WidgetContent w = shown("");
+    CHECK(w.title.size() == 1 && w.title[0].text == "WAR 30 / NIN 15");
+    CHECK(w.subtitle.size() == 3 && w.subtitle[0].text == "7,655 EXP to next" && w.subtitle[2].bar);
     CHECK(w.hasPopup && w.figures);
-    // The bar first, then the EXP, on one line.
-    const WidgetContent first = shown("bar exp | -jobs");
-    CHECK(first.title.front().bar && first.title.back().text == "  7,655 EXP to next" && first.subtitle.empty());
-}
-
-TEST(the_exp_widget_is_its_bar_with_each_text_on_the_side_it_is_set_to)
-{
-    const auto said = [](const std::vector<Span>& spans) {
-        std::string text;
-        for (const Span& s : spans)
-            text += s.text;
-        return text;
-    };
-    const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
-    const WidgetContent w =
-        ExpWidget(level30, {ExpTextPlace::Above, ExpTextPlace::Right, ExpTextPlace::Right}, 150, 6, Align::Center);
-    CHECK(w.meter && w.title.empty() && w.hasPopup);
-    CHECK(std::fabs(w.meter->done - 12345.0f / 20000.0f) < 1e-6f && w.meter->width == 150 && w.meter->height == 6);
-    CHECK_EQ(said(w.meter->above), "12,345 / 20,000 EXP");
-    CHECK_EQ(said(w.meter->right), "7,655 EXP to next · 61%"); // two on a side say it as the Job widget does
-    CHECK(w.meter->left.empty() && w.meter->below.empty());
-    // At the cap the bar fills with limit points, and To Next says the merits.
-    const WidgetContent capped =
-        ExpWidget(JobReport{AtCap(3, 4000), std::nullopt}, {ExpTextPlace::Left, ExpTextPlace::Below, ExpTextPlace::Off}, 150, 6, Align::Center);
-    CHECK(capped.meter && std::fabs(capped.meter->done - 0.4f) < 1e-6f);
-    CHECK_EQ(said(capped.meter->left), "4,000 / 10,000 LP");
-    CHECK_EQ(said(capped.meter->below), "3 merits");
-    CHECK(capped.meter->above.empty() && capped.meter->right.empty());
-    // Before the server has sent the jobs, a dash.
-    const WidgetContent none = ExpWidget(std::nullopt, kDefaultExpPlaces, 150, 6, Align::Center);
-    CHECK(!none.meter && none.title.front().text == "-");
+    // The bar first, then the percent and the earned EXP, on one line.
+    const WidgetContent first = shown("bar percent earned | -jobs");
+    std::string line;
+    for (const Span& span : first.title)
+        line += span.text;
+    CHECK(first.title.front().bar && line.find("61%") < line.find("12,345 / 20,000 EXP") && line.ends_with("EXP"));
+    CHECK(first.subtitle.empty());
 }

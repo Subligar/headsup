@@ -79,11 +79,11 @@ namespace headsup
         return host.TextWidth(text, face.family, WholePixels(face.size), static_cast<float>(face.tracking));
     }
 
-    float RmlBar::SpansWidth(RmlHost& host, const std::vector<Span>& spans, const TextFace& face, float barWidth) const
+    float RmlBar::SpansWidth(RmlHost& host, const std::vector<Span>& spans, const TextFace& face) const
     {
         float width = 0.0f;
         for (const Span& s : spans)
-            width += MarkWidth(s, face.size, barWidth) + Width(host, s.text, face);
+            width += MarkWidth(s, face.size) + Width(host, s.text, face);
         return width;
     }
 
@@ -98,14 +98,14 @@ namespace headsup
         return digit;
     }
 
-    float RmlBar::SteadyWidth(RmlHost& host, std::vector<Span> spans, const TextFace& face, float barWidth)
+    float RmlBar::SteadyWidth(RmlHost& host, std::vector<Span> spans, const TextFace& face)
     {
         // Never less than the line as it reads now, should a pair of its real figures kern wider.
-        const float shown = SpansWidth(host, spans, face, barWidth);
+        const float shown = SpansWidth(host, spans, face);
         const char digit  = WidestDigitOf(host, face);
         for (Span& s : spans)
             s.text = SteadyFigures(s.text, digit);
-        return std::max(shown, SpansWidth(host, spans, face, barWidth));
+        return std::max(shown, SpansWidth(host, spans, face));
     }
 
     const std::string& RmlBar::Fitted(RmlHost& host, Memo<FitKey, std::string>& memo, std::string text,
@@ -160,7 +160,6 @@ namespace headsup
         rows.place.alone        = PlaceLine(host, titleFont, t.alone, kTitleGlyphs, t.aloneY);
         rows.place.figuresAlone = PlaceLine(host, detailFont, t.alone, kTitleGlyphs, t.aloneY);
         rows.place.detail       = PlaceLine(host, detailFont, t.detail, kDetailGlyphs, t.detailY);
-        rows.place.side         = PlaceLine(host, detailFont, t.side, kDetailGlyphs, t.sideY);
         const int helpPixels    = HelpTextPixels(helpText, t.title);
         rows.place.helpCaption  = PlaceLine(host, titleFont, helpPixels, kTitleGlyphs, 0.0f);
         rows.place.help         = PlaceLine(host, detailFont, helpPixels, kTitleGlyphs, 0.0f);
@@ -203,7 +202,6 @@ namespace headsup
         Widgets& widgets)
     {
         const BarMetrics& m = look.metrics;
-        const float bar     = InlineBarWidth(m);
         std::array<float, kPanelSlots> natural{};
         widgets.panel = Panel(look.settings);
         for (int i = 0; i < kPanelSlots; ++i)
@@ -219,16 +217,11 @@ namespace headsup
                 shown.measured = true;
                 // A widget of cells is as wide as its columns; another as its longer line.
                 shown.columns = c.cells ? CellColumns(c, [&](bool title, const Span& span) {
-                    return SteadyWidth(host, {span}, title && c.subtitle.empty() ? look.TitleFace(c) : look.DetailFace(), bar);
+                    return SteadyWidth(host, {span}, title && c.subtitle.empty() ? look.TitleFace(c) : look.DetailFace());
                 }) : std::vector<float>{};
-                const auto detail = [&](const std::vector<Span>& spans) { return SteadyWidth(host, spans, look.MeterFace(), bar); };
-                shown.meter = c.meter ? PlaceMeter(*c.meter, MeterWidths{detail(c.meter->above), detail(c.meter->below),
-                                                                 detail(c.meter->left), detail(c.meter->right)}, m.gap)
-                                      : MeterPlace{};
-                const float text = c.meter ? shown.meter.width
-                                   : c.cells ? CellsWidth(shown.columns, m.gap)
-                                             : std::max(SteadyWidth(host, c.title, look.TitleFace(c), bar),
-                                                   c.subtitle.empty() ? 0.0f : SteadyWidth(host, c.subtitle, look.DetailFace(), bar));
+                const float text = c.cells ? CellsWidth(shown.columns, m.gap)
+                                           : std::max(SteadyWidth(host, c.title, look.TitleFace(c)),
+                                                 c.subtitle.empty() ? 0.0f : SteadyWidth(host, c.subtitle, look.DetailFace()));
                 shown.natural  = look.Leading(c) + text;
             }
             natural[i] = shown.natural;
@@ -262,7 +255,7 @@ namespace headsup
                 const size_t at = WidestTextSpan(line);
                 if (at >= line.size()) return;
                 std::string& text = line[at].text;
-                const float rest  = SpansWidth(host, line, face, bar) - Width(host, text, face);
+                const float rest  = SpansWidth(host, line, face) - Width(host, text, face);
                 text = Fitted(host, memo, std::move(text), face, room - rest);
             };
             cut(target.title, m_TitleFit, look.TitleFace(target));
@@ -308,7 +301,7 @@ namespace headsup
             if (shown.marked && shown.drawn == content) continue;
             shown.drawn  = content;
             shown.marked = true;
-            shown.element->SetInnerRML(WidgetRml(content, look, shown.columns, shown.meter));
+            shown.element->SetInnerRML(WidgetRml(content, look, shown.columns));
         }
         const auto diamond = static_cast<float>(WholePixels(m.diamond));
         for (size_t d = 0; d < m_Dividers.size(); ++d)

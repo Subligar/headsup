@@ -22,7 +22,7 @@ namespace
     BarTextPlace Place()
     {
         return BarTextPlace{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
-            BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, BarLinePlace{14, 15.0f, 3.0f},
+            BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f},
             BarLinePlace{16, 0.0f, 0.0f}, BarLinePlace{17, 0.0f, 0.0f}};
     }
 
@@ -160,11 +160,11 @@ TEST(a_widgets_icon_on_the_right_comes_after_its_lines_and_a_picture_is_drawn_as
     c.shown   = true;
     c.picture = GamePicture::BastokCrest;
     c.title   = {Text("Valkurm Dunes")};
-    std::string rml = WidgetRml(c, look, {}, {});
+    std::string rml = WidgetRml(c, look, {});
     const size_t picture = rml.find("class=\"icon pic\""), text = rml.find("class=\"text\"");
     CHECK(picture != std::string::npos && picture < text);
     c.iconsRight = true;
-    rml = WidgetRml(c, look, {}, {});
+    rml = WidgetRml(c, look, {});
     CHECK(rml.find("class=\"icon pic right\"") > rml.find("Valkurm Dunes"));
     // Its room counts toward the widget's width either side.
     CHECK(look.Leading(c) > 0.0f);
@@ -196,10 +196,10 @@ TEST(a_widgets_markup_has_its_leading_icons_coin_lines_and_marks_inside_its_line
     Span coin  = Text("12");
     coin.coin  = true;
     Span bar   = Text("");
-    bar.bar    = 0.4f;
+    bar.bar    = InlineBar{0.4f, 90, 6, ""};
     c.title    = {Text("Rolanberry <Fields>"), Colored(" [S]", 0xFF6FE36Fu), link};
     c.subtitle = {Text("Sandy", Tone::Dim), coin, bar};
-    const std::string rml = WidgetRml(c, look, {}, {});
+    const std::string rml = WidgetRml(c, look, {});
     CHECK(Has(rml, "<img class=\"icon\" src=\"hu:icon/5\"/>") && Has(rml, "hu:icon/7"));
     CHECK(Has(rml, "class=\"coin\"") && Has(rml, "hu:coin/17")); // 0.75 of 0.50 H: 16.875
     CHECK(Has(rml, "Rolanberry &lt;Fields&gt;") && Has(rml, "#6fe36fff") && Has(rml, "#efe3c6ff"));
@@ -215,7 +215,7 @@ TEST(a_widgets_markup_has_its_leading_icons_coin_lines_and_marks_inside_its_line
     CHECK(Has(rml, "#a8936dff") && Has(rml, "Sandy"));
     c.subtitle.clear();
     c.coin = false;
-    const std::string bare = WidgetRml(c, look, {}, {});
+    const std::string bare = WidgetRml(c, look, {});
     CHECK(!Has(bare, "ibar") && !Has(bare, "detail") && !Has(bare, "coin"));
 }
 
@@ -228,12 +228,12 @@ TEST(a_widget_of_figures_takes_the_detail_font_for_its_title)
     c.title   = {Text("21:07")};
     c.figures = true;
     // No second line: the title alone.
-    CHECK(Has(WidgetRml(c, look, {}, {}), "class=\"title figures alone\""));
+    CHECK(Has(WidgetRml(c, look, {}), "class=\"title figures alone\""));
     c.figures = false;
-    CHECK(Has(WidgetRml(c, look, {}, {}), "class=\"title alone\""));
+    CHECK(Has(WidgetRml(c, look, {}), "class=\"title alone\""));
     c.figures  = true;
     c.subtitle = {Text("Earth", Tone::Dim)};
-    CHECK(Has(WidgetRml(c, look, {}, {}), "class=\"title figures\"") && Has(WidgetRml(c, look, {}, {}), "class=\"detail fig\""));
+    CHECK(Has(WidgetRml(c, look, {}), "class=\"title figures\"") && Has(WidgetRml(c, look, {}), "class=\"detail fig\""));
 }
 
 TEST(the_bars_text_carries_its_shadow)
@@ -512,7 +512,7 @@ TEST(a_widget_of_cells_lays_each_in_its_column_a_gap_apart)
     c.cells    = true;
     c.title    = {Text("S 1"), Text("B 2")};
     c.subtitle = {Text("W 1"), Text("BM 14")};
-    const std::string rml = WidgetRml(c, look, {30.0f, 44.0f}, {});
+    const std::string rml = WidgetRml(c, look, {30.0f, 44.0f});
     // The first column its width and the gap; the last its width.
     const std::string first = "class=\"cell\" style=\"width:" + Px(30.0f + look.metrics.gap) + ";";
     const std::string last  = "class=\"cell\" style=\"width:" + Px(44.0f) + ";";
@@ -536,14 +536,14 @@ TEST(a_widget_of_cells_on_two_lines_draws_its_top_line_at_the_detail_size_so_its
     c.figures  = true;
     c.title    = {Span{" 8", Tone::Normal, 0, GamePicture::SanDoriaCrest}, Span{" 4", Tone::Normal, 0, GamePicture::BastokCrest}};
     c.subtitle = {Span{" 2", Tone::Normal, 0, GamePicture::WindurstCrest}, Span{" 5", Tone::Normal, 0, GamePicture::BeastmenCrest}};
-    CHECK(Has(WidgetRml(c, look, {30.0f, 30.0f}, {}), "<div class=\"title figures cells\">"));
+    CHECK(Has(WidgetRml(c, look, {30.0f, 30.0f}), "<div class=\"title figures cells\">"));
     const std::string css = BarDocument(look, Place());
     CHECK(Has(css, ".title.cells{font-size:" + Px(static_cast<float>(look.lines.detail)) + ";}"));
     CHECK(Has(css, ".title.cells .line-icon{width:" + Px(static_cast<float>(look.lines.detail)) + ";height:" +
                        Px(static_cast<float>(look.lines.detail)) + ";"));
     // On one line (1 x 4) it keeps the title's size.
     c.subtitle.clear();
-    CHECK(!Has(WidgetRml(c, look, {30.0f, 30.0f}, {}), "cells\""));
+    CHECK(!Has(WidgetRml(c, look, {30.0f, 30.0f}), "cells\""));
 }
 
 TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_what_was_read_at_load)
@@ -553,7 +553,7 @@ TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_wha
     WidgetContent c;
     c.shown = true;
     c.title = {Text("S 300"), Span{"", Tone::Normal, 0, GamePicture::PlayOnlineMessenger}, Text("2", Tone::Dim)};
-    const std::string rml = WidgetRml(c, look, {}, {});
+    const std::string rml = WidgetRml(c, look, {});
     const std::string img = "<img class=\"line-icon pic\" src=\"" + GamePictureSource(GamePicture::PlayOnlineMessenger) + "\"/>";
     CHECK(rml.find(img) != std::string::npos && rml.find(img) < rml.find(">2<"));
     // Its pixels are the game's, B, G, R, A as an ARGB word keeps them.
@@ -574,83 +574,6 @@ TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_wha
     CHECK(!GamePictureImage(std::nullopt, std::nullopt, GamePictureSource(GamePicture::SanDoriaCrest)));
     CHECK(GamePictureImage(std::nullopt, crests, GamePictureSource(GamePicture::BeastmenCrest))->argb ==
           std::vector<uint32_t>{0xFF121110u});
-}
-
-TEST(a_meter_is_as_wide_as_its_bar_and_side_texts_with_the_texts_above_and_below_centered_on_the_bar)
-{
-    Meter m;
-    m.width = 100;
-    // Left 30 and a gap of 4 reach further than half of the 140 above past the bar; right 20 and its gap do too.
-    const MeterPlace p = PlaceMeter(m, MeterWidths{140.0f, 0.0f, 30.0f, 20.0f}, 4.0f);
-    CHECK_EQ(p.barX, 34.0f);
-    CHECK_EQ(p.width, 34.0f + 100.0f + 24.0f);
-    CHECK_EQ(p.aboveX, 34.0f + 50.0f - 70.0f);
-    // A text above wider than all of that sets the width, the bar in its middle.
-    const MeterPlace wide = PlaceMeter(m, MeterWidths{300.0f, 0.0f, 30.0f, 20.0f}, 4.0f);
-    CHECK(wide.barX == 100.0f && wide.width == 300.0f && wide.aboveX == 0.0f);
-}
-
-TEST(a_meters_texts_above_and_below_line_up_with_its_bars_left_or_right_and_run_past_it_that_way)
-{
-    Meter m;
-    m.width = 100;
-    m.align = Align::Left;
-    // Starting at the bar's left: the 140 above runs 40 past its right, further than right 20 and its gap.
-    const MeterPlace left = PlaceMeter(m, MeterWidths{140.0f, 60.0f, 30.0f, 20.0f}, 4.0f);
-    CHECK(left.barX == 34.0f && left.aboveX == 34.0f && left.belowX == 34.0f);
-    CHECK_EQ(left.width, 34.0f + 140.0f);
-    m.align = Align::Right;
-    // Ending at its right: 40 past its left, further than left 30 and its gap.
-    const MeterPlace right = PlaceMeter(m, MeterWidths{140.0f, 60.0f, 30.0f, 20.0f}, 4.0f);
-    CHECK(right.barX == 40.0f && right.aboveX == 0.0f && right.belowX == 40.0f + 100.0f - 60.0f);
-    CHECK_EQ(right.width, 40.0f + 100.0f + 24.0f);
-}
-
-TEST(a_meters_texts_are_measured_in_the_face_they_are_drawn_in)
-{
-    Settings settings;
-    BarLook look = LookOf(BarTheme::PhoenixGold, settings);
-    look.lines.side        = 12;
-    const TextFace face    = look.MeterFace();
-    const std::string rule = ".mtext{font-family:\"" + std::string(face.family) + "\";font-size:" + Px(face.size) + ";";
-    CHECK(face.size == 12.0f && Has(BarDocument(look, Place()), rule.c_str()));
-}
-
-TEST(a_meters_bar_and_the_texts_over_and_under_it_are_centered_on_the_row_with_its_side_texts_by_it)
-{
-    Settings settings;
-    const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
-    // Half a line of text and its gap: how far the bar moves from the row's middle with text on one side of it only.
-    const float half = (static_cast<float>(look.lines.side) + kMeterTextGap) / 2.0f;
-    for (const auto& [above, below, shift] : {std::tuple{true, false, half}, std::tuple{false, true, -half},
-             std::tuple{true, true, 0.0f}, std::tuple{false, false, 0.0f}})
-    {
-        WidgetContent c;
-        c.shown = true;
-        Meter m;
-        m.done   = 0.25f;
-        m.width  = 100;
-        m.height = 6;
-        if (above) m.above = {Text("12,345 / 20,000 EXP")};
-        if (below) m.below = {Text("7,655 to next")};
-        m.right  = {Text("61%")};
-        c.meter  = m;
-        const MeterPlace place = PlaceMeter(m, MeterWidths{above ? 120.0f : 0.0f, below ? 90.0f : 0.0f, 0.0f, 20.0f}, look.metrics.gap);
-        const std::string rml = WidgetRml(c, look, {}, place);
-        const float barTop = std::round((look.row.height - 6.0f) / 2.0f + shift);
-        const std::string bar = "class=\"mbar\" style=\"left:" + Px(place.barX) + ";top:" + Px(barTop) + ";width:" + Px(100.0f) +
-                                ";height:" + Px(6.0f) + ";\"";
-        CHECK(rml.find(bar) != std::string::npos);
-        CHECK(rml.find("width: 25%") != std::string::npos);
-        // Above ends a gap over the bar's top, below starts a gap under its bottom; the right text starts a gap after
-        // its end, moved as the bar is.
-        if (above)
-            CHECK(rml.find("left:" + Px(place.aboveX) + ";bottom:" + Px(look.row.height - barTop + kMeterTextGap) + ";") != std::string::npos);
-        if (below) CHECK(rml.find("left:" + Px(place.belowX) + ";top:" + Px(barTop + 6.0f + kMeterTextGap) + ";") != std::string::npos);
-        CHECK(rml.find("class=\"mtext mside\" style=\"left:" + Px(place.barX + 100.0f + look.metrics.gap) + ";margin-top:" +
-                       Px(barTop - std::round((look.row.height - 6.0f) / 2.0f)) + ";\"") != std::string::npos);
-        CHECK(rml.find(">61%<") != std::string::npos);
-    }
 }
 
 TEST(a_side_shared_in_a_combined_pill_keeps_its_text_where_it_was_and_draws_no_edge)
