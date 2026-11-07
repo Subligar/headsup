@@ -637,7 +637,7 @@ TEST(gil_bags_and_earth_time)
     state.earthMonth  = 10;
     state.earthDay    = 8;
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "21:07");
-    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-08");
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 8th, 2026 - 21:07");
 }
 
 // As Ashita reports the inventory: gil is item 0xFFFF in its first slot, and a bag the character cannot use has no
@@ -1369,7 +1369,7 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
     {
         settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, stacked ? "time | server" : "time | -server");
         const PopupContent p     = BarPopupContent(BarWidget::EarthTime, state, settings);
-        CHECK(Joined(p.title) == "2026-10-08"); // the Pacific coast's date
+        CHECK(Joined(p.title) == "October 8th, 2026 - 11:30:42pm"); // the Pacific coast's date
         CHECK(p.sections.size() == 1 && Lines(p.sections[0]) == (std::vector<std::string>{"Server Time Friday 15:30 JST",
                                                                     "Daily Reset in 8h 29m", "Conquest Tally in 2d 8h"}));
     }
@@ -2003,15 +2003,15 @@ TEST(the_clock_reads_in_the_zone_picked_for_it_with_that_zones_date_in_its_popup
     state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
     CHECK(!settings.Widget(BarWidget::EarthTime).clockZone.has_value());
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "08:30");
-    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-09");
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 9th, 2026 - 08:30");
     settings.Widget(BarWidget::EarthTime).clockZone = ClockZone::UsPacific;
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "PDT 23:30");
-    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-08");
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 8th, 2026 - 23:30");
     settings.Widget(BarWidget::EarthTime).clockZone    = ClockZone::Japan;
     settings.Widget(BarWidget::EarthTime).clock24      = false;
     settings.Widget(BarWidget::EarthTime).clockSeconds = true;
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "JST 3:30:42 PM");
-    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-09");
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 9th, 2026 - 3:30:42pm");
 }
 
 TEST(a_clock_in_a_picked_zone_is_read_from_the_time_alone_and_the_computers_from_its_own)
@@ -2079,6 +2079,64 @@ TEST(the_clocks_add_seconds_when_asked)
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "09:30");
     settings.Widget(BarWidget::EarthTime).clockSeconds = true;
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "09:30:07");
+}
+
+TEST(the_clocks_local_date_says_the_computers_date_as_date_format_writes_it)
+{
+    const CalendarDay day{2026, 11, 7};
+    CHECK_EQ(DateText(DateFormat::YearMonthDay, day), "2026/11/07");
+    CHECK_EQ(DateText(DateFormat::MonthDayYear, day), "11/07/2026");
+    CHECK_EQ(DateText(DateFormat::DayMonthYear, day), "07/11/2026");
+    CHECK_EQ(DateText(DateFormat::MonthDay, day), "November 7th");
+    CHECK_EQ(DateText(DateFormat::Iso, day), "2026-11-07");
+    CHECK_EQ(DateText(DateFormat::MonthDayCommaYear, day), "November 7th, 2026");
+    CHECK_EQ(DateText(DateFormat::ShortMonthDay, day), "Nov 7");
+    // English ordinals, the teens included.
+    const std::pair<int, const char*> ordinals[] = {{1, "January 1st"}, {2, "January 2nd"}, {3, "January 3rd"},
+        {4, "January 4th"}, {11, "January 11th"}, {12, "January 12th"}, {13, "January 13th"}, {21, "January 21st"},
+        {22, "January 22nd"}, {23, "January 23rd"}, {30, "January 30th"}, {31, "January 31st"}};
+    for (const auto& [d, said] : ordinals)
+        CHECK_EQ(DateText(DateFormat::MonthDay, CalendarDay{2026, 1, d}), said);
+    Settings settings;
+    BarState state;
+    state.unixMs    = 1791527400000 + 42000; // still Thursday the 8th on the US Pacific coast
+    state.earthYear = 2026, state.earthMonth = 10, state.earthDay = 9;
+    state.earthHour = 8, state.earthMinute = 30;
+    WidgetOptions& o = settings.Widget(BarWidget::EarthTime);
+    CHECK(o.dateFormat == DateFormat::MonthDayYear);
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle).empty()); // off until asked
+    o.design = DesignFrom(BarWidget::EarthTime, "time | date");
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle) == "10/09/2026");
+    o.dateFormat = DateFormat::MonthDay;
+    o.clockZone  = ClockZone::UsPacific; // Local Timezone moves the time, never the computer's date
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle) == "October 9th");
+    // It needs the computer's date even while the time is another zone's.
+    for (WidgetOptions& each : settings.widgets)
+        each.on = false;
+    o.on = true;
+    CHECK(NeedsOf(settings, {}).localTime);
+    o.design = DesignFrom(BarWidget::EarthTime, "time | -date");
+    CHECK(!NeedsOf(settings, {}).localTime);
+}
+
+TEST(the_clocks_popup_is_headed_by_the_date_in_words_and_the_time_as_24_hour_and_seconds_say)
+{
+    CHECK_EQ(DateTimeTitle(CalendarDay{1999, 9, 1}, 12, 0, -1, false), "September 1st, 1999 - 12:00pm");
+    CHECK_EQ(DateTimeTitle(CalendarDay{1999, 9, 1}, 0, 5, -1, false), "September 1st, 1999 - 12:05am");
+    CHECK_EQ(DateTimeTitle(CalendarDay{1999, 9, 1}, 13, 4, 9, false), "September 1st, 1999 - 1:04:09pm");
+    CHECK_EQ(DateTimeTitle(CalendarDay{1999, 9, 1}, 13, 4, 9, true), "September 1st, 1999 - 13:04:09");
+    Settings settings;
+    BarState state;
+    state.unixMs    = 1791527400000 + 42000; // Thursday 23:30:42 on the US Pacific coast
+    state.earthYear = 2026, state.earthMonth = 10, state.earthDay = 9;
+    state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
+    WidgetOptions& o = settings.Widget(BarWidget::EarthTime);
+    o.clock24 = true, o.clockSeconds = false;
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 9th, 2026 - 08:30");
+    o.clock24 = false, o.clockSeconds = true;
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 9th, 2026 - 8:30:42am");
+    o.clockZone = ClockZone::UsPacific; // the Local Time's zone, date and time
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 8th, 2026 - 11:30:42pm");
 }
 
 TEST(the_performance_widget_has_no_ping_to_offer)

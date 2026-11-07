@@ -1498,7 +1498,9 @@ namespace headsup
                                                       : LocalZoneName(state.unixMs, state.earthYear, state.earthMonth,
                                                             state.earthDay, state.earthHour, state.earthMinute) +
                                                             " " + ClockText(state.earthHour, state.earthMinute, o.clock24, -1)))},
-                    {WidgetPart::ClockVana, ListOf(Text(VanaClock(state.unixMs)))}};
+                    {WidgetPart::ClockVana, ListOf(Text(VanaClock(state.unixMs)))},
+                    {WidgetPart::ClockDate,
+                        ListOf(Text(DateText(o.dateFormat, CalendarDay{state.earthYear, state.earthMonth, state.earthDay})))}};
             case BarWidget::GameHelp: return {};
             case BarWidget::Performance: return PerformanceParts(state, o, base);
             case BarWidget::Job: return JobParts(state.job, o, base);
@@ -1686,6 +1688,7 @@ namespace headsup
         bool zonedClock = false, localClock = false, serverClock = false;
         EachShownCopy(settings, BarWidget::EarthTime, [&](const WidgetOptions& o) {
             (o.clockZone ? zonedClock : localClock) = true;
+            localClock = localClock || PartOn(o.design, WidgetPart::ClockDate); // the computer's date
             // The computer's zone is named by comparing its time with the time alone.
             const bool second = PartOn(o.design, WidgetPart::ClockServer);
             serverClock = serverClock || second || PartOn(o.design, WidgetPart::ClockVana);
@@ -1945,14 +1948,15 @@ namespace headsup
         }
         case BarWidget::EarthTime:
         {
-            int year = state.earthYear, month = state.earthMonth, day = state.earthDay;
+            CalendarDay day{state.earthYear, state.earthMonth, state.earthDay};
+            int hour = state.earthHour, minute = state.earthMinute, second = state.earthSecond;
             if (o.clockZone)
             {
                 const ZoneTime there = ZoneAt(*o.clockZone, state.unixMs);
-                year = there.year, month = there.month, day = there.day;
+                day = CalendarDay{there.year, there.month, there.day}, hour = there.hour, minute = there.minute,
+                second = there.second;
             }
-            popup.title =
-                ListOf(Text(std::to_string(year) + "-" + Printed("%02d", month) + "-" + Printed("%02d", day)));
+            popup.title = ListOf(Text(DateTimeTitle(day, hour, minute, o.clockSeconds ? second : -1, o.clock24)));
             popup.sections = ListOf(ServerTimeRows(state.unixMs));
             break;
         }

@@ -14,7 +14,7 @@ namespace headsup
         constexpr P kCurrency[] = {P::Currency1Name, P::Currency2Name, P::Currency1Amount, P::Currency2Amount,
             P::Currency1Icon, P::Currency2Icon};
         constexpr P kBags[]   = {P::BagCount, P::BagName};
-        constexpr P kClock[]  = {P::ClockTime, P::ClockServer, P::ClockVana};
+        constexpr P kClock[]  = {P::ClockTime, P::ClockServer, P::ClockVana, P::ClockDate};
         constexpr P kJob[]    = {P::JobJobs, P::JobEarned, P::JobToNext, P::JobPercent, P::JobBar};
         constexpr P kPerf[]   = {P::PerfFps, P::PerfSent, P::PerfReceived, P::PerfPercent, P::PerfMemory,
             P::PerfMessages};
@@ -26,14 +26,14 @@ namespace headsup
         // By WidgetPart.
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
             "date", "day", "time", "moon", "aggro", "name", "distance", "detection", "level", "player", "weak",
-            "coin", "name1", "name2", "amount1", "amount2", "icon1", "icon2", "count", "bag", "icon", "time", "server", "vana", "icon", "jobs", "earned", "tonext", "percent", "bar",
+            "coin", "name1", "name2", "amount1", "amount2", "icon1", "icon2", "count", "bag", "icon", "time", "server", "vana", "icon", "date", "jobs", "earned", "tonext", "percent", "bar",
             "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "pin1", "pin2",
             "pin3", "pin4", "pin5", "pin6", "ship",
             "guild", "sandoria", "bastok", "windurst", "beastmen"};
 
         // As each widget showed before it had a design.
         constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation", "weather | day time -date -moon",
-            "name distance -detection | level player -weak", "amount1 | icon2 amount2 -name1 -name2 -icon1", "count | bag", "time | -server -vana", "", "-fps sent received percent -memory messages |",
+            "name distance -detection | level player -weak", "amount1 | icon2 amount2 -name1 -name2 -icon1", "count | bag", "time | -server -vana -date", "", "-fps sent received percent -memory messages |",
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
             "ship | -guild -sandoria -bastok -windurst -beastmen"};
 

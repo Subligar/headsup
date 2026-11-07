@@ -9,6 +9,22 @@ namespace headsup
         const char* const kWeekdays[kDaysPerWeek] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
             "Saturday", "Sunday"};
 
+        constexpr int kMonthsPerYear = 12;
+        const char* const kMonthNames[kMonthsPerYear] = {"January", "February", "March", "April", "May", "June", "July",
+            "August", "September", "October", "November", "December"};
+        constexpr size_t kShortMonth = 3; // "Nov"
+
+        // "7th", "1st", "22nd", "13th".
+        std::string Ordinal(int day)
+        {
+            constexpr int kTens = 10, kHundreds = 100;
+            const int ones = day % kTens, tens = day % kHundreds / kTens;
+            const char* suffix = tens == 1 || ones > 3 || ones == 0 ? "th" : ones == 1 ? "st" : ones == 2 ? "nd" : "rd";
+            return std::to_string(day) + suffix;
+        }
+
+        const char* MonthName(int month) { return month >= 1 && month <= kMonthsPerYear ? kMonthNames[month - 1] : ""; }
+
         int64_t FloorDiv(int64_t a, int64_t b) { return a / b - ((a % b != 0) && ((a < 0) != (b < 0)) ? 1 : 0); }
 
         // The days since 1970-01-01 of a date, and a date of them (Howard Hinnant's days_from_civil and
@@ -167,5 +183,31 @@ namespace headsup
         rows.rows.push_back(Labeled("Daily Reset in", Text(SpanText(SecondsToDailyReset(unixMs)))));
         rows.rows.push_back(Labeled("Conquest Tally in", Text(SpanText(SecondsToTally(unixMs)))));
         return rows;
+    }
+
+    std::string DateText(DateFormat format, CalendarDay d)
+    {
+        const std::string month = MonthName(d.month);
+        switch (format)
+        {
+        case DateFormat::YearMonthDay: return Printed("%04d", d.year) + "/" + Printed("%02d", d.month) + "/" + Printed("%02d", d.day);
+        case DateFormat::MonthDayYear: return Printed("%02d", d.month) + "/" + Printed("%02d", d.day) + "/" + Printed("%04d", d.year);
+        case DateFormat::DayMonthYear: return Printed("%02d", d.day) + "/" + Printed("%02d", d.month) + "/" + Printed("%04d", d.year);
+        case DateFormat::MonthDay: return month + " " + Ordinal(d.day);
+        case DateFormat::Iso: return Printed("%04d", d.year) + "-" + Printed("%02d", d.month) + "-" + Printed("%02d", d.day);
+        case DateFormat::MonthDayCommaYear: return month + " " + Ordinal(d.day) + ", " + std::to_string(d.year);
+        case DateFormat::ShortMonthDay: return month.substr(0, kShortMonth) + " " + std::to_string(d.day);
+        }
+        return {};
+    }
+
+    std::string DateTimeTitle(CalendarDay day, int hour, int minute, int second, bool twentyFour)
+    {
+        const std::string seconds = second >= 0 ? ":" + Printed("%02d", second) : "";
+        constexpr int kHalfDay = 12;
+        const std::string time = twentyFour ? HourMinute(hour, minute) + seconds
+                                            : std::to_string(hour % kHalfDay == 0 ? kHalfDay : hour % kHalfDay) + ":" +
+                                                  Printed("%02d", minute) + seconds + (hour < kHalfDay ? "am" : "pm");
+        return DateText(DateFormat::MonthDayCommaYear, day) + " - " + time;
     }
 }

@@ -838,8 +838,9 @@ namespace headsup
                 case WidgetTabsRow::SecondaryTimezone:
                     if (kind == BarWidget::EarthTime)
                     {
-                        std::optional<ClockZone>& picked =
-                            static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::LocalTimezone ? o.clockZone : o.clockSecondZone;
+                        const bool local = static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::LocalTimezone;
+                        if (!PartOn(o.design, local ? WidgetPart::ClockTime : WidgetPart::ClockServer)) break;
+                        std::optional<ClockZone>& picked = local ? o.clockZone : o.clockSecondZone;
                         int zone = ClockZoneChoice(picked);
                         form.NumberDropdown(label.c_str(), zone, 0, kClockZoneChoices - 1,
                             [&](int choice) { return ClockZoneChoiceName(choice, c.layout, c.readings.localZone); }, row.tip);
@@ -851,6 +852,16 @@ namespace headsup
                     break;
                 case WidgetTabsRow::Seconds:
                     if (kind == BarWidget::EarthTime) form.Switch(label.c_str(), o.clockSeconds, row.tip);
+                    break;
+                case WidgetTabsRow::DateFormat:
+                    if (kind == BarWidget::EarthTime && PartOn(o.design, WidgetPart::ClockDate))
+                    {
+                        // Each format as today reads in it.
+                        int format = static_cast<int>(o.dateFormat);
+                        form.NumberDropdown(label.c_str(), format, 0, kDateFormatCount - 1,
+                            [&](int i) { return DateText(static_cast<DateFormat>(i), c.readings.today); }, row.tip);
+                        o.dateFormat = static_cast<DateFormat>(format);
+                    }
                     break;
                 case WidgetTabsRow::ShowZoneId:
                     if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, row.tip);

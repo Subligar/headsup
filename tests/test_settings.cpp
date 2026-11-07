@@ -1118,6 +1118,21 @@ TEST(the_clocks_zone_is_saved_by_name_and_an_unknown_name_keeps_the_default)
     CHECK(!LoadSettings(second).Widget(BarWidget::EarthTime).clockSecondZone.has_value());
 }
 
+TEST(the_clocks_date_format_is_saved_by_name_and_an_unknown_name_keeps_the_default)
+{
+    MapStore fresh;
+    SaveSettings(Settings{}, fresh);
+    CHECK(fresh.values["clockDateFormat"] == "monthDayYear");
+    Settings s;
+    s.Widget(BarWidget::EarthTime).dateFormat = DateFormat::ShortMonthDay;
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK(saved.values["clockDateFormat"] == "shortMonthDay");
+    CHECK(LoadSettings(saved) == s);
+    saved.values["clockDateFormat"] = "stardate";
+    CHECK(LoadSettings(saved).Widget(BarWidget::EarthTime).dateFormat == DateFormat::MonthDayYear);
+}
+
 TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
 {
     Settings s;

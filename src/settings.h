@@ -69,6 +69,7 @@ namespace headsup
         std::optional<ClockZone> clockSecondZone = ClockZone::Japan; // its Secondary Timezone part's, the same way
         bool clock24         = true;                // its two lines
         bool clockSeconds    = false;               // its own line's seconds
+        DateFormat dateFormat = DateFormat::MonthDayYear; // how its Local Date button writes the date
         int expBarWidth      = kDefaultExpBarWidth;  // Job & EXP: its EXP Bar's
         int expBarHeight     = kDefaultExpBarHeight;
         std::optional<ExpText> expBarText;           // what its EXP Bar says in its middle; none for nothing

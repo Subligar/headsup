@@ -268,6 +268,9 @@ namespace headsup
         const char* const kJobTextNames[kJobTextCount] = {"mainSub", "main", "levelFirst"};
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
+        constexpr const char* kDateFormatKey   = "clockDateFormat";
+        const char* const kDateFormatNames[kDateFormatCount] = {"ymd", "monthDayYear", "dayMonthYear", "monthDay", "iso",
+            "monthDayCommaYear", "shortMonthDay"};
         const char* const kClockZoneNames[kClockZoneCount] = {"japan", "utc", "usEastern", "usCentral", "usMountain",
             "usArizona", "usPacific", "usAlaska", "usHawaii", "ukIreland", "centralEurope", "easternEurope",
             "australiaEastern"};
@@ -1321,6 +1324,8 @@ namespace headsup
                     o.clockSecondZone.reset();
                 o.clock24      = flag(kClock24Key, o.clock24);
                 o.clockSeconds = flag(kClockSecondsKey, o.clockSeconds);
+                o.dateFormat   = static_cast<DateFormat>(
+                    NameIndex(kDateFormatNames, kDateFormatCount, text(kDateFormatKey), static_cast<int>(o.dateFormat)));
                 break;
             }
             case BarWidget::Job:
@@ -1384,6 +1389,7 @@ namespace headsup
                 text(kClockSecondZoneKey, o.clockSecondZone ? kClockZoneNames[static_cast<int>(*o.clockSecondZone)] : kLocalZone);
                 flag(kClock24Key, o.clock24);
                 flag(kClockSecondsKey, o.clockSeconds);
+                text(kDateFormatKey, kDateFormatNames[static_cast<int>(o.dateFormat)]);
                 break;
             case BarWidget::Job:
                 flag(kJobNamesKey, o.jobNames);

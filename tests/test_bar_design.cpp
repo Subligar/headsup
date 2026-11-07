@@ -50,7 +50,7 @@ TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
 TEST(a_design_saves_as_text_and_loads_back)
 {
     CHECK_EQ(DesignText(DefaultDesign(BarWidget::Zone)), "name | region nation");
-    CHECK_EQ(DesignText(DefaultDesign(BarWidget::EarthTime)), "time | -server -vana");
+    CHECK_EQ(DesignText(DefaultDesign(BarWidget::EarthTime)), "time | -server -vana -date");
     const char* const job = "-jobs tonext bar | -earned -percent";
     CHECK_EQ(DesignText(DesignFrom(BarWidget::Job, job)), job);
     for (int k = 0; k < kBarWidgetCount; ++k)

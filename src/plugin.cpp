@@ -1126,6 +1126,7 @@ public:
             .settingsOf       = SettingsShownNow(),
             .partMarks        = {},
             .localZone        = LocalZoneNow(),
+            .today            = TodayNow(),
         };
         if (!readings.settingsOf.empty())
             readings.partMarks = headsup::PartMarksNow(readings.settingsOf, BarStateNow(now), m_Settings);
@@ -3041,6 +3042,14 @@ private:
         return local == nullptr ? std::string()
                                 : headsup::LocalZoneName(UnixMsOf(clock), local->tm_year + 1900, local->tm_mon + 1,
                                       local->tm_mday, local->tm_hour, local->tm_min);
+    }
+
+    static headsup::CalendarDay TodayNow()
+    {
+        const std::time_t seconds = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        const std::tm* local      = std::localtime(&seconds);
+        return local == nullptr ? headsup::CalendarDay{}
+                                : headsup::CalendarDay{local->tm_year + 1900, local->tm_mon + 1, local->tm_mday};
     }
 
     uint32_t TitleOf(bool self, uint32_t serverId, IPlayer* player) const

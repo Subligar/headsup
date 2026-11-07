@@ -290,6 +290,33 @@ TEST(the_job_widgets_bar_rows_show_with_its_exp_bar_and_job_text_with_its_job_in
     CHECK(Has(shown, "job-names") && !Has(shown, "job-text"));
 }
 
+TEST(the_clocks_zones_show_with_their_buttons_and_date_format_with_local_date_written_in_todays_date)
+{
+    Window w;
+    const PanelWidget clock{BarWidget::EarthTime};
+    w.settings.Widget(clock).on = true;
+    w.readings.settingsOf       = {clock};
+    w.readings.today            = CalendarDay{2026, 11, 7};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(clock).design = DesignFrom(BarWidget::EarthTime, "time | -server -date");
+    std::string shown = rows();
+    CHECK(Has(shown, "local-timezone") && !Has(shown, "secondary-timezone") && !Has(shown, "date-format"));
+    w.settings.Widget(clock).design = DesignFrom(BarWidget::EarthTime, "-time | server date");
+    shown = rows();
+    CHECK(!Has(shown, "local-timezone") && Has(shown, "secondary-timezone") && Has(shown, "date-format"));
+    // Each format is offered as today reads in it.
+    const auto says = [&](const char* text) {
+        return std::ranges::any_of(w.Pass().values, [&](const FormValue& v) { return v.kind == FormValueKind::Text && v.text == text; });
+    };
+    w.settings.Widget(clock).dateFormat = DateFormat::MonthDay;
+    CHECK(says("November 7th"));
+    w.settings.Widget(clock).dateFormat = DateFormat::DayMonthYear;
+    CHECK(says("07/11/2026") && !says("November 7th"));
+}
+
 TEST(the_widget_layout_cards_reset_arrow_shows_once_it_was_changed_and_puts_every_widget_back)
 {
     Window w;
