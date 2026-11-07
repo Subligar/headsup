@@ -759,10 +759,14 @@ namespace headsup
 
 
         // Who holds the zone's region; no one before a conquest update or outside the conquest regions.
-        // Jeuno's crest in Jeuno, and Aht Urhgan's in the regions of its Besieged map, as the game's region maps show them.
+        // A nation's crest in its own city and Jeuno's in Jeuno, which no conquest holds, and Aht Urhgan's in the
+        // regions of its Besieged map, as the game's region maps show them.
         GamePicture HomeCrest(const ZoneRecord* zone)
         {
             if (zone == nullptr) return GamePicture::None;
+            if (zone->region == kSanDoriaRegion) return GamePicture::SanDoriaCrest;
+            if (zone->region == kBastokRegion) return GamePicture::BastokCrest;
+            if (zone->region == kWindurstRegion) return GamePicture::WindurstCrest;
             if (zone->region == kJeunoRegion) return GamePicture::JeunoCrest;
             if (zone->region >= kFirstAhtUrhganRegion && zone->region <= kLastAhtUrhganRegion) return GamePicture::AhtUrhganCrest;
             return GamePicture::None;

@@ -944,9 +944,9 @@ TEST(the_zone_says_who_holds_its_region_once_known)
     // Its name after the region, as the default design has it, and its crest for the widget's icon.
     CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {"  Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
     CHECK(w.picture == GamePicture::BastokCrest);
-    state.zone = 230; // Southern San d'Oria: a city region, not in the conquest packet
+    state.zone = 230; // Southern San d'Oria: a city region, not in the conquest packet, with its nation's crest
     CHECK(Joined(Content(BarWidget::Zone, state, settings).subtitle) == "San d'Oria");
-    CHECK(Content(BarWidget::Zone, state, settings).picture == GamePicture::None);
+    CHECK(Content(BarWidget::Zone, state, settings).picture == GamePicture::SanDoriaCrest);
 }
 
 TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
@@ -1017,7 +1017,23 @@ TEST(the_zones_design_puts_the_holders_name_before_or_after_the_zone_or_below_it
     CHECK(shown("name | region nation").picture == GamePicture::JeunoCrest && shown("name | region nation").subtitle.size() == 1);
     state.zone = 50; // Aht Urhgan Whitegate, West Aht Urhgan
     CHECK(shown("name | region").picture == GamePicture::AhtUrhganCrest);
-    state.zone = 230; // Southern San d'Oria: no crest
+    // A nation's own city its crest, as no conquest holds it, whoever holds the regions around it.
+    owners.fill(Nation::Beastmen);
+    state.owners = owners;
+    for (const auto& [zone, crest] : {std::pair{230, GamePicture::SanDoriaCrest}, std::pair{233, GamePicture::SanDoriaCrest},
+             std::pair{234, GamePicture::BastokCrest}, std::pair{237, GamePicture::BastokCrest},
+             std::pair{238, GamePicture::WindurstCrest}, std::pair{242, GamePicture::WindurstCrest},
+             std::pair{243, GamePicture::JeunoCrest}})
+    {
+        state.zone = static_cast<uint16_t>(zone); // Southern San d'Oria, Chateau d'Oraguille, Bastok Mines, Metalworks, ...
+        CHECK(shown("name | region nation").picture == crest && shown("name | region nation").subtitle.size() == 1);
+    }
+    // Before any conquest update too.
+    state.owners.reset();
+    state.zone = 236; // Port Bastok
+    CHECK(shown("name | region").picture == GamePicture::BastokCrest);
+    // Nothing outside a region.
+    state.zone = 280; // Mog Garden
     CHECK(shown("name | region").picture == GamePicture::None);
 }
 

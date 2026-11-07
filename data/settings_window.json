@@ -1286,7 +1286,7 @@
       "options": [
         {"name": "Zone Name", "tip": "The zone you are in."},
         {"name": "Region Name", "tip": "The zone's region."},
-        {"name": "Conquest Icon", "tip": "The crest of the nation that holds the region; Jeuno's in Jeuno, and Aht Urhgan's in the regions of its Besieged map."},
+        {"name": "Conquest Icon", "tip": "The crest of the nation that holds the region; a nation's own in its city, Jeuno's in Jeuno, and Aht Urhgan's in the regions of its Besieged map."},
         {"name": "Conquest Nation", "tip": "The name of the nation that holds the region."},
         {"name": "Weather Icon", "tip": "The weather's picture, as Use Custom Icons picks it."},
         {"name": "Weather Name", "tip": "The weather now."},
