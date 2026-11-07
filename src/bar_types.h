@@ -118,6 +118,15 @@ namespace headsup
     // icons.
     enum class CustomIcons : uint8_t { Never, NoVanilla, Always };
     constexpr int kCustomIconsCount = static_cast<int>(CustomIcons::Always) + 1;
+    // Where the player dragged a pinned pop-out, kept by its edges nearest the screen's sides: its left edge from the
+    // screen's left or its right edge from the right, and its top from the top or its bottom from the bottom. It grows
+    // away from those edges as its content does.
+    struct PopupSpot
+    {
+        int x = 0, y = 0;
+        bool fromRight = false, fromBottom = false;
+        bool operator==(const PopupSpot&) const = default;
+    };
     // Where a widget's icon goes: nowhere, before its text or after it.
     enum class IconSide : uint8_t { Hide, Left, Right };
     constexpr int kIconSideCount = static_cast<int>(IconSide::Right) + 1;

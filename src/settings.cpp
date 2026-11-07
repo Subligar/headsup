@@ -247,6 +247,8 @@ namespace headsup
         constexpr const char* kCombineSuffix    = "Combine";
         constexpr const char* kLinkPaddingSuffix = "LinkPadding";
         constexpr const char* kIconSideSuffix    = "Icon";
+        constexpr const char* kPopupSpotSuffix   = "PopupSpot"; // "left 10 top 200" or "right 120 bottom 80"
+        constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
         const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
         // The EXP widget's: a place for each ExpText, and its bar's size.
         const char* const kExpPlaceKeys[kExpTextCount] = {"barExpEarned", "barExpToNext", "barExpPercent"};
@@ -1244,6 +1246,18 @@ namespace headsup
             o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
             o.linkPadding = number(widget + kLinkPaddingSuffix, o.linkPadding);
+            {
+                std::istringstream words(text((widget + kPopupSpotSuffix).c_str()));
+                std::string across, down;
+                PopupSpot spot;
+                if (words >> across >> spot.x >> down >> spot.y && (across == kSpotLeft || across == kSpotRight) &&
+                    (down == kSpotTop || down == kSpotBottom))
+                {
+                    spot.fromRight  = across == kSpotRight;
+                    spot.fromBottom = down == kSpotBottom;
+                    o.popupSpot     = spot;
+                }
+            }
             if (IconPartOf(w.kind))
                 o.iconSide = static_cast<IconSide>(NameIndex(kIconSideNames, kIconSideCount,
                     text((widget + kIconSideSuffix).c_str()), static_cast<int>(o.iconSide)));
@@ -1319,6 +1333,11 @@ namespace headsup
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
             if (IconPartOf(w.kind)) text((widget + kIconSideSuffix).c_str(), kIconSideNames[static_cast<int>(o.iconSide)]);
+            const std::optional<PopupSpot>& spot = o.popupSpot;
+            text((widget + kPopupSpotSuffix).c_str(),
+                spot ? (std::string(spot->fromRight ? kSpotRight : kSpotLeft) + " " + std::to_string(spot->x) + " " +
+                        (spot->fromBottom ? kSpotBottom : kSpotTop) + " " + std::to_string(spot->y)).c_str()
+                     : "");
             switch (w.kind)
             {
             case BarWidget::Currency: text(kBarCurrencyKey, kCurrencyTable[o.currency].key); break;

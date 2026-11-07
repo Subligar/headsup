@@ -79,6 +79,7 @@ namespace headsup
         std::optional<PanelWidget> combine;          // shown right after it in its pill, with one popup (Combine)
         int linkPadding = 0; // pixels between it and the widget it combines with
         IconSide iconSide = IconSide::Left; // its icon's, for a widget with one (IconPartOf)
+        std::optional<PopupSpot> popupSpot; // where its pop-out shows while pinned; none for under its pill
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.

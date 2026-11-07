@@ -43,7 +43,9 @@ ICONS = [(name, f'third_party/mobdb-icons/{name}.png', '') for name in
     ('Sunny', 'sunny'), ('Fair', 'fair'), ('Cloudy', 'cloudy'), ('Foggy', 'foggy'), ('Thunder', 'thunder'),
     ('Thunderstorms', 'thunderstorms'), ('Aurora', 'aurora'), ('Gloom', 'gloom'), ('Snow', 'snow'),
     ('Blizzard', 'blizzard'), ('Windy', 'windy'), ('Gales', 'gales'), ('Rain', 'rain'), ('Squalls', 'squalls'),
-    ('DustStorm', 'dust_storm'), ('HeatSpell', 'heat_spell')]]
+    ('DustStorm', 'dust_storm'), ('HeatSpell', 'heat_spell')]] + [
+    ('Reset', 'resources/icons/reset.png', 'puts a moved pop-out back in its place'),
+]
 # An icon is drawn at about a quarter of its pixels with linear filtering and no smaller copies, which mixes the clear
 # pixels two out from its edge into it: those take the colors beside them, so the edge keeps its own.
 BLEED_RINGS = 2

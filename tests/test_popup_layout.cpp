@@ -133,6 +133,28 @@ TEST(a_subtitle_sits_under_the_title_outside_any_card_and_above_the_cards)
     CHECK(l.height > plain.height);
 }
 
+TEST(a_pinned_popup_moved_from_its_place_has_a_reset_chip_left_of_its_cog)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupContent content = Sample();
+    content.resetPress   = "popup reset 2";
+    const auto pressed = [](const PopupLayout& l) -> const PopupTabChip* {
+        for (const PopupTabChip& chip : l.chips)
+            if (chip.press && chip.tab == "popup reset 2") return &chip;
+        return nullptr;
+    };
+    const PopupLayout pinned = LayoutPopup(content, m, BarShape::Pills, true, Fake);
+    const PopupTabChip* reset = pressed(pinned);
+    CHECK(reset != nullptr);
+    const float gap = 0.6f * m.popupText;
+    CHECK(Near(reset->width, pinned.cog.width) && Near(reset->y, pinned.cog.y) && Near(reset->x + reset->width + gap, pinned.cog.x));
+    // Its icon alone in it.
+    CHECK(std::ranges::any_of(pinned.pieces, [](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Reset; }));
+    // Not while it only hovers, which shows it in its place.
+    CHECK(pressed(LayoutPopup(content, m, BarShape::Pills, false, Fake)) == nullptr);
+    CHECK(pressed(LayoutPopup(Sample(), m, BarShape::Pills, true, Fake)) == nullptr);
+}
+
 TEST(a_headed_card_has_a_collapse_chip_at_its_right_and_collapsed_shows_its_heading_alone)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);

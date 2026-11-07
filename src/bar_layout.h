@@ -108,6 +108,10 @@ namespace headsup
     PillJoins JoinsOf(const BarLayout& layout, PanelWidget widget);
     // A combined pill has a popup when any of its widgets has one: its first widget's hasPopup says so.
     void SharePopups(std::array<bool, kPanelSlots>& hasPopup, const std::array<PanelWidget, kPanelSlots>& groups);
+    // A dragged popup's spot, by which half of the screen its middle is in across and down.
+    PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight);
+    // A popup of this size at the spot, its kept edges where the spot says, moved onto the screen if it would leave it.
+    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight);
     // Under its widget below the bar, moved inward from the screen's sides, its height cut at the bottom: a ring
     // drawn ring pixels around it stays gap from the bar and the screen's edges.
     BarRect PlacePopup(const BarRect& widget, float barHeight, float width, float height, float screenWidth,
@@ -149,16 +153,22 @@ namespace headsup
         void Frame(const BarLayout& layout, const std::array<bool, kPanelSlots>& hasPopup);
         // Where the open popup was drawn, or an empty rectangle, its cards' tabs, the parts that scroll, its pin chip
         // and its settings chip.
+        // grip: its title row, by which a pinned popup is dragged.
         void SetPopup(const BarRect& popup, std::vector<BarTabChip> chips = {}, std::vector<BarScroll> scrolls = {},
-            const BarRect& pin = {}, const BarRect& cog = {});
+            const BarRect& pin = {}, const BarRect& cog = {}, const BarRect& grip = {});
         // The wheel turned notches toward the player: true when the pointer, where it last moved, is over a part of the
         // popup that scrolls, which then scrolls kLinesPerNotch lines a notch, no further than its ends.
         bool Wheel(int notches);
         // A left press on a scrollbar's track drags its thumb, from where it was pressed on it or, off it, from its
         // middle, which jumps there; moves drag it, held, until the button goes up.
-        bool Dragging() const { return m_Drag.has_value(); }
-        void DragTo(float y);
-        void EndDrag() { m_Drag.reset(); }
+        // A left press on a pinned popup's title row drags the popup, which ends where the button goes up.
+        bool Dragging() const { return m_Drag.has_value() || m_PopupDrag.has_value(); }
+        void DragTo(float x, float y);
+        void EndDrag();
+        // Where the popup being dragged is now; nothing while none is.
+        std::optional<BarRect> DraggedPopup() const;
+        // The pill whose popup a drag left somewhere since the last call, and where.
+        std::optional<std::pair<PanelWidget, BarRect>> TakeMoved() { return std::exchange(m_Moved, std::nullopt); }
         // How many lines each part of the open popup has been scrolled, by its key: back to the top once it closes.
         const std::map<std::string, size_t>& Scrolled() const { return m_Scrolled; }
         // A press in the open popup was refused, which it says until it closes.
@@ -222,7 +232,15 @@ namespace headsup
         std::set<std::string> m_Fleeting; // the cards in m_Tabs whose picks go when the popup closes
         std::vector<std::string> m_Presses;
         std::vector<BarScroll> m_Scrolls;
-        BarRect m_PinChip, m_CogChip;
+        BarRect m_PinChip, m_CogChip, m_Grip;
+        struct PopupDrag
+        {
+            PanelWidget pill;
+            BarRect at;
+            float grabX, grabY; // from its top-left corner
+        };
+        std::optional<PopupDrag> m_PopupDrag;
+        std::optional<std::pair<PanelWidget, BarRect>> m_Moved;
         struct Drag
         {
             std::string key;

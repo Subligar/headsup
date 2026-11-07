@@ -1559,6 +1559,15 @@ namespace headsup
                 list.push_back(status);
             return PressResult::Changed;
         }
+        if (press.starts_with(kPopupResetPress))
+        {
+            const std::string number(press.substr(std::string_view(kPopupResetPress).size()));
+            char* end = nullptr;
+            const long slot = std::strtol(number.c_str(), &end, 10);
+            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return PressResult::None;
+            settings.widgets[static_cast<size_t>(slot)].popupSpot.reset();
+            return PressResult::Changed;
+        }
         if (press.starts_with(kCollapsePress))
         {
             const std::string key(press.substr(std::string_view(kCollapsePress).size()));
@@ -1758,6 +1767,7 @@ namespace headsup
         }
         if (HasCopies(head.kind)) content.clonePress = kWidgetClonePress + std::to_string(SlotOf(head));
         if (head.copy > 0) content.removePress = kWidgetRemovePress + std::to_string(SlotOf(head));
+        if (settings.Widget(head).popupSpot) content.resetPress = kPopupResetPress + std::to_string(SlotOf(head));
         return content;
     }
 

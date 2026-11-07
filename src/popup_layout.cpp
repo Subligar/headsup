@@ -715,9 +715,11 @@ namespace headsup
             l.pieces.push_back(PopupPiece{PopupPiece::Kind::Cog, (side - mark) / 2.0f, pad + (side - mark) / 2.0f, mark, mark, {},
                 PopupFont::Pin});
             titleWidth += unit * kCellGap + side;
-            for (const auto& [press, icon] : {std::pair{&content.clonePress, Icon::Clone}, std::pair{&content.removePress, Icon::Delete}})
+            for (const auto& [press, icon] : {std::pair{&content.resetPress, Icon::Reset}, std::pair{&content.clonePress, Icon::Clone},
+                     std::pair{&content.removePress, Icon::Delete}})
             {
-                if (!settings || press->empty()) continue;
+                // The reset while it is pinned, where it can be dragged; the others while its settings show.
+                if (press->empty() || (press == &content.resetPress ? !pinned : !settings)) continue;
                 chips.push_back(TitleChip{l.pieces.size(), *press});
                 PopupPiece chip{PopupPiece::Kind::ActionChip, 0.0f, pad, side, side, {}};
                 chip.font = PopupFont::Pin;
@@ -731,6 +733,7 @@ namespace headsup
             }
         }
         l.lines.push_back(PopupLine{pad + rowHeight});
+        l.titleRow = pad + rowHeight;
         float top = pad + rowHeight + metrics.rowGap;
         if (!content.subtitle.empty())
         {

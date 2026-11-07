@@ -119,6 +119,7 @@ namespace headsup
     // What a popup's clone and remove chips tell, then the widget's slot.
     constexpr const char* kWidgetClonePress = "widget clone ", *kWidgetRemovePress = "widget remove ";
     constexpr const char* kCollapsePress = "collapse "; // and the card's CollapseKey
+    constexpr const char* kPopupResetPress = "popup reset "; // and its pill's slot: back under its pill
     // A pop-out card's name in Settings::collapsedSections: its pill's and its heading's without what is in brackets,
     // so the Today card is one card whatever the date. One word: lower case, a '-' for each space.
     std::string CollapseKey(PanelWidget head, std::string_view heading);

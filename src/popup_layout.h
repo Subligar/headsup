@@ -94,6 +94,7 @@ namespace headsup
         std::vector<PopupScroll> scrolls;
         BarRect pin{}; // the pin chip, which a press pins or unpins the popup by; none in an empty popup
         BarRect cog{}; // the settings chip, which a press shows the widget's settings by, or its content again
+        float titleRow = 0.0f; // the title row's height, by which a pinned popup is dragged
         BarRect body{}; // where the settings go while they show: under the title, as wide as the popup's inside
     };
 

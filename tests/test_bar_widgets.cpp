@@ -764,6 +764,19 @@ TEST(each_headed_card_of_a_pop_out_collapses_by_its_press_and_stays_collapsed_ac
     CHECK(!PanelPopupContent(BarWidget::Weather, state, settings).sections[0].collapsed);
 }
 
+TEST(a_pop_out_moved_from_its_place_offers_its_reset_which_puts_it_back)
+{
+    Settings settings;
+    BarState state;
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).resetPress.empty());
+    settings.Widget(BarWidget::Bags).popupSpot = PopupSpot{10, 20, false, false};
+    const std::string press = PanelPopupContent(BarWidget::Bags, state, settings).resetPress;
+    CHECK(!press.empty());
+    CHECK(ApplyPopupPress(settings, press, Nation::None) == PressResult::Changed);
+    CHECK(!settings.Widget(BarWidget::Bags).popupSpot);
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).resetPress.empty());
+}
+
 TEST(the_forecast_names_the_weekdays_past_the_weeks_end)
 {
     Settings settings;

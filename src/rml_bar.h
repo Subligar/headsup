@@ -183,7 +183,7 @@ namespace headsup
         // on the screen: where it went (an empty rectangle for none).
         BarRect ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-            std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin, BarRect& cog);
+            std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin, BarRect& cog, BarRect& grip);
         bool PopupDocumentFor(RmlHost& host, const BarLook& look);
         void ClosePopup();
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);
@@ -217,7 +217,7 @@ namespace headsup
         std::optional<float> m_PopupLeft, m_PopupTop, m_PopupWidth, m_PopupHeight;
         Memo<PopupKey, PopupLayout> m_PopupLayout;
         // The widest the open popup has been since it opened, which it keeps as its text changes with the time.
-        std::optional<PanelWidget> m_WidestFor;
+        std::pair<std::optional<PanelWidget>, bool> m_WidestFor; // the pill and whether its settings showed
         float m_Widest = 0.0f;
         PopupFaces m_PopupFaces;
         // Each popup font's widths of the texts the open popup measured, its figures at the font's widest digit.

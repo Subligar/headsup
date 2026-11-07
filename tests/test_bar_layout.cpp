@@ -178,6 +178,47 @@ TEST(a_fleeting_cards_pick_is_forgotten_once_the_popup_closes_and_another_cards_
     CHECK(!input.PickedTabs().contains("Conquest") && input.PickedTabs().at("Travel") == "Boats");
 }
 
+TEST(a_dragged_popup_is_kept_by_its_edges_nearest_the_screens_sides_and_grows_away_from_them)
+{
+    constexpr float W = 1920.0f, H = 1080.0f;
+    const PopupSpot topLeft = SpotOf(BarRect{100.0f, 200.0f, 300.0f, 400.0f}, W, H);
+    CHECK(topLeft == (PopupSpot{100, 200, false, false}));
+    const PopupSpot bottomRight = SpotOf(BarRect{1500.0f, 600.0f, 300.0f, 400.0f}, W, H);
+    CHECK(bottomRight == (PopupSpot{120, 80, true, true})); // 1920 - 1800 and 1080 - 1000
+    // Placed back at another size, its kept edges stay and it grows away from them.
+    CHECK(PlaceAtSpot(topLeft, 500.0f, 450.0f, W, H) == (BarRect{100.0f, 200.0f, 500.0f, 450.0f}));
+    CHECK(PlaceAtSpot(bottomRight, 500.0f, 450.0f, W, H) == (BarRect{1300.0f, 550.0f, 500.0f, 450.0f}));
+    // Never off the screen.
+    const BarRect big = PlaceAtSpot(topLeft, 1900.0f, 1000.0f, W, H);
+    CHECK(big.x >= 0.0f && big.y >= 0.0f && big.x + big.width <= W && big.y + big.height <= H);
+}
+
+TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const BarRect target = *RectOf(l, BarWidget::Target);
+    input.Move(target.x + 5.0f, 18.0f);
+    const BarRect popup{760.0f, 44.0f, 400.0f, 300.0f}, grip{760.0f, 44.0f, 300.0f, 30.0f};
+    input.SetPopup(popup, {}, {}, {}, {}, grip);
+    // Hovered, not pinned: its title row moves nothing.
+    input.Move(800.0f, 50.0f);
+    CHECK(input.Press(800.0f, 50.0f, true) && !input.Dragging());
+    input.Pin(BarWidget::Target);
+    input.Move(800.0f, 50.0f);
+    input.SetPopup(popup, {}, {}, {}, {}, grip);
+    CHECK(input.Press(800.0f, 50.0f, true) && input.Dragging());
+    input.DragTo(900.0f, 150.0f);
+    CHECK(input.DraggedPopup() == std::optional<BarRect>(BarRect{860.0f, 144.0f, 400.0f, 300.0f}));
+    input.EndDrag();
+    const std::optional<std::pair<PanelWidget, BarRect>> moved = input.TakeMoved();
+    CHECK(moved && moved->first == PanelWidget{BarWidget::Target} && moved->second == (BarRect{860.0f, 144.0f, 400.0f, 300.0f}));
+    CHECK(!input.TakeMoved() && !input.DraggedPopup());
+}
+
 TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)
 {
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);

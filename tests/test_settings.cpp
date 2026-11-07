@@ -2867,6 +2867,24 @@ TEST(the_currency_favorites_are_kept_in_order_and_an_unknown_or_repeated_one_is_
     CHECK(LoadSettings(store).currencyFavorites.empty()); // every star taken off
 }
 
+TEST(a_dragged_pop_outs_spot_saves_under_its_widget_and_loads_back)
+{
+    Settings s;
+    CHECK(!s.Widget(BarWidget::Target).popupSpot);
+    s.Widget(BarWidget::Target).popupSpot = PopupSpot{120, 80, true, true};
+    s.Widget(BarWidget::Zone).popupSpot   = PopupSpot{10, 200, false, false};
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["barTargetPopupSpot"], "right 120 bottom 80");
+    CHECK_EQ(store.values["barZonePopupSpot"], "left 10 top 200");
+    CHECK_EQ(store.values["barGilPopupSpot"], "");
+    const Settings loaded = LoadSettings(store);
+    CHECK(loaded.Widget(BarWidget::Target).popupSpot == s.Widget(BarWidget::Target).popupSpot);
+    CHECK(loaded.Widget(BarWidget::Zone).popupSpot == s.Widget(BarWidget::Zone).popupSpot && !loaded.Widget(BarWidget::Bags).popupSpot);
+    store.values["barZonePopupSpot"] = "sideways 4";
+    CHECK(!LoadSettings(store).Widget(BarWidget::Zone).popupSpot);
+}
+
 TEST(the_collapsed_pop_out_cards_save_and_load_back)
 {
     Settings s;

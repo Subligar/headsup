@@ -400,15 +400,17 @@ namespace headsup
 
     BarRect RmlBar::ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
         const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-        std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin, BarRect& cog)
+        std::vector<BarTabChip>& chips, std::vector<BarScroll>& scrolls, BarRect& pin, BarRect& cog, BarRect& grip)
     {
         m_SettingsBody.reset();
         const std::optional<PanelWidget> open  = input.Open();
         const std::optional<BarRect> pill      = open ? GroupRect(layout, *open) : std::nullopt;
         const BarRect* anchor                  = pill ? &*pill : nullptr;
-        if (open != m_WidestFor)
+        // Its widest is its own: the content's, or its settings' while they show.
+        const std::pair<std::optional<PanelWidget>, bool> widestFor{open, input.SettingsShown() == open};
+        if (widestFor != m_WidestFor)
         {
-            m_WidestFor = open;
+            m_WidestFor = widestFor;
             m_Widest    = 0.0f;
             m_PopupWidths = {};
         }
@@ -448,8 +450,17 @@ namespace headsup
             return cut;
         });
         m_Widest = std::max(m_Widest, pl.width);
-        const BarRect rect =
-            PlacePopup(*anchor, barBottom, pl.width, pl.height, screenWidth, screenHeight, m.gap, out);
+        BarRect rect = PlacePopup(*anchor, barBottom, pl.width, pl.height, screenWidth, screenHeight, m.gap, out);
+        // Pinned, it shows where the player is dragging it or last left it.
+        if (input.Pinned() == open)
+        {
+            if (const std::optional<BarRect> dragged = input.DraggedPopup())
+                rect = PlaceAtSpot(PopupSpot{static_cast<int>(dragged->x), static_cast<int>(dragged->y)}, rect.width,
+                    rect.height, screenWidth, screenHeight);
+            else if (const std::optional<PopupSpot>& spot = look.settings.Widget(*open).popupSpot)
+                rect = PlaceAtSpot(*spot, rect.width, rect.height, screenWidth, screenHeight);
+        }
+        grip = BarRect{rect.x, rect.y, rect.width, pl.titleRow};
         if (fresh || !m_PopupMarked)
         {
             m_Popup->SetInnerRML(PopupRml(pl, look, m_PopupFaces));
@@ -531,10 +542,10 @@ namespace headsup
         input.Frame(layout, widgets.hasPopup);
         std::vector<BarTabChip> chips;
         std::vector<BarScroll> scrolls;
-        BarRect pin, cog;
+        BarRect pin, cog, grip;
         const BarRect popup =
-            ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, chips, scrolls, pin, cog);
-        input.SetPopup(popup, std::move(chips), std::move(scrolls), pin, cog);
+            ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, chips, scrolls, pin, cog, grip);
+        input.SetPopup(popup, std::move(chips), std::move(scrolls), pin, cog, grip);
         if (m_Visible == hidden)
         {
             m_Visible = !hidden;

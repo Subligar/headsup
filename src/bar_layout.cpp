@@ -376,6 +376,23 @@ namespace headsup
         return BarRect{x, y, width, std::max(0.0f, std::min(height, PopupRoom(barHeight, screenHeight, gap, ring)))};
     }
 
+    PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight)
+    {
+        const bool right = popup.x + popup.width / 2.0f > screenWidth / 2.0f;
+        const bool lower = popup.y + popup.height / 2.0f > screenHeight / 2.0f;
+        return PopupSpot{static_cast<int>(std::lround(right ? screenWidth - popup.x - popup.width : popup.x)),
+            static_cast<int>(std::lround(lower ? screenHeight - popup.y - popup.height : popup.y)), right, lower};
+    }
+
+    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight)
+    {
+        width  = std::min(width, screenWidth);
+        height = std::min(height, screenHeight);
+        const auto x = static_cast<float>(spot.x), y = static_cast<float>(spot.y);
+        return BarRect{std::clamp(spot.fromRight ? screenWidth - x - width : x, 0.0f, screenWidth - width),
+            std::clamp(spot.fromBottom ? screenHeight - y - height : y, 0.0f, screenHeight - height), width, height};
+    }
+
     float PopupRoom(float barHeight, float screenHeight, float gap, float ring)
     {
         return screenHeight - barHeight - 2.0f * (gap + ring);
@@ -409,18 +426,25 @@ namespace headsup
     }
 
     void BarInput::SetPopup(const BarRect& popup, std::vector<BarTabChip> chips, std::vector<BarScroll> scrolls,
-        const BarRect& pin, const BarRect& cog)
+        const BarRect& pin, const BarRect& cog, const BarRect& grip)
     {
         m_Popup   = popup;
         m_PinChip = pin;
         m_CogChip = cog;
+        m_Grip    = grip;
         m_Chips   = std::move(chips);
         m_Scrolls = std::move(scrolls);
         Reevaluate();
     }
 
-    void BarInput::DragTo(float y)
+    void BarInput::DragTo(float x, float y)
     {
+        if (m_PopupDrag)
+        {
+            m_PopupDrag->at.x = x - m_PopupDrag->grabX;
+            m_PopupDrag->at.y = y - m_PopupDrag->grabY;
+            return;
+        }
         if (!m_Drag) return;
         for (const BarScroll& scroll : m_Scrolls)
             if (scroll.key == m_Drag->key && scroll.track.height > scroll.thumb)
@@ -428,6 +452,18 @@ namespace headsup
                 const float along = (y - m_Drag->grab - scroll.track.y) / (scroll.track.height - scroll.thumb);
                 m_Scrolled[scroll.key] = static_cast<size_t>(std::lround(std::clamp(along, 0.0f, 1.0f) * static_cast<float>(scroll.most)));
             }
+    }
+
+    void BarInput::EndDrag()
+    {
+        if (m_PopupDrag) m_Moved = std::pair{m_PopupDrag->pill, m_PopupDrag->at};
+        m_Drag.reset();
+        m_PopupDrag.reset();
+    }
+
+    std::optional<BarRect> BarInput::DraggedPopup() const
+    {
+        return m_PopupDrag ? std::optional(m_PopupDrag->at) : std::nullopt;
     }
 
     bool BarInput::Wheel(int notches)
@@ -499,7 +535,7 @@ namespace headsup
                                                            static_cast<float>(scroll.most);
                     const bool held  = y >= top && y < top + scroll.thumb;
                     m_Drag           = Drag{scroll.key, held ? y - top : scroll.thumb / 2.0f};
-                    DragTo(y);
+                    DragTo(x, y);
                     return true;
                 }
             for (const BarTabChip& chip : m_Chips)
@@ -534,6 +570,8 @@ namespace headsup
                     m_Settings = m_Pinned = Open();
                 }
             }
+            else if (m_Pinned && m_Pinned == Open() && m_Grip.Contains(x, y))
+                m_PopupDrag = PopupDrag{*m_Pinned, m_Popup, x - m_Popup.x, y - m_Popup.y};
         }
         return true;
     }
@@ -553,7 +591,7 @@ namespace headsup
             {
                 if ((buttons & kLeftButton) != 0)
                 {
-                    m_Input.DragTo(y);
+                    m_Input.DragTo(x, y);
                     return true;
                 }
                 m_Input.EndDrag();

@@ -960,6 +960,13 @@ public:
         if (m_Rml.Running())
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
+        // A pinned pop-out dragged somewhere stays there, kept by its edges nearest the screen's sides.
+        if (const auto moved = m_BarInput.TakeMoved())
+        {
+            m_Settings.Widget(moved->first).popupSpot = headsup::SpotOf(moved->second,
+                static_cast<float>(m_Names.BackBufferWidth()), static_cast<float>(m_Names.BackBufferHeight()));
+            m_SettingsChangedAt = now;
+        }
         for (const std::string& press : m_BarInput.TakePresses())
             if (const std::optional<headsup::PanelWidget> next = headsup::ApplyWidgetPress(m_Settings, press))
             {
