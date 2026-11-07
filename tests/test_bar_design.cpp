@@ -147,6 +147,13 @@ TEST(an_empty_first_line_lets_the_second_draw_alone)
     CHECK((w.title == std::vector<Span>{Text("35%", Tone::Dim)}) && w.subtitle.empty());
 }
 
+TEST(a_saved_design_of_no_part_its_widget_still_has_is_the_default)
+{
+    CHECK(DesignFrom(BarWidget::Currency, "amount | currency") == DefaultDesign(BarWidget::Currency));
+    CHECK(DesignFrom(BarWidget::Currency, "amount | currency name2") != DefaultDesign(BarWidget::Currency));
+    CHECK(PartOn(DesignFrom(BarWidget::Currency, "amount | currency name2"), WidgetPart::Currency2Name));
+}
+
 TEST(a_part_with_nothing_to_show_takes_no_gap)
 {
     // Most currencies have no picture of their own.
