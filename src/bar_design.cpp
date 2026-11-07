@@ -25,7 +25,7 @@ namespace headsup
         // By WidgetPart.
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
             "date", "day", "time", "moon", "aggro", "name", "distance", "detection", "level", "player", "weak",
-            "coin", "amount", "currency", "count", "bag", "icon", "time", "server", "vana", "jobs", "earned", "tonext", "percent", "bar",
+            "coin", "amount", "currency", "count", "bag", "icon", "time", "server", "vana", "icon", "jobs", "earned", "tonext", "percent", "bar",
             "fps", "sent", "received", "percent", "ping", "memory", "messages", "count", "health", "pin1", "pin2",
             "pin3", "pin4", "pin5", "pin6", "ship",
             "guild", "rse", "moon", "sandoria", "bastok", "windurst", "beastmen"};
@@ -73,6 +73,7 @@ namespace headsup
         case BarWidget::Target: return P::TargetAggro;
         case BarWidget::Currency: return P::CurrencyCoin;
         case BarWidget::Bags: return P::BagIcon;
+        case BarWidget::EarthTime: return P::ClockIcon;
         default: return std::nullopt;
         }
     }
@@ -219,6 +220,7 @@ namespace headsup
         case WidgetPart::TargetAggro: return PartMark{Icon::AggroNQ};
         case WidgetPart::TargetDetection: return PartMark{Icon::Sight};
         case WidgetPart::BagIcon: return PartMark{Icon::Bag};
+        case WidgetPart::ClockIcon: return PartMark{Icon::Clock};
         case WidgetPart::ZoneCrest:
         case WidgetPart::WorldSanDoria: return PartMark{std::nullopt, GamePicture::SanDoriaCrest};
         case WidgetPart::WorldBastok: return PartMark{std::nullopt, GamePicture::BastokCrest};

@@ -969,6 +969,14 @@ TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
     CHECK(Content(BarWidget::Bags, state, settings).icons == std::vector<Icon>{Icon::Bag});
     bags.iconSide = IconSide::Hide;
     CHECK(Content(BarWidget::Bags, state, settings).icons.empty());
+    // And the clock's.
+    WidgetOptions& clock = settings.Widget(BarWidget::EarthTime);
+    clock.on = true;
+    CHECK(Content(BarWidget::EarthTime, state, settings).icons == std::vector<Icon>{Icon::Clock});
+    clock.iconSide = IconSide::Right;
+    CHECK(Content(BarWidget::EarthTime, state, settings).iconsRight);
+    clock.iconSide = IconSide::Hide;
+    CHECK(Content(BarWidget::EarthTime, state, settings).icons.empty());
     WidgetOptions& gil = settings.Widget(BarWidget::Currency);
     state.gil = 1200;
     CHECK(Content(BarWidget::Currency, state, settings).coin);

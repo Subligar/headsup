@@ -1442,7 +1442,7 @@ namespace headsup
             }
             case BarWidget::EarthTime:
                 base.hasPopup = true;
-                return {{WidgetPart::ClockTime,
+                return {{WidgetPart::ClockIcon, ListOf(Mark(Icon::Clock))}, {WidgetPart::ClockTime,
                             ListOf(Text(o.clockZone ? ZoneClockText(ZoneAt(*o.clockZone, state.unixMs), o.clock24, o.clockSeconds)
                                                     : ClockText(state.earthHour, state.earthMinute, o.clock24,
                                                           o.clockSeconds ? state.earthSecond : -1)))},

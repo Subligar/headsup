@@ -39,6 +39,7 @@ ICONS = [(name, f'third_party/mobdb-icons/{name}.png', '') for name in
     ('Delete', 'resources/icons/delete.png', "takes a widget's copy off"),
     ('Flag', 'resources/icons/flag.png', 'a region with no supply run yet'),
     ('Bag', 'resources/icons/bag.png', "the Inventory widget's bag"),
+    ('Clock', 'resources/icons/clock.png', "the Clock widget's clock"),
 ] + [(f'Weather{name}', f'resources/icons/weather/{file}.png', '') for name, file in [
     ('Sunny', 'sunny'), ('Fair', 'fair'), ('Cloudy', 'cloudy'), ('Foggy', 'foggy'), ('Thunder', 'thunder'),
     ('Thunderstorms', 'thunderstorms'), ('Aurora', 'aurora'), ('Gloom', 'gloom'), ('Snow', 'snow'),

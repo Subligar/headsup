@@ -21,7 +21,7 @@ namespace headsup
         TargetAggro, TargetName, TargetDistance, TargetDetection, TargetLevel, TargetPlayer, TargetWeak,
         CurrencyCoin, CurrencyAmount, CurrencyName,
         BagCount, BagName, BagIcon,
-        ClockTime, ClockServer, ClockVana,
+        ClockTime, ClockServer, ClockVana, ClockIcon,
         JobJobs, JobEarned, JobToNext, JobPercent, JobBar,
         PerfFps, PerfSent, PerfReceived, PerfPercent, PerfPing, PerfMemory, PerfMessages,
         PartyCount, PartyHealth,

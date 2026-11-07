@@ -38,6 +38,7 @@ TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
     CHECK(IconPartOf(BarWidget::Target) == std::optional(WidgetPart::TargetAggro));
     CHECK(IconPartOf(BarWidget::Currency) == std::optional(WidgetPart::CurrencyCoin));
     CHECK(IconPartOf(BarWidget::Bags) == std::optional(WidgetPart::BagIcon));
+    CHECK(IconPartOf(BarWidget::EarthTime) == std::optional(WidgetPart::ClockIcon));
     CHECK(!IconPartOf(BarWidget::Performance) && !IconPartOf(BarWidget::GameHelp));
     for (int k = 0; k < kBarWidgetCount; ++k)
     {

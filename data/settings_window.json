@@ -1286,6 +1286,7 @@
         {"name": "Local Time", "tip": "The time in your Local Timezone."},
         {"name": "Secondary Timezone", "tip": "The time in your Secondary Timezone, Japan's by default."},
         {"name": "Vana'diel Time", "tip": "The time in Vana'diel."},
+        {"name": "Clock Icon", "tip": "A clock's picture."},
         {"name": "Job Info", "tip": "Your jobs and levels, as Job Text shows them."},
         {"name": "Earned EXP", "tip": "The EXP you have of this level, out of what it takes. At the level cap, your limit points."},
         {"name": "EXP Til Next Level", "tip": "The EXP left to the next level. At the level cap, your merits."},
