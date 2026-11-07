@@ -1237,9 +1237,22 @@ TEST(world_infos_designer_has_a_button_for_each_thing_it_can_tell_and_each_natio
     w.readings.settingsOf  = {world};
     const std::string chip = "id=\"toppanel-widgets-part-" + std::to_string(SlotOf(world)) + "-";
     const std::string rml  = Block(w.Pass(), "toppanel-widgets")->rml;
-    for (const WidgetPart part : {WidgetPart::WorldShip, WidgetPart::WorldGuild, WidgetPart::WorldRse, WidgetPart::WorldMoon,
-             WidgetPart::WorldSanDoria, WidgetPart::WorldBastok, WidgetPart::WorldWindurst, WidgetPart::WorldBeastmen})
+    for (const WidgetPart part : {WidgetPart::WorldShip, WidgetPart::WorldGuild, WidgetPart::WorldSanDoria, WidgetPart::WorldBastok,
+             WidgetPart::WorldWindurst, WidgetPart::WorldBeastmen})
         CHECK(Has(rml, (chip + std::to_string(static_cast<int>(part)) + "\"").c_str()));
+}
+
+TEST(world_infos_tracked_ship_and_guild_show_only_with_their_buttons_on)
+{
+    Window w;
+    const PanelWidget world{BarWidget::World};
+    w.settings.Widget(world).on = true;
+    w.readings.settingsOf       = {world};
+    const auto rows = [&] { return Block(w.Pass(), "toppanel-widgets")->rml; };
+    w.settings.Widget(world).design = DesignFrom(BarWidget::World, "ship | -guild");
+    CHECK(Has(rows(), "toppanel-widgets-ship-world") && !Has(rows(), "toppanel-widgets-guild-world"));
+    w.settings.Widget(world).design = DesignFrom(BarWidget::World, "guild | -ship");
+    CHECK(!Has(rows(), "toppanel-widgets-ship-world") && Has(rows(), "toppanel-widgets-guild-world"));
 }
 
 TEST(feedback_is_sent_only_once_its_fields_are_filled_and_the_card_says_how_it_went)

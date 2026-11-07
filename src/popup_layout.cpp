@@ -134,7 +134,16 @@ namespace headsup
             bool beside   = false; // in one row with the card before it
             bool under    = false; // under the card before it, in its column
             bool collapsed = false; // as tall as its heading, wherever it is
+            float natural  = 0.0f;  // its height as laid out, before a row makes it taller
         };
+
+        // A tab's chip's content: its icon or picture, and its name.
+        PopupCell TabCell(const PopupTab& tab)
+        {
+            PopupCell cell = Cell(tab.name, tab.icon);
+            cell.picture   = tab.picture;
+            return cell;
+        }
 
         Block LayoutSection(const PopupSection& section, const BarMetrics& metrics, bool ornate, SpanMeasure measure)
         {
@@ -186,7 +195,7 @@ namespace headsup
                 float widest = 0.0f, tall = 0.0f;
                 for (const PopupTab& tab : section.tabs)
                 {
-                    const TextSize framed = Framed(CellSize(Cell(tab.name, tab.icon), unit, measure), unit);
+                    const TextSize framed = Framed(CellSize(TabCell(tab), unit, measure), unit);
                     widest = std::max(widest, framed.width);
                     tall   = std::max(tall, framed.height);
                 }
@@ -198,7 +207,7 @@ namespace headsup
                 for (size_t i = 0; i < count; ++i)
                 {
                     const PopupTab& tab   = section.tabs[i];
-                    const TextSize size   = CellSize(Cell(tab.name, tab.icon), unit, measure);
+                    const TextSize size   = CellSize(TabCell(tab), unit, measure);
                     const TextSize framed = Framed(size, unit);
                     const float top       = y + static_cast<float>(i / across) * (tall + gap);
                     const float inside    = top + framed.inkTop - size.inkTop; // where its icon and name start
@@ -210,10 +219,13 @@ namespace headsup
                     b.pieces.push_back(std::move(chip));
                     // Each after the frame placed from where the chip's content starts; spread, the chip adds where.
                     float x = 0.0f;
-                    if (tab.icon)
+                    if (tab.icon || tab.picture != GamePicture::None)
                     {
                         const float s = unit * kCellIcon;
-                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Icon, x, inside, s, s, {}, PopupFont::Text, *tab.icon});
+                        PopupPiece mark{tab.icon ? PopupPiece::Kind::Icon : PopupPiece::Kind::Picture, x, inside, s, s, {},
+                            PopupFont::Text, tab.icon.value_or(Icon{})};
+                        mark.picture = tab.picture;
+                        b.pieces.push_back(std::move(mark));
                         x += s + unit * kIconGap;
                         b.chips.back().parts = 2;
                     }
@@ -362,6 +374,10 @@ namespace headsup
                     return std::nullopt;
                 };
                 float lineHeight = 0.0f, x = b.pad + indent;
+                // A trailing grid's columns end here, before they go to the card's right.
+                float rowRight = x;
+                for (size_t c = 0; grid && c < columns.size(); ++c)
+                    rowRight += columns[c] + (c + 1 < columns.size() ? gaps[c] : 0.0f);
                 bool shown       = showLine(row, grid && row.header);
                 std::optional<float> drop = centered(0);
                 for (size_t i = 0; i < row.cells.size(); ++i)
@@ -448,14 +464,17 @@ namespace headsup
                     }
                     else if (spread)
                         b.values.push_back(Block::Value{first, b.pieces.size(), (start + cx) / 2.0f - unit * kMiddleRight, 0.0f, true});
+                    else if (grid && row.trailing && i % perLine != 0)
+                        b.values.push_back(Block::Value{first, b.pieces.size(), rowRight, indent});
                     lineHeight = std::max(lineHeight, size.height);
                     x += grid ? columns[i % columns.size()] + gaps[i % columns.size()] : size.width + gap;
                 }
                 if (shown) y += lineHeight + metrics.rowGap;
             }
             closeSocket();
-            b.width  = contentWidth + 2.0f * b.pad;
-            b.height = std::max(y - metrics.rowGap, b.pad) + b.pad;
+            b.width   = contentWidth + 2.0f * b.pad;
+            b.height  = std::max(y - metrics.rowGap, b.pad) + b.pad;
+            b.natural = b.height;
             return b;
         }
 
@@ -468,6 +487,9 @@ namespace headsup
                     b.pieces[i].x += (v.middle ? width / 2.0f : width - b.pad - v.inset) - v.right;
             for (const size_t socket : b.sockets)
                 b.pieces[socket].width = width - 2.0f * b.pad;
+            // Its last socket, a tab's list, reaches down as far as the card does.
+            if (!b.sockets.empty() && b.natural > 0.0f && b.height > b.natural)
+                b.pieces[b.sockets.back()].height += b.height - b.natural;
             for (const Block::Anchor& anchor : b.anchors)
                 b.pieces[anchor.piece].x = width - anchor.fromRight;
             // Each tab as wide as its share of the card's inside, its name in its middle; a short row in the middle.

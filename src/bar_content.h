@@ -117,6 +117,7 @@ namespace headsup
         bool nested = false; // set in a socket with the nested rows beside it, as a tab's rows are
         bool header = false; // Grid: its first line heads its columns, and each group of them set side by side
         bool spread = false; // Grid: a right-aligned column at the card's right edge, a centered middle one right of middle
+        bool trailing = false; // Grid: its columns after the first against the card's right edge, as they are to each other
         bool inset  = false; // in from the card's sides as far as a socket's rows, to line up with a socket under it
         bool roomy  = false; // Grid: its columns further apart
         // A socket's first row: what its scrolling is kept by, and how many of its lines it is scrolled past.
@@ -131,6 +132,7 @@ namespace headsup
         Span name;
         std::vector<PopupRow> rows;
         std::optional<Icon> icon{}; // before its name
+        GamePicture picture = GamePicture::None; // or a picture from the game's files there
         bool operator==(const PopupTab&) const = default;
     };
 

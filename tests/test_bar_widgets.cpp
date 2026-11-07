@@ -2455,7 +2455,7 @@ TEST(world_infos_nation_buttons_show_each_crest_and_the_regions_it_holds_and_its
     BarState state;
     WidgetOptions& o = settings.Widget(BarWidget::World);
     o.on             = true;
-    o.design         = DesignFrom(BarWidget::World, "sandoria bastok windurst beastmen | -ship -guild -rse -moon");
+    o.design         = DesignFrom(BarWidget::World, "sandoria bastok windurst beastmen | -ship -guild");
     CHECK_EQ(Joined(Content(BarWidget::World, state, settings).title), "-"); // before the standings come
     RegionOwners owners{};
     owners.fill(Nation::Beastmen);
@@ -2474,7 +2474,7 @@ TEST(world_infos_nation_buttons_show_each_crest_and_the_regions_it_holds_and_its
           counts[2].picture == GamePicture::WindurstCrest && counts[3].picture == GamePicture::BeastmenCrest);
     CHECK(counts[1].argb == NationColor(Nation::Bastok));
     // Bastok alone.
-    o.design = DesignFrom(BarWidget::World, "bastok | -ship -guild -rse -moon -sandoria -windurst -beastmen");
+    o.design = DesignFrom(BarWidget::World, "bastok | -ship -guild -sandoria -windurst -beastmen");
     const WidgetContent bastok = Content(BarWidget::World, state, settings);
     CHECK(bastok.title.size() == 1 && bastok.title[0].text == " 2" && bastok.hasPopup);
     // The popup has every nation's regions, a tab each.
@@ -2566,6 +2566,8 @@ TEST(world_infos_conquest_card_has_your_nation_first_picked_anew_each_time_and_i
     state.nation = Nation::Windurst;
     const PopupSection yours = card();
     CHECK((names(yours) == std::vector<std::string>{"Windurst", "San d'Oria", "Bastok", "Beastmen"}));
+    // Each tab with its nation's crest before its name.
+    CHECK(yours.tabs[0].picture == GamePicture::WindurstCrest && yours.tabs[3].picture == GamePicture::BeastmenCrest);
     CHECK(yours.tab == 0 && yours.tabsAcross == 2 && yours.tabEachOpen);
     // Its heading counts down to the tally, which the card and its picks are kept by without.
     CHECK_EQ(yours.heading, "Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")");
@@ -2598,7 +2600,7 @@ namespace
     }
 }
 
-TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim)
+TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim_in_parentheses)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
@@ -2607,13 +2609,16 @@ TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim)
         return Joined(w.title);
     };
     // The airship's door opens at 28 s into the next cycle: 864 - 576 + 28 s from now.
-    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria  Boards in 5:16");
-    // Open until 21:00, 11 Vana'diel hours away.
-    CHECK_EQ(shown("guild"), std::string("Woodworking  Open") + kDot + "closes in 26:24");
-    // Week 1: Hume Female in Gusgen Mines, until day 16.
-    CHECK_EQ(shown("rse"), std::string("Hume Female  Gusgen Mines") + kDot + "ends in 6:19:12");
-    // Day 9 is 12% and waxing; full on day 46.
-    CHECK_EQ(shown("moon"), "Waxing Crescent 12%  Full moon in 35:07:12");
+    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria (Boards in 5:16)");
+    // Open until 21:00, 11 Vana'diel hours away: it says when it closes, and not that it is open.
+    CHECK_EQ(shown("guild"), "Woodworking (Closes in 26:24)");
+    // Closed, it says when it opens.
+    state.unixMs = kEarthsdayTen + static_cast<int64_t>(27 * 60 * 1000);
+    CHECK(shown("guild").starts_with("Woodworking (Opens in "));
+    state.unixMs = kEarthsdayTen;
+    // The RSE and the moon are the pop-out's alone.
+    CHECK(std::ranges::find(PartsOf(BarWidget::World), WidgetPart::WorldShip) != PartsOf(BarWidget::World).end());
+    CHECK(PartsOf(BarWidget::World).size() == 6);
     // The name in the line's tone, the countdown dim.
     const WidgetContent ship = Content(BarWidget::World, state, WorldShowing("ship |"));
     CHECK(ship.title.front().tone == Tone::Normal && ship.title.back().tone == Tone::Dim);
@@ -2670,7 +2675,7 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
     const auto airships = std::ranges::count_if(TravelRoutes(), [](const TravelRoute& r) { return std::string(r.group) == "Airships"; });
     const auto rows = [](const PopupTab& tab) {
         CHECK(tab.rows.size() == 1 && tab.rows[0].kind == RowKind::Grid && tab.rows[0].columns == 3 && tab.rows[0].nested &&
-              !tab.rows[0].spread);
+              !tab.rows[0].spread && tab.rows[0].trailing); // the stage and time against the card's right
         std::vector<std::array<std::string, 3>> out;
         const std::vector<PopupCell>& cells = tab.rows[0].cells;
         for (size_t i = 0; i + 2 < cells.size(); i += 3)

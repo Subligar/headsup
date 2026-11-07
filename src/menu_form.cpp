@@ -778,12 +778,12 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::Ship:
-                    if (kind == BarWidget::World)
+                    if (kind == BarWidget::World && PartOn(o.design, WidgetPart::WorldShip))
                         form.NumberDropdown(label.c_str(), o.worldRoute, 0, static_cast<int>(TravelRoutes().size()) - 1,
                             [](int r) { return std::string(TravelRoutes()[static_cast<size_t>(r)].name); }, row.tip);
                     break;
                 case WidgetTabsRow::Guild:
-                    if (kind == BarWidget::World)
+                    if (kind == BarWidget::World && PartOn(o.design, WidgetPart::WorldGuild))
                         form.NumberDropdown(label.c_str(), o.worldGuild, 0, static_cast<int>(GuildShops().size()) - 1,
                             [](int g) {
                                 const GuildShop& shop = GuildShops()[static_cast<size_t>(g)];

@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 namespace headsup
@@ -102,12 +103,31 @@ namespace headsup
 
         std::string Spans(const std::vector<Span>& spans, const BarLook& look)
         {
-            std::string rml;
+            // RmlUi's parser drops a text of spaces alone, which the width was measured with: those spaces go on the end
+            // of the text before them, or the start of the next.
+            struct Run
+            {
+                std::string mark, text;
+                uint32_t color;
+            };
+            std::vector<Run> runs;
+            std::string carried;
             for (const Span& span : spans)
             {
-                rml += Picture(span, look);
-                if (!span.text.empty())
-                    rml += "<span style=\"color:" + RcssColor(look.BarColor(span)) + ";\">" + EscapedRml(span.text) + "</span>";
+                const bool spaces = !HasMark(span) && !span.text.empty() && span.text.find_first_not_of(' ') == std::string::npos;
+                if (spaces && !runs.empty() && !runs.back().text.empty())
+                    runs.back().text += span.text;
+                else if (spaces)
+                    carried += span.text;
+                else
+                    runs.push_back(Run{Picture(span, look), std::exchange(carried, {}) + span.text, look.BarColor(span)});
+            }
+            std::string rml;
+            for (const Run& run : runs)
+            {
+                rml += run.mark;
+                if (!run.text.empty())
+                    rml += "<span style=\"color:" + RcssColor(run.color) + ";\">" + EscapedRml(run.text) + "</span>";
             }
             return rml;
         }

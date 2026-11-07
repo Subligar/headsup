@@ -122,6 +122,32 @@ TEST(a_widgets_content_sits_in_the_middle_of_a_wider_box_with_its_lines_against_
     }
 }
 
+TEST(a_widgets_line_draws_a_span_of_spaces_alone_as_wide_as_it_is_measured)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    test::RmlSession rml;
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::World));
+    widget->SetClass(kHiddenClass, false);
+    const auto width = [&](std::vector<Span> title) {
+        WidgetContent c;
+        c.shown = true;
+        c.title = std::move(title);
+        widget->SetInnerRML(WidgetRml(c, look, {}));
+        rml.context->Update();
+        Rml::ElementList lines;
+        widget->GetElementsByClassName(lines, "t");
+        return lines.front()->GetBox().GetSize(Rml::BoxArea::Border).x;
+    };
+    const float apart = width({Text("Bastok"), Text("    "), Text("Jeuno")}), together = width({Text("Bastok    Jeuno")});
+    CHECK(together > width({Text("BastokJeuno")}) + 4.0f);
+    CHECK(std::fabs(apart - together) <= 1.0f);
+}
+
 TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complaint)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},

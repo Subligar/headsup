@@ -26,7 +26,7 @@ namespace headsup
         PerfFps, PerfSent, PerfReceived, PerfPercent, PerfPing, PerfMemory, PerfMessages,
         PartyCount, PartyHealth,
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,
-        WorldShip, WorldGuild, WorldRse, WorldMoon, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
+        WorldShip, WorldGuild, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
     };
     constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::WorldBeastmen) + 1;
 

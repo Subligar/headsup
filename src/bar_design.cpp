@@ -19,7 +19,7 @@ namespace headsup
             P::PerfMessages};
         constexpr P kParty[]  = {P::PartyCount, P::PartyHealth};
         constexpr P kStatus[] = {P::StatusPin1, P::StatusPin2, P::StatusPin3, P::StatusPin4, P::StatusPin5, P::StatusPin6};
-        constexpr P kWorld[]  = {P::WorldShip, P::WorldGuild, P::WorldRse, P::WorldMoon, P::WorldSanDoria, P::WorldBastok,
+        constexpr P kWorld[]  = {P::WorldShip, P::WorldGuild, P::WorldSanDoria, P::WorldBastok,
             P::WorldWindurst, P::WorldBeastmen};
 
         // By WidgetPart.
@@ -28,13 +28,13 @@ namespace headsup
             "coin", "amount", "currency", "count", "bag", "icon", "time", "server", "vana", "icon", "jobs", "earned", "tonext", "percent", "bar",
             "fps", "sent", "received", "percent", "ping", "memory", "messages", "count", "health", "pin1", "pin2",
             "pin3", "pin4", "pin5", "pin6", "ship",
-            "guild", "rse", "moon", "sandoria", "bastok", "windurst", "beastmen"};
+            "guild", "sandoria", "bastok", "windurst", "beastmen"};
 
         // As each widget showed before it had a design.
         constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation", "weather | day time -date -moon",
             "name distance -detection | level player -weak", "amount | currency", "count | bag", "time | -server -vana", "", "-fps sent received percent -ping -memory messages |",
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
-            "ship | -guild -rse -moon -sandoria -bastok -windurst -beastmen"};
+            "ship | -guild -sandoria -bastok -windurst -beastmen"};
 
         constexpr char kLineBreak = '|', kOffMark = '-', kSpace = ' ';
 

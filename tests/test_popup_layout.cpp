@@ -1219,6 +1219,55 @@ TEST(a_tabs_icon_goes_before_its_name_inside_its_chip)
     }
 }
 
+TEST(a_tabs_game_picture_goes_before_its_name_inside_its_chip)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupContent c;
+    c.title = {{"World Info", Tone::Normal}};
+    PopupSection section{"Conquest", {}};
+    PopupTab sandy{{"San d'Oria", Tone::Normal}, {LineOf("Ronfaure")}};
+    sandy.picture = GamePicture::SanDoriaCrest;
+    PopupTab bastok{{"Bastok", Tone::Normal}, {LineOf("Gustaberg")}};
+    bastok.picture = GamePicture::BastokCrest;
+    section.tabs = {sandy, bastok};
+    c.sections.push_back(section);
+    const PopupLayout l = LayoutPopup(c, m, BarShape::Pills, false, Fake);
+    for (const PopupTabChip& chip : l.chips)
+    {
+        const PopupPiece* name    = Find(l, chip.tab);
+        const PopupPiece* picture = nullptr;
+        for (const PopupPiece& p : l.pieces)
+            if (p.kind == PopupPiece::Kind::Picture && p.x >= chip.x && p.x < chip.x + chip.width) picture = &p;
+        CHECK(picture != nullptr && picture->picture == (chip.tab == "Bastok" ? GamePicture::BastokCrest : GamePicture::SanDoriaCrest));
+        CHECK(picture->x + picture->width < name->x && name->x + name->width <= chip.x + chip.width);
+    }
+}
+
+TEST(a_tabs_list_reaches_the_bottom_of_a_card_made_taller_by_the_one_beside_it)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupContent c;
+    c.title = {{"World Info", Tone::Normal}};
+    PopupSection conquest{"Conquest", {}};
+    for (const char* name : {"Windurst", "Bastok"})
+    {
+        PopupRow region = LineOf("Region");
+        region.nested   = true;
+        conquest.tabs.push_back(PopupTab{Text(name), {region}});
+    }
+    c.sections.push_back(conquest);
+    PopupSection travel{"Travel", {}};
+    for (int i = 0; i < 12; ++i)
+        travel.rows.push_back(Labeled("Route", Text("5:16")));
+    travel.beside = true;
+    c.sections.push_back(travel);
+    const PopupLayout l = LayoutPopup(c, m, BarShape::Pills, false, Fake);
+    const PopupPiece& card   = *Of(l, PopupPiece::Kind::Card).at(0);
+    const PopupPiece& socket = *Of(l, PopupPiece::Kind::Socket).at(0);
+    CHECK(card.height > 2.0f * (socket.y - card.y)); // made much taller than its own rows
+    CHECK(Near(card.y + card.height - (socket.y + socket.height), socket.x - card.x)); // its padding below, as at its side
+}
+
 TEST(a_popup_without_a_title_has_its_pin_alone_at_its_top_right)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);
@@ -1263,6 +1312,41 @@ TEST(a_crests_name_value_and_star_are_centered_on_the_crest)
     CHECK(Near(name->y + (text.inkTop + text.inkBottom) / 2.0f, middle));
     CHECK(Near(star.y + star.height / 2.0f, middle));
     CHECK(Near(Find(l, "45%")->y, name->y));
+}
+
+TEST(a_trailing_grids_columns_after_the_first_sit_against_the_cards_right_as_one_block)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    for (const bool nested : {false, true})
+    {
+        PopupRow grid{RowKind::Grid, 3, {}};
+        grid.trailing = true;
+        grid.nested   = nested;
+        for (const char* route : {"Jeuno to Bastok", "Kazham to Jeuno"})
+        {
+            PopupCell stage = Word("Arrives in");
+            stage.align     = Align::Right;
+            grid.cells.push_back(Word(route));
+            grid.cells.push_back(std::move(stage));
+            grid.cells.push_back(Word("5:16"));
+        }
+        PopupContent c;
+        c.title = {{"World Info", Tone::Normal}};
+        c.sections.push_back(PopupSection{"Travel", {grid}});
+        // A wide card under it, so the travel card is wider than its rows.
+        c.sections.push_back(PopupSection{"Guilds", {Labeled("A guild with a name far longer than any route above it", Text("Open"))}});
+        const PopupLayout l    = LayoutPopup(c, m, BarShape::Pills, false, Fake);
+        const PopupPiece& card = *Of(l, PopupPiece::Kind::Card).at(0);
+        const PopupPiece& from = *Find(l, "Jeuno to Bastok");
+        const PopupPiece& said = *Find(l, "Arrives in");
+        const PopupPiece& time = *Find(l, "5:16");
+        // The time ends as far in from the card's right as the route starts from its left; the route stays put.
+        CHECK(Near(card.x + card.width - (time.x + time.width), from.x - card.x));
+        // Its column's gap kept: the stage ends a column gap before the time.
+        CHECK(time.x - (said.x + said.width) > 0.0f && time.x - (said.x + said.width) < 2.0f * m.popupText);
+        CHECK(said.x > from.x + from.width + 3.0f * m.popupText);
+        CHECK(AllInside(l, m));
+    }
 }
 
 TEST(a_spread_grid_keeps_its_right_column_at_the_cards_edge_and_its_centered_one_in_its_middle)

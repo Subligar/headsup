@@ -1310,8 +1310,6 @@
         {"name": "Pinned Status #6", "tip": "The status pinned sixth in the pop-out, with its time left. Its pin turns it on and off."},
         {"name": "Ship", "tip": "Your Tracked Ship's next sailing and how long until it."},
         {"name": "Guild", "tip": "Your Tracked Guild's shop: open or closed, and how long until that changes."},
-        {"name": "RSE", "tip": "This week's Race-Specific Equipment race, where, and when it ends."},
-        {"name": "Moon", "tip": "The moon's phase, and how long until it is next full or new."},
         {"name": "San d'Oria", "tip": "San d'Oria's crest and how many regions it holds."},
         {"name": "Bastok", "tip": "Bastok's crest and how many regions it holds."},
         {"name": "Windurst", "tip": "Windurst's crest and how many regions it holds."},

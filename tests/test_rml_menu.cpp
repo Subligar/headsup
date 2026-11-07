@@ -1960,6 +1960,7 @@ TEST(the_world_info_widget_offers_its_tracked_ship_and_guild)
     Window window;
     WidgetOptions& world = window.settings.Widget(BarWidget::World);
     world.on             = true;
+    world.design         = DesignFrom(BarWidget::World, "ship | guild");
     window.Page("toppanel");
     window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::World)));
     CHECK(window.Shows("toppanel-widgets-ship-world") && window.Shows("toppanel-widgets-guild-world"));

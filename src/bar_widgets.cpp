@@ -809,12 +809,12 @@ namespace headsup
             return spans;
         }
 
+        // When the guild's shop next closes while open, else opens.
         std::vector<Span> GuildText(const GuildShop& shop, int64_t unixMs)
         {
             const GuildHours hours = GuildAt(shop, unixMs);
-            const char* now        = hours.open ? "Open" : hours.holiday ? "Holiday" : "Closed";
-            std::vector<Span> spans = ListOf(Text(now, hours.open ? Tone::Normal : Tone::Dim), Text(kDot, Tone::Dim));
-            AddTime(spans, hours.open ? "closes in " : "opens in ", hours.changeIn);
+            std::vector<Span> spans;
+            AddTime(spans, hours.open ? "Closes in " : "Opens in ", hours.changeIn);
             return spans;
         }
 
@@ -890,35 +890,27 @@ namespace headsup
             return popup;
         }
 
-        // What World Info can tell, a part each: the Tracked Ship's next sailing, the Tracked Guild's hours, the RSE and
-        // the moon, each its name and then its countdown, and each nation's crest and how many regions it holds.
+        // What World Info can tell, a part each: the Tracked Ship's next sailing and the Tracked Guild's hours, each its
+        // name and then its countdown in parentheses, and each nation's crest and how many regions it holds.
         std::vector<PartContent> WorldParts(const BarState& state, const WidgetOptions& o, WidgetContent& base)
         {
             base.hasPopup = true;
             const auto told = [](std::vector<Span> name, std::vector<Span> details) {
-                name.push_back(Text("  "));
+                // RmlUi drops a span of spaces alone: the space goes with the parenthesis.
+                name.push_back(Text(" (", Tone::Dim));
                 for (Span& span : details)
                 {
                     span.tone = Tone::Dim;
                     name.push_back(std::move(span));
                 }
+                name.push_back(Text(")", Tone::Dim));
                 return name;
             };
             const TravelRoute& route = TravelRoutes()[static_cast<size_t>(o.worldRoute)];
             const GuildShop& shop    = GuildShops()[static_cast<size_t>(o.worldGuild)];
-            const Rse rse            = RseAt(state.unixMs);
-            const VanaTime t         = VanaAt(state.unixMs);
-            const uint32_t full      = NextMoonDay(t.day, true), fresh = NextMoonDay(t.day, false);
-            const bool fullFirst     = full < fresh;
             std::vector<PartContent> parts{
                 {WidgetPart::WorldShip, told(ListOf(Text(route.name)), SailingText(route, state.unixMs))},
-                {WidgetPart::WorldGuild, told(ListOf(Text(shop.guild)), GuildText(shop, state.unixMs))},
-                {WidgetPart::WorldRse, told(ListOf(Text(rse.race)),
-                    ListOf(Text(rse.place), Text(kDot), Text("ends in " + Countdown(rse.endsIn))))},
-                {WidgetPart::WorldMoon, told(ListOf(Text(std::string(MoonPhaseName(t.moonPercent, t.moonDirection)) + " " +
-                                                     std::to_string(t.moonPercent) + "%")),
-                    ListOf(Text(std::string(fullFirst ? "Full" : "New") + " moon in " +
-                                Countdown(SecondsToDay(state.unixMs, fullFirst ? full : fresh)))))}};
+                {WidgetPart::WorldGuild, told(ListOf(Text(shop.guild)), GuildText(shop, state.unixMs))}};
             for (int n = 0; n < kContenderNations; ++n)
             {
                 const auto nation = static_cast<Nation>(static_cast<int>(Nation::SanDoria) + n);
@@ -1198,6 +1190,7 @@ namespace headsup
                 const bool yours = state.nation == nation && state.outposts != nullptr;
                 bool unknown     = false;
                 PopupTab held{Colored(NationName(nation), NationColor(nation)), {}};
+                held.picture = NationCrest(nation);
                 for (int region = 0; region < kConquestRegionCount; ++region)
                 {
                     if ((*state.owners)[region] != nation) continue;
@@ -1252,7 +1245,8 @@ namespace headsup
                         grid.cells.push_back(std::move(stage));
                         grid.cells.push_back(Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn))));
                     }
-                    grid.nested = true;
+                    grid.nested   = true;
+                    grid.trailing = true;
                     kind.rows.push_back(std::move(grid));
                     ScrollsBy(kind.rows.front(), state, travel.heading + "/" + kind.name.text);
                     travel.tabs.push_back(std::move(kind));
