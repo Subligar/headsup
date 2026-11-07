@@ -24,7 +24,6 @@ namespace headsup
         constexpr float kCardGap     = 0.45f; // between cards, and between the columns of them
         constexpr float kMinWidth    = 12.0f; // popupText, so a short popup is not a sliver
         constexpr float kPinChip     = 1.4f;  // the round pin chip's side, in popup text sizes
-        constexpr const char* kCollapseDash = "\xE2\x80\x93"; // an en dash: on an open card's collapse chip
         constexpr float kMarkShare   = 0.7f;  // the pin or cog, of its chip's height
         constexpr float kSocketInset = 0.9f;  // a socket's rows from its left and right edges
         constexpr float kSocketPad   = 0.35f; // above and below a socket's rows
@@ -133,6 +132,7 @@ namespace headsup
             float reserve = 0.0f; // its height with its tallest tab picked, which sets its column
             bool beside   = false; // in one row with the card before it
             bool under    = false; // under the card before it, in its column
+            bool collapsed = false; // as tall as its heading, wherever it is
         };
 
         Block LayoutSection(const PopupSection& section, const BarMetrics& metrics, bool ornate, SpanMeasure measure)
@@ -160,11 +160,9 @@ namespace headsup
                     PopupPiece chip{PopupPiece::Kind::ActionChip, 0.0f, y, side, side, {}};
                     chip.font = PopupFont::Pin;
                     b.pieces.push_back(std::move(chip));
-                    Span sign{section.collapsed ? "+" : kCollapseDash, Tone::Heading, 0};
-                    const TextSize st = measure(sign, PopupFont::Heading);
-                    b.anchors.push_back(Block::Anchor{b.pieces.size(), b.pad + (side + st.width) / 2.0f});
-                    b.pieces.push_back(PopupPiece{PopupPiece::Kind::Text, 0.0f, y + (side - st.height) / 2.0f, st.width,
-                        st.height, std::move(sign), PopupFont::Heading});
+                    b.anchors.push_back(Block::Anchor{b.pieces.size(), b.pad + side});
+                    b.pieces.push_back(PopupPiece{PopupPiece::Kind::Sign, 0.0f, y, side, side,
+                        Span{section.collapsed ? kCollapsedSign : kOpenSign, Tone::Heading, 0}});
                     b.presses.push_back(Block::Press{section.collapsePress, 0.0f, y, side, side, b.pad + side});
                 }
                 y += t.height + metrics.rowGap;
@@ -508,18 +506,20 @@ namespace headsup
             l.lines.push_back(PopupLine{y + b.height});
         }
         // A card as LayoutSection lays it out, as wide as with its widest tab picked, so its chips wrap the same
-        // whichever is, and with its reserve: its height with its tallest tab picked.
+        // whichever is, and with its reserve: its height with its tallest tab picked. Collapsed, it keeps its open width.
         Block LayoutCard(const PopupSection& section, const BarMetrics& metrics, bool ornate, SpanMeasure measure)
         {
-            Block b  = LayoutSection(section, metrics, ornate, measure);
-            b.beside = section.beside;
-            b.under  = section.under;
+            Block b     = LayoutSection(section, metrics, ornate, measure);
+            b.beside    = section.beside;
+            b.under     = section.under;
+            b.collapsed = section.collapsed && !section.heading.empty();
             PopupSection each = section;
+            each.collapsed    = false;
             for (size_t tab = 0; tab < std::max<size_t>(section.tabs.size(), 1); ++tab)
             {
                 each.tab           = tab;
                 const Block picked = LayoutSection(each, metrics, ornate, measure);
-                b.reserve          = std::max(b.reserve, picked.height);
+                b.reserve          = b.collapsed ? b.height : std::max(b.reserve, picked.height);
                 b.width            = std::max(b.width, picked.width);
             }
             return b;
@@ -812,12 +812,12 @@ namespace headsup
                         column += tallest(cards[c]) + cardGap;
                     const float tall  = std::max(tallest(cards[i]), column);
                     const float first = cards[i].width, rest = width - first - cardGap;
-                    cards[i].height   = tall;
+                    if (!cards[i].collapsed) cards[i].height = tall;
                     Place(cards[i], pad, y, first, l.lines.size(), l);
                     float at = y;
                     for (size_t c = i + 1; c < end; ++c)
                     {
-                        cards[c].height = c + 1 == end ? y + tall - at : tallest(cards[c]);
+                        cards[c].height = c + 1 == end && !cards[c].collapsed ? y + tall - at : tallest(cards[c]);
                         Place(cards[c], pad + first + cardGap, at, rest, l.lines.size(), l);
                         at += cards[c].height + cardGap;
                     }

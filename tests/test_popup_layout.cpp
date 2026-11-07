@@ -174,6 +174,10 @@ TEST(a_headed_card_has_a_collapse_chip_at_its_right_and_collapsed_shows_its_head
     CHECK(Near(chip->x + chip->width, card.x + card.width - 0.4f * m.popupText) || chip->x + chip->width <= card.x + card.width);
     CHECK(chip->x > heading.x + heading.width && chip->y < heading.y + heading.height && chip->y + chip->height > heading.y);
     CHECK(Find(open, "\xE2\x80\x93") != nullptr && Find(open, "+30%") != nullptr);
+    // The sign is drawn in the chip's own box, so it sits in its middle whatever the font.
+    const PopupPiece& sign = *Find(open, "\xE2\x80\x93");
+    CHECK(sign.kind == PopupPiece::Kind::Sign && Near(sign.x, chip->x) && Near(sign.y, chip->y) &&
+          Near(sign.width, chip->width) && Near(sign.height, chip->height));
     // Collapsed: the heading and a plus, none of its rows, and a shorter card.
     content.sections[0].collapsed = true;
     const PopupLayout shut = LayoutPopup(content, m, BarShape::Pills, false, Fake);
@@ -489,6 +493,50 @@ TEST(a_card_keeps_its_own_width_and_the_one_beside_it_takes_the_rest_of_the_row)
     CHECK(today.width < later.width && Near(today.height, later.height));
     CHECK(Near(later.x + later.width, l.width - m.popupPadding)); // to the popup's right padding
     CHECK(AllInside(l, m));
+}
+
+TEST(a_collapsed_card_keeps_its_width_and_is_only_as_tall_as_its_heading_beside_a_taller_card)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const auto popup = [&](bool collapsed) {
+        PopupContent c;
+        c.title = {{"Sunshine", Tone::Normal}};
+        PopupSection today{"Today", {Labeled("Firesday the long", Text("12:00"))}};
+        today.collapsePress = "collapse today";
+        today.collapsed     = collapsed;
+        c.sections.push_back(today);
+        PopupSection forecast{"Weather Forecast", {}};
+        for (int i = 0; i < 8; ++i)
+            forecast.rows.push_back(Labeled("A day", Text("50%")));
+        forecast.beside = true;
+        c.sections.push_back(forecast);
+        return LayoutPopup(c, m, BarShape::Pills, false, Fake);
+    };
+    const PopupLayout open = popup(false), shut = popup(true);
+    const std::vector<const PopupPiece*> was = Of(open, PopupPiece::Kind::Card), now = Of(shut, PopupPiece::Kind::Card);
+    // Neither card moves or changes width, and the collapsed one leaves room under it.
+    CHECK(Near(now[0]->x, was[0]->x) && Near(now[0]->width, was[0]->width));
+    CHECK(Near(now[1]->x, was[1]->x) && Near(now[1]->width, was[1]->width) && Near(now[1]->height, was[1]->height));
+    CHECK(now[0]->height < now[1]->height / 2.0f);
+    CHECK(AllInside(shut, m));
+}
+
+TEST(a_collapsed_card_in_a_column_keeps_its_width)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const auto popup = [&](bool collapsed) {
+        PopupContent c;
+        c.title = {{"Zone", Tone::Normal}};
+        c.sections.push_back(PopupSection{"Region", {Labeled("Zulkheim", Text(""))}});
+        PopupSection wide{"Influence", {Labeled("A nation with a name far longer than the other card", Text("0%"))}};
+        wide.collapsePress = "collapse influence";
+        wide.collapsed     = collapsed;
+        c.sections.push_back(wide);
+        return LayoutPopup(c, m, BarShape::Pills, false, Fake);
+    };
+    const PopupLayout open = popup(false), shut = popup(true);
+    CHECK(Near(shut.width, open.width));
+    CHECK(Near(Of(shut, PopupPiece::Kind::Card)[1]->width, Of(open, PopupPiece::Kind::Card)[1]->width));
 }
 
 TEST(cards_under_the_one_beside_another_make_a_column_as_tall_as_the_card_beside_it)

@@ -30,6 +30,7 @@ namespace headsup
         constexpr uint32_t kSocketShade    = 0x59000000, kSocketLight = 0x14FFFFFF;
         constexpr uint32_t kLitTab         = 0x40; // the picked tab's fill: its accent at a quarter
         constexpr uint32_t kScrollTrack    = 0x1AFFFFFF, kScrollThumb = 0x73FFFFFF; // white, faint and less so
+        constexpr float kSignArm = 0.5f, kSignBar = 0.12f; // a collapse chip's sign: its bars' length and width, of its side
         // The accent's alpha in the target's frame as it breathes, from and to, and in a lit title's glow.
         constexpr uint32_t kBreatheLow = 0x59, kBreatheHigh = 0xCC, kLitGlow = 0x80;
         // How a widget eases into its lit look.
@@ -644,6 +645,22 @@ namespace headsup
                 rml += "<img class=\"p\" src=\"" + IconSource(Icon::Star) + "\" style=\"" + place +
                        size(static_cast<float>(pixels), static_cast<float>(pixels)) + "image-color:" + RcssColor(kStarColor) +
                        ";\"/>";
+                break;
+            }
+            case PopupPiece::Kind::Sign:
+            {
+                // Bars in whole pixels, as far from each side of the chip as from the other: a glyph sat low in it.
+                const int side = WholePixels(piece.width);
+                int bar        = std::max(1, static_cast<int>(std::lround(static_cast<float>(side) * kSignBar)));
+                int arm        = static_cast<int>(std::lround(static_cast<float>(side) * kSignArm));
+                bar += (side - bar) % 2;
+                arm += (side - arm) % 2;
+                const float x = std::round(piece.x), y = std::round(piece.y);
+                const auto in = static_cast<float>((side - bar) / 2), along = static_cast<float>((side - arm) / 2);
+                const std::string fill = "background-color:" + RcssColor(color) + ";\"></div>";
+                rml += "<div class=\"p\" style=\"" + BoxAt(x + along, y + in, static_cast<float>(arm), static_cast<float>(bar)) + fill;
+                if (piece.span.text == kCollapsedSign)
+                    rml += "<div class=\"p\" style=\"" + BoxAt(x + in, y + along, static_cast<float>(bar), static_cast<float>(arm)) + fill;
                 break;
             }
             case PopupPiece::Kind::Rule:

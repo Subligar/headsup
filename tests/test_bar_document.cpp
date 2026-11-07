@@ -315,7 +315,11 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     const PopupPiece thumb  = piece(PopupPiece::Kind::ScrollThumb, 190.0f, 76.4f, 4.0f, 7.1f);
     PopupPiece item         = piece(PopupPiece::Kind::Item, 120.0f, 104.0f, 19.3f, 19.3f);
     item.item               = 4443;
-    layout.pieces           = {card, title, value, icon, mark, star, rule, tag, socket, time, tab, track, thumb, item};
+    PopupPiece plus         = piece(PopupPiece::Kind::Sign, 100.0f, 10.0f, 17.0f, 17.0f);
+    plus.span               = Text(kCollapsedSign, Tone::Heading);
+    PopupPiece minus        = piece(PopupPiece::Kind::Sign, 160.0f, 10.0f, 18.0f, 18.0f);
+    minus.span              = Text(kOpenSign, Tone::Heading);
+    layout.pieces = {card, title, value, icon, mark, star, rule, tag, socket, time, tab, track, thumb, item, plus, minus};
     // The title's line box starts 2 px under where the layout put its line; the text's, at it.
     const PopupFaces faces = {PopupFace{"Marcellus SC", 24, 29, 0, 2.0f}, PopupFace{"Barlow Condensed", 18, 22, 0, 0.0f},
         PopupFace{"Marcellus SC", 15, 18, 0, 0.0f}, PopupFace{"Marcellus SC", 15, 18, 0, 0.0f}};
@@ -342,6 +346,11 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     CHECK(Has(rml, "<img class=\"p\" src=\"hu:item/4443\" style=\"left:120px;top:104px;width:19.3px;height:19.3px;\"/>"));
     // The picked tab is lit.
     CHECK(Has(rml, "<div class=\"p tab lit\" style=\"left:24px;top:104px;width:50px;height:21px;border-radius:10.5px;\"></div>"));
+    // A collapse chip's sign is bars with as many pixels on each side of them: a plus across and down, a minus across.
+    CHECK(Has(rml, "<div class=\"p\" style=\"left:104px;top:17px;width:9px;height:3px;background-color:"));
+    CHECK(Has(rml, "<div class=\"p\" style=\"left:107px;top:14px;width:3px;height:9px;background-color:"));
+    CHECK(Has(rml, "<div class=\"p\" style=\"left:164px;top:18px;width:10px;height:2px;background-color:"));
+    CHECK(!Has(rml, "left:168px;top:14px"));
     // A pill theme's panel has no outer border.
     const std::string pills = PopupRml(layout, LookOf(BarTheme::UmbraDark, settings), faces);
     CHECK(!Has(pills, "id=\"outer\""));

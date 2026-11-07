@@ -21,6 +21,9 @@ namespace headsup
         Pin,     // the pinned mark: a heading's font and size, set solid
     };
 
+    constexpr const char* kCollapsedSign = "+";           // a collapsed card's chip
+    constexpr const char* kOpenSign      = "\xE2\x80\x93"; // an open one's: an en dash
+
     struct PopupPiece
     {
         enum class Kind : uint8_t
@@ -42,6 +45,7 @@ namespace headsup
             CogChip,     // the settings chip left of the pin, drawn as a tab's; open while the settings show
             ActionChip,  // the clone or remove chip left of the cog while the settings show, drawn as a tab's
             Cog,         // the cog on it
+            Sign,        // a collapse chip's minus or plus (its span's text), drawn as bars centered in the piece
         };
         Kind kind = Kind::Text;
         float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f; // from the popup's top-left corner
