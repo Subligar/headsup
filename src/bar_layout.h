@@ -217,6 +217,10 @@ namespace headsup
         std::optional<PanelWidget> Pinned() const { return m_Pinned.empty() ? std::nullopt : std::optional(m_Pinned.back()); }
         bool IsPinned(PanelWidget pill) const { return std::ranges::find(m_Pinned, pill) != m_Pinned.end(); }
         std::optional<PanelWidget> Hovered() const { return m_Under; }
+        // Each frame, whether the settings window is open: the popups showing when it opened are drawn under it, and
+        // those that came out after it over it.
+        void MenuOpen(bool open);
+        bool OverMenu(PanelWidget pill) const;
 
     private:
         void Reevaluate();
@@ -258,6 +262,7 @@ namespace headsup
         std::optional<PanelWidget> m_Hover;  // the popup hovering keeps open
         std::optional<PanelWidget> m_Dismissed; // unpinned from its widget: no hover until the pointer leaves it
         std::vector<PanelWidget> m_Pinned;   // in the order pinned
+        std::optional<std::vector<PanelWidget>> m_UnderMenu; // while the window is open: those it opened over, still shown
         std::optional<PanelWidget> m_Settings; // a pinned pill, while its popup shows its settings
         bool m_PinnedForSettings = false;      // its pin came with its settings, and goes when they close
     };

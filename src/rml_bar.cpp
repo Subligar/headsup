@@ -408,7 +408,8 @@ namespace headsup
         const std::vector<bool> over         = OverSettings(order, input.SettingsShown());
         for (size_t i = 0; i < order.size(); ++i)
             if (std::optional<PopupPlace> place =
-                    ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, order[i], over[i]))
+                    ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, order[i],
+                        over[i] || (input.OverMenu(order[i]) && input.SettingsShown() != order[i])))
             {
                 const PanelWidget pill = order[i];
                 shown[SlotOf(pill)] = true;

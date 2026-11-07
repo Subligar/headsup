@@ -101,7 +101,7 @@ namespace headsup
         css += "body{position:absolute;display:block;box-sizing:border-box;width:" + Em(kWindowWidth) + ";height:" +
                Em(kWindowHeight) + ";min-width:" + Em(kMinWindowWidth) + ";min-height:" + Em(kMinWindowHeight) +
                ";background-color:" + color(c.background) + ";border:1px " + color(c.border) + ";border-radius:" +
-               Em(kCardRadius * 1.5f) + ";color:" + color(c.text) + ";font-family:\"" + look.textFont + "\";z-index:5;}";
+               Em(kCardRadius * 1.5f) + ";color:" + color(c.text) + ";font-family:\"" + look.textFont + "\";z-index:" + std::to_string(kMenuWindowZ) + ";}";
         // The window comes in a little small and grows to its size.
         // Its fade has no end of its own: it ends at the element's own opacity, under the window's filter.
         css += "body.open{animation:0.22s cubic-out window-in, 0.22s cubic-out window-fade;}";

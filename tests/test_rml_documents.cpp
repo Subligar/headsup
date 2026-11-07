@@ -1,4 +1,5 @@
 #include "bar_document.h"
+#include "menu_document.h"
 #include "window_skin.h"
 #include "rml_session.h"
 #include "test.h"
@@ -396,4 +397,23 @@ TEST(a_pop_outs_title_card_heading_and_text_draw_at_18_16_and_14_px_and_a_headin
         CHECK(text.width > 0.0f && text.width < heading.width && heading.width < title.width);
         CHECK_EQ(rml.Said(), "");
     }
+}
+
+TEST(the_settings_window_draws_over_the_lower_popups_and_its_settings_view_and_upper_popups_over_it)
+{
+    test::RmlSession rml;
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    const PopupFaces faces = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
+        PopupFace{"Barlow Condensed", 16, 19}, PopupFace{"Barlow Condensed", 16, 19}};
+    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt};
+    Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
+    Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
+    Rml::ElementDocument* view   = rml.context->LoadDocumentFromMemory(MenuViewDocument(menu), "view");
+    CHECK(popups != nullptr && window != nullptr && view != nullptr);
+    for (Rml::ElementDocument* d : {popups, window, view})
+        d->Show();
+    rml.context->Update();
+    const auto z = [](Rml::ElementDocument* d) { return d->GetComputedValues().z_index().value; };
+    CHECK(z(popups) < z(window) && z(window) < z(view));
 }

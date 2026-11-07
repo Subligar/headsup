@@ -276,6 +276,34 @@ TEST(popups_shown_after_the_one_whose_settings_show_go_over_its_settings)
     CHECK(OverSettings(shown, PanelWidget{BarWidget::Target}) == (std::vector<bool>{false, false, false, false}));
 }
 
+TEST(the_settings_window_goes_over_the_popups_open_before_it_and_under_those_opened_after)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    for (const BarWidget w : {BarWidget::Target, BarWidget::Zone, BarWidget::Job})
+        popups[SlotOf(w)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    input.Pin(BarWidget::Zone);
+    CHECK(!input.OverMenu(BarWidget::Zone)); // no window open
+    input.MenuOpen(true);
+    input.Pin(BarWidget::Job);
+    CHECK(!input.OverMenu(BarWidget::Zone) && input.OverMenu(BarWidget::Job));
+    // Each frame the window stays open changes nothing.
+    input.MenuOpen(true);
+    CHECK(!input.OverMenu(BarWidget::Zone) && input.OverMenu(BarWidget::Job));
+    // One open before it, closed and opened again, comes out over it.
+    input.Pin(std::nullopt);
+    input.Frame(l, popups);
+    input.Pin(BarWidget::Zone);
+    input.Pin(BarWidget::Job);
+    CHECK(input.OverMenu(BarWidget::Zone) && input.OverMenu(BarWidget::Job));
+    // Opened anew, the window goes over everything showing.
+    input.MenuOpen(false);
+    input.MenuOpen(true);
+    CHECK(!input.OverMenu(BarWidget::Zone) && !input.OverMenu(BarWidget::Job));
+}
+
 TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)
 {
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
