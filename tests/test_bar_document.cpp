@@ -401,6 +401,20 @@ TEST(an_items_picture_is_named_by_its_id_for_the_plugin_to_serve)
     CHECK(!HostImage("hu:item/4443")); // the plugin's to make, from the game's resources
 }
 
+TEST(a_status_icon_is_named_by_its_pack_and_id_for_the_plugin_to_serve)
+{
+    CHECK_EQ(StatusSource(StatusMark{253, 1, true}), "hu:status/1/253");
+    CHECK_EQ(StatusSource(StatusMark{0, kVanillaStatusIcons, false}), "hu:status/vanilla/0");
+    // Its background is an icon of its own: the name says the pack and the status alone.
+    CHECK(StatusOfSource("hu:status/1/253") == (StatusMark{253, 1, false}));
+    CHECK(StatusOfSource("hu:status/vanilla/0") == (StatusMark{0, kVanillaStatusIcons, false}));
+    const std::string pastPacks = "hu:status/" + std::to_string(kStatusPackCount) + "/1";
+    for (const std::string& bad : {pastPacks, std::string("hu:status/1/70000"), std::string("hu:status/1"),
+             std::string("hu:status/x/1"), std::string("hu:item/1/1")})
+        CHECK(!StatusOfSource(bad));
+    CHECK(!HostImage("hu:status/1/253")); // the plugin's: a status a pack lacks is the game's
+}
+
 TEST(every_theme_eases_breathes_and_pulses_in_its_own_colors)
 {
     Settings settings;

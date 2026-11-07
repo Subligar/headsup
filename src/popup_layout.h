@@ -47,6 +47,7 @@ namespace headsup
             Cog,         // the cog on it
             Sign,        // a collapse chip's minus or plus (its span's text), drawn as bars centered in the piece
             Coin,        // gil's coin, as an icon is drawn
+            Status,      // a status's icon, which the plugin serves, as an icon is drawn
         };
         Kind kind = Kind::Text;
         float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f; // from the popup's top-left corner
@@ -58,6 +59,7 @@ namespace headsup
         bool right     = false;         // Text: drawn against its box's right, as a pair's value is
         uint16_t item  = 0;             // Item
         GamePicture picture = GamePicture::None; // Picture
+        StatusMark status{};                     // Status
         bool tinted = false; // Icon: one of HeadsUp's own white ones, drawn in its span's color
     };
 

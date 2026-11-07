@@ -1512,7 +1512,7 @@ namespace headsup
                 std::vector<PartContent> parts;
                 for (size_t rank = 0; rank < kMostStatusPins; ++rank)
                     parts.push_back({static_cast<WidgetPart>(static_cast<size_t>(WidgetPart::StatusPin1) + rank),
-                        PinnedStatus(state.statuses, settings.statusPins, rank)});
+                        PinnedStatus(state.statuses, settings.statusPins, rank, o.statusDisplay, OwnPalette(settings))});
                 return parts;
             }
             case BarWidget::World: return WorldParts(state, o, base);
@@ -1983,8 +1983,8 @@ namespace headsup
         case BarWidget::Party:
             return PartyPopup(state.party);
         case BarWidget::StatusTimers:
-            return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins,
-                ScrolledBy(state, kStatusListKey), state.pinRefused);
+            return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins, OwnPalette(settings),
+                ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
             return WorldPopup(state);
         case BarWidget::Settings: break;

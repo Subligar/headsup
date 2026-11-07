@@ -24,7 +24,8 @@ CALLED_INTERFACES = ['IAshitaCore', 'IMemoryManager', 'IEntity', 'IParty', 'IPla
                      'ICastBar', 'IAutoFollow', 'IPluginManager']
 NOT_CALLED = {'ILogManager'}  # handed to the plugin, never called
 # Calls are matched by name alone: these share a name with a call on another interface and are never made on this one.
-# The plugin's ->GetString calls are IConfigurationManager's; it reads only GetItemById from IResourceManager.
+# The plugin's ->GetString calls are IConfigurationManager's; it reads only GetItemById and GetStatusIconById from
+# IResourceManager.
 NAME_ONLY_ELSEWHERE = {('IResourceManager', 'GetString')}
 INTERFACE = re.compile(r'^(?:struct|interface)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{(.*?)^\};', re.M | re.S)
 DECL = re.compile(r'virtual\s+[^;]*?\b([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*(?:const)?\s*=\s*0\s*;')

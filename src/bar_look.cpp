@@ -215,7 +215,7 @@ namespace headsup
     {
         const float side = std::round(size);
         return span.picture != GamePicture::None ? kPictureGap + side
-               : span.icon || span.coin || span.item != 0 ? kLineIconGap + side
+               : span.icon || span.coin || span.item != 0 || span.status ? kLineIconGap + side
                : span.bar                        ? static_cast<float>(span.bar->width)
                                                  : 0.0f;
     }

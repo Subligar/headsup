@@ -108,6 +108,14 @@ namespace headsup
         LevelFirst,
     };
     constexpr int kJobTextCount = static_cast<int>(JobText::LevelFirst) + 1;
+    // How the Status Timers widget shows a pinned status: its name, its icon, or its icon then its name.
+    enum class StatusDisplay : uint8_t
+    {
+        Name,
+        Icon,
+        Both,
+    };
+    constexpr int kStatusDisplayCount = static_cast<int>(StatusDisplay::Both) + 1;
     constexpr int kMinExpBarWidth = 40, kMaxExpBarWidth = 400, kDefaultExpBarWidth = 100;  // pixels
     constexpr int kMinExpBarHeight = 2, kMaxExpBarHeight = 16, kDefaultExpBarHeight = 6;   // pixels
 

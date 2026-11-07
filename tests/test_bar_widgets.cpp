@@ -1718,7 +1718,9 @@ TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_
     CHECK(!NeedsOf(settings, {}).statuses); // nothing pinned to show
     CHECK(NeedsOf(settings, {PanelWidget{BarWidget::StatusTimers}}).statuses);
     settings.statusPins = {kSignetEffect};
-    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Signet 1h 42m");
+    // Its icon, then its name, as new.
+    const WidgetContent shown = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(shown.title[0].status && shown.title[0].status->id == kSignetEffect && Joined(shown.title) == " Signet 1h 42m");
     // Its popup's favorites are the settings', Signet and Sanction on a new install.
     const PopupContent p = BarPopupContent(BarWidget::StatusTimers, state, settings);
     CHECK(Joined(p.sections[0].rows[0].cells[2].text) == "Signet" && Joined(p.sections[0].rows[0].cells[6].text) == "Sanction");
@@ -1757,7 +1759,8 @@ TEST(the_status_timers_widget_shows_each_pin_at_its_rank_where_its_design_puts_i
     Settings settings;
     BarState state;
     state.statuses = {{40, 1800.0}, {33, 90.0}};
-    settings.Widget(BarWidget::StatusTimers).on = true;
+    settings.Widget(BarWidget::StatusTimers).on            = true;
+    settings.Widget(BarWidget::StatusTimers).statusDisplay = StatusDisplay::Name;
     settings.statusPins = {40, 33, kSignetEffect}; // ranks 1, 2 and 3
     // As new: 1, 3 and 5 on the first line, 2, 4 and 6 on the second.
     CHECK_EQ(DesignText(settings.Widget(BarWidget::StatusTimers).design), "pin1 pin3 pin5 | pin2 pin4 pin6");

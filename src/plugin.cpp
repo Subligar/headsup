@@ -2169,7 +2169,15 @@ private:
                 {
                     const IItem* found = g_Resources != nullptr ? g_Resources->GetItemById(*item) : nullptr;
                     if (found == nullptr) return std::optional<headsup::Image>{};
-                    return headsup::ItemPicture(found->Bitmap, std::min<size_t>(found->ImageSize, sizeof(found->Bitmap)));
+                    return headsup::ResourcePicture(found->Bitmap, std::min<size_t>(found->ImageSize, sizeof(found->Bitmap)));
+                }
+                // A status's icon from its pack, else the game's.
+                if (const std::optional<headsup::StatusMark> status = headsup::StatusOfSource(name))
+                {
+                    if (std::optional<headsup::Image> own = headsup::PackIcon(status->pack, status->id)) return own;
+                    const IStatusIcon* icon = g_Resources != nullptr ? g_Resources->GetStatusIconById(status->id) : nullptr;
+                    if (icon == nullptr) return std::optional<headsup::Image>{};
+                    return headsup::ResourcePicture(icon->Bitmap, std::min<size_t>(icon->ImageSize, sizeof(icon->Bitmap)));
                 }
                 return headsup::HostImage(name);
             });

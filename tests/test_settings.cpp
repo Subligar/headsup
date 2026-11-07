@@ -941,11 +941,14 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     s.customPalette.windowType   = 3;
     s.customPalette.rounding     = 12;
     s.customPalette.separator    = DashMark::Dot;
+    s.customPalette.statusIcons  = 1;
+    s.customPalette.statusBack   = true;
     s.customThemeName            = "Dusk";
     MapStore file;
     SaveSettings(s, file);
     CHECK(file.values["customThemeStripTop"] == "10203000" && file.values["customThemeShape"] == "glass");
     CHECK(file.values["customThemeBackground"] == "window" && file.values["customThemeSeparator"] == "dot");
+    CHECK(file.values["customThemeStatusIcons"] == std::string(kStatusPackNames[1]) && file.values["customThemeStatusBackground"] == "true");
     CHECK_EQ(file.values["customThemeName"], std::string("Dusk"));
     CHECK(LoadSettings(file) == s);
     MapStore fresh;
@@ -954,7 +957,9 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     garbled.values["customThemeAccent"] = "not a color";
     garbled.values["customThemeBorder"] = "99";
     garbled.values["customThemeRounding"] = "-5";
+    garbled.values["customThemeStatusIcons"] = "Missing Pack";
     const Settings read = LoadSettings(garbled);
+    CHECK_EQ(read.customPalette.statusIcons, kVanillaStatusIcons);
     CHECK(read.customPalette.accent == PaletteOf(BarTheme::PhoenixGold).accent && read.customPalette.border == kMaxStripBorder);
     CHECK_EQ(read.customPalette.rounding, kShapeRounding);
 }
@@ -2879,6 +2884,19 @@ TEST(the_performance_widgets_show_mem_text_starts_off_and_is_kept)
     SaveSettings(s, store);
     CHECK_EQ(store.values["memText"], "true");
     CHECK(LoadSettings(store).Widget(BarWidget::Performance).memText);
+}
+
+TEST(the_status_timers_display_starts_with_name_and_icon_and_is_kept_by_each_copy)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::StatusTimers).statusDisplay == StatusDisplay::Both);
+    s.Widget(BarWidget::StatusTimers).statusDisplay = StatusDisplay::Icon;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["statusDisplay"], "icon");
+    CHECK(LoadSettings(store).Widget(BarWidget::StatusTimers).statusDisplay == StatusDisplay::Icon);
+    store.values["statusDisplay"] = "pictures";
+    CHECK(LoadSettings(store).Widget(BarWidget::StatusTimers).statusDisplay == StatusDisplay::Both);
 }
 
 TEST(the_bags_widgets_bag_is_kept_and_one_past_the_last_reads_as_the_inventory)

@@ -46,7 +46,7 @@ TEST(an_items_picture_is_read_with_its_black_clear)
     for (const bool fileHeader : {false, true})
     {
         const std::vector<uint8_t> bmp = TwoByTwo(fileHeader);
-        const std::optional<Image> picture = ItemPicture(bmp.data(), bmp.size());
+        const std::optional<Image> picture = ResourcePicture(bmp.data(), bmp.size());
         CHECK(picture.has_value());
         CHECK(picture->width == 2 && picture->height == 2);
         CHECK_EQ(picture->argb[0] >> 24, 0u);           // top left, black: clear
@@ -59,7 +59,27 @@ TEST(an_items_picture_is_read_with_its_black_clear)
 TEST(a_cut_short_items_picture_is_none)
 {
     const std::vector<uint8_t> bmp = TwoByTwo(false);
-    CHECK(!ItemPicture(bmp.data(), bmp.size() - 1).has_value());
-    CHECK(!ItemPicture(bmp.data(), 20).has_value());
-    CHECK(!ItemPicture(nullptr, 100).has_value());
+    CHECK(!ResourcePicture(bmp.data(), bmp.size() - 1).has_value());
+    CHECK(!ResourcePicture(bmp.data(), 20).has_value());
+    CHECK(!ResourcePicture(nullptr, 100).has_value());
+}
+
+TEST(a_status_icons_picture_of_32_bits_is_read_with_its_black_clear)
+{
+    // A status icon as the game's files hold it: 32 bits a pixel, B, G, R and an alpha of 0 or 0x80, rows bottom up.
+    std::vector<uint8_t> bmp;
+    Put32(bmp, 40);
+    Put32(bmp, 2);
+    Put32(bmp, 2);
+    Put16(bmp, 1);
+    Put16(bmp, 32);
+    for (int i = 0; i < 6; ++i) Put32(bmp, 0);
+    for (const uint32_t pixel : {0x80302010u, 0x00000000u, 0x80000000u, 0x800000FFu}) Put32(bmp, pixel);
+    const std::optional<Image> picture = ResourcePicture(bmp.data(), bmp.size());
+    CHECK(picture.has_value() && picture->width == 2 && picture->height == 2);
+    CHECK_EQ(picture->argb[0] >> 24, 0u);    // top left, black: clear whatever its alpha
+    CHECK_EQ(picture->argb[1], 0xFF0000FFu); // top right, blue
+    CHECK_EQ(picture->argb[2], 0xFF302010u); // bottom left
+    CHECK_EQ(picture->argb[3] >> 24, 0u);
+    CHECK(!ResourcePicture(bmp.data(), bmp.size() - 1).has_value());
 }

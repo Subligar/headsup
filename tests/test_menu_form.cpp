@@ -1497,3 +1497,42 @@ TEST(show_mem_text_shows_with_the_performance_widgets_memory_button_and_switches
     w.Pass({{"toppanel-widgets-mem-text-performance", kClickEvent, ""}});
     CHECK(w.settings.Widget(performance).memText);
 }
+
+TEST(status_icons_offers_vanilla_then_each_pack_and_with_show_status_background_edits_a_copy_of_the_theme)
+{
+    Window w;
+    w.state.page             = Page::Theme;
+    const std::string icons  = "theme-theme-colors-status-icons", back = "theme-theme-colors-status-background";
+    const FormBlock* card    = Block(w.Pass(), "theme-theme-colors");
+    CHECK(At(card, "theme-theme-colors-popup-opacity") < At(card, icons) && At(card, icons) < At(card, back));
+    const Form open = w.Pass({{icons, kClickEvent, ""}});
+    CHECK(open.popup && Has(open.popup->rml, ">Vanilla<"));
+    for (const std::string_view pack : kStatusPackNames)
+        CHECK(Has(open.popup->rml, (">" + std::string(pack) + "<").c_str()));
+    CHECK(!Has(open.popup->rml, (icons + "-o-" + std::to_string(kStatusPackCount + 1)).c_str()));
+    // The second pack, after Vanilla and the first.
+    CHECK(w.Pass({{icons + "-o-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.statusIcons == 1);
+    CHECK(!w.settings.customPalette.statusBack);
+    w.Pass({{back, kClickEvent, ""}});
+    CHECK(w.settings.customPalette.statusBack);
+}
+
+TEST(display_shows_on_the_status_timers_widget_alone_and_picks_how_its_pins_show)
+{
+    Window w;
+    const PanelWidget statuses{BarWidget::StatusTimers}, clock{BarWidget::EarthTime};
+    w.settings.Widget(statuses).on = w.settings.Widget(clock).on = true;
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.readings.settingsOf = {clock};
+    CHECK(!Has(rows(), "status-display"));
+    w.readings.settingsOf = {statuses};
+    CHECK(Has(rows(), "status-display"));
+    const std::string list = "toppanel-widgets-status-display-statustimers";
+    w.Pass({{list, kClickEvent, ""}});
+    CHECK(w.Pass({{list + "-o-1", kClickEvent, ""}}).changed);
+    CHECK(w.settings.Widget(statuses).statusDisplay == StatusDisplay::Icon);
+}

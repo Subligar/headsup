@@ -31,6 +31,10 @@ namespace headsup
     // A game item's picture, which only the plugin can make (from the game's resources), and the item a name is.
     std::string ItemSource(uint16_t item);
     std::optional<uint16_t> ItemOfSource(std::string_view name);
+    // A status's icon from its pack, or from the game's resources when the pack has none or it is the game's own, which
+    // only the plugin can read; the status a name is, with no background (that is an icon of its own).
+    std::string StatusSource(const StatusMark& mark);
+    std::optional<StatusMark> StatusOfSource(std::string_view name);
     std::string ResetSource(uint32_t argb, int pixels); // the circular arrow that puts a color back
     std::string CogSource(uint32_t argb, int pixels);   // the cog on a popup's settings chip
     // The image a name stands for; nothing for a name that is none of the above.

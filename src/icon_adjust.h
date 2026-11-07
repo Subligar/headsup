@@ -20,6 +20,8 @@ namespace headsup
     IconAdjust AdjustOf(std::string_view file);
     IconAdjust AdjustOf(Icon icon);
     IconAdjust AdjustOf(GamePicture picture);
+    // A pack's status icon is named by its pack's folder and its file, as "HD/253.png"; the game's own have none.
+    IconAdjust AdjustOf(const StatusMark& mark);
     // An adjustment as an element's style takes it, which moves and sizes what is drawn without moving what is
     // beside it: empty for none.
     std::string AdjustRules(const IconAdjust& adjust);

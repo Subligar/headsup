@@ -21,9 +21,14 @@ namespace headsup
     {
         constexpr std::string_view kIconKind = "icon", kStripKind = "strip", kCoinKind = "coin",
                                    kResetKind = "reset", kCogKind = "cog", kGameKind = "game",
-                                   kItemKind = "item";
+                                   kItemKind = "item", kStatusKind = "status";
         // A separator's, by DashMark.
         constexpr std::string_view kSeparatorKinds[kDashMarkCount] = {"dash", "dot", "square", "diamond"};
+        // XIUI's party list draws a status's background 1.1 icons wide and 0.75 as wide as tall, from 0.3 of its width
+        // above the icon for a buff and 0.1 for a debuff, the icon 0.1 / 1.5 of an icon in from its left. Here the
+        // background fills its mark's box, centered across it as the picture is in its square, and the icon is in it so.
+        constexpr float kBackWide = 1.1f, kBackAspect = 0.75f, kBuffDrop = 0.3f, kDebuffDrop = 0.1f, kBackInset = 0.1f / 1.5f;
+        constexpr float kBackedIcon = kBackAspect / kBackWide; // the icon's side, of the box's
         // RmlUi blurs a glow by a Gaussian of this share of its width; the bar's shadow is a CSS blur radius, twice
         // its Gaussian's.
         constexpr float kGlowSigmaPerWidth = 0.4f;
@@ -83,6 +88,25 @@ namespace headsup
             return value;
         }
 
+        // A status's icon in a square box of side at x, y in unit, over its background with Show Status Background,
+        // each moved and sized by its own icon adjustment.
+        std::string StatusPictures(const StatusMark& mark, float x, float y, float side, const char* unit)
+        {
+            const auto at = [&](float left, float top, float size) {
+                return "left:" + RcssNumber(x + left * side) + unit + ";top:" + RcssNumber(y + top * side) + unit +
+                       ";width:" + RcssNumber(size * side) + unit + ";height:" + RcssNumber(size * side) + unit + ";";
+            };
+            if (!mark.back)
+                return "<img class=\"p\" src=\"" + StatusSource(mark) + "\" style=\"" + at(0.0f, 0.0f, 1.0f) +
+                       AdjustRules(AdjustOf(mark)) + "\"/>";
+            const Icon back   = IsDebuff(mark.id) ? Icon::DebuffBack : Icon::BuffBack;
+            const float drop  = (IsDebuff(mark.id) ? kDebuffDrop : kBuffDrop) * kBackWide * kBackedIcon;
+            const float inset = (1.0f - kBackAspect) / 2.0f + kBackInset * kBackedIcon;
+            return "<img class=\"p\" src=\"" + IconSource(back) + "\" style=\"" + at(0.0f, 0.0f, 1.0f) +
+                   AdjustRules(AdjustOf(back)) + "\"/><img class=\"p\" src=\"" + StatusSource(mark) + "\" style=\"" +
+                   at(inset, drop, kBackedIcon) + AdjustRules(AdjustOf(mark)) + "\"/>";
+        }
+
         // A span's mark, before its text.
         std::string Picture(const Span& span, const BarLook& look)
         {
@@ -92,6 +116,7 @@ namespace headsup
             if (span.icon) return "<img class=\"line-icon\" src=\"" + IconSource(*span.icon) + "\"" + AdjustStyle(AdjustOf(*span.icon)) + "/>";
             if (span.item != 0) return "<img class=\"line-icon\" src=\"" + ItemSource(span.item) + "\"/>";
             if (span.coin) return "<img class=\"line-icon\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
+            if (span.status) return "<span class=\"line-icon smark\">" + StatusPictures(*span.status, 0.0f, 0.0f, kPercentWhole, "%") + "</span>";
             if (span.bar)
             {
                 const InlineBar& bar = *span.bar;
@@ -278,6 +303,25 @@ namespace headsup
         const std::optional<uint32_t> item = Number(parts[1]);
         if (!item || *item == 0 || *item > UINT16_MAX) return std::nullopt;
         return static_cast<uint16_t>(*item);
+    }
+
+    std::string StatusSource(const StatusMark& mark)
+    {
+        return std::string(kHostSource) + std::string(kStatusKind) + kSeparator +
+               (mark.pack == kVanillaStatusIcons ? std::string(kVanillaStatusName) : std::to_string(mark.pack)) + kSeparator +
+               std::to_string(mark.id);
+    }
+
+    std::optional<StatusMark> StatusOfSource(std::string_view name)
+    {
+        if (name.substr(0, kHostSource.size()) != kHostSource) return std::nullopt;
+        const std::vector<std::string_view> parts = Parts(name.substr(kHostSource.size()));
+        if (parts.size() != 3 || parts[0] != kStatusKind) return std::nullopt;
+        const std::optional<uint32_t> pack = Number(parts[1]), id = Number(parts[2]);
+        if ((parts[1] != kVanillaStatusName && (!pack || *pack >= static_cast<uint32_t>(kStatusPackCount))) || !id ||
+            *id > UINT16_MAX)
+            return std::nullopt;
+        return StatusMark{static_cast<uint16_t>(*id), pack ? static_cast<int>(*pack) : kVanillaStatusIcons};
     }
 
     std::string ResetSource(uint32_t argb, int pixels)
@@ -517,6 +561,7 @@ namespace headsup
         css += ".t{white-space:pre;}";
         css += ".cell{display:inline-block;white-space:pre;}";
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
+        css += ".smark{position:relative;}"; // a status's icon and its background, placed inside it
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";
         css += TextRules("", look.titleFont, look.detailFont, lines, place, rowTop);
         // An EXP bar among a line's text, taking no height of its line: its track from its capitals' middle up and down
@@ -682,6 +727,9 @@ namespace headsup
             case PopupPiece::Kind::Picture:
                 rml += "<img class=\"p\" src=\"" + GamePictureSource(piece.picture) + "\" style=\"" + place + "width:" +
                        Px(piece.width) + ";height:" + Px(piece.height) + ";" + AdjustRules(AdjustOf(piece.picture)) + "\"/>";
+                break;
+            case PopupPiece::Kind::Status:
+                rml += StatusPictures(piece.status, std::round(piece.x), std::round(piece.y), piece.width, "px");
                 break;
             case PopupPiece::Kind::Coin:
             {

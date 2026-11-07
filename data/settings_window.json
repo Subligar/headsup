@@ -61,6 +61,15 @@
             {"key": "theme-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets, the pop-outs, their sections and the help bar are, wherever those are Set by Theme. Auto keeps the corners of the theme's own style. Default: Auto."},
             {"key": "popup-opacity", "name": "Pop-out Opacity", "tip": "How much of the game shows through the pop-outs. At 100% none of it does."},
             {
+              "key": "status-icons",
+              "name": "Status Icons",
+              "tip": "The pictures of the status effects in the Status Timers widget and its pop-out: the game's own, or a pack's. A status a pack has no picture for shows the game's. Default: Vanilla.",
+              "words": [
+                {"key": "vanilla", "name": "Vanilla"}
+              ]
+            },
+            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: off."},
+            {
               "key": "theme-palette",
               "rows": [
                 {"key": "under-line", "name": "Under Line", "tip": "A row just under the border; clear for none."},
@@ -267,6 +276,7 @@
                 {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows on it. Default is None."},
                 {"key": "bar-text-align", "name": "Bar Text Alignment", "tip": "Puts the EXP Bar's text at its left or right end, or in its middle. Default is Center."},
                 {"key": "mem-text", "name": "Show Mem Text", "tip": "Puts \"Mem\" before the Memory button's figures. Off, the figures alone. Default is off."},
+                {"key": "status-display", "name": "Display", "tip": "What shows for each pinned status: its name, its icon, or both with the icon first. Default is Both Name & Icon."},
                 {"key": "job-text", "name": "Job Text", "tip": "How Job Info and the EXP Bar's Job Text write your jobs and levels. Default is Main 75 / Sub 37."}
               ],
               "words": [
@@ -1354,6 +1364,14 @@
         {"name": "Never", "tip": "Always the game's element icons. A weather the game has no icon for shows none."},
         {"name": "When No Vanilla Icon", "tip": "The game's element icons, and HeadsUp's own pictures for clear, sunshine, clouds and fog, which have none."},
         {"name": "Always", "tip": "HeadsUp's own pictures for every weather."}
+      ]
+    },
+    {
+      "key": "status-display",
+      "options": [
+        {"name": "Only Name"},
+        {"name": "Only Icon"},
+        {"name": "Both Name & Icon"}
       ]
     },
     {

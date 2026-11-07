@@ -228,6 +228,8 @@ namespace headsup
         constexpr const char* kWindowTypeSuffix = "WindowType";
         constexpr const char* kRoundingSuffix = "Rounding";
         constexpr const char* kSeparatorSuffix = "Separator";
+        constexpr const char* kStatusIconsSuffix = "StatusIcons"; // by StatusIconsName
+        constexpr const char* kStatusBackSuffix  = "StatusBackground";
         constexpr const char* kCustomThemeNameKey = "customThemeName";
         constexpr const char* kBarCurrencyKey = "barCurrency";
         constexpr const char* kBarSecondCurrencyKey = "barCurrency2";
@@ -265,6 +267,8 @@ namespace headsup
         constexpr const char* kJobNamesKey  = "jobNames";
         constexpr const char* kZoneIdKey    = "zoneId";
         constexpr const char* kMemTextKey   = "memText";
+        constexpr const char* kStatusDisplayKey = "statusDisplay";
+        const char* const kStatusDisplayNames[kStatusDisplayCount] = {"name", "icon", "both"};
         constexpr const char* kJobTextKey   = "jobText";
         const char* const kJobTextNames[kJobTextCount] = {"mainSub", "main", "levelFirst"};
         constexpr const char* kClock24Key   = "clock24";
@@ -1212,6 +1216,7 @@ namespace headsup
         s.customPalette.border = std::clamp(s.customPalette.border, 0, kMaxStripBorder);
         s.customPalette.rounding = std::clamp(s.customPalette.rounding, kShapeRounding, kMaxRounding);
         s.customPalette.windowType = std::clamp(s.customPalette.windowType, kFollowGameWindow, kWindowTypes);
+        s.customPalette.statusIcons = std::clamp(s.customPalette.statusIcons, kVanillaStatusIcons, kStatusPackCount - 1);
         if (!IsFolderFileName(s.customThemeName)) s.customThemeName = kUnnamedTheme;
         for (int slot = 0; slot < kPanelSlots; ++slot)
         {
@@ -1313,6 +1318,10 @@ namespace headsup
             case BarWidget::Performance:
                 o.memText = flag(kMemTextKey, o.memText);
                 break;
+            case BarWidget::StatusTimers:
+                o.statusDisplay = static_cast<StatusDisplay>(NameIndex(kStatusDisplayNames, kStatusDisplayCount,
+                    text(kStatusDisplayKey), static_cast<int>(o.statusDisplay)));
+                break;
             case BarWidget::EarthTime:
             {
                 // kClockZoneCount for a name of none of them, as kLocalZone is.
@@ -1386,6 +1395,9 @@ namespace headsup
                 break;
             case BarWidget::Performance:
                 flag(kMemTextKey, o.memText);
+                break;
+            case BarWidget::StatusTimers:
+                text(kStatusDisplayKey, kStatusDisplayNames[static_cast<int>(o.statusDisplay)]);
                 break;
             case BarWidget::EarthTime:
                 text(kClockZoneKey, o.clockZone ? kClockZoneNames[static_cast<int>(*o.clockZone)] : kLocalZone);
@@ -1647,6 +1659,9 @@ namespace headsup
             s.customPalette.rounding     = LoadInt(store, custom + kRoundingSuffix, s.customPalette.rounding);
             s.customPalette.separator    = static_cast<DashMark>(NameIndex(kDashMarkNames, kDashMarkCount,
                 store.GetString((custom + kSeparatorSuffix).c_str(), ""), static_cast<int>(s.customPalette.separator)));
+            s.customPalette.statusIcons =
+                StatusIconsNamed(store.GetString((custom + kStatusIconsSuffix).c_str(), ""), s.customPalette.statusIcons);
+            s.customPalette.statusBack = HeldSwitch(store, custom + kStatusBackSuffix).value_or(s.customPalette.statusBack);
             s.customThemeName = store.GetString(kCustomThemeNameKey, "");
             s.menuFont         = store.GetString(kMenuFontKey, s.menuFont.c_str());
             // By the font named: one whose Windows file was missing was drawn in Barlow Condensed, which nothing here knows.
@@ -1752,6 +1767,8 @@ namespace headsup
         StoreFloat(store, kCustomThemeKey + std::string(kWindowTypeSuffix), static_cast<float>(s.customPalette.windowType));
         StoreFloat(store, kCustomThemeKey + std::string(kRoundingSuffix), static_cast<float>(s.customPalette.rounding));
         store.Set((kCustomThemeKey + std::string(kSeparatorSuffix)).c_str(), kDashMarkNames[static_cast<int>(s.customPalette.separator)]);
+        store.Set((kCustomThemeKey + std::string(kStatusIconsSuffix)).c_str(), StatusIconsName(s.customPalette.statusIcons).c_str());
+        StoreBool(store, kCustomThemeKey + std::string(kStatusBackSuffix), s.customPalette.statusBack);
         store.Set(kCustomThemeNameKey, s.customThemeName.c_str());
         store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
         store.Set(kFishStaminaKey, kFishStaminaNames[static_cast<int>(s.fishStamina)]);

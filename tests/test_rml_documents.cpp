@@ -6,6 +6,7 @@
 
 #include <RmlUi/Core.h>
 
+#include <array>
 #include <cmath>
 #include <optional>
 #include <string>
@@ -579,5 +580,92 @@ TEST(an_adjusted_icon_draws_moved_or_sized_in_its_own_room_in_the_bar_and_the_po
     CHECK_EQ(pictures.size(), static_cast<size_t>(2));
     CHECK(near(drawnAt(pictures[0], 2.0f, 2.0f), 0.0f, 0.0f));
     CHECK(near(drawnAt(pictures[1], 1.5f, 1.5f), 0.0f, 0.0f));
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its_background_sits_in_it_as_xiuis_does)
+{
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    test::RmlSession rml;
+    const auto box = [](Rml::Element* e) {
+        const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border), size = e->GetBox().GetSize(Rml::BoxArea::Border);
+        return std::array<float, 4>{at.x, at.y, size.x, size.y};
+    };
+    const auto near = [](float a, float b) { return std::fabs(a - b) < 0.05f; };
+    // XIUI's party list: the background 1.1 icons wide and 1/0.75 of that tall, a buff's 0.33 of an icon above the
+    // icon and a debuff's 0.11, 1/15 of an icon left of it. Fit to the box's height, the icon is 0.75/1.1 of it.
+    const float icon = 0.75f / 1.1f, left = (1.0f - 0.75f) / 2.0f + icon / 15.0f;
+    const auto checkIn = [&](Rml::Element* square, const Rml::ElementList& images, bool debuff) {
+        const auto [x, y, w, h] = box(square);
+        CHECK(images.size() == 2 && w > 0.0f && near(w, h));
+        const auto back = box(images[0]), shown = box(images[1]);
+        CHECK(near(back[0], x) && near(back[1], y) && near(back[2], w) && near(back[3], h));
+        CHECK(near(shown[2], w * icon) && near(shown[3], h * icon));
+        CHECK(near(shown[0], x + w * left) && near(shown[1], y + h * icon * (debuff ? 0.11f : 0.33f)));
+        CHECK(images[0]->GetAttribute<Rml::String>("src", "") == IconSource(debuff ? Icon::DebuffBack : Icon::BuffBack));
+    };
+
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::StatusTimers));
+    widget->SetClass(kHiddenClass, false);
+    WidgetContent c;
+    c.shown = true;
+    Span protect = Text(""), dia = Text("");
+    protect.status = StatusMark{40, 0, true};
+    dia.status     = StatusMark{134, kVanillaStatusIcons, true};
+    Span plain     = Text("");
+    plain.status   = StatusMark{33, 1, false};
+    c.title        = {protect, Text(" Protect"), Text("  "), dia, Text(" Dia")};
+    c.subtitle     = {plain, Text(" Haste")};
+    widget->SetInnerRML(WidgetRml(c, look, {}));
+    rml.context->Update();
+    Rml::ElementList marks, lines;
+    widget->GetElementsByClassName(marks, "smark");
+    widget->GetElementsByClassName(lines, "line-icon");
+    CHECK(marks.size() == 3 && lines.size() == 3);
+    for (size_t i = 0; i < 2; ++i)
+    {
+        Rml::ElementList images;
+        marks[i]->GetElementsByTagName(images, "img");
+        checkIn(marks[i], images, i == 1);
+        CHECK(images[1]->GetAttribute<Rml::String>("src", "") == StatusSource(i == 0 ? protect.status.value() : dia.status.value()));
+    }
+    // A mark is a line's icon square, the name after it.
+    Rml::ElementList hasteImages;
+    marks[2]->GetElementsByTagName(hasteImages, "img");
+    const auto haste = box(marks[2]), hasteIcon = box(hasteImages.at(0));
+    CHECK(hasteImages.size() == 1 && near(hasteIcon[0], haste[0]) && near(hasteIcon[2], haste[2]) && near(hasteIcon[3], haste[3]));
+    CHECK(near(haste[3], static_cast<float>(look.lines.detail)));
+
+    PopupFaces faces;
+    for (PopupFace& face : faces)
+        face = PopupFace{look.detailFont, 14, 16, 0.0f};
+    PopupLayout layout;
+    layout.width  = 200.0f;
+    layout.height = 100.0f;
+    PopupPiece piece{PopupPiece::Kind::Status, 10.0f, 10.0f, 22.0f, 22.0f, {}};
+    piece.status = StatusMark{134, 2, true};
+    layout.pieces = {piece};
+    Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
+    popups->Show();
+    Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+    popup->SetClass(kPopupClass, true);
+    popup->SetInnerRML(PopupRml(layout, look, faces));
+    rml.context->Update();
+    Rml::ElementList pictures;
+    popup->GetElementsByTagName(pictures, "img");
+    Rml::Element* square = popups->AppendChild(popups->CreateElement("div")); // where the piece's box is
+    square->SetProperty("position", "absolute");
+    const Rml::Vector2f origin = popup->GetAbsoluteOffset(Rml::BoxArea::Border);
+    square->SetProperty("left", Rml::ToString(origin.x + 10.0f) + "px");
+    square->SetProperty("top", Rml::ToString(origin.y + 10.0f) + "px");
+    square->SetProperty("width", "22px");
+    square->SetProperty("height", "22px");
+    rml.context->Update();
+    checkIn(square, pictures, true);
     CHECK_EQ(rml.Said(), "");
 }

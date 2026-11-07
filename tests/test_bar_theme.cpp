@@ -44,9 +44,12 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     p.windowType   = 6;
     p.rounding     = 9;
     p.separator    = DashMark::Square;
+    p.statusIcons  = 2;
+    p.statusBack   = true;
     p.parent       = BarTheme::Vanilla;
     const std::string file = ThemeFileText(p);
     CHECK(PaletteFromThemeFile(file) == p);
+    CHECK(file.find("StatusIcons=" + std::string(kStatusPackNames[2])) != std::string::npos);
     // A part it lacks, or cannot be read, is Phoenix Gold's; a file of none of its parts is no theme.
     const std::optional<BarPalette> partial = PaletteFromThemeFile("[theme]\nTitle=ff102030\nAccent=nonsense\n");
     CHECK(partial && partial->title == 0xFF102030u && partial->accent == PaletteOf(BarTheme::PhoenixGold).accent);
@@ -57,6 +60,9 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     // A rounding past the most is the most, and none read is the shape's own.
     const std::optional<BarPalette> round = PaletteFromThemeFile("[theme]\nTitle=ff102030\nRounding=99\n");
     CHECK(round && round->rounding == kMaxRounding && partial->rounding == kShapeRounding);
+    // Status icons of no pack's name, and none read, are the game's; no background unless it says so.
+    const std::optional<BarPalette> icons = PaletteFromThemeFile("[theme]\nTitle=ff102030\nStatusIcons=Gone\nStatusBackground=yes\n");
+    CHECK(icons && icons->statusIcons == kVanillaStatusIcons && !icons->statusBack && partial->statusIcons == kVanillaStatusIcons);
 }
 
 TEST(the_themes_folder_lists_its_theme_files_by_name)

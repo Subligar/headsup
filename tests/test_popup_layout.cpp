@@ -1387,7 +1387,8 @@ TEST(status_timers_favorites_time_lines_up_with_the_lists_and_their_pin_sits_clo
 {
     const BarMetrics m = MetricsFor(36, BarShape::Ornate);
     const std::vector<ActiveStatus> active{{40, 1800.0}, {33, 90.0}}; // Protect and Haste
-    const PopupLayout l = LayoutPopup(StatusTimersPopup(active, {kSignetEffect, 40}, {40}, 0), m, false, Fake);
+    const PopupLayout l =
+        LayoutPopup(StatusTimersPopup(active, {kSignetEffect, 40}, {40}, PaletteOf(BarTheme::PhoenixGold), 0, 0), m, false, Fake);
     const PopupPiece *favorite = Find(l, "30m 00s"), *listed = Find(l, "1m 30s");
     CHECK(favorite != nullptr && listed != nullptr);
     CHECK(Near(favorite->x + favorite->width, listed->x + listed->width));
@@ -1400,6 +1401,34 @@ TEST(status_timers_favorites_time_lines_up_with_the_lists_and_their_pin_sits_clo
     CHECK(icons.size() >= 2 && signet != nullptr && icons[0]->icon == Icon::Pinned && icons[1]->icon == Icon::Star);
     const float pinToStar = icons[1]->x - icons[0]->x - icons[0]->width, starToName = signet->x - icons[1]->x - icons[1]->width;
     CHECK(pinToStar > 0.0f && pinToStar < starToName / 2.0f);
+}
+
+TEST(each_status_in_the_popup_has_its_icon_left_of_its_name_as_big_as_the_pins_and_the_names_line_up)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const std::vector<ActiveStatus> active{{33, 90.0}, {134, 30.0}}; // Haste, Dia
+    const PopupLayout l =
+        LayoutPopup(StatusTimersPopup(active, {40}, {40}, PaletteOf(BarTheme::PhoenixGold), 0, 0), m, false, Fake);
+    const PopupPiece *protect = Find(l, "Protect"), *haste = Find(l, "Haste"), *dia = Find(l, "Dia");
+    CHECK(protect != nullptr && haste != nullptr && dia != nullptr);
+    std::vector<const PopupPiece*> marks;
+    for (const PopupPiece& p : l.pieces)
+        if (p.kind == PopupPiece::Kind::Status) marks.push_back(&p);
+    const auto markOf = [&](uint16_t id) {
+        const auto at = std::ranges::find_if(marks, [&](const PopupPiece* p) { return p->status.id == id; });
+        return at == marks.end() ? nullptr : *at;
+    };
+    const PopupPiece *protectMark = markOf(40), *hasteMark = markOf(33), *diaMark = markOf(134);
+    CHECK(protectMark != nullptr && hasteMark != nullptr && diaMark != nullptr);
+    const PopupPiece* pin = nullptr;
+    for (const PopupPiece& p : l.pieces)
+        if (p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Pinned) pin = &p;
+    CHECK(pin != nullptr && Near(protectMark->width, pin->width) && Near(protectMark->width, protectMark->height));
+    for (const auto& [mark, name] : {std::pair{protectMark, protect}, std::pair{hasteMark, haste}, std::pair{diaMark, dia}})
+        CHECK(mark->x + mark->width < name->x && name->x - (mark->x + mark->width) < mark->width / 2.0f);
+    CHECK(Near(haste->x, dia->x) && Near(hasteMark->x, diaMark->x));
+    // The debuffs' list sits under the buffs'.
+    CHECK(dia->y > haste->y);
 }
 
 TEST(while_its_settings_show_a_widgets_clone_and_remove_chips_sit_left_of_the_cog_and_press_what_they_say)

@@ -5,6 +5,7 @@
 #include "function_ref.h"
 #include "icons.h"
 #include "plate_settings.h"
+#include "status_icons.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -55,8 +56,18 @@ namespace headsup
         bool operator==(const InlineBar&) const = default;
     };
 
-    // Some text, and before it at most one mark: a game picture, an icon or gil's coin as tall as its letters, or an
-    // EXP bar.
+    // A status's icon from a theme's Status Icons (kVanillaStatusIcons or a pack's place), over its buff's or debuff's
+    // background with the theme's Show Status Background.
+    struct StatusMark
+    {
+        uint16_t id = 0;
+        int pack    = kVanillaStatusIcons;
+        bool back   = false;
+        bool operator==(const StatusMark&) const = default;
+    };
+
+    // Some text, and before it at most one mark: a game picture, an icon, gil's coin or a status's icon as tall as its
+    // letters, or an EXP bar.
     struct Span
     {
         std::string text;
@@ -67,9 +78,13 @@ namespace headsup
         bool coin = false;
         std::optional<InlineBar> bar{};
         uint16_t item = 0; // a game item's picture
+        std::optional<StatusMark> status{};
         bool operator==(const Span&) const = default;
     };
-    constexpr bool HasMark(const Span& s) { return s.picture != GamePicture::None || s.icon || s.coin || s.bar || s.item != 0; }
+    constexpr bool HasMark(const Span& s)
+    {
+        return s.picture != GamePicture::None || s.icon || s.coin || s.bar || s.item != 0 || s.status;
+    }
 
     struct WidgetContent
     {
@@ -98,6 +113,7 @@ namespace headsup
         bool star = false; // a star after the text: who holds what the cell's row is about
         uint16_t item = 0; // a game item's picture before the text, in place of an icon
         bool coin     = false; // gil's coin there, in place of an icon
+        std::optional<StatusMark> status{}; // a status's icon there, in place of an icon
         Align align   = Align::Left; // in a grid, against its column's left, in its middle or against its right
         GamePicture picture = GamePicture::None; // a picture from the game's files before the text, as an icon is
         std::optional<Span> tint{}; // its icon, one of HeadsUp's own white ones, drawn in this span's color

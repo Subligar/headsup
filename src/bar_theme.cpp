@@ -17,6 +17,8 @@ namespace headsup
         constexpr const char* kShapeKey = "Shape", *kBorderKey = "Border", *kBackgroundKey = "Background";
         constexpr const char* kWindowTypeKey = "WindowType", *kRoundingKey = "Rounding", *kSeparatorKey = "Separator";
         constexpr const char* kParentKey = "Parent";
+        constexpr const char* kStatusIconsKey = "StatusIcons", *kStatusBackKey = "StatusBackground";
+        constexpr const char* kTrue = "true", *kFalse = "false";
 
         template <typename Enum>
         void Named(std::optional<std::string> text, const char* const* names, int count, Enum& value)
@@ -120,6 +122,8 @@ namespace headsup
         values.push_back({kWindowTypeKey, std::to_string(palette.windowType)});
         values.push_back({kRoundingKey, std::to_string(palette.rounding)});
         values.push_back({kSeparatorKey, kDashMarkNames[static_cast<int>(palette.separator)]});
+        values.push_back({kStatusIconsKey, StatusIconsName(palette.statusIcons)});
+        values.push_back({kStatusBackKey, palette.statusBack ? kTrue : kFalse});
         values.push_back({kParentKey, kBarThemeNames[static_cast<int>(palette.parent)]});
         return WithIniValues("", kThemeSection, values);
     }
@@ -149,6 +153,9 @@ namespace headsup
             palette.windowType = std::clamp(*type, kFollowGameWindow, kWindowTypes);
         if (const std::optional<int> rounding = NumberIn(IniValue(file, kThemeSection, kRoundingKey), 10))
             palette.rounding = std::clamp(*rounding, kShapeRounding, kMaxRounding);
+        if (const std::optional<std::string> icons = IniValue(file, kThemeSection, kStatusIconsKey))
+            palette.statusIcons = StatusIconsNamed(*icons, palette.statusIcons);
+        palette.statusBack = IniValue(file, kThemeSection, kStatusBackKey) == kTrue;
         return any ? std::optional<BarPalette>(palette) : std::nullopt;
     }
 }

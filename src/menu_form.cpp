@@ -948,6 +948,16 @@ namespace headsup
                     if (kind == BarWidget::Performance && PartOn(o.design, WidgetPart::PerfMemory))
                         form.Switch(label.c_str(), o.memText, row.tip);
                     break;
+                case WidgetTabsRow::StatusDisplay:
+                    if (kind == BarWidget::StatusTimers)
+                    {
+                        int display = static_cast<int>(o.statusDisplay);
+                        form.NumberDropdown(label.c_str(), display, 0, kStatusDisplayCount - 1,
+                            [&](int i) { return std::string(c.layout.OptionsOf(WindowList::StatusDisplay)[static_cast<size_t>(i)].name); },
+                            row.tip);
+                        o.statusDisplay = static_cast<StatusDisplay>(display);
+                    }
+                    break;
                 }
             }
         }
@@ -1959,6 +1969,26 @@ namespace headsup
                 form.Fade(!BarOn(s));
                 ThemeOpacity(c, label, {&BarPalette::panelTop, &BarPalette::panelBottom}, tip);
                 break;
+            case SettingPiece::StatusIcons:
+            {
+                form.Fade(!BarOn(s));
+                BarPalette edited = ShownPalette(c);
+                form.NumberDropdown(label.c_str(), edited.statusIcons, kVanillaStatusIcons, kStatusPackCount - 1,
+                    [&](int pack) {
+                        return pack == kVanillaStatusIcons ? Words(Word(c, WindowWord::StatusIconsVanilla)) : StatusIconsName(pack);
+                    },
+                    tip);
+                EditTheme(c, edited);
+                break;
+            }
+            case SettingPiece::StatusBackground:
+            {
+                form.Fade(!BarOn(s));
+                BarPalette edited = ShownPalette(c);
+                form.Switch(label.c_str(), edited.statusBack, tip);
+                EditTheme(c, edited);
+                break;
+            }
             case SettingPiece::ThemePalette: ThemePalette(c, e); break;
             case SettingPiece::ProfileFiles: ProfileFiles(c); break;
             case SettingPiece::SaveAutomatically:

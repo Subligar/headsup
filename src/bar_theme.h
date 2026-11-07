@@ -3,6 +3,7 @@
 #include "bar_types.h"
 #include "dash_mark.h"
 #include "fonts.h"
+#include "status_icons.h"
 
 #include <cstdint>
 #include <optional>
@@ -47,6 +48,8 @@ namespace headsup
         BarBackground background = BarBackground::Gradient; // Plain is stripTop alone
         int windowType    = kFollowGameWindow; // the art's, for the Window background
         DashMark separator = DashMark::Diamond; // the panel's separators, and what a nameplate's dash is drawn as
+        int statusIcons = kVanillaStatusIcons;  // the game's status icons or a pack's
+        bool statusBack = false;                // a buff's or debuff's background behind each status icon
         BarTheme parent    = BarTheme::PhoenixGold; // a custom theme's: the built-in one it was first copied from
         bool operator==(const BarPalette&) const = default;
     };
@@ -73,7 +76,7 @@ namespace headsup
         "custom", "gameWindow"};
 
     // A saved theme's file, in the themes folder: a [theme] section of its palette's parts by kPaletteColors' names,
-    // Shape, Border, Rounding, Background, WindowType, Separator and Parent. Read back, a part it lacks or that cannot be
+    // Shape, Border, Rounding, Background, WindowType, Separator, StatusIcons, StatusBackground and Parent. Read back, a part it lacks or that cannot be
     // read is Phoenix Gold's, and a file of none of the colors is no theme.
     constexpr const char* kThemeExtensions[] = {".ini"};
     std::string ThemeFileText(const BarPalette& palette);

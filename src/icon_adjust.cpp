@@ -57,6 +57,12 @@ namespace headsup
 
     IconAdjust AdjustOf(GamePicture picture) { return AdjustOf(FileOf(picture)); }
 
+    IconAdjust AdjustOf(const StatusMark& mark)
+    {
+        if (mark.pack == kVanillaStatusIcons) return {};
+        return AdjustOf(StatusIconsName(mark.pack) + "/" + std::to_string(mark.id) + ".png");
+    }
+
     std::string AdjustRules(const IconAdjust& adjust)
     {
         std::string transform;

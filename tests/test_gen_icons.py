@@ -92,9 +92,16 @@ class Decode(unittest.TestCase):
         with self.assertRaises(gen.IconError):
             gen.decode_bgra(palette_png(1, 1, [5], [(1, 2, 3)], []))  # an index past the palette
 
-    def test_only_complete_8_bit_rgba_or_palette_pngs_are_accepted(self):
+    def test_an_rgb_png_is_opaque(self):
+        rgb = bytes([10, 20, 30, 40, 50, 60])
+        raw = b''.join(bytes([0]) + rgb[y * 6:(y + 1) * 6] for y in range(1))
+        header = struct.pack('>IIBBBBB', 2, 1, 8, 2, 0, 0, 0)
+        data = SIGNATURE + chunk(b'IHDR', header) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
+        self.assertEqual(gen.decode_bgra(data), (2, 1, bytes([30, 20, 10, 255, 60, 50, 40, 255])))
+
+    def test_only_complete_8_bit_rgba_rgb_or_palette_pngs_are_accepted(self):
         with self.assertRaises(gen.IconError):
-            gen.decode_bgra(png(2, 2, bytes(12), color_type=2))
+            gen.decode_bgra(png(2, 2, bytes(16), color_type=4))  # gray with alpha
         with self.assertRaises(gen.IconError):
             gen.decode_bgra(b'GIF89a')
         with self.assertRaises(gen.IconError):
@@ -226,6 +233,71 @@ class GenIcons(unittest.TestCase):
         (self.dir / 'third_party' / 'mobdb-icons' / 'Link.png').unlink()
         with self.assertRaises(gen.IconError):
             gen.generate(self.dir)
+
+
+class StatusPacks(unittest.TestCase):
+    """Each folder of resources/icons/status is a pack of status icons named by status id, packed into the plugin
+    whole and unpacked only once the pack is picked."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = pathlib.Path(self.tmp.name)
+        self.base = self.dir / gen.STATUS_PACKS
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def add(self, pack, name, data):
+        (self.base / pack).mkdir(parents=True, exist_ok=True)
+        (self.base / pack / name).write_bytes(data)
+
+    def test_each_folder_is_a_pack_in_name_order_its_icons_by_id_and_other_files_left_out(self):
+        self.add('Zeta', '7.png', png(1, 1, bytes([1, 2, 3, 4])))
+        self.add('Alpha', '12.png', png(1, 1, bytes([5, 6, 7, 8])))
+        self.add('Alpha', '3.png', png(1, 1, bytes([9, 10, 11, 12])))
+        self.add('Alpha', 'credits.txt', b'not an icon')
+        self.add('Alpha', 'unknown.png', b'not a status')
+        (self.base / 'BuffIcon.png').write_bytes(png(1, 1, bytes(4)))  # beside the packs: no pack
+        packs = gen.status_packs(self.dir)
+        self.assertEqual([name for name, _ in packs], ['Alpha', 'Zeta'])
+        self.assertEqual(packs[0][1], [(3, 1, bytes([11, 10, 9, 12])), (12, 1, bytes([7, 6, 5, 8]))])
+
+    def test_an_icon_not_square_is_centered_on_one_its_longer_side(self):
+        self.add('Pack', '1.png', png(1, 2, bytes([1, 2, 3, 4, 5, 6, 7, 8])))
+        (_, icons), = gen.status_packs(self.dir)
+        self.assertEqual(icons, [(1, 2, bytes([3, 2, 1, 4]) + bytes(4) + bytes([7, 6, 5, 8]) + bytes(4))])
+
+    def test_an_unreadable_icon_or_an_odd_pack_name_fails(self):
+        self.add('Pack', '1.png', b'BM not a png')
+        with self.assertRaises(gen.IconError) as caught:
+            gen.status_packs(self.dir)
+        self.assertIn('1.png', str(caught.exception))
+        (self.base / 'Pack' / '1.png').unlink()
+        self.add('Bad "Name"', '1.png', png(1, 1, bytes(4)))
+        with self.assertRaises(gen.IconError):
+            gen.status_packs(self.dir)
+
+    def test_a_pack_is_its_icons_pixels_one_after_another_compressed_with_where_each_starts(self):
+        one, two = bytes([1, 2, 3, 4]), bytes(range(16))
+        names, table, blobs = gen.generate_status([('HD', [(4, 1, one), (9, 2, two)]), ('XIView', [])])
+        self.assertIn('constexpr std::string_view kStatusPackNames[] = {"HD", "XIView"};', names)
+        self.assertIn('constexpr int kStatusPackCount = 2;', names)
+        self.assertEqual(zlib.decompress(blobs['status_pack_0.z']), one + two)
+        self.assertIn('#embed "status_pack_0.z"', table)
+        self.assertIn('const PackedIcon kStatusPackIcons0[] = {{4, 1, 0}, {9, 2, 4}};', table)
+        self.assertIn(f'{{kStatusPack0, sizeof(kStatusPack0), {len(one + two)}, kStatusPackIcons0, 2}}', table)
+
+    def test_the_packs_in_the_repository_are_read_whole(self):
+        packs = dict(gen.status_packs(gen_root()))
+        self.assertEqual(sorted(packs), ['HD', 'Tetsouou', 'XIView'])
+        for name, icons in packs.items():
+            with self.subTest(pack=name):
+                self.assertGreater(len(icons), 600)
+                self.assertTrue(all(side == 32 for _, side, _ in icons))
+
+
+def gen_root():
+    return pathlib.Path(__file__).resolve().parent.parent
 
 
 class Pointer(unittest.TestCase):
