@@ -969,8 +969,7 @@ public:
                 m_SettingsChangedAt = now;
                 m_BarInput.ShowSettings(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)]);
             }
-            else switch (headsup::ApplyPopupPress(m_Settings, press,
-                static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1)))
+            else switch (headsup::ApplyPopupPress(m_Settings, press, NationNow()))
             {
             case headsup::PressResult::Changed:
                 m_SettingsChangedAt = now;
@@ -1099,6 +1098,7 @@ public:
             .sitting          = m_Player.sitting,
             .windowsBand      = m_WindowHook.WindowsBand(),
             .barBand          = band.value_or(headsup::HelpBand{}).topBar,
+            .nation           = NationNow(),
             .screenWidth      = m_Rml.Overlay() != nullptr ? m_Rml.Overlay()->GetDimensions().x : 0,
             .screenHeight     = m_Rml.Overlay() != nullptr ? m_Rml.Overlay()->GetDimensions().y : 0,
             .seenWindows      = &m_SeenWindows,
@@ -2124,6 +2124,12 @@ private:
         if (g_PresentSlot == nullptr) m_Rml.RenderOverlay();
     }
 
+    // Ashita's nation is 0 for San d'Oria to 2 for Windurst.
+    headsup::Nation NationNow() const
+    {
+        return static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1);
+    }
+
     // RmlUi starts once the back buffer's size is known, and follows it after.
     void StartRml()
     {
@@ -2694,8 +2700,7 @@ private:
         s.pinRefused = m_BarInput.Refused();
         if (needs.conquest)
         {
-            // Ashita's nation is 0 for San d'Oria to 2 for Windurst.
-            s.nation = static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1);
+            s.nation = NationNow();
             s.outposts = &Outposts()[m_AshitaCore->GetMemoryManager()->GetParty()->GetMemberServerId(0)];
         }
         if (needs.unixTime || needs.localTime || needs.statuses)
@@ -2797,7 +2802,11 @@ private:
                 s.stripBag = headsup::BagOf(inventory->GetContainerCount(c), inventory->GetContainerCountMax(c));
             }
         }
-        if (needs.gil) s.currencies = m_GameState.Currencies();
+        if (needs.gil)
+        {
+            s.currencies = m_GameState.Currencies();
+            s.nation     = NationNow(); // whose conquest points are yours
+        }
         if (!needs.gil && needs.containers == 0) return s;
         const Ashita::FFXI::item_t* gil =
             needs.gil ? inventory->GetContainerItem(headsup::kInventory, headsup::kGilSlot) : nullptr;

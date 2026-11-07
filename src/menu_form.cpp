@@ -762,10 +762,22 @@ namespace headsup
                         form.Segments(label.c_str(), s.blueMagicLearned, names.data(), kBlueLearnedCount, row.tip);
                     }
                     break;
-                case WidgetTabsRow::Currency:
+                case WidgetTabsRow::Currency1:
+                case WidgetTabsRow::Currency2:
                     if (kind == BarWidget::Currency)
-                        form.NumberDropdown(label.c_str(), o.currency, kGilCurrency, kCurrencyCount - 1,
-                            [](int currency) { return std::string(kCurrencyTable[currency].name); }, row.tip);
+                    {
+                        const auto which   = static_cast<WidgetTabsRow>(row.row);
+                        int& currency      = which == WidgetTabsRow::Currency1 ? o.currency : o.secondCurrency;
+                        const Nation yours = c.readings.nation;
+                        const std::vector<int> choices = CurrencyChoices(yours);
+                        // Your nation's points, picked by their name, are its own choice.
+                        const int shown = NationPoints(yours) == currency ? kYourConquestCurrency : currency;
+                        int picked      = static_cast<int>(std::ranges::find(choices, shown) - choices.begin());
+                        const int was   = picked;
+                        form.NumberDropdown(label.c_str(), picked, 0, static_cast<int>(choices.size()) - 1,
+                            [&](int i) { return CurrencyName(choices[static_cast<size_t>(i)], yours); }, row.tip);
+                        if (picked != was) currency = choices[static_cast<size_t>(picked)];
+                    }
                     break;
                 case WidgetTabsRow::CustomIcons:
                     if (kind == BarWidget::Weather)

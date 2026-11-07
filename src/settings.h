@@ -59,7 +59,8 @@ namespace headsup
     {
         bool on         = false;
         WidgetDesign design; // what it shows on its two lines (NewWidget gives each kind its default)
-        int currency    = kGilCurrency;             // Gil: by kCurrencyTable
+        int currency    = kGilCurrency;             // Gil: by kCurrencyTable, or kYourConquestCurrency
+        int secondCurrency = kYourConquestCurrency; // its Currency 2 buttons', the same way
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
         CustomIcons weatherIcons = CustomIcons::Always; // Forecast: its weather pictures
         bool zoneId = true;                         // Zone: its number after its name in the pop-out's header

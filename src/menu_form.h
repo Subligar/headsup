@@ -31,6 +31,7 @@ namespace headsup
         // In the game's menu pixels: the line the game's windows went under last frame, and the panel's own lowest
         // reach without its help line; 0 while the panel is off.
         int windowsBand = 0, barBand = 0;
+        Nation nation = Nation::None; // yours, once known
         int screenWidth = 0, screenHeight = 0; // the overlay's pixels, where the fishing bar goes; 0 before it runs
         const std::vector<std::string>* seenWindows = nullptr; // the game's windows seen under Game help's bar
         const std::vector<WindowPlace>* windowPlaces = nullptr; // where each window seen last stood

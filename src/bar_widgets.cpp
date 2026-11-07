@@ -822,12 +822,6 @@ namespace headsup
         // in its color, two to a line in columns.
         constexpr const char* kFavoritePress = "favorite "; // a currency's star tells this, then the currency's key
 
-        std::optional<int> NationPoints(Nation nation)
-        {
-            if (nation < Nation::SanDoria || nation > Nation::Windurst) return std::nullopt;
-            return kConquestPointsFirst + static_cast<int>(nation) - static_cast<int>(Nation::SanDoria);
-        }
-
         // The favorites as currencies, each once; your nation's conquest points once your nation is known.
         std::vector<int> FavoriteCurrencies(const std::vector<std::string>& keys, Nation nation)
         {
@@ -1109,6 +1103,39 @@ namespace headsup
             return rows;
         }
 
+        // The coin, then each of the two currencies' name, amount and the game's picture of it where it has one.
+        std::vector<PartContent> CurrencyParts(const BarState& state, const WidgetOptions& o, WidgetContent& base)
+        {
+            base.hasPopup     = true;
+            const Nation yours = state.nation.value_or(Nation::None);
+            Span coin          = Text("");
+            coin.coin          = true;
+            std::vector<PartContent> parts{{WidgetPart::CurrencyCoin, ListOf(coin)}};
+            const WidgetPart names[] = {WidgetPart::Currency1Name, WidgetPart::Currency2Name},
+                             amounts[] = {WidgetPart::Currency1Amount, WidgetPart::Currency2Amount},
+                             icons[] = {WidgetPart::Currency1Icon, WidgetPart::Currency2Icon};
+            const int picked[] = {o.currency, o.secondCurrency};
+            for (size_t i = 0; i < std::size(picked); ++i)
+            {
+                const std::optional<int> c = ResolvedCurrency(picked[i], yours);
+                const std::optional<uint32_t> amount = !c ? std::nullopt : *c == kGilCurrency ? state.gil : state.currencies[*c];
+                std::vector<Span> icon;
+                if (c == kGilCurrency) icon.push_back(coin);
+                for (const Nation nation : {Nation::SanDoria, Nation::Bastok, Nation::Windurst})
+                    if (c && c == NationPoints(nation)) icon.push_back(Mark(NationCrest(nation)));
+                if (c && kCurrencyTable[*c].item != 0)
+                {
+                    Span item = Text("");
+                    item.item = kCurrencyTable[*c].item;
+                    icon.push_back(item);
+                }
+                parts.push_back({names[i], ListOf(Text(CurrencyName(picked[i], yours)))});
+                parts.push_back({amounts[i], ListOf(Text(amount ? Grouped(*amount) : "-"))});
+                parts.push_back({icons[i], std::move(icon)});
+            }
+            return parts;
+        }
+
         // The favorites at the top, then every currency in a scrolling list sorted as its tab says, each with a star
         // that adds it to the favorites or takes it off.
         PopupContent CurrencyPopup(const BarState& state, const Settings& settings)
@@ -1165,7 +1192,8 @@ namespace headsup
                 all.tabs.push_back(std::move(tab));
             }
             all.tab        = Picked(state, all);
-            popup.sections = ListOf(std::move(top), std::move(all));
+            popup.sections  = ListOf(std::move(top), std::move(all));
+            popup.oneColumn = true;
             return popup;
         }
 
@@ -1429,21 +1457,7 @@ namespace headsup
                 return parts;
             }
             case BarWidget::Target: return TargetParts(state, settings, o, base);
-            case BarWidget::Currency:
-            {
-                // The picked currency; gil with its coin.
-                base.hasPopup = true;
-                if (o.currency == kGilCurrency)
-                {
-                    Span coin = Text("");
-                    coin.coin = true;
-                    return {{WidgetPart::CurrencyCoin, ListOf(coin)},
-                        {WidgetPart::CurrencyAmount, ListOf(Text(state.gil ? Grouped(*state.gil) : "-"))}};
-                }
-                const std::optional<uint32_t>& amount = state.currencies[o.currency];
-                return {{WidgetPart::CurrencyAmount, ListOf(Text(amount ? Grouped(*amount) : "-"))},
-                    {WidgetPart::CurrencyName, ListOf(Text(kCurrencyTable[o.currency].name))}};
-            }
+            case BarWidget::Currency: return CurrencyParts(state, o, base);
             case BarWidget::Bags:
             {
                 const std::optional<BagCount>& bag = state.bags[o.bag];

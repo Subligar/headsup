@@ -149,9 +149,9 @@ TEST(an_empty_first_line_lets_the_second_draw_alone)
 
 TEST(a_part_with_nothing_to_show_takes_no_gap)
 {
-    // Gil has no currency name.
-    const std::vector<PartContent> gil = {{WidgetPart::CurrencyAmount, {Text("1,200")}}, {WidgetPart::CurrencyName, {}}};
-    const WidgetContent w = Composed(BarWidget::Currency, "amount currency |", gil);
+    // Most currencies have no picture of their own.
+    const std::vector<PartContent> notes = {{WidgetPart::Currency1Amount, {Text("1,200")}}, {WidgetPart::Currency1Icon, {}}};
+    const WidgetContent w = Composed(BarWidget::Currency, "amount1 icon1 |", notes);
     CHECK((w.title == std::vector<Span>{Text("1,200")}) && w.subtitle.empty() && !w.coin);
 }
 

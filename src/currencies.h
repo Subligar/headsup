@@ -5,7 +5,9 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace headsup
 {
@@ -24,6 +26,7 @@ namespace headsup
         uint16_t packet;  // 0 for gil, which the inventory holds
         uint16_t offset;  // from the packet's start, Ashita's 4-byte header counted
         uint8_t bytes;    // 2 or 4, little-endian; a 4-byte one is signed and below 0 reads as 0
+        uint16_t item = 0; // the item it is held as or was before, whose picture is its icon; 0 for none
     };
     // Gil first; the rest in the order of Phoenix's GP_SERV_COMMAND_CURRENCIES_1 and _2.
     inline constexpr CurrencyInfo kCurrencyTable[] = {
@@ -31,12 +34,12 @@ namespace headsup
         {"cp_sandoria", "Conquest Points (San d'Oria)", kCurrencies1Packet, 0x04, 4},
         {"cp_bastok", "Conquest Points (Bastok)", kCurrencies1Packet, 0x08, 4},
         {"cp_windurst", "Conquest Points (Windurst)", kCurrencies1Packet, 0x0C, 4},
-        {"beastmen_seals", "Beastmen's Seals", kCurrencies1Packet, 0x10, 2},
-        {"kindred_seals", "Kindred's Seals", kCurrencies1Packet, 0x12, 2},
-        {"kindred_crests", "Kindred's Crests", kCurrencies1Packet, 0x14, 2},
-        {"high_kindred_crests", "High Kindred's Crests", kCurrencies1Packet, 0x16, 2},
-        {"sacred_kindred_crests", "Sacred Kindred's Crests", kCurrencies1Packet, 0x18, 2},
-        {"ancient_beastcoins", "Ancient Beastcoins", kCurrencies1Packet, 0x1A, 2},
+        {"beastmen_seals", "Beastmen's Seals", kCurrencies1Packet, 0x10, 2, 1126},
+        {"kindred_seals", "Kindred's Seals", kCurrencies1Packet, 0x12, 2, 1127},
+        {"kindred_crests", "Kindred's Crests", kCurrencies1Packet, 0x14, 2, 2955},
+        {"high_kindred_crests", "High Kindred's Crests", kCurrencies1Packet, 0x16, 2, 2956},
+        {"sacred_kindred_crests", "Sacred Kindred's Crests", kCurrencies1Packet, 0x18, 2, 2957},
+        {"ancient_beastcoins", "Ancient Beastcoins", kCurrencies1Packet, 0x1A, 2, 1875},
         {"valor_points", "Valor Points", kCurrencies1Packet, 0x1C, 2},
         {"scylds", "Scylds", kCurrencies1Packet, 0x1E, 2},
         {"guild_fishing", "Guild Points (Fishing)", kCurrencies1Packet, 0x20, 4},
@@ -104,6 +107,17 @@ namespace headsup
     void ReadCurrencies(CurrencyValues& values, uint16_t id, const uint8_t* data, uint32_t size);
     // The currency a key names; none for one no currency has.
     std::optional<int> CurrencyOfKey(std::string_view key);
-    // In the favorites list (Settings::currencyFavorites): your nation's conquest points, whichever nation that is.
+    // In the favorites list (Settings::currencyFavorites) and a widget's: your nation's conquest points, whichever
+    // nation that is.
     constexpr const char* kYourConquestPoints = "cp_nation";
+    // A widget's currency that is your nation's conquest points, in place of a kCurrencyTable place.
+    constexpr int kYourConquestCurrency = -1;
+    // A nation's conquest points; none for no nation.
+    std::optional<int> NationPoints(Nation nation);
+    // A widget's currency as kCurrencyTable's place: your nation's points once your nation is known.
+    std::optional<int> ResolvedCurrency(int currency, Nation yours);
+    // What a currency picker offers, in its order: gil, your nation's conquest points, the other nations', the rest.
+    std::vector<int> CurrencyChoices(Nation yours);
+    // A currency's name, your nation's conquest points without the nation's.
+    std::string CurrencyName(int currency, Nation yours);
 }

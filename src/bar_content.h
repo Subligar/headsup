@@ -65,9 +65,10 @@ namespace headsup
         std::optional<Icon> icon{};
         bool coin = false;
         std::optional<InlineBar> bar{};
+        uint16_t item = 0; // a game item's picture
         bool operator==(const Span&) const = default;
     };
-    constexpr bool HasMark(const Span& s) { return s.picture != GamePicture::None || s.icon || s.coin || s.bar; }
+    constexpr bool HasMark(const Span& s) { return s.picture != GamePicture::None || s.icon || s.coin || s.bar || s.item != 0; }
 
     struct WidgetContent
     {

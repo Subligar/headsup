@@ -618,7 +618,7 @@ TEST(gil_bags_and_earth_time)
     CHECK(Joined(Content(BarWidget::Currency, state, settings).title) == "-");
     state.gil             = 1234567;
     const WidgetContent g = Content(BarWidget::Currency, state, settings);
-    CHECK(g.coin && Joined(g.title) == "1,234,567" && g.subtitle.empty() && g.hasPopup);
+    CHECK(g.coin && Joined(g.title) == "1,234,567" && g.hasPopup);
     state.bags[0]         = BagCount{45, 80};
     state.bags[5]         = BagCount{30, 30}; // a full satchel
     const WidgetContent b = Content(BarWidget::Bags, state, settings);
@@ -1782,7 +1782,7 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     state.gil    = 4751;
     state.nation = Nation::Bastok;
     PopupContent p = BarPopupContent(BarWidget::Currency, state, settings);
-    CHECK(Joined(p.title) == "Currencies" && p.sections.size() == 2 && p.sections[0].heading == "Favorites");
+    CHECK(Joined(p.title) == "Currencies" && p.sections.size() == 2 && p.sections[0].heading == "Favorites" && p.oneColumn);
     // By default gil and your nation's conquest points, each starred; a star's press takes it off.
     const PopupRow& top = p.sections[0].rows[0];
     CHECK((gridLines(top) == std::vector<std::string>{"Gil 4,751", "Conquest Points (Bastok) -"}));
@@ -1827,20 +1827,59 @@ TEST(a_currencys_star_adds_it_to_the_favorites_and_takes_it_off)
     CHECK((early.currencyFavorites == std::vector<std::string>{"gil", kYourConquestPoints, "sparks"}));
 }
 
-TEST(the_currency_widget_shows_the_picked_currency)
+TEST(the_currency_widget_shows_two_currencies_and_your_nations_points_without_its_name)
 {
     Settings settings;
     BarState state;
-    state.gil = 4751;
-    const int notes = *CurrencyOfKey("allied_notes");
-    settings.Widget(BarWidget::Currency).currency = notes;
-    WidgetContent w      = Content(BarWidget::Currency, state, settings);
-    CHECK(!w.coin && Joined(w.title) == "-" && Joined(w.subtitle) == "Allied Notes"); // not sent yet
+    state.gil    = 4751;
+    state.nation = Nation::Bastok;
+    WidgetOptions& o = settings.Widget(BarWidget::Currency);
+    CHECK(o.currency == kGilCurrency && o.secondCurrency == kYourConquestCurrency);
+    o.design        = DesignFrom(BarWidget::Currency, "amount1 name1 | amount2 name2");
+    WidgetContent w = Content(BarWidget::Currency, state, settings);
+    CHECK(Joined(w.title) == "4,751  Gil" && Joined(w.subtitle) == "-  Conquest Points"); // not sent yet
     for (std::optional<uint32_t>& amount : state.currencies)
         amount = 0; // the server sent them all, most at none
+    state.currencies[*CurrencyOfKey("cp_bastok")] = 350;
+    CHECK(Joined(Content(BarWidget::Currency, state, settings).subtitle) == "350  Conquest Points");
+    o.secondCurrency = *CurrencyOfKey("cp_sandoria");
+    CHECK(Joined(Content(BarWidget::Currency, state, settings).subtitle) == "0  Conquest Points (San d'Oria)");
+    // The coin shows whatever the currencies are.
+    const int notes = *CurrencyOfKey("allied_notes");
+    o.currency      = notes;
     state.currencies[notes] = 12000;
     w = Content(BarWidget::Currency, state, settings);
-    CHECK(Joined(w.title) == "12,000" && w.hasPopup);
+    CHECK(w.coin && Joined(w.title) == "12,000  Allied Notes" && w.hasPopup);
+    // Each currency's icon is the game's own picture of it, where it has one.
+    o.design         = DesignFrom(BarWidget::Currency, "icon1 | icon2");
+    o.currency       = *CurrencyOfKey("beastmen_seals");
+    o.secondCurrency = kYourConquestCurrency;
+    w                = Content(BarWidget::Currency, state, settings);
+    CHECK(w.title.size() == 1 && w.title[0].item == 1126); // the Beastmen's Seal item, by item_basic.sql
+    CHECK(w.subtitle.size() == 1 && w.subtitle[0].picture == GamePicture::BastokCrest);
+    o.iconSide = IconSide::Hide; // gil's coin from its icon alone, first on the line, goes beside both lines
+    o.currency = kGilCurrency;
+    CHECK(Content(BarWidget::Currency, state, settings).coin);
+    o.currency = notes;
+    w          = Content(BarWidget::Currency, state, settings);
+    CHECK(!w.coin && std::ranges::none_of(w.title, [](const Span& s) { return s.item != 0; }));
+}
+
+TEST(the_currency_choices_put_your_nations_points_after_gil_and_before_the_others)
+{
+    const int sandoria = *CurrencyOfKey("cp_sandoria"), bastok = *CurrencyOfKey("cp_bastok"),
+              windurst = *CurrencyOfKey("cp_windurst");
+    const std::vector<int> bastokan = CurrencyChoices(Nation::Bastok);
+    CHECK(bastokan.size() == static_cast<size_t>(kCurrencyCount));
+    CHECK((std::vector<int>(bastokan.begin(), bastokan.begin() + 4) ==
+           std::vector<int>{kGilCurrency, kYourConquestCurrency, sandoria, windurst}));
+    CHECK(std::ranges::find(bastokan, bastok) == bastokan.end());
+    const std::vector<int> unknown = CurrencyChoices(Nation::None);
+    CHECK(unknown.size() == static_cast<size_t>(kCurrencyCount) + 1 && unknown[1] == kYourConquestCurrency &&
+          unknown[2] == sandoria);
+    CHECK(CurrencyName(kYourConquestCurrency, Nation::Bastok) == "Conquest Points");
+    CHECK(CurrencyName(bastok, Nation::Bastok) == "Conquest Points");
+    CHECK(CurrencyName(bastok, Nation::Windurst) == "Conquest Points (Bastok)");
 }
 
 TEST(the_target_says_how_far_it_is_after_its_name_unless_its_distance_is_off)
@@ -2360,7 +2399,7 @@ TEST(each_copy_of_a_widget_shows_by_its_own_settings)
     CHECK(copy.has_value());
     settings.Widget(*copy).currency = 3;
     const WidgetContent first = Content(BarWidget::Currency, state, settings), second = Content(*copy, state, settings);
-    CHECK(first.coin && !second.coin && second.title.front().text == "50");
+    CHECK(first.coin && second.coin && second.title.front().text == "50");
     // A copy not on the panel shows nothing, whatever it was set to.
     RemoveWidgetCopy(settings, *copy);
     settings.Widget(*copy).on = true;

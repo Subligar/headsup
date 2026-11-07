@@ -2660,12 +2660,12 @@ TEST(a_copy_keeps_its_own_settings_under_its_own_keys_and_a_file_without_copies_
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value() && s.Widget(*copy).on);
     s.Widget(*copy).currency = 3;
-    s.Widget(*copy).design = DesignFrom(BarWidget::Currency, "amount | -currency");
+    s.Widget(*copy).design = DesignFrom(BarWidget::Currency, "amount1 | -name1");
     MapStore store;
     SaveSettings(s, store);
     CHECK_EQ(store.values["barCurrency"], std::string(kCurrencyTable[kGilCurrency].key)); // the first copy's, as ever
     CHECK_EQ(store.values["barCurrency_2"], std::string(kCurrencyTable[3].key));
-    CHECK_EQ(store.values["barGilDesign_2"], "amount | -currency");
+    CHECK_EQ(store.values["barGilDesign_2"], "amount1 | -name1 -name2 -amount2 -icon1 -icon2");
     const Settings read = LoadSettings(store);
     CHECK(read.Widget(*copy) == s.Widget(*copy) && Placed(read.barSections, *copy));
     // Taken off, its settings go: put back, it is new.
@@ -2680,7 +2680,7 @@ TEST(a_clone_starts_with_every_setting_of_the_widget_it_copies_shown_and_combine
     WidgetOptions& gil = s.Widget(BarWidget::Currency);
     gil.on             = false;
     gil.currency       = 3;
-    gil.design         = DesignFrom(BarWidget::Currency, "amount | -currency");
+    gil.design         = DesignFrom(BarWidget::Currency, "amount1 | -name1");
     gil.combine        = PanelWidget{BarWidget::Bags};
     const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::Currency);
     CHECK(copy.has_value());
@@ -2867,6 +2867,21 @@ TEST(the_fishing_bar_keeps_its_fish_stamina_width_and_place)
     store.values["fishBarX"]     = "-300";
     const Settings odd = LoadSettings(store);
     CHECK(odd.fishStamina == FishBarShown::HeadsUp && odd.fishBarWidth == kMinFishBarWidth && odd.fishBarX == kFishBarUnplaced);
+}
+
+TEST(the_currency_widget_keeps_its_two_currencies)
+{
+    Settings s;
+    WidgetOptions& o = s.Widget(BarWidget::Currency);
+    o.currency       = *CurrencyOfKey("sparks");
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK(store.values["barCurrency"] == "sparks" && store.values["barCurrency2"] == kYourConquestPoints);
+    CHECK(LoadSettings(store).Widget(BarWidget::Currency) == o);
+    store.values["barCurrency"]  = kYourConquestPoints;
+    store.values["barCurrency2"] = "allied_notes";
+    const WidgetOptions loaded   = LoadSettings(store).Widget(BarWidget::Currency);
+    CHECK(loaded.currency == kYourConquestCurrency && loaded.secondCurrency == *CurrencyOfKey("allied_notes"));
 }
 
 TEST(the_currency_favorites_are_kept_in_order_and_an_unknown_or_repeated_one_is_left_out)

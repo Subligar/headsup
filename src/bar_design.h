@@ -19,7 +19,7 @@ namespace headsup
         ZoneName, ZoneRegion, ZoneCrest, ZoneNation,
         WeatherIcon, WeatherName, VanaDate, VanaDay, VanaTime, VanaMoon,
         TargetAggro, TargetName, TargetDistance, TargetDetection, TargetLevel, TargetPlayer, TargetWeak,
-        CurrencyCoin, CurrencyAmount, CurrencyName,
+        CurrencyCoin, Currency1Name, Currency2Name, Currency1Amount, Currency2Amount, Currency1Icon, Currency2Icon,
         BagCount, BagName, BagIcon,
         ClockTime, ClockServer, ClockVana, ClockIcon,
         JobJobs, JobEarned, JobToNext, JobPercent, JobBar,

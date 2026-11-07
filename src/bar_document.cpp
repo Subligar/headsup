@@ -85,6 +85,7 @@ namespace headsup
             if (span.picture != GamePicture::None)
                 return "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"/>";
             if (span.icon) return "<img class=\"line-icon\" src=\"" + IconSource(*span.icon) + "\"/>";
+            if (span.item != 0) return "<img class=\"line-icon\" src=\"" + ItemSource(span.item) + "\"/>";
             if (span.coin) return "<img class=\"line-icon\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
             if (span.bar)
             {

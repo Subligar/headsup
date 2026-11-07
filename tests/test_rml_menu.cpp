@@ -1922,9 +1922,10 @@ TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
     CHECK(window.Shows(copyChip) && window.Shows(copyChip + "-remove"));
     // The clone's settings show at once: a currency picked there is the clone's.
     CHECK(window.shown == copy);
-    window.Click("toppanel-widgets-currency-gil-2");
-    CHECK(window.Click("toppanel-widgets-currency-gil-2-o-1"));
-    CHECK(window.settings.Widget(copy).currency == 1 && window.settings.Widget(BarWidget::Currency).currency == kGilCurrency);
+    window.Click("toppanel-widgets-currency-1-gil-2");
+    CHECK(window.Click("toppanel-widgets-currency-1-gil-2-o-1"));
+    CHECK(window.settings.Widget(copy).currency == kYourConquestCurrency &&
+          window.settings.Widget(BarWidget::Currency).currency == kGilCurrency);
     // Taken off, its settings give way to the first copy's.
     CHECK(window.Click(copyChip + "-remove"));
     CHECK(!Placed(window.settings.barSections, copy) && window.shown == PanelWidget{BarWidget::Currency});
@@ -1936,9 +1937,9 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     Window window;
     window.Page("toppanel");
     const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
-    CHECK(!window.Shows("toppanel-widgets-currency-gil"));
+    CHECK(!window.Shows("toppanel-widgets-currency-1-gil"));
     window.Click(chip);
-    CHECK(window.shown == BarWidget::Currency && window.Shows("toppanel-widgets-currency-gil"));
+    CHECK(window.shown == BarWidget::Currency && window.Shows("toppanel-widgets-currency-1-gil"));
     CHECK(window.Find(chip)->IsClassSet("picked"));
     // In a document of their own over the popup's room, as wide as it and no wider, which say how tall they are.
     Rml::Element* view = window.Find(kMenuViewBodyId);
@@ -1951,14 +1952,14 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     // With the window closed they work on, their dropdown too.
     window.menu.open = false;
     window.Frames(2);
-    CHECK(!window.Shows(chip) && window.Shows("toppanel-widgets-currency-gil"));
-    window.Click("toppanel-widgets-currency-gil");
-    CHECK(window.Click("toppanel-widgets-currency-gil-o-1"));
-    CHECK(window.settings.Widget(BarWidget::Currency).currency == 1);
+    CHECK(!window.Shows(chip) && window.Shows("toppanel-widgets-currency-1-gil"));
+    window.Click("toppanel-widgets-currency-1-gil");
+    CHECK(window.Click("toppanel-widgets-currency-1-gil-o-1"));
+    CHECK(window.settings.Widget(BarWidget::Currency).currency == kYourConquestCurrency);
     window.menu.open = true;
     window.Frames(2);
     window.Click(chip);
-    CHECK(!window.shown && !window.Shows("toppanel-widgets-currency-gil"));
+    CHECK(!window.shown && !window.Shows("toppanel-widgets-currency-1-gil"));
     CHECK_EQ(window.Said(), "");
 }
 
