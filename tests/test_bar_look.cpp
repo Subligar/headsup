@@ -242,6 +242,26 @@ namespace
     int Brightness(uint32_t argb) { return static_cast<int>((argb >> 16 & 0xFF) + (argb >> 8 & 0xFF) + (argb & 0xFF)); }
 }
 
+TEST(a_copy_of_a_built_in_theme_looks_as_it_does_until_a_change_and_then_changes_only_that)
+{
+    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark, BarTheme::PhoenixRed, BarTheme::Aurora})
+    {
+        Settings built;
+        built.barTheme = theme;
+        Settings copy;
+        copy.barTheme             = BarTheme::Custom;
+        copy.customPalette        = PaletteOf(theme);
+        copy.customPalette.parent = theme;
+        CHECK(MenuThemeFor(copy, nullptr) == MenuThemeFor(built, nullptr));
+        CHECK(MenuColorsFor(copy, nullptr) == MenuColorsFor(built, nullptr));
+        CHECK(PaletteFor(copy, nullptr) == PaletteFor(built, nullptr));
+        // A new accent changes the window's accent, and its background stays the theme's.
+        copy.customPalette.accent = 0xFF12AB34;
+        const MenuColors was = MenuColorsFor(built, nullptr), now = MenuColorsFor(copy, nullptr);
+        CHECK(now.accent == 0xFF12AB34u && now.background == was.background && now.card == was.card && now.text == was.text);
+    }
+}
+
 TEST(the_settings_window_takes_the_top_panels_theme)
 {
     Settings s;

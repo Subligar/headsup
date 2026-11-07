@@ -102,7 +102,7 @@ namespace headsup
         bool themesRequested  = false; // the list of themes was opened: the themes folder is to be read again
         std::string themeName, themeNameOf; // Theme Name's box, and the custom theme's name it was filled from
         // What the plugin is to do once: read a custom theme in and pick it, or give the one in use a new name.
-        std::optional<std::string> themeLoad, themeRename;
+        std::optional<std::string> themeLoad, themeRename, themeDelete;
         bool saveRequested = false, revertRequested = false; // by hand: write the changes, or drop them
         bool profilesRequested = false; // the list of profiles was opened: the profiles folder is to be read again
         std::string profileName;   // typed for a new profile, or the one in use's new name

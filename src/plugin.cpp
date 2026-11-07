@@ -1160,6 +1160,13 @@ public:
             m_SettingsChangedAt = now;
         if (const std::optional<std::string> name = m_RmlMenu.TakeThemeRename(); name && RenameTheme(*name))
             m_SettingsChangedAt = now;
+        if (const std::optional<std::string> name = m_RmlMenu.TakeThemeDelete())
+        {
+            if (!DeleteFileA(ThemePath(*name).c_str()) && GetLastError() != ERROR_FILE_NOT_FOUND)
+                Print("could not delete the theme " + ThemePath(*name) + ".");
+            m_ThemeWritten.reset();
+            ScanThemes();
+        }
         if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
         if (const std::optional<headsup::FeedbackDraft> feedback = m_RmlMenu.TakeFeedback())
         {

@@ -69,6 +69,7 @@ namespace headsup
         bool TakeThemesRequest();
         std::optional<std::string> TakeThemeLoad();
         std::optional<std::string> TakeThemeRename();
+        std::optional<std::string> TakeThemeDelete();
         bool TakeProfilesRequest();
         bool TakeSaveRequest();
         bool TakeRevertRequest();

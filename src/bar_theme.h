@@ -46,6 +46,7 @@ namespace headsup
         int windowType    = kFollowGameWindow; // the art's, for the Window background
         bool windowBorder = true;              // the art's frame around the panel, the help bar and the popups
         DashMark separator = DashMark::Diamond; // the panel's separators, and what a nameplate's dash is drawn as
+        BarTheme parent    = BarTheme::PhoenixGold; // a custom theme's: the built-in one it was first copied from
         bool operator==(const BarPalette&) const = default;
     };
 
@@ -67,9 +68,11 @@ namespace headsup
     inline constexpr const char* kBarShapeNames[kBarShapeCount] = {"ornate", "pills", "glass", "window"};
     inline constexpr const char* kBarBackgroundNames[kBarBackgroundCount] = {"plain", "gradient", "window"};
     inline constexpr const char* kDashMarkNames[kDashMarkCount] = {"no", "dot", "square", "diamond"};
+    inline constexpr const char* kBarThemeNames[kBarThemeCount] = {"phoenixGold", "umbraDark", "phoenixRedOrnate", "aurora",
+        "custom", "gameWindow"};
 
     // A saved theme's file, in the themes folder: a [theme] section of its palette's parts by kPaletteColors' names,
-    // Shape, Border, Background, WindowType, WindowBorder and Separator. Read back, a part it lacks or that cannot be
+    // Shape, Border, Background, WindowType, WindowBorder, Separator and Parent. Read back, a part it lacks or that cannot be
     // read is Phoenix Gold's, and a file of none of the colors is no theme.
     constexpr const char* kThemeExtensions[] = {".ini"};
     std::string ThemeFileText(const BarPalette& palette);

@@ -219,8 +219,6 @@ namespace headsup
         // those keys in the file, so a file that has it is not migrated over them.
         constexpr const char* kDesignsSavedKey = "nameplateDesigns";
         constexpr const char* kBarThemeKey = "barTheme";
-        const char* const kBarThemeNames[kBarThemeCount] = {"phoenixGold", "umbraDark", "phoenixRedOrnate", "aurora",
-            "custom", "gameWindow"};
         // The Custom theme: this before each of kPaletteColors' names, and its shape and border.
         constexpr const char* kCustomThemeKey = "customTheme";
         constexpr const char* kShapeSuffix = "Shape";

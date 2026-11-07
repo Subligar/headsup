@@ -42,6 +42,7 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     p.windowType   = 6;
     p.windowBorder = false;
     p.separator    = DashMark::Square;
+    p.parent       = BarTheme::Vanilla;
     const std::string file = ThemeFileText(p);
     CHECK(PaletteFromThemeFile(file) == p);
     // A part it lacks, or cannot be read, is Phoenix Gold's; a file of none of its parts is no theme.

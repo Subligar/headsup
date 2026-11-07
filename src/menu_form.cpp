@@ -430,18 +430,14 @@ namespace headsup
         void EditTheme(Context& c, const BarPalette& edited)
         {
             if (edited == ShownPalette(c)) return;
-            if (c.s.barTheme != BarTheme::Custom) c.s.customThemeName = CopyName(c, c.s.barTheme);
-            c.s.customPalette = edited;
+            BarPalette kept = edited;
+            if (c.s.barTheme != BarTheme::Custom)
+            {
+                c.s.customThemeName = CopyName(c, c.s.barTheme);
+                kept.parent         = c.s.barTheme;
+            }
+            c.s.customPalette = kept;
             c.s.barTheme      = BarTheme::Custom;
-        }
-
-        // Halfway between two colors, a byte at a time.
-        uint32_t Halfway(uint32_t a, uint32_t b)
-        {
-            uint32_t mixed = 0;
-            for (int shift = 0; shift < 32; shift += 8)
-                mixed |= (((a >> shift & 0xFF) + (b >> shift & 0xFF)) / 2) << shift;
-            return mixed;
         }
 
         // The rest of the palette, by ThemePaletteRow.
@@ -1714,6 +1710,15 @@ namespace headsup
                 form.Fade(false);
                 ThemeDropdown(c, label, tip);
                 break;
+            case SettingPiece::DeleteTheme:
+                form.Fade(false);
+                if (s.barTheme == BarTheme::Custom && form.Button(label.c_str(), label.c_str(), kResetPill, tip))
+                {
+                    c.state.themeDelete = s.customThemeName;
+                    s.barTheme          = s.customPalette.parent;
+                    form.changed        = true;
+                }
+                break;
             case SettingPiece::WidgetBackground:
                 form.Fade(!BarOn(s));
                 form.Switch(label.c_str(), s.widgetBackground, tip);
@@ -1820,14 +1825,17 @@ namespace headsup
                 break;
             }
             case SettingPiece::ThemeTop:
+            case SettingPiece::ThemeMiddle:
             case SettingPiece::ThemeBottom:
             {
                 form.Fade(!BarOn(s));
                 BarPalette edited = ShownPalette(c);
                 if (edited.background != BarBackground::Gradient) break;
-                form.ArgbSwatch(label.c_str(), e.piece == SettingPiece::ThemeTop ? edited.stripTop : edited.stripBottom, tip);
-                if (edited == ShownPalette(c)) break;
-                edited.stripMiddle = Halfway(edited.stripTop, edited.stripBottom);
+                form.ArgbSwatch(label.c_str(),
+                    edited.*(e.piece == SettingPiece::ThemeTop      ? &BarPalette::stripTop
+                             : e.piece == SettingPiece::ThemeMiddle ? &BarPalette::stripMiddle
+                                                                    : &BarPalette::stripBottom),
+                    tip);
                 EditTheme(c, edited);
                 break;
             }

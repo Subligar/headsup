@@ -29,6 +29,17 @@ namespace headsup
         // The pills' section headings' letter-spacing, in their size: the approved mockup's 1.2 px at 10.5 px.
         constexpr float kHeadingTracking = 1.2f / 10.5f;
 
+        constexpr uint32_t MenuColors::*kMenuColorFields[] = {&MenuColors::background, &MenuColors::card,
+            &MenuColors::control, &MenuColors::hover, &MenuColors::inset, &MenuColors::border, &MenuColors::raisedEdge,
+            &MenuColors::text, &MenuColors::heading, &MenuColors::label, &MenuColors::muted, &MenuColors::accent,
+            &MenuColors::accentHover, &MenuColors::accentSoft, &MenuColors::accentEnd};
+
+        // The built-in theme in use, or the one a custom theme was copied from.
+        BarTheme BuiltInOf(const Settings& settings)
+        {
+            return settings.barTheme == BarTheme::Custom ? settings.customPalette.parent : settings.barTheme;
+        }
+
         // A corner's radius as set, or the theme's own.
         float Rounded(int setting, float theme) { return setting == kThemeRounding ? theme : static_cast<float>(setting); }
 
@@ -76,21 +87,30 @@ namespace headsup
 
     MenuTheme MenuThemeFor(const Settings& settings, const GameSkinLook* skin)
     {
-        if (settings.barTheme == BarTheme::Aurora) return MenuTheme::Aurora;
+        if (BuiltInOf(settings) == BarTheme::Aurora) return MenuTheme::Aurora;
         if (skin != nullptr && UsesGameArt(settings)) return MenuTheme::GameWindow;
         return MenuTheme::Phoenix;
     }
 
     MenuColors MenuColorsFor(const Settings& settings, const GameSkinLook* skin)
     {
+        MenuColors own;
         switch (MenuThemeFor(settings, skin))
         {
-        case MenuTheme::Aurora: return kAuroraMenuColors;
+        case MenuTheme::Aurora: own = kAuroraMenuColors; break;
         case MenuTheme::GameWindow: return skin->menu;
-        case MenuTheme::Phoenix: break;
+        case MenuTheme::Phoenix:
+            if (BuiltInOf(settings) != BarTheme::PhoenixRed) return MenuColorsFrom(PaletteFor(settings, skin));
+            own = kPhoenixMenuColors;
+            break;
         }
-        if (settings.barTheme == BarTheme::PhoenixRed) return kPhoenixMenuColors;
-        return MenuColorsFrom(PaletteFor(settings, skin));
+        if (settings.barTheme != BarTheme::Custom) return own;
+        // A copy keeps the window its theme has, but for each color its own palette's changes would make.
+        const MenuColors from = MenuColorsFrom(PaletteOf(settings.customPalette.parent)),
+                         now  = MenuColorsFrom(PaletteFor(settings, skin));
+        for (uint32_t MenuColors::* const color : kMenuColorFields)
+            if (now.*color != from.*color) own.*color = now.*color;
+        return own;
     }
 
     MenuColors MenuColorsFrom(const BarPalette& p)

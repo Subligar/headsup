@@ -20,7 +20,8 @@
                 {"key": "copy", "name": "{file} (custom)"},
                 {"key": "copy-again", "name": "{file} (custom {count})"}
               ]
-            }
+            },
+            {"key": "delete-theme", "name": "Delete Custom Theme", "tip": "Deletes this custom theme's file from the themes folder, and goes back to the built-in theme it was first copied from."}
           ]
         },
         {
@@ -41,6 +42,7 @@
             },
             {"key": "theme-background", "name": "Background Color", "indent": true, "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
             {"key": "theme-top", "name": "Top Color", "indent": true, "tip": "The strip's color at its top, with its opacity."},
+            {"key": "theme-middle", "name": "Middle Color", "tip": "The panel's color just past halfway down its gradient."},
             {"key": "theme-bottom", "name": "Bottom Color", "indent": true, "tip": "The strip's color at its foot, with its opacity."},
             {"key": "window-type", "name": "Window Type", "indent": true, "tip": "Which of the game's eight window frames the art is. Auto is the one picked in the game's Config, Windows, Shared, followed as you change it. Default: Auto."},
             {"key": "window-border", "name": "Border", "indent": true, "tip": "A border around the top panel, the help bar, the pop-outs, the fishing bar and this window, in the color of the game's window frame. Off, they are the window's background alone."},

@@ -15,6 +15,7 @@ namespace headsup
         constexpr const char* kThemeSection = "theme";
         constexpr const char* kShapeKey = "Shape", *kBorderKey = "Border", *kBackgroundKey = "Background";
         constexpr const char* kWindowTypeKey = "WindowType", *kWindowBorderKey = "WindowBorder", *kSeparatorKey = "Separator";
+        constexpr const char* kParentKey = "Parent";
         constexpr const char* kTrueText = "true", *kFalseText = "false";
 
         template <typename Enum>
@@ -48,25 +49,25 @@ namespace headsup
                 .pill = 0, .pillBorder = 0, .title = 0xFFEFE3C6, .subtitle = 0xFFA8936D, .divider = 0xFF8A6D2C,
                 .panelTop = 0xF71C160F, .panelBottom = 0xF70C0A08, .panelBorder = 0xFFC9A24A, .panelOuter = 0xFF3D2F14,
                 .text = 0xFFE4D8BD, .heading = 0xFFC9A24A, .tagFill = 0, .tagBorder = 0xFF6B5422, .tagText = 0xFFD8C49A,
-                .highlight = 0x1AC9A24A},
+                .highlight = 0x1AC9A24A, .parent = BarTheme::PhoenixGold},
             {.shape = BarShape::Pills, .stripTop = 0xFF2B2B30, .stripMiddle = 0xFF212125, .stripBottom = 0xFF17171A,
                 .bottomLine = 0xFF000000, .underLine = 0, .below = 0x80000000, .accent = 0xFF5B8DEF, .accentEnd = 0xFF9CC2FF,
                 .pill = 0xFF222226, .pillBorder = 0xFF3A3A42, .title = 0xFFE9E9EE, .subtitle = 0xFF8E8E99, .divider = 0,
                 .panelTop = 0xFF1D1D21, .panelBottom = 0xFF1D1D21, .panelBorder = 0xFF3A3A42, .panelOuter = 0,
                 .text = 0xFFDEDEE5, .heading = 0xFF8E8E99, .tagFill = 0xFF2C2C33, .tagBorder = 0, .tagText = 0xFFC5C5D0,
-                .highlight = 0xFF2A2A30},
+                .highlight = 0xFF2A2A30, .parent = BarTheme::UmbraDark},
             {.shape = BarShape::Ornate, .stripTop = 0xFF2B1A1A, .stripMiddle = 0xFF180E0E, .stripBottom = 0xFF0F0909,
                 .bottomLine = 0xFFC55151, .underLine = 0xFF3A1B1B, .below = 0x59C55151, .accent = 0xFFC55151, .accentEnd = 0xFFE06F5E,
                 .pill = 0, .pillBorder = 0, .title = 0xFFFFF8F8, .subtitle = 0xFFD2ABAB, .divider = 0xFF8A4545,
                 .panelTop = 0xF7291C1C, .panelBottom = 0xF7180E0E, .panelBorder = 0xFFC55151, .panelOuter = 0xFF3A1B1B,
                 .text = 0xFFF3E6E6, .heading = 0xFFD2ABAB, .tagFill = 0, .tagBorder = 0xFF6E3434, .tagText = 0xFFE8C9C9,
-                .highlight = 0x1AC55151},
+                .highlight = 0x1AC55151, .parent = BarTheme::PhoenixRed},
             {.shape = BarShape::Glass, .stripTop = 0xE6131C2B, .stripMiddle = 0xE60E1522, .stripBottom = 0xE60A0F18,
                 .bottomLine = 0xFF1B2636, .underLine = 0, .below = 0x595EE6FF, .accent = 0xFF5EE6FF, .accentEnd = 0xFFB48CFF,
                 .pill = 0x1AFFFFFF, .pillBorder = 0x24B8D8FF, .title = 0xFFEAF2FF, .subtitle = 0xFF8FA3BF, .divider = 0,
                 .panelTop = 0xF2131C2B, .panelBottom = 0xF20A0F18, .panelBorder = 0x595EE6FF, .panelOuter = 0,
                 .text = 0xFFE3ECFA, .heading = 0xFF5EE6FF, .tagFill = 0x265EE6FF, .tagBorder = 0, .tagText = 0xFFCFE9FF,
-                .highlight = 0x335EE6FF},
+                .highlight = 0x335EE6FF, .parent = BarTheme::Aurora},
         };
     }
 
@@ -76,6 +77,7 @@ namespace headsup
             BarPalette p = kPalettes[static_cast<int>(BarTheme::PhoenixGold)];
             p.shape      = BarShape::Window;
             p.background = BarBackground::Window;
+            p.parent     = BarTheme::Vanilla;
             return p;
         }();
         if (theme == BarTheme::Vanilla) return vanilla;
@@ -117,6 +119,7 @@ namespace headsup
         values.push_back({kWindowTypeKey, std::to_string(palette.windowType)});
         values.push_back({kWindowBorderKey, palette.windowBorder ? kTrueText : kFalseText});
         values.push_back({kSeparatorKey, kDashMarkNames[static_cast<int>(palette.separator)]});
+        values.push_back({kParentKey, kBarThemeNames[static_cast<int>(palette.parent)]});
         return WithIniValues("", kThemeSection, values);
     }
 
@@ -137,6 +140,8 @@ namespace headsup
         Named(IniValue(file, kThemeSection, kShapeKey), kBarShapeNames, kBarShapeCount, palette.shape);
         Named(IniValue(file, kThemeSection, kBackgroundKey), kBarBackgroundNames, kBarBackgroundCount, palette.background);
         Named(IniValue(file, kThemeSection, kSeparatorKey), kDashMarkNames, kDashMarkCount, palette.separator);
+        Named(IniValue(file, kThemeSection, kParentKey), kBarThemeNames, kBarThemeCount, palette.parent);
+        if (palette.parent == BarTheme::Custom) palette.parent = BarTheme::PhoenixGold;
         if (const std::optional<int> border = NumberIn(IniValue(file, kThemeSection, kBorderKey), 10))
             palette.border = std::clamp(*border, 0, kMaxStripBorder);
         if (const std::optional<int> type = NumberIn(IniValue(file, kThemeSection, kWindowTypeKey), 10))

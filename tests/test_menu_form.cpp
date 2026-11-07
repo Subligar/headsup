@@ -985,6 +985,7 @@ TEST(an_edit_of_a_built_in_theme_makes_a_custom_copy_of_it_named_after_it)
     CHECK(w.Pass({{accent + "-p-r", kChangeEvent, "1"}}).changed);
     BarPalette edited = PaletteOf(BarTheme::UmbraDark); // the theme shown, with the change
     edited.accent     = (edited.accent & 0xFF00FFFFu) | 0x00010000u;
+    edited.parent     = BarTheme::UmbraDark; // which theme it came from
     CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette == edited);
     CHECK_EQ(w.settings.customThemeName, std::string("Umbra Dark (custom 2)"));
     // Another change is the custom theme's own.
@@ -1000,6 +1001,20 @@ TEST(an_edit_of_a_built_in_theme_makes_a_custom_copy_of_it_named_after_it)
     w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
     w.Pass({{"theme-theme-look-theme-o-5", kClickEvent, ""}});
     CHECK(w.state.themeLoad == "umbra dark (custom)" && w.settings.barTheme == BarTheme::Aurora);
+}
+
+TEST(delete_custom_theme_shows_for_a_custom_theme_and_goes_back_to_the_theme_it_was_copied_from)
+{
+    Window w;
+    w.state.page = Page::Theme;
+    const std::string button = "theme-theme-look-delete-theme";
+    CHECK(At(Block(w.Pass(), "theme-theme-look"), button) == std::string::npos);
+    w.settings.barTheme             = BarTheme::Custom;
+    w.settings.customThemeName      = "Dusk";
+    w.settings.customPalette.parent = BarTheme::Aurora;
+    CHECK(At(Block(w.Pass(), "theme-theme-look"), button) != std::string::npos);
+    CHECK(w.Pass({{button, kClickEvent, ""}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Aurora && w.state.themeDelete == "Dusk");
 }
 
 TEST(the_built_in_list_has_no_custom_heading_without_custom_themes)
@@ -1043,12 +1058,16 @@ TEST(the_background_style_shows_the_color_the_gradient_or_the_window_settings)
     CHECK(w.Pass({{"theme-theme-colors-background-style-s-0", kClickEvent, ""}}).changed);
     CHECK(p.background == BarBackground::Plain && w.settings.barTheme == BarTheme::Custom && shows("theme-name"));
     CHECK(!shows("theme-top") && !shows("theme-bottom") && shows("theme-background"));
-    // Its stops are kept for the gradient's return; edited, the middle stays halfway between the two.
+    // Its stops are kept for the gradient's return, each its own: an edit of one leaves the others.
     w.Pass({{"theme-theme-colors-background-style-s-1", kClickEvent, ""}});
     CHECK(p.background == BarBackground::Gradient && p.stripBottom == gold.stripBottom && shows("theme-top"));
+    CHECK(shows("theme-middle"));
     w.Pass({{"theme-theme-colors-theme-top", kClickEvent, ""}});
     w.Pass({{"theme-theme-colors-theme-top-p-a", kChangeEvent, "0"}});
-    CHECK(p.stripTop == (gold.stripTop & 0x00FFFFFFu) && p.stripMiddle == 0x7F1A1510u);
+    CHECK(p.stripTop == (gold.stripTop & 0x00FFFFFFu) && p.stripMiddle == gold.stripMiddle);
+    w.Pass({{"theme-theme-colors-theme-middle", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-middle-p-a", kChangeEvent, "0"}});
+    CHECK(p.stripMiddle == (gold.stripMiddle & 0x00FFFFFFu));
     w.Pass({{"theme-theme-colors-background-style-s-2", kClickEvent, ""}});
     CHECK(p.background == BarBackground::Window && shows("window-type") && shows("window-border") && !shows("theme-top"));
 }
