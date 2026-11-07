@@ -98,6 +98,8 @@ namespace
     constexpr const char* kThemesFolder      = "themes";  // and their saved top panel themes
     constexpr const char* kOutpostsFile      = "outposts.txt"; // every character's supply runs, as overseers told them
     constexpr const char* kTurnInsFile       = "guild_turnins.txt"; // today's guild point turn-ins, as Phoenix's site gave them
+    constexpr const char* kTopPanelPage      = "toppanel"; // the settings window's page and card the Settings widget opens
+    constexpr const char* kWidgetLayoutCard  = "layout";
     constexpr double kTurnInsRetry           = 600.0; // seconds after a fetch that got no answer
     constexpr const char* kSettingsFile      = "settings.ini";
     constexpr const char* kNewFileSuffix     = ".new";          // after the process id: the file while it is written
@@ -967,7 +969,9 @@ public:
             m_SettingsChangedAt = now;
         }
         for (const std::string& press : m_BarInput.TakePresses())
-            if (const std::optional<headsup::PanelWidget> next = headsup::ApplyWidgetPress(m_Settings, press))
+            if (press == headsup::kOpenSettingsPress)
+                m_RmlMenu.OpenPage(kTopPanelPage, kWidgetLayoutCard);
+            else if (const std::optional<headsup::PanelWidget> next = headsup::ApplyWidgetPress(m_Settings, press))
             {
                 m_SettingsChangedAt = now;
                 m_BarInput.ShowSettings(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)]);

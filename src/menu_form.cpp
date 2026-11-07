@@ -891,7 +891,7 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::Alignment:
-                    if (kind != BarWidget::GameHelp)
+                    if (Aligns(kind))
                     {
                         int picked = static_cast<int>(o.align);
                         form.NumberDropdown(label.c_str(), picked, 0, kWidgetAlignCount - 1,
@@ -1029,7 +1029,8 @@ namespace headsup
                     if (held[i].copy > 0 && action(kChipRemove, Icon::Delete, WindowWord::WidgetTabsRemoveCopy)) remove = held[i];
                     form.Raw("</div><div class=\"wname\">" + EscapedRml(CopyName(c, held[i])) + "</div></div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
-                    if (!form.Off() && was && s.widgets[w].on && form.Clicked(id)) c.state.settingsAsked = held[i];
+                    if (!form.Off() && was && s.widgets[w].on && held[i].kind != BarWidget::Settings && form.Clicked(id))
+                        c.state.settingsAsked = held[i];
                     form.Set(id, FormValueKind::Class, "on", {}, s.widgets[w].on);
                     form.Set(id, FormValueKind::Class, kPickedClass, {},
                         std::ranges::find(c.readings.settingsOf, held[i]) != c.readings.settingsOf.end());

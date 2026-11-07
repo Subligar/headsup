@@ -1523,3 +1523,18 @@ TEST(a_widget_in_a_combined_pill_knows_which_sides_it_shares)
     CHECK(joins(BarWidget::Bags) == std::pair(false, true));
     CHECK(joins(BarWidget::Currency) == std::pair(true, false));
 }
+
+TEST(a_press_on_the_settings_widget_asks_for_the_settings_window_and_pins_nothing)
+{
+    std::array<float, kPanelSlots> widths = Widths(100, 0, 120, 200, 90, 60, 50);
+    widths[SlotOf(BarWidget::Settings)]   = 30.0f;
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, widths, 0.0f);
+    const BarRect cog = *RectOf(l, BarWidget::Settings);
+    BarInput input;
+    input.Frame(l, {});
+    input.Move(cog.x + 5.0f, 18.0f);
+    CHECK(!input.Open());
+    CHECK(input.Press(cog.x + 5.0f, 18.0f, true));
+    CHECK((input.TakePresses() == std::vector<std::string>{kOpenSettingsPress}) && !input.Pinned());
+    CHECK(input.Press(cog.x + 5.0f, 18.0f, false) && input.TakePresses().empty()); // a right press tells nothing
+}

@@ -203,14 +203,15 @@ namespace headsup
     std::optional<std::string> RmlMenu::TakeProfileRename() { return std::exchange(m_State.profileRename, std::nullopt); }
     std::optional<std::string> RmlMenu::TakeProfileDelete() { return std::exchange(m_State.profileDelete, std::nullopt); }
 
-    bool RmlMenu::OpenPage(const std::string& name)
+    bool RmlMenu::OpenPage(const std::string& name, const std::string& card)
     {
         const std::optional<Page> page = m_Layout->PageNamed(name);
         if (!page) return false;
         m_State.Leave();
-        m_State.page = *page;
-        open         = true;
-        m_ScrollTo   = 0.0f;
+        m_State.page   = *page;
+        open           = true;
+        m_ScrollTo     = 0.0f;
+        m_ScrollToCard = card.empty() ? card : name + "-" + card; // as Form names a card
         return true;
     }
 
@@ -903,6 +904,10 @@ namespace headsup
             m_Page->SetScrollTop(*m_ScrollTo);
             m_ScrollTo.reset();
         }
+        if (Rml::Element* card = m_ScrollToCard.empty() ? nullptr : m_Document->GetElementById(m_ScrollToCard))
+            m_Page->SetScrollTop(m_Page->GetScrollTop() + card->GetAbsoluteOffset(Rml::BoxArea::Border).y -
+                                 m_Page->GetAbsoluteOffset(Rml::BoxArea::Padding).y);
+        m_ScrollToCard.clear();
         return form.changed || typed || moved;
     }
 

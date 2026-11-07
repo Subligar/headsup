@@ -259,6 +259,7 @@ barJob=false
 barParty=true
 barStatusTimers=true
 barWorld=true
+barSettings=true
 barZoneLine2=true
 barZoneIcons=true
 barWeatherLine2=true
@@ -301,7 +302,7 @@ serverSeconds=true
 barPerformanceParts=16.0000
 barLeft=zone weather job party statusTimers world
 barCenter=
-barRight=target gil bags performance earthTime
+barRight=target gil bags performance earthTime settings
 hideHelpBar=true
 hideNetstat=true
 screenshotKey=121.0000
@@ -1033,7 +1034,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld"}; // in BarWidget's order
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"}; // in BarWidget's order
     static_assert(std::size(widgetKeys) == kBarWidgetCount);
     for (int w = 0; w < kBarWidgetCount; ++w)
     {
@@ -1185,6 +1186,7 @@ TEST(each_widgets_alignment_saves_under_its_own_key_and_loads_back_set_by_locati
     CHECK_EQ(saved.values["barBagsAlign_2"], "center");
     CHECK_EQ(saved.values["barBagsAlign"], "location");
     CHECK(!saved.values.contains("barGameHelpAlign")); // its text is the help bar's, placed by its Anchor
+    CHECK(!saved.values.contains("barSettingsAlign")); // only its cog
     const Settings loaded = LoadSettings(saved);
     CHECK(loaded.Widget(BarWidget::Zone).align == WidgetAlign::Right && loaded.Widget(second).align == WidgetAlign::Center);
     saved.values["barZoneAlign"] = "nonsense";
@@ -2759,7 +2761,7 @@ TEST(a_combined_widget_is_kept_by_its_partners_name_and_loses_a_partner_taken_of
     CHECK(s.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Party));
 }
 
-TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_taken)
+TEST(a_widget_combines_with_any_placed_widget_but_the_target_settings_itself_and_ones_taken)
 {
     Settings s;
     const auto offers = [&](PanelWidget widget, PanelWidget other) {
@@ -2770,9 +2772,9 @@ TEST(a_widget_combines_with_any_placed_widget_but_the_target_itself_and_ones_tak
     std::vector<PanelWidget> all;
     for (const std::vector<PanelWidget>& section : s.barSections)
         for (const PanelWidget w : section)
-            if (w != PanelWidget{BarWidget::Zone} && w.kind != BarWidget::Target) all.push_back(w);
+            if (w != PanelWidget{BarWidget::Zone} && w.kind != BarWidget::Target && w.kind != BarWidget::Settings) all.push_back(w);
     CHECK(CombineChoices(s, BarWidget::Zone) == all);
-    CHECK(CombineChoices(s, BarWidget::Target).empty());
+    CHECK(CombineChoices(s, BarWidget::Target).empty() && CombineChoices(s, BarWidget::Settings).empty());
     s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Party};
     CHECK(offers(BarWidget::Zone, BarWidget::Party));     // its own pick
     CHECK(!offers(BarWidget::Weather, BarWidget::Party)); // Zone has it

@@ -1516,6 +1516,7 @@ namespace headsup
                 return parts;
             }
             case BarWidget::World: return WorldParts(state, o, base);
+            case BarWidget::Settings: base.cog = true; return {};
             }
             return {};
         }
@@ -1551,7 +1552,7 @@ namespace headsup
                         chip.on = true;
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && widget.kind == BarWidget::StatusTimers) w.title = ListOf(Text("Status Timers", Tone::Dim));
-            if (w.title.empty() && w.icons.empty() && !w.coin && w.picture == GamePicture::None) w.title = ListOf(Text("-"));
+            if (w.title.empty() && w.icons.empty() && !w.coin && !w.cog && w.picture == GamePicture::None) w.title = ListOf(Text("-"));
             return w;
         }
     }
@@ -1986,6 +1987,7 @@ namespace headsup
                 ScrolledBy(state, kStatusListKey), state.pinRefused);
         case BarWidget::World:
             return WorldPopup(state);
+        case BarWidget::Settings: break;
         }
         return popup;
     }

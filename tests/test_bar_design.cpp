@@ -18,13 +18,13 @@ namespace
     }
 }
 
-TEST(every_widget_but_game_help_has_parts_and_a_default_design_holding_each_once)
+TEST(every_widget_but_game_help_and_settings_has_parts_and_a_default_design_holding_each_once)
 {
     for (int k = 0; k < kBarWidgetCount; ++k)
     {
         const auto kind = static_cast<BarWidget>(k);
         std::vector<WidgetPart> held = PartsIn(DefaultDesign(kind)), parts(PartsOf(kind).begin(), PartsOf(kind).end());
-        CHECK_EQ(parts.empty(), kind == BarWidget::GameHelp);
+        CHECK_EQ(parts.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings);
         std::ranges::sort(held);
         std::ranges::sort(parts);
         CHECK(held == parts);

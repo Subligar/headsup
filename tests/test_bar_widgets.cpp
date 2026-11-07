@@ -3117,3 +3117,16 @@ TEST(a_designer_chip_shows_its_parts_picture_as_the_game_is_now_or_a_stand_in)
     CHECK(mark(PartMarksNow({PanelWidget{BarWidget::Target}}, state, settings), WidgetPart::TargetAggro) ==
           PartMark{Icon::AggroNQ});
 }
+
+TEST(the_settings_widget_is_its_cog_alone_with_no_popup_copies_or_alignment)
+{
+    Settings settings;
+    BarState state;
+    CHECK(!Content(BarWidget::Settings, state, settings).shown); // off on a new install
+    settings.Widget(BarWidget::Settings).on = true;
+    const WidgetContent w = Content(BarWidget::Settings, state, settings);
+    CHECK(w.shown && w.cog && !w.hasPopup && w.title.empty() && w.subtitle.empty() && w.icons.empty());
+    CHECK(BarPopupContent(BarWidget::Settings, state, settings).sections.empty());
+    CHECK(!CloneWidget(settings, BarWidget::Settings) && !HasCopies(BarWidget::Settings) && !Combines(BarWidget::Settings));
+    CHECK(!Aligns(BarWidget::Settings) && !Aligns(BarWidget::GameHelp) && Aligns(BarWidget::Currency));
+}

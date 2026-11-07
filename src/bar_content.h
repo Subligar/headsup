@@ -76,6 +76,7 @@ namespace headsup
         bool shown = false;
         std::vector<Icon> icons; // before the text, beside both lines
         bool coin = false;       // gil's coin there
+        bool cog = false;        // the settings cog, alone: the Settings widget
         GamePicture picture = GamePicture::None; // a picture from the game's files there, as an icon is
         bool iconsRight = false; // those after the text instead
         std::vector<Span> title;

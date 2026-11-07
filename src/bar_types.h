@@ -48,12 +48,13 @@ namespace headsup
         Party,
         StatusTimers,
         World,
+        Settings, // the cog alone, which opens the settings window: no popup, settings or copies
     };
-    constexpr int kBarWidgetCount = static_cast<int>(BarWidget::World) + 1;
+    constexpr int kBarWidgetCount = static_cast<int>(BarWidget::Settings) + 1;
     // Which widgets a new settings file shows, by BarWidget. to_array takes its size from the list, so a widget added
     // to BarWidget without a default here fails the assert.
     constexpr auto kBarWidgetDefaults =
-        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false});
+        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false, false});
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
     // What the Performance widget shows on the panel, a bit each, in this order on its line.
@@ -82,7 +83,12 @@ namespace headsup
     constexpr int SlotOf(PanelWidget widget) { return static_cast<int>(widget.kind) * kMostCopies + widget.copy; }
     constexpr PanelWidget WidgetInSlot(int slot) { return PanelWidget{static_cast<BarWidget>(slot / kMostCopies), slot % kMostCopies}; }
     // The target has one frame the bar gives way around, and game help a bar of its own: neither has copies.
-    constexpr bool HasCopies(BarWidget widget) { return widget != BarWidget::Target && widget != BarWidget::GameHelp; }
+    constexpr bool HasCopies(BarWidget widget)
+    {
+        return widget != BarWidget::Target && widget != BarWidget::GameHelp && widget != BarWidget::Settings;
+    }
+    // Game help's text is the help bar's, placed by its Anchor; the Settings widget is its cog alone.
+    constexpr bool Aligns(BarWidget widget) { return widget != BarWidget::GameHelp && widget != BarWidget::Settings; }
 
     // What an EXP text says: what is earned of the level, what is left to the next, or the share earned as a percent;
     // the EXP bar's can say the jobs too, as Job Text writes them.

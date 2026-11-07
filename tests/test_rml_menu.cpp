@@ -1975,6 +1975,33 @@ TEST(the_currency_dropdowns_show_each_currencys_picture_left_of_its_name_in_a_co
     CHECK_EQ(window.Said(), "");
 }
 
+TEST(the_window_opens_on_a_page_scrolled_to_one_of_its_cards)
+{
+    Window window;
+    window.Page("vanillaui");
+    CHECK(window.menu.OpenPage("toppanel", "layout"));
+    window.Frames(2);
+    Rml::Element* page = window.Find(kMenuPageId);
+    Rml::Element* card = window.Find("toppanel-layout");
+    CHECK(page->GetScrollTop() > 0.0f);
+    CHECK(std::fabs(card->GetAbsoluteOffset(Rml::BoxArea::Border).y - page->GetAbsoluteOffset(Rml::BoxArea::Padding).y) < 1.0f);
+    // It is a scroll once: the page then moves only as the player moves it.
+    const float top = page->GetScrollTop();
+    window.Frames(2);
+    CHECK_EQ(page->GetScrollTop(), top);
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(the_settings_widgets_chip_opens_no_settings_of_its_own)
+{
+    Window window;
+    window.settings.Widget(BarWidget::Settings).on = true;
+    window.Page("toppanel");
+    window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Settings)));
+    CHECK(!window.shown);
+    CHECK(!window.Find("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Settings)) + "-clone"));
+}
+
 TEST(the_world_info_widget_offers_its_tracked_ship_and_guild)
 {
     Window window;

@@ -1059,7 +1059,8 @@
         {"name": "Job & EXP", "tip": "Jobs, levels and EXP to the next level, with a bar. Hover for EXP per hour."},
         {"name": "Party", "tip": "Party size and the lowest HP and MP. Hover for each member."},
         {"name": "Status Timers", "tip": "The time left on each status you pin. Hover for your favorite statuses, with a pin to show one here, and every other status with a star to add it to them."},
-        {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."}
+        {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."},
+        {"name": "Settings", "tip": "Just the settings cog. Click it to open these settings on the Top Panel page, at Widget Layout."}
       ]
     },
     {

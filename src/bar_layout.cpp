@@ -624,6 +624,11 @@ namespace headsup
         if (!Over(x, y)) return false;
         if (!left) return true;
         const std::optional<PanelWidget> under = WidgetAt(m_Layout, x, y);
+        if (under && under->kind == BarWidget::Settings)
+        {
+            m_Presses.push_back(kOpenSettingsPress);
+            return true;
+        }
         // The widget on the bar pins and unpins its popup, as its pin chip does.
         if (under && m_HasPopup[SlotOf(*under)])
         {

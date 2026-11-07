@@ -513,6 +513,7 @@ namespace headsup
         css += ".coin{" + square(static_cast<float>(coin)) + "margin-top:" +
                Px(std::round(mid - static_cast<float>(coin) / 2.0f) - rowTop) + ";margin-right:" + Px(m.gap) + ";}";
         css += ".icon.right,.coin.right{margin-right:0px;margin-left:" + Px(m.gap) + ";}";
+        css += ".icon.cog{margin-right:0px;}";
         css += ".t{white-space:pre;}";
         css += ".cell{display:inline-block;white-space:pre;}";
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
@@ -693,7 +694,8 @@ namespace headsup
             {
                 const int pixels = WholePixels(piece.width);
                 rml += "<img class=\"p\" src=\"" + CogSource(look.PopupColor(Span{"", Tone::Heading, 0}), pixels) +
-                       "\" style=\"" + place + size(static_cast<float>(pixels), static_cast<float>(pixels)) + "\"/>";
+                       "\" style=\"" + place + size(static_cast<float>(pixels), static_cast<float>(pixels)) +
+                       AdjustRules(AdjustOf(kCogName)) + "\"/>";
                 break;
             }
             case PopupPiece::Kind::Star:
@@ -783,6 +785,9 @@ namespace headsup
         for (const Icon icon : content.icons)
             icons += "<img class=\"icon" + side + "\" src=\"" + IconSource(icon) + "\"" + AdjustStyle(AdjustOf(icon)) + "/>";
         if (content.coin) icons += "<img class=\"coin" + side + "\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
+        if (content.cog)
+            icons += "<img class=\"icon cog\" src=\"" + CogSource(look.palette.title, WholePixels(look.metrics.icon)) + "\"" +
+                     AdjustStyle(AdjustOf(kCogName)) + "/>";
         if (!content.iconsRight) rml += icons;
         rml += "<div class=\"text\">";
         const std::string title = std::string("title") + (content.figures ? " figures" : "") +

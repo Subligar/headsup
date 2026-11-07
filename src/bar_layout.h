@@ -163,6 +163,9 @@ namespace headsup
         BarRect pin{}, cog{}, grip{};
     };
 
+    // What a press on the Settings widget tells the plugin (BarInput::TakePresses): open the settings window.
+    constexpr const char* kOpenSettingsPress = "open settings";
+
     // Which popups show. Hovering a widget that has one opens it; leaving both the widget and its popup, or the widget
     // losing its popup, closes it, and the pointer crossing the gap between them does not. A press on a widget or a
     // popup's pin chip pins its popup, or unpins it if it was pinned; a pinned popup stays open beside the others.

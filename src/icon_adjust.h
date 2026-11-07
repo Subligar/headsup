@@ -14,6 +14,8 @@ namespace headsup
         float x = 0.0f, y = 0.0f, scale = 1.0f;
         bool operator==(const IconAdjust&) const = default;
     };
+    // The settings cog's name in the table: it is painted in code (Cog), not read from a file.
+    constexpr std::string_view kCogName = "cog";
     // An icon's adjustment by its file name (an icon's PNG, or a crest's chunk in 51.DAT); none for one not adjusted.
     IconAdjust AdjustOf(std::string_view file);
     IconAdjust AdjustOf(Icon icon);

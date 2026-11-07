@@ -280,7 +280,7 @@ namespace headsup
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1279,7 +1279,7 @@ namespace headsup
             if (IconPartOf(w.kind))
                 o.iconSide = static_cast<IconSide>(NameIndex(kIconSideNames, kIconSideCount,
                     text((widget + kIconSideSuffix).c_str()), static_cast<int>(o.iconSide)));
-            if (w.kind != BarWidget::GameHelp)
+            if (Aligns(w.kind))
                 o.align = static_cast<WidgetAlign>(NameIndex(kWidgetAlignNames, kWidgetAlignCount,
                     text((widget + kAlignSuffix).c_str()), static_cast<int>(o.align)));
             switch (w.kind)
@@ -1363,7 +1363,7 @@ namespace headsup
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
             if (IconPartOf(w.kind)) text((widget + kIconSideSuffix).c_str(), kIconSideNames[static_cast<int>(o.iconSide)]);
-            if (w.kind != BarWidget::GameHelp) text((widget + kAlignSuffix).c_str(), kWidgetAlignNames[static_cast<int>(o.align)]);
+            if (Aligns(w.kind)) text((widget + kAlignSuffix).c_str(), kWidgetAlignNames[static_cast<int>(o.align)]);
             const std::optional<PopupSpot>& spot = o.popupSpot;
             text((widget + kPopupSpotSuffix).c_str(),
                 spot ? (std::string(spot->fromRight ? kSpotRight : kSpotLeft) + " " + std::to_string(spot->x) + " " +

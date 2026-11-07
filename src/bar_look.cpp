@@ -187,7 +187,8 @@ namespace headsup
     {
         const size_t icons = content.icons.size() + (content.picture != GamePicture::None ? 1 : 0);
         return static_cast<float>(icons) * (metrics.icon + metrics.gap) +
-               (content.coin ? static_cast<float>(CoinPixels(metrics)) + metrics.gap : 0.0f);
+               (content.coin ? static_cast<float>(CoinPixels(metrics)) + metrics.gap : 0.0f) +
+               (content.cog ? metrics.icon : 0.0f); // alone, with no text to keep a gap from
     }
 
     std::optional<BoxStyle> BarLook::BoxOf(BarWidget widget, bool lit) const

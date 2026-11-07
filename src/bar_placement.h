@@ -60,7 +60,10 @@ namespace headsup
     // By SlotOf: the widget the player combined with each one, shown right after it in one pill with one popup.
     using CombineLinks = std::array<std::optional<PanelWidget>, kPanelSlots>;
     // The target keeps a frame of its own and game help a bar of its own: neither combines.
-    constexpr bool Combines(BarWidget widget) { return OnTheBar(widget) && widget != BarWidget::Target; }
+    constexpr bool Combines(BarWidget widget)
+    {
+        return OnTheBar(widget) && widget != BarWidget::Target && widget != BarWidget::Settings;
+    }
     // The panel as it is drawn: a widget combined with another pulls that one from its own place to just after it,
     // and that one pulls what it is combined with in turn. A link counts between two placed widgets that combine,
     // when no lower slot pulled its widget already and it closes no ring. group: by SlotOf, the first widget of the
