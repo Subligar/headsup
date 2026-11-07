@@ -338,7 +338,7 @@ class Reader:
         for number, page in enumerate(self.listed(value, 'pages'), start=1):
             if isinstance(page, dict) and 'key' not in page:
                 self.bad(f'page {number} has no key')
-            self.fields(page, f'page {number}', ('key', 'name', 'child', 'cards'))
+            self.fields(page, f'page {number}', ('key', 'name', 'child', 'description', 'cards'))
             key = self.key(page, f'page {number}')
             owner = f'the page "{key}"'
             if key not in self.pieces.pages:
@@ -349,7 +349,10 @@ class Reader:
             child = page.get('child', False)
             if not isinstance(child, bool):
                 self.bad(f'the child of {owner} must be true or false')
-            entry = Entry(key=key, name=self.named(page, owner, True), child=child)
+            description = page.get('description')
+            if description is not None:
+                self.plain(description, 'description', owner)
+            entry = Entry(key=key, name=self.named(page, owner, True), child=child, description=description)
             if key in KINDS:
                 if 'cards' in page:
                     self.bad(f'{owner} shares the entity cards and cannot have cards of its own')
@@ -636,7 +639,7 @@ def generate(layout: Layout, pieces: Pieces = PIECES, text: str = ''):
         first, count = (entity_first, len(layout.entity)) if page.key in KINDS else (
             sum(len(p.cards) for p in layout.pages[:layout.pages.index(page)]), len(page.cards))
         pages.append(f'    {{Page::{pieces.pages[page.key]}, "{page.key}", {c_text(page.name)}, '
-                     f'{"true" if page.child else "false"}, {first}, {count}}},')
+                     f'{c_text(page.description)}, {"true" if page.child else "false"}, {first}, {count}}},')
     for word in layout.words:
         layout_words.append(f'    {{WindowWord::{pascal(word.key)}, {c_text(word.name)}, {c_text(word.tip)}}},')
 

@@ -81,6 +81,19 @@ TEST(the_window_is_its_sidebar_and_the_open_pages_cards)
     CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-target-cursor") != nullptr);
 }
 
+TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
+{
+    Window w;
+    w.state.page           = Page::VanillaUi;
+    const char* described = w.layout.PageOf(Page::VanillaUi).description;
+    CHECK(described != nullptr);
+    const Form form = w.Pass();
+    CHECK(form.blocks.size() > 2 && form.blocks[1].bare && Has(form.blocks[1].rml, described) && !form.blocks[2].bare);
+    // A page without one starts with its first card.
+    w.state.page = Page::Entities;
+    CHECK(w.layout.PageOf(Page::Entities).description == nullptr && !w.Pass().blocks[1].bare);
+}
+
 TEST(the_palettes_are_on_their_own_colors_page_after_the_mouse_cursor)
 {
     Window w;

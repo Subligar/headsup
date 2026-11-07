@@ -207,6 +207,8 @@ namespace headsup
         // A block with the id a card of that title would have and no title or card of its own; EndCard ends it.
         void BeginBare(const char* title);
         void EndCard();
+        // The page's own words, on the page above its cards, written as a card's description is.
+        void PageNote(const char* text);
 
         // A row: its label at the left, with its tip, and the controls that follow at the right, until EndRow.
         // In a label, what is before "##" shows and what follows it names the control's id, which is otherwise

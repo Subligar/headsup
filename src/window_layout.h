@@ -83,6 +83,7 @@ namespace headsup
         Page page;
         const char* key;
         const char* name;
+        const char* description; // under its title, above its cards; null for none
         bool child; // indented under the page before it
         int firstCard, cardCount; // the five entity pages share one range
     };

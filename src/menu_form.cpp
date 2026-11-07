@@ -2375,6 +2375,7 @@ namespace headsup
         Sidebar(c);
         const LayoutPage& page = layout.PageOf(state.page);
         form.pageKey           = page.key;
+        if (page.description != nullptr) form.PageNote(page.description);
         if (c.kind)
         {
             if (state.design.kind != *c.kind) state.design = DesignEditor{.kind = *c.kind};

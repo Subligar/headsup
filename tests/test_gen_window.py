@@ -334,9 +334,19 @@ class Generate(unittest.TestCase):
 
     def test_a_page_of_the_entity_cards_and_the_lists(self):
         _, tables, _ = gen.generate(parse(fixture()), PIECES)
-        self.assertIn('{Page::Mobs, "mobs", "Mobs", true, 3, 2},', tables)
+        self.assertIn('{Page::Mobs, "mobs", "Mobs", nullptr, true, 3, 2},', tables)
         self.assertIn('{WindowList::Mode, 0, 2},', tables)
         self.assertIn('{"On", "Some.", "Claimed."},', tables)
+
+    def test_a_page_says_its_description_and_refuses_one_that_is_no_text(self):
+        tree = fixture()
+        tree['pages'][0]['description'] = 'Read first.'
+        _, tables, _ = gen.generate(parse(tree), PIECES)
+        self.assertIn('{Page::Home, "home", "Home", "Read first.", false, 0, 2},', tables)
+        tree['pages'][0]['description'] = 3
+        with self.assertRaises(gen.DataError) as caught:
+            parse(tree)
+        self.assertIn('the description of the page "home" must be text', str(caught.exception))
 
     def test_quotes_and_letters_past_ascii_are_escaped(self):
         tree = fixture()

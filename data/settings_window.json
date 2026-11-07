@@ -384,10 +384,11 @@
       "key": "vanillaui",
       "name": "Vanilla UI",
       "child": true,
+      "description": "NOTE: These settings are a work in progress and for advanced users only.",
       "cards": [
         {
           "key": "base-game-ui",
-          "name": "Base Game UI",
+          "name": "Windows",
           "settings": [
             {"key": "game-help", "name": "Game Help", "tip": "The game's own help bar goes under the top panel, and the windows under it. Off while it is hidden."},
             {"key": "auto-adjust", "name": "Auto Adjust Windows", "tip": "Places every menu's windows right under the top panel as it is now, for the game help on and off. Your own shifts go."},

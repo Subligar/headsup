@@ -202,6 +202,11 @@ namespace headsup
         Out() += "<div>";
     }
 
+    void Form::PageNote(const char* text)
+    {
+        blocks.push_back(FormBlock{Slug(pageKey + "/" + kNoteName), "<div class=\"note\">" + NoteRml(text) + "</div>", true});
+    }
+
     void Form::EndCard()
     {
         Out() += "</div>";
