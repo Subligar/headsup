@@ -175,19 +175,18 @@ namespace headsup
 
     bool RmlBar::Document(RmlHost& host, const BarLook& look, const BarTextPlace& place)
     {
-        DocumentKey key{look.palette, look.metrics, look.row, look.lines, place, look.titleFont, look.detailFont,
-            look.settings.panelSeparators, look.skin};
-        if (m_Document != nullptr && key == m_DocumentKey) return true;
+        // Built again whenever its text would differ, so every setting it reads takes effect.
+        std::string text = BarDocument(look, place);
+        if (m_Document != nullptr && text == m_DocumentText) return true;
         // A strip of other colors or rows is another image: the one before is let go, or every step of a color's
         // slider would keep its own.
-        const auto strip = [](const DocumentKey& k) {
-            return StripSource(k.palette, WholePixels(k.metrics.height), WholePixels(k.metrics.below));
-        };
-        if (m_Document != nullptr && strip(m_DocumentKey) != strip(key)) Rml::ReleaseTexture(strip(m_DocumentKey));
+        std::string strip = StripSource(look.palette, WholePixels(look.metrics.height), WholePixels(look.metrics.below));
+        if (m_Document != nullptr && strip != m_StripSource) Rml::ReleaseTexture(m_StripSource);
         Close();
-        m_Document = host.Bar()->LoadDocumentFromMemory(BarDocument(look, place), kDocumentName);
+        m_Document = host.Bar()->LoadDocumentFromMemory(text, kDocumentName);
         if (m_Document == nullptr) return false;
-        m_DocumentKey = std::move(key);
+        m_DocumentText = std::move(text);
+        m_StripSource  = std::move(strip);
         for (int slot = 0; slot < kPanelSlots; ++slot)
             if (OnTheBar(WidgetInSlot(slot).kind)) m_Shown[slot].element = m_Document->GetElementById(WidgetId(WidgetInSlot(slot)));
         for (int d = 0; d < kDividerCount; ++d)
@@ -371,19 +370,21 @@ namespace headsup
 
     bool RmlBar::PopupDocumentFor(RmlHost& host, const BarLook& look)
     {
-        PopupDocumentKey key{look.palette, look.metrics, look.titleFont, look.detailFont, look.skin};
-        if (m_PopupDocuments[0] != nullptr && key == m_PopupDocumentKey) return true;
-        ClosePopup();
+        PopupFaces faces;
         for (int f = 0; f < kPopupFontCount; ++f)
         {
             const TextFace face  = look.FaceOf(static_cast<PopupFont>(f));
             const int pixels     = WholePixels(face.size);
             const FaceLine& line = FaceLineOf(host, face.family, pixels);
-            m_PopupFaces[f]      = PopupFace{face.family, pixels, line.rmlHeight, line.drop};
+            faces[f]             = PopupFace{face.family, pixels, line.rmlHeight, line.drop};
         }
+        std::string text = PopupDocument(look, faces);
+        if (m_PopupDocuments[0] != nullptr && text == m_PopupDocumentText) return true;
+        ClosePopup();
+        m_PopupFaces = faces;
         for (Rml::ElementDocument*& document : m_PopupDocuments)
         {
-            document = host.Overlay()->LoadDocumentFromMemory(PopupDocument(look, m_PopupFaces), kPopupDocumentName);
+            document = host.Overlay()->LoadDocumentFromMemory(text, kPopupDocumentName);
             if (document == nullptr)
             {
                 ClosePopup();
@@ -393,7 +394,7 @@ namespace headsup
         }
         m_PopupDocuments[1]->SetProperty(Rml::PropertyId::ZIndex,
             Rml::Property(static_cast<float>(kMenuViewZ + kOverSettings), Rml::Unit::NUMBER));
-        m_PopupDocumentKey = std::move(key);
+        m_PopupDocumentText = std::move(text);
         return true;
     }
 

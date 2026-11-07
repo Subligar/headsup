@@ -60,20 +60,6 @@ namespace headsup
             BarTextPlace place;
             float helpBarHeight = 0.0f; // fitted to its text, the same whatever it shows
         };
-        // What the document was built from: a change builds it again.
-        struct DocumentKey
-        {
-            BarPalette palette{};
-            BarMetrics metrics{};
-            BarRow row{};
-            TextRow lines{};
-            BarTextPlace place{};
-            const char* titleFont  = nullptr;
-            const char* detailFont = nullptr;
-            int separators = 0;
-            std::optional<SkinFrame> skin;
-            bool operator==(const DocumentKey&) const = default;
-        };
         // A widget's element and what it shows now.
         struct Shown
         {
@@ -141,15 +127,6 @@ namespace headsup
             std::optional<SettingsRoom> settings;
             bool operator==(const PopupKey&) const = default;
         };
-        struct PopupDocumentKey
-        {
-            BarPalette palette{};
-            BarMetrics metrics{};
-            const char* titleFont  = nullptr;
-            const char* detailFont = nullptr;
-            std::optional<SkinFrame> skin;
-            bool operator==(const PopupDocumentKey&) const = default;
-        };
         // A font's line as GDI draws it, which the popups are laid out by (its height, and its ink's top and bottom
         // in it), and as RmlUi sets it: its line box's height, and how far under GDI's line top that box starts for
         // the two baselines to meet.
@@ -202,7 +179,7 @@ namespace headsup
         GdiText m_Gdi; // the bar's text rows are sized by GDI's ink, as the bar drawn with it is
         Memo<LinesKey, Rows> m_Rows;
         Rml::ElementDocument* m_Document = nullptr;
-        DocumentKey m_DocumentKey;
+        std::string m_DocumentText, m_StripSource; // what the document was built from, and its strip image
         bool m_Visible = false;
         std::array<Shown, kPanelSlots> m_Shown;
         std::array<Divider, kDividerCount> m_Dividers;
@@ -214,7 +191,7 @@ namespace headsup
         Memo<HelpBarKey, HelpBarFit> m_HelpBar;
         // The popups' documents: under the settings a popup shows, and over them for the popups shown after that one.
         std::array<Rml::ElementDocument*, 2> m_PopupDocuments{};
-        PopupDocumentKey m_PopupDocumentKey;
+        std::string m_PopupDocumentText;
         // Each pill's popup, by its first widget's SlotOf.
         struct Popup
         {
