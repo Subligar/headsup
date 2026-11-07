@@ -467,16 +467,8 @@ namespace headsup
             return cut;
         });
         popup.widest = std::max(popup.widest, pl.width);
-        BarRect rect = PlacePopup(*anchor, barBottom, pl.width, pl.height, screenWidth, screenHeight, m.gap, out);
-        // Pinned, it shows where the player is dragging it or last left it.
-        if (pinned)
-        {
-            if (const std::optional<BarRect> dragged = input.DraggedPopup(open))
-                rect = PlaceAtSpot(PopupSpot{static_cast<int>(dragged->x), static_cast<int>(dragged->y)}, rect.width,
-                    rect.height, screenWidth, screenHeight);
-            else if (const std::optional<PopupSpot>& spot = look.settings.Widget(open).popupSpot)
-                rect = PlaceAtSpot(*spot, rect.width, rect.height, screenWidth, screenHeight);
-        }
+        const BarRect rect = PopupAt(PlacePopup(*anchor, barBottom, pl.width, pl.height, screenWidth, screenHeight, m.gap, out),
+            input.DraggedPopup(open), look.settings.Widget(open).popupSpot, screenWidth, screenHeight);
         if (fresh || !popup.marked)
         {
             popup.element->SetInnerRML(PopupRml(pl, look, m_PopupFaces));

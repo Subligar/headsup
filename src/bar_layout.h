@@ -112,6 +112,10 @@ namespace headsup
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight);
     // A popup of this size at the spot, its kept edges where the spot says, moved onto the screen if it would leave it.
     BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight);
+    // Where a popup placed under its widget shows: where it is being dragged, else at the spot it was left, pinned or
+    // not.
+    BarRect PopupAt(const BarRect& underWidget, const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot,
+        float screenWidth, float screenHeight);
     // Under its widget below the bar, moved inward from the screen's sides, its height cut at the bottom: a ring
     // drawn ring pixels around it stays gap from the bar and the screen's edges.
     BarRect PlacePopup(const BarRect& widget, float barHeight, float width, float height, float screenWidth,

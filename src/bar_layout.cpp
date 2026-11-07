@@ -393,6 +393,14 @@ namespace headsup
             std::clamp(spot.fromBottom ? screenHeight - y - height : y, 0.0f, screenHeight - height), width, height};
     }
 
+    BarRect PopupAt(const BarRect& underWidget, const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot,
+        float screenWidth, float screenHeight)
+    {
+        const std::optional<PopupSpot> at =
+            dragged ? std::optional(PopupSpot{static_cast<int>(dragged->x), static_cast<int>(dragged->y)}) : spot;
+        return at ? PlaceAtSpot(*at, underWidget.width, underWidget.height, screenWidth, screenHeight) : underWidget;
+    }
+
     float PopupRoom(float barHeight, float screenHeight, float gap, float ring)
     {
         return screenHeight - barHeight - 2.0f * (gap + ring);

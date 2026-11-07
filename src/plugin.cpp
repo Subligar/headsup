@@ -939,12 +939,13 @@ public:
                 // No message says the pointer left the client area, and in windowed modes the game never moves Windows'.
                 // A Windows tester's borderless window got no mouse moves in its top 18 px while no game menu was open,
                 // so a move of Windows' pointer that no message gave counts as one. Linkpearl's moves are messages alone.
+                // Never during a drag: the messages carry it, and a made move whose button reads up would end it.
                 POINT screen{}, pointer{};
                 if (GetCursorPos(&screen) && (pointer = screen, ScreenToClient(g_GameWindow, &pointer)))
                 {
                     if (!PtInRect(&client, pointer))
                         m_BarInput.Leave();
-                    else if ((pointer.x != m_LastPointer.x || pointer.y != m_LastPointer.y) &&
+                    else if (!m_BarInput.Dragging() && (pointer.x != m_LastPointer.x || pointer.y != m_LastPointer.y) &&
                              (pointer.x != g_LastMove.x || pointer.y != g_LastMove.y) && WindowFromPoint(screen) == g_GameWindow)
                     {
                         const WPARAM buttons = (GetKeyState(VK_LBUTTON) < 0 ? MK_LBUTTON : 0) | (GetKeyState(VK_RBUTTON) < 0 ? MK_RBUTTON : 0);

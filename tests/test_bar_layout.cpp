@@ -203,6 +203,16 @@ TEST(a_dragged_popup_is_kept_by_its_edges_nearest_the_screens_sides_and_grows_aw
     CHECK(big.x >= 0.0f && big.y >= 0.0f && big.x + big.width <= W && big.y + big.height <= H);
 }
 
+TEST(a_popup_shows_where_it_is_dragged_else_at_its_kept_spot_else_under_its_widget)
+{
+    constexpr float W = 1920.0f, H = 1080.0f;
+    const BarRect under{800.0f, 44.0f, 300.0f, 200.0f};
+    CHECK(PopupAt(under, std::nullopt, std::nullopt, W, H) == under);
+    const PopupSpot kept{120, 80, true, true};
+    CHECK(PopupAt(under, std::nullopt, kept, W, H) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, BarRect{400.0f, 500.0f, 300.0f, 200.0f}, kept, W, H) == (BarRect{400.0f, 500.0f, 300.0f, 200.0f}));
+}
+
 TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
 {
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
