@@ -44,10 +44,13 @@ namespace headsup
     constexpr const char* kStatusFavoritePress = "status favorite ", *kStatusPinPress = "status pin ";
     constexpr const char* kStatusListKey = "Status Timers"; // what the popup's scrolling list is kept by
 
-    // The pinned statuses on one line, each with its time left, matched by name; its name while none is pinned.
-    std::vector<Span> PinnedStatuses(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& pins);
+    constexpr size_t kMostStatusPins = 6; // a Pinned Status button each
+    // The status pinned at rank (from 0, in the order pinned) with its time left, matched by name; nothing for a rank
+    // without one.
+    std::vector<Span> PinnedStatus(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& pins, size_t rank);
     // Your favorites, each with its pin and star, over every other status in a scrolling list scrolled this many
-    // lines: those you have first, the rest by name, one line a name. refused: the last pin was kept, which it says.
+    // lines: those you have first, the rest by name, one line a name, in one column. refused: a pin was refused, the
+    // last one kept or a seventh, which it says under its title.
     PopupContent StatusTimersPopup(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& favorites,
         const std::vector<uint16_t>& pins, size_t scrolled, bool refused = false);
 }

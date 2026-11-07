@@ -976,7 +976,10 @@ public:
             else switch (headsup::ApplyPopupPress(m_Settings, press,
                 static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1)))
             {
-            case headsup::PressResult::Changed: m_SettingsChangedAt = now; break;
+            case headsup::PressResult::Changed:
+                m_SettingsChangedAt = now;
+                m_BarInput.Refuse(false); // what it said no longer holds
+                break;
             case headsup::PressResult::Refused: m_BarInput.Refuse(); break;
             case headsup::PressResult::None: break;
             }

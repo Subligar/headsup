@@ -646,8 +646,12 @@ namespace headsup
                     const std::string name = base + " " + std::to_string(part);
                     const std::string id   = form.Id(name);
                     form.Raw("<div class=\"btn raised wchip dchip drag\" id=\"" + id + "\"" + TipAttribute(names[part].tip) + ">");
+                    // A Pinned Status button is on while a status is pinned at its rank, which its pin sets.
+                    const auto pin = static_cast<size_t>(chip.part) - static_cast<size_t>(WidgetPart::StatusPin1);
+                    const bool pinned = widget.kind == BarWidget::StatusTimers;
+                    if (pinned) chip.on = pin < c.s.statusPins.size();
                     bool on = chip.on;
-                    form.CheckAt((name + kChipToggle).c_str(), on);
+                    if (!pinned) form.CheckAt((name + kChipToggle).c_str(), on);
                     if (on != chip.on)
                     {
                         toggled = true;
@@ -828,7 +832,8 @@ namespace headsup
                     // The EXP meter is laid out without a design.
                     if (!bar)
                     {
-                        form.Note(row.tip); // the Widget Designer's description
+                        // the Widget Designer's description
+                        form.Note(kind == BarWidget::StatusTimers ? Word(c, WindowWord::WidgetTabsDesignStatusTimers) : row.tip);
                         Designer(c, widget);
                     }
                     break;

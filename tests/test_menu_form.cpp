@@ -1169,6 +1169,27 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK_EQ(design(), "-nation name | region");
 }
 
+TEST(the_pinned_status_buttons_have_no_switch_and_are_on_while_a_status_is_pinned_at_their_rank)
+{
+    Window w;
+    const PanelWidget timers{BarWidget::StatusTimers};
+    w.readings.settingsOf = {timers};
+    w.settings.statusPins = {40, 33}; // ranks 1 and 2
+    const std::string base = "toppanel-widgets-part-" + std::to_string(SlotOf(timers)) + "-";
+    const auto chip = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
+    const Form form = w.Pass();
+    const std::string rml = Block(form, "toppanel-widgets")->rml;
+    CHECK(Has(rml, ("id=\"" + chip(WidgetPart::StatusPin6) + "\"").c_str()));
+    CHECK(!Has(rml, (chip(WidgetPart::StatusPin1) + "-on").c_str()));
+    const auto on = [&](WidgetPart part) {
+        bool shown = false;
+        for (const FormValue& v : form.values)
+            if (v.id == chip(part) && v.kind == FormValueKind::Class && v.name == "on") shown = v.on;
+        return shown;
+    };
+    CHECK(on(WidgetPart::StatusPin1) && on(WidgetPart::StatusPin2) && !on(WidgetPart::StatusPin3));
+}
+
 TEST(world_infos_designer_has_a_button_for_each_thing_it_can_tell_and_each_nation)
 {
     Window w;

@@ -1703,6 +1703,28 @@ TEST(a_statuss_star_and_pin_add_it_and_take_it_off_and_its_star_takes_its_pin_to
           (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
     for (const char* bad : {"status favorite ", "status favorite 4x", "status pin 65000", "status pin 99999999"})
         CHECK(ApplyPopupPress(s, bad, Nation::None) == PressResult::None);
+    // Six at most: a seventh pin is refused.
+    s.statusPins = {40, 33, 41, 42, 43, kSignetEffect};
+    CHECK(press(kStatusPinPress, 116) == PressResult::Refused && s.statusPins.size() == kMostStatusPins);
+}
+
+TEST(the_status_timers_widget_shows_each_pin_at_its_rank_where_its_design_puts_it)
+{
+    Settings settings;
+    BarState state;
+    state.statuses = {{40, 1800.0}, {33, 90.0}};
+    settings.Widget(BarWidget::StatusTimers).on = true;
+    settings.statusPins = {40, 33, kSignetEffect}; // ranks 1, 2 and 3
+    // As new: 1, 3 and 5 on the first line, 2, 4 and 6 on the second.
+    CHECK_EQ(DesignText(settings.Widget(BarWidget::StatusTimers).design), "pin1 pin3 pin5 | pin2 pin4 pin6");
+    const WidgetContent w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(w.title) == "Protect 30m 00s  Signet 0s" && Joined(w.subtitle) == "Haste 1m 30s");
+    // Pinned or not decides what shows, not the design's switches.
+    settings.Widget(BarWidget::StatusTimers).design = DesignFrom(BarWidget::StatusTimers, "-pin1 -pin2 -pin3 | -pin4 -pin5 -pin6");
+    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Protect 30m 00s  Haste 1m 30s  Signet 0s");
+    // None pinned: its name, dim.
+    settings.statusPins.clear();
+    CHECK(Content(BarWidget::StatusTimers, state, settings).title == ListOf(Text("Status Timers", Tone::Dim)));
 }
 
 TEST(a_widgets_clone_and_remove_presses_clone_it_or_take_the_copy_off_and_name_whose_settings_show_next)

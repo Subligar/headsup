@@ -74,23 +74,24 @@ TEST(status_names_are_phoenixs_and_one_it_lacks_has_none)
     CHECK(StatusRecords().size() > 600);
 }
 
-TEST(the_panel_shows_each_pinned_status_with_its_time_left_and_its_name_while_none_is)
+TEST(each_pinned_status_shows_with_its_time_left_at_its_rank_and_a_rank_without_one_shows_nothing)
 {
     std::vector<ActiveStatus> active{{40, 1800.0}, {kSignetEffect, std::nullopt}};
-    CHECK(Joined(PinnedStatuses(active, {})) == "Status Timers");
-    const std::vector<Span> line = PinnedStatuses(active, {40, kSignetEffect, 33}); // Protect, Signet and Haste
-    CHECK(Joined(line) == "Protect 30m 00s  Signet -  Haste 0s");
-    CHECK(line[1] == Text(" 30m 00s", Tone::Dim));
+    const std::vector<uint16_t> pins{40, kSignetEffect, 33}; // Protect, Signet and Haste
+    CHECK(PinnedStatus(active, pins, 0) == (std::vector<Span>{Text("Protect"), Text(" 30m 00s", Tone::Dim)}));
+    CHECK(Joined(PinnedStatus(active, pins, 1)) == "Signet -" && Joined(PinnedStatus(active, pins, 2)) == "Haste 0s");
+    CHECK(PinnedStatus(active, pins, 3).empty() && PinnedStatus(active, {}, 0).empty());
     // A status matches by name: Sleep II's time shows for a pinned Sleep.
     active.push_back(ActiveStatus{19, 60.0});
-    CHECK(Joined(PinnedStatuses(active, {2})) == "Sleep 1m 00s");
+    CHECK(Joined(PinnedStatus(active, {2}, 0)) == "Sleep 1m 00s");
 }
 
 TEST(the_popup_lists_your_favorites_with_pins_over_every_other_status_those_you_have_first)
 {
     const std::vector<ActiveStatus> active{{40, 1800.0}, {33, 90.0}};
     const PopupContent p = StatusTimersPopup(active, {kSignetEffect, 40}, {40}, 3);
-    CHECK(Joined(p.title) == "Status Timers" && p.sections.size() == 2);
+    CHECK(Joined(p.title) == "Status Timers" && p.sections.size() == 2 && p.oneColumn);
+    CHECK(p.sections[0].heading == "Favorites");
     const PopupRow& top = p.sections[0].rows[0];
     CHECK(top.columns == 4 && top.cells.size() == 8);
     // Signet: a grayed pin, a star, its name and 0, as you do not have it.
@@ -112,8 +113,10 @@ TEST(the_popup_lists_your_favorites_with_pins_over_every_other_status_those_you_
     CHECK(StatusTimersPopup(active, {}, {}, 0).sections[0].rows[0].kind == RowKind::Line);
     // A refused unpin says why just under the title, in the error red.
     const PopupContent refused = StatusTimersPopup(active, {kSignetEffect}, {kSignetEffect}, 0, true);
-    const PopupRow& why        = refused.sections[0].rows[0];
-    CHECK(Joined(why.cells[0].text) == "Must have at least one status pinned." && why.cells[0].text[0].tone == Tone::Own &&
-          why.cells[0].text[0].argb == kErrorColor);
-    CHECK(refused.sections[0].rows[1].kind == RowKind::Grid);
+    CHECK(Joined(refused.subtitle) == "Must have at least one status pinned." && refused.subtitle[0].tone == Tone::Own &&
+          refused.subtitle[0].argb == kErrorColor);
+    CHECK(refused.sections[0].rows[0].kind == RowKind::Grid);
+    // And a seventh pin refused says the most there can be.
+    const std::vector<uint16_t> six{40, 33, 41, 42, 43, kSignetEffect};
+    CHECK(Joined(StatusTimersPopup(active, six, six, 0, true).subtitle) == "You can not pin more than 6 status effects");
 }

@@ -1458,7 +1458,13 @@ namespace headsup
             case BarWidget::Party: return PartyParts(state.party, base);
             case BarWidget::StatusTimers:
                 base.hasPopup = true;
-                return {{WidgetPart::StatusPins, PinnedStatuses(state.statuses, settings.statusPins)}};
+            {
+                std::vector<PartContent> parts;
+                for (size_t rank = 0; rank < kMostStatusPins; ++rank)
+                    parts.push_back({static_cast<WidgetPart>(static_cast<size_t>(WidgetPart::StatusPin1) + rank),
+                        PinnedStatus(state.statuses, settings.statusPins, rank)});
+                return parts;
+            }
             case BarWidget::World: return WorldParts(state, o, base);
             }
             return {};
@@ -1489,7 +1495,14 @@ namespace headsup
                     base.iconsRight = o.iconSide == IconSide::Right;
                     parts.erase(part);
                 }
-            WidgetContent w = ComposeContent(o.design, std::move(parts), std::move(base));
+            // The pins decide which Pinned Status buttons show, not their switches.
+            WidgetDesign design = o.design;
+            if (widget.kind == BarWidget::StatusTimers)
+                for (std::vector<DesignChip>& line : design.lines)
+                    for (DesignChip& chip : line)
+                        chip.on = true;
+            WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
+            if (w.title.empty() && widget.kind == BarWidget::StatusTimers) w.title = ListOf(Text("Status Timers", Tone::Dim));
             if (w.title.empty() && w.icons.empty() && !w.coin && w.picture == GamePicture::None) w.title = ListOf(Text("-"));
             return w;
         }
@@ -1555,6 +1568,8 @@ namespace headsup
                 list.erase(at);
                 if (kind == kStatusFavoritePress) std::erase(settings.statusPins, status);
             }
+            else if (kind == kStatusPinPress && list.size() >= kMostStatusPins)
+                return PressResult::Refused;
             else
                 list.push_back(status);
             return PressResult::Changed;

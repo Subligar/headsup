@@ -274,7 +274,8 @@
                 {"key": "remove-copy", "name": "Remove This Copy", "tip": "Takes this copy off the panel. Its settings go with it."},
                 {"key": "combine-none", "name": "None"},
                 {"key": "link-disabled", "name": "(disabled)"},
-                {"key": "design-last-on", "name": "At least one button must be enabled."}
+                {"key": "design-last-on", "name": "At least one button must be enabled."},
+                {"key": "design-status-timers", "name": "Use the lines below to change how info is organized in the widget."}
               ]
             }
           ]
@@ -1277,7 +1278,12 @@
         {"name": "Messages", "tip": "PlayOnline's mail and messenger icons while something waits, with how many."},
         {"name": "Party Size", "tip": "How many are in your party, or Solo."},
         {"name": "HP and MP", "tip": "The lowest HP and MP in your party."},
-        {"name": "Pinned Statuses", "tip": "The time left on each status you pin in the pop-out."},
+        {"name": "Pinned Status #1", "tip": "The status pinned first in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #2", "tip": "The status pinned second in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #3", "tip": "The status pinned third in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #4", "tip": "The status pinned fourth in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #5", "tip": "The status pinned fifth in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #6", "tip": "The status pinned sixth in the pop-out, with its time left. Its pin turns it on and off."},
         {"name": "Ship", "tip": "Your Tracked Ship's next sailing and how long until it."},
         {"name": "Guild", "tip": "Your Tracked Guild's shop: open or closed, and how long until that changes."},
         {"name": "RSE", "tip": "This week's Race-Specific Equipment race, where, and when it ends."},

@@ -181,7 +181,7 @@ namespace headsup
         // How many lines each part of the popups has been scrolled, by its key: back to the top once none shows.
         const std::map<std::string, size_t>& Scrolled() const { return m_Scrolled; }
         // A press in a popup was refused, which it says until none shows.
-        void Refuse() { m_Refused = true; }
+        void Refuse(bool refused = true) { m_Refused = refused; }
         bool Refused() const { return m_Refused; }
         void Move(float x, float y);
         // The pointer is off the game: over an Ashita window or out of the client area, where no move reports it.

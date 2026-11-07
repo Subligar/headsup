@@ -140,29 +140,27 @@ namespace headsup
         return out;
     }
 
-    std::vector<Span> PinnedStatuses(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& pins)
+    std::vector<Span> PinnedStatus(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& pins, size_t rank)
     {
-        std::vector<Span> line;
-        const std::vector<Named> named = NamedAll(active);
-        for (const uint16_t pin : pins)
-        {
-            const std::string name = NameOf(pin);
-            AddPart(line, ListOf(Text(name), Text(" " + TimeOf(HeldAs(named, name)).text, Tone::Dim)));
-        }
-        if (line.empty()) line = ListOf(Text("Status Timers", Tone::Dim));
-        return line;
+        if (rank >= pins.size()) return {};
+        const std::string name = NameOf(pins[rank]);
+        return ListOf(Text(name), Text(" " + TimeOf(HeldAs(NamedAll(active), name)).text, Tone::Dim));
     }
 
     PopupContent StatusTimersPopup(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& favorites,
         const std::vector<uint16_t>& pins, size_t scrolled, bool refused)
     {
         PopupContent popup;
-        popup.title = ListOf(Text("Status Timers"));
+        popup.title     = ListOf(Text("Status Timers"));
+        popup.oneColumn = true;
+        if (refused)
+            popup.subtitle = ListOf(Colored(pins.size() >= kMostStatusPins ? "You can not pin more than 6 status effects"
+                                                                             : "Must have at least one status pinned.",
+                kErrorColor));
         const std::vector<Named> named = NamedAll(active);
         // Favorites: a pin, a star, the name and the time, matched by name as the panel's are.
         constexpr int kFavoriteColumns = 4, kListColumns = 3;
-        PopupSection top;
-        if (refused) top.rows.push_back(Line(Cell(Colored("Must have at least one status pinned.", kErrorColor))));
+        PopupSection top{"Favorites", {}};
         std::vector<std::string> favoriteNames;
         if (favorites.empty())
             top.rows.push_back(LineOf("Click a status's star to keep it here, then its pin to show it on the panel.", Tone::Dim));
