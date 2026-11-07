@@ -1201,6 +1201,8 @@ namespace headsup
             return popup;
         }
 
+        constexpr int kSupplyColumns = 3; // a region's name, then "Supply run available" and its flag
+
         // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
         // opens. Your nation's say which outposts you have not run supplies to, as far as overseers told.
         PopupSection ConquestSection(const BarState& state)
@@ -1223,21 +1225,37 @@ namespace headsup
                 bool unknown     = false;
                 PopupTab held{Colored(NationName(nation), NationColor(nation)), {}};
                 held.picture = NationCrest(nation);
+                std::vector<std::pair<uint8_t, std::optional<bool>>> regions; // each held, and whether you ran supplies there
                 for (int region = 0; region < kConquestRegionCount; ++region)
+                    if ((*state.owners)[region] == nation)
+                    {
+                        const auto r = static_cast<uint8_t>(region);
+                        regions.emplace_back(r, yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true));
+                        unknown = unknown || !regions.back().second;
+                    }
+                // While one has a supply run to make, every region is a line of a grid whose words and gray flag
+                // stand against the card's right, so they line up.
+                const bool runs = std::ranges::any_of(regions, [](const auto& region) { return region.second == false; });
+                for (const auto& [r, ran] : regions)
                 {
-                    if ((*state.owners)[region] != nation) continue;
-                    const auto r                  = static_cast<uint8_t>(region);
-                    const std::optional<bool> ran = yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true);
-                    unknown = unknown || !ran;
+                    if (!runs)
+                    {
+                        held.rows.push_back(LineOf(std::string(RegionName(r))));
+                        continue;
+                    }
+                    PopupRow row{RowKind::Grid, kSupplyColumns, {Cell(Text(std::string(RegionName(r))))}};
+                    row.trailing = true;
                     if (ran == false)
                     {
-                        PopupCell flag; // gray, after the name: no supply run there yet
+                        PopupCell said = Cell(Text("Supply run available"));
+                        said.align     = Align::Right;
+                        PopupCell flag;
                         flag.icon = Icon::Flag;
                         flag.tint = Text("", Tone::Dim);
-                        held.rows.push_back(PopupRow{RowKind::Line, 0, {Cell(Text(std::string(RegionName(r)))), std::move(flag)}});
+                        row.cells.push_back(std::move(said));
+                        row.cells.push_back(std::move(flag));
                     }
-                    else
-                        held.rows.push_back(LineOf(std::string(RegionName(r))));
+                    held.rows.push_back(std::move(row));
                 }
                 if (held.rows.empty()) held.rows.push_back(LineOf("None", Tone::Dim));
                 if (unknown)

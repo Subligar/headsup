@@ -2578,11 +2578,12 @@ TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
     state.outposts = &runs;
     std::vector<std::string> lines = TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings)));
     CHECK(lines.size() == 3 && lines[0] == "Gustaberg" && lines[2].find("overseer") != std::string::npos);
-    // Told by Bastok's overseer that Gustaberg's was run: Derfland is marked by a gray flag after its name, Gustaberg
-    // is not.
+    // Told by Bastok's overseer that Gustaberg's was run: Derfland says "Supply run available" in a column against
+    // the card's right, a gray flag after it; Gustaberg does not.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
-    const PopupSection told = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
-    CHECK((TabLines(told) == std::vector<std::string>{"Gustaberg", "Derfland"}));
+    const PopupContent popup = BarPopupContent(BarWidget::World, state, settings);
+    const PopupSection told  = ConquestCard(popup);
+    CHECK((TabLines(told) == std::vector<std::string>{"Gustaberg", "DerflandSupply run available"}));
     const std::vector<PopupRow>& rows = told.tabs.at(told.tab).rows;
     const auto flagged = [](const PopupRow& row) {
         return std::ranges::any_of(row.cells, [](const PopupCell& c) {
@@ -2590,7 +2591,27 @@ TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
         });
     };
     CHECK(!flagged(rows[0]) && flagged(rows[1]));
-    CHECK(rows[1].cells.back().icon == Icon::Flag); // after the name
+    CHECK(rows[1].cells.back().icon == Icon::Flag);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills);
+    const auto measure = [](const Span& span, PopupFont font) {
+        const float height = font == PopupFont::Title ? 24.0f : 18.0f;
+        return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
+    };
+    const PopupLayout l = LayoutPopup(popup, m, false, measure, 1000.0f);
+    const auto piece = [&](auto is) { return std::ranges::find_if(l.pieces, is); };
+    const auto name  = piece([](const PopupPiece& p) { return p.span.text == "Derfland"; });
+    const auto said  = piece([](const PopupPiece& p) { return p.span.text == "Supply run available"; });
+    const auto flag  = piece([](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Flag; });
+    const auto ran   = piece([](const PopupPiece& p) { return p.span.text == "Gustaberg"; });
+    CHECK(name != l.pieces.end() && said != l.pieces.end() && flag != l.pieces.end() && ran != l.pieces.end());
+    const auto socket = piece([](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Socket; });
+    CHECK(socket != l.pieces.end());
+    // On Derfland's line, the words after the name and the flag after them, ending as far in from the tab's right as
+    // the name starts from its left; Gustaberg lined up with it.
+    CHECK(said->x > name->x + name->width && flag->x >= said->x + said->width);
+    CHECK(std::fabs((socket->x + socket->width) - (flag->x + flag->width) - (name->x - socket->x)) < 0.5f);
+    CHECK(std::fabs((flag->y + flag->height / 2.0f) - (name->y + name->height / 2.0f)) < name->height / 2.0f);
+    CHECK_EQ(ran->x, name->x);
     // Another nation's regions are not yours to run supplies to.
     owners[0] = Nation::SanDoria;
     state.owners = owners;
