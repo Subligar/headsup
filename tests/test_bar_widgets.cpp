@@ -627,7 +627,7 @@ TEST(gil_bags_and_earth_time)
     const PopupContent bagsPopup = BarPopupContent(BarWidget::Bags, state, settings);
     CHECK(Joined(bagsPopup.title) == "Inventory");
     const PopupRow& rows         = bagsPopup.sections[0].rows[0];
-    CHECK(rows.kind == RowKind::Grid && rows.columns == 2 && rows.cells.size() == 6); // Storage too, with no room
+    CHECK(rows.kind == RowKind::Grid && rows.columns == 2 && rows.cells.size() == 6 && rows.roomy); // Storage too, with no room
     CHECK(Joined(rows.cells[2].text) == "Storage");
     CHECK(Joined(rows.cells[4].text) == "Mog Satchel");
     CHECK(rows.cells[5].text == (std::vector<Span>{{"30 / 30", Tone::Resist}}));

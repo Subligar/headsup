@@ -1894,6 +1894,7 @@ namespace headsup
         {
             popup.title   = ListOf(Text("Inventory"));
             PopupRow grid = Grid(kBagColumns, kBagColumns * kContainerCount);
+            grid.roomy    = true;
             for (const int c : BagChoices())
             {
                 // Storage shows before its furniture gives it room. The server gives Mog Safe 2 its room before the
