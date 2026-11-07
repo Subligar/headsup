@@ -23,7 +23,7 @@ namespace headsup
         BagCount, BagName, BagIcon,
         ClockTime, ClockServer, ClockVana, ClockIcon,
         JobJobs, JobEarned, JobToNext, JobPercent, JobBar,
-        PerfFps, PerfSent, PerfReceived, PerfPercent, PerfPing, PerfMemory, PerfMessages,
+        PerfFps, PerfSent, PerfReceived, PerfPercent, PerfMemory, PerfMessages,
         PartyCount, PartyHealth,
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,
         WorldShip, WorldGuild, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,

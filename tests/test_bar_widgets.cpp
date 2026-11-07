@@ -1117,7 +1117,6 @@ namespace
         ConnectionReport r;
         r.counters       = NetCounters{227, 175, 100};
         r.silence        = 0.3;
-        r.latency        = Latency{48.0, 40.0, 66.0};
         r.receivedBytes  = 35328.0;
         r.sentBytes      = 1258291.0;
         r.countedSeconds = 4320.0;
@@ -1486,7 +1485,7 @@ TEST(the_performance_widget_shows_the_games_rates_on_one_line_and_turns_amber_th
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S -  R -");
 }
 
-TEST(the_performance_popup_gives_the_rates_ping_last_data_and_session_totals)
+TEST(the_performance_popup_gives_the_rates_last_data_and_session_totals)
 {
     Settings settings;
     BarState state;
@@ -1494,9 +1493,9 @@ TEST(the_performance_popup_gives_the_rates_ping_last_data_and_session_totals)
     const PopupContent p = BarPopupContent(BarWidget::Performance, state, settings);
     CHECK(Joined(p.title) == "Performance" && p.sections.size() == 2 && p.sections[0].heading == "Connection");
     // Short lines only: no sentence on where S and R come from (the menu tip says it).
-    CHECK(Lines(p.sections[0]) == (std::vector<std::string>{"Sent 175 B/s", "Received 227 B/s", "Ping 48 ms",
-                                      "40 to 66 ms over recent pings", "Last Server Data 1s"})); // 0.3 s, rounded up
-    CHECK(p.sections[0].rows[4] == Labeled("Last Server Data", Text("1s")));
+    CHECK(Lines(p.sections[0]) ==
+          (std::vector<std::string>{"Sent 175 B/s", "Received 227 B/s", "Last Server Data 1s"})); // 0.3 s, rounded up
+    CHECK(p.sections[0].rows[2] == Labeled("Last Server Data", Text("1s")));
     CHECK(p.sections[1].heading == "This Session");
     CHECK(Lines(p.sections[1]) == (std::vector<std::string>{"Sent 1.2 MB", "Received 34.5 KB", "Over 1h 12m"}));
 }
@@ -1509,19 +1508,19 @@ TEST(the_performance_popup_colors_the_last_server_data_as_the_bar_and_names_the_
     state.connection->silence = 17.4;
     state.connection->counters->received = 0;
     PopupContent p            = BarPopupContent(BarWidget::Performance, state, settings);
-    CHECK(p.sections[0].rows[4] ==
+    CHECK(p.sections[0].rows[2] ==
           Line(Cell(ListOf(Colored("Last Server Data ", kWarningColor), Colored("18s", kWarningColor)))));
-    CHECK(p.sections[0].rows.size() == 5); // the meter is still full
+    CHECK(p.sections[0].rows.size() == 3); // the meter is still full
 
     state.connection->counters->health = 94;
     p = BarPopupContent(BarWidget::Performance, state, settings);
-    CHECK(p.sections[0].rows[4] ==
+    CHECK(p.sections[0].rows[2] ==
           Line(Cell(ListOf(Colored("Last Server Data ", kAlarmColor), Colored("18s", kAlarmColor)))));
     CHECK(Lines(p.sections[0]).back() == "The game's own meter is at 94%: it falls once 10 s pass without server data.");
 
     state.connection->zoning = true; // no color while zoning; the meter line stays while the meter is under 100
     p = BarPopupContent(BarWidget::Performance, state, settings);
-    CHECK(p.sections[0].rows[4] == Labeled("Last Server Data", Text("18s")) && p.sections[0].rows.size() == 6);
+    CHECK(p.sections[0].rows[2] == Labeled("Last Server Data", Text("18s")) && p.sections[0].rows.size() == 4);
 }
 
 TEST(the_party_widget_counts_members_and_shows_the_lowest_hp_and_mp_in_your_zone)
@@ -2020,18 +2019,10 @@ TEST(the_clocks_add_seconds_when_asked)
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "09:30:07");
 }
 
-TEST(the_performance_widget_adds_its_ping_when_asked)
+TEST(the_performance_widget_has_no_ping_to_offer)
 {
-    Settings settings;
-    BarState state;
-    state.connection = SteadyLink();
-    WidgetDesign& design = settings.Widget(BarWidget::Performance).design;
-    design               = DesignFrom(BarWidget::Performance, "sent received |");
-    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227");
-    design = DesignFrom(BarWidget::Performance, "sent received ping |");
-    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227  48 ms");
-    state.connection->latency.reset(); // not measured yet
-    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227");
+    const auto parts = PartsOf(BarWidget::Performance);
+    CHECK(std::ranges::none_of(parts, [](WidgetPart part) { return std::string(PartFileName(part)) == "ping"; }));
 }
 
 TEST(a_mobs_popup_lists_what_it_drops_at_its_treasure_hunter_0_chance_and_what_can_be_stolen)

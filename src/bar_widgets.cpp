@@ -841,7 +841,7 @@ namespace headsup
 
         // The parts of PerfPart that are the connection's.
         constexpr uint8_t kConnectionParts = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received) |
-                                             PerfBit(PerfPart::Percent) | PerfBit(PerfPart::Ping) |
+                                             PerfBit(PerfPart::Percent) |
                                              PerfBit(PerfPart::Messages);
 
         Span Mark(GamePicture picture) { return Span{"", Tone::Normal, 0, picture}; }
@@ -861,7 +861,7 @@ namespace headsup
 
         // Each PerfPart's widget part.
         constexpr WidgetPart kPerfWidgetParts[kPerfPartCount] = {WidgetPart::PerfFps, WidgetPart::PerfSent,
-            WidgetPart::PerfReceived, WidgetPart::PerfPercent, WidgetPart::PerfPing, WidgetPart::PerfMemory,
+            WidgetPart::PerfReceived, WidgetPart::PerfPercent, WidgetPart::PerfMemory,
             WidgetPart::PerfMessages};
 
         // The frame rate, each of the connection's figures and the memory.

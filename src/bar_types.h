@@ -57,7 +57,7 @@ namespace headsup
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
     // What the Performance widget shows on the panel, a bit each, in this order on its line.
-    enum class PerfPart : uint8_t { Fps, Sent, Received, Percent, Ping, Memory, Messages };
+    enum class PerfPart : uint8_t { Fps, Sent, Received, Percent, Memory, Messages };
     constexpr int kPerfPartCount = static_cast<int>(PerfPart::Messages) + 1;
     constexpr uint8_t PerfBit(PerfPart part) { return static_cast<uint8_t>(1u << static_cast<int>(part)); }
     constexpr uint8_t kDefaultPerfParts = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received) |

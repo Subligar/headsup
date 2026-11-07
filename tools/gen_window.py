@@ -211,7 +211,7 @@ PIECES = Pieces(
         'plate-mode': List(4), 'outline-mode': List(4, extra={3: 'tipOnClaimRows'}), 'color-source': List(7),
         'show-condition': List(13), 'ornament-place': List(5), 'align': List(3), 'font-style': List(3),
         'smoothness': List(4), 'bar-theme': List(6), 'bar-sections': List(3),
-        'bar-widgets': List(12), 'plate-lines': List(3), 'job-text': List(3), 'exp-bar-text': List(4), 'target-shows': List(5), 'widget-parts': List(53), 'custom-icons': List(3), 'icon-sides': List(3), 'blue-learned': List(2), 'detection-icons': List(8), 'tags': List(30),
+        'bar-widgets': List(12), 'plate-lines': List(3), 'job-text': List(3), 'exp-bar-text': List(4), 'target-shows': List(5), 'widget-parts': List(52), 'custom-icons': List(3), 'icon-sides': List(3), 'blue-learned': List(2), 'detection-icons': List(8), 'tags': List(30),
         'setup-theme': List(5), 'setup-mob-plates': List(4), 'setup-mob-design': List(3), 'setup-outlines': List(4),
         'setup-outline-thickness': List(3), 'setup-cursor': List(4), 'setup-players': List(2), 'setup-self': List(3),
         'setup-player-icons': List(3), 'setup-line-kinds': List(3), 'setup-npcs': List(2), 'setup-pets': List(3), 'setup-panel': List(4), 'setup-nameplates': List(3), 'setup-pointer': List(2),

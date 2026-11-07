@@ -58,19 +58,6 @@ namespace headsup
 
     void ConnectionMeter::Received(double now) { m_LastReceived = now; }
 
-    void ConnectionMeter::RoundTrip(double ms)
-    {
-        m_RoundTrips.push_back(ms);
-        if (m_RoundTrips.size() > kRoundTrips) m_RoundTrips.pop_front();
-        if (m_RoundTrips.size() < kLeastRoundTrips) return;
-        std::array<double, kRoundTrips> sorted{};
-        const size_t n = m_RoundTrips.size();
-        std::copy(m_RoundTrips.begin(), m_RoundTrips.end(), sorted.begin());
-        std::sort(sorted.begin(), sorted.begin() + static_cast<std::ptrdiff_t>(n));
-        const double median = n % 2 == 1 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0;
-        m_Latency           = Latency{median, sorted[0], sorted[n - 1]};
-    }
-
     void ConnectionMeter::Frame(double now, const std::optional<NetCounters>& counters)
     {
         const double held = m_LastFrame ? now - *m_LastFrame : 0.0;
@@ -90,7 +77,6 @@ namespace headsup
         r.counters = m_Counters;
         if (m_LastReceived) r.silence = now - *m_LastReceived;
         r.zoning = zoning;
-        r.latency = m_Latency;
         r.receivedBytes  = m_ReceivedBytes;
         r.sentBytes      = m_SentBytes;
         r.countedSeconds = m_CountedSeconds;
@@ -117,8 +103,6 @@ namespace headsup
             AddPart(line, ListOf(Text("R ", Tone::Dim), Figure(Rate(report->counters, &NetCounters::received), state)));
         if (has(PerfPart::Percent) && report->counters)
             AddPart(line, ListOf(Figure(Printed("%d%%", report->counters->health), state)));
-        if (has(PerfPart::Ping) && report->latency)
-            AddPart(line, ListOf(Text(Printed("%.0f ms", report->latency->medianMs), Tone::Dim)));
         if (has(PerfPart::Messages) && Waiting(report->playOnline))
         {
             std::vector<Span> waiting;
@@ -140,15 +124,6 @@ namespace headsup
         PopupSection now{"Connection", {}};
         now.rows.push_back(Labeled("Sent", Text(PerSecond(r.counters, &NetCounters::sent))));
         now.rows.push_back(Labeled("Received", Text(PerSecond(r.counters, &NetCounters::received))));
-        if (r.latency)
-        {
-            now.rows.push_back(Labeled("Ping", Text(Printed("%.0f ms", r.latency->medianMs))));
-            now.rows.push_back(LineOf(Printed("%.0f", r.latency->lowestMs) + " to " +
-                                          Printed("%.0f ms over recent pings", r.latency->highestMs),
-                Tone::Dim));
-        }
-        else
-            now.rows.push_back(Labeled("Ping", Text("-", Tone::Dim)));
         now.rows.push_back(LastData(r));
         if (r.counters && r.counters->health < kFullHealth)
             now.rows.push_back(LineOf("The game's own meter is at " + std::to_string(r.counters->health) +

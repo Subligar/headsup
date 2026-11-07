@@ -37,7 +37,6 @@
 #include "search_client.h"
 #include "guild_points.h"
 #include "item_picture.h"
-#include "server_ping.h"
 #include "web_get.h"
 #include "settings.h"
 #include "shot_watch.h"
@@ -351,14 +350,12 @@ class HeadsUp final : public IPlugin
     bool m_PlayOnlineTried = false; // it scans the client's code, so once
     std::optional<headsup::PlayOnlineCounts> m_PlayOnlineCounts; // read with the counters
     headsup::ConnectionMeter m_Connection;
-    headsup::ServerPing m_Ping;
     headsup::WebGet m_TurnInFetch;                 // Phoenix's site, for today's guild point turn-ins
     headsup::WebGet m_FeedbackPost;                // the Feedback page's, to the team's feedback service
     std::optional<headsup::GuildPatterns> m_TurnIns;
     std::optional<int64_t> m_TurnInsDay;           // the day in Japan they are for
     bool m_TurnInsRead = false, m_TurnInsFailed = false;
     double m_TurnInsRetry = 0.0;                   // the next fetch after one that got no answer
-    bool m_PingTried = false; // started once someone wants the ping
     headsup::FreeSpaceWalk m_SpaceWalk;
     headsup::CpuMeter m_Cpu;
     std::optional<uint64_t> m_Mapped; // the process's VirtualSize, read with the processor time
@@ -580,7 +577,6 @@ public:
         if (const std::string failure = m_WindowHook.Stop(); !failure.empty()) Print(failure + ".");
         if (const std::string failure = m_PointerFix.Stop(); !failure.empty()) Print(failure + ".");
         m_Pointer.Stop();
-        m_Ping.Stop();
         m_Fonts.Wait();
         m_Search.Stop();
         m_TurnInFetch.Stop();
@@ -809,8 +805,6 @@ public:
         m_DrawDump.SawPacket(id, data, size, Now());
 #endif
         if (!injected) m_Connection.Received(Now()); // an addon's injected packet never came from the server
-        if (id == headsup::kZoneOutPacket)
-            if (const std::optional<uint32_t> server = headsup::ParseZoneOutAddress(data, size)) m_Ping.SendingTo(*server);
         const headsup::PacketFollowUp next = m_GameState.Received(id, data, size);
         if (next.zonedIn)
         {
@@ -2757,14 +2751,6 @@ private:
                 m_PlayOnlineCounts = PlayOnlineNow();
                 m_CountersReadAt   = now;
             }
-            if (!m_PingTried)
-            {
-                m_PingTried = true;
-                if (const std::string failure = m_Ping.Start(); !failure.empty())
-                    Note("the ping is not measured, as HeadsUp " + failure + ".");
-            }
-            for (const double ms : m_Ping.TakeRoundTrips())
-                m_Connection.RoundTrip(ms);
             m_Connection.Frame(now, m_Counters);
             s.connection = m_Connection.Report(now, m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() != 0);
             s.connection->playOnline = m_PlayOnlineCounts;

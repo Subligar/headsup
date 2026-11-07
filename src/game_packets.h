@@ -13,7 +13,6 @@
 namespace headsup
 {
     constexpr uint16_t kZoneInPacket         = 0x00A; // server to client: entering a zone
-    constexpr uint16_t kZoneOutPacket        = 0x00B; // server to client: leaving it, for the next zone's server
     constexpr uint16_t kWeatherPacket        = 0x057; // server to client: the zone's weather changed
     constexpr uint16_t kSkillsPacket         = 0x062; // server to client: your skills, the crafts' ranks among them
     constexpr uint16_t kConquestPacket       = 0x05E; // server to client: the conquest standings
@@ -44,8 +43,6 @@ namespace headsup
     std::optional<Weather> ParseZoneInWeather(const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x00A: your server id (UniqueNo) at 0x04.
     std::optional<uint32_t> ParseZoneInPlayer(const uint8_t* data, uint32_t size);
-    // Phoenix's s2c 0x00B: the next zone's map server at 0x08, an IPv4 address as it goes on the wire; none for none.
-    std::optional<uint32_t> ParseZoneOutAddress(const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x00A: the zone's number (ZoneNo) at 0x30.
     std::optional<uint16_t> ParseZoneInZone(const uint8_t* data, uint32_t size);
     // A kTalkNumPacket's or kTalkNumWorkPacket's message number in the zone's dialog and whose it is (UniqueNo, at
