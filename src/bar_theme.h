@@ -29,6 +29,7 @@ namespace headsup
     constexpr int kBarBackgroundCount = static_cast<int>(BarBackground::Window) + 1;
     constexpr int kWindowTypes      = 8; // the game's, in Config > Windows > Shared
     constexpr int kFollowGameWindow = 0; // a Window Type setting's: the type the game is set to, where 1 to 8 pin one
+    constexpr uint32_t kVanillaPill = 0x32000000; // Vanilla's pills, art read or not: black at an alpha of 50 of 255
 
     // D3DCOLORs (ARGB); 0 is none.
     struct BarPalette

@@ -300,10 +300,13 @@ TEST(the_background_is_shaded_as_the_game_shades_it)
     CHECK_EQ(p.panelBottom & 0xFFFFFF, 0x8080FFu);
 }
 
-TEST(the_palette_is_the_window_shape_with_no_pills_and_no_glow)
+TEST(the_palette_is_the_window_shape_with_black_pills_at_50_alpha_and_no_glow)
 {
+    // The user's pick for Vanilla's Pill: 0, 0, 0 with an alpha of 50, art read or not.
+    constexpr uint32_t kBlackAt50 = 50u << 24;
     const BarPalette p = SkinPalette(Colored(0xFF1E2A6E, 0xFF888888));
-    CHECK(p.shape == BarShape::Window && p.pill == 0 && p.pillBorder == 0 && p.below == 0 && p.underLine == 0);
+    CHECK(p.shape == BarShape::Window && p.pill == kBlackAt50 && p.pillBorder == 0 && p.below == 0 && p.underLine == 0);
+    CHECK_EQ(PaletteOf(BarTheme::Vanilla).pill, kBlackAt50);
     CHECK(p.panelBorder == 0xFF888888u);
 }
 

@@ -80,6 +80,7 @@ namespace headsup
             p.shape      = BarShape::Window;
             p.background = BarBackground::Window;
             p.border     = kSkinEdge;
+            p.pill       = kVanillaPill;
             p.parent     = BarTheme::Vanilla;
             return p;
         }();

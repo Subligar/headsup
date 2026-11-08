@@ -275,7 +275,7 @@ namespace headsup
         const uint32_t accent = ArgbOf(t.accent), frame = ArgbOf(t.frame), text = ArgbOf(Mixed(t.text, t.accent, kTextTint));
         return BarPalette{.shape = BarShape::Window, .stripTop = ArgbOf(t.top), .stripMiddle = ArgbOf(t.middle),
             .stripBottom = ArgbOf(t.bottom), .bottomLine = frame, .underLine = 0, .below = 0, .accent = accent,
-            .accentEnd = Lighter(frame), .pill = 0, .pillBorder = 0, .title = ArgbOf(Mixed(t.text, t.accent, kTitleTint)),
+            .accentEnd = Lighter(frame), .pill = kVanillaPill, .pillBorder = 0, .title = ArgbOf(Mixed(t.text, t.accent, kTitleTint)),
             .subtitle = ArgbOf(Shade(t, kSubtitleChroma, kSubtitleLight)), .divider = ArgbOf(Shade(t, 1.0f, kDividerLight)),
             .panelTop = ArgbOf(t.top, kPanelAlpha), .panelBottom = ArgbOf(t.bottom, kPanelAlpha), .panelBorder = frame,
             .panelOuter = 0, .text = text, .heading = accent, .tagFill = WithAlpha(accent, kTagAlpha), .tagBorder = 0,
