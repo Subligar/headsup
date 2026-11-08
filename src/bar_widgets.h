@@ -31,7 +31,7 @@ namespace headsup
         uint32_t used = 0, max = 0;
     };
     constexpr uint32_t kInventory = 0, kGilSlot = 0; // gil is an item in the inventory's first slot
-    constexpr int kStorage = 2, kTemporaryItems = 3, kMogSafe2 = 9;
+    constexpr int kMogSafe = 1, kStorage = 2, kTemporaryItems = 3, kMogSafe2 = 9;
     // That slot's item read as gil: its count when the item is gil, nullopt for anything else there.
     std::optional<uint32_t> GilOf(uint16_t item, uint32_t count);
     // A container as Ashita counts it: nullopt for one the character has no room in (locked, or not bought).
@@ -39,9 +39,10 @@ namespace headsup
     // The container whose name, as the Bags popup gives it, the caption is: the game's caption for a bag list, or
     // "Items" for the inventory as that menu opens.
     std::optional<int> ContainerNamed(const std::string& caption);
-    // And the other way: a container's name, "Mog Satchel".
-    const char* ContainerName(int container);
-    // The containers the Bags widget lists and may show, in their order: every one but the temporary items.
+    // A container's name as the panel and the Bag dropdowns write it: the game's without "Mog", a number in brackets,
+    // "Wardrobe (3)".
+    std::string ContainerName(int container);
+    // The containers the Bags widget may show, in its dropdowns' order: every one but the temporary items.
     const std::vector<int>& BagChoices();
 
     // What the widgets show, gathered by the plugin each frame.

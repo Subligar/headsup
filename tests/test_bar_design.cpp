@@ -89,11 +89,11 @@ TEST(a_part_moves_within_and_across_lines)
 
 TEST(the_last_part_on_cannot_be_turned_off)
 {
-    WidgetDesign d = DesignFrom(BarWidget::Bags, "count | -bag");
-    CHECK(!TurnOff(d, WidgetPart::BagCount));
-    CHECK(PartOn(d, WidgetPart::BagCount));
+    WidgetDesign d = DesignFrom(BarWidget::Bags, "count1 | -name1");
+    CHECK(!TurnOff(d, WidgetPart::Bag1Count));
+    CHECK(PartOn(d, WidgetPart::Bag1Count));
     d = DefaultDesign(BarWidget::Bags);
-    CHECK(TurnOff(d, WidgetPart::BagName) && !PartOn(d, WidgetPart::BagName));
+    CHECK(TurnOff(d, WidgetPart::Bag1Name) && !PartOn(d, WidgetPart::Bag1Name));
 }
 
 namespace

@@ -21,7 +21,7 @@ namespace headsup
         WeatherIcon, WeatherName, VanaDate, VanaDay, VanaTime, VanaMoon,
         TargetAggro, TargetName, TargetDistance, TargetDetection, TargetLevel, TargetPlayer, TargetWeak,
         CurrencyCoin, Currency1Name, Currency2Name, Currency1Amount, Currency2Amount, Currency1Icon, Currency2Icon,
-        BagCount, BagName, BagIcon,
+        Bag1Count, Bag2Count, Bag1Name, Bag2Name, BagIcon,
         ClockTime, ClockServer, ClockVana, ClockIcon, ClockDate,
         JobJobs, JobEarned, JobToNext, JobPercent, JobBar,
         PerfFps, PerfSent, PerfReceived, PerfPercent, PerfMemory, PerfMessages,

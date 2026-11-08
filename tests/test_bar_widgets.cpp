@@ -2599,12 +2599,71 @@ TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)
     state.bags[5] = BagCount{12, 80}; // the satchel
     CHECK_EQ(Content(BarWidget::Bags, state, settings).title.front().text, "26 / 30");
     settings.Widget(BarWidget::Bags).bag = 5;
+    settings.Widget(BarWidget::Bags).design = DesignFrom(BarWidget::Bags, "count1 | name1");
     const WidgetContent satchel = Content(BarWidget::Bags, state, settings);
-    CHECK(satchel.title.front().text == "12 / 80" && satchel.subtitle.front().text == ContainerName(5));
+    CHECK(satchel.title.front().text == "12 / 80" && satchel.subtitle.front().text == "Satchel");
     CHECK_EQ(NeedsOf(settings, {}).containers, 6);
     // A bag the character has no room in reads as nothing yet.
     settings.Widget(BarWidget::Bags).bag = 6;
     CHECK_EQ(Content(BarWidget::Bags, state, settings).title.front().text, "-");
+}
+
+TEST(the_bags_widget_shows_two_bags_at_once_each_by_its_own_buttons)
+{
+    Settings settings;
+    BarState state;
+    state.bags[0]  = BagCount{26, 30};
+    state.bags[11] = BagCount{40, 80}; // the third wardrobe
+    WidgetOptions& o = settings.Widget(BarWidget::Bags);
+    o.bag            = 0;
+    o.secondBag      = 11;
+    o.design         = DesignFrom(BarWidget::Bags, "name1 count1 | name2 count2");
+    const WidgetContent both = Content(BarWidget::Bags, state, settings);
+    CHECK_EQ(Joined(both.title), "Inventory  26 / 30");
+    CHECK_EQ(Joined(both.subtitle), "Wardrobe (3)  40 / 80");
+    // The plugin counts the second bag only while its count shows.
+    CHECK_EQ(NeedsOf(settings, {}).containers, 12);
+    o.design = DesignFrom(BarWidget::Bags, "name1 count1 | name2 -count2");
+    CHECK_EQ(NeedsOf(settings, {}).containers, 1);
+    // A bag of its own each: the second picked alone moves nothing of the first.
+    o.design    = DesignFrom(BarWidget::Bags, "count2 | count1");
+    o.secondBag = 5;
+    const WidgetContent swapped = Content(BarWidget::Bags, state, settings);
+    CHECK(Joined(swapped.title) == "-" && Joined(swapped.subtitle) == "26 / 30");
+}
+
+TEST(a_bag_is_named_without_mog_and_its_number_in_brackets)
+{
+    CHECK_EQ(ContainerName(0), "Inventory");
+    CHECK_EQ(ContainerName(1), "Safe");
+    CHECK_EQ(ContainerName(2), "Storage");
+    CHECK_EQ(ContainerName(5), "Satchel");
+    CHECK_EQ(ContainerName(8), "Wardrobe");
+    CHECK_EQ(ContainerName(9), "Safe (2)");
+    CHECK_EQ(ContainerName(11), "Wardrobe (3)");
+    CHECK_EQ(ContainerName(16), "Wardrobe (8)");
+}
+
+TEST(the_bags_to_pick_start_with_the_inventory_storage_and_both_safes)
+{
+    // Then the rest in Ashita's order, the temporary items left out.
+    CHECK(BagChoices() == (std::vector<int>{0, 2, 1, 9, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16}));
+}
+
+TEST(the_bags_popup_lists_the_bags_in_ashitas_order_by_the_games_names)
+{
+    Settings settings;
+    BarState state;
+    for (int c = 0; c < kContainerCount; ++c)
+        state.bags[static_cast<size_t>(c)] = BagCount{1, 80};
+    std::vector<std::string> names;
+    for (const PopupSection& section : BarPopupContent(BarWidget::Bags, state, settings).sections)
+        for (const PopupRow& row : section.rows)
+            for (size_t i = 0; i < row.cells.size(); i += 2)
+                names.push_back(row.cells[i].text.front().text);
+    CHECK(names == (std::vector<std::string>{"Inventory", "Mog Safe", "Storage", "Mog Locker", "Mog Satchel", "Mog Sack",
+                       "Mog Case", "Mog Wardrobe", "Mog Safe 2", "Mog Wardrobe 2", "Mog Wardrobe 3", "Mog Wardrobe 4",
+                       "Mog Wardrobe 5", "Mog Wardrobe 6", "Mog Wardrobe 7", "Mog Wardrobe 8"}));
 }
 
 TEST(a_targeted_players_jobs_show_from_whatever_knows_them_unless_switched_off)

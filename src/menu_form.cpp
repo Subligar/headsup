@@ -840,15 +840,17 @@ namespace headsup
                             },
                             row.tip);
                     break;
-                case WidgetTabsRow::Bag:
+                case WidgetTabsRow::Bag1:
+                case WidgetTabsRow::Bag2:
                     if (kind == BarWidget::Bags)
                     {
+                        int& bag = static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::Bag1 ? o.bag : o.secondBag;
                         const std::vector<int>& bags = BagChoices();
-                        const auto at = std::ranges::find(bags, o.bag);
+                        const auto at = std::ranges::find(bags, bag);
                         int choice    = at != bags.end() ? static_cast<int>(at - bags.begin()) : 0;
                         form.NumberDropdown(label.c_str(), choice, 0, static_cast<int>(bags.size()) - 1,
-                            [&](int i) { return std::string(ContainerName(bags[static_cast<size_t>(i)])); }, row.tip);
-                        o.bag = bags[static_cast<size_t>(choice)];
+                            [&](int i) { return ContainerName(bags[static_cast<size_t>(i)]); }, row.tip);
+                        bag = bags[static_cast<size_t>(choice)];
                     }
                     break;
                 case WidgetTabsRow::LocalTimezone:

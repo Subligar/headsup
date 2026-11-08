@@ -235,6 +235,7 @@ namespace headsup
         constexpr const char* kBarCurrencyKey = "barCurrency";
         constexpr const char* kBarSecondCurrencyKey = "barCurrency2";
         constexpr const char* kBarBagKey      = "barBag";
+        constexpr const char* kBarSecondBagKey = "barBag2";
         constexpr const char* kWeatherIconsKey = "weatherIcons"; // the Forecast widget's, by kCustomIconsNames
         const char* const kCustomIconsNames[kCustomIconsCount] = {"never", "missing", "always"};
         constexpr const char* kWorldRouteKey    = "barWorldRoute";
@@ -1240,7 +1241,8 @@ namespace headsup
             w.design = Whole(WidgetInSlot(slot).kind, std::move(w.design));
             for (int WidgetOptions::* const which : {&WidgetOptions::currency, &WidgetOptions::secondCurrency})
                 if (w.*which < kYourConquestCurrency || w.*which >= kCurrencyCount) w.*which = fresh.*which;
-            if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
+            for (int WidgetOptions::* const which : {&WidgetOptions::bag, &WidgetOptions::secondBag})
+                if (w.*which < 0 || w.*which >= kContainerCount) w.*which = fresh.*which;
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
             if (static_cast<int>(w.weatherIcons) >= kCustomIconsCount) w.weatherIcons = fresh.weatherIcons;
             if (static_cast<int>(w.iconSide) >= kIconSideCount) w.iconSide = fresh.iconSide;
@@ -1313,7 +1315,10 @@ namespace headsup
                     else if (const std::optional<int> currency = CurrencyOfKey(held)) o.*which = *currency;
                 }
                 break;
-            case BarWidget::Bags: o.bag = number(kBarBagKey, o.bag); break;
+            case BarWidget::Bags:
+                o.bag       = number(kBarBagKey, o.bag);
+                o.secondBag = number(kBarSecondBagKey, o.secondBag);
+                break;
             case BarWidget::Weather:
                 o.weatherIcons = static_cast<CustomIcons>(
                     NameIndex(kCustomIconsNames, kCustomIconsCount, text(kWeatherIconsKey), static_cast<int>(o.weatherIcons)));
@@ -1400,7 +1405,10 @@ namespace headsup
                 for (const auto& [key, which] : {std::pair{kBarCurrencyKey, o.currency}, std::pair{kBarSecondCurrencyKey, o.secondCurrency}})
                     text(key, which == kYourConquestCurrency ? kYourConquestPoints : kCurrencyTable[which].key);
                 break;
-            case BarWidget::Bags: StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag)); break;
+            case BarWidget::Bags:
+                StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag));
+                StoreFloat(store, CopyKey(kBarSecondBagKey, w), static_cast<float>(o.secondBag));
+                break;
             case BarWidget::Weather: text(kWeatherIconsKey, kCustomIconsNames[static_cast<int>(o.weatherIcons)]); break;
             case BarWidget::World:
                 text(kWorldRouteKey, TravelRoutes()[static_cast<size_t>(o.worldRoute)].name);

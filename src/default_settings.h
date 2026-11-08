@@ -7,7 +7,7 @@ namespace headsup
     constexpr const char* kDefaultSettingsText = R"([settings]
 nameplateDesigns=true
 badgeFontName=Barlow Condensed
-barBagsDesign=count -bag |
+barBagsDesign=count1 -name1 -count2 -name2 |
 barBagsIcon=right
 barCenter=job
 barEarnedAlign=right

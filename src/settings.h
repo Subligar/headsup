@@ -61,7 +61,8 @@ namespace headsup
         WidgetDesign design; // what it shows on its two lines (NewWidget gives each kind its default)
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable, or kYourConquestCurrency
         int secondCurrency = kYourConquestCurrency; // its Currency 2 buttons', the same way
-        int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
+        int bag         = 0;                        // Bags: the container of its Bag 1 buttons, by Ashita's number
+        int secondBag   = kMogSatchel;              // its Bag 2 buttons', the same way
         CustomIcons weatherIcons = CustomIcons::Always; // Forecast: its weather pictures
         bool zoneId = true;                         // Zone: its number after its name in the pop-out's header
         bool memText = false;                       // Performance: "Mem" before its Memory button's figures

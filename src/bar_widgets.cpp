@@ -30,6 +30,7 @@ namespace headsup
             "Mog Locker", "Mog Satchel", "Mog Sack", "Mog Case", "Mog Wardrobe", "Mog Safe 2", "Mog Wardrobe 2",
             "Mog Wardrobe 3", "Mog Wardrobe 4", "Mog Wardrobe 5", "Mog Wardrobe 6", "Mog Wardrobe 7", "Mog Wardrobe 8"};
         constexpr const char* kItemsMenu = "Items";
+        constexpr std::string_view kMogWord = "Mog "; // the start of most bags' names, which the panel leaves out
         constexpr const char* kAnonymousJobs = "? ? ?"; // as the game writes an anonymous player's
         // The Mog House's own short captions for some of them, as the game's strip titles their lists.
         struct ShortCaption
@@ -1487,10 +1488,14 @@ namespace headsup
             case BarWidget::Currency: return CurrencyParts(state, o, base);
             case BarWidget::Bags:
             {
-                const std::optional<BagCount>& bag = state.bags[o.bag];
+                const auto count = [&](int c) {
+                    const std::optional<BagCount>& bag = state.bags[static_cast<size_t>(c)];
+                    return ListOf(bag ? BagFill(*bag) : Text("-"));
+                };
                 base.hasPopup = true;
-                return {{WidgetPart::BagIcon, ListOf(Mark(Icon::Bag))}, {WidgetPart::BagCount, ListOf(bag ? BagFill(*bag) : Text("-"))},
-                    {WidgetPart::BagName, ListOf(Text(ContainerName(o.bag)))}};
+                return {{WidgetPart::BagIcon, ListOf(Mark(Icon::Bag))}, {WidgetPart::Bag1Count, count(o.bag)},
+                    {WidgetPart::Bag2Count, count(o.secondBag)}, {WidgetPart::Bag1Name, ListOf(Text(ContainerName(o.bag)))},
+                    {WidgetPart::Bag2Name, ListOf(Text(ContainerName(o.secondBag)))}};
             }
             case BarWidget::EarthTime:
                 base.hasPopup = true;
@@ -1592,14 +1597,21 @@ namespace headsup
         return max > 0 ? std::optional<BagCount>(BagCount{used, max}) : std::nullopt;
     }
 
-    const char* ContainerName(int container) { return kContainerNames[std::clamp(container, 0, kContainerCount - 1)]; }
+    std::string ContainerName(int container)
+    {
+        std::string_view name = kContainerNames[std::clamp(container, 0, kContainerCount - 1)];
+        if (name.starts_with(kMogWord)) name.remove_prefix(kMogWord.size());
+        const size_t space = name.rfind(' ');
+        if (space == std::string_view::npos || !std::isdigit(static_cast<unsigned char>(name[space + 1]))) return std::string(name);
+        return std::string(name.substr(0, space)) + " (" + std::string(name.substr(space + 1)) + ")";
+    }
 
     const std::vector<int>& BagChoices()
     {
         static const std::vector<int> choices = [] {
-            std::vector<int> all;
+            std::vector<int> all{static_cast<int>(kInventory), kStorage, kMogSafe, kMogSafe2};
             for (int c = 0; c < kContainerCount; ++c)
-                if (c != kTemporaryItems) all.push_back(c);
+                if (c != kTemporaryItems && std::ranges::find(all, c) == all.end()) all.push_back(c);
             return all;
         }();
         return choices;
@@ -1760,8 +1772,10 @@ namespace headsup
         if (shown(BarWidget::Bags))
         {
             needs.containers = opened(BarWidget::Bags) ? kContainerCount : 1;
-            EachShownCopy(settings, BarWidget::Bags,
-                [&](const WidgetOptions& o) { needs.containers = std::max(needs.containers, o.bag + 1); });
+            EachShownCopy(settings, BarWidget::Bags, [&](const WidgetOptions& o) {
+                if (PartOn(o.design, WidgetPart::Bag1Count)) needs.containers = std::max(needs.containers, o.bag + 1);
+                if (PartOn(o.design, WidgetPart::Bag2Count)) needs.containers = std::max(needs.containers, o.secondBag + 1);
+            });
         }
         return needs;
     }
@@ -1972,8 +1986,9 @@ namespace headsup
             popup.title   = ListOf(Text("Inventory"));
             PopupRow grid = Grid(kBagColumns, kBagColumns * kContainerCount);
             grid.roomy    = true;
-            for (const int c : BagChoices())
+            for (int c = 0; c < kContainerCount; ++c)
             {
+                if (c == kTemporaryItems) continue;
                 // Storage shows before its furniture gives it room. The server gives Mog Safe 2 its room before the
                 // second floor is open: only what is in it says it can be used.
                 const std::optional<BagCount> bag = c == kStorage && !state.bags[c] ? std::optional(BagCount{}) : state.bags[c];

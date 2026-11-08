@@ -2925,15 +2925,27 @@ TEST(the_status_timers_display_starts_with_name_and_icon_and_is_kept_by_each_cop
     CHECK(LoadSettings(store).Widget(BarWidget::StatusTimers).statusDisplay == StatusDisplay::Both);
 }
 
-TEST(the_bags_widgets_bag_is_kept_and_one_past_the_last_reads_as_the_inventory)
+TEST(the_bags_widgets_two_bags_are_kept_and_one_past_the_last_reads_as_its_default)
 {
     Settings s;
-    s.Widget(BarWidget::Bags).bag = 5;
+    CHECK(s.Widget(BarWidget::Bags).bag == 0 && s.Widget(BarWidget::Bags).secondBag == 5); // the inventory and satchel
+    s.Widget(BarWidget::Bags).bag       = 8;
+    s.Widget(BarWidget::Bags).secondBag = 11;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(LoadSettings(store).Widget(BarWidget::Bags).bag, 5);
-    store.values["barBag"] = std::to_string(kContainerCount);
-    CHECK_EQ(LoadSettings(store).Widget(BarWidget::Bags).bag, 0);
+    CHECK(LoadSettings(store).Widget(BarWidget::Bags).bag == 8 && LoadSettings(store).Widget(BarWidget::Bags).secondBag == 11);
+    store.values["barBag"]  = std::to_string(kContainerCount);
+    store.values["barBag2"] = std::to_string(kContainerCount);
+    CHECK(LoadSettings(store).Widget(BarWidget::Bags).bag == 0 && LoadSettings(store).Widget(BarWidget::Bags).secondBag == 5);
+}
+
+TEST(a_new_installs_inventory_widget_shows_the_first_bags_count_alone)
+{
+    const WidgetDesign d = DefaultSettings().Widget(BarWidget::Bags).design;
+    CHECK(PartOn(d, WidgetPart::Bag1Count));
+    for (const WidgetPart off : {WidgetPart::Bag1Name, WidgetPart::Bag2Count, WidgetPart::Bag2Name})
+        CHECK(!PartOn(d, off));
+    CHECK_EQ(DefaultSettings().Widget(BarWidget::Bags).bag, 0);
 }
 
 TEST(the_world_info_widget_keeps_its_picks_by_name)

@@ -1996,6 +1996,22 @@ TEST(the_currency_dropdowns_show_each_currencys_picture_left_of_its_name_in_a_co
     CHECK_EQ(window.Said(), "");
 }
 
+TEST(the_inventorys_two_bag_dropdowns_each_pick_their_own_bag_in_the_lists_order)
+{
+    Window window;
+    window.Page("toppanel");
+    window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Bags)));
+    const WidgetOptions& o = window.settings.Widget(BarWidget::Bags);
+    const int second = o.secondBag;
+    window.Click("toppanel-widgets-bag-1-bags");
+    CHECK(window.Click("toppanel-widgets-bag-1-bags-o-1"));
+    CHECK(o.bag == kStorage && o.secondBag == second);
+    window.Click("toppanel-widgets-bag-2-bags");
+    CHECK(window.Click("toppanel-widgets-bag-2-bags-o-3"));
+    CHECK(o.bag == kStorage && o.secondBag == kMogSafe2);
+    CHECK_EQ(window.Said(), "");
+}
+
 TEST(the_window_opens_on_a_page_scrolled_to_one_of_its_cards)
 {
     Window window;

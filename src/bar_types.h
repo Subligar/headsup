@@ -63,6 +63,7 @@ namespace headsup
     constexpr uint8_t PerfBit(PerfPart part) { return static_cast<uint8_t>(1u << static_cast<int>(part)); }
     constexpr uint8_t kDefaultPerfParts = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received) |
                                           PerfBit(PerfPart::Percent) | PerfBit(PerfPart::Messages);
+    constexpr int kMogSatchel = 5; // Ashita's container number
     constexpr int kContainerCount = 17; // Ashita's containers 0 (inventory) to 16 (wardrobe 8), the bags a widget can show
 
     // A widget on the panel: which, and which of its copies. Copy 0 is the one every settings file has; the others are
