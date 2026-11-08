@@ -71,7 +71,7 @@ namespace headsup
             {"barHeight", &Settings::barHeight, kMinBarHeight, kMaxBarHeight},
             {"barIconScale", &Settings::barIconScale, kMinIconScale, kMaxIconScale, kPercentStep},
             {"barWidgetSpacing", &Settings::barWidgetSpacing, 0, kMaxWidgetSpacing},
-            {"barWidgetPadding", &Settings::barWidgetPadding, kThemePadding, kMaxWidgetPadding},
+            {"barWidgetPadding", &Settings::barWidgetPadding, 0, kMaxWidgetPadding},
             {"widgetRounding", &Settings::widgetRounding, kThemeRounding, kMaxRounding},
             {"popupRounding", &Settings::popupRounding, kThemeRounding, kMaxRounding},
             {"sectionRounding", &Settings::sectionRounding, kThemeRounding, kMaxRounding},

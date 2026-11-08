@@ -340,15 +340,6 @@ TEST(a_themes_own_corner_rounding_rounds_whatever_is_set_by_theme)
     CHECK(Near(PopupPanel(own).radius, 7.0f));
 }
 
-TEST(a_widget_is_padded_as_the_panel_says_or_as_the_theme_does)
-{
-    const BarMetrics m = MetricsFor(45, BarShape::Pills);
-    Settings s;
-    CHECK_EQ(WidgetPadding(m, s), m.padding); // the theme's
-    s.barWidgetPadding = 6;
-    CHECK_EQ(WidgetPadding(m, s), 6.0f);
-}
-
 TEST(the_help_bar_takes_its_set_width_text_size_and_height)
 {
     Settings settings;

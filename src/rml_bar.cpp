@@ -240,7 +240,8 @@ namespace headsup
             natural[i] = shown.natural;
         }
         const std::array<WidgetPads, kPanelSlots> pads =
-            PillPads(widgets.panel.placement, widgets.panel.group, natural, LinkedRoom(look.settings), WidgetPadding(m, look.settings));
+            PillPads(widgets.panel.placement, widgets.panel.group, natural, LinkedRoom(look.settings),
+                static_cast<float>(look.settings.barWidgetPadding));
         for (int i = 0; i < kPanelSlots; ++i)
         {
             m_Shown[i].pads = pads[static_cast<size_t>(i)];

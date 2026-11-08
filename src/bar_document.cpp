@@ -449,8 +449,9 @@ namespace headsup
     WidgetSide SideOf(const BarLook& look, PanelWidget widget, float room, bool shared)
     {
         if (shared) return WidgetSide{0.0f, room};
-        const bool plain = look.ornate && widget.kind != BarWidget::Target;
-        const float margin = plain ? DiamondClearance(look.metrics) : 0.0f;
+        const bool plain    = look.ornate && widget.kind != BarWidget::Target;
+        const bool diamonds = (look.settings.panelSeparators & SeparatorBit(Separator::Between)) != 0;
+        const float margin  = plain && diamonds ? DiamondClearance(look.metrics) : 0.0f;
         return WidgetSide{margin, std::max(0.0f, room - (plain ? margin : kBoxBorder))};
     }
 

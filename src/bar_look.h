@@ -60,8 +60,6 @@ namespace headsup
     MenuColors MenuColorsFrom(const BarPalette& palette);
     // The game's art as the settings draw it: without its border while Border is off.
     SkinFrame FrameAsSet(const Settings& settings, SkinFrame frame);
-    // The room from a widget's sides to what it shows: the panel's Widget Padding, which may be the theme's.
-    float WidgetPadding(const BarMetrics& metrics, const Settings& settings);
     // Whether a pill shows only while lit: the theme gives none of its widgets a box then and Show Widget Background
     // is off.
     bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head);

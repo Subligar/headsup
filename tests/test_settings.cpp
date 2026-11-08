@@ -2798,7 +2798,7 @@ TEST(the_panels_widget_spacing_and_padding_are_kept_and_held_to_their_range)
     store.values["barWidgetSpacing"] = "500";
     store.values["barWidgetPadding"] = "-9";
     const Settings held = LoadSettings(store);
-    CHECK(held.barWidgetSpacing == kMaxWidgetSpacing && held.barWidgetPadding == kThemePadding);
+    CHECK(held.barWidgetSpacing == kMaxWidgetSpacing && held.barWidgetPadding == 0);
 }
 
 TEST(the_target_widgets_detection_icons_and_visibility_are_kept_and_held_to_their_range)

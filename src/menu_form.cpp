@@ -1859,8 +1859,7 @@ namespace headsup
                 break;
             case SettingPiece::WidgetPadding:
                 form.Fade(!BarOn(s));
-                form.SliderInt(label.c_str(), s.barWidgetPadding, kThemePadding, kMaxWidgetPadding,
-                    PixelsOr(Word(c, WindowWord::Themes), kThemePadding), tip);
+                form.SliderInt(label.c_str(), s.barWidgetPadding, 0, kMaxWidgetPadding, Pixels, tip);
                 break;
             case SettingPiece::TextScale:
                 form.Fade(!BarOn(s));

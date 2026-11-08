@@ -136,11 +136,6 @@ namespace headsup
         return frame;
     }
 
-    float WidgetPadding(const BarMetrics& metrics, const Settings& settings)
-    {
-        return settings.barWidgetPadding == kThemePadding ? metrics.padding : static_cast<float>(settings.barWidgetPadding);
-    }
-
     bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head)
     {
         return !look.ornate && !look.settings.widgetBackground &&

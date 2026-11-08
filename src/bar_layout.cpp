@@ -31,22 +31,22 @@ namespace headsup
 
         constexpr float kDiamondGap = 2.0f; // pixels clear between a frame or hover tint and a divider's diamond
 
-        // Between neighbours in a section: `between`, and in ornate, where a diamond on the plain neighbour's edge
-        // divides them, the framed target's clear space from it.
+        // Between neighbours in a section: the Widget Spacing, with `between` more for a separator's diamond, and in
+        // ornate, where that diamond on the plain neighbour's edge divides them, the framed target's clear space from it.
         struct Spacing
         {
             float between = 0.0f, frameClear = 0.0f;
-            float room = 0.0f; // every widget's room more on each side
+            float room = 0.0f; // the Widget Spacing
             const std::array<PanelWidget, kPanelSlots>* groups = nullptr;
             bool Together(PanelWidget a, PanelWidget b) const { return (*groups)[SlotOf(a)] == (*groups)[SlotOf(b)]; }
             float Frame(PanelWidget w) const { return w.kind == BarWidget::Target ? frameClear : 0.0f; }
             // left is the one placed further left.
             float Apart(PanelWidget left, PanelWidget right) const
             {
-                return Together(left, right) ? 0.0f : between + Frame(left) + Frame(right) + 2.0f * room;
+                return Together(left, right) ? 0.0f : between + Frame(left) + Frame(right) + room;
             }
             // From a's edge: the middle of what is between them, but for a's frame's clear space.
-            float Middle(PanelWidget a) const { return Frame(a) + between / 2.0f + room; }
+            float Middle(PanelWidget a) const { return Frame(a) + (between + room) / 2.0f; }
         };
 
         struct Group
@@ -126,10 +126,10 @@ namespace headsup
     {
         const bool ornate   = shape == BarShape::Ornate;
         const bool diamonds = (separators & SeparatorBit(Separator::Between)) != 0;
-        // Ornate neighbours abut, a diamond on their boundary, the tints keeping clear of it. Pills sit a gap apart; a
-        // diamond between them takes its width and a gap on either side.
-        const float pillGap = diamonds ? 2.0f * m.gap + static_cast<float>(WholePixels(m.diamond)) : m.gap;
-        const Spacing apart{.between = ornate ? 0.0f : pillGap, .frameClear = ornate ? DiamondClearance(m) : 0.0f, .room = spacing,
+        // Neighbours are the Widget Spacing apart. A diamond between them takes its clear space more: ornate's sits on
+        // the plain neighbour's edge, inside its margin (SideOf), the framed target keeping clear of it.
+        const float clear = diamonds ? DiamondClearance(m) : 0.0f;
+        const Spacing apart{.between = ornate ? 0.0f : 2.0f * clear, .frameClear = ornate ? clear : 0.0f, .room = spacing,
             .groups = &groups};
         const bool caps     = (separators & SeparatorBit(Separator::EndCaps)) != 0;
         const float edge    = caps ? m.cap : m.gap; // between a section and the screen's edge

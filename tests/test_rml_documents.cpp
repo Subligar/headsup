@@ -561,6 +561,50 @@ TEST(a_widgets_alignment_puts_its_content_and_its_lines_against_that_side_whatev
     }
 }
 
+TEST(two_neighbouring_widgets_are_drawn_the_widget_spacing_apart_in_every_shape)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    constexpr int kSpacing = 2;
+    Settings settings;
+    settings.panelSeparators  = 0;
+    settings.barWidgetSpacing = kSpacing;
+    const BarPlacement left{std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather}, {}, {}};
+    std::array<float, kPanelSlots> natural{};
+    natural[SlotOf(BarWidget::Zone)]    = 100.0f;
+    natural[SlotOf(BarWidget::Weather)] = 80.0f;
+    for (const BarTheme theme : {BarTheme::UmbraDark, BarTheme::Aurora, BarTheme::Vanilla, BarTheme::PhoenixGold})
+    {
+        test::RmlSession rml;
+        const BarLook look        = LookOf(PaletteOf(theme), settings);
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        bar->Show();
+        const BarLayout layout = LayoutBar(1920.0f, look.metrics, look.palette.shape, natural, 0.0f, left,
+            settings.panelSeparators, static_cast<float>(kSpacing), AloneGroups());
+        // Placed as the bar places them.
+        const auto show = [&](BarWidget kind) {
+            Rml::Element* e = bar->GetElementById(WidgetId(kind));
+            e->SetClass(kHiddenClass, false);
+            const BarRect& rect = *RectOf(layout, kind);
+            const float padding = static_cast<float>(settings.barWidgetPadding);
+            const WidgetSide side = SideOf(look, kind, padding, false);
+            e->SetProperty(Rml::PropertyId::Left, Rml::Property(rect.x, Rml::Unit::PX));
+            e->SetProperty(Rml::PropertyId::Width, Rml::Property(rect.width - 2.0f * side.margin, Rml::Unit::PX));
+            for (const Rml::PropertyId id : {Rml::PropertyId::MarginLeft, Rml::PropertyId::MarginRight})
+                e->SetProperty(id, Rml::Property(side.margin, Rml::Unit::PX));
+            for (const Rml::PropertyId id : {Rml::PropertyId::PaddingLeft, Rml::PropertyId::PaddingRight})
+                e->SetProperty(id, Rml::Property(side.padding, Rml::Unit::PX));
+            return e;
+        };
+        Rml::Element* zone = show(BarWidget::Zone);
+        Rml::Element* weather = show(BarWidget::Weather);
+        rml.context->Update();
+        const float zoneRight = LeftOf(zone) + zone->GetBox().GetSize(Rml::BoxArea::Border).x;
+        CHECK(std::fabs(LeftOf(weather) - zoneRight - static_cast<float>(kSpacing)) < 0.01f);
+        CHECK_EQ(rml.Said(), "");
+    }
+}
+
 TEST(an_adjusted_icon_draws_moved_or_sized_in_its_own_room_in_the_bar_and_the_pop_outs)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},

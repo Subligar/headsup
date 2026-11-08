@@ -29,14 +29,15 @@ namespace
     int ShapeSeparators(BarShape shape) { return shape == BarShape::Ornate ? kAllSeparators : 0; }
     constexpr int kBetween = SeparatorBit(Separator::Between), kCaps = SeparatorBit(Separator::EndCaps);
 
-    // LayoutBar on the default panel, each widget in a pill of its own, unless the test says otherwise.
+    // LayoutBar on the default panel, each widget in a pill of its own, unless the test says otherwise; its Widget
+    // Spacing a pills gap, ornate's none.
     BarLayout Layout(float screenWidth, const BarMetrics& metrics, BarShape shape,
         const std::array<float, kPanelSlots>& natural, float targetMinimum,
         const BarPlacement& placement = DefaultPlacement(), std::optional<int> separators = std::nullopt,
-        float spacing = 0.0f, const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups())
+        std::optional<float> spacing = std::nullopt, const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups())
     {
         return LayoutBar(screenWidth, metrics, shape, natural, targetMinimum, placement,
-            separators.value_or(ShapeSeparators(shape)), spacing, groups);
+            separators.value_or(ShapeSeparators(shape)), spacing.value_or(shape == BarShape::Ornate ? 0.0f : metrics.gap), groups);
     }
 
     std::array<float, kPanelSlots> Widths(float zone, float weather, float vana, float target, float gil,
@@ -1432,17 +1433,19 @@ TEST(end_caps_take_the_room_between_the_panels_edges_and_its_sections)
 
 TEST(pills_with_diamonds_center_one_in_a_wider_gap_between_neighbours_of_a_section)
 {
-    const float g = kPills.gap, d = static_cast<float>(WholePixels(kPills.diamond));
+    // The spacing, the diamond and 2 px clear either side of it.
+    const float s = kPills.gap, d = static_cast<float>(WholePixels(kPills.diamond)), clear = 2.0f;
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f,
-        DefaultPlacement(), kBetween);
+        DefaultPlacement(), kBetween, s);
     const BarRect& zone = *RectOf(l, BarWidget::Zone);
     const BarRect& weather = *RectOf(l, BarWidget::Weather);
-    CHECK(Near(weather.x, zone.x + zone.width + g + d + g)); // a gap, the diamond, a gap
-    CHECK(l.dividers.size() == 4);                          // two on the left, two on the right, none by the target
-    CHECK(Near(l.dividers[0], zone.x + zone.width + g + d / 2.0f));
-    for (const float dx : l.dividers) // every diamond keeps a gap from both pills beside it
+    CHECK(Near(weather.x, zone.x + zone.width + s + d + 2.0f * clear));
+    CHECK(l.dividers.size() == 4); // two on the left, two on the right, none by the target
+    CHECK(Near(l.dividers[0], zone.x + zone.width + (s + d) / 2.0f + clear));
+    for (const float dx : l.dividers) // every diamond keeps half the spacing and its clear space from both pills
         for (const PlacedWidget& p : l.widgets)
-            CHECK(dx + d / 2.0f + g <= p.rect.x + 0.01f || p.rect.x + p.rect.width + g <= dx - d / 2.0f + 0.01f);
+            CHECK(dx + d / 2.0f + clear + s / 2.0f <= p.rect.x + 0.01f ||
+                  p.rect.x + p.rect.width + clear + s / 2.0f <= dx - d / 2.0f + 0.01f);
     CHECK(Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f).dividers.empty());
 }
 
@@ -1498,21 +1501,21 @@ TEST(each_copy_of_a_widget_takes_a_place_of_its_own)
     CHECK(Near(second->width, 70.0f) && Near(second->x, first->x + first->width + kPills.gap)); // right after it
 }
 
-TEST(widget_spacing_adds_room_between_every_widget_and_each_neighbour)
+TEST(widget_spacing_adds_its_room_once_between_every_widget_and_its_neighbour)
 {
     const std::array<float, kPanelSlots> natural = Widths(100, 80, 120, 200, 90, 60, 50);
     for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
     {
-        const BarLayout plain = Layout(1920.0f, metrics, shape, natural, 0.0f);
+        const BarLayout plain = Layout(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), std::nullopt, 0.0f);
         const BarLayout spaced = Layout(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), std::nullopt, 5.0f);
         CHECK(Near(RectOf(spaced, BarWidget::Zone)->x, RectOf(plain, BarWidget::Zone)->x));
-        CHECK(Near(RectOf(spaced, BarWidget::Weather)->x, RectOf(plain, BarWidget::Weather)->x + 10.0f));
-        CHECK(Near(RectOf(spaced, BarWidget::Job)->x, RectOf(plain, BarWidget::Job)->x + 20.0f));
+        CHECK(Near(RectOf(spaced, BarWidget::Weather)->x, RectOf(plain, BarWidget::Weather)->x + 5.0f));
+        CHECK(Near(RectOf(spaced, BarWidget::Job)->x, RectOf(plain, BarWidget::Job)->x + 10.0f));
         // An ornate divider stands in the middle of the room it is in.
         if (shape == BarShape::Ornate)
         {
             const BarRect& zone = *RectOf(spaced, BarWidget::Zone);
-            CHECK(Near(spaced.dividers[0], zone.x + zone.width + 5.0f));
+            CHECK(Near(spaced.dividers[0], zone.x + zone.width + 2.5f));
         }
     }
 }
@@ -1685,4 +1688,30 @@ TEST(a_widget_lights_under_the_pointer_whether_or_not_it_has_a_popup)
     input.Pin(BarWidget::Target);
     input.Leave();
     CHECK(lit(BarWidget::Zone) && !lit(BarWidget::Target) && !lit(BarWidget::Settings));
+}
+
+TEST(neighbours_are_the_widget_spacing_apart_and_a_separator_between_them_adds_its_diamonds_room)
+{
+    const auto left = Sections({BarWidget::Zone, BarWidget::Weather, BarWidget::Target}, {}, {});
+    std::array<float, kPanelSlots> natural{};
+    natural[SlotOf(BarWidget::Zone)]    = 100.0f;
+    natural[SlotOf(BarWidget::Weather)] = 80.0f;
+    natural[SlotOf(BarWidget::Target)]  = 200.0f;
+    constexpr float kSpacing = 2.0f;
+    for (const BarShape shape : {BarShape::Pills, BarShape::Glass, BarShape::Window, BarShape::Ornate})
+    {
+        const BarMetrics m = MetricsFor(36, shape);
+        const BarLayout l  = Layout(1920.0f, m, shape, natural, 0.0f, left, 0, kSpacing);
+        const BarRect &zone = *RectOf(l, BarWidget::Zone), &weather = *RectOf(l, BarWidget::Weather),
+                      &target = *RectOf(l, BarWidget::Target);
+        CHECK(Near(weather.x - (zone.x + zone.width), kSpacing) && Near(target.x - (weather.x + weather.width), kSpacing));
+        // Ornate's diamond room is in its plain widgets' margins (SideOf).
+        if (shape == BarShape::Ornate) continue;
+        // A diamond drawn WholePixels(diamond) wide, 2 px clear of what is beside it, sits in the middle of the gap.
+        const float diamond = static_cast<float>(WholePixels(m.diamond)) + 2.0f * 2.0f;
+        const BarLayout d   = Layout(1920.0f, m, shape, natural, 0.0f, left, kBetween, kSpacing);
+        const BarRect &dz = *RectOf(d, BarWidget::Zone), &dw = *RectOf(d, BarWidget::Weather);
+        CHECK(Near(dw.x - (dz.x + dz.width), kSpacing + diamond));
+        CHECK(d.dividers.size() == 2 && Near(d.dividers[0], (dz.x + dz.width + dw.x) / 2.0f));
+    }
 }

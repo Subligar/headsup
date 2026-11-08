@@ -201,7 +201,7 @@
               ]
             },
             {"key": "height", "name": "Panel Height", "tip": "How tall the top panel is. The text and icons of every widget grow and shrink with it."},
-            {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Default: 2 px."},
+            {"key": "widget-spacing", "name": "Widget Spacing", "tip": "The space between every widget and the widgets beside it. A separator between them adds its own room. Default: 2 px."},
             {"key": "hide-readout", "name": "Hide Server Info", "tip": "The game's S, R and % numbers at the top right."},
             {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
           ]

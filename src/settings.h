@@ -42,8 +42,8 @@ namespace headsup
     constexpr const char* kBadgeFont   = kBarlowCondensed; // what badges were set in before they took the default font
     constexpr size_t kMaxFontName      = 31; // a Windows font name's longest, without its terminator
 
-    constexpr int kMaxWidgetSpacing = 40; // pixels
-    constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
+    constexpr int kDefaultWidgetSpacing = 2, kMaxWidgetSpacing = 40; // pixels
+    constexpr int kDefaultWidgetPadding = 8, kMaxWidgetPadding = 40; // pixels
     constexpr int kThemeRounding = -1; // a corner's radius in pixels up to kMaxRounding, or the theme's own
     // Where the Zone widget shows who holds its region: not at all, before or after the zone's name, or under it.
     // The Target widget's Visibility: the targets it shows for.
@@ -173,8 +173,8 @@ namespace headsup
         int barIconScale   = kDefaultIconScale; // its icons, in percent of the most it holds
         std::string barTitleFont; // widget titles and popup headings; empty for the theme's
         std::string barTextFont;  // details, figures and popup text; empty for the theme's
-        int barWidgetSpacing = 0;             // every widget's, unless it has its own
-        int barWidgetPadding = kThemePadding; // likewise
+        int barWidgetSpacing = kDefaultWidgetSpacing; // between neighbouring widgets
+        int barWidgetPadding = kDefaultWidgetPadding; // inside every widget, from its edges to its content
         float popupTextScale   = kDefaultPopupScale; // the pop-outs' text sizes, times their own
         float popupWidthScale  = kDefaultPopupScale; // each pop-out's sections, and so the pop-out, this much wider
         float popupHeightScale = kDefaultPopupScale; // and taller
