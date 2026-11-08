@@ -728,7 +728,7 @@
         }
       ]
     },
-    {"key": "credits", "name": "Credits", "description": "Thanks to atom0s and the Ashita team for Ashita, which HeadsUp runs on.\nThanks to the XIUI team for XIUI. HeadsUp's HD status icons, buff and debuff backgrounds, nameplate icons, gil icon and list of debuffs come from it.\nThanks to Tesouou on FFXIAH for the Tetsouou status icons.\nThanks to KenshiDRK for XI View 2.0's status icons, carrying on Brandson's UI and Darkshade's XI View."}
+    {"key": "credits", "name": "Credits", "description": "- Thanks to atom0s and the Ashita team for Ashita, which HeadsUp runs on.\n- Thanks to the XIUI team for XIUI. HeadsUp's HD status icons, buff and debuff backgrounds, nameplate icons, gil icon and list of debuffs come from it.\n- Thanks to Tesouou on FFXIAH for the Tetsouou status icons.\n- Thanks to KenshiDRK for XI View 2.0's status icons, carrying on Brandson's UI and Darkshade's XI View."}
   ],
   "entity": {
     "cards": [

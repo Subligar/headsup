@@ -203,6 +203,7 @@ namespace headsup
         css += ".note{color:" + color(c.muted) + ";margin-bottom:" + Em(kSpacing) + ";}";
         // A description's bullet point hangs its dot in the room left of its text, so a long one wraps under itself.
         css += ".note .bullet{position:relative;padding-left:" + Em(kBulletIndent) + ";margin-top:0.2em;}";
+        css += std::string(".") + kPageNoteClass + " .bullet{margin-top:" + Em(kPageBulletGap) + ";}";
         css += ".note .bullet .dot{position:absolute;left:" + Em(kBulletIndent / 3.0f) + ";top:0px;}";
         css += std::string(".") + kSetupPreviewClass + "{display:block;width:" + Em(kPreviewWide) + ";height:" + Em(kPreviewTall) +
                ";margin:0px auto " + Em(kSpacing) + " auto;}";

@@ -38,6 +38,7 @@ namespace headsup
     constexpr float kChipLine       = 1.5f;  // each line of a tray's widget chip
     constexpr float kChipLinePad    = 0.25f; // above and below its lines
     constexpr float kBulletIndent   = 1.2f; // a description's bullet point: its text from the card's edge
+    constexpr float kPageBulletGap  = 0.8f; // above each of a page's own bullet points, which stand apart
     constexpr float kTabHeight      = 2.0f;
     constexpr float kTabRule        = 0.12f; // the line a strip of tabs stands on
     constexpr float kTabGap         = 0.12f; // between two tabs, and two rows of them: a couple of pixels

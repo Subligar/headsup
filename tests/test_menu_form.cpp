@@ -106,10 +106,14 @@ TEST(the_credits_page_comes_after_feedback_and_shows_its_words_with_no_cards)
     CHECK(words.find('\n') != std::string_view::npos);
     CHECK_EQ(form.blocks.size(), 2u);
     CHECK(form.blocks[1].bare);
+    // Each thanks is a bullet point.
     for (size_t start = 0; start <= words.size();)
     {
-        const size_t end = std::min(words.find('\n', start), words.size());
-        CHECK(Has(form.blocks[1].rml, ("<div>" + std::string(words.substr(start, end - start)) + "</div>").c_str()));
+        const size_t end           = std::min(words.find('\n', start), words.size());
+        const std::string_view one = words.substr(start, end - start);
+        CHECK(one.starts_with("- "));
+        CHECK(Has(form.blocks[1].rml,
+            ("<div class=\"bullet\"><span class=\"dot\">•</span>" + std::string(one.substr(2)) + "</div>").c_str()));
         start = end + 1;
     }
 }
