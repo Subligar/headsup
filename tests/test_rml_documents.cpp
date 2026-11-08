@@ -439,7 +439,9 @@ TEST(a_pop_outs_title_card_heading_and_text_draw_at_18_16_and_14_px_and_a_headin
     }
 }
 
-TEST(the_settings_window_draws_over_the_lower_popups_and_its_settings_view_and_upper_popups_over_it)
+// Where they all overlap, what the pointer finds on top is what is drawn on top. The card: a popup's settings, opened
+// before the window, drew over the window while the rest of that popup was under it.
+TEST(the_settings_window_draws_over_a_popup_and_its_settings_opened_before_it_and_under_those_after)
 {
     test::RmlSession rml;
     Settings settings;
@@ -447,15 +449,40 @@ TEST(the_settings_window_draws_over_the_lower_popups_and_its_settings_view_and_u
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
         PopupFace{"Barlow Condensed", 16, 19}, PopupFace{"Barlow Condensed", 16, 19}};
     const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt};
-    Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
-    Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
-    Rml::ElementDocument* view   = rml.context->LoadDocumentFromMemory(MenuViewDocument(menu), "view");
-    CHECK(popups != nullptr && window != nullptr && view != nullptr);
-    for (Rml::ElementDocument* d : {popups, window, view})
+    // Each popup document as the bar makes it, a popup at the top left, and the settings view and window there too.
+    const auto popups = [&](std::optional<int> z) {
+        Rml::ElementDocument* d = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
+        if (z) d->SetProperty(Rml::PropertyId::ZIndex, Rml::Property(static_cast<float>(*z), Rml::Unit::NUMBER));
+        Rml::Element* popup = d->AppendChild(d->CreateElement("div"));
+        popup->SetClass(kPopupClass, true);
+        // The bar takes the pointer over popups, not RmlUi: found here only to see which is on top.
+        popup->SetAttribute("style", "left:0px;top:0px;width:200px;height:200px;pointer-events:auto;");
         d->Show();
-    rml.context->Update();
-    const auto z = [](Rml::ElementDocument* d) { return d->GetComputedValues().z_index().value; };
-    CHECK(z(popups) < z(window) && z(window) < z(view));
+        return popup;
+    };
+    const auto shown = [&](Rml::ElementDocument* d) {
+        d->SetProperty(Rml::PropertyId::Left, Rml::Property(0.0f, Rml::Unit::PX));
+        d->SetProperty(Rml::PropertyId::Top, Rml::Property(0.0f, Rml::Unit::PX));
+        d->Show();
+    };
+    const auto top = [&] {
+        rml.context->Update();
+        Rml::Element* hit = rml.context->GetElementAtPoint(Rml::Vector2f(100.0f, 100.0f));
+        return hit == nullptr ? nullptr : hit->GetOwnerDocument();
+    };
+    Rml::Element* under = popups(std::nullopt);
+    Rml::ElementDocument* view = rml.context->LoadDocumentFromMemory(MenuViewDocument(menu), "view");
+    view->GetElementById(kMenuViewBodyId)->SetAttribute("style", "width:200px;height:200px;");
+    shown(view);
+    CHECK(top() == view); // the settings over their popup
+    Rml::Element* overSettings = popups(kPopupsOverSettingsZ);
+    CHECK(top() == overSettings->GetOwnerDocument()); // a popup shown after it over both
+    Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
+    shown(window);
+    CHECK(top() == window);
+    CHECK(top() != under->GetOwnerDocument());
+    Rml::Element* overMenu = popups(kPopupsOverMenuZ);
+    CHECK(top() == overMenu->GetOwnerDocument()); // one come out after the window opened
 }
 
 TEST(a_widgets_alignment_puts_its_content_and_its_lines_against_that_side_whatever_its_section)

@@ -22,7 +22,6 @@ namespace headsup
         constexpr const char* kCapital = "H"; // its ink is a font's capitals'
         constexpr const char* kDocumentName      = "top panel";
         constexpr const char* kPopupDocumentName = "top panel popup";
-        constexpr int kOverSettings = 10; // the upper popups' document, over the settings view's
 
         void Set(Rml::Element* element, Rml::PropertyId property, std::optional<float>& was, float value)
         {
@@ -397,8 +396,10 @@ namespace headsup
             }
             document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
         }
-        m_PopupDocuments[1]->SetProperty(Rml::PropertyId::ZIndex,
-            Rml::Property(static_cast<float>(kMenuViewZ + kOverSettings), Rml::Unit::NUMBER));
+        m_PopupDocuments[static_cast<size_t>(PopupLayer::OverSettings)]->SetProperty(Rml::PropertyId::ZIndex,
+            Rml::Property(static_cast<float>(kPopupsOverSettingsZ), Rml::Unit::NUMBER));
+        m_PopupDocuments[static_cast<size_t>(PopupLayer::OverMenu)]->SetProperty(Rml::PropertyId::ZIndex,
+            Rml::Property(static_cast<float>(kPopupsOverMenuZ), Rml::Unit::NUMBER));
         m_PopupDocumentText = std::move(text);
         return true;
     }
@@ -410,11 +411,10 @@ namespace headsup
         std::vector<PopupPlace> places;
         std::array<bool, kPanelSlots> shown{};
         const std::vector<PanelWidget> order = input.Shown();
-        const std::vector<bool> over         = OverSettings(order, input.SettingsShown());
+        const std::vector<PopupLayer> layers = input.Layers();
         for (size_t i = 0; i < order.size(); ++i)
             if (std::optional<PopupPlace> place =
-                    ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, order[i],
-                        over[i] || (input.OverMenu(order[i]) && input.SettingsShown() != order[i])))
+                    ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, order[i], layers[i]))
             {
                 const PanelWidget pill = order[i];
                 shown[SlotOf(pill)] = true;
@@ -440,21 +440,21 @@ namespace headsup
 
     std::optional<PopupPlace> RmlBar::ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
         const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden, PanelWidget open,
-        bool over)
+        PopupLayer layer)
     {
         const std::optional<BarRect> anchor = GroupRect(layout, open);
         if (!anchor || !PopupDocumentFor(host, look)) return std::nullopt;
         Popup& popup = m_Popups[SlotOf(open)];
-        Rml::Element*& element = popup.elements[over ? 1 : 0];
+        Rml::Element*& element = popup.elements[static_cast<size_t>(layer)];
         if (element == nullptr)
         {
-            Rml::ElementDocument* document = m_PopupDocuments[over ? 1 : 0];
+            Rml::ElementDocument* document = m_PopupDocuments[static_cast<size_t>(layer)];
             element = document->AppendChild(document->CreateElement("div"));
             element->SetClass(kPopupClass, true);
         }
         if (popup.element != element)
         {
-            // Moved over or under the settings: drawn anew in the other document.
+            // Moved over or under the settings or the window: drawn anew in that document.
             if (popup.element != nullptr)
             {
                 popup.element->SetClass(kHiddenClass, true);

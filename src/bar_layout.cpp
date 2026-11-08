@@ -374,18 +374,6 @@ namespace headsup
         return BarRect{x, y, width, std::max(0.0f, std::min(height, PopupRoom(barHeight, screenHeight, gap, ring)))};
     }
 
-    std::vector<bool> OverSettings(const std::vector<PanelWidget>& shown, std::optional<PanelWidget> settings)
-    {
-        std::vector<bool> over;
-        bool past = false;
-        for (const PanelWidget pill : shown)
-        {
-            over.push_back(past);
-            past = past || pill == settings;
-        }
-        return over;
-    }
-
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight)
     {
         const bool right = popup.x + popup.width / 2.0f > screenWidth / 2.0f;
@@ -474,6 +462,21 @@ namespace headsup
     bool BarInput::OverMenu(PanelWidget pill) const
     {
         return m_UnderMenu && std::ranges::find(*m_UnderMenu, pill) == m_UnderMenu->end();
+    }
+
+    std::vector<PopupLayer> BarInput::Layers() const
+    {
+        std::vector<PopupLayer> layers;
+        const std::optional<PanelWidget> settings = SettingsShown();
+        bool past = false;
+        for (const PanelWidget pill : Shown())
+        {
+            layers.push_back(OverMenu(pill) && pill != settings ? PopupLayer::OverMenu
+                             : past                             ? PopupLayer::OverSettings
+                                                                : PopupLayer::UnderSettings);
+            past = past || pill == settings;
+        }
+        return layers;
     }
 
     std::vector<PanelWidget> BarInput::Shown() const

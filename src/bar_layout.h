@@ -105,9 +105,10 @@ namespace headsup
     PillJoins JoinsOf(const BarLayout& layout, PanelWidget widget);
     // A combined pill has a popup when any of its widgets has one: its first widget's hasPopup says so.
     void SharePopups(std::array<bool, kPanelSlots>& hasPopup, const std::array<PanelWidget, kPanelSlots>& groups);
-    // By the popups shown, bottom to top: whether each is drawn over the settings shown in the popup of settings, as
-    // every popup shown after that one is.
-    std::vector<bool> OverSettings(const std::vector<PanelWidget>& shown, std::optional<PanelWidget> settings);
+    // Which of the popups' documents a popup is drawn in: under the settings a popup shows, over them, or over the
+    // settings window.
+    enum class PopupLayer : uint8_t { UnderSettings, OverSettings, OverMenu };
+    constexpr size_t kPopupLayers = static_cast<size_t>(PopupLayer::OverMenu) + 1;
     // A dragged popup's spot, by which half of the screen its middle is in across and down. One reaching the screen's
     // bottom, cut to the room below its top, is kept by its top: kept by its bottom it would grow up past where it was left.
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight);
@@ -230,6 +231,10 @@ namespace headsup
         // those that came out after it over it.
         void MenuOpen(bool open);
         bool OverMenu(PanelWidget pill) const;
+        // By Shown, bottom to top: each popup's layer. Those shown after the one with settings go over its settings,
+        // and those come out after the window opened over the window, but for the one with settings, which stays under
+        // the window with them.
+        std::vector<PopupLayer> Layers() const;
 
     private:
         void Reevaluate();

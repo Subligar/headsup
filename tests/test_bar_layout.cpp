@@ -298,12 +298,32 @@ TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
     CHECK(!input.TakeMoved() && !input.DraggedPopup(BarWidget::Target));
 }
 
-TEST(popups_shown_after_the_one_whose_settings_show_go_over_its_settings)
+TEST(popups_shown_after_the_one_whose_settings_show_go_over_its_settings_and_under_the_window_unless_come_out_after_it)
 {
-    const std::vector<PanelWidget> shown{BarWidget::Zone, BarWidget::Job, BarWidget::Bags, BarWidget::Target};
-    CHECK(OverSettings(shown, std::nullopt) == (std::vector<bool>{false, false, false, false}));
-    CHECK(OverSettings(shown, PanelWidget{BarWidget::Job}) == (std::vector<bool>{false, false, true, true}));
-    CHECK(OverSettings(shown, PanelWidget{BarWidget::Target}) == (std::vector<bool>{false, false, false, false}));
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    for (const BarWidget w : {BarWidget::Target, BarWidget::Zone, BarWidget::Job, BarWidget::Bags})
+        popups[SlotOf(w)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    using enum PopupLayer;
+    const auto press = [&](BarWidget w) { return input.Press(RectOf(l, w)->x + 5.0f, 18.0f, true); };
+    input.Pin(BarWidget::Zone);
+    input.Pin(BarWidget::Job);
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings}));
+    input.ShowSettings(BarWidget::Job);
+    CHECK(press(BarWidget::Bags));
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings}));
+    // The card: the window opened over them all, Job's settings with it.
+    input.MenuOpen(true);
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings}));
+    CHECK(press(BarWidget::Target));
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings, OverMenu}));
+    // Settings shown after the window opened stay under it with their popup.
+    input.ShowSettings(BarWidget::Target);
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, UnderSettings, UnderSettings}));
+    input.MenuOpen(false);
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, UnderSettings, UnderSettings}));
 }
 
 TEST(the_settings_window_goes_over_the_popups_open_before_it_and_under_those_opened_after)

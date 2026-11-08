@@ -158,11 +158,10 @@ namespace headsup
         // went, with its cards' tabs and the parts that scroll at their places on the screen.
         std::vector<PopupPlace> ShowPopups(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden);
-        // One pill's popup, as ShowPopups places it; nothing when its pill is not on the bar. over: drawn over the
-        // settings another popup shows.
+        // One pill's popup, as ShowPopups places it, in its layer's document; nothing when its pill is not on the bar.
         std::optional<PopupPlace> ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-            PanelWidget open, bool over);
+            PanelWidget open, PopupLayer layer);
         bool PopupDocumentFor(RmlHost& host, const BarLook& look);
         void ClosePopup();
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);
@@ -189,14 +188,14 @@ namespace headsup
         // What the help bar's markup was made from, with Background.
         std::optional<std::pair<HelpBarParts, bool>> m_HelpDrawn;
         Memo<HelpBarKey, HelpBarFit> m_HelpBar;
-        // The popups' documents: under the settings a popup shows, and over them for the popups shown after that one.
-        std::array<Rml::ElementDocument*, 2> m_PopupDocuments{};
+        // The popups' documents, by PopupLayer.
+        std::array<Rml::ElementDocument*, kPopupLayers> m_PopupDocuments{};
         std::string m_PopupDocumentText;
         // Each pill's popup, by its first widget's SlotOf.
         struct Popup
         {
             Rml::Element* element = nullptr;                   // the one of elements in use
-            std::array<Rml::Element*, 2> elements{};           // in each of m_PopupDocuments, made as needed
+            std::array<Rml::Element*, kPopupLayers> elements{}; // in each of m_PopupDocuments, made as needed
             bool marked = false; // its markup is the layout's
             std::optional<float> left, top, width, height;
             Memo<PopupKey, PopupLayout> layout;
