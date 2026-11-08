@@ -236,14 +236,16 @@ namespace
         if (message == WM_MOUSEMOVE) g_LastMove = {clientX, clientY};
         const float x      = static_cast<float>(clientX) * g_BarScaleX;
         const float y      = static_cast<float>(clientY) * g_BarScaleY;
-        // RmlUi's overlay lies over every window: what it takes, nothing under it sees.
+        // RmlUi's overlay lies over every window: what it takes, nothing under it sees. Its popups are the bar's.
         const bool overRml = !blocked && g_Rml != nullptr && g_Rml->Running() &&
-                             g_Rml->Mouse(message, x, y, static_cast<int16_t>(HIWORD(wParam)));
+                             g_Rml->Mouse(message, x, y, static_cast<int16_t>(HIWORD(wParam))) &&
+                             !g_Rml->HoverIn(headsup::kPopupDocumentName);
         // An Ashita window takes the mouse. Asked only when read: the bar ignores it while off or for blocked messages.
         const bool overGui = overRml || (((g_BarOn && !g_BarHidden && !blocked) || g_SyncClicks) && g_Gui != nullptr &&
                                             g_Gui->GetIO().WantCaptureMouse);
+        // What RmlUi's windows take, over the popups too, is not the bar's.
         const bool barTook = g_BarClicks != nullptr &&
-            g_BarClicks->Take(message, static_cast<uint32_t>(wParam), x, y, g_BarOn && !g_BarHidden, overGui, blocked);
+            g_BarClicks->Take(message, static_cast<uint32_t>(wParam), x, y, g_BarOn && !g_BarHidden, overGui, blocked || overRml);
         // A window the player hides takes no click, which the game would act on unseen; an Ashita window over it does.
         const bool hiddenWindow = !barTook && !overRml && !blocked &&
             headsup::SwallowsClick(message, static_cast<int>(static_cast<float>(clientX) * g_MenuScaleX),

@@ -468,7 +468,7 @@ TEST(every_theme_eases_breathes_and_pulses_in_its_own_colors)
         CHECK(Has(rml, "@keyframes pulse{from{opacity:0.65;}to{opacity:1;}}"));
         // A popup drops in from its widget.
         const std::string popup = PopupDocument(look, faces);
-        CHECK(Has(popup, ".popup{position:absolute;transform-origin:50% 0%;}"));
+        CHECK(Has(popup, ".popup{position:absolute;transform-origin:50% 0%;pointer-events:auto;}"));
         CHECK(Has(popup, ".popup.open{animation:0.2s cubic-out drop-in;}"));
         CHECK(Has(popup, "@keyframes drop-in{from{opacity:0;transform:translateY(-10px) scale(0.96);}to{opacity:1;"
                          "transform:translateY(0px) scale(1);}}"));

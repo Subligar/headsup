@@ -485,8 +485,7 @@ TEST(the_settings_window_draws_over_a_popup_and_its_settings_opened_before_it_an
         if (z) d->SetProperty(Rml::PropertyId::ZIndex, Rml::Property(static_cast<float>(*z), Rml::Unit::NUMBER));
         Rml::Element* popup = d->AppendChild(d->CreateElement("div"));
         popup->SetClass(kPopupClass, true);
-        // The bar takes the pointer over popups, not RmlUi: found here only to see which is on top.
-        popup->SetAttribute("style", "left:0px;top:0px;width:200px;height:200px;pointer-events:auto;");
+        popup->SetAttribute("style", "left:0px;top:0px;width:200px;height:200px;");
         d->Show();
         return popup;
     };
@@ -513,6 +512,56 @@ TEST(the_settings_window_draws_over_a_popup_and_its_settings_opened_before_it_an
     CHECK(top() != under->GetOwnerDocument());
     Rml::Element* overMenu = popups(kPopupsOverMenuZ);
     CHECK(top() == overMenu->GetOwnerDocument()); // one come out after the window opened
+}
+
+// The card "Clicking through pop-outs onto the config menu": a pop-out over the settings window takes the pointer, so
+// the window under it is neither hovered nor pressed, and the window beside the pop-out still is.
+TEST(a_popup_over_the_settings_window_keeps_the_pointer_from_the_window_under_it)
+{
+    test::RmlSession rml;
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    const PopupFaces faces = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
+        PopupFace{"Barlow Condensed", 16, 19}, PopupFace{"Barlow Condensed", 16, 19}};
+    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt};
+    Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
+    window->SetProperty(Rml::PropertyId::Left, Rml::Property(0.0f, Rml::Unit::PX));
+    window->SetProperty(Rml::PropertyId::Top, Rml::Property(0.0f, Rml::Unit::PX));
+    window->SetProperty(Rml::PropertyId::Width, Rml::Property(600.0f, Rml::Unit::PX));
+    window->SetProperty(Rml::PropertyId::Height, Rml::Property(600.0f, Rml::Unit::PX));
+    window->Show();
+    Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), kPopupDocumentName);
+    popups->SetProperty(Rml::PropertyId::ZIndex, Rml::Property(static_cast<float>(kPopupsOverMenuZ), Rml::Unit::NUMBER));
+    Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+    popup->SetClass(kPopupClass, true);
+    popup->SetAttribute("style", "left:100px;top:100px;width:200px;height:200px;");
+    popups->Show();
+    rml.context->Update();
+    int pressed = 0;
+    struct Count : Rml::EventListener
+    {
+        int& n;
+        explicit Count(int& n) : n(n) {}
+        void ProcessEvent(Rml::Event&) override { ++n; }
+    } count{pressed};
+    window->AddEventListener(Rml::EventId::Mousedown, &count);
+    // On the popup: the popup has it, the window under it nothing.
+    rml.context->ProcessMouseMove(200, 200, 0);
+    rml.context->Update();
+    CHECK(rml.context->GetHoverElement() != nullptr && rml.context->GetHoverElement()->GetOwnerDocument() == popups);
+    CHECK(popups->GetSourceURL() == kPopupDocumentName); // as the plugin tells the bar's pointer from the window's
+    CHECK(!window->IsPseudoClassSet("hover"));
+    rml.context->ProcessMouseButtonDown(0, 0);
+    rml.context->ProcessMouseButtonUp(0, 0);
+    CHECK_EQ(pressed, 0);
+    // Beside it, on the window: the window's.
+    rml.context->ProcessMouseMove(450, 450, 0);
+    rml.context->Update();
+    CHECK(window->IsPseudoClassSet("hover"));
+    rml.context->ProcessMouseButtonDown(0, 0);
+    rml.context->ProcessMouseButtonUp(0, 0);
+    CHECK_EQ(pressed, 1);
+    window->RemoveEventListener(Rml::EventId::Mousedown, &count);
 }
 
 TEST(a_widgets_alignment_puts_its_content_and_its_lines_against_that_side_whatever_its_section)

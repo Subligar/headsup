@@ -21,7 +21,6 @@ namespace headsup
         constexpr int kFewLetters = 3;     // the least of the target's name worth its room on the bar
         constexpr const char* kCapital = "H"; // its ink is a font's capitals'
         constexpr const char* kDocumentName      = "top panel";
-        constexpr const char* kPopupDocumentName = "top panel popup";
 
         void Set(Rml::Element* element, Rml::PropertyId property, std::optional<float>& was, float value)
         {

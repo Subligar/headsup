@@ -48,6 +48,8 @@ namespace headsup
         // A mouse message in back-buffer pixels, to the overlay: true when an element of it is under the pointer or
         // being dragged, so neither the game nor the bar gets the message.
         bool Mouse(uint32_t message, float x, float y, int wheelDelta);
+        // Whether the overlay's element under the pointer is in a document loaded from that source.
+        bool HoverIn(const char* source) const;
         // A key to the overlay, typed into its focused text field as well: true when a text field has the focus,
         // so the game must not get the key.
         bool Key(uint32_t virtualKey, bool down);

@@ -695,7 +695,8 @@ namespace headsup
         css += "div{display:block;}";
         css += std::string(".") + kHiddenClass + "{display:none;}";
         // A popup drops in from its widget.
-        css += std::string(".") + kPopupClass + "{position:absolute;transform-origin:50% 0%;}";
+        // A popup takes the pointer in RmlUi, so a window under it gets no hover or press through it.
+        css += std::string(".") + kPopupClass + "{position:absolute;transform-origin:50% 0%;pointer-events:auto;}";
         css += std::string(".") + kPopupClass + "." + kOpenClass + "{animation:0.2s cubic-out drop-in;}";
         css += "@keyframes drop-in{from{opacity:0;transform:translateY(-10px) scale(0.96);}to{opacity:1;"
                "transform:translateY(0px) scale(1);}}";

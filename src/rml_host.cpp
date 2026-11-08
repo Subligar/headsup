@@ -181,6 +181,12 @@ namespace headsup
         }
     }
 
+    bool RmlHost::HoverIn(const char* source) const
+    {
+        const Rml::Element* hover = Running() ? m_Overlay->GetHoverElement() : nullptr;
+        return hover != nullptr && hover->GetOwnerDocument() != nullptr && hover->GetOwnerDocument()->GetSourceURL() == source;
+    }
+
     // A press on nothing of HeadsUp's takes the keyboard from its text box or slider, as a click elsewhere in a
     // window does: the box would go on keeping every key from the game, and the slider on moving with the arrows.
     bool RmlHost::Press(int button, int modifiers)
