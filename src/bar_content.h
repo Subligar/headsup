@@ -190,7 +190,7 @@ namespace headsup
         bool settings  = true;  // its widget's settings show in place of it behind a cog: Game help's are in their own card
         // While its settings show, what its title's clone and remove chips tell when pressed; empty for none.
         std::string clonePress{}, removePress{};
-        // While it is pinned somewhere the player dragged it, what its title's reset chip tells; empty for none.
+        // While it is somewhere the player dragged it, what its title's reset chip tells; empty for none.
         std::string resetPress{};
         bool operator==(const PopupContent&) const = default;
     };

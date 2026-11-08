@@ -739,8 +739,8 @@ namespace headsup
             for (const auto& [press, icon] : {std::pair{&content.resetPress, Icon::Reset}, std::pair{&content.clonePress, Icon::Clone},
                      std::pair{&content.removePress, Icon::Delete}})
             {
-                // The reset while it is pinned, where it can be dragged; the others while its settings show.
-                if (press->empty() || (press == &content.resetPress ? !pinned : !settings)) continue;
+                // The reset whenever it was moved, pinned or not; the others while its settings show.
+                if (press->empty() || (press != &content.resetPress && !settings)) continue;
                 chips.push_back(TitleChip{l.pieces.size(), *press});
                 PopupPiece chip{PopupPiece::Kind::ActionChip, 0.0f, pad, side, side, {}};
                 chip.font = PopupFont::Pin;

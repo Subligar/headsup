@@ -495,10 +495,11 @@ namespace headsup
         const auto out        = static_cast<float>(OuterPad(PopupPanel(look)));
         const float barBottom = open.kind == BarWidget::GameHelp ? anchor->y + anchor->height : BarBottom(p, m);
         const bool pinned     = input.IsPinned(open);
-        // Dragged or left somewhere, it is cut to the room there, not under the bar.
         const std::optional<PopupSpot> placed = PlacedSpot(input.DraggedPopup(open), look.settings.Widget(open).popupSpot);
+        // Laid out for the room under the bar wherever it is placed: a lower spot's smaller room would flow its cards
+        // into more columns, widening it.
         PopupKey key{PanelPopupContent(open, state, look.settings), pinned, m.height, m.popupText,
-            placed ? SpotRoom(*placed, screenHeight) : PopupRoom(barBottom, screenHeight, m.gap, out), popup.widest,
+            PopupRoom(barBottom, screenHeight, m.gap, out), popup.widest,
             settings ? std::optional(settingsRoom.value_or(SettingsRoom{})) : std::nullopt};
         bool fresh            = false;
         const PopupLayout& pl = popup.layout.Get(std::move(key), [&](const PopupKey& k) {
@@ -512,7 +513,7 @@ namespace headsup
         // Placed by a drag or a spot, it opens under its widget again once that is reset.
         if (placed) popup.keptX.reset();
         else if (!popup.keptX) popup.keptX = under.x;
-        const BarRect rect = PopupAt(under, pl.height, placed, screenWidth, screenHeight, popup.keptX);
+        const BarRect rect = PopupAt(under, pl.height, placed, screenWidth, screenHeight, BarBottom(p, m) + out, popup.keptX);
         if (fresh || !popup.marked)
         {
             popup.element->SetInnerRML(PopupRml(pl, look, m_PopupFaces));

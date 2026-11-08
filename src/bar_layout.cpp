@@ -382,13 +382,13 @@ namespace headsup
             static_cast<int>(std::lround(lower ? screenHeight - popup.y - popup.height : popup.y)), right, lower};
     }
 
-    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight)
+    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight, float top)
     {
         width  = std::min(width, screenWidth);
-        height = std::min(height, screenHeight);
+        height = std::min(height, std::max(0.0f, screenHeight - top));
         const auto x = static_cast<float>(spot.x), y = static_cast<float>(spot.y);
         return BarRect{std::clamp(spot.fromRight ? screenWidth - x - width : x, 0.0f, screenWidth - width),
-            std::clamp(spot.fromBottom ? screenHeight - y - height : y, 0.0f, screenHeight - height), width, height};
+            std::clamp(spot.fromBottom ? screenHeight - y - height : y, top, std::max(top, screenHeight - height)), width, height};
     }
 
     std::optional<PopupSpot> PlacedSpot(const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot)
@@ -398,15 +398,10 @@ namespace headsup
                        : spot;
     }
 
-    float SpotRoom(const PopupSpot& spot, float screenHeight)
-    {
-        return screenHeight - static_cast<float>(std::max(0, spot.y));
-    }
-
     BarRect PopupAt(const BarRect& underWidget, float height, const std::optional<PopupSpot>& placed, float screenWidth,
-        float screenHeight, std::optional<float> keptX)
+        float screenHeight, float top, std::optional<float> keptX)
     {
-        if (placed) return PlaceAtSpot(*placed, underWidget.width, height, screenWidth, screenHeight);
+        if (placed) return PlaceAtSpot(*placed, underWidget.width, height, screenWidth, screenHeight, top);
         BarRect rect = underWidget;
         if (keptX) rect.x = std::clamp(*keptX, 0.0f, std::max(0.0f, screenWidth - rect.width));
         return rect;

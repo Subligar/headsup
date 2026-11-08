@@ -134,7 +134,8 @@ TEST(a_subtitle_sits_under_the_title_outside_any_card_and_above_the_cards)
     CHECK(l.height > plain.height);
 }
 
-TEST(a_pinned_popup_moved_from_its_place_has_a_reset_chip_left_of_its_cog)
+// The card "Pop-out repositioning bugs": a moved pop-out offers its reset while it only hovers too.
+TEST(a_popup_moved_from_its_place_has_a_reset_chip_left_of_its_cog_pinned_or_not)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);
     PopupContent content = Sample();
@@ -144,16 +145,18 @@ TEST(a_pinned_popup_moved_from_its_place_has_a_reset_chip_left_of_its_cog)
             if (chip.press && chip.tab == "popup reset 2") return &chip;
         return nullptr;
     };
-    const PopupLayout pinned = LayoutPopup(content, m, true, Fake);
-    const PopupTabChip* reset = pressed(pinned);
-    CHECK(reset != nullptr);
     const float gap = 0.25f * m.popupText;
-    CHECK(Near(reset->width, pinned.cog.width) && Near(reset->y, pinned.cog.y) && Near(reset->x + reset->width + gap, pinned.cog.x));
-    // Its icon alone in it.
-    CHECK(std::ranges::any_of(pinned.pieces, [](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Reset; }));
-    // Not while it only hovers, which shows it in its place.
-    CHECK(pressed(LayoutPopup(content, m, false, Fake)) == nullptr);
-    CHECK(pressed(LayoutPopup(Sample(), m, true, Fake)) == nullptr);
+    for (const bool pinned : {true, false})
+    {
+        const PopupLayout l       = LayoutPopup(content, m, pinned, Fake);
+        const PopupTabChip* reset = pressed(l);
+        CHECK(reset != nullptr);
+        CHECK(Near(reset->width, l.cog.width) && Near(reset->y, l.cog.y) && Near(reset->x + reset->width + gap, l.cog.x));
+        // Its icon alone in it.
+        CHECK(std::ranges::any_of(l.pieces, [](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Reset; }));
+        // Not in its place.
+        CHECK(pressed(LayoutPopup(Sample(), m, pinned, Fake)) == nullptr);
+    }
 }
 
 TEST(a_headed_card_has_a_collapse_chip_at_its_right_and_collapsed_shows_its_heading_alone)
