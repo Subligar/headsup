@@ -50,7 +50,7 @@ namespace headsup
             {kTraitRegain, "Regain"}, {kTraitShadows, "Shadows"}, {kTraitCounter, "Counter"}};
         constexpr int kWholeAbsorb = 100; // percent
         constexpr int kForecastDays = 5, kForecastColumns = 4;
-        constexpr int kWorldGuildColumns   = 2; // a shop's hours now, and who and where
+        constexpr int kWorldGuildColumns   = 3; // a shop open or closed, when that changes, and who and where
         constexpr int kZoneRollColumns     = 3; // a zone, and its chance of the element today and tomorrow
         constexpr int kTurnInColumns       = 6; // a rank, its item and its points, its high quality's, and the most a day
         constexpr uint16_t kGilItem  = 0xFFFF;
@@ -161,8 +161,8 @@ namespace headsup
                 if (info.traits & trait) row.cells.push_back(Cell(Text(name, Tone::Tag)));
             if (*info.addEffect != '\0')
                 row.cells.push_back(Cell(Text(std::string_view(info.addEffect) == kUnknownAddEffect
-                                                  ? std::string("Additional effect")
-                                                  : std::string("Additional effect: ") + info.addEffect,
+                                                  ? std::string("Additional Effect")
+                                                  : std::string("Additional Effect: ") + info.addEffect,
                     Tone::Tag)));
             return row;
         }
@@ -214,7 +214,7 @@ namespace headsup
                 cell.star      = learned;
                 grid.cells.push_back(std::move(cell));
             }
-            return PopupSection{"TP moves", ListOf(std::move(grid))};
+            return PopupSection{"TP Moves", ListOf(std::move(grid))};
         }
 
         // The spells it casts at a level: each whose levels hold it, by the game's name.
@@ -287,7 +287,7 @@ namespace headsup
         {
             PopupSection spawn{"Spawn", {}};
             const MobInfo& info = InfoOf(mob);
-            spawn.rows.push_back(LineOf(mob.respawn > 0 ? "Respawn " + Countdown(mob.respawn) : "No respawn timer"));
+            spawn.rows.push_back(LineOf(mob.respawn > 0 ? "Respawn " + Countdown(mob.respawn) : "No Respawn Timer"));
             if (info.windowStart != kNoWindow)
                 spawn.rows.push_back(LineOf("Spawns " + Hour(info.windowStart) + " to " + Hour(info.windowEnd)));
             if (info.lotteryChance > 0)
@@ -305,14 +305,14 @@ namespace headsup
                 if (state.targetPhSeconds)
                 {
                     const double left = *state.targetPhSeconds;
-                    spawn.rows.push_back(LineOf(left > 0.0 ? "Back in " + Countdown(left) : "Due now", Tone::Weak));
+                    spawn.rows.push_back(LineOf(left > 0.0 ? "Back in " + Countdown(left) : "Due Now", Tone::Weak));
                 }
             }
             if (mob.placeholders > 0)
                 spawn.rows.push_back(LineOf(std::to_string(mob.placeholders) +
                     (mob.placeholders == 1 ? " placeholder" : " placeholders") + " in this zone"));
             if (mob.placeholderOf == 0 && mob.placeholders == 0)
-                spawn.rows.push_back(LineOf("Not an NM placeholder", Tone::Dim));
+                spawn.rows.push_back(LineOf("Not an NM Placeholder", Tone::Dim));
             return spawn;
         }
 
@@ -597,7 +597,7 @@ namespace headsup
                 AddListing(sections, "Trade", ItemNames(TradesOf(npc), state), (npc.unread & kNpcUnreadTrade) != 0);
             AddListing(sections, "Pops", MobNames(PopsOf(npc)), (npc.unread & kNpcUnreadPops) != 0);
             AddListing(sections, "Gives", ItemNames(GivesOf(npc), state), (npc.unread & kNpcUnreadGives) != 0);
-            AddListing(sections, "Key items", KeyItemNames(KeyItemsOf(npc)));
+            AddListing(sections, "Key Items", KeyItemNames(KeyItemsOf(npc)));
             AddListing(sections, "Checks for", KeyItemNames(NeedsOf(npc)));
             AddLinks(sections, npc);
             return sections;
@@ -609,7 +609,7 @@ namespace headsup
             const ActorInfo* target = state.target;
             if (target == nullptr)
             {
-                popup.title = ListOf(Text("No target", Tone::Dim));
+                popup.title = ListOf(Text("No Target", Tone::Dim));
                 return popup;
             }
             if (!IsMob(target))
@@ -621,14 +621,14 @@ namespace headsup
                     PopupSection rows;
                     rows.rows.push_back(Labeled("Jobs", Text(CheckedJobs(c.general))));
                     if (c.general.masterLevel > 0)
-                        rows.rows.push_back(Labeled("Master level", Text(std::to_string(c.general.masterLevel))));
+                        rows.rows.push_back(Labeled("Master Level", Text(std::to_string(c.general.masterLevel))));
                     if (!c.general.linkshell.empty())
                         rows.rows.push_back(Labeled("Linkshell", Text(c.general.linkshell)));
                     if (const std::string title = TitleName(c.message.title); !title.empty())
                         rows.rows.push_back(Labeled("Title", Text(title)));
                     else if (c.message.title != 0)
                         rows.rows.push_back(Labeled("Title", Text("#" + std::to_string(c.message.title))));
-                    rows.rows.push_back(LineOf("As of your check", Tone::Dim));
+                    rows.rows.push_back(LineOf("As of Your Check", Tone::Dim));
                     popup.sections = ListOf(std::move(rows));
                 }
                 else if (const NpcRecord* npc = NpcOf(target))
@@ -652,7 +652,7 @@ namespace headsup
             PopupRow damage = Grid(kDamageColumns, kFirstElementSdt);
             for (int i = 0; i < kFirstElementSdt; ++i)
                 damage.cells.push_back(Cell(Percent(SdtPercent(res.sdt[i])), SdtIcon(i)));
-            PopupSection damageTaken{"Damage taken", ListOf(std::move(damage))};
+            PopupSection damageTaken{"Damage Taken", ListOf(std::move(damage))};
             PopupRow kinds = Grid(kDamageColumns, kDamageKindCount);
             for (int k = 0; k < kDamageKindCount; ++k)
                 if (const int percent = SdtPercent(defenses.damageTaken[k]); percent != 0)
@@ -730,6 +730,11 @@ namespace headsup
             return Colored(WeekdayName(t.weekday), ElementColor(WeekdayElement(t.weekday)));
         }
 
+        Span VanaClock(int64_t unixMs)
+        {
+            const VanaTime t = VanaAt(unixMs);
+            return HourMinuteSpan(t.hour, t.minute);
+        }
         std::string MoonText(const VanaTime& t) { return MoonPhaseName(t.moonPercent, t.moonDirection); }
 
         std::string VanaDate(const VanaTime& t)
@@ -753,29 +758,31 @@ namespace headsup
         }
 
 
-        // The widget just before this one in its combined pill, whose Combine pulled it there; none for a widget alone
-        // or first in its pill.
-        std::optional<PanelWidget> CombinedBefore(const PanelGroups& panel, PanelWidget widget)
-        {
-            const std::vector<PanelWidget> pill = Members(panel, panel.group[SlotOf(widget)]);
-            const auto at = std::ranges::find(pill, widget);
-            if (at == pill.end() || at == pill.begin()) return std::nullopt;
-            return *(at - 1);
-        }
-
-        std::vector<Nation> PickedNations(uint8_t bits)
-        {
-            std::vector<Nation> picked;
-            for (const Nation nation : {Nation::SanDoria, Nation::Bastok, Nation::Windurst, Nation::Beastmen})
-                if (bits & NationBit(nation)) picked.push_back(nation);
-            return picked;
-        }
-
         // Who holds the zone's region; no one before a conquest update or outside the conquest regions.
+        // A nation's crest in its own city and Jeuno's in Jeuno, which no conquest holds, and Aht Urhgan's in the
+        // regions of its Besieged map, as the game's region maps show them.
+        GamePicture HomeCrest(const ZoneRecord* zone)
+        {
+            if (zone == nullptr) return GamePicture::None;
+            if (zone->region == kSanDoriaRegion) return GamePicture::SanDoriaCrest;
+            if (zone->region == kBastokRegion) return GamePicture::BastokCrest;
+            if (zone->region == kWindurstRegion) return GamePicture::WindurstCrest;
+            if (zone->region == kJeunoRegion) return GamePicture::JeunoCrest;
+            if (zone->region >= kFirstAhtUrhganRegion && zone->region <= kLastAhtUrhganRegion) return GamePicture::AhtUrhganCrest;
+            return GamePicture::None;
+        }
+
         Nation OwnerOf(const ZoneRecord* zone, const BarState& state)
         {
             return InConquest(zone) && state.owners ? (*state.owners)[zone->region] : Nation::None;
         }
+
+        // By Weather: HeadsUp's own picture of each.
+        constexpr Icon kCustomWeather[kWeatherCount] = {Icon::WeatherFair, Icon::WeatherSunny, Icon::WeatherCloudy,
+            Icon::WeatherFoggy, Icon::WeatherHeatSpell, Icon::WeatherHeatSpell, Icon::WeatherRain, Icon::WeatherSqualls,
+            Icon::WeatherDustStorm, Icon::WeatherDustStorm, Icon::WeatherWindy, Icon::WeatherGales, Icon::WeatherSnow,
+            Icon::WeatherBlizzard, Icon::WeatherThunder, Icon::WeatherThunderstorms, Icon::WeatherAurora,
+            Icon::WeatherAurora, Icon::WeatherGloom, Icon::WeatherGloom};
 
         std::optional<Icon> WeatherIcon(Weather weather)
         {
@@ -806,70 +813,18 @@ namespace headsup
             return spans;
         }
 
+        // When the guild's shop next closes while open, else opens.
         std::vector<Span> GuildText(const GuildShop& shop, int64_t unixMs)
         {
             const GuildHours hours = GuildAt(shop, unixMs);
-            const char* now        = hours.open ? "Open" : hours.holiday ? "Holiday" : "Closed";
-            std::vector<Span> spans = ListOf(Text(now, hours.open ? Tone::Normal : Tone::Dim), Text(kDot, Tone::Dim));
-            AddTime(spans, hours.open ? "closes in " : "opens in ", hours.changeIn);
+            std::vector<Span> spans;
+            AddTime(spans, hours.open ? "Closes in " : "Opens in ", hours.changeIn);
             return spans;
-        }
-
-        // The element's next weather in the zone: its likeliest, with the element's chance that day.
-        struct ZoneWeather
-        {
-            std::optional<ElementWeather> next;
-            std::string when;
-        };
-        ZoneWeather WeatherHere(uint16_t zoneId, Element element, int64_t unixMs)
-        {
-            const ZoneRecord* zone = KnownZone(zoneId);
-            const uint32_t today   = VanaAt(unixMs).day;
-            ZoneWeather here{zone ? NextElementWeather(*zone, element, today) : std::nullopt, "Not in this zone"};
-            if (here.next)
-                here.when = here.next->day == today ? "Can roll here now" : "Here in " + Countdown(SecondsToDay(unixMs, here.next->day));
-            return here;
         }
 
         // How many regions each picked nation holds: a nation alone by its name; several by their crests, each count
         // in its color, two to a line in columns.
-        WidgetContent ConquestCounts(const BarState& state, const WidgetOptions& o)
-        {
-            WidgetContent w;
-            w.shown    = true;
-            w.subtitle = ListOf(Text("Conquest", Tone::Dim));
-            w.hasPopup = true;
-            if (!state.owners)
-            {
-                w.title = ListOf(Text("-"));
-                return w;
-            }
-            const std::vector<Nation> picked = PickedNations(o.nations);
-            w.cells = picked.size() > 1; // its counts alone, without its name under them
-            if (w.cells) w.subtitle.clear();
-            constexpr size_t kTwoByTwo = 2; // nations a line
-            const size_t perLine = o.conquestGrid == ConquestGrid::OneByFour ? picked.size() : kTwoByTwo;
-            for (size_t i = 0; i < picked.size(); ++i)
-            {
-                const Nation nation = picked[i];
-                const std::string regions = std::to_string(std::ranges::count(*state.owners, nation));
-                Span count = Colored(picked.size() == 1 ? std::string(NationName(nation)) + " " + regions : " " + regions,
-                    NationColor(nation));
-                if (picked.size() > 1) count.picture = NationCrest(nation);
-                (i < perLine ? w.title : w.subtitle).push_back(count);
-            }
-            if (w.title.empty()) w.title = ListOf(Text("-"));
-            w.figures = true;
-            return w;
-        }
-
         constexpr const char* kFavoritePress = "favorite "; // a currency's star tells this, then the currency's key
-
-        std::optional<int> NationPoints(Nation nation)
-        {
-            if (nation < Nation::SanDoria || nation > Nation::Windurst) return std::nullopt;
-            return kConquestPointsFirst + static_cast<int>(nation) - static_cast<int>(Nation::SanDoria);
-        }
 
         // The favorites as currencies, each once; your nation's conquest points once your nation is known.
         std::vector<int> FavoriteCurrencies(const std::vector<std::string>& keys, Nation nation)
@@ -884,28 +839,43 @@ namespace headsup
 
         // The parts of PerfPart that are the connection's.
         constexpr uint8_t kConnectionParts = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received) |
-                                             PerfBit(PerfPart::Percent) | PerfBit(PerfPart::Ping) |
+                                             PerfBit(PerfPart::Percent) |
                                              PerfBit(PerfPart::Messages);
 
-        // The frame rate, the connection and the memory, each part picked on one line.
-        WidgetContent PerformanceWidget(const BarState& state, uint8_t parts)
+        Span Mark(GamePicture picture) { return Span{"", Tone::Normal, 0, picture}; }
+        Span Mark(Icon icon)
         {
-            WidgetContent w;
-            w.shown    = true;
-            w.hasPopup = true;
-            w.figures  = true;
-            if ((parts & PerfBit(PerfPart::Fps)) != 0) AddPart(w.title, FpsFigures(state.frames));
-            if (const uint8_t net = parts & kConnectionParts; net != 0)
-                AddPart(w.title, ConnectionFigures(state.connection, net));
-            if ((parts & PerfBit(PerfPart::Memory)) != 0)
-            {
-                std::vector<Span> memory = ListOf(Text("Mem ", Tone::Dim));
-                for (Span& span : MemoryFigures(state.memory))
-                    memory.push_back(std::move(span));
-                AddPart(w.title, std::move(memory));
-            }
-            if (w.title.empty()) w.title = ListOf(Text("-"));
-            return w;
+            Span s = Text("");
+            s.icon = icon;
+            return s;
+        }
+        std::vector<Span> Marks(const Icon* icons, int count)
+        {
+            std::vector<Span> spans;
+            for (int i = 0; i < count; ++i)
+                spans.push_back(Mark(icons[i]));
+            return spans;
+        }
+
+        // Each PerfPart's widget part.
+        constexpr WidgetPart kPerfWidgetParts[kPerfPartCount] = {WidgetPart::PerfFps, WidgetPart::PerfSent,
+            WidgetPart::PerfReceived, WidgetPart::PerfPercent, WidgetPart::PerfMemory,
+            WidgetPart::PerfMessages};
+
+        // The frame rate, each of the connection's figures and the memory, after "Mem" with Show Mem Text.
+        std::vector<PartContent> PerformanceParts(const BarState& state, const WidgetOptions& o, WidgetContent& base)
+        {
+            base.hasPopup = true;
+            base.figures  = true;
+            std::vector<PartContent> parts{{WidgetPart::PerfFps, FpsFigures(state.frames)}};
+            for (int p = 0; p < kPerfPartCount; ++p)
+                if (const uint8_t bit = PerfBit(static_cast<PerfPart>(p)); (bit & kConnectionParts) != 0 && state.connection)
+                    parts.push_back({kPerfWidgetParts[p], ConnectionFigures(state.connection, bit)});
+            std::vector<Span> memory = o.memText ? ListOf(Text("Mem ", Tone::Dim)) : std::vector<Span>{};
+            for (Span& span : MemoryFigures(state.memory))
+                memory.push_back(std::move(span));
+            parts.push_back({WidgetPart::PerfMemory, std::move(memory)});
+            return parts;
         }
 
         PopupContent PerformancePopup(const BarState& state)
@@ -918,62 +888,41 @@ namespace headsup
             return popup;
         }
 
-        WidgetContent WorldWidget(const BarState& state, const WidgetOptions& o)
+        // What World Info can tell, a part each: the Tracked Ship's next sailing and the Tracked Guild's hours, each its
+        // name and then its countdown in parentheses, and each nation's crest and how many regions it holds.
+        std::vector<PartContent> WorldParts(const BarState& state, const WidgetOptions& o, WidgetContent& base)
         {
-            if (o.worldLine == WorldLine::Conquest) return ConquestCounts(state, o);
-            WidgetContent w;
-            w.shown    = true;
-            w.hasPopup = true;
-            switch (o.worldLine)
+            base.hasPopup = true;
+            const auto told = [](std::vector<Span> name, std::vector<Span> details) {
+                // RmlUi drops a span of spaces alone: the space goes with the parenthesis.
+                name.push_back(Text(" (", Tone::Dim));
+                for (Span& span : details)
+                {
+                    span.tone = Tone::Dim;
+                    name.push_back(std::move(span));
+                }
+                name.push_back(Text(")", Tone::Dim));
+                return name;
+            };
+            const TravelRoute& route = TravelRoutes()[static_cast<size_t>(o.worldRoute)];
+            const GuildShop& shop    = GuildShops()[static_cast<size_t>(o.worldGuild)];
+            std::vector<PartContent> parts{
+                {WidgetPart::WorldShip, told(ListOf(Text(route.name)), SailingText(route, state.unixMs))},
+                {WidgetPart::WorldGuild, told(ListOf(Text(shop.guild)), GuildText(shop, state.unixMs))}};
+            for (int n = 0; n < kContenderNations; ++n)
             {
-            case WorldLine::Departure:
-            {
-                const TravelRoute& route = TravelRoutes()[static_cast<size_t>(o.worldRoute)];
-                w.title    = ListOf(Text(route.name));
-                w.subtitle = SailingText(route, state.unixMs);
-                break;
+                const auto nation = static_cast<Nation>(static_cast<int>(Nation::SanDoria) + n);
+                const auto part   = static_cast<WidgetPart>(static_cast<int>(WidgetPart::WorldSanDoria) + n);
+                std::vector<Span> count;
+                if (state.owners)
+                {
+                    Span held    = Colored(" " + std::to_string(std::ranges::count(*state.owners, nation)), NationColor(nation));
+                    held.picture = NationCrest(nation);
+                    count.push_back(std::move(held));
+                }
+                parts.push_back({part, std::move(count)});
             }
-            case WorldLine::Weather:
-            {
-                const ZoneWeather here = WeatherHere(state.zone, o.worldElement, state.unixMs);
-                w.title = here.next ? ListOf(Text(std::string(WeatherName(here.next->weather)) + " " +
-                                                  std::to_string(here.next->percent) + "%"))
-                                    : ListOf(Text(std::string(ElementName(o.worldElement)) + " weather"));
-                if (here.next)
-                    if (const std::optional<Icon> icon = WeatherIcon(here.next->weather)) w.icons.push_back(*icon);
-                w.subtitle = ListOf(Text(here.when, Tone::Dim));
-                break;
-            }
-            case WorldLine::Guild:
-            {
-                const GuildShop& shop = GuildShops()[static_cast<size_t>(o.worldGuild)];
-                w.title    = ListOf(Text(shop.guild));
-                w.subtitle = GuildText(shop, state.unixMs);
-                break;
-            }
-            case WorldLine::Rse:
-            {
-                const Rse rse = RseAt(state.unixMs);
-                w.title    = ListOf(Text(rse.race));
-                w.subtitle = ListOf(Text(rse.place), Text(kDot, Tone::Dim), Text("ends in " + Countdown(rse.endsIn)));
-                break;
-            }
-            case WorldLine::Moon:
-            {
-                const VanaTime t     = VanaAt(state.unixMs);
-                const uint32_t full  = NextMoonDay(t.day, true), fresh = NextMoonDay(t.day, false);
-                const bool fullFirst = full < fresh;
-                w.title    = ListOf(Text(std::string(MoonPhaseName(t.moonPercent, t.moonDirection)) + " " +
-                                         std::to_string(t.moonPercent) + "%"));
-                w.subtitle = ListOf(Text(std::string(fullFirst ? "Full" : "New") + " moon in " +
-                                         Countdown(SecondsToDay(state.unixMs, fullFirst ? full : fresh))));
-                break;
-            }
-            case WorldLine::Conquest: break; // ConquestCounts, above
-            }
-            for (Span& span : w.subtitle)
-                span.tone = Tone::Dim;
-            return w;
+            return parts;
         }
 
         size_t ScrolledBy(const BarState& state, const std::string& key)
@@ -991,13 +940,19 @@ namespace headsup
         }
 
         // The tab the player picked last in the card, or its first.
-        size_t Picked(const BarState& state, const PopupSection& section)
+        size_t Picked(const BarState& state, const PopupSection& section, size_t fallback = 0)
         {
-            if (state.pickedTabs == nullptr) return 0;
-            const auto picked = state.pickedTabs->find(section.heading);
-            if (picked == state.pickedTabs->end()) return 0;
+            if (state.pickedTabs == nullptr) return fallback;
+            const auto picked = state.pickedTabs->find(std::string(CardKey(section.heading)));
+            if (picked == state.pickedTabs->end()) return fallback;
             const auto tab = std::ranges::find(section.tabs, picked->second, [](const PopupTab& t) { return t.name.text; });
-            return tab == section.tabs.end() ? 0 : static_cast<size_t>(tab - section.tabs.begin());
+            return tab == section.tabs.end() ? fallback : static_cast<size_t>(tab - section.tabs.begin());
+        }
+
+        // "Rain (50%)".
+        std::string WeatherChanceText(const WeatherChance& c)
+        {
+            return std::string(WeatherName(c.weather)) + " (" + std::to_string(c.percent) + "%)";
         }
 
         // A zone's weathers of an element on a day, likeliest first, after the likeliest one's icon; a dash for none.
@@ -1008,7 +963,7 @@ namespace headsup
             for (const WeatherChance& chance : roll->weathers)
             {
                 if (!text.empty()) text.push_back(Text(kDot, Tone::Dim));
-                text.push_back(Text(std::string(WeatherName(chance.weather)) + " " + std::to_string(chance.percent) + "%"));
+                text.push_back(Text(WeatherChanceText(chance)));
             }
             return Cell(std::move(text), WeatherIcon(roll->weathers.front().weather));
         }
@@ -1101,7 +1056,7 @@ namespace headsup
         // your rank starred and lit; until the site answers, a line saying so.
         std::vector<PopupRow> TurnIns(const BarState& state, int craft, const std::string& guild)
         {
-            std::vector<PopupRow> rows = ListOf(LineOf("Today's Turn-ins", Tone::Heading));
+            std::vector<PopupRow> rows = ListOf(LineOf("Today's Turn-Ins", Tone::Heading));
             if (state.turnIns == nullptr)
             {
                 PopupRow waiting = LineOf(state.turnInsFailed ? "phoenix-xi.com did not answer; trying again soon"
@@ -1115,6 +1070,7 @@ namespace headsup
             PopupRow grid = Grid(kTurnInColumns, (kExpert - kNovice + 2) * kTurnInColumns);
             grid.nested   = true;
             grid.header   = true;
+            grid.roomy    = true;
             ScrollsBy(grid, state, "Guilds/" + guild + "/Turn-ins");
             for (const char* heading : {"Rank", "NQ Item", "Points", "HQ Item", "Points", "Max Points"})
                 grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
@@ -1151,6 +1107,28 @@ namespace headsup
             return rows;
         }
 
+        // Gil's picture, then each of the two currencies' name, amount and picture where it has one.
+        std::vector<PartContent> CurrencyParts(const BarState& state, const WidgetOptions& o, WidgetContent& base)
+        {
+            base.hasPopup     = true;
+            const Nation yours = state.nation.value_or(Nation::None);
+            std::vector<PartContent> parts{{WidgetPart::CurrencyCoin, ListOf(Mark(Icon::Gil))}};
+            const WidgetPart names[] = {WidgetPart::Currency1Name, WidgetPart::Currency2Name},
+                             amounts[] = {WidgetPart::Currency1Amount, WidgetPart::Currency2Amount},
+                             icons[] = {WidgetPart::Currency1Icon, WidgetPart::Currency2Icon};
+            const int picked[] = {o.currency, o.secondCurrency};
+            for (size_t i = 0; i < std::size(picked); ++i)
+            {
+                const std::optional<int> c = ResolvedCurrency(picked[i], yours);
+                const std::optional<uint32_t> amount = !c ? std::nullopt : *c == kGilCurrency ? state.gil : state.currencies[*c];
+                const Span icon = CurrencyMark(picked[i], yours);
+                parts.push_back({names[i], ListOf(Text(CurrencyName(picked[i], yours)))});
+                parts.push_back({amounts[i], ListOf(Text(amount ? Grouped(*amount) : "-"))});
+                parts.push_back({icons[i], HasMark(icon) ? ListOf(icon) : std::vector<Span>{}});
+            }
+            return parts;
+        }
+
         // The favorites at the top, then every currency in a scrolling list sorted as its tab says, each with a star
         // that adds it to the favorites or takes it off.
         PopupContent CurrencyPopup(const BarState& state, const Settings& settings)
@@ -1166,13 +1144,19 @@ namespace headsup
                 star.tint  = favorite ? Colored("", kStarColor) : Text("", Tone::Dim);
                 star.press = kFavoritePress + std::string(kCurrencyTable[c].key);
                 grid.cells.push_back(std::move(star));
+                const Span mark = CurrencyMark(c, Nation::None);
+                PopupCell picture;
+                if (mark.coin) picture.icon = Icon::Gil;
+                picture.picture = mark.picture;
+                picture.item    = mark.item;
+                grid.cells.push_back(std::move(picture));
                 grid.cells.push_back(Cell(Text(kCurrencyTable[c].name)));
                 const std::optional<uint32_t> held = amount(c);
                 PopupCell value = Cell(held ? Text(Grouped(*held)) : Text("-", Tone::Dim));
                 value.align     = Align::Right;
                 grid.cells.push_back(std::move(value));
             };
-            constexpr int kColumns = 3; // the star, the name and the amount
+            constexpr int kColumns = 4; // the star, the picture, the name and the amount
             PopupSection top{"Favorites", {}};
             if (favorites.empty())
                 top.rows.push_back(LineOf("Click a currency's star to keep it here.", Tone::Dim));
@@ -1181,6 +1165,9 @@ namespace headsup
                 PopupRow grid = Grid(kColumns, favorites.size() * kColumns);
                 for (const int c : favorites)
                     add(grid, c);
+                grid.nested = true;
+                grid.spread = true;
+                ScrollsBy(grid, state, top.heading);
                 top.rows.push_back(std::move(grid));
             }
             PopupSection all{"All Currencies", {}};
@@ -1202,88 +1189,125 @@ namespace headsup
                 for (const int c : order)
                     add(grid, c);
                 grid.nested = true;
+                grid.spread = true;
                 tab.rows.push_back(std::move(grid));
                 ScrollsBy(tab.rows.front(), state, all.heading + "/" + tab.name.text);
                 all.tabs.push_back(std::move(tab));
             }
             all.tab        = Picked(state, all);
-            popup.sections = ListOf(std::move(top), std::move(all));
+            popup.sections  = ListOf(std::move(top), std::move(all));
+            popup.oneColumn = true;
             return popup;
         }
 
-        // The regions each picked nation holds, a tab each. Your nation's say which outposts you have not run supplies to,
-        // as far as overseers told.
-        PopupSection ConquestSection(const BarState& state, const WidgetOptions& o)
+        constexpr int kSupplyColumns = 3; // a region's name, then "Supply run available" and its flag
+
+        // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
+        // opens. Your nation's say which outposts you have not run supplies to, as far as overseers told.
+        PopupSection ConquestSection(const BarState& state)
         {
-            PopupSection conquest{"Conquest", {}};
+            PopupSection conquest{"Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")", {}};
+            conquest.tabsAcross  = 2;
+            conquest.tabEachOpen = true;
             if (!state.owners)
             {
                 conquest.rows.push_back(LineOf("The standings show once the server sends them.", Tone::Dim));
                 return conquest;
             }
-            for (const Nation nation : PickedNations(o.nations))
+            std::vector<Nation> nations;
+            if (state.nation && *state.nation >= Nation::SanDoria && *state.nation <= Nation::Windurst) nations.push_back(*state.nation);
+            for (const Nation nation : {Nation::SanDoria, Nation::Bastok, Nation::Windurst, Nation::Beastmen})
+                if (std::ranges::find(nations, nation) == nations.end()) nations.push_back(nation);
+            for (const Nation nation : nations)
             {
                 const bool yours = state.nation == nation && state.outposts != nullptr;
                 bool unknown     = false;
                 PopupTab held{Colored(NationName(nation), NationColor(nation)), {}};
+                held.picture = NationCrest(nation);
+                std::vector<std::pair<uint8_t, std::optional<bool>>> regions; // each held, and whether you ran supplies there
                 for (int region = 0; region < kConquestRegionCount; ++region)
+                    if ((*state.owners)[region] == nation)
+                    {
+                        const auto r = static_cast<uint8_t>(region);
+                        regions.emplace_back(r, yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true));
+                        unknown = unknown || !regions.back().second;
+                    }
+                // While one has a supply run to make, every region is a line of a grid whose words and gray flag
+                // stand against the card's right, so they line up.
+                const bool runs = std::ranges::any_of(regions, [](const auto& region) { return region.second == false; });
+                for (const auto& [r, ran] : regions)
                 {
-                    if ((*state.owners)[region] != nation) continue;
-                    const auto r                  = static_cast<uint8_t>(region);
-                    const std::optional<bool> ran = yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true);
-                    unknown = unknown || !ran;
-                    if (ran == false)
-                        held.rows.push_back(Line(Cell(ListOf(Text(std::string(RegionName(r))), Text(kDot, Tone::Dim),
-                            Text("no supply run", Tone::Dim)))));
-                    else
+                    if (!runs)
+                    {
                         held.rows.push_back(LineOf(std::string(RegionName(r))));
+                        continue;
+                    }
+                    PopupRow row{RowKind::Grid, kSupplyColumns, {Cell(Text(std::string(RegionName(r))))}};
+                    row.trailing = true;
+                    if (ran == false)
+                    {
+                        PopupCell said = Cell(Text("Supply run available"));
+                        said.align     = Align::Right;
+                        PopupCell flag;
+                        flag.icon = Icon::Flag;
+                        flag.tint = Text("", Tone::Dim);
+                        row.cells.push_back(std::move(said));
+                        row.cells.push_back(std::move(flag));
+                    }
+                    held.rows.push_back(std::move(row));
                 }
                 if (held.rows.empty()) held.rows.push_back(LineOf("None", Tone::Dim));
                 if (unknown)
                     held.rows.push_back(LineOf("Talk to a conquest overseer in your nation's city to see your supply runs.", Tone::Dim));
                 for (PopupRow& row : held.rows)
                     row.nested = true;
-                ScrollsBy(held.rows.front(), state, conquest.heading + "/" + held.name.text);
+                ScrollsBy(held.rows.front(), state, std::string(CardKey(conquest.heading)) + "/" + held.name.text);
                 conquest.tabs.push_back(std::move(held));
             }
             conquest.tab = Picked(state, conquest);
             return conquest;
         }
 
-        PopupContent WorldPopup(const BarState& state, const WidgetOptions& o)
+        // The Conquest card, Travel and the Calendar in a column beside it, and Guilds under them all.
+        PopupContent WorldPopup(const BarState& state)
         {
             PopupContent popup;
             popup.title = ListOf(Text("World Info"));
-            const auto picked = [&](WorldSection section) { return (o.worldSections & WorldBit(section)) != 0; };
-            if (picked(WorldSection::Travel))
+            popup.sections.push_back(ConquestSection(state));
             {
                 // A tab for each kind of ship, its routes together in the data.
                 PopupSection travel{"Travel", {}};
+                travel.beside = true;
                 const std::span<const TravelRoute> routes = TravelRoutes();
                 for (size_t first = 0, last = 0; first < routes.size(); first = last)
                 {
+                    // The route, whether its ship arrives or departs next against how long until it does.
+                    constexpr int kColumns = 3;
                     PopupTab kind{Text(routes[first].group), {}};
+                    PopupRow grid{RowKind::Grid, kColumns, {}};
                     for (last = first; last < routes.size() && std::string_view(routes[last].group) == routes[first].group; ++last)
                     {
-                        std::vector<Span> when = SailingText(routes[last], state.unixMs);
-                        PopupRow row = Labeled(routes[last].name, when.front());
-                        for (size_t s = 1; s < when.size(); ++s)
-                            row.cells.back().text.push_back(when[s]);
-                        row.nested = true;
-                        kind.rows.push_back(std::move(row));
+                        const Sailing next = NextSailing(routes[last], state.unixMs);
+                        PopupCell stage    = Cell(Text(next.boarding ? "Departs in" : "Arrives in", Tone::Dim));
+                        stage.align        = Align::Right;
+                        grid.cells.push_back(Cell(Text(routes[last].name)));
+                        grid.cells.push_back(std::move(stage));
+                        grid.cells.push_back(Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn))));
                     }
+                    grid.nested   = true;
+                    grid.trailing = true;
+                    kind.rows.push_back(std::move(grid));
                     ScrollsBy(kind.rows.front(), state, travel.heading + "/" + kind.name.text);
                     travel.tabs.push_back(std::move(kind));
                 }
                 travel.tab = Picked(state, travel);
                 popup.sections.push_back(std::move(travel));
             }
-            if (picked(WorldSection::Calendar))
             {
                 const Rse now = RseAt(state.unixMs), next = RseAt(state.unixMs, 1);
                 const uint32_t today = VanaAt(state.unixMs).day;
                 PopupSection calendar{"Calendar", {}};
-                calendar.beside = picked(WorldSection::Travel); // the ships and the calendar in one row, Guilds under
+                calendar.under = true;
                 // Each line's name and who on the left; where and when on the right, the time last.
                 const auto race = [](const char* label, const Rse& rse) {
                     PopupRow row = Labeled(label, Text(rse.place));
@@ -1298,32 +1322,33 @@ namespace headsup
                 const auto until = [](const char* label, double seconds) { return Labeled(label, Text(Countdown(seconds))); };
                 calendar.rows.push_back(until("Full Moon", SecondsToDay(state.unixMs, NextMoonDay(today, true))));
                 calendar.rows.push_back(until("New Moon", SecondsToDay(state.unixMs, NextMoonDay(today, false))));
-                calendar.rows.push_back(until("Conquest Tally", SecondsToTally(state.unixMs)));
                 popup.sections.push_back(std::move(calendar));
             }
-            if (picked(WorldSection::Guilds))
             {
-                // A tab for each guild, its shops together in the data: how many are open, then each shop's hours, and
-                // who and where.
+                // A tab for each guild, its shops together in the data: each shop's hours in columns, open or closed
+                // against when that changes and where, then a craft's turn-ins.
                 PopupSection guilds{"Guilds", {}};
                 const std::span<const GuildShop> shops = GuildShops();
                 for (size_t first = 0, last = 0; first < shops.size(); first = last)
                 {
-                    int open = 0;
-                    for (last = first; last < shops.size() && std::string_view(shops[last].guild) == shops[first].guild; ++last)
-                        open += GuildAt(shops[last], state.unixMs).open;
+                    for (last = first; last < shops.size() && std::string_view(shops[last].guild) == shops[first].guild; ++last) {}
                     PopupTab guild{Text(shops[first].guild), {}};
-                    PopupRow count = Labeled("Open", Text(std::to_string(open) + " of " + std::to_string(last - first)));
-                    count.nested   = true;
-                    ScrollsBy(count, state, guilds.heading + "/" + shops[first].guild);
-                    guild.rows.push_back(std::move(count));
+                    guild.rows.push_back(LineOf("Shop Hours", Tone::Heading));
                     PopupRow grid = Grid(kWorldGuildColumns, (last - first) * kWorldGuildColumns);
                     grid.nested   = true;
                     for (size_t i = first; i < last; ++i)
                     {
-                        grid.cells.push_back(Cell(GuildText(shops[i], state.unixMs)));
+                        const GuildHours hours = GuildAt(shops[i], state.unixMs);
+                        PopupCell now = Cell(Text(hours.open ? "Open" : hours.holiday ? "Holiday" : "Closed",
+                            hours.open ? Tone::Normal : Tone::Dim));
+                        now.align = Align::Right;
+                        PopupCell change = Cell(Text((hours.open ? "closes in " : "opens in ") + Countdown(hours.changeIn)));
+                        change.align = Align::Center;
+                        grid.cells.push_back(std::move(now));
+                        grid.cells.push_back(std::move(change));
                         grid.cells.push_back(Cell(Text(std::string(shops[i].shops) + ", " + shops[i].zone, Tone::Dim)));
                     }
+                    ScrollsBy(grid, state, guilds.heading + "/" + shops[first].guild);
                     guild.rows.push_back(std::move(grid));
                     if (const std::optional<int> craft = CraftGuildNamed(shops[first].guild))
                         for (PopupRow& row : TurnIns(state, *craft, shops[first].guild))
@@ -1333,7 +1358,6 @@ namespace headsup
                 guilds.tab = Picked(state, guilds);
                 popup.sections.push_back(std::move(guilds));
             }
-            if (picked(WorldSection::Conquest)) popup.sections.push_back(ConquestSection(state, o));
             return popup;
         }
 
@@ -1352,11 +1376,73 @@ namespace headsup
                 bag.max == 0 ? Tone::Dim : bag.used >= bag.max ? Tone::Resist : Tone::Normal);
         }
 
-        WidgetContent ContentOf(PanelWidget widget, const BarState& state, const Settings& settings)
+        std::vector<PartContent> TargetParts(const BarState& state, const Settings& settings, const WidgetOptions& o,
+            WidgetContent& base)
         {
-            WidgetContent w;
-            w.shown = Shows(settings, widget);
-            if (!w.shown) return w;
+            if ((o.targetShows & TargetShowBit(TargetShowOf(state.target))) == 0)
+            {
+                base.shown = false;
+                return {};
+            }
+            if (state.target == nullptr) return {{WidgetPart::TargetName, ListOf(Text("No Target", Tone::Dim))}};
+            std::vector<PartContent> parts;
+            if (TargetShowOf(state.target) != TargetShow::Mobs)
+            {
+                parts.push_back({WidgetPart::TargetName, ListOf(Colored(state.target->name,
+                                                             ToArgb(settings.palette.type[static_cast<int>(TypeOf(state.target->state))])))});
+                if (state.target->kind == EntityKind::Player)
+                {
+                    // What is known of their jobs, the newest first; a check alone has a popup to show.
+                    const std::optional<PlayerJobs>& jobs = state.target->jobs;
+                    std::string said;
+                    if (jobs && jobs->mainJob != 0)
+                        said = JobsText(jobs->mainJob, jobs->mainLevel, jobs->subJob, jobs->subLevel);
+                    else if (state.target->status && state.target->status->anonymous)
+                        said = kAnonymousJobs;
+                    else if (state.targetCheck)
+                        said = CheckedJobs(state.targetCheck->general);
+                    if (!said.empty()) parts.push_back({WidgetPart::TargetPlayer, ListOf(Text(said))});
+                    base.hasPopup = state.targetCheck.has_value();
+                }
+                base.hasPopup = base.hasPopup || NpcOf(state.target) != nullptr;
+            }
+            else
+            {
+                const IconSet aggro = IconsFor(state.target->mob, DetectionBit(DetectionIcon::Aggro));
+                const IconSet senses = IconsFor(state.target->mob, o.targetDetection & ~DetectionBit(DetectionIcon::Aggro));
+                parts.push_back({WidgetPart::TargetAggro, Marks(aggro.icons, aggro.count)});
+                parts.push_back({WidgetPart::TargetDetection, Marks(senses.icons, senses.count)});
+                parts.push_back({WidgetPart::TargetName, ListOf(Colored(state.target->name, NameColor(*state.target, settings)))});
+                if (HasLevel(*state.target))
+                    parts.push_back({WidgetPart::TargetLevel,
+                        ListOf(Colored(state.target->level.text, ShadeColor(*state.target, settings)))});
+                if (IsMob(state.target))
+                {
+                    // Weaknesses by SDT or rank, as the badges find them by default.
+                    std::vector<Span> weak;
+                    const InfoIconSet found = InfoIconsFor(&ResistancesOf(*state.target->mob), BadgeRules{});
+                    for (int i = 0; i < found.count; ++i)
+                        if (found.icons[i].badge == BadgeKind::Weak || found.icons[i].badge == BadgeKind::WeakRank)
+                            weak.push_back(Mark(found.icons[i].icon));
+                    parts.push_back({WidgetPart::TargetWeak, std::move(weak)});
+                }
+                base.hasPopup = IsMob(state.target); // a mob the data lacks gets its name, level and con, no popup
+            }
+            if (state.targetDistance && std::isfinite(*state.targetDistance))
+            {
+                constexpr float kFarthest = 99.9f; // the farthest a target's distance reads
+                const auto said = [](float yalms) { return "(" + Printed("%.1f", yalms) + ")"; };
+                Span far = Text(said(*state.targetDistance), Tone::Dim);
+                far.room = {said(kFarthest)};
+                parts.push_back({WidgetPart::TargetDistance, ListOf(std::move(far))});
+            }
+            return parts;
+        }
+
+        // What each part of a widget shows now, base taking whether it shows at all, its popup and its figures.
+        std::vector<PartContent> PartsNow(PanelWidget widget, const BarState& state, const Settings& settings,
+            WidgetContent& base)
+        {
             const WidgetOptions& o = settings.Widget(widget);
             switch (widget.kind)
             {
@@ -1364,167 +1450,132 @@ namespace headsup
             {
                 const ZoneRecord* zone = KnownZone(state.zone);
                 const std::string_view region = ZoneRegion(zone);
-                w.title = ListOf(Text(ZoneTitle(state.zone)));
-                if (o.secondLine && !region.empty()) w.subtitle = ListOf(Text(std::string(region), Tone::Dim));
-                // Who holds its region, as its crest and its name after it.
-                std::vector<Span> holder;
-                if (const Nation owner = OwnerOf(zone, state); owner != Nation::None && o.zoneConquest != ConquestPlace::Off)
+                std::vector<PartContent> parts{{WidgetPart::ZoneName, ListOf(Text(ZoneTitle(state.zone)))},
+                    {WidgetPart::ZoneRegion, region.empty() ? std::vector<Span>{} : ListOf(Text(std::string(region)))}};
+                // Who holds its region, by their crest and by name; Jeuno's and Aht Urhgan's crests alone in their own.
+                if (const Nation owner = OwnerOf(zone, state); owner != Nation::None)
                 {
-                    const GamePicture crest = NationCrest(owner);
-                    if (crest != GamePicture::None) holder.push_back(Span{"", Tone::Normal, 0, crest});
-                    if (o.zoneConquestText)
-                        holder.push_back(Colored((holder.empty() ? "" : " ") + std::string(NationName(owner)), NationColor(owner)));
+                    if (const GamePicture crest = NationCrest(owner); crest != GamePicture::None)
+                        parts.push_back({WidgetPart::ZoneCrest, ListOf(Mark(crest))});
+                    parts.push_back({WidgetPart::ZoneNation, ListOf(Colored(std::string(NationName(owner)), NationColor(owner)))});
                 }
-                if (!holder.empty())
-                    switch (o.zoneConquest)
-                    {
-                    case ConquestPlace::Left:
-                        holder.push_back(Text(" "));
-                        w.title.insert(w.title.begin(), holder.begin(), holder.end());
-                        break;
-                    case ConquestPlace::Right:
-                        w.title.push_back(Text(" "));
-                        w.title.insert(w.title.end(), holder.begin(), holder.end());
-                        break;
-                    case ConquestPlace::Below:
-                        if (!w.subtitle.empty()) w.subtitle.push_back(Text(kDot, Tone::Dim));
-                        w.subtitle.insert(w.subtitle.end(), holder.begin(), holder.end());
-                        break;
-                    case ConquestPlace::Off: break;
-                    }
-                w.hasPopup = state.zone != 0;
-                break;
+                else if (const GamePicture crest = HomeCrest(zone); crest != GamePicture::None)
+                    parts.push_back({WidgetPart::ZoneCrest, ListOf(Mark(crest))});
+                base.hasPopup = state.zone != 0;
+                return parts;
             }
             case BarWidget::Weather:
             {
-                const std::optional<WeatherOdds> today = OddsOn(state, VanaAt(state.unixMs).day);
-                if (!state.weather && !today)
-                {
-                    w.shown = false;
-                    break;
-                }
-                const Weather now = state.weather ? *state.weather : today->normal;
-                if (const std::optional<Icon> icon = WeatherIcon(now)) w.icons.assign(IsDoubleWeather(now) ? 2 : 1, *icon);
-                w.title = ListOf(Text(WeatherName(now)));
-                // Today's chance of it; the forecast is in the popup.
-                for (const WeatherChance& c : today ? Chances(*today) : WeatherChances{})
-                    if (c.weather == now) w.subtitle = ListOf(Text(std::to_string(c.percent) + "%", Tone::Dim));
-                w.hasPopup = today.has_value();
-                break;
-            }
-            case BarWidget::VanaTime:
-            {
+                // The weather now, or the day's likeliest before it is known; Vana'diel's date, day, time and moon.
                 const VanaTime t = VanaAt(state.unixMs);
-                const std::string time = HourMinute(t.hour, t.minute);
-                w.title = o.vanaWeekday ? ListOf(WeekdayText(t), Text(" " + time)) : ListOf(Text(time));
-                std::string line = o.vanaDate ? VanaDate(t) : std::string();
-                if (o.secondLine) line += (line.empty() ? "" : " ") + MoonText(t) + " " + std::to_string(t.moonPercent) + "%";
-                if (!line.empty()) w.subtitle = ListOf(Text(line, Tone::Dim));
-                w.hasPopup = true;
-                break;
+                const std::optional<WeatherOdds> today = OddsOn(state, t.day);
+                std::vector<PartContent> parts{{WidgetPart::WeatherIcon, {}}, {WidgetPart::WeatherName, {}},
+                    {WidgetPart::VanaDate, ListOf(Text(VanaDate(t)))}, {WidgetPart::VanaDay, ListOf(WeekdayText(t))},
+                    {WidgetPart::VanaTime, ListOf(HourMinuteSpan(t.hour, t.minute))},
+                    {WidgetPart::VanaMoon, ListOf(Text(MoonText(t) + " " + std::to_string(t.moonPercent) + "%"))}};
+                if (state.weather || today)
+                {
+                    const Weather now = state.weather ? *state.weather : today->normal;
+                    for (const Icon icon : WeatherIcons(now, o.weatherIcons))
+                        parts[0].spans.push_back(Mark(icon));
+                    parts[1].spans = ListOf(Text(WeatherName(now)));
+                }
+                base.hasPopup = true;
+                return parts;
             }
-            case BarWidget::Target:
-                if ((o.targetShows & TargetShowBit(TargetShowOf(state.target))) == 0)
-                    w.shown = false;
-                else if (state.target == nullptr)
-                    w.title = ListOf(Text("No target", Tone::Dim));
-                else if (TargetShowOf(state.target) != TargetShow::Mobs)
-                {
-                    w.title = ListOf(Colored(state.target->name,
-                        ToArgb(settings.palette.type[static_cast<int>(TypeOf(state.target->state))])));
-                    if (state.target->kind == EntityKind::Player)
-                    {
-                        // What is known of their jobs, the newest first; a check alone has a popup to show.
-                        const std::optional<PlayerJobs>& jobs = state.target->jobs;
-                        std::string said;
-                        if (jobs && jobs->mainJob != 0)
-                            said = JobsText(jobs->mainJob, jobs->mainLevel, jobs->subJob, jobs->subLevel);
-                        else if (state.target->status && state.target->status->anonymous)
-                            said = kAnonymousJobs;
-                        else if (state.targetCheck)
-                            said = CheckedJobs(state.targetCheck->general);
-                        if (o.targetJobs && !said.empty()) w.subtitle = ListOf(Text(said, Tone::Dim));
-                        w.hasPopup = state.targetCheck.has_value();
-                    }
-                    w.hasPopup = w.hasPopup || NpcOf(state.target) != nullptr;
-                }
-                else
-                {
-                    // Its aggression before its name, the rest of its icons after it, as Show Icons picks them.
-                    const IconSet aggro = IconsFor(state.target->mob, o.targetIcons & DetectionBit(DetectionIcon::Aggro));
-                    const IconSet rest  = IconsFor(state.target->mob, o.targetIcons & kAllDetection & ~DetectionBit(DetectionIcon::Aggro));
-                    w.icons.assign(aggro.icons, aggro.icons + aggro.count);
-                    w.titleIcons.assign(rest.icons, rest.icons + rest.count);
-                    w.title = ListOf(Colored(state.target->name, NameColor(*state.target, settings)));
-                    if (o.targetMobLevel && HasLevel(*state.target))
-                        w.subtitle = ListOf(Colored(state.target->level.text, ShadeColor(*state.target, settings)));
-                    if ((o.targetIcons & kTargetWeakIcons) != 0 && IsMob(state.target))
-                    {
-                        // Weaknesses by SDT or rank, as the badges find them by default.
-                        const InfoIconSet found = InfoIconsFor(&ResistancesOf(*state.target->mob), BadgeRules{});
-                        for (int i = 0; i < found.count; ++i)
-                            if (found.icons[i].badge == BadgeKind::Weak || found.icons[i].badge == BadgeKind::WeakRank)
-                                w.subtitleIcons.push_back(found.icons[i].icon);
-                    }
-                    w.hasPopup = IsMob(state.target); // a mob the data lacks gets its name, level and con, no popup
-                }
-                if (w.shown && state.target != nullptr && o.targetDistance && state.targetDistance &&
-                    std::isfinite(*state.targetDistance))
-                    w.title.push_back(Text(" (" + Printed("%.1f", *state.targetDistance) + ")", Tone::Dim));
-                break;
-            case BarWidget::Currency:
-            {
-                // The picked currency; gil with its coin.
-                const int picked = o.currency;
-                if (picked == kGilCurrency)
-                {
-                    w.coin  = true;
-                    w.title = ListOf(Text(state.gil ? Grouped(*state.gil) : "-"));
-                }
-                else
-                {
-                    const std::optional<uint32_t>& amount = state.currencies[picked];
-                    w.title    = ListOf(Text(amount ? Grouped(*amount) : "-"));
-                    w.subtitle = ListOf(Text(kCurrencyTable[picked].name, Tone::Dim));
-                }
-                w.hasPopup = true;
-                break;
-            }
+            case BarWidget::Target: return TargetParts(state, settings, o, base);
+            case BarWidget::Currency: return CurrencyParts(state, o, base);
             case BarWidget::Bags:
             {
                 const std::optional<BagCount>& bag = state.bags[o.bag];
-                w.title    = ListOf(bag ? BagFill(*bag) : Text("-"));
-                w.subtitle = ListOf(Text(o.bag == static_cast<int>(kInventory) ? "Bags" : ContainerName(o.bag), Tone::Dim));
-                w.hasPopup = true;
-                break;
+                base.hasPopup = true;
+                return {{WidgetPart::BagIcon, ListOf(Mark(Icon::Bag))}, {WidgetPart::BagCount, ListOf(bag ? BagFill(*bag) : Text("-"))},
+                    {WidgetPart::BagName, ListOf(Text(ContainerName(o.bag)))}};
             }
             case BarWidget::EarthTime:
-                w.title    = ListOf(Text(o.clockZone
-                        ? ZoneClockText(ZoneAt(*o.clockZone, state.unixMs), o.clock24, o.clockSeconds)
-                        : ClockText(state.earthHour, state.earthMinute, o.clock24, o.clockSeconds ? state.earthSecond : -1)));
-                if (o.clockServerTime)
-                    w.subtitle = ListOf(Text(ZoneClockText(ZoneAt(ClockZone::Japan, state.unixMs), o.clock24, false), Tone::Dim));
-                w.hasPopup = true;
-                break;
-            case BarWidget::GameHelp:
-                return WidgetContent{};
-            case BarWidget::Performance:
-                return PerformanceWidget(state, o.perfParts);
-            case BarWidget::Job:
-                return o.jobLayout == JobLayout::Bar ? ExpWidget(state.job, o.expPlaces, o.expBarWidth, o.expBarHeight, o.expAlign)
-                                                     : JobWidget(state.job, o.expBar, o.jobNames, o.jobLayout, o.expText);
-            case BarWidget::Party:
-                return PartyWidget(state.party);
+                base.hasPopup = true;
+                return {{WidgetPart::ClockIcon, ListOf(Mark(Icon::Clock))}, {WidgetPart::ClockTime,
+                            o.clockZone ? ZoneClockSpans(ZoneAt(*o.clockZone, state.unixMs), o.clock24, o.clockSeconds)
+                                        : ClockSpans(state.earthHour, state.earthMinute, o.clock24,
+                                              o.clockSeconds ? state.earthSecond : -1)},
+                    {WidgetPart::ClockServer,
+                        o.clockSecondZone ? ZoneClockSpans(ZoneAt(*o.clockSecondZone, state.unixMs), o.clock24, false)
+                                          : [&] {
+                                                std::vector<Span> spans = ClockSpans(state.earthHour, state.earthMinute, o.clock24);
+                                                spans.insert(spans.begin(), Text(LocalZoneName(state.unixMs, state.earthYear,
+                                                    state.earthMonth, state.earthDay, state.earthHour, state.earthMinute) + " "));
+                                                return spans;
+                                            }()},
+                    {WidgetPart::ClockVana, ListOf(VanaClock(state.unixMs))},
+                    {WidgetPart::ClockDate,
+                        ListOf(Text(DateText(o.dateFormat, CalendarDay{state.earthYear, state.earthMonth, state.earthDay})))}};
+            case BarWidget::GameHelp: return {};
+            case BarWidget::Performance: return PerformanceParts(state, o, base);
+            case BarWidget::Job: return JobParts(state.job, o, base);
+            case BarWidget::Party: return PartyParts(state.party, base);
             case BarWidget::StatusTimers:
-                return StatusTimersWidget(state.statuses, settings.statusPins);
-            case BarWidget::World:
-                return WorldWidget(state, o);
+                base.hasPopup = true;
+            {
+                std::vector<PartContent> parts;
+                for (size_t rank = 0; rank < kMostStatusPins; ++rank)
+                    parts.push_back({static_cast<WidgetPart>(static_cast<size_t>(WidgetPart::StatusPin1) + rank),
+                        PinnedStatus(state.statuses, settings.statusPins, rank, o.statusDisplay, OwnPalette(settings))});
+                return parts;
             }
+            case BarWidget::World: return WorldParts(state, o, base);
+            case BarWidget::Settings: base.cog = true; return {};
+            }
+            return {};
+        }
+
+        WidgetContent ContentOf(PanelWidget widget, const BarState& state, const Settings& settings)
+        {
+            WidgetContent base;
+            base.shown = Shows(settings, widget);
+            const WidgetOptions& o = settings.Widget(widget);
+            if (widget.kind == BarWidget::GameHelp) return WidgetContent{}; // its own bar, never a widget
+            if (!base.shown) return base;
+            std::vector<PartContent> parts = PartsNow(widget, state, settings, base);
+            if (!base.shown) return base;
+            // The widget's icon goes beside both lines, where its Icon setting puts it.
+            if (const std::optional<WidgetPart> icon = IconPartOf(widget.kind))
+                if (const auto part = std::ranges::find(parts, *icon, &PartContent::part); part != parts.end())
+                {
+                    if (o.iconSide != IconSide::Hide)
+                        for (const Span& s : part->spans)
+                        {
+                            if (s.icon) base.icons.push_back(*s.icon);
+                            if (s.picture != GamePicture::None) base.picture = s.picture;
+                        }
+                    base.iconsRight = o.iconSide == IconSide::Right;
+                    parts.erase(part);
+                }
+            // The pins decide which Pinned Status buttons show, not their switches.
+            WidgetDesign design = o.design;
+            if (widget.kind == BarWidget::StatusTimers)
+                for (std::vector<DesignChip>& line : design.lines)
+                    for (DesignChip& chip : line)
+                        chip.on = true;
+            WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
+            if (w.title.empty() && widget.kind == BarWidget::StatusTimers) w.title = ListOf(Text("Status Timers", Tone::Dim));
+            if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None) w.title = ListOf(Text("-"));
             return w;
         }
     }
 
     uint32_t ElementColor(Element element) { return kElementColors[static_cast<int>(element)]; }
+
+    Span CurrencyMark(int currency, Nation yours)
+    {
+        Span mark                  = Text("");
+        const std::optional<int> c = ResolvedCurrency(currency, yours);
+        if (!c) return mark;
+        mark.coin = *c == kGilCurrency;
+        mark.item = kCurrencyTable[*c].item;
+        for (const Nation nation : {Nation::SanDoria, Nation::Bastok, Nation::Windurst})
+            if (c == NationPoints(nation)) mark.picture = NationCrest(nation);
+        return mark;
+    }
 
     std::optional<Span> StripBagFill(const BarState& state)
     {
@@ -1565,7 +1616,7 @@ namespace headsup
         return std::nullopt;
     }
 
-    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
+    PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
     {
         // A status's star or pin; a status taken off the favorites leaves the panel too, as only they have pins.
         for (const std::string_view kind : {kStatusFavoritePress, kStatusPinPress})
@@ -1575,21 +1626,43 @@ namespace headsup
             char* end           = nullptr;
             const unsigned long id = std::strtoul(number.c_str(), &end, 10);
             if (number.empty() || *end != '\0' || id > UINT16_MAX || *StatusName(static_cast<uint16_t>(id)) == '\0')
-                return false;
+                return PressResult::None;
             const auto status = static_cast<uint16_t>(id);
             std::vector<uint16_t>& list = kind == kStatusPinPress ? settings.statusPins : settings.statusFavorites;
             if (const auto at = std::ranges::find(list, status); at != list.end())
             {
+                if (settings.statusPins == std::vector<uint16_t>{status}) return PressResult::Refused;
                 list.erase(at);
                 if (kind == kStatusFavoritePress) std::erase(settings.statusPins, status);
             }
+            else if (kind == kStatusPinPress && list.size() >= kMostStatusPins)
+                return PressResult::Refused;
             else
                 list.push_back(status);
-            return true;
+            return PressResult::Changed;
         }
-        if (!press.starts_with(kFavoritePress)) return false;
+        if (press.starts_with(kPopupResetPress))
+        {
+            const std::string number(press.substr(std::string_view(kPopupResetPress).size()));
+            char* end = nullptr;
+            const long slot = std::strtol(number.c_str(), &end, 10);
+            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return PressResult::None;
+            settings.widgets[static_cast<size_t>(slot)].popupSpot.reset();
+            return PressResult::Changed;
+        }
+        if (press.starts_with(kCollapsePress))
+        {
+            const std::string key(press.substr(std::string_view(kCollapsePress).size()));
+            if (key.empty() || key.find(' ') != std::string::npos) return PressResult::None;
+            if (const auto at = std::ranges::find(settings.collapsedSections, key); at != settings.collapsedSections.end())
+                settings.collapsedSections.erase(at);
+            else
+                settings.collapsedSections.push_back(key);
+            return PressResult::Changed;
+        }
+        if (!press.starts_with(kFavoritePress)) return PressResult::None;
         const std::string key(press.substr(std::string_view(kFavoritePress).size()));
-        if (!CurrencyOfKey(key)) return false;
+        if (!CurrencyOfKey(key)) return PressResult::None;
         // Your nation's points by their own key once it is known, so its star takes them off.
         std::vector<std::string> favorites;
         for (const std::string& held : settings.currencyFavorites)
@@ -1603,51 +1676,76 @@ namespace headsup
         else
             favorites.push_back(key);
         settings.currencyFavorites = std::move(favorites);
-        return true;
+        return PressResult::Changed;
     }
 
     bool StandingsShown(const Settings& settings)
     {
         bool shown = AnyCopyShown(settings, BarWidget::Zone);
         EachShownCopy(settings, BarWidget::World,
-            [&](const WidgetOptions& o) { shown = shown || o.worldLine == WorldLine::Conquest; });
+            [&](const WidgetOptions& o) {
+                for (int n = 0; n < kContenderNations; ++n)
+                    shown = shown || PartOn(o.design, static_cast<WidgetPart>(static_cast<int>(WidgetPart::WorldSanDoria) + n));
+            });
         return shown;
     }
 
-    bool PopupShows(const Settings& settings, std::optional<PanelWidget> open, BarWidget widget)
+    bool PopupShows(const Settings& settings, const std::vector<PanelWidget>& shown, BarWidget widget)
     {
-        if (!open) return false;
-        if (open->kind == widget) return true;
-        return std::ranges::any_of(Members(Panel(settings), *open), [&](PanelWidget w) { return w.kind == widget; });
+        return std::ranges::any_of(shown, [&](PanelWidget open) {
+            return open.kind == widget ||
+                   std::ranges::any_of(Members(Panel(settings), open), [&](PanelWidget w) { return w.kind == widget; });
+        });
     }
 
-    BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open)
+    void HoldWhileLoading(BarState& state, CharacterReadings& held, bool loaded)
+    {
+        if (loaded)
+        {
+            held = {state.zone, state.weather, state.job, state.gil, state.bags, state.statuses, state.unixMs};
+            return;
+        }
+        const double since = static_cast<double>(state.unixMs - held.unixMs) / kMsPerSecond;
+        state.zone     = held.zone;
+        state.weather  = held.weather;
+        state.job      = held.job;
+        state.gil      = held.gil;
+        state.bags     = held.bags;
+        state.statuses = held.statuses;
+        for (ActiveStatus& status : state.statuses)
+            if (status.secondsLeft) status.secondsLeft = std::max(0.0, *status.secondsLeft - since);
+    }
+
+    BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing)
     {
         const auto shown  = [&](BarWidget widget) { return AnyCopyShown(settings, widget); };
-        const auto opened = [&](BarWidget widget) { return PopupShows(settings, open, widget); };
+        const auto opened = [&](BarWidget widget) { return PopupShows(settings, showing, widget); };
         BarNeeds needs;
         // A Clock in a zone of its own goes by the time alone, as its server line and its popup's resets do; in the
         // computer's zone, by what Windows makes of the time.
         bool zonedClock = false, localClock = false, serverClock = false;
         EachShownCopy(settings, BarWidget::EarthTime, [&](const WidgetOptions& o) {
             (o.clockZone ? zonedClock : localClock) = true;
-            serverClock = serverClock || o.clockServerTime;
+            localClock = localClock || PartOn(o.design, WidgetPart::ClockDate); // the computer's date
+            // The computer's zone is named by comparing its time with the time alone.
+            const bool second = PartOn(o.design, WidgetPart::ClockServer);
+            serverClock = serverClock || second || PartOn(o.design, WidgetPart::ClockVana);
+            localClock  = localClock || (second && !o.clockSecondZone);
         });
-        // World Info reads the zone for a weather on the panel.
-        bool worldWeather = false;
-        EachShownCopy(settings, BarWidget::World,
-            [&](const WidgetOptions& o) { worldWeather = worldWeather || o.worldLine == WorldLine::Weather; });
-        needs.unixTime   = shown(BarWidget::Weather) || shown(BarWidget::VanaTime) || zonedClock || serverClock ||
+        needs.unixTime   = shown(BarWidget::Weather) || zonedClock || serverClock ||
                            shown(BarWidget::World) || opened(BarWidget::EarthTime) ||
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
         needs.localTime  = localClock;
-        needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather) || worldWeather;
+        needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather);
         needs.target     = shown(BarWidget::Target);
         needs.gil        = shown(BarWidget::Currency);
         needs.strip      = shown(BarWidget::GameHelp);
         // The Performance widget reads what its copies show on the panel, and everything for its popup.
         uint8_t perf = 0;
-        EachShownCopy(settings, BarWidget::Performance, [&](const WidgetOptions& o) { perf |= o.perfParts; });
+        EachShownCopy(settings, BarWidget::Performance, [&](const WidgetOptions& o) {
+            for (int p = 0; p < kPerfPartCount; ++p)
+                if (PartOn(o.design, kPerfWidgetParts[p])) perf |= PerfBit(static_cast<PerfPart>(p));
+        });
         const bool perfPopup = opened(BarWidget::Performance);
         needs.conquest   = opened(BarWidget::World) || opened(BarWidget::Currency);
         needs.frames     = (perf & PerfBit(PerfPart::Fps)) != 0 || perfPopup;
@@ -1668,52 +1766,111 @@ namespace headsup
         return needs;
     }
 
-    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings,
-        const PanelGroups& panel)
+    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings)
     {
-        // Each widget's own content, less its second line or icons where they are switched off.
-        WidgetContent w        = ContentOf(widget, state, settings);
-        // Combined, the widget before it in its pill may keep it off the panel; its popup still joins the pill's.
-        if (const std::optional<PanelWidget> before = CombinedBefore(panel, widget);
-            before && !settings.Widget(*before).combineOnPanel)
-            w.shown = false;
-        const WidgetOptions& o = settings.Widget(widget);
-        if (!o.secondLine && HasSecondLine(widget.kind))
+        return ContentOf(widget, state, settings);
+    }
+
+    std::array<PartMark, kWidgetPartCount> PartMarksNow(const std::vector<PanelWidget>& widgets, const BarState& state,
+        const Settings& settings)
+    {
+        std::array<PartMark, kWidgetPartCount> marks;
+        for (int p = 0; p < kWidgetPartCount; ++p)
+            marks[static_cast<size_t>(p)] = DefaultMark(static_cast<WidgetPart>(p));
+        for (const PanelWidget widget : widgets)
         {
-            w.subtitle.clear();
-            w.subtitleIcons.clear();
+            WidgetContent base;
+            for (const PartContent& part : PartsNow(widget, state, settings, base))
+                if (const std::optional<PartMark> mark = MarkOf(part.spans)) marks[static_cast<size_t>(part.part)] = *mark;
         }
-        if (!o.icons && HasIcons(widget.kind))
+        return marks;
+    }
+
+    namespace
+    {
+        // Every popup of a pill's widgets, joined: a title or card shown already, as two copies of a widget have, is
+        // left out.
+        PopupContent JoinedPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
         {
-            w.icons.clear();
-            w.titleIcons.clear();
-            w.subtitleIcons.clear();
-            w.coin = false;
+            const std::vector<PanelWidget> pill = Members(Panel(settings), head);
+            if (pill.size() <= 1) return BarPopupContent(head, state, settings);
+            PopupContent joined;
+            joined.oneColumn = true;
+            std::vector<std::vector<Span>> titles;
+            for (const PanelWidget w : pill)
+            {
+                if (!ContentOf(w, state, settings).hasPopup) continue;
+                PopupContent own = BarPopupContent(w, state, settings);
+                if (!own.title.empty() && std::ranges::find(titles, own.title) == titles.end())
+                {
+                    if (joined.title.empty())
+                        joined.icon = own.icon;
+                    else
+                        joined.title.push_back(Text(kDot, Tone::Dim));
+                    joined.title.insert(joined.title.end(), own.title.begin(), own.title.end());
+                    titles.push_back(std::move(own.title));
+                    if (!joined.subtitle.empty() && !own.subtitle.empty()) joined.subtitle.push_back(Text(kDot, Tone::Dim));
+                    joined.subtitle.insert(joined.subtitle.end(), own.subtitle.begin(), own.subtitle.end());
+                }
+                for (PopupSection& section : own.sections)
+                    if (std::ranges::find(joined.sections, section) == joined.sections.end())
+                        joined.sections.push_back(std::move(section));
+                joined.oneColumn = joined.oneColumn && own.oneColumn;
+            }
+            return joined;
         }
-        return w;
+    }
+
+    std::vector<Icon> WeatherIcons(Weather weather, CustomIcons use)
+    {
+        const std::optional<Icon> game = WeatherIcon(weather);
+        if (use == CustomIcons::Always || (use == CustomIcons::NoVanilla && !game))
+            return {kCustomWeather[std::clamp(static_cast<int>(weather), 0, kWeatherCount - 1)]};
+        if (!game) return {};
+        return std::vector<Icon>(IsDoubleWeather(weather) ? 2 : 1, *game);
+    }
+
+    std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press)
+    {
+        for (const std::string_view kind : {kWidgetClonePress, kWidgetRemovePress})
+        {
+            if (!press.starts_with(kind)) continue;
+            const std::string number(press.substr(kind.size()));
+            char* end         = nullptr;
+            const long slot   = std::strtol(number.c_str(), &end, 10);
+            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return std::nullopt;
+            const PanelWidget widget = WidgetInSlot(static_cast<int>(slot));
+            if (kind == kWidgetClonePress) return HasCopies(widget.kind) ? CloneWidget(settings, widget) : std::nullopt;
+            if (widget.copy == 0 || !Placed(settings.barSections, widget)) return std::nullopt;
+            RemoveWidgetCopy(settings, widget);
+            return PanelWidget{widget.kind};
+        }
+        return std::nullopt;
+    }
+
+    std::string CollapseKey(PanelWidget head, std::string_view heading)
+    {
+        heading = CardKey(heading);
+        std::string key = PanelWidgetName(head) + ".";
+        for (const char c : heading)
+            key += c == ' ' ? '-' : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return key;
     }
 
     PopupContent PanelPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
     {
-        const std::vector<PanelWidget> pill = Members(Panel(settings), head);
-        if (pill.size() <= 1) return BarPopupContent(head, state, settings);
-        PopupContent joined;
-        joined.oneColumn = true;
-        for (size_t i = 0; i < pill.size(); ++i)
+        PopupContent content = JoinedPopupContent(head, state, settings);
+        for (PopupSection& section : content.sections)
         {
-            const PanelWidget w = pill[i];
-            if (!ContentOf(w, state, settings).hasPopup) continue;
-            if (i > 0 && !settings.Widget(pill[i - 1]).combineInPopup) continue;
-            PopupContent own = BarPopupContent(w, state, settings);
-            if (joined.title.empty())
-                joined.icon = own.icon;
-            else if (!own.title.empty())
-                joined.title.push_back(Text(kDot, Tone::Dim));
-            joined.title.insert(joined.title.end(), own.title.begin(), own.title.end());
-            joined.sections.insert(joined.sections.end(), own.sections.begin(), own.sections.end());
-            joined.oneColumn = joined.oneColumn && own.oneColumn;
+            if (section.heading.empty()) continue;
+            const std::string key = CollapseKey(head, section.heading);
+            section.collapsePress = kCollapsePress + key;
+            section.collapsed     = std::ranges::find(settings.collapsedSections, key) != settings.collapsedSections.end();
         }
-        return joined;
+        if (HasCopies(head.kind)) content.clonePress = kWidgetClonePress + std::to_string(SlotOf(head));
+        if (head.copy > 0) content.removePress = kWidgetRemovePress + std::to_string(SlotOf(head));
+        if (settings.Widget(head).popupSpot) content.resetPress = kPopupResetPress + std::to_string(SlotOf(head));
+        return content;
     }
 
     PopupContent BarPopupContent(PanelWidget widget, const BarState& state, const Settings& settings)
@@ -1728,8 +1885,8 @@ namespace headsup
             const std::string_view region = ZoneRegion(zone);
             popup.title = ListOf(Text(ZoneTitle(state.zone)));
             // A zone past the data has its number for a title already.
-            if (zone != nullptr && o.zoneId) popup.title.push_back(Text(" " + std::to_string(state.zone), Tone::Dim));
-            if (!region.empty()) popup.sections.push_back(PopupSection{"", ListOf(Line(Cell(Text(std::string(region), Tone::Dim))))});
+            if (zone != nullptr && o.zoneId) popup.title.push_back(Text(" (Zone #" + std::to_string(state.zone) + ")", Tone::Dim));
+            if (!region.empty()) popup.subtitle = ListOf(Text(std::string(region), Tone::Dim));
             if (InConquest(zone) && state.shares)
             {
                 PopupSection influence{"Influence", {}};
@@ -1750,82 +1907,71 @@ namespace headsup
         case BarWidget::Weather:
         {
             const VanaTime t = VanaAt(state.unixMs);
-            // No title: the weather now is on the panel, and the forecast names the zone it is for.
-            std::array<WeatherChances, kForecastDays> days{};
-            bool oneWeather = true;  // on every day
-            bool fogs       = false; // a day can roll a weather fog takes the place of in the small hours
-            for (int d = 0; d < kForecastDays; ++d)
-            {
-                const std::optional<WeatherOdds> odds = OddsOn(state, t.day + static_cast<uint32_t>(d));
-                days[d]    = odds ? Chances(*odds) : WeatherChances{};
-                oneWeather = oneWeather && days[d].count == 1;
-                for (const WeatherChance& chance : days[d])
-                    fogs = fogs || chance.weather == Weather::None || chance.weather == Weather::Sunshine ||
-                           chance.weather == Weather::Clouds;
-            }
-            // Phoenix's notes in a narrow column at the right, a line beside each day from the first, a blank line
-            // between two notes.
-            std::vector<std::string> notes;
-            const auto note = [&notes](std::string first, std::string second) {
-                if (!notes.empty()) notes.emplace_back();
-                notes.push_back(std::move(first));
-                notes.push_back(std::move(second));
+            const std::optional<WeatherOdds> odds = OddsOn(state, t.day);
+            const WeatherChances today = odds ? Chances(*odds) : WeatherChances{};
+            const auto iconOf = [&](Weather weather) {
+                const std::vector<Icon> icons = WeatherIcons(weather, o.weatherIcons);
+                return icons.empty() ? std::nullopt : std::optional(icons.front());
             };
-            // One weather on every day (Phoenix's static zones: Promyvion, Temenos): rolling again changes nothing.
-            if (!oneWeather) note("Phoenix rolls the weather again", "every 3 to 30 Earth minutes.");
-            if (fogs) note("From 2:00 to 7:00 outside towns,", "sunshine and clouds turn to fog.");
-            const int columns = kForecastColumns + (notes.empty() ? 0 : 1);
-            PopupRow grid     = Grid(columns, kForecastDays * columns);
-            for (int d = 0; d < kForecastDays; ++d)
+            // The weather now for a title, with its icon and today's chance of it.
+            if (state.weather || odds)
             {
+                const Weather now = state.weather ? *state.weather : odds->normal;
+                std::string title = WeatherName(now);
+                for (const WeatherChance& c : today)
+                    if (c.weather == now) title += " (" + std::to_string(c.percent) + "%)";
+                popup.title = ListOf(Text(title));
+                popup.icon  = iconOf(now);
+            }
+            // Today, by Vana'diel's date: the day and time, the zone's weathers today, then the moon, each with what is next.
+            PopupSection day{"Today (" + VanaDate(t) + ")", ListOf(Line(Cell(ListOf(WeekdayText(t),
+                Text(" " + HourMinute(t.hour, t.minute)),
+                Text(" (Next Day in " + Countdown(SecondsToNextDay(state.unixMs)) + ")", Tone::Dim)))))};
+            // Its weathers on one line, a slash between them.
+            PopupRow weathers{RowKind::Line, 0, {}};
+            for (const WeatherChance& c : today)
+            {
+                if (!weathers.cells.empty()) weathers.cells.push_back(Cell(Text("/", Tone::Dim)));
+                weathers.cells.push_back(Cell(Text(WeatherChanceText(c)), iconOf(c.weather)));
+            }
+            if (!weathers.cells.empty()) day.rows.push_back(std::move(weathers));
+            day.rows.push_back(Line(Cell(ListOf(Text(MoonText(t) + ", " + std::to_string(t.moonPercent) + "%"),
+                Text(" (Next Phase in " + Countdown(SecondsToNextPhase(state.unixMs)) + ")", Tone::Dim)))));
+            // The days after it, beside it: each day and its chances, likeliest first.
+            PopupRow grid = Grid(kForecastColumns, (kForecastDays - 1) * kForecastColumns);
+            for (int d = 1; d < kForecastDays; ++d)
+            {
+                const std::optional<WeatherOdds> later = OddsOn(state, t.day + static_cast<uint32_t>(d));
+                const WeatherChances chances = later ? Chances(*later) : WeatherChances{};
                 const int weekday = (t.weekday + d) % kVanaDaysPerWeek;
                 const std::string name = WeekdayName(weekday);
-                PopupCell day = Cell(Colored(d == 0 ? "Today (" + name + ")" : d == 1 ? "Tomorrow (" + name + ")" : name,
-                    ElementColor(WeekdayElement(weekday))));
-                day.align = Align::Right;
-                grid.cells.push_back(std::move(day));
+                PopupCell named = Cell(Colored(d == 1 ? name + " (Tomorrow)" : name, ElementColor(WeekdayElement(weekday))));
+                named.align = Align::Right;
+                grid.cells.push_back(std::move(named));
                 for (int c = 0; c < kForecastColumns - 1; ++c)
                 {
                     PopupCell weather;
-                    if (c < days[d].count)
-                    {
-                        const WeatherChance& chance = days[d].chances[c];
-                        weather = Cell(Text(std::string(WeatherName(chance.weather)) + " " + std::to_string(chance.percent) + "%"),
-                            WeatherIcon(chance.weather));
-                    }
-                    weather.align = Align::Center;
+                    if (c < chances.count) weather = Cell(Text(WeatherChanceText(chances.chances[c])), iconOf(chances.chances[c].weather));
+                    weather.align = Align::Left;
                     grid.cells.push_back(std::move(weather));
                 }
-                if (!notes.empty())
-                    grid.cells.push_back(static_cast<size_t>(d) < notes.size() && !notes[d].empty()
-                                             ? Cell(Text(notes[d], Tone::Dim))
-                                             : PopupCell{});
             }
             // Zone 0 is the data's "unknown": the heading names no zone for it.
             const ZoneRecord* zone = state.zone != 0 ? ZoneById(state.zone) : nullptr;
-            popup.sections = ListOf(PopupSection{zone != nullptr ? "Forecast (" + std::string(zone->name) + ")" : "Forecast",
-                                        ListOf(std::move(grid))},
-                ByElement(state, t.day));
+            PopupSection forecast{zone != nullptr ? "Weather Forecast (" + std::string(zone->name) + ")" : "Weather Forecast",
+                ListOf(std::move(grid))};
+            forecast.beside = true;
+            popup.sections  = ListOf(std::move(day), std::move(forecast), ByElement(state, t.day));
             popup.oneColumn = true;
-            break;
-        }
-        case BarWidget::VanaTime:
-        {
-            const VanaTime t = VanaAt(state.unixMs);
-            popup.title      = ListOf(Text(VanaDate(t)));
-            popup.sections   = ListOf(PopupSection{"",
-                ListOf(Line(Cell(ListOf(WeekdayText(t), Text(" " + HourMinute(t.hour, t.minute))))),
-                    LineOf(MoonText(t) + " (" + std::to_string(t.moonPercent) + "%)"),
-                    LineOf("Next day in " + Countdown(SecondsToNextDay(state.unixMs)), Tone::Dim),
-                    LineOf("Next phase in " + Countdown(SecondsToNextPhase(state.unixMs)), Tone::Dim))});
             break;
         }
         case BarWidget::Target: return TargetPopup(state, settings);
         case BarWidget::Currency: return CurrencyPopup(state, settings);
         case BarWidget::Bags:
         {
-            popup.title   = ListOf(Text("Bags"));
+            popup.title   = ListOf(Text("Inventory"));
             PopupRow grid = Grid(kBagColumns, kBagColumns * kContainerCount);
+            grid.roomy    = true;
             for (const int c : BagChoices())
             {
                 // Storage shows before its furniture gives it room. The server gives Mog Safe 2 its room before the
@@ -1840,14 +1986,15 @@ namespace headsup
         }
         case BarWidget::EarthTime:
         {
-            int year = state.earthYear, month = state.earthMonth, day = state.earthDay;
+            CalendarDay day{state.earthYear, state.earthMonth, state.earthDay};
+            int hour = state.earthHour, minute = state.earthMinute, second = state.earthSecond;
             if (o.clockZone)
             {
                 const ZoneTime there = ZoneAt(*o.clockZone, state.unixMs);
-                year = there.year, month = there.month, day = there.day;
+                day = CalendarDay{there.year, there.month, there.day}, hour = there.hour, minute = there.minute,
+                second = there.second;
             }
-            popup.title =
-                ListOf(Text(std::to_string(year) + "-" + Printed("%02d", month) + "-" + Printed("%02d", day)));
+            popup.title = ListOf(Text(DateTimeTitle(day, hour, minute, o.clockSeconds ? second : -1, o.clock24)));
             popup.sections = ListOf(ServerTimeRows(state.unixMs));
             break;
         }
@@ -1860,10 +2007,11 @@ namespace headsup
         case BarWidget::Party:
             return PartyPopup(state.party);
         case BarWidget::StatusTimers:
-            return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins,
-                ScrolledBy(state, kStatusListKey));
+            return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins, OwnPalette(settings),
+                ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
-            return WorldPopup(state, o);
+            return WorldPopup(state);
+        case BarWidget::Settings: break;
         }
         return popup;
     }

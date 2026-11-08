@@ -94,43 +94,6 @@ TEST(the_next_full_and_new_moons_are_the_days_of_100_and_0_percent)
     CHECK_EQ(SecondsToDay(At(3, 100.0), 4), kVanaDay - 100.0);
 }
 
-TEST(the_next_day_a_zone_can_roll_an_elements_weather)
-{
-    const ZoneRecord* zone = ZoneById(79); // Caedarva Mire: Water, Lightning and Dark weathers, and no others
-    CHECK(zone != nullptr);
-    const auto has = [&](uint32_t day, Element element) {
-        const WeatherOdds odds = *WeatherOn(*zone, day);
-        return WeatherElement(odds.normal) == element || WeatherElement(odds.common) == element ||
-               WeatherElement(odds.rare) == element;
-    };
-    CHECK(NextElementWeather(*zone, Element::Water, 0).has_value() && !NextElementWeather(*zone, Element::Fire, 0));
-    for (int e = 0; e < kElementCount; ++e)
-    {
-        const auto element = static_cast<Element>(e);
-        const std::optional<ElementWeather> next = NextElementWeather(*zone, element, 0);
-        if (!next)
-        {
-            // None in the whole cycle.
-            for (uint32_t day = 0; day < kWeatherDays; ++day)
-                CHECK(!has(day, element));
-            continue;
-        }
-        // No day before it has one, and that day its weathers of the element add up to the chance.
-        for (uint32_t day = 0; day < next->day; ++day)
-        {
-            const WeatherOdds odds = *WeatherOn(*zone, day);
-            for (const Weather w : {odds.normal, odds.common, odds.rare})
-                CHECK(WeatherElement(w) != element);
-        }
-        const WeatherOdds odds = *WeatherOn(*zone, next->day);
-        int percent = 0;
-        for (const auto [w, chance] : {std::pair{odds.normal, kNormalChance}, {odds.common, kCommonChance}, {odds.rare, kRareChance}})
-            if (WeatherElement(w) == element) percent += chance;
-        CHECK(next->percent == percent && WeatherElement(next->weather) == element);
-    }
-    CHECK(!NextElementWeather(ZoneRecord{"None", kUnknownRegion, kNoCalendar, kNoFishing}, Element::Fire, 0));
-}
-
 TEST(the_zones_that_can_roll_an_element_come_likeliest_first_with_their_chance)
 {
     for (const uint32_t day : {0u, 777u})

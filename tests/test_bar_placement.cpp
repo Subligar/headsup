@@ -28,7 +28,7 @@ namespace
 TEST(the_default_placement_is_todays_bar_with_every_widget_once)
 {
     const BarPlacement& d = DefaultPlacement();
-    CHECK(Original(In(d, kLeft)) == (List{BarWidget::Zone, BarWidget::Weather, BarWidget::VanaTime}));
+    CHECK(Original(In(d, kLeft)) == (List{BarWidget::Zone, BarWidget::Weather}));
     CHECK(In(d, kCenter) == (List{BarWidget::Target})); // the target alone in the center
     CHECK(Original(In(d, kRight)) == (List{BarWidget::Currency, BarWidget::Bags, BarWidget::EarthTime}));
     for (int w = 0; w < kBarWidgetCount; ++w)
@@ -52,8 +52,8 @@ TEST(a_placement_reads_back_what_it_wrote)
 
 TEST(unknown_and_repeated_names_are_dropped_and_a_widget_named_nowhere_goes_home_at_the_end)
 {
-    const BarPlacement p = PlacementFrom({"vanaTime moon vanaTime", "zone", "earthTime target"});
-    CHECK(Original(In(p, kLeft)) == (List{BarWidget::VanaTime, BarWidget::Weather})); // weather named nowhere
+    const BarPlacement p = PlacementFrom({"job moon job", "zone", "earthTime target"});
+    CHECK(In(p, kLeft).front() == BarWidget::Job && Original(In(p, kLeft)) == (List{BarWidget::Weather})); // weather named nowhere
     CHECK(In(p, kCenter) == (List{BarWidget::Zone}));
     CHECK(Original(In(p, kRight)) == (List{BarWidget::EarthTime, BarWidget::Target, BarWidget::Currency, BarWidget::Bags}));
 }
@@ -71,10 +71,10 @@ TEST(a_widget_moves_up_and_down_within_its_section)
 {
     BarPlacement p = DefaultPlacement();
     const List left = In(p, kLeft);
-    CHECK(MoveWidget(p, kLeft, 2, kLeft, 0)); // Vana'diel time to the front
-    CHECK(Original(In(p, kLeft)) == (List{BarWidget::VanaTime, BarWidget::Zone, BarWidget::Weather}));
-    CHECK(MoveWidget(p, kLeft, 0, kLeft, 2)); // back down, before Weather: after Zone
-    CHECK(Original(In(p, kLeft)) == (List{BarWidget::Zone, BarWidget::VanaTime, BarWidget::Weather}));
+    CHECK(MoveWidget(p, kLeft, 1, kLeft, 0)); // the weather to the front
+    CHECK(Original(In(p, kLeft)) == (List{BarWidget::Weather, BarWidget::Zone}));
+    CHECK(MoveWidget(p, kLeft, 0, kLeft, 2)); // back down, before the third: after Zone
+    CHECK(Original(In(p, kLeft)) == (List{BarWidget::Zone, BarWidget::Weather}));
     CHECK(MoveWidget(p, kLeft, 0, kLeft, In(p, kLeft).size())); // to the end
     CHECK(In(p, kLeft).back() == BarWidget::Zone && In(p, kLeft).size() == left.size());
 }

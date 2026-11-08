@@ -13,7 +13,7 @@
 namespace headsup
 {
     constexpr uint16_t kZoneInPacket         = 0x00A; // server to client: entering a zone
-    constexpr uint16_t kZoneOutPacket        = 0x00B; // server to client: leaving it, for the next zone's server
+    constexpr uint16_t kBagsSentPacket       = 0x01D; // server to client: a bag, or every bag, is sent (ITEM_SAME)
     constexpr uint16_t kWeatherPacket        = 0x057; // server to client: the zone's weather changed
     constexpr uint16_t kSkillsPacket         = 0x062; // server to client: your skills, the crafts' ranks among them
     constexpr uint16_t kConquestPacket       = 0x05E; // server to client: the conquest standings
@@ -44,10 +44,10 @@ namespace headsup
     std::optional<Weather> ParseZoneInWeather(const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x00A: your server id (UniqueNo) at 0x04.
     std::optional<uint32_t> ParseZoneInPlayer(const uint8_t* data, uint32_t size);
-    // Phoenix's s2c 0x00B: the next zone's map server at 0x08, an IPv4 address as it goes on the wire; none for none.
-    std::optional<uint32_t> ParseZoneOutAddress(const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x00A: the zone's number (ZoneNo) at 0x30.
     std::optional<uint16_t> ParseZoneInZone(const uint8_t* data, uint32_t size);
+    // Phoenix's s2c 0x01D: State at 0x04 is 1 (AllLoaded) once every bag is sent, which it sends last at a zone-in.
+    bool ParseAllBagsSent(const uint8_t* data, uint32_t size);
     // A kTalkNumPacket's or kTalkNumWorkPacket's message number in the zone's dialog and whose it is (UniqueNo, at
     // 0x04): MesNum at 0x0A or 0x1A, its top bit (show the speaker's name) dropped.
     struct TalkMessage
@@ -84,7 +84,7 @@ namespace headsup
         uint8_t percent = 0;
         bool operator==(const RegionShare&) const = default;
     };
-    constexpr int kContenderNations = 4; // San d'Oria to the beastmen, as kAllNations has them
+    constexpr int kContenderNations = 4; // San d'Oria to the beastmen
     // The largest share first, equal shares in Nation's order.
     using RegionShares = std::array<RegionShare, kContenderNations>;
     // Nothing for a short packet, or for shares of more than 100 in all, which a layout other than Phoenix's would

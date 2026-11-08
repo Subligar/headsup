@@ -169,64 +169,163 @@ TEST(exp_per_hour_is_taken_at_the_last_whole_second_so_its_figure_changes_once_a
     CHECK_EQ(*t.PerHour(630.5), 400.0 * 3600.0 / 600.0);
 }
 
-TEST(the_exp_says_what_it_is_set_to_earned_to_next_and_a_percent_in_that_order)
+TEST(each_exp_button_says_its_own_text_and_at_the_cap_the_limit_points_and_merits)
 {
-    const auto bits = [](std::initializer_list<ExpText> parts) {
-        uint8_t b = 0;
-        for (const ExpText part : parts)
-            b |= ExpTextBit(part);
-        return b;
+    // What a part says, with the widget's defaults.
+    const auto said = [](const JobReport& job, WidgetPart which) {
+        WidgetContent base;
+        for (const PartContent& part : JobParts(job, WidgetOptions{}, base))
+            if (part.part == which) return part.spans.empty() ? std::string() : part.spans.front().text;
+        return std::string("no such part");
     };
     const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
-    const auto title = [](const WidgetContent& w) { return w.title.front().text; };
-    CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst, kDefaultExpText)), "7,655 EXP to next"); // as before
-    CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst, bits({ExpText::Percent}))), "61%");
-    CHECK_EQ(title(JobWidget(level30, ExpBarPlace::Under, true, JobLayout::ExpFirst,
-                 bits({ExpText::Percent, ExpText::Earned, ExpText::ToNext}))),
-        "12,345 / 20,000 EXP · 7,655 to next · 61%");
-    // At the cap the points are limit points, after the merits.
+    CHECK_EQ(said(level30, WidgetPart::JobEarned), "12,345 / 20,000 EXP");
+    CHECK_EQ(said(level30, WidgetPart::JobToNext), "7,655 til next level");
+    CHECK_EQ(said(level30, WidgetPart::JobPercent), "61%");
+    // At the cap the points are limit points, and what is left to the next is the merits.
     const JobReport capped{AtCap(3, 4000), std::nullopt};
-    CHECK_EQ(title(JobWidget(capped, ExpBarPlace::Under, true, JobLayout::ExpFirst, bits({ExpText::Earned, ExpText::Percent}))),
-        "3 merits · 4,000 / 10,000 LP · 40%");
-    // To Next at the cap: the merits say how far along you are, as they always have.
-    CHECK_EQ(title(JobWidget(capped, ExpBarPlace::Under, true, JobLayout::ExpFirst, bits({ExpText::ToNext}))), "3 merits");
+    CHECK_EQ(said(capped, WidgetPart::JobEarned), "4,000 / 10,000 LP");
+    CHECK_EQ(said(capped, WidgetPart::JobToNext), "3 merits");
+    CHECK_EQ(said(capped, WidgetPart::JobPercent), "40%");
     // A percent is never rounded up to a level not reached.
-    CHECK_EQ(title(JobWidget(JobReport{Sample(30, 19999, 20000), std::nullopt}, ExpBarPlace::Under, true,
-                 JobLayout::ExpFirst, bits({ExpText::Percent}))),
-        "99%");
-    // Nothing picked: the jobs alone, on one line in any layout, the bar still under them.
-    for (const JobLayout layout : {JobLayout::JobsFirst, JobLayout::ExpFirst, JobLayout::ExpOnly})
-    {
-        const WidgetContent w = JobWidget(level30, ExpBarPlace::Under, true, layout, 0);
-        CHECK(w.title.size() == 1 && w.title.front().text == JobWidget(level30, ExpBarPlace::Under, true, JobLayout::JobsFirst, kDefaultExpText).title.front().text);
-        CHECK(w.title.front().tone == Tone::Normal && w.subtitle.empty() && w.progress.has_value());
-    }
+    CHECK_EQ(said(JobReport{Sample(30, 19999, 20000), std::nullopt}, WidgetPart::JobPercent), "99%");
 }
 
-TEST(the_exp_widget_is_its_bar_with_each_text_on_the_side_it_is_set_to)
+TEST(job_text_puts_the_jobs_and_levels_in_the_order_it_names)
 {
-    const auto said = [](const std::vector<Span>& spans) {
-        std::string text;
-        for (const Span& s : spans)
-            text += s.text;
-        return text;
+    const auto said = [](JobSample sample, JobText text) {
+        WidgetOptions o;
+        o.jobText = text;
+        WidgetContent base;
+        for (const PartContent& part : JobParts(JobReport{sample, std::nullopt}, o, base))
+            if (part.part == WidgetPart::JobJobs) return part.spans.front().text;
+        return std::string("no jobs part");
     };
+    const JobSample s = Sample(30, 0, 1000); // WAR 30 / NIN 15
+    CHECK_EQ(said(s, JobText::MainSub), "WAR 30 / NIN 15");
+    CHECK_EQ(said(s, JobText::Main), "WAR 30");
+    CHECK_EQ(said(s, JobText::LevelFirst), "30 WAR / NIN");
+    // Without a subjob, the main job alone.
+    JobSample alone = s;
+    alone.subLevel  = 0;
+    CHECK_EQ(said(alone, JobText::LevelFirst), "30 WAR");
+    CHECK_EQ(said(alone, JobText::MainSub), "WAR 30");
+}
+
+TEST(the_exp_bar_is_its_set_size_filled_with_the_text_bar_text_picks_in_its_middle)
+{
     const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
-    const WidgetContent w =
-        ExpWidget(level30, {ExpTextPlace::Above, ExpTextPlace::Right, ExpTextPlace::Right}, 150, 6, Align::Center);
-    CHECK(w.meter && w.title.empty() && w.hasPopup);
-    CHECK(std::fabs(w.meter->done - 12345.0f / 20000.0f) < 1e-6f && w.meter->width == 150 && w.meter->height == 6);
-    CHECK_EQ(said(w.meter->above), "12,345 / 20,000 EXP");
-    CHECK_EQ(said(w.meter->right), "7,655 EXP to next · 61%"); // two on a side say it as the Job widget does
-    CHECK(w.meter->left.empty() && w.meter->below.empty());
-    // At the cap the bar fills with limit points, and To Next says the merits.
-    const WidgetContent capped =
-        ExpWidget(JobReport{AtCap(3, 4000), std::nullopt}, {ExpTextPlace::Left, ExpTextPlace::Below, ExpTextPlace::Off}, 150, 6, Align::Center);
-    CHECK(capped.meter && std::fabs(capped.meter->done - 0.4f) < 1e-6f);
-    CHECK_EQ(said(capped.meter->left), "4,000 / 10,000 LP");
-    CHECK_EQ(said(capped.meter->below), "3 merits");
-    CHECK(capped.meter->above.empty() && capped.meter->right.empty());
-    // Before the server has sent the jobs, a dash.
-    const WidgetContent none = ExpWidget(std::nullopt, kDefaultExpPlaces, 150, 6, Align::Center);
-    CHECK(!none.meter && none.title.front().text == "-");
+    const auto bar = [&](std::optional<ExpText> text) {
+        WidgetOptions o;
+        o.expBarWidth  = 150;
+        o.expBarHeight = 12;
+        o.expBarText   = text;
+        WidgetContent base;
+        for (const PartContent& part : JobParts(level30, o, base))
+            if (part.part == WidgetPart::JobBar) return *part.spans.front().bar;
+        return InlineBar{};
+    };
+    const InlineBar none = bar(std::nullopt);
+    CHECK(none.width == 150 && none.height == 12 && none.text.empty());
+    CHECK(std::fabs(none.done - 12345.0f / 20000.0f) < 1e-6f);
+    CHECK_EQ(bar(ExpText::Earned).text, "12,345 / 20,000 EXP");
+    CHECK_EQ(bar(ExpText::ToNext).text, "7,655 til next level");
+    CHECK_EQ(bar(ExpText::Percent).text, "61%");
+    // Job Text on the bar: the jobs as Job Text says them, whatever Job Info shows.
+    CHECK_EQ(bar(ExpText::Jobs).text, "WAR 30 / NIN 15");
+}
+
+TEST(the_exp_bars_text_says_the_jobs_as_job_text_writes_them_and_lines_up_as_bar_text_alignment_says)
+{
+    const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
+    WidgetOptions o;
+    o.expBarText = ExpText::Jobs;
+    o.jobText    = JobText::LevelFirst;
+    const auto bar = [&] {
+        WidgetContent base;
+        for (const PartContent& part : JobParts(level30, o, base))
+            if (part.part == WidgetPart::JobBar) return *part.spans.front().bar;
+        return InlineBar{};
+    };
+    CHECK_EQ(bar().text, "30 WAR / NIN");
+    CHECK(bar().align == Align::Center);
+    o.expBarTextAlign = Align::Left;
+    CHECK(bar().align == Align::Left);
+}
+
+TEST(the_job_widget_lays_out_its_jobs_exp_and_bar_as_its_design_says)
+{
+    const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
+    const auto shown = [&](std::string_view design) {
+        WidgetContent base;
+        base.shown = true;
+        std::vector<PartContent> parts = JobParts(level30, WidgetOptions{}, base);
+        return ComposeContent(DesignFrom(BarWidget::Job, design), std::move(parts), base);
+    };
+    // The default: the jobs over the EXP to the next level, the bar after it.
+    const WidgetContent w = shown("");
+    CHECK(w.title.size() == 1 && w.title[0].text == "WAR 30 / NIN 15");
+    CHECK(w.subtitle.size() == 3 && w.subtitle[0].text == "7,655 til next level" && w.subtitle[2].bar);
+    CHECK(w.hasPopup && w.figures);
+    // The bar first, then the percent and the earned EXP, on one line.
+    const WidgetContent first = shown("bar percent earned | -jobs");
+    std::string line;
+    for (const Span& span : first.title)
+        line += span.text;
+    CHECK(first.title.front().bar && line.find("61%") < line.find("12,345 / 20,000 EXP") && line.ends_with("EXP"));
+    CHECK(first.subtitle.empty());
+}
+
+TEST(each_job_widget_text_lines_up_on_its_own_and_texts_of_one_alignment_on_a_line_are_one_run)
+{
+    const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
+    const auto shown = [&](std::string_view design, Align jobs, Align earned, Align toNext, Align percent) {
+        WidgetOptions o;
+        o.jobInfoAlign = jobs;
+        o.earnedAlign  = earned;
+        o.toNextAlign  = toNext;
+        o.percentAlign = percent;
+        WidgetContent base;
+        base.shown = true;
+        return ComposeContent(DesignFrom(BarWidget::Job, design), JobParts(level30, o, base), base);
+    };
+    // Each run of a line: where it starts, its alignment and its text, its two-space gap left on.
+    const auto runs = [](const std::vector<Span>& line) {
+        std::string said;
+        for (const Span& span : line)
+        {
+            if (span.align) said += std::string("[") + "LCR"[static_cast<int>(*span.align)] + "]";
+            said += span.bar ? "<bar>" : span.text;
+        }
+        return said;
+    };
+    // The default: every text at the left, one run a line, the bar with the text before it.
+    const WidgetContent plain = shown("jobs | tonext bar", Align::Left, Align::Left, Align::Left, Align::Left);
+    CHECK_EQ(runs(plain.title), "[L]WAR 30 / NIN 15");
+    CHECK_EQ(runs(plain.subtitle), "[L]7,655 til next level  <bar>");
+    // Left, right and left again: the two at the left one run, in the design's order, two spaces apart.
+    const WidgetContent split = shown("jobs percent earned | tonext", Align::Left, Align::Left, Align::Left, Align::Right);
+    CHECK_EQ(runs(split.title), "[L]WAR 30 / NIN 15  12,345 / 20,000 EXP[R]  61%");
+    // A bar with no text before it goes with the text after it; one of each alignment makes three runs.
+    const WidgetContent three = shown("bar earned tonext percent | jobs", Align::Left, Align::Right, Align::Center, Align::Left);
+    CHECK_EQ(runs(three.title), "[L]61%[C]  7,655 til next level[R]  <bar>  12,345 / 20,000 EXP");
+    CHECK_EQ(runs(three.subtitle), "[L]WAR 30 / NIN 15");
+    // A line of the bar alone has no alignment of its own: the widget's lines it up.
+    CHECK_EQ(runs(shown("jobs | bar", Align::Right, Align::Left, Align::Left, Align::Left).subtitle), "<bar>");
+}
+
+TEST(the_exp_bar_takes_its_custom_background_and_fill_colors_and_the_themes_without_them)
+{
+    const JobReport level30{Sample(30, 12345, 20000), std::nullopt};
+    WidgetOptions o;
+    const auto bar = [&] {
+        WidgetContent base;
+        for (const PartContent& part : JobParts(level30, o, base))
+            if (part.part == WidgetPart::JobBar) return *part.spans.front().bar;
+        return InlineBar{};
+    };
+    CHECK(!bar().back && !bar().fill);
+    o.expBarBack = 0x40FFFFFFu;
+    o.expBarFill = 0xFF20C040u;
+    CHECK(bar().back == 0x40FFFFFFu && bar().fill == 0xFF20C040u);
 }

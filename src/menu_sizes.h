@@ -35,6 +35,8 @@ namespace headsup
     constexpr float kChipDot        = 0.5f;
     constexpr float kChipToggle     = 0.6f; // a widget chip's toggle, as a share of a table's
     constexpr float kChipClone      = 1.0f; // a widget chip's clone picture
+    constexpr float kChipLine       = 1.5f;  // each line of a tray's widget chip
+    constexpr float kChipLinePad    = 0.25f; // above and below its lines
     constexpr float kBulletIndent   = 1.2f; // a description's bullet point: its text from the card's edge
     constexpr float kTabHeight      = 2.0f;
     constexpr float kTabRule        = 0.12f; // the line a strip of tabs stands on
@@ -43,6 +45,9 @@ namespace headsup
     constexpr int kTabFillGrow      = 1000;  // the last row's filler grows this much faster than its tabs
     constexpr float kTipWidth       = 20.0f;
     constexpr float kSettingsWidth  = 30.0f; // a panel popup's settings: a label and a slider with room
+    constexpr size_t kSettingsAcross = 3;    // a linked pill's widgets' settings side by side, each in a box
+    constexpr float kSettingsBoxGap = 0.6f;  // between two of those boxes
+    constexpr float kSettingsBoxPad = 0.5f;  // a box's settings from its edges
     constexpr float kHeaderRow      = 2.4f;  // a card's title row
     constexpr float kLineNameWidth  = 6.6f;  // "Middle Line", before its design box
     constexpr int kResetArrowPixels = 48;    // the reset arrow's picture, drawn smaller than it is

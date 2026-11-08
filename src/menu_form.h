@@ -1,5 +1,6 @@
 #pragma once
 
+#include "feedback.h"
 #include "form.h"
 #include "menu_state.h"
 #include "settings.h"
@@ -27,14 +28,16 @@ namespace headsup
         uint32_t names = 0, replaced = 0, hidden = 0; // the game's names, those HeadsUp drew, those no one drew
         int level = 0;             // yours; 0 while unknown
         bool sitting = false;
-        int barTitlePixels = 0;    // the title size the bar drew last frame, 0 when it is off
         // In the game's menu pixels: the line the game's windows went under last frame, and the panel's own lowest
         // reach without its help line; 0 while the panel is off.
         int windowsBand = 0, barBand = 0;
+        Nation nation = Nation::None; // yours, once known
+        int screenWidth = 0, screenHeight = 0; // the overlay's pixels, where the fishing bar goes; 0 before it runs
         const std::vector<std::string>* seenWindows = nullptr; // the game's windows seen under Game help's bar
         const std::vector<WindowPlace>* windowPlaces = nullptr; // where each window seen last stood
         const std::vector<std::string>* cursorFiles = nullptr; // the cursors folder's files, without their extensions
         const std::vector<std::string>* themeFiles  = nullptr; // the themes folder's, the same way
+        const BarPalette* palette = nullptr; // the palette the panel was drawn in last frame, the game's art's for Vanilla
         const std::vector<std::string>* profiles    = nullptr; // the profiles folder's, the same way
         const std::string* profile = nullptr; // the profile in use, empty while the old settings.ini is
         bool unsaved = false; // changes not yet in the file
@@ -44,6 +47,10 @@ namespace headsup
         bool exportable = false; // a developer's build, which can write its built-in layout out as a file
         // The widgets whose settings the panel's open popup shows, in its pill's order; none while it shows none.
         std::vector<PanelWidget> settingsOf;
+        // The picture each part's chip in the Widget Designer shows, as the game is now.
+        std::array<PartMark, kWidgetPartCount> partMarks{};
+        std::string localZone; // the computer's time zone, as LocalZoneName names it
+        CalendarDay today;     // the computer's date
     };
 
     // The Game Windows card's own state: its filter and whether it lists every window.
@@ -86,15 +93,17 @@ namespace headsup
         // A widget whose settings the panel's popup is to show, or stop showing when it shows them: a chip clicked in
         // the Layout, a clone made, a copy removed. Once, for the plugin.
         std::optional<PanelWidget> settingsAsked;
+        // A widget whose designer was asked to switch off its last part: it says why under its lines.
+        std::optional<PanelWidget> partRefused;
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool watchRequested = false; // the debug watch is to start, or stop
         bool exportRequested = false;
         bool cursorsRequested = false; // a list of pictures was opened: the cursors folder is to be read again
-        bool themesRequested  = false; // the list of saved themes was opened: the themes folder is to be read again
-        std::string themeName;   // typed to save the Custom theme under
-        std::string themePicked; // the saved theme picked to load
-        std::optional<std::string> themeSave, themeLoad; // what the plugin is to write or read in, once
+        bool themesRequested  = false; // the list of themes was opened: the themes folder is to be read again
+        std::string themeName, themeNameOf; // Theme Name's box, and the custom theme's name it was filled from
+        // What the plugin is to do once: read a custom theme in and pick it, or give the one in use a new name.
+        std::optional<std::string> themeLoad, themeRename, themeDelete;
         bool saveRequested = false, revertRequested = false; // by hand: write the changes, or drop them
         bool profilesRequested = false; // the list of profiles was opened: the profiles folder is to be read again
         std::string profileName;   // typed for a new profile, or the one in use's new name
@@ -113,6 +122,9 @@ namespace headsup
         std::vector<std::string> plateFonts, plateFontsFrom;
         bool setupBackup    = false;   // a run again started: the settings file is to be copied first
         bool closeRequested = false;   // Setup was skipped or cancelled, and the window closes
+        FeedbackDraft feedback;
+        FeedbackStatus feedbackStatus = FeedbackStatus::None;
+        bool feedbackRequested = false; // Send Feedback was pressed with the form filled: the plugin is to send it, once
 
         // What a page was in the middle of is dropped when it is left, by another page or by the window closing: a
         // row waiting for a key would take one pressed for the game, and a reset asked once would wait armed.
@@ -124,6 +136,9 @@ namespace headsup
             shotKeyCapture = {};
         }
     };
+
+    // What the feedback service said of the feedback sent: taken, it is cleared for the next.
+    void FeedbackAnswered(MenuFormState& state, bool sent);
 
     // Setup ended, never to open by itself again: Finish keeps the picks, and Skip, Cancel or the window's close
     // button put back the settings it opened with and close the window.
@@ -137,7 +152,7 @@ namespace headsup
 
     // The block of the settings the panel's popup shows, whether the window is open or not: each widget's under its
     // name when there are more than one. Nothing while it shows none.
-    constexpr const char* kWidgetSettingsBlock = "widgets"; // its controls' ids are the Widgets card's
+    constexpr const char* kWidgetSettingsBlock = "widgets"; // its controls' ids are the Widgets card's, on the Top Panel page
     void BuildWidgetSettings(Form& form, Settings& settings, const MenuReadings& readings, MenuFormState& state,
         const std::vector<std::string>& fonts, const std::vector<std::string>& menuFonts,
         const WindowLayout& layout = kWindowLayout);

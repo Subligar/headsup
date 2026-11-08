@@ -37,7 +37,6 @@
 #include "search_client.h"
 #include "guild_points.h"
 #include "item_picture.h"
-#include "server_ping.h"
 #include "web_get.h"
 #include "settings.h"
 #include "shot_watch.h"
@@ -61,6 +60,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <chrono>
 #include <cstring>
 #include <deque>
@@ -98,6 +98,8 @@ namespace
     constexpr const char* kThemesFolder      = "themes";  // and their saved top panel themes
     constexpr const char* kOutpostsFile      = "outposts.txt"; // every character's supply runs, as overseers told them
     constexpr const char* kTurnInsFile       = "guild_turnins.txt"; // today's guild point turn-ins, as Phoenix's site gave them
+    constexpr const char* kTopPanelPage      = "toppanel"; // the settings window's page and card the Settings widget opens
+    constexpr const char* kWidgetLayoutCard  = "layout";
     constexpr double kTurnInsRetry           = 600.0; // seconds after a fetch that got no answer
     constexpr const char* kSettingsFile      = "settings.ini";
     constexpr const char* kNewFileSuffix     = ".new";          // after the process id: the file while it is written
@@ -224,12 +226,14 @@ namespace
     bool KnowsSpell(uint16_t spell) { return g_Player != nullptr && g_Player->HasSpell(spell); }
 
     headsup::GamePresses g_GamePresses; // what the game got of each button, for OnMouse
+    POINT g_LastMove{-1, -1};           // the client position of the last mouse move a message gave
 
     // HeadsUp's own answer for a mouse message: true when the game must not get it.
     bool KeepMouse(uint32_t message, WPARAM wParam, LPARAM lParam, bool blocked)
     {
         const auto clientX = static_cast<int16_t>(LOWORD(lParam));
         const auto clientY = static_cast<int16_t>(HIWORD(lParam));
+        if (message == WM_MOUSEMOVE) g_LastMove = {clientX, clientY};
         const float x      = static_cast<float>(clientX) * g_BarScaleX;
         const float y      = static_cast<float>(clientY) * g_BarScaleY;
         // RmlUi's overlay lies over every window: what it takes, nothing under it sees.
@@ -306,6 +310,8 @@ class HeadsUp final : public IPlugin
     std::vector<headsup::TimerLine> m_TimerLines;
     uint16_t m_SelfIndex = 0;
     uint16_t m_Zone      = 0; // this frame
+    headsup::Nation m_Nation = headsup::Nation::None; // NationNow's
+    headsup::CharacterReadings m_Held; // the panel's readings of you, kept while you zone
     headsup::OutlineRenderer m_Outline;
     headsup::GameNames m_Names;
     headsup::NameplateRenderer m_Nameplates;
@@ -315,7 +321,6 @@ class HeadsUp final : public IPlugin
     headsup::RmlMenu m_RmlMenu;
     bool m_RmlTried = false;
     headsup::BarClicks m_BarClicks{m_BarInput};
-    bool m_BarDrawn = false; // this frame
     headsup::PointerSwap m_Pointer;
     std::vector<HANDLE> m_LoadedFonts;
     headsup::NameHook m_NameHook;
@@ -324,6 +329,8 @@ class HeadsUp final : public IPlugin
     headsup::WindowHook m_WindowHook;
     bool m_WindowHookTried = false; // it patches the game's code, so it starts only once someone wants it
     headsup::PointerFix m_PointerFix;
+    bool m_CursorClipped = false; // Windows' pointer held in the game's window by Lock Cursor to Window
+    POINT m_LastPointer{-1, -1}; // Windows' pointer in the client area at the last frame
     headsup::StripTextReader m_StripText;
     std::optional<std::string> m_StripTextFound; // Find's result once looked for, said by the dev dump
     headsup::StripObject m_HelpBytes{}, m_TitleBytes{}; // this frame's
@@ -348,13 +355,12 @@ class HeadsUp final : public IPlugin
     bool m_PlayOnlineTried = false; // it scans the client's code, so once
     std::optional<headsup::PlayOnlineCounts> m_PlayOnlineCounts; // read with the counters
     headsup::ConnectionMeter m_Connection;
-    headsup::ServerPing m_Ping;
     headsup::WebGet m_TurnInFetch;                 // Phoenix's site, for today's guild point turn-ins
+    headsup::WebGet m_FeedbackPost;                // the Feedback page's, to the team's feedback service
     std::optional<headsup::GuildPatterns> m_TurnIns;
     std::optional<int64_t> m_TurnInsDay;           // the day in Japan they are for
     bool m_TurnInsRead = false, m_TurnInsFailed = false;
     double m_TurnInsRetry = 0.0;                   // the next fetch after one that got no answer
-    bool m_PingTried = false; // started once someone wants the ping
     headsup::FreeSpaceWalk m_SpaceWalk;
     headsup::CpuMeter m_Cpu;
     std::optional<uint64_t> m_Mapped; // the process's VirtualSize, read with the processor time
@@ -426,7 +432,6 @@ class HeadsUp final : public IPlugin
     // The game's tables of where its files are and of players' models, read when Setup's preview first wants a model.
     std::optional<headsup::FileTables> m_FileTables;
     std::optional<headsup::PlayerTables> m_PlayerTables;
-    bool m_OfferSetup = false; // the settings file was missing at load: Setup opens once the player is in game
     headsup::CursorTargets m_CursorTargets;
     float m_MenuWidth   = 0.0f;
     // The windows the hook moves, as last given it (none until the first frame), and those it has seen.
@@ -439,7 +444,9 @@ class HeadsUp final : public IPlugin
     std::vector<std::string> m_LastOpen;      // the open windows it wrote last
     std::vector<std::string> m_SeenWindows;   // what the window hook has: the settings' windows and groups
     std::vector<std::string> m_CursorFiles;      // the cursors folder's, as the Target Cursor and Cursor Icon lists offer them
-    std::vector<std::string> m_ThemeFiles;       // the themes folder's, as Theme Colors' Load offers them
+    std::vector<std::string> m_ThemeFiles;       // the themes folder's, as the Theme dropdown offers them
+    // The custom theme as its file was last read or written: its name and palette.
+    std::optional<std::pair<std::string, headsup::BarPalette>> m_ThemeWritten;
     std::vector<std::string> m_ProfileNames;     // the profiles folder's, as the Profiles card offers them
     std::string m_Profile;   // the profile in use; empty for the settings.ini of before profiles
     std::string m_Character; // the character logged in, empty before one is
@@ -561,6 +568,7 @@ public:
         SavePending();
         SetScreenshot(false);
         HoldGameKeys(false);
+        LockCursor(false);
         m_AshitaCore->GetInputManager()->GetMouse()->RemoveCallback(kName);
         m_AshitaCore->GetInputManager()->GetKeyboard()->RemoveCallback(kName);
         g_Rml = nullptr;
@@ -574,10 +582,10 @@ public:
         if (const std::string failure = m_WindowHook.Stop(); !failure.empty()) Print(failure + ".");
         if (const std::string failure = m_PointerFix.Stop(); !failure.empty()) Print(failure + ".");
         m_Pointer.Stop();
-        m_Ping.Stop();
         m_Fonts.Wait();
         m_Search.Stop();
         m_TurnInFetch.Stop();
+        m_FeedbackPost.Stop();
         m_Nameplates.Release();
         m_SetupPreview.Release();
         g_AfterGui = nullptr;
@@ -663,8 +671,10 @@ public:
             SetScreenshot(!m_Screenshot);
         else if (args[1] == "debug")
             m_DebugPending = true;
+#ifdef HEADSUP_DEV
         else if (args[1] == "setup")
             m_RmlMenu.StartSetup(m_Settings, true);
+#endif
         else if (args[1] == "rml")
         {
             if (!m_Rml.Running())
@@ -758,11 +768,11 @@ public:
             Print("/hu on | /hu off: turn all of HeadsUp (outlines, nameplates, the top panel and the rest) on or off");
             Print("/hu screenshot: hide every name, HeadsUp's bar and menu and every addon window until it is run again; bind it with /bind");
             Print("/hu debug: write what every outline and nameplate show to logs/headsup");
-            Print("/hu setup: walk through the main settings again, with a preview of each");
             Print("/hu menu <page>: open the settings at a page, such as entities, mobs or toppanel");
-            Print("/hu popup <widget> | off: pin a widget's popup open, such as zone or vanatime");
+            Print("/hu popup <widget> | off: pin a widget's pop-out open, such as zone or vanatime");
             Print("/hu windowlog [stop]: write which game windows are open, as it changes, to logs/headsup/windows.log");
 #ifdef HEADSUP_DEV
+            Print("/hu setup: walk through the main settings again, with a preview of each");
             Print("/hu drawdump [seconds | watch | stop]: write every draw call of one frame to logs/headsup after the delay, or watch every frame for name glitches until stopped");
             Print("/hu codedump: write the client's loaded image to logs/headsup");
             Print("/hu windowowners: write each open game window's owner, its class and its layout's first bytes to logs/headsup");
@@ -802,8 +812,6 @@ public:
         m_DrawDump.SawPacket(id, data, size, Now());
 #endif
         if (!injected) m_Connection.Received(Now()); // an addon's injected packet never came from the server
-        if (id == headsup::kZoneOutPacket)
-            if (const std::optional<uint32_t> server = headsup::ParseZoneOutAddress(data, size)) m_Ping.SendingTo(*server);
         const headsup::PacketFollowUp next = m_GameState.Received(id, data, size);
         if (next.zonedIn)
         {
@@ -891,7 +899,7 @@ public:
         g_BarHidden = m_UiHidden;
         // Opening Region Info asks the server for the conquest standings; HeadsUp asks the same once per zone-in, and
         // again while the Zone or World Info popup shows them.
-        const auto opened = [&](headsup::BarWidget w) { return headsup::PopupShows(m_Settings, m_BarInput.Open(), w); };
+        const auto opened = [&](headsup::BarWidget w) { return headsup::PopupShows(m_Settings, m_BarInput.Shown(), w); };
         if (m_GameState.ConquestRequestDue(now,
                 g_BarOn &&
                     headsup::StandingsShown(m_Settings) &&
@@ -930,26 +938,70 @@ public:
                 g_BarScaleX = m_Names.BackBufferWidth() / static_cast<float>(client.right);
                 g_BarScaleY = m_Names.BackBufferHeight() / static_cast<float>(client.bottom);
                 // No message says the pointer left the client area, and in windowed modes the game never moves Windows'.
-                if (POINT pointer{}; GetCursorPos(&pointer) && ScreenToClient(g_GameWindow, &pointer) &&
-                                     !PtInRect(&client, pointer))
-                    m_BarInput.Leave();
+                // A Windows tester's borderless window got no mouse moves in its top 18 px while no game menu was open,
+                // so a move of Windows' pointer that no message gave counts as one. Linkpearl's moves are messages alone.
+                // A drag goes by Windows' pointer and its button as they are: the moves may not come, or may say the
+                // button is up while it is held, once the bar kept its press from the game.
+                POINT screen{}, pointer{};
+                if (GetCursorPos(&screen) && (pointer = screen, ScreenToClient(g_GameWindow, &pointer)))
+                {
+                    if (m_BarInput.Dragging())
+                    {
+#ifdef HEADSUP_DEV
+                        // /hu play's drag is messages alone, with no button held. GetAsyncKeyState reads the physical
+                        // buttons, so with them swapped the left one is VK_RBUTTON.
+                        if (m_Played.empty())
+#endif
+                            m_BarClicks.Held(static_cast<float>(pointer.x) * g_BarScaleX, static_cast<float>(pointer.y) * g_BarScaleY,
+                                KeyDown(GetSystemMetrics(SM_SWAPBUTTON) != 0 ? VK_RBUTTON : VK_LBUTTON));
+                    }
+                    else if (!PtInRect(&client, pointer))
+                        m_BarInput.Leave();
+                    else if ((pointer.x != m_LastPointer.x || pointer.y != m_LastPointer.y) &&
+                             (pointer.x != g_LastMove.x || pointer.y != g_LastMove.y) && WindowFromPoint(screen) == g_GameWindow)
+                    {
+                        const WPARAM buttons = (GetKeyState(VK_LBUTTON) < 0 ? MK_LBUTTON : 0) | (GetKeyState(VK_RBUTTON) < 0 ? MK_RBUTTON : 0);
+                        KeepMouse(WM_MOUSEMOVE, buttons, MAKELPARAM(pointer.x, pointer.y), false);
+                    }
+                    m_LastPointer = pointer;
+                }
             }
         }
         UpdateSkin();
         m_RmlBar.settingsRoom = m_RmlMenu.RoomFor(SettingsShownNow(), m_Settings);
+        m_BarInput.MenuOpen(m_RmlMenu.open);
         // Off, the bar is given nothing to show, and releases what it made.
         if (m_Rml.Running())
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
                 m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
+        // A pinned pop-out dragged somewhere stays there, kept by its edges nearest the screen's sides.
+        if (const auto moved = m_BarInput.TakeMoved())
+        {
+            m_Settings.Widget(moved->first).popupSpot = headsup::SpotOf(moved->second,
+                static_cast<float>(m_Names.BackBufferWidth()), static_cast<float>(m_Names.BackBufferHeight()));
+            m_SettingsChangedAt = now;
+        }
         for (const std::string& press : m_BarInput.TakePresses())
-            if (headsup::ApplyPopupPress(m_Settings, press,
-                    static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1)))
+            if (press == headsup::kOpenSettingsPress)
+                m_RmlMenu.OpenPage(kTopPanelPage, kWidgetLayoutCard);
+            else if (const std::optional<headsup::PanelWidget> next = headsup::ApplyWidgetPress(m_Settings, press))
+            {
                 m_SettingsChangedAt = now;
-        if (const bool fishing = m_Settings.enabled && m_Settings.fishBar; m_Rml.Running() &&
+                m_BarInput.ShowSettings(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)]);
+            }
+            else switch (headsup::ApplyPopupPress(m_Settings, press, NationNow()))
+            {
+            case headsup::PressResult::Changed:
+                m_SettingsChangedAt = now;
+                m_BarInput.Refuse(false); // what it said no longer holds
+                break;
+            case headsup::PressResult::Refused: m_BarInput.Refuse(); break;
+            case headsup::PressResult::None: break;
+            }
+        if (const bool fishing = m_Settings.enabled && m_Settings.fishStamina == headsup::FishBarShown::HeadsUp; m_Rml.Running() &&
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
-        m_BarDrawn = false;
         if (!Logging()) CloseNotes();
         m_ArrowHook.Hide(m_Settings.enabled && m_Settings.cursorStyle != headsup::CursorStyle::Vanilla);
         LoadCursorFile();
@@ -962,11 +1014,22 @@ public:
         static const std::vector<uint8_t> kNoKeys;
         m_PointerFix.KeepPointerFor(m_Settings.enabled ? m_Settings.keepPointerKeys : kNoKeys);
         g_SyncClicks = m_Settings.enabled && m_Settings.fixPointer;
-        UpdateMenu(now, loginStatus, drewInScene, band);
+        UpdateMenu(now, drewInScene, band);
         if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
         UpdatePointer();
+        LockCursor(m_Settings.enabled && m_Settings.lockCursor);
         HoldGameKeys(m_Rml.WantsText());
         m_NameHook.NewFrame(NameOwners());
+        DrawPanel();
+    }
+
+    // The panel draws in Present, so it stands where the host puts the plugins against ImGui: under it, as Ashita
+    // has them, or over it for a plugin Signet's /overimgui puts there.
+    void DrawPanel()
+    {
+        if (!g_BarOn || g_BarHidden || m_Shot.Hiding() || m_Device == nullptr || FAILED(m_Device->BeginScene())) return;
+        if (!WithQuadStates([&] { DrawBar(); })) BarNotDrawn();
+        m_Device->EndScene();
     }
 
     // The window hook: what to hide, place and shift of the game's windows, and which are open. The help bar's band.
@@ -982,7 +1045,8 @@ public:
         const bool movesWindows = (band && band->bottom != 0 && m_Settings.shiftVanillaUi) ||
                                   !m_Settings.pinnedWindows.empty() || m_Settings.moveGameHelp ||
                                   !m_Settings.hiddenWindows.empty();
-        const bool fishBarHidden = m_Settings.enabled && m_Settings.hideGameFishBar && FishNow().has_value();
+        const bool fishBarHidden =
+            m_Settings.enabled && m_Settings.fishStamina != headsup::FishBarShown::Vanilla && FishNow().has_value();
         // The panel also needs the hook to know when the game's map covers it.
         if ((hidden.Any() || movesWindows || g_BarOn || fishBarHidden) && !std::exchange(m_WindowHookTried, true))
         {
@@ -1033,18 +1097,12 @@ public:
     }
 
     // The settings window, and what it hands back: saves, reverts, profile and theme picks.
-    void UpdateMenu(double now, uint8_t loginStatus, bool drewInScene, const std::optional<headsup::HelpBand>& band)
+    void UpdateMenu(double now, bool drewInScene, const std::optional<headsup::HelpBand>& band)
     {
         if (!m_Rml.Running()) return;
-        if (m_OfferSetup && loginStatus == headsup::kLoginInGame && !m_Player.inEvent &&
-            m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0)
-        {
-            m_OfferSetup = false;
-            if (!m_Settings.setupDone) m_RmlMenu.StartSetup(m_Settings, false);
-        }
         const headsup::NameStats names = m_NameHook.Stats();
         if (m_RmlMenu.open) m_WindowPlaces = m_WindowHook.Places();
-        const headsup::MenuReadings readings{
+        headsup::MenuReadings readings{
             .outlinedMobs     = m_Tracker.OutlinedCount(),
             .meshes           = m_Outline.MeshesLastFrame(),
             .nameplates       = static_cast<uint32_t>(m_Nameplates.LastShown().size()),
@@ -1059,13 +1117,16 @@ public:
             .hidden           = names.hidden,
             .level            = m_Player.level,
             .sitting          = m_Player.sitting,
-            .barTitlePixels   = m_RmlBar.TitlePixels(),
             .windowsBand      = m_WindowHook.WindowsBand(),
             .barBand          = band.value_or(headsup::HelpBand{}).topBar,
+            .nation           = NationNow(),
+            .screenWidth      = m_Rml.Overlay() != nullptr ? m_Rml.Overlay()->GetDimensions().x : 0,
+            .screenHeight     = m_Rml.Overlay() != nullptr ? m_Rml.Overlay()->GetDimensions().y : 0,
             .seenWindows      = &m_SeenWindows,
             .windowPlaces     = &m_WindowPlaces,
             .cursorFiles      = &m_CursorFiles,
             .themeFiles       = &m_ThemeFiles,
+            .palette          = &headsup::PaletteFor(m_Settings, SkinNow()),
             .profiles         = &m_ProfileNames,
             .profile          = &m_Profile,
             .unsaved          = m_SettingsChangedAt.has_value(),
@@ -1080,7 +1141,12 @@ public:
             .exportable       = true,
 #endif
             .settingsOf       = SettingsShownNow(),
+            .partMarks        = {},
+            .localZone        = LocalZoneNow(),
+            .today            = TodayNow(),
         };
+        if (!readings.settingsOf.empty())
+            readings.partMarks = headsup::PartMarksNow(readings.settingsOf, BarStateNow(now), m_Settings);
         m_RmlMenu.settingsAt = m_RmlBar.SettingsBody();
         if (m_RmlMenu.Update(MenuHostNow(), m_Settings, readings, m_Fonts.Choices(m_Settings.defaultFont), kVersion))
         {
@@ -1112,10 +1178,26 @@ public:
 #endif
         if (m_RmlMenu.TakeCursorsRequest()) ScanCursors();
         if (m_RmlMenu.TakeThemesRequest()) ScanThemes();
-        if (const std::optional<std::string> name = m_RmlMenu.TakeThemeSave()) SaveTheme(*name);
         if (const std::optional<std::string> name = m_RmlMenu.TakeThemeLoad(); name && LoadTheme(*name))
             m_SettingsChangedAt = now;
+        if (const std::optional<std::string> name = m_RmlMenu.TakeThemeRename(); name && RenameTheme(*name))
+            m_SettingsChangedAt = now;
+        if (const std::optional<std::string> name = m_RmlMenu.TakeThemeDelete())
+        {
+            if (!DeleteFileA(ThemePath(*name).c_str()) && GetLastError() != ERROR_FILE_NOT_FOUND)
+                Print("could not delete the theme " + ThemePath(*name) + ".");
+            m_ThemeWritten.reset();
+            ScanThemes();
+        }
         if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
+        if (const std::optional<headsup::FeedbackDraft> feedback = m_RmlMenu.TakeFeedback())
+        {
+            char version[16];
+            const auto printed = std::to_chars(version, version + sizeof(version), kVersion);
+            m_FeedbackPost.Post(headsup::kFeedbackHost, headsup::kFeedbackPath,
+                headsup::FeedbackBody(*feedback, std::string_view(version, static_cast<size_t>(printed.ptr - version))));
+        }
+        if (const std::optional<headsup::WebGet::Answer> answer = m_FeedbackPost.Take()) m_RmlMenu.FeedbackAnswered(answer->ok);
         // The switch itself is always saved, so a profile keeps whether it saves by hand.
         if (m_Settings.autoSave != std::exchange(m_AutoSaveWas, m_Settings.autoSave) || m_RmlMenu.TakeSaveRequest())
             SaveSettings();
@@ -1159,19 +1241,11 @@ public:
             m_Names.UseScene(m_NameHook.SceneTarget(), m_NameHook.SceneDepth());
             plates = m_Names.NamesThisFrame();
         }
-        const bool bar = g_BarOn && !g_BarHidden && !m_Shot.Hiding() && !std::exchange(m_BarDrawn, true);
         if (plates)
         {
             m_Names.FinishText();
-            const bool saved = WithSavedState([&] {
-                DrawNameplates(1.0f, 1.0f, false);
-                if (bar) DrawBar();
-            });
-            if (!saved) PlatesNotDrawn();
-            if (!saved && bar) BarNotDrawn();
+            if (!WithSavedState([&] { DrawNameplates(1.0f, 1.0f, false); })) PlatesNotDrawn();
         }
-        else if (bar && !WithQuadStates([&] { DrawBar(); }))
-            BarNotDrawn();
     }
 
     bool Direct3DDrawPrimitive(D3DPRIMITIVETYPE type, UINT startVertex, UINT primCount) override
@@ -1237,7 +1311,7 @@ private:
     std::vector<headsup::PanelWidget> SettingsShownNow() const
     {
         const std::optional<headsup::PanelWidget> shown = m_BarInput.SettingsShown();
-        return shown ? headsup::Members(headsup::Panel(m_Settings), *shown) : std::vector<headsup::PanelWidget>{};
+        return shown ? headsup::PillSettings(m_Settings, *shown) : std::vector<headsup::PanelWidget>{};
     }
 
     std::optional<headsup::HelpBand> HelpBandNow() const
@@ -1677,7 +1751,7 @@ private:
     void UpdateSkin()
     {
         if (!headsup::UsesGameArt(m_Settings)) return;
-        const int type    = headsup::SkinTypeOf(m_Settings.windowType, m_WindowTypeReader.Read());
+        const int type    = headsup::SkinTypeOf(headsup::OwnPalette(m_Settings).windowType, m_WindowTypeReader.Read());
         const float scale = m_MenuHeight > 0.0f ? m_Names.BackBufferHeight() / m_MenuHeight : 1.0f;
         if (m_SkinLook && type == m_SkinLook->frame.type && scale == m_SkinLook->frame.scale) return;
         const std::optional<headsup::WindowSkin>& skin = m_WindowSkins[static_cast<size_t>(type)];
@@ -1890,7 +1964,7 @@ private:
     void HookPresent(IDirect3DDevice8* device)
     {
         if (!PatchSlot(g_PresentSlot, device, kPresentSlot, reinterpret_cast<void*>(&HookedPresent), g_RealPresent))
-            Note("the top panel's popups draw under other addons' windows: Present could not be hooked.");
+            Note("the top panel's pop-outs draw under other addons' windows: Present could not be hooked.");
         else if (g_PresentSlot != nullptr)
             g_AfterGui = [] { if (g_Plugin != nullptr) g_Plugin->DrawOverGui(); };
     }
@@ -2049,17 +2123,14 @@ private:
             m_Played.push_back(PlayedInput{true, 0, kKeys.at(args[3]), 1});
             m_Played.push_back(PlayedInput{true, 0, kKeys.at(args[3]), static_cast<LPARAM>(kUp)});
         }
-        else if (what == "theme" || what == "height" || what == "seps" || what == "text" || what == "popuptext" ||
-                 what == "moves")
+        else if (what == "theme" || what == "height" || what == "seps" || what == "moves")
         {
             // A bar setting by number, saved as a change in the window is.
             const int value = static_cast<int>(number(3));
             if (what == "moves") m_Settings.shiftVanillaUi = value != 0;
             if (what == "theme") m_Settings.barTheme = static_cast<headsup::BarTheme>(value);
             if (what == "height") m_Settings.barHeight = value;
-            if (what == "seps") m_Settings.barSeparators = static_cast<headsup::BarSeparators>(value);
-            if (what == "text") m_Settings.barTextSize = value;
-            if (what == "popuptext") m_Settings.popupTextSize = value;
+            if (what == "seps") m_Settings.panelSeparators = value;
             m_Settings          = headsup::Clamp(m_Settings);
             m_SettingsChangedAt = Now();
         }
@@ -2080,6 +2151,19 @@ private:
         m_Rml.RenderBar();
         // Without Present hooked nothing draws over ImGui: the overlay goes under it, with the bar.
         if (g_PresentSlot == nullptr) m_Rml.RenderOverlay();
+    }
+
+    bool PlayerLoaded() const
+    {
+        return m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0 && !m_GameState.Loading();
+    }
+
+    // Ashita's nation is 0 for San d'Oria to 2 for Windurst, and 0 while your data loads, so it is kept from before.
+    headsup::Nation NationNow()
+    {
+        if (PlayerLoaded())
+            m_Nation = static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1);
+        return m_Nation;
     }
 
     // RmlUi starts once the back buffer's size is known, and follows it after.
@@ -2105,8 +2189,14 @@ private:
                 {
                     const IItem* found = g_Resources != nullptr ? g_Resources->GetItemById(*item) : nullptr;
                     if (found == nullptr) return std::optional<headsup::Image>{};
-                    return headsup::ItemPicture(found->Bitmap, std::min<size_t>(found->ImageSize, sizeof(found->Bitmap)));
+                    return headsup::ResourcePicture(found->Bitmap, std::min<size_t>(found->ImageSize, sizeof(found->Bitmap)));
                 }
+                if (std::optional<headsup::Image> status = headsup::StatusImage(name, [](uint16_t id) {
+                        const IStatusIcon* icon = g_Resources != nullptr ? g_Resources->GetStatusIconById(id) : nullptr;
+                        if (icon == nullptr) return std::optional<headsup::Image>{};
+                        return headsup::ResourcePicture(icon->Bitmap, std::min<size_t>(icon->ImageSize, sizeof(icon->Bitmap)));
+                    }))
+                    return status;
                 return headsup::HostImage(name);
             });
         if (!started) Print("RmlUi did not start: the top panel and the settings window are off until HeadsUp reloads.");
@@ -2200,25 +2290,54 @@ private:
 
     void ScanThemes() { m_ThemeFiles = headsup::FolderFileNames(FolderEntries(ThemesFolder()), headsup::kThemeExtensions); }
 
-    void SaveTheme(const std::string& name)
+    std::string ThemePath(const std::string& name) { return ThemesFolder() + name + headsup::kThemeExtensions[0]; }
+
+    // Writes the custom theme in use to its file when it changed since it was read or written last.
+    void SaveCustomTheme()
     {
-        const std::string path = ThemesFolder() + name + headsup::kThemeExtensions[0];
-        Print(WriteText(path, headsup::ThemeFileText(m_Settings.customPalette)) ? "saved the Custom theme as " + name + "." : "could not save the theme " + path + ".");
-        ScanThemes();
+        if (m_Settings.barTheme != headsup::BarTheme::Custom) return;
+        const std::pair<std::string, headsup::BarPalette> now{m_Settings.customThemeName, m_Settings.customPalette};
+        if (m_ThemeWritten == now) return;
+        const std::string path = ThemePath(now.first);
+        if (!WriteText(path, headsup::ThemeFileText(now.second)))
+        {
+            Print("could not save the theme " + path + ".");
+            return;
+        }
+        m_ThemeWritten = now;
+        if (std::ranges::find(m_ThemeFiles, now.first) == m_ThemeFiles.end()) ScanThemes();
     }
 
-    // Makes a saved theme the Custom theme and picks it; false when the file gave no theme.
+    // Makes a saved theme the custom theme in use; false when the file gave no theme.
     bool LoadTheme(const std::string& name)
     {
-        const std::string path = ThemesFolder() + name + headsup::kThemeExtensions[0];
+        const std::string path = ThemePath(name);
         const std::optional<headsup::BarPalette> palette = headsup::PaletteFromThemeFile(ReadText(path));
         if (!palette)
         {
             Print("could not read a theme from " + path + ".");
             return false;
         }
-        m_Settings.customPalette = *palette;
-        m_Settings.barTheme      = headsup::BarTheme::Custom;
+        m_Settings.customPalette   = *palette;
+        m_Settings.customThemeName = name;
+        m_Settings.barTheme        = headsup::BarTheme::Custom;
+        m_ThemeWritten             = {name, *palette};
+        return true;
+    }
+
+    // Gives the custom theme in use a new name: its file is written under it and the old one goes.
+    bool RenameTheme(const std::string& name)
+    {
+        const std::string was = ThemePath(m_Settings.customThemeName);
+        if (!WriteText(ThemePath(name), headsup::ThemeFileText(m_Settings.customPalette)))
+        {
+            Print("could not save the theme " + ThemePath(name) + ".");
+            return false;
+        }
+        DeleteFileA(was.c_str());
+        m_Settings.customThemeName = name;
+        m_ThemeWritten             = {name, m_Settings.customPalette};
+        ScanThemes();
         return true;
     }
 
@@ -2376,10 +2495,7 @@ private:
         const auto used = m_CharacterProfiles.byCharacter.find(character);
         const std::string profile = used != m_CharacterProfiles.byCharacter.end() ? used->second : character;
         if (!Exists(ProfileFile(profile))) CopySettingsTo(profile);
-        // A new install's Setup is still owed, now on the character's profile.
-        const bool offer = m_OfferSetup;
         UseProfile(profile);
-        m_OfferSetup = m_OfferSetup || offer;
     }
 
     void NewProfile(const std::string& name)
@@ -2427,8 +2543,7 @@ private:
         // Ashita keeps a loaded file's values after the plugin unloads: without this, a file deleted since would load
         // as it was. A missing file is fine: every value keeps its default.
         config->Delete(kConfigAlias);
-        m_OfferSetup = !Exists(file);
-        if (!config->Load(kConfigAlias, SettingsPath().c_str()) && !m_OfferSetup)
+        if (const bool missing = !Exists(file); !config->Load(kConfigAlias, SettingsPath().c_str()) && !missing)
             Print("could not read " + file + "; using the defaults, which a change in the menu will write into that file");
         m_Settings    = m_SavedKeys.Load();
         m_AutoSaveWas = m_Settings.autoSave;
@@ -2503,6 +2618,7 @@ private:
     void SaveSettings()
     {
         const double before = Now();
+        SaveCustomTheme();
         const std::vector<headsup::KeyText>& keys = m_SavedKeys.Save(m_Settings);
         m_LastSaveKeys                            = keys.size();
         if (!keys.empty())
@@ -2553,6 +2669,34 @@ private:
         headsup::PlayerStatus status = headsup::WithPacketStatus(memory, m_GameState.PlayerStatusOf(index, m_SelfIndex));
         status.levelSync             = m_GameState.SyncOf(index).synced || m_BuffSynced.count(index) != 0;
         return status;
+    }
+
+    // Each frame, as the window moves, resizes and gains or loses the focus. Windows may drop a clip on its own
+    // (another window's, a focus change), so it is checked against the clip now and made again. Unseen under Wine.
+    void LockCursor(bool on)
+    {
+        RECT client{};
+        POINT origin{};
+        headsup::ScreenRect area;
+        const bool focused = g_GameWindow != nullptr && GetForegroundWindow() == g_GameWindow;
+        if (focused && GetClientRect(g_GameWindow, &client) && ClientToScreen(g_GameWindow, &origin))
+            area = {origin.x, origin.y, origin.x + client.right, origin.y + client.bottom};
+        RECT now{};
+        if (!GetClipCursor(&now)) return;
+        switch (headsup::CursorClipStep(on && focused, area, {now.left, now.top, now.right, now.bottom}, m_CursorClipped))
+        {
+        case headsup::ClipStep::Clip:
+        {
+            const RECT clip{area.left, area.top, area.right, area.bottom};
+            m_CursorClipped = ClipCursor(&clip) != 0;
+            break;
+        }
+        case headsup::ClipStep::Release:
+            ClipCursor(nullptr);
+            m_CursorClipped = false;
+            break;
+        case headsup::ClipStep::Keep: break;
+        }
     }
 
     void UpdatePointer()
@@ -2616,17 +2760,24 @@ private:
 
     headsup::BarState BarStateNow(double now)
     {
-        const headsup::BarNeeds needs = headsup::NeedsOf(m_Settings, m_BarInput.Open());
+        headsup::BarState s = BarStateRead(now);
+        headsup::HoldWhileLoading(s, m_Held, PlayerLoaded());
+        return s;
+    }
+
+    headsup::BarState BarStateRead(double now)
+    {
+        const headsup::BarNeeds needs = headsup::NeedsOf(m_Settings, m_BarInput.Shown());
         headsup::BarState s;
         s.weather = WeatherNow();
         s.owners   = m_GameState.Owners();
         s.shares   = m_GameState.Shares();
         s.pickedTabs = &m_BarInput.PickedTabs();
         s.scrolled   = &m_BarInput.Scrolled();
+        s.pinRefused = m_BarInput.Refused();
         if (needs.conquest)
         {
-            // Ashita's nation is 0 for San d'Oria to 2 for Windurst.
-            s.nation = static_cast<headsup::Nation>(m_AshitaCore->GetMemoryManager()->GetPlayer()->GetNation() + 1);
+            s.nation = NationNow();
             s.outposts = &Outposts()[m_AshitaCore->GetMemoryManager()->GetParty()->GetMemberServerId(0)];
         }
         if (needs.unixTime || needs.localTime || needs.statuses)
@@ -2676,14 +2827,6 @@ private:
                 m_PlayOnlineCounts = PlayOnlineNow();
                 m_CountersReadAt   = now;
             }
-            if (!m_PingTried)
-            {
-                m_PingTried = true;
-                if (const std::string failure = m_Ping.Start(); !failure.empty())
-                    Note("the ping is not measured, as HeadsUp " + failure + ".");
-            }
-            for (const double ms : m_Ping.TakeRoundTrips())
-                m_Connection.RoundTrip(ms);
             m_Connection.Frame(now, m_Counters);
             s.connection = m_Connection.Report(now, m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() != 0);
             s.connection->playOnline = m_PlayOnlineCounts;
@@ -2736,7 +2879,11 @@ private:
                 s.stripBag = headsup::BagOf(inventory->GetContainerCount(c), inventory->GetContainerCountMax(c));
             }
         }
-        if (needs.gil) s.currencies = m_GameState.Currencies();
+        if (needs.gil)
+        {
+            s.currencies = m_GameState.Currencies();
+            s.nation     = NationNow(); // whose conquest points are yours
+        }
         if (!needs.gil && needs.containers == 0) return s;
         const Ashita::FFXI::item_t* gil =
             needs.gil ? inventory->GetContainerItem(headsup::kInventory, headsup::kGilSlot) : nullptr;
@@ -2924,6 +3071,24 @@ private:
     }
 
     // Your own title is the client's; another player's comes with a check of them.
+    static std::string LocalZoneNow()
+    {
+        const auto clock          = std::chrono::system_clock::now();
+        const std::time_t seconds = std::chrono::system_clock::to_time_t(clock);
+        const std::tm* local      = std::localtime(&seconds);
+        return local == nullptr ? std::string()
+                                : headsup::LocalZoneName(UnixMsOf(clock), local->tm_year + 1900, local->tm_mon + 1,
+                                      local->tm_mday, local->tm_hour, local->tm_min);
+    }
+
+    static headsup::CalendarDay TodayNow()
+    {
+        const std::time_t seconds = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        const std::tm* local      = std::localtime(&seconds);
+        return local == nullptr ? headsup::CalendarDay{}
+                                : headsup::CalendarDay{local->tm_year + 1900, local->tm_mon + 1, local->tm_mday};
+    }
+
     uint32_t TitleOf(bool self, uint32_t serverId, IPlayer* player) const
     {
         if (self) return player->GetTitle();
@@ -2952,6 +3117,7 @@ private:
         m_Pets.clear();
         m_Checkable.clear();
         const bool autoChecks = m_Settings.enabled && m_Settings.autoCheck;
+        if (m_Checks.LevelIs(player->GetMainJobLevel())) m_AutoCheck.AskAgain();
         for (uint32_t i = 0; i < count; ++i)
         {
             if (entity->GetRawEntity(i) == nullptr) continue;

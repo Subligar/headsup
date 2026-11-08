@@ -100,8 +100,8 @@ VISIBILITY_ROWS = {**rows('aggressive', 'passive', 'nm-aggressive', 'nm-passive'
 
 PIECES = Pieces(
     pages={'theme': 'Theme', 'entities': 'Entities', 'mobs': 'Mobs', 'players': 'Players', 'self': 'Self', 'npcs': 'Npcs', 'pets': 'Pets',
-           'userinterface': 'UserInterface', 'toppanel': 'TopPanel', 'widgets': 'Widgets', 'mousecursor': 'MouseCursor',
-           'colors': 'Colors', 'configmenu': 'ConfigMenu'},
+           'userinterface': 'UserInterface', 'helpbar': 'HelpBar', 'fishingbar': 'FishingBar', 'vanillaui': 'VanillaUi', 'toppanel': 'TopPanel',
+           'colors': 'Colors', 'configmenu': 'ConfigMenu', 'feedback': 'Feedback'},
     cards={
         'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(),
         'colors-aggression': Card(), 'colors-toughness': Card(), 'colors-claim-status': Card(),
@@ -109,15 +109,16 @@ PIECES = Pieces(
         'visibility': Card(), 'outline-design': Card(), 'nameplate-design': Card(), 'line-style': Card(),
         'ornament': Card(), 'nameplate-opacity': Card(), 'detection-icons': Card(), 'badges': Card(),
         'weaknesses': Card(), 'statuses': Card(), 'placeholder-timers': Card(),
-        'screenshot-mode': Card(), 'window-groups': Card(), 'custom-game-ui': Card(), 'base-game-ui': Card(),
-        'top-panel': Card(switch=True), 'theme-colors': Card(), 'help-bar': Card(switch=True), 'widgets': Card(), 'layout': Card(),
+        'screenshot-mode': Card(), 'window-groups': Card(), 'fishing-appearance': Card(), 'base-game-ui': Card(),
+        'top-panel': Card(switch=True), 'theme-colors': Card(), 'help-bar': Card(switch=True), 'widgets': Card(), 'layout': Card(), 'widget-appearance': Card(), 'popup-appearance': Card(),
         'mouse-pointer': Card(), 'settings-window': Card(), 'profiles': Card(), 'reset': Card(), 'debug-mode': Card(switch=True),
+        'feedback-form': Card(),
     },
     settings={
         # Entities
         'base-font-size': Setting(), 'default-font': Setting(), 'base-icon-size': Setting(), 'linkpearl-outline': Setting(),
         'auto-check': Setting(), 'look-up-players': Setting(),
-        'replace-dashes': Setting(options=4, nameless=frozenset({1, 2, 3})), 'scale-with-distance': Setting(),
+        'scale-with-distance': Setting(),
         'min-size': Setting(), 'max-size': Setting(), 'stack-line-to-entity': Setting(), 'vertical-offset': Setting(),
         'stack-names': Setting(), 'hide-during-conversation': Setting(),
         'thickness': Setting(), 'opacity': Setting(), 'smoothness': Setting(), 'outline-range': Setting(),
@@ -163,7 +164,7 @@ PIECES = Pieces(
             words={'weak': True, 'resist': True}),
         'respawn-timers': Setting(), 'timer-size': Setting(), 'up-time': Setting(),
         # User Interface
-        'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(), 'fishing-bar-width': Setting(), 'fishing-bar-height': Setting(), 'fishing-bar-x': Setting(), 'fishing-bar-y': Setting(), 'fishing-bar-draggable': Setting(), 'fishing-bar-font': Setting(), 'fishing-bar-text-size': Setting(), 'fishing-bar-line': Setting(), 'fish-color-by-catch': Setting(), 'fish-small-color': Setting(), 'fish-large-color': Setting(), 'fish-item-color': Setting(), 'fish-monster-color': Setting(), 'fish-line-color': Setting(), 'fish-rod-color': Setting(), 'hide-game-fish-bar': Setting(),
+        'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(options=3), 'fishing-bar-width': Setting(), 'fishing-bar-height': Setting(), 'fishing-bar-x': Setting(), 'fishing-bar-y': Setting(), 'fishing-bar-draggable': Setting(), 'fishing-bar-font': Setting(), 'fishing-bar-text-size': Setting(), 'fishing-bar-line': Setting(), 'fish-color-by-catch': Setting(), 'fish-small-color': Setting(), 'fish-large-color': Setting(), 'fish-item-color': Setting(), 'fish-monster-color': Setting(), 'fish-line-color': Setting(), 'fish-rod-color': Setting(),
         'groups': Setting(unnamed=True, words={'note': True, 'help-on': True, 'help-off': True, 'starts-at': True,
                                                'row-tip': False}),
         'game-help': Setting(), 'auto-adjust': Setting(),
@@ -172,32 +173,34 @@ PIECES = Pieces(
         'window-list': Setting(unnamed=True, words={'note': True, 'find': True, 'name-hint': True, 'all-windows': False,
                                                     'hide': True, 'keep': True, 'row-tip': False}),
         # Top Panel and Widgets
-        'theme': Setting(), 'window-type': Setting(options=9), 'window-border': Setting(), 'separators': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
-        'height': Setting(), 'text-size': Setting(words={'fits': True}), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'one-line': Setting(options=3), 'popup-size': Setting(),
+        'theme': Setting(words={'built-in': True, 'custom': True, 'copy': True, 'copy-again': True}), 'delete-theme': Setting(), 'window-type': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
+        'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'corner-rounding': Setting(), 'text-scale': Setting(), 'popup-width': Setting(), 'popup-height': Setting(), 'popup-rounding': Setting(), 'section-rounding': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
-        'theme-shape': Setting(options=4), 'theme-background': Setting(), 'theme-gradient': Setting(),
-        'theme-top': Setting(), 'theme-bottom': Setting(), 'theme-border-color': Setting(),
-        'theme-border-thickness': Setting(),
+        'theme-name': Setting(), 'background-style': Setting(options=3),
+        'separator-style': Setting(options=4, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
+        'theme-top': Setting(), 'theme-middle': Setting(), 'theme-bottom': Setting(), 'background-opacity': Setting(),
+        'theme-border-thickness': Setting(), 'theme-rounding': Setting(), 'popup-opacity': Setting(),
+        'status-icons': Setting(words={'vanilla': True}), 'status-background': Setting(),
         'theme-palette': Setting(unnamed=True, rows=rows(
             'under-line', 'glow-below', 'accent', 'accent-end', 'pill', 'pill-border', 'title', 'subtitle', 'divider',
             'panel-top', 'panel-bottom', 'panel-border', 'panel-outer', 'text', 'heading', 'tag-fill', 'tag-border',
-            'tag-text', 'highlight')),
-        'theme-files': Setting(unnamed=True, words={'save-as': True, 'name-hint': True, 'save': True, 'load': True}),
+            'tag-text', 'highlight', 'border-color')),
         'save-automatically': Setting(), 'save-changes': Setting(words={'save': True, 'revert': True}),
         'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
-        'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-text-size': Setting(), 'help-width': Setting(), 'help-height': Setting(),
+        'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-rounding': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
-            'combine', 'combine-on-panel', 'combine-in-popup', 'second-line', 'show-region-name', 'show-conquest', 'show-conquest-text', 'show-zone-id', 'moon-phase', 'day-of-week', 'date', 'icons', 'background', 'spacing', 'padding', 'title-font', 'text-font', 'text-size', 'visibility', 'show-icons', 'show-mob-level', 'show-distance', 'jobs', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency', 'bag', 'nations', 'conquest-grid', 'shows', 'ship', 'element', 'guild', 'popup', 'time-zone', 'server-time', '24-hour',
-            'seconds', 'layout', 'exp-text', 'exp-bar', 'exp-earned', 'exp-to-next', 'exp-percent', 'exp-align', 'bar-width', 'bar-height',
-            'job-names', 'panel-parts'), words={'clone': True, 'remove-copy': True, 'combine-none': True}),
-        'trays': Setting(unnamed=True), 'reset-layout': Setting(),
+            'design', 'icon', 'alignment', 'show-zone-id', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
+            'seconds', 'date-format', 'job-text', 'job-text-align', 'earned-align', 'tnl-align', 'percent-align', 'bar-width', 'bar-height', 'bar-back', 'bar-color', 'bar-text', 'bar-text-align', 'mem-text', 'status-display'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),
+        'trays': Setting(unnamed=True),
         # Mouse Cursor and HeadsUp Config
-        'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'keep-pointer': Setting(),
+        'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'lock-cursor': Setting(), 'keep-pointer': Setting(),
         'enable-headsup': Setting(), 'font': Setting(), 'size': Setting(),
         'window-opacity': Setting(),
-        'run-setup': Setting(),
         'reset-all-settings': Setting(words={'note': True, 'reset-everything': True, 'keep-them': True}),
         'debug-report': Setting(words={'watch': True, 'stop': True, 'saved': True}),
+        # Feedback
+        'feedback-type': Setting(options=3), 'feedback-topic': Setting(options=6), 'feedback-text': Setting(unnamed=True),
+        'send-feedback': Setting(words={'missing': True, 'sending': True, 'sent': True, 'failed': True}),
         'logging': Setting(words={'file': True}),
         'mobs-outlined': Setting(), 'meshes-outlined': Setting(), 'stencil-buffer': Setting(words={'available': True, 'missing': True}), 'nameplates': Setting(),
         'drawn': Setting(words={'in-scene': True, 'on-top': True}), 'game-s-names': Setting(words={'not-hooked': True}),
@@ -207,15 +210,15 @@ PIECES = Pieces(
     lists={
         'plate-mode': List(4), 'outline-mode': List(4, extra={3: 'tipOnClaimRows'}), 'color-source': List(7),
         'show-condition': List(13), 'ornament-place': List(5), 'align': List(3), 'font-style': List(3),
-        'smoothness': List(4), 'bar-theme': List(7), 'bar-sections': List(3),
-        'bar-widgets': List(13), 'perf-parts': List(7), 'plate-lines': List(3), 'job-layout': List(4), 'exp-bar': List(3), 'exp-text': List(3), 'exp-place': List(5), 'nations': List(4), 'world-line': List(6), 'world-sections': List(4), 'target-shows': List(5), 'conquest-place': List(4), 'conquest-grid': List(2), 'blue-learned': List(2), 'target-icons': List(10), 'tags': List(30),
-        'setup-theme': List(6), 'setup-mob-plates': List(4), 'setup-mob-design': List(3), 'setup-outlines': List(4),
+        'smoothness': List(4), 'bar-theme': List(6), 'bar-sections': List(3),
+        'bar-widgets': List(13), 'plate-lines': List(3), 'job-text': List(3), 'exp-bar-text': List(5), 'target-shows': List(5), 'widget-parts': List(57), 'custom-icons': List(3), 'icon-sides': List(3), 'widget-aligns': List(4), 'status-display': List(3), 'blue-learned': List(2), 'detection-icons': List(8), 'tags': List(30),
+        'setup-theme': List(5), 'setup-mob-plates': List(4), 'setup-mob-design': List(3), 'setup-outlines': List(4),
         'setup-outline-thickness': List(3), 'setup-cursor': List(4), 'setup-players': List(2), 'setup-self': List(3),
         'setup-player-icons': List(3), 'setup-line-kinds': List(3), 'setup-npcs': List(2), 'setup-pets': List(3), 'setup-panel': List(4), 'setup-nameplates': List(3), 'setup-pointer': List(2),
         'setup-widget-groups': List(4),
     },
     words={'switched-off': True, 'switch-off': True, 'switch-on': True, 'switched-off-top-panel': True,
-           'switched-off-headsup': True, 'key-add': True, 'key-waiting': True, 'always': True, 'never': True, 'conditions': True, 'checks-all': True, 'checks-none': True, 'checks-picked': True, 'local': True, 'themes': True,
+           'switched-off-headsup': True, 'key-add': True, 'key-waiting': True, 'always': True, 'never': True, 'conditions': True, 'checks-all': True, 'checks-none': True, 'checks-picked': True, 'local': True, 'themes': True, 'custom-color': True,
            'default': True, 'auto': True, 'reset-to-default': False, 'cutoff-off': True, 'weak-off': False,
            'weak-rank': False, 'resist-off': False, 'resist-rank': False, 'unused-tags-these': True, 'unused-tags-name': True, 'or': True,
            'reload': True, 'export': True,
@@ -336,7 +339,7 @@ class Reader:
         for number, page in enumerate(self.listed(value, 'pages'), start=1):
             if isinstance(page, dict) and 'key' not in page:
                 self.bad(f'page {number} has no key')
-            self.fields(page, f'page {number}', ('key', 'name', 'child', 'cards'))
+            self.fields(page, f'page {number}', ('key', 'name', 'child', 'description', 'cards'))
             key = self.key(page, f'page {number}')
             owner = f'the page "{key}"'
             if key not in self.pieces.pages:
@@ -347,7 +350,10 @@ class Reader:
             child = page.get('child', False)
             if not isinstance(child, bool):
                 self.bad(f'the child of {owner} must be true or false')
-            entry = Entry(key=key, name=self.named(page, owner, True), child=child)
+            description = page.get('description')
+            if description is not None:
+                self.plain(description, 'description', owner)
+            entry = Entry(key=key, name=self.named(page, owner, True), child=child, description=description)
             if key in KINDS:
                 if 'cards' in page:
                     self.bad(f'{owner} shares the entity cards and cannot have cards of its own')
@@ -634,7 +640,7 @@ def generate(layout: Layout, pieces: Pieces = PIECES, text: str = ''):
         first, count = (entity_first, len(layout.entity)) if page.key in KINDS else (
             sum(len(p.cards) for p in layout.pages[:layout.pages.index(page)]), len(page.cards))
         pages.append(f'    {{Page::{pieces.pages[page.key]}, "{page.key}", {c_text(page.name)}, '
-                     f'{"true" if page.child else "false"}, {first}, {count}}},')
+                     f'{c_text(page.description)}, {"true" if page.child else "false"}, {first}, {count}}},')
     for word in layout.words:
         layout_words.append(f'    {{WindowWord::{pascal(word.key)}, {c_text(word.name)}, {c_text(word.tip)}}},')
 

@@ -81,10 +81,26 @@ namespace headsup
         LinuxXIState linuxxi;
         const std::map<std::string, std::string>* pickedTabs = nullptr; // the tab the player picked in a card, by its heading
         const std::map<std::string, size_t>* scrolled        = nullptr; // lines a part of a popup is scrolled past, by its key
+        bool pinRefused = false; // Status Timers kept its last pin since its popup opened
         const GuildPatterns* turnIns = nullptr; // today's guild point turn-ins, once fetched
         bool turnInsFailed = false;             // the last fetch got no answer
         std::optional<CraftRanks> crafts;       // yours, once the server sent them
     };
+
+    // What the panel reads of your character, which the game empties or fills partway while you change zones.
+    struct CharacterReadings
+    {
+        uint16_t zone = 0;
+        std::optional<Weather> weather;
+        std::optional<JobReport> job;
+        std::optional<uint32_t> gil;
+        std::array<std::optional<BagCount>, kContainerCount> bags{};
+        std::vector<ActiveStatus> statuses;
+        int64_t unixMs = 0; // when the statuses were read
+    };
+    // Loaded, held takes state's readings; while loading, state shows held's instead, their status timers run down
+    // since.
+    void HoldWhileLoading(BarState& state, CharacterReadings& held, bool loaded);
 
     // The parts of BarState that the shown widgets and the open popup read, for the plugin to gather only those; it
     // always copies the weather, the owners and the shares, which GameState keeps from packets.
@@ -107,25 +123,45 @@ namespace headsup
         bool conquest   = false; // your nation and supply runs, for World Info's conquest and Currency's points
         int containers = 0; // bags from 0 up to this
     };
-    BarNeeds NeedsOf(const Settings& settings, std::optional<PanelWidget> open);
+    BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing); // showing: the popups shown
     // Does to the settings what a press on a popup's pressable cell told (PopupCell::press): a currency's or a
     // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
-    // off. False when it changed nothing.
-    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
+    // off. The last pin stays, by its pin or its star: Refused.
+    enum class PressResult : uint8_t { None, Changed, Refused };
+    // A weather's icons as Use Custom Icons picks them: HeadsUp's own picture, or the game's element icon, twice for a
+    // double weather; none for a weather that has none of the kind picked.
+    std::vector<Icon> WeatherIcons(Weather weather, CustomIcons use);
+    // What a popup's clone and remove chips tell, then the widget's slot.
+    constexpr const char* kWidgetClonePress = "widget clone ", *kWidgetRemovePress = "widget remove ";
+    constexpr const char* kCollapsePress = "collapse "; // and the card's CollapseKey
+    constexpr const char* kPopupResetPress = "popup reset "; // and its pill's slot: back under its pill
+    // A pop-out card's name in Settings::collapsedSections: its pill's and its heading's without what is in brackets,
+    // so the Today card is one card whatever the date. One word: lower case, a '-' for each space.
+    std::string CollapseKey(PanelWidget head, std::string_view heading);
+    // Clones the widget a press names or takes its copy off: the widget whose settings show next, the clone or the
+    // first copy; nothing for any other press, or when nothing changed.
+    std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press);
+    PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
     // Whether the panel shows the conquest standings: the Zone widget, or a World Info showing Conquest Info.
     bool StandingsShown(const Settings& settings);
     // Whether the open popup shows a widget's: its own, or a combined pill's with that widget in it.
-    bool PopupShows(const Settings& settings, std::optional<PanelWidget> open, BarWidget widget);
+    bool PopupShows(const Settings& settings, const std::vector<PanelWidget>& shown, BarWidget widget);
 
-    // Game help is never shown on the bar: it has a bar of its own, under the top bar. panel: Panel(settings).
-    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings,
-        const PanelGroups& panel);
+    // The picture each part's chip in the Widget Designer shows: the one these widgets show now, else its stand-in.
+    std::array<PartMark, kWidgetPartCount> PartMarksNow(const std::vector<PanelWidget>& widgets, const BarState& state,
+        const Settings& settings);
+
+    // Game help is never shown on the bar: it has a bar of its own, under the top bar.
+    WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings);
     // The used and total slots of the bag the game's caption names, as the Bags widget writes them.
     std::optional<Span> StripBagFill(const BarState& state);
     PopupContent BarPopupContent(PanelWidget widget, const BarState& state, const Settings& settings);
     // The popup a pill opens, named by its first widget: that widget's, or for a combined pill each of its widgets'
     // that is shown and has one, their titles joined and their cards one after another.
     PopupContent PanelPopupContent(PanelWidget head, const BarState& state, const Settings& settings);
+    // A widget's currency's picture (kCurrencyTable's place, or kYourConquestCurrency) as a span of no text: gil's coin,
+    // a nation's crest for its conquest points, or the game's item; one with none has no mark (HasMark).
+    Span CurrencyMark(int currency, Nation yours);
     // The element colors of the weekdays and weather, from the spec.
     uint32_t ElementColor(Element element);
 }

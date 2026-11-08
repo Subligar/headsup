@@ -8,13 +8,15 @@
 
 namespace headsup
 {
-    // One HTTPS GET at a time, on a thread of its own, so the game never waits on the network.
+    // One HTTPS request at a time, on a thread of its own, so the game never waits on the network.
     class WebGet
     {
     public:
         ~WebGet();
         // Fetches https://host/path, unless a fetch is under way.
         void Start(const wchar_t* host, const wchar_t* path);
+        // Posts this JSON to https://host/path, unless a request is under way.
+        void Post(const wchar_t* host, const wchar_t* path, std::string json);
         // Cancels the fetch under way and waits for its thread.
         void Stop();
         struct Answer
@@ -26,7 +28,8 @@ namespace headsup
         std::optional<Answer> Take();
 
     private:
-        void Run(std::wstring host, std::wstring path);
+        void Begin(const wchar_t* host, const wchar_t* path, std::string json);
+        void Run(std::wstring host, std::wstring path, std::string json); // a GET with no json
 
         std::thread m_Thread;
         std::mutex m_Lock;

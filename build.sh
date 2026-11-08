@@ -7,8 +7,8 @@ PLUGINS_DIR="${HEADSUP_PLUGINS_DIR:-$HOME/Games/PhoenixXI/plugins}"
 # RmlUi and FreeType as tools/rmlui/build.sh builds them: static, for the plugin and for the unit tests.
 RMLUI_DIR="${HEADSUP_RMLUI_DIR:-$HOME/.cache/headsup-rmlui}"
 RMLUI_LIBS=(-lrmlui_debugger -lrmlui -lfreetype)
-PURE_SOURCES=(world_info.cpp guild_points.cpp item_picture.cpp outposts.cpp player_lookup.cpp search_cipher.cpp search_server.cpp window_skin.cpp note_log.cpp bar_memory.cpp address_space.cpp figures.cpp linuxxi_report.cpp game_font.cpp window_layout.cpp json_text.cpp friend_list.cpp auto_check.cpp dash_mark.cpp cursor_picture.cpp rml_pure.cpp markup.cpp bar_document.cpp form.cpp menu_form.cpp menu_document.cpp rml_menu.cpp con.cpp cursor_file.cpp fonts.cpp pointer_keys.cpp utf16.cpp mobdata.cpp npcdata.cpp magic_chance.cpp ph_timers.cpp settings.cpp tracker.cpp outline_math.cpp labels.cpp look.cpp check.cpp nameplate.cpp icons.cpp plate_image.cpp player_status.cpp pose.cpp commands.cpp game_glyphs.cpp game_cursor.cpp native_locate.cpp window_views.cpp strip_text.cpp code_patch.cpp name_frame.cpp copy_state.cpp zones.cpp vanadiel.cpp bar_theme.cpp bar_look.cpp bar_content.cpp bar_server_time.cpp bar_fps.cpp bar_job.cpp bar_connection.cpp bar_party.cpp bar_statuses.cpp bar_game_help.cpp bar_widgets.cpp bar_placement.cpp bar_layout.cpp popup_layout.cpp weather.cpp game_packets.cpp game_state.cpp titles.cpp currencies.cpp menu_state.cpp plate_settings.cpp entity_state.cpp plate_template.cpp plate_compose.cpp plate_layout.cpp ini_text.cpp model_file.cpp model_pose.cpp setup.cpp setup_scene.cpp fish_bar.cpp fish_catch.cpp profiles.cpp)
-PLUGIN_SOURCES=("${PURE_SOURCES[@]}" model_render.cpp setup_preview.cpp import_slot.cpp server_ping.cpp web_get.cpp search_client.cpp rml_system.cpp rml_render.cpp rml_host.cpp rml_bar.cpp d3d_util.cpp game_names.cpp outline.cpp pointer_swap.cpp gpu.cpp nameplate_render.cpp installed_fonts.cpp debug_report.cpp memory_query.cpp plugin.cpp native_hook.cpp)
+PURE_SOURCES=(status_icons.cpp world_info.cpp icon_adjust.cpp feedback.cpp guild_points.cpp item_picture.cpp outposts.cpp player_lookup.cpp search_cipher.cpp search_server.cpp window_skin.cpp note_log.cpp bar_memory.cpp address_space.cpp figures.cpp linuxxi_report.cpp game_font.cpp window_layout.cpp json_text.cpp friend_list.cpp auto_check.cpp dash_mark.cpp cursor_picture.cpp rml_pure.cpp markup.cpp bar_document.cpp form.cpp menu_form.cpp menu_document.cpp rml_menu.cpp con.cpp cursor_file.cpp fonts.cpp pointer_keys.cpp utf16.cpp mobdata.cpp npcdata.cpp magic_chance.cpp ph_timers.cpp settings.cpp tracker.cpp outline_math.cpp labels.cpp look.cpp check.cpp nameplate.cpp icons.cpp plate_image.cpp player_status.cpp pose.cpp commands.cpp game_glyphs.cpp game_cursor.cpp native_locate.cpp window_views.cpp strip_text.cpp code_patch.cpp name_frame.cpp copy_state.cpp zones.cpp vanadiel.cpp bar_theme.cpp bar_look.cpp bar_content.cpp bar_server_time.cpp bar_fps.cpp bar_job.cpp bar_connection.cpp bar_party.cpp bar_statuses.cpp bar_game_help.cpp bar_widgets.cpp bar_design.cpp bar_placement.cpp bar_layout.cpp popup_layout.cpp weather.cpp game_packets.cpp game_state.cpp titles.cpp currencies.cpp menu_state.cpp plate_settings.cpp entity_state.cpp plate_template.cpp plate_compose.cpp plate_layout.cpp ini_text.cpp model_file.cpp model_pose.cpp setup.cpp setup_scene.cpp fish_bar.cpp fish_catch.cpp profiles.cpp)
+PLUGIN_SOURCES=("${PURE_SOURCES[@]}" model_render.cpp setup_preview.cpp import_slot.cpp web_get.cpp search_client.cpp rml_system.cpp rml_render.cpp rml_host.cpp rml_bar.cpp d3d_util.cpp game_names.cpp outline.cpp pointer_swap.cpp gpu.cpp nameplate_render.cpp installed_fonts.cpp debug_report.cpp memory_query.cpp plugin.cpp native_hook.cpp)
 # A developer's tools, kept beside the repository and out of it: when they are there, they are built in and plugin.cpp's
 # HEADSUP_DEV hooks call them.
 DEV_DIR="$ROOT/../HeadsUp-dev"
@@ -70,7 +70,7 @@ unit_tests() {
     mkdir -p "$OUT"
     python3 -m unittest discover -s "$ROOT/tests" -p 'test_*.py'
     compile "$OUT/unit" g++ -std=c++20 -O1 -Wall -Wextra -Werror -I"$ROOT/src" -I"$ROOT/tests" -I"$DEV_DIR" \
-        -isystem "$RMLUI_DIR/linux/include" -DRMLUI_STATIC_LIB -- "${PURE_SOURCES[@]/#/$ROOT/src/}" "$ROOT"/tests/*.cpp \
+        -isystem "$RMLUI_DIR/linux/include" -isystem "$RMLUI_DIR/linux/include/freetype2" -DRMLUI_STATIC_LIB -- "${PURE_SOURCES[@]/#/$ROOT/src/}" "$ROOT"/tests/*.cpp \
         "${DEV_TESTS[@]}"
     g++ -o "$OUT/unit_tests" "${OBJECTS[@]}" -L"$RMLUI_DIR/linux/lib" "${RMLUI_LIBS[@]}"
     "$OUT/unit_tests"
@@ -85,11 +85,11 @@ plugin() {
     # 32-bit Windows' malloc aligns to 8 bytes, where GCC takes plain new to give 16 (tools/rmlui/build.sh).
     compile "$OUT/plugin" i686-w64-mingw32-g++ -std=c++20 -O2 -msse2 -mfpmath=sse -mincoming-stack-boundary=2 \
         -faligned-new=8 \
-        -isystem "$ROOT/shim" -isystem "$ROOT/third_party/ashita-sdk" -isystem "$RMLUI_DIR/mingw/include" \
+        -isystem "$ROOT/shim" -isystem "$ROOT/third_party/ashita-sdk" -isystem "$RMLUI_DIR/mingw/include" -isystem "$RMLUI_DIR/mingw/include/freetype2" \
         -DRMLUI_STATIC_LIB -I"$ROOT/src" "${DEV_FLAGS[@]}" \
         -Wall -Wextra -Werror -fpermissive -- "${PLUGIN_SOURCES[@]/#/$ROOT/src/}" "${DEV_SOURCES[@]}"
     i686-w64-mingw32-g++ -shared -static -static-libgcc -static-libstdc++ -Wl,--kill-at \
-        -o "$OUT/$DLL.dll" "${OBJECTS[@]}" -L"$RMLUI_DIR/mingw/lib" "${RMLUI_LIBS[@]}" -lpsapi -lgdi32 -lws2_32 -liphlpapi -lwinhttp
+        -o "$OUT/$DLL.dll" "${OBJECTS[@]}" -L"$RMLUI_DIR/mingw/lib" "${RMLUI_LIBS[@]}" -lpsapi -lgdi32 -lws2_32 -lwinhttp
     # The static libstdc++ brings 11 MB of debug sections, which the game would map too. The DLL ships without them and
     # HeadsUp.debug beside it keeps them and the symbols, for reading a crash's addresses.
     i686-w64-mingw32-objcopy --only-keep-debug "$OUT/$DLL.dll" "$OUT/$DLL.debug"

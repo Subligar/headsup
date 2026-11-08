@@ -42,7 +42,7 @@ namespace headsup
         // The same for a font in a file, known by the name given.
         bool EnsureFontFile(const std::string& name, const std::string& path);
         // A text's width and a font's measures as RmlUi lays them out, in pixels; nothing for an unknown family.
-        float TextWidth(const std::string& text, const std::string& family, int pixels, float tracking = 0.0f);
+        float TextWidth(const std::string& text, const std::string& family, int pixels);
         Rml::FontMetrics Metrics(const std::string& family, int pixels);
 
         // A mouse message in back-buffer pixels, to the overlay: true when an element of it is under the pointer or

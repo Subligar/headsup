@@ -13,18 +13,30 @@ using namespace headsup;
 
 namespace
 {
+    // Places the popup in front where the bar drew it, as the bar does each frame; an empty rectangle for none.
+    void SetPopup(BarInput& input, const BarRect& rect, std::vector<BarTabChip> chips = {}, std::vector<BarScroll> scrolls = {},
+        const BarRect& pin = {}, const BarRect& cog = {}, const BarRect& grip = {})
+    {
+        std::vector<PopupPlace> places;
+        if (input.Open() && rect.width > 0.0f)
+            places.push_back(PopupPlace{*input.Open(), rect, std::move(chips), std::move(scrolls), pin, cog, grip});
+        input.SetPopups(std::move(places));
+    }
+
     bool Near(float a, float b) { return std::fabs(a - b) < 0.01f; }
 
-    constexpr std::array<float, kPanelSlots> kNoSpacing{};
+    // Separators as each shape drew them before they were the player's: ornate's diamonds and caps, pills' none.
+    int ShapeSeparators(BarShape shape) { return shape == BarShape::Ornate ? kAllSeparators : 0; }
+    constexpr int kBetween = SeparatorBit(Separator::Between), kCaps = SeparatorBit(Separator::EndCaps);
 
     // LayoutBar on the default panel, each widget in a pill of its own, unless the test says otherwise.
     BarLayout Layout(float screenWidth, const BarMetrics& metrics, BarShape shape,
         const std::array<float, kPanelSlots>& natural, float targetMinimum,
-        const BarPlacement& placement = DefaultPlacement(), BarSeparators separators = BarSeparators::Theme,
-        const std::array<float, kPanelSlots>& spacing = kNoSpacing,
-        const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups())
+        const BarPlacement& placement = DefaultPlacement(), std::optional<int> separators = std::nullopt,
+        float spacing = 0.0f, const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups())
     {
-        return LayoutBar(screenWidth, metrics, shape, natural, targetMinimum, placement, separators, spacing, groups);
+        return LayoutBar(screenWidth, metrics, shape, natural, targetMinimum, placement,
+            separators.value_or(ShapeSeparators(shape)), spacing, groups);
     }
 
     std::array<float, kPanelSlots> Widths(float zone, float weather, float vana, float target, float gil,
@@ -32,7 +44,7 @@ namespace
     {
         std::array<float, kPanelSlots> widths{};
         const std::pair<BarWidget, float> each[] = {{BarWidget::Zone, zone}, {BarWidget::Weather, weather},
-            {BarWidget::VanaTime, vana}, {BarWidget::Target, target}, {BarWidget::Currency, gil}, {BarWidget::Bags, bags},
+            {BarWidget::Job, vana}, {BarWidget::Target, target}, {BarWidget::Currency, gil}, {BarWidget::Bags, bags},
             {BarWidget::EarthTime, earth}};
         for (const auto& [widget, width] : each)
             widths[SlotOf(widget)] = width;
@@ -40,8 +52,8 @@ namespace
     }
 
     // Natural widths, a 36 px bar.
-    const BarMetrics kPills  = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
-    const BarMetrics kOrnate = MetricsFor(36, BarShape::Ornate, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics kPills  = MetricsFor(36, BarShape::Pills);
+    const BarMetrics kOrnate = MetricsFor(36, BarShape::Ornate);
 }
 
 TEST(pills_put_the_groups_at_the_edges_and_the_target_in_the_middle)
@@ -50,7 +62,7 @@ TEST(pills_put_the_groups_at_the_edges_and_the_target_in_the_middle)
     CHECK(Near(l.height, 36.0f) && l.widgets.size() == 6);
     const float g = kPills.gap;
     CHECK(l.widgets[0].widget == BarWidget::Zone && Near(l.widgets[0].rect.x, g));
-    CHECK(l.widgets[1].widget == BarWidget::VanaTime && Near(l.widgets[1].rect.x, g + 100.0f + g)); // weather is off
+    CHECK(l.widgets[1].widget == BarWidget::Job && Near(l.widgets[1].rect.x, g + 100.0f + g)); // weather is off
     CHECK(Near(RectOf(l, BarWidget::EarthTime)->x + 50.0f, 1920.0f - g));
     CHECK(Near(RectOf(l, BarWidget::Bags)->x + 60.0f, 1920.0f - g - 50.0f - g));
     CHECK(Near(RectOf(l, BarWidget::Target)->x, 860.0f) && Near(l.targetWidth, 200.0f));
@@ -59,7 +71,7 @@ TEST(pills_put_the_groups_at_the_edges_and_the_target_in_the_middle)
     std::vector<PanelWidget> order;
     for (const PlacedWidget& p : l.widgets)
         order.push_back(p.widget);
-    CHECK(order == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::VanaTime, BarWidget::Target, BarWidget::Currency,
+    CHECK(order == (std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Job, BarWidget::Target, BarWidget::Currency,
                                            BarWidget::Bags, BarWidget::EarthTime})); // in bar order
 }
 
@@ -72,7 +84,7 @@ TEST(ornate_starts_after_the_caps_and_divides_neighbours_with_diamonds)
     CHECK(l.dividers.size() == 4); // two between three on the left, two on the right
     CHECK(Near(l.dividers[0], kOrnate.cap + 100.0f));
     // Each on the boundary between two neighbours: the start of the later one.
-    CHECK(Near(l.dividers[1], RectOf(l, BarWidget::VanaTime)->x));
+    CHECK(Near(l.dividers[1], RectOf(l, BarWidget::Job)->x));
     CHECK(Near(l.dividers[2], RectOf(l, BarWidget::Bags)->x));
     CHECK(Near(l.dividers[3], RectOf(l, BarWidget::EarthTime)->x));
     CHECK(Near(RectOf(l, BarWidget::Target)->height, PillRow(kOrnate).height)); // the target's frame
@@ -116,37 +128,39 @@ TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
     popups[SlotOf(BarWidget::Target)]   = true;
-    popups[SlotOf(BarWidget::VanaTime)] = true;
+    popups[SlotOf(BarWidget::Job)] = true;
     BarInput input;
     input.Frame(l, popups);
     input.Move(960.0f, 18.0f);
     CHECK(input.Open() == BarWidget::Target);
-    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f});
+    SetPopup(input, BarRect{760.0f, 44.0f, 400.0f, 300.0f});
     input.Move(960.0f, 200.0f); // into the popup
     CHECK(input.Open() == BarWidget::Target);
     input.Move(960.0f, 700.0f);
     CHECK(!input.Open().has_value());
-    input.SetPopup(BarRect{});
+    SetPopup(input, BarRect{});
     CHECK(!input.Press(960.0f, 700.0f, true)); // the game's
     const BarRect pin{1100.0f, 52.0f, 50.0f, 20.0f};
     input.Move(960.0f, 18.0f);
-    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
+    SetPopup(input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
     CHECK(input.Press(960.0f, 18.0f, true)); // the widget pins its popup
     CHECK(input.Pinned() == BarWidget::Target);
     CHECK(input.Press(960.0f, 18.0f, true)); // and unpins it
     CHECK(!input.Pinned().has_value());
+    input.Move(960.0f, 700.0f);
+    input.Move(960.0f, 18.0f); // hovered again
     CHECK(input.Press(960.0f, 200.0f, true)); // the popup's, and no pin
     CHECK(!input.Pinned().has_value());
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its pin chip pins it
     CHECK(input.Pinned() == BarWidget::Target);
     input.Move(960.0f, 700.0f);
     CHECK(input.Open() == BarWidget::Target); // stays
-    const BarRect vana = *RectOf(l, BarWidget::VanaTime);
+    const BarRect vana = *RectOf(l, BarWidget::Job);
     input.Move(vana.x + 5.0f, 18.0f);
-    CHECK(input.Open() == BarWidget::VanaTime); // hovering another shows it
+    CHECK(input.Open() == BarWidget::Job); // hovering another shows it
     input.Move(960.0f, 700.0f);
     CHECK(input.Open() == BarWidget::Target); // back to the pinned one
-    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
+    SetPopup(input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
     CHECK(input.Press(960.0f, 200.0f, true)); // elsewhere on the pinned popup: still pinned
     CHECK(input.Pinned() == BarWidget::Target);
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its chip again unpins
@@ -155,6 +169,189 @@ TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
     CHECK(input.Press(gil.x + 5.0f, 18.0f, true)); // the bar's, but gil has no popup
     CHECK(!input.Pinned().has_value());
     CHECK(input.Press(5.0f, 30.0f, false)); // a right press on the strip is the bar's too
+}
+
+TEST(a_popup_unpinned_from_its_widget_hides_until_the_pointer_leaves_the_widget_and_comes_back)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    input.Move(960.0f, 18.0f);
+    CHECK(input.Press(960.0f, 18.0f, true) && input.Pinned() == BarWidget::Target);
+    CHECK(input.Press(960.0f, 18.0f, true) && !input.Pinned());
+    CHECK(!input.Open()); // gone, though the pointer is still on the widget
+    input.Move(965.0f, 20.0f);
+    CHECK(!input.Open());
+    input.Move(960.0f, 700.0f);
+    input.Move(960.0f, 18.0f);
+    CHECK(input.Open() == BarWidget::Target); // back once it left and came back
+    // Or a press pins it again at once.
+    CHECK(input.Press(960.0f, 18.0f, true) && input.Press(960.0f, 18.0f, true) && !input.Open());
+    CHECK(input.Press(960.0f, 18.0f, true) && input.Open() == BarWidget::Target && input.Pinned() == BarWidget::Target);
+}
+
+TEST(a_fleeting_cards_pick_is_forgotten_once_the_popup_closes_and_another_cards_is_kept)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    input.Move(960.0f, 18.0f);
+    const BarRect bastok{770.0f, 100.0f, 60.0f, 20.0f}, boats{770.0f, 200.0f, 60.0f, 20.0f};
+    BarTabChip nation{"Conquest", bastok, "Bastok"};
+    nation.fleeting = true;
+    SetPopup(input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {nation, BarTabChip{"Travel", boats, "Boats"}});
+    input.Move(780.0f, 110.0f);
+    CHECK(input.Press(780.0f, 110.0f, true) && input.Press(780.0f, 210.0f, true));
+    CHECK(input.PickedTabs().at("Conquest") == "Bastok" && input.PickedTabs().at("Travel") == "Boats");
+    input.Leave(); // the popup closes
+    CHECK(!input.PickedTabs().contains("Conquest") && input.PickedTabs().at("Travel") == "Boats");
+}
+
+TEST(a_dragged_popup_is_kept_by_its_edges_nearest_the_screens_sides_and_grows_away_from_them)
+{
+    constexpr float W = 1920.0f, H = 1080.0f;
+    const PopupSpot topLeft = SpotOf(BarRect{100.0f, 200.0f, 300.0f, 400.0f}, W, H);
+    CHECK(topLeft == (PopupSpot{100, 200, false, false}));
+    const PopupSpot bottomRight = SpotOf(BarRect{1500.0f, 600.0f, 300.0f, 400.0f}, W, H);
+    CHECK(bottomRight == (PopupSpot{120, 80, true, true})); // 1920 - 1800 and 1080 - 1000
+    // Placed back at another size, its kept edges stay and it grows away from them.
+    CHECK(PlaceAtSpot(topLeft, 500.0f, 450.0f, W, H) == (BarRect{100.0f, 200.0f, 500.0f, 450.0f}));
+    CHECK(PlaceAtSpot(bottomRight, 500.0f, 450.0f, W, H) == (BarRect{1300.0f, 550.0f, 500.0f, 450.0f}));
+    // Never off the screen.
+    const BarRect big = PlaceAtSpot(topLeft, 1900.0f, 1000.0f, W, H);
+    CHECK(big.x >= 0.0f && big.y >= 0.0f && big.x + big.width <= W && big.y + big.height <= H);
+}
+
+TEST(a_popup_shows_where_it_is_dragged_else_at_its_kept_spot_else_under_its_widget)
+{
+    constexpr float W = 1920.0f, H = 1080.0f;
+    const BarRect under{800.0f, 44.0f, 300.0f, 200.0f};
+    CHECK(!PlacedSpot(std::nullopt, std::nullopt));
+    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H) == under);
+    const PopupSpot kept{120, 80, true, true};
+    CHECK(PlacedSpot(std::nullopt, kept) == kept);
+    CHECK(PopupAt(under, 200.0f, kept, W, H) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+    // Dragged, by its top left, wherever it was kept.
+    const std::optional<PopupSpot> dragged = PlacedSpot(BarRect{400.0f, 500.0f, 300.0f, 200.0f}, kept);
+    CHECK(dragged == (PopupSpot{400, 500, false, false}));
+    CHECK(PopupAt(under, 200.0f, dragged, W, H) == (BarRect{400.0f, 500.0f, 300.0f, 200.0f}));
+    // Open, it stays across where it opened while its widget changes width, on the screen, and grows from there.
+    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H, 700.0f) == (BarRect{700.0f, 44.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(BarRect{800.0f, 44.0f, 500.0f, 200.0f}, 200.0f, std::nullopt, W, H, 1600.0f) ==
+          (BarRect{1420.0f, 44.0f, 500.0f, 200.0f}));
+    // A spot of its own wins over where it opened.
+    CHECK(PopupAt(under, 200.0f, kept, W, H, 700.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+}
+
+TEST(a_popup_cut_to_the_room_under_the_bar_drags_down_as_far_as_it_is_put_cut_to_the_room_below_it)
+{
+    // The card "General Changes": pop-outs moved no more than a few pixels. One taller than the room under a 34 px bar
+    // was cut to that room, and kept on the screen at that height it could go no lower than 2 gaps under the bar.
+    constexpr float W = 1920.0f, H = 1080.0f, bar = 34.0f, gap = 6.0f;
+    const float underBar = PopupRoom(bar, H, gap, 0.0f);
+    const BarRect under  = PlacePopup(BarRect{900.0f, 3.0f, 100.0f, 29.0f}, bar, 400.0f, 1500.0f, W, H, gap, 0.0f);
+    CHECK(Near(under.height, underBar));
+    // Dragged 300 px down, its top goes there and its room is the screen below it.
+    const std::optional<PopupSpot> placed = PlacedSpot(BarRect{under.x, under.y + 300.0f, under.width, under.height}, std::nullopt);
+    const float room = SpotRoom(*placed, H);
+    CHECK(Near(room, H - under.y - 300.0f));
+    const BarRect dragged = PopupAt(under, room, placed, W, H);
+    CHECK(Near(dragged.y, under.y + 300.0f) && Near(dragged.height, room));
+    // Let go there it stays there: reaching the screen's bottom, it is kept by its top, with the same room.
+    const PopupSpot left = SpotOf(dragged, W, H);
+    CHECK(!left.fromBottom && Near(SpotRoom(left, H), room) && PopupAt(under, room, left, W, H) == dragged);
+    // One that fits, let go in the lower half, is kept by its bottom and has the room above that.
+    const BarRect low{100.0f, 600.0f, under.width, 300.0f};
+    const PopupSpot bottom = SpotOf(low, W, H);
+    CHECK(bottom.fromBottom && Near(SpotRoom(bottom, H), 900.0f) && PopupAt(under, 300.0f, bottom, W, H) == low);
+}
+
+TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const BarRect target = *RectOf(l, BarWidget::Target);
+    input.Move(target.x + 5.0f, 18.0f);
+    const BarRect popup{760.0f, 44.0f, 400.0f, 300.0f}, grip{760.0f, 44.0f, 300.0f, 30.0f};
+    SetPopup(input, popup, {}, {}, {}, {}, grip);
+    // Hovered, not pinned: its title row moves nothing.
+    input.Move(800.0f, 50.0f);
+    CHECK(input.Press(800.0f, 50.0f, true) && !input.Dragging());
+    input.Pin(BarWidget::Target);
+    input.Move(800.0f, 50.0f);
+    SetPopup(input, popup, {}, {}, {}, {}, grip);
+    CHECK(input.Press(800.0f, 50.0f, true) && input.Dragging());
+    input.DragTo(900.0f, 150.0f);
+    CHECK(input.DraggedPopup(BarWidget::Target) == std::optional<BarRect>(BarRect{860.0f, 144.0f, 400.0f, 300.0f}));
+    // Where the frame showed it, cut to the room below, is where it was left.
+    SetPopup(input, BarRect{860.0f, 144.0f, 400.0f, 250.0f});
+    input.EndDrag();
+    const std::optional<std::pair<PanelWidget, BarRect>> moved = input.TakeMoved();
+    CHECK(moved && moved->first == PanelWidget{BarWidget::Target} && moved->second == (BarRect{860.0f, 144.0f, 400.0f, 250.0f}));
+    CHECK(!input.TakeMoved() && !input.DraggedPopup(BarWidget::Target));
+}
+
+TEST(popups_shown_after_the_one_whose_settings_show_go_over_its_settings_and_under_the_window_unless_come_out_after_it)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    for (const BarWidget w : {BarWidget::Target, BarWidget::Zone, BarWidget::Job, BarWidget::Bags})
+        popups[SlotOf(w)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    using enum PopupLayer;
+    const auto press = [&](BarWidget w) { return input.Press(RectOf(l, w)->x + 5.0f, 18.0f, true); };
+    input.Pin(BarWidget::Zone);
+    input.Pin(BarWidget::Job);
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings}));
+    input.ShowSettings(BarWidget::Job);
+    CHECK(press(BarWidget::Bags));
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings}));
+    // The card: the window opened over them all, Job's settings with it.
+    input.MenuOpen(true);
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings}));
+    CHECK(press(BarWidget::Target));
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings, OverMenu}));
+    // Settings shown after the window opened stay under it with their popup.
+    input.ShowSettings(BarWidget::Target);
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, UnderSettings, UnderSettings}));
+    input.MenuOpen(false);
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, UnderSettings, UnderSettings}));
+}
+
+TEST(the_settings_window_goes_over_the_popups_open_before_it_and_under_those_opened_after)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    for (const BarWidget w : {BarWidget::Target, BarWidget::Zone, BarWidget::Job})
+        popups[SlotOf(w)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    input.Pin(BarWidget::Zone);
+    CHECK(!input.OverMenu(BarWidget::Zone)); // no window open
+    input.MenuOpen(true);
+    input.Pin(BarWidget::Job);
+    CHECK(!input.OverMenu(BarWidget::Zone) && input.OverMenu(BarWidget::Job));
+    // Each frame the window stays open changes nothing.
+    input.MenuOpen(true);
+    CHECK(!input.OverMenu(BarWidget::Zone) && input.OverMenu(BarWidget::Job));
+    // One open before it, closed and opened again, comes out over it.
+    input.Pin(std::nullopt);
+    input.Frame(l, popups);
+    input.Pin(BarWidget::Zone);
+    input.Pin(BarWidget::Job);
+    CHECK(input.OverMenu(BarWidget::Zone) && input.OverMenu(BarWidget::Job));
+    // Opened anew, the window goes over everything showing.
+    input.MenuOpen(false);
+    input.MenuOpen(true);
+    CHECK(!input.OverMenu(BarWidget::Zone) && !input.OverMenu(BarWidget::Job));
 }
 
 TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)
@@ -166,7 +363,7 @@ TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)
     input.Frame(l, popups);
     input.Move(960.0f, 18.0f);
     const BarRect airships{770.0f, 100.0f, 60.0f, 20.0f}, boats{834.0f, 100.0f, 50.0f, 20.0f};
-    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {BarTabChip{"Travel", airships, "Airships"}, BarTabChip{"Travel", boats, "Boats"}});
+    SetPopup(input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {BarTabChip{"Travel", airships, "Airships"}, BarTabChip{"Travel", boats, "Boats"}});
     input.Move(850.0f, 110.0f);
     CHECK(input.Press(850.0f, 110.0f, true));
     CHECK(input.PickedTabs().at("Travel") == "Boats" && !input.Pinned());
@@ -179,7 +376,7 @@ TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)
     CHECK(input.Press(960.0f, 250.0f, true)); // elsewhere on the popup: the popup's, and no pin
     CHECK(!input.Pinned().has_value());
     // With no popup drawn its tabs are gone, and what was picked stays picked for the next time.
-    input.SetPopup(BarRect{});
+    SetPopup(input, BarRect{});
     CHECK(!input.Press(850.0f, 110.0f, true));
     CHECK(input.PickedTabs().at("Travel") == "Airships");
 }
@@ -193,7 +390,7 @@ TEST(a_press_on_a_pressable_cell_is_told_once_and_picks_no_tab_and_pins_nothing)
     input.Frame(l, popups);
     input.Move(960.0f, 18.0f);
     const BarRect star{780.0f, 120.0f, 20.0f, 20.0f};
-    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {BarTabChip{"", star, "favorite gil", true}});
+    SetPopup(input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {BarTabChip{"", star, "favorite gil", true}});
     input.Move(785.0f, 125.0f);
     CHECK(input.Press(785.0f, 125.0f, true));
     CHECK(input.Press(785.0f, 125.0f, true));
@@ -218,28 +415,49 @@ TEST(a_cut_help_bar_under_the_strip_opens_its_popup_and_takes_only_its_own_press
     CHECK(input.Pinned() == BarWidget::GameHelp);
 }
 
-TEST(pinning_another_widget_moves_the_pin)
+TEST(pinning_another_widget_keeps_the_first_pinned_beside_it)
 {
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
     popups[SlotOf(BarWidget::Target)]   = true;
-    popups[SlotOf(BarWidget::VanaTime)] = true;
+    popups[SlotOf(BarWidget::Job)] = true;
     BarInput input;
     input.Frame(l, popups);
     const BarRect pin{1100.0f, 52.0f, 50.0f, 20.0f};
     input.Move(960.0f, 18.0f);
-    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
+    SetPopup(input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin);
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true));
     CHECK(input.Pinned() == BarWidget::Target);
-    // Another's popup shows while it is hovered, and its own chip moves the pin to it.
-    const BarRect vana = *RectOf(l, BarWidget::VanaTime), vanaPin{vana.x + 200.0f, 52.0f, 50.0f, 20.0f};
+    // Another's popup shows beside it while it is hovered, and its own chip pins it too.
+    const BarRect vana = *RectOf(l, BarWidget::Job), vanaPin{vana.x + 200.0f, 52.0f, 50.0f, 20.0f};
     input.Move(vana.x + 5.0f, 18.0f);
-    input.SetPopup(BarRect{vana.x, 44.0f, 300.0f, 200.0f}, {}, {}, vanaPin);
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Target, BarWidget::Job}));
+    input.SetPopups({PopupPlace{BarWidget::Target, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, pin},
+        PopupPlace{BarWidget::Job, BarRect{vana.x, 44.0f, 300.0f, 200.0f}, {}, {}, vanaPin}});
     CHECK(input.Press(vanaPin.x + 5.0f, vanaPin.y + 5.0f, true));
-    CHECK(input.Pinned() == BarWidget::VanaTime);
-    // A press on another widget on the bar moves the pin to it too.
+    CHECK(input.IsPinned(BarWidget::Target) && input.IsPinned(BarWidget::Job) && input.Pinned() == BarWidget::Job);
+    input.Leave();
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Target, BarWidget::Job}));
+    // A press on a pinned widget on the bar unpins it alone.
     CHECK(input.Press(960.0f, 18.0f, true));
-    CHECK(input.Pinned() == BarWidget::Target);
+    CHECK(!input.IsPinned(BarWidget::Target) && input.Pinned() == BarWidget::Job);
+}
+
+TEST(a_press_where_two_popups_overlap_goes_to_the_one_on_top)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Target)] = true;
+    popups[SlotOf(BarWidget::Job)]    = true;
+    BarInput input;
+    input.Frame(l, popups);
+    input.Pin(BarWidget::Target);
+    input.Pin(BarWidget::Job); // pinned last: drawn on top
+    const BarRect under{760.0f, 44.0f, 400.0f, 300.0f}, over{900.0f, 100.0f, 300.0f, 200.0f}, chip{950.0f, 150.0f, 40.0f, 20.0f};
+    input.SetPopups({PopupPlace{BarWidget::Target, under, {BarTabChip{"Travel", chip, "Boats"}}},
+        PopupPlace{BarWidget::Job, over, {BarTabChip{"Jobs", chip, "Main"}}}});
+    CHECK(input.Press(chip.x + 5.0f, chip.y + 5.0f, true));
+    CHECK(input.PickedTabs().contains("Jobs") && !input.PickedTabs().contains("Travel"));
 }
 
 TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)
@@ -247,42 +465,59 @@ TEST(the_cog_chip_pins_the_popup_on_its_settings_and_back_and_the_pin_ends_them)
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
     popups[SlotOf(BarWidget::Target)]   = true;
-    popups[SlotOf(BarWidget::VanaTime)] = true;
+    popups[SlotOf(BarWidget::Job)] = true;
     BarInput input;
     input.Frame(l, popups);
     const BarRect popup{760.0f, 44.0f, 400.0f, 300.0f}, pin{1100.0f, 52.0f, 50.0f, 20.0f}, cog{1074.0f, 52.0f, 20.0f, 20.0f};
     input.Move(960.0f, 18.0f);
-    input.SetPopup(popup, {}, {}, pin, cog);
+    SetPopup(input, popup, {}, {}, pin, cog);
     CHECK(!input.SettingsShown());
     CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true)); // its settings, pinned
     CHECK(input.SettingsShown() == BarWidget::Target && input.Pinned() == BarWidget::Target);
     input.Move(960.0f, 700.0f);
     CHECK(input.SettingsShown() == BarWidget::Target); // it stays as the pointer goes
-    const BarRect vana = *RectOf(l, BarWidget::VanaTime);
+    const BarRect vana = *RectOf(l, BarWidget::Job);
     input.Move(vana.x + 5.0f, 18.0f);
-    CHECK(input.Open() == BarWidget::VanaTime && !input.SettingsShown()); // another's popup, as it is
-    input.SetPopup(BarRect{vana.x, 44.0f, 300.0f, 200.0f});
+    CHECK(input.Open() == BarWidget::Job && input.SettingsShown() == BarWidget::Target); // another's popup beside it
+    SetPopup(input, BarRect{vana.x, 44.0f, 300.0f, 200.0f});
     input.Move(960.0f, 700.0f);
-    input.SetPopup(popup, {}, {}, pin, cog);
+    SetPopup(input, popup, {}, {}, pin, cog);
     CHECK(input.SettingsShown() == BarWidget::Target);
-    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true)); // again: its content, still pinned
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true)); // again: its content, and unpinned, as the cog pinned it
+    CHECK(!input.SettingsShown() && !input.Pinned());
+    // Pinned by its pin first, it stays pinned when the cog closes its settings.
+    CHECK(input.Press(960.0f, 18.0f, true));
+    input.Move(960.0f, 700.0f);
+    CHECK(input.Pinned() == BarWidget::Target);
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
+    CHECK(input.SettingsShown() == BarWidget::Target);
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
     CHECK(!input.SettingsShown() && input.Pinned() == BarWidget::Target);
     input.Press(cog.x + 5.0f, cog.y + 5.0f, true);
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // unpinned, it shows its content again
     CHECK(!input.Pinned() && !input.SettingsShown());
+    // Settings opened by the cog, then pinned by hand: the pin is the player's now, and the cog leaves it.
+    input.Move(960.0f, 18.0f);
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // the pin's press unpins and ends the settings
+    CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // pinned by hand
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
+    CHECK(input.Press(cog.x + 5.0f, cog.y + 5.0f, true));
+    CHECK(input.Pinned() == BarWidget::Target);
+    input.Pin(std::nullopt);
     // As the settings window asks: shown and pinned, then closed.
-    input.ShowSettings(BarWidget::VanaTime);
-    CHECK(input.SettingsShown() == BarWidget::VanaTime && input.Pinned() == BarWidget::VanaTime);
+    input.ShowSettings(BarWidget::Job);
+    CHECK(input.SettingsShown() == BarWidget::Job && input.Pinned() == BarWidget::Job);
     input.ShowSettings(std::nullopt);
     CHECK(!input.Pinned() && !input.SettingsShown());
     // A pin moved by a command ends them too.
-    input.ShowSettings(BarWidget::VanaTime);
+    input.ShowSettings(BarWidget::Job);
     input.Pin(BarWidget::Target);
     CHECK(!input.SettingsShown());
 }
 
 // Targeting a player or nothing while the pointer rests on the target takes its popup away: the hover goes with it,
-// and a pin stays (a pinned target popup reads "No target").
+// and a pin stays (a pinned target popup reads "No Target").
 TEST(a_hovered_popup_closes_when_its_widget_stops_having_one)
 {
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
@@ -292,7 +527,7 @@ TEST(a_hovered_popup_closes_when_its_widget_stops_having_one)
     BarInput input;
     input.Frame(l, popups);
     input.Move(960.0f, 18.0f);
-    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f});
+    SetPopup(input, BarRect{760.0f, 44.0f, 400.0f, 300.0f});
     CHECK(input.Open() == BarWidget::Target);
     input.Frame(l, none);
     CHECK(!input.Open().has_value());
@@ -361,8 +596,10 @@ TEST(a_shrunk_target_with_fractional_widths_stays_between_the_groups)
         float leftEnd = 0.0f, rightStart = screen;
         for (const PlacedWidget& p : l.widgets)
         {
-            if (p.widget.kind < BarWidget::Target) leftEnd = std::max(leftEnd, p.rect.x + p.rect.width);
-            if (p.widget.kind > BarWidget::Target) rightStart = std::min(rightStart, p.rect.x);
+            const auto& left = DefaultPlacement()[static_cast<int>(BarSection::Left)];
+            const bool onLeft = std::ranges::find(left, p.widget) != left.end();
+            if (onLeft) leftEnd = std::max(leftEnd, p.rect.x + p.rect.width);
+            if (!onLeft && p.widget.kind != BarWidget::Target) rightStart = std::min(rightStart, p.rect.x);
         }
         CHECK(target->x >= leftEnd + kPills.gap - 0.01f);
         CHECK(target->x + target->width <= rightStart - kPills.gap + 0.01f);
@@ -384,7 +621,7 @@ TEST(the_hover_holds_across_the_gap_between_a_widget_and_its_popup)
     BarInput input;
     input.Frame(l, popups);
     input.Move(960.0f, 18.0f);
-    input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f});
+    SetPopup(input, BarRect{760.0f, 44.0f, 400.0f, 300.0f});
     for (const float y : {34.0f, 40.0f, 43.0f, 60.0f})
     {
         input.Move(960.0f, y);
@@ -403,19 +640,19 @@ TEST(leaving_the_game_closes_a_hovered_popup_until_the_pointer_is_back_and_keeps
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
     popups[SlotOf(BarWidget::Target)]   = true;
-    popups[SlotOf(BarWidget::VanaTime)] = true;
+    popups[SlotOf(BarWidget::Job)] = true;
     const BarRect popup{760.0f, 44.0f, 400.0f, 300.0f};
     BarInput input;
     input.Frame(l, popups);
     input.Move(960.0f, 18.0f);
-    input.SetPopup(popup);
+    SetPopup(input, popup);
     input.Move(960.0f, 200.0f); // into the popup
     CHECK(input.Open() == BarWidget::Target);
     input.Leave();
     CHECK(!input.Open().has_value() && !input.Hovered().has_value());
     input.Frame(l, popups); // the next frame, at the same layout
     CHECK(!input.Open().has_value());
-    input.SetPopup(BarRect{});
+    SetPopup(input, BarRect{});
     input.Move(960.0f, 18.0f);
     CHECK(input.Open() == BarWidget::Target);
     input.Leave(); // from the widget itself
@@ -423,9 +660,9 @@ TEST(leaving_the_game_closes_a_hovered_popup_until_the_pointer_is_back_and_keeps
     CHECK(!input.Open().has_value() && !input.Hovered().has_value());
     input.Move(960.0f, 18.0f);
     input.Pin(BarWidget::Target);
-    const BarRect vana = *RectOf(l, BarWidget::VanaTime);
+    const BarRect vana = *RectOf(l, BarWidget::Job);
     input.Move(vana.x + 5.0f, 18.0f);
-    CHECK(input.Open() == BarWidget::VanaTime);
+    CHECK(input.Open() == BarWidget::Job);
     input.Leave();
     CHECK(input.Open() == BarWidget::Target && input.Pinned() == BarWidget::Target);
 }
@@ -449,19 +686,20 @@ TEST(resetting_drops_a_pinned_popup_and_the_pointer)
 
 namespace
 {
-    // GDI's line box is taller than the ink in it: leading above the capitals, and the title's descenders reach a
-    // quarter of its size below its baseline.
+    // GDI's line box is taller than the ink in it: leading above the capitals, brackets a little over them, and the
+    // title's descenders reach a quarter of its size below its baseline.
     LineInk FakeInk(bool title, int pixels)
     {
         const float px = static_cast<float>(pixels);
-        return title ? LineInk{0.30f * px, 1.00f * px, 1.25f * px} : LineInk{0.25f * px, 0.95f * px, 1.20f * px};
+        return title ? LineInk{0.30f * px, 1.00f * px, 1.25f * px, 0.35f * px}
+                     : LineInk{0.25f * px, 0.95f * px, 1.20f * px, 0.30f * px};
     }
 
     // Ink a quarter of the size: anything fits.
     LineInk SmallInk(bool, int pixels)
     {
         const float px = static_cast<float>(pixels);
-        return LineInk{0.0f, 0.2f * px, 0.25f * px};
+        return LineInk{0.0f, 0.2f * px, 0.25f * px, 0.0f};
     }
 
 }
@@ -471,7 +709,7 @@ TEST(pill_rows_are_whole_pixels_centered_above_the_strips_bottom_line)
     for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
+            const BarMetrics m = MetricsFor(h, shape);
             const BarRow row   = PillRow(m);
             const float above = row.y, below = (m.height - 1.0f) - (row.y + row.height); // the last row is the line
             CHECK(Near(row.y, std::round(row.y)) && Near(row.height, std::round(row.height)));
@@ -489,128 +727,68 @@ TEST(a_titles_descenders_stay_clear_of_its_detail_line_and_both_inside_the_pill)
     for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
         {
-            const BarMetrics m  = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
-            const BarRow row    = PillRow(m);
-            const TextRow t     = FitTextRow(m, FakeInk);
-            const LineInk title = FakeInk(true, t.title);
-            // Inside the pill's 1 px border, the ink keeps clear space above and below.
+            const BarMetrics m   = MetricsFor(h, shape);
+            const BarRow row     = PillRow(m);
+            const TextRow t      = FitTextRow(m, FakeInk);
+            const LineInk title  = FakeInk(true, t.title), detail = FakeInk(false, t.detail);
+            const LineInk alone  = FakeInk(true, t.alone);
+            // Inside the pill's 1 px border, the ink keeps clear space above; descenders may hang into it below.
             const float margin = std::max(2.0f, 0.06f * row.height);
             const float inTop = row.y + 1.0f, inBottom = row.y + row.height - 1.0f;
-            if (h >= 36) CHECK(t.twoLines);
-            if (t.twoLines)
-            {
-                const LineInk detail = FakeInk(false, t.detail);
-                CHECK(t.title > t.detail && t.detail >= 9);
-                CHECK(t.title <= WholePixels(m.title) && t.detail <= WholePixels(m.subtitle));
-                const float above = (t.titleY + title.top) - inTop;
-                const float below = inBottom - (t.detailY + detail.bottom);
-                CHECK(above >= margin - 0.01f && below >= margin - 0.01f && std::fabs(above - below) <= 1.01f);
-                // Three rows clear from the title's descenders to the detail's capitals: two still read as touching.
-                CHECK((t.detailY + detail.top) - (t.titleY + title.bottom) >= 3.0f - 0.01f);
-            }
-            // A title alone (gil, the clock, or every title when two lines do not fit): all its ink inside.
-            const float aloneTop = t.aloneY + title.top, aloneBottom = t.aloneY + title.bottom;
-            CHECK(aloneTop >= inTop + margin - 0.01f && aloneBottom <= inBottom - margin + 0.01f);
+            CHECK(t.title > t.detail);
+            CHECK(t.title <= WholePixels(m.title) && t.detail <= WholePixels(m.subtitle));
+            const float above = (t.titleY + title.top) - inTop;
+            const float below = inBottom - (t.detailY + detail.bottom);
+            CHECK(above >= margin - 0.01f && below >= 0.0f);
+            // The title's top and the detail's baseline centered, as two lines read without the detail's descenders,
+            // at every height (the card "General Changes": two lines a pixel higher than one at some heights).
+            const float underBaseline = inBottom - (t.detailY + detail.baseline);
+            CHECK(std::fabs(above - underBaseline) <= 0.01f);
+            // Three rows clear from the title's descenders to the detail's capitals: two still read as touching.
+            CHECK((t.detailY + detail.top) - (t.titleY + title.bottom) >= 3.0f - 0.01f);
+            // A title alone (gil, the clock): its capitals centered on the pill's middle, where an icon beside it
+            // is, not its taller brackets (the clock's icon sat high of its time); all its ink inside.
+            const float aloneAbove = (t.aloneY + alone.capital) - inTop, aloneUnder = inBottom - (t.aloneY + alone.baseline);
+            CHECK(std::fabs(aloneAbove - aloneUnder) <= 0.01f);
+            CHECK((t.aloneY + alone.top) - inTop >= margin - 0.01f && t.aloneY + alone.bottom <= inBottom + 0.01f);
         }
 }
 
-TEST(a_row_too_short_for_two_lines_kept_apart_shows_titles_alone_at_full_size)
+TEST(a_short_row_shrinks_both_lines_together_and_a_title_alone_keeps_its_full_size)
 {
     for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
     {
-        const BarMetrics m = MetricsFor(24, shape, kAutoBarTextSize, kAutoPopupTextSize);
+        const BarMetrics m = MetricsFor(24, shape);
         const TextRow t    = FitTextRow(m, FakeInk);
-        CHECK(!t.twoLines);
-        CHECK_EQ(t.title, WholePixels(m.title));
+        CHECK(t.title < WholePixels(m.title) && t.detail < WholePixels(m.subtitle));
+        CHECK(std::fabs(static_cast<float>(t.detail) / static_cast<float>(t.title) - m.subtitle / m.title) < 0.15f);
+        CHECK_EQ(t.alone, WholePixels(m.title));
         // Its capitals centered in the pill, within a pixel.
-        const LineInk title = FakeInk(true, t.title);
+        const LineInk alone = FakeInk(true, t.alone);
         const BarRow row    = PillRow(m);
-        const float above = (t.aloneY + title.top) - row.y, below = row.y + row.height - (t.aloneY + title.baseline);
+        const float above = (t.aloneY + alone.capital) - row.y, below = row.y + row.height - (t.aloneY + alone.baseline);
         CHECK(std::fabs(above - below) <= 1.01f);
     }
 }
 
-// Small text is hard to read: a detail line under 9 px is not worth drawing, and a taller bar never gets smaller
-// titles, except where it gains room for a detail line under them.
-TEST(no_line_is_under_9_px_and_a_taller_bar_never_shrinks_the_titles)
+TEST(a_taller_bar_never_shrinks_a_line)
 {
     for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
     {
-        int twoLines = 0, compact = 0;
+        TextRow last;
         for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
         {
-            const TextRow t = FitTextRow(MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize), FakeInk);
-            CHECK(t.title >= 9);
-            if (t.twoLines)
-            {
-                CHECK(t.detail >= 9);
-                CHECK(t.title >= twoLines);
-                twoLines = t.title;
-            }
-            else
-            {
-                CHECK(t.title >= compact);
-                compact = t.title;
-            }
-        }
-    }
-}
-
-// Gil and the clock have no detail line: they take the row's title size, and their capitals are centered in the pill.
-TEST(a_title_without_a_detail_line_takes_the_rows_title_size_centered)
-{
-    for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
-        for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
-        {
-            const BarMetrics m  = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
-            const BarRow row    = PillRow(m);
-            const TextRow t     = FitTextRow(m, FakeInk);
-            const LineInk title = FakeInk(true, t.title);
-            const float above = (t.aloneY + title.top) - row.y;
-            const float below = row.y + row.height - (t.aloneY + title.baseline);
-            CHECK(std::fabs(above - below) <= 1.01f);
-        }
-}
-
-// A meter's text beside its bar is in the detail size, or the title's where the row holds one line, its capitals
-// centered on the row as the bar is.
-TEST(the_text_beside_a_meter_has_its_capitals_on_the_rows_middle)
-{
-    for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
-        for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
-        {
-            const BarMetrics m = MetricsFor(h, shape, kAutoBarTextSize, kAutoPopupTextSize);
-            const BarRow row   = PillRow(m);
-            const TextRow t    = FitTextRow(m, FakeInk);
-            CHECK_EQ(t.side, t.twoLines ? t.detail : t.title); // at Auto
-            const LineInk side = FakeInk(!t.twoLines, t.side);
-            const float above = (t.sideY + side.top) - row.y, below = row.y + row.height - (t.sideY + side.baseline);
-            CHECK(std::fabs(above - below) <= 0.01f);
-        }
-}
-
-// A meter's texts at a set size are that size while it fits, a pixel a step: no jump where the row goes to one line.
-TEST(a_meters_texts_at_a_set_size_are_that_size)
-{
-    for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
-    {
-        int last = 0;
-        for (int size = 10; size <= 24; ++size)
-        {
-            const TextRow t = FitTextRow(MetricsFor(45, shape, size, kAutoPopupTextSize), FakeInk);
-            CHECK_EQ(t.side, t.title);
-            if (t.twoLines) CHECK_EQ(t.side, size);
-            CHECK(t.side >= last && t.side <= last + 1 + (last == 0 ? size : 0));
-            last = t.side;
+            const TextRow t = FitTextRow(MetricsFor(h, shape), FakeInk);
+            CHECK(t.title >= last.title && t.detail >= last.detail && t.alone >= last.alone);
+            last = t;
         }
     }
 }
 
 TEST(text_shrinks_only_when_its_ink_would_not_fit)
 {
-    const BarMetrics m = MetricsFor(36, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
     const TextRow roomy = FitTextRow(m, SmallInk);
-    CHECK(roomy.twoLines);
     CHECK_EQ(roomy.title, WholePixels(m.title));
     CHECK_EQ(roomy.detail, WholePixels(m.subtitle));
     const TextRow tight = FitTextRow(m, FakeInk); // the full sizes leave no gap between the lines
@@ -763,7 +941,7 @@ TEST(the_open_popup_keeps_the_pointer_over_an_ashita_window_under_it)
 {
     Clicks c;
     CHECK(!c.Take(WM_MOUSEMOVE, kOnBarY));
-    c.input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, BarRect{kOnBarX - 20.0f, 190.0f, 50.0f, 20.0f});
+    SetPopup(c.input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {}, {}, BarRect{kOnBarX - 20.0f, 190.0f, 50.0f, 20.0f});
     CHECK(!c.Take(WM_MOUSEMOVE, 200.0f, 0, true, true)); // into the popup, over XIUI's window
     CHECK(c.input.Open() == BarWidget::Target);
     CHECK(c.Take(WM_LBUTTONDOWN, 200.0f, 0, true, true)); // a press on its pin chip pins it
@@ -780,7 +958,7 @@ TEST(the_wheel_over_a_popups_scrolling_area_scrolls_it_three_lines_a_notch)
 {
     Clicks c;
     CHECK(!c.Take(WM_MOUSEMOVE, kOnBarY));
-    c.input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {},
+    SetPopup(c.input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {},
         {BarScroll{"By Element/Dark", BarRect{770.0f, 150.0f, 380.0f, 120.0f}, 7, BarRect{1140.0f, 155.0f, 10.0f, 110.0f}, 30.0f}});
     const auto wheel = [&](int notches) {
         return c.clicks.Take(WM_MOUSEWHEEL, static_cast<uint32_t>(static_cast<uint16_t>(-notches * 120)) << 16, 0.0f, 0.0f,
@@ -794,13 +972,27 @@ TEST(the_wheel_over_a_popups_scrolling_area_scrolls_it_three_lines_a_notch)
     CHECK(!wheel(1) && c.input.Scrolled().at("By Element/Dark") == 4);
 }
 
+TEST(a_closed_popup_opens_again_scrolled_to_its_top_and_without_its_refusal)
+{
+    Clicks c;
+    CHECK(!c.Take(WM_MOUSEMOVE, kOnBarY));
+    SetPopup(c.input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {},
+        {BarScroll{"Status Timers", BarRect{770.0f, 150.0f, 380.0f, 120.0f}, 7, BarRect{1140.0f, 155.0f, 10.0f, 110.0f}, 30.0f}});
+    CHECK(!c.Take(WM_MOUSEMOVE, 200.0f));
+    CHECK(c.clicks.Take(WM_MOUSEWHEEL, static_cast<uint32_t>(static_cast<uint16_t>(-120)) << 16, 0.0f, 0.0f, true, false, false));
+    c.input.Refuse();
+    CHECK(c.input.Scrolled().at("Status Timers") == 3 && c.input.Refused());
+    CHECK(!c.Take(WM_MOUSEMOVE, kGameY)); // away: it closes
+    CHECK(!c.input.Open().has_value() && c.input.Scrolled().empty() && !c.input.Refused());
+}
+
 TEST(the_scrollbar_drags_its_thumb_and_a_press_on_its_track_jumps_there)
 {
     Clicks c;
     CHECK(!c.Take(WM_MOUSEMOVE, kOnBarY));
     // The track runs 100 to 300 down the grip at x 950 to 970; its thumb is 50 tall; 30 lines to scroll.
     const auto popup = [&] {
-        c.input.SetPopup(BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {},
+        SetPopup(c.input, BarRect{760.0f, 44.0f, 400.0f, 300.0f}, {},
             {BarScroll{"By Element/Dark", BarRect{770.0f, 90.0f, 380.0f, 220.0f}, 30, BarRect{950.0f, 100.0f, 20.0f, 200.0f}, 50.0f}});
     };
     popup();
@@ -822,6 +1014,106 @@ TEST(the_scrollbar_drags_its_thumb_and_a_press_on_its_track_jumps_there)
     CHECK_EQ(scrolled(), static_cast<size_t>(0));
     CHECK(c.Take(WM_LBUTTONUP, 110.0f));
     CHECK(!c.input.Pinned().has_value());
+}
+
+namespace
+{
+    // A pinned Target popup in the screen's right half, a fraction of a pixel across as measured text makes it, put
+    // each frame where rml_bar puts it and kept where a drag leaves it as the plugin keeps it.
+    struct DraggedPopup
+    {
+        static constexpr float W = 1920.0f, H = 1080.0f, kTitleRow = 30.0f;
+        Clicks c;
+        BarRect under{1300.6f, 44.0f, 400.4f, 300.0f};
+        std::optional<PopupSpot> spot;
+        BarRect shown{};
+        DraggedPopup()
+        {
+            c.input.Pin(BarWidget::Target);
+            Frame();
+        }
+        void Frame()
+        {
+            shown = PopupAt(under, under.height, PlacedSpot(c.input.DraggedPopup(BarWidget::Target), spot), W, H);
+            SetPopup(c.input, shown, {}, {}, {}, {}, BarRect{shown.x, shown.y, shown.width, kTitleRow});
+            if (const auto moved = c.input.TakeMoved()) spot = SpotOf(moved->second, W, H);
+        }
+        // RmlUi is given whole pixels.
+        float Left() const { return std::round(shown.x); }
+        float Top() const { return std::round(shown.y); }
+        bool Take(uint32_t message, float x, float y, uint32_t buttons = 0)
+        {
+            return c.clicks.Take(message, buttons, x, y, true, false, false);
+        }
+    };
+}
+
+// The card's "moves a single pixel each time": with no move reaching the drag, each press and release on the title
+// row moved it a pixel left, as its spot was cut to whole pixels downward and measured from the right.
+TEST(a_pinned_popup_pressed_and_let_go_by_its_title_row_stays_where_it_shows)
+{
+    DraggedPopup d;
+    const float left = d.Left(), top = d.Top();
+    for (int drag = 0; drag < 3; ++drag)
+    {
+        const float x = d.shown.x + 50.0f, y = d.shown.y + 10.0f;
+        CHECK(d.Take(WM_LBUTTONDOWN, x, y));
+        d.Frame();
+        CHECK_EQ(d.Left(), left);
+        CHECK(d.Take(WM_LBUTTONUP, x, y));
+        d.Frame();
+        d.Frame();
+        CHECK(d.spot.has_value());
+        CHECK_EQ(d.Left(), left);
+        CHECK_EQ(d.Top(), top);
+    }
+}
+
+// The drag goes by where the pointer is, not by the button flags of the moves: the end is the release, or the button
+// read up from Windows each frame.
+TEST(a_popup_drag_follows_moves_whose_button_flag_reads_up)
+{
+    DraggedPopup d;
+    const float left = d.Left(), top = d.Top();
+    const float x = d.shown.x + 50.0f, y = d.shown.y + 10.0f;
+    CHECK(d.Take(WM_LBUTTONDOWN, x, y));
+    for (int step = 1; step <= 3; ++step)
+    {
+        CHECK(d.Take(WM_MOUSEMOVE, x, y + 100.0f * static_cast<float>(step)));
+        d.Frame();
+        CHECK_EQ(d.Top(), top + 100.0f * static_cast<float>(step));
+    }
+    CHECK(d.Take(WM_LBUTTONUP, x, y + 300.0f));
+    d.Frame();
+    d.Frame();
+    CHECK_EQ(d.Top(), top + 300.0f);
+    CHECK_EQ(d.Left(), left);
+}
+
+// Where no move message comes while the button is held, Windows' pointer read each frame drags it, and the button
+// read up there ends it where it shows: let go outside the window, no release message comes either.
+TEST(a_popup_drag_follows_windows_pointer_each_frame_and_ends_once_its_button_is_up)
+{
+    DraggedPopup d;
+    const float left = d.Left(), top = d.Top();
+    const float x = d.shown.x + 50.0f, y = d.shown.y + 10.0f;
+    CHECK(d.Take(WM_LBUTTONDOWN, x, y));
+    for (int frame = 1; frame <= 3; ++frame)
+    {
+        d.c.clicks.Held(x - 40.0f * static_cast<float>(frame), y + 100.0f * static_cast<float>(frame), true);
+        d.Frame();
+        CHECK_EQ(d.Top(), top + 100.0f * static_cast<float>(frame));
+        CHECK_EQ(d.Left(), left - 40.0f * static_cast<float>(frame));
+    }
+    d.c.clicks.Held(x, y + 500.0f, false);
+    CHECK(!d.c.input.Dragging());
+    d.Frame();
+    d.Frame();
+    CHECK_EQ(d.Top(), top + 300.0f);
+    CHECK_EQ(d.Left(), left - 120.0f);
+    CHECK(!d.Take(WM_MOUSEMOVE, x, y + 600.0f)); // let go: moving does nothing to it
+    d.Frame();
+    CHECK_EQ(d.Top(), top + 300.0f);
 }
 
 TEST(the_bar_going_off_gives_the_game_every_release)
@@ -1045,9 +1337,9 @@ TEST(a_target_that_gave_way_comes_back_into_the_room_the_dropped_widgets_left)
     CHECK(RectOf(l, BarWidget::Currency) == nullptr);
     const BarRect* target = RectOf(l, BarWidget::Target);
     CHECK(target != nullptr);
-    const float room = RectOf(l, BarWidget::Bags)->x - g - (RectOf(l, BarWidget::VanaTime)->x + 120.0f) - g;
+    const float room = RectOf(l, BarWidget::Bags)->x - g - (RectOf(l, BarWidget::Job)->x + 120.0f) - g;
     CHECK(Near(room, 70.5f) && Near(l.targetWidth, std::floor(room)) && target && Near(target->width, 70.0f));
-    CHECK(target && target->x >= RectOf(l, BarWidget::VanaTime)->x + 120.0f + g - 0.01f);
+    CHECK(target && target->x >= RectOf(l, BarWidget::Job)->x + 120.0f + g - 0.01f);
     CheckApartAndInside(l, screen);
 }
 
@@ -1077,7 +1369,7 @@ TEST(a_target_in_a_side_section_also_takes_back_the_room_a_dropped_neighbour_lef
     // target. Against every widget it would keep floor(S - 420 - 7g) px, under 40; gil needs S >= 420 + 6g and goes;
     // without it the target has S - 330 - 6g = 70.5 px between Vana'diel time and bags.
     const float screen = 400.5f + 6.0f * g;
-    const auto right   = Sections({BarWidget::Zone, BarWidget::VanaTime}, {},
+    const auto right   = Sections({BarWidget::Zone, BarWidget::Job}, {},
         {BarWidget::Target, BarWidget::Currency, BarWidget::Bags, BarWidget::EarthTime});
     const BarLayout l  = Layout(screen, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 40.0f, right);
     CHECK(RectOf(l, BarWidget::Currency) == nullptr && RectOf(l, BarWidget::Target) != nullptr);
@@ -1124,18 +1416,25 @@ TEST(the_right_section_keeps_a_gap_from_the_left_or_its_inner_widget_goes)
     CheckApartAndInside(l, screen, sides);
 }
 
-TEST(separators_follow_the_theme_until_the_player_picks)
+TEST(end_caps_take_the_room_between_the_panels_edges_and_its_sections)
 {
-    CHECK(DiamondsOn(BarSeparators::Theme, BarShape::Ornate) && !DiamondsOn(BarSeparators::Theme, BarShape::Pills));
-    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
-        CHECK(DiamondsOn(BarSeparators::Diamonds, shape) && !DiamondsOn(BarSeparators::None, shape));
+    for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
+    {
+        const auto widths = Widths(100, 80, 120, 200, 90, 60, 50);
+        const BarLayout caps = Layout(1920.0f, metrics, shape, widths, 0.0f, DefaultPlacement(), kCaps);
+        const BarLayout none = Layout(1920.0f, metrics, shape, widths, 0.0f, DefaultPlacement(), 0);
+        CHECK(Near(RectOf(caps, BarWidget::Zone)->x, metrics.cap) && Near(RectOf(none, BarWidget::Zone)->x, metrics.gap));
+        const BarRect& clock = *RectOf(caps, BarWidget::EarthTime);
+        CHECK(Near(clock.x + clock.width, 1920.0f - metrics.cap));
+        CHECK(caps.dividers.empty() && none.dividers.empty());
+    }
 }
 
 TEST(pills_with_diamonds_center_one_in_a_wider_gap_between_neighbours_of_a_section)
 {
     const float g = kPills.gap, d = static_cast<float>(WholePixels(kPills.diamond));
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f,
-        DefaultPlacement(), BarSeparators::Diamonds);
+        DefaultPlacement(), kBetween);
     const BarRect& zone = *RectOf(l, BarWidget::Zone);
     const BarRect& weather = *RectOf(l, BarWidget::Weather);
     CHECK(Near(weather.x, zone.x + zone.width + g + d + g)); // a gap, the diamond, a gap
@@ -1151,8 +1450,7 @@ TEST(ornate_without_diamonds_keeps_its_widgets_where_they_were)
 {
     const auto widths = Widths(100, 80, 120, 200, 90, 60, 50);
     const BarLayout with = Layout(1920.0f, kOrnate, BarShape::Ornate, widths, 0.0f);
-    const BarLayout none = Layout(1920.0f, kOrnate, BarShape::Ornate, widths, 0.0f, DefaultPlacement(),
-        BarSeparators::None);
+    const BarLayout none = Layout(1920.0f, kOrnate, BarShape::Ornate, widths, 0.0f, DefaultPlacement(), kCaps);
     CHECK(none.dividers.empty() && with.dividers.size() == 4);
     for (size_t i = 0; i < with.widgets.size(); ++i)
         CHECK(with.widgets[i].rect == none.widgets[i].rect);
@@ -1161,85 +1459,29 @@ TEST(ornate_without_diamonds_keeps_its_widgets_where_they_were)
 TEST(diamonds_divide_neighbours_within_each_section_and_never_between_sections)
 {
     const auto center = Sections({BarWidget::Zone}, {BarWidget::Currency, BarWidget::Bags}, {BarWidget::EarthTime});
-    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, SomeWidths(), 0.0f, center, BarSeparators::Diamonds);
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, SomeWidths(), 0.0f, center, kBetween);
     CHECK(l.dividers.size() == 1); // between gil and bags, in the center
     CHECK(l.dividers[0] > RectOf(l, BarWidget::Currency)->x && l.dividers[0] < RectOf(l, BarWidget::Bags)->x);
 }
 
-TEST(a_bar_text_size_that_fits_is_drawn_and_one_that_does_not_is_shrunk_to_what_fits)
+TEST(both_lines_shrink_together_keeping_the_font_size_ratio_when_they_do_not_fit)
 {
     for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
     {
-        const TextRow roomy = FitTextRow(MetricsFor(64, shape, 16, kAutoBarTextSize), FakeInk);
-        CHECK(roomy.twoLines && roomy.title == 16 && roomy.detail == WholePixels(16.0f * 0.33f / 0.40f));
-        const BarMetrics small = MetricsFor(24, shape, kMaxBarTextSize, kAutoBarTextSize);
-        const TextRow tight    = FitTextRow(small, FakeInk);
-        CHECK(tight.title < kMaxBarTextSize);
-        // As large as the row holds: what fits at Auto's size for this height, no less.
-        CHECK(tight.title >= FitTextRow(MetricsFor(24, shape, kAutoBarTextSize, kAutoPopupTextSize), FakeInk).title);
-        const BarRow row = PillRow(small);
-        const LineInk ink = FakeInk(true, tight.title);
-        const float y     = tight.twoLines ? tight.titleY : tight.aloneY;
-        CHECK(y + ink.top >= row.y && y + ink.bottom <= row.y + row.height); // its ink inside the row
+        // Ratio 1 on a 45 px bar: 18 over 18 needs more than its 28 px of ink, so both come down, the same size.
+        const TextRow even = FitTextRow(MetricsFor(45, shape, 1.0f), FakeInk);
+        CHECK(even.title < 18 && even.title == even.detail && even.alone == 18);
+        // Ratio 0.5: the second line twice the first, both down by the same share.
+        const TextRow tall = FitTextRow(MetricsFor(45, shape, 0.5f), FakeInk);
+        CHECK(tall.detail > tall.title && std::fabs(static_cast<float>(tall.detail) / static_cast<float>(tall.title) - 2.0f) < 0.25f);
+        const BarRow row    = PillRow(MetricsFor(45, shape));
+        const LineInk title = FakeInk(true, tall.title), detail = FakeInk(false, tall.detail);
+        CHECK(tall.titleY + title.top >= row.y && tall.detailY + detail.bottom <= row.y + row.height);
+        CHECK((tall.detailY + detail.top) - (tall.titleY + title.bottom) >= 3.0f - 0.01f);
+        // Ratio 2 on a tall bar fits as it is: the second line half the first.
+        const TextRow small = FitTextRow(MetricsFor(64, shape, 2.0f), FakeInk);
+        CHECK(small.title == WholePixels(0.40f * 64.0f) && small.detail == WholePixels(0.40f * 64.0f / 2.0f));
     }
-}
-
-TEST(a_set_bar_text_size_is_drawn_at_that_size_alone_when_two_lines_do_not_fit)
-{
-    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
-    {
-        const BarRow row = PillRow(MetricsFor(45, shape, kAutoBarTextSize, kAutoPopupTextSize));
-        for (const int size : {16, 24})
-        {
-            const TextRow t = FitTextRow(MetricsFor(45, shape, size, kAutoBarTextSize), FakeInk);
-            CHECK_EQ(t.title, size);
-            const LineInk title = FakeInk(true, size);
-            if (t.twoLines)
-            {
-                CHECK(t.detail >= 9 && t.detail <= WholePixels(static_cast<float>(size) * 0.33f / 0.40f));
-                const LineInk detail = FakeInk(false, t.detail);
-                CHECK(t.titleY + title.top >= row.y && t.detailY + detail.bottom <= row.y + row.height);
-            }
-            else
-                CHECK(t.aloneY + title.top >= row.y && t.aloneY + title.bottom <= row.y + row.height);
-        }
-        // The row holds 28 px of ink (36 less its border and 3 px margins). A 24 px title's ink is 22.8 px: not even a
-        // 9 px detail line (8.55) fits 3 px under it, so it shows alone.
-        CHECK(!FitTextRow(MetricsFor(45, shape, 24, kAutoBarTextSize), FakeInk).twoLines);
-    }
-}
-
-TEST(a_set_bar_text_size_keeps_its_title_and_shrinks_only_the_detail_line_to_fit)
-{
-    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
-    {
-        // As Auto at 45 px: two lines, a 14 px title over a detail line of at least 9 px.
-        const TextRow fourteen = FitTextRow(MetricsFor(45, shape, 14, kAutoBarTextSize), FakeInk);
-        CHECK(fourteen.twoLines && fourteen.title == 14 && fourteen.detail >= 9);
-        // 16 px over its 13 px share needs 15.2 + 12.35 + 3 of the 28 px; the detail takes the most that fits under the
-        // title, 28 - 15.2 - 3 = 9.8 px of ink, a 10 px line.
-        const TextRow sixteen = FitTextRow(MetricsFor(45, shape, 16, kAutoBarTextSize), FakeInk);
-        CHECK(sixteen.twoLines && sixteen.title == 16);
-        CHECK_EQ(sixteen.detail, 10);
-        const BarRow row     = PillRow(MetricsFor(45, shape, kAutoBarTextSize, kAutoPopupTextSize));
-        const LineInk detail = FakeInk(false, sixteen.detail);
-        CHECK(sixteen.detailY + detail.bottom <= row.y + row.height);
-    }
-}
-
-TEST(a_larger_bar_text_size_never_draws_smaller_titles)
-{
-    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
-        for (int h = kMinBarHeight; h <= kMaxBarHeight; ++h)
-        {
-            int last = 0;
-            for (int size = kAutoBarTextSize + 1; size <= kMaxBarTextSize; ++size)
-            {
-                const int drawn = FitTextRow(MetricsFor(h, shape, size, kAutoBarTextSize), FakeInk).title;
-                CHECK(drawn >= last && drawn <= size);
-                last = drawn;
-            }
-        }
 }
 
 TEST(each_copy_of_a_widget_takes_a_place_of_its_own)
@@ -1256,18 +1498,16 @@ TEST(each_copy_of_a_widget_takes_a_place_of_its_own)
     CHECK(Near(second->width, 70.0f) && Near(second->x, first->x + first->width + kPills.gap)); // right after it
 }
 
-TEST(a_widgets_own_spacing_adds_room_between_it_and_each_neighbour)
+TEST(widget_spacing_adds_room_between_every_widget_and_each_neighbour)
 {
     const std::array<float, kPanelSlots> natural = Widths(100, 80, 120, 200, 90, 60, 50);
-    std::array<float, kPanelSlots> spacing{};
-    spacing[SlotOf(BarWidget::Weather)] = 10.0f;
     for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
     {
         const BarLayout plain = Layout(1920.0f, metrics, shape, natural, 0.0f);
-        const BarLayout spaced = Layout(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), BarSeparators::Theme, spacing);
+        const BarLayout spaced = Layout(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), std::nullopt, 5.0f);
         CHECK(Near(RectOf(spaced, BarWidget::Zone)->x, RectOf(plain, BarWidget::Zone)->x));
         CHECK(Near(RectOf(spaced, BarWidget::Weather)->x, RectOf(plain, BarWidget::Weather)->x + 10.0f));
-        CHECK(Near(RectOf(spaced, BarWidget::VanaTime)->x, RectOf(plain, BarWidget::VanaTime)->x + 20.0f));
+        CHECK(Near(RectOf(spaced, BarWidget::Job)->x, RectOf(plain, BarWidget::Job)->x + 20.0f));
         // An ornate divider stands in the middle of the room it is in.
         if (shape == BarShape::Ornate)
         {
@@ -1285,14 +1525,14 @@ namespace
         CombineLinks links{};
         links[SlotOf(BarWidget::Zone)] = BarWidget::Weather;
         links[SlotOf(BarWidget::Bags)] = BarWidget::Currency;
-        const BarPlacement p{std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather, BarWidget::VanaTime},
+        const BarPlacement p{std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather, BarWidget::Job},
             std::vector<PanelWidget>{BarWidget::Target},
             std::vector<PanelWidget>{BarWidget::Currency, BarWidget::Bags, BarWidget::EarthTime}};
         return Combine(p, links);
     }
 
-    BarLayout CombinedBar(float screen, BarShape shape, const BarMetrics& m, BarSeparators separators = BarSeparators::Theme,
-                          const std::array<float, kPanelSlots>& spacing = kNoSpacing)
+    BarLayout CombinedBar(float screen, BarShape shape, const BarMetrics& m, std::optional<int> separators = std::nullopt,
+                          float spacing = 0.0f)
     {
         const PanelGroups g = Combined();
         return Layout(screen, m, shape, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f, g.placement, separators, spacing,
@@ -1303,11 +1543,9 @@ namespace
 TEST(combined_widgets_touch_with_no_gap_or_diamond_between_them)
 {
     for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
-        for (const BarSeparators separators : {BarSeparators::Theme, BarSeparators::Diamonds, BarSeparators::None})
+        for (const int separators : {0, kBetween, kCaps, kBetween | kCaps})
         {
-            std::array<float, kPanelSlots> spacing{};
-            spacing[SlotOf(BarWidget::Zone)] = 10.0f;
-            spacing[SlotOf(BarWidget::Weather)] = 10.0f;
+            const float spacing = 10.0f;
             const BarLayout l = CombinedBar(1920.0f, shape, metrics, separators, spacing);
             const BarRect zone = *RectOf(l, BarWidget::Zone), weather = *RectOf(l, BarWidget::Weather);
             const BarRect bags = *RectOf(l, BarWidget::Bags), gil = *RectOf(l, BarWidget::Currency);
@@ -1316,13 +1554,35 @@ TEST(combined_widgets_touch_with_no_gap_or_diamond_between_them)
             // Between groups, as between any neighbours: here Weather's own room and the gap or diamond.
             const BarLayout alone = Layout(1920.0f, metrics, shape, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f,
                 DefaultPlacement(), separators, spacing);
-            const float apart = RectOf(alone, BarWidget::VanaTime)->x - RectOf(alone, BarWidget::Weather)->x -
+            const float apart = RectOf(alone, BarWidget::Job)->x - RectOf(alone, BarWidget::Weather)->x -
                                 RectOf(alone, BarWidget::Weather)->width;
-            CHECK(Near(RectOf(l, BarWidget::VanaTime)->x, weather.x + weather.width + apart));
+            CHECK(Near(RectOf(l, BarWidget::Job)->x, weather.x + weather.width + apart));
             for (const float divider : l.dividers)
                 CHECK(!Near(divider, weather.x) && !Near(divider, gil.x));
-            if (DiamondsOn(separators, shape)) CHECK_EQ(l.dividers.size(), static_cast<size_t>(2)); // one a side
+            if ((separators & kBetween) != 0) CHECK_EQ(l.dividers.size(), static_cast<size_t>(2)); // one a side
         }
+}
+
+TEST(a_linked_pills_widgets_keep_no_padding_between_them_but_the_linked_padding)
+{
+    const PanelGroups g = Combined();
+    std::array<float, kPanelSlots> linked{}, shown{};
+    linked[SlotOf(BarWidget::Zone)] = 12.0f; // after Zone, before the Weather it pulls
+    linked[SlotOf(BarWidget::Bags)] = 7.0f;  // after Bags, before Gil
+    for (const BarWidget w : {BarWidget::Zone, BarWidget::Weather, BarWidget::Job, BarWidget::Target, BarWidget::Currency,
+             BarWidget::Bags, BarWidget::EarthTime})
+        shown[SlotOf(w)] = 1.0f;
+    constexpr float kPad = 9.0f;
+    const std::array<WidgetPads, kPanelSlots> pads = PillPads(g.placement, g.group, shown, linked, kPad);
+    const auto of = [&](BarWidget w) { return pads[SlotOf(w)]; };
+    CHECK(of(BarWidget::Zone).left == kPad && of(BarWidget::Zone).right == 12.0f);
+    CHECK(of(BarWidget::Weather).left == 0.0f && of(BarWidget::Weather).right == kPad);
+    CHECK(of(BarWidget::Bags).left == kPad && of(BarWidget::Bags).right == 7.0f);
+    CHECK(of(BarWidget::Currency).left == 0.0f && of(BarWidget::Currency).right == kPad);
+    CHECK(of(BarWidget::Job).left == kPad && of(BarWidget::Job).right == kPad); // in a pill of its own
+    // A widget of the pill with nothing to show leaves its neighbour the edge.
+    shown[SlotOf(BarWidget::Weather)] = 0.0f;
+    CHECK(PillPads(g.placement, g.group, shown, linked, kPad)[SlotOf(BarWidget::Zone)].right == kPad);
 }
 
 TEST(a_combined_pill_that_does_not_fit_goes_whole)
@@ -1336,14 +1596,14 @@ TEST(a_combined_pill_that_does_not_fit_goes_whole)
     CHECK(RectOf(right, BarWidget::Bags) == nullptr && RectOf(right, BarWidget::Currency) == nullptr);
     // The center drops a combined pill whole from its end.
     CombineLinks links{};
-    links[SlotOf(BarWidget::Weather)] = BarWidget::VanaTime;
-    const BarPlacement p{std::vector<PanelWidget>{}, std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather, BarWidget::VanaTime},
+    links[SlotOf(BarWidget::Weather)] = BarWidget::Job;
+    const BarPlacement p{std::vector<PanelWidget>{}, std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Weather, BarWidget::Job},
         std::vector<PanelWidget>{}};
     const PanelGroups cg = Combine(p, links);
     const BarLayout center = Layout(2.0f * g + 100.0f + g + 80.0f + 60.0f, kPills, BarShape::Pills,
-        Widths(100, 80, 120, 0, 0, 0, 0), 0.0f, cg.placement, BarSeparators::Theme, kNoSpacing, cg.group);
+        Widths(100, 80, 120, 0, 0, 0, 0), 0.0f, cg.placement, std::nullopt, 0.0f, cg.group);
     CHECK(RectOf(center, BarWidget::Zone) != nullptr);
-    CHECK(RectOf(center, BarWidget::Weather) == nullptr && RectOf(center, BarWidget::VanaTime) == nullptr);
+    CHECK(RectOf(center, BarWidget::Weather) == nullptr && RectOf(center, BarWidget::Job) == nullptr);
     CHECK(left.dividers.empty() && right.dividers.empty());
 }
 
@@ -1365,12 +1625,12 @@ TEST(a_combined_pill_hovers_and_pins_as_one_widget_named_by_its_first)
     input.Frame(l, popups);
     const BarRect pin{weather.x + 250.0f, 52.0f, 40.0f, 20.0f};
     input.Move(weather.x + 5.0f, 18.0f);
-    input.SetPopup(BarRect{weather.x, 44.0f, 300.0f, 200.0f}, {}, {}, pin);
+    SetPopup(input, BarRect{weather.x, 44.0f, 300.0f, 200.0f}, {}, {}, pin);
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true));
     CHECK(input.Pinned() == std::optional<PanelWidget>(BarWidget::Zone));
     const PanelGroups g = Combined();
     const BarLayout hiddenZone = Layout(1920.0f, kPills, BarShape::Pills, Widths(0, 80, 120, 200, 90, 60, 50), 0.0f,
-        g.placement, BarSeparators::Theme, kNoSpacing, g.group);
+        g.placement, std::nullopt, 0.0f, g.group);
     input.Frame(hiddenZone, popups);
     CHECK(input.Pinned() == std::optional<PanelWidget>(BarWidget::Zone));
 }
@@ -1381,7 +1641,48 @@ TEST(a_widget_in_a_combined_pill_knows_which_sides_it_shares)
     const auto joins = [&](BarWidget w) { const PillJoins j = JoinsOf(l, w); return std::pair{j.before, j.after}; };
     CHECK(joins(BarWidget::Zone) == std::pair(false, true));
     CHECK(joins(BarWidget::Weather) == std::pair(true, false));
-    CHECK(joins(BarWidget::VanaTime) == std::pair(false, false));
+    CHECK(joins(BarWidget::Job) == std::pair(false, false));
     CHECK(joins(BarWidget::Bags) == std::pair(false, true));
     CHECK(joins(BarWidget::Currency) == std::pair(true, false));
+}
+
+TEST(a_press_on_the_settings_widget_asks_for_the_settings_window_and_pins_nothing)
+{
+    std::array<float, kPanelSlots> widths = Widths(100, 0, 120, 200, 90, 60, 50);
+    widths[SlotOf(BarWidget::Settings)]   = 30.0f;
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, widths, 0.0f);
+    const BarRect cog = *RectOf(l, BarWidget::Settings);
+    BarInput input;
+    input.Frame(l, {});
+    input.Move(cog.x + 5.0f, 18.0f);
+    CHECK(!input.Open());
+    CHECK(input.Press(cog.x + 5.0f, 18.0f, true));
+    CHECK((input.TakePresses() == std::vector<std::string>{kOpenSettingsPress}) && !input.Pinned());
+    CHECK(input.Press(cog.x + 5.0f, 18.0f, false) && input.TakePresses().empty()); // a right press tells nothing
+}
+
+// The card: the Settings widget, and a widget with nothing to pop out (Party alone, Target with nothing targeted),
+// light as the pointer goes over them as the others do.
+TEST(a_widget_lights_under_the_pointer_whether_or_not_it_has_a_popup)
+{
+    std::array<float, kPanelSlots> widths = Widths(100, 0, 120, 200, 90, 60, 50);
+    widths[SlotOf(BarWidget::Settings)]   = 30.0f;
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, widths, 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Zone)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const auto over = [&](BarWidget w) { input.Move(RectOf(l, w)->x + 5.0f, 18.0f); };
+    const auto lit  = [&](BarWidget w) { return input.Lit(w, popups[SlotOf(w)]); };
+    over(BarWidget::Settings);
+    CHECK(lit(BarWidget::Settings) && !lit(BarWidget::Target) && !lit(BarWidget::Zone));
+    over(BarWidget::Target);
+    CHECK(lit(BarWidget::Target) && !lit(BarWidget::Settings));
+    over(BarWidget::Zone);
+    CHECK(lit(BarWidget::Zone) && !lit(BarWidget::Target));
+    // Off the bar, a pinned one stays lit while it has a popup to show.
+    input.Pin(BarWidget::Zone);
+    input.Pin(BarWidget::Target);
+    input.Leave();
+    CHECK(lit(BarWidget::Zone) && !lit(BarWidget::Target) && !lit(BarWidget::Settings));
 }

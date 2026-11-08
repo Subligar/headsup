@@ -12,12 +12,13 @@ namespace headsup
         // Phoenix's c2s 0x0DD, counting Ashita's 4-byte header.
         constexpr size_t kRequestServerId = 0x04, kRequestIndex = 0x08;
         // What an addon's report of a check's answer holds, both parts: the checker addon's name in the line's header
-        // and the level it reports, or simplelog's words for a con and for an answer the server would not gauge.
+        // and the level it reports, or simplelog's words for a con and for an answer the server would not gauge. For a
+        // plural name simplelog writes "seem" for "seems" and "Wings'" or "Wings" for "'s".
         struct ReportMarks
         {
             std::string_view first, second;
         };
-        constexpr ReportMarks kReports[] = {{"checker", "Lv. "}, {" seems ", "to be level "}, {"'s strength is impossible to gauge!", ""}};
+        constexpr ReportMarks kReports[] = {{"checker", "Lv. "}, {" seem", "to be level "}, {" strength is impossible to gauge!", ""}};
 
         bool IsReport(std::string_view line)
         {
@@ -116,6 +117,8 @@ namespace headsup
         // An answer still on its way is HeadsUp's to keep out; with none owed, the next spawn is asked about at once.
         if (!m_Waiting.contains(serverId)) m_Asked.erase(serverId);
     }
+
+    void AutoCheck::AskAgain() { m_Asked.clear(); }
 
     void AutoCheck::Clear() { *this = AutoCheck{}; }
 }

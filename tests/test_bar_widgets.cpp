@@ -23,8 +23,11 @@ namespace
 {
     WidgetContent Content(PanelWidget widget, const BarState& state, const Settings& settings)
     {
-        return BarWidgetContent(widget, state, settings, Panel(settings));
+        return BarWidgetContent(widget, state, settings);
     }
+
+    // Gil's picture leads the widget, beside both lines.
+    bool LeadsWithGil(const WidgetContent& w) { return std::ranges::find(w.icons, Icon::Gil) != w.icons.end(); }
 
     constexpr uint32_t kBountyHunter = 17199648; // Goblin Bounty Hunter, zone 103: light -3, dark 0, the rest -2
 
@@ -68,14 +71,6 @@ namespace
         return nullptr;
     }
 
-    // The weather popup's forecast card, its heading naming the zone.
-    const PopupSection* Forecast(const PopupContent& popup)
-    {
-        for (const PopupSection& s : popup.sections)
-            if (s.heading.starts_with("Forecast")) return &s;
-        return nullptr;
-    }
-
     // Each row of a section as one line of text: its cells' text joined.
     std::vector<std::string> Lines(const PopupSection& section)
     {
@@ -91,9 +86,9 @@ namespace
     }
 
     // World Info's Conquest card, and the lines of its picked tab.
-    const PopupSection& ConquestCard(const PopupContent& popup)
+    PopupSection ConquestCard(const PopupContent& popup)
     {
-        return *std::ranges::find(popup.sections, std::string("Conquest"), &PopupSection::heading);
+        return *std::ranges::find_if(popup.sections, [](const PopupSection& s) { return CardKey(s.heading) == "Conquest"; });
     }
     std::vector<std::string> TabLines(const PopupSection& card)
     {
@@ -135,29 +130,38 @@ TEST(the_target_widget_shows_name_level_and_con_in_their_colors)
     CHECK(w.subtitle == (std::vector<Span>{{"Lv 17-20 EP-EM", Tone::Own, 0xFF445566u}}));
 }
 
-TEST(show_icons_picks_a_mobs_icons_its_aggression_before_its_name_the_rest_after_and_weaknesses_after_its_level)
+TEST(a_mobs_aggression_is_the_targets_icon_and_detection_and_weaknesses_are_parts_of_its_design)
 {
     Settings settings;
     const ActorInfo goblin = Goblin();
     BarState state;
     state.target     = &goblin;
     WidgetOptions& o = settings.Widget(BarWidget::Target);
-    WidgetContent w  = Content(BarWidget::Target, state, settings);
-    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.empty() && w.subtitleIcons.empty()); // as new
-    o.targetIcons = kAllTargetIcons;
-    w             = Content(BarWidget::Target, state, settings);
+    const auto icons = [](const std::vector<Span>& line) {
+        std::vector<Icon> out;
+        for (const Span& s : line)
+            if (s.icon) out.push_back(*s.icon);
+        return out;
+    };
+    WidgetContent w = Content(BarWidget::Target, state, settings);
+    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && icons(w.title).empty() && icons(w.subtitle).empty()); // as new
+    o.design          = DesignFrom(BarWidget::Target, "name detection distance | level weak player");
+    o.targetDetection = kAllDetection;
+    w                 = Content(BarWidget::Target, state, settings);
     std::vector<Icon> rest = EveryIcon(goblin);
     rest.erase(rest.begin()); // the aggression icon comes first
-    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && w.titleIcons.size() > 1 && w.titleIcons == rest);
+    CHECK(w.icons == std::vector<Icon>{Icon::AggroNQ} && rest.size() > 1 && icons(w.title) == rest);
     std::vector<Icon> weak;
     const InfoIconSet all = InfoIconsFor(&ResistancesOf(*goblin.mob), BadgeRules{});
     for (int i = 0; i < all.count; ++i)
         if (all.icons[i].badge == BadgeKind::Weak || all.icons[i].badge == BadgeKind::WeakRank)
             weak.push_back(all.icons[i].icon);
-    CHECK(!weak.empty() && w.subtitleIcons == weak);
-    o.targetIcons = DetectionBit(DetectionIcon::Link);
-    w             = Content(BarWidget::Target, state, settings);
-    CHECK(w.icons.empty() && w.titleIcons == std::vector<Icon>{Icon::Link} && w.subtitleIcons.empty());
+    CHECK(!weak.empty() && icons(w.subtitle) == weak);
+    o.targetDetection = DetectionBit(DetectionIcon::Link);
+    o.design          = DesignFrom(BarWidget::Target, "name detection | level");
+    o.iconSide        = IconSide::Hide;
+    w                 = Content(BarWidget::Target, state, settings);
+    CHECK(w.icons.empty() && icons(w.title) == std::vector<Icon>{Icon::Link} && icons(w.subtitle).empty());
 }
 
 TEST(show_mob_level_off_leaves_out_a_mobs_level_and_con)
@@ -166,7 +170,7 @@ TEST(show_mob_level_off_leaves_out_a_mobs_level_and_con)
     const ActorInfo goblin = Goblin();
     BarState state;
     state.target = &goblin;
-    settings.Widget(BarWidget::Target).targetMobLevel = false;
+    settings.Widget(BarWidget::Target).design = DesignFrom(BarWidget::Target, "aggro name distance | -level player -weak");
     const WidgetContent w = Content(BarWidget::Target, state, settings);
     CHECK(w.shown && w.subtitle.empty() && Joined(w.title) == "Goblin Bounty Hunter");
 }
@@ -218,9 +222,9 @@ TEST(no_target_reads_no_target_and_a_player_gets_only_a_name)
 {
     Settings settings;
     BarState state;
-    CHECK(Content(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No target", Tone::Dim}}));
+    CHECK(Content(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No Target", Tone::Dim}}));
     CHECK(!Content(BarWidget::Target, state, settings).hasPopup);
-    CHECK(BarPopupContent(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No target", Tone::Dim}}));
+    CHECK(BarPopupContent(BarWidget::Target, state, settings).title == (std::vector<Span>{{"No Target", Tone::Dim}}));
     ActorInfo player;
     player.kind = EntityKind::Player;
     std::snprintf(player.name, sizeof(player.name), "%s", "Zinnia");
@@ -269,8 +273,8 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     std::vector<std::string> headings;
     for (const PopupSection& s : popup.sections)
         headings.push_back(s.heading);
-    CHECK(headings == (std::vector<std::string>{"", "Damage taken", "Elements", "Statuses", "Immune", "Stats at Level 20",
-                                                "TP moves", "Spawn"}));
+    CHECK(headings == (std::vector<std::string>{"", "Damage Taken", "Elements", "Statuses", "Immune", "Stats at Level 20",
+                                                "TP Moves", "Spawn"}));
     const PopupRow& elements = Section(popup, "Elements")->rows[0];
     CHECK(elements.kind == RowKind::Grid && elements.columns == 4 && elements.cells.size() == 8);
     CHECK(elements.cells[6].icon == Icon::Light);
@@ -290,7 +294,7 @@ TEST(the_target_popup_has_every_element_and_status_with_its_percent)
     const PopupRow& stats = Section(popup, "Stats at Level 20")->rows[1];
     CHECK(stats.kind == RowKind::Grid && stats.cells.size() == 16);
     CHECK(Joined(stats.cells[14].text) == "MEva" && Joined(stats.cells[15].text) == "58");
-    const PopupRow& moves = Section(popup, "TP moves")->rows[0];
+    const PopupRow& moves = Section(popup, "TP Moves")->rows[0];
     CHECK(moves.kind == RowKind::Grid && moves.columns == 3 && moves.cells.size() == 3);
     CHECK(Joined(moves.cells[0].text) == "Goblin Rush" && Joined(moves.cells[2].text) == "Bomb Toss Suicide");
     const PopupRow& statuses = Section(popup, "Statuses")->rows[0];
@@ -314,7 +318,7 @@ namespace
 
     const PopupCell* MoveCell(const PopupContent& popup, const char* name)
     {
-        const PopupSection* moves = Section(popup, "TP moves");
+        const PopupSection* moves = Section(popup, "TP Moves");
         if (moves == nullptr) return nullptr;
         for (const PopupCell& cell : moves->rows[0].cells)
             if (Joined(cell.text) == name) return &cell;
@@ -454,7 +458,7 @@ TEST(a_lottery_nm_shows_its_jobs_window_chance_and_cooldown_and_its_placeholder_
     CHECK(Lines(*Section(popup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Spawns 20:00 to 04:00",
                                                  "15% pop chance", "3:00:00 cooldown after its kill",
                                                  "1 placeholder in this zone"}));
-    const PopupRow& kinds = Section(popup, "Damage taken")->rows[1];
+    const PopupRow& kinds = Section(popup, "Damage Taken")->rows[1];
     CHECK(kinds.cells.size() == 2);
     CHECK(kinds.cells[0].text == (std::vector<Span>{{"Magic", Tone::Dim}, {" ", Tone::Normal}, {"-25%", Tone::Resist}}));
     CHECK(kinds.cells[1].text == (std::vector<Span>{{"Breath", Tone::Dim}, {" ", Tone::Normal}, {"-50%", Tone::Resist}}));
@@ -465,7 +469,7 @@ TEST(a_lottery_nm_shows_its_jobs_window_chance_and_cooldown_and_its_placeholder_
     // A mob with no other kind of damage taken has only its SDT row.
     const ActorInfo goblin = Goblin();
     state.target           = &goblin;
-    CHECK(Section(BarPopupContent(BarWidget::Target, state, settings), "Damage taken")->rows.size() == 1);
+    CHECK(Section(BarPopupContent(BarWidget::Target, state, settings), "Damage Taken")->rows.size() == 1);
 }
 
 TEST(a_casters_spells_are_the_ones_it_casts_at_its_level)
@@ -509,7 +513,7 @@ TEST(an_element_it_absorbs_and_what_it_does_by_itself)
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]).back() == "Regen");
     const ActorInfo elemental = MobTarget(16928885);
     state.target              = &elemental;
-    CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]).back() == "Additional effect: Poison");
+    CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]).back() == "Additional Effect: Poison");
 }
 
 TEST(a_resisted_damage_type_shows_its_percent_in_the_resist_tone)
@@ -520,7 +524,7 @@ TEST(a_resisted_damage_type_shows_its_percent_in_the_resist_tone)
     BarState state;
     state.target             = &target;
     const PopupContent popup = BarPopupContent(BarWidget::Target, state, settings);
-    const PopupRow& damage   = Section(popup, "Damage taken")->rows[0];
+    const PopupRow& damage   = Section(popup, "Damage Taken")->rows[0];
     CHECK(damage.cells[0].icon == Icon::Slashing);
     CHECK(damage.cells[0].text == (std::vector<Span>{{"-50%", Tone::Resist}}));
     CHECK(damage.cells[3].text == (std::vector<Span>{{"-75%", Tone::Resist}}));
@@ -533,16 +537,16 @@ TEST(the_spawn_section_says_when_there_is_no_timer_no_placeholder_or_one_is_due)
     const ActorInfo goblin = Goblin(); // respawn 300, no placeholder of an NM, no placeholders of its own
     state.target           = &goblin;
     const PopupContent goblinPopup = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Lines(*Section(goblinPopup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Not an NM placeholder"}));
+    CHECK(Lines(*Section(goblinPopup, "Spawn")) == (std::vector<std::string>{"Respawn 5:00", "Not an NM Placeholder"}));
     const ActorInfo snipper = MobTarget(16781313); // respawn 0
     state.target            = &snipper;
     const PopupContent snipperPopup = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Lines(*Section(snipperPopup, "Spawn")).front() == "No respawn timer");
+    CHECK(Lines(*Section(snipperPopup, "Spawn")).front() == "No Respawn Timer");
     const ActorInfo worm  = MobTarget(17191194); // Bigmouth Billy's placeholder
     state.target          = &worm;
     state.targetPhSeconds = 0.0;
     const PopupContent wormPopup = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Section(wormPopup, "Spawn")->rows[2].cells[0].text == (std::vector<Span>{{"Due now", Tone::Weak}}));
+    CHECK(Section(wormPopup, "Spawn")->rows[2].cells[0].text == (std::vector<Span>{{"Due Now", Tone::Weak}}));
 }
 
 TEST(an_immunity_shows_a_cross_in_its_status_and_an_icon_under_immune)
@@ -568,41 +572,32 @@ TEST(an_immunity_shows_a_cross_in_its_status_and_an_icon_under_immune)
         CHECK(cell.immune && cell.icon.has_value() && cell.text.empty());
 }
 
-TEST(vanadiel_time_names_the_day_in_its_elements_color_and_the_moon)
+TEST(the_forecast_shows_vanadiels_date_day_time_and_moon_as_its_design_sets)
 {
     Settings settings;
     BarState state;
-    state.unixMs          = 1791417600000LL; // Darksday 09:00, 64% waxing
-    const WidgetContent w = Content(BarWidget::VanaTime, state, settings);
-    CHECK(w.title ==
-          (std::vector<Span>{{"Darksday", Tone::Own, ElementColor(Element::Dark)}, {" 09:00", Tone::Normal}}));
-    CHECK(w.subtitle == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Dim}}));
-    const PopupContent popup = BarPopupContent(BarWidget::VanaTime, state, settings);
-    CHECK(Joined(popup.title) == "1514/03/20");
+    state.unixMs = 1791417600000LL; // Darksday 1514/03/20 09:00, 64% waxing; no zone, so no weather
+    WidgetOptions& o = settings.Widget(BarWidget::Weather);
+    const auto shown = [&] { return Content(BarWidget::Weather, state, settings); };
+    const WidgetContent w = shown(); // icon weather | day time: no weather, so its line gives way to the next
+    CHECK(w.shown && w.hasPopup && w.icons.empty() && w.subtitle.empty());
+    CHECK(w.title.size() == 2 && w.title[0] == (Span{"Darksday", Tone::Own, ElementColor(Element::Dark)}));
+    CHECK(w.title[1].text == "  09:00" && w.title[1].tone == Tone::Normal && !w.title[1].room.empty());
+    o.design = DesignFrom(BarWidget::Weather, "day time | date moon");
+    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}, {"  Waxing Gibbous 64%", Tone::Dim}}));
+    o.design = DesignFrom(BarWidget::Weather, "moon | time");
+    CHECK(shown().title == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Normal}}));
+    CHECK(Joined(shown().subtitle) == "09:00" && shown().subtitle.front().tone == Tone::Dim);
+    // Its pop-out's Today card has the date in its heading, the rest in its rows with what comes next beside each.
+    const PopupContent popup  = BarPopupContent(BarWidget::Weather, state, settings);
+    const PopupSection* today = Section(popup, "Today (1514/03/20)");
+    CHECK(today != nullptr);
     std::string all;
-    for (const PopupRow& row : popup.sections[0].rows)
+    for (const PopupRow& row : today->rows)
         for (const PopupCell& cell : row.cells)
             all += Joined(cell.text) + "|";
-    CHECK(all.find("Waxing Gibbous (64%)") != std::string::npos);
-    CHECK(all.find("Next day in 36:00") != std::string::npos);
-    CHECK(all.find("Next phase in 10:12:00") != std::string::npos);
-}
-
-TEST(the_vanadiel_clock_shows_its_day_of_week_date_and_moon_phase_as_set)
-{
-    Settings settings;
-    BarState state;
-    state.unixMs = 1791417600000LL; // Darksday 1514/03/20 09:00, 64% waxing
-    WidgetOptions& o = settings.Widget(BarWidget::VanaTime);
-    const auto shown = [&] { return Content(BarWidget::VanaTime, state, settings); };
-    o.vanaDate = true;
-    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20 Waxing Gibbous 64%", Tone::Dim}}));
-    o.secondLine = false; // Show Moon Phase off: the date alone
-    CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}}));
-    o.vanaDate = false;
-    CHECK(shown().subtitle.empty());
-    o.vanaWeekday = false;
-    CHECK(shown().title == (std::vector<Span>{{"09:00", Tone::Normal}}));
+    CHECK(all == "Darksday 09:00 (Next Day in 36:00)|Waxing Gibbous, 64% (Next Phase in 10:12:00)|");
+    CHECK(today->rows[0].cells[0].text.back().tone == Tone::Dim && today->rows[1].cells[0].text.back().tone == Tone::Dim);
 }
 
 TEST(the_zone_widget_names_the_zone_and_its_region)
@@ -627,14 +622,16 @@ TEST(gil_bags_and_earth_time)
     CHECK(Joined(Content(BarWidget::Currency, state, settings).title) == "-");
     state.gil             = 1234567;
     const WidgetContent g = Content(BarWidget::Currency, state, settings);
-    CHECK(g.coin && Joined(g.title) == "1,234,567" && g.subtitle.empty() && g.hasPopup);
+    CHECK(LeadsWithGil(g) && Joined(g.title) == "1,234,567" && g.hasPopup);
     state.bags[0]         = BagCount{45, 80};
     state.bags[5]         = BagCount{30, 30}; // a full satchel
     const WidgetContent b = Content(BarWidget::Bags, state, settings);
-    CHECK(Joined(b.title) == "45 / 80" && Joined(b.subtitle) == "Bags" && b.hasPopup);
+    CHECK(Joined(b.title) == "45 / 80" && Joined(b.subtitle) == "Inventory" && b.hasPopup);
+    CHECK(b.icons.size() == 1 && b.icons[0] == Icon::Bag); // its bag leads both lines
     const PopupContent bagsPopup = BarPopupContent(BarWidget::Bags, state, settings);
+    CHECK(Joined(bagsPopup.title) == "Inventory");
     const PopupRow& rows         = bagsPopup.sections[0].rows[0];
-    CHECK(rows.kind == RowKind::Grid && rows.columns == 2 && rows.cells.size() == 6); // Storage too, with no room
+    CHECK(rows.kind == RowKind::Grid && rows.columns == 2 && rows.cells.size() == 6 && rows.roomy); // Storage too, with no room
     CHECK(Joined(rows.cells[2].text) == "Storage");
     CHECK(Joined(rows.cells[4].text) == "Mog Satchel");
     CHECK(rows.cells[5].text == (std::vector<Span>{{"30 / 30", Tone::Resist}}));
@@ -644,7 +641,7 @@ TEST(gil_bags_and_earth_time)
     state.earthMonth  = 10;
     state.earthDay    = 8;
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "21:07");
-    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-08");
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 8th, 2026 - 21:07");
 }
 
 // As Ashita reports the inventory: gil is item 0xFFFF in its first slot, and a bag the character cannot use has no
@@ -661,6 +658,48 @@ TEST(gil_is_only_the_gil_item_and_a_bag_without_room_is_none)
     CHECK(!BagOf(0, 0).has_value()); // locked
 }
 
+// While you change zones the game empties your job, gil and status icons and refills the bags one item at a time.
+TEST(while_your_data_loads_the_panel_keeps_what_it_last_read_and_the_status_timers_run_on)
+{
+    Settings settings;
+    JobSample war;
+    war.mainJob = 1, war.mainLevel = 30, war.subJob = 13, war.subLevel = 15;
+    BarState loaded;
+    loaded.unixMs     = 1'800'000'000'000;
+    loaded.zone       = 103;
+    loaded.weather    = Weather::Rain;
+    loaded.gil        = 1234567;
+    loaded.bags[0]    = BagCount{45, 80};
+    loaded.job        = JobReport{war, std::nullopt};
+    loaded.statuses   = {{33, 120.0}, {40, std::nullopt}}; // Haste with two minutes left, and Protect untimed
+    CharacterReadings held;
+    BarState first = loaded;
+    HoldWhileLoading(first, held, true);
+    CHECK(Joined(Content(BarWidget::Currency, first, settings).title) == "1,234,567");
+
+    BarState zoning;
+    zoning.unixMs  = loaded.unixMs + 5'000;
+    zoning.bags[0] = BagCount{3, 80}; // the first items back
+    HoldWhileLoading(zoning, held, false);
+    CHECK(Joined(Content(BarWidget::Currency, zoning, settings).title) == "1,234,567");
+    CHECK(Joined(Content(BarWidget::Bags, zoning, settings).title) == "45 / 80");
+    CHECK(Joined(Content(BarWidget::Job, zoning, settings).title) == "WAR 30 / NIN 15");
+    CHECK(zoning.zone == 103 && zoning.weather == Weather::Rain);
+    CHECK(zoning.statuses == (std::vector<ActiveStatus>{{33, 115.0}, {40, std::nullopt}}));
+    CHECK(zoning.unixMs == loaded.unixMs + 5'000); // the clock is not held
+
+    BarState arrived;
+    arrived.unixMs  = zoning.unixMs + 1'000;
+    arrived.zone    = 104;
+    arrived.gil     = 1234000;
+    arrived.bags[0] = BagCount{44, 80};
+    HoldWhileLoading(arrived, held, true);
+    CHECK(Joined(Content(BarWidget::Bags, arrived, settings).title) == "44 / 80");
+    BarState again;
+    HoldWhileLoading(again, held, false);
+    CHECK(again.zone == 104 && again.gil == 1234000u && !again.job.has_value()); // held from the newest loaded frame
+}
+
 TEST(each_widget_follows_its_switch_and_a_switched_off_one_builds_nothing)
 {
     Settings settings;
@@ -672,64 +711,118 @@ TEST(each_widget_follows_its_switch_and_a_switched_off_one_builds_nothing)
     for (int i = 0; i < kBarWidgetCount; ++i)
     {
         const WidgetContent w = Content(static_cast<BarWidget>(i), state, settings);
-        CHECK(!w.shown && w.title.empty() && w.subtitle.empty() && w.icons.empty() && !w.coin && !w.hasPopup);
+        CHECK(!w.shown && w.title.empty() && w.subtitle.empty() && w.icons.empty() && !w.hasPopup);
     }
 }
 
-TEST(before_a_weather_is_known_the_widget_shows_the_days_likely_weather_and_its_chance)
+TEST(before_a_weather_is_known_the_widget_shows_the_days_likely_weather)
 {
     Settings settings;
     BarState state;
     state.zone   = 103;              // Valkurm Dunes, day 0: sunshine 50%, dust storm 50%
     state.unixMs = kVanaEpochUnixMs; // day 0
     const WidgetContent w = Content(BarWidget::Weather, state, settings);
-    CHECK(w.shown && w.hasPopup && w.icons.empty());
-    CHECK(Joined(w.title) == "Sunshine" && Joined(w.subtitle) == "50%");
+    CHECK(w.shown && w.hasPopup && w.icons == (std::vector<Icon>{Icon::WeatherSunny}));
+    CHECK(Joined(w.title) == "Sunshine");
 }
 
-TEST(a_known_weather_shows_its_element_once_or_twice_and_only_its_chance_today)
+TEST(use_custom_icons_picks_headsups_pictures_or_the_games_element_icons)
 {
+    // Always: HeadsUp's own, one for a double weather too.
+    CHECK(WeatherIcons(Weather::DustStorm, CustomIcons::Always) == (std::vector<Icon>{Icon::WeatherDustStorm}));
+    CHECK(WeatherIcons(Weather::SandStorm, CustomIcons::Always) == (std::vector<Icon>{Icon::WeatherDustStorm}));
+    CHECK(WeatherIcons(Weather::None, CustomIcons::Always) == (std::vector<Icon>{Icon::WeatherFair}));
+    CHECK(WeatherIcons(Weather::Darkness, CustomIcons::Always) == (std::vector<Icon>{Icon::WeatherGloom}));
+    // Never: the game's element, twice for a double weather, and nothing for a weather of no element.
+    CHECK(WeatherIcons(Weather::DustStorm, CustomIcons::Never) == (std::vector<Icon>{Icon::Earth}));
+    CHECK(WeatherIcons(Weather::SandStorm, CustomIcons::Never) == (std::vector<Icon>{Icon::Earth, Icon::Earth}));
+    CHECK(WeatherIcons(Weather::Sunshine, CustomIcons::Never).empty());
+    // When No Vanilla Icon: the element where there is one.
+    CHECK(WeatherIcons(Weather::Rain, CustomIcons::NoVanilla) == (std::vector<Icon>{Icon::Water}));
+    CHECK(WeatherIcons(Weather::Clouds, CustomIcons::NoVanilla) == (std::vector<Icon>{Icon::WeatherCloudy}));
+    // Each weather has its own picture by the card's names.
+    for (int w = 0; w < kWeatherCount; ++w)
+        CHECK_EQ(WeatherIcons(static_cast<Weather>(w), CustomIcons::Always).size(), static_cast<size_t>(1));
+    // The widget and its pop-out follow the setting.
     Settings settings;
     BarState state;
     state.zone    = 103;
     state.unixMs  = kVanaEpochUnixMs;
-    state.weather = Weather::DustStorm;
-    WidgetContent w = Content(BarWidget::Weather, state, settings);
-    CHECK(Joined(w.title) == "Dust Storm" && w.icons == (std::vector<Icon>{Icon::Earth}) &&
-          Joined(w.subtitle) == "50%");
     state.weather = Weather::SandStorm;
-    w             = Content(BarWidget::Weather, state, settings);
-    CHECK(w.icons == (std::vector<Icon>{Icon::Earth, Icon::Earth}));
+    settings.Widget(BarWidget::Weather).weatherIcons = CustomIcons::Never;
+    CHECK(Content(BarWidget::Weather, state, settings).icons == (std::vector<Icon>{Icon::Earth, Icon::Earth}));
+    CHECK(BarPopupContent(BarWidget::Weather, state, settings).icon == std::optional<Icon>(Icon::Earth));
 }
 
-TEST(the_forecast_covers_today_and_four_more_days)
+TEST(the_forecast_pop_out_has_the_weather_for_a_title_today_beside_the_next_four_days)
 {
     Settings settings;
     BarState state;
     state.zone   = 103;
     state.unixMs = kVanaEpochUnixMs;
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* forecast = Section(popup, "Forecast (Valkurm Dunes)");
-    CHECK(forecast != nullptr && forecast == &popup.sections.front()); // first, under no title
-    CHECK(popup.title.empty() && !popup.icon);
-    // Each day, its three chances, and Phoenix's notes in a column at the right.
-    CHECK(forecast->rows[0].kind == RowKind::Grid && forecast->rows[0].columns == 5);
+    CHECK(Joined(popup.title) == "Sunshine (50%)" && popup.icon == std::optional<Icon>(Icon::WeatherSunny));
+    // Today first, the forecast beside it, then the elements.
+    const PopupSection* today    = &popup.sections[0];
+    const PopupSection* forecast = Section(popup, "Weather Forecast (Valkurm Dunes)");
+    CHECK(today->heading.starts_with("Today (") && forecast == &popup.sections[1] && forecast->beside && !today->beside);
+    // Today's weathers on one line between the day and time and the moon, a slash between them.
+    const std::vector<PopupCell>& weathers = today->rows[1].cells;
+    CHECK(weathers.size() == 3 && Joined(weathers[0].text) == "Sunshine (50%)" && Joined(weathers[1].text) == "/" &&
+          Joined(weathers[2].text) == "Dust Storm (50%)");
+    CHECK(weathers[2].icon == std::optional<Icon>(Icon::WeatherDustStorm));
+    CHECK(Joined(today->rows[2].cells[0].text).starts_with(Joined(ListOf(Text(MoonPhaseName(VanaAt(state.unixMs).moonPercent,
+        VanaAt(state.unixMs).moonDirection))))));
+    CHECK(today->rows.size() == 3);
+    // Each day from tomorrow, its chances, and no notes.
+    CHECK(forecast->rows[0].kind == RowKind::Grid && forecast->rows[0].columns == 4);
     const std::vector<PopupCell>& cells = forecast->rows[0].cells;
-    CHECK(cells.size() == 25);
-    CHECK(Joined(cells[0].text) == "Today (Firesday)");
-    CHECK(Joined(cells[1].text) == "Sunshine 50%" && Joined(cells[2].text) == "Dust Storm 50%");
-    CHECK(cells[3].text.empty()); // the day has two chances
-    CHECK(Joined(cells[5].text) == "Tomorrow (Earthsday)"); // day 1
-    CHECK(Joined(cells[10].text) == "Watersday");           // day 2: calendar 0x0421, Sunshine 100%
-    CHECK(Joined(cells[11].text) == "Sunshine 100%");
-    CHECK(cells[12].text.empty() && cells[13].text.empty());
-    CHECK(Joined(cells[20].text) == "Iceday");              // day 4: calendar 0x0442, Sunshine 50% and Clouds 50%
-    CHECK(Joined(cells[21].text) == "Sunshine 50%" && Joined(cells[22].text) == "Clouds 50%");
-    CHECK(cells[23].text.empty());
-    // The days against their column's right, the weathers in the middle of theirs, each with its element.
-    for (size_t i = 0; i < cells.size(); i += 5)
-        CHECK(cells[i].align == Align::Right && cells[i + 1].align == Align::Center && cells[i + 3].align == Align::Center);
-    CHECK(cells[2].icon == std::optional<Icon>(Icon::Earth) && !cells[1].icon); // dust storm's earth; sunshine has none
+    CHECK(cells.size() == 16);
+    CHECK(Joined(cells[0].text) == "Earthsday (Tomorrow)"); // day 1
+    CHECK(Joined(cells[4].text) == "Watersday");            // day 2: calendar 0x0421, Sunshine 100%
+    CHECK(Joined(cells[5].text) == "Sunshine (100%)" && cells[6].text.empty() && cells[7].text.empty());
+    CHECK(Joined(cells[12].text) == "Iceday");              // day 4: calendar 0x0442, Sunshine 50% and Clouds 50%
+    CHECK(Joined(cells[13].text) == "Sunshine (50%)" && Joined(cells[14].text) == "Clouds (50%)");
+    // The days against their column's right, the weathers against their columns' left.
+    for (size_t i = 0; i < cells.size(); i += 4)
+        CHECK(cells[i].align == Align::Right && cells[i + 1].align == Align::Left && cells[i + 3].align == Align::Left);
+}
+
+TEST(each_headed_card_of_a_pop_out_collapses_by_its_press_and_stays_collapsed_across_days)
+{
+    Settings settings;
+    BarState state;
+    state.zone   = 103;
+    state.unixMs = kVanaEpochUnixMs;
+    PopupContent popup = PanelPopupContent(BarWidget::Weather, state, settings);
+    const PopupSection& today = popup.sections[0];
+    CHECK(!today.collapsePress.empty() && !today.collapsed);
+    for (const PopupSection& section : popup.sections)
+        CHECK(section.heading.empty() || !section.collapsePress.empty());
+    const std::string press = today.collapsePress;
+    CHECK(ApplyPopupPress(settings, press, Nation::None) == PressResult::Changed);
+    popup = PanelPopupContent(BarWidget::Weather, state, settings);
+    CHECK(popup.sections[0].collapsed && !popup.sections[1].collapsed);
+    // The next day's Today card, under another date, is the same card.
+    state.unixMs += kMsPerDay;
+    popup = PanelPopupContent(BarWidget::Weather, state, settings);
+    CHECK(popup.sections[0].collapsed && popup.sections[0].collapsePress == press);
+    // Pressed again, it opens.
+    CHECK(ApplyPopupPress(settings, press, Nation::None) == PressResult::Changed);
+    CHECK(!PanelPopupContent(BarWidget::Weather, state, settings).sections[0].collapsed);
+}
+
+TEST(a_pop_out_moved_from_its_place_offers_its_reset_which_puts_it_back)
+{
+    Settings settings;
+    BarState state;
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).resetPress.empty());
+    settings.Widget(BarWidget::Bags).popupSpot = PopupSpot{10, 20, false, false};
+    const std::string press = PanelPopupContent(BarWidget::Bags, state, settings).resetPress;
+    CHECK(!press.empty());
+    CHECK(ApplyPopupPress(settings, press, Nation::None) == PressResult::Changed);
+    CHECK(!settings.Widget(BarWidget::Bags).popupSpot);
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).resetPress.empty());
 }
 
 TEST(the_forecast_names_the_weekdays_past_the_weeks_end)
@@ -740,38 +833,53 @@ TEST(the_forecast_names_the_weekdays_past_the_weeks_end)
     state.unixMs = 1009831536000LL; // epoch day 6, a Lightsday: the epoch and six days of 3456 Earth seconds
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
     std::vector<std::string> days;
-    const std::vector<PopupCell>& cells = Forecast(popup)->rows[0].cells;
-    for (size_t i = 0; i < cells.size(); i += 5) // the day cells come first in each row of five
+    const std::vector<PopupCell>& cells = Section(popup, "Weather Forecast (Valkurm Dunes)")->rows[0].cells;
+    for (size_t i = 0; i < cells.size(); i += 4) // the day cells come first in each row of four
         days.push_back(Joined(cells[i].text));
-    CHECK(days ==
-          (std::vector<std::string>{"Today (Lightsday)", "Tomorrow (Darksday)", "Firesday", "Earthsday", "Watersday"}));
+    CHECK(days == (std::vector<std::string>{"Darksday (Tomorrow)", "Firesday", "Earthsday", "Watersday"}));
 }
 
-TEST(the_reroll_note_is_in_earth_minutes_and_left_out_where_the_weather_never_changes)
+TEST(a_zone_without_a_calendar_or_weather_shows_vanadiels_time_alone)
 {
-    // data/phoenix_weather.tsv: Temenos (zone 37) has calendar 11, one day of Stellar Glare three times, which
-    // Phoenix sets once and never rolls again; Valkurm Dunes rolls between Sunshine and Dust Storm on day 0.
     Settings settings;
     BarState state;
+    state.zone   = 999;
     state.unixMs = kVanaEpochUnixMs;
-    state.zone   = 103;
-    const PopupContent dunes = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupRow& grid     = Forecast(dunes)->rows[0];
-    CHECK_EQ(Forecast(dunes)->rows.size(), static_cast<size_t>(1)); // the notes beside the days, not under them
-    // Each note on two short lines beside the days, a blank line between them, so the column stays narrow.
-    CHECK(Joined(grid.cells[4].text) == "Phoenix rolls the weather again");
-    CHECK(Joined(grid.cells[9].text) == "every 3 to 30 Earth minutes.");
-    CHECK(grid.cells[14].text.empty());
-    // Phoenix's UpdateWeather turns a roll of no weather, sunshine or clouds into fog from 2:00 to 7:00 outside towns.
-    CHECK(Joined(grid.cells[19].text) == "From 2:00 to 7:00 outside towns,");
-    CHECK(Joined(grid.cells[24].text) == "sunshine and clouds turn to fog.");
-    CHECK(grid.cells[4].text.front().tone == Tone::Dim && grid.cells[24].text.front().tone == Tone::Dim);
-    state.zone = 37;
-    const PopupContent temenos   = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* forecast = Forecast(temenos);
-    CHECK(forecast->heading == "Forecast (Temenos)");
-    CHECK(forecast->rows.size() == 1 && forecast->rows[0].columns == 4); // neither note: Stellar Glare is all it has
-    CHECK(Joined(forecast->rows[0].cells[1].text) == "Stellar Glare 100%");
+    const WidgetContent w = Content(BarWidget::Weather, state, settings);
+    CHECK(w.shown && w.icons.empty() && Joined(w.title) == "Firesday  00:00");
+    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
+    CHECK(popup.title.empty() && !popup.icon && popup.sections[0].heading.starts_with("Today ("));
+}
+
+TEST(an_unknown_zone_has_no_weather_odds_of_its_own)
+{
+    Settings settings;
+    BarState state;
+    state.zone   = 0; // the data gives zone 0 calendar 0, which says Sunshine
+    state.unixMs = kVanaEpochUnixMs;
+    CHECK(Content(BarWidget::Weather, state, settings).icons.empty());
+    state.weather = Weather::DustStorm;
+    const WidgetContent w = Content(BarWidget::Weather, state, settings);
+    CHECK(w.shown && Joined(w.title) == "Dust Storm" && w.icons == (std::vector<Icon>{Icon::WeatherDustStorm}));
+    const PopupContent popup     = BarPopupContent(BarWidget::Weather, state, settings);
+    const PopupSection* forecast = Section(popup, "Weather Forecast");
+    CHECK(forecast != nullptr && Joined(popup.title) == "Dust Storm"); // no chance of it to give
+    const std::vector<PopupCell>& cells = forecast->rows[0].cells;
+    for (size_t i = 0; i < cells.size(); ++i)
+        if (i % 4 != 0) CHECK(cells[i].text.empty()); // the days alone
+}
+
+TEST(a_live_weather_outside_the_days_chances_still_shows)
+{
+    Settings settings;
+    BarState state;
+    state.zone    = 103;
+    state.unixMs  = kVanaEpochUnixMs;
+    state.weather = Weather::Rain; // day 0 is Sunshine or Dust Storm
+    const WidgetContent w = Content(BarWidget::Weather, state, settings);
+    CHECK(Joined(w.title) == "Rain" && w.icons == (std::vector<Icon>{Icon::WeatherRain}));
+    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
+    CHECK(Joined(popup.title) == "Rain" && Joined(popup.sections[0].rows[1].cells[0].text) == "Sunshine (50%)");
 }
 
 TEST(the_weather_popup_has_a_tab_for_each_element_of_the_zones_that_can_roll_it_today_and_tomorrow)
@@ -825,7 +933,7 @@ TEST(the_weather_popup_has_a_tab_for_each_element_of_the_zones_that_can_roll_it_
     const ZoneRoll top = ZonesRolling(Element::Ice, today).front();
     std::string shares;
     for (const WeatherChance& w : top.weathers)
-        shares += (shares.empty() ? "" : kDot) + std::string(WeatherName(w.weather)) + " " + std::to_string(w.percent) + "%";
+        shares += (shares.empty() ? "" : kDot) + std::string(WeatherName(w.weather)) + " (" + std::to_string(w.percent) + "%)";
     const size_t row = static_cast<size_t>(std::ranges::find(order, top.zone) - order.begin());
     CHECK(row < order.size());
     CHECK_EQ(Joined(grid.cells[3 * (row + 1) + 1].text), shares);
@@ -843,7 +951,7 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
         if (ZonesRolling(static_cast<Element>(e), 777).size() > ZonesRolling(most, 777).size()) most = static_cast<Element>(e);
     const std::map<std::string, std::string> picked{{"By Element", ElementName(most)}};
     state.pickedTabs = &picked;
-    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
         return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
@@ -853,7 +961,7 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
         return std::ranges::any_of(l.pieces, [&](const PopupPiece& p) { return p.span.text == text; });
     };
     const std::string key = std::string("By Element/") + ElementName(most);
-    PopupLayout l = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, BarShape::Pills, false, measure, room);
+    PopupLayout l = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, false, measure, room);
     const size_t all = l.pieces.size();
     CutPopup(l, room, m.popupPadding);
     CHECK(l.height <= room + 0.01f && l.pieces.size() == all);
@@ -865,50 +973,8 @@ TEST(the_weather_popups_longest_element_fits_a_1080_screen_and_scrolls_through_i
     CHECK(!shows(l, last));
     const std::map<std::string, size_t> scrolled{{key, l.scrolls.front().most}};
     state.scrolled = &scrolled;
-    const PopupLayout end = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, BarShape::Pills, false, measure, room);
+    const PopupLayout end = LayoutPopup(BarPopupContent(BarWidget::Weather, state, settings), m, false, measure, room);
     CHECK(shows(end, last) && end.height <= room + 0.01f);
-}
-
-TEST(a_zone_without_a_calendar_or_weather_hides_the_widget)
-{
-    Settings settings;
-    BarState state;
-    state.zone = 999;
-    CHECK(!Content(BarWidget::Weather, state, settings).shown);
-}
-
-TEST(an_unknown_zone_has_no_weather_odds_of_its_own)
-{
-    Settings settings;
-    BarState state;
-    state.zone   = 0; // the data gives zone 0 calendar 0, which says Sunshine
-    state.unixMs = kVanaEpochUnixMs;
-    CHECK(!Content(BarWidget::Weather, state, settings).shown);
-    state.weather = Weather::DustStorm;
-    const WidgetContent w = Content(BarWidget::Weather, state, settings);
-    CHECK(w.shown && Joined(w.title) == "Dust Storm" && w.icons == (std::vector<Icon>{Icon::Earth}));
-    CHECK(w.subtitle.empty() && !w.hasPopup);
-    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    const PopupSection* forecast = Forecast(popup);
-    CHECK(forecast != nullptr && forecast->heading == "Forecast");
-    const std::vector<PopupCell>& cells = forecast->rows[0].cells;
-    const auto columns = static_cast<size_t>(forecast->rows[0].columns);
-    for (size_t i = 0; i < cells.size(); ++i)
-        if (i % columns != 0 && i % columns != 4) CHECK(cells[i].text.empty()); // days first, notes last
-}
-
-TEST(a_live_weather_outside_the_days_chances_still_shows)
-{
-    Settings settings;
-    BarState state;
-    state.zone    = 103;
-    state.unixMs  = kVanaEpochUnixMs;
-    state.weather = Weather::Rain; // day 0 is Sunshine or Dust Storm
-    const WidgetContent w = Content(BarWidget::Weather, state, settings);
-    CHECK(Joined(w.title) == "Rain" && w.icons == (std::vector<Icon>{Icon::Water}));
-    CHECK(w.subtitle.empty()); // no chance of it today to give
-    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(Joined(Forecast(popup)->rows[0].cells[1].text) == "Sunshine 50%");
 }
 
 TEST(the_zone_says_who_holds_its_region_once_known)
@@ -921,14 +987,54 @@ TEST(the_zone_says_who_holds_its_region_once_known)
     owners[1]    = Nation::Bastok;
     state.owners = owners;
     const WidgetContent w = Content(BarWidget::Zone, state, settings);
-    // Its crest and name after the region, as Show Conquest and Show Conquest Text are by default.
-    CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {kDot, Tone::Dim}, Span{"", Tone::Normal, 0, GamePicture::BastokCrest},
-                             {" Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
-    state.zone = 230; // Southern San d'Oria: a city region, not in the conquest packet
+    // Its name after the region, as the default design has it, and its crest for the widget's icon.
+    CHECK(w.subtitle == (std::vector<Span>{{"Zulkheim", Tone::Dim}, {"  Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
+    CHECK(w.picture == GamePicture::BastokCrest);
+    state.zone = 230; // Southern San d'Oria: a city region, not in the conquest packet, with its nation's crest
     CHECK(Joined(Content(BarWidget::Zone, state, settings).subtitle) == "San d'Oria");
+    CHECK(Content(BarWidget::Zone, state, settings).picture == GamePicture::SanDoriaCrest);
 }
 
-TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_below_it)
+TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
+{
+    Settings settings;
+    BarState state;
+    state.zone = 103;
+    RegionOwners owners{};
+    owners[1]    = Nation::Bastok;
+    state.owners = owners;
+    WidgetOptions& zone = settings.Widget(BarWidget::Zone);
+    CHECK(zone.iconSide == IconSide::Left);
+    WidgetContent w = Content(BarWidget::Zone, state, settings);
+    CHECK(w.picture == GamePicture::BastokCrest && !w.iconsRight);
+    zone.iconSide = IconSide::Right;
+    w = Content(BarWidget::Zone, state, settings);
+    CHECK(w.picture == GamePicture::BastokCrest && w.iconsRight);
+    zone.iconSide = IconSide::Hide;
+    CHECK(Content(BarWidget::Zone, state, settings).picture == GamePicture::None);
+    // The bag's icon and gil's the same way.
+    WidgetOptions& bags = settings.Widget(BarWidget::Bags);
+    CHECK(Content(BarWidget::Bags, state, settings).icons == std::vector<Icon>{Icon::Bag});
+    bags.iconSide = IconSide::Hide;
+    CHECK(Content(BarWidget::Bags, state, settings).icons.empty());
+    // And the clock's.
+    WidgetOptions& clock = settings.Widget(BarWidget::EarthTime);
+    clock.on = true;
+    CHECK(Content(BarWidget::EarthTime, state, settings).icons == std::vector<Icon>{Icon::Clock});
+    clock.iconSide = IconSide::Right;
+    CHECK(Content(BarWidget::EarthTime, state, settings).iconsRight);
+    clock.iconSide = IconSide::Hide;
+    CHECK(Content(BarWidget::EarthTime, state, settings).icons.empty());
+    WidgetOptions& gil = settings.Widget(BarWidget::Currency);
+    state.gil = 1200;
+    CHECK(LeadsWithGil(Content(BarWidget::Currency, state, settings)));
+    gil.iconSide = IconSide::Right;
+    CHECK(LeadsWithGil(Content(BarWidget::Currency, state, settings)) && Content(BarWidget::Currency, state, settings).iconsRight);
+    gil.iconSide = IconSide::Hide;
+    CHECK(!LeadsWithGil(Content(BarWidget::Currency, state, settings)));
+}
+
+TEST(the_zones_design_puts_the_holders_name_before_or_after_the_zone_or_below_it)
 {
     Settings settings;
     WidgetOptions& o = settings.Widget(BarWidget::Zone);
@@ -937,32 +1043,44 @@ TEST(show_conquest_puts_the_holders_crest_and_name_left_or_right_of_the_zone_or_
     RegionOwners owners{};
     owners[1]    = Nation::Bastok;
     state.owners = owners;
-    const Span crest{"", Tone::Normal, 0, GamePicture::BastokCrest}, bastok{" Bastok", Tone::Own, NationColor(Nation::Bastok)};
     const Span dunes{"Valkurm Dunes"}, region{"Zulkheim", Tone::Dim};
-    const auto shown = [&] { return Content(BarWidget::Zone, state, settings); };
-    o.zoneConquest = ConquestPlace::Left;
-    CHECK(shown().title == (std::vector<Span>{crest, bastok, Text(" "), dunes}) && shown().subtitle == std::vector<Span>{region});
-    o.zoneConquest = ConquestPlace::Right;
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), crest, bastok}));
-    o.zoneConquestText = false; // the crest alone
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), crest}));
-    o.zoneConquest = ConquestPlace::Off;
-    CHECK(shown().title == std::vector<Span>{dunes} && shown().subtitle == std::vector<Span>{region});
-    // Show Region Name off: below, the crest has the second line to itself.
-    o.secondLine     = false;
-    o.zoneConquest   = ConquestPlace::Below;
-    CHECK(shown().subtitle == std::vector<Span>{crest});
-    o.zoneConquest = ConquestPlace::Off;
-    CHECK(shown().subtitle.empty());
-    // The Beastmen have no crest in the game's files: the Goblin Mask stands in for one.
-    owners[1]          = Nation::Beastmen;
-    state.owners       = owners;
-    o.zoneConquest     = ConquestPlace::Right;
-    o.zoneConquestText = true;
-    const Span mask{"", Tone::Normal, 0, GamePicture::BeastmenCrest};
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), mask, Span{" Beastmen", Tone::Own, NationColor(Nation::Beastmen)}}));
-    o.zoneConquestText = false;
-    CHECK(shown().title == (std::vector<Span>{dunes, Text(" "), mask}));
+    const auto shown = [&](std::string_view design) {
+        o.design = DesignFrom(BarWidget::Zone, design);
+        return Content(BarWidget::Zone, state, settings);
+    };
+    CHECK(shown("nation name | region").title ==
+          (std::vector<Span>{{"Bastok", Tone::Own, NationColor(Nation::Bastok)}, Text("  Valkurm Dunes")}));
+    CHECK(shown("nation name | region").subtitle == std::vector<Span>{region});
+    CHECK(shown("name nation | region").title == (std::vector<Span>{dunes, {"  Bastok", Tone::Own, NationColor(Nation::Bastok)}}));
+    CHECK(shown("name -nation | region").title == std::vector<Span>{dunes});
+    CHECK(shown("name | -region -nation").subtitle.empty());
+    // The Beastmen's crest, as the conquest map shows it.
+    owners[1]    = Nation::Beastmen;
+    state.owners = owners;
+    CHECK(shown("name | region").picture == GamePicture::BeastmenCrest);
+    // Jeuno's crest in Jeuno, and Aht Urhgan's in its Besieged regions: a crest alone, with no nation named.
+    state.zone = 244; // Upper Jeuno
+    CHECK(shown("name | region nation").picture == GamePicture::JeunoCrest && shown("name | region nation").subtitle.size() == 1);
+    state.zone = 50; // Aht Urhgan Whitegate, West Aht Urhgan
+    CHECK(shown("name | region").picture == GamePicture::AhtUrhganCrest);
+    // A nation's own city its crest, as no conquest holds it, whoever holds the regions around it.
+    owners.fill(Nation::Beastmen);
+    state.owners = owners;
+    for (const auto& [zone, crest] : {std::pair{230, GamePicture::SanDoriaCrest}, std::pair{233, GamePicture::SanDoriaCrest},
+             std::pair{234, GamePicture::BastokCrest}, std::pair{237, GamePicture::BastokCrest},
+             std::pair{238, GamePicture::WindurstCrest}, std::pair{242, GamePicture::WindurstCrest},
+             std::pair{243, GamePicture::JeunoCrest}})
+    {
+        state.zone = static_cast<uint16_t>(zone); // Southern San d'Oria, Chateau d'Oraguille, Bastok Mines, Metalworks, ...
+        CHECK(shown("name | region nation").picture == crest && shown("name | region nation").subtitle.size() == 1);
+    }
+    // Before any conquest update too.
+    state.owners.reset();
+    state.zone = 236; // Port Bastok
+    CHECK(shown("name | region").picture == GamePicture::BastokCrest);
+    // Nothing outside a region.
+    state.zone = 280; // Mog Garden
+    CHECK(shown("name | region").picture == GamePicture::None);
 }
 
 TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
@@ -970,25 +1088,26 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     Settings settings;
     BarState state;
     state.zone = 103; // Valkurm Dunes, Zulkheim (region 1)
-    settings.Widget(BarWidget::Zone).zoneId = true;
     const PopupContent dunes = BarPopupContent(BarWidget::Zone, state, settings);
-    CHECK(dunes.title == ListOf(Text("Valkurm Dunes"), Text(" 103", Tone::Dim)));
-    // Its region by name alone, in the dim tone the word Region was in.
-    CHECK(dunes.sections.size() == 1 && dunes.sections[0].rows[0].cells[0].text == ListOf(Text("Zulkheim", Tone::Dim)));
+    CHECK(dunes.title == ListOf(Text("Valkurm Dunes"), Text(" (Zone #103)", Tone::Dim)));
+    // Its region by name alone, dim, right under the title rather than in a card.
+    CHECK(dunes.subtitle == ListOf(Text("Zulkheim", Tone::Dim)) && dunes.sections.empty());
     RegionOwners owners{};
     owners[1]    = Nation::Bastok;
     state.owners = owners; // who holds it is on the bar, and in the popup only beside its share
     CHECK(BarPopupContent(BarWidget::Zone, state, settings) == dunes);
     state.zone = 230; // Southern San d'Oria: a city region, outside the conquest
     const PopupContent city = BarPopupContent(BarWidget::Zone, state, settings);
-    CHECK(Joined(city.title) == "Southern San d'Oria 230");
-    CHECK(city.sections.size() == 1 && Lines(city.sections[0]) == (std::vector<std::string>{"San d'Oria"}));
-    // Show Zone ID is off on a new install: the name alone.
-    settings.Widget(BarWidget::Zone).zoneId = false;
-    CHECK(Joined(BarPopupContent(BarWidget::Zone, state, settings).title) == "Southern San d'Oria");
+    CHECK(Joined(city.title) == "Southern San d'Oria (Zone #230)");
+    CHECK(Joined(city.subtitle) == "San d'Oria" && city.sections.empty());
     state.zone = 999; // past the data: its number is its title already, and it has no region
     const PopupContent unknown = BarPopupContent(BarWidget::Zone, state, settings);
-    CHECK(Joined(unknown.title) == "Zone 999" && unknown.sections.empty());
+    CHECK(Joined(unknown.title) == "Zone 999" && unknown.subtitle.empty() && unknown.sections.empty());
+    // Show Zone ID in Header off: the name alone.
+    settings.Widget(BarWidget::Zone).zoneId = false;
+    state.zone = 103;
+    CHECK(BarPopupContent(BarWidget::Zone, state, settings).title == ListOf(Text("Valkurm Dunes")));
+    CHECK(Settings{}.Widget(BarWidget::Zone).zoneId);
 }
 
 TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
@@ -1006,7 +1125,7 @@ TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
     const PopupContent popup       = BarPopupContent(BarWidget::Zone, state, settings);
     const PopupSection* influence = Section(popup, "Influence");
     CHECK(influence != nullptr);
-    CHECK(Lines(popup.sections[0]) == (std::vector<std::string>{"Ronfaure"}));
+    CHECK(Joined(popup.subtitle) == "Ronfaure");
     CHECK(Lines(*influence) == (std::vector<std::string>{"San d'Oria 61%", "Bastok 21%", "Windurst 11%", "Beastmen 5%",
                                    "Tally in 2d 8h"}));
     for (const PopupRow& row : influence->rows)
@@ -1060,7 +1179,6 @@ namespace
         ConnectionReport r;
         r.counters       = NetCounters{227, 175, 100};
         r.silence        = 0.3;
-        r.latency        = Latency{48.0, 40.0, 66.0};
         r.receivedBytes  = 35328.0;
         r.sentBytes      = 1258291.0;
         r.countedSeconds = 4320.0;
@@ -1092,7 +1210,8 @@ namespace
             state.owners  = owners;
             state.shares =
                 RegionShares{{{Nation::Bastok, 52}, {Nation::SanDoria, 30}, {Nation::Windurst, 10}, {Nation::Beastmen, 8}}};
-            state.weather = Weather::DustStorm;
+            // No weather yet: the Forecast shows the zone's likeliest, so it reads the zone.
+            state.weather.reset();
             state.strip    = StripText{"Mog Wardrobe 8", "Help on the selected item"};
             state.stripBag = BagCount{3, 80};
             state.frames   = FrameReport{1000.0 / 30.0, 120.0};
@@ -1202,7 +1321,7 @@ TEST(the_bar_gathers_what_each_shown_widget_and_open_popup_reads_and_nothing_mor
         for (const std::optional<PanelWidget> open : {std::optional<PanelWidget>(), std::optional<PanelWidget>(widget)})
         {
             if (open && !hasPopup) continue;
-            const BarNeeds needs = NeedsOf(settings, open);
+            const BarNeeds needs = NeedsOf(settings, open ? std::vector<PanelWidget>{*open} : std::vector<PanelWidget>{});
             CHECK(SameShown(widget, open, full.state, Gathered(full.state, needs), settings));
             for (const BarNeeds& less : EachOneLess(needs))
                 CHECK(!SameShown(widget, open, full.state, Gathered(full.state, less), settings));
@@ -1213,12 +1332,12 @@ TEST(the_bar_gathers_what_each_shown_widget_and_open_popup_reads_and_nothing_mor
 TEST(the_other_bags_are_gathered_only_while_their_popup_is_open)
 {
     Settings settings;
-    CHECK(NeedsOf(settings, std::nullopt).containers == 1);
-    CHECK(NeedsOf(settings, BarWidget::Target).containers == 1);
-    CHECK(NeedsOf(settings, BarWidget::Bags).containers == kContainerCount);
+    CHECK(NeedsOf(settings, {}).containers == 1);
+    CHECK(NeedsOf(settings, {BarWidget::Target}).containers == 1);
+    CHECK(NeedsOf(settings, {BarWidget::Bags}).containers == kContainerCount);
     for (WidgetOptions& each : settings.widgets)
         each.on = false;
-    const BarNeeds none = NeedsOf(settings, BarWidget::Bags); // a popup open as its widget is switched off
+    const BarNeeds none = NeedsOf(settings, {BarWidget::Bags}); // a popup open as its widget is switched off
     CHECK(!none.unixTime && !none.localTime && !none.zone && !none.target && !none.gil && none.containers == 0);
 }
 
@@ -1264,7 +1383,7 @@ TEST(a_help_line_without_a_caption_wraps_in_the_popup_under_a_fixed_title)
                              "to begin. Press cancel to return to the previous menu.";
     state.strip = StripText{"", help};
     const PopupContent p = BarPopupContent(BarWidget::GameHelp, state, settings);
-    CHECK(Joined(p.title) == "Game help");
+    CHECK(Joined(p.title) == "Game Help");
     const std::vector<std::string> lines = Lines(p.sections[0]);
     CHECK(lines.size() == 2);
     for (const std::string& line : lines)
@@ -1281,9 +1400,9 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
     state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
     WidgetContent w = Content(BarWidget::EarthTime, state, settings);
     CHECK(w.shown && w.hasPopup && Joined(w.title) == "08:30" && w.subtitle.empty()); // not stacked unless asked
-    settings.Widget(BarWidget::EarthTime).clockServerTime = true;
+    settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, "time | server");
     w                        = Content(BarWidget::EarthTime, state, settings);
-    CHECK(Joined(w.title) == "08:30" && w.subtitle == ListOf(Text("JST 15:30", Tone::Dim)));
+    CHECK(Joined(w.title) == "08:30" && Joined(w.subtitle) == "JST 15:30" && w.subtitle.back().tone == Tone::Dim);
     settings.Widget(BarWidget::EarthTime).clockSeconds = true; // the seconds are the upper line's
     settings.Widget(BarWidget::EarthTime).clock24      = false;
     w                     = Content(BarWidget::EarthTime, state, settings);
@@ -1294,18 +1413,18 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
     // The popup has the server's clock and its resets whether stacked or not: 8h 29m 18s to Saturday 00:00 JST.
     for (const bool stacked : {true, false})
     {
-        settings.Widget(BarWidget::EarthTime).clockServerTime = stacked;
+        settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, stacked ? "time | server" : "time | -server");
         const PopupContent p     = BarPopupContent(BarWidget::EarthTime, state, settings);
-        CHECK(Joined(p.title) == "2026-10-08"); // the Pacific coast's date
-        CHECK(p.sections.size() == 1 && Lines(p.sections[0]) == (std::vector<std::string>{"Server time Friday 15:30 JST",
-                                                                    "Daily reset in 8h 29m", "Conquest tally in 2d 8h"}));
+        CHECK(Joined(p.title) == "October 8th, 2026 - 11:30:42pm"); // the Pacific coast's date
+        CHECK(p.sections.size() == 1 && Lines(p.sections[0]) == (std::vector<std::string>{"Server Time Friday 15:30 JST",
+                                                                    "Daily Reset in 8h 29m", "Conquest Tally in 2d 8h"}));
     }
 }
 
 TEST(the_performance_widget_shows_frames_a_second_and_its_popup_the_frame_times)
 {
     Settings settings;
-    settings.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Fps);
+    settings.Widget(BarWidget::Performance).design = DesignFrom(BarWidget::Performance, "fps |");
     BarState state;
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "-");
     state.frames = FrameReport{1000.0 / 30.0, 120.0};
@@ -1315,7 +1434,7 @@ TEST(the_performance_widget_shows_frames_a_second_and_its_popup_the_frame_times)
     CHECK(Joined(p.title) == "Performance");
     const auto processor = std::ranges::find(p.sections, std::string("Processor"), &PopupSection::heading);
     CHECK(processor != p.sections.end() &&
-          Lines(*processor) == (std::vector<std::string>{"Frame rate 30 fps", "Frame time 33.3 ms", "Slowest frame 120.0 ms"}));
+          Lines(*processor) == (std::vector<std::string>{"Frame Rate 30 fps", "Frame Time 33.3 ms", "Slowest Frame 120.0 ms"}));
 }
 
 TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_those)
@@ -1328,22 +1447,34 @@ TEST(the_performance_widget_puts_each_part_picked_on_one_line_and_reads_only_tho
     WidgetOptions& o = settings.Widget(BarWidget::Performance);
     // By default the rates, the game's meter and PlayOnline's messages, as the Connection widget showed.
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227  100%");
-    o.perfParts = PerfBit(PerfPart::Fps) | PerfBit(PerfPart::Received) | PerfBit(PerfPart::Memory);
+    o.design = DesignFrom(BarWidget::Performance, "fps received memory |");
+    o.memText = true;
     const std::string line = Joined(Content(BarWidget::Performance, state, settings).title);
     CHECK(line.starts_with("30 fps  R 227  Mem ") && line.find("S ") == std::string::npos);
-    CHECK(NeedsOf(settings, std::nullopt).frames && NeedsOf(settings, std::nullopt).connection &&
-          NeedsOf(settings, std::nullopt).memory && !NeedsOf(settings, std::nullopt).cpu);
-    o.perfParts = PerfBit(PerfPart::Fps);
-    CHECK(!NeedsOf(settings, std::nullopt).connection && !NeedsOf(settings, std::nullopt).memory);
+    // Without Show Mem Text, the memory's figures alone.
+    o.memText = false;
+    const std::string bare = Joined(Content(BarWidget::Performance, state, settings).title);
+    std::string unlabeled = line;
+    unlabeled.erase(unlabeled.find("Mem "), std::string_view("Mem ").size());
+    CHECK_EQ(bare, unlabeled);
+    // In the design's order, on either line.
+    o.design = DesignFrom(BarWidget::Performance, "received | fps");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "R 227");
+    CHECK(Joined(Content(BarWidget::Performance, state, settings).subtitle) == "30 fps");
+    o.design = DesignFrom(BarWidget::Performance, "fps received memory |");
+    CHECK(NeedsOf(settings, {}).frames && NeedsOf(settings, {}).connection &&
+          NeedsOf(settings, {}).memory && !NeedsOf(settings, {}).cpu);
+    o.design = DesignFrom(BarWidget::Performance, "fps |");
+    CHECK(!NeedsOf(settings, {}).connection && !NeedsOf(settings, {}).memory);
     // Its popup reads everything.
-    const BarNeeds open = NeedsOf(settings, PanelWidget{BarWidget::Performance});
+    const BarNeeds open = NeedsOf(settings, {PanelWidget{BarWidget::Performance}});
     CHECK(open.connection && open.memory && open.cpu && open.linuxxi);
 }
 
 TEST(the_performance_widgets_memory_turns_amber_then_red_as_the_space_left_runs_low)
 {
     Settings settings;
-    settings.Widget(BarWidget::Performance).perfParts = PerfBit(PerfPart::Memory);
+    settings.Widget(BarWidget::Performance).design = DesignFrom(BarWidget::Performance, "memory |");
     BarState state;
     const auto used = [&](uint32_t leftMb) {
         constexpr uint32_t kCeilingMb = 4095;
@@ -1366,19 +1497,19 @@ TEST(the_job_widget_shows_jobs_and_exp_to_next_or_merits_at_the_cap_over_a_bar_o
     state.job = JobReport{s, 18000.0};
     const WidgetContent w = Content(BarWidget::Job, state, settings);
     CHECK(w.shown && w.hasPopup && w.figures && Joined(w.title) == "WAR 30 / NIN 15" &&
-          Joined(w.subtitle) == "3,460 EXP to next");
-    CHECK(w.progress && std::fabs(*w.progress - 4140.0f / 7600.0f) < 1e-6f); // the bar under it
+          Joined(w.subtitle) == "3,460 til next level  ");
+    CHECK(w.subtitle.back().bar && std::fabs(w.subtitle.back().bar->done - 4140.0f / 7600.0f) < 1e-6f); // the bar after it
     CHECK(Joined(BarPopupContent(BarWidget::Job, state, settings).title) == "Job and EXP"); // words: the title font
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
-          (std::vector<std::string>{"EXP 4,140 / 7,600", "To next 3,460", "Per hour 18,000", "Next level in 11m 32s",
-              "Limit points 0 / 10,000"})); // 7,600 - 4,140 = 3,460; at 18,000 an hour that is 692 s
+          (std::vector<std::string>{"Earned EXP 4,140 / 7,600", "Til Next Level 3,460", "EXP Per Hour 18,000", "Next Level in 11m 32s",
+              "Limit Points 0 / 10,000"})); // 7,600 - 4,140 = 3,460; at 18,000 an hour that is 692 s
 
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
-    CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "7 merits");
-    CHECK(Content(BarWidget::Job, state, settings).progress == 0.421f); // limit points to the next merit
+    CHECK(Content(BarWidget::Job, state, settings).subtitle.front().text == "7 merits");
+    CHECK(Content(BarWidget::Job, state, settings).subtitle.back().bar->done == 0.421f); // limit points to the next merit
     CHECK(Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]) ==
-          (std::vector<std::string>{"Merits 7 / 10", "Limit points 4,210 / 10,000", "Per hour -",
+          (std::vector<std::string>{"Merits 7 / 10", "Limit Points 4,210 / 10,000", "Per Hour -",
               "Limit Mode is off, so EXP does not become merits."}));
 }
 
@@ -1389,12 +1520,12 @@ TEST(the_job_widget_says_one_merit_and_promises_no_merit_without_limit_mode)
     JobSample s;
     s.mainJob = 1, s.mainLevel = 75, s.merits = 1, s.meritsMax = 10, s.limitPoints = 100;
     state.job = JobReport{s, 5000.0};
-    CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "1 merit");
+    CHECK(Content(BarWidget::Job, state, settings).subtitle.front().text == "1 merit");
     for (const std::string& line : Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]))
         CHECK(line.find("Next merit") == std::string::npos); // Limit Mode is off
     state.job->sample.limitMode = true;
     const auto lines = Lines(BarPopupContent(BarWidget::Job, state, settings).sections[0]);
-    CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("Next merit in") == 0; }));
+    CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("Next Merit in") == 0; }));
 }
 
 TEST(the_performance_widget_shows_the_games_rates_on_one_line_and_turns_amber_then_red)
@@ -1423,7 +1554,7 @@ TEST(the_performance_widget_shows_the_games_rates_on_one_line_and_turns_amber_th
     CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S -  R -");
 }
 
-TEST(the_performance_popup_gives_the_rates_ping_last_data_and_session_totals)
+TEST(the_performance_popup_gives_the_rates_last_data_and_session_totals)
 {
     Settings settings;
     BarState state;
@@ -1431,10 +1562,10 @@ TEST(the_performance_popup_gives_the_rates_ping_last_data_and_session_totals)
     const PopupContent p = BarPopupContent(BarWidget::Performance, state, settings);
     CHECK(Joined(p.title) == "Performance" && p.sections.size() == 2 && p.sections[0].heading == "Connection");
     // Short lines only: no sentence on where S and R come from (the menu tip says it).
-    CHECK(Lines(p.sections[0]) == (std::vector<std::string>{"Sent 175 B/s", "Received 227 B/s", "Ping 48 ms",
-                                      "40 to 66 ms over recent pings", "Last server data 1s"})); // 0.3 s, rounded up
-    CHECK(p.sections[0].rows[4] == Labeled("Last server data", Text("1s")));
-    CHECK(p.sections[1].heading == "This session");
+    CHECK(Lines(p.sections[0]) ==
+          (std::vector<std::string>{"Sent 175 B/s", "Received 227 B/s", "Last Server Data 1s"})); // 0.3 s, rounded up
+    CHECK(p.sections[0].rows[2] == Labeled("Last Server Data", Text("1s")));
+    CHECK(p.sections[1].heading == "This Session");
     CHECK(Lines(p.sections[1]) == (std::vector<std::string>{"Sent 1.2 MB", "Received 34.5 KB", "Over 1h 12m"}));
 }
 
@@ -1446,19 +1577,19 @@ TEST(the_performance_popup_colors_the_last_server_data_as_the_bar_and_names_the_
     state.connection->silence = 17.4;
     state.connection->counters->received = 0;
     PopupContent p            = BarPopupContent(BarWidget::Performance, state, settings);
-    CHECK(p.sections[0].rows[4] ==
-          Line(Cell(ListOf(Colored("Last server data ", kWarningColor), Colored("18s", kWarningColor)))));
-    CHECK(p.sections[0].rows.size() == 5); // the meter is still full
+    CHECK(p.sections[0].rows[2] ==
+          Line(Cell(ListOf(Colored("Last Server Data ", kWarningColor), Colored("18s", kWarningColor)))));
+    CHECK(p.sections[0].rows.size() == 3); // the meter is still full
 
     state.connection->counters->health = 94;
     p = BarPopupContent(BarWidget::Performance, state, settings);
-    CHECK(p.sections[0].rows[4] ==
-          Line(Cell(ListOf(Colored("Last server data ", kAlarmColor), Colored("18s", kAlarmColor)))));
+    CHECK(p.sections[0].rows[2] ==
+          Line(Cell(ListOf(Colored("Last Server Data ", kAlarmColor), Colored("18s", kAlarmColor)))));
     CHECK(Lines(p.sections[0]).back() == "The game's own meter is at 94%: it falls once 10 s pass without server data.");
 
     state.connection->zoning = true; // no color while zoning; the meter line stays while the meter is under 100
     p = BarPopupContent(BarWidget::Performance, state, settings);
-    CHECK(p.sections[0].rows[4] == Labeled("Last server data", Text("18s")) && p.sections[0].rows.size() == 6);
+    CHECK(p.sections[0].rows[2] == Labeled("Last Server Data", Text("18s")) && p.sections[0].rows.size() == 4);
 }
 
 TEST(the_party_widget_counts_members_and_shows_the_lowest_hp_and_mp_in_your_zone)
@@ -1593,13 +1724,13 @@ TEST(a_checked_player_shows_their_jobs_and_a_popup_of_the_check)
     CHECK(Joined(w.subtitle) == "WAR 75 / NIN 37" && w.hasPopup);
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]) ==
           (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Linkshell Phoenix", "Title New Adventurer",
-              "As of your check"}));
+              "As of Your Check"}));
     check.general.masterLevel = 5;
     check.general.linkshell.clear();
     state.targetCheck = check;
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]) ==
-          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Master level 5", "Title New Adventurer",
-              "As of your check"}));
+          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Master Level 5", "Title New Adventurer",
+              "As of Your Check"}));
     check.general.mainJob = check.general.subJob = check.general.mainLevel = check.general.subLevel = 0;
     state.targetCheck = check; // anonymous
     CHECK(Joined(Content(BarWidget::Target, state, settings).subtitle) == "? ? ?");
@@ -1615,10 +1746,10 @@ TEST(a_checked_players_title_shows_its_number_when_the_list_lacks_it_and_not_at_
     state.target    = &player;
     state.targetCheck = PlayerCheck{InspectGeneral{0x01006A2B, 0x410, "", 1, 13, 75, 37, 0}, InspectMessage{"", 99999}};
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]) ==
-          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Title #99999", "As of your check"}));
+          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "Title #99999", "As of Your Check"}));
     state.targetCheck->message.title = 0;
     CHECK(Lines(BarPopupContent(BarWidget::Target, state, settings).sections[0]) ==
-          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "As of your check"}));
+          (std::vector<std::string>{"Jobs WAR 75 / NIN 37", "As of Your Check"}));
 }
 
 TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_shown)
@@ -1626,13 +1757,16 @@ TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_
     Settings settings;
     BarState state;
     state.statuses = {ActiveStatus{kSignetEffect, 6130.0}};
-    CHECK(!NeedsOf(settings, std::nullopt).statuses); // off on a new install
+    CHECK(!NeedsOf(settings, {}).statuses); // off on a new install
     settings.Widget(BarWidget::StatusTimers).on = true;
-    CHECK(!NeedsOf(settings, std::nullopt).statuses); // nothing pinned to show
-    CHECK(NeedsOf(settings, PanelWidget{BarWidget::StatusTimers}).statuses);
+    CHECK(NeedsOf(settings, {}).statuses); // Signet is pinned
+    settings.statusPins.clear();
+    CHECK(!NeedsOf(settings, {}).statuses); // nothing pinned to show
+    CHECK(NeedsOf(settings, {PanelWidget{BarWidget::StatusTimers}}).statuses);
     settings.statusPins = {kSignetEffect};
-    CHECK(NeedsOf(settings, std::nullopt).statuses);
-    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Signet 1h 42m");
+    // Its icon, then its name, as new.
+    const WidgetContent shown = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(shown.title[0].status && shown.title[0].status->id == kSignetEffect && Joined(shown.title) == " Signet 1h 42m");
     // Its popup's favorites are the settings', Signet and Sanction on a new install.
     const PopupContent p = BarPopupContent(BarWidget::StatusTimers, state, settings);
     CHECK(Joined(p.sections[0].rows[0].cells[2].text) == "Signet" && Joined(p.sections[0].rows[0].cells[6].text) == "Sanction");
@@ -1641,17 +1775,64 @@ TEST(the_status_timers_widget_shows_its_pins_and_reads_your_statuses_only_while_
 TEST(a_statuss_star_and_pin_add_it_and_take_it_off_and_its_star_takes_its_pin_too)
 {
     Settings s;
-    CHECK(ApplyPopupPress(s, std::string(kStatusFavoritePress) + "40", Nation::None));
+    CHECK((s.statusPins == std::vector<uint16_t>{kSignetEffect})); // Signet is pinned on a new install
+    const auto press = [&](const char* kind, uint16_t id) {
+        return ApplyPopupPress(s, std::string(kind) + std::to_string(id), Nation::None);
+    };
+    CHECK(press(kStatusFavoritePress, 40) == PressResult::Changed);
     CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect, 40}));
-    CHECK(ApplyPopupPress(s, std::string(kStatusPinPress) + "40", Nation::None));
-    CHECK(ApplyPopupPress(s, std::string(kStatusPinPress) + "253", Nation::None));
-    CHECK((s.statusPins == std::vector<uint16_t>{40, kSignetEffect}));
-    CHECK(ApplyPopupPress(s, std::string(kStatusPinPress) + "253", Nation::None));
+    CHECK(press(kStatusPinPress, 40) == PressResult::Changed);
+    CHECK((s.statusPins == std::vector<uint16_t>{kSignetEffect, 40}));
+    CHECK(press(kStatusPinPress, kSignetEffect) == PressResult::Changed);
     CHECK((s.statusPins == std::vector<uint16_t>{40}));
-    CHECK(ApplyPopupPress(s, std::string(kStatusFavoritePress) + "40", Nation::None));
-    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) && s.statusPins.empty());
+    // The last pin stays, by its pin or by its star, which would take it off too.
+    CHECK(press(kStatusPinPress, 40) == PressResult::Refused);
+    CHECK(press(kStatusFavoritePress, 40) == PressResult::Refused);
+    CHECK((s.statusPins == std::vector<uint16_t>{40}) && s.statusFavorites.size() == 3);
+    CHECK(press(kStatusPinPress, kSignetEffect) == PressResult::Changed);
+    CHECK(press(kStatusFavoritePress, 40) == PressResult::Changed);
+    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) &&
+          (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
     for (const char* bad : {"status favorite ", "status favorite 4x", "status pin 65000", "status pin 99999999"})
-        CHECK(!ApplyPopupPress(s, bad, Nation::None));
+        CHECK(ApplyPopupPress(s, bad, Nation::None) == PressResult::None);
+    // Six at most: a seventh pin is refused.
+    s.statusPins = {40, 33, 41, 42, 43, kSignetEffect};
+    CHECK(press(kStatusPinPress, 116) == PressResult::Refused && s.statusPins.size() == kMostStatusPins);
+}
+
+TEST(the_status_timers_widget_shows_each_pin_at_its_rank_where_its_design_puts_it)
+{
+    Settings settings;
+    BarState state;
+    state.statuses = {{40, 1800.0}, {33, 90.0}};
+    settings.Widget(BarWidget::StatusTimers).on            = true;
+    settings.Widget(BarWidget::StatusTimers).statusDisplay = StatusDisplay::Name;
+    settings.statusPins = {40, 33, kSignetEffect}; // ranks 1, 2 and 3
+    // As new: 1, 3 and 5 on the first line, 2, 4 and 6 on the second.
+    CHECK_EQ(DesignText(settings.Widget(BarWidget::StatusTimers).design), "pin1 pin3 pin5 | pin2 pin4 pin6");
+    const WidgetContent w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(w.title) == "Protect 30m 00s  Signet 0s" && Joined(w.subtitle) == "Haste 1m 30s");
+    // Pinned or not decides what shows, not the design's switches.
+    settings.Widget(BarWidget::StatusTimers).design = DesignFrom(BarWidget::StatusTimers, "-pin1 -pin2 -pin3 | -pin4 -pin5 -pin6");
+    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Protect 30m 00s  Haste 1m 30s  Signet 0s");
+    // None pinned: its name, dim.
+    settings.statusPins.clear();
+    CHECK(Content(BarWidget::StatusTimers, state, settings).title == ListOf(Text("Status Timers", Tone::Dim)));
+}
+
+TEST(a_widgets_clone_and_remove_presses_clone_it_or_take_the_copy_off_and_name_whose_settings_show_next)
+{
+    Settings s;
+    const PanelWidget zone{BarWidget::Zone};
+    const PopupContent first = PanelPopupContent(zone, BarState{}, s);
+    CHECK(first.removePress.empty() && !first.clonePress.empty()); // the first copy is never taken off
+    const std::optional<PanelWidget> copy = ApplyWidgetPress(s, first.clonePress);
+    CHECK(copy && copy->kind == BarWidget::Zone && copy->copy == 1 && Placed(s.barSections, *copy) && s.Widget(*copy).on);
+    const PopupContent second = PanelPopupContent(*copy, BarState{}, s);
+    CHECK(ApplyWidgetPress(s, second.removePress) == zone && !Placed(s.barSections, *copy));
+    CHECK(!ApplyWidgetPress(s, "widget remove 999") && !ApplyWidgetPress(s, "widget clone x") && !ApplyWidgetPress(s, "status pin 40"));
+    // The game's help has no copies.
+    CHECK(PanelPopupContent(BarWidget::GameHelp, BarState{}, s).clonePress.empty());
 }
 
 TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by_name)
@@ -1673,11 +1854,15 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     state.gil    = 4751;
     state.nation = Nation::Bastok;
     PopupContent p = BarPopupContent(BarWidget::Currency, state, settings);
-    CHECK(Joined(p.title) == "Currencies" && p.sections.size() == 2 && p.sections[0].heading == "Favorites");
+    CHECK(Joined(p.title) == "Currencies" && p.sections.size() == 2 && p.sections[0].heading == "Favorites" && p.oneColumn);
     // By default gil and your nation's conquest points, each starred; a star's press takes it off.
     const PopupRow& top = p.sections[0].rows[0];
     CHECK((gridLines(top) == std::vector<std::string>{"Gil 4,751", "Conquest Points (Bastok) -"}));
-    CHECK(top.cells[0].icon == Icon::Star && top.cells[0].press == "favorite gil" && top.cells[2].align == Align::Right);
+    CHECK(top.cells[0].icon == Icon::Star && top.cells[0].press == "favorite gil" && top.cells[3].align == Align::Right);
+    // Each currency's picture in a column of its own after its star: gil's, a nation's crest.
+    CHECK(top.columns == 4 && top.cells[1].icon == Icon::Gil && top.cells[1].text.empty() && top.cells[5].picture == GamePicture::BastokCrest);
+    // In a socket that scrolls, as All Currencies' are, their amounts at its right.
+    CHECK(top.nested && top.scroll == "Favorites" && top.spread);
     const PopupSection& all = p.sections[1];
     CHECK(all.tabs.size() == 2 && all.tabs[0].name.text == "By Amount" && all.tabs[1].name.text == "Alphabetically");
     CHECK((Lines(all) == std::vector<std::string>{"Their amounts show once the server sends them."}));
@@ -1693,7 +1878,12 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     CHECK(lines.size() == static_cast<size_t>(kCurrencyCount) && byAmount.nested && !byAmount.scroll.empty());
     CHECK((std::vector<std::string>(lines.begin(), lines.begin() + 4) ==
            std::vector<std::string>{"Allied Notes 12,000", "Gil 4,751", "Sparks of Eminence 350", "Ancient Beastcoins 0"}));
-    CHECK(byAmount.cells[0].icon == Icon::StarEmpty && byAmount.cells[3].icon == Icon::Star); // Gil's
+    CHECK(byAmount.cells[0].icon == Icon::StarEmpty && byAmount.cells[4].icon == Icon::Star); // Gil's
+    CHECK(byAmount.spread && byAmount.cells[5].icon == Icon::Gil);
+    // A currency with no picture leaves its place in the column empty.
+    CHECK(byAmount.cells[1] == PopupCell{});
+    const auto row = std::ranges::find_if(byAmount.cells, [](const PopupCell& c) { return Joined(c.text) == "Beastmen's Seals"; });
+    CHECK(row != byAmount.cells.end() && (row - 1)->item == 1126); // the Beastmen's Seal item, by item_basic.sql
     const std::map<std::string, std::string> picked{{"All Currencies", "Alphabetically"}};
     state.pickedTabs = &picked;
     p = BarPopupContent(BarWidget::Currency, state, settings);
@@ -1705,35 +1895,80 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
 TEST(a_currencys_star_adds_it_to_the_favorites_and_takes_it_off)
 {
     Settings s;
-    CHECK(ApplyPopupPress(s, "favorite sparks", Nation::Bastok));
+    CHECK(ApplyPopupPress(s, "favorite sparks", Nation::Bastok) == PressResult::Changed);
     CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "cp_bastok", "sparks"}));
-    CHECK(ApplyPopupPress(s, "favorite cp_bastok", Nation::Bastok));
+    CHECK(ApplyPopupPress(s, "favorite cp_bastok", Nation::Bastok) == PressResult::Changed);
     CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "sparks"}));
-    CHECK(!ApplyPopupPress(s, "favorite nothing", Nation::Bastok) && !ApplyPopupPress(s, "something else", Nation::Bastok));
+    CHECK(ApplyPopupPress(s, "favorite nothing", Nation::Bastok) == PressResult::None &&
+          ApplyPopupPress(s, "something else", Nation::Bastok) == PressResult::None);
     CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "sparks"}));
     // Before your nation is known, its points stay yours, whichever nation that turns out to be.
     Settings early;
-    CHECK(ApplyPopupPress(early, "favorite sparks", Nation::None));
+    CHECK(ApplyPopupPress(early, "favorite sparks", Nation::None) == PressResult::Changed);
     CHECK((early.currencyFavorites == std::vector<std::string>{"gil", kYourConquestPoints, "sparks"}));
 }
 
-TEST(the_currency_widget_shows_the_picked_currency)
+TEST(the_currency_widget_shows_two_currencies_and_your_nations_points_without_its_name)
 {
     Settings settings;
     BarState state;
-    state.gil = 4751;
-    const int notes = *CurrencyOfKey("allied_notes");
-    settings.Widget(BarWidget::Currency).currency = notes;
-    WidgetContent w      = Content(BarWidget::Currency, state, settings);
-    CHECK(!w.coin && Joined(w.title) == "-" && Joined(w.subtitle) == "Allied Notes"); // not sent yet
+    state.gil    = 4751;
+    state.nation = Nation::Bastok;
+    WidgetOptions& o = settings.Widget(BarWidget::Currency);
+    CHECK(o.currency == kGilCurrency && o.secondCurrency == kYourConquestCurrency);
+    o.design        = DesignFrom(BarWidget::Currency, "amount1 name1 | amount2 name2");
+    WidgetContent w = Content(BarWidget::Currency, state, settings);
+    CHECK(Joined(w.title) == "4,751  Gil" && Joined(w.subtitle) == "-  Conquest Points"); // not sent yet
     for (std::optional<uint32_t>& amount : state.currencies)
         amount = 0; // the server sent them all, most at none
+    state.currencies[*CurrencyOfKey("cp_bastok")] = 350;
+    CHECK(Joined(Content(BarWidget::Currency, state, settings).subtitle) == "350  Conquest Points");
+    o.secondCurrency = *CurrencyOfKey("cp_sandoria");
+    CHECK(Joined(Content(BarWidget::Currency, state, settings).subtitle) == "0  Conquest Points (San d'Oria)");
+    // Gil's picture leads whatever the currencies are.
+    const int notes = *CurrencyOfKey("allied_notes");
+    o.currency      = notes;
     state.currencies[notes] = 12000;
     w = Content(BarWidget::Currency, state, settings);
-    CHECK(Joined(w.title) == "12,000" && w.hasPopup);
+    CHECK(LeadsWithGil(w) && Joined(w.title) == "12,000  Allied Notes" && w.hasPopup);
+    // Each currency's icon is the game's own picture of it, where it has one.
+    o.design         = DesignFrom(BarWidget::Currency, "icon1 | icon2");
+    o.currency       = *CurrencyOfKey("beastmen_seals");
+    o.secondCurrency = kYourConquestCurrency;
+    w                = Content(BarWidget::Currency, state, settings);
+    CHECK(w.title.size() == 1 && w.title[0].item == 1126); // the Beastmen's Seal item, by item_basic.sql
+    CHECK(w.subtitle.size() == 1 && w.subtitle[0].picture == GamePicture::BastokCrest);
+    // Gil's is the Coin Icon's picture, on its own line wherever it is, and apart from the Coin Icon: either, both or none.
+    o.currency = kGilCurrency;
+    for (const IconSide side : {IconSide::Left, IconSide::Hide})
+    {
+        o.iconSide = side;
+        w          = Content(BarWidget::Currency, state, settings);
+        CHECK(LeadsWithGil(w) == (side == IconSide::Left) && w.title.size() == 1 && w.title[0].coin);
+    }
+    o.currency = notes;
+    w          = Content(BarWidget::Currency, state, settings);
+    CHECK(!LeadsWithGil(w) && std::ranges::none_of(w.title, [](const Span& s) { return s.item != 0; }));
 }
 
-TEST(the_target_says_how_far_it_is_after_its_name_unless_show_distance_is_off)
+TEST(the_currency_choices_put_your_nations_points_after_gil_and_before_the_others)
+{
+    const int sandoria = *CurrencyOfKey("cp_sandoria"), bastok = *CurrencyOfKey("cp_bastok"),
+              windurst = *CurrencyOfKey("cp_windurst");
+    const std::vector<int> bastokan = CurrencyChoices(Nation::Bastok);
+    CHECK(bastokan.size() == static_cast<size_t>(kCurrencyCount));
+    CHECK((std::vector<int>(bastokan.begin(), bastokan.begin() + 4) ==
+           std::vector<int>{kGilCurrency, kYourConquestCurrency, sandoria, windurst}));
+    CHECK(std::ranges::find(bastokan, bastok) == bastokan.end());
+    const std::vector<int> unknown = CurrencyChoices(Nation::None);
+    CHECK(unknown.size() == static_cast<size_t>(kCurrencyCount) + 1 && unknown[1] == kYourConquestCurrency &&
+          unknown[2] == sandoria);
+    CHECK(CurrencyName(kYourConquestCurrency, Nation::Bastok) == "Conquest Points");
+    CHECK(CurrencyName(bastok, Nation::Bastok) == "Conquest Points");
+    CHECK(CurrencyName(bastok, Nation::Windurst) == "Conquest Points (Bastok)");
+}
+
+TEST(the_target_says_how_far_it_is_after_its_name_unless_its_distance_is_off)
 {
     Settings settings;
     const ActorInfo goblin = Goblin();
@@ -1742,45 +1977,39 @@ TEST(the_target_says_how_far_it_is_after_its_name_unless_show_distance_is_off)
     state.targetDistance = 12.34f;
     const std::string name = Joined(Content(BarWidget::Target, state, Settings{}).title);
     WidgetContent w = Content(BarWidget::Target, state, settings);
-    CHECK(w.title.back() == Text(" (12.3)", Tone::Dim));
-    settings.Widget(BarWidget::Target).targetDistance = false;
+    CHECK(w.title.back().text == "  (12.3)" && w.title.back().tone == Tone::Dim);
+    // It keeps the room of the farthest it reads, 99.9.
+    CHECK((w.title.back().room == std::vector<std::string>{"(99.9)"}));
+    settings.Widget(BarWidget::Target).design = DesignFrom(BarWidget::Target, "aggro name -distance | level player");
     w = Content(BarWidget::Target, state, settings);
-    CHECK(Joined(w.title) + " (12.3)" == name);
+    CHECK(Joined(w.title) + "  (12.3)" == name);
     // Without a target, or a distance, there is nothing to measure.
-    settings.Widget(BarWidget::Target).targetDistance = true;
+    settings.Widget(BarWidget::Target).design = DefaultDesign(BarWidget::Target);
     state.targetDistance.reset();
-    CHECK(Joined(Content(BarWidget::Target, state, settings).title) + " (12.3)" == name);
+    CHECK(Joined(Content(BarWidget::Target, state, settings).title) + "  (12.3)" == name);
     state.target         = nullptr;
     state.targetDistance = 5.0f;
-    CHECK(Joined(Content(BarWidget::Target, state, settings).title) == "No target");
+    CHECK(Joined(Content(BarWidget::Target, state, settings).title) == "No Target");
 }
 
 TEST(each_widget_can_drop_its_second_line_or_its_icons)
 {
     Settings settings;
-    const ActorInfo goblin = Goblin();
     BarState state;
-    state.zone    = 103;
     state.unixMs  = kVanaEpochUnixMs;
     state.weather = Weather::DustStorm;
-    state.target  = &goblin;
     state.gil     = 100;
-    settings.Widget(BarWidget::Weather).secondLine = false;
+    settings.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "weather | -day -time");
     WidgetContent w = Content(BarWidget::Weather, state, settings);
     CHECK(w.subtitle.empty() && !w.icons.empty() && Joined(w.title) == "Dust Storm");
-    settings.Widget(BarWidget::Weather).icons = false;
+    settings.Widget(BarWidget::Weather).iconSide = IconSide::Hide;
     CHECK(Content(BarWidget::Weather, state, settings).icons.empty());
-    // The Target's own settings say what its lines and icons show: these two leave it alone.
-    settings.Widget(BarWidget::Target).secondLine = false;
-    settings.Widget(BarWidget::Target).icons      = false;
-    w = Content(BarWidget::Target, state, settings);
-    CHECK(!w.subtitle.empty() && !w.icons.empty());
-    settings.Widget(BarWidget::Currency).icons = false;
+    settings.Widget(BarWidget::Currency).iconSide = IconSide::Hide;
     w = Content(BarWidget::Currency, state, settings);
-    CHECK(!w.coin && Joined(w.title) == "100");
+    CHECK(!LeadsWithGil(w) && Joined(w.title) == "100");
 }
 
-TEST(the_job_widget_puts_its_exp_bar_under_beside_or_nowhere_and_can_show_levels_alone)
+TEST(the_job_widgets_design_places_its_exp_bar_anywhere)
 {
     Settings settings;
     BarState state;
@@ -1788,40 +2017,44 @@ TEST(the_job_widget_puts_its_exp_bar_under_beside_or_nowhere_and_can_show_levels
     s.mainJob = 1, s.mainLevel = 30, s.subJob = 13, s.subLevel = 15;
     s.exp = 3800, s.expNeeded = 7600;
     state.job = JobReport{s, std::nullopt};
-    settings.Widget(BarWidget::Job).expBar = ExpBarPlace::Beside;
+    WidgetOptions& o = settings.Widget(BarWidget::Job);
+    o.design        = DesignFrom(BarWidget::Job, "jobs bar | tonext");
     WidgetContent w = Content(BarWidget::Job, state, settings);
-    CHECK(w.progress == 0.5f && w.progressBeside);
-    settings.Widget(BarWidget::Job).expBar = ExpBarPlace::Off;
-    CHECK(!Content(BarWidget::Job, state, settings).progress);
-    settings.Widget(BarWidget::Job).jobNames = false;
-    CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "Lv 30 / 15");
+    CHECK(w.title.back().bar->done == 0.5f && Joined(w.subtitle) == "3,800 til next level");
+    o.design = DesignFrom(BarWidget::Job, "jobs | tonext -bar");
+    w        = Content(BarWidget::Job, state, settings);
+    CHECK(std::ranges::none_of(w.subtitle, [](const Span& span) { return span.bar.has_value(); }));
     s.subJob  = 0, s.subLevel = 0; // no support job yet
     state.job = JobReport{s, std::nullopt};
-    CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "Lv 30");
+    CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "WAR 30");
 }
 
-TEST(the_job_widget_can_put_its_exp_first_or_show_it_alone)
+TEST(the_job_widgets_design_can_put_its_exp_first_or_show_it_alone)
 {
     Settings settings;
     BarState state;
     JobSample s;
     s.mainJob = 1, s.mainLevel = 30, s.subJob = 13, s.subLevel = 15;
     s.exp = 4140, s.expNeeded = 7600;
-    state.job          = JobReport{s, std::nullopt};
-    settings.Widget(BarWidget::Job).jobLayout = JobLayout::ExpFirst;
-    WidgetContent w    = Content(BarWidget::Job, state, settings);
-    CHECK(w.title == ListOf(Text("3,460 EXP to next"))); // the larger line, in the title's own tone
-    CHECK(w.subtitle == ListOf(Text("WAR 30 / NIN 15", Tone::Dim)));
-    CHECK(w.figures && w.hasPopup && w.progress && std::fabs(*w.progress - 4140.0f / 7600.0f) < 1e-6f);
-    settings.Widget(BarWidget::Job).jobNames = false;
-    CHECK(Joined(Content(BarWidget::Job, state, settings).subtitle) == "Lv 30 / 15");
-    settings.Widget(BarWidget::Job).jobLayout = JobLayout::ExpOnly;
-    w                  = Content(BarWidget::Job, state, settings);
-    CHECK(Joined(w.title) == "3,460 EXP to next" && w.subtitle.empty() && w.progress.has_value());
+    state.job        = JobReport{s, std::nullopt};
+    WidgetOptions& o = settings.Widget(BarWidget::Job);
+    o.design         = DesignFrom(BarWidget::Job, "tonext | jobs -bar");
+    WidgetContent w  = Content(BarWidget::Job, state, settings);
+    // Each text a run of its own alignment, at the left by default.
+    const auto left = [](Span span) {
+        span.align = Align::Left;
+        return ListOf(std::move(span));
+    };
+    CHECK(w.title == left(Text("3,460 til next level"))); // the larger line, in the title's own tone
+    CHECK(w.subtitle == left(Text("WAR 30 / NIN 15", Tone::Dim)));
+    CHECK(w.figures && w.hasPopup);
+    o.design = DesignFrom(BarWidget::Job, "-jobs tonext | -bar");
+    w        = Content(BarWidget::Job, state, settings);
+    CHECK(Joined(w.title) == "3,460 til next level" && w.subtitle.empty());
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
     w         = Content(BarWidget::Job, state, settings);
-    CHECK(w.title == ListOf(Text("7 merits")) && w.subtitle.empty() && w.progress == 0.421f);
+    CHECK(w.title == left(Text("7 merits")) && w.subtitle.empty());
     state.job.reset(); // the title screen
     w = Content(BarWidget::Job, state, settings);
     CHECK(Joined(w.title) == "-" && w.subtitle.empty());
@@ -1838,15 +2071,15 @@ TEST(the_clock_reads_in_the_zone_picked_for_it_with_that_zones_date_in_its_popup
     state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
     CHECK(!settings.Widget(BarWidget::EarthTime).clockZone.has_value());
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "08:30");
-    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-09");
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 9th, 2026 - 08:30");
     settings.Widget(BarWidget::EarthTime).clockZone = ClockZone::UsPacific;
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "PDT 23:30");
-    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-08");
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 8th, 2026 - 23:30");
     settings.Widget(BarWidget::EarthTime).clockZone    = ClockZone::Japan;
     settings.Widget(BarWidget::EarthTime).clock24      = false;
     settings.Widget(BarWidget::EarthTime).clockSeconds = true;
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "JST 3:30:42 PM");
-    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "2026-10-09");
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 9th, 2026 - 3:30:42pm");
 }
 
 TEST(a_clock_in_a_picked_zone_is_read_from_the_time_alone_and_the_computers_from_its_own)
@@ -1855,18 +2088,43 @@ TEST(a_clock_in_a_picked_zone_is_read_from_the_time_alone_and_the_computers_from
     for (WidgetOptions& each : settings.widgets)
         each.on = false;
     settings.Widget(BarWidget::EarthTime).on = true;
-    const BarNeeds own = NeedsOf(settings, std::nullopt);
+    const BarNeeds own = NeedsOf(settings, {});
     CHECK(own.localTime && !own.unixTime);
     settings.Widget(BarWidget::EarthTime).clockZone   = ClockZone::Utc;
-    const BarNeeds zoned = NeedsOf(settings, std::nullopt);
+    const BarNeeds zoned = NeedsOf(settings, {});
     CHECK(zoned.unixTime && !zoned.localTime);
     settings.Widget(BarWidget::EarthTime).clockZone.reset();
-    settings.Widget(BarWidget::EarthTime).clockServerTime = true; // the server's line goes by the time, the computer's by its own
-    const BarNeeds stacked   = NeedsOf(settings, std::nullopt);
+    settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, "time | server"); // the server's line goes by the time, the computer's by its own
+    const BarNeeds stacked   = NeedsOf(settings, {});
     CHECK(stacked.unixTime && stacked.localTime);
-    settings.Widget(BarWidget::EarthTime).clockServerTime = false;
-    const BarNeeds opened    = NeedsOf(settings, BarWidget::EarthTime); // the popup counts down to the resets
+    settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, "time | -server");
+    const BarNeeds opened    = NeedsOf(settings, {BarWidget::EarthTime}); // the popup counts down to the resets
     CHECK(opened.unixTime && opened.localTime);
+}
+
+TEST(the_clocks_secondary_line_reads_in_its_own_zone_and_vanadiels_time_is_a_part_too)
+{
+    Settings settings;
+    BarState state;
+    state.unixMs    = 1791527400000 + 42000; // Friday 15:30:42 JST
+    state.earthYear = 2026, state.earthMonth = 10, state.earthDay = 9; // the computer's own: 08:30:42 in Berlin
+    state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
+    WidgetOptions& o = settings.Widget(BarWidget::EarthTime);
+    CHECK(o.clockSecondZone == ClockZone::Japan);
+    o.design        = DesignFrom(BarWidget::EarthTime, "time | server");
+    o.clockSecondZone = ClockZone::UsPacific;
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle) == "PDT 23:30");
+    o.clockSecondZone.reset(); // Automatic: the computer's, named
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle) == "CEST 08:30");
+    o.design = DesignFrom(BarWidget::EarthTime, "time vana | -server");
+    const VanaTime t       = VanaAt(state.unixMs);
+    const std::string both = Joined(Content(BarWidget::EarthTime, state, settings).title);
+    CHECK(both.starts_with("08:30") && both.ends_with(" " + Printed("%02d", t.hour) + ":" + Printed("%02d", t.minute)));
+    for (WidgetOptions& each : settings.widgets)
+        each.on = false;
+    o.on = true;
+    o.design = DesignFrom(BarWidget::EarthTime, "-time vana | -server");
+    CHECK(NeedsOf(settings, {}).unixTime);
 }
 
 TEST(the_clocks_read_on_a_twelve_hour_clock_when_asked)
@@ -1891,18 +2149,68 @@ TEST(the_clocks_add_seconds_when_asked)
     CHECK(Joined(Content(BarWidget::EarthTime, state, settings).title) == "09:30:07");
 }
 
-TEST(the_performance_widget_adds_its_ping_when_asked)
+TEST(the_clocks_local_date_says_the_computers_date_as_date_format_writes_it)
 {
+    const CalendarDay day{2026, 11, 7};
+    CHECK_EQ(DateText(DateFormat::YearMonthDay, day), "2026/11/07");
+    CHECK_EQ(DateText(DateFormat::MonthDayYear, day), "11/07/2026");
+    CHECK_EQ(DateText(DateFormat::DayMonthYear, day), "07/11/2026");
+    CHECK_EQ(DateText(DateFormat::MonthDay, day), "November 7th");
+    CHECK_EQ(DateText(DateFormat::Iso, day), "2026-11-07");
+    CHECK_EQ(DateText(DateFormat::MonthDayCommaYear, day), "November 7th, 2026");
+    CHECK_EQ(DateText(DateFormat::ShortMonthDay, day), "Nov 7");
+    // English ordinals, the teens included.
+    const std::pair<int, const char*> ordinals[] = {{1, "January 1st"}, {2, "January 2nd"}, {3, "January 3rd"},
+        {4, "January 4th"}, {11, "January 11th"}, {12, "January 12th"}, {13, "January 13th"}, {21, "January 21st"},
+        {22, "January 22nd"}, {23, "January 23rd"}, {30, "January 30th"}, {31, "January 31st"}};
+    for (const auto& [d, said] : ordinals)
+        CHECK_EQ(DateText(DateFormat::MonthDay, CalendarDay{2026, 1, d}), said);
     Settings settings;
     BarState state;
-    state.connection = SteadyLink();
-    uint8_t& parts   = settings.Widget(BarWidget::Performance).perfParts;
-    parts            = PerfBit(PerfPart::Sent) | PerfBit(PerfPart::Received);
-    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227");
-    parts |= PerfBit(PerfPart::Ping);
-    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227  48 ms");
-    state.connection->latency.reset(); // not measured yet
-    CHECK(Joined(Content(BarWidget::Performance, state, settings).title) == "S 175  R 227");
+    state.unixMs    = 1791527400000 + 42000; // still Thursday the 8th on the US Pacific coast
+    state.earthYear = 2026, state.earthMonth = 10, state.earthDay = 9;
+    state.earthHour = 8, state.earthMinute = 30;
+    WidgetOptions& o = settings.Widget(BarWidget::EarthTime);
+    CHECK(o.dateFormat == DateFormat::MonthDayYear);
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle).empty()); // off until asked
+    o.design = DesignFrom(BarWidget::EarthTime, "time | date");
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle) == "10/09/2026");
+    o.dateFormat = DateFormat::MonthDay;
+    o.clockZone  = ClockZone::UsPacific; // Local Timezone moves the time, never the computer's date
+    CHECK(Joined(Content(BarWidget::EarthTime, state, settings).subtitle) == "October 9th");
+    // It needs the computer's date even while the time is another zone's.
+    for (WidgetOptions& each : settings.widgets)
+        each.on = false;
+    o.on = true;
+    CHECK(NeedsOf(settings, {}).localTime);
+    o.design = DesignFrom(BarWidget::EarthTime, "time | -date");
+    CHECK(!NeedsOf(settings, {}).localTime);
+}
+
+TEST(the_clocks_popup_is_headed_by_the_date_in_words_and_the_time_as_24_hour_and_seconds_say)
+{
+    CHECK_EQ(DateTimeTitle(CalendarDay{1999, 9, 1}, 12, 0, -1, false), "September 1st, 1999 - 12:00pm");
+    CHECK_EQ(DateTimeTitle(CalendarDay{1999, 9, 1}, 0, 5, -1, false), "September 1st, 1999 - 12:05am");
+    CHECK_EQ(DateTimeTitle(CalendarDay{1999, 9, 1}, 13, 4, 9, false), "September 1st, 1999 - 1:04:09pm");
+    CHECK_EQ(DateTimeTitle(CalendarDay{1999, 9, 1}, 13, 4, 9, true), "September 1st, 1999 - 13:04:09");
+    Settings settings;
+    BarState state;
+    state.unixMs    = 1791527400000 + 42000; // Thursday 23:30:42 on the US Pacific coast
+    state.earthYear = 2026, state.earthMonth = 10, state.earthDay = 9;
+    state.earthHour = 8, state.earthMinute = 30, state.earthSecond = 42;
+    WidgetOptions& o = settings.Widget(BarWidget::EarthTime);
+    o.clock24 = true, o.clockSeconds = false;
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 9th, 2026 - 08:30");
+    o.clock24 = false, o.clockSeconds = true;
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 9th, 2026 - 8:30:42am");
+    o.clockZone = ClockZone::UsPacific; // the Local Time's zone, date and time
+    CHECK(Joined(BarPopupContent(BarWidget::EarthTime, state, settings).title) == "October 8th, 2026 - 11:30:42pm");
+}
+
+TEST(the_performance_widget_has_no_ping_to_offer)
+{
+    const auto parts = PartsOf(BarWidget::Performance);
+    CHECK(std::ranges::none_of(parts, [](WidgetPart part) { return std::string(PartFileName(part)) == "ping"; }));
 }
 
 TEST(a_mobs_popup_lists_what_it_drops_at_its_treasure_hunter_0_chance_and_what_can_be_stolen)
@@ -2092,7 +2400,7 @@ TEST(an_npcs_popup_names_the_key_items_it_gives_and_checks_for)
     BarState state;
     state.target         = &qm;
     const PopupContent p = BarPopupContent(BarWidget::Target, state, settings);
-    CHECK(Headings(p) == (std::vector<std::string>{"", "Click", "Pops", "Key items", "Checks for", "Quests"}));
+    CHECK(Headings(p) == (std::vector<std::string>{"", "Click", "Pops", "Key Items", "Checks for", "Quests"}));
     CHECK(SectionLines(p, "Click") ==
           (std::vector<std::string>{"There is nothing out of the ordinary here.", "In Elderly Pursuits, step 1",
               "You are overwhelmed by the putrid stench of", "decay!", "\xE2\x86\x92 Pops Para",
@@ -2101,7 +2409,7 @@ TEST(an_npcs_popup_names_the_key_items_it_gives_and_checks_for)
               "\xE2\x86\x92 Gives key item Cathedral Medallion"}));
     CHECK(SectionLines(p, "Quests") == (std::vector<std::string>{"Elderly Pursuits Other Areas"}));
     CHECK(SectionLines(p, "Pops") == (std::vector<std::string>{"Para"}));
-    CHECK(SectionLines(p, "Key items") == (std::vector<std::string>{"Cathedral Medallion"}));
+    CHECK(SectionLines(p, "Key Items") == (std::vector<std::string>{"Cathedral Medallion"}));
     CHECK(SectionLines(p, "Checks for") == (std::vector<std::string>{"Antique Amulet"}));
 }
 
@@ -2240,7 +2548,7 @@ TEST(each_copy_of_a_widget_shows_by_its_own_settings)
     CHECK(copy.has_value());
     settings.Widget(*copy).currency = 3;
     const WidgetContent first = Content(BarWidget::Currency, state, settings), second = Content(*copy, state, settings);
-    CHECK(first.coin && !second.coin && second.title.front().text == "50");
+    CHECK(LeadsWithGil(first) && LeadsWithGil(second) && second.title.front().text == "50");
     // A copy not on the panel shows nothing, whatever it was set to.
     RemoveWidgetCopy(settings, *copy);
     settings.Widget(*copy).on = true;
@@ -2255,11 +2563,11 @@ TEST(what_the_plugin_gathers_follows_every_copy)
     const std::optional<PanelWidget> clock = CloneWidget(settings, BarWidget::EarthTime);
     CHECK(clock.has_value());
     settings.Widget(*clock).clockZone = ClockZone::Utc;
-    const BarNeeds needs = NeedsOf(settings, std::nullopt);
+    const BarNeeds needs = NeedsOf(settings, {});
     CHECK(needs.unixTime && !needs.localTime); // only the copy shows, in a zone of its own
     settings.Widget(BarWidget::EarthTime).on = true;
-    CHECK(NeedsOf(settings, std::nullopt).localTime);
-    CHECK(NeedsOf(settings, PanelWidget{BarWidget::Bags, 2}).containers == 0); // Bags is off, any copy of it
+    CHECK(NeedsOf(settings, {}).localTime);
+    CHECK(NeedsOf(settings, {PanelWidget{BarWidget::Bags, 2}}).containers == 0); // Bags is off, any copy of it
 }
 
 TEST(the_bags_popup_lists_mog_safe_2_only_once_it_holds_something)
@@ -2283,28 +2591,6 @@ TEST(the_bags_popup_lists_mog_safe_2_only_once_it_holds_something)
     CHECK(listed("Mog Safe 2"));
 }
 
-TEST(the_job_and_exp_widgets_bar_layout_is_its_exp_bar_by_its_own_settings)
-{
-    Settings settings;
-    BarState state;
-    JobSample s;
-    s.mainJob = 1, s.mainLevel = 30, s.exp = 12345, s.expNeeded = 20000;
-    state.job = JobReport{s, std::nullopt};
-    WidgetOptions& o = settings.Widget(BarWidget::Job);
-    CHECK(!Content(BarWidget::Job, state, settings).meter); // its lines on a new install
-    o.jobLayout    = JobLayout::Bar;
-    o.expPlaces    = {ExpTextPlace::Off, ExpTextPlace::Off, ExpTextPlace::Left};
-    o.expBarWidth  = 200;
-    o.expBarHeight = 8;
-    const WidgetContent w = Content(BarWidget::Job, state, settings);
-    CHECK(w.shown && w.meter && w.meter->left.front().text == "61%" && w.meter->right.empty());
-    CHECK(w.meter->width == 200 && w.meter->height == 8 && w.hasPopup);
-    CHECK(NeedsOf(settings, std::nullopt).job);
-    // The other layouts keep their own lines.
-    o.jobLayout = JobLayout::JobsFirst;
-    CHECK_EQ(Content(BarWidget::Job, state, settings).subtitle.front().text, "7,655 EXP to next");
-}
-
 TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)
 {
     Settings settings;
@@ -2315,7 +2601,7 @@ TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)
     settings.Widget(BarWidget::Bags).bag = 5;
     const WidgetContent satchel = Content(BarWidget::Bags, state, settings);
     CHECK(satchel.title.front().text == "12 / 80" && satchel.subtitle.front().text == ContainerName(5));
-    CHECK_EQ(NeedsOf(settings, std::nullopt).containers, 6);
+    CHECK_EQ(NeedsOf(settings, {}).containers, 6);
     // A bag the character has no room in reads as nothing yet.
     settings.Widget(BarWidget::Bags).bag = 6;
     CHECK_EQ(Content(BarWidget::Bags, state, settings).title.front().text, "-");
@@ -2332,22 +2618,23 @@ TEST(a_targeted_players_jobs_show_from_whatever_knows_them_unless_switched_off)
     CHECK(Content(BarWidget::Target, state, settings).subtitle.empty()); // nothing known of them yet
     player.jobs = PlayerJobs{1, 75, 13, 37}; // from a lookup, the party list or a check
     CHECK_EQ(Content(BarWidget::Target, state, settings).subtitle.front().text, "WAR 75 / NIN 37");
-    settings.Widget(BarWidget::Target).targetJobs = false;
+    settings.Widget(BarWidget::Target).design = DesignFrom(BarWidget::Target, "name | -player");
     CHECK(Content(BarWidget::Target, state, settings).subtitle.empty());
     // An anonymous player's are the game's question marks.
-    settings.Widget(BarWidget::Target).targetJobs = true;
+    settings.Widget(BarWidget::Target).design = DefaultDesign(BarWidget::Target);
     player.jobs.reset();
     player.status = PlayerStatus{};
     player.status->anonymous = true;
     CHECK_EQ(Content(BarWidget::Target, state, settings).subtitle.front().text, "? ? ?");
 }
 
-TEST(world_info_shows_conquest_info_counting_the_regions_of_the_nations_picked_and_its_popup_names_them)
+TEST(world_infos_nation_buttons_show_each_crest_and_the_regions_it_holds_and_its_popup_names_them)
 {
     Settings settings;
     BarState state;
-    settings.Widget(BarWidget::World).on        = true;
-    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
+    WidgetOptions& o = settings.Widget(BarWidget::World);
+    o.on             = true;
+    o.design         = DesignFrom(BarWidget::World, "sandoria bastok windurst beastmen | -ship -guild");
     CHECK_EQ(Joined(Content(BarWidget::World, state, settings).title), "-"); // before the standings come
     RegionOwners owners{};
     owners.fill(Nation::Beastmen);
@@ -2356,24 +2643,26 @@ TEST(world_info_shows_conquest_info_counting_the_regions_of_the_nations_picked_a
     owners[5] = Nation::Windurst;
     owners[18] = Nation::None;
     state.owners = owners;
-    // Two by two, in lined-up columns, each its crest and count: San d'Oria and Bastok over Windurst and the beastmen.
-    const WidgetContent all = Content(BarWidget::World, state, settings);
-    CHECK(all.cells && all.title.size() == 2 && all.subtitle.size() == 2);
-    CHECK(all.title[0].text == " 1" && all.title[1].text == " 2" && all.subtitle[0].text == " 1" && all.subtitle[1].text == " 14");
-    CHECK(all.title[0].picture == GamePicture::SanDoriaCrest && all.title[1].picture == GamePicture::BastokCrest &&
-          all.subtitle[0].picture == GamePicture::WindurstCrest && all.subtitle[1].picture == GamePicture::BeastmenCrest);
-    CHECK(all.title[1].argb == NationColor(Nation::Bastok) && all.hasPopup);
-    // Or all four on one line.
-    settings.Widget(BarWidget::World).conquestGrid = ConquestGrid::OneByFour;
-    const WidgetContent row = Content(BarWidget::World, state, settings);
-    CHECK(row.cells && row.title.size() == 4 && row.subtitle.empty() && row.title[3].picture == GamePicture::BeastmenCrest);
-    settings.Widget(BarWidget::World).conquestGrid = ConquestGrid::TwoByTwo;
-    // Bastok alone: its name and count, and its regions in the popup.
-    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
-    CHECK_EQ(Joined(Content(BarWidget::World, state, settings).title), "Bastok 2");
+    // Each its crest and count, in its color, on the line the design puts it.
+    std::vector<Span> counts;
+    for (const Span& span : Content(BarWidget::World, state, settings).title)
+        if (span.picture != GamePicture::None) counts.push_back(span);
+    CHECK(counts.size() == 4);
+    CHECK(counts[0].text == " 1" && counts[1].text == " 2" && counts[2].text == " 1" && counts[3].text == " 14");
+    CHECK(counts[0].picture == GamePicture::SanDoriaCrest && counts[1].picture == GamePicture::BastokCrest &&
+          counts[2].picture == GamePicture::WindurstCrest && counts[3].picture == GamePicture::BeastmenCrest);
+    CHECK(counts[1].argb == NationColor(Nation::Bastok));
+    // Bastok alone.
+    o.design = DesignFrom(BarWidget::World, "bastok | -ship -guild -sandoria -windurst -beastmen");
+    const WidgetContent bastok = Content(BarWidget::World, state, settings);
+    CHECK(bastok.title.size() == 1 && bastok.title[0].text == " 2" && bastok.hasPopup);
+    // The popup has every nation's regions, a tab each.
     const PopupSection card = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
-    CHECK(card.tabs.size() == 1 && card.tabs[0].name.text == "Bastok");
-    CHECK(TabLines(card) == (std::vector<std::string>{"Gustaberg", "Derfland"}));
+    CHECK(card.tabs.size() == 4 && card.tabs[1].name.text == "Bastok");
+    std::map<std::string, std::string> picked{{"Conquest", "Bastok"}};
+    state.pickedTabs = &picked;
+    CHECK(TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings))) ==
+          (std::vector<std::string>{"Gustaberg", "Derfland"}));
 }
 
 TEST(the_bags_popup_always_lists_storage_and_never_the_temporary_items)
@@ -2404,47 +2693,88 @@ TEST(the_bags_popup_always_lists_storage_and_never_the_temporary_items)
 TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
 {
     Settings settings;
-    settings.Widget(BarWidget::World).on        = true;
-    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
+    settings.Widget(BarWidget::World).on = true;
     BarState state;
     RegionOwners owners{};
     owners[3] = owners[4] = Nation::Bastok; // Gustaberg and Derfland
     state.owners = owners;
     state.nation = Nation::Bastok;
-    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
     // Before an overseer has told: one line says how to learn them.
     OutpostRuns runs;
     state.outposts = &runs;
     std::vector<std::string> lines = TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings)));
     CHECK(lines.size() == 3 && lines[0] == "Gustaberg" && lines[2].find("overseer") != std::string::npos);
-    // Told by Bastok's overseer that Gustaberg's was run: Derfland is marked, Gustaberg is not.
+    // Told by Bastok's overseer that Gustaberg's was run: Derfland says "Supply run available" in a column against
+    // the card's right, a gray flag after it; Gustaberg does not.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
-    lines = TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings)));
-    CHECK((lines == std::vector<std::string>{"Gustaberg", "Derfland · no supply run"}));
+    const PopupContent popup = BarPopupContent(BarWidget::World, state, settings);
+    const PopupSection told  = ConquestCard(popup);
+    CHECK((TabLines(told) == std::vector<std::string>{"Gustaberg", "DerflandSupply run available"}));
+    const std::vector<PopupRow>& rows = told.tabs.at(told.tab).rows;
+    const auto flagged = [](const PopupRow& row) {
+        return std::ranges::any_of(row.cells, [](const PopupCell& c) {
+            return c.icon == Icon::Flag && c.tint && c.tint->tone == Tone::Dim && c.text.empty();
+        });
+    };
+    CHECK(!flagged(rows[0]) && flagged(rows[1]));
+    CHECK(rows[1].cells.back().icon == Icon::Flag);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills);
+    const auto measure = [](const Span& span, PopupFont font) {
+        const float height = font == PopupFont::Title ? 24.0f : 18.0f;
+        return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
+    };
+    const PopupLayout l = LayoutPopup(popup, m, false, measure, 1000.0f);
+    const auto piece = [&](auto is) { return std::ranges::find_if(l.pieces, is); };
+    const auto name  = piece([](const PopupPiece& p) { return p.span.text == "Derfland"; });
+    const auto said  = piece([](const PopupPiece& p) { return p.span.text == "Supply run available"; });
+    const auto flag  = piece([](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Flag; });
+    const auto ran   = piece([](const PopupPiece& p) { return p.span.text == "Gustaberg"; });
+    CHECK(name != l.pieces.end() && said != l.pieces.end() && flag != l.pieces.end() && ran != l.pieces.end());
+    const auto socket = piece([](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Socket; });
+    CHECK(socket != l.pieces.end());
+    // On Derfland's line, the words after the name and the flag after them, ending as far in from the tab's right as
+    // the name starts from its left; Gustaberg lined up with it.
+    CHECK(said->x > name->x + name->width && flag->x >= said->x + said->width);
+    CHECK(std::fabs((socket->x + socket->width) - (flag->x + flag->width) - (name->x - socket->x)) < 0.5f);
+    CHECK(std::fabs((flag->y + flag->height / 2.0f) - (name->y + name->height / 2.0f)) < name->height / 2.0f);
+    CHECK_EQ(ran->x, name->x);
     // Another nation's regions are not yours to run supplies to.
-    settings.Widget(BarWidget::World).nations = kAllNations;
     owners[0] = Nation::SanDoria;
     state.owners = owners;
     const PopupSection all = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
-    CHECK(all.tabs.size() == 4 && all.tabs[0].name.text == "San d'Oria");
-    CHECK((TabLines(all) == std::vector<std::string>{"Ronfaure"}));
+    CHECK(all.tabs.size() == 4 && all.tabs[1].name.text == "San d'Oria");
+    CHECK((Lines(PopupSection{"", all.tabs[1].rows}) == std::vector<std::string>{"Ronfaure"}));
 }
 
-TEST(two_nations_picked_are_one_line_of_two_cells_and_one_is_its_name_over_the_widgets)
+TEST(world_infos_conquest_card_has_your_nation_first_picked_anew_each_time_and_its_tabs_two_by_two)
 {
     Settings settings;
-    settings.Widget(BarWidget::World).on        = true;
-    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
+    settings.Widget(BarWidget::World).on = true;
     BarState state;
+    state.unixMs = kVanaEpochUnixMs;
     RegionOwners owners{};
-    owners[3] = Nation::Bastok;
     state.owners = owners;
-    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok) | NationBit(Nation::Windurst);
-    const WidgetContent two = Content(BarWidget::World, state, settings);
-    CHECK(two.cells && two.title.size() == 2 && two.subtitle.empty());
-    settings.Widget(BarWidget::World).nations = NationBit(Nation::Bastok);
-    const WidgetContent one = Content(BarWidget::World, state, settings);
-    CHECK(!one.cells && Joined(one.title) == "Bastok 1" && Joined(one.subtitle) == "Conquest");
+    const auto card = [&] { return ConquestCard(BarPopupContent(BarWidget::World, state, settings)); };
+    const auto names = [](const PopupSection& c) {
+        std::vector<std::string> out;
+        for (const PopupTab& tab : c.tabs)
+            out.push_back(tab.name.text);
+        return out;
+    };
+    CHECK((names(card()) == std::vector<std::string>{"San d'Oria", "Bastok", "Windurst", "Beastmen"})); // no nation known
+    CHECK_EQ(card().tab, static_cast<size_t>(0));
+    state.nation = Nation::Windurst;
+    const PopupSection yours = card();
+    CHECK((names(yours) == std::vector<std::string>{"Windurst", "San d'Oria", "Bastok", "Beastmen"}));
+    // Each tab with its nation's crest before its name.
+    CHECK(yours.tabs[0].picture == GamePicture::WindurstCrest && yours.tabs[3].picture == GamePicture::BeastmenCrest);
+    CHECK(yours.tab == 0 && yours.tabsAcross == 2 && yours.tabEachOpen);
+    // Its heading counts down to the tally, which the card and its picks are kept by without.
+    CHECK_EQ(yours.heading, "Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")");
+    std::map<std::string, std::string> picked{{"Conquest", "Bastok"}};
+    state.pickedTabs = &picked;
+    const PopupSection other = card();
+    CHECK_EQ(other.tabs.at(other.tab).name.text, "Bastok");
 }
 
 namespace
@@ -2458,93 +2788,80 @@ namespace
             if (std::string(items[i].*field) == name) return static_cast<int>(i);
         return -1;
     }
-    Settings WorldShowing(WorldLine line)
+    Settings WorldShowing(std::string_view design)
     {
         Settings settings;
         WidgetOptions& o = settings.Widget(BarWidget::World);
         o.on             = true;
-        o.worldLine      = line;
+        o.design         = DesignFrom(BarWidget::World, design);
         o.worldRoute     = IndexOf(TravelRoutes(), "Jeuno to San d'Oria", &TravelRoute::name);
         o.worldGuild     = IndexOf(GuildShops(), "Chaupire", &GuildShop::shops);
-        o.worldElement   = Element::Water;
         return settings;
     }
 }
 
-TEST(the_world_info_widget_tells_what_you_picked_with_its_countdown)
+TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim_in_parentheses)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
-    state.zone   = 79; // Caedarva Mire
-    const auto shown = [&](WorldLine line) {
-        const WidgetContent w = Content(BarWidget::World, state, WorldShowing(line));
-        return Joined(w.title) + " / " + Joined(w.subtitle);
+    const auto shown = [&](std::string_view part) {
+        const WidgetContent w = Content(BarWidget::World, state, WorldShowing(std::string(part) + " |"));
+        return Joined(w.title);
     };
     // The airship's door opens at 28 s into the next cycle: 864 - 576 + 28 s from now.
-    CHECK_EQ(shown(WorldLine::Departure), "Jeuno to San d'Oria / Boards in 5:16");
-    // Its second line is dim, as every widget's is.
-    for (int line = 0; line < kWorldLineCount; ++line)
-        for (const Span& span : Content(BarWidget::World, state, WorldShowing(static_cast<WorldLine>(line))).subtitle)
-            CHECK(span.tone == Tone::Dim);
-    // Open until 21:00, 11 Vana'diel hours away.
-    CHECK_EQ(shown(WorldLine::Guild), std::string("Woodworking / Open") + kDot + "closes in 26:24");
-    // Week 1: Hume Female in Gusgen Mines, until day 16.
-    CHECK_EQ(shown(WorldLine::Rse), std::string("Hume Female / Gusgen Mines") + kDot + "ends in 6:19:12");
-    // Day 9 is 12% and waxing; full on day 46.
-    CHECK_EQ(shown(WorldLine::Moon), "Waxing Crescent 12% / Full moon in 35:07:12");
-    const std::optional<ElementWeather> rain = NextElementWeather(*ZoneById(79), Element::Water, VanaAt(kEarthsdayTen).day);
-    const std::string when = rain->day == VanaAt(kEarthsdayTen).day ? "Can roll here now"
-                                                                     : "Here in " + Countdown(SecondsToDay(kEarthsdayTen, rain->day));
-    CHECK_EQ(shown(WorldLine::Weather), std::string(WeatherName(rain->weather)) + " " + std::to_string(rain->percent) + "% / " + when);
-    // A zone that never rolls it.
-    state.zone = 100; // West Ronfaure: sunshine and clouds only
-    CHECK_EQ(shown(WorldLine::Weather), "Water weather / Not in this zone");
+    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria (Boards in 5:16)");
+    // Open until 21:00, 11 Vana'diel hours away: it says when it closes, and not that it is open.
+    CHECK_EQ(shown("guild"), "Woodworking (Closes in 26:24)");
+    // Closed, it says when it opens.
+    state.unixMs = kEarthsdayTen + static_cast<int64_t>(27 * 60 * 1000);
+    CHECK(shown("guild").starts_with("Woodworking (Opens in "));
+    state.unixMs = kEarthsdayTen;
+    // The RSE and the moon are the pop-out's alone.
+    CHECK(std::ranges::find(PartsOf(BarWidget::World), WidgetPart::WorldShip) != PartsOf(BarWidget::World).end());
+    CHECK(PartsOf(BarWidget::World).size() == 6);
+    // The name in the line's tone, the countdown dim.
+    const WidgetContent ship = Content(BarWidget::World, state, WorldShowing("ship |"));
+    CHECK(ship.title.front().tone == Tone::Normal && ship.title.back().tone == Tone::Dim);
+    // Two on the panel at once, a line each.
+    const WidgetContent both = Content(BarWidget::World, state, WorldShowing("ship | guild"));
+    CHECK(Joined(both.title).starts_with("Jeuno") && Joined(both.subtitle).starts_with("Woodworking"));
 }
 
-TEST(the_world_info_popup_has_the_parts_you_picked)
+TEST(the_world_info_popup_has_conquest_beside_travel_over_the_calendar_and_guilds_under_them)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
     state.zone   = 79;
-    Settings settings = WorldShowing(WorldLine::Departure);
-    const auto headings = [&] {
-        std::vector<std::string> out;
-        for (const PopupSection& section : BarPopupContent(BarWidget::World, state, settings).sections)
-            out.push_back(section.heading);
-        return out;
-    };
-    CHECK((headings() == std::vector<std::string>{"Travel", "Calendar", "Guilds", "Conquest"}));
-    // The calendar beside the ships, Guilds and Conquest under both; without the ships it stands alone.
-    const PopupContent all = BarPopupContent(BarWidget::World, state, settings);
-    CHECK(!all.sections[0].beside && all.sections[1].beside && !all.sections[2].beside && !all.sections[3].beside);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Calendar) | WorldBit(WorldSection::Guilds);
-    CHECK(!BarPopupContent(BarWidget::World, state, settings).sections[0].beside);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Calendar);
-    CHECK((headings() == std::vector<std::string>{"Calendar"}));
-    const PopupContent calendar = BarPopupContent(BarWidget::World, state, settings);
-    const std::vector<std::string> lines = Lines(calendar.sections[0]);
-    // Who, then where and when on the right, the time last and alone.
+    const Settings settings = WorldShowing("ship |");
+    const PopupContent all  = BarPopupContent(BarWidget::World, state, settings);
+    std::vector<std::string> headings;
+    for (const PopupSection& section : all.sections)
+        headings.push_back(std::string(CardKey(section.heading)));
+    CHECK((headings == std::vector<std::string>{"Conquest", "Travel", "Calendar", "Guilds"}));
+    CHECK(!all.sections[0].beside && all.sections[1].beside && all.sections[2].under && !all.sections[3].beside &&
+          !all.sections[3].under);
+    const std::vector<std::string> lines = Lines(all.sections[2]);
+    // Who, then where and when on the right, the time last and alone; the tally is in the Conquest card's heading.
+    CHECK_EQ(lines.size(), static_cast<size_t>(4));
     CHECK_EQ(lines[0], "RSE Hume Female Gusgen Mines");
     CHECK_EQ(lines[1], std::string("Next RSE Elvaan Male ") + RseAt(kEarthsdayTen, 1).place + kDot + "6:19:12");
     CHECK_EQ(lines[2], "Full Moon 35:07:12");
     // The next new moon is day 88.
     CHECK_EQ(lines[3], "New Moon " + Countdown(SecondsToDay(kEarthsdayTen, 88)));
-    CHECK_EQ(lines[4], "Conquest Tally " + Countdown(SecondsToTally(kEarthsdayTen)));
-    for (const PopupRow& row : calendar.sections[0].rows)
+    for (const PopupRow& row : all.sections[2].rows)
     {
         CHECK(row.kind == RowKind::Pair);
         CHECK(row.cells[0].text.front().tone == Tone::Dim); // the line's name
     }
-    CHECK_EQ(calendar.sections[0].rows[1].cells[1].text.back().text, "6:19:12");
+    CHECK_EQ(all.sections[2].rows[1].cells[1].text.back().text, "6:19:12");
 }
 
 TEST(each_kind_of_ship_has_a_tab_of_its_routes)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
-    Settings settings = WorldShowing(WorldLine::Departure);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Travel);
-    const auto travel = [&] { return BarPopupContent(BarWidget::World, state, settings).sections.at(0); };
+    const Settings settings = WorldShowing("ship |");
+    const auto travel = [&] { return BarPopupContent(BarWidget::World, state, settings).sections.at(1); };
     // A tab a kind, the first picked until another is.
     const PopupSection first = travel();
     CHECK_EQ(first.heading, "Travel");
@@ -2553,41 +2870,50 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
         kinds.push_back(tab.name.text);
     CHECK((kinds == std::vector<std::string>{"Airships", "Boats", "Manaclipper", "Barge"}));
     CHECK(first.tab == 0 && first.rows.empty());
-    // Each tab lists its kind's routes, set in.
+    // Each tab lists its kind's routes, set in, in three columns: the route, whether the ship arrives or departs
+    // next against its right, and how long until it does against its left.
     const auto airships = std::ranges::count_if(TravelRoutes(), [](const TravelRoute& r) { return std::string(r.group) == "Airships"; });
-    CHECK_EQ(first.tabs[0].rows.size(), static_cast<size_t>(airships));
-    for (const PopupRow& row : first.tabs[0].rows)
-        CHECK(row.nested);
-    const std::vector<std::string> routes = Lines(PopupSection{"", first.tabs[0].rows});
-    CHECK(std::ranges::find(routes, "Jeuno to San d'Oria Boards in 5:16") != routes.end());
+    const auto rows = [](const PopupTab& tab) {
+        CHECK(tab.rows.size() == 1 && tab.rows[0].kind == RowKind::Grid && tab.rows[0].columns == 3 && tab.rows[0].nested &&
+              !tab.rows[0].spread && tab.rows[0].trailing); // the stage and time against the card's right
+        std::vector<std::array<std::string, 3>> out;
+        const std::vector<PopupCell>& cells = tab.rows[0].cells;
+        for (size_t i = 0; i + 2 < cells.size(); i += 3)
+        {
+            CHECK(cells[i + 1].align == Align::Right && cells[i + 2].align == Align::Left && cells[i + 2].text.size() == 1);
+            out.push_back({Joined(cells[i].text), Joined(cells[i + 1].text), Joined(cells[i + 2].text)});
+        }
+        return out;
+    };
+    const auto route = [&](const PopupTab& tab, const char* name) {
+        for (const std::array<std::string, 3>& r : rows(tab))
+            if (r[0] == name) return r;
+        return std::array<std::string, 3>{};
+    };
+    CHECK_EQ(rows(first.tabs[0]).size(), static_cast<size_t>(airships));
+    CHECK((route(first.tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Arrives in", "5:16"}));
     // Picking Boats picks its tab.
     std::map<std::string, std::string> picked{{"Travel", "Boats"}};
     state.pickedTabs = &picked;
     CHECK_EQ(travel().tab, static_cast<size_t>(1));
     picked["Travel"] = "Airships";
     state.unixMs = kVanaEpochUnixMs + 864LL * 1000 + 100 * 1000; // 100 s into a cycle: its door opened at 28 s
-    const std::vector<std::string> boarding = Lines(PopupSection{"", travel().tabs[0].rows});
-    CHECK(std::ranges::find(boarding, std::string("Jeuno to San d'Oria Boarding") + kDot + "leaves in 1:22") != boarding.end());
-    // The time is a span of its own, so only it moves as it ticks.
-    for (const PopupRow& row : travel().tabs[0].rows)
-        CHECK(row.cells.back().text.back().text.find(' ') == std::string::npos);
+    CHECK((route(travel().tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Departs in", "1:22"}));
 }
 
-TEST(each_guild_has_a_tab_of_its_shops)
+TEST(each_guild_has_a_tab_of_its_shops_hours_in_columns)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
-    Settings settings = WorldShowing(WorldLine::Departure);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Guilds);
-    const auto guilds = [&] { return BarPopupContent(BarWidget::World, state, settings).sections.at(0); };
+    const Settings settings = WorldShowing("ship |");
+    const auto guilds = [&] { return BarPopupContent(BarWidget::World, state, settings).sections.at(3); };
     // A tab a guild, in the shops' order; no goblins selling chips among them.
     std::vector<std::string> names;
-    std::map<std::string, std::pair<int, int>> open; // each guild's open shops and all its shops
+    std::map<std::string, int> count; // each guild's shops
     for (const GuildShop& shop : GuildShops())
     {
         if (names.empty() || names.back() != shop.guild) names.push_back(shop.guild);
-        open[shop.guild].first += GuildAt(shop, state.unixMs).open;
-        ++open[shop.guild].second;
+        ++count[shop.guild];
     }
     CHECK(std::ranges::find(names, "Chips") == names.end());
     const PopupSection section = guilds();
@@ -2597,39 +2923,39 @@ TEST(each_guild_has_a_tab_of_its_shops)
     {
         const PopupTab& tab = section.tabs[i];
         CHECK(tab.name == Text(names[i])); // every tab in one color
-        CHECK_EQ(Lines(PopupSection{"", tab.rows}).front(),
-            "Open " + std::to_string(open[names[i]].first) + " of " + std::to_string(open[names[i]].second));
+        // A title over the box of hours, with no count of the open ones.
+        CHECK(!tab.rows[0].nested && tab.rows[0].cells[0].text == ListOf(Text("Shop Hours", Tone::Heading)));
     }
-    // Each shop's hours, then who and where, set in under the count.
+    // Each shop's hours: open or closed against the right, when that changes in the middle, and who and where.
     const std::map<std::string, std::string> picked{{"Guilds", "Woodworking"}};
     state.pickedTabs = &picked;
     const PopupSection woodworking = guilds();
-    const PopupRow& grid           = woodworking.tabs[woodworking.tab].rows[1]; // after the count, before the turn-ins
+    const PopupRow& grid           = woodworking.tabs[woodworking.tab].rows[1];
     CHECK(woodworking.tabs[woodworking.tab].name.text == "Woodworking");
-    CHECK(grid.nested && grid.kind == RowKind::Grid && grid.columns == 2);
-    CHECK_EQ(grid.cells.size(), static_cast<size_t>(2 * open["Woodworking"].second));
+    CHECK(grid.nested && grid.kind == RowKind::Grid && grid.columns == 3);
+    CHECK_EQ(grid.cells.size(), static_cast<size_t>(3 * count["Woodworking"]));
     const auto at = std::ranges::find_if(grid.cells, [](const PopupCell& c) { return Joined(c.text) == "Chaupire, Northern San d'Oria"; });
-    CHECK(at != grid.cells.end() && (at - grid.cells.begin()) % 2 == 1);
-    // Its hours before it: open until 21:00, 11 Vana'diel hours away, as the panel line says.
-    CHECK_EQ(Joined((at - 1)->text), std::string("Open") + kDot + "closes in 26:24");
+    CHECK(at != grid.cells.end() && (at - grid.cells.begin()) % 3 == 2 && at->align == Align::Left);
+    // Open until 21:00, 11 Vana'diel hours away.
+    CHECK(Joined((at - 2)->text) == "Open" && (at - 2)->align == Align::Right);
+    CHECK(Joined((at - 1)->text) == "closes in 26:24" && (at - 1)->align == Align::Center);
 }
 
 TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_lit)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
-    Settings settings = WorldShowing(WorldLine::Departure);
-    settings.Widget(BarWidget::World).worldSections = WorldBit(WorldSection::Guilds);
+    const Settings settings = WorldShowing("ship |");
     const std::map<std::string, std::string> picked{{"Guilds", "Fishing"}};
     state.pickedTabs = &picked;
     const auto fishing = [&] {
-        const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(0);
+        const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(3);
         return guilds.tabs[guilds.tab].rows;
     };
-    // The shops in one socket, the turn-ins under a line of their own in another.
+    // The shops in one socket under their title, the turn-ins under a line of their own in another.
     std::vector<PopupRow> rows = fishing();
-    CHECK(rows.size() == 4 && rows[0].nested && rows[1].nested && !rows[2].nested && rows[3].nested);
-    CHECK_EQ(Lines(PopupSection{"", {rows[2]}}).front(), "Today's Turn-ins");
+    CHECK(rows.size() == 4 && !rows[0].nested && rows[1].nested && !rows[2].nested && rows[3].nested);
+    CHECK_EQ(Lines(PopupSection{"", {rows[2]}}).front(), "Today's Turn-Ins");
     // Not fetched yet, it says so.
     CHECK_EQ(Lines(PopupSection{"", {rows[3]}}).front(), "They come from phoenix-xi.com");
     state.turnInsFailed = true;
@@ -2650,6 +2976,8 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
     // that row is yours, starred and lit.
     PopupRow day = grid();
     CHECK(day.kind == RowKind::Grid && day.columns == 6 && day.nested && day.header && day.scroll == "Guilds/Fishing/Turn-ins");
+    CHECK(day.roomy); // its columns further apart than the shops'
+
     CHECK_EQ(day.cells.size(), static_cast<size_t>(6 * 9));
     CHECK(text(day, 0, 0) == "Rank" && text(day, 0, 1) == "NQ Item" && text(day, 0, 2) == "Points" &&
           text(day, 0, 3) == "HQ Item" && text(day, 0, 4) == "Points" && text(day, 0, 5) == "Max Points");
@@ -2686,11 +3014,11 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
     // A guild that takes no turn-ins has none.
     const std::map<std::string, std::string> pickedTenshodo{{"Guilds", "Tenshodo"}};
     state.pickedTabs = &pickedTenshodo;
-    const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(0);
+    const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(3);
     CHECK(guilds.tabs[guilds.tab].name.text == "Tenshodo" && guilds.tabs[guilds.tab].rows.size() == 2);
 }
 
-TEST(the_weather_popup_keeps_its_forecast_and_elements_in_one_column_at_one_width)
+TEST(the_forecast_pop_out_puts_today_beside_the_forecast_over_the_elements)
 {
     Settings settings;
     BarState state;
@@ -2698,17 +3026,19 @@ TEST(the_weather_popup_keeps_its_forecast_and_elements_in_one_column_at_one_widt
     state.unixMs = kVanaEpochUnixMs + 777LL * 3456 * 1000;
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
     CHECK(popup.oneColumn);
-    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
+    const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
         return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
     };
     std::vector<const PopupPiece*> cards;
-    const PopupLayout l = LayoutPopup(popup, m, BarShape::Pills, false, measure, 1000.0f);
+    const PopupLayout l = LayoutPopup(popup, m, false, measure, 1000.0f);
     for (const PopupPiece& p : l.pieces)
         if (p.kind == PopupPiece::Kind::Card) cards.push_back(&p);
-    CHECK_EQ(cards.size(), static_cast<size_t>(2));
-    CHECK(cards[0]->x == cards[1]->x && cards[0]->width == cards[1]->width && cards[1]->y > cards[0]->y);
+    CHECK_EQ(cards.size(), static_cast<size_t>(3));
+    CHECK(cards[0]->y == cards[1]->y && cards[1]->x > cards[0]->x + cards[0]->width && cards[0]->height == cards[1]->height);
+    CHECK(cards[2]->y > cards[0]->y + cards[0]->height && cards[2]->x == cards[0]->x &&
+          cards[2]->width > cards[0]->width + cards[1]->width);
 }
 
 TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with_one)
@@ -2727,38 +3057,69 @@ TEST(a_combined_pills_popup_joins_the_titles_and_cards_of_each_widget_shown_with
     CHECK(both.title == title);
     std::vector<PopupSection> sections = bags.sections;
     sections.insert(sections.end(), gil.sections.begin(), gil.sections.end());
+    // Each headed card collapses under the pill's first widget's name.
+    for (PopupSection& section : sections)
+        if (!section.heading.empty()) section.collapsePress = kCollapsePress + CollapseKey(BarWidget::Bags, section.heading);
     CHECK(both.sections == sections);
-    // A widget alone has its own popup.
-    CHECK(PanelPopupContent(BarWidget::VanaTime, state, settings) == BarPopupContent(BarWidget::VanaTime, state, settings));
+    // A widget alone has its own popup, with its clone chip.
+    PopupContent alone = BarPopupContent(BarWidget::EarthTime, state, settings);
+    alone.clonePress   = std::string(kWidgetClonePress) + std::to_string(SlotOf(BarWidget::EarthTime));
+    for (PopupSection& section : alone.sections)
+        if (!section.heading.empty()) section.collapsePress = kCollapsePress + CollapseKey(BarWidget::EarthTime, section.heading);
+    CHECK(PanelPopupContent(BarWidget::EarthTime, state, settings) == alone);
     // A combined pill whose first widget is switched off has its partner's popup alone.
     settings.Widget(BarWidget::Bags).on = false;
-    CHECK(PanelPopupContent(BarWidget::Bags, state, settings) == gil);
+    PopupContent partner = gil;
+    partner.clonePress   = std::string(kWidgetClonePress) + std::to_string(SlotOf(BarWidget::Bags)); // the pill's
+    for (PopupSection& section : partner.sections)
+        if (!section.heading.empty()) section.collapsePress = kCollapsePress + CollapseKey(BarWidget::Bags, section.heading);
+    CHECK(PanelPopupContent(BarWidget::Bags, state, settings) == partner);
 }
 
-TEST(a_combined_partner_can_leave_the_panel_or_the_popup_to_the_widget_it_follows)
+TEST(two_linked_copies_of_a_widget_show_its_title_and_cards_once)
 {
-    // Bags combined with a second Bags: the popup would list every bag twice.
+    // Zone linked with a second Zone: the same zone, region and influence.
     Settings settings;
     BarState state;
-    const PanelWidget second{BarWidget::Bags, 1};
+    state.zone = 103;
+    const PanelWidget second{BarWidget::Zone, 1};
     settings.barSections[0].push_back(second);
     settings.Widget(second).on               = true;
-    settings.Widget(BarWidget::Bags).combine = second;
-    const PopupContent bags = BarPopupContent(BarWidget::Bags, state, settings);
-    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
-    settings.Widget(BarWidget::Bags).combineInPopup = false;
-    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections == bags.sections);
-    CHECK(Content(second, state, settings).shown); // still on the panel
-    // On the panel the first alone, the partner's popup still joined.
-    settings.Widget(BarWidget::Bags).combineInPopup = true;
-    settings.Widget(BarWidget::Bags).combineOnPanel = false;
-    const WidgetContent hidden = Content(second, state, settings);
-    CHECK(!hidden.shown && hidden.hasPopup);
-    CHECK(Content(BarWidget::Bags, state, settings).shown);
-    CHECK(PanelPopupContent(BarWidget::Bags, state, settings).sections.size() == 2 * bags.sections.size());
-    // Not combined, the switches change nothing.
-    settings.Widget(BarWidget::Bags).combine.reset();
-    CHECK(Content(second, state, settings).shown);
+    settings.Widget(BarWidget::Zone).combine = second;
+    const PopupContent zone   = BarPopupContent(BarWidget::Zone, state, settings);
+    const PopupContent linked = PanelPopupContent(BarWidget::Zone, state, settings);
+    CHECK(linked.title == zone.title && linked.sections == zone.sections);
+    CHECK(Content(second, state, settings).shown); // on the panel, beside the first
+    // Two widgets of a kind with different cards keep both.
+    settings.Widget(BarWidget::Currency).combine = PanelWidget{BarWidget::Bags};
+    const PopupContent gilBags = PanelPopupContent(BarWidget::Currency, state, settings);
+    CHECK(gilBags.sections.size() == BarPopupContent(BarWidget::Currency, state, settings).sections.size() +
+                                         BarPopupContent(BarWidget::Bags, state, settings).sections.size());
+}
+
+TEST(a_link_puts_the_linked_widget_just_after_its_own_in_the_saved_layout)
+{
+    Settings s;
+    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Currency}; // Gil sits on the right
+    const Settings clamped = Clamp(s);
+    CHECK(clamped.barSections == Panel(s).placement);
+    const std::vector<PanelWidget>& left = clamped.barSections[static_cast<int>(BarSection::Left)];
+    const auto zone = std::ranges::find(left, PanelWidget{BarWidget::Zone});
+    CHECK(zone != left.end() && zone + 1 != left.end() && *(zone + 1) == PanelWidget{BarWidget::Currency});
+}
+
+TEST(a_linked_pills_settings_are_its_widgets_that_are_on)
+{
+    Settings s;
+    s.Widget(BarWidget::Bags).combine     = PanelWidget{BarWidget::Currency};
+    s.Widget(BarWidget::Currency).combine = PanelWidget{BarWidget::EarthTime};
+    CHECK((PillSettings(s, BarWidget::Bags) == std::vector<PanelWidget>{BarWidget::Bags, BarWidget::Currency, BarWidget::EarthTime}));
+    s.Widget(BarWidget::Currency).on = false;
+    CHECK((PillSettings(s, BarWidget::Bags) == std::vector<PanelWidget>{BarWidget::Bags, BarWidget::EarthTime}));
+    s.Widget(BarWidget::EarthTime).on = false; // one left on: as a widget alone
+    CHECK((PillSettings(s, BarWidget::Bags) == std::vector<PanelWidget>{BarWidget::Bags}));
+    s.Widget(BarWidget::Bags).on = false; // none on: the pill's own
+    CHECK((PillSettings(s, BarWidget::Bags) == std::vector<PanelWidget>{BarWidget::Bags}));
 }
 
 TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)
@@ -2768,21 +3129,58 @@ TEST(a_combined_pills_open_popup_gathers_what_each_of_its_widgets_needs)
     settings.Widget(BarWidget::World).on      = true;
     settings.Widget(BarWidget::Zone).combine  = PanelWidget{BarWidget::World};
     settings.Widget(BarWidget::Currency).combine   = PanelWidget{BarWidget::Bags};
-    CHECK(NeedsOf(settings, BarWidget::Zone).conquest);
-    CHECK(NeedsOf(settings, BarWidget::Currency).containers == kContainerCount);
-    CHECK(!NeedsOf(settings, BarWidget::Weather).conquest);
+    CHECK(NeedsOf(settings, {BarWidget::Zone}).conquest);
+    CHECK(NeedsOf(settings, {BarWidget::Currency}).containers == kContainerCount);
+    CHECK(!NeedsOf(settings, {BarWidget::Weather}).conquest);
 }
 
-TEST(the_standings_are_asked_for_while_the_zone_or_a_world_info_showing_conquest_info_is_on_the_panel)
+TEST(the_standings_are_asked_for_while_the_zone_or_a_world_info_showing_a_nation_is_on_the_panel)
 {
     Settings settings;
     settings.Widget(BarWidget::Zone).on  = false;
     settings.Widget(BarWidget::World).on = true;
     CHECK(!StandingsShown(settings)); // its next ship
-    settings.Widget(BarWidget::World).worldLine = WorldLine::Conquest;
+    settings.Widget(BarWidget::World).design = DesignFrom(BarWidget::World, "ship | windurst");
     CHECK(StandingsShown(settings));
     settings.Widget(BarWidget::World).on = false;
     CHECK(!StandingsShown(settings));
     settings.Widget(BarWidget::Zone).on = true;
     CHECK(StandingsShown(settings));
+}
+
+TEST(a_designer_chip_shows_its_parts_picture_as_the_game_is_now_or_a_stand_in)
+{
+    Settings settings;
+    BarState state;
+    state.unixMs  = kVanaEpochUnixMs;
+    state.weather = Weather::DustStorm;
+    const auto mark = [](const std::array<PartMark, kWidgetPartCount>& marks, WidgetPart part) {
+        return marks[static_cast<size_t>(part)];
+    };
+    // The Weather's settings open: its icon is the dust storm's; the Target's, with no target, its stand-ins.
+    const auto marks = PartMarksNow({PanelWidget{BarWidget::Weather}, PanelWidget{BarWidget::Target}}, state, settings);
+    const std::vector<Icon> storm = Content(BarWidget::Weather, state, settings).icons; // the icon it leads with
+    CHECK(!storm.empty() && mark(marks, WidgetPart::WeatherIcon) == PartMark{storm.front()});
+    CHECK(mark(marks, WidgetPart::WeatherIcon) != DefaultMark(WidgetPart::WeatherIcon));
+    CHECK(mark(marks, WidgetPart::TargetAggro) == DefaultMark(WidgetPart::TargetAggro));
+    CHECK(mark(marks, WidgetPart::CurrencyCoin).icon == Icon::Gil);
+    CHECK(mark(marks, WidgetPart::WeatherName) == PartMark{});
+    // A mob targeted: its own aggression icon.
+    const ActorInfo goblin = Goblin();
+    state.target = &goblin;
+    CHECK(mark(PartMarksNow({PanelWidget{BarWidget::Target}}, state, settings), WidgetPart::TargetAggro) ==
+          PartMark{Icon::AggroNQ});
+}
+
+TEST(the_settings_widget_is_its_cog_alone_with_no_popup_copies_or_alignment)
+{
+    Settings settings;
+    BarState state;
+    CHECK(!Content(BarWidget::Settings, state, settings).shown); // off on a new install
+    settings.Widget(BarWidget::Settings).on = true;
+    const WidgetContent w = Content(BarWidget::Settings, state, settings);
+    CHECK(w.shown && w.cog && !w.hasPopup && w.title.empty() && w.subtitle.empty() && w.icons.empty());
+    CHECK(BarPopupContent(BarWidget::Settings, state, settings).sections.empty());
+    CHECK(!CloneWidget(settings, BarWidget::Settings) && !HasCopies(BarWidget::Settings) && !Combines(BarWidget::Settings));
+    CHECK(!Aligns(BarWidget::Settings) && !Aligns(BarWidget::GameHelp) && Aligns(BarWidget::Currency));
 }

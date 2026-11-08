@@ -34,7 +34,7 @@ namespace headsup
         constexpr const char* kEnabledKey = "enabled"; // in every file any build saved: what tells a file from none
         constexpr BoolKey kBools[] = {{kEnabledKey, &Settings::enabled}, {"autoSave", &Settings::autoSave}, {"phTimers", &Settings::phTimers},
             {"scaleWithDistance", &Settings::scaleWithDistance},
-            {"fixPointer", &Settings::fixPointer}, {"countYourAccuracy", &Settings::countAccuracy}, {"showBar", &Settings::showBar},
+            {"fixPointer", &Settings::fixPointer}, {"lockCursor", &Settings::lockCursor}, {"countYourAccuracy", &Settings::countAccuracy}, {"showBar", &Settings::showBar},
             {"hideHelpBar", &Settings::hideHelpBar}, {"hideNetstat", &Settings::hideNetstat},
             {"screenshotHidesGame", &Settings::screenshotHidesGame},
             {"stackNames", &Settings::stackNames}, {"stackLine", &Settings::stackLine}, {"hideInEvent", &Settings::hideInEvent},
@@ -44,10 +44,11 @@ namespace headsup
             {"nameplates", &Settings::nameplates}, {"outlines", &Settings::outlines},
             {"outlineFadeIn", &Settings::outlineFadeIn}, {"cursorFloat", &Settings::cursorFloat},
             {"autoCheck", &Settings::autoCheck}, {"lookUpPlayers", &Settings::lookUpPlayers},
-            {"gameWindowBorder", &Settings::gameWindowBorder}, {"fishBar", &Settings::fishBar},
-            {"hideGameFishBar", &Settings::hideGameFishBar}, {"fishBarDraggable", &Settings::fishBarDraggable},
+
+            {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
-            {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground}};
+            {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
+            {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"widgetBackground", &Settings::widgetBackground}};
 
         // Whole numbers are stored as floats, like every other number in settings.ini.
         struct IntKey
@@ -68,10 +69,14 @@ namespace headsup
             {"elementResistRank", &Settings::elementResistRank, kMinResistRank, kNoResistRank},
             {"maxElements", &Settings::maxElements, 0, kElementCount},
             {"barHeight", &Settings::barHeight, kMinBarHeight, kMaxBarHeight},
-            {"barTextSize", &Settings::barTextSize, kAutoBarTextSize, kMaxBarTextSize},
+            {"barIconScale", &Settings::barIconScale, kMinIconScale, kMaxIconScale, kPercentStep},
             {"barWidgetSpacing", &Settings::barWidgetSpacing, 0, kMaxWidgetSpacing},
             {"barWidgetPadding", &Settings::barWidgetPadding, kThemePadding, kMaxWidgetPadding},
-            {"popupTextSize", &Settings::popupTextSize, kAutoPopupTextSize, kMaxBarTextSize},
+            {"widgetRounding", &Settings::widgetRounding, kThemeRounding, kMaxRounding},
+            {"popupRounding", &Settings::popupRounding, kThemeRounding, kMaxRounding},
+            {"sectionRounding", &Settings::sectionRounding, kThemeRounding, kMaxRounding},
+            {"helpBarRounding", &Settings::helpBarRounding, kThemeRounding, kMaxRounding},
+            {"panelSeparators", &Settings::panelSeparators, 0, kAllSeparators},
             {"helpBarTextSize", &Settings::helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize},
             {"helpBarWidth", &Settings::helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth},
             {"helpBarHeight", &Settings::helpBarHeight, kAutoHelpBarHeight, kMaxHelpBarHeight},
@@ -85,7 +90,6 @@ namespace headsup
             {"timerPercent", &Settings::timerPercent, kMinSizePercent, kMaxSizePercent, kPercentStep},
             {"phUpMinutes", &Settings::phUpMinutes, 0, kMaxUpMinutes},
             {"screenshotKey", &Settings::screenshotKey, 0, UINT8_MAX},
-            {"windowType", &Settings::windowType, kFollowGameWindow, kWindowTypes},
             {"menuX", &Settings::menuX, -kMaxMenuSide, kMaxMenuSide}, // dragged partly off the screen's left
             {"menuY", &Settings::menuY, 0, kMaxMenuSide}, {"menuWidth", &Settings::menuWidth, 0, kMaxMenuSide},
             {"menuHeight", &Settings::menuHeight, 0, kMaxMenuSide},
@@ -108,8 +112,6 @@ namespace headsup
             {kMenuFontSizeKey, &Settings::menuFontSize, kMinMenuFontSize, kMaxMenuFontSize},
             {kCursorHeightKey, &Settings::cursorHeight, kMinCursorSide, kMaxCursorSide},
             {kCursorEdgeKey, &Settings::cursorOutlineThickness, kMinCursorEdge, kMaxCursorEdge, kPercentStep}};
-        constexpr const char* kDashMarkKey = "dashMark";
-        const char* const kDashMarkNames[kDashMarkCount] = {"no", "dot", "square", "diamond"};
         constexpr const char* kCursorStyleKey = "cursorStyle";
         constexpr const char* kCursorFileKey  = "cursorFile";
         const char* const kCursorStyleNames[kCursorStyleCount] = {"vanilla", "triangle", "feather", "chocobo", "file"};
@@ -131,7 +133,11 @@ namespace headsup
             float Settings::*field;
             float lo, hi;
         };
-        constexpr FloatKey kFloats[] = {{"maxDistance", &Settings::maxDistance, kMinOutlineDistance, kMaxOutlineDistance}};
+        constexpr FloatKey kFloats[] = {{"maxDistance", &Settings::maxDistance, kMinOutlineDistance, kMaxOutlineDistance},
+            {"barFontRatio", &Settings::barFontRatio, kMinFontRatio, kMaxFontRatio},
+            {"popupTextScale", &Settings::popupTextScale, kMinPopupScale, kMaxPopupScale},
+            {"popupWidthScale", &Settings::popupWidthScale, kMinPopupBoxScale, kMaxPopupScale},
+            {"popupHeightScale", &Settings::popupHeightScale, kMinPopupBoxScale, kMaxPopupScale}};
 
         struct ColorKey
         {
@@ -160,6 +166,7 @@ namespace headsup
         constexpr const char* kScaleCursorKey = "scaleCursor";
         constexpr const char* kKeepPointerKey = "keepPointerKeys"; // hex virtual-key codes, a space apart
         constexpr const char* kCurrencyFavoritesKey = "currencyFavorites"; // kCurrencyTable's keys, a space apart
+        constexpr const char* kCollapsedKey = "popupCollapsed"; // the collapsed pop-out cards' keys, a space apart
         constexpr const char* kStatusFavoritesKey = "statusFavorites", *kStatusPinsKey = "statusPins"; // status ids
 
         std::string SpaceApart(const std::vector<std::string>& words)
@@ -213,78 +220,79 @@ namespace headsup
         // those keys in the file, so a file that has it is not migrated over them.
         constexpr const char* kDesignsSavedKey = "nameplateDesigns";
         constexpr const char* kBarThemeKey = "barTheme";
-        const char* const kBarThemeNames[kBarThemeCount] = {"phoenixGold", "umbraDark", "phoenixRedOrnate",
-            "phoenixRedPills", "aurora", "custom", "gameWindow"};
         // The Custom theme: this before each of kPaletteColors' names, and its shape and border.
         constexpr const char* kCustomThemeKey = "customTheme";
         constexpr const char* kShapeSuffix = "Shape";
         constexpr const char* kBorderSuffix = "Border";
-        constexpr const char* kGradientSuffix = "Gradient";
+        constexpr const char* kBackgroundSuffix = "Background";
+        constexpr const char* kWindowTypeSuffix = "WindowType";
+        constexpr const char* kRoundingSuffix = "Rounding";
+        constexpr const char* kSeparatorSuffix = "Separator";
+        constexpr const char* kStatusIconsSuffix = "StatusIcons"; // by StatusIconsName
+        constexpr const char* kStatusBackSuffix  = "StatusBackground";
+        constexpr const char* kCustomThemeNameKey = "customThemeName";
         constexpr const char* kBarCurrencyKey = "barCurrency";
+        constexpr const char* kBarSecondCurrencyKey = "barCurrency2";
         constexpr const char* kBarBagKey      = "barBag";
-        constexpr const char* kBarNationsKey  = "barNations";
-        constexpr const char* kConquestGridKey = "barConquestGrid";
-        constexpr const char* kWorldLineKey     = "barWorldLine";
+        constexpr const char* kWeatherIconsKey = "weatherIcons"; // the Forecast widget's, by kCustomIconsNames
+        const char* const kCustomIconsNames[kCustomIconsCount] = {"never", "missing", "always"};
         constexpr const char* kWorldRouteKey    = "barWorldRoute";
-        constexpr const char* kWorldElementKey  = "barWorldElement";
         constexpr const char* kWorldGuildKey    = "barWorldGuild";
-        constexpr const char* kWorldSectionsKey = "barWorldSections";
-        const char* const kWorldLineNames[kWorldLineCount] = {"departure", "weather", "guild", "rse", "moon", "conquest"};
-        constexpr const char* kClockServerTimeKey = "clockServerTime";
-        // Server time was a widget of its own, with this switch.
-        constexpr const char* kServerTimeWidgetKey = "barServerTime";
         constexpr const char* kTrue                = "true";
         constexpr const char* kAshitaTrue          = "1";
         constexpr const char* kClockZoneKey       = "clockZone"; // the Clock widget's: a kClockZoneNames or kLocalZone
+        constexpr const char* kClockSecondZoneKey = "clockSecondZone"; // its Secondary Timezone's, the same way
         constexpr const char* kLocalZone          = "local";
-        constexpr const char* kJobLayoutKey       = "jobLayout";
-        const char* const kJobLayoutNames[kJobLayoutCount] = {"jobsFirst", "expFirst", "expOnly", "bar"};
-        constexpr const char* kTargetIconsKey    = "barTargetShowIcons";
+        constexpr const char* kTargetDetectionKey = "barTargetDetection";
         constexpr const char* kTargetShowsKey    = "barTargetShows";
-        constexpr const char* kTargetMobLevelKey = "barTargetMobLevel";
-        constexpr const char* kTargetJobsKey     = "barTargetJobs";
-        constexpr const char* kTargetDistanceKey = "barTargetDistance";
         constexpr const char* kMenuFontKey      = "menuFont";
         constexpr const char* kBlueMagicLearnedKey = "blueMagicLearned";
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
-        constexpr const char* kSecondLineSuffix = "Line2";
-        constexpr const char* kIconsSuffix      = "Icons";
-        constexpr const char* kBackgroundSuffix = "Background";
-        constexpr const char* kSpacingSuffix    = "Spacing";
+        constexpr const char* kDesignSuffix     = "Design";
         constexpr const char* kCombineSuffix    = "Combine";
-        constexpr const char* kCombineOnPanelSuffix = "CombineOnPanel", *kCombineInPopupSuffix = "CombineInPopup";
-        constexpr const char* kPaddingSuffix    = "Padding";
-        constexpr const char* kTitleFontSuffix  = "TitleFont";
-        constexpr const char* kTextFontSuffix   = "TextFont";
-        constexpr const char* kTextSizeSuffix   = "TextSize";
-        constexpr const char* kExpBarKey        = "expBar";
-        constexpr const char* kExpTextKey       = "expText";
-        const char* const kExpBarNames[kExpBarPlaceCount] = {"under", "beside", "off"};
+        constexpr const char* kLinkPaddingSuffix = "LinkPadding";
+        constexpr const char* kIconSideSuffix    = "Icon";
+        constexpr const char* kAlignSuffix       = "Align";
+        constexpr const char* kPopupSpotSuffix   = "PopupSpot"; // "left 10 top 200" or "right 120 bottom 80"
+        constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
+        const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
+        const char* const kWidgetAlignNames[kWidgetAlignCount] = {"location", "left", "center", "right"};
         // The EXP widget's: a place for each ExpText, and its bar's size.
-        const char* const kExpPlaceKeys[kExpTextCount] = {"barExpEarned", "barExpToNext", "barExpPercent"};
-        const char* const kExpPlaceNames[kExpTextPlaceCount] = {"off", "above", "below", "left", "right"};
         constexpr const char* kExpBarWidthKey = "barExpBarWidth", *kExpBarHeightKey = "barExpBarHeight";
-        constexpr const char* kExpAlignKey = "barExpAlign";
-        constexpr const char* kJobNamesKey  = "jobNames";
-        constexpr const char* kSubtitleKey  = "barSubtitle";
-        const char* const kSubtitleNames[kSubtitlePlaceCount] = {"hide", "before", "after"};
+        constexpr const char* kExpBarTextKey  = "barExpBarText";
+        constexpr const char* kNoExpBarText   = "none";
+        const char* const kExpTextNames[kExpTextCount] = {"earned", "toNext", "percent", "jobs"};
+        constexpr const char* kExpBarTextAlignKey = "barExpBarTextAlign"; // by kAlignNames
+        constexpr const char* kJobInfoAlignKey = "barJobInfoAlign", *kEarnedAlignKey = "barEarnedAlign"; // by kAlignNames
+        constexpr const char* kToNextAlignKey = "barToNextAlign", *kPercentAlignKey = "barPercentAlign";
+        constexpr const char* kExpBarBackKey = "barExpBarBack", *kExpBarFillKey = "barExpBarFill"; // ARGB in hex
+        constexpr const char* kThemeColor = "theme"; // in place of a color: the theme's
+        constexpr std::pair<const char*, Align WidgetOptions::*> kJobAligns[] = {{kExpBarTextAlignKey, &WidgetOptions::expBarTextAlign},
+            {kJobInfoAlignKey, &WidgetOptions::jobInfoAlign}, {kEarnedAlignKey, &WidgetOptions::earnedAlign},
+            {kToNextAlignKey, &WidgetOptions::toNextAlign}, {kPercentAlignKey, &WidgetOptions::percentAlign}};
+        constexpr std::pair<const char*, std::optional<uint32_t> WidgetOptions::*> kExpBarColors[] = {
+            {kExpBarBackKey, &WidgetOptions::expBarBack}, {kExpBarFillKey, &WidgetOptions::expBarFill}};
+        constexpr const char* kZoneIdKey    = "zoneId";
+        constexpr const char* kMemTextKey   = "memText";
+        constexpr const char* kStatusDisplayKey = "statusDisplay";
+        const char* const kStatusDisplayNames[kStatusDisplayCount] = {"name", "icon", "both"};
+        constexpr const char* kJobTextKey   = "jobText";
+        const char* const kJobTextNames[kJobTextCount] = {"mainSub", "main", "levelFirst"};
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
-        constexpr const char* kZoneIdKey           = "zoneId";
-        constexpr const char* kZoneConquestKey     = "zoneConquest";
-        constexpr const char* kZoneConquestTextKey = "zoneConquestText";
-        const char* const kConquestPlaceNames[kConquestPlaceCount] = {"off", "left", "right", "below"};
-        constexpr const char* kVanaWeekdayKey  = "vanaWeekday";
-        constexpr const char* kVanaDateKey     = "vanaDate";
-        constexpr const char* kPerfPartsKey = "barPerformanceParts";
+        constexpr const char* kDateFormatKey   = "clockDateFormat";
+        const char* const kDateFormatNames[kDateFormatCount] = {"ymd", "monthDayYear", "dayMonthYear", "monthDay", "iso",
+            "monthDayCommaYear", "shortMonthDay"};
         const char* const kClockZoneNames[kClockZoneCount] = {"japan", "utc", "usEastern", "usCentral", "usMountain",
             "usArizona", "usPacific", "usAlaska", "usHawaii", "ukIreland", "centralEurope", "easternEurope",
             "australiaEastern"};
-        constexpr const char* kBarSeparatorsKey                    = "barSeparators";
-        const char* const kBarSeparatorsNames[kBarSeparatorsCount] = {"theme", "diamonds", "none"};
-        const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barVanaTime", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld"};
+        constexpr const char* kFishStaminaKey                   = "fishStamina";
+        const char* const kFishStaminaNames[kFishStaminaCount]  = {"hide", "vanilla", "headsup"};
+        constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
+        const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
+        const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -432,12 +440,18 @@ namespace headsup
 
         void StoreBool(SettingsStore& store, const std::string& key, bool v) { store.Set(key.c_str(), v ? kTrue : "false"); }
 
-        uint32_t LoadHex(SettingsStore& store, const std::string& key, uint32_t fallback)
+        // None for a key missing or not in hex.
+        std::optional<uint32_t> HeldHex(SettingsStore& store, const std::string& key)
         {
             const std::string text = store.GetString(key.c_str(), "");
             char* end              = nullptr;
             const unsigned long v  = std::strtoul(text.c_str(), &end, kHex);
-            return text.empty() || *end != '\0' ? fallback : static_cast<uint32_t>(v);
+            return text.empty() || *end != '\0' ? std::nullopt : std::optional(static_cast<uint32_t>(v));
+        }
+
+        uint32_t LoadHex(SettingsStore& store, const std::string& key, uint32_t fallback)
+        {
+            return HeldHex(store, key).value_or(fallback);
         }
 
         void StoreHex(SettingsStore& store, const std::string& key, uint32_t v)
@@ -1050,6 +1064,11 @@ namespace headsup
         return choices;
     }
 
+    const BarPalette& OwnPalette(const Settings& s)
+    {
+        return s.barTheme == BarTheme::Custom ? s.customPalette : PaletteOf(s.barTheme);
+    }
+
     bool UsesGameFont(const Settings& s)
     {
         const auto game = [](const std::string& font) { return GameFontVariantOf(font).has_value(); };
@@ -1204,42 +1223,45 @@ namespace headsup
         if (!pointerNamed) s.pointerFile.clear();
         if (static_cast<int>(s.pointerIcon) >= kPointerIconCount || (s.pointerIcon == PointerIcon::File && !pointerNamed))
             s.pointerIcon = d.pointerIcon;
-        if (static_cast<int>(s.dashMark) >= kDashMarkCount) s.dashMark = d.dashMark;
         ClampPick(s.cursorColor, d.cursorColor, CursorSources());
         ClampPick(s.cursorEdgeColor, d.cursorEdgeColor, CursorSources());
         if (static_cast<int>(s.barTheme) >= kBarThemeCount) s.barTheme = d.barTheme;
         if (static_cast<int>(s.customPalette.shape) >= kBarShapeCount) s.customPalette.shape = d.customPalette.shape;
         s.customPalette.border = std::clamp(s.customPalette.border, 0, kMaxStripBorder);
-        for (WidgetOptions& w : s.widgets)
+        s.customPalette.rounding = std::clamp(s.customPalette.rounding, kShapeRounding, kMaxRounding);
+        s.customPalette.windowType = std::clamp(s.customPalette.windowType, kFollowGameWindow, kWindowTypes);
+        s.customPalette.statusIcons = std::clamp(s.customPalette.statusIcons, kVanillaStatusIcons, kStatusPackCount - 1);
+        if (!IsFolderFileName(s.customThemeName)) s.customThemeName = kUnnamedTheme;
+        for (int slot = 0; slot < kPanelSlots; ++slot)
         {
+            WidgetOptions& w = s.widgets[slot];
             const WidgetOptions fresh;
-            if (w.currency < 0 || w.currency >= kCurrencyCount) w.currency = fresh.currency;
+            w.design = Whole(WidgetInSlot(slot).kind, std::move(w.design));
+            for (int WidgetOptions::* const which : {&WidgetOptions::currency, &WidgetOptions::secondCurrency})
+                if (w.*which < kYourConquestCurrency || w.*which >= kCurrencyCount) w.*which = fresh.*which;
             if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
-            w.spacing = std::clamp(w.spacing, 0, kMaxWidgetSpacing);
-            w.padding = w.padding < 0 ? kPanelPadding : std::min(w.padding, kMaxWidgetPadding);
-            w.textSize = std::clamp(w.textSize, kPanelTextSize, kMaxBarTextSize);
-            for (std::string* font : {&w.titleFont, &w.textFont})
-                if (font->size() > kMaxFontName) font->clear();
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
-            if (static_cast<int>(w.expBar) >= kExpBarPlaceCount) w.expBar = fresh.expBar;
+            if (static_cast<int>(w.weatherIcons) >= kCustomIconsCount) w.weatherIcons = fresh.weatherIcons;
+            if (static_cast<int>(w.iconSide) >= kIconSideCount) w.iconSide = fresh.iconSide;
+            if (static_cast<int>(w.align) >= kWidgetAlignCount) w.align = fresh.align;
+            if (w.clockSecondZone && static_cast<int>(*w.clockSecondZone) >= kClockZoneCount) w.clockSecondZone = fresh.clockSecondZone;
+            w.linkPadding  = std::clamp(w.linkPadding, 0, kMaxWidgetSpacing);
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
             w.expBarHeight = std::clamp(w.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight);
-            if (static_cast<int>(w.jobLayout) >= kJobLayoutCount) w.jobLayout = fresh.jobLayout;
-            if (static_cast<int>(w.worldLine) >= kWorldLineCount) w.worldLine = fresh.worldLine;
+            w.targetDetection &= kAllDetection;
             if (w.worldRoute < 0 || w.worldRoute >= static_cast<int>(TravelRoutes().size())) w.worldRoute = fresh.worldRoute;
             if (w.worldGuild < 0 || w.worldGuild >= static_cast<int>(GuildShops().size())) w.worldGuild = fresh.worldGuild;
-            if (static_cast<int>(w.worldElement) >= kElementCount) w.worldElement = fresh.worldElement;
-            w.worldSections &= kAllWorldSections;
         }
-        if (static_cast<int>(s.barSubtitle) >= kSubtitlePlaceCount) s.barSubtitle = d.barSubtitle;
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
-        if (static_cast<int>(s.barSeparators) >= kBarSeparatorsCount) s.barSeparators = d.barSeparators;
+        if (static_cast<int>(s.helpBarAnchor) >= kHelpAnchorCount) s.helpBarAnchor = d.helpBarAnchor;
         ClampDesigner(s, d);
         for (StatusBadgeRule& status : s.statusBadges)
         {
             status.weakRank   = std::clamp(status.weakRank, kNoWeakRank, kMaxWeakRank);
             status.resistRank = std::clamp(status.resistRank, kMinResistRank, kNoResistRank);
         }
+        // A linked widget sits just after its own in the layout too, as the panel draws it.
+        s.barSections = Panel(s).placement;
         return s;
     }
 
@@ -1258,91 +1280,98 @@ namespace headsup
             const auto text = [&](const char* key) { return store.GetString(CopyKey(key, w).c_str(), ""); };
             const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
-            o.secondLine = flag(widget + kSecondLineSuffix, o.secondLine);
-            o.icons      = flag(widget + kIconsSuffix, o.icons);
-            o.background = flag(widget + kBackgroundSuffix, o.background);
-            o.spacing    = number(widget + kSpacingSuffix, o.spacing);
-            o.padding    = number(widget + kPaddingSuffix, o.padding);
-            o.titleFont  = text((widget + kTitleFontSuffix).c_str());
-            o.textFont   = text((widget + kTextFontSuffix).c_str());
-            o.textSize   = number(widget + kTextSizeSuffix, o.textSize);
+            o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
-            o.combineOnPanel = flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
-            o.combineInPopup = flag(widget + kCombineInPopupSuffix, o.combineInPopup);
+            o.linkPadding = number(widget + kLinkPaddingSuffix, o.linkPadding);
+            {
+                std::istringstream words(text((widget + kPopupSpotSuffix).c_str()));
+                std::string across, down;
+                PopupSpot spot;
+                if (words >> across >> spot.x >> down >> spot.y && (across == kSpotLeft || across == kSpotRight) &&
+                    (down == kSpotTop || down == kSpotBottom))
+                {
+                    spot.fromRight  = across == kSpotRight;
+                    spot.fromBottom = down == kSpotBottom;
+                    o.popupSpot     = spot;
+                }
+            }
+            if (IconPartOf(w.kind))
+                o.iconSide = static_cast<IconSide>(NameIndex(kIconSideNames, kIconSideCount,
+                    text((widget + kIconSideSuffix).c_str()), static_cast<int>(o.iconSide)));
+            if (Aligns(w.kind))
+                o.align = static_cast<WidgetAlign>(NameIndex(kWidgetAlignNames, kWidgetAlignCount,
+                    text((widget + kAlignSuffix).c_str()), static_cast<int>(o.align)));
             switch (w.kind)
             {
             case BarWidget::Currency:
-                if (const std::optional<int> currency = CurrencyOfKey(text(kBarCurrencyKey))) o.currency = *currency;
+                for (const auto& [key, which] : {std::pair{kBarCurrencyKey, &WidgetOptions::currency},
+                         std::pair{kBarSecondCurrencyKey, &WidgetOptions::secondCurrency}})
+                {
+                    const std::string held = text(key);
+                    if (held == kYourConquestPoints) o.*which = kYourConquestCurrency;
+                    else if (const std::optional<int> currency = CurrencyOfKey(held)) o.*which = *currency;
+                }
                 break;
             case BarWidget::Bags: o.bag = number(kBarBagKey, o.bag); break;
+            case BarWidget::Weather:
+                o.weatherIcons = static_cast<CustomIcons>(
+                    NameIndex(kCustomIconsNames, kCustomIconsCount, text(kWeatherIconsKey), static_cast<int>(o.weatherIcons)));
+                break;
             case BarWidget::World:
             {
-                o.nations = static_cast<uint8_t>(std::clamp(number(kBarNationsKey, o.nations), 0, static_cast<int>(kAllNations)));
-                o.conquestGrid = static_cast<ConquestGrid>(
-                    std::clamp(number(kConquestGridKey, static_cast<int>(o.conquestGrid)), 0, kConquestGridCount - 1));
-                const std::string line = text(kWorldLineKey), route = text(kWorldRouteKey), guild = text(kWorldGuildKey);
-                const std::string element = text(kWorldElementKey);
-                o.worldLine = static_cast<WorldLine>(NameIndex(kWorldLineNames, kWorldLineCount, line, static_cast<int>(o.worldLine)));
+                const std::string route = text(kWorldRouteKey), guild = text(kWorldGuildKey);
                 for (size_t r = 0; r < TravelRoutes().size(); ++r)
                     if (route == TravelRoutes()[r].name) o.worldRoute = static_cast<int>(r);
                 for (size_t g = 0; g < GuildShops().size(); ++g)
                     if (guild == GuildShops()[g].shops) o.worldGuild = static_cast<int>(g);
-                for (int e = 0; e < kElementCount; ++e)
-                    if (element == ElementName(static_cast<Element>(e))) o.worldElement = static_cast<Element>(e);
-                o.worldSections = static_cast<uint8_t>(
-                    std::clamp(number(kWorldSectionsKey, o.worldSections), 0, static_cast<int>(kAllWorldSections)));
                 break;
             }
             case BarWidget::Zone:
-            {
                 o.zoneId = flag(kZoneIdKey, o.zoneId);
-                o.zoneConquest = static_cast<ConquestPlace>(
-                    NameIndex(kConquestPlaceNames, kConquestPlaceCount, text(kZoneConquestKey), static_cast<int>(o.zoneConquest)));
-                o.zoneConquestText = flag(kZoneConquestTextKey, o.zoneConquestText);
                 break;
-            }
-            case BarWidget::VanaTime:
-                o.vanaWeekday = flag(kVanaWeekdayKey, o.vanaWeekday);
-                o.vanaDate    = flag(kVanaDateKey, o.vanaDate);
+            case BarWidget::Performance:
+                o.memText = flag(kMemTextKey, o.memText);
+                break;
+            case BarWidget::StatusTimers:
+                o.statusDisplay = static_cast<StatusDisplay>(NameIndex(kStatusDisplayNames, kStatusDisplayCount,
+                    text(kStatusDisplayKey), static_cast<int>(o.statusDisplay)));
                 break;
             case BarWidget::EarthTime:
             {
                 // kClockZoneCount for a name of none of them, as kLocalZone is.
                 if (const int zone = NameIndex(kClockZoneNames, kClockZoneCount, text(kClockZoneKey), kClockZoneCount); zone < kClockZoneCount)
                     o.clockZone = static_cast<ClockZone>(zone);
+                const std::string second = text(kClockSecondZoneKey);
+                if (const int zone = NameIndex(kClockZoneNames, kClockZoneCount, second, kClockZoneCount); zone < kClockZoneCount)
+                    o.clockSecondZone = static_cast<ClockZone>(zone);
+                else if (second == kLocalZone)
+                    o.clockSecondZone.reset();
                 o.clock24      = flag(kClock24Key, o.clock24);
                 o.clockSeconds = flag(kClockSecondsKey, o.clockSeconds);
-                // A file from when Server time was a widget, and shown, has the Clock stack it.
-                o.clockServerTime = flag(kClockServerTimeKey, w.copy == 0 && store.GetString(kServerTimeWidgetKey, "") == kTrue);
+                o.dateFormat   = static_cast<DateFormat>(
+                    NameIndex(kDateFormatNames, kDateFormatCount, text(kDateFormatKey), static_cast<int>(o.dateFormat)));
                 break;
             }
             case BarWidget::Job:
             {
-                o.expBar = static_cast<ExpBarPlace>(NameIndex(kExpBarNames, kExpBarPlaceCount, text(kExpBarKey), static_cast<int>(o.expBar)));
-                o.expText = static_cast<uint8_t>(std::clamp(number(kExpTextKey, o.expText), 0, (1 << kExpTextCount) - 1));
-                o.jobLayout = static_cast<JobLayout>(NameIndex(kJobLayoutNames, kJobLayoutCount, text(kJobLayoutKey), static_cast<int>(o.jobLayout)));
-                o.jobNames = flag(kJobNamesKey, o.jobNames);
-                for (int t = 0; t < kExpTextCount; ++t)
-                {
-                    ExpTextPlace& place = o.expPlaces[static_cast<size_t>(t)];
-                    place = static_cast<ExpTextPlace>(NameIndex(kExpPlaceNames, kExpTextPlaceCount, text(kExpPlaceKeys[t]), static_cast<int>(place)));
-                }
+                o.jobText  = static_cast<JobText>(NameIndex(kJobTextNames, kJobTextCount, text(kJobTextKey), static_cast<int>(o.jobText)));
                 o.expBarWidth  = number(kExpBarWidthKey, o.expBarWidth);
                 o.expBarHeight = number(kExpBarHeightKey, o.expBarHeight);
-                o.expAlign = static_cast<Align>(NameIndex(kAlignNames, kAlignCount, text(kExpAlignKey), static_cast<int>(o.expAlign)));
+                if (const std::string barText = text(kExpBarTextKey); barText == kNoExpBarText)
+                    o.expBarText.reset();
+                else if (const int at = NameIndex(kExpTextNames, kExpTextCount, barText, -1); at >= 0)
+                    o.expBarText = static_cast<ExpText>(at);
+                for (const auto& [key, align] : kJobAligns)
+                    o.*align = static_cast<Align>(NameIndex(kAlignNames, kAlignCount, text(key), static_cast<int>(o.*align)));
+                for (const auto& [key, color] : kExpBarColors)
+                    o.*color = HeldHex(store, CopyKey(key, w));
                 break;
             }
-            case BarWidget::Performance:
-                o.perfParts = static_cast<uint8_t>(std::clamp(number(kPerfPartsKey, o.perfParts), 0, static_cast<int>(kAllPerfParts)));
-                break;
             case BarWidget::Target:
-                o.targetIcons    = static_cast<uint32_t>(
-                    std::clamp(number(kTargetIconsKey, static_cast<int>(o.targetIcons)), 0, static_cast<int>(kAllTargetIcons)));
+                o.targetDetection = static_cast<uint32_t>(
+                    std::clamp(number(kTargetDetectionKey, static_cast<int>(o.targetDetection)), 0, static_cast<int>(kAllDetection)));
                 o.targetShows    = static_cast<uint8_t>(
                     std::clamp(number(kTargetShowsKey, o.targetShows), 0, static_cast<int>(kAllTargetShows)));
-                o.targetMobLevel = flag(kTargetMobLevelKey, o.targetMobLevel);
-                o.targetJobs     = flag(kTargetJobsKey, o.targetJobs);
-                o.targetDistance = flag(kTargetDistanceKey, o.targetDistance);
                 break;
             default: break;
             }
@@ -1354,63 +1383,58 @@ namespace headsup
             const auto flag = [&](const std::string& key, bool v) { StoreBool(store, CopyKey(key, w), v); };
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
-            flag(widget + kSecondLineSuffix, o.secondLine);
-            flag(widget + kIconsSuffix, o.icons);
-            flag(widget + kBackgroundSuffix, o.background);
-            StoreFloat(store, CopyKey(widget + kSpacingSuffix, w), static_cast<float>(o.spacing));
-            StoreFloat(store, CopyKey(widget + kPaddingSuffix, w), static_cast<float>(o.padding));
-            text((widget + kTitleFontSuffix).c_str(), o.titleFont.c_str());
-            text((widget + kTextFontSuffix).c_str(), o.textFont.c_str());
-            StoreFloat(store, CopyKey(widget + kTextSizeSuffix, w), static_cast<float>(o.textSize));
+            if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
-            flag(widget + kCombineOnPanelSuffix, o.combineOnPanel);
-            flag(widget + kCombineInPopupSuffix, o.combineInPopup);
+            StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
+            if (IconPartOf(w.kind)) text((widget + kIconSideSuffix).c_str(), kIconSideNames[static_cast<int>(o.iconSide)]);
+            if (Aligns(w.kind)) text((widget + kAlignSuffix).c_str(), kWidgetAlignNames[static_cast<int>(o.align)]);
+            const std::optional<PopupSpot>& spot = o.popupSpot;
+            text((widget + kPopupSpotSuffix).c_str(),
+                spot ? (std::string(spot->fromRight ? kSpotRight : kSpotLeft) + " " + std::to_string(spot->x) + " " +
+                        (spot->fromBottom ? kSpotBottom : kSpotTop) + " " + std::to_string(spot->y)).c_str()
+                     : "");
             switch (w.kind)
             {
-            case BarWidget::Currency: text(kBarCurrencyKey, kCurrencyTable[o.currency].key); break;
+            case BarWidget::Currency:
+                for (const auto& [key, which] : {std::pair{kBarCurrencyKey, o.currency}, std::pair{kBarSecondCurrencyKey, o.secondCurrency}})
+                    text(key, which == kYourConquestCurrency ? kYourConquestPoints : kCurrencyTable[which].key);
+                break;
             case BarWidget::Bags: StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag)); break;
+            case BarWidget::Weather: text(kWeatherIconsKey, kCustomIconsNames[static_cast<int>(o.weatherIcons)]); break;
             case BarWidget::World:
-                StoreFloat(store, CopyKey(kBarNationsKey, w), static_cast<float>(o.nations));
-                StoreFloat(store, CopyKey(kConquestGridKey, w), static_cast<float>(o.conquestGrid));
-                text(kWorldLineKey, kWorldLineNames[static_cast<int>(o.worldLine)]);
                 text(kWorldRouteKey, TravelRoutes()[static_cast<size_t>(o.worldRoute)].name);
-                text(kWorldElementKey, ElementName(o.worldElement));
                 text(kWorldGuildKey, GuildShops()[static_cast<size_t>(o.worldGuild)].shops);
-                StoreFloat(store, CopyKey(kWorldSectionsKey, w), static_cast<float>(o.worldSections));
                 break;
             case BarWidget::Zone:
                 flag(kZoneIdKey, o.zoneId);
-                text(kZoneConquestKey, kConquestPlaceNames[static_cast<int>(o.zoneConquest)]);
-                flag(kZoneConquestTextKey, o.zoneConquestText);
                 break;
-            case BarWidget::VanaTime:
-                flag(kVanaWeekdayKey, o.vanaWeekday);
-                flag(kVanaDateKey, o.vanaDate);
+            case BarWidget::Performance:
+                flag(kMemTextKey, o.memText);
+                break;
+            case BarWidget::StatusTimers:
+                text(kStatusDisplayKey, kStatusDisplayNames[static_cast<int>(o.statusDisplay)]);
                 break;
             case BarWidget::EarthTime:
                 text(kClockZoneKey, o.clockZone ? kClockZoneNames[static_cast<int>(*o.clockZone)] : kLocalZone);
+                text(kClockSecondZoneKey, o.clockSecondZone ? kClockZoneNames[static_cast<int>(*o.clockSecondZone)] : kLocalZone);
                 flag(kClock24Key, o.clock24);
                 flag(kClockSecondsKey, o.clockSeconds);
-                flag(kClockServerTimeKey, o.clockServerTime);
+                text(kDateFormatKey, kDateFormatNames[static_cast<int>(o.dateFormat)]);
                 break;
             case BarWidget::Job:
-                text(kExpBarKey, kExpBarNames[static_cast<int>(o.expBar)]);
-                StoreFloat(store, CopyKey(kExpTextKey, w), static_cast<float>(o.expText));
-                text(kJobLayoutKey, kJobLayoutNames[static_cast<int>(o.jobLayout)]);
-                flag(kJobNamesKey, o.jobNames);
-                for (int t = 0; t < kExpTextCount; ++t)
-                    text(kExpPlaceKeys[t], kExpPlaceNames[static_cast<int>(o.expPlaces[static_cast<size_t>(t)])]);
+                text(kJobTextKey, kJobTextNames[static_cast<int>(o.jobText)]);
                 StoreFloat(store, CopyKey(kExpBarWidthKey, w), static_cast<float>(o.expBarWidth));
                 StoreFloat(store, CopyKey(kExpBarHeightKey, w), static_cast<float>(o.expBarHeight));
-                text(kExpAlignKey, kAlignNames[static_cast<int>(o.expAlign)]);
+                text(kExpBarTextKey, o.expBarText ? kExpTextNames[static_cast<int>(*o.expBarText)] : kNoExpBarText);
+                for (const auto& [key, align] : kJobAligns)
+                    text(key, kAlignNames[static_cast<int>(o.*align)]);
+                for (const auto& [key, color] : kExpBarColors)
+                    if (o.*color) StoreHex(store, CopyKey(key, w), *(o.*color));
+                    else text(key, kThemeColor);
                 break;
-            case BarWidget::Performance: StoreFloat(store, CopyKey(kPerfPartsKey, w), static_cast<float>(o.perfParts)); break;
             case BarWidget::Target:
-                StoreFloat(store, CopyKey(kTargetIconsKey, w), static_cast<float>(o.targetIcons));
+                StoreFloat(store, CopyKey(kTargetDetectionKey, w), static_cast<float>(o.targetDetection));
                 StoreFloat(store, CopyKey(kTargetShowsKey, w), static_cast<float>(o.targetShows));
-                flag(kTargetMobLevelKey, o.targetMobLevel);
-                flag(kTargetJobsKey, o.targetJobs);
-                flag(kTargetDistanceKey, o.targetDistance);
                 break;
             default: break;
             }
@@ -1421,7 +1445,7 @@ namespace headsup
     {
         WidgetOptions o;
         o.on         = widget.copy > 0 || kBarWidgetDefaults[static_cast<int>(widget.kind)];
-        o.background = widget.kind == BarWidget::Target; // its frame, always shown
+        o.design     = DefaultDesign(widget.kind);
         return o;
     }
 
@@ -1490,6 +1514,14 @@ namespace headsup
         for (int slot = 0; slot < kPanelSlots; ++slot)
             links[slot] = s.widgets[slot].combine;
         return Combine(s.barSections, links);
+    }
+
+    std::vector<PanelWidget> PillSettings(const Settings& s, PanelWidget head)
+    {
+        std::vector<PanelWidget> on;
+        for (const PanelWidget w : Members(Panel(s), head))
+            if (s.Widget(w).on) on.push_back(w);
+        return on.empty() ? std::vector<PanelWidget>{head} : on;
     }
 
     namespace
@@ -1582,8 +1614,6 @@ namespace headsup
                     NameIndex(kRankDisplayNames, kRankDisplayCount, display, static_cast<int>(s.rankDisplay)));
             else if (HeldSwitch(store, kOldShowRanksKey).value_or(false))
                 s.rankDisplay = RankDisplay::Rank;
-            s.dashMark     = static_cast<DashMark>(
-                NameIndex(kDashMarkNames, kDashMarkCount, store.GetString(kDashMarkKey, ""), static_cast<int>(s.dashMark)));
             s.cursorHeight = Rebased(store, kCursorHeightKey, kOldCursorSizeKey, s.cursorHeight, [](float size) { return size; });
             s.cursorWidth  = Rebased(store, kCursorWidthKey, kOldCursorSizeKey, s.cursorWidth, [&](float size) {
                 return static_cast<float>(NaturalCursorWidth(wasArrow ? CursorStyle::Triangle : CursorStyle::Feather, Whole(size)));
@@ -1610,6 +1640,12 @@ namespace headsup
                                                                                  s.currencyFavorites.end())
                         s.currencyFavorites.push_back(key);
             }
+            {
+                std::istringstream words(store.GetString(kCollapsedKey, ""));
+                s.collapsedSections.clear();
+                for (std::string key; words >> key;)
+                    if (std::ranges::find(s.collapsedSections, key) == s.collapsedSections.end()) s.collapsedSections.push_back(key);
+            }
             s.statusFavorites = StatusIds(store.GetString(kStatusFavoritesKey, SpaceApart(s.statusFavorites).c_str()));
             s.statusPins      = StatusIds(store.GetString(kStatusPinsKey, SpaceApart(s.statusPins).c_str()));
             std::istringstream keys(store.GetString(kKeepPointerKey, ""));
@@ -1635,7 +1671,16 @@ namespace headsup
             s.customPalette.shape = static_cast<BarShape>(NameIndex(kBarShapeNames, kBarShapeCount,
                 store.GetString((custom + kShapeSuffix).c_str(), ""), static_cast<int>(s.customPalette.shape)));
             s.customPalette.border = LoadInt(store, custom + kBorderSuffix, s.customPalette.border);
-            s.customPalette.gradient = HeldSwitch(store, custom + kGradientSuffix).value_or(s.customPalette.gradient);
+            s.customPalette.background = static_cast<BarBackground>(NameIndex(kBarBackgroundNames, kBarBackgroundCount,
+                store.GetString((custom + kBackgroundSuffix).c_str(), ""), static_cast<int>(s.customPalette.background)));
+            s.customPalette.windowType   = LoadInt(store, custom + kWindowTypeSuffix, s.customPalette.windowType);
+            s.customPalette.rounding     = LoadInt(store, custom + kRoundingSuffix, s.customPalette.rounding);
+            s.customPalette.separator    = static_cast<DashMark>(NameIndex(kDashMarkNames, kDashMarkCount,
+                store.GetString((custom + kSeparatorSuffix).c_str(), ""), static_cast<int>(s.customPalette.separator)));
+            s.customPalette.statusIcons =
+                StatusIconsNamed(store.GetString((custom + kStatusIconsSuffix).c_str(), ""), s.customPalette.statusIcons);
+            s.customPalette.statusBack = HeldSwitch(store, custom + kStatusBackSuffix).value_or(s.customPalette.statusBack);
+            s.customThemeName = store.GetString(kCustomThemeNameKey, "");
             s.menuFont         = store.GetString(kMenuFontKey, s.menuFont.c_str());
             // By the font named: one whose Windows file was missing was drawn in Barlow Condensed, which nothing here knows.
             s.menuFontSize     = Rebased(store, kMenuFontSizeKey, kOldMenuScaleKey, s.menuFontSize, [&](float percent) {
@@ -1647,10 +1692,10 @@ namespace headsup
             s.fishBarLine  = store.GetString(kFishBarLineKey, s.fishBarLine.c_str());
             s.blueMagicLearned = static_cast<BlueLearned>(NameIndex(kBlueLearnedNames, kBlueLearnedCount,
                 store.GetString(kBlueMagicLearnedKey, ""), static_cast<int>(s.blueMagicLearned)));
-            s.barSeparators = static_cast<BarSeparators>(NameIndex(kBarSeparatorsNames, kBarSeparatorsCount,
-                store.GetString(kBarSeparatorsKey, ""), static_cast<int>(s.barSeparators)));
-            s.barSubtitle = static_cast<SubtitlePlace>(
-                NameIndex(kSubtitleNames, kSubtitlePlaceCount, store.GetString(kSubtitleKey, ""), static_cast<int>(s.barSubtitle)));
+            s.helpBarAnchor = static_cast<HelpAnchor>(NameIndex(kHelpAnchorNames, kHelpAnchorCount,
+                store.GetString(kHelpAnchorKey, ""), static_cast<int>(s.helpBarAnchor)));
+            s.fishStamina = static_cast<FishBarShown>(NameIndex(kFishStaminaNames, kFishStaminaCount,
+                store.GetString(kFishStaminaKey, ""), static_cast<int>(s.fishStamina)));
             std::array<std::string, kBarSectionCount> sections;
             for (int i = 0; i < kBarSectionCount; ++i)
                 sections[i] = store.GetString(kBarSectionKeys[i], "");
@@ -1705,7 +1750,6 @@ namespace headsup
         store.Set(kPointerIconKey, kPointerIconNames[static_cast<int>(s.pointerIcon)]);
         store.Set(kPointerFileKey, s.pointerFile.c_str());
         store.Set(kRankDisplayKey, kRankDisplayNames[static_cast<int>(s.rankDisplay)]);
-        store.Set(kDashMarkKey, kDashMarkNames[static_cast<int>(s.dashMark)]);
         SavePick(store, kCursorPickKey, s.cursorColor);
         SavePick(store, kCursorEdgePickKey, s.cursorEdgeColor);
         store.Set(kBadgeFontKey, s.badgeFontName.c_str());
@@ -1721,6 +1765,7 @@ namespace headsup
         }
         store.Set(kKeepPointerKey, keys.c_str());
         store.Set(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str());
+        store.Set(kCollapsedKey, SpaceApart(s.collapsedSections).c_str());
         store.Set(kStatusFavoritesKey, SpaceApart(s.statusFavorites).c_str());
         store.Set(kStatusPinsKey, SpaceApart(s.statusPins).c_str());
         for (int i = 0; i < kStatusRankCount; ++i)
@@ -1735,8 +1780,16 @@ namespace headsup
             StoreHex(store, kCustomThemeKey + std::string(color.name), s.customPalette.*color.field);
         store.Set((kCustomThemeKey + std::string(kShapeSuffix)).c_str(), kBarShapeNames[static_cast<int>(s.customPalette.shape)]);
         StoreFloat(store, kCustomThemeKey + std::string(kBorderSuffix), static_cast<float>(s.customPalette.border));
-        StoreBool(store, kCustomThemeKey + std::string(kGradientSuffix), s.customPalette.gradient);
-        store.Set(kBarSeparatorsKey, kBarSeparatorsNames[static_cast<int>(s.barSeparators)]);
+        store.Set((kCustomThemeKey + std::string(kBackgroundSuffix)).c_str(),
+            kBarBackgroundNames[static_cast<int>(s.customPalette.background)]);
+        StoreFloat(store, kCustomThemeKey + std::string(kWindowTypeSuffix), static_cast<float>(s.customPalette.windowType));
+        StoreFloat(store, kCustomThemeKey + std::string(kRoundingSuffix), static_cast<float>(s.customPalette.rounding));
+        store.Set((kCustomThemeKey + std::string(kSeparatorSuffix)).c_str(), kDashMarkNames[static_cast<int>(s.customPalette.separator)]);
+        store.Set((kCustomThemeKey + std::string(kStatusIconsSuffix)).c_str(), StatusIconsName(s.customPalette.statusIcons).c_str());
+        StoreBool(store, kCustomThemeKey + std::string(kStatusBackSuffix), s.customPalette.statusBack);
+        store.Set(kCustomThemeNameKey, s.customThemeName.c_str());
+        store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
+        store.Set(kFishStaminaKey, kFishStaminaNames[static_cast<int>(s.fishStamina)]);
         store.Set(kMenuFontKey, s.menuFont.c_str());
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());
         store.Set(kFishBarLineKey, s.fishBarLine.c_str());
@@ -1745,7 +1798,6 @@ namespace headsup
         for (int slot = 0; slot < kPanelSlots; ++slot)
             if (const PanelWidget w = WidgetInSlot(slot); w.copy == 0 || Placed(s.barSections, w))
                 SaveWidget(store, w, s.widgets[slot]);
-        store.Set(kSubtitleKey, kSubtitleNames[static_cast<int>(s.barSubtitle)]);
         for (int i = 0; i < kBarSectionCount; ++i)
             store.Set(kBarSectionKeys[i], PlacementNames(s.barSections[i]).c_str());
         store.Set(kPinnedWindowsKey, WindowPlaceText(s.pinnedWindows).c_str());

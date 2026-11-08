@@ -17,9 +17,12 @@ namespace headsup
     {
         Title,   // TitleFont, larger than popupText
         Text,    // the detail font at popupText
-        Heading, // TitleFont at heading size; uppercase and letter-spaced in the detail font for pills
+        Heading, // TitleFont at heading size
         Pin,     // the pinned mark: a heading's font and size, set solid
     };
+
+    constexpr const char* kCollapsedSign = "+";           // a collapsed card's chip
+    constexpr const char* kOpenSign      = "\xE2\x80\x93"; // an open one's: an en dash
 
     struct PopupPiece
     {
@@ -38,10 +41,12 @@ namespace headsup
             ScrollTrack, // a scrolling socket's scrollbar, in its right padding
             ScrollThumb, // and the part of it its shown lines are
             Picture,     // a picture from the game's files, as an icon is drawn
-            PinChip,     // the pin's chip, drawn as a tab's; open while pinned
-            PinWord,     // the word on it, drawn as text
+            PinChip,     // the pin's round chip, drawn as a tab's; open while pinned
             CogChip,     // the settings chip left of the pin, drawn as a tab's; open while the settings show
+            ActionChip,  // the clone or remove chip left of the cog while the settings show, drawn as a tab's
             Cog,         // the cog on it
+            Sign,        // a collapse chip's minus or plus (its span's text), drawn as bars centered in the piece
+            Status,      // a status's icon, which the plugin serves, as an icon is drawn
         };
         Kind kind = Kind::Text;
         float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f; // from the popup's top-left corner
@@ -53,6 +58,7 @@ namespace headsup
         bool right     = false;         // Text: drawn against its box's right, as a pair's value is
         uint16_t item  = 0;             // Item
         GamePicture picture = GamePicture::None; // Picture
+        StatusMark status{};                     // Status
         bool tinted = false; // Icon: one of HeadsUp's own white ones, drawn in its span's color
     };
 
@@ -64,7 +70,8 @@ namespace headsup
         float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f;
         size_t line = 0;
         std::string tab;
-        bool press = false;
+        bool press    = false;
+        bool fleeting = false; // its pick is forgotten once the popup closes
     };
 
     // A socket that shows only some of its lines, from the popup's top-left corner, and how many lines it scrolls.
@@ -93,6 +100,7 @@ namespace headsup
         std::vector<PopupScroll> scrolls;
         BarRect pin{}; // the pin chip, which a press pins or unpins the popup by; none in an empty popup
         BarRect cog{}; // the settings chip, which a press shows the widget's settings by, or its content again
+        float titleRow = 0.0f; // the title row's height, by which a pinned popup is dragged
         BarRect body{}; // where the settings go while they show: under the title, as wide as the popup's inside
     };
 
@@ -116,11 +124,11 @@ namespace headsup
     // under the title, on the panel. A pair's value ends at its card's right edge. When the cards stacked would run
     // taller than kTwoColumnsAbove popup text sizes, they flow into two columns as even as their order allows, and
     // into more when two would run taller than room, a card too tall for it going on in the next under its heading.
-    // The pin chip sits at the title row's top right: "pin", or lit and "pinned" while pinned, with the settings chip
-    // left of it, lit while settings show. It is never narrower than least, its cards widening to fill it. With
-    // settings, their room is left under the title in place of the sections, no taller than room leaves.
+    // The round pin chip sits at the title row's top right: an empty pin, or lit with a filled one while pinned, with
+    // the settings chip left of it, lit while settings show. It is never narrower than least, its cards widening to
+    // fill it. With settings, their room is left under the title in place of the sections, no taller than room leaves.
     constexpr float kTwoColumnsAbove = 24.0f;
-    PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, BarShape shape, bool pinned,
+    PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, bool pinned,
                             SpanMeasure measure, float room = std::numeric_limits<float>::infinity(), float least = 0.0f,
                             std::optional<SettingsRoom> settings = std::nullopt);
     // A layout taller than height keeps the title and the cards that end padding or more above it, and shrinks to

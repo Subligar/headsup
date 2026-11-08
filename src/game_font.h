@@ -117,10 +117,14 @@ namespace headsup
         ColorPicture mail, messenger;
     };
     Read<PlayOnlineIcons> ReadPlayOnlineIcons(std::span<const uint8_t> dat);
-    // The three nations' crests the game's conquest menus show, out of a whole 51.DAT. The Beastmen have none.
+    // The crests' chunks in 51.DAT, each named for its picture's first four letters, which the icon adjustments name
+    // them by.
+    constexpr std::string_view kSanDoriaCrestChunk = "scre", kBastokCrestChunk = "bcre", kWindurstCrestChunk = "wcre",
+                               kBeastmenCrestChunk = "mcre", kJeunoCrestChunk = "jcre", kAhtUrhganCrestChunk = "acre";
+    // The crests the game's conquest map shows, and Jeuno's and Aht Urhgan's from its region maps, out of a whole 51.DAT.
     struct NationCrests
     {
-        ColorPicture sanDoria, bastok, windurst;
+        ColorPicture sanDoria, bastok, windurst, beastmen, jeuno, ahtUrhgan;
     };
     Read<NationCrests> ReadNationCrests(std::span<const uint8_t> dat);
     // The glyphs of a shapes chunk, each drawn from the picture of that name, which is width by height.

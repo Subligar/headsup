@@ -13,15 +13,30 @@ namespace
 {
     bool Near(float a, float b) { return std::fabs(a - b) < 0.01f; }
 
-    BarLook LookOf(BarTheme theme, const Settings& settings, TextRow lines = {}, int height = 45)
+    BarLook LookOf(const BarPalette& p, const Settings& settings, TextRow lines = {}, int height = 45,
+        float popupScale = kDefaultPopupScale)
     {
-        const BarPalette& p = PaletteOf(theme);
-        const BarMetrics m  = MetricsFor(height, p.shape, kAutoBarTextSize, kAutoPopupTextSize);
+        const BarMetrics m = MetricsFor(height, p.shape, kDefaultFontRatio, popupScale);
         return BarLook{p, settings, m, PillRow(m), lines, BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate,
             BarTextFont(settings), std::nullopt};
     }
 
+    BarLook LookOf(BarTheme theme, const Settings& settings, TextRow lines = {}, int height = 45,
+        float popupScale = kDefaultPopupScale)
+    {
+        return LookOf(PaletteOf(theme), settings, lines, height, popupScale);
+    }
+
     bool Family(const TextFace& face, const char* family) { return std::string(face.family) == family; }
+
+    // A widget with both its lines: its title is in the two-line size.
+    WidgetContent TwoLines()
+    {
+        WidgetContent content;
+        content.title    = {Span{"Bags"}};
+        content.subtitle = {Span{"27/30"}};
+        return content;
+    }
 }
 
 TEST(the_custom_theme_takes_the_settings_palette_and_starts_as_phoenix_gold)
@@ -71,29 +86,19 @@ TEST(ornate_popups_head_their_sections_in_the_title_font_and_pills_popups_in_the
           Family(ornate.FaceOf(PopupFont::Text), "Barlow Condensed"));
     for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Heading})
         CHECK(Family(pills.FaceOf(font), "Barlow Condensed"));
-    // At 45 px: popup text 0.39 H, headings 0.33 H, a popup's title 1.35 times its text.
-    CHECK(Near(ornate.FaceOf(PopupFont::Text).size, 17.55f) && Near(ornate.FaceOf(PopupFont::Heading).size, 14.85f) &&
-          Near(ornate.FaceOf(PopupFont::Title).size, 23.69f));
+    // A pop-out's text 14 px, its card headings 16 px and its title 18 px at a Pop-out Scale of 1.
+    CHECK(Near(ornate.FaceOf(PopupFont::Text).size, 14.0f) && Near(ornate.FaceOf(PopupFont::Heading).size, 16.0f) &&
+          Near(ornate.FaceOf(PopupFont::Title).size, 18.0f));
     // A widget's title in the shape's title font, its detail line in Barlow, at the sizes their row fitted.
-    CHECK(Family(ornate.TitleFace(), "Marcellus SC") && ornate.TitleFace().size == 14.0f);
-    CHECK(Family(pills.TitleFace(), "Barlow Condensed") && pills.TitleFace().size == 13.0f);
+    CHECK(Family(ornate.TitleFace(TwoLines()), "Marcellus SC") && ornate.TitleFace(TwoLines()).size == 14.0f);
+    CHECK(Family(pills.TitleFace(TwoLines()), "Barlow Condensed") && pills.TitleFace(TwoLines()).size == 13.0f);
     CHECK(Family(ornate.DetailFace(), "Barlow Condensed") && ornate.DetailFace().size == 11.0f);
 }
 
-TEST(pills_section_headings_are_letter_spaced_and_nothing_else_is)
+TEST(the_pinned_mark_takes_the_headings_family_and_size)
 {
-    // Spec, Shapes: pills popups have "uppercase, letter-spaced section headings"; the approved mockup spaces them
-    // 1.2 px at 10.5 px, which is 2 px for the 15 px headings at 45 px and 1 px for the 12 px ones at 36 px. The
-    // pinned mark takes the headings' family and size, set solid as in the mockup.
     Settings settings;
-    const BarLook pills = LookOf(BarTheme::UmbraDark, settings), ornate = LookOf(BarTheme::PhoenixGold, settings);
-    CHECK_EQ(pills.FaceOf(PopupFont::Heading).tracking, 2);
-    CHECK_EQ(LookOf(BarTheme::PhoenixRedPills, settings, {}, 36).FaceOf(PopupFont::Heading).tracking, 1);
-    for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Pin})
-        CHECK_EQ(pills.FaceOf(font).tracking, 0);
-    for (const PopupFont font : {PopupFont::Title, PopupFont::Text, PopupFont::Heading, PopupFont::Pin})
-        CHECK_EQ(ornate.FaceOf(font).tracking, 0);
-    CHECK(pills.TitleFace().tracking == 0 && pills.DetailFace().tracking == 0);
+    const BarLook pills = LookOf(BarTheme::UmbraDark, settings, {}, 45, 1.5f), ornate = LookOf(BarTheme::PhoenixGold, settings);
     for (const BarLook* look : {&pills, &ornate})
         CHECK(look->FaceOf(PopupFont::Pin).family == look->FaceOf(PopupFont::Heading).family &&
               look->FaceOf(PopupFont::Pin).size == look->FaceOf(PopupFont::Heading).size);
@@ -105,13 +110,16 @@ TEST(a_widgets_text_starts_after_its_icons_and_coin_each_with_a_gap)
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
     WidgetContent weather;
     weather.icons = {Icon::Lightning, Icon::Lightning};
-    CHECK(Near(look.Leading(weather), 2.0f * (22.5f + 7.65f))); // icons 0.50 H, gaps 0.17 H
+    CHECK(Near(look.Leading(weather), 2.0f * (0.65f * 34.0f + 7.65f))); // icons 65% of the pill's 34 px inside, gaps 0.17 H
     CHECK(Near(look.Leading(WidgetContent{}), 0.0f));
-    // Gil's coin is drawn 17 px wide at 45 px (0.375 H, whole pixels), and its amount starts a gap after that.
+    // Gil's picture has an icon's room, as every icon.
     WidgetContent gil;
-    gil.coin = true;
-    CHECK_EQ(CoinPixels(look.metrics), 17);
-    CHECK(Near(look.Leading(gil), 17.0f + 7.65f));
+    gil.icons = {Icon::Gil};
+    CHECK(Near(look.Leading(gil), 0.65f * 34.0f + 7.65f));
+    // A zone's crest has an icon's room (its adjustment draws it smaller inside it).
+    WidgetContent zone;
+    zone.picture = GamePicture::BastokCrest;
+    CHECK(Near(look.Leading(zone), 0.65f * 34.0f + 7.65f));
 }
 
 TEST(the_ornate_target_is_framed_and_a_lit_widget_tinted)
@@ -157,10 +165,11 @@ TEST(a_widget_of_figures_draws_its_title_in_the_detail_font_in_every_theme)
     figures.figures = true;
     for (int theme = 0; theme < kFixedThemeCount; ++theme)
     {
-        const BarLook look = LookOf(static_cast<BarTheme>(theme), settings, TextRow{14, 11, true});
-        CHECK(Family(look.TitleFace(figures), "Barlow Condensed") && look.TitleFace(figures).size == 14.0f);
-        CHECK(look.TitleFace(figures).tracking == 0);
-        CHECK(Family(look.TitleFace(words), look.TitleFace().family) && look.TitleFace(words).size == 14.0f);
+        const BarLook look = LookOf(static_cast<BarTheme>(theme), settings, TextRow{.title = 14, .detail = 11, .alone = 17});
+        CHECK(Family(look.TitleFace(figures), "Barlow Condensed") && look.TitleFace(figures).size == 17.0f);
+        // Alone, a title takes the size of a line alone; over a second line, the two-line size.
+        CHECK(Family(look.TitleFace(words), look.TitleFace(TwoLines()).family) && look.TitleFace(words).size == 17.0f);
+        CHECK_EQ(look.TitleFace(TwoLines()).size, 14.0f);
     }
     CHECK(Family(LookOf(BarTheme::PhoenixGold, settings).TitleFace(words), "Marcellus SC"));
 }
@@ -178,28 +187,33 @@ TEST(the_bar_takes_the_players_fonts_or_its_themes)
     BarTitleFont(settings, BarShape::Ornate);
     CHECK(std::string(title) == "Cinzel"); // an earlier name stays where caches keep it
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
-    CHECK(std::string(look.DetailFace().family) == "Verdana" && std::string(look.TitleFace().family) == "Georgia");
+    CHECK(std::string(look.DetailFace().family) == "Verdana" && std::string(look.TitleFace(TwoLines()).family) == "Georgia");
 }
 
-TEST(the_games_art_is_in_use_for_its_theme_or_a_custom_theme_of_its_shape)
+TEST(the_games_art_is_in_use_for_vanilla_or_a_custom_theme_with_its_background)
 {
     Settings s;
     CHECK(!UsesGameArt(s));
-    s.barTheme = BarTheme::GameWindow;
+    s.barTheme = BarTheme::Vanilla;
     CHECK(UsesGameArt(s));
     s.barTheme = BarTheme::Custom;
     CHECK(!UsesGameArt(s));
-    s.customPalette.shape = BarShape::Window;
+    s.customPalette.shape = BarShape::Window; // the shape alone is not the art
+    CHECK(!UsesGameArt(s));
+    s.customPalette.background = BarBackground::Window;
     CHECK(UsesGameArt(s));
     s.barTheme = BarTheme::Aurora;
     CHECK(!UsesGameArt(s));
 }
 
-TEST(game_window_without_the_games_art_is_phoenix_gold)
+TEST(vanilla_without_the_games_art_is_phoenix_golds_colors_and_with_it_the_arts)
 {
     Settings s;
-    s.barTheme = BarTheme::GameWindow;
-    CHECK(PaletteFor(s, nullptr) == PaletteOf(BarTheme::PhoenixGold));
+    s.barTheme = BarTheme::Vanilla;
+    CHECK(PaletteFor(s, nullptr) == PaletteOf(BarTheme::Vanilla));
+    CHECK_EQ(PaletteFor(s, nullptr).accent, PaletteOf(BarTheme::PhoenixGold).accent);
+    const GameSkinLook skin{SkinFrame{2, 1.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors};
+    CHECK(PaletteFor(s, &skin) == PaletteOf(BarTheme::UmbraDark));
 }
 
 namespace
@@ -219,14 +233,34 @@ namespace
     int Brightness(uint32_t argb) { return static_cast<int>((argb >> 16 & 0xFF) + (argb >> 8 & 0xFF) + (argb & 0xFF)); }
 }
 
+TEST(a_copy_of_a_built_in_theme_looks_as_it_does_until_a_change_and_then_changes_only_that)
+{
+    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark, BarTheme::PhoenixRed, BarTheme::Aurora})
+    {
+        Settings built;
+        built.barTheme = theme;
+        Settings copy;
+        copy.barTheme             = BarTheme::Custom;
+        copy.customPalette        = PaletteOf(theme);
+        copy.customPalette.parent = theme;
+        CHECK(MenuThemeFor(copy, nullptr) == MenuThemeFor(built, nullptr));
+        CHECK(MenuColorsFor(copy, nullptr) == MenuColorsFor(built, nullptr));
+        CHECK(PaletteFor(copy, nullptr) == PaletteFor(built, nullptr));
+        // A new accent changes the window's accent, and its background stays the theme's.
+        copy.customPalette.accent = 0xFF12AB34;
+        const MenuColors was = MenuColorsFor(built, nullptr), now = MenuColorsFor(copy, nullptr);
+        CHECK(now.accent == 0xFF12AB34u && now.background == was.background && now.card == was.card && now.text == was.text);
+    }
+}
+
 TEST(the_settings_window_takes_the_top_panels_theme)
 {
     Settings s;
     // Phoenix Gold, the default, gives a window lit in its gold.
     CHECK(MenuThemeFor(s, nullptr) == MenuTheme::Phoenix);
     CHECK_EQ(MenuColorsFor(s, nullptr).accent, PaletteOf(BarTheme::PhoenixGold).accent);
-    // The Phoenix Red themes keep the window drawn from phoenix-xi.com's palette, and Aurora its glass.
-    s.barTheme = BarTheme::PhoenixRedPills;
+    // Phoenix Red keeps the window drawn from phoenix-xi.com's palette, and Aurora its glass.
+    s.barTheme = BarTheme::PhoenixRed;
     CHECK(MenuColorsFor(s, nullptr) == kPhoenixMenuColors);
     s.barTheme = BarTheme::Aurora;
     CHECK(MenuThemeFor(s, nullptr) == MenuTheme::Aurora && MenuColorsFor(s, nullptr) == kAuroraMenuColors);
@@ -234,11 +268,11 @@ TEST(the_settings_window_takes_the_top_panels_theme)
     s.barTheme             = BarTheme::Custom;
     s.customPalette.accent = 0xFF12AB34;
     CHECK_EQ(MenuColorsFor(s, nullptr).accent, 0xFF12AB34u);
-    // The game's art, once read, for Game Window and a Custom theme of its shape; Phoenix Gold's colors until then.
+    // The game's art, once read, for Vanilla and a Custom theme on its art; Phoenix Gold's colors until then.
     const GameSkinLook skin{SkinFrame{2, 1.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors};
-    s.customPalette.shape = BarShape::Window;
+    s.customPalette.background = BarBackground::Window;
     CHECK(MenuThemeFor(s, &skin) == MenuTheme::GameWindow && MenuColorsFor(s, &skin) == kAuroraMenuColors);
-    s.barTheme = BarTheme::GameWindow;
+    s.barTheme = BarTheme::Vanilla;
     CHECK(MenuThemeFor(s, &skin) == MenuTheme::GameWindow);
     CHECK(MenuThemeFor(s, nullptr) == MenuTheme::Phoenix);
     CHECK_EQ(MenuColorsFor(s, nullptr).accent, PaletteOf(BarTheme::PhoenixGold).accent);
@@ -258,45 +292,65 @@ TEST(a_window_from_a_panels_colors_reads_well_and_steps_up_from_its_page)
     }
 }
 
-TEST(a_widget_is_padded_and_spaced_as_the_panel_says_unless_it_has_its_own)
-{
-    const BarMetrics m = MetricsFor(45, BarShape::Pills, kAutoBarTextSize, kAutoPopupTextSize);
-    Settings s;
-    WidgetOptions o;
-    CHECK_EQ(WidgetPadding(m, s, o), m.padding); // the theme's
-    CHECK_EQ(WidgetSpacing(s, o), 0.0f);
-    s.barWidgetPadding = 6;
-    s.barWidgetSpacing = 10;
-    CHECK_EQ(WidgetPadding(m, s, o), 6.0f);
-    CHECK_EQ(WidgetSpacing(s, o), 10.0f);
-    o.padding = 4;
-    o.spacing = 3;
-    CHECK_EQ(WidgetPadding(m, s, o), 4.0f);
-    CHECK_EQ(WidgetSpacing(s, o), 3.0f);
-}
-
-TEST(a_widgets_fonts_and_text_size_are_its_own_or_the_panels)
+TEST(widgets_pop_outs_and_their_sections_are_rounded_as_set_or_as_the_theme_does)
 {
     Settings settings;
-    settings.barTitleFont = "Cinzel";
-    settings.barTextSize  = 14;
-    WidgetOptions o;
-    CHECK_EQ(std::string(WidgetTitleFont(settings, BarShape::Pills, o)), "Cinzel");
-    CHECK(WidgetTextFont(settings, o) == BarTextFont(settings));
-    CHECK_EQ(WidgetTextSize(settings, o), 14);
-    o.titleFont = "Arial";
-    o.textFont  = "Arial";
-    o.textSize  = 20;
-    CHECK(WidgetTitleFont(settings, BarShape::Pills, o) == WidgetTextFont(settings, o)); // one pointer per name
-    CHECK_EQ(std::string(WidgetTextFont(settings, o)), "Arial");
-    CHECK_EQ(WidgetTextSize(settings, o), 20);
+    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark})
+    {
+        const BarLook own = LookOf(theme, settings);
+        const float widget = own.BoxOf(BarWidget::Target, true)->radius, popup = PopupPanel(own).radius,
+                    card   = PopupCard(own).radius;
+        Settings set = settings;
+        set.widgetRounding  = 11;
+        set.popupRounding   = 0;
+        set.sectionRounding = 20;
+        const BarLook rounded = LookOf(theme, set);
+        CHECK(Near(rounded.BoxOf(BarWidget::Target, true)->radius, 11.0f) && Near(rounded.BoxOf(BarWidget::Bags, true)->radius, 11.0f));
+        CHECK(Near(PopupPanel(rounded).radius, 0.0f) && Near(PopupCard(rounded).radius, 20.0f));
+        // The theme's own, by default.
+        CHECK(settings.widgetRounding == kThemeRounding && widget > 0.0f && popup > 0.0f && card > 0.0f);
+        CHECK(Near(widget, theme == BarTheme::PhoenixGold ? 3.0f : own.metrics.pillRadius) && Near(popup, own.metrics.panelRadius));
+    }
+}
+
+TEST(the_help_bar_is_rounded_as_set_or_as_the_theme_does)
+{
+    Settings settings;
+    CHECK_EQ(settings.helpBarRounding, kThemeRounding);
+    const BarLook own = LookOf(BarTheme::UmbraDark, settings);
+    CHECK(Near(HelpBarPanel(own).radius, own.metrics.panelRadius));
+    settings.helpBarRounding = 9;
+    CHECK(Near(HelpBarPanel(LookOf(BarTheme::UmbraDark, settings)).radius, 9.0f));
+}
+
+TEST(a_themes_own_corner_rounding_rounds_whatever_is_set_by_theme)
+{
+    Settings settings;
+    BarPalette p = PaletteOf(BarTheme::PhoenixGold);
+    CHECK_EQ(p.rounding, kShapeRounding);
+    p.rounding = 7;
+    const BarLook look = LookOf(p, settings);
+    CHECK(Near(look.BoxOf(BarWidget::Target, true)->radius, 7.0f) && Near(PopupPanel(look).radius, 7.0f));
+    CHECK(Near(PopupCard(look).radius, 7.0f) && Near(HelpBarPanel(look).radius, 7.0f));
+    // A rounding of their own still wins.
+    settings.widgetRounding  = 2;
+    settings.helpBarRounding = 0;
+    const BarLook own = LookOf(p, settings);
+    CHECK(Near(own.BoxOf(BarWidget::Target, true)->radius, 2.0f) && Near(HelpBarPanel(own).radius, 0.0f));
+    CHECK(Near(PopupPanel(own).radius, 7.0f));
+}
+
+TEST(a_widget_is_padded_as_the_panel_says_or_as_the_theme_does)
+{
+    const BarMetrics m = MetricsFor(45, BarShape::Pills);
+    Settings s;
+    CHECK_EQ(WidgetPadding(m, s), m.padding); // the theme's
+    s.barWidgetPadding = 6;
+    CHECK_EQ(WidgetPadding(m, s), 6.0f);
 }
 
 TEST(the_help_bar_takes_its_set_width_text_size_and_height)
 {
-    CHECK(Near(HelpBarWidth(1920.0f, kDefaultHelpBarWidth), 960.0f));
-    CHECK(Near(HelpBarWidth(1920.0f, 25), 480.0f));
-    CHECK(Near(HelpBarWidth(1366.0f, 25), 341.0f));
     Settings settings;
     TextRow lines;
     lines.title = 16;

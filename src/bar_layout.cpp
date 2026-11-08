@@ -15,14 +15,12 @@ namespace headsup
     {
         constexpr const char* kEllipsis = "...";
         constexpr float kBottomLine  = 1.0f;  // the strip's last row is a line
-        constexpr float kBorder      = 1.0f;  // a pill's or frame's
         constexpr float kInkMargin   = 0.06f; // the ink's clear space inside a pill, of its height
         constexpr float kMinInkMargin = 2.0f; // pixels
         constexpr float kLineGap     = 0.08f; // H from the title's descenders to the detail's top, when there is room
         constexpr float kMinLineGap  = 3.0f;  // pixels: two clear rows between them still read as touching
-        constexpr int kMinDetail     = 9;     // pixels, the smallest detail line worth drawing
-        constexpr float kShrinkStep  = 0.02f; // both lines get smaller together by this share of their size at a time
-        constexpr int kShrinkSteps   = 25;    // to half at most
+        // The detail's share of a title, as a float, can fall either side of a half: this rounds every size alike.
+        constexpr float kShareSlack  = 0.001f;
 
         float Width(const std::array<float, kPanelSlots>& natural, PanelWidget w)
         {
@@ -38,17 +36,17 @@ namespace headsup
         struct Spacing
         {
             float between = 0.0f, frameClear = 0.0f;
-            const std::array<float, kPanelSlots>* own = nullptr; // each widget's room more
+            float room = 0.0f; // every widget's room more on each side
             const std::array<PanelWidget, kPanelSlots>* groups = nullptr;
             bool Together(PanelWidget a, PanelWidget b) const { return (*groups)[SlotOf(a)] == (*groups)[SlotOf(b)]; }
             float Frame(PanelWidget w) const { return w.kind == BarWidget::Target ? frameClear : 0.0f; }
-            float Room(PanelWidget w) const { return (*own)[SlotOf(w)]; }
-            float Apart(PanelWidget a, PanelWidget b) const
+            // left is the one placed further left.
+            float Apart(PanelWidget left, PanelWidget right) const
             {
-                return Together(a, b) ? 0.0f : between + Frame(a) + Frame(b) + Room(a) + Room(b);
+                return Together(left, right) ? 0.0f : between + Frame(left) + Frame(right) + 2.0f * room;
             }
             // From a's edge: the middle of what is between them, but for a's frame's clear space.
-            float Middle(PanelWidget a, PanelWidget b) const { return Frame(a) + (between + Room(a) + Room(b)) / 2.0f; }
+            float Middle(PanelWidget a) const { return Frame(a) + between / 2.0f + room; }
         };
 
         struct Group
@@ -73,7 +71,9 @@ namespace headsup
                 const float width = Width(widths, w);
                 if (width <= 0.0f) continue;
                 const bool first = g.widgets.empty();
-                const float gap  = first ? 0.0f : spacing.Apart(g.widgets.back().widget, w);
+                const float gap  = first ? 0.0f
+                                         : dir > 0.0f ? spacing.Apart(g.widgets.back().widget, w)
+                                                      : spacing.Apart(w, g.widgets.back().widget);
                 if (width > (limit - at) * dir - gap + kFitSlack)
                 {
                     for (PanelWidget next = w; !g.widgets.empty() && spacing.Together(g.widgets.back().widget, next);)
@@ -86,7 +86,7 @@ namespace headsup
                     break;
                 }
                 if (!first && diamonds && !spacing.Together(g.widgets.back().widget, w))
-                    g.dividers.push_back(at + dir * spacing.Middle(g.widgets.back().widget, w));
+                    g.dividers.push_back(at + dir * spacing.Middle(g.widgets.back().widget));
                 const float x       = dir > 0.0f ? at + gap : at - gap - width;
                 const bool isTarget = w.kind == BarWidget::Target; // framed on the pill row in every shape
                 const PanelWidget head = (*spacing.groups)[SlotOf(w)];
@@ -116,23 +116,23 @@ namespace headsup
         // them, keeps all of it.
         float InkMargin(float rowHeight) { return std::ceil(std::max(kMinInkMargin, kInkMargin * rowHeight)); }
 
-        float InkRoom(float rowHeight) { return rowHeight - 2.0f * kBorder - 2.0f * InkMargin(rowHeight); }
+        float InkRoom(float rowHeight) { return rowHeight - 2.0f * kPillBorder - 2.0f * InkMargin(rowHeight); }
     }
 
     BarLayout LayoutBar(float screenWidth, const BarMetrics& m, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
-                        const BarPlacement& placement, BarSeparators separators,
-                        const std::array<float, kPanelSlots>& spacing,
+                        const BarPlacement& placement, int separators, float spacing,
                         const std::array<PanelWidget, kPanelSlots>& groups)
     {
         const bool ornate   = shape == BarShape::Ornate;
-        const bool diamonds = DiamondsOn(separators, shape);
+        const bool diamonds = (separators & SeparatorBit(Separator::Between)) != 0;
         // Ornate neighbours abut, a diamond on their boundary, the tints keeping clear of it. Pills sit a gap apart; a
         // diamond between them takes its width and a gap on either side.
         const float pillGap = diamonds ? 2.0f * m.gap + static_cast<float>(WholePixels(m.diamond)) : m.gap;
-        const Spacing apart{.between = ornate ? 0.0f : pillGap, .frameClear = ornate ? DiamondClearance(m) : 0.0f, .own = &spacing,
+        const Spacing apart{.between = ornate ? 0.0f : pillGap, .frameClear = ornate ? DiamondClearance(m) : 0.0f, .room = spacing,
             .groups = &groups};
-        const float edge    = ornate ? m.cap : m.gap; // between a section and the screen's edge
+        const bool caps     = (separators & SeparatorBit(Separator::EndCaps)) != 0;
+        const float edge    = caps ? m.cap : m.gap; // between a section and the screen's edge
         const BarRow pill   = PillRow(m);
         const float rowY    = ornate ? 0.0f : pill.y;
         const float rowH    = ornate ? m.height : pill.height;
@@ -221,11 +221,6 @@ namespace headsup
         return l;
     }
 
-    bool DiamondsOn(BarSeparators separators, BarShape shape)
-    {
-        return separators == BarSeparators::Diamonds || (separators == BarSeparators::Theme && shape == BarShape::Ornate);
-    }
-
     float DiamondClearance(const BarMetrics& m)
     {
         return static_cast<float>(WholePixels(m.diamond)) / 2.0f + kDiamondGap;
@@ -241,8 +236,7 @@ namespace headsup
     TextRow FitTextRow(const BarMetrics& m, FunctionRef<LineInk(bool title, int pixels)> ink)
     {
         const BarRow row    = PillRow(m);
-        const float inside  = row.height - 2.0f * kBorder;
-        const float margin  = InkMargin(row.height);
+        const float inside  = row.height - 2.0f * kPillBorder;
         // The margin grows a pixel a side at a time, so a row a pixel taller can have a pixel less room for the ink: a
         // row takes no more than the next one's, and a taller bar never gets smaller text.
         const float room    = std::min(InkRoom(row.height), InkRoom(row.height + 1.0f));
@@ -250,50 +244,36 @@ namespace headsup
         TextRow t;
         LineInk title, detail;
         float spare = 0.0f; // for the gap
-        // A set size is the player's title: only its detail line gets smaller, a pixel at a time down to the floor.
-        const int steps = m.titleSet ? WholePixels(m.subtitle) - kMinDetail : kShrinkSteps;
-        for (int step = 0; step <= steps; ++step)
+        // A pixel of the title at a time, the detail line keeping its share of it, so a larger size or a taller bar
+        // never draws either line smaller.
+        const float share = m.subtitle / m.title;
+        for (t.title = std::max(1, WholePixels(m.title));; --t.title)
         {
-            const float scale = 1.0f - kShrinkStep * static_cast<float>(step);
-            t.title           = WholePixels(m.titleSet ? m.title : m.title * scale);
-            const int share   = m.titleSet ? WholePixels(m.subtitle) - step : WholePixels(m.subtitle * scale);
-            t.detail          = std::min(share, t.title - 1);
-            if (t.detail < kMinDetail) break;
-            title  = ink(true, t.title);
-            detail = ink(false, t.detail);
-            spare  = room - (title.bottom - title.top) - (detail.bottom - detail.top);
-            if (spare >= kMinLineGap)
-            {
-                t.twoLines = true;
-                break;
-            }
+            t.detail = std::max(1, WholePixels(share * static_cast<float>(t.title) + kShareSlack));
+            title    = ink(true, t.title);
+            detail   = ink(false, t.detail);
+            spare    = room - (title.bottom - title.top) - (detail.bottom - detail.top);
+            if (spare >= kMinLineGap || t.title == 1) break;
         }
-        if (t.twoLines)
-        {
-            const float gap   = std::min(spare, maxGap);
-            const float block = (title.bottom - title.top) + gap + (detail.bottom - detail.top);
-            const float top   = row.y + kBorder + (inside - block) / 2.0f; // of the title's ink
-            t.titleY          = top - title.top;
-            t.detailY         = top + (title.bottom - title.top) + gap - detail.top;
-        }
-        else
-        {
-            // Too short a row for two lines kept apart: titles alone, as large as their ink fits.
-            t.detail = 0;
-            for (t.title = WholePixels(m.title); t.title > 1; --t.title)
-                if (const LineInk alone = ink(true, t.title); alone.bottom - alone.top <= room) break;
-            title = ink(true, t.title);
-        }
-        // A title alone: its capitals centered, raised if its descenders would come too near the bottom.
-        const float centered = row.y + (row.height - (title.baseline - title.top)) / 2.0f;
-        const float lowest   = row.y + row.height - kBorder - margin - (title.bottom - title.top);
-        t.aloneY             = std::min(centered, lowest) - title.top;
-        // A meter's texts at a size the player set are that size, as far as the row lets the title be; at Auto, the
-        // detail line's.
-        const bool asTitle   = m.titleSet || !t.twoLines;
-        const LineInk side   = asTitle ? title : detail;
-        t.side               = asTitle ? t.title : t.detail;
-        t.sideY              = row.y + (row.height - (side.baseline - side.top)) / 2.0f - side.top;
+        const float gap   = std::clamp(spare, 0.0f, maxGap);
+        const float block = (title.bottom - title.top) + gap + (detail.bottom - detail.top);
+        // The title's ink top to the detail's baseline centered, as the eye reads two lines, the detail's descenders
+        // hanging into the clear space under them but never past the border. Raised to keep them out of it, lines
+        // without descenders read a pixel high.
+        const float read     = block - (detail.bottom - detail.baseline);
+        const float even     = row.y + kPillBorder + (inside - read) / 2.0f;
+        const float top      = std::min(even, row.y + kPillBorder + inside - block); // of the title's ink
+        t.titleY          = top - title.top;
+        t.detailY         = top + (title.bottom - title.top) + gap - detail.top;
+        // A title alone: as large as its ink fits, its capitals centered as an icon beside it is (not its taller
+        // brackets), raised only if its descenders would pass the border.
+        LineInk alone;
+        for (t.alone = WholePixels(m.title); t.alone > 1; --t.alone)
+            if (alone = ink(true, t.alone); alone.bottom - alone.top <= room) break;
+        alone = ink(true, t.alone);
+        const float centered = row.y + (row.height - (alone.baseline - alone.capital)) / 2.0f - alone.capital;
+        const float lowest   = row.y + row.height - kPillBorder - alone.bottom;
+        t.aloneY             = std::min(centered, lowest);
         return t;
     }
 
@@ -349,6 +329,28 @@ namespace headsup
         return {};
     }
 
+    std::array<WidgetPads, kPanelSlots> PillPads(const BarPlacement& placement, const std::array<PanelWidget, kPanelSlots>& groups,
+        const std::array<float, kPanelSlots>& shown, const std::array<float, kPanelSlots>& linked, float padding)
+    {
+        std::array<WidgetPads, kPanelSlots> pads;
+        pads.fill(WidgetPads{padding, padding});
+        for (const std::vector<PanelWidget>& section : placement)
+        {
+            std::optional<PanelWidget> last;
+            for (const PanelWidget w : section)
+            {
+                if (shown[SlotOf(w)] <= 0.0f) continue;
+                if (last && groups[SlotOf(*last)] == groups[SlotOf(w)])
+                {
+                    pads[SlotOf(*last)].right = linked[SlotOf(*last)];
+                    pads[SlotOf(w)].left      = 0.0f;
+                }
+                last = w;
+            }
+        }
+        return pads;
+    }
+
     void SharePopups(std::array<bool, kPanelSlots>& hasPopup, const std::array<PanelWidget, kPanelSlots>& groups)
     {
         for (int slot = 0; slot < kPanelSlots; ++slot)
@@ -370,6 +372,44 @@ namespace headsup
         const float x        = std::max(0.0f, std::max(clear, std::min(centered, screenWidth - clear - width)));
         const float y        = barHeight + clear;
         return BarRect{x, y, width, std::max(0.0f, std::min(height, PopupRoom(barHeight, screenHeight, gap, ring)))};
+    }
+
+    PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight)
+    {
+        const bool right = popup.x + popup.width / 2.0f > screenWidth / 2.0f;
+        const bool lower = popup.y + popup.height / 2.0f > screenHeight / 2.0f && popup.y + popup.height < screenHeight;
+        return PopupSpot{static_cast<int>(std::lround(right ? screenWidth - popup.x - popup.width : popup.x)),
+            static_cast<int>(std::lround(lower ? screenHeight - popup.y - popup.height : popup.y)), right, lower};
+    }
+
+    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight)
+    {
+        width  = std::min(width, screenWidth);
+        height = std::min(height, screenHeight);
+        const auto x = static_cast<float>(spot.x), y = static_cast<float>(spot.y);
+        return BarRect{std::clamp(spot.fromRight ? screenWidth - x - width : x, 0.0f, screenWidth - width),
+            std::clamp(spot.fromBottom ? screenHeight - y - height : y, 0.0f, screenHeight - height), width, height};
+    }
+
+    std::optional<PopupSpot> PlacedSpot(const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot)
+    {
+        // Rounded as SpotOf rounds: cut downward, a spot kept from the right or bottom crept a pixel at each press.
+        return dragged ? std::optional(PopupSpot{static_cast<int>(std::lround(dragged->x)), static_cast<int>(std::lround(dragged->y))})
+                       : spot;
+    }
+
+    float SpotRoom(const PopupSpot& spot, float screenHeight)
+    {
+        return screenHeight - static_cast<float>(std::max(0, spot.y));
+    }
+
+    BarRect PopupAt(const BarRect& underWidget, float height, const std::optional<PopupSpot>& placed, float screenWidth,
+        float screenHeight, std::optional<float> keptX)
+    {
+        if (placed) return PlaceAtSpot(*placed, underWidget.width, height, screenWidth, screenHeight);
+        BarRect rect = underWidget;
+        if (keptX) rect.x = std::clamp(*keptX, 0.0f, std::max(0.0f, screenWidth - rect.width));
+        return rect;
     }
 
     float PopupRoom(float barHeight, float screenHeight, float gap, float ring)
@@ -400,36 +440,139 @@ namespace headsup
     {
         m_Layout   = layout;
         m_HasPopup = hasPopup;
-        if (m_Pinned && !GroupRect(m_Layout, *m_Pinned)) Pin(std::nullopt);
+        std::erase_if(m_Pinned, [&](PanelWidget pill) { return !GroupRect(m_Layout, pill); });
+        if (m_Settings && !IsPinned(*m_Settings)) m_Settings.reset();
         Reevaluate();
     }
 
-    void BarInput::SetPopup(const BarRect& popup, std::vector<BarTabChip> chips, std::vector<BarScroll> scrolls,
-        const BarRect& pin, const BarRect& cog)
+    void BarInput::SetPopups(std::vector<PopupPlace> popups)
     {
-        m_Popup   = popup;
-        m_PinChip = pin;
-        m_CogChip = cog;
-        m_Chips   = std::move(chips);
-        m_Scrolls = std::move(scrolls);
+        m_Popups = std::move(popups);
         Reevaluate();
     }
 
-    void BarInput::DragTo(float y)
+    void BarInput::MenuOpen(bool open)
     {
+        if (!open)
+            m_UnderMenu.reset();
+        else if (!m_UnderMenu)
+            m_UnderMenu = Shown();
+    }
+
+    bool BarInput::OverMenu(PanelWidget pill) const
+    {
+        return m_UnderMenu && std::ranges::find(*m_UnderMenu, pill) == m_UnderMenu->end();
+    }
+
+    std::vector<PopupLayer> BarInput::Layers() const
+    {
+        std::vector<PopupLayer> layers;
+        const std::optional<PanelWidget> settings = SettingsShown();
+        bool past = false;
+        for (const PanelWidget pill : Shown())
+        {
+            layers.push_back(OverMenu(pill) && pill != settings ? PopupLayer::OverMenu
+                             : past                             ? PopupLayer::OverSettings
+                                                                : PopupLayer::UnderSettings);
+            past = past || pill == settings;
+        }
+        return layers;
+    }
+
+    std::vector<PanelWidget> BarInput::Shown() const
+    {
+        std::vector<PanelWidget> shown = m_Pinned;
+        if (m_Hover && !IsPinned(*m_Hover)) shown.push_back(*m_Hover);
+        return shown;
+    }
+
+    void BarInput::Pin(std::optional<PanelWidget> widget)
+    {
+        m_Settings.reset();
+        m_PinnedForSettings = false;
+        m_Hover.reset();
+        if (!widget)
+        {
+            m_Pinned.clear();
+            return;
+        }
+        std::erase(m_Pinned, *widget);
+        m_Pinned.push_back(*widget);
+    }
+
+    void BarInput::ShowSettings(std::optional<PanelWidget> pill)
+    {
+        if (!pill)
+        {
+            if (m_Settings && m_PinnedForSettings) std::erase(m_Pinned, *m_Settings);
+            m_Settings.reset();
+            m_PinnedForSettings = false;
+            return;
+        }
+        const bool held = IsPinned(*pill);
+        Pin(pill);
+        m_Settings          = pill;
+        m_PinnedForSettings = !held;
+    }
+
+    void BarInput::TogglePin(PanelWidget pill)
+    {
+        if (m_Settings == pill)
+        {
+            m_Settings.reset();
+            m_PinnedForSettings = false;
+        }
+        if (IsPinned(pill))
+            std::erase(m_Pinned, pill);
+        else
+            m_Pinned.push_back(pill);
+    }
+
+    const PopupPlace* BarInput::PlaceAt(float x, float y) const
+    {
+        for (auto place = m_Popups.rbegin(); place != m_Popups.rend(); ++place)
+            if ((IsPinned(place->pill) || m_Hover == place->pill) && place->rect.Contains(x, y)) return &*place;
+        return nullptr;
+    }
+
+    void BarInput::DragTo(float x, float y)
+    {
+        if (m_PopupDrag)
+        {
+            m_PopupDrag->at.x = x - m_PopupDrag->grabX;
+            m_PopupDrag->at.y = y - m_PopupDrag->grabY;
+            return;
+        }
         if (!m_Drag) return;
-        for (const BarScroll& scroll : m_Scrolls)
-            if (scroll.key == m_Drag->key && scroll.track.height > scroll.thumb)
-            {
-                const float along = (y - m_Drag->grab - scroll.track.y) / (scroll.track.height - scroll.thumb);
-                m_Scrolled[scroll.key] = static_cast<size_t>(std::lround(std::clamp(along, 0.0f, 1.0f) * static_cast<float>(scroll.most)));
-            }
+        for (const PopupPlace& place : m_Popups)
+            for (const BarScroll& scroll : place.scrolls)
+                if (scroll.key == m_Drag->key && scroll.track.height > scroll.thumb)
+                {
+                    const float along = (y - m_Drag->grab - scroll.track.y) / (scroll.track.height - scroll.thumb);
+                    m_Scrolled[scroll.key] =
+                        static_cast<size_t>(std::lround(std::clamp(along, 0.0f, 1.0f) * static_cast<float>(scroll.most)));
+                }
+    }
+
+    void BarInput::EndDrag()
+    {
+        if (m_PopupDrag)
+            for (const PopupPlace& place : m_Popups)
+                if (place.pill == m_PopupDrag->pill) m_Moved = std::pair{place.pill, place.rect};
+        m_Drag.reset();
+        m_PopupDrag.reset();
+    }
+
+    std::optional<BarRect> BarInput::DraggedPopup(PanelWidget pill) const
+    {
+        return m_PopupDrag && m_PopupDrag->pill == pill ? std::optional(m_PopupDrag->at) : std::nullopt;
     }
 
     bool BarInput::Wheel(int notches)
     {
-        if (!InPopup(m_X, m_Y)) return false;
-        for (const BarScroll& scroll : m_Scrolls)
+        const PopupPlace* place = PlaceAt(m_X, m_Y);
+        if (place == nullptr) return false;
+        for (const BarScroll& scroll : place->scrolls)
             if (scroll.rect.Contains(m_X, m_Y))
             {
                 const long now = static_cast<long>(std::min(m_Scrolled[scroll.key], scroll.most)) + kLinesPerNotch * notches;
@@ -451,68 +594,111 @@ namespace headsup
     void BarInput::Reevaluate()
     {
         m_Under = WidgetAt(m_Layout, m_X, m_Y);
-        if (m_Under && m_HasPopup[SlotOf(*m_Under)])
+        if (m_Dismissed != m_Under) m_Dismissed.reset();
+        if (m_Under && m_HasPopup[SlotOf(*m_Under)] && m_Under != m_Dismissed)
             m_Hover = m_Under;
-        else if (!(m_Hover && m_HasPopup[SlotOf(*m_Hover)] && InPopupColumn(m_X, m_Y)))
+        else if (!(m_Hover && m_HasPopup[SlotOf(*m_Hover)] && InHoverColumn(m_X, m_Y)))
             m_Hover.reset();
+        if (m_UnderMenu)
+            std::erase_if(*m_UnderMenu, [shown = Shown()](PanelWidget pill) { return std::ranges::find(shown, pill) == shown.end(); });
+        if (Shown().empty())
+        {
+            m_Scrolled.clear();
+            m_Refused = false;
+            for (const std::string& card : std::exchange(m_Fleeting, {}))
+                m_Tabs.erase(card);
+        }
     }
 
-    bool BarInput::InPopupColumn(float x, float y) const
+    bool BarInput::InHoverColumn(float x, float y) const
     {
-        return BarRect{m_Popup.x, 0.0f, m_Popup.width, m_Popup.y + m_Popup.height}.Contains(x, y);
+        for (const PopupPlace& place : m_Popups)
+            if (place.pill == m_Hover &&
+                BarRect{place.rect.x, 0.0f, place.rect.width, place.rect.y + place.rect.height}.Contains(x, y))
+                return true;
+        return false;
     }
 
     bool BarInput::Over(float x, float y) const
     {
-        return (y >= 0.0f && y < m_Layout.height) || WidgetAt(m_Layout, x, y) || (Open() && m_Popup.Contains(x, y));
+        return (y >= 0.0f && y < m_Layout.height) || WidgetAt(m_Layout, x, y) || InPopup(x, y);
     }
 
     bool BarInput::Press(float x, float y, bool left)
     {
         if (!Over(x, y)) return false;
         if (!left) return true;
+        const std::optional<PanelWidget> under = WidgetAt(m_Layout, x, y);
+        if (under && under->kind == BarWidget::Settings)
+        {
+            m_Presses.push_back(kOpenSettingsPress);
+            return true;
+        }
         // The widget on the bar pins and unpins its popup, as its pin chip does.
-        if (const std::optional<PanelWidget> under = WidgetAt(m_Layout, x, y); under && m_HasPopup[SlotOf(*under)])
+        if (under && m_HasPopup[SlotOf(*under)])
         {
-            m_Pinned = m_Pinned == under ? std::nullopt : under;
-            m_Settings.reset();
-        }
-        else if (!under && Open() && m_Popup.Contains(x, y))
-        {
-            for (const BarScroll& scroll : m_Scrolls)
-                if (scroll.track.Contains(x, y) && scroll.most > 0)
-                {
-                    const size_t now = std::min(m_Scrolled[scroll.key], scroll.most);
-                    const float top  = scroll.track.y + (scroll.track.height - scroll.thumb) * static_cast<float>(now) /
-                                                           static_cast<float>(scroll.most);
-                    const bool held  = y >= top && y < top + scroll.thumb;
-                    m_Drag           = Drag{scroll.key, held ? y - top : scroll.thumb / 2.0f};
-                    DragTo(y);
-                    return true;
-                }
-            for (const BarTabChip& chip : m_Chips)
-                if (chip.rect.Contains(x, y))
-                {
-                    if (chip.press)
-                        m_Presses.push_back(chip.tab);
-                    else
-                        m_Tabs[chip.key] = chip.tab;
-                    return true;
-                }
-            if (m_PinChip.Contains(x, y))
+            TogglePin(*under);
+            // Unpinned there, it goes at once, though the pointer is still on the widget.
+            if (IsPinned(*under))
+                m_Dismissed.reset();
+            else
             {
-                m_Pinned = m_Pinned == Open() ? std::nullopt : Open();
-                m_Settings.reset();
+                m_Dismissed = under;
+                m_Hover.reset();
             }
-            else if (m_CogChip.Contains(x, y))
+            return true;
+        }
+        const PopupPlace* place = under ? nullptr : PlaceAt(x, y);
+        if (place == nullptr) return true;
+        for (const BarScroll& scroll : place->scrolls)
+            if (scroll.track.Contains(x, y) && scroll.most > 0)
             {
-                if (SettingsShown())
-                    m_Settings.reset();
+                const size_t now = std::min(m_Scrolled[scroll.key], scroll.most);
+                const float top  = scroll.track.y + (scroll.track.height - scroll.thumb) * static_cast<float>(now) /
+                                                       static_cast<float>(scroll.most);
+                const bool held  = y >= top && y < top + scroll.thumb;
+                m_Drag           = Drag{scroll.key, held ? y - top : scroll.thumb / 2.0f};
+                DragTo(x, y);
+                return true;
+            }
+        for (const BarTabChip& chip : place->chips)
+            if (chip.rect.Contains(x, y))
+            {
+                if (chip.press)
+                    m_Presses.push_back(chip.tab);
                 else
-                    m_Settings = m_Pinned = Open();
+                {
+                    m_Tabs[chip.key] = chip.tab;
+                    if (chip.fleeting) m_Fleeting.insert(chip.key);
+                }
+                return true;
+            }
+        const PanelWidget pill = place->pill;
+        if (place->pin.Contains(x, y))
+            TogglePin(pill);
+        else if (place->cog.Contains(x, y))
+        {
+            if (SettingsShown() == pill)
+                ShowSettings(std::nullopt);
+            else
+            {
+                m_PinnedForSettings = !IsPinned(pill);
+                if (m_PinnedForSettings) m_Pinned.push_back(pill);
+                m_Settings = pill;
             }
         }
+        else if (IsPinned(pill) && place->grip.Contains(x, y))
+            m_PopupDrag = PopupDrag{pill, place->rect, x - place->rect.x, y - place->rect.y};
         return true;
+    }
+
+    void BarClicks::Held(float x, float y, bool down)
+    {
+        if (!m_Input.Dragging()) return;
+        if (down)
+            m_Input.DragTo(x, y);
+        else
+            m_Input.EndDrag();
     }
 
     bool BarClicks::Take(uint32_t message, uint32_t buttons, float x, float y, bool barOn, bool overGui, bool blocked)
@@ -522,19 +708,16 @@ namespace headsup
         switch (message)
         {
         case kMouseMove:
+            // A drag goes on wherever the pointer goes; the game sees none of it. Not ended by a move's button flag:
+            // after the bar kept the press from the game, Windows may report the button up while it is held.
+            if (m_Input.Dragging())
+            {
+                m_Input.DragTo(x, y);
+                return true;
+            }
             // A move with a button up is the first news of a release outside the window, which nothing else reports.
             m_Left  = m_Left && (buttons & kLeftButton) != 0;
             m_Right = m_Right && (buttons & kRightButton) != 0;
-            // A drag goes on wherever the pointer goes while the button is held; the game sees none of it.
-            if (m_Input.Dragging())
-            {
-                if ((buttons & kLeftButton) != 0)
-                {
-                    m_Input.DragTo(y);
-                    return true;
-                }
-                m_Input.EndDrag();
-            }
             if (barsTurn)
                 m_Input.Move(x, y);
             else

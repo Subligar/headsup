@@ -73,6 +73,8 @@ namespace headsup
         bool OwnReport(std::string_view line, double now) const;
         // The mob was seen dead: what comes back is another spawn.
         void Forget(uint32_t serverId);
+        // Your level changed and every answer was dropped: each mob may be asked about again at once.
+        void AskAgain();
         // Another zone, where the ids are other mobs'.
         void Clear();
 

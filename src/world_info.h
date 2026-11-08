@@ -66,15 +66,6 @@ namespace headsup
     Rse RseAt(int64_t unixMs, int weeksAhead = 0);
 
     const char* ElementName(Element element);
-    // The next day from today, today included, when the zone can roll a weather of the element: its likeliest weather
-    // of that element and the element's chance that day. nullopt for a zone without a calendar or one that never rolls it.
-    struct ElementWeather
-    {
-        uint32_t day = 0;
-        Weather weather = Weather::None;
-        int percent     = 0;
-    };
-    std::optional<ElementWeather> NextElementWeather(const ZoneRecord& zone, Element element, uint32_t today);
     // A zone that can roll a weather of the element on a day: its weathers of that element, likeliest first, and their
     // chances added up.
     struct ZoneRoll

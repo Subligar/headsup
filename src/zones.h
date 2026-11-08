@@ -29,6 +29,10 @@ namespace headsup
     std::string_view ZoneRegion(const ZoneRecord* zone);
     // Phoenix's REGION_TYPE spelled for players: "Zulkheim", "Tu'Lia"; empty when unknown.
     std::string_view RegionName(uint8_t region);
+    // Phoenix's REGION_TYPE numbers: the three nations' cities and Jeuno, and West Aht Urhgan to Alzadaal, Aht
+    // Urhgan's Besieged map.
+    constexpr uint8_t kSanDoriaRegion = 19, kBastokRegion = 20, kWindurstRegion = 21, kJeunoRegion = 22;
+    constexpr uint8_t kFirstAhtUrhganRegion = 28, kLastAhtUrhganRegion = 32;
     // The zone's three weathers on a day of its calendar's kWeatherDays cycle, packed normal << 10 | common << 5 |
     // rare; nullopt without a calendar.
     std::optional<uint16_t> PackedWeather(const ZoneRecord& zone, uint32_t vanaDay);

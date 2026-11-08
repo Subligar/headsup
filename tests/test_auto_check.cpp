@@ -274,3 +274,29 @@ TEST(the_simplelog_addons_line_for_a_check_headsup_made_is_kept_out_too)
     theirs.PlayerAsked(kWorm, 10.1);
     CHECK(!theirs.OwnReport(kSimplelogLine, 10.2));
 }
+
+TEST(simplelogs_line_for_a_mob_with_a_plural_name_is_kept_out_too)
+{
+    // simplelog's functions.lua words a plural name's answer as "seem" and "They seem", and its strength as "Wings'"
+    // or, with targets condensed, "Wings strength".
+    CheckCandidate wings = Mob(kCrab, 5.0f);
+    wings.name           = "Midnight Wings";
+    const std::vector<CheckCandidate> mobs{wings};
+    AutoCheck checks;
+    CHECK(checks.Due(mobs, 10.0).has_value());
+    CHECK(checks.OwnReport("The \x1F\x45Midnight Wings\x1E\x01 seem \x1E\x01to be level 22 (EM)\x1E\x01.\x07"
+                           "They seem to have high evasion and defense.", 10.2));
+    CHECK(checks.OwnReport("The \x1F\x45Midnight Wings\x1E\x01' strength is impossible to gauge!", 10.2));
+    CHECK(checks.OwnReport("The \x1F\x45Midnight Wings\x1E\x01 strength is impossible to gauge!", 10.2));
+}
+
+TEST(after_your_level_changes_a_mob_asked_about_a_moment_ago_is_asked_again)
+{
+    AutoCheck checks;
+    const std::vector<CheckCandidate> mobs{Mob(kCrab, 8.0f)};
+    CHECK(checks.Due(mobs, 100.0).has_value());
+    CHECK(checks.TakeAnswer(CheckAnswer{kCrab, true}, 100.2));
+    CHECK(!checks.Due(mobs, 101.0)); // its answer, dropped, would come back only after kAskAgain
+    checks.AskAgain();
+    CHECK(checks.Due(mobs, 101.0).has_value());
+}

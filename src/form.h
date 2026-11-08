@@ -86,6 +86,9 @@ namespace headsup
     // own tag held, which would leave its place.
     constexpr const char* kGhostClass    = "ghost";
     constexpr const char* kGhostSlotClass = "ghost-slot", *kGhostTextClass = "ghost-text"; // its place, and the letters before it
+    // A Widget Designer line: a drop on it but on none of its buttons goes before the button after the pointer, or on
+    // its end.
+    constexpr const char* kDesignLineClass = "design-line", *kDesignChipClass = "dchip";
     // On a stretch split by a held tag: the bytes of it that stand before the tag, which it does not show.
     constexpr const char* kSplitAttribute = "split";
     constexpr const char* kReplacedClass = "replaced";
@@ -197,10 +200,15 @@ namespace headsup
         void BeginBlock(const char* id);
         // A card, its title row folding it; an enabled checkbox sits at the title's right, and what the card is for
         // is written under the title. False when it is folded, with nothing more to do; true, with EndCard to call.
-        bool BeginCard(const char* title, bool* enabled = nullptr, const char* about = nullptr);
+        // reset: the card has an arrow at its header's right that puts it back to its defaults, shown while differs,
+        // and set when it was clicked.
+        bool BeginCard(const char* title, bool* enabled = nullptr, const char* about = nullptr, bool* reset = nullptr,
+            bool differs = false);
         // A block with the id a card of that title would have and no title or card of its own; EndCard ends it.
         void BeginBare(const char* title);
         void EndCard();
+        // The page's own words, on the page above its cards, written as a card's description is.
+        void PageNote(const char* text);
 
         // A row: its label at the left, with its tip, and the controls that follow at the right, until EndRow.
         // In a label, what is before "##" shows and what follows it names the control's id, which is otherwise
@@ -244,6 +252,15 @@ namespace headsup
             DropdownAt(label, value, first, last, text, width, nullptr, option);
             EndRow();
         }
+        // A dropdown of groups of rows, each group under its heading and one without rows left out. value: the row
+        // picked, counted through every group's; another than any row shows shown.
+        struct ListGroup
+        {
+            std::string heading;
+            std::vector<std::string> rows, tips;
+        };
+        void GroupedDropdown(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown,
+            const char* tip);
         // A dropdown whose rows, and the closed control, show RML of the page's own where the others show words.
         void MarkupDropdown(const char* label, int& value, const std::vector<std::string>& rows, const char* tip,
             const OptionTip& option = {});
@@ -259,6 +276,10 @@ namespace headsup
         void ArgbSwatch(const char* label, uint32_t& argb, const char* tip);
         // A color pick: the dropdown of its source, then the swatch of a custom color.
         void ColorPickRow(const char* label, ColorPick& pick, const std::vector<ColorSource>& sources, const char* tip);
+        // A color (ARGB) the theme sets, none, or the player's own: words' Set by Theme and Custom as joined buttons,
+        // then the swatch, the theme's color while Set by Theme. A color picked makes it Custom.
+        void ThemeColorRow(const char* label, std::optional<uint32_t>& custom, uint32_t theme, const char* const* words,
+            const char* tip);
         // A dropdown of checks, one bit of bits each in the options' order. Closed, it says All, None, the one picked
         // or how many are.
         void BitsDropdown(const char* label, uint32_t& bits, std::span<const LayoutOption> options, const char* tip);
@@ -272,7 +293,7 @@ namespace headsup
         // need. Returns the tab clicked, or picked.
         int Tabs(const char* id, int picked, const char* const* labels, int count, bool wrap = false);
         // A muted line inside the card, wrapped at its edge.
-        void Note(const char* text);
+        void Note(const char* text, const char* classes = "note");
         // A pill action on a line of its own.
         bool Action(const char* label, const char* tip = nullptr);
         // A label and a text that changes without the row changing: a reading, not a setting.
@@ -329,6 +350,8 @@ namespace headsup
         // text then holds. Live: true whenever a key changed it.
         bool TextAt(const char* id, std::string& text, const char* hint, float width, bool live = false,
             size_t most = 0);
+        // A box of several lines across the card, which text holds as it is typed. most: the characters it takes.
+        void Paragraph(const char* id, std::string& text, size_t most);
         // A design line's box: stretches of text to type in with its slots as chips between them, which take drops
         // and can be dragged. True when its text changed. draft keeps its caret, and says whether it has the keyboard.
         bool LineBox(const char* id, std::string& text, LineDraft& draft);

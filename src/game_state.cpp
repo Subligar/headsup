@@ -38,6 +38,7 @@ namespace headsup
             m_CalledForHelp.clear();
             m_ConquestOwed   = true;
             m_CurrenciesOwed = true;
+            m_Loading        = true;
             m_Shares.reset();
             m_Weather    = ParseZoneInWeather(data, size);
             m_Zone       = ParseZoneInZone(data, size);
@@ -54,6 +55,9 @@ namespace headsup
                 }
                 m_Player = *player;
             }
+            break;
+        case kBagsSentPacket:
+            if (ParseAllBagsSent(data, size)) m_Loading = false;
             break;
         case kTalkNumPacket:
         case kTalkNumWorkPacket:

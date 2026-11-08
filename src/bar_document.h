@@ -22,15 +22,21 @@
 namespace headsup
 {
     // The images the bar's documents name, drawn by the bar's own image code when RmlUi asks for them: an icon by
-    // its number, a theme's strip column (its rows and the rows fading below), a diamond or a coin by its pixels.
+    // its number, a theme's strip column (its rows and the rows fading below), a diamond by its pixels.
     constexpr std::string_view kHostSource = "hu:";
     std::string IconSource(Icon icon);
     std::string StripSource(const BarPalette& palette, int rows, int belowRows);
-    std::string DiamondSource(uint32_t argb, int pixels);
-    std::string CoinSource(int pixels);
+    std::string SeparatorSource(DashMark mark, uint32_t argb, int pixels);
     // A game item's picture, which only the plugin can make (from the game's resources), and the item a name is.
     std::string ItemSource(uint16_t item);
     std::optional<uint16_t> ItemOfSource(std::string_view name);
+    // A status's icon from its pack, or from the game's resources when the pack has none or it is the game's own, which
+    // only the plugin can read; the status a name is, with no background (that is an icon of its own).
+    std::string StatusSource(const StatusMark& mark);
+    std::optional<StatusMark> StatusOfSource(std::string_view name);
+    // A status name's icon: its pack's, else the game's (nothing from game when it has none), else XIView's
+    // unknown.png; nothing for a name that is no status.
+    std::optional<Image> StatusImage(std::string_view name, FunctionRef<std::optional<Image>(uint16_t)> game);
     std::string ResetSource(uint32_t argb, int pixels); // the circular arrow that puts a color back
     std::string CogSource(uint32_t argb, int pixels);   // the cog on a popup's settings chip
     // The image a name stands for; nothing for a name that is none of the above.
@@ -40,40 +46,29 @@ namespace headsup
     std::optional<Image> GamePictureImage(const std::optional<PlayOnlineIcons>& icons, const std::optional<NationCrests>& crests,
         std::string_view name);
 
-    // A line of a widget as RmlUi lays it out: its line box's height, where its top goes from the strip's top (over
-    // a detail line, and alone), and how far under that top the icons after its text start.
+    // A line of a widget as RmlUi lays it out: its line box's height, where its top goes from the strip's top, how
+    // far under that top the icons after its text start, and how far its capitals' middle is, where an EXP bar's goes.
     struct BarLinePlace
     {
-        int height     = 0;
-        float top      = 0.0f, aloneTop = 0.0f;
-        float iconDrop = 0.0f;
+        int height       = 0;
+        float top        = 0.0f;
+        float iconDrop   = 0.0f;
+        float capsMiddle = 0.0f;
         bool operator==(const BarLinePlace&) const = default;
     };
     // Where the widgets' lines go so their ink lands on the rows the bar's text row gives: a title in the title
-    // font, a title of figures in the detail font, a detail line, and a meter's text beside its bar.
+    // font and a title of figures in the detail font, over a detail line and alone, and a detail line.
     struct BarTextPlace
     {
-        BarLinePlace title, figures, detail, side;
+        BarLinePlace title, figures, alone, figuresAlone, detail;
         BarLinePlace helpCaption, help; // the help bar's, at its own text size
         bool operator==(const BarTextPlace&) const = default;
     };
 
-    // A widget's own text, where its fonts or size are not the bar's: those fonts, and the text row and places they
-    // come to.
-    struct WidgetText
-    {
-        PanelWidget widget;
-        const char* titleFont  = nullptr; // interned, as the bar's are
-        const char* detailFont = nullptr;
-        TextRow lines;
-        BarTextPlace place;
-        bool operator==(const WidgetText&) const = default;
-    };
-
-    // The bar's markup and style: the strip across the screen, the ornate caps, a divider for each pair of
-    // neighbours and every placed widget's element, all sized from the look, with the text rules of each widget in
-    // own under its id. The widgets and dividers carry the hidden class and no place: the plugin shows and places them.
-    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own);
+    // The bar's markup and style: the strip across the screen, the end caps when the settings show them, a divider
+    // for each pair of neighbours and every placed widget's element, all sized from the look. The widgets and dividers
+    // carry the hidden class and no place: the plugin shows and places them.
+    std::string BarDocument(const BarLook& look, const BarTextPlace& place);
     std::string WidgetId(PanelWidget widget);
     // A widget's margin and padding on one side as its element takes them, for a room from its edge to what it
     // shows: inside a pill's or a frame's border, or past a plain ornate widget's margin. A side it shares in a
@@ -95,23 +90,15 @@ namespace headsup
     // Shares its pill with the widget before it, or after it, and has no edge or round corners on that side.
     constexpr const char* kJoinBeforeClass = "join-before";
     constexpr const char* kJoinAfterClass  = "join-after";
-    // A meter's texts as wide as they are drawn, and where its parts go across it: its bar after barX, the texts
-    // above and below centered on the bar.
-    struct MeterWidths
-    {
-        float above = 0.0f, below = 0.0f, left = 0.0f, right = 0.0f;
-    };
-    struct MeterPlace
-    {
-        float width = 0.0f, barX = 0.0f, aboveX = 0.0f, belowX = 0.0f;
-        bool operator==(const MeterPlace&) const = default;
-    };
-    MeterPlace PlaceMeter(const Meter& meter, const MeterWidths& text, float gap);
-
-    // A widget's inner markup: its icons, coin, title and detail lines in their colors, and its progress bar.
-    // columns: a widget of cells' column widths (CellColumns); meter: a meter's place (PlaceMeter).
-    std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns,
-        const MeterPlace& meter);
+    // A widget's class for the section it is in, whose side of the panel its content lines up with.
+    const char* SectionClass(BarSection section);
+    // The track an EXP bar's fill runs along, in a theme: its color while Set by Theme. Its fill is the accent's gradient.
+    uint32_t ExpBarBack(const BarPalette& palette);
+    // A widget's class for its Alignment, which wins over its section's; empty for Set by Location.
+    const char* AlignClass(WidgetAlign align);
+    // A widget's inner markup: its icons, title and detail lines in their colors, and its progress bar.
+    // columns: a widget of cells' column widths (CellColumns).
+    std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns);
     // A widget of cells' columns: each as wide as its widest cell, which width measures (title: on the first line).
     std::vector<float> CellColumns(const WidgetContent& content, FunctionRef<float(bool title, const Span&)> width);
     float CellsWidth(const std::vector<float>& columns, float gap);
@@ -134,7 +121,7 @@ namespace headsup
     struct PopupFace
     {
         std::string family;
-        int pixels = 0, line = 0, tracking = 0;
+        int pixels = 0, line = 0;
         float drop = 0.0f;
         bool operator==(const PopupFace&) const = default;
     };
@@ -148,7 +135,7 @@ namespace headsup
     // The panel's text shadow as a font effect, for text of that many pixels.
     std::string ShadowEffect(int pixels);
     constexpr const char* kOpenClass = "open"; // on a popup while it shows, so what it does as it opens plays each time
-    constexpr const char* kPopupId = "popup";
+    constexpr const char* kPopupClass = "popup"; // each pill's popup's element
     // A laid out popup's markup, from its top left corner: its panel, then each piece where the layout put it.
     std::string PopupRml(const PopupLayout& layout, const BarLook& look, const PopupFaces& faces);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "argb.h"
+#include "bar_design.h"
 #include "bar_placement.h"
 #include "bar_server_time.h"
 #include "bar_statuses.h"
@@ -43,69 +44,50 @@ namespace headsup
 
     constexpr int kMaxWidgetSpacing = 40; // pixels
     constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
+    constexpr int kThemeRounding = -1; // a corner's radius in pixels up to kMaxRounding, or the theme's own
     // Where the Zone widget shows who holds its region: not at all, before or after the zone's name, or under it.
-    enum class ConquestPlace : uint8_t { Off, Left, Right, Below };
-    constexpr int kConquestPlaceCount = 4;
     // The Target widget's Visibility: the targets it shows for.
     enum class TargetShow : uint8_t { NpcsObjects, Players, Mobs, Pets, NoTarget };
     constexpr int kTargetShowCount = 5;
     constexpr uint8_t TargetShowBit(TargetShow show) { return static_cast<uint8_t>(1u << static_cast<int>(show)); }
     constexpr uint8_t kAllTargetShows = (1u << kTargetShowCount) - 1;
     // Its Show Icons: the detection icons, then a mob's weaknesses after its level.
-    constexpr uint32_t kTargetWeakIcons = 1u << kDetectionIconCount;
-    constexpr uint32_t kAllTargetIcons  = kAllDetection | kTargetWeakIcons;
-    // A widget's spacing and padding at their sliders' leftmost: the panel's.
-    constexpr int kPanelSpacing = 0, kPanelPadding = kThemePadding;
-    constexpr int kPanelTextSize = kAutoBarTextSize; // a widget's text size: the panel's, at the slider's leftmost
 
     // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
-    enum class ConquestGrid : uint8_t { TwoByTwo, OneByFour };
-    constexpr int kConquestGridCount = 2;
     // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
     struct WidgetOptions
     {
         bool on         = false;
-        bool secondLine = true;
-        bool icons      = true; // and gil's coin
-        bool background = false; // its pill or tint shown while not hovered, as well as whatever the theme shows
-        int spacing     = kPanelSpacing; // pixels more between it and each of its neighbours
-        int padding     = kPanelPadding; // pixels from its sides to what it shows
-        std::string titleFont, textFont;  // its own, as the panel's; empty for the panel's
-        int textSize    = kPanelTextSize; // its title's, or the panel's
-        int currency    = kGilCurrency;             // Gil: by kCurrencyTable
+        WidgetDesign design; // what it shows on its two lines (NewWidget gives each kind its default)
+        int currency    = kGilCurrency;             // Gil: by kCurrencyTable, or kYourConquestCurrency
+        int secondCurrency = kYourConquestCurrency; // its Currency 2 buttons', the same way
         int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
-        uint8_t nations = kAllNations;              // World Info's conquest: whose regions it counts, by NationBit
-        ConquestGrid conquestGrid = ConquestGrid::TwoByTwo; // and how several are laid out
+        CustomIcons weatherIcons = CustomIcons::Always; // Forecast: its weather pictures
+        bool zoneId = true;                         // Zone: its number after its name in the pop-out's header
+        bool memText = false;                       // Performance: "Mem" before its Memory button's figures
+        StatusDisplay statusDisplay = StatusDisplay::Both; // Status Timers: how each pinned status shows
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
+        std::optional<ClockZone> clockSecondZone = ClockZone::Japan; // its Secondary Timezone part's, the same way
         bool clock24         = true;                // its two lines
         bool clockSeconds    = false;               // its own line's seconds
-        bool clockServerTime = false;               // the server's time under its own
-        bool zoneId          = false;               // Zone: its number after its name in the popup
-        ConquestPlace zoneConquest = ConquestPlace::Below; // and who holds its region, by their crest
-        bool zoneConquestText      = true;                 // and by name, after the crest
-        bool vanaWeekday     = true;                // Vana'diel Clock: the day before the time
-        bool vanaDate        = false;               // and the date before the moon
-        ExpBarPlace expBar   = ExpBarPlace::Under;  // Job & EXP
-        uint8_t expText      = kDefaultExpText;     // by ExpTextBit
-        ExpPlaces expPlaces  = kDefaultExpPlaces;   // its Bar layout: its texts around its bar
-        int expBarWidth      = kDefaultExpBarWidth;
+        DateFormat dateFormat = DateFormat::MonthDayYear; // how its Local Date button writes the date
+        int expBarWidth      = kDefaultExpBarWidth;  // Job & EXP: its EXP Bar's
         int expBarHeight     = kDefaultExpBarHeight;
-        Align expAlign       = Align::Center;       // its texts above and below the bar, against it
-        JobLayout jobLayout  = JobLayout::JobsFirst;
-        bool jobNames        = true;
-        uint8_t perfParts    = kDefaultPerfParts; // Performance: what it shows on the panel, by PerfBit
-        uint32_t targetIcons = DetectionBit(DetectionIcon::Aggro); // Target: a mob's icons, by DetectionBit and kTargetWeakIcons
+        std::optional<ExpText> expBarText;           // what its EXP Bar says; none for nothing
+        Align expBarTextAlign = Align::Center;       // where on the bar it says it
+        std::optional<uint32_t> expBarBack, expBarFill; // its EXP Bar's colors (ARGB); none for the theme's
+        JobText jobText      = JobText::MainSub;     // how its Job Info says the jobs
+        // Where on its line each of its texts goes, against the widget's other lines.
+        Align jobInfoAlign = Align::Left, earnedAlign = Align::Left, toNextAlign = Align::Left, percentAlign = Align::Left;
+        uint32_t targetDetection = kDefaultDetection; // Target: the senses its Detection part shows, by DetectionBit
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
-        bool targetMobLevel  = true;  // a mob's level and con under its name
-        bool targetJobs      = true;  // and a player's jobs and levels, as far as they are known
-        bool targetDistance  = true;  // and how far it is, after its name
-        WorldLine worldLine  = WorldLine::Departure; // World Info: what it tells on the panel
-        int worldRoute       = 0;                    // its departure, by TravelRoutes
-        Element worldElement = Element::Fire;        // its weather
-        int worldGuild       = 0;                    // its guild shop, by GuildShops
-        uint8_t worldSections = kAllWorldSections;   // its popup's parts, by WorldBit
+        int worldRoute       = 0;                    // World Info: its Tracked Ship, by TravelRoutes
+        int worldGuild       = 0;                    // its Tracked Guild, by GuildShops
         std::optional<PanelWidget> combine;          // shown right after it in its pill, with one popup (Combine)
-        bool combineOnPanel = true, combineInPopup = true; // that widget's place on the panel and cards in the popup
+        int linkPadding = 0; // pixels between it and the widget it combines with
+        IconSide iconSide = IconSide::Left; // its icon's, for a widget with one (IconPartOf)
+        WidgetAlign align = WidgetAlign::Location; // all but Game Help's, whose text is the help bar's
+        std::optional<PopupSpot> popupSpot; // where its pop-out shows while pinned; none for under its pill
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.
@@ -123,7 +105,11 @@ namespace headsup
     // long, and with nothing in it that would lead out of the folder.
     constexpr size_t kMaxFileName = 64;
     bool IsFolderFileName(std::string_view name);
+    constexpr const char* kUnnamedTheme = "Custom"; // a custom theme's name where a file holds none
     // The mouse pointer: the game's own, PlayOnline's chocobo, or a cursor file of the player's.
+    // Which fish stamina bar shows while a fish is hooked: none, the game's, or HeadsUp's in place of the game's.
+    enum class FishBarShown : uint8_t { Hidden, Vanilla, HeadsUp };
+    constexpr int kFishStaminaCount = 3;
     enum class PointerIcon : uint8_t { Vanilla, Chocobo, File };
     constexpr int kPointerIconCount = 3;
     constexpr int kMinCursorSide = 4, kMaxCursorSide = 64; // pixels: the target cursor's width and height
@@ -155,9 +141,10 @@ namespace headsup
     {
         // The Currency popup's favorites at its top, by kCurrencyTable's key or kYourConquestPoints, in this order.
         std::vector<std::string> currencyFavorites{kCurrencyTable[kGilCurrency].key, kYourConquestPoints};
+        std::vector<std::string> collapsedSections; // the pop-out cards collapsed, by CollapseKey
         // The Status Timers popup's favorites at its top, and those of them it shows on the panel, by status id.
         std::vector<uint16_t> statusFavorites{kSignetEffect, kSanctionEffect};
-        std::vector<uint16_t> statusPins;
+        std::vector<uint16_t> statusPins{kSignetEffect};
         bool enabled       = true;
         bool autoSave      = true; // off, changes wait for Save in the settings window, and Revert drops them
         int outlineThickness = 100; // percent of kOutlineUnitPx
@@ -175,15 +162,26 @@ namespace headsup
         std::string badgeFontName; // badges' numbers; empty for the default font
         bool showBar       = true;
         BarTheme barTheme  = BarTheme::PhoenixGold;
-        BarPalette customPalette = PaletteOf(BarTheme::PhoenixGold); // the Custom theme's, kept while another is picked
-        BarSeparators barSeparators = BarSeparators::Theme;
+        // The custom theme in use, or the last one, kept while another is picked: its colors and looks as they are now,
+        // and the name of its file in the themes folder.
+        BarPalette customPalette = PaletteOf(BarTheme::PhoenixGold);
+        std::string customThemeName = kUnnamedTheme;
+        int panelSeparators    = kAllSeparators; // by SeparatorBit, whatever the theme
+        bool widgetBackground   = false; // every widget's pill or tint shown while not hovered, over the theme's look
         int barHeight      = 45; // pixels: the least at which titles are 13 px over 11 px detail lines
-        int barTextSize    = kAutoBarTextSize; // the bar's title size, or Auto
+        float barFontRatio = kDefaultFontRatio; // a widget's top line's size over its second line's
+        int barIconScale   = kDefaultIconScale; // its icons, in percent of the most it holds
         std::string barTitleFont; // widget titles and popup headings; empty for the theme's
         std::string barTextFont;  // details, figures and popup text; empty for the theme's
         int barWidgetSpacing = 0;             // every widget's, unless it has its own
         int barWidgetPadding = kThemePadding; // likewise
-        int popupTextSize  = kAutoPopupTextSize; // the popups' text size, or Auto
+        float popupTextScale   = kDefaultPopupScale; // the pop-outs' text sizes, times their own
+        float popupWidthScale  = kDefaultPopupScale; // each pop-out's sections, and so the pop-out, this much wider
+        float popupHeightScale = kDefaultPopupScale; // and taller
+        int widgetRounding  = kThemeRounding; // the widgets' boxes' corners
+        int popupRounding   = kThemeRounding; // the pop-outs'
+        int sectionRounding = kThemeRounding; // their sections'
+        int helpBarRounding = kThemeRounding; // the help bar's
         std::array<WidgetOptions, kPanelSlots> widgets = DefaultWidgets(); // by SlotOf; a copy not placed has none
         std::vector<WindowPlace> pinnedWindows;  // game windows the player put at places of their own, never shifted
         std::vector<std::string> hiddenWindows;  // game windows drawn as nothing, by short name
@@ -197,16 +195,15 @@ namespace headsup
         int helpBarTextSize = kAutoBarTextSize;  // its text's pixels, or Auto: the bar's title size
         int helpBarWidth    = kDefaultHelpBarWidth;
         int helpBarHeight   = kAutoHelpBarHeight;
+        HelpAnchor helpBarAnchor = HelpAnchor::Left;
+        bool helpBarFullWidth    = false; // the whole screen's width, whatever the text's
         std::string menuFont = kDefaultMenuFont; // the settings window's text, by its kMenuFonts name
         int menuFontSize     = kDefaultMenuFontSize; // pixels: the settings window's text and everything sized by it
         int menuOpacity      = 100;              // percent
-        int windowType       = kFollowGameWindow; // the game's art drawn: the Window Type the game is set to, or 1 to 8
-        bool gameWindowBorder = true; // the art's frame around the top panel and the help bar
         // Where the player left the settings window, in pixels; no width for one never moved, which opens in the
         // screen's middle.
         int menuX = 0, menuY = 0, menuWidth = 0, menuHeight = 0;
-        bool fishBar     = true; // HeadsUp's own bar of a hooked fish's stamina
-        bool hideGameFishBar = true; // and the game's dropped
+        FishBarShown fishStamina = FishBarShown::HeadsUp;
         int fishBarWidth = 300;
         int fishBarX = kFishBarUnplaced, fishBarY = kFishBarUnplaced;
         int fishBarHeight   = kDefaultFishBarHeight;
@@ -224,7 +221,6 @@ namespace headsup
         Color fishMonsterColor = {{0.61f, 0.31f, 0.85f}};
         Color fishLineColor    = {{1.00f, 0.55f, 0.10f}};
         Color fishRodColor     = {{0.88f, 0.19f, 0.19f}};
-        SubtitlePlace barSubtitle = SubtitlePlace::After; // a widget's second line on a bar too short for two
         BarPlacement barSections = DefaultPlacement(); // where each widget sits, by BarSection
         bool hideHelpBar = false; // skip the game's own help bar across the top of the screen
         bool hideNetstat = false; // and its connection readout (S, R and %) at the top right
@@ -240,6 +236,7 @@ namespace headsup
         std::string pointerFile; // a File pointer's name in the cursors folder, without its extension
         int pointerSize = kMinPointerSize; // percent, the game's own pointer included
         bool fixPointer        = true;  // the game reads the mouse in its true client area and syncs its pointer before clicks
+        bool lockCursor        = false; // Windows' pointer kept inside the game's window while it has the focus
         int cursorWidth        = DefaultCursorWidth(); // pixels
         int cursorHeight       = kDefaultCursorHeight;
         int cursorOutlineThickness = 100; // percent: its edge, a twentieth of its height at 100
@@ -261,7 +258,6 @@ namespace headsup
         int baseSize    = 15; // pixels: a line's text at 100 percent
         int baseIconSize = kDefaultIconSize; // and its icons
         int pearlOutline = 100;              // the linkpearl's outline, percent of XIUI's; 0 for none
-        DashMark dashMark = DashMark::Diamond; // what a dash typed in a design is drawn as
         bool autoCheck    = false; // every mob that comes near is checked by HeadsUp, for its exact level
         bool lookUpPlayers = false; // every player the server shows you is looked up by the search server, for their jobs
         std::string defaultFont = kDefaultFont;
@@ -299,6 +295,8 @@ namespace headsup
     void RemoveWidgetCopy(Settings& s, PanelWidget widget);
     // The panel as it is drawn, each widget's combine pulling its partner after it.
     PanelGroups Panel(const Settings& s);
+    // The widgets whose settings a pill's popup shows: those of its widgets that are on, or its first alone.
+    std::vector<PanelWidget> PillSettings(const Settings& s, PanelWidget head);
     // What a widget can be combined with, in the panel's order: every placed widget that combines, but itself, one
     // another widget has, and one whose own links lead back to it.
     std::vector<PanelWidget> CombineChoices(const Settings& s, PanelWidget widget);
@@ -320,6 +318,9 @@ namespace headsup
     std::vector<std::string> NameplateFontChoices(const std::vector<std::string>& fonts);
     // Whether a nameplate is set in the game's own font: the default, a line's or the badges'.
     bool UsesGameFont(const Settings& s);
+    // The theme picked, as far as the settings know it: Custom's palette, or a built-in one's (Vanilla's without the
+    // game's art, which PaletteFor in bar_look.h adds). Its background, window type, frame and separators are its own.
+    const BarPalette& OwnPalette(const Settings& s);
 
     // Key/value persistence: Ashita's configuration manager in the plugin, an in-memory map in tests.
     class SettingsStore

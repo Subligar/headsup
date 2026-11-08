@@ -350,34 +350,10 @@ TEST(an_outer_border_reaches_its_gap_and_its_own_pixel_past_the_box)
     CHECK_EQ(OuterPad(BoxStyle{.radius = 3.0f, .outerGap = 2}), 0); // a gap with no ring around it
 }
 
-TEST(a_diamond_and_a_coin)
+TEST(a_diamond)
 {
     const Image d = Diamond(9, 0xFFFFFFFF);
     CHECK(d.width == 9 && d.height == 9 && Alpha(d, 4, 4) == 0xFF && Alpha(d, 0, 0) == 0);
-    const Image c = Coin(12, 0xFFE8C35A);
-    CHECK(Alpha(c, 6, 6) == 0xFF && Alpha(c, 0, 0) == 0);
-    CHECK(Channel(Pixel(c, 0, 6), kRedShift) < Channel(Pixel(c, 6, 6), kRedShift)); // the darker rim
-}
-
-TEST(an_opaque_coin_is_opaque_wherever_its_disc_covers_a_pixel_whole)
-{
-    const int size = 13;
-    const float center = size / 2.0f;
-    const Image coin = Coin(size, 0xFFE8C35A);
-    auto inside = [&](float x, float y) {
-        return (x - center) * (x - center) + (y - center) * (y - center) <= center * center;
-    };
-    int covered = 0, lowest = 255;
-    for (int y = 0; y < size; ++y)
-        for (int x = 0; x < size; ++x)
-        {
-            const bool whole = inside(x, y) && inside(x + 1.0f, y) && inside(x, y + 1.0f) && inside(x + 1.0f, y + 1.0f);
-            if (!whole) continue;
-            ++covered;
-            lowest = std::min(lowest, static_cast<int>(Alpha(coin, x, y)));
-        }
-    CHECK(covered > 50);
-    CHECK_EQ(lowest, 255); // the rim and the face add up to the whole disc
 }
 
 TEST(an_image_goes_in_a_textures_corner_and_the_rest_of_its_rows_is_cleared)
@@ -407,11 +383,11 @@ TEST(ink_is_the_box_of_the_pixels_covered_at_least_the_threshold)
     CHECK(FindInk(Coverage{}, 64).Empty());
 }
 
-TEST(a_lines_ink_runs_from_its_glyphs_top_to_their_bottom_with_the_h_on_its_baseline)
+TEST(a_lines_ink_runs_from_its_glyphs_top_to_their_bottom_with_the_h_on_its_baseline_and_its_top_the_capitals)
 {
     const InkBox glyphs{1, 2, 30, 17}, capital{0, 4, 9, 14}; // "H0gj" reaching above and below the H
     const std::optional<LineInk> ink = LineInkOf(glyphs, capital);
-    CHECK(ink.has_value() && ink->top == 2.0f && ink->baseline == 14.0f && ink->bottom == 17.0f);
+    CHECK(ink.has_value() && ink->top == 2.0f && ink->baseline == 14.0f && ink->bottom == 17.0f && ink->capital == 4.0f);
     CHECK(!LineInkOf(InkBox{}, capital).has_value()); // GDI drew nothing: no ink to keep
     CHECK(!LineInkOf(glyphs, InkBox{}).has_value());
 }

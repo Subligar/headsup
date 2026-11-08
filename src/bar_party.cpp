@@ -40,17 +40,11 @@ namespace headsup
 
     bool UsesMp(const PartyMember& m) { return JobHasMp(m.mainJob) || (m.subLevel > 0 && JobHasMp(m.subJob)); }
 
-    WidgetContent PartyWidget(const Party& party)
+    std::vector<PartContent> PartyParts(const Party& party, WidgetContent& base)
     {
-        WidgetContent w;
-        w.shown         = true;
         const int count = Members(party);
-        if (count <= 1)
-        {
-            w.title = ListOf(Text("Solo"));
-            return w;
-        }
-        w.title = ListOf(Text("Party " + std::to_string(count)));
+        if (count <= 1) return {{WidgetPart::PartyCount, ListOf(Text("Solo"))}};
+        std::vector<Span> health;
         std::optional<uint8_t> hp, mp;
         for (const std::optional<PartyMember>& m : party)
         {
@@ -58,16 +52,17 @@ namespace headsup
             hp = std::min(hp.value_or(m->hpPercent), m->hpPercent);
             if (UsesMp(*m)) mp = std::min(mp.value_or(m->mpPercent), m->mpPercent);
         }
-        if (hp) w.subtitle = ListOf(Text("HP ", Tone::Dim), Level(Percent(*hp), *hp));
+        if (hp) health = ListOf(Text("HP ", Tone::Dim), Level(Percent(*hp), *hp));
         if (mp)
         {
-            w.subtitle.push_back(Text(kDot, Tone::Dim));
-            w.subtitle.push_back(Text("MP ", Tone::Dim));
-            w.subtitle.push_back(Level(Percent(*mp), *mp));
+            if (!health.empty()) health.push_back(Text(kDot, Tone::Dim));
+            health.push_back(Text("MP ", Tone::Dim));
+            health.push_back(Level(Percent(*mp), *mp));
         }
-        w.hasPopup = true;
-        w.figures  = true;
-        return w;
+        base.hasPopup = true;
+        base.figures  = true;
+        return {{WidgetPart::PartyCount, ListOf(Text("Party " + std::to_string(count)))},
+            {WidgetPart::PartyHealth, std::move(health)}};
     }
 
     PopupContent PartyPopup(const Party& party)

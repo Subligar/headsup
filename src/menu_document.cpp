@@ -17,12 +17,13 @@ namespace headsup
         constexpr float kSpacing      = 0.45f; // between rows
         // Setup's picture, 16:9 like its target: short enough that its first step fits the window's own size.
         constexpr float kPreviewTall  = 14.0f;
+        constexpr float kParagraphTall = 9.0f; // a box of several lines
         constexpr float kPreviewWide  = kPreviewTall * 16.0f / 9.0f;
         constexpr float kPadX         = 0.6f;  // a control's text from its sides
         constexpr float kHeadHeight   = 2.05f; // the window's title row
         constexpr float kScrollbar    = 0.7f;
         constexpr float kPopupTall    = 18.0f; // the most of a dropdown's list shown before it scrolls
-        constexpr float kNavHeight    = 2.0f;
+        constexpr float kNavHeight    = 1.85f; // each page in the sidebar: short enough that all fit a window at its first size
         constexpr float kNavGap       = 0.2f;  // between two pages of the sidebar
         constexpr float kNavSlide     = 0.35f; // how far a page's name moves under the pointer
         constexpr float kToggleKnob   = kToggleHeight - 2.0f * kToggleInset; // its peg's height
@@ -100,7 +101,7 @@ namespace headsup
         css += "body{position:absolute;display:block;box-sizing:border-box;width:" + Em(kWindowWidth) + ";height:" +
                Em(kWindowHeight) + ";min-width:" + Em(kMinWindowWidth) + ";min-height:" + Em(kMinWindowHeight) +
                ";background-color:" + color(c.background) + ";border:1px " + color(c.border) + ";border-radius:" +
-               Em(kCardRadius * 1.5f) + ";color:" + color(c.text) + ";font-family:\"" + look.textFont + "\";z-index:5;}";
+               Em(kCardRadius * 1.5f) + ";color:" + color(c.text) + ";font-family:\"" + look.textFont + "\";z-index:" + std::to_string(kMenuWindowZ) + ";}";
         // The window comes in a little small and grows to its size.
         // Its fade has no end of its own: it ends at the element's own opacity, under the window's filter.
         css += "body.open{animation:0.22s cubic-out window-in, 0.22s cubic-out window-fade;}";
@@ -182,6 +183,7 @@ namespace headsup
                ";font-family:\"" + look.titleFont + "\";font-size:" + Em(kCardTitleScale) + ";color:" + color(c.heading) +
                ";transition:color" + kEase + ";}";
         css += ".card-head:hover .card-title{color:" + color(c.accent) + ";}";
+        css += ".card-head .reset{position:absolute;right:" + Em(kCardPad) + ";top:" + Em((kHeaderRow - kFrame) / 2.0f) + ";}";
         css += ".check.card-on{position:absolute;right:" + Em(kCardPad) + ";top:" + Em((kHeaderRow - kToggleHeight) / 2.0f) +
                ";width:" + Em(kCardToggleWidth) + ";}";
         css += ".card-body{padding:0px " + Em(kCardPad) + " " + Em(kCardPad * 0.6f) + " " + Em(kCardPad) +
@@ -249,6 +251,7 @@ namespace headsup
         css += ".seg{flex:1 0 auto;height:" + frame + ";" + framed + "padding:0px " + Em(kSegmentPad) + ";margin-left:" +
                Em(kSegmentGap) + ";border-radius:" + radius + ";text-align:center;white-space:nowrap;background-color:" +
                color(c.control) + ";color:" + color(c.muted) + ";}";
+        css += ".swatched .segs{min-width:" + Em(kControlWidth - kFrame - kControlGap) + ";}"; // a swatch beside it
         css += ".seg:first-child{margin-left:0px;}";
         css += ".seg:hover{background-color:" + color(c.hover) + ";}";
         css += ".seg.picked{background-color:" + color(c.accent) + ";}";
@@ -265,13 +268,15 @@ namespace headsup
         css += "input.range sliderarrowdec,input.range sliderarrowinc{width:0px;height:0px;}";
         css += ".val{position:absolute;left:0px;top:0px;width:100%;" + framed + "text-align:center;pointer-events:none;}";
         // Text boxes: the edge lights while one has the keyboard.
-        css += "input.text{box-sizing:border-box;height:" + frame + ";padding:0.2em " + Em(kPadX) + ";border-radius:" +
+        css += "input.text,textarea{box-sizing:border-box;height:" + frame + ";padding:0.2em " + Em(kPadX) + ";border-radius:" +
                radius + ";border:1px transparent;background-color:" + color(c.control) + ";color:" + color(c.text) +
                ";transition:border-color" + kEase + ";}";
-        css += "input.text:hover,input.text:focus{background-color:" + color(c.hover) + ";}";
-        css += "input.text:focus{border-color:" + color(Faded(c.accent, kFocus)) + ";}";
+        css += "input.text:hover,input.text:focus,textarea:hover,textarea:focus{background-color:" + color(c.hover) + ";}";
+        css += "input.text:focus,textarea:focus{border-color:" + color(Faded(c.accent, kFocus)) + ";}";
         css += "input.text:placeholder-shown{color:" + color(c.muted) + ";}";
-        css += "input.text selection{background-color:" + color(c.accentSoft) + ";}";
+        css += "input.text selection,textarea selection{background-color:" + color(c.accentSoft) + ";}";
+        css += "textarea{display:block;width:100%;height:" + Em(kParagraphTall) + ";margin-bottom:" + Em(kSpacing) +
+               ";overflow-y:auto;}";
         css += "input.num{width:" + Em(kNumberWidth) + ";}";
         css += std::string("input.num.") + kLiveClass + "{color:" + color(c.muted) + ";}";
         css += ".num-name{width:" + Em(kNumberName) + ";text-align:right;color:" + color(c.muted) + ";" + raised + "}";
@@ -314,6 +319,9 @@ namespace headsup
         css += ".opt{height:" + frame + ";" + framed + "padding:0px " + Em(kPadX) + ";border-radius:" + radius +
                ";white-space:nowrap;}";
         css += ".opt:hover,.opt.picked{background-color:" + color(c.accentSoft) + ";}";
+        // A group's heading in a list: muted capitals that take no click.
+        css += ".opt-head{height:" + frame + ";" + framed + "padding:0px " + Em(kPadX) + ";white-space:nowrap;color:" +
+               color(c.muted) + ";text-transform:uppercase;font-size:0.8em;}";
         css += ".dot{display:inline-block;width:" + Em(kChipDot) + ";height:" + Em(kChipDot) + ";border-radius:" +
                Em(kChipDot / 2.0f) + ";margin-right:0.5em;background-color:" + color(c.muted) + ";}";
         css += ".on .dot{background-color:" + color(c.accent) + ";}";
@@ -348,6 +356,7 @@ namespace headsup
                ");}";
         css += ".btn.reset-all{height:" + Em(kTallButton) + ";" + line(kTallButton, kPillEdge) + "border-radius:" +
                Em(kTallButton / 2.0f) + ";text-transform:uppercase;}";
+        css += ".btn.wide{width:100%;}";
         css += ".btn.waiting{border-color:" + color(c.accent) + ";color:" + color(c.muted) + ";}";
         css += ".btn.round{width:" + frame + ";padding:0px;color:" + color(c.muted) + ";}";
         css += ".btn.step{position:relative;width:" + frame + ";padding:0px;border-radius:" + radius + ";background-color:" +
@@ -403,7 +412,28 @@ namespace headsup
                color(c.muted) + ";}";
         css += ".wclone:hover img{image-color:" + color(c.accent) + ";}";
         css += ".widget-name{color:" + color(c.text) + ";}";
+        // A linked pill's settings: a box a widget, kSettingsAcross a row.
+        css += ".wcols{display:flex;flex-wrap:wrap;align-items:flex-start;}";
+        css += ".wbox{box-sizing:border-box;width:" + Em(kSettingsWidth + 2.0f * kSettingsBoxPad) + ";padding:" + Em(kSettingsBoxPad) +
+               ";margin:0px 0px " + Em(kSettingsBoxGap) + " " + Em(kSettingsBoxGap) + ";border:1px " + color(c.border) +
+               ";border-radius:" + Em(kCardRadius) + ";background-color:" + color(c.inset) + ";}";
+        css += ".wbox:nth-child(" + std::to_string(kSettingsAcross) + "n+1){margin-left:0px;}";
+        // A tray's chip in two lines: its toggle and buttons, then its name. A press on a line is the chip's own: on a
+        // box inside the dragged chip, RmlUi made no click of it.
+        css += ".wchip.wtwo{height:auto;line-height:" + Em(kChipLine) + ";padding:" + Em(kChipLinePad) + " 0.7em;}";
+        css += ".wtwo .wtop{display:block;height:" + Em(kChipLine) + ";pointer-events:none;}";
+        css += ".wtwo .wclone{height:" + Em(kChipLine) + ";pointer-events:auto;}";
+        css += ".wtwo .check{pointer-events:auto;}";
+        css += ".wtwo .wname{display:block;height:" + Em(kChipLine) + ";white-space:nowrap;pointer-events:none;}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
+        // The Widget Designer: its two lines as trays of chips side by side, wrapping, each line's end taking a drop.
+        css += ".tray.design-line{display:flex;flex-wrap:wrap;margin-bottom:0.3em;}";
+        css += ".dchip{display:inline-block;margin-right:0.3em;}";
+        // A designer chip's picture, and a currency's in its dropdown, where one with none keeps the room.
+        css += ".dchip .dmark,.omark{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) + ";vertical-align:middle;margin-right:0.4em;}";
+        css += ".omark{display:inline-block;}";
+        css += ".design-line .tray-end{flex:1 1 2em;}";
+        css += ".error{margin-bottom:" + Em(kSpacing) + ";color:" + color(kErrorColor) + ";}";
         // What a control says under the pointer.
         css += std::string("#") + kMenuTipId + "{position:absolute;z-index:60;box-sizing:border-box;max-width:" +
                Em(kTipWidth) + ";padding:0.4em 0.6em;border-radius:" + radius + ";border:1px " + color(c.raisedEdge) +
@@ -422,7 +452,7 @@ namespace headsup
         // The window's style, its body made a clear box over the panel's popup, which draws the ground.
         return MenuStyle(look) +
                "body{width:auto;height:auto;min-width:0px;min-height:0px;padding:0px;background-color:transparent;"
-               "decorator:none;border-width:0px;border-radius:0px;z-index:20;}body.open{animation:none;}#" +
+               "decorator:none;border-width:0px;border-radius:0px;z-index:" + std::to_string(kMenuViewZ) + ";}body.open{animation:none;}#" +
                kMenuViewBodyId + "{overflow-y:auto;}";
     }
 

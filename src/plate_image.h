@@ -32,10 +32,10 @@ namespace headsup
     InkBox FindInk(const Coverage& coverage, uint8_t threshold);
 
     // Where a font's ink sits in the line GDI draws it in, in rows from the line's top: the top of its tallest
-    // capitals and figures, its baseline, and the bottom of its descenders.
+    // capitals and figures, its baseline, the bottom of its descenders, and the top of its capitals alone.
     struct LineInk
     {
-        float top = 0.0f, baseline = 0.0f, bottom = 0.0f;
+        float top = 0.0f, baseline = 0.0f, bottom = 0.0f, capital = 0.0f;
     };
     // A line's ink from the ink of glyphs drawn in it and of an H: nothing when either drew none.
     std::optional<LineInk> LineInkOf(const InkBox& glyphs, const InkBox& capital);
@@ -124,8 +124,9 @@ namespace headsup
     int OuterPad(const BoxStyle& style);
     // A diamond size pixels tall and wide.
     Image Diamond(int size, uint32_t color);
-    // Gil's coin: a disc size pixels across with a 1 px rim at 60% of its color's brightness.
-    Image Coin(int size, uint32_t color);
+    // The top panel's separator in a Separator Style, size pixels square: a diamond corner to corner, a dot and a
+    // square of about its weight, or a dash across its middle for None.
+    Image SeparatorImage(DashMark mark, int size, uint32_t color);
     // A circular arrow in a square size pixels across: most of a ring, turning counterclockwise to a head at its top.
     Image ResetArrow(int size, uint32_t color);
     // A cog of eight teeth with a hole in its middle, in a square size pixels across.

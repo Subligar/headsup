@@ -4,6 +4,7 @@
 
 #include "argb.h"
 #include "bar_document.h"
+#include "icon_adjust.h"
 #include "menu_text.h"
 #include "settings.h"
 
@@ -154,7 +155,7 @@ namespace headsup
         m_CardId = id;
     }
 
-    bool Form::BeginCard(const char* title, bool* enabled, const char* about)
+    bool Form::BeginCard(const char* title, bool* enabled, const char* about, bool* reset, bool differs)
     {
         m_CardId = Slug(pageKey + "/" + std::string(IdName(title)));
         blocks.push_back(FormBlock{m_CardId, {}, false});
@@ -182,6 +183,7 @@ namespace headsup
             Set(check + "-state", FormValueKind::Text, {}, word);
             Set(check, FormValueKind::Class, "on", {}, *enabled);
         }
+        if (reset != nullptr) *reset = ResetAt("reset", differs);
         Out() += "</div>";
         if (!open) return false;
         Out() += "<div class=\"card-body\">";
@@ -199,6 +201,11 @@ namespace headsup
         Set(m_CardId, FormValueKind::Class, kOffClass, {}, m_Off);
         if (!m_Off) ++m_CardsShown;
         Out() += "<div>";
+    }
+
+    void Form::PageNote(const char* text)
+    {
+        blocks.push_back(FormBlock{Slug(pageKey + "/" + kNoteName), "<div class=\"note\">" + NoteRml(text) + "</div>", true});
     }
 
     void Form::EndCard()
@@ -413,6 +420,32 @@ namespace headsup
         EndRow();
     }
 
+    void Form::GroupedDropdown(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown,
+        const char* tip)
+    {
+        Row(label, tip);
+        const std::string control = Id(label);
+        if (ListControl(control, shown, kControlWidth))
+        {
+            std::string rml;
+            int index = 0;
+            for (const ListGroup& group : groups)
+            {
+                if (group.rows.empty()) continue;
+                rml += "<div class=\"opt-head\">" + EscapedRml(group.heading) + "</div>";
+                for (size_t i = 0; i < group.rows.size(); ++i, ++index)
+                    rml += ListRow(control, index, group.rows[i], index == value, i < group.tips.size() ? group.tips[i] : std::string());
+            }
+            int chosen = value;
+            if (ListChoice(control, std::move(rml), index, chosen) && chosen != value)
+            {
+                value   = chosen;
+                changed = true;
+            }
+        }
+        EndRow();
+    }
+
     std::string Form::ListRow(const std::string& control, int index, const std::string& name, bool picked,
         const std::string& tip, bool markup)
     {
@@ -620,6 +653,22 @@ namespace headsup
         EndRow();
     }
 
+    void Form::ThemeColorRow(const char* label, std::optional<uint32_t>& custom, uint32_t theme, const char* const* words,
+        const char* tip)
+    {
+        constexpr int kChoices = 2; // Set by Theme, Custom
+        Row(label, tip);
+        int own = custom ? 1 : 0;
+        Out() += "<div class=\"swatched\">";
+        SegmentsAt(label, own, words, kChoices);
+        Out() += "</div>";
+        uint32_t argb      = own == 1 ? custom.value_or(theme) : theme;
+        const uint32_t was = argb;
+        ArgbSwatchAt((std::string(label) + " swatch").c_str(), argb);
+        custom = own == 1 || argb != was ? std::optional(argb) : std::nullopt;
+        EndRow();
+    }
+
     void Form::TakeChecks(const std::string& control, FunctionRef<void(int)> clicked)
     {
         const std::string start = control + kOptionIdInfix;
@@ -742,10 +791,10 @@ namespace headsup
         return chosen;
     }
 
-    void Form::Note(const char* text)
+    void Form::Note(const char* text, const char* classes)
     {
         const std::string note = Id(kNoteName);
-        Out() += "<div class=\"note\" id=\"" + note + "\">" + EscapedRml(text) + "</div>";
+        Out() += std::string("<div class=\"") + classes + "\" id=\"" + note + "\">" + EscapedRml(text) + "</div>";
         Set(note, FormValueKind::Class, kOffClass, {}, m_Off);
     }
 
@@ -809,6 +858,15 @@ namespace headsup
         return took;
     }
 
+    void Form::Paragraph(const char* id, std::string& text, size_t most)
+    {
+        const std::string box = Id(id);
+        if (const FormEvent* typed = Took(box, kChangeEvent); typed != nullptr && !m_Off) text = typed->value;
+        Out() += "<textarea id=\"" + box + "\" maxlength=\"" + std::to_string(most) + "\"></textarea>";
+        Set(box, FormValueKind::Value, {}, text);
+        Set(box, FormValueKind::Class, kOffClass, {}, m_Off);
+    }
+
     namespace
     {
 
@@ -828,7 +886,7 @@ namespace headsup
             const std::optional<Icon> icon = TagIcon(tag);
             return std::string("<div class=\"") + classes + "\" id=\"" + id + "\" " + kCarriesAttribute + "=\"" +
                    EscapedRml(TagName(tag)) + "\"" + TipAttribute(tip) + ">" +
-                   (icon ? "<img src=\"" + IconSource(*icon) + "\"/>" : std::string()) + EscapedRml(Said(word.name)) + "</div>";
+                   (icon ? "<img src=\"" + IconSource(*icon) + "\"" + AdjustStyle(AdjustOf(*icon)) + "/>" : std::string()) + EscapedRml(Said(word.name)) + "</div>";
         }
 
         // The id of one tag of a line's chip, which is the chip's own while the chip holds no other.

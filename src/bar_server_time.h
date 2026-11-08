@@ -55,10 +55,36 @@ namespace headsup
         }
     };
     ZoneTime ZoneAt(ClockZone zone, int64_t unixMs);
-    // A zone's clock as a widget titles it: "JST 15:30", "PDT 11:30:42 PM".
-    std::string ZoneClockText(const ZoneTime& t, bool twentyFour, bool seconds);
+    // The computer's zone by the local date and time it gives for unixMs: the abbreviation of a zone as far ahead of
+    // UTC now ("CEST"), one in daylight saving first, else that offset ("UTC+5:30").
+    std::string LocalZoneName(int64_t unixMs, int year, int month, int day, int hour, int minute);
+    // A zone's clock as a widget titles it: "JST 15:30", "PDT 11:30:42 PM", its time as ClockSpans.
+    std::vector<Span> ZoneClockSpans(const ZoneTime& t, bool twentyFour, bool seconds);
 
-    // What the Clock's popup lists: the server's clock, "Server time Friday 15:30 JST", and the time to the daily reset
+    // A day on the calendar, its month and day from 1.
+    struct CalendarDay
+    {
+        int year = 0, month = 0, day = 0;
+    };
+    // How the Clock's Local Date button writes a date: 2026/11/07, 11/07/2026, 07/11/2026, November 7th, 2026-11-07,
+    // November 7th, 2026 or Nov 7.
+    enum class DateFormat : uint8_t
+    {
+        YearMonthDay,
+        MonthDayYear,
+        DayMonthYear,
+        MonthDay,
+        Iso,
+        MonthDayCommaYear,
+        ShortMonthDay,
+    };
+    constexpr int kDateFormatCount = static_cast<int>(DateFormat::ShortMonthDay) + 1;
+    std::string DateText(DateFormat format, CalendarDay day);
+    // The Clock's popup's title: "September 1st, 1999 - 12:00pm", or "- 12:00:00" on a 24-hour clock with seconds
+    // (second -1 for none).
+    std::string DateTimeTitle(CalendarDay day, int hour, int minute, int second, bool twentyFour);
+
+    // What the Clock's popup lists: the server's clock, "Server Time Friday 15:30 JST", and the time to the daily reset
     // and to the conquest tally, which go by it.
     PopupSection ServerTimeRows(int64_t unixMs);
 }

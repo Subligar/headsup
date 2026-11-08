@@ -135,7 +135,7 @@ TEST(a_top_panel_preset_shows_its_widgets_and_no_others)
     for (int w = 0; w < kBarWidgetCount; ++w)
     {
         const auto widget = static_cast<BarWidget>(w);
-        const bool expected = widget == BarWidget::Zone || widget == BarWidget::VanaTime || widget == BarWidget::Target;
+        const bool expected = widget == BarWidget::Zone || widget == BarWidget::Weather || widget == BarWidget::Target;
         CHECK_EQ(minimal.Widget(PanelWidget{widget}).on, expected);
     }
     CHECK(minimal.showBar);

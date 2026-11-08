@@ -9,6 +9,7 @@
 
 #include <RmlUi/Core/Elements/ElementFormControl.h>
 #include <RmlUi/Core/Elements/ElementFormControlInput.h>
+#include <RmlUi/Core/Elements/ElementFormControlTextArea.h>
 #include <RmlUi/Core/Factory.h>
 #include <RmlUi/Core/FontEngineInterface.h>
 #include <RmlUi/Core/StyleSheetContainer.h>
@@ -48,6 +49,21 @@ namespace headsup
             return element;
         }
 
+        // In a designer line's gaps: the first button on the pointer's row past it or on a row below, else the line's
+        // end (its last child).
+        Rml::Element* DesignSlotAt(Rml::Element* line, Rml::Vector2f at)
+        {
+            for (int i = 0; i < line->GetNumChildren(); ++i)
+            {
+                Rml::Element* chip = line->GetChild(i);
+                if (!chip->IsClassSet(kDesignChipClass)) continue;
+                const Rml::Vector2f top  = chip->GetAbsoluteOffset(Rml::BoxArea::Border);
+                const Rml::Vector2f size = chip->GetBox().GetSize(Rml::BoxArea::Border);
+                if (at.y < top.y + size.y && (at.y < top.y || at.x < top.x + size.x / 2.0f)) return chip;
+            }
+            return line->GetNumChildren() > 0 ? line->GetChild(line->GetNumChildren() - 1) : line;
+        }
+
         Rml::ElementFormControlInput* AsInput(Rml::Element* element)
         {
             return rmlui_dynamic_cast<Rml::ElementFormControlInput*>(element);
@@ -65,6 +81,7 @@ namespace headsup
         {
             return input != nullptr && input->GetAttribute<Rml::String>("type", "text") == "text";
         }
+        bool IsParagraph(Rml::Element* element) { return rmlui_dynamic_cast<Rml::ElementFormControlTextArea*>(element) != nullptr; }
 
         // A caret RmlUi counts in characters, as the byte it is before.
         size_t ByteOf(const std::string& text, int characters)
@@ -146,7 +163,11 @@ namespace headsup
     {
         if (widgets.empty()) return std::nullopt;
         Rml::Element* shown = m_ViewShown && widgets == m_ViewFor ? m_ViewBody->GetFirstChild() : nullptr;
-        return SettingsRoom{std::round(kSettingsWidth * static_cast<float>(settings.menuFontSize)),
+        // Side by side, each a box with its padding.
+        const float across = static_cast<float>(std::min(widgets.size(), kSettingsAcross));
+        const float ems    = widgets.size() > 1 ? across * (kSettingsWidth + 2.0f * kSettingsBoxPad) + (across - 1.0f) * kSettingsBoxGap
+                                                : kSettingsWidth;
+        return SettingsRoom{std::round(ems * static_cast<float>(settings.menuFontSize)),
             shown != nullptr ? std::ceil(shown->GetBox().GetSize(Rml::BoxArea::Border).y) : 0.0f};
     }
 
@@ -166,24 +187,31 @@ namespace headsup
     bool RmlMenu::TakeExportRequest() { return std::exchange(m_State.exportRequested, false); }
     bool RmlMenu::TakeCursorsRequest() { return std::exchange(m_State.cursorsRequested, false); }
     bool RmlMenu::TakeThemesRequest() { return std::exchange(m_State.themesRequested, false); }
-    std::optional<std::string> RmlMenu::TakeThemeSave() { return std::exchange(m_State.themeSave, std::nullopt); }
     std::optional<std::string> RmlMenu::TakeThemeLoad() { return std::exchange(m_State.themeLoad, std::nullopt); }
+    std::optional<std::string> RmlMenu::TakeThemeRename() { return std::exchange(m_State.themeRename, std::nullopt); }
+    std::optional<std::string> RmlMenu::TakeThemeDelete() { return std::exchange(m_State.themeDelete, std::nullopt); }
     bool RmlMenu::TakeProfilesRequest() { return std::exchange(m_State.profilesRequested, false); }
     bool RmlMenu::TakeSaveRequest() { return std::exchange(m_State.saveRequested, false); }
     bool RmlMenu::TakeRevertRequest() { return std::exchange(m_State.revertRequested, false); }
+    std::optional<FeedbackDraft> RmlMenu::TakeFeedback()
+    {
+        if (!std::exchange(m_State.feedbackRequested, false)) return std::nullopt;
+        return m_State.feedback;
+    }
     std::optional<std::string> RmlMenu::TakeProfileUse() { return std::exchange(m_State.profileUse, std::nullopt); }
     std::optional<std::string> RmlMenu::TakeProfileNew() { return std::exchange(m_State.profileNew, std::nullopt); }
     std::optional<std::string> RmlMenu::TakeProfileRename() { return std::exchange(m_State.profileRename, std::nullopt); }
     std::optional<std::string> RmlMenu::TakeProfileDelete() { return std::exchange(m_State.profileDelete, std::nullopt); }
 
-    bool RmlMenu::OpenPage(const std::string& name)
+    bool RmlMenu::OpenPage(const std::string& name, const std::string& card)
     {
         const std::optional<Page> page = m_Layout->PageNamed(name);
         if (!page) return false;
         m_State.Leave();
-        m_State.page = *page;
-        open         = true;
-        m_ScrollTo   = 0.0f;
+        m_State.page   = *page;
+        open           = true;
+        m_ScrollTo     = 0.0f;
+        m_ScrollToCard = card.empty() ? card : name + "-" + card; // as Form names a card
         return true;
     }
 
@@ -392,7 +420,11 @@ namespace headsup
                 auto* control = rmlui_dynamic_cast<Rml::ElementFormControl*>(element);
                 if (control == nullptr) continue;
                 // A text box being typed in keeps what is typed: it is set once it is left.
-                if (element == focus && IsText(AsInput(element))) continue;
+                if (element == focus && (IsText(AsInput(element)) || IsParagraph(element)))
+                {
+                    m_Applied.erase(key);
+                    continue;
+                }
                 if (control->GetValue() != value.text) control->SetValue(value.text);
                 break;
             }
@@ -533,6 +565,9 @@ namespace headsup
         Rml::Element* named = WithId(hovered);
         for (Rml::Element* up = hovered; up != nullptr; up = up->GetParentNode())
             if (up->IsClassSet(kGhostSlotClass)) named = up;
+        if (hovered != nullptr && hovered->IsClassSet(kDesignLineClass))
+            named = DesignSlotAt(hovered, Rml::Vector2f(static_cast<float>(event.GetParameter<int>("mouse_x", 0)),
+                                              static_cast<float>(event.GetParameter<int>("mouse_y", 0))));
         FormEvent drop{named != nullptr ? named->GetId() : std::string(), type, dragged->GetId(),
             dragged->GetAttribute<Rml::String>(kCarriesAttribute, "")};
         const float x = static_cast<float>(event.GetParameter<int>("mouse_x", 0));
@@ -589,7 +624,7 @@ namespace headsup
             }
             break;
         case Rml::EventId::Change:
-            if (AsInput(target) != nullptr)
+            if (AsInput(target) != nullptr || IsParagraph(target))
                 m_Events.push_back(FormEvent{id, kChangeEvent, event.GetParameter<Rml::String>("value", "")});
             break;
         case Rml::EventId::Focus:
@@ -616,9 +651,12 @@ namespace headsup
             }
             break;
         case Rml::EventId::Keydown:
-            if (Rml::ElementFormControlInput* input = AsInput(target); IsText(input))
+            // RmlUi leaves a box of several lines its line breaks to be typed, as a text input the host never sends.
+            if (const auto key = static_cast<Rml::Input::KeyIdentifier>(event.GetParameter<int>("key_identifier", 0));
+                IsParagraph(target) && (key == Rml::Input::KI_RETURN || key == Rml::Input::KI_NUMPADENTER))
+                target->GetContext()->ProcessTextInput('\n');
+            else if (Rml::ElementFormControlInput* input = AsInput(target); IsText(input))
             {
-                const auto key = static_cast<Rml::Input::KeyIdentifier>(event.GetParameter<int>("key_identifier", 0));
                 if (key == Rml::Input::KI_ESCAPE)
                 {
                     // Escape takes the typing back.
@@ -866,6 +904,10 @@ namespace headsup
             m_Page->SetScrollTop(*m_ScrollTo);
             m_ScrollTo.reset();
         }
+        if (Rml::Element* card = m_ScrollToCard.empty() ? nullptr : m_Document->GetElementById(m_ScrollToCard))
+            m_Page->SetScrollTop(m_Page->GetScrollTop() + card->GetAbsoluteOffset(Rml::BoxArea::Border).y -
+                                 m_Page->GetAbsoluteOffset(Rml::BoxArea::Padding).y);
+        m_ScrollToCard.clear();
         return form.changed || typed || moved;
     }
 

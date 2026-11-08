@@ -1,6 +1,8 @@
 #include "rml_menu.h"
 
+#include "bar_document.h"
 #include "bar_look.h"
+#include "currencies.h"
 #include "fonts.h"
 #include "game_font.h"
 #include "layout_edit.h"
@@ -31,24 +33,6 @@ namespace
     constexpr double kFrameSeconds = 1.0 / 30.0; // the game's frame
     constexpr const char* kLongFont = "Franklin Gothic Demi Condensed"; // a family too long for its dropdown
 
-    // A bundled font's capital height in pixels at a size: its OS/2 table's sCapHeight over the head's units per em.
-    float CapHeight(const char* family, float pixels)
-    {
-        size_t count             = 0;
-        const BundledFont* fonts = BundledFonts(count);
-        const BundledFont* font  = std::find_if(fonts, fonts + count, [&](const BundledFont& f) { return std::string(f.family) == family; });
-        CHECK(font != fonts + count);
-        const unsigned char* data = font->data;
-        const auto u16 = [&](size_t at) { return static_cast<unsigned>(data[at] << 8 | data[at + 1]); };
-        const auto table = [&](const char* tag) {
-            for (unsigned i = 0; i < u16(4); ++i)
-                if (std::equal(tag, tag + 4, data + 12 + 16 * i)) return static_cast<size_t>(u16(12 + 16 * i + 8)) << 16 | u16(12 + 16 * i + 10);
-            return size_t{0};
-        };
-        const size_t head = table("head"), os2 = table("OS/2");
-        CHECK(head != 0 && os2 != 0 && u16(os2) >= 2);
-        return static_cast<float>(static_cast<int16_t>(u16(os2 + 88))) * pixels / static_cast<float>(u16(head + 18));
-    }
     // How far below the middle of a box a line of capitals stands: RmlUi puts a line's baseline half the leading and
     // the font's ascent under the line's top.
     float CapsBelowMiddle(Rml::Element* text, Rml::Element* box, float capHeight)
@@ -100,7 +84,7 @@ namespace
                 m_Rml.complaints.seconds += kFrameSeconds;
                 // As the plugin does: the panel's popup shows a placed pill's settings, at the room they took last.
                 if (shown && !Placed(settings.barSections, *shown)) shown.reset();
-                m_Readings.settingsOf = shown ? Members(Panel(settings), *shown) : std::vector<PanelWidget>{};
+                m_Readings.settingsOf = shown ? PillSettings(settings, *shown) : std::vector<PanelWidget>{};
                 const std::optional<SettingsRoom> room = menu.RoomFor(m_Readings.settingsOf, settings);
                 menu.settingsAt = room ? std::optional(BarRect{kSettingsX, kSettingsY, room->width, kSettingsHeight}) : std::nullopt;
                 changed = menu.Update(m_Host, settings, m_Readings, m_Fonts, kVersion) || changed;
@@ -181,10 +165,11 @@ namespace
         // What a text box holds.
         std::string Typed(const std::string& id)
         {
-            auto* input = rmlui_dynamic_cast<Rml::ElementFormControlInput*>(Find(id));
-            if (input == nullptr) throw test::Failure{"the window has no text box " + id};
-            return input->GetValue();
+            auto* box = rmlui_dynamic_cast<Rml::ElementFormControl*>(Find(id));
+            if (box == nullptr) throw test::Failure{"the window has no text box " + id};
+            return box->GetValue();
         }
+        Rml::Element* Focused() { return m_Host.context->GetFocusElement(); }
 
         // Presses the left button on one control and lets it go on another, or that far from the first.
         bool Drag(const std::string& from, const std::string& onto) { return Drag(from, Center(onto) - Center(from)); }
@@ -395,7 +380,7 @@ TEST(text_in_a_box_stands_in_its_middle_by_its_fonts_capitals)
         Window window(BarTheme::PhoenixGold, size.font);
         window.settings.menuFontSize = size.pixels;
         window.Frames(2);
-        const float cap = CapHeight(size.font, static_cast<float>(size.pixels));
+        const float cap = test::CapHeight(size.font, static_cast<float>(size.pixels));
         const std::pair<const char*, const char*> boxed[] = {
             {"entities-nameplates-vertical-offset-val", "entities-nameplates-vertical-offset-box"},
             {"entities-nameplates-default-font-val", "entities-nameplates-default-font"},
@@ -407,6 +392,13 @@ TEST(text_in_a_box_stands_in_its_middle_by_its_fonts_capitals)
         Rml::Element* chip = window.Find("mobs-nameplate-design-design-mobs-2-c-0");
         CHECK(std::abs(CapsBelowMiddle(chip, chip, cap)) <= 0.5f);
     }
+}
+
+TEST(every_page_fits_the_sidebar_of_a_window_at_its_first_size)
+{
+    Window window;
+    Rml::Element* sidebar = window.Find(kMenuSidebarId);
+    CHECK(sidebar->GetScrollHeight() <= sidebar->GetClientHeight());
 }
 
 TEST(a_pages_name_stays_on_one_line_under_the_pointer_and_its_highlight_goes_on_past_it)
@@ -576,8 +568,8 @@ TEST(a_row_left_waiting_for_a_key_waits_no_longer_once_its_page_or_the_window_is
     CHECK_EQ(window.settings.screenshotKey, 0);
     // Waited for on its page, the key is taken; and one the row already holds is no change.
     window.held.clear();
-    window.Page("mousecursor");
-    const std::string keep = "mousecursor-mouse-pointer-keep-pointer-add";
+    window.Page("userinterface");
+    const std::string keep = "userinterface-mouse-pointer-keep-pointer-add";
     window.Click(keep);
     window.held = {kLetterA};
     CHECK(window.Frames(2));
@@ -607,7 +599,8 @@ TEST(the_list_of_pages_scrolls_in_a_window_too_short_for_it)
 TEST(a_dash_mark_is_shown_as_its_shape_in_the_list_and_in_the_closed_control)
 {
     Window window;
-    const std::string list = "entities-nameplates-replace-dashes";
+    window.Page("theme");
+    const std::string list = "theme-theme-colors-separator-style";
     const auto shape = [&](const std::string& id) {
         Rml::ElementList shapes;
         window.Find(id)->GetElementsByClassName(shapes, "dash");
@@ -746,8 +739,8 @@ TEST(a_tag_chip_dropped_goes_in_after_what_it_lands_on)
 TEST(the_fishing_bars_chips_drop_into_its_text)
 {
     Window window;
-    window.Page("userinterface");
-    const std::string box = "userinterface-custom-game-ui-fish-line";
+    window.Page("fishingbar");
+    const std::string box = "fishingbar-fishing-appearance-fish-line";
     std::string& text     = window.settings.fishBarLine;
     text                  = "$size";
     window.Frames(2);
@@ -857,8 +850,8 @@ TEST(a_window_closed_while_a_box_has_the_keyboard_keeps_what_was_typed_and_takes
 TEST(a_box_typed_in_keeps_the_keyboard_when_what_it_filters_is_listed_anew)
 {
     Window window;
-    window.Page("userinterface");
-    const std::string find = "userinterface-base-game-ui-find-window";
+    window.Page("vanillaui");
+    const std::string find = "vanillaui-base-game-ui-find-window";
     window.Click(find);
     for (const char* letter : {"e", "q", "u"})
         window.Type(letter); // a frame after each: the list under the box changes with every letter
@@ -911,7 +904,7 @@ TEST(escape_gives_a_box_back_what_it_held_and_a_click_beside_a_lines_stretches_t
 TEST(every_switch_of_every_page_flips_a_setting_of_its_own_and_flips_it_back)
 {
     // Not settings: what the window itself is showing.
-    const std::vector<std::string> windowsOwn{"userinterface-base-game-ui-all-windows"};
+    const std::vector<std::string> windowsOwn{"vanillaui-base-game-ui-all-windows"};
     for (const LayoutPage& info : kWindowLayout.pages)
     {
         Window window;
@@ -976,13 +969,14 @@ TEST(every_dropdown_slider_row_of_choices_and_number_of_every_page_and_tab_sets_
     };
     for (const LayoutPage& info : kWindowLayout.pages)
     {
+        if (std::string_view(info.key) == "feedback") continue; // its form is sent, and sets nothing
         Window window;
         window.Page(info.key);
         // Every switch on, so that what a feature switched off on a new install hides is there to work.
         for (int pass = 0; pass < 3; ++pass)
             for (Rml::Element* element : window.OfClass("check"))
                 if (!element->GetId().empty() && !element->IsClassSet("on") && window.Shows(element->GetId()) &&
-                    element->GetId() != "userinterface-base-game-ui-all-windows")
+                    element->GetId() != "vanillaui-base-game-ui-all-windows")
                     window.Click(element->GetId());
         const Settings fresh = window.settings;
         const std::map<std::string, std::string> saved = Saved(fresh);
@@ -1381,10 +1375,10 @@ TEST(a_tip_stays_on_the_screen_and_off_the_pointer)
 
 TEST(every_control_of_every_page_takes_a_click_and_the_window_stands)
 {
-    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::Aurora, BarTheme::GameWindow})
+    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::Aurora, BarTheme::Vanilla})
     {
         Window window(theme);
-        if (theme == BarTheme::GameWindow)
+        if (theme == BarTheme::Vanilla)
             window.Skin(GameSkinLook{SkinFrame{0, 4.0f / 3.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors});
         for (const LayoutPage& page : kWindowLayout.pages)
         {
@@ -1399,6 +1393,13 @@ TEST(every_control_of_every_page_takes_a_click_and_the_window_stands)
                 // What opened a list or a picker closes it again.
                 if (window.Find("popup") != nullptr && window.Find("popup")->IsVisible(true) && window.Shows(id)) window.Click(id);
                 CHECK(window.menu.open);
+                // Run Setup takes the window over, and leaving it closes the window: the pages after want it back.
+                if (window.menu.InSetup())
+                {
+                    window.Click("setup-buttons-leave");
+                    CHECK(!window.menu.InSetup());
+                    window.menu.open = true;
+                }
                 window.Page(page.key);
             }
             CHECK_EQ(window.Said(), "");
@@ -1670,7 +1671,7 @@ TEST(a_setting_of_something_switched_off_is_not_shown)
 
 TEST(the_game_window_theme_draws_the_window_in_the_art_and_its_colors)
 {
-    Window window(BarTheme::GameWindow);
+    Window window(BarTheme::Vanilla);
     const GameSkinLook look{SkinFrame{5, 1.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors};
     const MenuLook menu{MenuTheme::GameWindow, kBarlowCondensed, kMarcellusSC, 16, 0, false, look.menu, look.frame};
     const std::string style = MenuStyle(menu);
@@ -1745,10 +1746,10 @@ TEST(a_picked_choice_and_tab_take_dark_text_where_the_accent_is_bright)
         throw test::Failure{std::string("no picked ") + kind};
     };
     for (const auto [theme, bright] : {std::pair{BarTheme::PhoenixGold, true}, std::pair{BarTheme::UmbraDark, true},
-             std::pair{BarTheme::Aurora, true}, std::pair{BarTheme::PhoenixRedOrnate, false}})
+             std::pair{BarTheme::Aurora, true}, std::pair{BarTheme::PhoenixRed, false}})
     {
         Window window(theme);
-        window.Page("toppanel");
+        window.Page("helpbar");
         window.Frames(kPastEasing);
         CHECK_EQ(pickedText(window, "seg") < 0.2f, bright);
         window.Page("mobs");
@@ -1895,31 +1896,34 @@ TEST(a_lines_arrows_swap_it_with_the_one_above_or_below_and_the_ends_have_only_o
 TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
 {
     Window window;
-    window.Page("widgets");
+    window.Page("toppanel");
     const PanelWidget copy{BarWidget::Currency, 1};
-    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)));
-    CHECK(!window.Shows("widgets-widgets-remove-copy-gil"));
-    CHECK(window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)) + "-clone"));
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
+    const std::string copyChip = "toppanel-layout-chip-" + std::to_string(SlotOf(copy));
+    CHECK(!window.Shows(chip + "-remove")); // the first copy is never taken off
+    CHECK(window.Click(chip + "-clone"));
     CHECK(Placed(window.settings.barSections, copy));
-    CHECK(window.Shows("widgets-layout-chip-" + std::to_string(SlotOf(copy))));
+    CHECK(window.Shows(copyChip) && window.Shows(copyChip + "-remove"));
     // The clone's settings show at once: a currency picked there is the clone's.
-    CHECK(window.Shows("widgets-widgets-remove-copy-gil-2"));
-    window.Click("widgets-widgets-currency-gil-2");
-    CHECK(window.Click("widgets-widgets-currency-gil-2-o-1"));
-    CHECK(window.settings.Widget(copy).currency == 1 && window.settings.Widget(BarWidget::Currency).currency == kGilCurrency);
-    CHECK(window.Click("widgets-widgets-remove-copy-gil-2"));
-    CHECK(!Placed(window.settings.barSections, copy));
+    CHECK(window.shown == copy);
+    window.Click("toppanel-widgets-currency-1-gil-2");
+    CHECK(window.Click("toppanel-widgets-currency-1-gil-2-o-1"));
+    CHECK(window.settings.Widget(copy).currency == kYourConquestCurrency &&
+          window.settings.Widget(BarWidget::Currency).currency == kGilCurrency);
+    // Taken off, its settings give way to the first copy's.
+    CHECK(window.Click(copyChip + "-remove"));
+    CHECK(!Placed(window.settings.barSections, copy) && window.shown == PanelWidget{BarWidget::Currency});
     CHECK_EQ(window.Said(), "");
 }
 
 TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_second_click_takes_them_away)
 {
     Window window;
-    window.Page("widgets");
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
-    CHECK(!window.Shows("widgets-widgets-currency-gil"));
+    window.Page("toppanel");
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency));
+    CHECK(!window.Shows("toppanel-widgets-currency-1-gil"));
     window.Click(chip);
-    CHECK(window.shown == BarWidget::Currency && window.Shows("widgets-widgets-currency-gil"));
+    CHECK(window.shown == BarWidget::Currency && window.Shows("toppanel-widgets-currency-1-gil"));
     CHECK(window.Find(chip)->IsClassSet("picked"));
     // In a document of their own over the popup's room, as wide as it and no wider, which say how tall they are.
     Rml::Element* view = window.Find(kMenuViewBodyId);
@@ -1932,32 +1936,83 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     // With the window closed they work on, their dropdown too.
     window.menu.open = false;
     window.Frames(2);
-    CHECK(!window.Shows(chip) && window.Shows("widgets-widgets-currency-gil"));
-    window.Click("widgets-widgets-currency-gil");
-    CHECK(window.Click("widgets-widgets-currency-gil-o-1"));
-    CHECK(window.settings.Widget(BarWidget::Currency).currency == 1);
+    CHECK(!window.Shows(chip) && window.Shows("toppanel-widgets-currency-1-gil"));
+    window.Click("toppanel-widgets-currency-1-gil");
+    CHECK(window.Click("toppanel-widgets-currency-1-gil-o-1"));
+    CHECK(window.settings.Widget(BarWidget::Currency).currency == kYourConquestCurrency);
     window.menu.open = true;
     window.Frames(2);
     window.Click(chip);
-    CHECK(!window.shown && !window.Shows("widgets-widgets-currency-gil"));
+    CHECK(!window.shown && !window.Shows("toppanel-widgets-currency-1-gil"));
     CHECK_EQ(window.Said(), "");
 }
 
-TEST(the_world_info_widget_offers_the_pick_for_what_it_shows)
+TEST(the_currency_dropdowns_show_each_currencys_picture_left_of_its_name_in_a_column)
+{
+    Window window;
+    window.Page("toppanel");
+    window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)));
+    const std::vector<int> choices = CurrencyChoices(Nation::None); // the window's readings know no nation
+    for (const std::string list : {"toppanel-widgets-currency-1-gil", "toppanel-widgets-currency-2-gil"})
+    {
+        window.Click(list);
+        const auto row = [&](const char* key) {
+            const int currency = *CurrencyOfKey(key);
+            return window.Find(list + "-o-" + std::to_string(std::ranges::find(choices, currency) - choices.begin()));
+        };
+        const auto source = [](Rml::Element* r) { return r->GetFirstChild()->GetAttribute<Rml::String>("src", ""); };
+        CHECK(source(row("gil")) == IconSource(Icon::Gil));
+        CHECK(source(row("cp_bastok")) == GamePictureSource(GamePicture::BastokCrest));
+        CHECK(source(row("beastmen_seals")) == ItemSource(1126));
+        // One with none keeps the picture's room, so every name starts in one column.
+        CHECK(source(row("allied_notes")).empty());
+        const auto nameX = [](Rml::Element* r) { return r->GetChild(1)->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+        CHECK(std::fabs(nameX(row("allied_notes")) - nameX(row("gil"))) < 0.5f);
+        CHECK(nameX(row("gil")) > row("gil")->GetFirstChild()->GetAbsoluteOffset(Rml::BoxArea::Border).x);
+        window.Click(list); // closes it
+    }
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(the_window_opens_on_a_page_scrolled_to_one_of_its_cards)
+{
+    Window window;
+    window.Page("vanillaui");
+    CHECK(window.menu.OpenPage("toppanel", "layout"));
+    window.Frames(2);
+    Rml::Element* page = window.Find(kMenuPageId);
+    Rml::Element* card = window.Find("toppanel-layout");
+    CHECK(page->GetScrollTop() > 0.0f);
+    CHECK(std::fabs(card->GetAbsoluteOffset(Rml::BoxArea::Border).y - page->GetAbsoluteOffset(Rml::BoxArea::Padding).y) < 1.0f);
+    // It is a scroll once: the page then moves only as the player moves it.
+    const float top = page->GetScrollTop();
+    window.Frames(2);
+    CHECK_EQ(page->GetScrollTop(), top);
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(the_settings_widgets_chip_opens_no_settings_of_its_own)
+{
+    Window window;
+    window.settings.Widget(BarWidget::Settings).on = true;
+    window.Page("toppanel");
+    window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Settings)));
+    CHECK(!window.shown);
+    CHECK(!window.Find("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Settings)) + "-clone"));
+}
+
+TEST(the_world_info_widget_offers_its_tracked_ship_and_guild)
 {
     Window window;
     WidgetOptions& world = window.settings.Widget(BarWidget::World);
     world.on             = true;
-    window.Page("widgets");
-    window.Click("widgets-layout-chip-" + std::to_string(SlotOf(BarWidget::World)));
-    CHECK(window.Shows("widgets-widgets-ship-world") && !window.Shows("widgets-widgets-element-world"));
-    window.Click("widgets-widgets-shows-world");
-    CHECK(window.Click("widgets-widgets-shows-world-o-1"));
-    CHECK(world.worldLine == WorldLine::Weather);
-    CHECK(window.Shows("widgets-widgets-element-world") && !window.Shows("widgets-widgets-ship-world"));
-    window.Click("widgets-widgets-element-world");
-    CHECK(window.Click("widgets-widgets-element-world-o-4"));
-    CHECK(world.worldElement == Element::Lightning);
+    world.design         = DesignFrom(BarWidget::World, "ship | guild");
+    window.Page("toppanel");
+    window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::World)));
+    CHECK(window.Shows("toppanel-widgets-ship-world") && window.Shows("toppanel-widgets-guild-world"));
+    window.Click("toppanel-widgets-ship-world");
+    CHECK(window.Click("toppanel-widgets-ship-world-o-2"));
+    CHECK_EQ(world.worldRoute, 2);
     CHECK_EQ(window.Said(), "");
 }
 
@@ -2107,13 +2162,11 @@ TEST(closing_the_window_during_setup_is_skipping_it)
     CHECK(window.settings.barTheme == BarTheme::PhoenixGold && window.settings.setupDone);
 }
 
-TEST(run_setup_on_the_config_page_opens_setup_as_a_run_again)
+TEST(the_config_page_offers_no_way_into_setup)
 {
     Window window;
     window.Page("configmenu");
-    CHECK(!window.Click("configmenu-reset-run-setup"));
-    CHECK(window.menu.InSetup());
-    CHECK(window.Shows("nav-setup-welcome"));
+    CHECK(window.Shows("configmenu-reset-reset-all-settings") && !window.Shows("configmenu-reset-run-setup"));
 }
 
 TEST(every_setup_step_builds_in_every_theme_without_a_complaint)
@@ -2264,4 +2317,71 @@ TEST(a_tag_in_a_line_has_no_tip_and_one_to_pick_from_does)
             if (chip->GetChild(i)->IsClassSet("part")) CHECK(!chip->GetChild(i)->HasAttribute("tip"));
     }
     CHECK(inLines > 0 && toPick > 0);
+}
+
+TEST(the_feedback_box_takes_several_lines_and_send_hands_them_over_once)
+{
+    Window window;
+    window.Page("feedback");
+    const std::string box = "feedback-feedback-form-feedback-text", send = "feedback-feedback-form-send-feedback";
+    window.Click(box);
+    window.Type("Names flicker");
+    window.Key(Rml::Input::KI_RETURN); // a new line, with the keyboard kept
+    window.Type("in Jeuno.");
+    CHECK(window.Find(box) == window.Focused());
+    window.Click(send);
+    const std::optional<FeedbackDraft> sent = window.menu.TakeFeedback();
+    CHECK(sent && sent->text == "Names flicker\nin Jeuno." && sent->type == FeedbackType::FeatureRequest);
+    CHECK(!window.menu.TakeFeedback());
+    window.menu.FeedbackAnswered(true);
+    window.Frames(2);
+    CHECK_EQ(window.Typed(box), std::string());
+}
+
+TEST(the_feedback_card_spans_its_box_and_button_across_and_puts_others_box_beside_the_topic)
+{
+    Window window;
+    window.Page("feedback");
+    const std::string card = "feedback-feedback-form";
+    const auto left  = [&](const std::string& id) { return window.Find(id)->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+    const auto width = [&](const std::string& id) { return window.Find(id)->GetBox().GetSize(Rml::BoxArea::Border).x; };
+    const auto top   = [&](const std::string& id) { return window.Find(id)->GetAbsoluteOffset(Rml::BoxArea::Border).y; };
+    const std::string box = card + "-feedback-text", send = card + "-send-feedback", topic = card + "-feedback-topic";
+    const float across = width(topic + "-label-row");
+    CHECK(width(box) > 0.95f * across && width(send) > 0.95f * across);
+    CHECK(window.Find(box)->GetBox().GetSize(Rml::BoxArea::Border).y > 4.0f * window.Find(send)->GetBox().GetSize(Rml::BoxArea::Border).y);
+    CHECK(top(box) < top(send));
+    window.Click(topic);
+    window.Click(topic + "-o-5");
+    CHECK(window.Shows(card + "-other"));
+    CHECK(left(card + "-other") >= left(topic) + width(topic));
+    CHECK(std::abs(top(card + "-other") - top(topic)) < 2.0f);
+}
+
+TEST(a_designer_button_dropped_in_the_gap_between_two_buttons_goes_between_them)
+{
+    Window window;
+    const PanelWidget job{BarWidget::Job};
+    window.settings.Widget(job).on     = true;
+    window.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs earned tonext | percent bar");
+    window.shown = job;
+    window.Frames(3);
+    Rml::ElementList lines;
+    window.Find(kMenuViewBodyId)->GetElementsByClassName(lines, "design-line");
+    CHECK(lines.size() == 2);
+    std::vector<Rml::Element*> top;
+    for (int i = 0; i < lines[0]->GetNumChildren(); ++i)
+        if (lines[0]->GetChild(i)->IsClassSet("dchip")) top.push_back(lines[0]->GetChild(i));
+    Rml::Element* percent = nullptr;
+    for (int i = 0; i < lines[1]->GetNumChildren(); ++i)
+        if (lines[1]->GetChild(i)->IsClassSet("dchip") && percent == nullptr) percent = lines[1]->GetChild(i);
+    CHECK(top.size() == 3 && percent != nullptr);
+    // In the gap after Job Info, at its middle.
+    const float gapLeft  = top[0]->GetAbsoluteOffset(Rml::BoxArea::Border).x + top[0]->GetBox().GetSize(Rml::BoxArea::Border).x;
+    const float gapRight = top[1]->GetAbsoluteOffset(Rml::BoxArea::Border).x;
+    CHECK(gapRight - gapLeft >= 2.0f);
+    const Rml::Vector2f gap{(gapLeft + gapRight) / 2.0f, window.Center(top[0]->GetId()).y};
+    CHECK(window.Drag(percent->GetId(), gap - window.Center(percent->GetId())));
+    window.Frames(2);
+    CHECK_EQ(DesignText(window.settings.Widget(job).design), "jobs percent earned tonext | bar");
 }

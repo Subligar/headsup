@@ -22,13 +22,15 @@ namespace headsup
         Pets,
         UserInterface,
         TopPanel,
-        Widgets,
-        MouseCursor,
         Colors,
         Theme,
         ConfigMenu,
+        Feedback,
+        HelpBar,
+        FishingBar,
+        VanillaUi,
     };
-    constexpr int kPageCount = static_cast<int>(Page::ConfigMenu) + 1;
+    constexpr int kPageCount = static_cast<int>(Page::VanillaUi) + 1;
 
     // A kind as a bit of a kinds mask: which of the entity pages a card, a setting or a row is drawn on.
     constexpr uint8_t KindBit(PlateKind kind) { return static_cast<uint8_t>(1u << static_cast<int>(kind)); }
@@ -81,6 +83,7 @@ namespace headsup
         Page page;
         const char* key;
         const char* name;
+        const char* description; // under its title, above its cards; null for none
         bool child; // indented under the page before it
         int firstCard, cardCount; // the five entity pages share one range
     };

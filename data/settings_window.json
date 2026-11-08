@@ -10,49 +10,65 @@
           "name": "Theme",
           "description": "The look of the top panel, this config menu, the fishing bar and many more parts of HeadsUp.",
           "settings": [
-            {"key": "theme", "name": "Theme", "tip": "The look of the top panel, its popups, this config window, the fishing bar and many more parts of HeadsUp."},
             {
-              "key": "window-type",
-              "name": "Window Type",
-              "indent": true,
-              "tip": "Which of the game's window frames the art is: the one picked in the game's Config, Windows, Shared, or one of the eight.",
-              "options": [
-                {"name": "Follow Game", "tip": "The Window Type the game is set to, followed as you change it."},
-                {"name": "Type 1"},
-                {"name": "Type 2"},
-                {"name": "Type 3"},
-                {"name": "Type 4"},
-                {"name": "Type 5"},
-                {"name": "Type 6"},
-                {"name": "Type 7"},
-                {"name": "Type 8"}
+              "key": "theme",
+              "name": "Theme",
+              "tip": "The look of the top panel, its pop-outs, this config window, the fishing bar and many more parts of HeadsUp. Your own themes are listed under the built-in ones.",
+              "words": [
+                {"key": "built-in", "name": "Built-in Themes"},
+                {"key": "custom", "name": "Custom Themes"},
+                {"key": "copy", "name": "{file} (custom)"},
+                {"key": "copy-again", "name": "{file} (custom {count})"}
               ]
             },
-            {"key": "window-border", "name": "Border", "indent": true, "tip": "A border around the top panel, the help bar, the popups, the fishing bar and this window, in the color of the game's window frame. Off, they are the window's background alone."}
+            {"key": "delete-theme", "name": "Delete Custom Theme", "tip": "Deletes this custom theme's file from the themes folder, and goes back to the built-in theme it was first copied from."}
           ]
         },
         {
           "key": "theme-colors",
-          "name": "Theme Colors",
-          "description": "Every part of the Custom theme, which starts as Phoenix Gold. It colors the top panel, the config menu and many more parts of HeadsUp. Changing one picks the Custom theme, and it keeps your changes while you pick another.",
+          "name": "Customize Appearance",
+          "description": "Every part of the theme in use. Changing one on a built-in theme makes a custom theme from it, named after it, and picks it. A custom theme saves each change as you make it, in config/headsup/themes.",
           "settings": [
+            {"key": "theme-name", "name": "Theme Name", "tip": "The custom theme's name, which is its file's name too. It changes once you click out of the box or close this window."},
             {
-              "key": "theme-shape",
-              "name": "Shape",
-              "tip": "How the widgets sit on the strip.",
+              "key": "background-style",
+              "name": "Background Style",
+              "tip": "What the top panel's strip is drawn with.",
               "options": [
-                {"name": "Ornate", "tip": "Diamonds between the widgets and a framed target, as Phoenix Gold has."},
-                {"name": "Pills", "tip": "Each widget in a rounded pill, as Umbra Dark has."},
-                {"name": "Glass", "tip": "Pills that show only when lit, a line of light under the strip and glass popups, as Aurora has."},
-                {"name": "Window", "tip": "The game's own window art under the strip and the popups, with pills only when lit, as Game Window has."}
+                {"name": "Plain", "tip": "One color, with its opacity."},
+                {"name": "Gradient", "tip": "A top color running into a bottom color."},
+                {"name": "Vanilla Window", "tip": "The game's own window art, of the Window Type below."}
               ]
             },
-            {"key": "theme-background", "name": "Background", "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
-            {"key": "theme-gradient", "name": "Gradient", "tip": "The strip runs from a top color to a bottom color."},
+            {"key": "theme-background", "name": "Background Color", "indent": true, "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
             {"key": "theme-top", "name": "Top Color", "indent": true, "tip": "The strip's color at its top, with its opacity."},
+            {"key": "theme-middle", "name": "Middle Color", "indent": true, "tip": "The panel's color just past halfway down its gradient."},
             {"key": "theme-bottom", "name": "Bottom Color", "indent": true, "tip": "The strip's color at its foot, with its opacity."},
-            {"key": "theme-border-color", "name": "Border Color", "tip": "The line along the strip's foot."},
-            {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels tall the line along the strip's foot is; 0 for none."},
+            {"key": "background-opacity", "name": "Background Opacity", "indent": true, "tip": "How much of the game shows through the top panel's strip. At 100% none of it does."},
+            {"key": "window-type", "name": "Window Type", "indent": true, "tip": "Which of the game's eight window frames the art is. Auto is the one picked in the game's Config, Windows, Shared, followed as you change it. Default: Auto."},
+            {
+              "key": "separator-style",
+              "name": "Separator Style",
+              "tip": "The shape of the top panel's separators, and what a dash (-) in a nameplate's design is drawn as.",
+              "options": [
+                {"name": "Dash", "tip": "A plain dash: the top panel shows short lines, and a nameplate's dashes stay as they are."},
+                {"tip": "Dot"},
+                {"tip": "Square"},
+                {"tip": "Diamond"}
+              ]
+            },
+            {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels thick the border is: the line along the strip's foot, or with Vanilla Window the frame around the top panel, the help bar, the pop-outs, the fishing bar and this window. 0 for none."},
+            {"key": "theme-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets, the pop-outs, their sections and the help bar are, wherever those are Set by Theme. Auto keeps the corners of the theme's own style. Default: Auto."},
+            {"key": "popup-opacity", "name": "Pop-out Opacity", "tip": "How much of the game shows through the pop-outs. At 100% none of it does."},
+            {
+              "key": "status-icons",
+              "name": "Status Icons",
+              "tip": "The pictures of the status effects in the Status Timers widget and its pop-out: the game's own, or a pack's. A status a pack has no picture for shows the game's. Default: Vanilla.",
+              "words": [
+                {"key": "vanilla", "name": "Vanilla"}
+              ]
+            },
+            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: off."},
             {
               "key": "theme-palette",
               "rows": [
@@ -63,27 +79,19 @@
                 {"key": "pill", "name": "Pill", "tip": "A widget's pill."},
                 {"key": "pill-border", "name": "Pill Border"},
                 {"key": "title", "name": "Title", "tip": "A widget's title on the strip."},
-                {"key": "subtitle", "name": "Subtitle", "tip": "A widget's second line, and dim text in popups."},
+                {"key": "subtitle", "name": "Subtitle", "tip": "A widget's second line, and dim text in pop-outs."},
                 {"key": "divider", "name": "Divider", "tip": "The diamonds between widgets on an ornate strip."},
-                {"key": "panel-top", "name": "Popup Top", "tip": "A popup's color at its top."},
-                {"key": "panel-bottom", "name": "Popup Bottom", "tip": "A popup's color at its foot."},
-                {"key": "panel-border", "name": "Popup Border"},
-                {"key": "panel-outer", "name": "Popup Outer Border", "tip": "A ring around an ornate popup's border; clear for none."},
-                {"key": "text", "name": "Popup Text"},
-                {"key": "heading", "name": "Popup Heading"},
-                {"key": "tag-fill", "name": "Tag Fill", "tip": "The small labels in popups."},
+                {"key": "panel-top", "name": "Pop-out Top", "tip": "A pop-out's color at its top."},
+                {"key": "panel-bottom", "name": "Pop-out Bottom", "tip": "A pop-out's color at its foot."},
+                {"key": "panel-border", "name": "Pop-out Border"},
+                {"key": "panel-outer", "name": "Pop-out Outer Border", "tip": "A ring around an ornate pop-out's border; clear for none."},
+                {"key": "text", "name": "Pop-out Text"},
+                {"key": "heading", "name": "Pop-out Heading"},
+                {"key": "tag-fill", "name": "Tag Fill", "tip": "The small labels in pop-outs."},
                 {"key": "tag-border", "name": "Tag Border"},
                 {"key": "tag-text", "name": "Tag Text"},
-                {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."}
-              ]
-            },
-            {
-              "key": "theme-files",
-              "words": [
-                {"key": "save-as", "name": "Save As", "tip": "Saves the Custom theme under this name, in config/headsup/themes, over one of the same name."},
-                {"key": "name-hint", "name": "Name"},
-                {"key": "save", "name": "Save"},
-                {"key": "load", "name": "Load", "tip": "Makes a saved theme the Custom theme, and picks it."}
+                {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."},
+                {"key": "border-color", "name": "Border Color", "tip": "The line along the strip's foot."}
               ]
             }
           ]
@@ -103,17 +111,6 @@
             {"key": "base-font-size", "name": "Base Font Size", "tip": "The base font size for nameplate elements."},
             {"key": "base-icon-size", "name": "Base Icon Size", "tip": "The base icon size for nameplate elements."},
             {"key": "linkpearl-outline", "name": "Linkpearl Outline", "tip": "How thick the dark outline around a linkshell's pearl is: 100% is XIUI's, 0% none."},
-            {
-              "key": "replace-dashes",
-              "name": "Replace Dashes",
-              "tip": "Optionally, replaces all dashes (-) used in all nameplate design sections with a symbol.",
-              "options": [
-                {"name": "No", "tip": "Does not replace dashes with anything."},
-                {"tip": "Dot"},
-                {"tip": "Square"},
-                {"tip": "Diamond"}
-              ]
-            },
             {"key": "vertical-offset", "name": "Vertical Offset", "tip": "Offsets the entire nameplate upward by this many pixels."},
             {"key": "scale-with-distance", "name": "Scale with Distance", "tip": "Automatically scales nameplates based on distance to the player character."},
             {"key": "min-size", "name": "Min Scale", "indent": true, "tip": "The minimum scale for the nameplate. This affects its size when far away."},
@@ -185,9 +182,145 @@
     {"key": "npcs", "name": "NPCs", "child": true},
     {"key": "pets", "name": "Pets", "child": true},
     {
+      "key": "toppanel",
+      "name": "Top Panel",
+      "cards": [
+        {
+          "key": "top-panel",
+          "name": "Panel Appearance",
+          "description": "Hover a widget for details; click it to keep them open. Its cog opens its options.",
+          "settings": [
+            {
+              "key": "show-separator",
+              "name": "Show Separator",
+              "tip": "Where the top panel shows its separators, whatever the theme. Separator Style on the Theme page picks their shape. Default: Between Widgets and End Caps.",
+              "options": [
+                {"name": "Never", "tip": "No separators. Picking it clears the others."},
+                {"name": "Between Widgets", "tip": "A separator between each widget and the next."},
+                {"name": "End Caps", "tip": "A separator at the far left and far right of the top panel."}
+              ]
+            },
+            {"key": "height", "name": "Panel Height", "tip": "How tall the top panel is. The text and icons of every widget grow and shrink with it."},
+            {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Default: 0 px."},
+            {"key": "hide-readout", "name": "Hide Server Info", "tip": "The game's S, R and % numbers at the top right."},
+            {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
+          ]
+        },
+        {
+          "key": "layout",
+          "name": "Widget Layout",
+          "description": "Drag a widget to move it, and click one that is on to open its settings in its pop-out on the top panel. Click it again to close them. Its toggle turns it on and off. You can also open a widget's settings from the cog in its pop-out.",
+          "settings": [
+            {"key": "trays"}
+          ]
+        },
+        {
+          "key": "widget-appearance",
+          "name": "Widget Appearance",
+          "description": "How every widget on the top panel looks.",
+          "settings": [
+            {"key": "widget-padding", "name": "Padding", "tip": "The room inside every widget, from its edges to its text. Default: the theme's own."},
+            {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of the icons in widgets. At 100% an icon is as tall as its widget can hold. Default: 65%."},
+            {"key": "widget-background", "name": "Show Background", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: Off."},
+            {"key": "title-font", "name": "Primary Font", "tip": "The font of each widget's top line, of a widget on one line, and of the pop-outs' headings. Default: the theme's."},
+            {"key": "text-font", "name": "Secondary Font", "tip": "The font of each widget's second line, its numbers and the pop-outs' text. Default: the theme's."},
+            {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of the primary line's text to the size of the secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Both lines grow or shrink together to fit the Panel Height. Default: 1.20x."},
+            {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets' backgrounds are. Set by Theme keeps the theme's own. Default: Set by Theme."}
+          ]
+        },
+        {
+          "key": "popup-appearance",
+          "name": "Pop-out Appearance",
+          "description": "How the widgets' pop-outs look.",
+          "settings": [
+            {"key": "text-scale", "name": "Text Scale", "tip": "Makes the text in the pop-outs larger or smaller. At 1x a pop-out's title is 18 px, its section titles 16 px and its text 14 px. Default: 1.0x."},
+            {"key": "popup-width", "name": "Width", "tip": "Makes each pop-out and its sections wider, without changing the text. Default: 1.0x."},
+            {"key": "popup-height", "name": "Height", "tip": "Makes each pop-out and its sections taller, without changing the text. Default: 1.0x."},
+            {"key": "popup-rounding", "name": "Pop-out Rounding", "tip": "How round the corners of the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."},
+            {"key": "section-rounding", "name": "Section Rounding", "tip": "How round the corners of the sections in the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."}
+          ]
+        },
+        {
+          "key": "widgets",
+          "name": "Widgets",
+          "description": "Each widget's settings, in its pop-out on the top panel.",
+          "settings": [
+            {
+              "key": "widget-tabs",
+              "rows": [
+                {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
+                {"key": "icon", "name": "Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is Show on Left."},
+                {"key": "alignment", "name": "Alignment", "tip": "Puts the widget's content against the left or right of its pill, or in its middle. Set by Location lines it up with the side of the panel it is on. Default is Set by Location."},
+                {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is on."},
+                {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
+                {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is 0 px."},
+                {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
+                {"key": "detection-icons", "name": "Detection Icons", "tip": "Which of a mob's icons the Detection part shows. Default is all of them."},
+                {"key": "blue-magic", "name": "Blue Magic", "tip": "In the pop-out, a mob's TP moves that a blue mage can learn are shown in the Blue Magic Color. Default is on."},
+                {"key": "blue-magic-color", "name": "Blue Magic Color", "tip": "The color of TP moves a blue mage can learn. Default is blue."},
+                {"key": "blue-magic-learned", "name": "Learned Blue Magic", "tip": "How a TP move whose blue magic you already know is shown: still blue with a star after it, or as plain text. Default is Star."},
+                {"key": "currency-1", "name": "Currency 1", "tip": "The currency the widget's Currency 1 buttons show. Default is Gil."},
+                {"key": "currency-2", "name": "Currency 2", "tip": "The currency the widget's Currency 2 buttons show. Default is Conquest Points, your nation's."},
+                {"key": "custom-icons", "name": "Use Custom Icons", "tip": "When the widget and its pop-out show HeadsUp's own weather pictures in place of the game's element icons. Default is Always."},
+                {"key": "ship", "name": "Tracked Ship", "tip": "The boat or airship whose next sailing the Ship button shows."},
+                {"key": "guild", "name": "Tracked Guild", "tip": "The guild shop whose hours the Guild button shows."},
+                {"key": "bag", "name": "Bag", "tip": "The bag this widget shows on the panel. Hover it for every bag."},
+                {"key": "local-timezone", "name": "Local Timezone", "tip": "The zone of the Local Time button. Automatic is your computer's. Another zone goes before the time, as in PDT 21:07. Default is Automatic."},
+                {"key": "secondary-timezone", "name": "Secondary Timezone", "tip": "The zone of the Secondary Timezone button, which goes before its time, as in JST 13:07. Default is Japan (JST), the server's time, which the daily reset and the conquest tally go by."},
+                {"key": "24-hour", "name": "24-Hour"},
+                {"key": "seconds", "name": "Seconds", "tip": "Adds seconds to the Local Time button and to the time in the pop-out's title."},
+                {"key": "date-format", "name": "Date Format", "tip": "How the Local Date button writes the date. Default is MM/DD/YYYY."},
+                {"key": "bar-width", "name": "Bar Width", "tip": "How long the EXP Bar is. Default is 100 px."},
+                {"key": "bar-height", "name": "Bar Height", "tip": "How thick the EXP Bar is. Default is 6 px."},
+                {"key": "bar-back", "name": "EXP Bar Background", "tip": "The color of the EXP Bar behind its fill. Set by Theme uses your theme's color. Picking a color switches it to Custom. Default is Set by Theme."},
+                {"key": "bar-color", "name": "EXP Bar Color", "tip": "The color of the EXP Bar's fill. Set by Theme uses your theme's colors. Picking a color switches it to Custom. Default is Set by Theme."},
+                {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows on it. Default is None."},
+                {"key": "bar-text-align", "name": "Bar Text Alignment", "tip": "Puts the EXP Bar's text at its left or right end, or in its middle. Default is Center."},
+                {"key": "mem-text", "name": "Show Mem Text", "tip": "Puts \"Mem\" before the Memory button's figures. Off, the figures alone. Default is off."},
+                {"key": "status-display", "name": "Display", "tip": "What shows for each pinned status: its name, its icon, or both with the icon first. Default is Both Name & Icon."},
+                {"key": "earned-align", "name": "Earned EXP Alignment", "tip": "Puts the Earned EXP text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
+                {"key": "tnl-align", "name": "EXP TNL Alignment", "tip": "Puts the EXP Til Next Level text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
+                {"key": "percent-align", "name": "EXP Percentage Alignment", "tip": "Puts the EXP Percentage text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
+                {"key": "job-text", "name": "Job Text", "tip": "How Job Info and the EXP Bar's Job Text write your jobs and levels. Default is Main 75 / Sub 37."},
+                {"key": "job-text-align", "name": "Job Text Alignment", "tip": "Puts the Job Info text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."}
+              ],
+              "words": [
+                {"key": "clone", "name": "Clone This Widget", "tip": "Puts another of this widget on the panel after it, with all of this one's settings."},
+                {"key": "remove-copy", "name": "Remove This Copy", "tip": "Takes this copy off the panel. Its settings go with it."},
+                {"key": "combine-none", "name": "None"},
+                {"key": "link-disabled", "name": "(disabled)"},
+                {"key": "design-last-on", "name": "At least one button must be enabled."},
+                {"key": "design-status-timers", "name": "Use the lines below to change how info is organized in the widget."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "key": "userinterface",
       "name": "User Interface",
       "cards": [
+        {
+          "key": "mouse-pointer",
+          "name": "Mouse Pointer",
+          "settings": [
+            {
+              "key": "pointer-icon",
+              "name": "Cursor Icon",
+              "tip": "What the mouse cursor looks like. You can place cursor files in the config/headsup/cursors folder and they will appear in the drop-down menu as options.",
+              "options": [
+                {"name": "Vanilla", "tip": "Changes nothing about the mouse cursor, keeping its vanilla appearance."},
+                {"name": "Chocobo", "tip": "Replaces the mouse cursor with the Chocobo cursor from PlayOnline."},
+                {"tip": "Replaces the mouse cursor with this file from the config/headsup/cursors folder."}
+              ]
+            },
+            {"key": "pointer-size", "name": "Cursor Size", "tip": "How large the mouse cursor is, the game's own included."},
+            {"key": "pointer-fix", "name": "Pointer Fix", "tip": "Keeps the game's pointer under yours after a resize, and clicks where you click. It also shows the pointer again over Ashita's windows."},
+            {"key": "keep-pointer", "name": "Keep Pointer", "tip": "The game hides its pointer when a key runs a command. While only these keys are held, it stays."},
+            {"key": "lock-cursor", "name": "Lock Cursor to Window", "tip": "While the game has the focus, the mouse cursor can not leave its window. Default is off."}
+          ]
+        },
         {
           "key": "screenshot-mode",
           "name": "Screenshot Mode",
@@ -196,34 +329,89 @@
             {"key": "key", "name": "Key", "tip": "Turns screenshot mode on and off. The game sees the key too, so pick one it does not use."},
             {"key": "hide-game-windows", "name": "Hide Game Windows", "tip": "The game's own windows and chat go too."}
           ]
-        },
+        }
+      ]
+    },
+    {
+      "key": "helpbar",
+      "name": "Help Bar",
+      "child": true,
+      "cards": [
         {
-          "key": "custom-game-ui",
-          "name": "Custom Game UI",
-          "description": "HeadsUp's own versions of parts of the game's UI. Each keeps working when you hide the game's window it belongs to.",
+          "key": "help-bar",
+          "name": "Appearance",
+          "description": "The game's help text, in a bar of its own under the top panel.",
           "settings": [
-            {"key": "fishing-bar", "name": "Fishing Bar", "tip": "The fish's stamina while you fight it. The game draws its bar in the party window, so it goes when that window is hidden. It shows only while a fish is hooked: drag it where you want it then."},
-            {"key": "fishing-bar-width", "name": "Width", "indent": true, "tip": "How wide the fishing bar is."},
-            {"key": "fishing-bar-height", "name": "Height", "indent": true, "tip": "How tall the fishing bar is, its frame counted. Default: 18 px."},
-            {"key": "fishing-bar-x", "name": "X Position", "indent": true, "tip": "Pixels from the left of the screen to the bar. Auto centers it. Default: Auto."},
-            {"key": "fishing-bar-y", "name": "Y Position", "indent": true, "tip": "Pixels from the top of the screen to the bar. Auto puts it low on the screen. Default: Auto."},
-            {"key": "fishing-bar-draggable", "name": "Draggable", "indent": true, "tip": "On, you can drag the bar to move it while a fish is hooked. Off, clicks go through it to the game. Default: On."},
-            {"key": "fishing-bar-font", "name": "Font", "indent": true, "tip": "The font of the text over the bar. Default: the top panel's text font."},
-            {"key": "fishing-bar-text-size", "name": "Font Size", "indent": true, "tip": "The size of the text over the bar. Default: 15 px."},
-            {"key": "fishing-bar-line", "name": "Text", "indent": true, "tip": "What the text over the bar says. Drag the buttons below into it, and write your own text around them. HeadsUp only says what the game has told you, never which fish it is."},
-            {"key": "fish-color-by-catch", "name": "Color by Catch", "indent": true, "tip": "Colors the bar by what is on the line. A rod that could break comes first, then a line that could snap, then the size of the catch. Off, the bar keeps the theme's color. Default: On."},
-            {"key": "fish-small-color", "name": "Small Fish", "indent": true, "tip": "The bar's color for a small fish."},
-            {"key": "fish-large-color", "name": "Large Fish", "indent": true, "tip": "The bar's color for a large fish."},
-            {"key": "fish-item-color", "name": "Item", "indent": true, "tip": "The bar's color for an item."},
-            {"key": "fish-monster-color", "name": "Monster", "indent": true, "tip": "The bar's color for a monster. Default: purple."},
-            {"key": "fish-line-color", "name": "Line Break", "indent": true, "tip": "The bar's color when your line could snap, which the game warns of with a bad feeling. Default: orange."},
-            {"key": "fish-rod-color", "name": "Rod Break", "indent": true, "tip": "The bar's color when your rod could break, which the game warns of with a terrible feeling. Default: red."},
-            {"key": "hide-game-fish-bar", "name": "Hide the Game's Fish Bar", "tip": "While a fish is hooked, the game's own fish bar at the top of the screen is not drawn. The party window still shows."}
+            {"key": "hide-game-help", "name": "Hide Game Help", "tip": "The game's own help bar, which the top panel covers."},
+            {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
+            {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
+            {"key": "help-rounding", "name": "Corner Rounding", "tip": "How round the help bar's corners are. Set by Theme keeps the theme's own. Default: Set by Theme."},
+            {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
+            {
+              "key": "anchor",
+              "name": "Anchor",
+              "tip": "Which side of the screen the help bar keeps to. Its text lines up the same way inside it. Default: Left.",
+              "options": [
+                {"name": "Left", "tip": "Against the screen's left edge, with its text on the left."},
+                {"name": "Center", "tip": "In the middle of the screen, with its text centered."},
+                {"name": "Right", "tip": "Against the screen's right edge, with its text on the right."}
+              ]
+            },
+            {"key": "full-width", "name": "Full Width", "tip": "The help bar takes the screen's whole width, however short its text. Default: Off."},
+            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
+            {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
           ]
-        },
+        }
+      ]
+    },
+    {
+      "key": "fishingbar",
+      "name": "Fishing Bar",
+      "child": true,
+      "cards": [
+        {
+          "key": "fishing-appearance",
+          "name": "Appearance",
+          "description": "HeadsUp's own bar of a hooked fish's stamina. It keeps working when you hide the party window, where the game draws its own.",
+          "settings": [
+            {
+              "key": "fishing-bar",
+              "name": "Fishing Bar",
+              "tip": "Which bar shows the fish's stamina while you fight it. Default: HeadsUp Fish Stamina.",
+              "options": [
+                {"name": "Hide Fish Stamina", "tip": "Hides the game's fish stamina bar and shows no bar of HeadsUp's."},
+                {"name": "Vanilla Fish Stamina", "tip": "Keeps the game's own fish stamina bar and shows no bar of HeadsUp's."},
+                {"name": "HeadsUp Fish Stamina", "tip": "Hides the game's fish stamina bar and shows HeadsUp's in its place. It shows only while a fish is hooked: drag it where you want it then."}
+              ]
+            },
+            {"key": "fishing-bar-width", "name": "Width", "tip": "How wide the fishing bar is."},
+            {"key": "fishing-bar-height", "name": "Height", "tip": "How tall the fishing bar is, its frame counted. Default: 18 px."},
+            {"key": "fishing-bar-x", "name": "X Position", "tip": "Pixels from the left of the screen to the bar. Auto centers it. Default: Auto."},
+            {"key": "fishing-bar-y", "name": "Y Position", "tip": "Pixels from the top of the screen to the bar. Auto puts it low on the screen. Default: Auto."},
+            {"key": "fishing-bar-draggable", "name": "Draggable", "tip": "On, you can drag the bar to move it while a fish is hooked. Off, clicks go through it to the game. Default: On."},
+            {"key": "fishing-bar-font", "name": "Font", "tip": "The font of the text over the bar. Default: the top panel's Secondary Font."},
+            {"key": "fishing-bar-text-size", "name": "Font Size", "tip": "The size of the text over the bar. Default: 15 px."},
+            {"key": "fishing-bar-line", "name": "Text", "tip": "What the text over the bar says. Drag the buttons below into it, and write your own text around them. HeadsUp only says what the game has told you, never which fish it is."},
+            {"key": "fish-color-by-catch", "name": "Color by Catch", "tip": "Colors the bar by what is on the line. A rod that could break comes first, then a line that could snap, then the size of the catch. Off, the bar keeps the theme's color. Default: On."},
+            {"key": "fish-small-color", "name": "Small Fish", "tip": "The bar's color for a small fish."},
+            {"key": "fish-large-color", "name": "Large Fish", "tip": "The bar's color for a large fish."},
+            {"key": "fish-item-color", "name": "Item", "tip": "The bar's color for an item."},
+            {"key": "fish-monster-color", "name": "Monster", "tip": "The bar's color for a monster. Default: purple."},
+            {"key": "fish-line-color", "name": "Line Break", "tip": "The bar's color when your line could snap, which the game warns of with a bad feeling. Default: orange."},
+            {"key": "fish-rod-color", "name": "Rod Break", "tip": "The bar's color when your rod could break, which the game warns of with a terrible feeling. Default: red."}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "vanillaui",
+      "name": "Vanilla UI",
+      "child": true,
+      "description": "NOTE: These settings are a work in progress and for advanced users only.",
+      "cards": [
         {
           "key": "base-game-ui",
-          "name": "Base Game UI",
+          "name": "Windows",
           "settings": [
             {"key": "game-help", "name": "Game Help", "tip": "The game's own help bar goes under the top panel, and the windows under it. Off while it is hidden."},
             {"key": "auto-adjust", "name": "Auto Adjust Windows", "tip": "Places every menu's windows right under the top panel as it is now, for the game help on and off. Your own shifts go."},
@@ -263,177 +451,6 @@
                 {"key": "row-tip", "tip": "Its shift down from where the game puts its windows, up when below zero."}
               ]
             }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "toppanel",
-      "name": "Top Panel",
-      "child": true,
-      "cards": [
-        {
-          "key": "top-panel",
-          "name": "Top Panel",
-          "description": "Hover a widget for details; click it to keep them open. The Widgets page has each one's options.",
-          "settings": [
-            {
-              "key": "separators",
-              "name": "Separators",
-              "options": [
-                {"name": "Theme's"},
-                {"name": "Diamonds"},
-                {"name": "None"}
-              ]
-            },
-            {"key": "title-font", "name": "Title Font"},
-            {"key": "text-font", "name": "Default Font"},
-            {"key": "height", "name": "Height"},
-            {
-              "key": "text-size",
-              "name": "Base Font Size",
-              "tip": "Auto follows the height. Too large for two lines, the second line goes as One Line says.",
-              "words": [
-                {"key": "fits", "name": "{count} px ({total} fits)"}
-              ]
-            },
-            {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Each widget can set its own on the Widgets page. Default is 0 px."},
-            {"key": "widget-padding", "name": "Widget Padding", "tip": "The room inside every widget, from its edges to its text. Each widget can set its own on the Widgets page. Default is the theme's own."},
-            {
-              "key": "one-line",
-              "name": "One Line",
-              "tip": "On a bar too short for two lines, each widget's second line goes before or after its title, or is left off.",
-              "options": [
-                {"name": "Hide"},
-                {"name": "Before"},
-                {"name": "After"}
-              ]
-            },
-            {"key": "popup-size", "name": "Popup Size", "tip": "Auto follows the height."},
-            {"key": "hide-readout", "name": "Hide Readout", "tip": "The game's S, R and % numbers at the top right."},
-            {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
-          ]
-        },
-        {
-          "key": "help-bar",
-          "name": "Help Bar",
-          "description": "The game's help text, in a bar of its own under the top panel.",
-          "settings": [
-            {"key": "hide-game-help", "name": "Hide Game Help", "tip": "The game's own help bar, which the top panel covers."},
-            {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
-            {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
-            {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
-            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
-            {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
-          ]
-        }
-      ]
-    },
-    {
-      "key": "widgets",
-      "name": "Widgets",
-      "child": true,
-      "cards": [
-        {
-          "key": "layout",
-          "name": "Layout",
-          "description": "Drag a widget to move it, and click one that is on to open its settings in its popup on the top panel. Click it again to close them. Its toggle turns it on and off. You can also open a widget's settings from the cog in its popup.",
-          "settings": [
-            {"key": "trays"},
-            {"key": "reset-layout", "name": "Reset Layout", "tip": "Puts every widget back in its first place and takes off any copies. Switches stay."}
-          ]
-        },
-        {
-          "key": "widgets",
-          "name": "Widgets",
-          "description": "Each widget's settings, in its popup on the top panel.",
-          "settings": [
-            {
-              "key": "widget-tabs",
-              "rows": [
-                {"key": "combine", "name": "Combine With", "tip": "Puts another widget right after this one in the same pill, with one popup for both. That widget leaves its own place. Default is None."},
-                {"key": "combine-on-panel", "name": "Show Combined on Panel", "tip": "Shows the combined widget in the pill. Off, only this widget shows on the top panel, and the other's popup still joins this one's. Default is on."},
-                {"key": "combine-in-popup", "name": "Show Combined in Popup", "tip": "Adds the combined widget's popup to this one's. Off, the popup shows this widget's alone, so a widget combined with a copy of itself is not listed twice. Default is on."},
-                {"key": "second-line", "name": "Second Line"},
-                {"key": "show-region-name", "name": "Show Region Name", "tip": "The zone's region on the second line. Default is on."},
-                {"key": "show-conquest", "name": "Show Conquest", "tip": "The crest of the nation that holds the region, before the zone's name, after it, or below it. Default is Below."},
-                {"key": "show-conquest-text", "name": "Show Conquest Text", "tip": "The holding nation's name after its crest. The Beastmen have no crest, so their name is all there is to show. Default is on."},
-                {"key": "show-zone-id", "name": "Show Zone ID", "tip": "The zone's number after its name in the popup. Default is off."},
-                {"key": "moon-phase", "name": "Show Moon Phase", "tip": "The moon's phase and how full it is, on the second line. Default is on."},
-                {"key": "day-of-week", "name": "Show Day of Week", "tip": "Vana'diel's day before the time, in its element's color. Default is on."},
-                {"key": "date", "name": "Show Date", "tip": "Vana'diel's date on the second line, before the moon. Default is off."},
-                {"key": "icons", "name": "Icons"},
-                {"key": "background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it. Off, it shows only what the theme gives it. Default is off, and on for the Target."},
-                {"key": "spacing", "name": "Spacing", "tip": "More room between this widget and the widgets beside it. Default is the top panel's Widget Spacing."},
-                {"key": "padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default is the top panel's Widget Padding."},
-                {"key": "title-font", "name": "Title Font", "tip": "This widget's title. Default is the top panel's Title Font."},
-                {"key": "text-font", "name": "Text Font", "tip": "This widget's second line and numbers. Default is the top panel's Text Font."},
-                {"key": "text-size", "name": "Text Size", "tip": "This widget's title size, with its second line to match. Default is the top panel's Text Size."},
-                {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
-                {"key": "show-icons", "name": "Show Icons", "tip": "A mob's icons: its aggression before its name, the rest after it, and its weaknesses after its level. Default is its aggression alone."},
-                {"key": "show-mob-level", "name": "Show Mob Level", "tip": "A mob's level and how tough it is, under its name. Default is on."},
-                {"key": "show-distance", "name": "Show Distance", "tip": "How far your target is, in yalms, in parentheses after its name. Default is on."},
-                {"key": "jobs", "name": "Show Player Info", "tip": "A player's jobs and levels under their name, once HeadsUp knows them: from your party, a check, or Look Up Players. Default is on."},
-                {"key": "blue-magic", "name": "Blue Magic", "tip": "In the popup, a mob's TP moves that a blue mage can learn are shown in the Blue Magic Color. Default is on."},
-                {"key": "blue-magic-color", "name": "Blue Magic Color", "tip": "The color of TP moves a blue mage can learn. Default is blue."},
-                {"key": "blue-magic-learned", "name": "Learned Blue Magic", "tip": "How a TP move whose blue magic you already know is shown: still blue with a star after it, or as plain text. Default is Star."},
-                {"key": "currency", "name": "Currency"},
-                {"key": "nations", "name": "Nations", "tip": "Whose regions the widget counts when it shows Conquest Info, and its popup lists."},
-                {"key": "conquest-grid", "name": "Layout", "tip": "How the nations are laid out when it shows more than one: two lines of two, or all on one line. Default is 2 x 2."},
-                {"key": "shows", "name": "Shows", "tip": "What the widget tells on the panel, with a countdown. Add a copy to show another."},
-                {"key": "ship", "name": "Ship", "tip": "The boat or airship whose next departure the widget shows."},
-                {"key": "element", "name": "Element", "tip": "Shows when that element's weather can next roll in the zone you are in, and its chance that day."},
-                {"key": "guild", "name": "Guild", "tip": "The guild shop whose hours the widget shows."},
-                {"key": "popup", "name": "Popup", "tip": "The parts its popup shows when you hover it."},
-                {"key": "bag", "name": "Bag", "tip": "The bag this widget shows on the panel. Hover it for every bag."},
-                {"key": "time-zone", "name": "Time Zone", "tip": "Local is your computer's. Another zone goes before the time, as in PDT 21:07."},
-                {"key": "server-time", "name": "Server Time", "tip": "Japan's time, which the server keeps and the resets go by, as a second line under your own."},
-                {"key": "24-hour", "name": "24-Hour"},
-                {"key": "seconds", "name": "Seconds", "tip": "On your own line."},
-                {"key": "layout", "name": "Layout", "tip": "Which is the larger line, your jobs and levels or your EXP, with the other under it; the EXP alone; or the EXP bar with its texts around it."},
-                {"key": "exp-text", "name": "EXP Text", "tip": "What the EXP says. At the level cap it is your limit points, after your merits. With none picked, your jobs show alone on one line."},
-                {"key": "exp-bar", "name": "EXP Bar"},
-                {"key": "exp-earned", "name": "Earned", "tip": "Where the EXP you have of this level, out of what it takes, goes around the bar. At the level cap it is your limit points."},
-                {"key": "exp-to-next", "name": "To Next", "tip": "Where the EXP left to the next level goes around the bar. At the level cap it is your merits."},
-                {"key": "exp-percent", "name": "Percent", "tip": "Where how much of the level you have, as a percent, goes around the bar."},
-                {"key": "exp-align", "name": "Text Align", "tip": "How the texts above and below the bar line up with it: at its left end, its middle or its right end. A text longer than the bar runs past it the other way. Default is Center."},
-                {"key": "bar-width", "name": "Bar Width", "tip": "How long the bar is."},
-                {"key": "bar-height", "name": "Bar Height", "tip": "How thick the bar is. It stays in the middle of the panel."},
-                {"key": "job-names", "name": "Job Names", "tip": "Off, the levels alone."},
-                {"key": "panel-parts", "name": "Shows", "tip": "What the widget shows on the panel, one after another."}
-              ],
-              "words": [
-                {"key": "clone", "name": "Clone This Widget", "tip": "Puts another of this widget on the panel after it, with all of this one's settings."},
-                {"key": "remove-copy", "name": "Remove This Copy", "tip": "Takes this copy off the panel. Its settings go with it."},
-                {"key": "combine-none", "name": "None"}
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "mousecursor",
-      "name": "Mouse Cursor",
-      "child": true,
-      "cards": [
-        {
-          "key": "mouse-pointer",
-          "name": "Mouse Pointer",
-          "settings": [
-            {
-              "key": "pointer-icon",
-              "name": "Cursor Icon",
-              "tip": "What the mouse cursor looks like. You can place cursor files in the config/headsup/cursors folder and they will appear in the drop-down menu as options.",
-              "options": [
-                {"name": "Vanilla", "tip": "Changes nothing about the mouse cursor, keeping its vanilla appearance."},
-                {"name": "Chocobo", "tip": "Replaces the mouse cursor with the Chocobo cursor from PlayOnline."},
-                {"tip": "Replaces the mouse cursor with this file from the config/headsup/cursors folder."}
-              ]
-            },
-            {"key": "pointer-size", "name": "Cursor Size", "tip": "How large the mouse cursor is, the game's own included."},
-            {"key": "pointer-fix", "name": "Pointer Fix", "tip": "Keeps the game's pointer under yours after a resize, and clicks where you click. It also shows the pointer again over Ashita's windows."},
-            {"key": "keep-pointer", "name": "Keep Pointer", "tip": "The game hides its pointer when a key runs a command. While only these keys are held, it stays."}
           ]
         }
       ]
@@ -648,7 +665,6 @@
           "key": "reset",
           "name": "Reset",
           "settings": [
-            {"key": "run-setup", "name": "Run Setup", "tip": "Walks you through the main settings again, with a preview of each. It starts from your settings as they are and changes only what you pick. Your settings are saved to a file first, so Cancel can put them back."},
             {
               "key": "reset-all-settings",
               "name": "Reset All Settings",
@@ -657,6 +673,54 @@
                 {"key": "note", "name": "Every setting goes back to its default. This cannot be undone."},
                 {"key": "reset-everything", "name": "Reset Everything"},
                 {"key": "keep-them", "name": "Keep Them"}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "feedback",
+      "name": "Feedback",
+      "cards": [
+        {
+          "key": "feedback-form",
+          "name": "Feedback",
+          "description": "Have any suggestions for improvements, new features, or bugs to report? Let us know!",
+          "settings": [
+            {
+              "key": "feedback-type",
+              "name": "Type",
+              "tip": "What kind of feedback you are sending.",
+              "options": [
+                {"name": "Feature Request"},
+                {"name": "Suggestion"},
+                {"name": "Bug Report"}
+              ]
+            },
+            {
+              "key": "feedback-topic",
+              "name": "Topic",
+              "tip": "The part of HeadsUp it is about. With Other, say what in the box beside it.",
+              "options": [
+                {"name": "General"},
+                {"name": "Nameplates"},
+                {"name": "Outlines"},
+                {"name": "Top Panel"},
+                {"name": "User Interface"},
+                {"name": "Other (please specify)"}
+              ]
+            },
+            {"key": "feedback-text"},
+            {
+              "key": "send-feedback",
+              "name": "Send Feedback",
+              "tip": "Sends the HeadsUp team what you wrote, its type and topic, and your version of HeadsUp. Nothing else about you or your game is sent.",
+              "words": [
+                {"key": "missing", "name": "You must fill out all fields in order to send your feedback."},
+                {"key": "sending", "name": "Sending..."},
+                {"key": "sent", "name": "Sent. Thank you for your feedback!"},
+                {"key": "failed", "name": "Your feedback could not be sent. Please try again later."}
               ]
             }
           ]
@@ -982,11 +1046,10 @@
       "options": [
         {"name": "Phoenix Gold", "tip": "An ornate strip in dark brown and gold, with diamonds between its widgets."},
         {"name": "Umbra Dark", "tip": "Each widget in a grey pill, lit in blue."},
-        {"name": "Phoenix Red, Ornate", "tip": "The ornate strip in Phoenix's dark red."},
-        {"name": "Phoenix Red, Pills", "tip": "Each widget in a pill, in Phoenix's dark red."},
+        {"name": "Phoenix Red", "tip": "The ornate strip in Phoenix's dark red."},
         {"name": "Aurora", "tip": "Slate glass, lit from cyan into violet."},
-        {"name": "Custom", "tip": "Your own colors and shape, from the Theme Colors card."},
-        {"name": "Game Window", "tip": "The game's own window art, of the Window Type below, in colors taken from it."}
+        {"name": "Custom", "tip": "One of your own themes, from the Customize Appearance card."},
+        {"name": "Vanilla", "tip": "The game's own window art, of the Window Type the game is set to, in colors taken from it."}
       ]
     },
     {
@@ -1001,67 +1064,26 @@
       "key": "bar-widgets",
       "options": [
         {"name": "Zone", "tip": "The zone, its region and who holds it. Hover for the influence there and the conquest tally."},
-        {"name": "Weather", "tip": "The weather now and today's chance of it. Hover for the forecast, and for the zones that can roll each element today and tomorrow."},
-        {"name": "Vana'diel Clock", "tip": "The Vana'diel day, time and moon."},
+        {"name": "Forecast", "tip": "The weather now and Vana'diel's date, day, time and moon. Hover for today, the forecast, and the zones that can roll each element today and tomorrow."},
         {"name": "Target", "tip": "Your target's name, level and con. Hover a mob for its details."},
         {"name": "Currency", "tip": "Gil, or another currency. Hover for your favorite currencies and every other one, with a star to keep one at the top."},
-        {"name": "Bags", "tip": "How full your inventory is. Hover for every bag."},
-        {"name": "Clock", "tip": "Your computer's time, or another time zone's, over the server's if you like. Hover for the daily reset and conquest tally."},
+        {"name": "Inventory", "tip": "How full your inventory is. Hover for every bag."},
+        {"name": "Clock", "tip": "Your computer's time or another time zone's, with a second zone's time or Vana'diel's if you like. Hover for the daily reset and conquest tally."},
         {"name": "Game Help", "tip": "The game's help text, in a bar of its own under the top panel."},
-        {"name": "Performance", "tip": "Frames per second, bytes sent and received each second, your ping and the game's memory, as you pick. Amber or red when data stops or memory runs low. Hover for your ping, the last server data, PlayOnline messages, the processor, the frames and the LinuxXI plugin's figures."},
-        {"name": "Job & EXP", "tip": "Jobs, levels and EXP to the next level, with a bar; or the EXP bar alone with its texts around it. Hover for EXP per hour."},
+        {"name": "Performance", "tip": "Frames per second, bytes sent and received each second and the game's memory, as you pick. Amber or red when data stops or memory runs low. Hover for the last server data, PlayOnline messages, the processor, the frames and the LinuxXI plugin's figures."},
+        {"name": "Job & EXP", "tip": "Jobs, levels and EXP to the next level, with a bar. Hover for EXP per hour."},
         {"name": "Party", "tip": "Party size and the lowest HP and MP. Hover for each member."},
         {"name": "Status Timers", "tip": "The time left on each status you pin. Hover for your favorite statuses, with a pin to show one here, and every other status with a star to add it to them."},
-        {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."}
+        {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."},
+        {"name": "Settings", "tip": "Just the settings cog. Click it to open these settings on the Top Panel page, at Widget Layout."}
       ]
     },
     {
-      "key": "perf-parts",
+      "key": "job-text",
       "options": [
-        {"name": "FPS", "tip": "Frames per second."},
-        {"name": "Sent", "tip": "Bytes sent each second; amber or red when data stops."},
-        {"name": "Received", "tip": "Bytes received each second; amber or red when data stops."},
-        {"name": "Percent", "tip": "The game's own connection meter, as its readout shows it: 100% while data comes in, less once it stops."},
-        {"name": "Ping", "tip": "Your ping to the server. It shows once a few of the server's answers are timed."},
-        {"name": "Memory", "tip": "The game's memory used; amber, then red, as it runs low before it runs out at 4 GB."},
-        {"name": "Messages", "tip": "PlayOnline's mail and messenger icons while something waits, with how many."}
-      ]
-    },
-    {
-      "key": "world-line",
-      "options": [
-        {"name": "Next Ship"},
-        {"name": "Weather"},
-        {"name": "Guild Hours"},
-        {"name": "RSE"},
-        {"name": "Moon"},
-        {"name": "Conquest Info"}
-      ]
-    },
-    {
-      "key": "world-sections",
-      "options": [
-        {"name": "Travel"},
-        {"name": "Guilds"},
-        {"name": "Calendar"},
-        {"name": "Conquest"}
-      ]
-    },
-    {
-      "key": "nations",
-      "options": [
-        {"name": "San d'Oria"},
-        {"name": "Bastok"},
-        {"name": "Windurst"},
-        {"name": "Beastmen"}
-      ]
-    },
-    {
-      "key": "exp-text",
-      "options": [
-        {"name": "Earned", "tip": "The EXP you have of this level, out of what it takes."},
-        {"name": "To Next", "tip": "The EXP left to the next level."},
-        {"name": "Percent", "tip": "How much of the level you have, as a percent."}
+        {"name": "Main 75 / Sub 37", "tip": "Your main job and its level, then your subjob and its level."},
+        {"name": "Main 75", "tip": "Your main job and its level."},
+        {"name": "75 Main / Sub", "tip": "Your main job's level, then your main job and subjob."}
       ]
     },
     {
@@ -1073,30 +1095,13 @@
       ]
     },
     {
-      "key": "job-layout",
+      "key": "exp-bar-text",
       "options": [
-        {"name": "Jobs First"},
-        {"name": "EXP First"},
-        {"name": "EXP Only"},
-        {"name": "Bar", "tip": "The EXP bar, with each text placed around it as you pick below."}
-      ]
-    },
-    {
-      "key": "exp-place",
-      "options": [
-        {"name": "Off"},
-        {"name": "Above"},
-        {"name": "Below"},
-        {"name": "Left"},
-        {"name": "Right"}
-      ]
-    },
-    {
-      "key": "exp-bar",
-      "options": [
-        {"name": "Under"},
-        {"name": "Beside"},
-        {"name": "Off"}
+        {"name": "None", "tip": "Nothing on the bar."},
+        {"name": "Earned EXP", "tip": "The EXP you have of this level, out of what it takes. At the level cap, your limit points."},
+        {"name": "EXP Til Next Level", "tip": "The EXP left to the next level. At the level cap, your merits."},
+        {"name": "EXP Percentage", "tip": "How much of the level you have, as a percent."},
+        {"name": "Job Text", "tip": "Your jobs and levels, as Job Text writes them."}
       ]
     },
     {
@@ -1139,10 +1144,9 @@
       "options": [
         {"name": "Phoenix Gold", "tip": "Gold on dark, with Phoenix's feather."},
         {"name": "Umbra Dark", "tip": "Plain and dark."},
-        {"name": "Phoenix Red Ornate", "tip": "Phoenix red with ornate edges."},
-        {"name": "Phoenix Red Pills", "tip": "Phoenix red, each widget in a pill."},
+        {"name": "Phoenix Red", "tip": "Phoenix red with ornate edges."},
         {"name": "Aurora", "tip": "Glass with a line of light under it."},
-        {"name": "Game Window", "tip": "The art of the game's own windows, in the Window Type you pick."}
+        {"name": "Vanilla", "tip": "The art of the game's own windows."}
       ]
     },
     {
@@ -1245,9 +1249,9 @@
     {
       "key": "setup-panel",
       "options": [
-        {"name": "Full", "tip": "The zone, weather, both clocks, your job, target, gil and bags, your frame rate, connection, distance and the game's help line."},
-        {"name": "Simple", "tip": "The zone, Vana'diel's time, your job, target, gil and bags."},
-        {"name": "Minimal", "tip": "The zone, Vana'diel's time and your target."},
+        {"name": "Full", "tip": "The zone, weather, both clocks, your job, target, gil and inventory, your frame rate, connection, distance and the game's help line."},
+        {"name": "Simple", "tip": "The zone, the weather with Vana'diel's time, your job, target, gil and inventory."},
+        {"name": "Minimal", "tip": "The zone, the weather with Vana'diel's time, and your target."},
         {"name": "No Top Panel", "tip": "No Top Panel. You can turn it on again in the settings window."}
       ]
     },
@@ -1262,8 +1266,8 @@
       "key": "setup-widget-groups",
       "options": [
         {"name": "Where You Are", "tip": "The zone, its weather and what is around you."},
-        {"name": "Time", "tip": "Vana'diel's time and yours."},
-        {"name": "You", "tip": "Your job, experience, gil, bags, party and target."},
+        {"name": "Time", "tip": "Your computer's time."},
+        {"name": "You", "tip": "Your job, experience, gil, inventory, party and target."},
         {"name": "System", "tip": "Your frame rate, connection, memory and the game's help line."}
       ]
     },
@@ -1278,9 +1282,8 @@
       ]
     },
     {
-      "key": "target-icons",
+      "key": "detection-icons",
       "options": [
-        {"name": "Aggression", "tip": "Whether it is aggressive or passive, before its name."},
         {"name": "Links", "tip": "It joins in when you fight one of its kind."},
         {"name": "Sight", "tip": "It sees you."},
         {"name": "True Sight", "tip": "It sees through invisible and sneak."},
@@ -1288,31 +1291,109 @@
         {"name": "Scent", "tip": "It smells you."},
         {"name": "Use of Spells", "tip": "Casting near it draws it."},
         {"name": "Use of Abilities", "tip": "Using an ability near it draws it."},
-        {"name": "Low Player HP", "tip": "Low HP near it draws it."},
-        {"name": "Weaknesses", "tip": "What it is weak to, after its level."}
+        {"name": "Low Player HP", "tip": "Low HP near it draws it."}
       ]
     },
     {
       "key": "blue-learned",
       "options": [
         {"name": "Star", "tip": "Still blue, with a star after it."},
-        {"name": "Plain Text", "tip": "In the popup's usual color, like any other TP move."}
+        {"name": "Plain Text", "tip": "In the pop-out's usual color, like any other TP move."}
       ]
     },
     {
-      "key": "conquest-grid",
+      "key": "widget-parts",
       "options": [
-        {"name": "2 x 2", "tip": "Two lines of two."},
-        {"name": "1 x 4", "tip": "All on one line."}
+        {"name": "Zone Name", "tip": "The zone you are in."},
+        {"name": "Region Name", "tip": "The zone's region."},
+        {"name": "Conquest Icon", "tip": "The crest of the nation that holds the region; a nation's own in its city, Jeuno's in Jeuno, and Aht Urhgan's in the regions of its Besieged map."},
+        {"name": "Conquest Nation", "tip": "The name of the nation that holds the region."},
+        {"name": "Weather Icon", "tip": "The weather's picture, as Use Custom Icons picks it."},
+        {"name": "Weather Name", "tip": "The weather now."},
+        {"name": "Vana'diel Date", "tip": "Vana'diel's date."},
+        {"name": "Vana'diel Weekday", "tip": "Vana'diel's day, in its element's color."},
+        {"name": "Vana'diel Time", "tip": "Vana'diel's time."},
+        {"name": "Moon Phase", "tip": "The moon's phase and how full it is."},
+        {"name": "Aggression", "tip": "Whether a mob is aggressive or passive."},
+        {"name": "Name", "tip": "Your target's name."},
+        {"name": "Distance", "tip": "How far your target is, in yalms."},
+        {"name": "Detection", "tip": "How a mob detects you, as Detection Icons picks."},
+        {"name": "Level", "tip": "A mob's level and how tough it is."},
+        {"name": "Player Info", "tip": "A player's jobs and levels, once HeadsUp knows them: from your party, a check, or Look Up Players."},
+        {"name": "Weaknesses", "tip": "What a mob is weak to."},
+        {"name": "Coin Icon", "tip": "Gil's coin, beside both lines, whichever currencies the widget shows."},
+        {"name": "Currency 1 Name", "tip": "The first currency's name."},
+        {"name": "Currency 2 Name", "tip": "The second currency's name."},
+        {"name": "Currency 1 Amount", "tip": "How much of the first currency you have."},
+        {"name": "Currency 2 Amount", "tip": "How much of the second currency you have."},
+        {"name": "Currency 1 Icon", "tip": "The first currency's picture from the game, where it has one: gil's coin, a nation's crest for conquest points, or the item for seals, crests and beastcoins."},
+        {"name": "Currency 2 Icon", "tip": "The second currency's picture from the game, where it has one: gil's coin, a nation's crest for conquest points, or the item for seals, crests and beastcoins."},
+        {"name": "Count", "tip": "The bag's used and total slots."},
+        {"name": "Bag Name", "tip": "The bag's name."},
+        {"name": "Bag Icon", "tip": "A bag's picture."},
+        {"name": "Local Time", "tip": "The time in your Local Timezone."},
+        {"name": "Secondary Timezone", "tip": "The time in your Secondary Timezone, Japan's by default."},
+        {"name": "Vana'diel Time", "tip": "The time in Vana'diel."},
+        {"name": "Clock Icon", "tip": "A clock's picture."},
+        {"name": "Local Date", "tip": "Your computer's date, as Date Format writes it."},
+        {"name": "Job Info", "tip": "Your jobs and levels, as Job Text shows them."},
+        {"name": "Earned EXP", "tip": "The EXP you have of this level, out of what it takes. At the level cap, your limit points."},
+        {"name": "EXP Til Next Level", "tip": "The EXP left to the next level. At the level cap, your merits."},
+        {"name": "EXP Percentage", "tip": "How much of the level you have, as a percent."},
+        {"name": "EXP Bar", "tip": "How much of the level you have, as a bar."},
+        {"name": "FPS", "tip": "Frames per second."},
+        {"name": "Sent", "tip": "Bytes sent each second; amber or red when data stops."},
+        {"name": "Received", "tip": "Bytes received each second; amber or red when data stops."},
+        {"name": "Percent", "tip": "The game's own connection meter, as its readout shows it: 100% while data comes in, less once it stops."},
+        {"name": "Memory", "tip": "The game's memory used; amber, then red, as it runs low before it runs out at 4 GB."},
+        {"name": "Messages", "tip": "PlayOnline's mail and messenger icons while something waits, with how many."},
+        {"name": "Party Size", "tip": "How many are in your party, or Solo."},
+        {"name": "HP and MP", "tip": "The lowest HP and MP in your party."},
+        {"name": "Pinned Status #1", "tip": "The status pinned first in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #2", "tip": "The status pinned second in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #3", "tip": "The status pinned third in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #4", "tip": "The status pinned fourth in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #5", "tip": "The status pinned fifth in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Pinned Status #6", "tip": "The status pinned sixth in the pop-out, with its time left. Its pin turns it on and off."},
+        {"name": "Ship", "tip": "Your Tracked Ship's next sailing and how long until it."},
+        {"name": "Guild", "tip": "Your Tracked Guild's shop: open or closed, and how long until that changes."},
+        {"name": "San d'Oria", "tip": "San d'Oria's crest and how many regions it holds."},
+        {"name": "Bastok", "tip": "Bastok's crest and how many regions it holds."},
+        {"name": "Windurst", "tip": "Windurst's crest and how many regions it holds."},
+        {"name": "Beastmen", "tip": "The beastmen's crest and how many regions they hold."}
       ]
     },
     {
-      "key": "conquest-place",
+      "key": "custom-icons",
       "options": [
-        {"name": "Off", "tip": "Who holds the region is not shown."},
-        {"name": "Left", "tip": "Before the zone's name."},
-        {"name": "Right", "tip": "After the zone's name."},
-        {"name": "Below", "tip": "On the second line, after the region."}
+        {"name": "Never", "tip": "Always the game's element icons. A weather the game has no icon for shows none."},
+        {"name": "When No Vanilla Icon", "tip": "The game's element icons, and HeadsUp's own pictures for clear, sunshine, clouds and fog, which have none."},
+        {"name": "Always", "tip": "HeadsUp's own pictures for every weather."}
+      ]
+    },
+    {
+      "key": "status-display",
+      "options": [
+        {"name": "Only Name"},
+        {"name": "Only Icon"},
+        {"name": "Both Name & Icon"}
+      ]
+    },
+    {
+      "key": "icon-sides",
+      "options": [
+        {"name": "Hide"},
+        {"name": "Show on Left"},
+        {"name": "Show on Right"}
+      ]
+    },
+    {
+      "key": "widget-aligns",
+      "options": [
+        {"name": "Set by Location"},
+        {"name": "Left"},
+        {"name": "Center"},
+        {"name": "Right"}
       ]
     }
   ],
@@ -1330,8 +1411,9 @@
     {"key": "checks-all", "name": "All"},
     {"key": "checks-none", "name": "None"},
     {"key": "checks-picked", "name": "{count} Picked"},
-    {"key": "local", "name": "Local"},
-    {"key": "themes", "name": "Theme's"},
+    {"key": "local", "name": "Automatic"},
+    {"key": "themes", "name": "Set by Theme"},
+    {"key": "custom-color", "name": "Custom"},
     {"key": "default", "name": "Default"},
     {"key": "auto", "name": "Auto"},
     {"key": "reset-to-default", "tip": "Back to its default."},

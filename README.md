@@ -75,10 +75,13 @@ Hover a widget for its popup, and click to keep it open.
 
 | Theme | Look |
 |---|---|
-| Phoenix Gold | Ornate, with diamonds and a framed target. The default |
+| Phoenix Gold | Ornate, with diamonds. The default |
 | Umbra Dark | Dark rounded pills |
-| Phoenix Red | The ornate or pill look in red |
+| Phoenix Red | The ornate look in red |
 | Aurora | Slate glass, lit from cyan into violet |
+| Vanilla | The game's own window art |
+
+Change anything in Customize Appearance and HeadsUp saves it as a theme of your own, which you pick from the same list.
 
 ## Settings
 
@@ -88,7 +91,7 @@ Hover a widget for its popup, and click to keep it open.
 |---|---|
 | Theme | The look of the top panel, this window, the fishing bar and more |
 | Nameplates & Outlines | Nameplates, outlines and the target cursor, with a page for Mobs, Players, Self, NPCs and Pets |
-| User Interface | Screenshot mode, moving the game's windows and a fishing bar of HeadsUp's own, with the Top Panel, Widgets and Mouse Cursor pages |
+| User Interface | The mouse cursor and screenshot mode, with the Help Bar page, the Fishing Bar page for HeadsUp's own fish stamina bar and the Vanilla UI page for moving the game's windows |
 | Colors | The colors for aggression, toughness, claims, targeting and each kind of entity |
 | HeadsUp Config | Turning HeadsUp off, a report for bug reports, and the window's own look |
 

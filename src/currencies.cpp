@@ -22,6 +22,32 @@ namespace headsup
         }
     }
 
+    std::optional<int> NationPoints(Nation nation)
+    {
+        if (nation < Nation::SanDoria || nation > Nation::Windurst) return std::nullopt;
+        return kConquestPointsFirst + static_cast<int>(nation) - static_cast<int>(Nation::SanDoria);
+    }
+
+    std::optional<int> ResolvedCurrency(int currency, Nation yours)
+    {
+        return currency == kYourConquestCurrency ? NationPoints(yours) : std::optional(currency);
+    }
+
+    std::vector<int> CurrencyChoices(Nation yours)
+    {
+        std::vector<int> choices{kGilCurrency, kYourConquestCurrency};
+        for (int c = kGilCurrency + 1; c < kCurrencyCount; ++c)
+            if (c != NationPoints(yours)) choices.push_back(c);
+        return choices;
+    }
+
+    std::string CurrencyName(int currency, Nation yours)
+    {
+        constexpr const char* kConquestPoints = "Conquest Points";
+        const std::optional<int> c = ResolvedCurrency(currency, yours);
+        return !c || c == NationPoints(yours) ? kConquestPoints : kCurrencyTable[*c].name;
+    }
+
     std::optional<int> CurrencyOfKey(std::string_view key)
     {
         for (int i = 0; i < kCurrencyCount; ++i)

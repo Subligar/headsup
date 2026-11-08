@@ -1,9 +1,15 @@
 #pragma once
 
 #include "fonts.h"
+#include "test.h"
+
+#include "plate_image.h"
 
 #include <RmlUi/Core.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <map>
@@ -11,6 +17,74 @@
 
 namespace test
 {
+    // A bundled font's capital height in pixels at a size: its OS/2 table's sCapHeight over the head's units per em.
+    inline float CapHeight(const char* family, float pixels)
+    {
+        size_t count                      = 0;
+        const headsup::BundledFont* fonts = headsup::BundledFonts(count);
+        const headsup::BundledFont* font  = std::find_if(fonts, fonts + count, [&](const headsup::BundledFont& f) { return std::string(f.family) == family; });
+        CHECK(font != fonts + count);
+        const unsigned char* data = font->data;
+        const auto u16 = [&](size_t at) { return static_cast<unsigned>(data[at] << 8 | data[at + 1]); };
+        const auto table = [&](const char* tag) {
+            for (unsigned i = 0; i < u16(4); ++i)
+                if (std::equal(tag, tag + 4, data + 12 + 16 * i)) return static_cast<size_t>(u16(12 + 16 * i + 8)) << 16 | u16(12 + 16 * i + 10);
+            return size_t{0};
+        };
+        const size_t head = table("head"), os2 = table("OS/2");
+        CHECK(head != 0 && os2 != 0 && u16(os2) >= 2);
+        return static_cast<float>(static_cast<int16_t>(u16(os2 + 88))) * pixels / static_cast<float>(u16(head + 18));
+    }
+
+    // A bundled font's ink as GDI finds it in the line it draws a text in (whole rows from the line's top, its ascent
+    // over the baseline), its capitals' an H's.
+    class GlyphInk
+    {
+    public:
+        explicit GlyphInk(const char* family)
+        {
+            size_t count                      = 0;
+            const headsup::BundledFont* fonts = headsup::BundledFonts(count);
+            const headsup::BundledFont* font  = std::find_if(fonts, fonts + count, [&](const headsup::BundledFont& f) { return std::string(f.family) == family; });
+            CHECK(font != fonts + count && FT_Init_FreeType(&m_Library) == 0);
+            CHECK(FT_New_Memory_Face(m_Library, font->data, static_cast<FT_Long>(font->bytes), 0, &m_Face) == 0);
+        }
+        ~GlyphInk()
+        {
+            FT_Done_Face(m_Face);
+            FT_Done_FreeType(m_Library);
+        }
+        GlyphInk(const GlyphInk&)            = delete;
+        GlyphInk& operator=(const GlyphInk&) = delete;
+
+        // The whole rows over the baseline the tallest of glyphs reaches at a size.
+        float Above(const char* glyphs, int pixels) const { return Rows(glyphs, pixels).first; }
+        headsup::LineInk LineInk(const char* glyphs, int pixels) const
+        {
+            const auto [above, below] = Rows(glyphs, pixels);
+            const float ascent        = static_cast<float>(m_Face->size->metrics.ascender >> 6);
+            return headsup::LineInk{ascent - above, ascent, ascent + below, ascent - Above("H", pixels)};
+        }
+
+    private:
+        std::pair<float, float> Rows(const char* glyphs, int pixels) const
+        {
+            CHECK(FT_Set_Pixel_Sizes(m_Face, 0, static_cast<FT_UInt>(pixels)) == 0);
+            long above = 0, below = 0;
+            for (const char* g = glyphs; *g != 0; ++g)
+            {
+                CHECK(FT_Load_Char(m_Face, static_cast<FT_ULong>(*g), FT_LOAD_DEFAULT) == 0);
+                const FT_Glyph_Metrics& gm = m_Face->glyph->metrics;
+                above = std::max(above, (gm.horiBearingY + 63) >> 6);
+                below = std::max(below, (gm.height - gm.horiBearingY + 63) >> 6);
+            }
+            return {static_cast<float>(above), static_cast<float>(below)};
+        }
+
+        FT_Library m_Library = nullptr;
+        FT_Face m_Face       = nullptr;
+    };
+
     // RmlUi asks for geometry and textures and is given handles that draw nothing.
     class NoRender : public Rml::RenderInterface
     {

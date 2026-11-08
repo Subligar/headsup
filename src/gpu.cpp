@@ -166,7 +166,7 @@ namespace headsup
         const std::optional<LineInk> ink = LineInkOf(inkOf(glyphs), inkOf("H"));
         // Without GDI the font's size stands in, and is not kept: the text will not draw either.
         const auto size = static_cast<float>(pixelHeight);
-        if (!ink) return LineInk{0.0f, size, size};
+        if (!ink) return LineInk{0.0f, size, size, 0.0f};
         m_Inks.emplace(std::tuple{std::string(family), pixelHeight, std::string(glyphs)}, *ink);
         return *ink;
     }

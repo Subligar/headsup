@@ -11,22 +11,6 @@ namespace
     bool Near(double a, double b) { return std::fabs(a - b) < 1e-6; }
 }
 
-TEST(latency_is_the_median_of_recent_round_trips)
-{
-    ConnectionMeter m;
-    for (const double ms : {70.0, 50.0})
-        m.RoundTrip(ms);
-    CHECK(!m.Report(1.0, false).latency.has_value()); // waits for three
-    m.RoundTrip(60.0);
-    const ConnectionReport r = m.Report(1.0, false);
-    CHECK(r.latency.has_value());
-    CHECK(Near(r.latency->medianMs, 60.0) && Near(r.latency->lowestMs, 50.0) && Near(r.latency->highestMs, 70.0));
-    // Only the last 15 count: once 15 more come, the first three are gone.
-    for (size_t i = 0; i < kRoundTrips; ++i)
-        m.RoundTrip(200.0);
-    CHECK(Near(m.Report(1.0, false).latency->lowestMs, 200.0));
-}
-
 TEST(silence_counts_from_the_last_packet_received)
 {
     ConnectionMeter m;

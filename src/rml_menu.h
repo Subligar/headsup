@@ -65,10 +65,11 @@ namespace headsup
         bool TakeExportRequest(); // the built-in layout is to be written out as a file
         // True once after a list of pictures (Target Cursor, Cursor Icon) was opened: read the cursors folder again.
         bool TakeCursorsRequest();
-        // Once each: the themes folder is to be read again, the Custom theme saved under a name, or a saved one read in.
+        // Once each: the themes folder is to be read again, a custom theme read in and picked, or the one in use renamed.
         bool TakeThemesRequest();
-        std::optional<std::string> TakeThemeSave();
         std::optional<std::string> TakeThemeLoad();
+        std::optional<std::string> TakeThemeRename();
+        std::optional<std::string> TakeThemeDelete();
         bool TakeProfilesRequest();
         bool TakeSaveRequest();
         bool TakeRevertRequest();
@@ -76,9 +77,12 @@ namespace headsup
         std::optional<std::string> TakeProfileNew();
         std::optional<std::string> TakeProfileRename();
         std::optional<std::string> TakeProfileDelete();
-        // Opens the window at the page named, as its sidebar spells it in lower case without spaces ("toppanel");
-        // false for a name no page has.
-        bool OpenPage(const std::string& name);
+        // Once after Send Feedback was pressed with the form filled: the feedback to send. Answered says how it went.
+        std::optional<FeedbackDraft> TakeFeedback();
+        void FeedbackAnswered(bool sent) { headsup::FeedbackAnswered(m_State, sent); }
+        // Opens the window at the page named, as its sidebar spells it in lower case without spaces ("toppanel"),
+        // scrolled to the top of its card of this key when one is given; false for a name no page has.
+        bool OpenPage(const std::string& name, const std::string& card = {});
         // Scrolls the page this far down when it is next drawn.
         void ScrollTo(float pixels) { m_ScrollTo = pixels; }
 
@@ -158,6 +162,7 @@ namespace headsup
         Rml::Vector2f m_PanAt;           // where the pointer was at the last move of a pan
         MenuFormState m_State;
         std::optional<float> m_ScrollTo;
+        std::string m_ScrollToCard; // the id of the card the page scrolls to the top of when next drawn
         bool m_Closed = false; // its close button was clicked
         bool m_Reload = false;
     };

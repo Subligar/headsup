@@ -72,4 +72,11 @@ namespace headsup
         else std::snprintf(name, sizeof(name), "Key %02X", vk);
         return name;
     }
+
+    ClipStep CursorClipStep(bool locked, const ScreenRect& client, const ScreenRect& current, bool clipped)
+    {
+        if (locked && client.right > client.left && client.bottom > client.top)
+            return current == client ? ClipStep::Keep : ClipStep::Clip;
+        return clipped ? ClipStep::Release : ClipStep::Keep;
+    }
 }

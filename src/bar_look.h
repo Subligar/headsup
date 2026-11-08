@@ -14,12 +14,11 @@
 
 namespace headsup
 {
-    // A text's font family, pixel size and letter-spacing.
+    // A text's font family and pixel size.
     struct TextFace
     {
         const char* family = nullptr;
         float size         = 0.0f;
-        int tracking       = 0; // pixels after each letter
     };
 
     // A frame's palette, sizes and fonts: what every part of the bar is drawn with.
@@ -39,21 +38,18 @@ namespace headsup
         uint32_t BarColor(const Span& span) const;
         uint32_t PopupColor(const Span& span) const;
         // A widget's title and detail line.
-        TextFace TitleFace() const;
         // A widget's title: in the detail font at the title's size for a widget of figures, in the title face else.
         TextFace TitleFace(const WidgetContent& content) const;
         TextFace DetailFace() const;
-        // A meter's texts: the detail font at the side line's size, the title's on a row of one line.
-        TextFace MeterFace() const;
         TextFace FaceOf(PopupFont font) const;
-        // The icons and coin before a widget's text.
+        // The icons and picture beside a widget's text.
         float Leading(const WidgetContent& content) const;
         // How a widget's box is drawn, or nothing for none. lit: hovered or open, with a popup. Ornate: the target's
         // frame and a lit widget's tint. Pills: every widget's pill, zone and Earth time flat until lit.
         std::optional<BoxStyle> BoxOf(BarWidget widget, bool lit) const;
     };
 
-    // Whether the game's window art is drawn: its theme, or a Custom theme of its shape.
+    // Whether the game's window art is drawn: the theme's background is the Window.
     bool UsesGameArt(const Settings& settings);
     // The settings window in the top panel's theme: Aurora's glass for Aurora, the game's art once it is read for the
     // Window shape, and the Phoenix window else; its colors phoenix-xi.com's for the Phoenix Red themes, Aurora's and
@@ -64,24 +60,14 @@ namespace headsup
     MenuColors MenuColorsFrom(const BarPalette& palette);
     // The game's art as the settings draw it: without its border while Border is off.
     SkinFrame FrameAsSet(const Settings& settings, SkinFrame frame);
-    // A widget's own title and text fonts, or the panel's: one pointer per name, as BarTitleFont and BarTextFont give.
-    const char* WidgetTitleFont(const Settings& settings, BarShape shape, const WidgetOptions& options);
-    const char* WidgetTextFont(const Settings& settings, const WidgetOptions& options);
-    // Its title size setting: its own, or the panel's.
-    int WidgetTextSize(const Settings& settings, const WidgetOptions& options);
-    // The room from a widget's sides to what it shows: its own, or the panel's, which may be the theme's.
-    float WidgetPadding(const BarMetrics& metrics, const Settings& settings, const WidgetOptions& options);
-    // Whether a pill shows only while lit: the theme gives none of its widgets a box then and none shows its background.
+    // The room from a widget's sides to what it shows: the panel's Widget Padding, which may be the theme's.
+    float WidgetPadding(const BarMetrics& metrics, const Settings& settings);
+    // Whether a pill shows only while lit: the theme gives none of its widgets a box then and Show Widget Background
+    // is off.
     bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head);
-    // Whether any widget in a pill has Show Background on.
-    bool BackedPill(const Settings& settings, const PanelGroups& panel, PanelWidget head);
-    // The room more between a widget and each neighbour: its own, or the panel's.
-    float WidgetSpacing(const Settings& settings, const WidgetOptions& options);
 
-    // What Game Window looks as while the game's art is not read.
-    constexpr BarTheme kGameArtFallback = BarTheme::PhoenixGold;
-    // The palette the bar is drawn with: the picked theme's, the player's own for Custom, or the skin's for Game
-    // Window (kGameArtFallback's while none is read).
+    // The palette the bar is drawn with: the picked theme's, the player's own for Custom, or the skin's for Vanilla
+    // (Phoenix Gold's colors while none is read).
     const BarPalette& PaletteFor(const Settings& settings, const GameSkinLook* skin);
 
     // The bar's fonts: the player's, or the theme's when they set none. Each name lasts as long as the process, for the
@@ -91,18 +77,11 @@ namespace headsup
     // The fishing bar's line's font, or the panel's text font.
     const char* FishBarFont(const Settings& settings);
 
-    // Gil's coin, in whole pixels.
-    int CoinPixels(const BarMetrics& metrics);
-    constexpr uint32_t kCoinColor  = 0xFFE8C35A;
     constexpr float kCapScale      = 1.4f;  // an end cap's diamond, in diamonds
-    constexpr float kLineIconGap   = 2.0f;  // pixels between the icons after a line's text
-    constexpr float kPictureGap    = 6.0f;  // before a game picture among a line's text
-    constexpr float kMeterTextGap  = 2.0f;  // between a meter's bar and the text above or below it
-    constexpr float kProgressInset = 2.0f;  // pixels from the pill row's foot, inside its border
-    // A widget's progress bar: a thin track along the pill row's foot, or a taller one beside the text.
-    float ProgressHeight(const BarMetrics& metrics, bool beside);
-    // A bar beside the text is this long.
-    float BesideWidth(const BarMetrics& metrics);
+    constexpr float kLineIconGap   = 2.0f;  // pixels before an icon among a line's text
+    constexpr float kPictureGap    = 6.0f;  // before a game picture there
+    // The room a span's mark takes before its text, at letters size pixels tall.
+    float MarkWidth(const Span& span, float size);
     // What a widget's title and detail line can hold, for how far their ink reaches: capitals, figures (taller
     // than the capitals in Marcellus, and some descend), a "[S]" zone's brackets, the bags' slash, descenders
     // (Marcellus's Q and J too) and commas; the detail line's ascenders, descenders and comma. Popup text holds
@@ -125,8 +104,6 @@ namespace headsup
     TextFace HelpFace(const BarLook& look);
     // Its set height, or fitted, as tall as its text.
     float HelpBarHeight(int setting, float fitted);
-    // The widest the help bar gets: its share of the screen's width.
-    float HelpBarWidth(float screenWidth, int percent);
     // The boxes a popup and the help bar are drawn with: a popup's panel with its outer border, a section's card (a
     // lift on the panel, rounded as a pill theme's panel is), a tag's pill height tall (the ornate themes keep their
     // gold edge around it), and the help bar's panel, bordered all round.
@@ -134,7 +111,7 @@ namespace headsup
     BoxStyle PopupCard(const BarLook& look);
     BoxStyle PopupTag(const BarLook& look, float height);
     BoxStyle HelpBarPanel(const BarLook& look);
-    constexpr uint32_t kStarColor     = kCoinColor; // a popup's star, in the coin's gold
+    constexpr uint32_t kStarColor     = 0xFFE8C35A; // a popup's star, gold
     constexpr float kShadowStrength   = 0.6f;       // the bar's text shadow, of the mockup's
 
 }

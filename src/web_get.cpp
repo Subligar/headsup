@@ -10,6 +10,7 @@ namespace headsup
         constexpr int kResolveMs = 5000, kConnectMs = 5000, kSendMs = 5000, kReceiveMs = 10000;
         constexpr DWORD kOk      = 200;
         constexpr size_t kChunk  = 4096;
+        constexpr const wchar_t* kJsonHeader = L"Content-Type: application/json\r\n";
 
         // A WinHTTP handle closed when it goes.
         struct Handle
@@ -24,7 +25,10 @@ namespace headsup
 
     WebGet::~WebGet() { Stop(); }
 
-    void WebGet::Start(const wchar_t* host, const wchar_t* path)
+    void WebGet::Start(const wchar_t* host, const wchar_t* path) { Begin(host, path, {}); }
+    void WebGet::Post(const wchar_t* host, const wchar_t* path, std::string json) { Begin(host, path, std::move(json)); }
+
+    void WebGet::Begin(const wchar_t* host, const wchar_t* path, std::string json)
     {
         {
             std::lock_guard lock(m_Lock);
@@ -32,7 +36,7 @@ namespace headsup
             m_Busy = true;
         }
         if (m_Thread.joinable()) m_Thread.join(); // the last fetch, which has ended
-        m_Thread = std::thread(&WebGet::Run, this, std::wstring(host), std::wstring(path));
+        m_Thread = std::thread(&WebGet::Run, this, std::wstring(host), std::wstring(path), std::move(json));
     }
 
     void WebGet::Stop()
@@ -51,14 +55,14 @@ namespace headsup
         return std::exchange(m_Answer, std::nullopt);
     }
 
-    void WebGet::Run(std::wstring host, std::wstring path)
+    void WebGet::Run(std::wstring host, std::wstring path, std::string json)
     {
         Answer answer;
         const Handle session{WinHttpOpen(L"HeadsUp", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME,
             WINHTTP_NO_PROXY_BYPASS, 0)};
         if (session.h != nullptr) WinHttpSetTimeouts(session.h, kResolveMs, kConnectMs, kSendMs, kReceiveMs);
         const Handle connect{session.h != nullptr ? WinHttpConnect(session.h, host.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0) : nullptr};
-        HINTERNET request = connect.h != nullptr ? WinHttpOpenRequest(connect.h, L"GET", path.c_str(), nullptr,
+        HINTERNET request = connect.h != nullptr ? WinHttpOpenRequest(connect.h, json.empty() ? L"GET" : L"POST", path.c_str(), nullptr,
                                                        WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)
                                                  : nullptr;
         {
@@ -69,7 +73,9 @@ namespace headsup
         // Closed by Stop, the request fails whatever call it is in.
         DWORD status = 0, size = sizeof(status);
         if (request != nullptr &&
-            WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
+            (json.empty() ? WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0)
+                          : WinHttpSendRequest(request, kJsonHeader, static_cast<DWORD>(-1), json.data(),
+                                static_cast<DWORD>(json.size()), static_cast<DWORD>(json.size()), 0)) &&
             WinHttpReceiveResponse(request, nullptr) &&
             WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX,
                 &status, &size, WINHTTP_NO_HEADER_INDEX))

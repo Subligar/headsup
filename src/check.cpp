@@ -78,4 +78,13 @@ namespace headsup
     {
         m_Results.erase(serverId);
     }
+
+    bool CheckResults::LevelIs(int playerLevel)
+    {
+        if (playerLevel == 0 || playerLevel == m_Level) return false;
+        const bool changed = m_Level != 0;
+        m_Level            = playerLevel;
+        if (changed) m_Results.clear();
+        return changed;
+    }
 }

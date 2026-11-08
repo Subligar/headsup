@@ -81,13 +81,26 @@ TEST(the_window_is_its_sidebar_and_the_open_pages_cards)
     CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-target-cursor") != nullptr);
 }
 
+TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
+{
+    Window w;
+    w.state.page           = Page::VanillaUi;
+    const char* described = w.layout.PageOf(Page::VanillaUi).description;
+    CHECK(described != nullptr);
+    const Form form = w.Pass();
+    CHECK(form.blocks.size() > 2 && form.blocks[1].bare && Has(form.blocks[1].rml, described) && !form.blocks[2].bare);
+    // A page without one starts with its first card.
+    w.state.page = Page::Entities;
+    CHECK(w.layout.PageOf(Page::Entities).description == nullptr && !w.Pass().blocks[1].bare);
+}
+
 TEST(the_palettes_are_on_their_own_colors_page_after_the_mouse_cursor)
 {
     Window w;
     const Form entities    = w.Pass();
     const std::string side = entities.blocks.front().rml;
     CHECK(Has(side, "<div class=\"nav\" id=\"nav-colors\">"));
-    CHECK(side.find("id=\"nav-mousecursor\"") < side.find("id=\"nav-colors\"") &&
+    CHECK(side.find("id=\"nav-vanillaui\"") < side.find("id=\"nav-colors\"") &&
           side.find("id=\"nav-colors\"") < side.find("id=\"nav-configmenu\""));
     const char* kPalettes[] = {
         "colors-aggression", "colors-toughness", "colors-claim-status", "colors-targeting", "colors-entity-type"};
@@ -159,9 +172,21 @@ TEST(a_pages_controls_change_the_settings_they_show)
     Window w;
     w.state.page = Page::TopPanel;
     CHECK(w.settings.showBar && w.settings.barHeight == 45);
-    const Form form = w.Pass({{"toppanel-top-panel-height", kChangeEvent, "52"},
-        {"toppanel-top-panel-separators-s-2", kClickEvent, ""}});
-    CHECK(form.changed && w.settings.barHeight == 52 && w.settings.barSeparators == BarSeparators::None);
+    const Form form = w.Pass({{"toppanel-top-panel-height", kChangeEvent, "52"}});
+    CHECK(form.changed && w.settings.barHeight == 52);
+    // Show Separator's Never clears the rest; another check then takes Never off.
+    const std::string separators = "toppanel-top-panel-show-separator";
+    CHECK_EQ(w.settings.panelSeparators, kAllSeparators);
+    w.Pass({{separators, kClickEvent, ""}});
+    w.Pass({{separators + "-o-0", kClickEvent, ""}});
+    CHECK_EQ(w.settings.panelSeparators, 0);
+    w.Pass({{separators + "-o-0", kClickEvent, ""}}); // Never stays while nothing else is checked
+    CHECK_EQ(w.settings.panelSeparators, 0);
+    w.Pass({{separators + "-o-2", kClickEvent, ""}});
+    CHECK_EQ(w.settings.panelSeparators, static_cast<int>(SeparatorBit(Separator::EndCaps)));
+    w.Pass({{separators + "-o-1", kClickEvent, ""}});
+    CHECK_EQ(w.settings.panelSeparators, kAllSeparators);
+    w.Pass({{separators, kClickEvent, ""}});
     // With the panel switched off by its card's checkbox, its settings are faint and take nothing.
     const Form off = w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}, {"toppanel-top-panel-height", kChangeEvent, "30"}});
     CHECK(off.changed && !w.settings.showBar && w.settings.barHeight == 52);
@@ -180,11 +205,11 @@ TEST(a_pages_controls_change_the_settings_they_show)
 TEST(a_widgets_chip_dropped_on_another_goes_before_it)
 {
     Window w;
-    w.state.page = Page::Widgets;
+    w.state.page = Page::TopPanel;
     const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
     CHECK(left.size() >= 2);
-    const std::string first  = "widgets-layout-chip-" + std::to_string(SlotOf(left[0]));
-    const std::string second = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const std::string first  = "toppanel-layout-chip-" + std::to_string(SlotOf(left[0]));
+    const std::string second = "toppanel-layout-chip-" + std::to_string(SlotOf(left[1]));
     const Form form = w.Pass({{first, kDropEvent, second}});
     const std::vector<PanelWidget>& now = w.settings.barSections[static_cast<int>(BarSection::Left)];
     CHECK(form.changed && now[0] == left[1] && now[1] == left[0]);
@@ -193,10 +218,10 @@ TEST(a_widgets_chip_dropped_on_another_goes_before_it)
 TEST(a_click_on_a_chip_that_is_on_asks_for_its_settings_and_one_on_its_toggle_or_that_is_off_does_not)
 {
     Window w;
-    w.state.page = Page::Widgets;
+    w.state.page = Page::TopPanel;
     const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[1]));
-    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(left[1]));
+    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id); };
     const Form form = w.Pass({{chip, kClickEvent, ""}});
     CHECK(w.state.settingsAsked == left[1] && !form.scrollToTop);
     CHECK(settings(form) == form.blocks.end()); // the page has none: the panel's popup shows them, once it does
@@ -210,10 +235,10 @@ TEST(a_click_on_a_chip_that_is_on_asks_for_its_settings_and_one_on_its_toggle_or
 TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under_its_name)
 {
     Window w;
-    w.state.page = Page::Widgets;
+    w.state.page = Page::TopPanel;
     const std::vector<PanelWidget> left = w.settings.barSections[static_cast<int>(BarSection::Left)];
-    const std::string chip = "widgets-layout-chip-" + std::to_string(SlotOf(left[0]));
-    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "widgets-widgets", &FormBlock::id); };
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(left[0]));
+    const auto settings    = [](const Form& form) { return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id); };
     w.readings.settingsOf = {left[0]};
     const Form one        = w.Pass();
     CHECK(settings(one) != one.blocks.end() && settings(one)->popout);
@@ -225,8 +250,8 @@ TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under
     const Form two        = w.Pass();
     CHECK(settings(two) != two.blocks.end());
     const std::string& rml = settings(two)->rml;
-    const auto first = rml.find("spacing-" + std::string(BarWidgetName(left[0].kind)));
-    const auto second = rml.find("spacing-" + std::string(BarWidgetName(left[1].kind)));
+    const auto first = rml.find("part-" + std::to_string(SlotOf(left[0])) + "-");
+    const auto second = rml.find("part-" + std::to_string(SlotOf(left[1])) + "-");
     CHECK(first != std::string::npos && second != std::string::npos && first < second);
     size_t names = 0;
     for (size_t at = 0; (at = rml.find("widget-name", at)) != std::string::npos; ++at)
@@ -234,10 +259,141 @@ TEST(the_settings_the_panels_popup_shows_are_built_on_any_page_each_widget_under
     CHECK_EQ(names, static_cast<size_t>(2));
     // The settings have no Clone: the Layout card's chip has it, and a click on it asks for the clone's settings.
     CHECK(!Has(rml, "clone"));
-    w.state.page = Page::Widgets;
+    w.state.page = Page::TopPanel;
     w.Pass({{chip + "-clone", kClickEvent, ""}});
     CHECK(w.state.settingsAsked && w.state.settingsAsked->kind == left[0].kind && w.state.settingsAsked->copy == 1);
     CHECK(Placed(w.settings.barSections, *w.state.settingsAsked));
+}
+
+TEST(the_job_widgets_bar_rows_show_with_its_exp_bar_and_job_text_with_its_job_info)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on = true;
+    w.readings.settingsOf     = {job};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs | tonext bar");
+    std::string shown = rows();
+    for (const char* key : {"bar-width", "bar-height", "bar-back", "bar-color", "bar-text", "job-text"})
+        CHECK(Has(shown, key));
+    CHECK(!Has(shown, "job-names")); // Job Text says it all
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext -bar");
+    shown = rows();
+    for (const char* key : {"bar-width", "bar-height", "bar-back", "bar-color", "bar-text", "job-text"})
+        CHECK(!Has(shown, key));
+}
+
+TEST(each_job_widget_texts_alignment_shows_while_its_button_is_on)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on = true;
+    w.readings.settingsOf     = {job};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    const std::pair<const char*, const char*> texts[] = {{"jobs", "job-text-align"}, {"earned", "earned-align"},
+        {"tonext", "tnl-align"}, {"percent", "percent-align"}};
+    for (const auto& [on, key] : texts)
+    {
+        w.settings.Widget(job).design = DesignFrom(BarWidget::Job, std::string(on) + " bar");
+        const std::string shown = rows();
+        for (const auto& [other, otherKey] : texts)
+            CHECK(Has(shown, otherKey) == (other == on));
+    }
+    // Each sets its own text's alignment.
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "percent bar");
+    w.Pass({{"toppanel-widgets-percent-align-job-s-2", kClickEvent, ""}});
+    const WidgetOptions& o = w.settings.Widget(job);
+    CHECK(o.percentAlign == Align::Right && o.jobInfoAlign == Align::Left && o.expBarTextAlign == Align::Center);
+}
+
+TEST(the_exp_bars_colors_are_the_themes_until_one_is_picked)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on     = true;
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs | bar");
+    w.readings.settingsOf         = {job};
+    w.Pass({{"toppanel-widgets-bar-color-job-s-1", kClickEvent, ""}});
+    const WidgetOptions& o = w.settings.Widget(job);
+    // Custom starts from the theme's accent, the start of its fill's gradient.
+    CHECK(o.expBarFill == w.settings.customPalette.accent && !o.expBarBack);
+    w.Pass({{"toppanel-widgets-bar-color-job-s-0", kClickEvent, ""}});
+    CHECK(!o.expBarFill);
+}
+
+TEST(job_text_shows_for_a_bar_saying_the_jobs_without_job_info_and_comes_last)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on = true;
+    w.readings.settingsOf     = {job};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext bar");
+    std::string shown = rows();
+    CHECK(Has(shown, "bar-text-align") && !Has(shown, "job-text"));
+    w.settings.Widget(job).expBarText = ExpText::Jobs;
+    shown = rows();
+    CHECK(Has(shown, "job-text"));
+    // Job Text is the widget's last setting but its alignment, just after it.
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs earned percent | tonext bar");
+    shown = rows();
+    for (const char* key : {"bar-width", "bar-height", "bar-back", "bar-color", "bar-text", "bar-text-align", "earned-align",
+             "tnl-align", "percent-align"})
+        CHECK(shown.find(key) < shown.find("\"toppanel-widgets-job-text-job"));
+    CHECK(shown.find("\"toppanel-widgets-job-text-job") < shown.find("job-text-align"));
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext -bar");
+    CHECK(!Has(rows(), "bar-text-align"));
+}
+
+TEST(the_clocks_zones_show_with_their_buttons_and_date_format_with_local_date_written_in_todays_date)
+{
+    Window w;
+    const PanelWidget clock{BarWidget::EarthTime};
+    w.settings.Widget(clock).on = true;
+    w.readings.settingsOf       = {clock};
+    w.readings.today            = CalendarDay{2026, 11, 7};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(clock).design = DesignFrom(BarWidget::EarthTime, "time | -server -date");
+    std::string shown = rows();
+    CHECK(Has(shown, "local-timezone") && !Has(shown, "secondary-timezone") && !Has(shown, "date-format"));
+    w.settings.Widget(clock).design = DesignFrom(BarWidget::EarthTime, "-time | server date");
+    shown = rows();
+    CHECK(!Has(shown, "local-timezone") && Has(shown, "secondary-timezone") && Has(shown, "date-format"));
+    // Each format is offered as today reads in it.
+    const auto says = [&](const char* text) {
+        return std::ranges::any_of(w.Pass().values, [&](const FormValue& v) { return v.kind == FormValueKind::Text && v.text == text; });
+    };
+    w.settings.Widget(clock).dateFormat = DateFormat::MonthDay;
+    CHECK(says("November 7th"));
+    w.settings.Widget(clock).dateFormat = DateFormat::DayMonthYear;
+    CHECK(says("07/11/2026") && !says("November 7th"));
+}
+
+TEST(the_widget_layout_cards_reset_arrow_shows_once_it_was_changed_and_puts_every_widget_back)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const char* reset = "toppanel-layout-reset";
+    const auto hidden = [&] { return ClassOn(w.Pass(), reset, kHiddenClass); };
+    CHECK(hidden());
+    MoveWidget(w.settings.barSections, BarSection::Center, 0, BarSection::Right, 0);
+    CHECK(!hidden());
+    w.Pass({{reset, kClickEvent, ""}});
+    CHECK(w.settings.barSections == DefaultPlacement());
+    // The card stays open: the arrow is no click on its head.
+    CHECK(!w.state.form.collapsed.contains("toppanel-layout"));
 }
 
 TEST(the_reset_card_asks_twice)
@@ -342,7 +498,7 @@ TEST(a_build_that_exports_its_layout_has_an_export_button_after_the_report_and_t
 TEST(a_key_row_takes_the_next_key_pressed_that_was_not_held)
 {
     Window w;
-    w.state.page = Page::MouseCursor;
+    w.state.page = Page::UserInterface;
     std::vector<uint8_t> down = {0x11}; // Ctrl is held as the button is clicked
     const auto pass = [&](std::vector<FormEvent> events) {
         Form form(std::move(events), w.state.form,
@@ -351,7 +507,7 @@ TEST(a_key_row_takes_the_next_key_pressed_that_was_not_held)
         return form.changed;
     };
     const size_t before = w.settings.keepPointerKeys.size();
-    pass({{"mousecursor-mouse-pointer-keep-pointer-add", kClickEvent, ""}});
+    pass({{"userinterface-mouse-pointer-keep-pointer-add", kClickEvent, ""}});
     CHECK(w.state.keyCapture.on);
     pass({});
     CHECK(w.state.keyCapture.on && w.settings.keepPointerKeys.size() == before); // Ctrl was held already
@@ -426,7 +582,7 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
     CHECK(w.settings.enabled && config.changed);
     // With the top panel off, its widgets' page has nothing to set either.
     w.settings.showBar = false;
-    w.state.page       = Page::Widgets;
+    w.state.page       = Page::TopPanel;
     CHECK_EQ(shown(w.Pass()).size(), size_t{1});
     CHECK(shown(w.Pass()) != off);
 }
@@ -465,8 +621,8 @@ TEST(the_cursor_icon_list_has_vanilla_the_chocobo_then_the_folders_files)
     Window w;
     const std::vector<std::string> files{"Gold Arrow", "sword"};
     w.readings.cursorFiles = &files;
-    w.state.page           = Page::MouseCursor;
-    const std::string list = "mousecursor-mouse-pointer-pointer-icon";
+    w.state.page           = Page::UserInterface;
+    const std::string list = "userinterface-mouse-pointer-pointer-icon";
     const auto option      = [&](int n) { return list + "-o-" + std::to_string(n); };
     const Form open        = w.Pass({{list, kClickEvent, ""}});
     CHECK(open.popup && w.state.cursorsRequested); // opening it asks for the folder to be read again
@@ -560,6 +716,23 @@ TEST(one_nameplate_opacity_card_sits_under_nameplates_on_the_entities_page)
     }
 }
 
+TEST(the_fishing_bar_page_shows_its_bars_settings_only_for_headsups_fish_stamina_and_places_it_on_the_screen)
+{
+    Window w;
+    w.state.page           = Page::FishingBar;
+    w.readings.screenWidth = 1920;
+    w.readings.screenHeight = 1080;
+    w.settings.fishStamina = FishBarShown::Vanilla;
+    const std::string card = "fishingbar-fishing-appearance", pick = card + "-fishing-bar", width = card + "-fishing-bar-width";
+    CHECK(At(Block(w.Pass(), card.c_str()), width) == std::string::npos);
+    CHECK(w.Pass({{pick, kClickEvent, ""}}).popup);
+    CHECK(w.Pass({{pick + "-o-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.fishStamina == FishBarShown::HeadsUp);
+    CHECK(At(Block(w.Pass(), card.c_str()), width) != std::string::npos);
+    w.Pass({{card + "-fishing-bar-x", kChangeEvent, "5000"}, {card + "-fishing-bar-y", kChangeEvent, "5000"}});
+    CHECK(w.settings.fishBarX == 1920 && w.settings.fishBarY == 1080);
+}
+
 TEST(the_pages_of_the_kinds_with_status_icons_set_how_many_a_nameplate_shows)
 {
     Window w;
@@ -628,15 +801,16 @@ TEST(a_color_off_its_default_has_an_arrow_that_puts_it_back)
     CHECK(w.settings.weakBadgeColor == Settings{}.weakBadgeColor);
 }
 
-TEST(the_dash_mark_is_picked_from_a_list_whose_first_row_is_none)
+TEST(the_separator_style_is_picked_from_a_list_whose_first_row_is_none_and_is_the_themes)
 {
     Window w;
-    const char* list = "entities-nameplates-replace-dashes";
+    w.state.page     = Page::Theme;
+    const char* list = "theme-theme-colors-separator-style";
     const Form open  = w.Pass({{list, kClickEvent, ""}});
     CHECK(open.popup);
-    CHECK(ClassOn(open, "entities-nameplates-replace-dashes-o-3", "picked")); // the diamond, a new install's
-    CHECK(w.Pass({{"entities-nameplates-replace-dashes-o-0", kClickEvent, ""}}).changed);
-    CHECK(w.settings.dashMark == DashMark::None);
+    CHECK(ClassOn(open, "theme-theme-colors-separator-style-o-3", "picked")); // the diamond, Phoenix Gold's
+    CHECK(w.Pass({{"theme-theme-colors-separator-style-o-0", kClickEvent, ""}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Custom && OwnPalette(w.settings).separator == DashMark::None);
 }
 
 TEST(a_page_moved_in_the_layout_moves_in_the_sidebar_and_opens_by_its_key)
@@ -675,15 +849,15 @@ TEST(a_setting_is_indented_where_the_layout_says_so)
 TEST(renaming_a_page_a_card_and_a_setting_changes_no_control_id)
 {
     test::EditedLayout edited;
-    edited.RenamePage("mousecursor", "Pointer");
+    edited.RenamePage("userinterface", "Pointer");
     edited.RenameCard("mouse-pointer", "Mouse");
     edited.RenameSetting("pointer-fix", "a fix of the pointer"); // shown as written, small letters and all
     Window w;
     w.layout     = edited.Layout();
-    w.state.page = Page::MouseCursor;
-    const Form form = w.Pass({{"mousecursor-mouse-pointer-pointer-fix", kClickEvent, ""}});
+    w.state.page = Page::UserInterface;
+    const Form form = w.Pass({{"userinterface-mouse-pointer-pointer-fix", kClickEvent, ""}});
     CHECK(form.changed && !w.settings.fixPointer);
-    const FormBlock* card = Block(form, "mousecursor-mouse-pointer");
+    const FormBlock* card = Block(form, "userinterface-mouse-pointer");
     CHECK(card != nullptr && Has(card->rml, ">Mouse<") && Has(card->rml, ">a fix of the pointer<"));
     CHECK(Has(form.blocks.front().rml, ">Pointer<"));
 }
@@ -702,8 +876,8 @@ TEST(a_setting_moved_to_another_card_works_there_and_sets_only_its_own_key)
     // It comes first in its new card, and is gone from its old one.
     const FormBlock* card = Block(form, "configmenu-settings-window");
     CHECK(At(card, "configmenu-settings-window-pointer-fix") < At(card, "configmenu-settings-window-font"));
-    w.state.page = Page::MouseCursor;
-    CHECK(At(Block(w.Pass(), "mousecursor-mouse-pointer"), "mousecursor-mouse-pointer-pointer-fix") == std::string::npos);
+    w.state.page = Page::UserInterface;
+    CHECK(At(Block(w.Pass(), "userinterface-mouse-pointer"), "userinterface-mouse-pointer-pointer-fix") == std::string::npos);
 }
 
 TEST(a_setting_moved_to_another_page_hides_as_it_would_at_home)
@@ -803,8 +977,8 @@ namespace
         return {};
     }
     // Status, whose highest window, the portrait, the game puts at 16.
-    const std::string kStatusShift = "userinterface-window-groups-status-shift";
-    const std::string kStatusReset = "userinterface-window-groups-status-reset";
+    const std::string kStatusShift = "vanillaui-window-groups-status-shift";
+    const std::string kStatusReset = "vanillaui-window-groups-status-reset";
     constexpr int kPortraitTop     = 16;
     constexpr auto kOn = static_cast<size_t>(HelpMode::On), kOff = static_cast<size_t>(HelpMode::Off);
 }
@@ -812,7 +986,7 @@ namespace
 TEST(a_views_shift_shows_its_default_until_one_is_typed_for_the_help_mode_shown_and_its_arrow_puts_it_back)
 {
     Window w;
-    w.state.page = Page::UserInterface;
+    w.state.page = Page::VanillaUi;
     const int on = w.settings.placedUnder[kOn], off = w.settings.placedUnder[kOff];
     CHECK(WindowHelpMode(w.settings) == HelpMode::On);
     CHECK_EQ(ValueOn(w.Pass(), kStatusShift), std::to_string(on - kPortraitTop));
@@ -822,9 +996,9 @@ TEST(a_views_shift_shows_its_default_until_one_is_typed_for_the_help_mode_shown_
     CHECK(w.settings.viewShifts[kOn] == typed && w.settings.viewShifts[kOff].empty());
     CHECK(!ClassOn(w.Pass(), kStatusReset.c_str(), "hidden"));
     // The other mode's shifts, picked by its button, are its own.
-    w.Pass({{"userinterface-window-groups-help-off", kClickEvent, ""}});
+    w.Pass({{"vanillaui-window-groups-help-off", kClickEvent, ""}});
     CHECK_EQ(ValueOn(w.Pass(), kStatusShift), std::to_string(off - kPortraitTop));
-    w.Pass({{"userinterface-window-groups-help-on", kClickEvent, ""}});
+    w.Pass({{"vanillaui-window-groups-help-on", kClickEvent, ""}});
     CHECK(w.Pass({{kStatusReset, kClickEvent, ""}}).changed);
     CHECK(w.settings.viewShifts[kOn].empty());
     // The default typed is no shift of the player's.
@@ -836,8 +1010,8 @@ TEST(a_views_shift_shows_its_default_until_one_is_typed_for_the_help_mode_shown_
 TEST(auto_adjust_places_the_views_under_the_line_the_windows_last_went_under)
 {
     Window w;
-    w.state.page = Page::UserInterface;
-    const char* button = "userinterface-base-game-ui-auto-adjust";
+    w.state.page = Page::VanillaUi;
+    const char* button = "vanillaui-base-game-ui-auto-adjust";
     const Settings before = w.settings;
     w.Pass({{button, kClickEvent, ""}}); // no frame of windows placed yet
     CHECK(w.settings == before);
@@ -853,10 +1027,10 @@ TEST(auto_adjust_places_the_views_under_the_line_the_windows_last_went_under)
 TEST(a_typed_x_puts_a_window_where_it_stands_but_for_that_and_its_arrow_lets_it_go)
 {
     Window w;
-    w.state.page = Page::UserInterface;
+    w.state.page = Page::VanillaUi;
     const std::vector<WindowPlace> now = {{"statcom", 16, 64}};
     w.readings.windowPlaces = &now;
-    const std::string x = "userinterface-base-game-ui-x-statcom", arrow = "userinterface-base-game-ui-place-statcom";
+    const std::string x = "vanillaui-base-game-ui-x-statcom", arrow = "vanillaui-base-game-ui-place-statcom";
     const Form shown = w.Pass();
     CHECK(ValueOn(shown, x) == "16" && ClassOn(shown, x.c_str(), "live") && ClassOn(shown, arrow.c_str(), "hidden"));
     CHECK(w.Pass({{x, kCommitEvent, "300"}}).changed);
@@ -874,24 +1048,24 @@ TEST(shift_vanilla_ui_is_the_top_panels_one_switch_and_off_leaves_auto_adjust_no
     CHECK(At(Block(w.Pass(), "toppanel-top-panel"), "toppanel-top-panel-shift-vanilla-ui") != std::string::npos);
     CHECK(w.Pass({{"toppanel-top-panel-shift-vanilla-ui", kClickEvent, ""}}).changed);
     CHECK(!w.settings.shiftVanillaUi);
-    w.state.page           = Page::UserInterface;
+    w.state.page           = Page::VanillaUi;
     w.readings.windowsBand = 80;
     w.readings.barBand     = 50;
     const Settings before  = w.settings;
-    w.Pass({{"userinterface-base-game-ui-auto-adjust", kClickEvent, ""}});
+    w.Pass({{"vanillaui-base-game-ui-auto-adjust", kClickEvent, ""}});
     CHECK(w.settings == before);
     const Form page = w.Pass();
-    CHECK(At(Block(page, "userinterface-base-game-ui"), "userinterface-base-game-ui-move-windows") == std::string::npos);
-    CHECK(At(Block(page, "userinterface-base-game-ui"), "userinterface-base-game-ui-keep-clear") == std::string::npos);
+    CHECK(At(Block(page, "vanillaui-base-game-ui"), "vanillaui-base-game-ui-move-windows") == std::string::npos);
+    CHECK(At(Block(page, "vanillaui-base-game-ui"), "vanillaui-base-game-ui-keep-clear") == std::string::npos);
 }
 
 TEST(a_window_set_to_hide_goes_on_the_hidden_list_and_shows_no_place_until_kept_again)
 {
     Window w;
-    w.state.page     = Page::UserInterface;
-    const char* keep = "userinterface-base-game-ui-keep-statcom";
+    w.state.page     = Page::VanillaUi;
+    const char* keep = "vanillaui-base-game-ui-keep-statcom";
     const auto place = [](const Form& form) {
-        return At(Block(form, "userinterface-base-game-ui"), "userinterface-base-game-ui-x-statcom") != std::string::npos;
+        return At(Block(form, "vanillaui-base-game-ui"), "vanillaui-base-game-ui-x-statcom") != std::string::npos;
     };
     const Form kept = w.Pass();
     CHECK(ClassOn(kept, keep, "on") && place(kept));
@@ -903,90 +1077,182 @@ TEST(a_window_set_to_hide_goes_on_the_hidden_list_and_shows_no_place_until_kept_
     CHECK(w.settings.hiddenWindows.empty() && place(w.Pass()));
 }
 
-TEST(an_edit_of_a_theme_color_makes_the_theme_custom_which_keeps_it)
+TEST(an_edit_of_a_built_in_theme_makes_a_custom_copy_of_it_named_after_it)
 {
     Window w;
     w.state.page        = Page::Theme;
     w.settings.barTheme = BarTheme::UmbraDark;
+    const std::vector<std::string> files = {"umbra dark (custom)"}; // Windows tells no cases apart
+    w.readings.themeFiles = &files;
     const std::string accent = "theme-theme-colors-accent-theme-palette";
     w.Pass({{accent, kClickEvent, ""}});
     CHECK(w.Pass({{accent + "-p-r", kChangeEvent, "1"}}).changed);
-    BarPalette edited = PaletteOf(BarTheme::PhoenixGold); // Custom starts from the first theme, whichever is shown
+    BarPalette edited = PaletteOf(BarTheme::UmbraDark); // the theme shown, with the change
     edited.accent     = (edited.accent & 0xFF00FFFFu) | 0x00010000u;
+    edited.parent     = BarTheme::UmbraDark; // which theme it came from
     CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette == edited);
-    // Another theme picked leaves Custom's colors for when it is picked again.
-    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
-    w.Pass({{"theme-theme-look-theme-o-4", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::Aurora && w.settings.customPalette == edited);
+    CHECK_EQ(w.settings.customThemeName, std::string("Umbra Dark (custom 2)"));
+    // Another change is the custom theme's own.
+    w.Pass({{"theme-theme-colors-theme-border-thickness", kChangeEvent, "3"}});
+    CHECK(w.settings.customPalette.border == 3 && w.settings.customThemeName == "Umbra Dark (custom 2)");
+    // The list: the built-in themes, then the custom ones, the one in use among them before the folder is read.
+    const Form listed = w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    CHECK(w.state.themesRequested && listed.popup && Has(listed.popup->rml, "Custom Themes"));
+    CHECK(ClassOn(listed, "theme-theme-look-theme-o-6", "picked") && Has(listed.popup->rml, "Umbra Dark (custom 2)"));
+    w.Pass({{"theme-theme-look-theme-o-3", kClickEvent, ""}});
+    CHECK(w.settings.barTheme == BarTheme::Aurora && w.settings.customPalette.border == 3);
+    // A custom one picked is read in by the plugin.
     w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
     w.Pass({{"theme-theme-look-theme-o-5", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::Custom && PaletteFor(w.settings, nullptr) == edited);
+    CHECK(w.state.themeLoad == "umbra dark (custom)" && w.settings.barTheme == BarTheme::Aurora);
 }
 
-TEST(window_type_shows_while_the_games_art_is_in_use_and_picks_a_type_or_follows_the_game)
+TEST(delete_custom_theme_shows_for_a_custom_theme_and_goes_back_to_the_theme_it_was_copied_from)
 {
     Window w;
-    w.state.page             = Page::Theme;
-    const std::string type   = "theme-theme-look-window-type";
-    const auto shown = [&] { return !ClassOn(w.Pass(), (type + "-label-row").c_str(), "off"); };
-    CHECK(!shown());
-    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
-    w.Pass({{"theme-theme-look-theme-o-6", kClickEvent, ""}});
-    CHECK(w.settings.barTheme == BarTheme::GameWindow && shown());
-    w.Pass({{type, kClickEvent, ""}});
-    CHECK(w.Pass({{type + "-o-5", kClickEvent, ""}}).changed);
-    CHECK_EQ(w.settings.windowType, 5);
-    w.Pass({{type, kClickEvent, ""}});
-    w.Pass({{type + "-o-0", kClickEvent, ""}});
-    CHECK_EQ(w.settings.windowType, 0);
+    w.state.page = Page::Theme;
+    const std::string button = "theme-theme-look-delete-theme";
+    CHECK(At(Block(w.Pass(), "theme-theme-look"), button) == std::string::npos);
+    w.settings.barTheme             = BarTheme::Custom;
+    w.settings.customThemeName      = "Dusk";
+    w.settings.customPalette.parent = BarTheme::Aurora;
+    CHECK(At(Block(w.Pass(), "theme-theme-look"), button) != std::string::npos);
+    CHECK(w.Pass({{button, kClickEvent, ""}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Aurora && w.state.themeDelete == "Dusk");
 }
 
-TEST(the_theme_colors_card_sets_the_shape_the_border_and_one_color_or_a_gradient)
+TEST(the_built_in_list_has_no_custom_heading_without_custom_themes)
+{
+    Window w;
+    w.state.page      = Page::Theme;
+    const Form listed = w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    CHECK(listed.popup && Has(listed.popup->rml, "Built-in Themes") && !Has(listed.popup->rml, "Custom Themes"));
+    CHECK(Has(listed.popup->rml, "Vanilla") && !Has(listed.popup->rml, ">Custom<"));
+}
+
+TEST(window_type_shows_on_the_games_art_and_picks_a_type_or_follows_the_game)
+{
+    Window w;
+    w.state.page           = Page::Theme;
+    const std::string type = "theme-theme-colors-window-type";
+    const auto shown = [&] { return At(Block(w.Pass(), "theme-theme-colors"), type) != std::string::npos; };
+    CHECK(!shown());
+    w.Pass({{"theme-theme-look-theme", kClickEvent, ""}});
+    w.Pass({{"theme-theme-look-theme-o-4", kClickEvent, ""}});
+    CHECK(w.settings.barTheme == BarTheme::Vanilla && shown());
+    CHECK(w.Pass({{type, kChangeEvent, "5"}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customThemeName == "Vanilla (custom)");
+    CHECK_EQ(OwnPalette(w.settings).windowType, 5);
+    w.Pass({{type, kChangeEvent, "0"}});
+    CHECK_EQ(OwnPalette(w.settings).windowType, kFollowGameWindow);
+}
+
+TEST(the_background_style_shows_the_color_the_gradient_or_the_window_settings)
 {
     Window w;
     w.state.page = Page::Theme;
     const auto shows = [&](const char* key) {
-        return !ClassOn(w.Pass(), (std::string("theme-theme-colors-") + key + "-label-row").c_str(), "off");
+        return At(Block(w.Pass(), "theme-theme-colors"), std::string("theme-theme-colors-") + key) != std::string::npos;
     };
     BarPalette& p          = w.settings.customPalette;
     const BarPalette& gold = PaletteOf(BarTheme::PhoenixGold);
-    // Phoenix Gold's strip is a gradient: its top and bottom show, and no one background.
+    // Phoenix Gold's strip is a gradient: its top and bottom show, and no one color or window.
     CHECK(shows("theme-top") && shows("theme-bottom") && !shows("theme-background"));
-    CHECK(w.Pass({{"theme-theme-colors-theme-gradient", kClickEvent, ""}}).changed);
-    CHECK(!p.gradient && w.settings.barTheme == BarTheme::Custom);
+    CHECK(shows("border-color-theme-palette") && shows("background-opacity") && shows("popup-opacity"));
+    CHECK(!shows("theme-name")); // a built-in theme has no name to change
+    CHECK(w.Pass({{"theme-theme-colors-background-style-s-0", kClickEvent, ""}}).changed);
+    CHECK(p.background == BarBackground::Plain && w.settings.barTheme == BarTheme::Custom && shows("theme-name"));
     CHECK(!shows("theme-top") && !shows("theme-bottom") && shows("theme-background"));
-    // Its stops are kept for the gradient's return; edited, the middle stays halfway between the two.
-    w.Pass({{"theme-theme-colors-theme-gradient", kClickEvent, ""}});
-    CHECK(p.gradient && p.stripBottom == gold.stripBottom && shows("theme-top"));
+    // Its stops are kept for the gradient's return, each its own: an edit of one leaves the others.
+    w.Pass({{"theme-theme-colors-background-style-s-1", kClickEvent, ""}});
+    CHECK(p.background == BarBackground::Gradient && p.stripBottom == gold.stripBottom && shows("theme-top"));
+    CHECK(shows("theme-middle"));
     w.Pass({{"theme-theme-colors-theme-top", kClickEvent, ""}});
     w.Pass({{"theme-theme-colors-theme-top-p-a", kChangeEvent, "0"}});
-    CHECK(p.stripTop == (gold.stripTop & 0x00FFFFFFu) && p.stripMiddle == 0x7F1A1510u);
-    w.Pass({{"theme-theme-colors-theme-border-thickness", kChangeEvent, "4"}});
-    CHECK_EQ(p.border, 4);
-    w.Pass({{"theme-theme-colors-theme-shape-s-2", kClickEvent, ""}});
-    CHECK(p.shape == BarShape::Glass);
+    CHECK(p.stripTop == (gold.stripTop & 0x00FFFFFFu) && p.stripMiddle == gold.stripMiddle);
+    w.Pass({{"theme-theme-colors-theme-middle", kClickEvent, ""}});
+    w.Pass({{"theme-theme-colors-theme-middle-p-a", kChangeEvent, "0"}});
+    CHECK(p.stripMiddle == (gold.stripMiddle & 0x00FFFFFFu));
+    w.Pass({{"theme-theme-colors-background-style-s-2", kClickEvent, ""}});
+    CHECK(p.background == BarBackground::Window && shows("window-type") && !shows("theme-top"));
+    // The art's frame is Border Thickness's alone, in the window type's color: no Border Color, and no opacity.
+    CHECK(shows("theme-border-thickness") && !shows("border-color-theme-palette"));
+    CHECK(!shows("background-opacity") && !shows("popup-opacity"));
 }
 
-TEST(a_theme_is_saved_under_a_name_it_can_have_and_loaded_from_the_list)
+TEST(border_color_is_the_last_color_of_the_themes_second_column)
 {
     Window w;
-    w.state.page          = Page::Theme;
-    const Settings before = w.settings;
-    const char* name = "theme-theme-colors-theme-name";
-    const char* save = "theme-theme-colors-save-theme";
-    w.Pass({{save, kClickEvent, ""}});
-    CHECK(!w.state.themeSave);
-    w.Pass({{name, kChangeEvent, "a/b"}, {save, kClickEvent, ""}});
-    CHECK(!w.state.themeSave);
-    w.Pass({{name, kChangeEvent, "Dusk"}, {save, kClickEvent, ""}});
-    CHECK(w.state.themeSave == "Dusk");
+    w.state.page             = Page::Theme;
+    const std::string border = "theme-theme-colors-border-color-theme-palette";
+    const Form form          = w.Pass();
+    const FormBlock* card    = Block(form, "theme-theme-colors");
+    CHECK(At(card, "theme-theme-colors-highlight-theme-palette") < At(card, border));
+    w.Pass({{border, kClickEvent, ""}});
+    CHECK(w.Pass({{border + "-p-r", kChangeEvent, "1"}}).changed);
+    CHECK_EQ(w.settings.customPalette.bottomLine, (PaletteOf(BarTheme::PhoenixGold).bottomLine & 0xFF00FFFFu) | 0x00010000u);
+}
+
+TEST(the_themes_corner_rounding_starts_at_its_shapes_own_and_edits_a_copy)
+{
+    Window w;
+    w.state.page           = Page::Theme;
+    const std::string rounding = "theme-theme-colors-theme-rounding";
+    const FormBlock* card  = Block(w.Pass(), "theme-theme-colors");
+    CHECK(At(card, "theme-theme-colors-theme-border-thickness") < At(card, rounding));
+    CHECK(w.Pass({{rounding, kChangeEvent, "6"}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.rounding == 6);
+    w.Pass({{rounding, kChangeEvent, std::to_string(kShapeRounding)}});
+    CHECK_EQ(w.settings.customPalette.rounding, kShapeRounding);
+}
+
+TEST(the_themes_opacities_set_the_alpha_of_the_strip_and_of_the_pop_outs)
+{
+    Window w;
+    w.state.page        = Page::Theme;
+    w.settings.barTheme = BarTheme::Aurora; // a strip at 90% and pop-outs at 95%, which a percent cannot say exactly
+    w.Pass();
+    // As RmlUi says a slider's value each time it is set: its own value changes nothing.
+    w.Pass({{"theme-theme-colors-background-opacity", kChangeEvent, "90"}, {"theme-theme-colors-popup-opacity", kChangeEvent, "95"}});
+    CHECK(w.settings.barTheme == BarTheme::Aurora); // shown, not changed
+    CHECK(w.Pass({{"theme-theme-colors-background-opacity", kChangeEvent, "50"}}).changed);
+    const BarPalette& aurora = PaletteOf(BarTheme::Aurora);
+    const BarPalette& p      = w.settings.customPalette;
+    const uint32_t half      = 0x80000000u; // 50% of 255, rounded
+    CHECK(w.settings.barTheme == BarTheme::Custom && p.stripTop == ((aurora.stripTop & 0x00FFFFFFu) | half));
+    CHECK(p.stripMiddle == ((aurora.stripMiddle & 0x00FFFFFFu) | half) && p.stripBottom == ((aurora.stripBottom & 0x00FFFFFFu) | half));
+    CHECK(p.panelTop == aurora.panelTop);
+    w.Pass({{"theme-theme-colors-popup-opacity", kChangeEvent, "40"}});
+    const uint32_t forty = 102u << 24; // 40% of 255
+    CHECK(p.panelTop == ((aurora.panelTop & 0x00FFFFFFu) | forty) && p.panelBottom == ((aurora.panelBottom & 0x00FFFFFFu) | forty));
+}
+
+TEST(the_help_bar_has_a_corner_rounding_of_its_own)
+{
+    Window w;
+    w.state.page = Page::HelpBar;
+    CHECK(w.Pass({{"helpbar-help-bar-help-rounding", kChangeEvent, "8"}}).changed);
+    CHECK_EQ(w.settings.helpBarRounding, 8);
+}
+
+TEST(a_custom_theme_takes_a_new_name_once_its_box_is_left_unless_it_cannot_have_it)
+{
+    Window w;
+    w.state.page               = Page::Theme;
+    w.settings.barTheme        = BarTheme::Custom;
+    w.settings.customThemeName = "Dusk";
     const std::vector<std::string> files = {"Dawn", "Dusk"};
     w.readings.themeFiles = &files;
-    w.Pass({{"theme-theme-colors-theme-file", kClickEvent, ""}});
-    CHECK(w.state.themesRequested); // opened, the folder is read again
-    w.Pass({{"theme-theme-colors-theme-file-o-1", kClickEvent, ""}});
-    w.Pass({{"theme-theme-colors-load-theme", kClickEvent, ""}});
-    CHECK(w.state.themeLoad == "Dusk" && w.settings == before); // the plugin reads it in
+    const std::string box = "theme-theme-colors-theme-name";
+    w.Pass();
+    CHECK_EQ(w.state.themeName, std::string("Dusk"));
+    for (const char* refused : {"a/b", "dawn", ""})
+    {
+        w.Pass({{box, kCommitEvent, refused}});
+        CHECK(!w.state.themeRename && w.state.themeName == "Dusk");
+    }
+    w.Pass({{box, kCommitEvent, "Night"}});
+    CHECK(w.state.themeRename == "Night" && w.settings.customThemeName == "Dusk"); // the plugin renames its file
 }
 
 TEST(the_profiles_card_asks_the_plugin_to_use_make_rename_or_delete_a_profile)
@@ -1051,15 +1317,15 @@ TEST(the_nameplate_fonts_lead_with_the_games_font_and_the_top_panels_leave_it_ou
     w.Pass({{"entities-nameplates-default-font-o-1", kClickEvent, ""}});
     CHECK(w.settings.defaultFont == kGameFontNarrowName);
     w.state.page = Page::TopPanel;
-    const Form open = w.Pass({{"toppanel-top-panel-title-font", kClickEvent, ""}});
+    const Form open = w.Pass({{"toppanel-widget-appearance-title-font", kClickEvent, ""}});
     CHECK(open.popup && Has(open.popup->rml, "Arial") && !Has(open.popup->rml, kGameFontName));
 }
 
 TEST(the_cursor_size_slider_sets_the_pointers_size)
 {
     Window w;
-    w.state.page = Page::MouseCursor;
-    CHECK(w.Pass({{"mousecursor-mouse-pointer-pointer-size", kChangeEvent, "150"}}).changed);
+    w.state.page = Page::UserInterface;
+    CHECK(w.Pass({{"userinterface-mouse-pointer-pointer-size", kChangeEvent, "150"}}).changed);
     CHECK_EQ(w.settings.pointerSize, 150);
 }
 
@@ -1079,9 +1345,235 @@ TEST(the_theme_is_never_faint_after_a_faint_setting)
     Window w;
     w.state.page = Page::Theme;
     test::EditedLayout edited;
-    edited.MoveSetting("theme", "theme-look", 1); // after Window Type, which is faint without the game's art
-    w.layout       = edited.Layout();
+    edited.MoveSetting("theme", "theme-colors", 10); // after Border Thickness, which is faint with the panel off
+    w.layout            = edited.Layout();
+    w.settings.showBar  = false;
+    const Form form     = w.Pass();
+    CHECK(ClassOn(form, "theme-theme-colors-theme-border-thickness-label-row", kOffClass));
+    CHECK(!ClassOn(form, "theme-theme-colors-theme-label-row", kOffClass));
+}
+
+TEST(a_widget_with_an_icon_has_a_row_putting_it_left_right_or_nowhere)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone};
+    w.readings.settingsOf = {zone};
+    const std::string row = "toppanel-widgets-icon-zone";
+    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, (row + "-s-2").c_str()));
+    w.Pass({{row + "-s-2", kClickEvent, ""}});
+    CHECK(w.settings.Widget(zone).iconSide == IconSide::Right);
+    w.Pass({{row + "-s-0", kClickEvent, ""}});
+    CHECK(w.settings.Widget(zone).iconSide == IconSide::Hide);
+    // A widget without an icon has no such row.
+    w.readings.settingsOf = {PanelWidget{BarWidget::Performance}};
+    CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "-icon-performance"));
+}
+
+TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone};
+    w.readings.settingsOf  = {zone};
+    const std::string base = "toppanel-widgets-part-" + std::to_string(SlotOf(zone)) + "-";
+    const auto chip        = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
+    const auto toggle      = [&](WidgetPart part) { return FormEvent{chip(part) + "-on", kClickEvent, ""}; };
+    const auto rml         = [](const Form& form) { return Block(form, "toppanel-widgets")->rml; };
+    const auto design      = [&] { return DesignText(w.settings.Widget(zone).design); };
+    const Form first = w.Pass();
+    CHECK(Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneNation) + "\"").c_str()));
+    CHECK(!Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str())); // its Icon setting has it
+    // A drop at a line's end moves the part there; on a chip, before it.
+    w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::ZoneNation)}});
+    CHECK_EQ(design(), "name nation | region");
+    w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, chip(WidgetPart::ZoneNation)}});
+    CHECK_EQ(design(), "nation name | region");
+    // Off one by one until one is left: the last stays on, and the designer says why under its lines.
+    w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneRegion)});
+    CHECK_EQ(design(), "-nation name | -region");
+    CHECK(!Has(rml(w.Pass()), "class=\"error\""));
+    const Form refused = w.Pass({toggle(WidgetPart::ZoneName)});
+    CHECK_EQ(design(), "-nation name | -region");
+    CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
+    bool shownOn = false; // the toggle's last word on its look
+    for (const FormValue& v : refused.values)
+        if (v.id == chip(WidgetPart::ZoneName) + "-on" && v.kind == FormValueKind::Class && v.name == "on") shownOn = v.on;
+    CHECK(shownOn);
+    // The next toggle or move takes the message away.
+    CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "class=\"error\""));
+    CHECK_EQ(design(), "-nation name | region");
+    // Another widget's chip dropped here moves nothing.
+    const std::string weather = "toppanel-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
+                                std::to_string(static_cast<int>(WidgetPart::WeatherName));
+    w.Pass({{base + "end-1", kDropEvent, weather}});
+    CHECK_EQ(design(), "-nation name | region");
+}
+
+TEST(the_pinned_status_buttons_have_no_switch_and_are_on_while_a_status_is_pinned_at_their_rank)
+{
+    Window w;
+    const PanelWidget timers{BarWidget::StatusTimers};
+    w.readings.settingsOf = {timers};
+    w.settings.statusPins = {40, 33}; // ranks 1 and 2
+    const std::string base = "toppanel-widgets-part-" + std::to_string(SlotOf(timers)) + "-";
+    const auto chip = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
     const Form form = w.Pass();
-    CHECK(ClassOn(form, "theme-theme-look-window-type-label-row", kOffClass));
-    CHECK(!ClassOn(form, "theme-theme-look-theme-label-row", kOffClass));
+    const std::string rml = Block(form, "toppanel-widgets")->rml;
+    CHECK(Has(rml, ("id=\"" + chip(WidgetPart::StatusPin6) + "\"").c_str()));
+    CHECK(!Has(rml, (chip(WidgetPart::StatusPin1) + "-on").c_str()));
+    const auto on = [&](WidgetPart part) {
+        bool shown = false;
+        for (const FormValue& v : form.values)
+            if (v.id == chip(part) && v.kind == FormValueKind::Class && v.name == "on") shown = v.on;
+        return shown;
+    };
+    CHECK(on(WidgetPart::StatusPin1) && on(WidgetPart::StatusPin2) && !on(WidgetPart::StatusPin3));
+}
+
+TEST(world_infos_designer_has_a_button_for_each_thing_it_can_tell_and_each_nation)
+{
+    Window w;
+    const PanelWidget world{BarWidget::World};
+    w.readings.settingsOf  = {world};
+    const std::string chip = "id=\"toppanel-widgets-part-" + std::to_string(SlotOf(world)) + "-";
+    const std::string rml  = Block(w.Pass(), "toppanel-widgets")->rml;
+    for (const WidgetPart part : {WidgetPart::WorldShip, WidgetPart::WorldGuild, WidgetPart::WorldSanDoria, WidgetPart::WorldBastok,
+             WidgetPart::WorldWindurst, WidgetPart::WorldBeastmen})
+        CHECK(Has(rml, (chip + std::to_string(static_cast<int>(part)) + "\"").c_str()));
+}
+
+TEST(world_infos_tracked_ship_and_guild_show_only_with_their_buttons_on)
+{
+    Window w;
+    const PanelWidget world{BarWidget::World};
+    w.settings.Widget(world).on = true;
+    w.readings.settingsOf       = {world};
+    const auto rows = [&] { return Block(w.Pass(), "toppanel-widgets")->rml; };
+    w.settings.Widget(world).design = DesignFrom(BarWidget::World, "ship | -guild");
+    CHECK(Has(rows(), "toppanel-widgets-ship-world") && !Has(rows(), "toppanel-widgets-guild-world"));
+    w.settings.Widget(world).design = DesignFrom(BarWidget::World, "guild | -ship");
+    CHECK(!Has(rows(), "toppanel-widgets-ship-world") && Has(rows(), "toppanel-widgets-guild-world"));
+}
+
+TEST(feedback_is_sent_only_once_its_fields_are_filled_and_the_card_says_how_it_went)
+{
+    Window w;
+    w.state.page             = Page::Feedback;
+    const std::string card   = "feedback-feedback-form";
+    const std::string send   = card + "-send-feedback", text = card + "-feedback-text", topic = card + "-feedback-topic";
+    const std::string other  = card + "-other";
+    const auto says = [&](WindowWord word) { return Has(Block(w.Pass(), card.c_str())->rml, w.layout.WordOf(word).name); };
+    const auto shows = [&](const std::string& id) { return At(Block(w.Pass(), card.c_str()), id) != std::string::npos; };
+
+    w.Pass({{send, kClickEvent, ""}});
+    CHECK(!w.state.feedbackRequested && w.state.feedbackStatus == FeedbackStatus::Missing);
+    CHECK(says(WindowWord::SendFeedbackMissing));
+    w.Pass({{text, kChangeEvent, "Names flicker."}});
+    CHECK(w.state.feedback.text == "Names flicker." && !shows(other));
+    // Other wants words of its own, in a box that only it shows.
+    w.Pass({{topic, kClickEvent, ""}});
+    w.Pass({{topic + "-o-5", kClickEvent, ""}});
+    CHECK(w.state.feedback.topic == FeedbackTopic::Other && shows(other));
+    w.Pass({{send, kClickEvent, ""}});
+    CHECK(!w.state.feedbackRequested && w.state.feedbackStatus == FeedbackStatus::Missing);
+    w.Pass({{other, kChangeEvent, "Fishing"}, {send, kClickEvent, ""}});
+    CHECK(w.state.feedbackRequested && w.state.feedbackStatus == FeedbackStatus::Sending);
+    CHECK(says(WindowWord::SendFeedbackSending) && !says(WindowWord::SendFeedbackMissing));
+    // While it is on its way, another press sends nothing more.
+    w.state.feedbackRequested = false;
+    w.Pass({{send, kClickEvent, ""}});
+    CHECK(!w.state.feedbackRequested);
+
+    FeedbackAnswered(w.state, true);
+    CHECK(says(WindowWord::SendFeedbackSent));
+    CHECK(w.state.feedback.text.empty() && w.state.feedback.other.empty() && w.state.feedback.topic == FeedbackTopic::General);
+}
+
+TEST(feedback_the_service_did_not_take_is_kept_to_send_again)
+{
+    Window w;
+    w.state.page   = Page::Feedback;
+    w.state.feedback.text = "Names flicker.";
+    w.Pass({{"feedback-feedback-form-send-feedback", kClickEvent, ""}});
+    CHECK(w.state.feedbackRequested);
+    w.state.feedbackRequested = false;
+    FeedbackAnswered(w.state, false);
+    CHECK(w.state.feedbackStatus == FeedbackStatus::Failed && w.state.feedback.text == "Names flicker.");
+    CHECK(Has(Block(w.Pass(), "feedback-feedback-form")->rml, w.layout.WordOf(WindowWord::SendFeedbackFailed).name));
+    w.Pass({{"feedback-feedback-form-send-feedback", kClickEvent, ""}});
+    CHECK(w.state.feedbackRequested && w.state.feedbackStatus == FeedbackStatus::Sending);
+}
+
+TEST(a_designer_buttons_picture_is_drawn_with_its_icons_adjustment)
+{
+    Window w;
+    const PanelWidget world{BarWidget::World};
+    w.settings.Widget(world).on = true;
+    w.readings.settingsOf       = {world};
+    w.readings.partMarks[static_cast<size_t>(WidgetPart::WorldBastok)] = PartMark{std::nullopt, GamePicture::BastokCrest};
+    w.readings.partMarks[static_cast<size_t>(WidgetPart::WorldShip)]   = PartMark{Icon::Star};
+    const Form form = w.Pass();
+    const std::string& rml = std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    // Bastok's crest at 85% of its room, the star as it is.
+    CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + GamePictureSource(GamePicture::BastokCrest) +
+                    "\" style=\"transform:scale(0.85);\"/>").c_str()));
+    CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + IconSource(Icon::Star) + "\"/>").c_str()));
+}
+
+TEST(show_mem_text_shows_with_the_performance_widgets_memory_button_and_switches_its_label)
+{
+    Window w;
+    const PanelWidget performance{BarWidget::Performance};
+    w.settings.Widget(performance).on = true;
+    w.readings.settingsOf             = {performance};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(performance).design = DesignFrom(BarWidget::Performance, "fps -memory |");
+    CHECK(!Has(rows(), "mem-text"));
+    w.settings.Widget(performance).design = DesignFrom(BarWidget::Performance, "fps memory |");
+    const std::string shown = rows();
+    CHECK(Has(shown, "mem-text"));
+    CHECK(!w.settings.Widget(performance).memText);
+    w.Pass({{"toppanel-widgets-mem-text-performance", kClickEvent, ""}});
+    CHECK(w.settings.Widget(performance).memText);
+}
+
+TEST(status_icons_offers_vanilla_then_each_pack_and_with_show_status_background_edits_a_copy_of_the_theme)
+{
+    Window w;
+    w.state.page             = Page::Theme;
+    const std::string icons  = "theme-theme-colors-status-icons", back = "theme-theme-colors-status-background";
+    const FormBlock* card    = Block(w.Pass(), "theme-theme-colors");
+    CHECK(At(card, "theme-theme-colors-popup-opacity") < At(card, icons) && At(card, icons) < At(card, back));
+    const Form open = w.Pass({{icons, kClickEvent, ""}});
+    CHECK(open.popup && Has(open.popup->rml, ">Vanilla<"));
+    for (const std::string_view pack : kStatusPackNames)
+        CHECK(Has(open.popup->rml, (">" + std::string(pack) + "<").c_str()));
+    CHECK(!Has(open.popup->rml, (icons + "-o-" + std::to_string(kStatusPackCount + 1)).c_str()));
+    // The second pack, after Vanilla and the first.
+    CHECK(w.Pass({{icons + "-o-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.statusIcons == 1);
+    CHECK(!w.settings.customPalette.statusBack);
+    w.Pass({{back, kClickEvent, ""}});
+    CHECK(w.settings.customPalette.statusBack);
+}
+
+TEST(display_shows_on_the_status_timers_widget_alone_and_picks_how_its_pins_show)
+{
+    Window w;
+    const PanelWidget statuses{BarWidget::StatusTimers}, clock{BarWidget::EarthTime};
+    w.settings.Widget(statuses).on = w.settings.Widget(clock).on = true;
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.readings.settingsOf = {clock};
+    CHECK(!Has(rows(), "status-display"));
+    w.readings.settingsOf = {statuses};
+    CHECK(Has(rows(), "status-display"));
+    const std::string list = "toppanel-widgets-status-display-statustimers";
+    w.Pass({{list, kClickEvent, ""}});
+    CHECK(w.Pass({{list + "-o-1", kClickEvent, ""}}).changed);
+    CHECK(w.settings.Widget(statuses).statusDisplay == StatusDisplay::Icon);
 }

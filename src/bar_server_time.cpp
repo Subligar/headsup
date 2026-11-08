@@ -9,6 +9,22 @@ namespace headsup
         const char* const kWeekdays[kDaysPerWeek] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
             "Saturday", "Sunday"};
 
+        constexpr int kMonthsPerYear = 12;
+        const char* const kMonthNames[kMonthsPerYear] = {"January", "February", "March", "April", "May", "June", "July",
+            "August", "September", "October", "November", "December"};
+        constexpr size_t kShortMonth = 3; // "Nov"
+
+        // "7th", "1st", "22nd", "13th".
+        std::string Ordinal(int day)
+        {
+            constexpr int kTens = 10, kHundreds = 100;
+            const int ones = day % kTens, tens = day % kHundreds / kTens;
+            const char* suffix = tens == 1 || ones > 3 || ones == 0 ? "th" : ones == 1 ? "st" : ones == 2 ? "nd" : "rd";
+            return std::to_string(day) + suffix;
+        }
+
+        const char* MonthName(int month) { return month >= 1 && month <= kMonthsPerYear ? kMonthNames[month - 1] : ""; }
+
         int64_t FloorDiv(int64_t a, int64_t b) { return a / b - ((a % b != 0) && ((a < 0) != (b < 0)) ? 1 : 0); }
 
         // The days since 1970-01-01 of a date, and a date of them (Howard Hinnant's days_from_civil and
@@ -126,6 +142,24 @@ namespace headsup
             static_cast<int>(inDay % kMsPerMinute / kMsPerSecond), static_cast<int>(date.year), date.month, date.day};
     }
 
+    std::string LocalZoneName(int64_t unixMs, int year, int month, int day, int hour, int minute)
+    {
+        const int64_t localMs = DaysFromCivil(year, month, day) * kMsPerDay + hour * kMsPerHour + minute * kMsPerMinute;
+        const auto ahead      = static_cast<int>(FloorDiv(localMs - FloorDiv(unixMs, kMsPerMinute) * kMsPerMinute, kMsPerMinute));
+        // A zone in daylight saving first: US Pacific's summer is Arizona's whole year, and more play on the coast.
+        for (const bool summer : {true, false})
+            for (const ZoneRule& z : kZones)
+            {
+                const bool daylight = Daylight(z, unixMs);
+                if (daylight == summer && z.standardMinutes + (daylight ? kHourMinutes : 0) == ahead)
+                    return daylight ? z.daylight : z.standard;
+            }
+        const int minutes = ahead < 0 ? -ahead : ahead;
+        std::string name  = std::string("UTC") + (ahead < 0 ? "-" : "+") + std::to_string(minutes / kHourMinutes);
+        if (minutes % kHourMinutes != 0) name += ":" + std::to_string(minutes % kHourMinutes);
+        return name;
+    }
+
     const char* JstWeekdayName(int weekday) { return kWeekdays[((weekday % kDaysPerWeek) + kDaysPerWeek) % kDaysPerWeek]; }
 
     double SecondsToDailyReset(int64_t unixMs) { return SecondsTo(JstDay(unixMs) + 1, unixMs); }
@@ -135,19 +169,47 @@ namespace headsup
         return SecondsTo(JstDay(unixMs) + kDaysPerWeek - ZoneAt(ClockZone::Japan, unixMs).weekday, unixMs);
     }
 
-    std::string ZoneClockText(const ZoneTime& t, bool twentyFour, bool seconds)
+    std::vector<Span> ZoneClockSpans(const ZoneTime& t, bool twentyFour, bool seconds)
     {
-        return std::string(t.abbreviation) + " " + ClockText(t.hour, t.minute, twentyFour, seconds ? t.second : -1);
+        std::vector<Span> spans = ClockSpans(t.hour, t.minute, twentyFour, seconds ? t.second : -1);
+        spans.insert(spans.begin(), Text(std::string(t.abbreviation) + " "));
+        return spans;
     }
 
     PopupSection ServerTimeRows(int64_t unixMs)
     {
         const ZoneTime t = ZoneAt(ClockZone::Japan, unixMs);
         PopupSection rows;
-        rows.rows.push_back(Labeled("Server time", Text(std::string(JstWeekdayName(t.weekday)) + " " +
+        rows.rows.push_back(Labeled("Server Time", Text(std::string(JstWeekdayName(t.weekday)) + " " +
                                                         HourMinute(t.hour, t.minute) + " " + t.abbreviation)));
-        rows.rows.push_back(Labeled("Daily reset in", Text(SpanText(SecondsToDailyReset(unixMs)))));
-        rows.rows.push_back(Labeled("Conquest tally in", Text(SpanText(SecondsToTally(unixMs)))));
+        rows.rows.push_back(Labeled("Daily Reset in", Text(SpanText(SecondsToDailyReset(unixMs)))));
+        rows.rows.push_back(Labeled("Conquest Tally in", Text(SpanText(SecondsToTally(unixMs)))));
         return rows;
+    }
+
+    std::string DateText(DateFormat format, CalendarDay d)
+    {
+        const std::string month = MonthName(d.month);
+        switch (format)
+        {
+        case DateFormat::YearMonthDay: return Printed("%04d", d.year) + "/" + Printed("%02d", d.month) + "/" + Printed("%02d", d.day);
+        case DateFormat::MonthDayYear: return Printed("%02d", d.month) + "/" + Printed("%02d", d.day) + "/" + Printed("%04d", d.year);
+        case DateFormat::DayMonthYear: return Printed("%02d", d.day) + "/" + Printed("%02d", d.month) + "/" + Printed("%04d", d.year);
+        case DateFormat::MonthDay: return month + " " + Ordinal(d.day);
+        case DateFormat::Iso: return Printed("%04d", d.year) + "-" + Printed("%02d", d.month) + "-" + Printed("%02d", d.day);
+        case DateFormat::MonthDayCommaYear: return month + " " + Ordinal(d.day) + ", " + std::to_string(d.year);
+        case DateFormat::ShortMonthDay: return month.substr(0, kShortMonth) + " " + std::to_string(d.day);
+        }
+        return {};
+    }
+
+    std::string DateTimeTitle(CalendarDay day, int hour, int minute, int second, bool twentyFour)
+    {
+        const std::string seconds = second >= 0 ? ":" + Printed("%02d", second) : "";
+        constexpr int kHalfDay = 12;
+        const std::string time = twentyFour ? HourMinute(hour, minute) + seconds
+                                            : std::to_string(hour % kHalfDay == 0 ? kHalfDay : hour % kHalfDay) + ":" +
+                                                  Printed("%02d", minute) + seconds + (hour < kHalfDay ? "am" : "pm");
+        return DateText(DateFormat::MonthDayCommaYear, day) + " - " + time;
     }
 }

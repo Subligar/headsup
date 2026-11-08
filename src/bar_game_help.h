@@ -33,14 +33,24 @@ namespace headsup
     // The help bar's box, height tall from left and top, and where each part of its row starts: the caption a padding
     // in, the bag's count a gap after it, the help a padding after those, and a padding to the box's right edge. A
     // part of no width takes no room.
+    // With full, the box is the whole room; else it fits its row and sits in the room at anchor. Either way the row sits
+    // in the box at anchor.
+    struct HelpBarSpan
+    {
+        float x = 0.0f, width = 0.0f;
+        bool operator==(const HelpBarSpan&) const = default;
+    };
     struct HelpBarRow
     {
         BarRect box;
         float captionX = 0.0f, bagX = 0.0f, helpX = 0.0f;
         bool operator==(const HelpBarRow&) const = default;
     };
-    HelpBarRow PlaceHelpBar(float left, float top, float height, float padding, float gap, float captionWidth,
-        float bagWidth, float helpWidth);
+    HelpBarRow PlaceHelpBar(HelpBarSpan room, HelpAnchor anchor, bool full, float top, float height, float padding,
+        float gap, float captionWidth, float bagWidth, float helpWidth);
+    // The room the help bar may take, margin in from both sides of the screen: percent of the screen's width less the
+    // left margin, or with full all of it, at anchor.
+    HelpBarSpan HelpBarRoom(float screenWidth, float margin, int percent, bool full, HelpAnchor anchor);
 
     // bagFill: the used and total slots of the bag the caption names, as the Bags widget writes them.
     PopupContent GameHelpPopup(const std::optional<StripText>& strip, const std::optional<Span>& bagFill);

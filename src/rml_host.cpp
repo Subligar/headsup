@@ -131,7 +131,7 @@ namespace headsup
         return loaded;
     }
 
-    float RmlHost::TextWidth(const std::string& text, const std::string& family, int pixels, float tracking)
+    float RmlHost::TextWidth(const std::string& text, const std::string& family, int pixels)
     {
         if (!Running() || text.empty()) return 0.0f;
         Rml::FontEngineInterface* engine = Rml::GetFontEngineInterface();
@@ -139,7 +139,7 @@ namespace headsup
             Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal, pixels);
         if (face == 0) return 0.0f;
         static const Rml::String kNoLanguage;
-        const Rml::TextShapingContext shaping{kNoLanguage, Rml::Style::Direction::Auto, Rml::Style::FontKerning::Auto, tracking};
+        const Rml::TextShapingContext shaping{kNoLanguage, Rml::Style::Direction::Auto, Rml::Style::FontKerning::Auto, 0.0f};
         return static_cast<float>(engine->GetStringWidth(face, text, shaping));
     }
 
