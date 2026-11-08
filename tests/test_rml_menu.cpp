@@ -2407,3 +2407,43 @@ TEST(a_designer_button_dropped_in_the_gap_between_two_buttons_goes_between_them)
     window.Frames(2);
     CHECK_EQ(DesignText(window.settings.Widget(job).design), "jobs percent earned tonext | bar");
 }
+
+TEST(a_theme_colors_custom_button_and_its_swatch_sit_side_by_side_without_overlapping)
+{
+    for (const char* font : {kBarlowCondensed, kCinzel})
+    {
+        Window window(BarTheme::PhoenixGold, font);
+        const PanelWidget job{BarWidget::Job};
+        window.settings.Widget(job).on = true;
+        window.shown                   = job;
+        window.Frames(3);
+        Rml::ElementList rows;
+        window.Find(kMenuViewBodyId)->GetElementsByClassName(rows, "swatched");
+        CHECK_EQ(rows.size(), size_t{2}); // EXP Bar Background and EXP Bar Color
+        Rml::ElementList sliders;
+        window.Find(kMenuViewBodyId)->GetElementsByClassName(sliders, "slider");
+        CHECK(!sliders.empty());
+        const auto rightOf = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x + e->GetBox().GetSize(Rml::BoxArea::Border).x; };
+        const auto leftOf  = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+        const auto middleOf = [](Rml::Element* e) {
+            return e->GetAbsoluteOffset(Rml::BoxArea::Border).y + e->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f;
+        };
+        for (Rml::Element* row : rows)
+        {
+            Rml::Element* swatch = row->GetNextSibling();
+            CHECK(swatch != nullptr && swatch->IsClassSet("swatch"));
+            Rml::ElementList segments;
+            row->GetElementsByClassName(segments, "seg");
+            CHECK_EQ(segments.size(), size_t{2});
+            Rml::Element* custom = segments.back();
+            if (rightOf(custom) > leftOf(swatch))
+                throw test::Failure{std::string(font) + ": Custom ends at " + std::to_string(rightOf(custom)) +
+                                    ", past the swatch's left at " + std::to_string(leftOf(swatch))};
+            // On one line, together as wide as a slider and ending where the other controls do.
+            CHECK(std::abs(middleOf(swatch) - middleOf(custom)) <= 1.0f);
+            CHECK(std::abs(leftOf(segments.front()) - leftOf(sliders.front())) <= 1.0f);
+            CHECK(std::abs(rightOf(swatch) - rightOf(sliders.front())) <= 1.0f);
+        }
+        CHECK_EQ(window.Said(), "");
+    }
+}

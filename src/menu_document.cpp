@@ -251,7 +251,9 @@ namespace headsup
         css += ".seg{flex:1 0 auto;height:" + frame + ";" + framed + "padding:0px " + Em(kSegmentPad) + ";margin-left:" +
                Em(kSegmentGap) + ";border-radius:" + radius + ";text-align:center;white-space:nowrap;background-color:" +
                color(c.control) + ";color:" + color(c.muted) + ";}";
-        css += ".swatched .segs{min-width:" + Em(kControlWidth - kFrame - kControlGap) + ";}"; // a swatch beside it
+        // A swatch beside them. Their box is a flex one: as a block, RmlUi sized it to their least width, and the swatch
+        // went over Custom.
+        css += ".swatched{display:flex;}.swatched .segs{min-width:" + Em(kControlWidth - kFrame - kControlGap) + ";}";
         css += ".seg:first-child{margin-left:0px;}";
         css += ".seg:hover{background-color:" + color(c.hover) + ";}";
         css += ".seg.picked{background-color:" + color(c.accent) + ";}";
