@@ -113,15 +113,17 @@ namespace headsup
     // bottom is kept by its top: kept by its bottom, a tall one shown smaller would drop away from where its top was left.
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight);
     // A popup of this size at the spot, its kept edges where the spot says, pushed onto the screen under top (the
-    // panel's bottom) where it would leave it, for this showing only: the spot stays as it was.
-    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight, float top);
+    // panel's bottom) where it would leave it, for this showing only: the spot stays as it was. Its ring, drawn ring
+    // pixels around it, stays on the screen too.
+    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight, float top,
+        float ring);
     // Where a popup is placed instead of under its widget: by its top left where it is being dragged, else at the spot
     // it was left, pinned or not; nothing for under its widget.
     std::optional<PopupSpot> PlacedSpot(const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot);
     // Where a popup shows: placed, at its height, else under its widget, across at keptX, where it opened, so a widget
     // changing width while it is open does not move it.
     BarRect PopupAt(const BarRect& underWidget, float height, const std::optional<PopupSpot>& placed, float screenWidth,
-        float screenHeight, float top, std::optional<float> keptX = std::nullopt);
+        float screenHeight, float top, float ring, std::optional<float> keptX = std::nullopt);
     // Under its widget below the bar, moved inward from the screen's sides, its height cut at the bottom: a ring
     // drawn ring pixels around it stays gap from the bar and the screen's edges.
     BarRect PlacePopup(const BarRect& widget, float barHeight, float width, float height, float screenWidth,
@@ -245,6 +247,8 @@ namespace headsup
         void Reevaluate();
         // Pins or unpins the pill's popup, as its widget or its pin chip do.
         void TogglePin(PanelWidget pill);
+        // The widget under the point, none where a popup is drawn over it (the cut help bar).
+        std::optional<PanelWidget> WidgetUnder(float x, float y) const;
         // The topmost popup drawn over the point, if any.
         const PopupPlace* PlaceAt(float x, float y) const;
         // The hovered popup and everything above it down from the screen's top: the pointer crossing the gap keeps it

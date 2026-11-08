@@ -382,13 +382,14 @@ namespace headsup
             static_cast<int>(std::lround(lower ? screenHeight - popup.y - popup.height : popup.y)), right, lower};
     }
 
-    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight, float top)
+    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight, float top,
+        float ring)
     {
-        width  = std::min(width, screenWidth);
-        height = std::min(height, std::max(0.0f, screenHeight - top));
+        width  = std::min(width, std::max(0.0f, screenWidth - 2.0f * ring));
+        height = std::min(height, std::max(0.0f, screenHeight - ring - top));
         const auto x = static_cast<float>(spot.x), y = static_cast<float>(spot.y);
-        return BarRect{std::clamp(spot.fromRight ? screenWidth - x - width : x, 0.0f, screenWidth - width),
-            std::clamp(spot.fromBottom ? screenHeight - y - height : y, top, std::max(top, screenHeight - height)), width, height};
+        return BarRect{std::clamp(spot.fromRight ? screenWidth - x - width : x, ring, std::max(ring, screenWidth - ring - width)),
+            std::clamp(spot.fromBottom ? screenHeight - y - height : y, top, std::max(top, screenHeight - ring - height)), width, height};
     }
 
     std::optional<PopupSpot> PlacedSpot(const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot)
@@ -399,11 +400,11 @@ namespace headsup
     }
 
     BarRect PopupAt(const BarRect& underWidget, float height, const std::optional<PopupSpot>& placed, float screenWidth,
-        float screenHeight, float top, std::optional<float> keptX)
+        float screenHeight, float top, float ring, std::optional<float> keptX)
     {
-        if (placed) return PlaceAtSpot(*placed, underWidget.width, height, screenWidth, screenHeight, top);
+        if (placed) return PlaceAtSpot(*placed, underWidget.width, height, screenWidth, screenHeight, top, ring);
         BarRect rect = underWidget;
-        if (keptX) rect.x = std::clamp(*keptX, 0.0f, std::max(0.0f, screenWidth - rect.width));
+        if (keptX) rect.x = std::clamp(*keptX, ring, std::max(ring, screenWidth - ring - rect.width));
         return rect;
     }
 
@@ -588,7 +589,7 @@ namespace headsup
 
     void BarInput::Reevaluate()
     {
-        m_Under = WidgetAt(m_Layout, m_X, m_Y);
+        m_Under = WidgetUnder(m_X, m_Y);
         if (m_Dismissed != m_Under) m_Dismissed.reset();
         if (m_Under && m_HasPopup[SlotOf(*m_Under)] && m_Under != m_Dismissed)
             m_Hover = m_Under;
@@ -614,6 +615,11 @@ namespace headsup
         return false;
     }
 
+    std::optional<PanelWidget> BarInput::WidgetUnder(float x, float y) const
+    {
+        return InPopup(x, y) ? std::nullopt : WidgetAt(m_Layout, x, y);
+    }
+
     bool BarInput::Over(float x, float y) const
     {
         return (y >= 0.0f && y < m_Layout.height) || WidgetAt(m_Layout, x, y) || InPopup(x, y);
@@ -623,7 +629,7 @@ namespace headsup
     {
         if (!Over(x, y)) return false;
         if (!left) return true;
-        const std::optional<PanelWidget> under = WidgetAt(m_Layout, x, y);
+        const std::optional<PanelWidget> under = WidgetUnder(x, y);
         if (under && under->kind == BarWidget::Settings)
         {
             m_Presses.push_back(kOpenSettingsPress);

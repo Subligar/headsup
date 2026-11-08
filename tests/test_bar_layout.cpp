@@ -222,10 +222,10 @@ TEST(a_dragged_popup_is_kept_by_its_edges_nearest_the_screens_sides_and_grows_aw
     const PopupSpot bottomRight = SpotOf(BarRect{1500.0f, 600.0f, 300.0f, 400.0f}, W, H);
     CHECK(bottomRight == (PopupSpot{120, 80, true, true})); // 1920 - 1800 and 1080 - 1000
     // Placed back at another size, its kept edges stay and it grows away from them.
-    CHECK(PlaceAtSpot(topLeft, 500.0f, 450.0f, W, H, top) == (BarRect{100.0f, 200.0f, 500.0f, 450.0f}));
-    CHECK(PlaceAtSpot(bottomRight, 500.0f, 450.0f, W, H, top) == (BarRect{1300.0f, 550.0f, 500.0f, 450.0f}));
+    CHECK(PlaceAtSpot(topLeft, 500.0f, 450.0f, W, H, top, 0.0f) == (BarRect{100.0f, 200.0f, 500.0f, 450.0f}));
+    CHECK(PlaceAtSpot(bottomRight, 500.0f, 450.0f, W, H, top, 0.0f) == (BarRect{1300.0f, 550.0f, 500.0f, 450.0f}));
     // Never off the screen or over the panel.
-    const BarRect big = PlaceAtSpot(topLeft, 1900.0f, 1000.0f, W, H, top);
+    const BarRect big = PlaceAtSpot(topLeft, 1900.0f, 1000.0f, W, H, top, 0.0f);
     CHECK(big.x >= 0.0f && big.y >= top && big.x + big.width <= W && big.y + big.height <= H);
 }
 
@@ -234,20 +234,20 @@ TEST(a_popup_shows_where_it_is_dragged_else_at_its_kept_spot_else_under_its_widg
     constexpr float W = 1920.0f, H = 1080.0f, top = 40.0f;
     const BarRect under{800.0f, 44.0f, 300.0f, 200.0f};
     CHECK(!PlacedSpot(std::nullopt, std::nullopt));
-    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H, top) == under);
+    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H, top, 0.0f) == under);
     const PopupSpot kept{120, 80, true, true};
     CHECK(PlacedSpot(std::nullopt, kept) == kept);
-    CHECK(PopupAt(under, 200.0f, kept, W, H, top) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, kept, W, H, top, 0.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
     // Dragged, by its top left, wherever it was kept.
     const std::optional<PopupSpot> dragged = PlacedSpot(BarRect{400.0f, 500.0f, 300.0f, 200.0f}, kept);
     CHECK(dragged == (PopupSpot{400, 500, false, false}));
-    CHECK(PopupAt(under, 200.0f, dragged, W, H, top) == (BarRect{400.0f, 500.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, dragged, W, H, top, 0.0f) == (BarRect{400.0f, 500.0f, 300.0f, 200.0f}));
     // Open, it stays across where it opened while its widget changes width, on the screen, and grows from there.
-    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H, top, 700.0f) == (BarRect{700.0f, 44.0f, 300.0f, 200.0f}));
-    CHECK(PopupAt(BarRect{800.0f, 44.0f, 500.0f, 200.0f}, 200.0f, std::nullopt, W, H, top, 1600.0f) ==
+    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H, top, 0.0f, 700.0f) == (BarRect{700.0f, 44.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(BarRect{800.0f, 44.0f, 500.0f, 200.0f}, 200.0f, std::nullopt, W, H, top, 0.0f, 1600.0f) ==
           (BarRect{1420.0f, 44.0f, 500.0f, 200.0f}));
     // A spot of its own wins over where it opened.
-    CHECK(PopupAt(under, 200.0f, kept, W, H, top, 700.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, kept, W, H, top, 0.0f, 700.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
 }
 
 // The card "Pop-out repositioning bugs": dragged low, a pop-out was laid out for the room under it, its cards flowed
@@ -260,7 +260,7 @@ TEST(a_placed_popup_keeps_its_size_wherever_it_goes_on_the_screen_and_under_the_
         for (float x = -300.0f; x <= W + 300.0f; x += 150.0f)
             for (float y = -300.0f; y <= H + 300.0f; y += 150.0f)
             {
-                const BarRect at = PopupAt(under, under.height, PlacedSpot(BarRect{x, y, under.width, under.height}, std::nullopt), W, H, top);
+                const BarRect at = PopupAt(under, under.height, PlacedSpot(BarRect{x, y, under.width, under.height}, std::nullopt), W, H, top, 0.0f);
                 CHECK(Near(at.width, under.width) && Near(at.height, under.height));
                 CHECK(at.x >= 0.0f && at.x + at.width <= W && at.y >= top && at.y + at.height <= H);
                 // Where it fits, it is where it was put.
@@ -276,15 +276,32 @@ TEST(a_popup_kept_near_an_edge_is_pushed_in_while_too_big_and_opens_at_its_spot_
     constexpr float W = 1920.0f, H = 1080.0f, top = 40.0f;
     const BarRect under{900.0f, 46.0f, 300.0f, 200.0f};
     const PopupSpot nearRight{1700, 300, false, false}, nearBottom{100, 900, false, false};
-    CHECK(PopupAt(under, 200.0f, nearRight, W, H, top) == (BarRect{1620.0f, 300.0f, 300.0f, 200.0f}));
-    CHECK(PopupAt(BarRect{900.0f, 46.0f, 150.0f, 200.0f}, 200.0f, nearRight, W, H, top) == (BarRect{1700.0f, 300.0f, 150.0f, 200.0f}));
-    CHECK(PopupAt(under, 200.0f, nearBottom, W, H, top) == (BarRect{100.0f, 880.0f, 300.0f, 200.0f}));
-    CHECK(PopupAt(under, 100.0f, nearBottom, W, H, top) == (BarRect{100.0f, 900.0f, 300.0f, 100.0f}));
+    CHECK(PopupAt(under, 200.0f, nearRight, W, H, top, 0.0f) == (BarRect{1620.0f, 300.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(BarRect{900.0f, 46.0f, 150.0f, 200.0f}, 200.0f, nearRight, W, H, top, 0.0f) == (BarRect{1700.0f, 300.0f, 150.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, nearBottom, W, H, top, 0.0f) == (BarRect{100.0f, 880.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 100.0f, nearBottom, W, H, top, 0.0f) == (BarRect{100.0f, 900.0f, 300.0f, 100.0f}));
     // Kept from the right, it is pushed off the left edge the same way.
     const PopupSpot nearLeft{1700, 300, true, false};
-    CHECK(PopupAt(under, 200.0f, nearLeft, W, H, top) == (BarRect{0.0f, 300.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, nearLeft, W, H, top, 0.0f) == (BarRect{0.0f, 300.0f, 300.0f, 200.0f}));
     // Kept above the panel's bottom, it shows under it.
-    CHECK(PopupAt(under, 200.0f, PopupSpot{100, 0, false, false}, W, H, top).y == top);
+    CHECK(PopupAt(under, 200.0f, PopupSpot{100, 0, false, false}, W, H, top, 0.0f).y == top);
+}
+
+// The card: on Ornate a popup has a ring drawn outside its box, which a popup pushed to the screen's left or right
+// edge left a few pixels off the screen.
+TEST(a_popup_pushed_onto_the_screen_keeps_its_ring_on_it_too)
+{
+    constexpr float W = 1920.0f, H = 1080.0f, ring = 6.0f, top = 40.0f + ring;
+    const BarRect under{900.0f, 46.0f, 300.0f, 200.0f};
+    const PopupSpot pastLeft{-50, 300, false, false}, pastRight{-50, 300, true, false}, pastBottom{100, -50, false, true};
+    CHECK(PopupAt(under, 200.0f, pastLeft, W, H, top, ring) == (BarRect{ring, 300.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, pastRight, W, H, top, ring) == (BarRect{W - ring - 300.0f, 300.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, pastBottom, W, H, top, ring) == (BarRect{100.0f, H - ring - 200.0f, 300.0f, 200.0f}));
+    // One too big for the screen is cut to it, ring and all.
+    const BarRect big = PlaceAtSpot(PopupSpot{0, 0, false, false}, W, H, W, H, top, ring);
+    CHECK(big == (BarRect{ring, top, W - 2.0f * ring, H - ring - top}));
+    // Open under its widget where it opened, as its widget grows.
+    CHECK(PopupAt(BarRect{800.0f, 46.0f, 500.0f, 200.0f}, 200.0f, std::nullopt, W, H, top, ring, 1600.0f).x == W - ring - 500.0f);
 }
 
 TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
@@ -430,6 +447,23 @@ TEST(a_cut_help_bar_under_the_strip_opens_its_popup_and_takes_only_its_own_press
     CHECK(!input.Press(600.0f, 70.0f, true)); // beside it, the game's
     CHECK(input.Press(100.0f, 70.0f, true)); // its own, which pins it as any widget's does
     CHECK(input.Pinned() == BarWidget::GameHelp);
+}
+
+TEST(a_popup_over_the_cut_help_bar_keeps_the_pointer_from_the_help_bar_under_it)
+{
+    BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    l.widgets.push_back(PlacedWidget{BarWidget::GameHelp, BarRect{0.0f, 46.0f, 480.0f, 60.0f}});
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::GameHelp)] = true;
+    popups[SlotOf(BarWidget::Zone)]     = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const BarRect zone = *RectOf(l, BarWidget::Zone);
+    input.Move(zone.x + 5.0f, 18.0f);
+    SetPopup(input, BarRect{0.0f, 44.0f, 600.0f, 300.0f}); // drawn over the help bar
+    input.Move(100.0f, 70.0f);
+    CHECK(input.Open() == BarWidget::Zone && !input.Hovered() && !input.Lit(BarWidget::GameHelp, true));
+    CHECK(input.Press(100.0f, 70.0f, true) && !input.Pinned());
 }
 
 TEST(pinning_another_widget_keeps_the_first_pinned_beside_it)
@@ -1051,7 +1085,7 @@ namespace
         }
         void Frame()
         {
-            shown = PopupAt(under, under.height, PlacedSpot(c.input.DraggedPopup(BarWidget::Target), spot), W, H, kPanelBottom);
+            shown = PopupAt(under, under.height, PlacedSpot(c.input.DraggedPopup(BarWidget::Target), spot), W, H, kPanelBottom, 0.0f);
             SetPopup(c.input, shown, {}, {}, {}, {}, BarRect{shown.x, shown.y, shown.width, kTitleRow});
             if (const auto moved = c.input.TakeMoved()) spot = SpotOf(moved->second, W, H);
         }

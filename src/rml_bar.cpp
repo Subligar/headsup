@@ -513,7 +513,7 @@ namespace headsup
         // Placed by a drag or a spot, it opens under its widget again once that is reset.
         if (placed) popup.keptX.reset();
         else if (!popup.keptX) popup.keptX = under.x;
-        const BarRect rect = PopupAt(under, pl.height, placed, screenWidth, screenHeight, BarBottom(p, m) + out, popup.keptX);
+        const BarRect rect = PopupAt(under, pl.height, placed, screenWidth, screenHeight, BarBottom(p, m) + out, out, popup.keptX);
         if (fresh || !popup.marked)
         {
             popup.element->SetInnerRML(PopupRml(pl, look, m_PopupFaces));
