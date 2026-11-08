@@ -280,24 +280,6 @@ TEST(text_is_drawn_no_taller_than_the_tallest_step_and_stretched_past_it)
     CHECK_EQ(FixedRasterHeight(288.0f), 213);
 }
 
-TEST(text_that_scales_is_drawn_at_whole_pixels_and_redrawn_only_a_whole_pixel_away)
-{
-    CHECK_EQ(TextRaster(22.5f, 0), 23);
-    CHECK_EQ(TextRaster(22.6f, 22), 22); // as the camera moves it, less than a pixel keeps the one drawn
-    CHECK_EQ(TextRaster(21.1f, 22), 22);
-    CHECK_EQ(TextRaster(23.0f, 22), 23);
-    CHECK_EQ(TextRaster(20.9f, 22), 21);
-    CHECK_EQ(TextRaster(26.4f, 22), 26);
-    CHECK_EQ(TextRaster(2.0f, 0), 6); // the smallest
-    CHECK_EQ(TextRaster(300.0f, 0), 213);
-    CHECK_EQ(TextRaster(300.0f, 213), 213);
-    CHECK_EQ(TextRaster(212.5f, 213), 213);
-    // Shown at the height it was drawn, every pixel of its texture one of the image's; only past the tallest stretched.
-    CHECK_EQ(TextShown(22.6f, 22), 22.0f);
-    CHECK_EQ(TextShown(21.1f, 22), 22.0f);
-    CHECK_EQ(TextShown(300.0f, 213), 300.0f);
-}
-
 namespace
 {
     // An image measured width by height, with halo pixels around it, at raster, and in proportion at other heights.

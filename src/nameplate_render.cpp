@@ -454,12 +454,8 @@ namespace headsup
         auto raster             = [&](float shown, int current) {
             return scales ? RasterHeight(shown, current) : FixedRasterHeight(shown);
         };
-        auto textRaster = [&](float shown, int current) {
-            return scales ? TextRaster(shown, current) : FixedRasterHeight(shown);
-        };
-        // A line's text height wanted and as drawn, and a run's badge text height, in the image.
-        auto textWanted = [&](const ComposedLine& line) { return line.look.textSize * scale * f.toY; };
-        auto textShown  = [&](const ComposedLine& line) { return TextShown(textWanted(line), p.lines[line.source].raster); };
+        // A line's text height and a run's badge text height, in the image.
+        auto textShown  = [&](const ComposedLine& line) { return line.look.textSize * scale * f.toY; };
         auto badgeShown = [&](const RunShape& run) { return run.iconSize * kBadgeShare * f.toY; };
         p.cursorRaster = CursorRaster(cursorShown, p.cursorRaster, settings.scaleCursor, settings.cursorHeight);
         const OrnamentSettings& ornament = settings.Kind(PlateKindOf(info.state)).ornament;
@@ -474,7 +470,7 @@ namespace headsup
             {
                 LineTextures& lt      = p.lines[line.source];
                 lineUsed[line.source] = true;
-                lt.raster             = textRaster(textWanted(line), lt.raster);
+                lt.raster             = raster(textShown(line), lt.raster);
                 TextLook look{StyleOf(line.look), line.look.color};
                 if (line.look.glow > 0.0f)
                 {
@@ -574,8 +570,7 @@ namespace headsup
         for (size_t i = timersHere ? f.selfTimers.size() : 0; i < p.timers.size(); ++i)
             ReleaseTexture(p.timers[i].texture);
         p.timers.resize(timersHere ? f.selfTimers.size() : 0);
-        p.timerRaster   = timersHere ? textRaster(timerShown, p.timerRaster) : 0;
-        const float timerDrawn = TextShown(timerShown, p.timerRaster);
+        p.timerRaster   = timersHere ? raster(timerShown, p.timerRaster) : 0;
         int timersReady = 0;
         for (; timersReady < static_cast<int>(p.timers.size()); ++timersReady)
         {
@@ -587,7 +582,7 @@ namespace headsup
         const ItemSize cursorBox = showCursor ? f.BoxOf(p.cursor, cursorShown) : ItemSize{};
         float timerHeight        = 0.0f;
         for (int i = 0; i < timersReady; ++i)
-            timerHeight = std::max(timerHeight, f.BoxOf(p.timers[i], timerDrawn).height);
+            timerHeight = std::max(timerHeight, f.BoxOf(p.timers[i], timerShown).height);
         if (lineCount > 0)
         {
             const float raise = static_cast<float>(settings.nameRaise) * scale;
@@ -696,8 +691,8 @@ namespace headsup
         for (int i = 0; i < timersReady; ++i)
         {
             const PlateTexture& t = p.timers[i];
-            addText(t, layout.centerX - f.BoxOf(t, timerDrawn).width / 2.0f,
-                layout.timersY + static_cast<float>(i) * layout.timerStep, timerDrawn);
+            addText(t, layout.centerX - f.BoxOf(t, timerShown).width / 2.0f,
+                layout.timersY + static_cast<float>(i) * layout.timerStep, timerShown);
         }
         // Only a name HeadsUp draws can move: the game's own stays where the game puts it.
         if (settings.stackNames && lineCount > 0)

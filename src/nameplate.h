@@ -120,12 +120,6 @@ namespace headsup
     // rises a little above it, so text is redrawn only when its size really changes and never flickers between two.
     // The steps end at a tallest one, which text shown taller is stretched from.
     int RasterHeight(float pixels, int current);
-    // The height text that scales with distance is drawn at: whole pixels, kept until the shown size is a whole pixel
-    // away, so moving the camera redraws it rather than stretching it. RasterHeight's smallest and tallest bound it.
-    int TextRaster(float pixels, int current);
-    // The height text drawn at raster is shown at: the raster, so each pixel of its texture is one of the image; text
-    // wanted taller than the tallest raster is stretched to its height.
-    float TextShown(float wanted, int raster);
     // The height text that keeps its size is drawn at: the size in whole pixels, to RasterHeight's tallest.
     int FixedRasterHeight(float pixels);
     // The height the target cursor's picture is drawn at, shown pixels tall: RasterHeight's (current, the one drawn

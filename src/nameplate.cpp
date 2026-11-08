@@ -239,18 +239,6 @@ namespace headsup
         return std::min(static_cast<int>(std::lround(size)), kRasterTallest);
     }
 
-    int TextRaster(float pixels, int current)
-    {
-        const float held = std::clamp(pixels, kRasterSmallest, static_cast<float>(kRasterTallest));
-        if (current > 0 && std::abs(held - static_cast<float>(current)) < 1.0f) return current;
-        return static_cast<int>(std::lround(held));
-    }
-
-    float TextShown(float wanted, int raster)
-    {
-        return wanted > static_cast<float>(kRasterTallest) ? wanted : static_cast<float>(raster);
-    }
-
     int FixedRasterHeight(float pixels)
     {
         return WholePixels(std::min(pixels, static_cast<float>(kRasterTallest)));
