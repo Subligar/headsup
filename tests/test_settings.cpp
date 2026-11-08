@@ -2799,6 +2799,9 @@ TEST(the_panels_widget_spacing_and_padding_are_kept_and_held_to_their_range)
     store.values["barWidgetPadding"] = "-9";
     const Settings held = LoadSettings(store);
     CHECK(held.barWidgetSpacing == kMaxWidgetSpacing && held.barWidgetPadding == 0);
+    // A file from before Padding lost its Set by Theme, -1, reads as the default 8 px.
+    store.values["barWidgetPadding"] = "-1.0000";
+    CHECK_EQ(LoadSettings(store).barWidgetPadding, 8);
 }
 
 TEST(the_target_widgets_detection_icons_and_visibility_are_kept_and_held_to_their_range)

@@ -58,6 +58,7 @@ namespace headsup
             int lo, hi;
             int step = 1;
         };
+        constexpr int kOldThemePadding = -1;
         constexpr IntKey kInts[] = {{"smoothness", &Settings::smoothness, kMinSmoothness, kMaxSmoothness},
             {"outlineThickness", &Settings::outlineThickness, kMinOutlineThickness, kMaxOutlineThickness, kPercentStep},
             {"outlineOpacity", &Settings::outlineOpacity, kMinOpacity, kMaxOpacity, kPercentStep},
@@ -1592,6 +1593,8 @@ namespace headsup
                 s.*b.field = HeldSwitch(store, b.key).value_or(s.*b.field);
             for (const IntKey& i : kInts)
                 s.*i.field = LoadInt(store, i.key, s.*i.field);
+            // Padding's Set by Theme, which round 20 took away: such a file gets the default.
+            if (s.barWidgetPadding == kOldThemePadding) s.barWidgetPadding = kDefaultWidgetPadding;
             // The shape a file from before had, which also gave its one size a width.
             const bool wasArrow = !HeldSwitch(store, kOldCursorFeatherKey).value_or(true);
             const std::string style = store.GetString(kCursorStyleKey, kNoText);
