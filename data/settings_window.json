@@ -193,7 +193,7 @@
             {
               "key": "show-separator",
               "name": "Show Separator",
-              "tip": "Where the top panel shows its separators, whatever the theme. Separator Style on the Theme page picks their shape. Default: Between Widgets and End Caps.",
+              "tip": "Where the top panel shows its separators, whatever the theme. Separator Style on the Theme page picks their shape. Default: Never.",
               "options": [
                 {"name": "Never", "tip": "No separators. Picking it clears the others."},
                 {"name": "Between Widgets", "tip": "A separator between each widget and the next."},
@@ -201,7 +201,7 @@
               ]
             },
             {"key": "height", "name": "Panel Height", "tip": "How tall the top panel is. The text and icons of every widget grow and shrink with it."},
-            {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Default: 0 px."},
+            {"key": "widget-spacing", "name": "Widget Spacing", "tip": "More room between every widget and the widgets beside it. Default: 2 px."},
             {"key": "hide-readout", "name": "Hide Server Info", "tip": "The game's S, R and % numbers at the top right."},
             {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
           ]
@@ -219,13 +219,13 @@
           "name": "Widget Appearance",
           "description": "How every widget on the top panel looks.",
           "settings": [
-            {"key": "widget-padding", "name": "Padding", "tip": "The room inside every widget, from its edges to its text. Default: the theme's own."},
-            {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of the icons in widgets. At 100% an icon is as tall as its widget can hold. Default: 65%."},
-            {"key": "widget-background", "name": "Show Background", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: Off."},
+            {"key": "widget-padding", "name": "Padding", "tip": "The room inside every widget, from its edges to its text. Default: 8 px."},
+            {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of the icons in widgets. At 100% an icon is as tall as its widget can hold. Default: 80%."},
+            {"key": "widget-background", "name": "Show Background", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: On."},
             {"key": "title-font", "name": "Primary Font", "tip": "The font of each widget's top line, of a widget on one line, and of the pop-outs' headings. Default: the theme's."},
             {"key": "text-font", "name": "Secondary Font", "tip": "The font of each widget's second line, its numbers and the pop-outs' text. Default: the theme's."},
             {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of the primary line's text to the size of the secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Both lines grow or shrink together to fit the Panel Height. Default: 1.20x."},
-            {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets' backgrounds are. Set by Theme keeps the theme's own. Default: Set by Theme."}
+            {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets' backgrounds are. Set by Theme keeps the theme's own. Default: 8 px."}
           ]
         },
         {
@@ -251,7 +251,7 @@
                 {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
                 {"key": "icon", "name": "Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is Show on Left."},
                 {"key": "alignment", "name": "Alignment", "tip": "Puts the widget's content against the left or right of its pill, or in its middle. Set by Location lines it up with the side of the panel it is on. Default is Set by Location."},
-                {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is on."},
+                {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is off."},
                 {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
                 {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is 0 px."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
@@ -269,16 +269,16 @@
                 {"key": "secondary-timezone", "name": "Secondary Timezone", "tip": "The zone of the Secondary Timezone button, which goes before its time, as in JST 13:07. Default is Japan (JST), the server's time, which the daily reset and the conquest tally go by."},
                 {"key": "24-hour", "name": "24-Hour"},
                 {"key": "seconds", "name": "Seconds", "tip": "Adds seconds to the Local Time button and to the time in the pop-out's title."},
-                {"key": "date-format", "name": "Date Format", "tip": "How the Local Date button writes the date. Default is MM/DD/YYYY."},
-                {"key": "bar-width", "name": "Bar Width", "tip": "How long the EXP Bar is. Default is 100 px."},
-                {"key": "bar-height", "name": "Bar Height", "tip": "How thick the EXP Bar is. Default is 6 px."},
+                {"key": "date-format", "name": "Date Format", "tip": "How the Local Date button writes the date. Default is MM/DD."},
+                {"key": "bar-width", "name": "Bar Width", "tip": "How long the EXP Bar is. Default is 250 px."},
+                {"key": "bar-height", "name": "Bar Height", "tip": "How thick the EXP Bar is. Default is 8 px."},
                 {"key": "bar-back", "name": "EXP Bar Background", "tip": "The color of the EXP Bar behind its fill. Set by Theme uses your theme's color. Picking a color switches it to Custom. Default is Set by Theme."},
                 {"key": "bar-color", "name": "EXP Bar Color", "tip": "The color of the EXP Bar's fill. Set by Theme uses your theme's colors. Picking a color switches it to Custom. Default is Set by Theme."},
-                {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows on it. Default is None."},
+                {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows on it. Default is EXP Percentage."},
                 {"key": "bar-text-align", "name": "Bar Text Alignment", "tip": "Puts the EXP Bar's text at its left or right end, or in its middle. Default is Center."},
                 {"key": "mem-text", "name": "Show Mem Text", "tip": "Puts \"Mem\" before the Memory button's figures. Off, the figures alone. Default is off."},
-                {"key": "status-display", "name": "Display", "tip": "What shows for each pinned status: its name, its icon, or both with the icon first. Default is Both Name & Icon."},
-                {"key": "earned-align", "name": "Earned EXP Alignment", "tip": "Puts the Earned EXP text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
+                {"key": "status-display", "name": "Display", "tip": "What shows for each pinned status: its name, its icon, or both with the icon first. Default is Only Icon."},
+                {"key": "earned-align", "name": "Earned EXP Alignment", "tip": "Puts the Earned EXP text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Right."},
                 {"key": "tnl-align", "name": "EXP TNL Alignment", "tip": "Puts the EXP Til Next Level text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
                 {"key": "percent-align", "name": "EXP Percentage Alignment", "tip": "Puts the EXP Percentage text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
                 {"key": "job-text", "name": "Job Text", "tip": "How Job Info and the EXP Bar's Job Text write your jobs and levels. Default is Main 75 / Sub 37."},
@@ -346,19 +346,19 @@
             {"key": "position", "name": "Position", "tip": "Pixels from its place under the top panel."},
             {"key": "background", "name": "Background", "tip": "Off, the help text alone, with no bar behind it."},
             {"key": "help-rounding", "name": "Corner Rounding", "tip": "How round the help bar's corners are. Set by Theme keeps the theme's own. Default: Set by Theme."},
-            {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: Auto."},
+            {"key": "help-text-size", "name": "Font Size", "tip": "The size of the help text. Auto uses the top panel's title size. Default: 14 px."},
             {
               "key": "anchor",
               "name": "Anchor",
-              "tip": "Which side of the screen the help bar keeps to. Its text lines up the same way inside it. Default: Left.",
+              "tip": "Which side of the screen the help bar keeps to. Its text lines up the same way inside it. Default: Center.",
               "options": [
                 {"name": "Left", "tip": "Against the screen's left edge, with its text on the left."},
                 {"name": "Center", "tip": "In the middle of the screen, with its text centered."},
                 {"name": "Right", "tip": "Against the screen's right edge, with its text on the right."}
               ]
             },
-            {"key": "full-width", "name": "Full Width", "tip": "The help bar takes the screen's whole width, however short its text. Default: Off."},
-            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 50%."},
+            {"key": "full-width", "name": "Full Width", "tip": "The help bar takes the screen's whole width, however short its text. Default: On."},
+            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 100%."},
             {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
           ]
         }
