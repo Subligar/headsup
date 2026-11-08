@@ -507,7 +507,8 @@ namespace headsup
     {
         if (glyphs.Empty() || capital.Empty()) return std::nullopt;
         return LineInk{
-            static_cast<float>(glyphs.top), static_cast<float>(capital.bottom), static_cast<float>(glyphs.bottom)};
+            static_cast<float>(glyphs.top), static_cast<float>(capital.bottom), static_cast<float>(glyphs.bottom),
+            static_cast<float>(capital.top)};
     }
 
     int OuterPad(const BoxStyle& style) { return style.outer != 0 ? style.outerGap + 1 : 0; }

@@ -686,19 +686,20 @@ TEST(resetting_drops_a_pinned_popup_and_the_pointer)
 
 namespace
 {
-    // GDI's line box is taller than the ink in it: leading above the capitals, and the title's descenders reach a
-    // quarter of its size below its baseline.
+    // GDI's line box is taller than the ink in it: leading above the capitals, brackets a little over them, and the
+    // title's descenders reach a quarter of its size below its baseline.
     LineInk FakeInk(bool title, int pixels)
     {
         const float px = static_cast<float>(pixels);
-        return title ? LineInk{0.30f * px, 1.00f * px, 1.25f * px} : LineInk{0.25f * px, 0.95f * px, 1.20f * px};
+        return title ? LineInk{0.30f * px, 1.00f * px, 1.25f * px, 0.35f * px}
+                     : LineInk{0.25f * px, 0.95f * px, 1.20f * px, 0.30f * px};
     }
 
     // Ink a quarter of the size: anything fits.
     LineInk SmallInk(bool, int pixels)
     {
         const float px = static_cast<float>(pixels);
-        return LineInk{0.0f, 0.2f * px, 0.25f * px};
+        return LineInk{0.0f, 0.2f * px, 0.25f * px, 0.0f};
     }
 
 }
@@ -745,10 +746,11 @@ TEST(a_titles_descenders_stay_clear_of_its_detail_line_and_both_inside_the_pill)
             CHECK(std::fabs(above - underBaseline) <= 0.01f);
             // Three rows clear from the title's descenders to the detail's capitals: two still read as touching.
             CHECK((t.detailY + detail.top) - (t.titleY + title.bottom) >= 3.0f - 0.01f);
-            // A title alone (gil, the clock): its capitals centered the same way, all its ink inside.
-            const float aloneAbove = (t.aloneY + alone.top) - inTop, aloneUnder = inBottom - (t.aloneY + alone.baseline);
+            // A title alone (gil, the clock): its capitals centered on the pill's middle, where an icon beside it
+            // is, not its taller brackets (the clock's icon sat high of its time); all its ink inside.
+            const float aloneAbove = (t.aloneY + alone.capital) - inTop, aloneUnder = inBottom - (t.aloneY + alone.baseline);
             CHECK(std::fabs(aloneAbove - aloneUnder) <= 0.01f);
-            CHECK(aloneAbove >= margin - 0.01f && t.aloneY + alone.bottom <= inBottom + 0.01f);
+            CHECK((t.aloneY + alone.top) - inTop >= margin - 0.01f && t.aloneY + alone.bottom <= inBottom + 0.01f);
         }
 }
 
@@ -764,7 +766,7 @@ TEST(a_short_row_shrinks_both_lines_together_and_a_title_alone_keeps_its_full_si
         // Its capitals centered in the pill, within a pixel.
         const LineInk alone = FakeInk(true, t.alone);
         const BarRow row    = PillRow(m);
-        const float above = (t.aloneY + alone.top) - row.y, below = row.y + row.height - (t.aloneY + alone.baseline);
+        const float above = (t.aloneY + alone.capital) - row.y, below = row.y + row.height - (t.aloneY + alone.baseline);
         CHECK(std::fabs(above - below) <= 1.01f);
     }
 }

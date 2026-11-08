@@ -407,11 +407,11 @@ TEST(ink_is_the_box_of_the_pixels_covered_at_least_the_threshold)
     CHECK(FindInk(Coverage{}, 64).Empty());
 }
 
-TEST(a_lines_ink_runs_from_its_glyphs_top_to_their_bottom_with_the_h_on_its_baseline)
+TEST(a_lines_ink_runs_from_its_glyphs_top_to_their_bottom_with_the_h_on_its_baseline_and_its_top_the_capitals)
 {
     const InkBox glyphs{1, 2, 30, 17}, capital{0, 4, 9, 14}; // "H0gj" reaching above and below the H
     const std::optional<LineInk> ink = LineInkOf(glyphs, capital);
-    CHECK(ink.has_value() && ink->top == 2.0f && ink->baseline == 14.0f && ink->bottom == 17.0f);
+    CHECK(ink.has_value() && ink->top == 2.0f && ink->baseline == 14.0f && ink->bottom == 17.0f && ink->capital == 4.0f);
     CHECK(!LineInkOf(InkBox{}, capital).has_value()); // GDI drew nothing: no ink to keep
     CHECK(!LineInkOf(glyphs, InkBox{}).has_value());
 }

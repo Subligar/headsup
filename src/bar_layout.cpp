@@ -265,15 +265,15 @@ namespace headsup
         const float top      = std::min(even, row.y + kPillBorder + inside - block); // of the title's ink
         t.titleY          = top - title.top;
         t.detailY         = top + (title.bottom - title.top) + gap - detail.top;
-        // A title alone: as large as its ink fits, its capitals centered, raised only if its descenders would pass the
-        // border.
+        // A title alone: as large as its ink fits, its capitals centered as an icon beside it is (not its taller
+        // brackets), raised only if its descenders would pass the border.
         LineInk alone;
         for (t.alone = WholePixels(m.title); t.alone > 1; --t.alone)
             if (alone = ink(true, t.alone); alone.bottom - alone.top <= room) break;
         alone = ink(true, t.alone);
-        const float centered = row.y + (row.height - (alone.baseline - alone.top)) / 2.0f;
-        const float lowest   = row.y + row.height - kPillBorder - (alone.bottom - alone.top);
-        t.aloneY             = std::min(centered, lowest) - alone.top;
+        const float centered = row.y + (row.height - (alone.baseline - alone.capital)) / 2.0f - alone.capital;
+        const float lowest   = row.y + row.height - kPillBorder - alone.bottom;
+        t.aloneY             = std::min(centered, lowest);
         return t;
     }
 

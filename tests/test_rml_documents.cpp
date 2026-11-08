@@ -1,4 +1,5 @@
 #include "bar_design.h"
+#include "bar_layout.h"
 #include "bar_document.h"
 #include "bar_widgets.h"
 #include "menu_document.h"
@@ -961,4 +962,61 @@ TEST(an_exp_bar_draws_in_its_themes_colors_or_its_own)
         CHECK(ownFill == Rml::Colourb(0x20, 0xC0, 0x40, 0xFF) && ownDecorator.find("gradient") == std::string::npos);
         CHECK_EQ(rml.Said(), "");
     }
+}
+
+TEST(a_widgets_icon_stands_on_the_middle_of_its_lone_lines_figures_as_a_clock_ticks)
+{
+    // The user's profile when they saw the clock's icon off its time: a 45 px panel in the game's window art, icons at
+    // 65%, a 24-hour clock of one line.
+    Settings settings;
+    settings.barFontRatio = 1.2f;
+    settings.barIconScale = 65;
+    WidgetOptions& o      = settings.Widget(BarWidget::EarthTime);
+    o.design              = DesignFrom(BarWidget::EarthTime, "time | -server -vana -date");
+    o.clock24             = true;
+    o.clockSeconds        = false;
+    const BarPalette& p   = PaletteOf(BarTheme::Vanilla);
+    const BarMetrics m    = MetricsFor(kBarHeight, p.shape, settings.barFontRatio, kDefaultPopupScale, settings.barIconScale);
+    const char* font      = BarTitleFont(settings, p.shape);
+    test::RmlSession rml;
+    const test::GlyphInk glyphs(font);
+    const TextRow lines = FitTextRow(m, [&](bool title, int pixels) {
+        return glyphs.LineInk(title ? kTitleGlyphs : kDetailGlyphs, pixels);
+    });
+    const BarLook look{p, settings, m, PillRow(m), lines, font, false, BarTextFont(settings), std::nullopt};
+    Rml::FontEngineInterface* engine = Rml::GetFontEngineInterface();
+    const Rml::FontMetrics& metrics  = engine->GetFontMetrics(engine->GetFontFaceHandle(Rml::StringUtilities::ToLower(font),
+        Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal, lines.alone));
+    // The lone line as the plugin places it: RmlUi's baseline on the one the ink was fitted with.
+    const float rmlBaseline = (std::round(metrics.ascent + metrics.descent) - metrics.ascent - metrics.descent) / 2.0f + metrics.ascent;
+    BarTextPlace place;
+    place.alone = BarLinePlace{WholePixels(metrics.ascent + metrics.descent),
+        std::round(lines.aloneY) + glyphs.LineInk(kTitleGlyphs, lines.alone).baseline - rmlBaseline, 0.0f};
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::EarthTime));
+    widget->SetClass(kHiddenClass, false);
+    const auto top = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).y; };
+    const float figures = glyphs.Above("0123456789", lines.alone); // the digits' ink over their baseline
+    BarState state;
+    for (const auto& [hour, minute] : {std::pair{21, 7}, std::pair{0, 0}, std::pair{13, 48}})
+    {
+        state.earthHour = hour, state.earthMinute = minute;
+        WidgetContent c = BarWidgetContent(BarWidget::EarthTime, state, settings);
+        Steady(c, look);
+        widget->SetInnerRML(WidgetRml(c, look, {}));
+        rml.context->Update();
+        Rml::ElementList icons, digits;
+        widget->GetElementsByClassName(icons, "icon");
+        widget->GetElementsByClassName(digits, "fig");
+        CHECK(icons.size() == 1 && digits.size() == 4);
+        if (icons.empty() || digits.empty()) return;
+        const float icon = top(icons.front()) + icons.front()->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f;
+        for (Rml::Element* digit : digits)
+        {
+            const float baseline = top(digit) + (digit->GetLineHeight() - metrics.ascent - metrics.descent) / 2.0f + metrics.ascent;
+            CHECK(std::fabs(baseline - figures / 2.0f - icon) <= 0.5f);
+        }
+    }
+    CHECK_EQ(rml.Said(), "");
 }
