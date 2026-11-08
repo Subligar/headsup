@@ -264,7 +264,15 @@ namespace headsup
         constexpr const char* kNoExpBarText   = "none";
         const char* const kExpTextNames[kExpTextCount] = {"earned", "toNext", "percent", "jobs"};
         constexpr const char* kExpBarTextAlignKey = "barExpBarTextAlign"; // by kAlignNames
-        constexpr const char* kJobNamesKey  = "jobNames";
+        constexpr const char* kJobInfoAlignKey = "barJobInfoAlign", *kEarnedAlignKey = "barEarnedAlign"; // by kAlignNames
+        constexpr const char* kToNextAlignKey = "barToNextAlign", *kPercentAlignKey = "barPercentAlign";
+        constexpr const char* kExpBarBackKey = "barExpBarBack", *kExpBarFillKey = "barExpBarFill"; // ARGB in hex
+        constexpr const char* kThemeColor = "theme"; // in place of a color: the theme's
+        constexpr std::pair<const char*, Align WidgetOptions::*> kJobAligns[] = {{kExpBarTextAlignKey, &WidgetOptions::expBarTextAlign},
+            {kJobInfoAlignKey, &WidgetOptions::jobInfoAlign}, {kEarnedAlignKey, &WidgetOptions::earnedAlign},
+            {kToNextAlignKey, &WidgetOptions::toNextAlign}, {kPercentAlignKey, &WidgetOptions::percentAlign}};
+        constexpr std::pair<const char*, std::optional<uint32_t> WidgetOptions::*> kExpBarColors[] = {
+            {kExpBarBackKey, &WidgetOptions::expBarBack}, {kExpBarFillKey, &WidgetOptions::expBarFill}};
         constexpr const char* kZoneIdKey    = "zoneId";
         constexpr const char* kMemTextKey   = "memText";
         constexpr const char* kStatusDisplayKey = "statusDisplay";
@@ -432,12 +440,18 @@ namespace headsup
 
         void StoreBool(SettingsStore& store, const std::string& key, bool v) { store.Set(key.c_str(), v ? kTrue : "false"); }
 
-        uint32_t LoadHex(SettingsStore& store, const std::string& key, uint32_t fallback)
+        // None for a key missing or not in hex.
+        std::optional<uint32_t> HeldHex(SettingsStore& store, const std::string& key)
         {
             const std::string text = store.GetString(key.c_str(), "");
             char* end              = nullptr;
             const unsigned long v  = std::strtoul(text.c_str(), &end, kHex);
-            return text.empty() || *end != '\0' ? fallback : static_cast<uint32_t>(v);
+            return text.empty() || *end != '\0' ? std::nullopt : std::optional(static_cast<uint32_t>(v));
+        }
+
+        uint32_t LoadHex(SettingsStore& store, const std::string& key, uint32_t fallback)
+        {
+            return HeldHex(store, key).value_or(fallback);
         }
 
         void StoreHex(SettingsStore& store, const std::string& key, uint32_t v)
@@ -1340,7 +1354,6 @@ namespace headsup
             }
             case BarWidget::Job:
             {
-                o.jobNames = flag(kJobNamesKey, o.jobNames);
                 o.jobText  = static_cast<JobText>(NameIndex(kJobTextNames, kJobTextCount, text(kJobTextKey), static_cast<int>(o.jobText)));
                 o.expBarWidth  = number(kExpBarWidthKey, o.expBarWidth);
                 o.expBarHeight = number(kExpBarHeightKey, o.expBarHeight);
@@ -1348,8 +1361,10 @@ namespace headsup
                     o.expBarText.reset();
                 else if (const int at = NameIndex(kExpTextNames, kExpTextCount, barText, -1); at >= 0)
                     o.expBarText = static_cast<ExpText>(at);
-                o.expBarTextAlign = static_cast<Align>(
-                    NameIndex(kAlignNames, kAlignCount, text(kExpBarTextAlignKey), static_cast<int>(o.expBarTextAlign)));
+                for (const auto& [key, align] : kJobAligns)
+                    o.*align = static_cast<Align>(NameIndex(kAlignNames, kAlignCount, text(key), static_cast<int>(o.*align)));
+                for (const auto& [key, color] : kExpBarColors)
+                    o.*color = HeldHex(store, CopyKey(key, w));
                 break;
             }
             case BarWidget::Target:
@@ -1407,12 +1422,15 @@ namespace headsup
                 text(kDateFormatKey, kDateFormatNames[static_cast<int>(o.dateFormat)]);
                 break;
             case BarWidget::Job:
-                flag(kJobNamesKey, o.jobNames);
                 text(kJobTextKey, kJobTextNames[static_cast<int>(o.jobText)]);
                 StoreFloat(store, CopyKey(kExpBarWidthKey, w), static_cast<float>(o.expBarWidth));
                 StoreFloat(store, CopyKey(kExpBarHeightKey, w), static_cast<float>(o.expBarHeight));
                 text(kExpBarTextKey, o.expBarText ? kExpTextNames[static_cast<int>(*o.expBarText)] : kNoExpBarText);
-                text(kExpBarTextAlignKey, kAlignNames[static_cast<int>(o.expBarTextAlign)]);
+                for (const auto& [key, align] : kJobAligns)
+                    text(key, kAlignNames[static_cast<int>(o.*align)]);
+                for (const auto& [key, color] : kExpBarColors)
+                    if (o.*color) StoreHex(store, CopyKey(key, w), *(o.*color));
+                    else text(key, kThemeColor);
                 break;
             case BarWidget::Target:
                 StoreFloat(store, CopyKey(kTargetDetectionKey, w), static_cast<float>(o.targetDetection));

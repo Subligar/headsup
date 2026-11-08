@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -70,10 +71,13 @@ namespace headsup
     {
         WidgetPart part;
         std::vector<Span> spans;
+        std::optional<Align> align{}; // a text's own place on its line
     };
     // base with its lines made of parts as design orders them, a part's gap between two. The parts of marks alone at
     // the very start of the first line are its leading icons and coin; a first line with nothing gives way to the
-    // second. A part on the second line dims unless it shades its own text.
+    // second. A part on the second line dims unless it shades its own text. On a line with aligned parts, those of one
+    // alignment are one run (Span::align), left, center then right; a part with none goes with the part before it, else
+    // the one after.
     WidgetContent ComposeContent(const WidgetDesign& design, std::vector<PartContent> parts, WidgetContent base);
     // The picture a part's chip in the Widget Designer shows before its name: an icon, a game picture or gil's coin.
     struct PartMark

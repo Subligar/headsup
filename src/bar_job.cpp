@@ -143,20 +143,15 @@ namespace headsup
     {
         if (!job) return {};
         const JobSample& s = job->sample;
-        Span jobs = Text(o.jobNames ? JobsAs(s, o.jobText)
-                                    : "Lv " + std::to_string(s.mainLevel) +
-                                          (s.subLevel > 0 && !std::string(JobName(s.subJob)).empty()
-                                                  ? " / " + std::to_string(s.subLevel)
-                                                  : ""));
-        std::vector<PartContent> parts{{WidgetPart::JobJobs, ListOf(std::move(jobs))},
-            {WidgetPart::JobEarned, ListOf(Text(ExpSaid(s, ExpText::Earned)))},
-            {WidgetPart::JobToNext, ListOf(Text(ExpSaid(s, ExpText::ToNext)))},
-            {WidgetPart::JobPercent, ListOf(Text(ExpSaid(s, ExpText::Percent)))}, {WidgetPart::JobBar, {}}};
+        std::vector<PartContent> parts{{WidgetPart::JobJobs, ListOf(Text(JobsAs(s, o.jobText))), o.jobInfoAlign},
+            {WidgetPart::JobEarned, ListOf(Text(ExpSaid(s, ExpText::Earned))), o.earnedAlign},
+            {WidgetPart::JobToNext, ListOf(Text(ExpSaid(s, ExpText::ToNext))), o.toNextAlign},
+            {WidgetPart::JobPercent, ListOf(Text(ExpSaid(s, ExpText::Percent))), o.percentAlign}, {WidgetPart::JobBar, {}}};
         if (const std::optional<float> done = ExpDone(s))
         {
             Span bar = Text("");
             bar.bar  = InlineBar{*done, o.expBarWidth, o.expBarHeight, o.expBarText ? ExpSaid(s, *o.expBarText, o.jobText) : "",
-                 o.expBarTextAlign};
+                 o.expBarTextAlign, o.expBarBack, o.expBarFill};
             parts.back().spans.push_back(bar);
         }
         base.hasPopup = true;

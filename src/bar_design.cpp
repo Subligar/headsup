@@ -174,7 +174,7 @@ namespace headsup
 
     WidgetContent ComposeContent(const WidgetDesign& design, std::vector<PartContent> parts, WidgetContent base)
     {
-        std::array<std::vector<std::vector<Span>>, kDesignLines> placed; // each line's parts with something to show
+        std::array<std::vector<PartContent>, kDesignLines> placed; // each line's parts with something to show
         for (int line = 0; line < kDesignLines; ++line)
             for (const DesignChip& chip : design.lines[static_cast<size_t>(line)])
             {
@@ -188,18 +188,35 @@ namespace headsup
                         base.icons.push_back(*s.icon);
                     continue;
                 }
-                placed[static_cast<size_t>(line)].push_back(std::move(part->spans));
+                placed[static_cast<size_t>(line)].push_back(std::move(*part));
             }
         if (placed[0].empty()) std::swap(placed[0], placed[1]);
         // The second line is the quieter one: a part there dims, unless it shades its own text.
-        for (std::vector<Span>& part : placed[1])
-            if (std::ranges::none_of(part, [](const Span& s) { return s.tone == Tone::Dim; }))
-                for (Span& span : part)
+        for (PartContent& part : placed[1])
+            if (std::ranges::none_of(part.spans, [](const Span& s) { return s.tone == Tone::Dim; }))
+                for (Span& span : part.spans)
                     if (span.tone == Tone::Normal && !span.text.empty()) span.tone = Tone::Dim;
         std::array<std::vector<Span>, kDesignLines> lines;
         for (int line = 0; line < kDesignLines; ++line)
-            for (std::vector<Span>& part : placed[static_cast<size_t>(line)])
-                AddPart(lines[static_cast<size_t>(line)], std::move(part));
+        {
+            std::vector<PartContent>& parts = placed[static_cast<size_t>(line)];
+            std::vector<Span>& spans        = lines[static_cast<size_t>(line)];
+            std::optional<Align> near;
+            for (PartContent& part : parts)
+                if (part.align) near = part.align;
+                else part.align = near;
+            near.reset();
+            for (auto part = parts.rbegin(); part != parts.rend(); ++part)
+                if (part->align) near = part->align;
+                else part->align = near;
+            std::ranges::stable_sort(parts, {}, &PartContent::align);
+            for (size_t i = 0; i < parts.size(); ++i)
+            {
+                const size_t at = spans.size();
+                AddPart(spans, std::move(parts[i].spans));
+                if (parts[i].align && (i == 0 || parts[i - 1].align != parts[i].align)) spans[at].align = parts[i].align;
+            }
+        }
         base.title    = std::move(lines[0]);
         base.subtitle = std::move(lines[1]);
         return base;

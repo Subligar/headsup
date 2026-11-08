@@ -2006,7 +2006,7 @@ TEST(each_widget_can_drop_its_second_line_or_its_icons)
     CHECK(!w.coin && Joined(w.title) == "100");
 }
 
-TEST(the_job_widgets_design_places_its_exp_bar_anywhere_and_its_jobs_can_show_levels_alone)
+TEST(the_job_widgets_design_places_its_exp_bar_anywhere)
 {
     Settings settings;
     BarState state;
@@ -2021,11 +2021,9 @@ TEST(the_job_widgets_design_places_its_exp_bar_anywhere_and_its_jobs_can_show_le
     o.design = DesignFrom(BarWidget::Job, "jobs | tonext -bar");
     w        = Content(BarWidget::Job, state, settings);
     CHECK(std::ranges::none_of(w.subtitle, [](const Span& span) { return span.bar.has_value(); }));
-    o.jobNames = false;
-    CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "Lv 30 / 15");
     s.subJob  = 0, s.subLevel = 0; // no support job yet
     state.job = JobReport{s, std::nullopt};
-    CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "Lv 30");
+    CHECK(Joined(Content(BarWidget::Job, state, settings).title) == "WAR 30");
 }
 
 TEST(the_job_widgets_design_can_put_its_exp_first_or_show_it_alone)
@@ -2039,8 +2037,13 @@ TEST(the_job_widgets_design_can_put_its_exp_first_or_show_it_alone)
     WidgetOptions& o = settings.Widget(BarWidget::Job);
     o.design         = DesignFrom(BarWidget::Job, "tonext | jobs -bar");
     WidgetContent w  = Content(BarWidget::Job, state, settings);
-    CHECK(w.title == ListOf(Text("3,460 til next level"))); // the larger line, in the title's own tone
-    CHECK(w.subtitle == ListOf(Text("WAR 30 / NIN 15", Tone::Dim)));
+    // Each text a run of its own alignment, at the left by default.
+    const auto left = [](Span span) {
+        span.align = Align::Left;
+        return ListOf(std::move(span));
+    };
+    CHECK(w.title == left(Text("3,460 til next level"))); // the larger line, in the title's own tone
+    CHECK(w.subtitle == left(Text("WAR 30 / NIN 15", Tone::Dim)));
     CHECK(w.figures && w.hasPopup);
     o.design = DesignFrom(BarWidget::Job, "-jobs tonext | -bar");
     w        = Content(BarWidget::Job, state, settings);
@@ -2048,7 +2051,7 @@ TEST(the_job_widgets_design_can_put_its_exp_first_or_show_it_alone)
     s.mainLevel = 75, s.subLevel = 37, s.merits = 7, s.meritsMax = 10, s.limitPoints = 4210;
     state.job = JobReport{s, std::nullopt};
     w         = Content(BarWidget::Job, state, settings);
-    CHECK(w.title == ListOf(Text("7 merits")) && w.subtitle.empty());
+    CHECK(w.title == left(Text("7 merits")) && w.subtitle.empty());
     state.job.reset(); // the title screen
     w = Content(BarWidget::Job, state, settings);
     CHECK(Joined(w.title) == "-" && w.subtitle.empty());

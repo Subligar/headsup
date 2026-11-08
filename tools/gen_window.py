@@ -190,7 +190,7 @@ PIECES = Pieces(
         'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-rounding': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
             'design', 'icon', 'alignment', 'show-zone-id', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
-            'seconds', 'date-format', 'job-names', 'job-text', 'bar-width', 'bar-height', 'bar-text', 'bar-text-align', 'mem-text', 'status-display'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),
+            'seconds', 'date-format', 'job-text', 'job-text-align', 'earned-align', 'tnl-align', 'percent-align', 'bar-width', 'bar-height', 'bar-back', 'bar-color', 'bar-text', 'bar-text-align', 'mem-text', 'status-display'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),
         'trays': Setting(unnamed=True),
         # Mouse Cursor and HeadsUp Config
         'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'lock-cursor': Setting(), 'keep-pointer': Setting(),
@@ -218,7 +218,7 @@ PIECES = Pieces(
         'setup-widget-groups': List(4),
     },
     words={'switched-off': True, 'switch-off': True, 'switch-on': True, 'switched-off-top-panel': True,
-           'switched-off-headsup': True, 'key-add': True, 'key-waiting': True, 'always': True, 'never': True, 'conditions': True, 'checks-all': True, 'checks-none': True, 'checks-picked': True, 'local': True, 'themes': True,
+           'switched-off-headsup': True, 'key-add': True, 'key-waiting': True, 'always': True, 'never': True, 'conditions': True, 'checks-all': True, 'checks-none': True, 'checks-picked': True, 'local': True, 'themes': True, 'custom-color': True,
            'default': True, 'auto': True, 'reset-to-default': False, 'cutoff-off': True, 'weak-off': False,
            'weak-rank': False, 'resist-off': False, 'resist-rank': False, 'unused-tags-these': True, 'unused-tags-name': True, 'or': True,
            'reload': True, 'export': True,

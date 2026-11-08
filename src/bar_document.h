@@ -93,6 +93,8 @@ namespace headsup
     constexpr const char* kJoinAfterClass  = "join-after";
     // A widget's class for the section it is in, whose side of the panel its content lines up with.
     const char* SectionClass(BarSection section);
+    // The track an EXP bar's fill runs along, in a theme: its color while Set by Theme. Its fill is the accent's gradient.
+    uint32_t ExpBarBack(const BarPalette& palette);
     // A widget's class for its Alignment, which wins over its section's; empty for Set by Location.
     const char* AlignClass(WidgetAlign align);
     // A widget's inner markup: its icons, coin, title and detail lines in their colors, and its progress bar.

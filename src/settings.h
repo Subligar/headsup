@@ -75,8 +75,10 @@ namespace headsup
         int expBarHeight     = kDefaultExpBarHeight;
         std::optional<ExpText> expBarText;           // what its EXP Bar says; none for nothing
         Align expBarTextAlign = Align::Center;       // where on the bar it says it
-        bool jobNames        = true;
+        std::optional<uint32_t> expBarBack, expBarFill; // its EXP Bar's colors (ARGB); none for the theme's
         JobText jobText      = JobText::MainSub;     // how its Job Info says the jobs
+        // Where on its line each of its texts goes, against the widget's other lines.
+        Align jobInfoAlign = Align::Left, earnedAlign = Align::Left, toNextAlign = Align::Left, percentAlign = Align::Left;
         uint32_t targetDetection = kDefaultDetection; // Target: the senses its Detection part shows, by DetectionBit
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
         int worldRoute       = 0;                    // World Info: its Tracked Ship, by TravelRoutes

@@ -277,17 +277,54 @@ TEST(the_job_widgets_bar_rows_show_with_its_exp_bar_and_job_text_with_its_job_in
     };
     w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs | tonext bar");
     std::string shown = rows();
-    for (const char* key : {"bar-width", "bar-height", "bar-text", "job-names", "job-text"})
+    for (const char* key : {"bar-width", "bar-height", "bar-back", "bar-color", "bar-text", "job-text"})
         CHECK(Has(shown, key));
+    CHECK(!Has(shown, "job-names")); // Job Text says it all
     w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext -bar");
     shown = rows();
-    for (const char* key : {"bar-width", "bar-height", "bar-text", "job-names", "job-text"})
+    for (const char* key : {"bar-width", "bar-height", "bar-back", "bar-color", "bar-text", "job-text"})
         CHECK(!Has(shown, key));
-    // Job Text names the jobs, so it goes with Job Names off.
-    w.settings.Widget(job).design   = DesignFrom(BarWidget::Job, "jobs | tonext");
-    w.settings.Widget(job).jobNames = false;
-    shown = rows();
-    CHECK(Has(shown, "job-names") && !Has(shown, "job-text"));
+}
+
+TEST(each_job_widget_texts_alignment_shows_while_its_button_is_on)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on = true;
+    w.readings.settingsOf     = {job};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    const std::pair<const char*, const char*> texts[] = {{"jobs", "job-text-align"}, {"earned", "earned-align"},
+        {"tonext", "tnl-align"}, {"percent", "percent-align"}};
+    for (const auto& [on, key] : texts)
+    {
+        w.settings.Widget(job).design = DesignFrom(BarWidget::Job, std::string(on) + " bar");
+        const std::string shown = rows();
+        for (const auto& [other, otherKey] : texts)
+            CHECK(Has(shown, otherKey) == (other == on));
+    }
+    // Each sets its own text's alignment.
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "percent bar");
+    w.Pass({{"toppanel-widgets-percent-align-job-s-2", kClickEvent, ""}});
+    const WidgetOptions& o = w.settings.Widget(job);
+    CHECK(o.percentAlign == Align::Right && o.jobInfoAlign == Align::Left && o.expBarTextAlign == Align::Center);
+}
+
+TEST(the_exp_bars_colors_are_the_themes_until_one_is_picked)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on     = true;
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs | bar");
+    w.readings.settingsOf         = {job};
+    w.Pass({{"toppanel-widgets-bar-color-job-s-1", kClickEvent, ""}});
+    const WidgetOptions& o = w.settings.Widget(job);
+    // Custom starts from the theme's accent, the start of its fill's gradient.
+    CHECK(o.expBarFill == w.settings.customPalette.accent && !o.expBarBack);
+    w.Pass({{"toppanel-widgets-bar-color-job-s-0", kClickEvent, ""}});
+    CHECK(!o.expBarFill);
 }
 
 TEST(job_text_shows_for_a_bar_saying_the_jobs_without_job_info_and_comes_last)
@@ -306,9 +343,13 @@ TEST(job_text_shows_for_a_bar_saying_the_jobs_without_job_info_and_comes_last)
     w.settings.Widget(job).expBarText = ExpText::Jobs;
     shown = rows();
     CHECK(Has(shown, "job-text"));
-    // Job Text is the widget's last setting.
-    for (const char* key : {"bar-width", "bar-height", "bar-text", "bar-text-align"})
-        CHECK(shown.find(key) < shown.find("job-text"));
+    // Job Text is the widget's last setting but its alignment, just after it.
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs earned percent | tonext bar");
+    shown = rows();
+    for (const char* key : {"bar-width", "bar-height", "bar-back", "bar-color", "bar-text", "bar-text-align", "earned-align",
+             "tnl-align", "percent-align"})
+        CHECK(shown.find(key) < shown.find("\"toppanel-widgets-job-text-job"));
+    CHECK(shown.find("\"toppanel-widgets-job-text-job") < shown.find("job-text-align"));
     w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext -bar");
     CHECK(!Has(rows(), "bar-text-align"));
 }

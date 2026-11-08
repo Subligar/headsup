@@ -734,6 +734,12 @@ namespace headsup
             for (const LayoutRow& row : c.layout.RowsOf(e))
             {
                 const std::string label = Labeled(row.name, row.key, scope);
+                // A Job & EXP alignment, shown while the part it places is on.
+                const auto alignRow = [&](WidgetPart part, Align& align) {
+                    if (kind != BarWidget::Job || !PartOn(o.design, part)) return;
+                    const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Align));
+                    form.Segments(label.c_str(), align, names.data(), kAlignCount, row.tip);
+                };
                 form.Fade(off);
                 switch (static_cast<WidgetTabsRow>(row.row))
                 {
@@ -917,7 +923,7 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::JobText:
-                    if ((jobs && o.jobNames) || (bar && o.expBarText == ExpText::Jobs))
+                    if (jobs || (bar && o.expBarText == ExpText::Jobs))
                     {
                         int text = static_cast<int>(o.jobText);
                         form.NumberDropdown(label.c_str(), text, 0, kJobTextCount - 1,
@@ -926,11 +932,20 @@ namespace headsup
                         o.jobText = static_cast<JobText>(text);
                     }
                     break;
-                case WidgetTabsRow::BarTextAlign:
+                case WidgetTabsRow::BarTextAlign: alignRow(WidgetPart::JobBar, o.expBarTextAlign); break;
+                case WidgetTabsRow::JobTextAlign: alignRow(WidgetPart::JobJobs, o.jobInfoAlign); break;
+                case WidgetTabsRow::EarnedAlign: alignRow(WidgetPart::JobEarned, o.earnedAlign); break;
+                case WidgetTabsRow::TnlAlign: alignRow(WidgetPart::JobToNext, o.toNextAlign); break;
+                case WidgetTabsRow::PercentAlign: alignRow(WidgetPart::JobPercent, o.percentAlign); break;
+                case WidgetTabsRow::BarBack:
+                case WidgetTabsRow::BarColor:
                     if (bar)
                     {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Align));
-                        form.Segments(label.c_str(), o.expBarTextAlign, names.data(), kAlignCount, row.tip);
+                        const bool back           = static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::BarBack;
+                        const BarPalette& palette = ShownPalette(c);
+                        const char* const words[] = {Word(c, WindowWord::Themes), Word(c, WindowWord::CustomColor)};
+                        form.ThemeColorRow(label.c_str(), back ? o.expBarBack : o.expBarFill,
+                            back ? ExpBarBack(palette) : palette.accent, words, row.tip);
                     }
                     break;
                 case WidgetTabsRow::BarWidth:
@@ -940,9 +955,6 @@ namespace headsup
                 case WidgetTabsRow::BarHeight:
                     if (bar)
                         form.SliderInt(label.c_str(), o.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight, Pixels, row.tip);
-                    break;
-                case WidgetTabsRow::JobNames:
-                    if (jobs) form.Switch(label.c_str(), o.jobNames, row.tip);
                     break;
                 case WidgetTabsRow::MemText:
                     if (kind == BarWidget::Performance && PartOn(o.design, WidgetPart::PerfMemory))

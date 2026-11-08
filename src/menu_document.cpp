@@ -251,6 +251,7 @@ namespace headsup
         css += ".seg{flex:1 0 auto;height:" + frame + ";" + framed + "padding:0px " + Em(kSegmentPad) + ";margin-left:" +
                Em(kSegmentGap) + ";border-radius:" + radius + ";text-align:center;white-space:nowrap;background-color:" +
                color(c.control) + ";color:" + color(c.muted) + ";}";
+        css += ".swatched .segs{min-width:" + Em(kControlWidth - kFrame - kControlGap) + ";}"; // a swatch beside it
         css += ".seg:first-child{margin-left:0px;}";
         css += ".seg:hover{background-color:" + color(c.hover) + ";}";
         css += ".seg.picked{background-color:" + color(c.accent) + ";}";

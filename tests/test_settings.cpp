@@ -350,7 +350,6 @@ helpBarY=8.0000
         s.helpBarBackground = false;
         s.helpBarX         = 12;
         s.helpBarY         = 8;
-        s.Widget(BarWidget::Job).jobNames   = false;
         s.Widget(BarWidget::EarthTime).clock24    = false;
         s.stackNames = true;
         s.hideInEvent = true;
@@ -383,7 +382,7 @@ helpBarY=8.0000
 
     // The keys of kSavedFile that only an older build's file carries: a migration reads them, or nothing does, and
     // nothing writes them.
-    const char* const kOldKeys[] = {"showRanks", "scaleOwnName", "movedWindows", "windowOffsets", "windowGroups", "allUnderBar", "menuScale", "chocoboPointer", "untargetedOpacity", "glowOffWhenFighting", "thickness", "cursorSize", "cursorOutline", "replaceCursor", "cursorFeather", "barServerTime", "barServerTimeLine2", "barServerTimeIcons", "serverSeconds",
+    const char* const kOldKeys[] = {"jobNames", "showRanks", "scaleOwnName", "movedWindows", "windowOffsets", "windowGroups", "allUnderBar", "menuScale", "chocoboPointer", "untargetedOpacity", "glowOffWhenFighting", "thickness", "cursorSize", "cursorOutline", "replaceCursor", "cursorFeather", "barServerTime", "barServerTimeLine2", "barServerTimeIcons", "serverSeconds",
         "serverClockZone", "showLabels", "replaceMobNames", "showIcons", "hideInCombat", "hideClaimed", "hideTooWeak",
         "hideWhileEngaged", "markPlaceholders", "fontBold", "nameGlow", "scalePlayerNames",
         "labelFontBold", "showOrnament", "ownGlowColor", "ownOrnamentColor", "labelFontName", "glowSize",
@@ -2852,6 +2851,30 @@ TEST(the_job_and_exp_widgets_job_text_and_bar_settings_are_kept)
     CHECK(clamped.expBarTextAlign == Align::Center);
     CHECK(clamped.expBarWidth == kMaxExpBarWidth && clamped.expBarHeight == kMinExpBarHeight);
     CHECK(!clamped.expBarText && clamped.jobText == JobText::MainSub);
+}
+
+TEST(the_job_widgets_text_alignments_and_bar_colors_are_kept_and_its_colors_start_as_the_themes)
+{
+    Settings s;
+    WidgetOptions& job = s.Widget(BarWidget::Job);
+    CHECK(job.jobInfoAlign == Align::Left && job.earnedAlign == Align::Left && job.toNextAlign == Align::Left &&
+          job.percentAlign == Align::Left);
+    CHECK(!job.expBarBack && !job.expBarFill);
+    job.jobInfoAlign = Align::Right;
+    job.earnedAlign  = Align::Center;
+    job.toNextAlign  = Align::Right;
+    job.expBarFill   = 0x80FF8000u;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK(store.values["barJobInfoAlign"] == "right" && store.values["barToNextAlign"] == "right" &&
+          store.values["barEarnedAlign"] == "center" && store.values["barPercentAlign"] == "left");
+    CHECK(store.values["barExpBarFill"] == "80FF8000" && store.values["barExpBarBack"] == "theme");
+    CHECK(LoadSettings(store).Widget(BarWidget::Job) == job);
+    // An unknown alignment or color reads as the default.
+    store.values["barPercentAlign"] = "justify";
+    store.values["barExpBarFill"]   = "orange";
+    const WidgetOptions read = LoadSettings(store).Widget(BarWidget::Job);
+    CHECK(read.percentAlign == Align::Left && !read.expBarFill);
 }
 
 TEST(the_zone_widgets_show_zone_id_in_header_is_kept)

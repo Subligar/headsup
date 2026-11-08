@@ -276,6 +276,10 @@ namespace headsup
         void ArgbSwatch(const char* label, uint32_t& argb, const char* tip);
         // A color pick: the dropdown of its source, then the swatch of a custom color.
         void ColorPickRow(const char* label, ColorPick& pick, const std::vector<ColorSource>& sources, const char* tip);
+        // A color (ARGB) the theme sets, none, or the player's own: words' Set by Theme and Custom as joined buttons,
+        // then the swatch, the theme's color while Set by Theme. A color picked makes it Custom.
+        void ThemeColorRow(const char* label, std::optional<uint32_t>& custom, uint32_t theme, const char* const* words,
+            const char* tip);
         // A dropdown of checks, one bit of bits each in the options' order. Closed, it says All, None, the one picked
         // or how many are.
         void BitsDropdown(const char* label, uint32_t& bits, std::span<const LayoutOption> options, const char* tip);

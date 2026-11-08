@@ -653,6 +653,22 @@ namespace headsup
         EndRow();
     }
 
+    void Form::ThemeColorRow(const char* label, std::optional<uint32_t>& custom, uint32_t theme, const char* const* words,
+        const char* tip)
+    {
+        constexpr int kChoices = 2; // Set by Theme, Custom
+        Row(label, tip);
+        int own = custom ? 1 : 0;
+        Out() += "<div class=\"swatched\">";
+        SegmentsAt(label, own, words, kChoices);
+        Out() += "</div>";
+        uint32_t argb      = own == 1 ? custom.value_or(theme) : theme;
+        const uint32_t was = argb;
+        ArgbSwatchAt((std::string(label) + " swatch").c_str(), argb);
+        custom = own == 1 || argb != was ? std::optional(argb) : std::nullopt;
+        EndRow();
+    }
+
     void Form::TakeChecks(const std::string& control, FunctionRef<void(int)> clicked)
     {
         const std::string start = control + kOptionIdInfix;

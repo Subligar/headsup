@@ -123,8 +123,11 @@ namespace headsup
                 const auto height    = static_cast<float>(bar.height);
                 std::string rml = "<span class=\"ibar\" style=\"width:" + Px(static_cast<float>(bar.width)) +
                                   ";\"><span class=\"track\" style=\"height:" + Px(height) + ";margin-top:" +
-                                  Px(-height / 2.0f) + ";\"><span class=\"fill\" style=\"width: " +
-                                  RcssNumber(std::clamp(bar.done, 0.0f, 1.0f) * kPercentWhole) + "%\"></span></span>";
+                                  Px(-height / 2.0f) + ";" + (bar.back ? "background-color:" + RcssColor(*bar.back) + ";" : "") +
+                                  "\"><span class=\"fill\" style=\"width: " +
+                                  RcssNumber(std::clamp(bar.done, 0.0f, 1.0f) * kPercentWhole) + "%;" +
+                                  (bar.fill ? "decorator:none;background-color:" + RcssColor(*bar.fill) + ";" : "") +
+                                  "\"></span></span>";
                 if (!bar.text.empty())
                     rml += "<span class=\"btext\" style=\"text-align:" + std::string(kTextAligns[static_cast<int>(bar.align)]) +
                            ";color:" + RcssColor(look.BarColor(Span{bar.text})) + ";\">" + EscapedRml(bar.text) + "</span>";
@@ -194,8 +197,24 @@ namespace headsup
         std::string Line(const char* classes, const std::vector<Span>& spans, const BarLook& look,
             const std::vector<float>& columns = {})
         {
-            return std::string("<div class=\"") + classes + "\"><span class=\"t\">" +
-                   (columns.empty() ? Spans(spans, look) : Cells(spans, look, columns)) + "</span></div>";
+            if (!columns.empty() || std::ranges::none_of(spans, [](const Span& s) { return s.align.has_value(); }))
+                return std::string("<div class=\"") + classes + "\"><span class=\"t\">" +
+                       (columns.empty() ? Spans(spans, look) : Cells(spans, look, columns)) + "</span></div>";
+            // Each run across the whole line on its own side, the line kept as wide as all of them by a hidden copy.
+            std::string rml = std::string("<div class=\"") + classes + " runs\"><span class=\"t sizer\">" + Spans(spans, look) + "</span>";
+            for (size_t start = 0, end = 0; start < spans.size(); start = end)
+            {
+                for (end = start + 1; end < spans.size() && !spans[end].align; ++end)
+                {
+                }
+                std::vector<Span> run(spans.begin() + static_cast<std::ptrdiff_t>(start), spans.begin() + static_cast<std::ptrdiff_t>(end));
+                run.front().text.erase(0, run.front().text.find_first_not_of(' ')); // its gap from the run before is the copy's
+                const std::optional<Align> align = spans[start].align;
+                rml += std::string("<div class=\"run\"") +
+                       (align ? std::string(" style=\"text-align:") + kTextAligns[static_cast<int>(*align)] + ";\"" : "") +
+                       "><span class=\"t\">" + Spans(run, look) + "</span></div>";
+            }
+            return rml + "</div>";
         }
 
         // A box's fill, edge and corners as BoxOf gives them; no box is a clear one, its room kept.
@@ -424,6 +443,12 @@ namespace headsup
         return kClasses[static_cast<int>(section)];
     }
 
+    uint32_t ExpBarBack(const BarPalette& palette)
+    {
+        constexpr uint32_t kGlassTrack = 0x1FFFFFFFu; // a glass of white
+        return palette.shape == BarShape::Glass ? kGlassTrack : palette.divider;
+    }
+
     const char* AlignClass(WidgetAlign align)
     {
         constexpr const char* kClasses[kWidgetAlignCount] = {"", "align-left", "align-center", "align-right"};
@@ -457,7 +482,6 @@ namespace headsup
             css += ".pills .widget.target,.pills .widget.backed{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
             css += ".pills .widget.lit{background-color:" + RcssColor(Faded(cyan, 0x2E)) + ";border-color:" +
                    RcssColor(Faded(cyan, 0xB3)) + ";}";
-            css += ".ibar .track{background-color:#ffffff1f;}";
             return css;
         }
     }
@@ -594,7 +618,9 @@ namespace headsup
         // An EXP bar among a line's text, taking no height of its line: its track from its capitals' middle up and down
         // (TextRules), its fill a block, as a span takes no width, and its text over it on the line's own baseline.
         css += ".ibar{display:inline-block;vertical-align:top;position:relative;height:0px;}";
-        css += ".ibar .track{position:absolute;left:0px;width:100%;background-color:" + RcssColor(p.divider) + ";}";
+        css += ".ibar .track{position:absolute;left:0px;width:100%;background-color:" + RcssColor(ExpBarBack(p)) + ";}";
+        // A line's runs of their own alignment (Line).
+        css += ".runs{position:relative;}.sizer{visibility:hidden;}.run{position:absolute;left:0px;right:0px;top:0px;}";
         css += ".ibar .fill{display:block;}";
         css += ".ibar .btext{position:absolute;left:0px;top:0px;width:100%;white-space:pre;box-sizing:border-box;padding:0px " +
                Px(kBarTextInset) + ";}";

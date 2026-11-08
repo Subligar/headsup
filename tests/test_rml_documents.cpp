@@ -856,3 +856,109 @@ TEST(a_ticking_span_keeps_its_gap_to_an_icon_after_it)
     CHECK(std::fabs(icon - room - DrawnWidth("  ", look.TitleFace(WidgetContent{}))) <= 1.0f);
     CHECK_EQ(rml.Said(), "");
 }
+
+TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_without_overlapping)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    test::RmlSession rml;
+    const BarLook look        = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Job));
+    widget->SetClass(kHiddenClass, false);
+    widget->SetClass(SectionClass(BarSection::Center), true); // which would center a line
+    const auto run = [](std::string text, Align align) {
+        Span span  = Text(std::move(text));
+        span.align = align;
+        return span;
+    };
+    const auto left  = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+    const auto right = [&](Rml::Element* e) { return left(e) + e->GetBox().GetSize(Rml::BoxArea::Border).x; };
+    // Each run's text as drawn, by its words.
+    const auto drawn = [&](const char* words) {
+        Rml::ElementList texts;
+        widget->GetElementsByClassName(texts, "t");
+        for (Rml::Element* t : texts)
+            if (t->GetInnerRML().find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
+                return t;
+        return static_cast<Rml::Element*>(nullptr);
+    };
+    // A short top line under a long one: its runs at the text's left and right edges and its middle.
+    WidgetContent c;
+    c.shown    = true;
+    c.title    = {run("WAR 30", Align::Left), run("  61%", Align::Right)};
+    c.subtitle = {Text("12,345 / 20,000 EXP and a long way to go")};
+    widget->SetInnerRML(WidgetRml(c, look, {}));
+    rml.context->Update();
+    Rml::ElementList texts;
+    widget->GetElementsByClassName(texts, "text");
+    Rml::Element* text = texts.front();
+    Rml::Element *jobs = drawn("WAR 30"), *percent = drawn("61%"), *detail = drawn("long way");
+    CHECK(jobs != nullptr && percent != nullptr && detail != nullptr);
+    CHECK(std::fabs(left(jobs) - left(text)) <= 0.5f);
+    CHECK(std::fabs(right(percent) - right(text)) <= 0.5f);
+    CHECK(std::fabs(right(detail) - right(text)) <= 0.5f && std::fabs(left(detail) - left(text)) <= 0.5f);
+    // Its gap is left off at the right: the percent ends at the edge as wide as its own text.
+    CHECK(std::fabs(percent->GetBox().GetSize(Rml::BoxArea::Border).x - DrawnWidth("61%", look.TitleFace(c))) <= 1.0f);
+    // Drawn on the top line's own row.
+    CHECK(std::fabs(jobs->GetAbsoluteOffset(Rml::BoxArea::Border).y - percent->GetAbsoluteOffset(Rml::BoxArea::Border).y) <= 0.01f);
+    // A centered run in the middle of the text.
+    c.title = {run("WAR 30", Align::Center)};
+    widget->SetInnerRML(WidgetRml(c, look, {}));
+    rml.context->Update();
+    jobs = drawn("WAR 30");
+    CHECK(std::fabs((left(jobs) - left(text)) - (right(text) - right(jobs))) <= 1.0f && left(jobs) - left(text) > 20.0f);
+    // The longer line: the text is as wide as all its runs, so they never overlap, two spaces apart.
+    c.title    = {run("12,345 / 20,000 EXP and a long way", Align::Left), run("  WAR 30 / NIN 15", Align::Right)};
+    c.subtitle = {Text("61%")};
+    widget->SetInnerRML(WidgetRml(c, look, {}));
+    rml.context->Update();
+    Rml::Element *exp = drawn("long way"), *both = drawn("NIN 15");
+    CHECK(std::fabs(left(exp) - left(text)) <= 0.5f && std::fabs(right(both) - right(text)) <= 0.5f);
+    CHECK(std::fabs(left(both) - right(exp) - DrawnWidth("  ", look.TitleFace(c))) <= 1.0f);
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(an_exp_bar_draws_in_its_themes_colors_or_its_own)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    for (const BarTheme theme : {BarTheme::UmbraDark, BarTheme::Aurora})
+    {
+        test::RmlSession rml;
+        const BarPalette& palette = PaletteOf(theme);
+        const BarLook look        = LookOf(palette, settings);
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+        bar->Show();
+        Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Job));
+        widget->SetClass(kHiddenClass, false);
+        const auto drawn = [&](std::optional<uint32_t> back, std::optional<uint32_t> fill) {
+            WidgetContent c;
+            c.shown   = true;
+            Span exp  = Text("");
+            exp.bar   = InlineBar{0.5f, 100, 6, "", Align::Center, back, fill};
+            c.title   = {exp};
+            widget->SetInnerRML(WidgetRml(c, look, {}));
+            rml.context->Update();
+            Rml::ElementList tracks, fills;
+            widget->GetElementsByClassName(tracks, "track");
+            widget->GetElementsByClassName(fills, "fill");
+            const Rml::Colourb track = tracks.front()->GetComputedValues().background_color();
+            const auto& own = fills.front()->GetComputedValues();
+            return std::tuple{static_cast<uint32_t>(track.alpha) << 24 | track.red << 16 | track.green << 8 | track.blue,
+                own.background_color(), fills.front()->GetProperty(Rml::PropertyId::Decorator)->ToString()};
+        };
+        // The theme's: the divider, a glass of white in Glass, and the accent's gradient.
+        const auto [themeBack, themeFill, themeDecorator] = drawn(std::nullopt, std::nullopt);
+        CHECK_EQ(themeBack, theme == BarTheme::Aurora ? 0x1FFFFFFFu : palette.divider);
+        CHECK(themeDecorator.find("horizontal-gradient") != std::string::npos);
+        // Its own: the track in its color and the fill in one color of its own.
+        const auto [ownBack, ownFill, ownDecorator] = drawn(0x80102030u, 0xFF20C040u);
+        CHECK_EQ(ownBack, 0x80102030u);
+        CHECK(ownFill == Rml::Colourb(0x20, 0xC0, 0x40, 0xFF) && ownDecorator.find("gradient") == std::string::npos);
+        CHECK_EQ(rml.Said(), "");
+    }
+}

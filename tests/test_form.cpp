@@ -3,6 +3,7 @@
 #include "test.h"
 
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -505,6 +506,43 @@ TEST(a_color_with_alpha_opens_four_sliders_and_its_hex_keeps_the_alpha)
     CHECK_EQ(argb, 0x40102030u);
     const Form echoed = pass({{"p-c-fill-p-r", kChangeEvent, "16"}}); // said back as it stands
     CHECK(!echoed.changed);
+}
+
+TEST(a_theme_color_shows_the_themes_until_a_color_is_picked_and_set_by_theme_puts_it_back)
+{
+    FormState state;
+    std::optional<uint32_t> custom;
+    uint32_t theme = 0x1FFFFFFFu;
+    const char* const words[] = {"Set by Theme", "Custom"};
+    const auto pass = [&](const std::vector<FormEvent>& events) {
+        Form form(events, state);
+        form.pageKey = "p";
+        form.BeginCard("C");
+        form.ThemeColorRow("Back", custom, theme, words, nullptr);
+        form.EndCard();
+        return form;
+    };
+    const auto swatch = [](const Form& form) {
+        const FormValue* shown = ValueOf(form, "p-c-back-swatch", FormValueKind::Property, "background-color");
+        return shown != nullptr ? shown->text : "<none>";
+    };
+    const Form first = pass({});
+    CHECK(ClassOn(first, "p-c-back-s-0", "picked") && !ClassOn(first, "p-c-back-s-1", "picked"));
+    CHECK_EQ(swatch(first), "#ffffff1f");
+    // The theme's color follows the theme while it is Set by Theme.
+    theme = 0xFF102030u;
+    CHECK_EQ(swatch(pass({})), "#102030ff");
+    // A color picked is Custom.
+    pass({{"p-c-back-swatch", kClickEvent, ""}});
+    const Form picked = pass({{"p-c-back-swatch-p-hex", kCommitEvent, "#405060"}});
+    CHECK(picked.changed && custom == 0xFF405060u);
+    CHECK(ClassOn(pass({}), "p-c-back-s-1", "picked"));
+    // Set by Theme forgets it and shows the theme's again, at once.
+    const Form back = pass({{"p-c-back-s-0", kClickEvent, ""}});
+    CHECK(back.changed && !custom && swatch(back) == "#102030ff");
+    // Custom alone starts from the theme's color.
+    pass({{"p-c-back-s-1", kClickEvent, ""}});
+    CHECK(custom == 0xFF102030u);
 }
 
 TEST(a_list_of_checks_stays_open_and_a_condition_unchecked_under_always_turns_always_off)

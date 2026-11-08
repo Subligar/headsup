@@ -53,6 +53,7 @@ namespace headsup
         int width = 0, height = 0;
         std::string text;
         Align align = Align::Center; // its text's
+        std::optional<uint32_t> back{}, fill{}; // ARGB; none for the theme's
         bool operator==(const InlineBar&) const = default;
     };
 
@@ -85,6 +86,8 @@ namespace headsup
         std::vector<std::string> room{};
         // That room's width with the text's trailing spaces, the spaces' width, and the widest digit's (SteadyBoxes).
         float box = 0.0f, trail = 0.0f, digit = 0.0f;
+        // A widget line's run of text with an alignment of its own starts here and goes to the next span with one.
+        std::optional<Align> align{};
         bool operator==(const Span&) const = default;
     };
     constexpr bool HasMark(const Span& s)
