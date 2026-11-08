@@ -52,6 +52,7 @@ ICONS = [(name, f'third_party/mobdb-icons/{name}.png', '') for name in
     ('Reset', 'resources/icons/reset.png', 'puts a moved pop-out back in its place'),
     ('BuffBack', 'resources/icons/status/BuffIcon.png', "behind a buff's status icon"),
     ('DebuffBack', 'resources/icons/status/DebuffIcon.png', "behind a debuff's"),
+    ('UnknownStatus', 'resources/icons/status/XIView/unknown.png', 'a status with no icon in its pack or the game'),
 ]
 # Each folder here is a pack of status icons, each named by its status id, as XIUI's are.
 STATUS_PACKS = 'resources/icons/status'

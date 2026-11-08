@@ -341,6 +341,15 @@ namespace headsup
         return StatusMark{static_cast<uint16_t>(*id), pack ? static_cast<int>(*pack) : kVanillaStatusIcons};
     }
 
+    std::optional<Image> StatusImage(std::string_view name, FunctionRef<std::optional<Image>(uint16_t)> game)
+    {
+        const std::optional<StatusMark> status = StatusOfSource(name);
+        if (!status) return std::nullopt;
+        if (std::optional<Image> own = PackIcon(status->pack, status->id)) return own;
+        if (std::optional<Image> games = game(status->id)) return games;
+        return HostImage(IconSource(Icon::UnknownStatus));
+    }
+
     std::string ResetSource(uint32_t argb, int pixels)
     {
         return std::string(kHostSource) + std::string(kResetKind) + kSeparator + Hex(argb) + kSeparator + std::to_string(pixels);

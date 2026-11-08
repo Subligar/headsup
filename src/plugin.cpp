@@ -2191,14 +2191,12 @@ private:
                     if (found == nullptr) return std::optional<headsup::Image>{};
                     return headsup::ResourcePicture(found->Bitmap, std::min<size_t>(found->ImageSize, sizeof(found->Bitmap)));
                 }
-                // A status's icon from its pack, else the game's.
-                if (const std::optional<headsup::StatusMark> status = headsup::StatusOfSource(name))
-                {
-                    if (std::optional<headsup::Image> own = headsup::PackIcon(status->pack, status->id)) return own;
-                    const IStatusIcon* icon = g_Resources != nullptr ? g_Resources->GetStatusIconById(status->id) : nullptr;
-                    if (icon == nullptr) return std::optional<headsup::Image>{};
-                    return headsup::ResourcePicture(icon->Bitmap, std::min<size_t>(icon->ImageSize, sizeof(icon->Bitmap)));
-                }
+                if (std::optional<headsup::Image> status = headsup::StatusImage(name, [](uint16_t id) {
+                        const IStatusIcon* icon = g_Resources != nullptr ? g_Resources->GetStatusIconById(id) : nullptr;
+                        if (icon == nullptr) return std::optional<headsup::Image>{};
+                        return headsup::ResourcePicture(icon->Bitmap, std::min<size_t>(icon->ImageSize, sizeof(icon->Bitmap)));
+                    }))
+                    return status;
                 return headsup::HostImage(name);
             });
         if (!started) Print("RmlUi did not start: the top panel and the settings window are off until HeadsUp reloads.");

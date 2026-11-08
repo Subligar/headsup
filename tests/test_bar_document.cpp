@@ -2,7 +2,9 @@
 #include "window_skin.h"
 #include "test.h"
 
+#include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <string>
 #include <tuple>
 
@@ -413,6 +415,28 @@ TEST(a_status_icon_is_named_by_its_pack_and_id_for_the_plugin_to_serve)
              std::string("hu:status/x/1"), std::string("hu:item/1/1")})
         CHECK(!StatusOfSource(bad));
     CHECK(!HostImage("hu:status/1/253")); // the plugin's: a status a pack lacks is the game's
+}
+
+TEST(a_status_icon_is_its_packs_else_the_games_else_xiviews_unknown_icon)
+{
+    const int hd = static_cast<int>(std::ranges::find(kStatusPackNames, "HD") - std::begin(kStatusPackNames));
+    const Image game{1, 1, {0xFF123456u}};
+    int asked        = 0;
+    const auto gives = [&](uint16_t) { ++asked; return std::optional<Image>(game); };
+    const auto none  = [&](uint16_t) { ++asked; return std::optional<Image>(); };
+    const auto at    = [](const Image& image, int x, int y) { return image.argb[static_cast<size_t>(y * image.width + x)]; };
+    // XIView's unknown.png read with another decoder: its middle, a gold edge and a clear corner.
+    const auto unknown = [&](const std::optional<Image>& image) {
+        return image && image->width == 32 && at(*image, 16, 16) == 0xFFE4DFBAu && at(*image, 5, 9) == 0xFFB09020u &&
+               at(*image, 0, 0) >> 24 == 0;
+    };
+    const std::optional<Image> packs = StatusImage(StatusSource(StatusMark{253, hd, false}), gives);
+    CHECK(packs && packs->width == 32 && asked == 0);
+    CHECK(StatusImage(StatusSource(StatusMark{650, hd, false}), gives)->argb == game.argb); // HD has no 650
+    CHECK(StatusImage(StatusSource(StatusMark{771, kVanillaStatusIcons, false}), gives)->argb == game.argb);
+    CHECK(unknown(StatusImage(StatusSource(StatusMark{771, kVanillaStatusIcons, false}), none)));
+    CHECK(unknown(StatusImage(StatusSource(StatusMark{650, hd, false}), none)));
+    CHECK(!StatusImage("hu:item/4443", gives));
 }
 
 TEST(every_theme_eases_breathes_and_pulses_in_its_own_colors)
