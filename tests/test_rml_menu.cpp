@@ -87,6 +87,7 @@ namespace
                 m_Readings.settingsOf = shown ? PillSettings(settings, *shown) : std::vector<PanelWidget>{};
                 const std::optional<SettingsRoom> room = menu.RoomFor(m_Readings.settingsOf, settings);
                 menu.settingsAt = room ? std::optional(BarRect{kSettingsX, kSettingsY, room->width, kSettingsHeight}) : std::nullopt;
+                m_Readings.skin = m_Host.skin ? &*m_Host.skin : nullptr;
                 changed = menu.Update(m_Host, settings, m_Readings, m_Fonts, kVersion) || changed;
                 if (const std::optional<PanelWidget> asked = menu.TakeSettingsAsked())
                 {
@@ -1667,6 +1668,27 @@ TEST(a_setting_of_something_switched_off_is_not_shown)
     window.settings.enabled = false;
     window.Frames(2);
     CHECK(!window.Shows("entities-target-cursor-head") && !window.Shows(least));
+}
+
+TEST(deleting_a_custom_theme_that_differs_from_its_theme_goes_back_to_that_theme_and_its_looks)
+{
+    Window window(BarTheme::Custom);
+    window.settings.customThemeName = "Dusk";
+    window.settings.customPalette   = PaletteOf(BarTheme::Aurora);
+    window.settings.customPalette.parent      = BarTheme::Aurora;
+    window.settings.customPalette.border      = PaletteOf(BarTheme::Aurora).border + 2;
+    window.settings.customPalette.rounding    = PaletteOf(BarTheme::Aurora).rounding + 3;
+    window.settings.customPalette.statusIcons = kVanillaStatusIcons;
+    window.settings.customPalette.statusBack  = !PaletteOf(BarTheme::Aurora).statusBack;
+    window.settings.customPalette.separator   = DashMark::Dot;
+    window.settings.customPalette.panelTop    = 0x40102030u;
+    window.Page("theme");
+    CHECK(window.Click("theme-theme-look-delete-theme"));
+    CHECK_EQ(window.menu.TakeThemeDelete().value_or(""), std::string("Dusk"));
+    window.Frames(5);
+    CHECK(window.settings.barTheme == BarTheme::Aurora);
+    CHECK(!window.menu.TakeThemeDelete());
+    CHECK(OwnPalette(window.settings) == PaletteOf(BarTheme::Aurora));
 }
 
 TEST(the_game_window_theme_draws_the_window_in_the_art_and_its_colors)

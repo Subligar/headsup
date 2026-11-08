@@ -5,6 +5,7 @@
 #include "menu_state.h"
 #include "settings.h"
 #include "setup.h"
+#include "window_skin.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -37,7 +38,7 @@ namespace headsup
         const std::vector<WindowPlace>* windowPlaces = nullptr; // where each window seen last stood
         const std::vector<std::string>* cursorFiles = nullptr; // the cursors folder's files, without their extensions
         const std::vector<std::string>* themeFiles  = nullptr; // the themes folder's, the same way
-        const BarPalette* palette = nullptr; // the palette the panel was drawn in last frame, the game's art's for Vanilla
+        const GameSkinLook* skin = nullptr; // the game's window art of the Window Type in use, once it is read
         const std::vector<std::string>* profiles    = nullptr; // the profiles folder's, the same way
         const std::string* profile = nullptr; // the profile in use, empty while the old settings.ini is
         bool unsaved = false; // changes not yet in the file

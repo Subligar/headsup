@@ -1126,7 +1126,7 @@ public:
             .windowPlaces     = &m_WindowPlaces,
             .cursorFiles      = &m_CursorFiles,
             .themeFiles       = &m_ThemeFiles,
-            .palette          = &headsup::PaletteFor(m_Settings, SkinNow()),
+            .skin             = SkinNow(),
             .profiles         = &m_ProfileNames,
             .profile          = &m_Profile,
             .unsaved          = m_SettingsChangedAt.has_value(),

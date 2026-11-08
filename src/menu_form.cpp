@@ -1,6 +1,7 @@
 #include "menu_form.h"
 
 #include "bar_document.h"
+#include "bar_look.h"
 #include "bar_theme.h"
 #include "icon_adjust.h"
 #include "cursor_picture.h"
@@ -404,13 +405,9 @@ namespace headsup
             }
         }
 
-        // The palette Customize Appearance shows: the custom theme's as it is now, or the built-in one's as the panel
-        // drew it (Vanilla's in the game's art's colors).
-        const BarPalette& ShownPalette(const Context& c)
-        {
-            if (c.s.barTheme == BarTheme::Custom || c.readings.palette == nullptr) return OwnPalette(c.s);
-            return *c.readings.palette;
-        }
+        // The palette Customize Appearance shows, as the panel draws it (Vanilla's in the game's art's colors). Taken
+        // from the settings as they are now: a theme picked this frame must not show the last one's looks.
+        const BarPalette& ShownPalette(const Context& c) { return PaletteFor(c.s, c.readings.skin); }
 
         const std::vector<std::string>& ThemeFiles(const Context& c)
         {
