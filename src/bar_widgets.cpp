@@ -1993,7 +1993,7 @@ namespace headsup
                 // second floor is open: only what is in it says it can be used.
                 const std::optional<BagCount> bag = c == kStorage && !state.bags[c] ? std::optional(BagCount{}) : state.bags[c];
                 if (!bag || (c == kMogSafe2 && bag->used == 0)) continue;
-                grid.cells.push_back(Cell(Text(kContainerNames[c])));
+                grid.cells.push_back(Cell(Text(ContainerName(c))));
                 grid.cells.push_back(Cell(BagFill(*bag)));
             }
             popup.sections = ListOf(PopupSection{"", ListOf(std::move(grid))});

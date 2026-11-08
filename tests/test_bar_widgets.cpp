@@ -633,7 +633,7 @@ TEST(gil_bags_and_earth_time)
     const PopupRow& rows         = bagsPopup.sections[0].rows[0];
     CHECK(rows.kind == RowKind::Grid && rows.columns == 2 && rows.cells.size() == 6 && rows.roomy); // Storage too, with no room
     CHECK(Joined(rows.cells[2].text) == "Storage");
-    CHECK(Joined(rows.cells[4].text) == "Mog Satchel");
+    CHECK(Joined(rows.cells[4].text) == "Satchel");
     CHECK(rows.cells[5].text == (std::vector<Span>{{"30 / 30", Tone::Resist}}));
     state.earthHour   = 21;
     state.earthMinute = 7;
@@ -2586,9 +2586,9 @@ TEST(the_bags_popup_lists_mog_safe_2_only_once_it_holds_something)
                         if (span.text == name) return true;
         return false;
     };
-    CHECK(listed("Inventory") && !listed("Mog Safe 2"));
+    CHECK(listed("Inventory") && !listed("Safe (2)"));
     state.bags[kMogSafe2] = BagCount{3, 50};
-    CHECK(listed("Mog Safe 2"));
+    CHECK(listed("Safe (2)"));
 }
 
 TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)
@@ -2650,7 +2650,8 @@ TEST(the_bags_to_pick_start_with_the_inventory_storage_and_both_safes)
     CHECK(BagChoices() == (std::vector<int>{0, 2, 1, 9, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16}));
 }
 
-TEST(the_bags_popup_lists_the_bags_in_ashitas_order_by_the_games_names)
+// The user: "Use short name everywhere", as the widget and its Bag dropdowns write them.
+TEST(the_bags_popup_lists_the_bags_in_ashitas_order_by_their_short_names)
 {
     Settings settings;
     BarState state;
@@ -2661,9 +2662,9 @@ TEST(the_bags_popup_lists_the_bags_in_ashitas_order_by_the_games_names)
         for (const PopupRow& row : section.rows)
             for (size_t i = 0; i < row.cells.size(); i += 2)
                 names.push_back(row.cells[i].text.front().text);
-    CHECK(names == (std::vector<std::string>{"Inventory", "Mog Safe", "Storage", "Mog Locker", "Mog Satchel", "Mog Sack",
-                       "Mog Case", "Mog Wardrobe", "Mog Safe 2", "Mog Wardrobe 2", "Mog Wardrobe 3", "Mog Wardrobe 4",
-                       "Mog Wardrobe 5", "Mog Wardrobe 6", "Mog Wardrobe 7", "Mog Wardrobe 8"}));
+    CHECK(names == (std::vector<std::string>{"Inventory", "Safe", "Storage", "Locker", "Satchel", "Sack", "Case", "Wardrobe",
+                       "Safe (2)", "Wardrobe (2)", "Wardrobe (3)", "Wardrobe (4)", "Wardrobe (5)", "Wardrobe (6)",
+                       "Wardrobe (7)", "Wardrobe (8)"}));
 }
 
 TEST(a_targeted_players_jobs_show_from_whatever_knows_them_unless_switched_off)

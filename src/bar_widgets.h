@@ -39,8 +39,8 @@ namespace headsup
     // The container whose name, as the Bags popup gives it, the caption is: the game's caption for a bag list, or
     // "Items" for the inventory as that menu opens.
     std::optional<int> ContainerNamed(const std::string& caption);
-    // A container's name as the panel and the Bag dropdowns write it: the game's without "Mog", a number in brackets,
-    // "Wardrobe (3)".
+    // A container's name wherever HeadsUp shows one (the widget, its pop-out, the Bag dropdowns): the game's without
+    // "Mog", a number in brackets, "Wardrobe (3)".
     std::string ContainerName(int container);
     // The containers the Bags widget may show, in its dropdowns' order: every one but the temporary items.
     const std::vector<int>& BagChoices();
