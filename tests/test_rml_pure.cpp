@@ -26,6 +26,20 @@ TEST(the_byte_under_a_point_of_a_text_is_the_nearest_boundary_between_its_charac
     CHECK_EQ(ByteUnder(accented, 12.0f, wide), size_t{3});
 }
 
+TEST(a_drop_in_a_column_of_buttons_goes_above_the_first_whose_middle_is_below_it)
+{
+    // Buttons 20 px tall with 4 px gaps: middles at 10, 34 and 58.
+    const std::vector<float> middles{10.0f, 34.0f, 58.0f};
+    CHECK_EQ(ColumnSlotAt(middles, 2.0f), size_t{0});   // the first's top half
+    CHECK_EQ(ColumnSlotAt(middles, 15.0f), size_t{1});  // its bottom half: below it
+    CHECK_EQ(ColumnSlotAt(middles, 22.0f), size_t{1});  // the gap after it
+    CHECK_EQ(ColumnSlotAt(middles, 30.0f), size_t{1});  // the second's top half
+    CHECK_EQ(ColumnSlotAt(middles, 40.0f), size_t{2});
+    CHECK_EQ(ColumnSlotAt(middles, 65.0f), size_t{3});  // the last's bottom half: the end
+    CHECK_EQ(ColumnSlotAt(middles, -5.0f), size_t{0});  // above them all, as on the tray's name
+    CHECK_EQ(ColumnSlotAt({}, 5.0f), size_t{0});
+}
+
 TEST(a_vertex_is_moved_to_the_pixel_center_with_its_texture_share)
 {
     // A 2x4 image padded into an 4x16 texture takes half its width and a quarter of its height.

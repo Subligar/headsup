@@ -2408,6 +2408,74 @@ TEST(a_designer_button_dropped_in_the_gap_between_two_buttons_goes_between_them)
     CHECK_EQ(DesignText(window.settings.Widget(job).design), "jobs percent earned tonext | bar");
 }
 
+TEST(a_widget_dropped_on_a_buttons_bottom_half_goes_below_it_on_its_top_half_above_and_in_a_gap_between)
+{
+    const auto chip = [](PanelWidget w) { return "toppanel-layout-chip-" + std::to_string(SlotOf(w)); };
+    // The tray's first three buttons in view.
+    const auto opened = [&](Window& window) {
+        window.Page("toppanel");
+        const std::vector<PanelWidget> left = window.settings.barSections[static_cast<int>(BarSection::Left)];
+        CHECK(left.size() >= 3);
+        window.Center(chip(left[0]));
+        window.Center(chip(left[2]));
+        return left;
+    };
+    // The place share of the way down a button, at its middle across.
+    const auto place = [&](Window& window, PanelWidget w, float share) {
+        Rml::Element* e = window.Find(chip(w));
+        return Rml::Vector2f(e->GetAbsoluteOffset(Rml::BoxArea::Border).x + e->GetBox().GetSize(Rml::BoxArea::Border).x / 2.0f,
+            e->GetAbsoluteOffset(Rml::BoxArea::Border).y + share * e->GetBox().GetSize(Rml::BoxArea::Border).y);
+    };
+    const auto order = [](const std::vector<PanelWidget>& was, const std::vector<PanelWidget>& now) {
+        std::vector<size_t> indices;
+        for (size_t i = 0; i < 3; ++i)
+            indices.push_back(static_cast<size_t>(std::ranges::find(was, now[i]) - was.begin()));
+        return indices;
+    };
+    const auto drop = [&](size_t from, size_t onto, float share) {
+        Window window;
+        const std::vector<PanelWidget> left = opened(window);
+        const Rml::Vector2f start = place(window, left[from], 0.5f);
+        CHECK(window.DragFrom(start, place(window, left[onto], share) - start));
+        return order(left, window.settings.barSections[static_cast<int>(BarSection::Left)]);
+    };
+    using Order = std::vector<size_t>;
+    CHECK(drop(0, 2, 0.75f) == (Order{1, 2, 0})); // the bottom half: below it
+    CHECK(drop(0, 2, 0.25f) == (Order{1, 0, 2})); // the top half: above it
+    CHECK(drop(2, 0, 0.75f) == (Order{0, 2, 1}));
+    CHECK(drop(2, 0, 0.25f) == (Order{2, 0, 1}));
+    // The gap between the first and second buttons.
+    Window window;
+    const std::vector<PanelWidget> left = opened(window);
+    const Rml::Vector2f below = place(window, left[0], 1.0f), above = place(window, left[1], 0.0f);
+    CHECK(above.y - below.y >= 2.0f);
+    const Rml::Vector2f start = place(window, left[2], 0.5f);
+    CHECK(window.DragFrom(start, (below + above) / 2.0f - start));
+    CHECK(order(left, window.settings.barSections[static_cast<int>(BarSection::Left)]) == (Order{0, 2, 1}));
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(a_designer_button_dropped_on_a_buttons_right_half_goes_after_it)
+{
+    Window window;
+    const PanelWidget job{BarWidget::Job};
+    window.settings.Widget(job).on     = true;
+    window.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs earned tonext | percent bar");
+    window.shown = job;
+    window.Frames(3);
+    Rml::ElementList lines;
+    window.Find(kMenuViewBodyId)->GetElementsByClassName(lines, "design-line");
+    CHECK(lines.size() == 2);
+    Rml::Element* jobs = lines[0]->GetChild(0);
+    Rml::Element* bar  = lines[1]->GetChild(1);
+    CHECK(jobs->IsClassSet("dchip") && bar->IsClassSet("dchip"));
+    const Rml::Vector2f at{jobs->GetAbsoluteOffset(Rml::BoxArea::Border).x + 0.8f * jobs->GetBox().GetSize(Rml::BoxArea::Border).x,
+        window.Center(jobs->GetId()).y};
+    CHECK(window.Drag(bar->GetId(), at - window.Center(bar->GetId())));
+    window.Frames(2);
+    CHECK_EQ(DesignText(window.settings.Widget(job).design), "jobs bar earned tonext | percent");
+}
+
 TEST(a_theme_colors_custom_button_and_its_swatch_sit_side_by_side_without_overlapping)
 {
     for (const char* font : {kBarlowCondensed, kCinzel})

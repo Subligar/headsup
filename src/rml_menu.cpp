@@ -64,6 +64,29 @@ namespace headsup
             return line->GetNumChildren() > 0 ? line->GetChild(line->GetNumChildren() - 1) : line;
         }
 
+        // In a Widget Layout tray: the button the drop goes above (ColumnSlotAt), else the tray's end (its last child).
+        Rml::Element* TraySlotAt(Rml::Element* tray, float y)
+        {
+            std::vector<Rml::Element*> chips;
+            std::vector<float> middles;
+            for (int i = 0; i < tray->GetNumChildren(); ++i)
+                if (Rml::Element* chip = tray->GetChild(i); chip->IsClassSet(kTrayChipClass))
+                {
+                    chips.push_back(chip);
+                    middles.push_back(chip->GetAbsoluteOffset(Rml::BoxArea::Border).y + chip->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f);
+                }
+            const size_t at = ColumnSlotAt(middles, y);
+            return at < chips.size() ? chips[at] : tray->GetLastChild();
+        }
+
+        // The designer line or Widget Layout tray an element is in, or is.
+        Rml::Element* DropColumnOf(Rml::Element* element)
+        {
+            for (; element != nullptr; element = element->GetParentNode())
+                if (element->IsClassSet(kDesignLineClass) || element->IsClassSet(kWidgetTrayClass)) return element;
+            return nullptr;
+        }
+
         Rml::ElementFormControlInput* AsInput(Rml::Element* element)
         {
             return rmlui_dynamic_cast<Rml::ElementFormControlInput*>(element);
@@ -565,12 +588,13 @@ namespace headsup
         Rml::Element* named = WithId(hovered);
         for (Rml::Element* up = hovered; up != nullptr; up = up->GetParentNode())
             if (up->IsClassSet(kGhostSlotClass)) named = up;
-        if (hovered != nullptr && hovered->IsClassSet(kDesignLineClass))
-            named = DesignSlotAt(hovered, Rml::Vector2f(static_cast<float>(event.GetParameter<int>("mouse_x", 0)),
-                                              static_cast<float>(event.GetParameter<int>("mouse_y", 0))));
+        const Rml::Vector2f pointer(static_cast<float>(event.GetParameter<int>("mouse_x", 0)),
+            static_cast<float>(event.GetParameter<int>("mouse_y", 0)));
+        if (Rml::Element* column = DropColumnOf(hovered))
+            named = column->IsClassSet(kDesignLineClass) ? DesignSlotAt(column, pointer) : TraySlotAt(column, pointer.y);
         FormEvent drop{named != nullptr ? named->GetId() : std::string(), type, dragged->GetId(),
             dragged->GetAttribute<Rml::String>(kCarriesAttribute, "")};
-        const float x = static_cast<float>(event.GetParameter<int>("mouse_x", 0));
+        const float x = pointer.x;
         // A stretch, or the letters of one a held tag shows itself after, is as wide as its letters from its
         // content's left: the pointer says between which.
         const auto byteIn = [&](Rml::Element* text, const std::string& letters) {

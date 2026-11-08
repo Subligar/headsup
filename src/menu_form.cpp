@@ -1024,7 +1024,7 @@ namespace headsup
             for (int section = 0; section < kBarSectionCount; ++section)
             {
                 const auto here = static_cast<BarSection>(section);
-                form.Raw(std::string("<div class=\"tray\"><div class=\"tray-name\">") +
+                form.Raw(std::string("<div class=\"tray ") + kWidgetTrayClass + "\"><div class=\"tray-name\">" +
                          EscapedRml(Said(sections[static_cast<size_t>(section)].name)) + "</div>");
                 const std::vector<PanelWidget>& held = s.barSections[section];
                 for (size_t i = 0; i < held.size(); ++i)
@@ -1032,7 +1032,7 @@ namespace headsup
                     const int w          = SlotOf(held[i]);
                     const std::string id = form.Id(kWidgetChip + std::to_string(w));
                     // Two lines: its toggle with its clone and, on a copy, its remove at the right; then its name.
-                    form.Raw("<div class=\"btn raised wchip wtwo drag\" id=\"" + id + "\"" +
+                    form.Raw(std::string("<div class=\"btn raised wchip ") + kTrayChipClass + " drag\" id=\"" + id + "\"" +
                              TipAttribute(widgets[static_cast<size_t>(held[i].kind)].tip) + "><div class=\"wtop\">");
                     const bool was = s.widgets[w].on;
                     form.CheckAt((kWidgetChip + std::to_string(w) + kChipToggle).c_str(), s.widgets[w].on);
