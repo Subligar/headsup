@@ -169,9 +169,11 @@ namespace headsup
         return SecondsTo(JstDay(unixMs) + kDaysPerWeek - ZoneAt(ClockZone::Japan, unixMs).weekday, unixMs);
     }
 
-    std::string ZoneClockText(const ZoneTime& t, bool twentyFour, bool seconds)
+    std::vector<Span> ZoneClockSpans(const ZoneTime& t, bool twentyFour, bool seconds)
     {
-        return std::string(t.abbreviation) + " " + ClockText(t.hour, t.minute, twentyFour, seconds ? t.second : -1);
+        std::vector<Span> spans = ClockSpans(t.hour, t.minute, twentyFour, seconds ? t.second : -1);
+        spans.insert(spans.begin(), Text(std::string(t.abbreviation) + " "));
+        return spans;
     }
 
     PopupSection ServerTimeRows(int64_t unixMs)

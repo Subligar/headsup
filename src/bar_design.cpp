@@ -235,8 +235,11 @@ namespace headsup
 
     size_t WidestTextSpan(const std::vector<Span>& line)
     {
-        // Letters, not the gaps a part starts with; a dim span (a distance, a label) only on a line of nothing else.
-        const auto letters = [](const Span& s) { return std::ranges::count_if(s.text, [](char c) { return c != ' '; }); };
+        // Letters, not the gaps a part starts with; a dim span (a label) only on a line of nothing else; never a span
+        // that keeps its room, as a cut one would keep it.
+        const auto letters = [](const Span& s) {
+            return s.room.empty() ? std::ranges::count_if(s.text, [](char c) { return c != ' '; }) : 0;
+        };
         const auto score   = [&](const Span& s) { return std::pair{s.tone != Tone::Dim, letters(s)}; };
         size_t widest = line.size();
         for (size_t i = 0; i < line.size(); ++i)

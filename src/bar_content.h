@@ -79,6 +79,12 @@ namespace headsup
         std::optional<InlineBar> bar{};
         uint16_t item = 0; // a game item's picture
         std::optional<StatusMark> status{};
+        // A text that ticks (a time, a distance) keeps the room of the widest of these, its digits any digit: each
+        // digit drawn in a cell as wide as its font's widest, the text against the room's right, so nothing after it
+        // moves.
+        std::vector<std::string> room{};
+        // That room's width with the text's trailing spaces, the spaces' width, and the widest digit's (SteadyBoxes).
+        float box = 0.0f, trail = 0.0f, digit = 0.0f;
         bool operator==(const Span&) const = default;
     };
     constexpr bool HasMark(const Span& s)
@@ -211,6 +217,10 @@ namespace headsup
     // "21:07", or "9:07 PM" on a 12-hour clock.
     // second is shown when it is 0 or more: "21:07:05", "9:07:05 PM".
     std::string ClockText(int hour, int minute, bool twentyFour, int second = -1);
+    // The same as spans that keep their room as it ticks: the time, then AM or PM in a room of its own.
+    std::vector<Span> ClockSpans(int hour, int minute, bool twentyFour, int second = -1);
+    // "09:05" in a span that keeps its room.
+    Span HourMinuteSpan(int hour, int minute);
     // "09:05"
     std::string HourMinute(int hour, int minute);
     // A figure running low, and one gone wrong.
@@ -246,4 +256,10 @@ namespace headsup
     std::string SteadyFigures(std::string_view text, char digit);
     // The digit that measures widest, the lowest of those that tie.
     char WidestDigit(FunctionRef<float(char)> measure);
+    constexpr bool IsDigit(char c) { return c >= '0' && c <= '9'; }
+    // text as a span with room draws it: each digit alone, each run of other characters together.
+    std::vector<std::string_view> FigurePieces(std::string_view text);
+    // Sets box, trail and digit of each span with room on a line of one font: digit its widest digit's width, width a
+    // text's.
+    void SteadyBoxes(std::vector<Span>& line, float digit, FunctionRef<float(const std::string&)> width);
 }

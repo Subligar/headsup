@@ -6,6 +6,12 @@
 
 namespace headsup
 {
+    namespace
+    {
+        constexpr int kHalfDay = 12;
+        constexpr std::string_view kDigits = "0123456789";
+    }
+
     Span Text(std::string text, Tone tone) { return Span{std::move(text), tone, 0}; }
 
     void AddPart(std::vector<Span>& line, std::vector<Span> part)
@@ -16,6 +22,8 @@ namespace headsup
         {
             if (!HasMark(part.front()))
                 part.front().text = kPartGap + part.front().text;
+            else if (!line.back().room.empty())
+                line.back().text += kPartGap; // a gap of its own between two elements would not be drawn
             else
                 line.push_back(Text(kPartGap));
         }
@@ -72,6 +80,40 @@ namespace headsup
         return widest;
     }
 
+    std::vector<std::string_view> FigurePieces(std::string_view text)
+    {
+        std::vector<std::string_view> pieces;
+        for (size_t at = 0; at < text.size();)
+        {
+            const size_t end = IsDigit(text[at]) ? at + 1 : std::min(text.find_first_of(kDigits, at), text.size());
+            pieces.push_back(text.substr(at, end - at));
+            at = end;
+        }
+        return pieces;
+    }
+
+    void SteadyBoxes(std::vector<Span>& line, float digit, FunctionRef<float(const std::string&)> width)
+    {
+        const auto drawn = [&](std::string_view text) {
+            float total = 0.0f;
+            for (const std::string_view piece : FigurePieces(text))
+                total += IsDigit(piece.front()) ? digit : width(std::string(piece));
+            return total;
+        };
+        for (Span& s : line)
+        {
+            if (s.room.empty()) continue;
+            const size_t first = std::min(s.text.find_first_not_of(' '), s.text.size());
+            const size_t last  = std::max(first, s.text.find_last_not_of(' ') + 1);
+            const std::string lead = s.text.substr(0, first), trail = s.text.substr(last);
+            s.digit = digit;
+            s.trail = trail.empty() ? 0.0f : width(trail);
+            s.box   = drawn(s.text);
+            for (const std::string& widest : s.room)
+                s.box = std::max(s.box, drawn(lead + widest + trail));
+        }
+    }
+
     std::string SpanText(double seconds)
     {
         const auto total = static_cast<long long>(std::ceil(std::max(0.0, seconds)));
@@ -94,7 +136,6 @@ namespace headsup
         char seconds[16] = "";
         if (second >= 0) std::snprintf(seconds, sizeof(seconds), ":%02d", second);
         if (twentyFour) return HourMinute(hour, minute) + seconds;
-        constexpr int kHalfDay = 12;
         char text[40];
         std::snprintf(text, sizeof(text), "%d:%02d%s %s", hour % kHalfDay == 0 ? kHalfDay : hour % kHalfDay, minute,
             seconds, hour < kHalfDay ? "AM" : "PM");
@@ -106,5 +147,31 @@ namespace headsup
         char text[8];
         std::snprintf(text, sizeof(text), "%02d:%02d", hour, minute);
         return text;
+    }
+
+    std::vector<Span> ClockSpans(int hour, int minute, bool twentyFour, int second)
+    {
+        const auto split = [&](int h) {
+            std::string text = ClockText(h, minute, twentyFour, second);
+            const size_t at  = std::min(text.find(' '), text.size());
+            return std::pair{text.substr(0, at), text.substr(at)};
+        };
+        auto [time, meridiem] = split(hour);
+        // Midnight reads with as many figures of hours as any time: 00 or 12.
+        Span clock = Text(std::move(time));
+        clock.room = {split(0).first};
+        std::vector<Span> spans{std::move(clock)};
+        if (meridiem.empty()) return spans;
+        Span half = Text(std::move(meridiem));
+        half.room = {split(0).second, split(kHalfDay).second};
+        spans.push_back(std::move(half));
+        return spans;
+    }
+
+    Span HourMinuteSpan(int hour, int minute)
+    {
+        Span span = Text(HourMinute(hour, minute));
+        span.room = {HourMinute(0, 0)};
+        return span;
     }
 }

@@ -1,4 +1,6 @@
+#include "bar_design.h"
 #include "bar_document.h"
+#include "bar_widgets.h"
 #include "menu_document.h"
 #include "window_skin.h"
 #include "rml_session.h"
@@ -8,8 +10,10 @@
 
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <vector>
 
 using namespace headsup;
@@ -24,6 +28,30 @@ namespace
         return BarLook{p, settings, m, PillRow(m), TextRow{13, 11, 10.0f, 24.0f, 13, 12.0f},
             BarTitleFont(settings, p.shape), p.shape == BarShape::Ornate, BarTextFont(settings), std::nullopt};
     }
+
+    // A text's width as RmlUi draws it in a face.
+    float DrawnWidth(const std::string& text, const TextFace& face)
+    {
+        Rml::FontEngineInterface* engine = Rml::GetFontEngineInterface();
+        const Rml::FontFaceHandle handle = engine->GetFontFaceHandle(Rml::StringUtilities::ToLower(face.family),
+            Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal, WholePixels(face.size));
+        static const Rml::String kNoLanguage;
+        const Rml::TextShapingContext shaping{kNoLanguage, Rml::Style::Direction::Auto, Rml::Style::FontKerning::Auto, 0.0f};
+        return static_cast<float>(engine->GetStringWidth(handle, text, shaping));
+    }
+
+    // The rooms of a widget's ticking spans, measured as the bar measures them.
+    void Steady(WidgetContent& c, const BarLook& look)
+    {
+        const auto steady = [](std::vector<Span>& line, const TextFace& face) {
+            const char digit = WidestDigit([&](char d) { return DrawnWidth(std::string(1, d), face); });
+            SteadyBoxes(line, DrawnWidth(std::string(1, digit), face), [&](const std::string& t) { return DrawnWidth(t, face); });
+        };
+        steady(c.title, look.TitleFace(c));
+        steady(c.subtitle, look.DetailFace());
+    }
+
+    float LeftOf(Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x; }
 }
 
 TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
@@ -694,5 +722,137 @@ TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its
     square->SetProperty("height", "22px");
     rml.context->Update();
     checkIn(square, pictures, true);
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(a_targets_distance_keeps_its_room_as_it_changes_so_the_text_around_it_stands_still)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    settings.Widget(BarWidget::Target).design = DesignFrom(BarWidget::Target, "name distance player |");
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    test::RmlSession rml;
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Target));
+    widget->SetClass(kHiddenClass, false);
+    widget->SetProperty(Rml::PropertyId::Width, Rml::Property(400.0f, Rml::Unit::PX));
+    ActorInfo player;
+    player.kind = player.state.kind = EntityKind::Player;
+    std::snprintf(player.name, sizeof(player.name), "%s", "Tanyrus");
+    player.jobs = PlayerJobs{3, 75, 4, 37};
+    BarState state;
+    state.target = &player;
+    // Where the name, the distance's room and the jobs after it start, with this distance.
+    const auto drawn = [&](float yalms) {
+        state.targetDistance = yalms;
+        WidgetContent c      = BarWidgetContent(BarWidget::Target, state, settings);
+        Steady(c, look);
+        widget->SetInnerRML(WidgetRml(c, look, {}));
+        rml.context->Update();
+        Rml::ElementList lines;
+        widget->GetElementsByClassName(lines, "t");
+        Rml::Element* line = lines.front();
+        CHECK(line->GetNumChildren() == 3);
+        if (line->GetNumChildren() != 3) return std::array<float, 3>{};
+        return std::array{LeftOf(line->GetChild(0)), LeftOf(line->GetChild(1)), LeftOf(line->GetChild(2))};
+    };
+    const std::array<float, 3> first = drawn(1.1f);
+    for (const float yalms : {8.8f, 11.1f, 44.4f, 99.9f, 0.0f, 17.5f})
+        CHECK(drawn(yalms) == first);
+    CHECK(first[2] > first[1] && first[1] > first[0]);
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(a_clocks_times_keep_their_room_and_each_figure_its_place_as_the_seconds_tick)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    for (const bool twentyFour : {false, true})
+        for (const bool seconds : {true, false})
+        {
+            Settings settings;
+            WidgetOptions& o = settings.Widget(BarWidget::EarthTime);
+            o.design         = DesignFrom(BarWidget::EarthTime, "time vana | -server -date");
+            o.clock24        = twentyFour;
+            o.clockSeconds   = seconds;
+            const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+            test::RmlSession rml;
+            Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+            bar->Show();
+            Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::EarthTime));
+            widget->SetClass(kHiddenClass, false);
+            widget->SetProperty(Rml::PropertyId::Width, Rml::Property(400.0f, Rml::Unit::PX));
+            BarState state;
+            // Where the minutes' and seconds' figures start, then the Vana'diel time after the clock.
+            const auto drawn = [&](int hour, int minute, int second) {
+                state.earthHour = hour, state.earthMinute = minute, state.earthSecond = second;
+                WidgetContent c = BarWidgetContent(BarWidget::EarthTime, state, settings);
+                Steady(c, look);
+                widget->SetInnerRML(WidgetRml(c, look, {}));
+                rml.context->Update();
+                Rml::ElementList rooms, figures;
+                widget->GetElementsByClassName(rooms, "steady");
+                CHECK(rooms.size() == (twentyFour ? 2u : 3u));
+                if (rooms.empty()) return std::vector<float>{};
+                rooms.front()->GetElementsByClassName(figures, "fig");
+                const size_t kept = seconds ? 4 : 2;
+                CHECK(figures.size() >= kept);
+                if (figures.size() < kept) return std::vector<float>{};
+                std::vector<float> at;
+                for (size_t i = figures.size() - kept; i < figures.size(); ++i)
+                    at.push_back(LeftOf(figures[i]));
+                for (Rml::Element* room : rooms)
+                    at.push_back(LeftOf(room));
+                return at;
+            };
+            const std::vector<float> first = drawn(9, 5, 7);
+            for (const auto& [hour, minute, second] :
+                std::array{std::tuple{10, 11, 11}, std::tuple{12, 59, 58}, std::tuple{21, 40, 1}, std::tuple{0, 0, 0},
+                    std::tuple{11, 11, 11}, std::tuple{23, 48, 44}})
+                CHECK(drawn(hour, minute, second) == first);
+            CHECK_EQ(rml.Said(), "");
+        }
+}
+
+TEST(a_ticking_span_keeps_its_gap_to_an_icon_after_it)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    test::RmlSession rml;
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Target));
+    widget->SetClass(kHiddenClass, false);
+    widget->SetProperty(Rml::PropertyId::Width, Rml::Property(400.0f, Rml::Unit::PX));
+    // The icon's left, and the room's right, after a name and a distance.
+    const auto drawn = [&](std::string far) {
+        Span distance = Text(std::move(far));
+        distance.room = {"(00.0)"};
+        Span sight;
+        sight.icon = Icon::Sight;
+        WidgetContent c;
+        c.shown = true;
+        AddPart(c.title, {Text("Goblin")});
+        AddPart(c.title, {distance});
+        AddPart(c.title, {sight});
+        Steady(c, look);
+        widget->SetInnerRML(WidgetRml(c, look, {}));
+        rml.context->Update();
+        Rml::ElementList rooms, icons;
+        widget->GetElementsByClassName(rooms, "steady");
+        widget->GetElementsByClassName(icons, "line-icon");
+        CHECK(rooms.size() == 1 && icons.size() == 1);
+        if (rooms.empty() || icons.empty()) return std::pair{0.0f, 0.0f};
+        return std::pair{icons.front()->GetAbsoluteOffset(Rml::BoxArea::Margin).x,
+            LeftOf(rooms.front()) + rooms.front()->GetBox().GetSize(Rml::BoxArea::Border).x};
+    };
+    const auto [icon, room] = drawn("(5.2)");
+    CHECK(drawn("(42.0)").first == icon);
+    // Two spaces of the font apart, as the gap between any two parts.
+    CHECK(std::fabs(icon - room - DrawnWidth("  ", look.TitleFace(WidgetContent{}))) <= 1.0f);
     CHECK_EQ(rml.Said(), "");
 }

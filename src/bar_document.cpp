@@ -141,6 +141,7 @@ namespace headsup
             {
                 std::string mark, text;
                 uint32_t color;
+                const Span* steady = nullptr;
             };
             std::vector<Run> runs;
             std::string carried;
@@ -152,13 +153,29 @@ namespace headsup
                 else if (spaces)
                     carried += span.text;
                 else
-                    runs.push_back(Run{Picture(span, look), std::exchange(carried, {}) + span.text, look.BarColor(span)});
+                    runs.push_back(Run{Picture(span, look), std::exchange(carried, {}) + span.text, look.BarColor(span),
+                        span.room.empty() ? nullptr : &span});
             }
             std::string rml;
             for (const Run& run : runs)
             {
                 rml += run.mark;
-                if (!run.text.empty())
+                if (run.steady != nullptr)
+                {
+                    // Its leading spaces are the room's own left, its trailing ones a margin: a text of spaces alone
+                    // between two cells would not be drawn.
+                    const Span& s = *run.steady;
+                    const size_t first = std::min(s.text.find_first_not_of(' '), s.text.size());
+                    const size_t last  = std::max(first, s.text.find_last_not_of(' ') + 1);
+                    rml += "<span class=\"steady\" style=\"width:" + Px(s.box - s.trail) + ";margin-right:" + Px(s.trail) +
+                           ";color:" + RcssColor(run.color) + ";\">";
+                    for (const std::string_view piece : FigurePieces(std::string_view(s.text).substr(first, last - first)))
+                        rml += IsDigit(piece.front())
+                                   ? "<span class=\"fig\" style=\"width:" + Px(s.digit) + ";\">" + std::string(piece) + "</span>"
+                                   : EscapedRml(piece);
+                    rml += "</span>";
+                }
+                else if (!run.text.empty())
                     rml += "<span style=\"color:" + RcssColor(run.color) + ";\">" + EscapedRml(run.text) + "</span>";
             }
             return rml;
@@ -560,6 +577,7 @@ namespace headsup
         css += ".icon.cog{margin-right:0px;}";
         css += ".t{white-space:pre;}";
         css += ".cell{display:inline-block;white-space:pre;}";
+        css += ".steady{display:inline-block;white-space:pre;text-align:right;}.fig{display:inline-block;text-align:center;}";
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
         css += ".smark{position:relative;}"; // a status's icon and its background, placed inside it
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";

@@ -578,12 +578,13 @@ TEST(the_forecast_shows_vanadiels_date_day_time_and_moon_as_its_design_sets)
     const auto shown = [&] { return Content(BarWidget::Weather, state, settings); };
     const WidgetContent w = shown(); // icon weather | day time: no weather, so its line gives way to the next
     CHECK(w.shown && w.hasPopup && w.icons.empty() && w.subtitle.empty());
-    CHECK(w.title == (std::vector<Span>{{"Darksday", Tone::Own, ElementColor(Element::Dark)}, {"  09:00", Tone::Normal}}));
+    CHECK(w.title.size() == 2 && w.title[0] == (Span{"Darksday", Tone::Own, ElementColor(Element::Dark)}));
+    CHECK(w.title[1].text == "  09:00" && w.title[1].tone == Tone::Normal && !w.title[1].room.empty());
     o.design = DesignFrom(BarWidget::Weather, "day time | date moon");
     CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}, {"  Waxing Gibbous 64%", Tone::Dim}}));
     o.design = DesignFrom(BarWidget::Weather, "moon | time");
     CHECK(shown().title == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Normal}}));
-    CHECK(shown().subtitle == (std::vector<Span>{{"09:00", Tone::Dim}}));
+    CHECK(Joined(shown().subtitle) == "09:00" && shown().subtitle.front().tone == Tone::Dim);
     // Its pop-out's Today card has the date in its heading, the rest in its rows with what comes next beside each.
     const PopupContent popup  = BarPopupContent(BarWidget::Weather, state, settings);
     const PopupSection* today = Section(popup, "Today (1514/03/20)");
@@ -1398,7 +1399,7 @@ TEST(the_clock_can_stack_the_servers_time_under_its_own_and_its_popup_has_the_re
     CHECK(w.shown && w.hasPopup && Joined(w.title) == "08:30" && w.subtitle.empty()); // not stacked unless asked
     settings.Widget(BarWidget::EarthTime).design = DesignFrom(BarWidget::EarthTime, "time | server");
     w                        = Content(BarWidget::EarthTime, state, settings);
-    CHECK(Joined(w.title) == "08:30" && w.subtitle == ListOf(Text("JST 15:30", Tone::Dim)));
+    CHECK(Joined(w.title) == "08:30" && Joined(w.subtitle) == "JST 15:30" && w.subtitle.back().tone == Tone::Dim);
     settings.Widget(BarWidget::EarthTime).clockSeconds = true; // the seconds are the upper line's
     settings.Widget(BarWidget::EarthTime).clock24      = false;
     w                     = Content(BarWidget::EarthTime, state, settings);
@@ -1973,7 +1974,9 @@ TEST(the_target_says_how_far_it_is_after_its_name_unless_its_distance_is_off)
     state.targetDistance = 12.34f;
     const std::string name = Joined(Content(BarWidget::Target, state, Settings{}).title);
     WidgetContent w = Content(BarWidget::Target, state, settings);
-    CHECK(w.title.back() == Text("  (12.3)", Tone::Dim));
+    CHECK(w.title.back().text == "  (12.3)" && w.title.back().tone == Tone::Dim);
+    // It keeps the room of the farthest it reads, 99.9.
+    CHECK((w.title.back().room == std::vector<std::string>{"(99.9)"}));
     settings.Widget(BarWidget::Target).design = DesignFrom(BarWidget::Target, "aggro name -distance | level player");
     w = Content(BarWidget::Target, state, settings);
     CHECK(Joined(w.title) + "  (12.3)" == name);

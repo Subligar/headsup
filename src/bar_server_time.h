@@ -58,8 +58,8 @@ namespace headsup
     // The computer's zone by the local date and time it gives for unixMs: the abbreviation of a zone as far ahead of
     // UTC now ("CEST"), one in daylight saving first, else that offset ("UTC+5:30").
     std::string LocalZoneName(int64_t unixMs, int year, int month, int day, int hour, int minute);
-    // A zone's clock as a widget titles it: "JST 15:30", "PDT 11:30:42 PM".
-    std::string ZoneClockText(const ZoneTime& t, bool twentyFour, bool seconds);
+    // A zone's clock as a widget titles it: "JST 15:30", "PDT 11:30:42 PM", its time as ClockSpans.
+    std::vector<Span> ZoneClockSpans(const ZoneTime& t, bool twentyFour, bool seconds);
 
     // A day on the calendar, its month and day from 1.
     struct CalendarDay

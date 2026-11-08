@@ -45,3 +45,48 @@ TEST(a_lines_figures_are_measured_as_its_fonts_widest_digit_so_a_ticking_clock_k
     CHECK_EQ(WidestDigit([](char) { return 7.0f; }), '0'); // tabular figures
     CHECK_EQ(WidestDigit([](char digit) { return digit == '9' ? 7.5f : 7.0f; }), '9');
 }
+
+TEST(a_ticking_span_keeps_the_room_of_its_widest_text_with_its_spaces_and_a_cell_a_digit)
+{
+    CHECK((FigurePieces("  (9.5)") == std::vector<std::string_view>{"  (", "9", ".", "5", ")"}));
+    CHECK((FigurePieces("12:05 PM") == std::vector<std::string_view>{"1", "2", ":", "0", "5", " PM"}));
+    // 3 px a character, digits as wide as the font's widest, 8 px.
+    const auto width = [](const std::string& text) { return 3.0f * static_cast<float>(text.size()); };
+    Span far   = Text("  (9.5)  ");
+    far.room   = {"(00.0)"};
+    Span noon  = Text("AM");
+    noon.room  = {"AM", "PAM"};
+    Span plain = Text("Goblin");
+    std::vector<Span> line{plain, far, noon};
+    SteadyBoxes(line, 8.0f, width);
+    // "  (" 9, three digits 24, "." 3, ")  " 9.
+    CHECK(far.box == 0.0f && line[1].box == 45.0f && line[1].trail == 6.0f && line[1].digit == 8.0f);
+    CHECK(line[2].box == 9.0f && line[2].trail == 0.0f); // the widest of its texts
+    CHECK(line[0].box == 0.0f);
+    // A text wider than its room keeps all of it.
+    line[1].text = "  (100.0)";
+    SteadyBoxes(line, 8.0f, width);
+    CHECK(line[1].box == 47.0f && line[1].trail == 0.0f);
+}
+
+TEST(a_clocks_spans_read_as_its_text_and_keep_the_room_of_its_widest_time)
+{
+    for (const bool twentyFour : {true, false})
+        for (const int second : {-1, 7})
+        {
+            const std::vector<Span> spans = ClockSpans(21, 7, twentyFour, second);
+            std::string text;
+            for (const Span& s : spans)
+            {
+                text += s.text;
+                CHECK(!s.room.empty());
+            }
+            CHECK_EQ(text, ClockText(21, 7, twentyFour, second));
+            // Two figures of hours, and AM and PM apart from the time.
+            CHECK_EQ(SteadyFigures(spans[0].room.front(), '0'), SteadyFigures(ClockText(10, 10, true, second), '0'));
+            CHECK(spans.size() == (twentyFour ? 1u : 2u));
+            if (!twentyFour) CHECK((spans[1].room == std::vector<std::string>{" AM", " PM"}));
+        }
+    const Span vana = HourMinuteSpan(9, 5);
+    CHECK(vana.text == "09:05" && vana.room == std::vector<std::string>{"00:00"});
+}

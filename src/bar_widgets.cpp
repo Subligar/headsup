@@ -730,10 +730,10 @@ namespace headsup
             return Colored(WeekdayName(t.weekday), ElementColor(WeekdayElement(t.weekday)));
         }
 
-        std::string VanaClock(int64_t unixMs)
+        Span VanaClock(int64_t unixMs)
         {
             const VanaTime t = VanaAt(unixMs);
-            return HourMinute(t.hour, t.minute);
+            return HourMinuteSpan(t.hour, t.minute);
         }
         std::string MoonText(const VanaTime& t) { return MoonPhaseName(t.moonPercent, t.moonDirection); }
 
@@ -1431,7 +1431,13 @@ namespace headsup
                 base.hasPopup = IsMob(state.target); // a mob the data lacks gets its name, level and con, no popup
             }
             if (state.targetDistance && std::isfinite(*state.targetDistance))
-                parts.push_back({WidgetPart::TargetDistance, ListOf(Text("(" + Printed("%.1f", *state.targetDistance) + ")", Tone::Dim))});
+            {
+                constexpr float kFarthest = 99.9f; // the farthest a target's distance reads
+                const auto said = [](float yalms) { return "(" + Printed("%.1f", yalms) + ")"; };
+                Span far = Text(said(*state.targetDistance), Tone::Dim);
+                far.room = {said(kFarthest)};
+                parts.push_back({WidgetPart::TargetDistance, ListOf(std::move(far))});
+            }
             return parts;
         }
 
@@ -1467,7 +1473,7 @@ namespace headsup
                 const std::optional<WeatherOdds> today = OddsOn(state, t.day);
                 std::vector<PartContent> parts{{WidgetPart::WeatherIcon, {}}, {WidgetPart::WeatherName, {}},
                     {WidgetPart::VanaDate, ListOf(Text(VanaDate(t)))}, {WidgetPart::VanaDay, ListOf(WeekdayText(t))},
-                    {WidgetPart::VanaTime, ListOf(Text(HourMinute(t.hour, t.minute)))},
+                    {WidgetPart::VanaTime, ListOf(HourMinuteSpan(t.hour, t.minute))},
                     {WidgetPart::VanaMoon, ListOf(Text(MoonText(t) + " " + std::to_string(t.moonPercent) + "%"))}};
                 if (state.weather || today)
                 {
@@ -1491,15 +1497,18 @@ namespace headsup
             case BarWidget::EarthTime:
                 base.hasPopup = true;
                 return {{WidgetPart::ClockIcon, ListOf(Mark(Icon::Clock))}, {WidgetPart::ClockTime,
-                            ListOf(Text(o.clockZone ? ZoneClockText(ZoneAt(*o.clockZone, state.unixMs), o.clock24, o.clockSeconds)
-                                                    : ClockText(state.earthHour, state.earthMinute, o.clock24,
-                                                          o.clockSeconds ? state.earthSecond : -1)))},
+                            o.clockZone ? ZoneClockSpans(ZoneAt(*o.clockZone, state.unixMs), o.clock24, o.clockSeconds)
+                                        : ClockSpans(state.earthHour, state.earthMinute, o.clock24,
+                                              o.clockSeconds ? state.earthSecond : -1)},
                     {WidgetPart::ClockServer,
-                        ListOf(Text(o.clockSecondZone ? ZoneClockText(ZoneAt(*o.clockSecondZone, state.unixMs), o.clock24, false)
-                                                      : LocalZoneName(state.unixMs, state.earthYear, state.earthMonth,
-                                                            state.earthDay, state.earthHour, state.earthMinute) +
-                                                            " " + ClockText(state.earthHour, state.earthMinute, o.clock24, -1)))},
-                    {WidgetPart::ClockVana, ListOf(Text(VanaClock(state.unixMs)))},
+                        o.clockSecondZone ? ZoneClockSpans(ZoneAt(*o.clockSecondZone, state.unixMs), o.clock24, false)
+                                          : [&] {
+                                                std::vector<Span> spans = ClockSpans(state.earthHour, state.earthMinute, o.clock24);
+                                                spans.insert(spans.begin(), Text(LocalZoneName(state.unixMs, state.earthYear,
+                                                    state.earthMonth, state.earthDay, state.earthHour, state.earthMinute) + " "));
+                                                return spans;
+                                            }()},
+                    {WidgetPart::ClockVana, ListOf(VanaClock(state.unixMs))},
                     {WidgetPart::ClockDate,
                         ListOf(Text(DateText(o.dateFormat, CalendarDay{state.earthYear, state.earthMonth, state.earthDay})))}};
             case BarWidget::GameHelp: return {};

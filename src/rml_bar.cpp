@@ -85,7 +85,7 @@ namespace headsup
     {
         float width = 0.0f;
         for (const Span& s : spans)
-            width += MarkWidth(s, face.size) + Width(host, s.text, face);
+            width += MarkWidth(s, face.size) + (s.room.empty() ? Width(host, s.text, face) : s.box);
         return width;
     }
 
@@ -213,6 +213,16 @@ namespace headsup
             c                = BarWidgetContent(WidgetInSlot(i), state, look.settings);
             widgets.hasPopup[i] = c.hasPopup; // kept off the panel, a combined widget's popup still joins its pill's
             if (!c.shown) continue;
+            const auto steady = [&](std::vector<Span>& line, const TextFace& face) {
+                if (std::ranges::none_of(line, [](const Span& s) { return !s.room.empty(); })) return;
+                SteadyBoxes(line, Width(host, std::string(1, WidestDigitOf(host, face)), face),
+                    [&](const std::string& text) { return Width(host, text, face); });
+            };
+            if (!c.cells)
+            {
+                steady(c.title, look.TitleFace(c));
+                steady(c.subtitle, look.DetailFace());
+            }
             Shown& shown        = m_Shown[i];
             if (!shown.measured || !(shown.content == c))
             {

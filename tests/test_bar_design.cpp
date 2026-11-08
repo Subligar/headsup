@@ -173,4 +173,8 @@ TEST(a_narrow_target_cuts_its_name_wherever_it_sits)
     CHECK_EQ(WidestTextSpan({Text("Bat", Tone::Own), Text("  (12.3)", Tone::Dim)}), 0u);
     CHECK_EQ(WidestTextSpan({Text("  "), aggro, Text("  Crab")}), 2u);
     CHECK_EQ(WidestTextSpan({}), 0u);
+    // A distance alone keeps its room, so it is never the one cut.
+    Span far = Text("(12.3)", Tone::Dim);
+    far.room = {"(99.9)"};
+    CHECK_EQ(WidestTextSpan({far}), 1u);
 }
