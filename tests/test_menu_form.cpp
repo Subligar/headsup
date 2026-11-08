@@ -1513,9 +1513,9 @@ TEST(a_designer_buttons_picture_is_drawn_with_its_icons_adjustment)
     w.readings.partMarks[static_cast<size_t>(WidgetPart::WorldShip)]   = PartMark{Icon::Star};
     const Form form = w.Pass();
     const std::string& rml = std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
-    // Bastok's crest at 85% of its room, the star as it is.
+    // Bastok's crest a pixel down at 85% of its room, the star as it is.
     CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + GamePictureSource(GamePicture::BastokCrest) +
-                    "\" style=\"transform:scale(0.85);\"/>").c_str()));
+                    "\" style=\"transform:translate(0px,1px) scale(0.85);\"/>").c_str()));
     CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + IconSource(Icon::Star) + "\"/>").c_str()));
 }
 

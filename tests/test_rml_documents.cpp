@@ -596,11 +596,12 @@ TEST(an_adjusted_icon_draws_moved_or_sized_in_its_own_room_in_the_bar_and_the_po
     widget->GetElementsByClassName(inline_, "line-icon");
     CHECK_EQ(icons.size(), static_cast<size_t>(4));
     CHECK_EQ(inline_.size(), static_cast<size_t>(1));
-    // The crests at 85% of their room around its middle, wherever they are, as they read larger than an icon.
+    // The conquest crests at 85% of their room around its middle and a pixel down, wherever they are, as they read
+    // larger than an icon.
     const Rml::Vector2f crest = size(icons[0]);
-    CHECK(near(drawnAt(icons[0], crest.x * 0.075f, crest.y * 0.075f), 0.0f, 0.0f));
+    CHECK(near(drawnAt(icons[0], crest.x * 0.075f, crest.y * 0.075f + 1.0f), 0.0f, 0.0f));
     const Rml::Vector2f windurst = size(inline_[0]);
-    CHECK(near(drawnAt(inline_[0], windurst.x * 0.925f, windurst.y * 0.925f), 1.0f, 1.0f));
+    CHECK(near(drawnAt(inline_[0], windurst.x * 0.925f, windurst.y * 0.925f + 1.0f), 1.0f, 1.0f));
     // The bag a pixel down, at its size; the clock at 80% of its room; the star as it is.
     CHECK(near(drawnAt(icons[1], 0.0f, 1.0f), 0.0f, 0.0f));
     const Rml::Vector2f bag = size(icons[1]);
@@ -635,7 +636,7 @@ TEST(an_adjusted_icon_draws_moved_or_sized_in_its_own_room_in_the_bar_and_the_po
     popup->GetElementsByTagName(pictures, "img");
     CHECK_EQ(pictures.size(), static_cast<size_t>(2));
     CHECK(near(drawnAt(pictures[0], 2.0f, 2.0f), 0.0f, 0.0f));
-    CHECK(near(drawnAt(pictures[1], 1.5f, 1.5f), 0.0f, 0.0f));
+    CHECK(near(drawnAt(pictures[1], 1.5f, 2.5f), 0.0f, 0.0f));
     CHECK_EQ(rml.Said(), "");
 }
 

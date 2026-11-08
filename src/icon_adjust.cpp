@@ -8,7 +8,7 @@ namespace headsup
     namespace
     {
         // Every crest read larger than the icons beside it.
-        constexpr float kCrestScale = 0.85f;
+        constexpr float kCrestScale = 0.85f, kConquestCrestDrop = 1.0f;
 
         struct FileAdjust
         {
@@ -19,10 +19,10 @@ namespace headsup
         constexpr FileAdjust kAdjusts[] = {
             {"bag.png", {0.0f, 1.0f, 1.0f}},
             {"clock.png", {0.0f, 0.0f, 0.8f}},
-            {kSanDoriaCrestChunk, {0.0f, 0.0f, kCrestScale}},
-            {kBastokCrestChunk, {0.0f, 0.0f, kCrestScale}},
-            {kWindurstCrestChunk, {0.0f, 0.0f, kCrestScale}},
-            {kBeastmenCrestChunk, {0.0f, 0.0f, kCrestScale}},
+            {kSanDoriaCrestChunk, {0.0f, kConquestCrestDrop, kCrestScale}},
+            {kBastokCrestChunk, {0.0f, kConquestCrestDrop, kCrestScale}},
+            {kWindurstCrestChunk, {0.0f, kConquestCrestDrop, kCrestScale}},
+            {kBeastmenCrestChunk, {0.0f, kConquestCrestDrop, kCrestScale}},
             {kJeunoCrestChunk, {0.0f, 0.0f, kCrestScale}},
             {kAhtUrhganCrestChunk, {0.0f, 0.0f, kCrestScale}},
         };
