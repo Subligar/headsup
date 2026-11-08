@@ -21,6 +21,7 @@ namespace headsup
         constexpr float kPairGap     = 1.2f;  // the least between a pair's label and its value
         constexpr float kTagPadX     = 0.6f, kTagPadY = 0.4f, kTagGap = 0.3f; // from a tag's ink to its frame
         constexpr float kCardPad     = 0.55f; // a card's contents from its edges
+        constexpr float kHeadingGap  = 0.2f;  // more under a card's heading than between its rows
         constexpr float kCardGap     = 0.45f; // between cards, and between the columns of them
         constexpr float kMinWidth    = 12.0f; // popupText, so a short popup is not a sliver
         constexpr float kPinChip     = 1.4f;  // the round pin chip's side, in popup text sizes
@@ -163,11 +164,12 @@ namespace headsup
                         Span{section.collapsed ? kCollapsedSign : kOpenSign, Tone::Heading, 0}});
                     b.presses.push_back(Block::Press{section.collapsePress, 0.0f, y, side, side, b.pad + side});
                 }
-                y += t.height + metrics.rowGap;
+                const float under = metrics.rowGap + std::round(unit * kHeadingGap);
+                y += t.height + under;
                 if (section.collapsed)
                 {
                     b.width  = contentWidth + 2.0f * b.pad;
-                    b.height = y - metrics.rowGap + b.pad;
+                    b.height = y - under + b.pad;
                     return b;
                 }
             }
@@ -848,7 +850,7 @@ namespace headsup
                     float at = y;
                     for (size_t c = i + 1; c < end; ++c)
                     {
-                        cards[c].height = c + 1 == end && !cards[c].collapsed ? y + tall - at : tallest(cards[c]);
+                        cards[c].height = c + 1 == end && !cards[c].collapsed ? tall - (at - y) : tallest(cards[c]);
                         Place(cards[c], pad + first + cardGap, at, rest, l.lines.size(), l);
                         at += cards[c].height + cardGap;
                     }

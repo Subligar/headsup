@@ -1502,3 +1502,25 @@ TEST(the_currency_popups_favorites_scroll_as_all_currencies_do_with_amounts_at_t
     CHECK(coins.size() == 2 && !crests.empty());
     CHECK(coins[0]->x + coins[0]->width < gilName[0]->x && coins[0]->x > sockets[0]->x);
 }
+
+TEST(a_cards_rows_start_a_few_pixels_further_under_its_heading_than_they_are_apart_more_at_a_larger_text_scale)
+{
+    PopupContent c;
+    c.title = {{"Zone", Tone::Normal}};
+    c.sections.push_back(PopupSection{"Elements", {LineOf("Fire"), LineOf("Ice")}});
+    // How much more room the heading has under it than a row has.
+    const auto extra = [&](float textScale) {
+        const BarMetrics m  = MetricsFor(36, BarShape::Pills, kDefaultFontRatio, textScale);
+        const PopupLayout l = LayoutPopup(c, m, false, Fake);
+        const PopupPiece &heading = *Find(l, "Elements"), &fire = *Find(l, "Fire"), &ice = *Find(l, "Ice");
+        return (fire.y - heading.y - heading.height) - (ice.y - fire.y - fire.height);
+    };
+    CHECK(extra(1.0f) >= 2.0f && extra(1.0f) <= 4.0f);
+    CHECK(std::fabs(extra(2.0f) - 2.0f * extra(1.0f)) <= 1.0f);
+    // Collapsed, the card is its heading inside its padding alone.
+    c.sections[0].collapsePress = "collapse zone.elements";
+    c.sections[0].collapsed     = true;
+    const PopupLayout shut = LayoutPopup(c, MetricsFor(36, BarShape::Pills), false, Fake);
+    const PopupPiece &card = *Of(shut, PopupPiece::Kind::Card).front(), &heading = *Find(shut, "Elements");
+    CHECK(Near(card.y + card.height - heading.y - heading.height, heading.y - card.y));
+}
