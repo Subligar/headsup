@@ -599,7 +599,9 @@ namespace headsup
         css += ".icon.cog{margin-right:0px;}";
         css += ".t{white-space:pre;}";
         css += ".cell{display:inline-block;white-space:pre;}";
-        css += ".steady{display:inline-block;white-space:pre;text-align:right;}.fig{display:inline-block;text-align:center;}";
+        // Only a figure in its steady box: the second line of figures is a .fig too, and must stay a block as wide as
+        // the text, or its runs line up against its own width (Job & EXP's earned EXP short of the bar's end).
+        css += ".steady{display:inline-block;white-space:pre;text-align:right;}.steady .fig{display:inline-block;text-align:center;}";
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
         css += ".smark{position:relative;}"; // a status's icon and its background, placed inside it
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";

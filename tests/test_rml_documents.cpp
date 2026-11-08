@@ -1,6 +1,7 @@
 #include "bar_design.h"
 #include "bar_layout.h"
 #include "bar_document.h"
+#include "bar_job.h"
 #include "bar_widgets.h"
 #include "menu_document.h"
 #include "window_skin.h"
@@ -974,6 +975,92 @@ TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_wit
     Rml::Element *exp = drawn("long way"), *both = drawn("NIN 15");
     CHECK(std::fabs(left(exp) - left(text)) <= 0.5f && std::fabs(right(both) - right(text)) <= 0.5f);
     CHECK(std::fabs(left(both) - right(exp) - DrawnWidth("  ", look.TitleFace(c))) <= 1.0f);
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(the_job_widgets_text_alignments_line_up_against_the_whole_width_of_both_its_lines)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    constexpr uint8_t kWar = 1, kNin = 13;
+    JobSample sample;
+    sample.mainJob   = kWar;
+    sample.mainLevel = 30;
+    sample.subJob    = kNin;
+    sample.subLevel  = 15;
+    sample.exp       = 12345;
+    sample.expNeeded = 20000;
+    const JobReport job{sample, std::nullopt};
+    Settings settings;
+    test::RmlSession rml;
+    const BarLook look        = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Job));
+    widget->SetClass(kHiddenClass, false);
+    const auto left  = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+    const auto right = [&](Rml::Element* e) { return left(e) + e->GetBox().GetSize(Rml::BoxArea::Border).x; };
+    const auto drawn = [&](const char* words) {
+        Rml::ElementList texts;
+        widget->GetElementsByClassName(texts, "t");
+        for (Rml::Element* t : texts)
+            if (t->GetInnerRML().find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
+                return t;
+        throw test::Failure{std::string("nothing drawn says ") + words};
+    };
+    // As the panel composes it, its lines of figures.
+    const auto composed = [&](std::string_view design, const WidgetOptions& o) {
+        WidgetContent base;
+        base.shown                     = true;
+        std::vector<PartContent> parts = JobParts(job, o, base);
+        CHECK(base.figures);
+        return ComposeContent(DesignFrom(BarWidget::Job, design), std::move(parts), base);
+    };
+    // The card's picture: a 250 px bar over the jobs and the EXP earned, far wider than they are.
+    for (const WidgetAlign widgetAlign : {WidgetAlign::Left, WidgetAlign::Center, WidgetAlign::Right})
+        for (const Align align : {Align::Left, Align::Center, Align::Right})
+        {
+            widget->SetClass(AlignClass(WidgetAlign::Left), widgetAlign == WidgetAlign::Left);
+            widget->SetClass(AlignClass(WidgetAlign::Center), widgetAlign == WidgetAlign::Center);
+            widget->SetClass(AlignClass(WidgetAlign::Right), widgetAlign == WidgetAlign::Right);
+            WidgetOptions o;
+            o.expBarWidth  = 250;
+            o.earnedAlign  = align;
+            const WidgetContent c = composed("bar | earned", o);
+            widget->SetInnerRML(WidgetRml(c, look, {}));
+            rml.context->Update();
+            Rml::ElementList tracks;
+            widget->GetElementsByClassName(tracks, "track");
+            CHECK(tracks.size() == 1);
+            Rml::Element* earned = drawn("12,345 / 20,000 EXP");
+            const float barLeft = left(tracks.front()), barRight = right(tracks.front());
+            if (align == Align::Left) CHECK(std::fabs(left(earned) - barLeft) <= 0.5f);
+            if (align == Align::Right) CHECK(std::fabs(right(earned) - barRight) <= 0.5f);
+            if (align == Align::Center)
+                CHECK(std::fabs((left(earned) - barLeft) - (barRight - right(earned))) <= 1.0f && left(earned) - barLeft > 20.0f);
+        }
+    // Jobs at the left and the EXP earned at the right, as in the picture: each at its own end of the bar.
+    WidgetOptions o;
+    o.expBarWidth  = 250;
+    o.jobInfoAlign = Align::Left;
+    o.earnedAlign  = Align::Right;
+    WidgetContent c = composed("bar | jobs earned", o);
+    widget->SetInnerRML(WidgetRml(c, look, {}));
+    rml.context->Update();
+    Rml::ElementList tracks;
+    widget->GetElementsByClassName(tracks, "track");
+    CHECK(std::fabs(left(drawn("WAR 30")) - left(tracks.front())) <= 0.5f);
+    CHECK(std::fabs(right(drawn("12,345 / 20,000 EXP")) - right(tracks.front())) <= 0.5f);
+    // The texts on top over a short bar: the bar line follows the widget's Alignment, the texts the whole width.
+    o.expBarWidth  = 40;
+    o.percentAlign = Align::Right;
+    c = composed("jobs earned percent | bar", o);
+    widget->SetInnerRML(WidgetRml(c, look, {}));
+    rml.context->Update();
+    Rml::ElementList texts;
+    widget->GetElementsByClassName(texts, "text");
+    CHECK(std::fabs(left(drawn("WAR 30")) - left(texts.front())) <= 0.5f);
+    CHECK(std::fabs(right(drawn("61%")) - right(texts.front())) <= 0.5f);
     CHECK_EQ(rml.Said(), "");
 }
 
