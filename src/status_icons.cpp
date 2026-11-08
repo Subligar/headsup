@@ -29,15 +29,16 @@ namespace headsup
         };
 #include "generated/status_packs.inc"
 
-        // XIUI 1.8.4's debuffs (libs/bufftable.lua, the 1s of statusEffects). XIUI counts a status missing from its
-        // table as a debuff; here it is a buff, as most of those Phoenix has are (the Prowesses, the Trust auras).
+        // XIUI 1.8.4's debuffs (libs/bufftable.lua, the 1s of statusEffects), plus KO, Ninjutsu Ele Debuff, Elemental
+        // Resistance Down and Hysteria. XIUI counts a status missing from its table as a debuff; here it is a buff, as
+        // most of those Phoenix has are (the Prowesses, the Trust auras).
         constexpr uint16_t kDebuffs[] = {
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 28, 29, 30, 31,
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 28, 29, 30, 31,
             128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147,
             148, 149, 155, 156, 168, 171, 172, 173, 174, 175, 186, 189, 192, 193, 194, 223, 259, 260, 261, 262,
             263, 264, 291, 298, 299, 309, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 404, 448, 449, 450,
-            451, 452, 536, 557, 558, 559, 560, 561, 562, 563, 564, 565, 566, 567, 572, 576, 597, 630, 631, 798,
-            805};
+            451, 452, 536, 557, 558, 559, 560, 561, 562, 563, 564, 565, 566, 567, 572, 576, 597, 630, 631, 793,
+            798, 802, 804, 805};
 
         // What FreeType's inflate allocates with.
         FT_MemoryRec_ g_Heap{nullptr, [](FT_Memory, long size) { return std::malloc(static_cast<size_t>(size)); },

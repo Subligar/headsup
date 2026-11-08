@@ -36,5 +36,6 @@ TEST(debuffs_are_xiuis_and_every_other_status_is_a_buff)
 {
     CHECK(IsDebuff(2) && IsDebuff(19) && IsDebuff(134) && IsDebuff(805)); // Sleep, Sleep II, Dia, Tomahawk
     CHECK(!IsDebuff(40) && !IsDebuff(253) && !IsDebuff(33));               // Protect, Signet, Haste
-    CHECK(!IsDebuff(0) && !IsDebuff(777));                                 // KO and a Prowess: not in XIUI's table
+    CHECK(!IsDebuff(777));                                                 // a Prowess: not in XIUI's table
+    CHECK(IsDebuff(0) && IsDebuff(793) && IsDebuff(802) && IsDebuff(804)); // KO, Ninjutsu Ele Debuff, Ele. Res. Down, Hysteria
 }
