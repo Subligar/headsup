@@ -52,7 +52,6 @@ TEST(image_names_round_trip_to_their_images)
     CHECK_EQ(StripSource(umbra, 45, 13), umbraStrip);
     CHECK_EQ(SeparatorSource(DashMark::Diamond, 0xFFC9A24Au, 10), "hu:diamond/ffc9a24a/10");
     CHECK_EQ(SeparatorSource(DashMark::None, 0xFFC9A24Au, 10), "hu:dash/ffc9a24a/10");
-    CHECK_EQ(CoinSource(17), "hu:coin/17");
     const std::optional<Image> icon = HostImage("hu:icon/4");
     CHECK(icon && icon->width == static_cast<int>(IconImage(Icon::Link).width));
     const std::optional<Image> strip = HostImage(umbraStrip);
@@ -79,8 +78,7 @@ TEST(image_names_round_trip_to_their_images)
         CHECK_EQ(mark->argb[0], 0u);                                             // a corner is clear
     }
     CHECK(!HostImage("hu:stars/ffc9a24a/10"));
-    const std::optional<Image> coin = HostImage("hu:coin/17");
-    CHECK(coin && coin->width == 17);
+    CHECK(!HostImage("hu:coin/17")); // gil is XIUI's picture, no longer a painted coin
     CHECK(!HostImage("hu:icon/999") && !HostImage("hu:nothing") && !HostImage("icon.png") && !HostImage("hu:strip/9/45/13"));
     CHECK(!HostImage("hu:strip/ff2b2b30/ff212125/zz17171a/ff000000/00000000/80000000/1/45/13"));
     // The reset arrow, in the color asked for: the bottom of its ring is that color.
@@ -199,14 +197,14 @@ TEST(a_widgets_lines_line_up_with_the_side_of_the_panel_its_section_is_on)
     CHECK(std::string(SectionClass(BarSection::Left)) != SectionClass(BarSection::Right));
 }
 
-TEST(a_widgets_markup_has_its_leading_icons_coin_lines_and_marks_inside_its_lines)
+TEST(a_widgets_markup_has_its_leading_icons_lines_and_marks_inside_its_lines_gil_as_xiuis_picture)
 {
     Settings settings;
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
+    const std::string gil = IconSource(Icon::Gil);
     WidgetContent c;
     c.shown    = true;
-    c.icons    = {Icon::Sight, Icon::Sound};
-    c.coin     = true;
+    c.icons    = {Icon::Sight, Icon::Sound, Icon::Gil};
     Span link  = Text("");
     link.icon  = Icon::Link;
     Span coin  = Text("12");
@@ -217,22 +215,21 @@ TEST(a_widgets_markup_has_its_leading_icons_coin_lines_and_marks_inside_its_line
     c.subtitle = {Text("Sandy", Tone::Dim), coin, bar};
     const std::string rml = WidgetRml(c, look, {});
     CHECK(Has(rml, "<img class=\"icon\" src=\"hu:icon/5\"/>") && Has(rml, "hu:icon/7"));
-    CHECK(Has(rml, "class=\"coin\"") && Has(rml, "hu:coin/17")); // 0.75 of 0.50 H: 16.875
+    CHECK(Has(rml, "<img class=\"icon\" src=\"" + gil + "\"/>"));
     CHECK(Has(rml, "Rolanberry &lt;Fields&gt;") && Has(rml, "#6fe36fff") && Has(rml, "#efe3c6ff"));
     // The link's icon after the title's text, inside the title's line.
     const size_t title = rml.find("<div class=\"title\">"), detail = rml.find("class=\"detail\"");
     CHECK(title != std::string::npos && detail != std::string::npos);
     const size_t linkAt = rml.find("<img class=\"line-icon\" src=\"hu:icon/4\"/>");
     CHECK(linkAt > rml.find("[S]") && linkAt < detail);
-    // The coin before its amount and the bar after it, filled 40%, on the second line.
-    const size_t coinAt = rml.find("<img class=\"line-icon\" src=\"hu:coin/", detail);
+    // Gil's picture before its amount and the bar after it, filled 40%, on the second line.
+    const size_t coinAt = rml.find("<img class=\"line-icon\" src=\"" + gil + "\"/>", detail);
     CHECK(coinAt != std::string::npos && coinAt < rml.find(">12<", detail));
     CHECK(rml.find("class=\"ibar\"", detail) > rml.find(">12<", detail) && Has(rml, "width: 40%"));
     CHECK(Has(rml, "#a8936dff") && Has(rml, "Sandy"));
     c.subtitle.clear();
-    c.coin = false;
     const std::string bare = WidgetRml(c, look, {});
-    CHECK(!Has(bare, "ibar") && !Has(bare, "detail") && !Has(bare, "coin"));
+    CHECK(!Has(bare, "ibar") && !Has(bare, "detail"));
 }
 
 TEST(a_widget_of_figures_takes_the_detail_font_for_its_title)

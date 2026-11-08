@@ -225,7 +225,7 @@ namespace headsup
     std::optional<PartMark> MarkOf(const std::vector<Span>& spans)
     {
         for (const Span& s : spans)
-            if (s.icon || s.picture != GamePicture::None || s.coin) return PartMark{s.icon, s.picture, s.coin};
+            if (s.icon || s.picture != GamePicture::None || s.coin) return PartMark{s.coin ? Icon::Gil : s.icon, s.picture};
         return std::nullopt;
     }
 
@@ -245,7 +245,7 @@ namespace headsup
         case WidgetPart::WorldWindurst: return PartMark{std::nullopt, GamePicture::WindurstCrest};
         case WidgetPart::WorldBeastmen: return PartMark{std::nullopt, GamePicture::BeastmenCrest};
         case WidgetPart::PerfMessages: return PartMark{std::nullopt, GamePicture::PlayOnlineMail};
-        case WidgetPart::CurrencyCoin: return PartMark{std::nullopt, GamePicture::None, true};
+        case WidgetPart::CurrencyCoin: return PartMark{Icon::Gil};
         default: return {};
         }
     }

@@ -22,12 +22,11 @@
 namespace headsup
 {
     // The images the bar's documents name, drawn by the bar's own image code when RmlUi asks for them: an icon by
-    // its number, a theme's strip column (its rows and the rows fading below), a diamond or a coin by its pixels.
+    // its number, a theme's strip column (its rows and the rows fading below), a diamond by its pixels.
     constexpr std::string_view kHostSource = "hu:";
     std::string IconSource(Icon icon);
     std::string StripSource(const BarPalette& palette, int rows, int belowRows);
     std::string SeparatorSource(DashMark mark, uint32_t argb, int pixels);
-    std::string CoinSource(int pixels);
     // A game item's picture, which only the plugin can make (from the game's resources), and the item a name is.
     std::string ItemSource(uint16_t item);
     std::optional<uint16_t> ItemOfSource(std::string_view name);
@@ -97,7 +96,7 @@ namespace headsup
     uint32_t ExpBarBack(const BarPalette& palette);
     // A widget's class for its Alignment, which wins over its section's; empty for Set by Location.
     const char* AlignClass(WidgetAlign align);
-    // A widget's inner markup: its icons, coin, title and detail lines in their colors, and its progress bar.
+    // A widget's inner markup: its icons, title and detail lines in their colors, and its progress bar.
     // columns: a widget of cells' column widths (CellColumns).
     std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns);
     // A widget of cells' columns: each as wide as its widest cell, which width measures (title: on the first line).

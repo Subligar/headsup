@@ -46,7 +46,6 @@ namespace headsup
             ActionChip,  // the clone or remove chip left of the cog while the settings show, drawn as a tab's
             Cog,         // the cog on it
             Sign,        // a collapse chip's minus or plus (its span's text), drawn as bars centered in the piece
-            Coin,        // gil's coin, as an icon is drawn
             Status,      // a status's icon, which the plugin serves, as an icon is drawn
         };
         Kind kind = Kind::Text;

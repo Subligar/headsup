@@ -26,6 +26,9 @@ namespace
         return BarWidgetContent(widget, state, settings);
     }
 
+    // Gil's picture leads the widget, beside both lines.
+    bool LeadsWithGil(const WidgetContent& w) { return std::ranges::find(w.icons, Icon::Gil) != w.icons.end(); }
+
     constexpr uint32_t kBountyHunter = 17199648; // Goblin Bounty Hunter, zone 103: light -3, dark 0, the rest -2
 
     ActorInfo Goblin()
@@ -619,7 +622,7 @@ TEST(gil_bags_and_earth_time)
     CHECK(Joined(Content(BarWidget::Currency, state, settings).title) == "-");
     state.gil             = 1234567;
     const WidgetContent g = Content(BarWidget::Currency, state, settings);
-    CHECK(g.coin && Joined(g.title) == "1,234,567" && g.hasPopup);
+    CHECK(LeadsWithGil(g) && Joined(g.title) == "1,234,567" && g.hasPopup);
     state.bags[0]         = BagCount{45, 80};
     state.bags[5]         = BagCount{30, 30}; // a full satchel
     const WidgetContent b = Content(BarWidget::Bags, state, settings);
@@ -708,7 +711,7 @@ TEST(each_widget_follows_its_switch_and_a_switched_off_one_builds_nothing)
     for (int i = 0; i < kBarWidgetCount; ++i)
     {
         const WidgetContent w = Content(static_cast<BarWidget>(i), state, settings);
-        CHECK(!w.shown && w.title.empty() && w.subtitle.empty() && w.icons.empty() && !w.coin && !w.hasPopup);
+        CHECK(!w.shown && w.title.empty() && w.subtitle.empty() && w.icons.empty() && !w.hasPopup);
     }
 }
 
@@ -1009,7 +1012,7 @@ TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
     CHECK(w.picture == GamePicture::BastokCrest && w.iconsRight);
     zone.iconSide = IconSide::Hide;
     CHECK(Content(BarWidget::Zone, state, settings).picture == GamePicture::None);
-    // The bag's icon and gil's coin the same way.
+    // The bag's icon and gil's the same way.
     WidgetOptions& bags = settings.Widget(BarWidget::Bags);
     CHECK(Content(BarWidget::Bags, state, settings).icons == std::vector<Icon>{Icon::Bag});
     bags.iconSide = IconSide::Hide;
@@ -1024,11 +1027,11 @@ TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
     CHECK(Content(BarWidget::EarthTime, state, settings).icons.empty());
     WidgetOptions& gil = settings.Widget(BarWidget::Currency);
     state.gil = 1200;
-    CHECK(Content(BarWidget::Currency, state, settings).coin);
+    CHECK(LeadsWithGil(Content(BarWidget::Currency, state, settings)));
     gil.iconSide = IconSide::Right;
-    CHECK(Content(BarWidget::Currency, state, settings).coin && Content(BarWidget::Currency, state, settings).iconsRight);
+    CHECK(LeadsWithGil(Content(BarWidget::Currency, state, settings)) && Content(BarWidget::Currency, state, settings).iconsRight);
     gil.iconSide = IconSide::Hide;
-    CHECK(!Content(BarWidget::Currency, state, settings).coin);
+    CHECK(!LeadsWithGil(Content(BarWidget::Currency, state, settings)));
 }
 
 TEST(the_zones_design_puts_the_holders_name_before_or_after_the_zone_or_below_it)
@@ -1856,8 +1859,8 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     const PopupRow& top = p.sections[0].rows[0];
     CHECK((gridLines(top) == std::vector<std::string>{"Gil 4,751", "Conquest Points (Bastok) -"}));
     CHECK(top.cells[0].icon == Icon::Star && top.cells[0].press == "favorite gil" && top.cells[3].align == Align::Right);
-    // Each currency's picture in a column of its own after its star: gil's coin, a nation's crest.
-    CHECK(top.columns == 4 && top.cells[1].coin && top.cells[1].text.empty() && top.cells[5].picture == GamePicture::BastokCrest);
+    // Each currency's picture in a column of its own after its star: gil's, a nation's crest.
+    CHECK(top.columns == 4 && top.cells[1].icon == Icon::Gil && top.cells[1].text.empty() && top.cells[5].picture == GamePicture::BastokCrest);
     // In a socket that scrolls, as All Currencies' are, their amounts at its right.
     CHECK(top.nested && top.scroll == "Favorites" && top.spread);
     const PopupSection& all = p.sections[1];
@@ -1876,7 +1879,7 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     CHECK((std::vector<std::string>(lines.begin(), lines.begin() + 4) ==
            std::vector<std::string>{"Allied Notes 12,000", "Gil 4,751", "Sparks of Eminence 350", "Ancient Beastcoins 0"}));
     CHECK(byAmount.cells[0].icon == Icon::StarEmpty && byAmount.cells[4].icon == Icon::Star); // Gil's
-    CHECK(byAmount.spread && byAmount.cells[5].coin);
+    CHECK(byAmount.spread && byAmount.cells[5].icon == Icon::Gil);
     // A currency with no picture leaves its place in the column empty.
     CHECK(byAmount.cells[1] == PopupCell{});
     const auto row = std::ranges::find_if(byAmount.cells, [](const PopupCell& c) { return Joined(c.text) == "Beastmen's Seals"; });
@@ -1922,12 +1925,12 @@ TEST(the_currency_widget_shows_two_currencies_and_your_nations_points_without_it
     CHECK(Joined(Content(BarWidget::Currency, state, settings).subtitle) == "350  Conquest Points");
     o.secondCurrency = *CurrencyOfKey("cp_sandoria");
     CHECK(Joined(Content(BarWidget::Currency, state, settings).subtitle) == "0  Conquest Points (San d'Oria)");
-    // The coin shows whatever the currencies are.
+    // Gil's picture leads whatever the currencies are.
     const int notes = *CurrencyOfKey("allied_notes");
     o.currency      = notes;
     state.currencies[notes] = 12000;
     w = Content(BarWidget::Currency, state, settings);
-    CHECK(w.coin && Joined(w.title) == "12,000  Allied Notes" && w.hasPopup);
+    CHECK(LeadsWithGil(w) && Joined(w.title) == "12,000  Allied Notes" && w.hasPopup);
     // Each currency's icon is the game's own picture of it, where it has one.
     o.design         = DesignFrom(BarWidget::Currency, "icon1 | icon2");
     o.currency       = *CurrencyOfKey("beastmen_seals");
@@ -1935,17 +1938,17 @@ TEST(the_currency_widget_shows_two_currencies_and_your_nations_points_without_it
     w                = Content(BarWidget::Currency, state, settings);
     CHECK(w.title.size() == 1 && w.title[0].item == 1126); // the Beastmen's Seal item, by item_basic.sql
     CHECK(w.subtitle.size() == 1 && w.subtitle[0].picture == GamePicture::BastokCrest);
-    // Gil's is the Coin Icon's coin, on its own line wherever it is, and apart from the Coin Icon: either, both or none.
+    // Gil's is the Coin Icon's picture, on its own line wherever it is, and apart from the Coin Icon: either, both or none.
     o.currency = kGilCurrency;
     for (const IconSide side : {IconSide::Left, IconSide::Hide})
     {
         o.iconSide = side;
         w          = Content(BarWidget::Currency, state, settings);
-        CHECK(w.coin == (side == IconSide::Left) && w.title.size() == 1 && w.title[0].coin);
+        CHECK(LeadsWithGil(w) == (side == IconSide::Left) && w.title.size() == 1 && w.title[0].coin);
     }
     o.currency = notes;
     w          = Content(BarWidget::Currency, state, settings);
-    CHECK(!w.coin && std::ranges::none_of(w.title, [](const Span& s) { return s.item != 0; }));
+    CHECK(!LeadsWithGil(w) && std::ranges::none_of(w.title, [](const Span& s) { return s.item != 0; }));
 }
 
 TEST(the_currency_choices_put_your_nations_points_after_gil_and_before_the_others)
@@ -2003,7 +2006,7 @@ TEST(each_widget_can_drop_its_second_line_or_its_icons)
     CHECK(Content(BarWidget::Weather, state, settings).icons.empty());
     settings.Widget(BarWidget::Currency).iconSide = IconSide::Hide;
     w = Content(BarWidget::Currency, state, settings);
-    CHECK(!w.coin && Joined(w.title) == "100");
+    CHECK(!LeadsWithGil(w) && Joined(w.title) == "100");
 }
 
 TEST(the_job_widgets_design_places_its_exp_bar_anywhere)
@@ -2545,7 +2548,7 @@ TEST(each_copy_of_a_widget_shows_by_its_own_settings)
     CHECK(copy.has_value());
     settings.Widget(*copy).currency = 3;
     const WidgetContent first = Content(BarWidget::Currency, state, settings), second = Content(*copy, state, settings);
-    CHECK(first.coin && second.coin && second.title.front().text == "50");
+    CHECK(LeadsWithGil(first) && LeadsWithGil(second) && second.title.front().text == "50");
     // A copy not on the panel shows nothing, whatever it was set to.
     RemoveWidgetCopy(settings, *copy);
     settings.Widget(*copy).on = true;
@@ -3160,7 +3163,7 @@ TEST(a_designer_chip_shows_its_parts_picture_as_the_game_is_now_or_a_stand_in)
     CHECK(!storm.empty() && mark(marks, WidgetPart::WeatherIcon) == PartMark{storm.front()});
     CHECK(mark(marks, WidgetPart::WeatherIcon) != DefaultMark(WidgetPart::WeatherIcon));
     CHECK(mark(marks, WidgetPart::TargetAggro) == DefaultMark(WidgetPart::TargetAggro));
-    CHECK(mark(marks, WidgetPart::CurrencyCoin).coin);
+    CHECK(mark(marks, WidgetPart::CurrencyCoin).icon == Icon::Gil);
     CHECK(mark(marks, WidgetPart::WeatherName) == PartMark{});
     // A mob targeted: its own aggression icon.
     const ActorInfo goblin = Goblin();

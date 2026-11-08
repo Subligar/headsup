@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generate src/generated/icons.inc and icon_ids.h from the MobDB icons in third_party/mobdb-icons (MIT License,
-ThornyFFXI), XIUI's player icons in third_party/xiui-icons (MIT License, tirem) and HeadsUp's own in resources/icons,
+ThornyFFXI), XIUI's player icons and gil in third_party/xiui-icons (MIT License, tirem) and HeadsUp's own in resources/icons,
 src/generated/status_packs.h, status_packs.inc and status_pack_N.z from the status icon packs in resources/icons/status,
 and src/generated/pointer.inc from the chocobo mouse pointer in third_party/playonline-chocobo.
 
@@ -53,6 +53,7 @@ ICONS = [(name, f'third_party/mobdb-icons/{name}.png', '') for name in
     ('BuffBack', 'resources/icons/status/BuffIcon.png', "behind a buff's status icon"),
     ('DebuffBack', 'resources/icons/status/DebuffIcon.png', "behind a debuff's"),
     ('UnknownStatus', 'resources/icons/status/XIView/unknown.png', 'a status with no icon in its pack or the game'),
+    ('Gil', 'third_party/xiui-icons/gil.png', "gil's coins"),
 ]
 # Each folder here is a pack of status icons, each named by its status id, as XIUI's are.
 STATUS_PACKS = 'resources/icons/status'

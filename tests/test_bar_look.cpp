@@ -112,11 +112,10 @@ TEST(a_widgets_text_starts_after_its_icons_and_coin_each_with_a_gap)
     weather.icons = {Icon::Lightning, Icon::Lightning};
     CHECK(Near(look.Leading(weather), 2.0f * (0.65f * 34.0f + 7.65f))); // icons 65% of the pill's 34 px inside, gaps 0.17 H
     CHECK(Near(look.Leading(WidgetContent{}), 0.0f));
-    // Gil's coin is drawn 17 px wide at 45 px (0.375 H, whole pixels), and its amount starts a gap after that.
+    // Gil's picture has an icon's room, as every icon.
     WidgetContent gil;
-    gil.coin = true;
-    CHECK_EQ(CoinPixels(look.metrics), 17);
-    CHECK(Near(look.Leading(gil), 17.0f + 7.65f));
+    gil.icons = {Icon::Gil};
+    CHECK(Near(look.Leading(gil), 0.65f * 34.0f + 7.65f));
     // A zone's crest has an icon's room (its adjustment draws it smaller inside it).
     WidgetContent zone;
     zone.picture = GamePicture::BastokCrest;

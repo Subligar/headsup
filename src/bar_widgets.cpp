@@ -1107,14 +1107,12 @@ namespace headsup
             return rows;
         }
 
-        // The coin, then each of the two currencies' name, amount and the game's picture of it where it has one.
+        // Gil's picture, then each of the two currencies' name, amount and picture where it has one.
         std::vector<PartContent> CurrencyParts(const BarState& state, const WidgetOptions& o, WidgetContent& base)
         {
             base.hasPopup     = true;
             const Nation yours = state.nation.value_or(Nation::None);
-            Span coin          = Text("");
-            coin.coin          = true;
-            std::vector<PartContent> parts{{WidgetPart::CurrencyCoin, ListOf(coin)}};
+            std::vector<PartContent> parts{{WidgetPart::CurrencyCoin, ListOf(Mark(Icon::Gil))}};
             const WidgetPart names[] = {WidgetPart::Currency1Name, WidgetPart::Currency2Name},
                              amounts[] = {WidgetPart::Currency1Amount, WidgetPart::Currency2Amount},
                              icons[] = {WidgetPart::Currency1Icon, WidgetPart::Currency2Icon};
@@ -1148,7 +1146,7 @@ namespace headsup
                 grid.cells.push_back(std::move(star));
                 const Span mark = CurrencyMark(c, Nation::None);
                 PopupCell picture;
-                picture.coin    = mark.coin;
+                if (mark.coin) picture.icon = Icon::Gil;
                 picture.picture = mark.picture;
                 picture.item    = mark.item;
                 grid.cells.push_back(std::move(picture));
@@ -1547,7 +1545,6 @@ namespace headsup
                         for (const Span& s : part->spans)
                         {
                             if (s.icon) base.icons.push_back(*s.icon);
-                            if (s.coin) base.coin = true;
                             if (s.picture != GamePicture::None) base.picture = s.picture;
                         }
                     base.iconsRight = o.iconSide == IconSide::Right;
@@ -1561,7 +1558,7 @@ namespace headsup
                         chip.on = true;
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && widget.kind == BarWidget::StatusTimers) w.title = ListOf(Text("Status Timers", Tone::Dim));
-            if (w.title.empty() && w.icons.empty() && !w.coin && !w.cog && w.picture == GamePicture::None) w.title = ListOf(Text("-"));
+            if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None) w.title = ListOf(Text("-"));
             return w;
         }
     }

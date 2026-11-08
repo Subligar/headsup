@@ -1497,8 +1497,11 @@ TEST(the_currency_popups_favorites_scroll_as_all_currencies_do_with_amounts_at_t
         CHECK(Near(favorites, all) && amounts[0]->right && amounts[1]->right);
     }
     CHECK(Near(gilName[0]->x, gilName[1]->x) && Near(gilName[1]->x, notesName[0]->x));
-    // The pictures sit left of the names, between the stars and them: gil's coin, Bastok's crest.
-    const std::vector<const PopupPiece*> coins = Of(l, PopupPiece::Kind::Coin), crests = Of(l, PopupPiece::Kind::Picture);
+    // The pictures sit left of the names, between the stars and them: gil's, untinted, and Bastok's crest.
+    std::vector<const PopupPiece*> coins;
+    for (const PopupPiece* p : Of(l, PopupPiece::Kind::Icon))
+        if (p->icon == Icon::Gil && !p->tinted) coins.push_back(p);
+    const std::vector<const PopupPiece*> crests = Of(l, PopupPiece::Kind::Picture);
     CHECK(coins.size() == 2 && !crests.empty());
     CHECK(coins[0]->x + coins[0]->width < gilName[0]->x && coins[0]->x > sockets[0]->x);
 }

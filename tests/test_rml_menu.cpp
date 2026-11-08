@@ -1953,7 +1953,6 @@ TEST(the_currency_dropdowns_show_each_currencys_picture_left_of_its_name_in_a_co
     window.Page("toppanel");
     window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Currency)));
     const std::vector<int> choices = CurrencyChoices(Nation::None); // the window's readings know no nation
-    const std::string coin         = CoinSource(0);
     for (const std::string list : {"toppanel-widgets-currency-1-gil", "toppanel-widgets-currency-2-gil"})
     {
         window.Click(list);
@@ -1962,7 +1961,7 @@ TEST(the_currency_dropdowns_show_each_currencys_picture_left_of_its_name_in_a_co
             return window.Find(list + "-o-" + std::to_string(std::ranges::find(choices, currency) - choices.begin()));
         };
         const auto source = [](Rml::Element* r) { return r->GetFirstChild()->GetAttribute<Rml::String>("src", ""); };
-        CHECK(source(row("gil")).starts_with(coin.substr(0, coin.size() - 1))); // the coin, at whatever size
+        CHECK(source(row("gil")) == IconSource(Icon::Gil));
         CHECK(source(row("cp_bastok")) == GamePictureSource(GamePicture::BastokCrest));
         CHECK(source(row("beastmen_seals")) == ItemSource(1126));
         // One with none keeps the picture's room, so every name starts in one column.

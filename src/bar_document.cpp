@@ -19,7 +19,7 @@ namespace headsup
 {
     namespace
     {
-        constexpr std::string_view kIconKind = "icon", kStripKind = "strip", kCoinKind = "coin",
+        constexpr std::string_view kIconKind = "icon", kStripKind = "strip",
                                    kResetKind = "reset", kCogKind = "cog", kGameKind = "game",
                                    kItemKind = "item", kStatusKind = "status";
         // A separator's, by DashMark.
@@ -113,9 +113,12 @@ namespace headsup
             if (span.picture != GamePicture::None)
                 return "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"" +
                        AdjustStyle(AdjustOf(span.picture)) + "/>";
-            if (span.icon) return "<img class=\"line-icon\" src=\"" + IconSource(*span.icon) + "\"" + AdjustStyle(AdjustOf(*span.icon)) + "/>";
+            if (span.icon || span.coin)
+            {
+                const Icon icon = span.coin ? Icon::Gil : *span.icon;
+                return "<img class=\"line-icon\" src=\"" + IconSource(icon) + "\"" + AdjustStyle(AdjustOf(icon)) + "/>";
+            }
             if (span.item != 0) return "<img class=\"line-icon\" src=\"" + ItemSource(span.item) + "\"/>";
-            if (span.coin) return "<img class=\"line-icon\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
             if (span.status) return "<span class=\"line-icon smark\">" + StatusPictures(*span.status, 0.0f, 0.0f, kPercentWhole, "%") + "</span>";
             if (span.bar)
             {
@@ -321,11 +324,6 @@ namespace headsup
                kSeparator + std::to_string(pixels);
     }
 
-    std::string CoinSource(int pixels)
-    {
-        return std::string(kHostSource) + std::string(kCoinKind) + kSeparator + std::to_string(pixels);
-    }
-
     std::string ItemSource(uint16_t item)
     {
         return std::string(kHostSource) + std::string(kItemKind) + kSeparator + std::to_string(item);
@@ -421,12 +419,6 @@ namespace headsup
             if (separator != std::end(kSeparatorKinds))
                 return SeparatorImage(static_cast<DashMark>(separator - std::begin(kSeparatorKinds)), size, *color);
             return kind == kResetKind ? ResetArrow(size, *color) : Cog(size, *color);
-        }
-        if (kind == kCoinKind && parts.size() == 2)
-        {
-            const std::optional<uint32_t> pixels = number(1);
-            if (!pixels) return std::nullopt;
-            return Coin(static_cast<int>(*pixels), kCoinColor);
         }
         return std::nullopt;
     }
@@ -537,7 +529,6 @@ namespace headsup
         const float rowTop      = row.y + kContentInset; // where a widget's content starts
         const float clear       = DiamondClearance(m);
         const int divider       = WholePixels(m.diamond), cap = WholePixels(m.diamond * kCapScale);
-        const int coin          = CoinPixels(m);
         const std::string capSource     = SeparatorSource(p.separator, p.accent, cap);
         const std::string dividerSource = SeparatorSource(p.separator, look.ornate ? p.divider : p.accent, divider);
         auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit); };
@@ -601,12 +592,10 @@ namespace headsup
                  std::pair{WidgetAlign::Right, "right"}})
             css += std::string(".widget.") + AlignClass(align) + " .content,.widget." + AlignClass(align) + " .text{text-align:" +
                    side + ";}";
-        css += ".icon,.coin,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
+        css += ".icon,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
         css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
                Px(m.gap) + ";}";
-        css += ".coin{" + square(static_cast<float>(coin)) + "margin-top:" +
-               Px(std::round(mid - static_cast<float>(coin) / 2.0f) - rowTop) + ";margin-right:" + Px(m.gap) + ";}";
-        css += ".icon.right,.coin.right{margin-right:0px;margin-left:" + Px(m.gap) + ";}";
+        css += ".icon.right{margin-right:0px;margin-left:" + Px(m.gap) + ";}";
         css += ".icon.cog{margin-right:0px;}";
         css += ".t{white-space:pre;}";
         css += ".cell{display:inline-block;white-space:pre;}";
@@ -784,13 +773,6 @@ namespace headsup
             case PopupPiece::Kind::Status:
                 rml += StatusPictures(piece.status, std::round(piece.x), std::round(piece.y), piece.width, "px");
                 break;
-            case PopupPiece::Kind::Coin:
-            {
-                const int pixels = WholePixels(piece.width);
-                rml += "<img class=\"p\" src=\"" + CoinSource(pixels) + "\" style=\"" + place +
-                       size(static_cast<float>(pixels), static_cast<float>(pixels)) + "\"/>";
-                break;
-            }
             case PopupPiece::Kind::Cog:
             {
                 const int pixels = WholePixels(piece.width);
@@ -885,7 +867,6 @@ namespace headsup
                      AdjustStyle(AdjustOf(content.picture)) + "/>";
         for (const Icon icon : content.icons)
             icons += "<img class=\"icon" + side + "\" src=\"" + IconSource(icon) + "\"" + AdjustStyle(AdjustOf(icon)) + "/>";
-        if (content.coin) icons += "<img class=\"coin" + side + "\" src=\"" + CoinSource(CoinPixels(look.metrics)) + "\"/>";
         if (content.cog)
             icons += "<img class=\"icon cog\" src=\"" + CogSource(look.palette.title, WholePixels(look.metrics.icon)) + "\"" +
                      AdjustStyle(AdjustOf(kCogName)) + "/>";

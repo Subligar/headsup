@@ -67,7 +67,7 @@ namespace headsup
         bool operator==(const StatusMark&) const = default;
     };
 
-    // Some text, and before it at most one mark: a game picture, an icon, gil's coin or a status's icon as tall as its
+    // Some text, and before it at most one mark: a game picture, an icon, gil's or a status's icon as tall as its
     // letters, or an EXP bar.
     struct Span
     {
@@ -76,7 +76,7 @@ namespace headsup
         uint32_t argb       = 0;
         GamePicture picture = GamePicture::None;
         std::optional<Icon> icon{};
-        bool coin = false;
+        bool coin = false; // gil's picture (Icon::Gil) as a currency's mark: it stays on its line, where an icon leads
         std::optional<InlineBar> bar{};
         uint16_t item = 0; // a game item's picture
         std::optional<StatusMark> status{};
@@ -99,7 +99,6 @@ namespace headsup
     {
         bool shown = false;
         std::vector<Icon> icons; // before the text, beside both lines
-        bool coin = false;       // gil's coin there
         bool cog = false;        // the settings cog, alone: the Settings widget
         GamePicture picture = GamePicture::None; // a picture from the game's files there, as an icon is
         bool iconsRight = false; // those after the text instead
@@ -121,7 +120,6 @@ namespace headsup
         std::vector<Span> text;
         bool star = false; // a star after the text: who holds what the cell's row is about
         uint16_t item = 0; // a game item's picture before the text, in place of an icon
-        bool coin     = false; // gil's coin there, in place of an icon
         std::optional<StatusMark> status{}; // a status's icon there, in place of an icon
         Align align   = Align::Left; // in a grid, against its column's left, in its middle or against its right
         GamePicture picture = GamePicture::None; // a picture from the game's files before the text, as an icon is

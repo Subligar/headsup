@@ -39,7 +39,6 @@ namespace headsup
         constexpr const char* kChipClone   = " clone"; // and its clone button's
         constexpr const char* kChipRemove  = " remove"; // and a copy's remove button's
         constexpr const char* kPartChip    = "part ";   // a designer chip's name, before its widget's slot and its part
-        constexpr int kChipCoinPixels      = 32;        // gil's coin on a designer chip, drawn smaller
         constexpr int kFirstSense = static_cast<int>(DetectionIcon::Link); // Detection Icons' first, after the aggression
 
         // The picture a designer chip shows before its name, or none.
@@ -47,20 +46,20 @@ namespace headsup
         {
             if (mark.icon) return IconSource(*mark.icon);
             if (mark.picture != GamePicture::None) return GamePictureSource(mark.picture);
-            if (mark.coin) return CoinSource(kChipCoinPixels);
             return {};
         }
         // A currency as its dropdown's row shows it: its picture, or the room of one, then its name.
         std::string CurrencyRow(int currency, Nation yours)
         {
             const Span mark = CurrencyMark(currency, yours);
-            const std::string source = mark.coin                        ? CoinSource(kChipCoinPixels)
+            const std::string source = mark.coin                        ? IconSource(Icon::Gil)
                                        : mark.picture != GamePicture::None ? GamePictureSource(mark.picture)
                                        : mark.item != 0                    ? ItemSource(mark.item)
                                                                            : std::string();
+            const IconAdjust adjust   = mark.coin ? AdjustOf(Icon::Gil) : AdjustOf(mark.picture);
             const std::string picture = source.empty() ? "<div class=\"omark\"></div>"
                                                        : "<img class=\"omark\" src=\"" + source + "\"" +
-                                                             AdjustStyle(AdjustOf(mark.picture)) + "/>";
+                                                             AdjustStyle(adjust) + "/>";
             return picture + EscapedRml(CurrencyName(currency, yours));
         }
         constexpr const char* kWidgetNameClass = "caption widget-name"; // over each widget's settings in a combined popup

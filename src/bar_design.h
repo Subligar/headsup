@@ -79,12 +79,11 @@ namespace headsup
     // alignment are one run (Span::align), left, center then right; a part with none goes with the part before it, else
     // the one after.
     WidgetContent ComposeContent(const WidgetDesign& design, std::vector<PartContent> parts, WidgetContent base);
-    // The picture a part's chip in the Widget Designer shows before its name: an icon, a game picture or gil's coin.
+    // The picture a part's chip in the Widget Designer shows before its name: an icon or a game picture.
     struct PartMark
     {
         std::optional<Icon> icon;
         GamePicture picture = GamePicture::None;
-        bool coin           = false;
         bool operator==(const PartMark&) const = default;
     };
     // The first mark among a part's spans, if any.

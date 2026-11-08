@@ -159,7 +159,7 @@ TEST(a_part_with_nothing_to_show_takes_no_gap)
     // Most currencies have no picture of their own.
     const std::vector<PartContent> notes = {{WidgetPart::Currency1Amount, {Text("1,200")}}, {WidgetPart::Currency1Icon, {}}};
     const WidgetContent w = Composed(BarWidget::Currency, "amount1 icon1 |", notes);
-    CHECK((w.title == std::vector<Span>{Text("1,200")}) && w.subtitle.empty() && !w.coin);
+    CHECK((w.title == std::vector<Span>{Text("1,200")}) && w.subtitle.empty() && w.icons.empty());
 }
 
 TEST(a_narrow_target_cuts_its_name_wherever_it_sits)

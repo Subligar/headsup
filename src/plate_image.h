@@ -127,8 +127,6 @@ namespace headsup
     // The top panel's separator in a Separator Style, size pixels square: a diamond corner to corner, a dot and a
     // square of about its weight, or a dash across its middle for None.
     Image SeparatorImage(DashMark mark, int size, uint32_t color);
-    // Gil's coin: a disc size pixels across with a 1 px rim at 60% of its color's brightness.
-    Image Coin(int size, uint32_t color);
     // A circular arrow in a square size pixels across: most of a ring, turning counterclockwise to a head at its top.
     Image ResetArrow(int size, uint32_t color);
     // A cog of eight teeth with a hole in its middle, in a square size pixels across.

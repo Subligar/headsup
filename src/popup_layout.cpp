@@ -39,7 +39,7 @@ namespace headsup
         TextSize CellSize(const PopupCell& cell, float unit, SpanMeasure measure)
         {
             TextSize size;
-            const bool pictured = cell.icon || cell.item != 0 || cell.picture != GamePicture::None || cell.coin || cell.status;
+            const bool pictured = cell.icon || cell.item != 0 || cell.picture != GamePicture::None || cell.status;
             if (pictured) size = TextSize{unit * kCellIcon, unit * kCellIcon, 0.0f, unit * kCellIcon};
             bool inked = pictured;
             for (const Span& span : cell.text)
@@ -412,12 +412,6 @@ namespace headsup
                         PopupPiece picture{PopupPiece::Kind::Picture, cx, cy, s, s, {}};
                         picture.picture = cell.picture;
                         b.pieces.push_back(std::move(picture));
-                        cx += s + (cell.text.empty() ? 0.0f : unit * kIconGap);
-                    }
-                    else if (cell.coin)
-                    {
-                        const float s = unit * kCellIcon;
-                        b.pieces.push_back(PopupPiece{PopupPiece::Kind::Coin, cx, cy, s, s, {}});
                         cx += s + (cell.text.empty() ? 0.0f : unit * kIconGap);
                     }
                     else if (cell.status)

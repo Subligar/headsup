@@ -17,7 +17,6 @@ namespace headsup
         // and the alphas of the edges and the soft accent, as the Phoenix window has them.
         constexpr uint32_t kMenuPageAlpha = 0xF7, kMenuEdgeAlpha = 0x24, kMenuRaisedAlpha = 0x3D, kMenuSoftAlpha = 0x47;
         constexpr float kCardStep = 0.07f, kInsetShade = 0.4f, kLabelShare = 0.3f, kMutedShare = 0.4f;
-        constexpr float kCoinScale       = 0.75f; // gil's coin, in icons
         constexpr float kFrameRadius     = 3.0f;  // the ornate target frame and hover tint
         constexpr int kLitTarget         = 2;     // a hovered ornate target's tint, in hover tints' alpha
         constexpr float kHelpPadShare    = 0.5f;   // of the gap: clear above and below the help bar's row
@@ -187,7 +186,6 @@ namespace headsup
     {
         const size_t icons = content.icons.size() + (content.picture != GamePicture::None ? 1 : 0);
         return static_cast<float>(icons) * (metrics.icon + metrics.gap) +
-               (content.coin ? static_cast<float>(CoinPixels(metrics)) + metrics.gap : 0.0f) +
                (content.cog ? metrics.icon : 0.0f); // alone, with no text to keep a gap from
     }
 
@@ -208,8 +206,6 @@ namespace headsup
         return BoxStyle{.radius = Rounded(settings.widgetRounding, palette, metrics.pillRadius), .top = fill, .bottom = fill,
             .border = isTarget || lit ? palette.accent : palette.pillBorder};
     }
-
-    int CoinPixels(const BarMetrics& metrics) { return WholePixels(metrics.icon * kCoinScale); }
 
     float MarkWidth(const Span& span, float size)
     {

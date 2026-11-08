@@ -42,7 +42,7 @@ namespace headsup
         TextFace TitleFace(const WidgetContent& content) const;
         TextFace DetailFace() const;
         TextFace FaceOf(PopupFont font) const;
-        // The icons, picture and coin beside a widget's text.
+        // The icons and picture beside a widget's text.
         float Leading(const WidgetContent& content) const;
         // How a widget's box is drawn, or nothing for none. lit: hovered or open, with a popup. Ornate: the target's
         // frame and a lit widget's tint. Pills: every widget's pill, zone and Earth time flat until lit.
@@ -77,11 +77,8 @@ namespace headsup
     // The fishing bar's line's font, or the panel's text font.
     const char* FishBarFont(const Settings& settings);
 
-    // Gil's coin, in whole pixels.
-    int CoinPixels(const BarMetrics& metrics);
-    constexpr uint32_t kCoinColor  = 0xFFE8C35A;
     constexpr float kCapScale      = 1.4f;  // an end cap's diamond, in diamonds
-    constexpr float kLineIconGap   = 2.0f;  // pixels before an icon or coin among a line's text
+    constexpr float kLineIconGap   = 2.0f;  // pixels before an icon among a line's text
     constexpr float kPictureGap    = 6.0f;  // before a game picture there
     // The room a span's mark takes before its text, at letters size pixels tall.
     float MarkWidth(const Span& span, float size);
@@ -114,7 +111,7 @@ namespace headsup
     BoxStyle PopupCard(const BarLook& look);
     BoxStyle PopupTag(const BarLook& look, float height);
     BoxStyle HelpBarPanel(const BarLook& look);
-    constexpr uint32_t kStarColor     = kCoinColor; // a popup's star, in the coin's gold
+    constexpr uint32_t kStarColor     = 0xFFE8C35A; // a popup's star, gold
     constexpr float kShadowStrength   = 0.6f;       // the bar's text shadow, of the mockup's
 
 }

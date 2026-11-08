@@ -142,43 +142,8 @@ namespace headsup
             return (argb & ~kAlphaMask) | static_cast<uint32_t>(alpha) << kAlphaShift;
         }
 
-        // How much of a pixel a rounded box covers: its center's distance inside the edge, plus a half. The distance is
-        // from the box's core, the box less its corners' radius, and comes apart into a column's and a row's share.
-        class Rounded
-        {
-        public:
-            Rounded(float left, float top, float width, float height, float radius)
-                : m_Empty(width <= 0.0f || height <= 0.0f),
-                  m_Radius(m_Empty ? 0.0f : std::clamp(radius, 0.0f, std::min(width, height) / 2.0f)),
-                  m_CenterX(left + width / 2.0f), m_CenterY(top + height / 2.0f), m_CoreX(width / 2.0f - m_Radius),
-                  m_CoreY(height / 2.0f - m_Radius)
-            {
-            }
-
-            // How far column x's center is past the core, across; 0 in line with it.
-            float Across(int x) const { return Past(static_cast<float>(x), m_CenterX, m_CoreX); }
-            float Down(int y) const { return Past(static_cast<float>(y), m_CenterY, m_CoreY); }
-            float Cover(float across, float down) const
-            {
-                if (m_Empty) return 0.0f;
-                const float outside = std::sqrt(across * across + down * down) - m_Radius;
-                return std::clamp(0.5f - outside, 0.0f, 1.0f);
-            }
-            float Cover(int x, int y) const { return Cover(Across(x), Down(y)); }
-
-        private:
-            static float Past(float pixel, float center, float core)
-            {
-                return std::max(std::abs(pixel + 0.5f - center) - core, 0.0f);
-            }
-
-            bool m_Empty;
-            float m_Radius, m_CenterX, m_CenterY, m_CoreX, m_CoreY;
-        };
-
         // The middle stop of a strip's gradient sits 55% of the way down, as the mockup's CSS has it.
         constexpr float kStripMiddle = 0.55f;
-        constexpr float kRimShade    = 0.6f; // a coin's rim, as a share of its color
         constexpr int kPixelSamples  = 8;         // across a pixel, each way: the star's and the reset arrow's
         // The reset arrow, in shares of its square: its ring's middle from the center and its thickness, the eighth
         // of a turn left open, and the head's length and half its base.
@@ -560,25 +525,6 @@ namespace headsup
             {
                 Paint paint;
                 paint.Over(Covered(x, y, kPixelSamples, inside), color);
-                image.argb[static_cast<size_t>(y * s + x)] = paint.Color();
-            }
-        return image;
-    }
-
-    Image Coin(int size, uint32_t color)
-    {
-        const int s = std::max(2, size);
-        Image image{s, s, std::vector<uint32_t>(static_cast<size_t>(s) * static_cast<size_t>(s), 0)};
-        const uint32_t rim = Mix(kBlack, Opaque(color), kRimShade);
-        const float fs = static_cast<float>(s);
-        const Rounded face(0.0f, 0.0f, fs, fs, fs / 2.0f), inside(1.0f, 1.0f, fs - 2.0f, fs - 2.0f, fs / 2.0f - 1.0f);
-        for (int y = 0; y < s; ++y)
-            for (int x = 0; x < s; ++x)
-            {
-                const float disc = face.Cover(x, y), inner = inside.Cover(x, y);
-                Paint paint;
-                paint.Add(disc - inner, rim);
-                paint.Add(inner, color);
                 image.argb[static_cast<size_t>(y * s + x)] = paint.Color();
             }
         return image;
