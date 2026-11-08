@@ -509,8 +509,8 @@ TEST(a_new_install_takes_the_built_in_defaults_and_a_saved_file_its_own)
     MapStore file;
     file.values["settingsVersion"] = "2.0000";
     CHECK(LoadSettings(file).barTheme == Settings{}.barTheme);
-    // The faded names stay off.
-    CHECK_EQ(DefaultSettings().opacity.notTargeted, Settings{}.opacity.notTargeted);
+    // Untargeted names fade to half and every name fades in, as the tester's file the defaults came from has them.
+    CHECK(DefaultSettings().opacity.notTargeted == 50 && DefaultSettings().opacity.fadeIn);
 }
 
 TEST(a_whole_number_too_large_for_an_int_is_clamped_like_any_other)
