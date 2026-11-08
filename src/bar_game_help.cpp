@@ -86,12 +86,13 @@ namespace headsup
         }
     }
 
-    HelpBarSpan HelpBarRoom(float screenWidth, float margin, int percent, bool full, HelpAnchor anchor)
+    HelpBarSpan HelpBarRoom(float screenWidth, float margin, int percent, bool full, HelpAnchor anchor, int offset)
     {
+        if (full) return HelpBarSpan{0.0f, screenWidth};
         const float whole = screenWidth - 2.0f * margin;
         const float share = static_cast<float>(percent) / static_cast<float>(kMaxHelpBarWidth);
-        const float width = full ? whole : std::min(std::floor(screenWidth * share) - margin, whole);
-        return HelpBarSpan{margin + AnchorShift(anchor, whole - width), width};
+        const float width = std::min(std::floor(screenWidth * share) - margin, whole);
+        return HelpBarSpan{margin + AnchorShift(anchor, whole - width) + static_cast<float>(offset), width};
     }
 
     HelpBarRow PlaceHelpBar(HelpBarSpan room, HelpAnchor anchor, bool full, float top, float height, float padding,

@@ -334,7 +334,7 @@ namespace headsup
     }
 
     BarRect RmlBar::ShowHelpBar(RmlHost& host, const BarLook& look, const Rows& rows, const BarState& state, float top,
-        float offsetX, float screenWidth, bool& cut)
+        float screenWidth, bool& cut)
     {
         cut = false;
         HelpBarParts parts;
@@ -347,7 +347,7 @@ namespace headsup
             const float bagWidth       = parts.bag ? Width(host, parts.bag->text, captionFace) : 0.0f;
             const Settings& s          = look.settings;
             const HelpBarSpan span =
-                HelpBarRoom(screenWidth, HelpBarLeft(m), s.helpBarWidth, s.helpBarFullWidth, s.helpBarAnchor);
+                HelpBarRoom(screenWidth, HelpBarLeft(m), s.helpBarWidth, s.helpBarFullWidth, s.helpBarAnchor, s.helpBarX);
             const float room = span.width - 2.0f * m.padding - (bagWidth > 0.0f ? bagWidth + m.gap : 0.0f);
             const HelpBarFit& fit = m_HelpBar.Get(
                 HelpBarKey{*state.strip, captionFace.family, helpFace.family, WholePixels(captionFace.size),
@@ -368,9 +368,6 @@ namespace headsup
             const float height = HelpBarHeight(look.settings.helpBarHeight, rows.helpBarHeight);
             parts.row          = PlaceHelpBar(span, s.helpBarAnchor, s.helpBarFullWidth, top, height, m.padding, m.gap,
                          fit.captionWidth, bagWidth, fit.helpWidth);
-            // Where the player moved it from its place under the top bar.
-            for (float* x : {&parts.row.box.x, &parts.row.captionX, &parts.row.bagX, &parts.row.helpX})
-                *x += offsetX;
         }
         const BarRect box = parts.row.box;
         std::pair drawn{std::move(parts), look.settings.helpBarBackground};
@@ -581,9 +578,8 @@ namespace headsup
         ShowWidgets(look, layout, widgets, input, screenWidth);
         // The help bar where the player moved it from its place under the top bar.
         bool helpCut        = false;
-        const float helpX   = static_cast<float>(settings.helpBarX);
         const float helpTop = HelpBarTop(p, m) + static_cast<float>(settings.helpBarY);
-        const BarRect help  = ShowHelpBar(host, look, rows, state, helpTop, helpX, screenWidth, helpCut);
+        const BarRect help  = ShowHelpBar(host, look, rows, state, helpTop, screenWidth, helpCut);
         if (helpCut)
         {
             // Hovered, it opens the popup with the rest, as a widget would.
@@ -593,8 +589,8 @@ namespace headsup
         if (settings.Widget(BarWidget::GameHelp).on)
         {
             const HelpBarSpan span = HelpBarRoom(screenWidth, HelpBarLeft(m), settings.helpBarWidth,
-                settings.helpBarFullWidth, settings.helpBarAnchor);
-            m_HelpReach = BarRect{span.x + helpX, helpTop, span.width, HelpBarHeight(settings.helpBarHeight, rows.helpBarHeight)};
+                settings.helpBarFullWidth, settings.helpBarAnchor, settings.helpBarX);
+            m_HelpReach = BarRect{span.x, helpTop, span.width, HelpBarHeight(settings.helpBarHeight, rows.helpBarHeight)};
         }
         input.Frame(layout, widgets.hasPopup);
         input.SetPopups(ShowPopups(host, look, state, layout, screenWidth, screenHeight, input, hidden));

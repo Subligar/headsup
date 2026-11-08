@@ -54,16 +54,25 @@ TEST(a_caption_wider_than_the_room_is_cut_and_leaves_the_help_none)
     CHECK(bar.help.empty() && bar.cut);
 }
 
-TEST(the_help_bars_room_is_its_share_of_the_screen_placed_by_its_anchor)
+TEST(the_help_bars_room_is_its_share_of_the_screen_placed_by_its_anchor_and_moved_by_its_offset)
 {
     // 8 px in from each edge of 1920: 1904 of room. Half the screen is 960, less the left margin.
-    CHECK(HelpBarRoom(1920.0f, 8.0f, kDefaultHelpBarWidth, false, HelpAnchor::Left) == (HelpBarSpan{8.0f, 952.0f}));
-    CHECK(HelpBarRoom(1920.0f, 8.0f, kDefaultHelpBarWidth, false, HelpAnchor::Center) == (HelpBarSpan{484.0f, 952.0f}));
-    CHECK(HelpBarRoom(1920.0f, 8.0f, kDefaultHelpBarWidth, false, HelpAnchor::Right) == (HelpBarSpan{960.0f, 952.0f}));
-    CHECK(HelpBarRoom(1366.0f, 8.0f, 25, false, HelpAnchor::Left) == (HelpBarSpan{8.0f, 333.0f}));
-    // Full Width, or the whole screen's width, takes all the room whatever the anchor.
-    CHECK(HelpBarRoom(1920.0f, 8.0f, 25, true, HelpAnchor::Right) == (HelpBarSpan{8.0f, 1904.0f}));
-    CHECK(HelpBarRoom(1920.0f, 8.0f, kMaxHelpBarWidth, false, HelpAnchor::Center) == (HelpBarSpan{8.0f, 1904.0f}));
+    CHECK(HelpBarRoom(1920.0f, 8.0f, kDefaultHelpBarWidth, false, HelpAnchor::Left, 0) == (HelpBarSpan{8.0f, 952.0f}));
+    CHECK(HelpBarRoom(1920.0f, 8.0f, kDefaultHelpBarWidth, false, HelpAnchor::Center, 0) == (HelpBarSpan{484.0f, 952.0f}));
+    CHECK(HelpBarRoom(1920.0f, 8.0f, kDefaultHelpBarWidth, false, HelpAnchor::Right, 0) == (HelpBarSpan{960.0f, 952.0f}));
+    CHECK(HelpBarRoom(1366.0f, 8.0f, 25, false, HelpAnchor::Left, 0) == (HelpBarSpan{8.0f, 333.0f}));
+    CHECK(HelpBarRoom(1920.0f, 8.0f, kMaxHelpBarWidth, false, HelpAnchor::Center, 0) == (HelpBarSpan{8.0f, 1904.0f}));
+    // The Position's X moves it.
+    CHECK(HelpBarRoom(1920.0f, 8.0f, kDefaultHelpBarWidth, false, HelpAnchor::Left, 700) == (HelpBarSpan{708.0f, 952.0f}));
+    CHECK(HelpBarRoom(1920.0f, 8.0f, kDefaultHelpBarWidth, false, HelpAnchor::Right, -40) == (HelpBarSpan{920.0f, 952.0f}));
+}
+
+TEST(a_full_width_help_bar_spans_the_screen_edge_to_edge_whatever_its_anchor_width_or_offset)
+{
+    for (const HelpAnchor anchor : {HelpAnchor::Left, HelpAnchor::Center, HelpAnchor::Right})
+        for (const int offset : {0, 700, -700})
+            for (const int percent : {25, kMaxHelpBarWidth})
+                CHECK(HelpBarRoom(1920.0f, 8.0f, percent, true, anchor, offset) == (HelpBarSpan{0.0f, 1920.0f}));
 }
 
 TEST(the_help_bars_box_wraps_its_caption_the_bags_count_and_its_help_in_one_row)

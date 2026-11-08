@@ -48,9 +48,9 @@ namespace headsup
     };
     HelpBarRow PlaceHelpBar(HelpBarSpan room, HelpAnchor anchor, bool full, float top, float height, float padding,
         float gap, float captionWidth, float bagWidth, float helpWidth);
-    // The room the help bar may take, margin in from both sides of the screen: percent of the screen's width less the
-    // left margin, or with full all of it, at anchor.
-    HelpBarSpan HelpBarRoom(float screenWidth, float margin, int percent, bool full, HelpAnchor anchor);
+    // The room the help bar may take: margin in from both sides of the screen, percent of the screen's width less the
+    // left margin, at anchor and moved offset pixels right; with full the whole screen, edge to edge, unmoved.
+    HelpBarSpan HelpBarRoom(float screenWidth, float margin, int percent, bool full, HelpAnchor anchor, int offset);
 
     // bagFill: the used and total slots of the bag the caption names, as the Bags widget writes them.
     PopupContent GameHelpPopup(const std::optional<StripText>& strip, const std::optional<Span>& bagFill);

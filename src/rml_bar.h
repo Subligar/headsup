@@ -150,10 +150,10 @@ namespace headsup
             Widgets& widgets);
         void ShowWidgets(const BarLook& look, const BarLayout& layout, const Widgets& widgets, const BarInput& input,
             float screenWidth);
-        // Game help's own bar under the top bar, from top and moved offsetX: where its box went (empty for none).
+        // Game help's own bar under the top bar, from top: where its box went (empty for none).
         // cut: its text was, so the bar has a popup with all of it.
         BarRect ShowHelpBar(RmlHost& host, const BarLook& look, const Rows& rows, const BarState& state, float top,
-            float offsetX, float screenWidth, bool& cut);
+            float screenWidth, bool& cut);
         // Places each popup the input shows in the host's overlay, the last on top, and hides the others: where each
         // went, with its cards' tabs and the parts that scroll at their places on the screen.
         std::vector<PopupPlace> ShowPopups(RmlHost& host, const BarLook& look, const BarState& state,
