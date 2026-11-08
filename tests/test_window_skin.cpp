@@ -307,6 +307,7 @@ TEST(the_palette_is_the_window_shape_with_black_pills_at_50_alpha_and_no_glow)
     const BarPalette p = SkinPalette(Colored(0xFF1E2A6E, 0xFF888888));
     CHECK(p.shape == BarShape::Window && p.pill == kBlackAt50 && p.pillBorder == 0 && p.below == 0 && p.underLine == 0);
     CHECK_EQ(PaletteOf(BarTheme::Vanilla).pill, kBlackAt50);
+    CHECK(StatusIconsName(p.statusIcons) == "HD" && p.statusBack); // as every built-in theme's
     CHECK(p.panelBorder == 0xFF888888u);
 }
 

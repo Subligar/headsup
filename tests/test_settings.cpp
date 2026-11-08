@@ -958,7 +958,7 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     garbled.values["customThemeRounding"] = "-5";
     garbled.values["customThemeStatusIcons"] = "Missing Pack";
     const Settings read = LoadSettings(garbled);
-    CHECK_EQ(read.customPalette.statusIcons, kVanillaStatusIcons);
+    CHECK_EQ(read.customPalette.statusIcons, PaletteOf(BarTheme::PhoenixGold).statusIcons);
     CHECK(read.customPalette.accent == PaletteOf(BarTheme::PhoenixGold).accent && read.customPalette.border == kMaxStripBorder);
     CHECK_EQ(read.customPalette.rounding, kShapeRounding);
 }

@@ -653,15 +653,16 @@ TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its
     };
     const auto near = [](float a, float b) { return std::fabs(a - b) < 0.05f; };
     // XIUI's party list: the background 1.1 icons wide and 1/0.75 of that tall, a buff's 0.33 of an icon above the
-    // icon and a debuff's 0.11, 1/15 of an icon left of it. Fit to the box's height, the icon is 0.75/1.1 of it.
-    const float icon = 0.75f / 1.1f, left = (1.0f - 0.75f) / 2.0f + icon / 15.0f;
+    // icon and a debuff's 0.11, 1/15 of an icon left of it. The icon fills its box as it does with no background, and
+    // the background's picture is square, its 1.1 icons wide in the middle of it, so it reaches past the box.
+    const float tall = 1.1f / 0.75f, left = 1.0f / 15.0f + (tall - 1.1f) / 2.0f;
     const auto checkIn = [&](Rml::Element* square, const Rml::ElementList& images, bool debuff) {
         const auto [x, y, w, h] = box(square);
         CHECK(images.size() == 2 && w > 0.0f && near(w, h));
         const auto back = box(images[0]), shown = box(images[1]);
-        CHECK(near(back[0], x) && near(back[1], y) && near(back[2], w) && near(back[3], h));
-        CHECK(near(shown[2], w * icon) && near(shown[3], h * icon));
-        CHECK(near(shown[0], x + w * left) && near(shown[1], y + h * icon * (debuff ? 0.11f : 0.33f)));
+        CHECK(near(shown[0], x) && near(shown[1], y) && near(shown[2], w) && near(shown[3], h));
+        CHECK(near(back[2], w * tall) && near(back[3], h * tall));
+        CHECK(near(back[0], x - w * left) && near(back[1], y - h * (debuff ? 0.11f : 0.33f)));
         CHECK(images[0]->GetAttribute<Rml::String>("src", "") == IconSource(debuff ? Icon::DebuffBack : Icon::BuffBack));
     };
 
@@ -706,7 +707,10 @@ TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its
     layout.height = 100.0f;
     PopupPiece piece{PopupPiece::Kind::Status, 10.0f, 10.0f, 22.0f, 22.0f, {}};
     piece.status = StatusMark{134, 2, true};
-    layout.pieces = {piece};
+    PopupPiece bare = piece;
+    bare.x       = 60.0f;
+    bare.status  = StatusMark{134, 2, false};
+    layout.pieces = {piece, bare};
     Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
     popups->Show();
     Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
@@ -723,7 +727,13 @@ TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its
     square->SetProperty("width", "22px");
     square->SetProperty("height", "22px");
     rml.context->Update();
+    CHECK_EQ(pictures.size(), static_cast<size_t>(3));
+    pictures.pop_back();
     checkIn(square, pictures, true);
+    // The same status with no background is drawn the same size.
+    Rml::ElementList bareImages;
+    popup->GetElementsByTagName(bareImages, "img");
+    CHECK(near(box(bareImages[1])[2], box(bareImages[2])[2]) && near(box(bareImages[1])[3], box(bareImages[2])[3]));
     CHECK_EQ(rml.Said(), "");
 }
 

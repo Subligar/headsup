@@ -63,12 +63,12 @@
             {
               "key": "status-icons",
               "name": "Status Icons",
-              "tip": "The pictures of the status effects in the Status Timers widget and its pop-out: the game's own, or a pack's. A status a pack has no picture for shows the game's. Default: Vanilla.",
+              "tip": "The pictures of the status effects in the Status Timers widget and its pop-out: the game's own, or a pack's. A status a pack has no picture for shows the game's. Default: HD.",
               "words": [
                 {"key": "vanilla", "name": "Vanilla"}
               ]
             },
-            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: off."},
+            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: on."},
             {
               "key": "theme-palette",
               "rows": [

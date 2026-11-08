@@ -1554,9 +1554,9 @@ TEST(status_icons_offers_vanilla_then_each_pack_and_with_show_status_background_
     // The second pack, after Vanilla and the first.
     CHECK(w.Pass({{icons + "-o-2", kClickEvent, ""}}).changed);
     CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.statusIcons == 1);
-    CHECK(!w.settings.customPalette.statusBack);
-    w.Pass({{back, kClickEvent, ""}});
     CHECK(w.settings.customPalette.statusBack);
+    w.Pass({{back, kClickEvent, ""}});
+    CHECK(!w.settings.customPalette.statusBack);
 }
 
 TEST(display_shows_on_the_status_timers_widget_alone_and_picks_how_its_pins_show)

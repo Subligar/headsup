@@ -49,8 +49,8 @@ namespace headsup
         BarBackground background = BarBackground::Gradient; // Plain is stripTop alone
         int windowType    = kFollowGameWindow; // the art's, for the Window background
         DashMark separator = DashMark::Diamond; // the panel's separators, and what a nameplate's dash is drawn as
-        int statusIcons = kVanillaStatusIcons;  // the game's status icons or a pack's
-        bool statusBack = false;                // a buff's or debuff's background behind each status icon
+        int statusIcons = kHdStatusIcons;       // the game's status icons or a pack's
+        bool statusBack = true;                 // a buff's or debuff's background behind each status icon
         BarTheme parent    = BarTheme::PhoenixGold; // a custom theme's: the built-in one it was first copied from
         bool operator==(const BarPalette&) const = default;
     };

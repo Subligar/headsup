@@ -156,7 +156,7 @@ namespace headsup
             palette.rounding = std::clamp(*rounding, kShapeRounding, kMaxRounding);
         if (const std::optional<std::string> icons = IniValue(file, kThemeSection, kStatusIconsKey))
             palette.statusIcons = StatusIconsNamed(*icons, palette.statusIcons);
-        palette.statusBack = IniValue(file, kThemeSection, kStatusBackKey) == kTrue;
+        if (const std::optional<std::string> back = IniValue(file, kThemeSection, kStatusBackKey)) palette.statusBack = *back == kTrue;
         return any ? std::optional<BarPalette>(palette) : std::nullopt;
     }
 }
