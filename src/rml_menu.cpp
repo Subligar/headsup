@@ -816,9 +816,9 @@ namespace headsup
                 LetGo(host, m_View, m_ViewTip);
                 const Form form = Pass(std::exchange(m_Events, {}), host, settings, readings, fonts, false);
                 ApplyBlocks(form.blocks, readings.settingsOf, settings.menuFontSize, false);
-                m_Events.clear();
                 ApplyPopup(form.popup);
                 ApplyValues(form.values);
+                m_Events.clear();
                 return changed || form.changed;
             }
             if (m_View != nullptr && ApplyView(nullptr, {}, m_ViewPixels))
@@ -908,10 +908,11 @@ namespace headsup
             m_TitleShown = title;
         }
         ApplyBlocks(form.blocks, readings.settingsOf, settings.menuFontSize);
-        // Whatever a card said of its controls as it was replaced is of controls that are gone.
-        m_Events.clear();
         ApplyPopup(form.popup);
         ApplyValues(form.values);
+        // A control says its value as it is built and each time it is set: that is the form's, not the player's, and
+        // read next frame it would write back a value the setting has since left.
+        m_Events.clear();
         if (form.focus)
         {
             if (Rml::ElementFormControlInput* input = AsInput(Find(form.focus->id)))
