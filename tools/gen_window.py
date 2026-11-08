@@ -101,7 +101,7 @@ VISIBILITY_ROWS = {**rows('aggressive', 'passive', 'nm-aggressive', 'nm-passive'
 PIECES = Pieces(
     pages={'theme': 'Theme', 'entities': 'Entities', 'mobs': 'Mobs', 'players': 'Players', 'self': 'Self', 'npcs': 'Npcs', 'pets': 'Pets',
            'userinterface': 'UserInterface', 'helpbar': 'HelpBar', 'fishingbar': 'FishingBar', 'vanillaui': 'VanillaUi', 'toppanel': 'TopPanel',
-           'colors': 'Colors', 'configmenu': 'ConfigMenu', 'feedback': 'Feedback'},
+           'colors': 'Colors', 'configmenu': 'ConfigMenu', 'feedback': 'Feedback', 'credits': 'Credits'},
     cards={
         'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(),
         'colors-aggression': Card(), 'colors-toughness': Card(), 'colors-claim-status': Card(),
@@ -359,7 +359,7 @@ class Reader:
                     self.bad(f'{owner} shares the entity cards and cannot have cards of its own')
             else:
                 entry.cards = self.cards(page.get('cards'), owner, in_entity=False, page=key)
-                if not entry.cards:
+                if not entry.cards and description is None:
                     self.bad(f'{owner} has no cards')
             pages.append(entry)
         for key in self.pieces.pages:

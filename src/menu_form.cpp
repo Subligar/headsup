@@ -2562,7 +2562,7 @@ namespace headsup
         }
         form.Fade(false);
         // A page whose every card is switched off says what switches them on.
-        if (form.CardsShown() == 0 && form.BeginCard(Labeled(Word(c, WindowWord::SwitchedOff), "switched-off").c_str()))
+        if (form.CardsShown() == 0 && page.cardCount > 0 && form.BeginCard(Labeled(Word(c, WindowWord::SwitchedOff), "switched-off").c_str()))
         {
             form.Note(Word(c, s.enabled ? WindowWord::SwitchedOffTopPanel : WindowWord::SwitchedOffHeadsup));
             form.EndCard();

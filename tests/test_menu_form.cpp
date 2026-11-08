@@ -94,6 +94,26 @@ TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
     CHECK(w.layout.PageOf(Page::Entities).description == nullptr && !w.Pass().blocks[1].bare);
 }
 
+TEST(the_credits_page_comes_after_feedback_and_shows_its_words_with_no_cards)
+{
+    Window w;
+    const std::string side = w.Pass().blocks.front().rml;
+    CHECK(Has(side, "<div class=\"nav\" id=\"nav-credits\">"));
+    CHECK(side.find("id=\"nav-feedback\"") < side.find("id=\"nav-credits\""));
+    const Form form = w.Pass({{"nav-credits", kClickEvent, ""}});
+    CHECK(w.state.page == Page::Credits && ClassOn(form, "nav-credits", "picked"));
+    const std::string_view words = w.layout.PageOf(Page::Credits).description;
+    CHECK(words.find('\n') != std::string_view::npos);
+    CHECK_EQ(form.blocks.size(), 2u);
+    CHECK(form.blocks[1].bare);
+    for (size_t start = 0; start <= words.size();)
+    {
+        const size_t end = std::min(words.find('\n', start), words.size());
+        CHECK(Has(form.blocks[1].rml, ("<div>" + std::string(words.substr(start, end - start)) + "</div>").c_str()));
+        start = end + 1;
+    }
+}
+
 TEST(the_palettes_are_on_their_own_colors_page_after_the_mouse_cursor)
 {
     Window w;

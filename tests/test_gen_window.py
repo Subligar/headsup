@@ -259,6 +259,17 @@ class Parse(unittest.TestCase):
         self.assertBad('the page "mobs" shares the entity cards and cannot have cards of its own',
                        lambda t: t['pages'][1].update(cards=[]))
 
+    def test_a_page_of_words_alone_needs_no_cards(self):
+        pieces = gen.dataclasses.replace(PIECES, pages={**PIECES.pages, 'thanks': 'Thanks'})
+        tree = fixture()
+        tree['pages'].append({'key': 'thanks', 'name': 'Thanks', 'description': 'One.\nTwo.'})
+        thanks = parse(tree, pieces).pages[-1]
+        self.assertEqual((thanks.cards, thanks.description), ([], 'One.\nTwo.'))
+        tree['pages'][-1].pop('description')
+        with self.assertRaises(gen.DataError) as caught:
+            parse(tree, pieces)
+        self.assertIn('the page "thanks" has no cards', str(caught.exception))
+
     def test_a_name_that_would_name_an_id(self):
         self.assertBad('the name of the setting "size" holds "##"',
                        lambda t: t['pages'][-1]['cards'][0]['settings'][0].update(name='Size##other'))

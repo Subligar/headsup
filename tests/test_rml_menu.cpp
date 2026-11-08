@@ -1385,7 +1385,7 @@ TEST(every_control_of_every_page_takes_a_click_and_the_window_stands)
         {
             window.Page(page.key);
             const std::vector<std::string> ids = window.Clickable();
-            CHECK(!ids.empty());
+            CHECK(ids.empty() == (page.cardCount == 0));
             for (const std::string& id : ids)
             {
                 // A click may fold a card or change a tab, and take later controls away with it.
