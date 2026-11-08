@@ -289,6 +289,9 @@ namespace headsup
         // while it is on, nothing else blocked the message and no Ashita window is under the pointer, or the pointer
         // is in the open popup, which is drawn over them.
         bool Take(uint32_t message, uint32_t buttons, float x, float y, bool barOn, bool overGui, bool blocked);
+        // Each frame during a drag, Windows' pointer and whether its left button is down: the drag follows it with or
+        // without moves, and ends where it shows once the button is up, even let go outside the window.
+        void Held(float x, float y, bool down);
 
     private:
         BarInput& m_Input;

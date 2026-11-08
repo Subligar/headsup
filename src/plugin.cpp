@@ -940,13 +940,24 @@ public:
                 // No message says the pointer left the client area, and in windowed modes the game never moves Windows'.
                 // A Windows tester's borderless window got no mouse moves in its top 18 px while no game menu was open,
                 // so a move of Windows' pointer that no message gave counts as one. Linkpearl's moves are messages alone.
-                // Never during a drag: the messages carry it, and a made move whose button reads up would end it.
+                // A drag goes by Windows' pointer and its button as they are: the moves may not come, or may say the
+                // button is up while it is held, once the bar kept its press from the game.
                 POINT screen{}, pointer{};
                 if (GetCursorPos(&screen) && (pointer = screen, ScreenToClient(g_GameWindow, &pointer)))
                 {
-                    if (!PtInRect(&client, pointer))
+                    if (m_BarInput.Dragging())
+                    {
+#ifdef HEADSUP_DEV
+                        // /hu play's drag is messages alone, with no button held. GetAsyncKeyState reads the physical
+                        // buttons, so with them swapped the left one is VK_RBUTTON.
+                        if (m_Played.empty())
+#endif
+                            m_BarClicks.Held(static_cast<float>(pointer.x) * g_BarScaleX, static_cast<float>(pointer.y) * g_BarScaleY,
+                                KeyDown(GetSystemMetrics(SM_SWAPBUTTON) != 0 ? VK_RBUTTON : VK_LBUTTON));
+                    }
+                    else if (!PtInRect(&client, pointer))
                         m_BarInput.Leave();
-                    else if (!m_BarInput.Dragging() && (pointer.x != m_LastPointer.x || pointer.y != m_LastPointer.y) &&
+                    else if ((pointer.x != m_LastPointer.x || pointer.y != m_LastPointer.y) &&
                              (pointer.x != g_LastMove.x || pointer.y != g_LastMove.y) && WindowFromPoint(screen) == g_GameWindow)
                     {
                         const WPARAM buttons = (GetKeyState(VK_LBUTTON) < 0 ? MK_LBUTTON : 0) | (GetKeyState(VK_RBUTTON) < 0 ? MK_RBUTTON : 0);

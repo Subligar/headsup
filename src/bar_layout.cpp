@@ -405,7 +405,9 @@ namespace headsup
 
     std::optional<PopupSpot> PlacedSpot(const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot)
     {
-        return dragged ? std::optional(PopupSpot{static_cast<int>(dragged->x), static_cast<int>(dragged->y)}) : spot;
+        // Rounded as SpotOf rounds: cut downward, a spot kept from the right or bottom crept a pixel at each press.
+        return dragged ? std::optional(PopupSpot{static_cast<int>(std::lround(dragged->x)), static_cast<int>(std::lround(dragged->y))})
+                       : spot;
     }
 
     float SpotRoom(const PopupSpot& spot, float screenHeight)
@@ -687,6 +689,15 @@ namespace headsup
         return true;
     }
 
+    void BarClicks::Held(float x, float y, bool down)
+    {
+        if (!m_Input.Dragging()) return;
+        if (down)
+            m_Input.DragTo(x, y);
+        else
+            m_Input.EndDrag();
+    }
+
     bool BarClicks::Take(uint32_t message, uint32_t buttons, float x, float y, bool barOn, bool overGui, bool blocked)
     {
         if (!barOn) m_Left = m_Right = false;
@@ -694,19 +705,16 @@ namespace headsup
         switch (message)
         {
         case kMouseMove:
+            // A drag goes on wherever the pointer goes; the game sees none of it. Not ended by a move's button flag:
+            // after the bar kept the press from the game, Windows may report the button up while it is held.
+            if (m_Input.Dragging())
+            {
+                m_Input.DragTo(x, y);
+                return true;
+            }
             // A move with a button up is the first news of a release outside the window, which nothing else reports.
             m_Left  = m_Left && (buttons & kLeftButton) != 0;
             m_Right = m_Right && (buttons & kRightButton) != 0;
-            // A drag goes on wherever the pointer goes while the button is held; the game sees none of it.
-            if (m_Input.Dragging())
-            {
-                if ((buttons & kLeftButton) != 0)
-                {
-                    m_Input.DragTo(x, y);
-                    return true;
-                }
-                m_Input.EndDrag();
-            }
             if (barsTurn)
                 m_Input.Move(x, y);
             else

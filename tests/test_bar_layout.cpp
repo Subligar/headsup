@@ -994,6 +994,106 @@ TEST(the_scrollbar_drags_its_thumb_and_a_press_on_its_track_jumps_there)
     CHECK(!c.input.Pinned().has_value());
 }
 
+namespace
+{
+    // A pinned Target popup in the screen's right half, a fraction of a pixel across as measured text makes it, put
+    // each frame where rml_bar puts it and kept where a drag leaves it as the plugin keeps it.
+    struct DraggedPopup
+    {
+        static constexpr float W = 1920.0f, H = 1080.0f, kTitleRow = 30.0f;
+        Clicks c;
+        BarRect under{1300.6f, 44.0f, 400.4f, 300.0f};
+        std::optional<PopupSpot> spot;
+        BarRect shown{};
+        DraggedPopup()
+        {
+            c.input.Pin(BarWidget::Target);
+            Frame();
+        }
+        void Frame()
+        {
+            shown = PopupAt(under, under.height, PlacedSpot(c.input.DraggedPopup(BarWidget::Target), spot), W, H);
+            SetPopup(c.input, shown, {}, {}, {}, {}, BarRect{shown.x, shown.y, shown.width, kTitleRow});
+            if (const auto moved = c.input.TakeMoved()) spot = SpotOf(moved->second, W, H);
+        }
+        // RmlUi is given whole pixels.
+        float Left() const { return std::round(shown.x); }
+        float Top() const { return std::round(shown.y); }
+        bool Take(uint32_t message, float x, float y, uint32_t buttons = 0)
+        {
+            return c.clicks.Take(message, buttons, x, y, true, false, false);
+        }
+    };
+}
+
+// The card's "moves a single pixel each time": with no move reaching the drag, each press and release on the title
+// row moved it a pixel left, as its spot was cut to whole pixels downward and measured from the right.
+TEST(a_pinned_popup_pressed_and_let_go_by_its_title_row_stays_where_it_shows)
+{
+    DraggedPopup d;
+    const float left = d.Left(), top = d.Top();
+    for (int drag = 0; drag < 3; ++drag)
+    {
+        const float x = d.shown.x + 50.0f, y = d.shown.y + 10.0f;
+        CHECK(d.Take(WM_LBUTTONDOWN, x, y));
+        d.Frame();
+        CHECK_EQ(d.Left(), left);
+        CHECK(d.Take(WM_LBUTTONUP, x, y));
+        d.Frame();
+        d.Frame();
+        CHECK(d.spot.has_value());
+        CHECK_EQ(d.Left(), left);
+        CHECK_EQ(d.Top(), top);
+    }
+}
+
+// The drag goes by where the pointer is, not by the button flags of the moves: the end is the release, or the button
+// read up from Windows each frame.
+TEST(a_popup_drag_follows_moves_whose_button_flag_reads_up)
+{
+    DraggedPopup d;
+    const float left = d.Left(), top = d.Top();
+    const float x = d.shown.x + 50.0f, y = d.shown.y + 10.0f;
+    CHECK(d.Take(WM_LBUTTONDOWN, x, y));
+    for (int step = 1; step <= 3; ++step)
+    {
+        CHECK(d.Take(WM_MOUSEMOVE, x, y + 100.0f * static_cast<float>(step)));
+        d.Frame();
+        CHECK_EQ(d.Top(), top + 100.0f * static_cast<float>(step));
+    }
+    CHECK(d.Take(WM_LBUTTONUP, x, y + 300.0f));
+    d.Frame();
+    d.Frame();
+    CHECK_EQ(d.Top(), top + 300.0f);
+    CHECK_EQ(d.Left(), left);
+}
+
+// Where no move message comes while the button is held, Windows' pointer read each frame drags it, and the button
+// read up there ends it where it shows: let go outside the window, no release message comes either.
+TEST(a_popup_drag_follows_windows_pointer_each_frame_and_ends_once_its_button_is_up)
+{
+    DraggedPopup d;
+    const float left = d.Left(), top = d.Top();
+    const float x = d.shown.x + 50.0f, y = d.shown.y + 10.0f;
+    CHECK(d.Take(WM_LBUTTONDOWN, x, y));
+    for (int frame = 1; frame <= 3; ++frame)
+    {
+        d.c.clicks.Held(x - 40.0f * static_cast<float>(frame), y + 100.0f * static_cast<float>(frame), true);
+        d.Frame();
+        CHECK_EQ(d.Top(), top + 100.0f * static_cast<float>(frame));
+        CHECK_EQ(d.Left(), left - 40.0f * static_cast<float>(frame));
+    }
+    d.c.clicks.Held(x, y + 500.0f, false);
+    CHECK(!d.c.input.Dragging());
+    d.Frame();
+    d.Frame();
+    CHECK_EQ(d.Top(), top + 300.0f);
+    CHECK_EQ(d.Left(), left - 120.0f);
+    CHECK(!d.Take(WM_MOUSEMOVE, x, y + 600.0f)); // let go: moving does nothing to it
+    d.Frame();
+    CHECK_EQ(d.Top(), top + 300.0f);
+}
+
 TEST(the_bar_going_off_gives_the_game_every_release)
 {
     Clicks c;
