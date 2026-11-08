@@ -1577,3 +1577,22 @@ TEST(display_shows_on_the_status_timers_widget_alone_and_picks_how_its_pins_show
     CHECK(w.Pass({{list + "-o-1", kClickEvent, ""}}).changed);
     CHECK(w.settings.Widget(statuses).statusDisplay == StatusDisplay::Icon);
 }
+
+// The card: the Icon, Alignment and Linked Padding tips are shared by every widget, and named one default for them
+// all. Each widget's default, as default_settings.h has it (barBagsIcon=right, barGilIcon=hide, barTargetIcon=hide,
+// barJobAlign=left, barZoneLinkPadding=19), or the struct's for a widget it leaves out and for a copy.
+TEST(a_shared_widget_setting_names_that_widgets_own_default)
+{
+    const WindowLayout& layout = kWindowLayout;
+    const auto side  = [&](IconSide s) { return std::string(layout.OptionsOf(WindowList::IconSides)[static_cast<size_t>(s)].name); };
+    const auto align = [&](WidgetAlign a) { return std::string(layout.OptionsOf(WindowList::WidgetAligns)[static_cast<size_t>(a)].name); };
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Bags), side(IconSide::Right));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Currency), side(IconSide::Hide));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Target), side(IconSide::Hide));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Zone), side(IconSide::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, PanelWidget{BarWidget::Currency, 1}), side(IconSide::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Job), align(WidgetAlign::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Zone), align(WidgetAlign::Location));
+    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Zone), "19"));
+    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Target), "0"));
+}

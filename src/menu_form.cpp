@@ -730,6 +730,10 @@ namespace headsup
             for (const LayoutRow& row : c.layout.RowsOf(e))
             {
                 const std::string label = Labeled(row.name, row.key, scope);
+                // A tip shared by every widget, naming this one's default.
+                const auto ownDefault = [&] {
+                    return Filled(Said(row.tip), kDefaultMark, WidgetDefaultText(c.layout, static_cast<WidgetTabsRow>(row.row), widget));
+                };
                 // A Job & EXP alignment, shown while the part it places is on.
                 const auto alignRow = [&](WidgetPart part, Align& align) {
                     if (kind != BarWidget::Job || !PartOn(o.design, part)) return;
@@ -759,7 +763,7 @@ namespace headsup
                 }
                 case WidgetTabsRow::LinkedPadding:
                     if (!o.combine || CombineChoices(s, widget).empty()) break;
-                    form.SliderInt(label.c_str(), o.linkPadding, 0, kMaxWidgetSpacing, Pixels, row.tip);
+                    form.SliderInt(label.c_str(), o.linkPadding, 0, kMaxWidgetSpacing, Pixels, ownDefault().c_str());
                     break;
                 case WidgetTabsRow::Visibility:
                     if (kind == BarWidget::Target)
@@ -891,7 +895,8 @@ namespace headsup
                     {
                         const LayoutOption& part = c.layout.OptionsOf(WindowList::WidgetParts)[static_cast<size_t>(*icon)];
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::IconSides));
-                        form.Segments(Labeled(part.name, row.key, scope).c_str(), o.iconSide, names.data(), kIconSideCount, row.tip);
+                        form.Segments(Labeled(part.name, row.key, scope).c_str(), o.iconSide, names.data(), kIconSideCount,
+                            ownDefault().c_str());
                     }
                     break;
                 case WidgetTabsRow::Alignment:
@@ -900,7 +905,7 @@ namespace headsup
                         int picked = static_cast<int>(o.align);
                         form.NumberDropdown(label.c_str(), picked, 0, kWidgetAlignCount - 1,
                             [&](int i) { return std::string(c.layout.OptionsOf(WindowList::WidgetAligns)[static_cast<size_t>(i)].name); },
-                            row.tip);
+                            ownDefault().c_str());
                         o.align = static_cast<WidgetAlign>(picked);
                     }
                     break;
@@ -2455,6 +2460,19 @@ namespace headsup
             const SetupPage& page = SetupPageOf(run.step);
             if (form.BeginCard(Labeled(Word(c, page.word), page.key).c_str(), nullptr, WordTip(c, page.word))) SetupStepCard(c, page);
             SetupButtons(c);
+        }
+    }
+
+    std::string WidgetDefaultText(const WindowLayout& layout, WidgetTabsRow row, PanelWidget widget)
+    {
+        static const Settings defaults = DefaultSettings();
+        const headsup::WidgetOptions& o = defaults.Widget(widget);
+        switch (row)
+        {
+        case WidgetTabsRow::Icon: return layout.OptionsOf(WindowList::IconSides)[static_cast<size_t>(o.iconSide)].name;
+        case WidgetTabsRow::Alignment: return layout.OptionsOf(WindowList::WidgetAligns)[static_cast<size_t>(o.align)].name;
+        case WidgetTabsRow::LinkedPadding: return Pixels(o.linkPadding);
+        default: return {};
         }
     }
 
