@@ -167,9 +167,10 @@ namespace headsup
     // What a press on the Settings widget tells the plugin (BarInput::TakePresses): open the settings window.
     constexpr const char* kOpenSettingsPress = "open settings";
 
-    // Which popups show. Hovering a widget that has one opens it; leaving both the widget and its popup, or the widget
-    // losing its popup, closes it, and the pointer crossing the gap between them does not. A press on a widget or a
-    // popup's pin chip pins its popup, or unpins it if it was pinned; a pinned popup stays open beside the others.
+    // Which popups show. Hovering a widget that has one opens it; leaving both the widget and its popup, hovering a
+    // widget without one, or the widget losing its popup, closes it, and the pointer crossing the gap between them does
+    // not. A press on a widget or a popup's pin chip pins its popup, or unpins it if it was pinned; a pinned popup stays
+    // open beside the others. A press on a widget with nothing to pop out shows its popup on its settings, or closes it.
     class BarInput
     {
     public:
@@ -203,8 +204,8 @@ namespace headsup
         // Forget the layout, the pointer and any pin, as before the first frame.
         void Reset() { *this = BarInput{}; }
         // True when the press landed on the bar, a widget placed under it or a popup: the game must not get it. A left
-        // press on a widget or a popup's pin chip pins or unpins its popup, leaving the others; on a tab it picks it,
-        // and pins nothing.
+        // press on a widget or a popup's pin chip pins or unpins its popup, leaving the others (on a widget without
+        // one, its settings); on a tab it picks it, and pins nothing.
         bool Press(float x, float y, bool left);
         // The tab picked last in each card since loading, by the card's heading.
         const std::map<std::string, std::string>& PickedTabs() const { return m_Tabs; }
@@ -227,8 +228,11 @@ namespace headsup
         std::optional<PanelWidget> Pinned() const { return m_Pinned.empty() ? std::nullopt : std::optional(m_Pinned.back()); }
         bool IsPinned(PanelWidget pill) const { return std::ranges::find(m_Pinned, pill) != m_Pinned.end(); }
         std::optional<PanelWidget> Hovered() const { return m_Under; }
-        // Whether a pill shows lit: under the pointer, or showing its popup.
-        bool Lit(PanelWidget pill, bool hasPopup) const { return m_Under == pill || (hasPopup && (Open() == pill || IsPinned(pill))); }
+        // Whether a pill shows lit: under the pointer, or showing its popup or its settings.
+        bool Lit(PanelWidget pill, bool hasPopup) const
+        {
+            return m_Under == pill || SettingsShown() == pill || (hasPopup && (Open() == pill || IsPinned(pill)));
+        }
         // Each frame, whether the settings window is open: the popups showing when it opened are drawn under it, and
         // those that came out after it over it.
         void MenuOpen(bool open);

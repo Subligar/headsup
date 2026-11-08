@@ -167,9 +167,11 @@ TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its chip again unpins
     CHECK(!input.Pinned().has_value());
     const BarRect gil = *RectOf(l, BarWidget::Currency);
-    CHECK(input.Press(gil.x + 5.0f, 18.0f, true)); // the bar's, but gil has no popup
-    CHECK(!input.Pinned().has_value());
+    CHECK(input.Press(gil.x + 5.0f, 18.0f, true)); // the bar's, and gil has no popup: its settings instead
+    CHECK(input.SettingsShown() == BarWidget::Currency);
+    input.Pin(std::nullopt);
     CHECK(input.Press(5.0f, 30.0f, false)); // a right press on the strip is the bar's too
+    CHECK(!input.Pinned().has_value());
 }
 
 TEST(a_popup_unpinned_from_its_widget_hides_until_the_pointer_leaves_the_widget_and_comes_back)
@@ -1688,6 +1690,62 @@ TEST(a_widget_lights_under_the_pointer_whether_or_not_it_has_a_popup)
     input.Pin(BarWidget::Target);
     input.Leave();
     CHECK(lit(BarWidget::Zone) && !lit(BarWidget::Target) && !lit(BarWidget::Settings));
+}
+
+// The card "Hover select bug": the pointer on a widget with nothing to pop out, here the Settings widget inside a
+// wide popup's column, closes the popup another widget opened by hovering, and leaves a pinned one.
+TEST(hovering_a_widget_without_a_popup_closes_the_hovered_popup_and_keeps_the_pinned_ones)
+{
+    std::array<float, kPanelSlots> widths = Widths(100, 0, 120, 200, 90, 60, 50);
+    widths[SlotOf(BarWidget::Settings)]   = 30.0f;
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, widths, 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Zone)]      = true;
+    popups[SlotOf(BarWidget::EarthTime)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const auto over = [&](BarWidget w) { input.Move(RectOf(l, w)->x + 5.0f, 18.0f); };
+    const auto lit  = [&](BarWidget w) { return input.Lit(w, popups[SlotOf(w)]); };
+    const BarRect wide{0.0f, 44.0f, 1920.0f, 300.0f}; // every widget in its column
+    over(BarWidget::EarthTime);
+    SetPopup(input, wide);
+    CHECK(input.Open() == BarWidget::EarthTime);
+    over(BarWidget::Settings);
+    CHECK(!input.Open() && input.Shown().empty() && !lit(BarWidget::EarthTime) && lit(BarWidget::Settings));
+    // A pinned one stays out, and lit, while the hovered one goes.
+    input.Pin(BarWidget::Zone);
+    over(BarWidget::EarthTime);
+    SetPopup(input, wide);
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Zone, BarWidget::EarthTime}));
+    over(BarWidget::Settings);
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Zone}) && lit(BarWidget::Zone) && !lit(BarWidget::EarthTime));
+}
+
+// The card: a widget that has settings but nothing to pop out now (Party alone, Target with nothing targeted) shows
+// nothing hovered, and a click on it opens its pop-out on its settings, which a second click closes.
+TEST(a_click_on_a_widget_without_a_popup_opens_its_settings_pop_out_and_another_closes_it)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Zone)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const BarRect target = *RectOf(l, BarWidget::Target);
+    input.Move(target.x + 5.0f, 18.0f);
+    CHECK(input.Shown().empty());
+    CHECK(input.Press(target.x + 5.0f, 18.0f, true));
+    CHECK(input.SettingsShown() == BarWidget::Target && (input.Shown() == std::vector<PanelWidget>{BarWidget::Target}));
+    input.Leave();
+    CHECK(input.SettingsShown() == BarWidget::Target && input.Lit(BarWidget::Target, false)); // it stays, lit
+    input.Move(target.x + 5.0f, 18.0f);
+    CHECK(input.Press(target.x + 5.0f, 18.0f, true));
+    CHECK(!input.SettingsShown() && input.Shown().empty() && !input.Pinned());
+    // A pinned popup of another widget stays out through both.
+    input.Pin(BarWidget::Zone);
+    CHECK(input.Press(target.x + 5.0f, 18.0f, true));
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Target}));
+    CHECK(input.Press(target.x + 5.0f, 18.0f, true));
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Zone}) && !input.SettingsShown());
 }
 
 TEST(neighbours_are_the_widget_spacing_apart_and_a_separator_between_them_adds_its_diamonds_room)

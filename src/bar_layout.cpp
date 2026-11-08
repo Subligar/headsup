@@ -597,7 +597,7 @@ namespace headsup
         if (m_Dismissed != m_Under) m_Dismissed.reset();
         if (m_Under && m_HasPopup[SlotOf(*m_Under)] && m_Under != m_Dismissed)
             m_Hover = m_Under;
-        else if (!(m_Hover && m_HasPopup[SlotOf(*m_Hover)] && InHoverColumn(m_X, m_Y)))
+        else if (m_Under || !(m_Hover && m_HasPopup[SlotOf(*m_Hover)] && InHoverColumn(m_X, m_Y)))
             m_Hover.reset();
         if (m_UnderMenu)
             std::erase_if(*m_UnderMenu, [shown = Shown()](PanelWidget pill) { return std::ranges::find(shown, pill) == shown.end(); });
@@ -634,8 +634,14 @@ namespace headsup
             m_Presses.push_back(kOpenSettingsPress);
             return true;
         }
+        // With nothing to pop out, it opens its popup on its settings, or closes them.
+        if (under && !m_HasPopup[SlotOf(*under)])
+        {
+            ShowSettings(SettingsShown() == under ? std::nullopt : under);
+            return true;
+        }
         // The widget on the bar pins and unpins its popup, as its pin chip does.
-        if (under && m_HasPopup[SlotOf(*under)])
+        if (under)
         {
             TogglePin(*under);
             // Unpinned there, it goes at once, though the pointer is still on the widget.
