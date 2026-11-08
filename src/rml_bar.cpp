@@ -299,8 +299,7 @@ namespace headsup
             const PanelWidget head = widgets.panel.group[w];
             shown.element->SetClass(kFlatClass, FlatPill(look, widgets.panel, head));
             shown.element->SetClass(kBackedClass, look.settings.widgetBackground);
-            shown.element->SetClass(kLitClass,
-                widgets.hasPopup[SlotOf(head)] && (input.Hovered() == head || input.Open() == head || input.IsPinned(head)));
+            shown.element->SetClass(kLitClass, input.Lit(head, widgets.hasPopup[SlotOf(head)]));
             if (widget.kind == BarWidget::Target) shown.element->SetClass(kTargetClass, look.settings.widgetBackground);
             const WidgetContent& content = widgets.contents[w];
             if (shown.marked && shown.drawn == content) continue;

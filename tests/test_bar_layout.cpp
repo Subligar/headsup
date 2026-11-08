@@ -1658,3 +1658,29 @@ TEST(a_press_on_the_settings_widget_asks_for_the_settings_window_and_pins_nothin
     CHECK((input.TakePresses() == std::vector<std::string>{kOpenSettingsPress}) && !input.Pinned());
     CHECK(input.Press(cog.x + 5.0f, 18.0f, false) && input.TakePresses().empty()); // a right press tells nothing
 }
+
+// The card: the Settings widget, and a widget with nothing to pop out (Party alone, Target with nothing targeted),
+// light as the pointer goes over them as the others do.
+TEST(a_widget_lights_under_the_pointer_whether_or_not_it_has_a_popup)
+{
+    std::array<float, kPanelSlots> widths = Widths(100, 0, 120, 200, 90, 60, 50);
+    widths[SlotOf(BarWidget::Settings)]   = 30.0f;
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, widths, 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Zone)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const auto over = [&](BarWidget w) { input.Move(RectOf(l, w)->x + 5.0f, 18.0f); };
+    const auto lit  = [&](BarWidget w) { return input.Lit(w, popups[SlotOf(w)]); };
+    over(BarWidget::Settings);
+    CHECK(lit(BarWidget::Settings) && !lit(BarWidget::Target) && !lit(BarWidget::Zone));
+    over(BarWidget::Target);
+    CHECK(lit(BarWidget::Target) && !lit(BarWidget::Settings));
+    over(BarWidget::Zone);
+    CHECK(lit(BarWidget::Zone) && !lit(BarWidget::Target));
+    // Off the bar, a pinned one stays lit while it has a popup to show.
+    input.Pin(BarWidget::Zone);
+    input.Pin(BarWidget::Target);
+    input.Leave();
+    CHECK(lit(BarWidget::Zone) && !lit(BarWidget::Target) && !lit(BarWidget::Settings));
+}

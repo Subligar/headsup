@@ -227,6 +227,8 @@ namespace headsup
         std::optional<PanelWidget> Pinned() const { return m_Pinned.empty() ? std::nullopt : std::optional(m_Pinned.back()); }
         bool IsPinned(PanelWidget pill) const { return std::ranges::find(m_Pinned, pill) != m_Pinned.end(); }
         std::optional<PanelWidget> Hovered() const { return m_Under; }
+        // Whether a pill shows lit: under the pointer, or showing its popup.
+        bool Lit(PanelWidget pill, bool hasPopup) const { return m_Under == pill || (hasPopup && (Open() == pill || IsPinned(pill))); }
         // Each frame, whether the settings window is open: the popups showing when it opened are drawn under it, and
         // those that came out after it over it.
         void MenuOpen(bool open);
