@@ -628,9 +628,11 @@ namespace headsup
             form.EndRow();
         }
 
-        // A copy's name as its tab and chip say it: the widget's, and after the first copy its number.
+        // A copy's name as its tab and chip say it: the widget's, and after the first copy its number; a created
+        // widget's own Name.
         std::string CopyName(const Context& c, PanelWidget widget)
         {
+            if (widget.kind == BarWidget::Custom) return c.s.Widget(widget).name;
             const char* name = c.layout.OptionsOf(WindowList::BarWidgets)[static_cast<size_t>(widget.kind)].name;
             const std::string said(Said(name));
             return widget.copy == 0 ? said : said + " " + std::to_string(widget.copy + 1);

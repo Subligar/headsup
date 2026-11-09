@@ -228,6 +228,21 @@ TEST(a_pages_controls_change_the_settings_they_show)
     CHECK(w.settings.showBar);
 }
 
+TEST(a_created_widget_goes_by_its_name_on_its_chip_in_link_widgets_list_and_over_its_settings)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.settings.Widget(made).name = "Mule";
+    CHECK(Has(Block(w.Pass(), "toppanel-layout")->rml, ">Mule</div>"));
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}};
+    const Form open = w.Pass({{"toppanel-widgets-combine-zone", kClickEvent, ""}});
+    CHECK(open.popup && Has(open.popup->rml, ">Mule</div>") && !Has(open.popup->rml, "Custom Widget"));
+    w.settings.Widget(BarWidget::Zone).combine = made;
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}, made};
+    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, ">Mule</div>"));
+}
+
 TEST(a_widgets_chip_dropped_on_another_goes_before_it)
 {
     Window w;
