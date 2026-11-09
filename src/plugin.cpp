@@ -85,7 +85,7 @@ namespace
 
     constexpr const char* kName              = "HeadsUp"; // as Ashita lists it and the chat names it
     // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
-    constexpr const char* kVersion           = "0.5.0";
+    constexpr const char* kVersion           = "0.5.1";
     constexpr const char* kConfigAlias       = "headsup";
     constexpr const char* kConfigFolder      = "config";
     constexpr const char* kWindowFile        = "settings_window.json"; // a developer's build reads one in its config folder
