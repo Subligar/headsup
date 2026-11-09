@@ -286,6 +286,17 @@ TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_desi
     CHECK(w.state.editSide == EditSide::Widget);
 }
 
+TEST(a_created_widgets_pop_out_designer_is_its_caption_then_its_rows_with_no_note_between)
+{
+    Window w;
+    w.readings.settingsOf = {*CreateWidget(w.settings)};
+    w.state.editSide      = EditSide::Popup;
+    const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
+    const size_t rows     = rml.find("<div class=\"design\">");
+    CHECK(rows != std::string::npos && rml.rfind("class=\"caption\"", rows) != std::string::npos);
+    CHECK(rml.rfind("class=\"note\"", rows) == std::string::npos);
+}
+
 TEST(create_new_widget_adds_one_at_the_rights_end_on_with_its_settings_asked_until_every_one_is_made)
 {
     Window w;

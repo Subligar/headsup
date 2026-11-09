@@ -1097,7 +1097,6 @@ namespace headsup
                 case WidgetTabsRow::PopupDesign:
                     if (kind != BarWidget::Custom) break;
                     form.Caption(row.name);
-                    form.Note(row.tip);
                     PopupDesigner(c, widget);
                     break;
                 case WidgetTabsRow::BarText:
