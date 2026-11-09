@@ -99,6 +99,102 @@
       ]
     },
     {
+      "key": "colors",
+      "name": "Colors",
+      "cards": [
+        {
+          "key": "colors-aggression",
+          "name": "Aggression",
+          "description": "Colors indicating a mob's level of aggression towards you, as well as their status as a notorious monster (or placeholder for a notorious monster).",
+          "settings": [
+            {
+              "key": "aggression-colors",
+              "rows": [
+                {"key": "passive", "name": "Passive"},
+                {"key": "aggressive", "name": "Aggressive"},
+                {"key": "nm-passive", "name": "NM (Passive)"},
+                {"key": "nm-aggressive", "name": "NM (Aggressive)"},
+                {"key": "nm-placeholder", "name": "NM (Placeholder)"},
+                {"key": "no-data", "name": "No Data"}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "colors-toughness",
+          "name": "Toughness",
+          "description": "Colors indicating how difficult a mob is at your current level.",
+          "settings": [
+            {
+              "key": "toughness-colors",
+              "rows": [
+                {"key": "unknown-level", "name": "Unknown"},
+                {"key": "too-weak", "name": "Too Weak"},
+                {"key": "easy-prey", "name": "Easy Prey"},
+                {"key": "decent-challenge", "name": "Decent Challenge"},
+                {"key": "even-match", "name": "Even Match"},
+                {"key": "tough", "name": "Tough"},
+                {"key": "very-tough", "name": "Very Tough"},
+                {"key": "incredibly-tough", "name": "Incredibly Tough"}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "colors-claim-status",
+          "name": "Claim Status",
+          "description": "Colors indicating whether or not a mob is claimed and by whom.",
+          "settings": [
+            {
+              "key": "claim-colors",
+              "rows": [
+                {"key": "unclaimed", "name": "Unclaimed"},
+                {"key": "claimed-others", "name": "Claimed (Others')"},
+                {"key": "claimed-yours", "name": "Claimed (Yours)"},
+                {"key": "called-for-help", "name": "Called for Help", "tip": "Used when the mob is engaged in combat and the player who claimed it has used the 'Call for Help' feature, allowing anyone to attack it."}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "colors-targeting",
+          "name": "Targeting",
+          "description": "Colors indicating your targeting and lock-on status for the entity.",
+          "settings": [
+            {
+              "key": "targeting-colors",
+              "rows": [
+                {"key": "not-targeted", "name": "Not Targeted"},
+                {"key": "targeted", "name": "Targeted"},
+                {"key": "locked-on", "name": "Locked On"},
+                {"key": "sub-target", "name": "Sub-Target", "tip": "Used when switching targets or choosing a target for your spells and abilities."},
+                {"key": "out-of-range", "name": "Out of Range", "tip": "Used when sub-targeting and the target is out of range."}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "colors-entity-type",
+          "name": "Entity Type",
+          "description": "Colors indicating the type of entity and their relation to the player.",
+          "settings": [
+            {
+              "key": "entity-type-colors",
+              "rows": [
+                {"key": "player", "name": "Player"},
+                {"key": "friend", "name": "Friend"},
+                {"key": "party-member", "name": "Party Member"},
+                {"key": "linkshell-member", "name": "Linkshell Member", "tip": "A member of the same linkshell as you."},
+                {"key": "mob", "name": "Mob"},
+                {"key": "npc-or-object", "name": "NPC/Object"},
+                {"key": "pet", "name": "Pet"}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "key": "entities",
       "name": "Nameplates & Outlines",
       "cards": [
@@ -450,102 +546,6 @@
                 {"key": "help-off", "name": "Game Help Off", "tip": "The shifts while no help shows under the top panel."},
                 {"key": "starts-at", "name": "Windows Start At", "tip": "Where each menu's highest window goes, in the game's menu pixels from the top of the screen."},
                 {"key": "row-tip", "tip": "Its shift down from where the game puts its windows, up when below zero."}
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "colors",
-      "name": "Colors",
-      "cards": [
-        {
-          "key": "colors-aggression",
-          "name": "Aggression",
-          "description": "Colors indicating a mob's level of aggression towards you, as well as their status as a notorious monster (or placeholder for a notorious monster).",
-          "settings": [
-            {
-              "key": "aggression-colors",
-              "rows": [
-                {"key": "passive", "name": "Passive"},
-                {"key": "aggressive", "name": "Aggressive"},
-                {"key": "nm-passive", "name": "NM (Passive)"},
-                {"key": "nm-aggressive", "name": "NM (Aggressive)"},
-                {"key": "nm-placeholder", "name": "NM (Placeholder)"},
-                {"key": "no-data", "name": "No Data"}
-              ]
-            }
-          ]
-        },
-        {
-          "key": "colors-toughness",
-          "name": "Toughness",
-          "description": "Colors indicating how difficult a mob is at your current level.",
-          "settings": [
-            {
-              "key": "toughness-colors",
-              "rows": [
-                {"key": "unknown-level", "name": "Unknown"},
-                {"key": "too-weak", "name": "Too Weak"},
-                {"key": "easy-prey", "name": "Easy Prey"},
-                {"key": "decent-challenge", "name": "Decent Challenge"},
-                {"key": "even-match", "name": "Even Match"},
-                {"key": "tough", "name": "Tough"},
-                {"key": "very-tough", "name": "Very Tough"},
-                {"key": "incredibly-tough", "name": "Incredibly Tough"}
-              ]
-            }
-          ]
-        },
-        {
-          "key": "colors-claim-status",
-          "name": "Claim Status",
-          "description": "Colors indicating whether or not a mob is claimed and by whom.",
-          "settings": [
-            {
-              "key": "claim-colors",
-              "rows": [
-                {"key": "unclaimed", "name": "Unclaimed"},
-                {"key": "claimed-others", "name": "Claimed (Others')"},
-                {"key": "claimed-yours", "name": "Claimed (Yours)"},
-                {"key": "called-for-help", "name": "Called for Help", "tip": "Used when the mob is engaged in combat and the player who claimed it has used the 'Call for Help' feature, allowing anyone to attack it."}
-              ]
-            }
-          ]
-        },
-        {
-          "key": "colors-targeting",
-          "name": "Targeting",
-          "description": "Colors indicating your targeting and lock-on status for the entity.",
-          "settings": [
-            {
-              "key": "targeting-colors",
-              "rows": [
-                {"key": "not-targeted", "name": "Not Targeted"},
-                {"key": "targeted", "name": "Targeted"},
-                {"key": "locked-on", "name": "Locked On"},
-                {"key": "sub-target", "name": "Sub-Target", "tip": "Used when switching targets or choosing a target for your spells and abilities."},
-                {"key": "out-of-range", "name": "Out of Range", "tip": "Used when sub-targeting and the target is out of range."}
-              ]
-            }
-          ]
-        },
-        {
-          "key": "colors-entity-type",
-          "name": "Entity Type",
-          "description": "Colors indicating the type of entity and their relation to the player.",
-          "settings": [
-            {
-              "key": "entity-type-colors",
-              "rows": [
-                {"key": "player", "name": "Player"},
-                {"key": "friend", "name": "Friend"},
-                {"key": "party-member", "name": "Party Member"},
-                {"key": "linkshell-member", "name": "Linkshell Member", "tip": "A member of the same linkshell as you."},
-                {"key": "mob", "name": "Mob"},
-                {"key": "npc-or-object", "name": "NPC/Object"},
-                {"key": "pet", "name": "Pet"}
               ]
             }
           ]
