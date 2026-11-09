@@ -94,6 +94,34 @@ namespace headsup
     // What a part of icons shows while it has none now (no target, no weather yet); nothing for a part of text.
     PartMark DefaultMark(WidgetPart part);
 
+    // A copy's pop-out: rows of cards, any widget's, each card once and a row 1 to kMostCardsInRow of them.
+    constexpr size_t kMostCardsInRow = 3;
+    struct PopupDesign
+    {
+        std::vector<std::vector<PopupCard>> rows;
+        bool operator==(const PopupDesign&) const = default;
+    };
+    BarWidget WidgetOfCard(PopupCard card);
+    std::vector<PopupCard> CardsOf(BarWidget kind); // none for the game's help and the Settings widget
+    // A card's name in the settings file, one of all the cards' alone. Saved: never rename one.
+    const char* CardFileName(PopupCard card);
+    // The widget's own cards in rows, as its pop-out laid them out before it had a design.
+    PopupDesign DefaultPopupDesign(BarWidget kind);
+    // The rows' file names a space apart, " | " between rows; kNoCards for none.
+    std::string PopupDesignText(const PopupDesign& design);
+    // The text PopupDesignText writes back as a design, made whole; nothing for kind's default.
+    PopupDesign PopupDesignFrom(BarWidget kind, std::string_view text);
+    // Each card once, the first kept; a row past kMostCardsInRow cut there, an empty one dropped.
+    PopupDesign WholePopup(PopupDesign design);
+    bool HoldsCard(const PopupDesign& design, PopupCard card);
+    // Whether card can go in row: one with room, one holding it already, or the new row after the last.
+    bool RowTakes(const PopupDesign& design, size_t row, PopupCard card);
+    // card put in row before the card at at (counted before the move), or at its end; row past the last makes a new
+    // one. It leaves where it was, and a row left empty goes. False when nothing changed or the row has no room.
+    bool PlaceCard(PopupDesign& design, PopupCard card, size_t row, size_t at);
+    // False when the design does not hold it.
+    bool RemoveCard(PopupDesign& design, PopupCard card);
+
     // Which of a line's spans is cut when the line is too long: the one with the most letters, a dim one only when no
     // other has any; the size when none has any.
     size_t WidestTextSpan(const std::vector<Span>& line);

@@ -163,6 +163,25 @@ namespace headsup
         bool operator==(const PopupTab&) const = default;
     };
 
+    // Each card a widget's pop-out can show: the Pop-out Designer puts any of them in any widget's pop-out.
+    enum class PopupCard : uint8_t
+    {
+        ZoneInfluence,
+        WeatherToday, WeatherForecast, WeatherByElement,
+        TargetOverview, TargetDamage, TargetElements, TargetStatuses, TargetImmune, TargetStats, TargetMoves, TargetSpells,
+        TargetSpawn, TargetDrops, TargetSteal, TargetDespoil, TargetShop, TargetClick, TargetTrade, TargetPops,
+        TargetGives, TargetKeyItems, TargetChecks, TargetQuests, TargetMissions, TargetBattlefields,
+        CurrencyFavorites, CurrencyAll,
+        BagsList,
+        ClockServer,
+        PerfConnection, PerfSession, PerfPlayOnline, PerfMemory, PerfProcessor, PerfLinuxXI, PerfLua,
+        JobExp,
+        PartyMembers,
+        StatusFavorites, StatusBuffs, StatusDebuffs,
+        WorldConquest, WorldTravel, WorldCalendar, WorldGuilds,
+    };
+    constexpr int kPopupCardCount = static_cast<int>(PopupCard::WorldGuilds) + 1;
+
     struct PopupSection
     {
         std::string heading; // empty for the rows under the title
@@ -177,6 +196,7 @@ namespace headsup
         bool under = false; // in the column of the card before it, under it: after a card beside, a column beside a card
         size_t tabsAcross = 0; // its tabs a row; 0 for as many as fit
         bool tabEachOpen  = false; // its tab is tab again each time the popup opens, until another is picked
+        std::optional<PopupCard> card{}; // which it is, for the Pop-out Designer; none for Game help's
         bool operator==(const PopupSection&) const = default;
     };
 

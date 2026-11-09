@@ -257,6 +257,7 @@ namespace headsup
         constexpr const char* kIconSideSuffix    = "Icon";
         constexpr const char* kAlignSuffix       = "Align";
         constexpr const char* kPopupSpotSuffix   = "PopupSpot"; // "left 10 top 200" or "right 120 bottom 80"
+        constexpr const char* kPopupDesignSuffix = "PopupDesign"; // its pop-out's rows of cards (PopupDesignText)
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
         const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
         const char* const kWidgetAlignNames[kWidgetAlignCount] = {"location", "left", "center", "right"};
@@ -1239,6 +1240,7 @@ namespace headsup
             WidgetOptions& w = s.widgets[slot];
             const WidgetOptions fresh;
             w.design = Whole(WidgetInSlot(slot).kind, std::move(w.design));
+            w.popup  = WholePopup(std::move(w.popup));
             for (int WidgetOptions::* const which : {&WidgetOptions::currency, &WidgetOptions::secondCurrency})
                 if (w.*which < kYourConquestCurrency || w.*which >= kCurrencyCount) w.*which = fresh.*which;
             for (int WidgetOptions::* const which : {&WidgetOptions::bag, &WidgetOptions::secondBag})
@@ -1288,6 +1290,7 @@ namespace headsup
             const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
             o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
+            if (!CardsOf(w.kind).empty()) o.popup = PopupDesignFrom(w.kind, text((widget + kPopupDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
             o.linkPadding = number(widget + kLinkPaddingSuffix, o.linkPadding);
             {
@@ -1394,6 +1397,7 @@ namespace headsup
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
             if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
+            if (!CardsOf(w.kind).empty()) text((widget + kPopupDesignSuffix).c_str(), PopupDesignText(o.popup).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
             if (IconPartOf(w.kind)) text((widget + kIconSideSuffix).c_str(), kIconSideNames[static_cast<int>(o.iconSide)]);
@@ -1459,6 +1463,7 @@ namespace headsup
         WidgetOptions o;
         o.on         = widget.copy > 0 || kBarWidgetDefaults[static_cast<int>(widget.kind)];
         o.design     = DefaultDesign(widget.kind);
+        o.popup      = DefaultPopupDesign(widget.kind);
         return o;
     }
 

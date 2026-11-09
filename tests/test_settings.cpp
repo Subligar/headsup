@@ -1159,6 +1159,38 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     CHECK_EQ(DesignText(LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
 }
 
+TEST(each_widgets_pop_out_design_saves_under_its_own_key_each_copys_under_its_own_and_clones_with_it)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::Zone).popup == DefaultPopupDesign(BarWidget::Zone));
+    s.Widget(BarWidget::Zone).popup = PopupDesign{{{PopupCard::ZoneInfluence, PopupCard::WeatherToday}}};
+    const PanelWidget second = *CloneWidget(s, BarWidget::Zone);
+    CHECK(s.Widget(second).popup == s.Widget(BarWidget::Zone).popup);
+    s.Widget(second).popup = PopupDesign{};
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barZonePopupDesign"], "zone.influence weather.today");
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(BarWidget::Zone).popup == s.Widget(BarWidget::Zone).popup);
+    CHECK(loaded.Widget(second).popup.rows.empty());
+    // Game help's pop-out keeps its own content, and the Settings widget has none.
+    CHECK(!saved.values.contains("barGameHelpPopupDesign") && !saved.values.contains("barSettingsPopupDesign"));
+    // A file from before the designer has the defaults; a row a hand filled past three keeps its first three.
+    saved.values.erase("barZonePopupDesign");
+    saved.values["barWorldPopupDesign"] = "world.guilds world.travel world.calendar world.conquest";
+    const Settings older = LoadSettings(saved);
+    CHECK(older.Widget(BarWidget::Zone).popup == DefaultPopupDesign(BarWidget::Zone));
+    CHECK_EQ(PopupDesignText(older.Widget(BarWidget::World).popup), "world.guilds world.travel world.calendar");
+}
+
+TEST(a_pop_out_row_given_more_than_three_cards_keeps_three_once_clamped)
+{
+    Settings s;
+    s.Widget(BarWidget::Job).popup = PopupDesign{{{PopupCard::JobExp, PopupCard::PartyMembers, PopupCard::BagsList, PopupCard::ZoneInfluence},
+        {PopupCard::JobExp}}};
+    CHECK_EQ(PopupDesignText(Clamp(s).Widget(BarWidget::Job).popup), "job.exp party.members bags.list");
+}
+
 TEST(each_widgets_icon_side_saves_under_its_own_key_and_loads_back)
 {
     Settings s;

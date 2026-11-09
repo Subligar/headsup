@@ -59,6 +59,7 @@ namespace headsup
     {
         bool on         = false;
         WidgetDesign design; // what it shows on its two lines (NewWidget gives each kind its default)
+        PopupDesign popup;   // the cards its pop-out shows, in rows
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable, or kYourConquestCurrency
         int secondCurrency = kYourConquestCurrency; // its Currency 2 buttons', the same way
         int bag         = 0;                        // Bags: the container of its Bag 1 buttons, by Ashita's number
