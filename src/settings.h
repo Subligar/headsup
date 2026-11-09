@@ -55,9 +55,12 @@ namespace headsup
 
     // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
     // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
+    constexpr const char* kCreatedWidgetName = "Custom Widget"; // a created widget's first Name, then with its number
+    constexpr size_t kMaxWidgetName = 32; // bytes
     struct WidgetOptions
     {
         bool on         = false;
+        std::string name; // a created widget's: its Name part, its pop-out's title and its chip's
         WidgetDesign design; // what it shows on its two lines (NewWidget gives each kind its default)
         PopupDesign popup;   // the cards its pop-out shows, in rows
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable, or kYourConquestCurrency
@@ -304,6 +307,8 @@ namespace headsup
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);
     // A new created widget at the right section's end, shown; none when every one there can be is made.
     std::optional<PanelWidget> CreateWidget(Settings& s);
+    // A created widget's Name before you give it one: kCreatedWidgetName, and after the first its number.
+    std::string CreatedWidgetName(PanelWidget widget);
     void RemoveWidgetCopy(Settings& s, PanelWidget widget);
     // The panel as it is drawn, each widget's combine pulling its partner after it.
     PanelGroups Panel(const Settings& s);

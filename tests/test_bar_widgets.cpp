@@ -3423,3 +3423,58 @@ TEST(every_card_a_widget_builds_is_one_of_its_own_and_its_default_pop_out_shows_
     }
     CHECK(built.size() >= static_cast<size_t>(kCardKindCount) / 2); // the fixtures reach most of them
 }
+
+TEST(a_created_widget_shows_its_name_and_any_widgets_parts_each_as_that_widgets_first_copy_has_them)
+{
+    Settings settings;
+    BarState state = RonfaureState();
+    state.bags[static_cast<size_t>(kMogSatchel)] = BagCount{3, 30};
+    const PanelWidget made = *CreateWidget(settings);
+    WidgetContent w = Content(made, state, settings);
+    CHECK(w.shown && Joined(w.title) == "Custom Widget" && w.subtitle.empty() && !w.hasPopup);
+    // The Zone's name beside it and the first Inventory's Bag 1 under it, that widget's bag as its settings pick it.
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name zone.name | bags.count1");
+    settings.Widget(BarWidget::Bags).bag = kMogSatchel;
+    w = Content(made, state, settings);
+    CHECK_EQ(Joined(w.title), "Custom Widget  " + std::string(KnownZone(state.zone)->name));
+    CHECK_EQ(Joined(w.subtitle), "3 / 30");
+    settings.Widget(made).name = "Mule";
+    CHECK(Joined(Content(made, state, settings).title).starts_with("Mule  "));
+    // A widget's icon leads at the start of the first line, as an icon part does.
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "bags.icon name |");
+    w = Content(made, state, settings);
+    CHECK(w.icons == std::vector{Icon::Bag} && Joined(w.title) == "Mule");
+    // Its pop-out is its name over the cards its design rows, any widget's.
+    settings.Widget(made).popup = PopupDesign{{{CardKind::ZoneInfluence}}};
+    CHECK(Content(made, state, settings).hasPopup);
+    const PopupContent popup = PanelPopupContent(made, state, settings);
+    CHECK(Joined(popup.title) == "Mule" && Rows(popup) == (std::vector<std::pair<std::string, bool>>{{"Influence", false}}));
+    CHECK(!popup.removePress.empty() && !popup.clonePress.empty());
+    // Its designer's chips show what each widget shows now.
+    state.weather = Weather::DustStorm;
+    const auto marks = PartMarksNow({made}, state, settings);
+    CHECK(marks[static_cast<size_t>(WidgetPart::WeatherIcon)] == PartMark{Content(BarWidget::Weather, state, settings).icons.front()});
+}
+
+TEST(a_created_widgets_parts_have_their_widgets_data_gathered_while_it_shows)
+{
+    Settings settings;
+    for (WidgetOptions& each : settings.widgets)
+        each.on = false;
+    const PanelWidget made = *CreateWidget(settings);
+    const auto needs = [&](const char* design) {
+        settings.Widget(made).design = DesignFrom(BarWidget::Custom, design);
+        return NeedsOf(settings, {});
+    };
+    const BarNeeds name = needs("name |");
+    CHECK(!name.frames && !name.gil && !name.statuses && !name.localTime && name.containers == 0 && !name.zone);
+    CHECK(needs("name | performance.fps").frames && !needs("name | -performance.fps").frames);
+    CHECK(needs("gil.amount1 |").gil && WidgetShown(settings, BarWidget::Currency) && !AnyCopyShown(settings, BarWidget::Currency));
+    CHECK(needs("statusTimers.pin1 |").statuses && needs("earthTime.date |").localTime);
+    settings.Widget(BarWidget::Bags).secondBag = kMogSatchel;
+    CHECK_EQ(needs("bags.count2 |").containers, kMogSatchel + 1);
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | world.windurst");
+    CHECK(StandingsShown(settings, {}));
+    settings.Widget(made).on = false;
+    CHECK(!StandingsShown(settings, {}) && !WidgetShown(settings, BarWidget::World));
+}

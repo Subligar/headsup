@@ -1373,12 +1373,28 @@ namespace headsup
             return pill;
         }
 
-        // Calls each with the options of every copy of a widget that Shows.
+        // Whether a created widget shows one of widget's parts.
+        bool HoldsPartOn(const WidgetOptions& created, BarWidget widget)
+        {
+            return std::ranges::any_of(created.design.lines, [&](const std::vector<DesignChip>& line) {
+                return std::ranges::any_of(line, [&](const DesignChip& chip) { return chip.on && WidgetOfPart(chip.part) == widget; });
+            });
+        }
+
+        // Calls each with the options of every copy of a widget that Shows, and for each created widget that shows its
+        // parts, its first copy's with that widget's design.
         template <typename Each>
         void EachShownCopy(const Settings& settings, BarWidget widget, const Each& each)
         {
             for (int copy = 0; copy < CopiesOf(widget); ++copy)
                 if (const PanelWidget w{widget, copy}; Shows(settings, w)) each(settings.Widget(w));
+            for (int copy = 0; copy < kMostCreatedWidgets && widget != BarWidget::Custom; ++copy)
+                if (const PanelWidget w{BarWidget::Custom, copy}; Shows(settings, w) && HoldsPartOn(settings.Widget(w), widget))
+                {
+                    WidgetOptions first = settings.Widget(PanelWidget{widget});
+                    first.design        = settings.Widget(w).design;
+                    each(first);
+                }
         }
 
         // Red when full; dim for a bag with no room yet, which is not full.
@@ -1540,7 +1556,26 @@ namespace headsup
             }
             case BarWidget::World: return WorldParts(state, o, base);
             case BarWidget::Settings: base.cog = true; return {};
-            case BarWidget::Custom: return {};
+            case BarWidget::Custom:
+            {
+                // Its Name, then the parts of each widget it holds, as that widget's first copy shows them.
+                std::vector<PartContent> parts{{WidgetPart::CustomName, o.name.empty() ? std::vector<Span>{} : ListOf(Text(o.name))}};
+                std::vector<BarWidget> from;
+                for (const std::vector<DesignChip>& line : o.design.lines)
+                    for (const DesignChip& chip : line)
+                        if (const BarWidget kind = WidgetOfPart(chip.part);
+                            kind != BarWidget::Custom && std::ranges::find(from, kind) == from.end())
+                            from.push_back(kind);
+                for (const BarWidget kind : from)
+                {
+                    WidgetContent theirs;
+                    for (PartContent& part : PartsNow(PanelWidget{kind}, state, settings, theirs))
+                        parts.push_back(std::move(part));
+                    base.figures = base.figures || theirs.figures;
+                }
+                base.hasPopup = !o.popup.rows.empty();
+                return parts;
+            }
             }
             return {};
         }
@@ -1569,10 +1604,9 @@ namespace headsup
                 }
             // The pins decide which Pinned Status buttons show, not their switches.
             WidgetDesign design = o.design;
-            if (widget.kind == BarWidget::StatusTimers)
-                for (std::vector<DesignChip>& line : design.lines)
-                    for (DesignChip& chip : line)
-                        chip.on = true;
+            for (std::vector<DesignChip>& line : design.lines)
+                for (DesignChip& chip : line)
+                    chip.on = chip.on || IsPinnedStatus(chip.part);
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && widget.kind == BarWidget::StatusTimers) w.title = ListOf(Text("Status Timers", Tone::Dim));
             if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
@@ -1713,9 +1747,16 @@ namespace headsup
         return PressResult::Changed;
     }
 
+    bool WidgetShown(const Settings& settings, BarWidget widget)
+    {
+        bool shown = AnyCopyShown(settings, widget);
+        EachShownCopy(settings, widget, [&](const WidgetOptions&) { shown = true; });
+        return shown;
+    }
+
     bool StandingsShown(const Settings& settings, const std::vector<PanelWidget>& showing)
     {
-        bool shown = AnyCopyShown(settings, BarWidget::Zone) || PopupShows(settings, showing, BarWidget::Zone) ||
+        bool shown = WidgetShown(settings, BarWidget::Zone) || PopupShows(settings, showing, BarWidget::Zone) ||
                      PopupShows(settings, showing, BarWidget::World);
         EachShownCopy(settings, BarWidget::World,
             [&](const WidgetOptions& o) {
@@ -1757,7 +1798,7 @@ namespace headsup
 
     BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing)
     {
-        const auto shown  = [&](BarWidget widget) { return AnyCopyShown(settings, widget); };
+        const auto shown  = [&](BarWidget widget) { return WidgetShown(settings, widget); };
         const auto opened = [&](BarWidget widget) { return PopupShows(settings, showing, widget); };
         BarNeeds needs;
         // A Clock in a zone of its own goes by the time alone, as its server line and its popup's resets do; in the
@@ -1820,12 +1861,17 @@ namespace headsup
         std::array<PartMark, kWidgetPartCount> marks;
         for (int p = 0; p < kWidgetPartCount; ++p)
             marks[static_cast<size_t>(p)] = DefaultMark(static_cast<WidgetPart>(p));
-        for (const PanelWidget widget : widgets)
-        {
+        const auto take = [&](PanelWidget widget) {
             WidgetContent base;
             for (const PartContent& part : PartsNow(widget, state, settings, base))
                 if (const std::optional<PartMark> mark = MarkOf(part.spans)) marks[static_cast<size_t>(part.part)] = *mark;
-        }
+        };
+        for (const PanelWidget widget : widgets)
+            if (widget.kind != BarWidget::Custom)
+                take(widget);
+            else // it offers every widget's parts
+                for (int k = 0; k < static_cast<int>(BarWidget::Custom); ++k)
+                    take(PanelWidget{static_cast<BarWidget>(k)});
         return marks;
     }
 
@@ -2085,8 +2131,10 @@ namespace headsup
                 ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
             return WorldPopup(state);
-        case BarWidget::Settings:
-        case BarWidget::Custom: break;
+        case BarWidget::Settings: break;
+        case BarWidget::Custom:
+            if (!o.name.empty()) popup.title = ListOf(Text(o.name));
+            break;
         }
         return popup;
     }

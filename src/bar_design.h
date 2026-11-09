@@ -31,6 +31,8 @@ namespace headsup
         CustomName, // a created widget's Name
     };
     constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::CustomName) + 1;
+    // A Pinned Status button, which its pin turns on and off rather than its switch.
+    constexpr bool IsPinnedStatus(WidgetPart part) { return part >= WidgetPart::StatusPin1 && part <= WidgetPart::StatusPin6; }
 
     struct DesignChip
     {

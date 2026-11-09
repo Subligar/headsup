@@ -253,6 +253,7 @@ namespace headsup
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
         constexpr const char* kDesignSuffix     = "Design";
+        constexpr const char* kNameSuffix       = "Name";
         constexpr const char* kCombineSuffix    = "Combine";
         constexpr const char* kLinkPaddingSuffix = "LinkPadding";
         constexpr const char* kIconSideSuffix    = "Icon";
@@ -1277,6 +1278,14 @@ namespace headsup
             if (w.popupTextScale) w.popupTextScale = std::clamp(*w.popupTextScale, kMinPopupScale, kMaxPopupScale);
             for (std::string* font : {&w.titleFont, &w.textFont})
                 if (font->size() > kMaxFontName) font->clear();
+            if (w.name.size() > kMaxWidgetName)
+            {
+                size_t end = kMaxWidgetName;
+                while (end > 0 && ContinuesCharacter(w.name[end])) --end;
+                w.name.resize(end);
+            }
+            if (const PanelWidget widget = WidgetInSlot(slot); widget.kind == BarWidget::Custom && w.name.empty())
+                w.name = CreatedWidgetName(widget);
         }
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
         if (static_cast<int>(s.helpBarAnchor) >= kHelpAnchorCount) s.helpBarAnchor = d.helpBarAnchor;
@@ -1311,6 +1320,7 @@ namespace headsup
             const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
             o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
+            if (w.kind == BarWidget::Custom) o.name = text((widget + kNameSuffix).c_str());
             if (!CardsOf(w.kind).empty()) o.popup = PopupDesignFrom(w.kind, text((widget + kPopupDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
             o.linkPadding = number(widget + kLinkPaddingSuffix, o.linkPadding);
@@ -1436,6 +1446,7 @@ namespace headsup
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
             if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
+            if (w.kind == BarWidget::Custom) text((widget + kNameSuffix).c_str(), o.name.c_str());
             if (!CardsOf(w.kind).empty()) text((widget + kPopupDesignSuffix).c_str(), PopupDesignText(o.popup).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
@@ -1523,6 +1534,7 @@ namespace headsup
         WidgetOptions o;
         o.on         = widget.copy > 0 || kBarWidgetDefaults[static_cast<int>(widget.kind)];
         o.design     = DefaultDesign(widget.kind);
+        if (widget.kind == BarWidget::Custom) o.name = CreatedWidgetName(widget);
         o.popup      = DefaultPopupDesign(widget.kind);
         return o;
     }
@@ -1560,7 +1572,13 @@ namespace headsup
         WidgetOptions& clone = s.Widget(*added) = s.Widget(widget);
         clone.on             = true;
         clone.combine.reset();
+        if (added->kind == BarWidget::Custom) clone.name = CreatedWidgetName(*added);
         return added;
+    }
+
+    std::string CreatedWidgetName(PanelWidget widget)
+    {
+        return widget.copy == 0 ? kCreatedWidgetName : kCreatedWidgetName + (" " + std::to_string(widget.copy + 1));
     }
 
     std::optional<PanelWidget> CreateWidget(Settings& s)

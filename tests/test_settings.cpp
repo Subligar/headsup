@@ -3210,3 +3210,25 @@ TEST(a_created_widget_shows_once_made_saves_under_its_own_keys_and_forgets_them_
     while (CreateWidget(s)) {}
     CHECK(Shows(s, PanelWidget{BarWidget::Custom, kMostCreatedWidgets - 1}) && !CreateWidget(s));
 }
+
+TEST(a_created_widget_is_named_by_its_number_keeps_its_name_and_a_clone_gets_one_of_its_own)
+{
+    Settings s;
+    const PanelWidget first = *CreateWidget(s), second = *CreateWidget(s);
+    CHECK_EQ(s.Widget(first).name, std::string(kCreatedWidgetName));
+    CHECK_EQ(s.Widget(second).name, std::string(kCreatedWidgetName) + " 2");
+    s.Widget(second).name = "Gil & Bags";
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barCustomName_2"], "Gil & Bags");
+    CHECK(!saved.values.contains("barZoneName")); // a built-in widget's name is its own
+    CHECK_EQ(LoadSettings(saved).Widget(second).name, "Gil & Bags");
+    // Emptied, it goes back to its own; past the most a name holds, it is cut there.
+    s.Widget(second).name.clear();
+    CHECK_EQ(Clamp(s).Widget(second).name, std::string(kCreatedWidgetName) + " 2");
+    s.Widget(second).name = std::string(kMaxWidgetName + 5, 'x');
+    CHECK_EQ(Clamp(s).Widget(second).name, std::string(kMaxWidgetName, 'x'));
+    s.Widget(second).name = "Gil & Bags";
+    const PanelWidget clone = *CloneWidget(s, second);
+    CHECK_EQ(s.Widget(clone).name, std::string(kCreatedWidgetName) + " 3");
+}
