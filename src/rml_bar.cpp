@@ -315,10 +315,12 @@ namespace headsup
                 shown.element->SetClass(AlignClass(static_cast<WidgetAlign>(k)), k == static_cast<int>(look.settings.Widget(widget).align));
             shown.element->SetClass(kJoinBeforeClass, joins.before);
             shown.element->SetClass(kJoinAfterClass, joins.after);
+            // A pill shows its first widget's Show Background; the target is always a pill of its own.
             const PanelWidget head = widgets.panel.group[w];
-            shown.element->SetClass(kBackedClass, look.settings.widgetBackground);
+            const bool backed      = look.settings.Widget(head).background.value_or(look.settings.widgetBackground);
+            shown.element->SetClass(kBackedClass, backed);
             shown.element->SetClass(kLitClass, input.Lit(head, widgets.hasPopup[SlotOf(head)]));
-            if (widget.kind == BarWidget::Target) shown.element->SetClass(kTargetClass, look.settings.widgetBackground);
+            if (widget.kind == BarWidget::Target) shown.element->SetClass(kTargetClass, backed);
             const WidgetContent& content = widgets.contents[w];
             if (shown.marked && shown.drawn == content) continue;
             shown.drawn  = content;

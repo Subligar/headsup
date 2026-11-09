@@ -178,21 +178,26 @@ namespace headsup
                (content.cog ? metrics.icon : 0.0f); // alone, with no text to keep a gap from
     }
 
-    std::optional<BoxStyle> BarLook::BoxOf(BarWidget widget, bool lit) const
+    std::optional<BoxStyle> BarLook::BoxOf(BarWidget widget, bool lit, bool backed) const
     {
         const bool isTarget = widget == BarWidget::Target;
+        const float radius  = WidgetRadius(settings.widgetRounding);
         if (ornate)
         {
             if (!isTarget && !lit) return std::nullopt;
             // The target's frame always has the tint, so a hovered one has more of it.
             const uint32_t fill = isTarget && lit ? AlphaTimes(palette.highlight, kLitTarget) : palette.highlight;
-            return BoxStyle{.radius = Rounded(settings.widgetRounding, palette, kFrameRadius), .top = fill, .bottom = fill,
-                .border = isTarget ? palette.accent : 0u};
+            return BoxStyle{.radius = radius, .top = fill, .bottom = fill, .border = isTarget ? palette.accent : 0u};
         }
-        if (!lit && !settings.widgetBackground) return std::nullopt;
+        if (!lit && !backed) return std::nullopt;
         const uint32_t fill = lit ? palette.highlight : palette.pill;
-        return BoxStyle{.radius = Rounded(settings.widgetRounding, palette, metrics.pillRadius), .top = fill, .bottom = fill,
+        return BoxStyle{.radius = radius, .top = fill, .bottom = fill,
             .border = isTarget || lit ? palette.accent : palette.pillBorder};
+    }
+
+    float BarLook::WidgetRadius(int rounding) const
+    {
+        return Rounded(rounding, palette, ornate ? kFrameRadius : metrics.pillRadius);
     }
 
     float MarkWidth(const Span& span, float size)

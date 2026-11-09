@@ -13,6 +13,7 @@
 #include <array>
 #include <cmath>
 #include <cstdio>
+#include <initializer_list>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -263,6 +264,58 @@ TEST(every_widget_lit_has_the_same_corners_and_shows_its_background_unlit_only_w
             }
         CHECK_EQ(rml.Said(), "");
     }
+}
+
+TEST(a_widget_shows_its_background_by_its_own_class_and_its_pill_is_rounded_by_its_first_widget)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    for (const BarTheme theme : {BarTheme::UmbraDark, BarTheme::PhoenixGold})
+        for (const bool panelBackground : {false, true})
+        {
+            Settings settings;
+            settings.widgetBackground = panelBackground;
+            settings.widgetRounding   = 4;
+            settings.Widget(BarWidget::Zone).combine     = PanelWidget{BarWidget::Weather};
+            settings.Widget(BarWidget::Zone).rounding    = 12;
+            settings.Widget(BarWidget::Weather).rounding = 1; // in Zone's pill, which is rounded by Zone's
+            settings.Widget(BarWidget::Bags).rounding    = kThemeRounding;
+            const BarLook look = LookOf(PaletteOf(theme), settings);
+            test::RmlSession rml;
+            Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+            bar->Show();
+            const auto shown = [&](BarWidget kind, std::initializer_list<const char*> classes) {
+                Rml::Element* e = bar->GetElementById(WidgetId(kind));
+                e->SetClass(kHiddenClass, false);
+                e->SetProperty(Rml::PropertyId::Width, Rml::Property(100.0f, Rml::Unit::PX)); // wide enough for any corner
+                for (const char* c : classes)
+                    e->SetClass(c, true);
+                return e;
+            };
+            Rml::Element* zone    = shown(BarWidget::Zone, {kBackedClass, kJoinAfterClass});
+            Rml::Element* weather = shown(BarWidget::Weather, {kBackedClass, kJoinBeforeClass});
+            Rml::Element* gil     = shown(BarWidget::Currency, {kLitClass});
+            Rml::Element* bags    = shown(BarWidget::Bags, {kLitClass});
+            Rml::Element* clock   = shown(BarWidget::EarthTime, {});
+            for (int update = 0; update < 3; ++update)
+            {
+                rml.complaints.seconds += 1.0; // past every easing
+                rml.context->Update();
+            }
+            const auto& z = zone->GetComputedValues();
+            const auto& w = weather->GetComputedValues();
+            CHECK(z.border_top_left_radius() == 12.0f && z.border_bottom_left_radius() == 12.0f);
+            CHECK(z.border_top_right_radius() == 0.0f && z.border_bottom_right_radius() == 0.0f);
+            CHECK(w.border_top_right_radius() == 12.0f && w.border_bottom_right_radius() == 12.0f);
+            CHECK(w.border_top_left_radius() == 0.0f && w.border_bottom_left_radius() == 0.0f);
+            CHECK(gil->GetComputedValues().border_top_left_radius() == 4.0f);
+            // The shape's, which RmlUi keeps in whole pixels.
+            const float own = std::trunc(theme == BarTheme::PhoenixGold ? 3.0f : look.metrics.pillRadius);
+            CHECK_EQ(bags->GetComputedValues().border_top_left_radius(), own);
+            // Its class alone shows it, whatever the Top Panel's Show Background says.
+            CHECK(z.background_color().alpha > 0 && clock->GetComputedValues().background_color().alpha == 0);
+            CHECK_EQ(rml.Said(), "");
+        }
 }
 
 TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_shape)

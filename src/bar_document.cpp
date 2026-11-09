@@ -532,7 +532,8 @@ namespace headsup
         const int divider       = WholePixels(m.diamond), cap = WholePixels(m.diamond * kCapScale);
         const std::string capSource     = SeparatorSource(p.separator, p.accent, cap);
         const std::string dividerSource = SeparatorSource(p.separator, look.ornate ? p.divider : p.accent, divider);
-        auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit); };
+        // Show Background is each widget's own: its backed class.
+        auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit, true); };
         auto square = [](float size) { return "width:" + Px(size) + ";height:" + Px(size) + ";"; };
         auto centered = [&](float size) { return Px(std::round(mid - size / 2.0f)); };
         const std::string shape = look.ornate ? ".ornate" : ".pills";
@@ -566,7 +567,8 @@ namespace headsup
         }
         else
         {
-            css += ".pills .widget{" + BoxRules(boxOf(BarWidget::Weather, false)) + "}";
+            css += ".pills .widget{" + BoxRules(look.BoxOf(BarWidget::Weather, false, false)) + "}";
+            css += ".pills .widget.backed{" + BoxRules(boxOf(BarWidget::Weather, false)) + "}";
             // Before the lit rule, which then gives it the accent as every lit pill has.
             css += ".pills .widget.target{" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             css += ".pills .widget.lit{" + BoxRules(boxOf(BarWidget::Weather, true)) + "}";
@@ -628,11 +630,19 @@ namespace headsup
         css += ".hh{" + FaceRules(look.detailFont, help, place.help.height) + ShadowEffect(help) + "}";
         const bool glass = look.palette.shape == BarShape::Glass;
         if (glass) css += GlassBarRules(look);
-        // Last, over every shape's own corners and borders.
-        css += shape + " .widget." + kJoinBeforeClass +
-               "{border-left-width:0px;border-top-left-radius:0px;border-bottom-left-radius:0px;}";
-        css += shape + " .widget." + kJoinAfterClass +
-               "{border-right-width:0px;border-top-right-radius:0px;border-bottom-right-radius:0px;}";
+        // Last, over every shape's own corners and borders, and a pill's own corners, its first widget's.
+        const std::string joinBefore = std::string(".") + kJoinBeforeClass +
+                                       "{border-left-width:0px;border-top-left-radius:0px;border-bottom-left-radius:0px;}";
+        const std::string joinAfter = std::string(".") + kJoinAfterClass +
+                                      "{border-right-width:0px;border-top-right-radius:0px;border-bottom-right-radius:0px;}";
+        css += shape + " .widget" + joinBefore + shape + " .widget" + joinAfter;
+        const PanelGroups panel = Panel(look.settings);
+        for (int slot = 0; slot < kPanelSlots; ++slot)
+            if (const std::optional<int> own = look.settings.Widget(panel.group[slot]).rounding)
+            {
+                const std::string id = "#" + WidgetId(WidgetInSlot(slot));
+                css += id + "{border-radius:" + Px(look.WidgetRadius(*own)) + ";}" + id + joinBefore + id + joinAfter;
+            }
 
         std::string rml = "<rml><head><style>" + css + "</style></head><body class=\"" + shape.substr(1) + "\">";
         rml += std::string("<div id=\"") + kStripId + "\"></div>";

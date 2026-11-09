@@ -154,14 +154,11 @@ TEST(a_pill_theme_frames_each_widget_and_its_caps_follow_the_settings)
     Settings settings;
     CHECK(Has(BarDocument(LookOf(BarTheme::UmbraDark, settings), Place()), "cap-right\" src"));
     settings.panelSeparators = SeparatorBit(Separator::Between);
-    // Without Show Widget Background no widget has a pill until lit.
-    CHECK(Has(BarDocument(LookOf(BarTheme::UmbraDark, settings), Place()),
-        ".pills .widget{background-color:transparent;border-color:transparent;}"));
-    settings.widgetBackground = true;
-    const std::string rml     = BarDocument(LookOf(BarTheme::UmbraDark, settings), Place());
+    const std::string rml    = BarDocument(LookOf(BarTheme::UmbraDark, settings), Place());
     CHECK(Has(rml, "<body class=\"pills\">") && !Has(rml, "cap-right\" src"));
-    // 0.17 H corners, the pill's fill and edge.
-    CHECK(Has(rml, ".pills .widget{background-color:#222226ff;border-color:#3a3a42ff;border-radius:7.65px;}"));
+    // Without its Show Background a widget has no pill until lit; with it, 0.17 H corners, the pill's fill and edge.
+    CHECK(Has(rml, ".pills .widget{background-color:transparent;border-color:transparent;}"));
+    CHECK(Has(rml, ".pills .widget.backed{background-color:#222226ff;border-color:#3a3a42ff;border-radius:7.65px;}"));
     CHECK(Has(rml, ".pills .widget.lit{background-color:#2a2a30ff;border-color:#5b8defff;"));
     CHECK(Has(rml, "class=\"widget hidden\" id=\"w-zone\""));
     CHECK(Has(rml, "hu:diamond/ff5b8def/10")); // a pill theme's dividers take the accent
@@ -188,7 +185,8 @@ TEST(a_widgets_icon_on_the_right_comes_after_its_lines_and_a_picture_is_drawn_as
 
 TEST(a_widgets_lines_line_up_with_the_side_of_the_panel_its_section_is_on)
 {
-    const BarLook look    = LookOf(BarTheme::UmbraDark, Settings{});
+    const Settings settings;
+    const BarLook look    = LookOf(BarTheme::UmbraDark, settings);
     const std::string css = BarDocument(look, Place());
     const auto rule = [&](BarSection section) {
         return std::string(".widget.") + SectionClass(section) + " .text{text-align:";
@@ -639,9 +637,10 @@ TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_wha
 TEST(a_side_shared_in_a_combined_pill_keeps_its_text_where_it_was_and_draws_no_edge)
 {
     constexpr float kRoom = 9.0f;
+    const Settings settings;
     for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark, BarTheme::Aurora})
     {
-        const BarLook look = LookOf(theme, Settings{});
+        const BarLook look = LookOf(theme, settings);
         const std::string css = BarDocument(look, Place());
         for (const BarWidget kind : {BarWidget::Zone, BarWidget::Currency})
         {
