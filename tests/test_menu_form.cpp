@@ -243,6 +243,22 @@ TEST(a_created_widget_goes_by_its_name_on_its_chip_in_link_widgets_list_and_over
     CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, ">Mule</div>"));
 }
 
+TEST(a_created_widget_takes_its_name_once_its_box_is_left_and_an_empty_one_is_the_default)
+{
+    Window w;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {made};
+    const std::string box  = "toppanel-widgets-name-custom";
+    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, ("id=\"" + box + "\"").c_str()));
+    CHECK(w.Pass({{box, kCommitEvent, "Mule"}}).changed);
+    CHECK_EQ(w.settings.Widget(made).name, std::string("Mule"));
+    w.Pass({{box, kCommitEvent, ""}});
+    CHECK_EQ(w.settings.Widget(made).name, std::string(kCreatedWidgetName));
+    // A built-in widget has no Name box.
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}};
+    CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "toppanel-widgets-name-zone"));
+}
+
 TEST(a_widgets_chip_dropped_on_another_goes_before_it)
 {
     Window w;

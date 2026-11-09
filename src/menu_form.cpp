@@ -1014,6 +1014,12 @@ namespace headsup
                         o.align = static_cast<WidgetAlign>(picked);
                     }
                     break;
+                case WidgetTabsRow::Name:
+                    if (kind != BarWidget::Custom) break;
+                    form.Row(label.c_str(), row.tip);
+                    if (form.TextAt(label.c_str(), o.name, nullptr, kControlWidth, false, kMaxWidgetName)) form.changed = true;
+                    form.EndRow();
+                    break;
                 case WidgetTabsRow::Design:
                     // the Widget Designer's description
                     form.Note(kind == BarWidget::StatusTimers ? Word(c, WindowWord::WidgetTabsDesignStatusTimers) : row.tip);
