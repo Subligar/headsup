@@ -765,8 +765,19 @@ namespace headsup
             rml += "<div id=\"outer\" style=\"left:" + Px(-out) + ";top:" + Px(-out) + ";" +
                    size(layout.width + 2.0f * out, layout.height + 2.0f * out) + "\"></div>";
         rml += "<div id=\"panel\" style=\"" + size(layout.width, layout.height) + "\"></div>";
+        // Previewed cards keep their places inside one box the popup's size, scaled about the title's foot and moved to
+        // the middle; the pieces come line by line, so every card's are in it.
+        bool boxed = false;
         for (const PopupPiece& piece : layout.pieces)
         {
+            if (layout.preview && !boxed && piece.line > 0)
+            {
+                boxed = true;
+                rml += std::string("<div class=\"p ") + kPreviewClass + "\" style=\"left:0px;top:0px;" +
+                       size(layout.width, layout.height) + "transform-origin:" + Px(look.metrics.popupPadding) + " " +
+                       Px(layout.preview->top) + ";transform:translateX(" + Px(layout.preview->shift) + ") scale(" +
+                       RcssNumber(layout.preview->scale) + ");\">";
+            }
             const std::string face  = "f" + std::to_string(static_cast<int>(piece.font));
             const uint32_t color    = look.PopupColor(piece.span);
             const std::string place = "left:" + Px(std::round(piece.x)) + ";top:" + Px(std::round(piece.y)) + ";";
@@ -859,6 +870,7 @@ namespace headsup
                 break;
             }
         }
+        if (boxed) rml += "</div>";
         return rml;
     }
 

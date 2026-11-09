@@ -370,6 +370,35 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     CHECK(!Has(pills, "id=\"outer\""));
 }
 
+TEST(a_previewed_pop_outs_cards_are_drawn_in_one_box_scaled_about_the_titles_foot_and_shifted_to_the_middle)
+{
+    Settings settings;
+    const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
+    PopupLayout layout;
+    layout.width = 220.0f, layout.height = 120.0f;
+    PopupPiece title;
+    title.kind = PopupPiece::Kind::Text, title.x = 16.0f, title.y = 16.0f, title.width = 80.0f, title.height = 24.0f;
+    title.span = Text("Mule"), title.font = PopupFont::Title;
+    PopupPiece card;
+    card.kind = PopupPiece::Kind::Card, card.x = 16.0f, card.y = 48.0f, card.width = 100.0f, card.height = 60.0f, card.line = 1;
+    PopupPiece value = title;
+    value.span = Text("50%"), value.font = PopupFont::Text, value.y = 60.0f, value.line = 1;
+    layout.pieces  = {title, card, value};
+    layout.preview = PopupPreview{0.5f, 44.0f, 35.0f};
+    const PopupFaces faces{};
+    const std::string rml = PopupRml(layout, look, faces);
+    const std::string box = std::string("<div class=\"p ") + kPreviewClass + "\" style=\"left:0px;top:0px;width:220px;height:120px;transform-origin:" +
+                            Px(look.metrics.popupPadding) + " " + Px(44.0f) + ";transform:translateX(" + Px(35.0f) + ") scale(" +
+                            RcssNumber(0.5f) + ");\">";
+    const size_t at = rml.find(box);
+    CHECK(at != std::string::npos && rml.find("Mule") < at && rml.find("class=\"p card\"") > at && rml.find("50%") > at);
+    CHECK(rml.ends_with("</div></div>")); // the value's own close, then the box's
+    // Without a preview, no box: the pieces as before.
+    layout.preview.reset();
+    const std::string plain = PopupRml(layout, look, faces);
+    CHECK(plain.find(kPreviewClass) == std::string::npos && !plain.ends_with("</div></div>"));
+}
+
 TEST(the_popup_document_styles_its_faces_and_boxes_from_the_look)
 {
     Settings settings;

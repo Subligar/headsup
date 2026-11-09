@@ -158,6 +158,7 @@ namespace headsup
     std::string ShadowEffect(int pixels);
     constexpr const char* kOpenClass = "open"; // on a popup while it shows, so what it does as it opens plays each time
     constexpr const char* kPopupClass = "popup"; // each pill's popup's element
+    constexpr const char* kPreviewClass = "preview"; // the box a pop-out's previewed cards are drawn scaled in
     // The source the overlay loads the popups' documents from: the pointer over them is the bar's.
     constexpr const char* kPopupDocumentName = "top panel popup";
     // A laid out popup's markup, from its top left corner: its panel, then each piece where the layout put it.

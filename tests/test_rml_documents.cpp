@@ -600,6 +600,15 @@ TEST(a_pop_outs_title_card_heading_and_text_draw_at_18_16_and_14_px_and_a_headin
         CHECK_EQ(text.pixels, 14.0f);
         CHECK(text.width > 0.0f && text.width < heading.width && heading.width < title.width);
         CHECK_EQ(rml.Said(), "");
+        // Previewed over its settings, its cards are one box RmlUi reads a transform on.
+        popup->SetInnerRML(PopupRml(LayoutPopup(content, look.metrics, false, measure, 2000.0f, 0.0f,
+                                        SettingsRoom{200.0f, 100.0f, SettingsPreview::Cards}),
+            look, faces));
+        rml.context->Update();
+        Rml::ElementList boxes;
+        popup->GetElementsByClassName(boxes, kPreviewClass);
+        CHECK(boxes.size() == 1 && boxes[0]->GetComputedValues().has_local_transform());
+        CHECK_EQ(rml.Said(), "");
     }
 }
 
