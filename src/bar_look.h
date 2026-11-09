@@ -44,9 +44,11 @@ namespace headsup
         TextFace FaceOf(PopupFont font) const;
         // The icons and picture beside a widget's text.
         float Leading(const WidgetContent& content) const;
-        // How a widget's box is drawn, or nothing for none. lit: hovered or open, with a popup. Ornate: the target's
-        // frame and a lit widget's tint. Pills: every widget's pill, zone and Earth time flat until lit.
-        std::optional<BoxStyle> BoxOf(BarWidget widget, bool lit) const;
+        // How a widget's box is drawn, or nothing for none. lit: hovered or open, with a popup; backed: its Show
+        // Background on. Ornate: the target's frame and a lit widget's tint. Pills: a widget's pill while lit or backed.
+        std::optional<BoxStyle> BoxOf(BarWidget widget, bool lit, bool backed) const;
+        // The corners of a widget's box at a Corner Rounding.
+        float WidgetRadius(int rounding) const;
     };
 
     // Whether the game's window art is drawn: the theme's background is the Window.
@@ -71,6 +73,12 @@ namespace headsup
     // caches that keep it by reference.
     const char* BarTitleFont(const Settings& settings, BarShape shape);
     const char* BarTextFont(const Settings& settings);
+    // A widget's own of those, or the panel's where it set none.
+    const char* WidgetTitleFont(const Settings& settings, BarShape shape, const WidgetOptions& own);
+    const char* WidgetTextFont(const Settings& settings, const WidgetOptions& own);
+    // The sizes a widget is drawn at: the panel's, at its own Font Size Ratio, Icon Scale and Pop-out Text Scale where
+    // it set them. The panel's own with a widget of none.
+    BarMetrics MetricsOf(const Settings& settings, BarShape shape, const WidgetOptions& own);
     // The fishing bar's line's font, or the panel's text font.
     const char* FishBarFont(const Settings& settings);
 

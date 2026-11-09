@@ -127,13 +127,13 @@ TEST(the_ornate_target_is_framed_and_a_lit_widget_tinted)
     Settings settings;
     const BarLook look  = LookOf(BarTheme::PhoenixGold, settings);
     const BarPalette& p = look.palette;
-    CHECK(!look.BoxOf(BarWidget::Weather, false).has_value());
-    const std::optional<BoxStyle> tint = look.BoxOf(BarWidget::Weather, true);
+    CHECK(!look.BoxOf(BarWidget::Weather, false, false).has_value());
+    const std::optional<BoxStyle> tint = look.BoxOf(BarWidget::Weather, true, false);
     CHECK(tint.has_value() && tint->top == p.highlight && tint->bottom == p.highlight && tint->border == 0u);
-    const std::optional<BoxStyle> frame = look.BoxOf(BarWidget::Target, false);
+    const std::optional<BoxStyle> frame = look.BoxOf(BarWidget::Target, false, false);
     CHECK(frame.has_value() && frame->top == p.highlight && frame->border == p.accent);
     // The frame always has the hover tint, so hovering the target doubles it: 0x1A, 10%, to 0x34.
-    const std::optional<BoxStyle> hovered = look.BoxOf(BarWidget::Target, true);
+    const std::optional<BoxStyle> hovered = look.BoxOf(BarWidget::Target, true, false);
     CHECK(hovered.has_value() && hovered->border == p.accent);
     CHECK(hovered->top == 0x34C9A24Au && hovered->bottom == 0x34C9A24Au);
 }
@@ -142,25 +142,46 @@ TEST(the_ornate_target_is_framed_and_a_lit_widget_tinted)
 TEST(pills_frame_every_widget_while_unlit_only_with_show_widget_background)
 {
     Settings settings;
-    settings.widgetBackground = false;
-    const BarLook bare        = LookOf(BarTheme::UmbraDark, settings);
-    const BarPalette& p       = bare.palette;
+    const BarLook look  = LookOf(BarTheme::UmbraDark, settings);
+    const BarPalette& p = look.palette;
     for (const BarWidget widget : {BarWidget::Zone, BarWidget::EarthTime, BarWidget::Bags, BarWidget::Job, BarWidget::Target})
     {
-        CHECK(!bare.BoxOf(widget, false).has_value());
-        const std::optional<BoxStyle> lit = bare.BoxOf(widget, true);
+        CHECK(!look.BoxOf(widget, false, false).has_value());
+        const std::optional<BoxStyle> lit = look.BoxOf(widget, true, false);
         CHECK(lit.has_value() && lit->top == p.highlight && lit->border == p.accent);
     }
-    settings.widgetBackground = true;
-    const BarLook backed      = LookOf(BarTheme::UmbraDark, settings);
     for (const BarWidget widget : {BarWidget::Zone, BarWidget::EarthTime, BarWidget::Bags})
     {
-        const std::optional<BoxStyle> box = backed.BoxOf(widget, false);
+        const std::optional<BoxStyle> box = look.BoxOf(widget, false, true);
         CHECK(box.has_value() && box->top == p.pill && box->border == p.pillBorder);
-        CHECK(Near(box->radius, backed.metrics.pillRadius));
+        CHECK(Near(box->radius, look.metrics.pillRadius));
     }
-    const std::optional<BoxStyle> target = backed.BoxOf(BarWidget::Target, false);
+    const std::optional<BoxStyle> target = look.BoxOf(BarWidget::Target, false, true);
     CHECK(target.has_value() && target->top == p.pill && target->border == p.accent);
+}
+
+TEST(a_widgets_own_sizes_and_fonts_take_the_place_of_the_top_panels_where_it_set_them)
+{
+    Settings s;
+    s.barIconScale = 80;
+    s.barTitleFont = "Georgia";
+    WidgetOptions own;
+    const BarMetrics panel = MetricsOf(s, BarShape::Pills, own);
+    CHECK(panel == MetricsFor(s.barHeight, BarShape::Pills, s.barFontRatio, s.popupTextScale, s.barIconScale,
+                       s.popupWidthScale, s.popupHeightScale));
+    CHECK(std::string(WidgetTitleFont(s, BarShape::Pills, own)) == "Georgia");
+    CHECK(WidgetTextFont(s, own) == BarTextFont(s));
+    own.fontRatio      = 2.0f;
+    own.iconScale      = 40;
+    own.popupTextScale = 1.5f;
+    own.titleFont      = "Verdana";
+    own.textFont       = "Arial";
+    const BarMetrics m = MetricsOf(s, BarShape::Pills, own);
+    CHECK(Near(m.title, panel.title) && Near(m.subtitle, m.title / 2.0f) && Near(m.icon, panel.icon / 2.0f));
+    CHECK(Near(m.popupText, 1.5f * kPopupTextPixels) && Near(m.popupWidth, panel.popupWidth));
+    CHECK(std::string(WidgetTitleFont(s, BarShape::Pills, own)) == "Verdana");
+    CHECK(std::string(WidgetTextFont(s, own)) == "Arial");
+    CHECK(WidgetTextFont(s, own) == WidgetTextFont(s, own)); // one pointer per name, as the panel's
 }
 
 TEST(a_widget_of_figures_draws_its_title_in_the_detail_font_in_every_theme)
@@ -305,14 +326,14 @@ TEST(widgets_pop_outs_and_their_sections_are_rounded_as_set_or_as_the_theme_does
     for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark})
     {
         const BarLook own = LookOf(theme, settings);
-        const float widget = own.BoxOf(BarWidget::Target, true)->radius, popup = PopupPanel(own).radius,
+        const float widget = own.BoxOf(BarWidget::Target, true, false)->radius, popup = PopupPanel(own).radius,
                     card   = PopupCard(own).radius;
         Settings set = settings;
         set.widgetRounding  = 11;
         set.popupRounding   = 0;
         set.sectionRounding = 20;
         const BarLook rounded = LookOf(theme, set);
-        CHECK(Near(rounded.BoxOf(BarWidget::Target, true)->radius, 11.0f) && Near(rounded.BoxOf(BarWidget::Bags, true)->radius, 11.0f));
+        CHECK(Near(rounded.BoxOf(BarWidget::Target, true, false)->radius, 11.0f) && Near(rounded.BoxOf(BarWidget::Bags, true, false)->radius, 11.0f));
         CHECK(Near(PopupPanel(rounded).radius, 0.0f) && Near(PopupCard(rounded).radius, 20.0f));
         // The theme's own, by default.
         CHECK(settings.widgetRounding == kThemeRounding && widget > 0.0f && popup > 0.0f && card > 0.0f);
@@ -337,13 +358,13 @@ TEST(a_themes_own_corner_rounding_rounds_whatever_is_set_by_theme)
     CHECK_EQ(p.rounding, kShapeRounding);
     p.rounding = 7;
     const BarLook look = LookOf(p, settings);
-    CHECK(Near(look.BoxOf(BarWidget::Target, true)->radius, 7.0f) && Near(PopupPanel(look).radius, 7.0f));
+    CHECK(Near(look.BoxOf(BarWidget::Target, true, false)->radius, 7.0f) && Near(PopupPanel(look).radius, 7.0f));
     CHECK(Near(PopupCard(look).radius, 7.0f) && Near(HelpBarPanel(look).radius, 7.0f));
     // A rounding of their own still wins.
     settings.widgetRounding  = 2;
     settings.helpBarRounding = 0;
     const BarLook own = LookOf(p, settings);
-    CHECK(Near(own.BoxOf(BarWidget::Target, true)->radius, 2.0f) && Near(HelpBarPanel(own).radius, 0.0f));
+    CHECK(Near(own.BoxOf(BarWidget::Target, true, false)->radius, 2.0f) && Near(HelpBarPanel(own).radius, 0.0f));
     CHECK(Near(PopupPanel(own).radius, 7.0f));
 }
 

@@ -259,6 +259,18 @@ namespace headsup
         constexpr const char* kAlignSuffix       = "Align";
         constexpr const char* kPopupSpotSuffix   = "PopupSpot"; // "left 10 top 200" or "right 120 bottom 80"
         constexpr const char* kPopupDesignSuffix = "PopupDesign"; // its pop-out's rows of cards (PopupDesignText)
+        // A widget's own of the Top Panel's looks, empty for the Top Panel's. Testers' files from before 2026-11-05
+        // hold widget keys ending in Spacing, Padding, Background, TitleFont, TextFont, TextSize and PopupTextSize of
+        // another meaning: never take those names.
+        constexpr const char* kOwnSpacingSuffix    = "WidgetSpacing";
+        constexpr const char* kOwnPaddingSuffix    = "WidgetPadding";
+        constexpr const char* kOwnBackgroundSuffix = "ShowBackground";
+        constexpr const char* kOwnRoundingSuffix   = "CornerRounding";
+        constexpr const char* kOwnTitleFontSuffix  = "PrimaryFont";
+        constexpr const char* kOwnTextFontSuffix   = "SecondaryFont";
+        constexpr const char* kOwnFontRatioSuffix  = "FontRatio";
+        constexpr const char* kOwnIconScaleSuffix  = "IconScale";
+        constexpr const char* kOwnPopupScaleSuffix = "PopupTextScale";
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
         const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
         const char* const kWidgetAlignNames[kWidgetAlignCount] = {"location", "left", "center", "right"};
@@ -1257,6 +1269,14 @@ namespace headsup
             w.targetDetection &= kAllDetection;
             if (w.worldRoute < 0 || w.worldRoute >= static_cast<int>(TravelRoutes().size())) w.worldRoute = fresh.worldRoute;
             if (w.worldGuild < 0 || w.worldGuild >= static_cast<int>(GuildShops().size())) w.worldGuild = fresh.worldGuild;
+            if (w.spacing) w.spacing = std::clamp(*w.spacing, 0, kMaxWidgetSpacing);
+            if (w.padding) w.padding = std::clamp(*w.padding, 0, kMaxWidgetPadding);
+            if (w.rounding) w.rounding = std::clamp(*w.rounding, kThemeRounding, kMaxRounding);
+            if (w.iconScale) w.iconScale = std::clamp(Stepped(*w.iconScale, kPercentStep), kMinIconScale, kMaxIconScale);
+            if (w.fontRatio) w.fontRatio = std::clamp(*w.fontRatio, kMinFontRatio, kMaxFontRatio);
+            if (w.popupTextScale) w.popupTextScale = std::clamp(*w.popupTextScale, kMinPopupScale, kMaxPopupScale);
+            for (std::string* font : {&w.titleFont, &w.textFont})
+                if (font->size() > kMaxFontName) font->clear();
         }
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
         if (static_cast<int>(s.helpBarAnchor) >= kHelpAnchorCount) s.helpBarAnchor = d.helpBarAnchor;
@@ -1312,6 +1332,24 @@ namespace headsup
             if (Aligns(w.kind))
                 o.align = static_cast<WidgetAlign>(NameIndex(kWidgetAlignNames, kWidgetAlignCount,
                     text((widget + kAlignSuffix).c_str()), static_cast<int>(o.align)));
+            if (HasOwnLooks(w.kind))
+            {
+                const auto own = [&](const char* suffix) { return HeldNumber(store, CopyKey(widget + suffix, w)); };
+                const auto whole = [&](const char* suffix) {
+                    const std::optional<float> held = own(suffix);
+                    return held ? std::optional<int>(Whole(*held)) : std::nullopt;
+                };
+                o.spacing        = whole(kOwnSpacingSuffix);
+                o.padding        = whole(kOwnPaddingSuffix);
+                o.rounding       = whole(kOwnRoundingSuffix);
+                o.iconScale      = whole(kOwnIconScaleSuffix);
+                o.fontRatio      = own(kOwnFontRatioSuffix);
+                o.popupTextScale = own(kOwnPopupScaleSuffix);
+                const std::string background = widget + kOwnBackgroundSuffix;
+                if (!text(background.c_str()).empty()) o.background = flag(background, false);
+                o.titleFont = text((widget + kOwnTitleFontSuffix).c_str());
+                o.textFont  = text((widget + kOwnTextFontSuffix).c_str());
+            }
             switch (w.kind)
             {
             case BarWidget::Currency:
@@ -1408,6 +1446,27 @@ namespace headsup
                 spot ? (std::string(spot->fromRight ? kSpotRight : kSpotLeft) + " " + std::to_string(spot->x) + " " +
                         (spot->fromBottom ? kSpotBottom : kSpotTop) + " " + std::to_string(spot->y)).c_str()
                      : "");
+            if (HasOwnLooks(w.kind))
+            {
+                const auto own = [&](const char* suffix, const auto& value) {
+                    if (value)
+                        StoreFloat(store, CopyKey(widget + suffix, w), static_cast<float>(*value));
+                    else
+                        text((widget + suffix).c_str(), "");
+                };
+                own(kOwnSpacingSuffix, o.spacing);
+                own(kOwnPaddingSuffix, o.padding);
+                own(kOwnRoundingSuffix, o.rounding);
+                own(kOwnIconScaleSuffix, o.iconScale);
+                own(kOwnFontRatioSuffix, o.fontRatio);
+                own(kOwnPopupScaleSuffix, o.popupTextScale);
+                if (o.background)
+                    flag(widget + kOwnBackgroundSuffix, *o.background);
+                else
+                    text((widget + kOwnBackgroundSuffix).c_str(), "");
+                text((widget + kOwnTitleFontSuffix).c_str(), o.titleFont.c_str());
+                text((widget + kOwnTextFontSuffix).c_str(), o.textFont.c_str());
+            }
             switch (w.kind)
             {
             case BarWidget::Currency:

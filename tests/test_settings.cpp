@@ -1229,6 +1229,59 @@ TEST(each_widgets_alignment_saves_under_its_own_key_and_loads_back_set_by_locati
     CHECK(LoadSettings(saved).Widget(BarWidget::Zone).align == WidgetAlign::Location);
 }
 
+TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keeps_its_own)
+{
+    Settings s;
+    const WidgetOptions fresh;
+    CHECK(!fresh.spacing && !fresh.padding && !fresh.background && fresh.titleFont.empty() && fresh.textFont.empty() &&
+          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale);
+    WidgetOptions& zone = s.Widget(BarWidget::Zone);
+    zone.spacing        = 12;
+    zone.padding        = 0;
+    zone.background     = false;
+    zone.titleFont      = "Arial";
+    zone.textFont       = "Verdana";
+    zone.fontRatio      = 1.5f;
+    zone.iconScale      = 40;
+    zone.rounding       = kThemeRounding;
+    zone.popupTextScale = 1.4f;
+    const PanelWidget copy = *CloneWidget(s, BarWidget::Zone);
+    CHECK(s.Widget(copy).spacing == 12 && s.Widget(copy).textFont == "Verdana" && s.Widget(copy).popupTextScale == 1.4f);
+    s.Widget(copy).iconScale  = 75;
+    s.Widget(copy).background = true;
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barZoneWidgetSpacing"], "12.0000");
+    CHECK_EQ(saved.values["barZoneShowBackground"], "false");
+    CHECK_EQ(saved.values["barZonePrimaryFont"], "Arial");
+    CHECK_EQ(saved.values["barZoneIconScale_2"], "75.0000");
+    CHECK_EQ(saved.values["barZoneShowBackground_2"], "true");
+    CHECK(saved.values.contains("barWeatherWidgetSpacing") && saved.values["barWeatherWidgetSpacing"].empty());
+    CHECK(!saved.values.contains("barGameHelpWidgetSpacing")); // the help bar has its own looks
+    CHECK(!saved.values.contains("barSettingsWidgetSpacing")); // only its cog, with no settings of its own
+    const Settings read = LoadSettings(saved);
+    CHECK(read.Widget(BarWidget::Zone) == s.Widget(BarWidget::Zone) && read.Widget(copy) == s.Widget(copy));
+    const WidgetOptions& weather = read.Widget(BarWidget::Weather);
+    CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale);
+}
+
+TEST(a_widgets_own_looks_out_of_their_range_are_held_to_it)
+{
+    MapStore store;
+    SaveSettings(Settings{}, store);
+    store.values["barZoneWidgetSpacing"]  = "500";
+    store.values["barZoneWidgetPadding"]  = "-9";
+    store.values["barZoneIconScale"]      = "43";
+    store.values["barZoneCornerRounding"] = "-9";
+    store.values["barZoneFontRatio"]      = "9";
+    store.values["barZonePopupTextScale"] = "0.01";
+    store.values["barZonePrimaryFont"]    = std::string(kMaxFontName + 1, 'a');
+    const WidgetOptions zone = LoadSettings(store).Widget(BarWidget::Zone);
+    CHECK(zone.spacing == kMaxWidgetSpacing && zone.padding == 0 && zone.iconScale == 45);
+    CHECK(zone.rounding == kThemeRounding && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
+    CHECK(zone.titleFont.empty());
+}
+
 TEST(separators_out_of_their_bits_are_held_to_them)
 {
     MapStore store;

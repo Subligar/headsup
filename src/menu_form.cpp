@@ -817,6 +817,9 @@ namespace headsup
             const bool jobs = kind == BarWidget::Job && PartOn(o.design, WidgetPart::JobJobs);
             const bool bar  = kind == BarWidget::Job && PartOn(o.design, WidgetPart::JobBar);
             const bool off = !BarOn(s) || !o.on;
+            // Its pill's spacing, background, rounding and pop-out are its first widget's, set there alone.
+            const bool pillLooks = HasOwnLooks(kind) && Panel(s).group[SlotOf(widget)] == widget;
+            const char* topPanel = Word(c, WindowWord::WidgetTabsTopPanel);
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
             const std::string scope = std::string(" ") + BarWidgetName(kind) + (widget.copy > 0 ? " " + std::to_string(widget.copy + 1) : "");
             for (const LayoutRow& row : c.layout.RowsOf(e))
@@ -825,6 +828,14 @@ namespace headsup
                 // A tip shared by every widget, naming this one's default.
                 const auto ownDefault = [&] {
                     return Filled(Said(row.tip), kDefaultMark, WidgetDefaultText(c.layout, static_cast<WidgetTabsRow>(row.row), widget));
+                };
+                // A look of its own on a slider whose step under lowest is the Top Panel's.
+                const auto ownSlider = [&](std::optional<int>& own, int lowest, int highest, FunctionRef<std::string(int)> shown) {
+                    const int panel = lowest - 1;
+                    int at          = own.value_or(panel);
+                    form.SliderInt(label.c_str(), at, panel, highest,
+                        [&](int v) { return v == panel ? Words(topPanel) : shown(v); }, row.tip);
+                    own = at == panel ? std::nullopt : std::optional<int>(at);
                 };
                 // A Job & EXP alignment, shown while the part it places is on.
                 const auto alignRow = [&](WidgetPart part, Align& align) {
@@ -1060,6 +1071,67 @@ namespace headsup
                 case WidgetTabsRow::MemText:
                     if (kind == BarWidget::Performance && PartOn(o.design, WidgetPart::PerfMemory))
                         form.Switch(label.c_str(), o.memText, row.tip);
+                    break;
+                case WidgetTabsRow::OwnLooks:
+                    if (HasOwnLooks(kind)) form.Caption(label.c_str());
+                    break;
+                case WidgetTabsRow::WidgetSpacing:
+                    if (pillLooks) ownSlider(o.spacing, 0, kMaxWidgetSpacing, Pixels);
+                    break;
+                case WidgetTabsRow::WidgetPadding:
+                    if (HasOwnLooks(kind)) ownSlider(o.padding, 0, kMaxWidgetPadding, Pixels);
+                    break;
+                case WidgetTabsRow::ShowBackground:
+                    if (pillLooks)
+                    {
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::OwnBackground));
+                        int picked = !o.background ? 0 : *o.background ? 1 : 2; // as the list has them
+                        form.Segments(label.c_str(), picked, names.data(), static_cast<int>(names.size()), row.tip);
+                        o.background = picked == 0 ? std::nullopt : std::optional<bool>(picked == 1);
+                    }
+                    break;
+                case WidgetTabsRow::CornerRounding:
+                    if (pillLooks)
+                        ownSlider(o.rounding, kThemeRounding, kMaxRounding, PixelsOr(Word(c, WindowWord::Themes), kThemeRounding));
+                    break;
+                case WidgetTabsRow::PrimaryFont:
+                    if (HasOwnLooks(kind)) form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, topPanel);
+                    break;
+                case WidgetTabsRow::SecondaryFont:
+                    if (HasOwnLooks(kind)) form.FontDropdown(label.c_str(), o.textFont, c.fonts, row.tip, topPanel);
+                    break;
+                case WidgetTabsRow::FontRatio:
+                    if (HasOwnLooks(kind))
+                    {
+                        // By the Top Panel's slider's positions, set only when moved, so a ratio between them is kept.
+                        std::optional<int> at = o.fontRatio ? std::optional<int>(FontRatioPosition(*o.fontRatio)) : std::nullopt;
+                        const std::optional<int> before = at;
+                        ownSlider(at, 0, 2 * kFontRatioSteps, [](int p) { return Printed("%.2fx", FontRatioAt(p)); });
+                        if (at != before) o.fontRatio = at ? std::optional<float>(FontRatioAt(*at)) : std::nullopt;
+                    }
+                    break;
+                case WidgetTabsRow::IconScale:
+                    if (HasOwnLooks(kind))
+                    {
+                        std::optional<int> at =
+                            o.iconScale ? std::optional<int>((*o.iconScale - kMinIconScale) / kPercentStep) : std::nullopt;
+                        ownSlider(at, 0, (kMaxIconScale - kMinIconScale) / kPercentStep,
+                            [](int p) { return Formatted("%d%%", kMinIconScale + p * kPercentStep); });
+                        o.iconScale = at ? std::optional<int>(kMinIconScale + *at * kPercentStep) : std::nullopt;
+                    }
+                    break;
+                case WidgetTabsRow::PopupTextScale:
+                    if (pillLooks)
+                    {
+                        const auto step = [](float scale) { return static_cast<int>(std::lround((scale - kMinPopupScale) / kPopupScaleStep)); };
+                        std::optional<int> at = o.popupTextScale ? std::optional<int>(step(*o.popupTextScale)) : std::nullopt;
+                        const std::optional<int> before = at;
+                        ownSlider(at, 0, step(kMaxPopupScale),
+                            [](int p) { return Printed("%.1fx", kMinPopupScale + static_cast<float>(p) * kPopupScaleStep); });
+                        if (at != before)
+                            o.popupTextScale = at ? std::optional<float>(kMinPopupScale + static_cast<float>(*at) * kPopupScaleStep)
+                                                  : std::nullopt;
+                    }
                     break;
                 case WidgetTabsRow::StatusDisplay:
                     if (kind == BarWidget::StatusTimers)

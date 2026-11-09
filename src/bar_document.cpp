@@ -516,7 +516,7 @@ namespace headsup
         }
     }
 
-    std::string BarDocument(const BarLook& look, const BarTextPlace& place)
+    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own)
     {
         const BarPalette& p  = look.palette;
         const BarMetrics& m  = look.metrics;
@@ -532,7 +532,8 @@ namespace headsup
         const int divider       = WholePixels(m.diamond), cap = WholePixels(m.diamond * kCapScale);
         const std::string capSource     = SeparatorSource(p.separator, p.accent, cap);
         const std::string dividerSource = SeparatorSource(p.separator, look.ornate ? p.divider : p.accent, divider);
-        auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit); };
+        // Show Background is each widget's own: its backed class.
+        auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit, true); };
         auto square = [](float size) { return "width:" + Px(size) + ";height:" + Px(size) + ";"; };
         auto centered = [&](float size) { return Px(std::round(mid - size / 2.0f)); };
         const std::string shape = look.ornate ? ".ornate" : ".pills";
@@ -566,7 +567,8 @@ namespace headsup
         }
         else
         {
-            css += ".pills .widget{" + BoxRules(boxOf(BarWidget::Weather, false)) + "}";
+            css += ".pills .widget{" + BoxRules(look.BoxOf(BarWidget::Weather, false, false)) + "}";
+            css += ".pills .widget.backed{" + BoxRules(boxOf(BarWidget::Weather, false)) + "}";
             // Before the lit rule, which then gives it the accent as every lit pill has.
             css += ".pills .widget.target{" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             css += ".pills .widget.lit{" + BoxRules(boxOf(BarWidget::Weather, true)) + "}";
@@ -593,8 +595,8 @@ namespace headsup
             css += std::string(".widget.") + AlignClass(align) + " .content,.widget." + AlignClass(align) + " .text{text-align:" +
                    side + ";}";
         css += ".icon,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
-        css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
-               Px(m.gap) + ";}";
+        auto icon = [&](float size) { return square(size) + "margin-top:" + Px(std::round(mid - size / 2.0f) - rowTop) + ";"; };
+        css += ".icon{" + icon(m.icon) + "margin-right:" + Px(m.gap) + ";}";
         css += ".icon.right{margin-right:0px;margin-left:" + Px(m.gap) + ";}";
         css += ".icon.cog{margin-right:0px;}";
         css += ".t{white-space:pre;}";
@@ -606,6 +608,12 @@ namespace headsup
         css += ".smark{position:relative;}"; // a status's icon and its background, placed inside it
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";
         css += TextRules("", look.titleFont, look.detailFont, lines, place, rowTop);
+        for (const WidgetText& text : own)
+        {
+            const std::string scope = "#" + WidgetId(text.widget) + " ";
+            css += TextRules(scope, text.titleFont, text.detailFont, text.lines, text.place, rowTop);
+            css += scope + ".icon{" + icon(text.metrics.icon) + "}";
+        }
         // An EXP bar among a line's text, taking no height of its line: its track from its capitals' middle up and down
         // (TextRules), its fill a block, as a span takes no width, and its text over it on the line's own baseline.
         css += ".ibar{display:inline-block;vertical-align:top;position:relative;height:0px;}";
@@ -628,11 +636,19 @@ namespace headsup
         css += ".hh{" + FaceRules(look.detailFont, help, place.help.height) + ShadowEffect(help) + "}";
         const bool glass = look.palette.shape == BarShape::Glass;
         if (glass) css += GlassBarRules(look);
-        // Last, over every shape's own corners and borders.
-        css += shape + " .widget." + kJoinBeforeClass +
-               "{border-left-width:0px;border-top-left-radius:0px;border-bottom-left-radius:0px;}";
-        css += shape + " .widget." + kJoinAfterClass +
-               "{border-right-width:0px;border-top-right-radius:0px;border-bottom-right-radius:0px;}";
+        // Last, over every shape's own corners and borders, and a pill's own corners, its first widget's.
+        const std::string joinBefore = std::string(".") + kJoinBeforeClass +
+                                       "{border-left-width:0px;border-top-left-radius:0px;border-bottom-left-radius:0px;}";
+        const std::string joinAfter = std::string(".") + kJoinAfterClass +
+                                      "{border-right-width:0px;border-top-right-radius:0px;border-bottom-right-radius:0px;}";
+        css += shape + " .widget" + joinBefore + shape + " .widget" + joinAfter;
+        const PanelGroups panel = Panel(look.settings);
+        for (int slot = 0; slot < kPanelSlots; ++slot)
+            if (const std::optional<int> own = look.settings.Widget(panel.group[slot]).rounding)
+            {
+                const std::string id = "#" + WidgetId(WidgetInSlot(slot));
+                css += id + "{border-radius:" + Px(look.WidgetRadius(*own)) + ";}" + id + joinBefore + id + joinAfter;
+            }
 
         std::string rml = "<rml><head><style>" + css + "</style></head><body class=\"" + shape.substr(1) + "\">";
         rml += std::string("<div id=\"") + kStripId + "\"></div>";
@@ -686,7 +702,9 @@ namespace headsup
                ";border-radius:" + Px(radius) + ";background-color:" + RcssColor(kSocketFill) + ";";
     }
 
-    std::string PopupDocument(const BarLook& look, const PopupFaces& faces)
+    std::string PopupScope(PanelWidget pill) { return "of-" + WidgetId(pill); }
+
+    std::string PopupDocument(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own)
     {
         const BoxStyle panel = PopupPanel(look);
         std::string css = "body{display:block;width:100%;height:100%;pointer-events:none;z-index:" + std::to_string(kPopupsZ) + ";}";
@@ -699,9 +717,14 @@ namespace headsup
         css += "@keyframes drop-in{from{opacity:0;transform:translateY(-10px) scale(0.96);}to{opacity:1;"
                "transform:translateY(0px) scale(1);}}";
         css += ".p{position:absolute;white-space:pre;}";
-        for (int f = 0; f < kPopupFontCount; ++f)
-            css += ".f" + std::to_string(f) + "{" + FaceRules(faces[f].family, faces[f].pixels, faces[f].line) +
-                   ShadowEffect(faces[f].pixels) + "}";
+        const auto faceRules = [&](const std::string& scope, const PopupFaces& each) {
+            for (int f = 0; f < kPopupFontCount; ++f)
+                css += scope + ".f" + std::to_string(f) + "{" + FaceRules(each[f].family, each[f].pixels, each[f].line) +
+                       ShadowEffect(each[f].pixels) + "}";
+        };
+        faceRules("", faces);
+        for (const PillFaces& pill : own)
+            faceRules("." + PopupScope(pill.pill) + " ", pill.faces);
         if (panel.outer != 0)
             css += "#outer{position:absolute;box-sizing:border-box;border:1px " + RcssColor(panel.outer) +
                    ";border-radius:" + Px(panel.radius + static_cast<float>(OuterPad(panel))) + ";}";

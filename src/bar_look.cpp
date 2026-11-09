@@ -146,6 +146,22 @@ namespace headsup
         return settings.barTextFont.empty() ? kDetailFont : Interned(settings.barTextFont);
     }
 
+    const char* WidgetTitleFont(const Settings& settings, BarShape shape, const WidgetOptions& own)
+    {
+        return own.titleFont.empty() ? BarTitleFont(settings, shape) : Interned(own.titleFont);
+    }
+
+    const char* WidgetTextFont(const Settings& settings, const WidgetOptions& own)
+    {
+        return own.textFont.empty() ? BarTextFont(settings) : Interned(own.textFont);
+    }
+
+    BarMetrics MetricsOf(const Settings& s, BarShape shape, const WidgetOptions& own)
+    {
+        return MetricsFor(s.barHeight, shape, own.fontRatio.value_or(s.barFontRatio), own.popupTextScale.value_or(s.popupTextScale),
+            own.iconScale.value_or(s.barIconScale), s.popupWidthScale, s.popupHeightScale);
+    }
+
     const char* FishBarFont(const Settings& settings)
     {
         return settings.fishBarFont.empty() ? BarTextFont(settings) : Interned(settings.fishBarFont);
@@ -178,21 +194,26 @@ namespace headsup
                (content.cog ? metrics.icon : 0.0f); // alone, with no text to keep a gap from
     }
 
-    std::optional<BoxStyle> BarLook::BoxOf(BarWidget widget, bool lit) const
+    std::optional<BoxStyle> BarLook::BoxOf(BarWidget widget, bool lit, bool backed) const
     {
         const bool isTarget = widget == BarWidget::Target;
+        const float radius  = WidgetRadius(settings.widgetRounding);
         if (ornate)
         {
             if (!isTarget && !lit) return std::nullopt;
             // The target's frame always has the tint, so a hovered one has more of it.
             const uint32_t fill = isTarget && lit ? AlphaTimes(palette.highlight, kLitTarget) : palette.highlight;
-            return BoxStyle{.radius = Rounded(settings.widgetRounding, palette, kFrameRadius), .top = fill, .bottom = fill,
-                .border = isTarget ? palette.accent : 0u};
+            return BoxStyle{.radius = radius, .top = fill, .bottom = fill, .border = isTarget ? palette.accent : 0u};
         }
-        if (!lit && !settings.widgetBackground) return std::nullopt;
+        if (!lit && !backed) return std::nullopt;
         const uint32_t fill = lit ? palette.highlight : palette.pill;
-        return BoxStyle{.radius = Rounded(settings.widgetRounding, palette, metrics.pillRadius), .top = fill, .bottom = fill,
+        return BoxStyle{.radius = radius, .top = fill, .bottom = fill,
             .border = isTarget || lit ? palette.accent : palette.pillBorder};
+    }
+
+    float BarLook::WidgetRadius(int rounding) const
+    {
+        return Rounded(rounding, palette, ornate ? kFrameRadius : metrics.pillRadius);
     }
 
     float MarkWidth(const Span& span, float size)

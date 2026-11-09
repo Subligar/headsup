@@ -17,6 +17,15 @@ namespace headsup
             return room;
         }
 
+        // Each widget's own of a Top Panel size in pixels, else the Top Panel's, by SlotOf.
+        std::array<float, kPanelSlots> EachOwn(const Settings& settings, std::optional<int> WidgetOptions::* own, int panel)
+        {
+            std::array<float, kPanelSlots> each{};
+            for (int slot = 0; slot < kPanelSlots; ++slot)
+                each[static_cast<size_t>(slot)] = static_cast<float>((settings.widgets[static_cast<size_t>(slot)].*own).value_or(panel));
+            return each;
+        }
+
         constexpr float kFitSteps = 10.0f; // a fitted text's room is kept in tenths of a pixel
         constexpr int kFewLetters = 3;     // the least of the target's name worth its room on the bar
         constexpr const char* kCapital = "H"; // its ink is a font's capitals'
@@ -174,10 +183,60 @@ namespace headsup
         return rows;
     }
 
-    bool RmlBar::Document(RmlHost& host, const BarLook& look, const BarTextPlace& place)
+    const RmlBar::Rows& RmlBar::OwnRowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, float fontRatio,
+        const char* titleFont, const char* detailFont)
     {
+        const LinesKey key{m.height, shape, fontRatio, titleFont, detailFont};
+        for (const auto& [known, rows] : m_OwnRows)
+            if (known == key) return rows;
+        for (auto& [known, rows] : m_OwnRowsBefore)
+            if (known == key) return m_OwnRows.emplace_back(known, std::move(rows)).second;
+        return m_OwnRows.emplace_back(key, MakeRows(host, m, titleFont, detailFont)).second;
+    }
+
+    void RmlBar::OwnText(RmlHost& host, const BarLook& look, Widgets& widgets)
+    {
+        // The rows asked for last frame and not again go.
+        m_OwnRowsBefore = std::move(m_OwnRows);
+        m_OwnRows.clear();
+        const Settings& s    = look.settings;
+        const BarShape shape = look.palette.shape;
+        for (int slot = 0; slot < kPanelSlots; ++slot)
+        {
+            const WidgetOptions& o = s.widgets[static_cast<size_t>(slot)];
+            if (o.titleFont.empty() && o.textFont.empty() && !o.fontRatio && !o.iconScale && !o.popupTextScale) continue;
+            // Its own fonts where RmlUi can read them, the bar's where it cannot.
+            const char* titleFont = WidgetTitleFont(s, shape, o);
+            if (!host.EnsureFont(titleFont)) titleFont = look.titleFont;
+            const char* detailFont = WidgetTextFont(s, o);
+            if (!host.EnsureFont(detailFont)) detailFont = look.detailFont;
+            const BarMetrics m = MetricsOf(s, shape, o);
+            // Copied out at once: the next widget's rows can move them.
+            const Rows& rows = OwnRowsFor(host, m, shape, o.fontRatio.value_or(s.barFontRatio), titleFont, detailFont);
+            widgets.text[static_cast<size_t>(slot)] = WidgetText{WidgetInSlot(slot), titleFont, detailFont, m, rows.lines, rows.place};
+        }
+    }
+
+    BarLook RmlBar::LookOf(const BarLook& look, const Widgets& widgets, int slot)
+    {
+        BarLook own = look;
+        if (const std::optional<WidgetText>& text = widgets.text[static_cast<size_t>(slot)])
+        {
+            own.metrics    = text->metrics;
+            own.lines      = text->lines;
+            own.titleFont  = text->titleFont;
+            own.detailFont = text->detailFont;
+        }
+        return own;
+    }
+
+    bool RmlBar::Document(RmlHost& host, const BarLook& look, const BarTextPlace& place, const Widgets& widgets)
+    {
+        std::vector<WidgetText> own;
+        for (const std::optional<WidgetText>& text : widgets.text)
+            if (text) own.push_back(*text);
         // Built again whenever its text would differ, so every setting it reads takes effect.
-        std::string text = BarDocument(look, place);
+        std::string text = BarDocument(look, place, own);
         if (m_Document != nullptr && text == m_DocumentText) return true;
         // A strip of other colors or rows is another image: the one before is let go, or every step of a color's
         // slider would keep its own.
@@ -212,6 +271,7 @@ namespace headsup
             c                = BarWidgetContent(WidgetInSlot(i), state, look.settings);
             widgets.hasPopup[i] = c.hasPopup; // kept off the panel, a combined widget's popup still joins its pill's
             if (!TakesRoom(c, widgets.panel.group[i], settingsShown)) continue;
+            const BarLook own = LookOf(look, widgets, i);
             const auto steady = [&](std::vector<Span>& line, const TextFace& face) {
                 if (std::ranges::none_of(line, [](const Span& s) { return !s.room.empty(); })) return;
                 SteadyBoxes(line, Width(host, std::string(1, WidestDigitOf(host, face)), face),
@@ -219,8 +279,8 @@ namespace headsup
             };
             if (!c.cells)
             {
-                steady(c.title, look.TitleFace(c));
-                steady(c.subtitle, look.DetailFace());
+                steady(c.title, own.TitleFace(c));
+                steady(c.subtitle, own.DetailFace());
             }
             Shown& shown        = m_Shown[i];
             if (!shown.measured || !(shown.content == c))
@@ -229,18 +289,18 @@ namespace headsup
                 shown.measured = true;
                 // A widget of cells is as wide as its columns; another as its longer line.
                 shown.columns = c.cells ? CellColumns(c, [&](bool title, const Span& span) {
-                    return SteadyWidth(host, {span}, title && c.subtitle.empty() ? look.TitleFace(c) : look.DetailFace());
+                    return SteadyWidth(host, {span}, title && c.subtitle.empty() ? own.TitleFace(c) : own.DetailFace());
                 }) : std::vector<float>{};
                 const float text = c.cells ? CellsWidth(shown.columns, m.gap)
-                                           : std::max(SteadyWidth(host, c.title, look.TitleFace(c)),
-                                                 c.subtitle.empty() ? 0.0f : SteadyWidth(host, c.subtitle, look.DetailFace()));
-                shown.natural  = look.Leading(c) + text;
+                                           : std::max(SteadyWidth(host, c.title, own.TitleFace(c)),
+                                                 c.subtitle.empty() ? 0.0f : SteadyWidth(host, c.subtitle, own.DetailFace()));
+                shown.natural  = own.Leading(c) + text;
             }
             natural[i] = shown.natural;
         }
         const std::array<WidgetPads, kPanelSlots> pads =
             PillPads(widgets.panel.placement, widgets.panel.group, natural, LinkedRoom(look.settings),
-                static_cast<float>(look.settings.barWidgetPadding));
+                EachOwn(look.settings, &WidgetOptions::padding, look.settings.barWidgetPadding));
         for (int i = 0; i < kPanelSlots; ++i)
         {
             m_Shown[i].pads = pads[static_cast<size_t>(i)];
@@ -248,22 +308,23 @@ namespace headsup
         }
         // The target goes when its room cannot hold its padding, its icons and the start of its longest text.
         WidgetContent& target = widgets.contents[SlotOf(BarWidget::Target)];
+        const BarLook targetLook    = LookOf(look, widgets, SlotOf(BarWidget::Target));
         const WidgetPads targetPads = pads[SlotOf(BarWidget::Target)];
         const float targetPadding   = targetPads.left + targetPads.right;
         const size_t targetName     = WidestTextSpan(target.title);
         const float targetMinimum =
-            targetPadding + look.Leading(target) +
+            targetPadding + targetLook.Leading(target) +
             (targetName >= target.title.size()
                     ? 0.0f
-                    : Width(host, Shortest(target.title[targetName].text, kFewLetters), look.TitleFace(target)));
+                    : Width(host, Shortest(target.title[targetName].text, kFewLetters), targetLook.TitleFace(target)));
         SharePopups(widgets.hasPopup, widgets.panel.group);
         const BarLayout layout = LayoutBar(screenWidth, m, look.palette.shape, natural, targetMinimum,
-            widgets.panel.placement, look.settings.panelSeparators, static_cast<float>(look.settings.barWidgetSpacing),
-            widgets.panel.group);
+            widgets.panel.placement, look.settings.panelSeparators,
+            EachOwn(look.settings, &WidgetOptions::spacing, look.settings.barWidgetSpacing), widgets.panel.group);
         if (layout.targetWidth > 0.0f && layout.targetWidth < natural[SlotOf(BarWidget::Target)])
         {
             // On each line the longest text is cut, as the name is; the rest keeps its room.
-            const float room = layout.targetWidth - targetPadding - look.Leading(target);
+            const float room = layout.targetWidth - targetPadding - targetLook.Leading(target);
             const auto cut   = [&](std::vector<Span>& line, Memo<FitKey, std::string>& memo, const TextFace& face) {
                 const size_t at = WidestTextSpan(line);
                 if (at >= line.size()) return;
@@ -271,8 +332,8 @@ namespace headsup
                 const float rest  = SpansWidth(host, line, face) - Width(host, text, face);
                 text = Fitted(host, memo, std::move(text), face, room - rest);
             };
-            cut(target.title, m_TitleFit, look.TitleFace(target));
-            cut(target.subtitle, m_SubtitleFit, look.DetailFace());
+            cut(target.title, m_TitleFit, targetLook.TitleFace(target));
+            cut(target.subtitle, m_SubtitleFit, targetLook.DetailFace());
         }
         return layout;
     }
@@ -306,15 +367,17 @@ namespace headsup
                 shown.element->SetClass(AlignClass(static_cast<WidgetAlign>(k)), k == static_cast<int>(look.settings.Widget(widget).align));
             shown.element->SetClass(kJoinBeforeClass, joins.before);
             shown.element->SetClass(kJoinAfterClass, joins.after);
+            // A pill shows its first widget's Show Background; the target is always a pill of its own.
             const PanelWidget head = widgets.panel.group[w];
-            shown.element->SetClass(kBackedClass, look.settings.widgetBackground);
+            const bool backed      = look.settings.Widget(head).background.value_or(look.settings.widgetBackground);
+            shown.element->SetClass(kBackedClass, backed);
             shown.element->SetClass(kLitClass, input.Lit(head, widgets.hasPopup[SlotOf(head)]));
-            if (widget.kind == BarWidget::Target) shown.element->SetClass(kTargetClass, look.settings.widgetBackground);
+            if (widget.kind == BarWidget::Target) shown.element->SetClass(kTargetClass, backed);
             const WidgetContent& content = widgets.contents[w];
             if (shown.marked && shown.drawn == content) continue;
             shown.drawn  = content;
             shown.marked = true;
-            shown.element->SetInnerRML(WidgetRml(content, look, shown.columns));
+            shown.element->SetInnerRML(WidgetRml(content, LookOf(look, widgets, w), shown.columns));
         }
         const auto diamond = static_cast<float>(WholePixels(m.diamond));
         for (size_t d = 0; d < m_Dividers.size(); ++d)
@@ -377,7 +440,7 @@ namespace headsup
         return box;
     }
 
-    bool RmlBar::PopupDocumentFor(RmlHost& host, const BarLook& look)
+    PopupFaces RmlBar::FacesOf(RmlHost& host, const BarLook& look)
     {
         PopupFaces faces;
         for (int f = 0; f < kPopupFontCount; ++f)
@@ -387,10 +450,17 @@ namespace headsup
             const FaceLine& line = FaceLineOf(host, face.family, pixels);
             faces[f]             = PopupFace{face.family, pixels, line.rmlHeight, line.drop};
         }
-        std::string text = PopupDocument(look, faces);
+        return faces;
+    }
+
+    bool RmlBar::PopupDocumentFor(RmlHost& host, const BarLook& look, const Widgets& widgets)
+    {
+        std::vector<PillFaces> own;
+        for (const std::optional<WidgetText>& text : widgets.text)
+            if (text) own.push_back(PillFaces{text->widget, FacesOf(host, LookOf(look, widgets, SlotOf(text->widget)))});
+        std::string text = PopupDocument(look, FacesOf(host, look), own);
         if (m_PopupDocuments[0] != nullptr && text == m_PopupDocumentText) return true;
         ClosePopup();
-        m_PopupFaces = faces;
         for (Rml::ElementDocument*& document : m_PopupDocuments)
         {
             document = host.Overlay()->LoadDocumentFromMemory(text, kPopupDocumentName);
@@ -408,7 +478,8 @@ namespace headsup
     }
 
     std::vector<PopupPlace> RmlBar::ShowPopups(RmlHost& host, const BarLook& look, const BarState& state,
-        const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden)
+        const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
+        const Widgets& widgets)
     {
         m_SettingsBody.reset();
         std::vector<PopupPlace> places;
@@ -417,7 +488,7 @@ namespace headsup
         const std::vector<PopupLayer> layers = input.Layers();
         for (size_t i = 0; i < order.size(); ++i)
             if (std::optional<PopupPlace> place =
-                    ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, order[i], layers[i]))
+                    ShowPopup(host, look, state, layout, screenWidth, screenHeight, input, hidden, widgets, order[i], layers[i]))
             {
                 const PanelWidget pill = order[i];
                 shown[SlotOf(pill)] = true;
@@ -441,12 +512,14 @@ namespace headsup
         return places;
     }
 
-    std::optional<PopupPlace> RmlBar::ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
-        const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden, PanelWidget open,
-        PopupLayer layer)
+    std::optional<PopupPlace> RmlBar::ShowPopup(RmlHost& host, const BarLook& panelLook, const BarState& state,
+        const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
+        const Widgets& widgets, PanelWidget open, PopupLayer layer)
     {
         const std::optional<BarRect> anchor = GroupRect(layout, open);
-        if (!anchor || !PopupDocumentFor(host, look)) return std::nullopt;
+        if (!anchor || !PopupDocumentFor(host, panelLook, widgets)) return std::nullopt;
+        // In its first widget's own text where it has some.
+        const BarLook look = LookOf(panelLook, widgets, SlotOf(open));
         Popup& popup = m_Popups[SlotOf(open)];
         Rml::Element*& element = popup.elements[static_cast<size_t>(layer)];
         if (element == nullptr)
@@ -454,6 +527,7 @@ namespace headsup
             Rml::ElementDocument* document = m_PopupDocuments[static_cast<size_t>(layer)];
             element = document->AppendChild(document->CreateElement("div"));
             element->SetClass(kPopupClass, true);
+            element->SetClass(PopupScope(open), true);
         }
         if (popup.element != element)
         {
@@ -513,7 +587,7 @@ namespace headsup
         const BarRect rect = PopupAt(under, pl.height, placed, screenWidth, screenHeight, BarBottom(p, m) + out, out, popup.keptX);
         if (fresh || !popup.marked)
         {
-            popup.element->SetInnerRML(PopupRml(pl, look, m_PopupFaces));
+            popup.element->SetInnerRML(PopupRml(pl, look, FacesOf(host, look)));
             popup.marked = true;
         }
         Set(popup.element, Rml::PropertyId::Left, popup.left, std::round(rect.x));
@@ -551,8 +625,7 @@ namespace headsup
             return;
         }
         const BarPalette& p = PaletteFor(settings, skin);
-        const BarMetrics m  = MetricsFor(settings.barHeight, p.shape, settings.barFontRatio, settings.popupTextScale,
-            settings.barIconScale, settings.popupWidthScale, settings.popupHeightScale);
+        const BarMetrics m  = MetricsOf(settings, p.shape, WidgetOptions{});
         // The player's fonts where RmlUi can read them, the theme's where it cannot.
         const char* titleFont = BarTitleFont(settings, p.shape);
         if (!host.EnsureFont(titleFont)) titleFont = TitleFont(p.shape);
@@ -565,7 +638,8 @@ namespace headsup
         if (UsesGameArt(settings) && skin != nullptr) look.skin = FrameAsSet(settings, skin->frame);
         m_BarBottom   = BarBottom(p, m);
         Widgets widgets;
-        if (!Document(host, look, rows.place))
+        OwnText(host, look, widgets);
+        if (!Document(host, look, rows.place, widgets))
         {
             input.Frame(BarLayout{}, {});
             input.SetPopups({});
@@ -590,7 +664,7 @@ namespace headsup
             m_HelpReach = BarRect{span.x, helpTop, span.width, HelpBarHeight(settings.helpBarHeight, rows.helpBarHeight)};
         }
         input.Frame(layout, widgets.hasPopup);
-        input.SetPopups(ShowPopups(host, look, state, layout, screenWidth, screenHeight, input, hidden));
+        input.SetPopups(ShowPopups(host, look, state, layout, screenWidth, screenHeight, input, hidden, widgets));
         if (m_Visible == hidden)
         {
             m_Visible = !hidden;
