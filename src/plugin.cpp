@@ -969,19 +969,20 @@ public:
                 }
             }
         }
-        UpdateSkin();
-        m_RmlBar.settingsRoom = m_RmlMenu.RoomFor(SettingsShownNow(), m_Settings);
-        // Off, the bar is given nothing to show, and releases what it made.
-        if (m_Rml.Running())
-            m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
-                m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
-        // A pinned pop-out dragged somewhere stays there, kept by its edges nearest the screen's sides.
+        // A pinned pop-out dragged somewhere stays there, kept by its edges nearest the screen's sides. Kept before the
+        // bar updates, or the frame the drag ends draws it at its old spot.
         if (const auto moved = m_BarInput.TakeMoved())
         {
             m_Settings.Widget(moved->first).popupSpot = headsup::SpotOf(moved->second,
                 static_cast<float>(m_Names.BackBufferWidth()), static_cast<float>(m_Names.BackBufferHeight()));
             m_SettingsChangedAt = now;
         }
+        UpdateSkin();
+        m_RmlBar.settingsRoom = m_RmlMenu.RoomFor(SettingsShownNow(), m_Settings);
+        // Off, the bar is given nothing to show, and releases what it made.
+        if (m_Rml.Running())
+            m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
+                m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
         for (const std::string& press : m_BarInput.TakePresses())
             if (press == headsup::kOpenSettingsPress)
                 m_RmlMenu.OpenPage(kTopPanelPage, kWidgetLayoutCard);
