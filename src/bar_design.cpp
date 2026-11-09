@@ -304,8 +304,10 @@ namespace headsup
 
     WidgetDesign DesignFrom(BarWidget kind, std::string_view text)
     {
-        // A design of none of the parts the widget has now, such as one saved before its parts changed, is no design.
+        // A design of none of the parts the widget has now, such as one saved before its parts changed, is no design;
+        // a created widget's is empty, as its pill may show another widget's parts.
         const WidgetDesign parsed = Parsed(kind, text);
+        if (kind == BarWidget::Custom) return text.empty() ? DefaultDesign(kind) : Whole(kind, parsed);
         const bool none = std::ranges::all_of(parsed.lines, [](const auto& line) { return line.empty(); });
         return none ? DefaultDesign(kind) : Whole(kind, parsed);
     }

@@ -1138,6 +1138,20 @@ TEST(the_clocks_date_format_is_saved_by_name_and_an_unknown_name_keeps_the_defau
     CHECK(LoadSettings(saved).Widget(BarWidget::EarthTime).dateFormat == DateFormat::MonthDayYear);
 }
 
+TEST(a_created_widget_emptied_in_a_pill_that_shows_another_widget_saves_and_loads_empty)
+{
+    Settings s;
+    const PanelWidget made = *CreateWidget(s);
+    s.Widget(made).combine = PanelWidget{BarWidget::Zone};
+    s.Widget(made).design  = WidgetDesign{};
+    CHECK(Clamp(s).Widget(made).design == WidgetDesign{});
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barCustomDesign"], "|");
+    const WidgetDesign loaded = LoadSettings(saved).Widget(made).design;
+    CHECK(loaded.lines[0].empty() && loaded.lines[1].empty());
+}
+
 TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
 {
     Settings s;

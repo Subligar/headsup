@@ -317,6 +317,14 @@ TEST(a_created_widgets_design_names_each_part_with_its_widget_and_keeps_only_the
     CHECK(DesignFrom(BarWidget::Zone, "zone.name | region nation") != DefaultDesign(BarWidget::Zone));
 }
 
+TEST(a_created_widgets_saved_design_of_no_part_is_empty_and_only_a_missing_one_is_the_default)
+{
+    CHECK(DesignFrom(BarWidget::Custom, "|") == WidgetDesign{});
+    CHECK_EQ(DesignText(BarWidget::Custom, DesignFrom(BarWidget::Custom, "|")), "|");
+    CHECK(DesignFrom(BarWidget::Custom, "") == DefaultDesign(BarWidget::Custom));
+    CHECK(DesignFrom(BarWidget::Zone, "|") == DefaultDesign(BarWidget::Zone)); // a built-in keeps its rule
+}
+
 TEST(a_part_put_into_a_line_is_on_and_one_taken_out_goes_unless_it_is_the_last_on)
 {
     WidgetDesign d = DefaultDesign(BarWidget::Custom); // name |
