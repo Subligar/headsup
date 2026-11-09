@@ -35,7 +35,7 @@ namespace headsup
         IEntity* entity = s.core->GetMemoryManager()->GetEntity();
         auto onOff      = [](bool on) { return on ? "on" : "off"; };
         std::fprintf(out,
-            "headsup %.2f: back buffer %.0fx%.0f, scene to screen scale %.3f x %.3f, player level %d%s, %u outlined, %u nameplates, nameplates %s outlines %s\n",
+            "headsup %s: back buffer %.0fx%.0f, scene to screen scale %.3f x %.3f, player level %d%s, %u outlined, %u nameplates, nameplates %s outlines %s\n",
             s.version, s.names.BackBufferWidth(), s.names.BackBufferHeight(), s.names.TargetScaleX(), s.names.TargetScaleY(),
             s.player.level, s.player.sitting ? " (sitting)" : "", s.tracker.OutlinedCount(),
             static_cast<unsigned>(s.plates.LastShown().size()), onOff(s.settings.nameplates), onOff(s.settings.outlines));

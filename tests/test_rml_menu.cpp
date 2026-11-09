@@ -28,7 +28,7 @@ using namespace headsup;
 namespace
 {
     constexpr float kEm       = static_cast<float>(kDefaultMenuFontSize); // the window's text, in pixels
-    constexpr double kVersion = 0.65;
+    constexpr const char* kVersion = "0.65.0";
     constexpr int kLeftButton = 0;
     constexpr double kFrameSeconds = 1.0 / 30.0; // the game's frame
     constexpr const char* kLongFont = "Franklin Gothic Demi Condensed"; // a family too long for its dropdown

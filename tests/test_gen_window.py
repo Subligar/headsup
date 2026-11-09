@@ -144,8 +144,8 @@ class Parse(unittest.TestCase):
         self.assertBad('the version must be text', lambda t: t.update(version=0.65))
 
     def test_the_plugins_version_is_read_from_its_source(self):
-        source = 'namespace\n{\n    constexpr double kVersion                = 0.71;\n    constexpr int kOther = 2;\n'
-        self.assertEqual(gen.plugin_version(source), '0.71')
+        source = 'namespace\n{\n    constexpr const char* kVersion       = "0.71.2";\n    constexpr int kOther = 2;\n'
+        self.assertEqual(gen.plugin_version(source), '0.71.2')
 
     def test_an_unknown_field_names_its_entry(self):
         self.assertBad('the setting "size" has an unknown field "tooltip"',

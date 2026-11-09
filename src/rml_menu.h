@@ -14,6 +14,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -44,7 +45,7 @@ namespace headsup
 
         // True when a setting changed and should be saved. fonts: FontChoices for the nameplates' and the bar's fonts.
         bool Update(const MenuHost& host, Settings& settings, const MenuReadings& readings,
-            const std::vector<std::string>& fonts, double version);
+            const std::vector<std::string>& fonts, std::string_view version);
         // Closes the window's document; before the host stops.
         void Close();
         // The room these widgets' settings take as they were last laid out over the panel's popup: 0 tall while they

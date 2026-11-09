@@ -558,7 +558,7 @@ def parse(text: str, source: str = SOURCE, pieces: Pieces = PIECES, version: str
     return Reader(source, pieces, version).layout(top)
 
 
-PLUGIN_VERSION = re.compile(r'constexpr double kVersion\s*=\s*([0-9.]+);')
+PLUGIN_VERSION = re.compile(r'constexpr const char\* kVersion\s*=\s*"([0-9.]+)";')
 
 
 def plugin_version(source: str) -> str:

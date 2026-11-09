@@ -84,9 +84,8 @@ namespace
     bool KeyDown(uint8_t vk) { return (GetAsyncKeyState(vk) & headsup::kKeyDownBit) != 0; }
 
     constexpr const char* kName              = "HeadsUp"; // as Ashita lists it and the chat names it
-    // Ashita takes a plugin's version as one number, so it holds the release tag's major.minor; the release workflow
-    // checks the two agree.
-    constexpr double kVersion                = 0.5;
+    // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
+    constexpr const char* kVersion           = "0.5.0";
     constexpr const char* kConfigAlias       = "headsup";
     constexpr const char* kConfigFolder      = "config";
     constexpr const char* kWindowFile        = "settings_window.json"; // a developer's build reads one in its config folder
@@ -496,7 +495,12 @@ public:
         return "Outlines monsters by whether they will attack you and replaces the game's nameplates with its own.";
     }
     const char* GetLink(void) const override { return ""; }
-    double GetVersion(void) const override { return kVersion; }
+    double GetVersion(void) const override
+    {
+        double version = 0.0;
+        std::from_chars(kVersion, kVersion + std::strlen(kVersion), version);
+        return version;
+    }
     uint32_t GetFlags(void) const override
     {
         return static_cast<uint32_t>(Ashita::PluginFlags::UseCommands | Ashita::PluginFlags::UseText |
@@ -1207,12 +1211,7 @@ public:
         }
         if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
         if (const std::optional<headsup::FeedbackDraft> feedback = m_RmlMenu.TakeFeedback())
-        {
-            char version[16];
-            const auto printed = std::to_chars(version, version + sizeof(version), kVersion);
-            m_FeedbackPost.Post(headsup::kFeedbackHost, headsup::kFeedbackPath,
-                headsup::FeedbackBody(*feedback, std::string_view(version, static_cast<size_t>(printed.ptr - version))));
-        }
+            m_FeedbackPost.Post(headsup::kFeedbackHost, headsup::kFeedbackPath, headsup::FeedbackBody(*feedback, kVersion));
         if (const std::optional<headsup::WebGet::Answer> answer = m_FeedbackPost.Take()) m_RmlMenu.FeedbackAnswered(answer->ok);
         // The switch itself is always saved, so a profile keeps whether it saves by hand.
         if (m_Settings.autoSave != std::exchange(m_AutoSaveWas, m_Settings.autoSave) || m_RmlMenu.TakeSaveRequest())
