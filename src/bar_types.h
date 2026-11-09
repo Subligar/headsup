@@ -168,6 +168,7 @@ namespace headsup
     }
     // A pop-out's Text Scale, Width and Height, times its own sizes.
     constexpr float kMinPopupScale = 0.2f, kMaxPopupScale = 2.0f, kDefaultPopupScale = 1.0f;
+    constexpr float kPopupScaleStep = 0.1f; // what a widget's own Pop-out Text Scale moves by, as the Top Panel's "%.1fx" slider does
     constexpr float kMinPopupBoxScale = kDefaultPopupScale; // Width and Height: never smaller than a pop-out's own
     // Icon Scale: a widget's icons, in percent of the most its widget holds.
     constexpr int kMinIconScale = 20, kMaxIconScale = 100, kDefaultIconScale = 65;

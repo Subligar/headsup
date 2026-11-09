@@ -379,7 +379,17 @@
                 {"key": "tnl-align", "name": "EXP TNL Alignment", "tip": "Puts the EXP Til Next Level text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
                 {"key": "percent-align", "name": "EXP Percentage Alignment", "tip": "Puts the EXP Percentage text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
                 {"key": "job-text", "name": "Job Text", "tip": "How Job Info and the EXP Bar's Job Text write your jobs and levels. Default is Main 75 / Sub 37."},
-                {"key": "job-text-align", "name": "Job Text Alignment", "tip": "Puts the Job Info text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."}
+                {"key": "job-text-align", "name": "Job Text Alignment", "tip": "Puts the Job Info text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
+                {"key": "own-looks", "name": "Top Panel Overrides"},
+                {"key": "widget-spacing", "name": "Widget Spacing", "tip": "The space between this widget and the widgets beside it. The gap between two widgets is the average of their spacings. Default: the Top Panel's."},
+                {"key": "widget-padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default: the Top Panel's."},
+                {"key": "show-background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it, on top of what the theme gives it. Default: the Top Panel's."},
+                {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of this widget's background are. Set by Theme keeps the theme's own. Default: the Top Panel's."},
+                {"key": "primary-font", "name": "Primary Font", "tip": "The font of this widget's top line, of the widget on one line, and of its pop-out's headings. Default: the Top Panel's."},
+                {"key": "secondary-font", "name": "Secondary Font", "tip": "The font of this widget's second line, its numbers and its pop-out's text. Default: the Top Panel's."},
+                {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of this widget's primary line's text to the size of its secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Default: the Top Panel's."},
+                {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of this widget's icons. At 100% an icon is as tall as the widget can hold. Default: the Top Panel's."},
+                {"key": "popup-text-scale", "name": "Pop-out Text Scale", "tip": "Makes the text in this widget's pop-out larger or smaller. Default: the Top Panel's."}
               ],
               "words": [
                 {"key": "clone", "name": "Clone This Widget", "tip": "Puts another of this widget on the panel after it, with all of this one's settings."},
@@ -387,7 +397,8 @@
                 {"key": "combine-none", "name": "None"},
                 {"key": "link-disabled", "name": "(disabled)"},
                 {"key": "design-last-on", "name": "At least one button must be enabled."},
-                {"key": "design-status-timers", "name": "Use the lines below to change how info is organized in the widget."}
+                {"key": "design-status-timers", "name": "Use the lines below to change how info is organized in the widget."},
+                {"key": "top-panel", "name": "Top Panel's"}
               ]
             }
           ]
@@ -1389,6 +1400,14 @@
         {"name": "Hide"},
         {"name": "Show on Left"},
         {"name": "Show on Right"}
+      ]
+    },
+    {
+      "key": "own-background",
+      "options": [
+        {"name": "Top Panel's"},
+        {"name": "On"},
+        {"name": "Off"}
       ]
     },
     {

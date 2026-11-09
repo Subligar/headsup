@@ -5,6 +5,7 @@
 #include "test.h"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <string>
 #include <vector>
@@ -1391,6 +1392,41 @@ TEST(a_widget_with_an_icon_has_a_row_putting_it_left_right_or_nowhere)
     // A widget without an icon has no such row.
     w.readings.settingsOf = {PanelWidget{BarWidget::Performance}};
     CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "-icon-performance"));
+}
+
+TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone}, weather{BarWidget::Weather};
+    WidgetOptions& own    = w.settings.Widget(zone);
+    w.readings.settingsOf = {zone};
+    const auto id = [](const char* key, const char* widget = "zone") { return std::string("toppanel-widgets-") + key + "-" + widget; };
+    w.Pass({{id("widget-spacing"), kChangeEvent, "10"}});
+    CHECK(own.spacing == 10);
+    w.Pass({{id("widget-spacing"), kChangeEvent, "-1"}}); // the step under 0 px
+    CHECK(!own.spacing);
+    w.Pass({{id("corner-rounding"), kChangeEvent, std::to_string(kThemeRounding)}});
+    CHECK(own.rounding == kThemeRounding);
+    w.Pass({{id("icon-scale"), kChangeEvent, "4"}}); // four steps of 5% over 20%
+    CHECK(own.iconScale == 40);
+    w.Pass({{id("popup-text-scale"), kChangeEvent, "13"}}); // thirteen tenths over 0.2x
+    CHECK(own.popupTextScale && std::fabs(*own.popupTextScale - 1.5f) < 0.001f);
+    w.Pass({{id("font-ratio"), kChangeEvent, std::to_string(kFontRatioSteps)}}); // the slider's middle, 1x
+    CHECK(own.fontRatio && std::fabs(*own.fontRatio - 1.0f) < 0.001f);
+    w.Pass({{id("font-ratio"), kChangeEvent, "-1"}});
+    CHECK(!own.fontRatio);
+    w.Pass({{id("show-background") + "-s-2", kClickEvent, ""}});
+    CHECK(own.background == false);
+    w.Pass({{id("show-background") + "-s-0", kClickEvent, ""}});
+    CHECK(!own.background);
+    // Linked, the pill's spacing, background, rounding and pop-out are Zone's to set; Weather keeps its own text.
+    own.combine           = weather;
+    w.readings.settingsOf = {zone, weather};
+    const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
+    for (const char* key : {"widget-spacing", "show-background", "corner-rounding", "popup-text-scale"})
+        CHECK(Has(rml, id(key).c_str()) && !Has(rml, id(key, "weather").c_str()));
+    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "icon-scale"})
+        CHECK(Has(rml, id(key, "weather").c_str()));
 }
 
 TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
