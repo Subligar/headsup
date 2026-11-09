@@ -257,8 +257,9 @@ namespace headsup
         constexpr const char* kIconSideSuffix    = "Icon";
         constexpr const char* kAlignSuffix       = "Align";
         constexpr const char* kPopupSpotSuffix   = "PopupSpot"; // "left 10 top 200" or "right 120 bottom 80"
-        // A widget's own of the Top Panel's looks, empty for the Top Panel's. Before 2026-11-05 a widget had keys
-        // ending in Spacing, Padding, Background, TitleFont and TextFont of another meaning: never take those names.
+        // A widget's own of the Top Panel's looks, empty for the Top Panel's. Testers' files from before 2026-11-05
+        // hold widget keys ending in Spacing, Padding, Background, TitleFont, TextFont, TextSize and PopupTextSize of
+        // another meaning: never take those names.
         constexpr const char* kOwnSpacingSuffix    = "WidgetSpacing";
         constexpr const char* kOwnPaddingSuffix    = "WidgetPadding";
         constexpr const char* kOwnBackgroundSuffix = "ShowBackground";
