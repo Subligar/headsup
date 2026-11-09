@@ -1150,6 +1150,9 @@ TEST(a_created_widget_emptied_in_a_pill_that_shows_another_widget_saves_and_load
     CHECK_EQ(saved.values["barCustomDesign"], "|");
     const WidgetDesign loaded = LoadSettings(saved).Widget(made).design;
     CHECK(loaded.lines[0].empty() && loaded.lines[1].empty());
+    // Once its pill shows nothing else, it gets its Name back rather than vanish from the panel.
+    s.Widget(BarWidget::Zone).on = false;
+    CHECK(Clamp(s).Widget(made).design == DefaultDesign(BarWidget::Custom));
 }
 
 TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)

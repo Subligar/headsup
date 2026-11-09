@@ -1299,9 +1299,15 @@ namespace headsup
         // A linked widget sits just after its own in the layout too, as the panel draws it.
         const PanelGroups panel = Panel(s);
         s.barSections           = panel.placement;
-        // A pill needs a part on among its widgets that are on, a widget alone one of its own.
+        // A pill needs a part on among its widgets that are on, a widget alone one of its own: a created widget
+        // emptied in a pill that no longer shows anything else gets its Name back.
         for (int slot = 0; slot < kPanelSlots; ++slot)
-            if (!PillShowsOther(s, panel, WidgetInSlot(slot))) TurnOnFirst(s.widgets[slot].design);
+        {
+            if (PillShowsOther(s, panel, WidgetInSlot(slot))) continue;
+            WidgetDesign& design = s.widgets[slot].design;
+            if (WidgetInSlot(slot).kind == BarWidget::Custom && design == WidgetDesign{}) design = DefaultDesign(BarWidget::Custom);
+            TurnOnFirst(design);
+        }
         return s;
     }
 
