@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <map>
+#include <set>
 #include <span>
 #include <string>
 #include <utility>
@@ -3377,4 +3378,40 @@ TEST(a_card_placed_in_another_widgets_pop_out_has_its_widgets_data_gathered_whil
     settings.Widget(BarWidget::Currency).popup = PopupDesign{{{CardKind::WorldConquest}}};
     CHECK(StandingsShown(settings, {BarWidget::Currency}) && !StandingsShown(settings, {}));
     CHECK(NeedsOf(settings, {BarWidget::Currency}).conquest);
+}
+
+TEST(every_card_a_widget_builds_is_one_of_its_own_and_its_default_pop_out_shows_them_all)
+{
+    const FullState full;
+    BarState state = full.state;
+    state.itemName = NpcItemName;
+    std::vector<ActorInfo> targets{full.target};
+    for (const uint32_t npc : {16785729u, 16912886u, 16798100u, 16793970u, 16785730u, 17207852u, 16785781u, 16982252u,
+             17678362u, 17719350u, 17772597u, 16916828u, 16818249u, 16806290u, 16879936u, 17105705u, 16822535u})
+        targets.push_back(NpcTarget(npc, "NPC"));
+    std::set<CardKind> built;
+    const Settings settings;
+    for (const ActorInfo& target : targets)
+    {
+        state.target = &target;
+        for (int k = 0; k < kBarWidgetCount; ++k)
+        {
+            const auto kind = static_cast<BarWidget>(k);
+            const PopupContent own = BarPopupContent(kind, state, settings);
+            if (!own.settings || !Content(kind, state, settings).hasPopup) continue;
+            std::vector<std::string> made, shown;
+            for (const PopupSection& section : own.sections)
+            {
+                CHECK(section.card.has_value() && WidgetOfCard(*section.card) == kind);
+                if (section.card) built.insert(*section.card);
+                made.push_back(section.heading);
+            }
+            for (const PopupSection& section : PanelPopupContent(kind, state, settings).sections)
+                shown.push_back(section.heading);
+            std::ranges::sort(made);
+            std::ranges::sort(shown);
+            CHECK(made == shown);
+        }
+    }
+    CHECK(built.size() >= static_cast<size_t>(kCardKindCount) / 2); // the fixtures reach most of them
 }
