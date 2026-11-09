@@ -48,7 +48,8 @@ namespace headsup
             {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
-            {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"widgetBackground", &Settings::widgetBackground}};
+            {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"helpBarShrink", &Settings::helpBarShrink},
+            {"widgetBackground", &Settings::widgetBackground}};
 
         // Whole numbers are stored as floats, like every other number in settings.ini.
         struct IntKey
@@ -58,6 +59,7 @@ namespace headsup
             int lo, hi;
             int step = 1;
         };
+        constexpr int kOldThemePadding = -1;
         constexpr IntKey kInts[] = {{"smoothness", &Settings::smoothness, kMinSmoothness, kMaxSmoothness},
             {"outlineThickness", &Settings::outlineThickness, kMinOutlineThickness, kMaxOutlineThickness, kPercentStep},
             {"outlineOpacity", &Settings::outlineOpacity, kMinOpacity, kMaxOpacity, kPercentStep},
@@ -71,7 +73,7 @@ namespace headsup
             {"barHeight", &Settings::barHeight, kMinBarHeight, kMaxBarHeight},
             {"barIconScale", &Settings::barIconScale, kMinIconScale, kMaxIconScale, kPercentStep},
             {"barWidgetSpacing", &Settings::barWidgetSpacing, 0, kMaxWidgetSpacing},
-            {"barWidgetPadding", &Settings::barWidgetPadding, kThemePadding, kMaxWidgetPadding},
+            {"barWidgetPadding", &Settings::barWidgetPadding, 0, kMaxWidgetPadding},
             {"widgetRounding", &Settings::widgetRounding, kThemeRounding, kMaxRounding},
             {"popupRounding", &Settings::popupRounding, kThemeRounding, kMaxRounding},
             {"sectionRounding", &Settings::sectionRounding, kThemeRounding, kMaxRounding},
@@ -234,6 +236,7 @@ namespace headsup
         constexpr const char* kBarCurrencyKey = "barCurrency";
         constexpr const char* kBarSecondCurrencyKey = "barCurrency2";
         constexpr const char* kBarBagKey      = "barBag";
+        constexpr const char* kBarSecondBagKey = "barBag2";
         constexpr const char* kWeatherIconsKey = "weatherIcons"; // the Forecast widget's, by kCustomIconsNames
         const char* const kCustomIconsNames[kCustomIconsCount] = {"never", "missing", "always"};
         constexpr const char* kWorldRouteKey    = "barWorldRoute";
@@ -250,11 +253,25 @@ namespace headsup
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
         constexpr const char* kDesignSuffix     = "Design";
+        constexpr const char* kNameSuffix       = "Name";
         constexpr const char* kCombineSuffix    = "Combine";
         constexpr const char* kLinkPaddingSuffix = "LinkPadding";
         constexpr const char* kIconSideSuffix    = "Icon";
         constexpr const char* kAlignSuffix       = "Align";
         constexpr const char* kPopupSpotSuffix   = "PopupSpot"; // "left 10 top 200" or "right 120 bottom 80"
+        constexpr const char* kPopupDesignSuffix = "PopupDesign"; // its pop-out's rows of cards (PopupDesignText)
+        // A widget's own of the Top Panel's looks, empty for the Top Panel's. Testers' files from before 2026-11-05
+        // hold widget keys ending in Spacing, Padding, Background, TitleFont, TextFont, TextSize and PopupTextSize of
+        // another meaning: never take those names.
+        constexpr const char* kOwnSpacingSuffix    = "WidgetSpacing";
+        constexpr const char* kOwnPaddingSuffix    = "WidgetPadding";
+        constexpr const char* kOwnBackgroundSuffix = "ShowBackground";
+        constexpr const char* kOwnRoundingSuffix   = "CornerRounding";
+        constexpr const char* kOwnTitleFontSuffix  = "PrimaryFont";
+        constexpr const char* kOwnTextFontSuffix   = "SecondaryFont";
+        constexpr const char* kOwnFontRatioSuffix  = "FontRatio";
+        constexpr const char* kOwnIconScaleSuffix  = "IconScale";
+        constexpr const char* kOwnPopupScaleSuffix = "PopupTextScale";
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
         const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
         const char* const kWidgetAlignNames[kWidgetAlignCount] = {"location", "left", "center", "right"};
@@ -292,7 +309,7 @@ namespace headsup
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barCustom"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1236,10 +1253,13 @@ namespace headsup
         {
             WidgetOptions& w = s.widgets[slot];
             const WidgetOptions fresh;
-            w.design = Whole(WidgetInSlot(slot).kind, std::move(w.design));
+            const BarWidget kind = WidgetInSlot(slot).kind;
+            w.design = Whole(kind, std::move(w.design));
+            w.popup  = kind == BarWidget::Custom ? WholePopup(std::move(w.popup)) : DefaultPopupDesign(kind);
             for (int WidgetOptions::* const which : {&WidgetOptions::currency, &WidgetOptions::secondCurrency})
                 if (w.*which < kYourConquestCurrency || w.*which >= kCurrencyCount) w.*which = fresh.*which;
-            if (w.bag < 0 || w.bag >= kContainerCount) w.bag = fresh.bag;
+            for (int WidgetOptions::* const which : {&WidgetOptions::bag, &WidgetOptions::secondBag})
+                if (w.*which < 0 || w.*which >= kContainerCount) w.*which = fresh.*which;
             if (w.clockZone && static_cast<int>(*w.clockZone) >= kClockZoneCount) w.clockZone = fresh.clockZone;
             if (static_cast<int>(w.weatherIcons) >= kCustomIconsCount) w.weatherIcons = fresh.weatherIcons;
             if (static_cast<int>(w.iconSide) >= kIconSideCount) w.iconSide = fresh.iconSide;
@@ -1251,6 +1271,22 @@ namespace headsup
             w.targetDetection &= kAllDetection;
             if (w.worldRoute < 0 || w.worldRoute >= static_cast<int>(TravelRoutes().size())) w.worldRoute = fresh.worldRoute;
             if (w.worldGuild < 0 || w.worldGuild >= static_cast<int>(GuildShops().size())) w.worldGuild = fresh.worldGuild;
+            if (w.spacing) w.spacing = std::clamp(*w.spacing, 0, kMaxWidgetSpacing);
+            if (w.padding) w.padding = std::clamp(*w.padding, 0, kMaxWidgetPadding);
+            if (w.rounding) w.rounding = std::clamp(*w.rounding, kThemeRounding, kMaxRounding);
+            if (w.iconScale) w.iconScale = std::clamp(Stepped(*w.iconScale, kPercentStep), kMinIconScale, kMaxIconScale);
+            if (w.fontRatio) w.fontRatio = std::clamp(*w.fontRatio, kMinFontRatio, kMaxFontRatio);
+            if (w.popupTextScale) w.popupTextScale = std::clamp(*w.popupTextScale, kMinPopupScale, kMaxPopupScale);
+            for (std::string* font : {&w.titleFont, &w.textFont})
+                if (font->size() > kMaxFontName) font->clear();
+            if (w.name.size() > kMaxWidgetName)
+            {
+                size_t end = kMaxWidgetName;
+                while (end > 0 && ContinuesCharacter(w.name[end])) --end;
+                w.name.resize(end);
+            }
+            if (const PanelWidget widget = WidgetInSlot(slot); widget.kind == BarWidget::Custom && w.name.empty())
+                w.name = CreatedWidgetName(widget);
         }
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
         if (static_cast<int>(s.helpBarAnchor) >= kHelpAnchorCount) s.helpBarAnchor = d.helpBarAnchor;
@@ -1261,7 +1297,17 @@ namespace headsup
             status.resistRank = std::clamp(status.resistRank, kMinResistRank, kNoResistRank);
         }
         // A linked widget sits just after its own in the layout too, as the panel draws it.
-        s.barSections = Panel(s).placement;
+        const PanelGroups panel = Panel(s);
+        s.barSections           = panel.placement;
+        // A pill needs a part on among its widgets that are on, a widget alone one of its own: a created widget
+        // emptied in a pill that no longer shows anything else gets its Name back.
+        for (int slot = 0; slot < kPanelSlots; ++slot)
+        {
+            if (PillShowsOther(s, panel, WidgetInSlot(slot))) continue;
+            WidgetDesign& design = s.widgets[slot].design;
+            if (WidgetInSlot(slot).kind == BarWidget::Custom && design == WidgetDesign{}) design = DefaultDesign(BarWidget::Custom);
+            TurnOnFirst(design);
+        }
         return s;
     }
 
@@ -1281,6 +1327,8 @@ namespace headsup
             const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
             o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
+            if (w.kind == BarWidget::Custom) o.name = text((widget + kNameSuffix).c_str());
+            if (w.kind == BarWidget::Custom) o.popup = PopupDesignFrom(w.kind, text((widget + kPopupDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
             o.linkPadding = number(widget + kLinkPaddingSuffix, o.linkPadding);
             {
@@ -1301,6 +1349,24 @@ namespace headsup
             if (Aligns(w.kind))
                 o.align = static_cast<WidgetAlign>(NameIndex(kWidgetAlignNames, kWidgetAlignCount,
                     text((widget + kAlignSuffix).c_str()), static_cast<int>(o.align)));
+            if (HasOwnLooks(w.kind))
+            {
+                const auto own = [&](const char* suffix) { return HeldNumber(store, CopyKey(widget + suffix, w)); };
+                const auto whole = [&](const char* suffix) {
+                    const std::optional<float> held = own(suffix);
+                    return held ? std::optional<int>(Whole(*held)) : std::nullopt;
+                };
+                o.spacing        = whole(kOwnSpacingSuffix);
+                o.padding        = whole(kOwnPaddingSuffix);
+                o.rounding       = whole(kOwnRoundingSuffix);
+                o.iconScale      = whole(kOwnIconScaleSuffix);
+                o.fontRatio      = own(kOwnFontRatioSuffix);
+                o.popupTextScale = own(kOwnPopupScaleSuffix);
+                const std::string background = widget + kOwnBackgroundSuffix;
+                if (!text(background.c_str()).empty()) o.background = flag(background, false);
+                o.titleFont = text((widget + kOwnTitleFontSuffix).c_str());
+                o.textFont  = text((widget + kOwnTextFontSuffix).c_str());
+            }
             switch (w.kind)
             {
             case BarWidget::Currency:
@@ -1312,7 +1378,10 @@ namespace headsup
                     else if (const std::optional<int> currency = CurrencyOfKey(held)) o.*which = *currency;
                 }
                 break;
-            case BarWidget::Bags: o.bag = number(kBarBagKey, o.bag); break;
+            case BarWidget::Bags:
+                o.bag       = number(kBarBagKey, o.bag);
+                o.secondBag = number(kBarSecondBagKey, o.secondBag);
+                break;
             case BarWidget::Weather:
                 o.weatherIcons = static_cast<CustomIcons>(
                     NameIndex(kCustomIconsNames, kCustomIconsCount, text(kWeatherIconsKey), static_cast<int>(o.weatherIcons)));
@@ -1383,7 +1452,9 @@ namespace headsup
             const auto flag = [&](const std::string& key, bool v) { StoreBool(store, CopyKey(key, w), v); };
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
-            if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
+            if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
+            if (w.kind == BarWidget::Custom) text((widget + kNameSuffix).c_str(), o.name.c_str());
+            if (w.kind == BarWidget::Custom) text((widget + kPopupDesignSuffix).c_str(), PopupDesignText(o.popup).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
             if (IconPartOf(w.kind)) text((widget + kIconSideSuffix).c_str(), kIconSideNames[static_cast<int>(o.iconSide)]);
@@ -1393,13 +1464,37 @@ namespace headsup
                 spot ? (std::string(spot->fromRight ? kSpotRight : kSpotLeft) + " " + std::to_string(spot->x) + " " +
                         (spot->fromBottom ? kSpotBottom : kSpotTop) + " " + std::to_string(spot->y)).c_str()
                      : "");
+            if (HasOwnLooks(w.kind))
+            {
+                const auto own = [&](const char* suffix, const auto& value) {
+                    if (value)
+                        StoreFloat(store, CopyKey(widget + suffix, w), static_cast<float>(*value));
+                    else
+                        text((widget + suffix).c_str(), "");
+                };
+                own(kOwnSpacingSuffix, o.spacing);
+                own(kOwnPaddingSuffix, o.padding);
+                own(kOwnRoundingSuffix, o.rounding);
+                own(kOwnIconScaleSuffix, o.iconScale);
+                own(kOwnFontRatioSuffix, o.fontRatio);
+                own(kOwnPopupScaleSuffix, o.popupTextScale);
+                if (o.background)
+                    flag(widget + kOwnBackgroundSuffix, *o.background);
+                else
+                    text((widget + kOwnBackgroundSuffix).c_str(), "");
+                text((widget + kOwnTitleFontSuffix).c_str(), o.titleFont.c_str());
+                text((widget + kOwnTextFontSuffix).c_str(), o.textFont.c_str());
+            }
             switch (w.kind)
             {
             case BarWidget::Currency:
                 for (const auto& [key, which] : {std::pair{kBarCurrencyKey, o.currency}, std::pair{kBarSecondCurrencyKey, o.secondCurrency}})
                     text(key, which == kYourConquestCurrency ? kYourConquestPoints : kCurrencyTable[which].key);
                 break;
-            case BarWidget::Bags: StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag)); break;
+            case BarWidget::Bags:
+                StoreFloat(store, CopyKey(kBarBagKey, w), static_cast<float>(o.bag));
+                StoreFloat(store, CopyKey(kBarSecondBagKey, w), static_cast<float>(o.secondBag));
+                break;
             case BarWidget::Weather: text(kWeatherIconsKey, kCustomIconsNames[static_cast<int>(o.weatherIcons)]); break;
             case BarWidget::World:
                 text(kWorldRouteKey, TravelRoutes()[static_cast<size_t>(o.worldRoute)].name);
@@ -1446,6 +1541,8 @@ namespace headsup
         WidgetOptions o;
         o.on         = widget.copy > 0 || kBarWidgetDefaults[static_cast<int>(widget.kind)];
         o.design     = DefaultDesign(widget.kind);
+        if (widget.kind == BarWidget::Custom) o.name = CreatedWidgetName(widget);
+        o.popup      = DefaultPopupDesign(widget.kind);
         return o;
     }
 
@@ -1457,14 +1554,20 @@ namespace headsup
         return widgets;
     }
 
+    bool PillShowsOther(const Settings& s, const PanelGroups& panel, PanelWidget widget)
+    {
+        return std::ranges::any_of(Members(panel, panel.group[SlotOf(widget)]),
+            [&](PanelWidget w) { return w != widget && s.Widget(w).on && AnyPartOn(s.Widget(w).design); });
+    }
+
     bool Shows(const Settings& s, PanelWidget widget)
     {
-        return s.Widget(widget).on && (widget.copy == 0 || Placed(s.barSections, widget));
+        return s.Widget(widget).on && (IsFirstCopy(widget) || Placed(s.barSections, widget));
     }
 
     bool AnyCopyShown(const Settings& s, BarWidget widget)
     {
-        for (int copy = 0; copy < kMostCopies; ++copy)
+        for (int copy = 0; copy < CopiesOf(widget); ++copy)
             if (Shows(s, PanelWidget{widget, copy})) return true;
         return false;
     }
@@ -1476,7 +1579,24 @@ namespace headsup
         WidgetOptions& clone = s.Widget(*added) = s.Widget(widget);
         clone.on             = true;
         clone.combine.reset();
+        if (added->kind == BarWidget::Custom) clone.name = CreatedWidgetName(*added);
         return added;
+    }
+
+    std::string CreatedWidgetName(PanelWidget widget)
+    {
+        return widget.copy == 0 ? kCreatedWidgetName : kCreatedWidgetName + (" " + std::to_string(widget.copy + 1));
+    }
+
+    std::optional<PanelWidget> CreateWidget(Settings& s)
+    {
+        const std::optional<PanelWidget> made = AddCreated(s.barSections);
+        if (made)
+        {
+            s.Widget(*made)    = NewWidget(*made);
+            s.Widget(*made).on = true;
+        }
+        return made;
     }
 
     void RemoveWidgetCopy(Settings& s, PanelWidget widget)
@@ -1592,6 +1712,8 @@ namespace headsup
                 s.*b.field = HeldSwitch(store, b.key).value_or(s.*b.field);
             for (const IntKey& i : kInts)
                 s.*i.field = LoadInt(store, i.key, s.*i.field);
+            // Padding's Set by Theme, which round 20 took away: such a file gets the default.
+            if (s.barWidgetPadding == kOldThemePadding) s.barWidgetPadding = kDefaultWidgetPadding;
             // The shape a file from before had, which also gave its one size a width.
             const bool wasArrow = !HeldSwitch(store, kOldCursorFeatherKey).value_or(true);
             const std::string style = store.GetString(kCursorStyleKey, kNoText);
@@ -1796,7 +1918,7 @@ namespace headsup
         store.Set(kBlueMagicLearnedKey, kBlueLearnedNames[static_cast<int>(s.blueMagicLearned)]);
         // A copy's keys are written while it is on the panel; the first copy's always.
         for (int slot = 0; slot < kPanelSlots; ++slot)
-            if (const PanelWidget w = WidgetInSlot(slot); w.copy == 0 || Placed(s.barSections, w))
+            if (const PanelWidget w = WidgetInSlot(slot); IsFirstCopy(w) || Placed(s.barSections, w))
                 SaveWidget(store, w, s.widgets[slot]);
         for (int i = 0; i < kBarSectionCount; ++i)
             store.Set(kBarSectionKeys[i], PlacementNames(s.barSections[i]).c_str());

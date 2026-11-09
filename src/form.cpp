@@ -205,7 +205,7 @@ namespace headsup
 
     void Form::PageNote(const char* text)
     {
-        blocks.push_back(FormBlock{Slug(pageKey + "/" + kNoteName), "<div class=\"note\">" + NoteRml(text) + "</div>", true});
+        blocks.push_back(FormBlock{Slug(pageKey + "/" + kNoteName), "<div class=\"note " + std::string(kPageNoteClass) + "\">" + NoteRml(text) + "</div>", true});
     }
 
     void Form::EndCard()
@@ -420,10 +420,8 @@ namespace headsup
         EndRow();
     }
 
-    void Form::GroupedDropdown(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown,
-        const char* tip)
+    void Form::GroupedDropdownAt(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown)
     {
-        Row(label, tip);
         const std::string control = Id(label);
         if (ListControl(control, shown, kControlWidth))
         {
@@ -443,7 +441,6 @@ namespace headsup
                 changed = true;
             }
         }
-        EndRow();
     }
 
     std::string Form::ListRow(const std::string& control, int index, const std::string& name, bool picked,
@@ -513,8 +510,6 @@ namespace headsup
         uint32_t moved = 0;
         for (size_t channel = 0; channel < levels.size(); ++channel)
         {
-            // A slider says its value as it is made and each time it is set: only a level other than the color's own
-            // is the player's, or opening the picker would round the color to it.
             const FormEvent* event = Took(swatch + "-p-" + kChannels[channel], kChangeEvent);
             if (event == nullptr) continue;
             const int to = static_cast<int>(std::lround(std::clamp(std::strtof(event->value.c_str(), nullptr), 0.0f, kColorFull)));

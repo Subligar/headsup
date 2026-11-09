@@ -31,7 +31,7 @@ namespace headsup
         uint32_t used = 0, max = 0;
     };
     constexpr uint32_t kInventory = 0, kGilSlot = 0; // gil is an item in the inventory's first slot
-    constexpr int kStorage = 2, kTemporaryItems = 3, kMogSafe2 = 9;
+    constexpr int kMogSafe = 1, kStorage = 2, kTemporaryItems = 3, kMogSafe2 = 9;
     // That slot's item read as gil: its count when the item is gil, nullopt for anything else there.
     std::optional<uint32_t> GilOf(uint16_t item, uint32_t count);
     // A container as Ashita counts it: nullopt for one the character has no room in (locked, or not bought).
@@ -39,9 +39,10 @@ namespace headsup
     // The container whose name, as the Bags popup gives it, the caption is: the game's caption for a bag list, or
     // "Items" for the inventory as that menu opens.
     std::optional<int> ContainerNamed(const std::string& caption);
-    // And the other way: a container's name, "Mog Satchel".
-    const char* ContainerName(int container);
-    // The containers the Bags widget lists and may show, in their order: every one but the temporary items.
+    // A container's name wherever HeadsUp shows one (the widget, its pop-out, the Bag dropdowns): the game's without
+    // "Mog", a number in brackets, "Wardrobe (3)".
+    std::string ContainerName(int container);
+    // The containers the Bags widget may show, in its dropdowns' order: every one but the temporary items.
     const std::vector<int>& BagChoices();
 
     // What the widgets show, gathered by the plugin each frame.
@@ -139,12 +140,16 @@ namespace headsup
     // so the Today card is one card whatever the date. One word: lower case, a '-' for each space.
     std::string CollapseKey(PanelWidget head, std::string_view heading);
     // Clones the widget a press names or takes its copy off: the widget whose settings show next, the clone or the
-    // first copy; nothing for any other press, or when nothing changed.
+    // first copy (a created widget itself, gone, so they close); nothing for any other press, or when nothing changed.
     std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press);
     PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
-    // Whether the panel shows the conquest standings: the Zone widget, or a World Info showing Conquest Info.
-    bool StandingsShown(const Settings& settings);
-    // Whether the open popup shows a widget's: its own, or a combined pill's with that widget in it.
+    // Whether a copy of widget shows, or a created widget showing one of its parts.
+    bool WidgetShown(const Settings& settings, BarWidget widget);
+    // Whether the conquest standings show: the Zone widget, a World Info showing a nation, or a popup in showing with
+    // the Zone's or World Info's cards.
+    bool StandingsShown(const Settings& settings, const std::vector<PanelWidget>& showing);
+    // Whether a popup shown shows a widget's: its own, a linked pill's with that widget in it, or one whose design
+    // holds one of that widget's cards.
     bool PopupShows(const Settings& settings, const std::vector<PanelWidget>& shown, BarWidget widget);
 
     // The picture each part's chip in the Widget Designer shows: the one these widgets show now, else its stand-in.
@@ -153,12 +158,20 @@ namespace headsup
 
     // Game help is never shown on the bar: it has a bar of its own, under the top bar.
     WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings);
+    // Whether a widget whose pill is pill is laid out on the bar: shown, and not idle unless its settings show.
+    bool TakesRoom(const WidgetContent& content, PanelWidget pill, std::optional<PanelWidget> settingsShown);
     // The used and total slots of the bag the game's caption names, as the Bags widget writes them.
     std::optional<Span> StripBagFill(const BarState& state);
     PopupContent BarPopupContent(PanelWidget widget, const BarState& state, const Settings& settings);
     // The popup a pill opens, named by its first widget: that widget's, or for a combined pill each of its widgets'
     // that is shown and has one, their titles joined and their cards one after another.
     PopupContent PanelPopupContent(PanelWidget head, const BarState& state, const Settings& settings);
+    // The mob a pop-out's preview shows its Target cards for while nothing is targeted, so you see them filled: Yagudo
+    // Acolyte in Giddeus, a white mage with drops, a steal, TP moves, spells and a respawn.
+    constexpr uint32_t kPreviewMob = 17371176;
+    // The popup a pill opens while its design is previewed beside its settings: PanelPopupContent, its Target's cards
+    // for kPreviewMob while nothing is targeted.
+    PopupContent PreviewPopupContent(PanelWidget head, const BarState& state, const Settings& settings);
     // A widget's currency's picture (kCurrencyTable's place, or kYourConquestCurrency) as a span of no text: gil's coin,
     // a nation's crest for its conquest points, or the game's item; one with none has no mark (HasMark).
     Span CurrencyMark(int currency, Nation yours);

@@ -236,14 +236,16 @@ namespace
         if (message == WM_MOUSEMOVE) g_LastMove = {clientX, clientY};
         const float x      = static_cast<float>(clientX) * g_BarScaleX;
         const float y      = static_cast<float>(clientY) * g_BarScaleY;
-        // RmlUi's overlay lies over every window: what it takes, nothing under it sees.
+        // RmlUi's overlay lies over every window: what it takes, nothing under it sees. Its popups are the bar's.
         const bool overRml = !blocked && g_Rml != nullptr && g_Rml->Running() &&
-                             g_Rml->Mouse(message, x, y, static_cast<int16_t>(HIWORD(wParam)));
+                             g_Rml->Mouse(message, x, y, static_cast<int16_t>(HIWORD(wParam))) &&
+                             !g_Rml->HoverIn(headsup::kPopupDocumentName);
         // An Ashita window takes the mouse. Asked only when read: the bar ignores it while off or for blocked messages.
         const bool overGui = overRml || (((g_BarOn && !g_BarHidden && !blocked) || g_SyncClicks) && g_Gui != nullptr &&
                                             g_Gui->GetIO().WantCaptureMouse);
+        // What RmlUi's windows take, over the popups too, is not the bar's.
         const bool barTook = g_BarClicks != nullptr &&
-            g_BarClicks->Take(message, static_cast<uint32_t>(wParam), x, y, g_BarOn && !g_BarHidden, overGui, blocked);
+            g_BarClicks->Take(message, static_cast<uint32_t>(wParam), x, y, g_BarOn && !g_BarHidden, overGui, blocked || overRml);
         // A window the player hides takes no click, which the game would act on unseen; an Ashita window over it does.
         const bool hiddenWindow = !barTook && !overRml && !blocked &&
             headsup::SwallowsClick(message, static_cast<int>(static_cast<float>(clientX) * g_MenuScaleX),
@@ -902,7 +904,7 @@ public:
         const auto opened = [&](headsup::BarWidget w) { return headsup::PopupShows(m_Settings, m_BarInput.Shown(), w); };
         if (m_GameState.ConquestRequestDue(now,
                 g_BarOn &&
-                    headsup::StandingsShown(m_Settings) &&
+                    headsup::StandingsShown(m_Settings, m_BarInput.Shown()) &&
                     m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
                 opened(headsup::BarWidget::Zone) || opened(headsup::BarWidget::World)))
         {
@@ -914,7 +916,7 @@ public:
         // Opening the Currencies menu asks for them; HeadsUp asks the same, as for the conquest standings.
         const bool gilOpen = opened(headsup::BarWidget::Currency);
         if (m_GameState.CurrencyRequestDue(now,
-                g_BarOn && headsup::AnyCopyShown(m_Settings, headsup::BarWidget::Currency) &&
+                g_BarOn && (headsup::WidgetShown(m_Settings, headsup::BarWidget::Currency) || gilOpen) &&
                     m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
                 gilOpen))
         {
@@ -967,27 +969,29 @@ public:
                 }
             }
         }
-        UpdateSkin();
-        m_RmlBar.settingsRoom = m_RmlMenu.RoomFor(SettingsShownNow(), m_Settings);
-        m_BarInput.MenuOpen(m_RmlMenu.open);
-        // Off, the bar is given nothing to show, and releases what it made.
-        if (m_Rml.Running())
-            m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
-                m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
-        // A pinned pop-out dragged somewhere stays there, kept by its edges nearest the screen's sides.
+        // A pinned pop-out dragged somewhere stays there, kept by its edges nearest the screen's sides. Kept before the
+        // bar updates, or the frame the drag ends draws it at its old spot.
         if (const auto moved = m_BarInput.TakeMoved())
         {
             m_Settings.Widget(moved->first).popupSpot = headsup::SpotOf(moved->second,
                 static_cast<float>(m_Names.BackBufferWidth()), static_cast<float>(m_Names.BackBufferHeight()));
             m_SettingsChangedAt = now;
         }
+        UpdateSkin();
+        m_RmlBar.settingsRoom = m_RmlMenu.RoomFor(SettingsShownNow(), m_Settings);
+        // Off, the bar is given nothing to show, and releases what it made.
+        if (m_Rml.Running())
+            m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),
+                m_Names.BackBufferWidth(), m_Names.BackBufferHeight(), m_BarInput, m_UiHidden);
         for (const std::string& press : m_BarInput.TakePresses())
             if (press == headsup::kOpenSettingsPress)
                 m_RmlMenu.OpenPage(kTopPanelPage, kWidgetLayoutCard);
             else if (const std::optional<headsup::PanelWidget> next = headsup::ApplyWidgetPress(m_Settings, press))
             {
                 m_SettingsChangedAt = now;
-                m_BarInput.ShowSettings(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)]);
+                m_BarInput.ShowSettings(headsup::Placed(m_Settings.barSections, *next)
+                                            ? std::optional(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)])
+                                            : std::nullopt);
             }
             else switch (headsup::ApplyPopupPress(m_Settings, press, NationNow()))
             {
@@ -1018,7 +1022,7 @@ public:
         if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
         UpdatePointer();
         LockCursor(m_Settings.enabled && m_Settings.lockCursor);
-        HoldGameKeys(m_Rml.WantsText());
+        HoldGameKeys(m_Rml.HoldsKeys());
         m_NameHook.NewFrame(NameOwners());
         DrawPanel();
     }
@@ -1126,7 +1130,7 @@ public:
             .windowPlaces     = &m_WindowPlaces,
             .cursorFiles      = &m_CursorFiles,
             .themeFiles       = &m_ThemeFiles,
-            .palette          = &headsup::PaletteFor(m_Settings, SkinNow()),
+            .skin             = SkinNow(),
             .profiles         = &m_ProfileNames,
             .profile          = &m_Profile,
             .unsaved          = m_SettingsChangedAt.has_value(),
@@ -1153,11 +1157,13 @@ public:
             m_SettingsChangedAt = now;
             SayGameFontFailure();
         }
-        // A chip clicked opens its pill's popup on its settings, or closes it when it shows them already.
+        // A chip clicked opens its pill's popup on its settings, or closes it when it shows them already; a created
+        // widget just removed has none to show.
         if (const std::optional<headsup::PanelWidget> asked = m_RmlMenu.TakeSettingsAsked())
         {
             const headsup::PanelWidget pill = headsup::Panel(m_Settings).group[headsup::SlotOf(*asked)];
-            m_BarInput.ShowSettings(m_BarInput.SettingsShown() == pill ? std::nullopt : std::optional(pill));
+            const bool shut = m_BarInput.SettingsShown() == pill || !headsup::Placed(m_Settings.barSections, *asked);
+            m_BarInput.ShowSettings(shut ? std::nullopt : std::optional(pill));
         }
         if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
         if (m_RmlMenu.TakeSetupBackup()) BackUpSettings();
@@ -2795,8 +2801,11 @@ private:
                 s.earthSecond = local->tm_sec;
             }
         }
-        // Today's guild point turn-ins while World Info shows: kept for the day in Japan, fetched again after its reset.
-        if (headsup::AnyCopyShown(m_Settings, headsup::BarWidget::World) && s.unixMs != 0)
+        // Today's guild point turn-ins while World Info or a pop-out with its cards shows: kept for the day in Japan,
+        // fetched again after its reset.
+        if ((headsup::AnyCopyShown(m_Settings, headsup::BarWidget::World) ||
+                headsup::PopupShows(m_Settings, m_BarInput.Shown(), headsup::BarWidget::World)) &&
+            s.unixMs != 0)
         {
             KeepTurnIns(s.unixMs, now);
             s.turnIns       = m_TurnIns && m_TurnInsDay == headsup::JstDay(s.unixMs) ? &*m_TurnIns : nullptr;

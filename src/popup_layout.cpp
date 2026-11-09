@@ -119,9 +119,8 @@ namespace headsup
             };
             std::vector<Scroll> scrolls;
             bool card     = false;
-            float reserve = 0.0f; // its height with its tallest tab picked, which sets its column
+            float reserve = 0.0f; // its height with its tallest tab picked, which sets its row's
             bool beside   = false; // in one row with the card before it
-            bool under    = false; // under the card before it, in its column
             bool collapsed = false; // as tall as its heading, wherever it is
             float natural  = 0.0f;  // its height as laid out, before a row makes it taller
         };
@@ -533,7 +532,6 @@ namespace headsup
         {
             Block b     = LayoutSection(section, metrics, measure);
             b.beside    = section.beside;
-            b.under     = section.under;
             b.collapsed = section.collapsed && !section.heading.empty();
             PopupSection each = section;
             each.collapsed    = false;
@@ -739,8 +737,8 @@ namespace headsup
             for (const auto& [press, icon] : {std::pair{&content.resetPress, Icon::Reset}, std::pair{&content.clonePress, Icon::Clone},
                      std::pair{&content.removePress, Icon::Delete}})
             {
-                // The reset while it is pinned, where it can be dragged; the others while its settings show.
-                if (press->empty() || (press == &content.resetPress ? !pinned : !settings)) continue;
+                // The reset whenever it was moved, pinned or not; the others while its settings show.
+                if (press->empty() || (press != &content.resetPress && !settings)) continue;
                 chips.push_back(TitleChip{l.pieces.size(), *press});
                 PopupPiece chip{PopupPiece::Kind::ActionChip, 0.0f, pad, side, side, {}};
                 chip.font = PopupFont::Pin;
@@ -770,14 +768,17 @@ namespace headsup
             top += subHeight + metrics.rowGap;
         }
 
-        float width = std::max({unit * kMinWidth, titleWidth, least - 2.0f * pad});
-        if (settings)
+        // Previewed beside the settings, the cards are laid out at the width the pop-out opens at: least is the popup's.
+        const bool preview      = settings && settings->preview == SettingsPreview::Cards;
+        const float leastInside = std::max({unit * kMinWidth, titleWidth, least - 2.0f * pad});
+        float width             = preview ? std::max(unit * kMinWidth, titleWidth) : leastInside;
+        // The settings body under the title, no taller than the room; the popup the title alone while it has no height.
+        const float bodyTall = settings ? std::clamp(room - top - pad, 0.0f, settings->height) : 0.0f;
+        if (settings && !preview)
         {
-            width        = std::max(width, settings->width);
-            const float tall = std::clamp(room - top - pad, 0.0f, settings->height);
-            l.body       = BarRect{pad, top, width, tall};
-            l.width      = width + 2.0f * pad;
-            l.height     = (tall > 0.0f ? top + tall : l.lines[0].bottom) + pad;
+            l.body   = BarRect{pad, top, std::max(width, settings->width), bodyTall};
+            l.width  = l.body.width + 2.0f * pad;
+            l.height = (bodyTall > 0.0f ? top + bodyTall : l.lines[0].bottom) + pad;
             PlaceChips(l, chips, pad, unit);
             return l;
         }
@@ -791,132 +792,69 @@ namespace headsup
             if (section.heading.empty() && section.tabs.empty() &&
                 std::ranges::all_of(section.rows, [](const PopupRow& row) { return row.cells.empty(); }))
                 continue;
-            for (const PopupSection& part : SplitToFit(section, tall, metrics, measure))
+            const std::vector<PopupSection> parts = SplitToFit(section, tall, metrics, measure);
+            for (const PopupSection& part : parts)
             {
                 // Width and Height make each card's box larger or smaller; its text stays the size it is.
                 Block& b = cards.emplace_back(LayoutCard(part, metrics, measure));
+                b.beside = b.beside || &part != &parts.front(); // a card cut to fit goes on beside itself
                 b.width *= metrics.popupWidth;
                 b.height *= metrics.popupHeight;
                 b.reserve *= metrics.popupHeight;
             }
         }
 
+        // In rows: a card beside the one before shares its row. A row fills the width, its cards sharing what their own
+        // widths leave evenly, each as tall as the row's tallest counted at its tallest tab, so a tab picked moves nothing;
+        // a card alone in its row is its own height.
+        const auto tallest = [](const Block& b) { return std::max(b.reserve, b.height); };
+        std::vector<std::pair<size_t, size_t>> rows; // each row's cards, [first, end)
+        for (size_t i = 0; i < cards.size(); ++i)
+            if (i == 0 || !cards[i].beside) rows.emplace_back(i, i + 1);
+            else rows.back().second = i + 1;
+        const auto natural = [&](std::pair<size_t, size_t> row) {
+            float across = cardGap * static_cast<float>(row.second - row.first - 1);
+            for (size_t c = row.first; c < row.second; ++c)
+                across += cards[c].width;
+            return across;
+        };
+        for (const auto& row : rows)
+            width = std::max(width, natural(row));
         float lowest = top;
-        if (std::ranges::any_of(cards, [](const Block& b) { return b.beside; }))
+        for (const auto& [first, end] : rows)
         {
-            // In rows: a card beside the one before shares its row, the first at its own width and the second, with the
-            // cards under it in its column, taking the rest. The row is as tall as the taller side, each card counted at
-            // its tallest tab so a tab picked moves nothing, the last card of the column taking what is left of it; a card
-            // alone fills the width.
-            const auto tallest = [](const Block& b) { return std::max(b.reserve, b.height); };
-            const auto columnEnd = [&](size_t i) { // one past the last card of the column beside card i
-                size_t end = i + 2;
-                while (end < cards.size() && cards[end].under) ++end;
-                return end;
-            };
-            float whole = 0.0f;
-            for (size_t i = 0; i < cards.size(); ++i)
-                if (i + 1 < cards.size() && cards[i + 1].beside)
-                {
-                    const size_t end = columnEnd(i);
-                    float column     = 0.0f;
-                    for (size_t c = i + 1; c < end; ++c)
-                        column = std::max(column, cards[c].width);
-                    whole = std::max(whole, cards[i].width + cardGap + column);
-                    i     = end - 1;
-                }
-                else
-                    whole = std::max(whole, cards[i].width);
-            width = std::max(width, whole);
-            float y = top;
-            for (size_t i = 0; i < cards.size(); ++i)
+            const float share = (width - natural({first, end})) / static_cast<float>(end - first);
+            float tall = 0.0f;
+            for (size_t c = first; c < end; ++c)
+                tall = std::max(tall, end - first == 1 ? cards[c].height : tallest(cards[c]));
+            float x = pad;
+            for (size_t c = first; c < end; ++c)
             {
-                if (i + 1 < cards.size() && cards[i + 1].beside)
-                {
-                    const size_t end = columnEnd(i);
-                    float column     = -cardGap;
-                    for (size_t c = i + 1; c < end; ++c)
-                        column += tallest(cards[c]) + cardGap;
-                    const float tall  = std::max(tallest(cards[i]), column);
-                    const float first = cards[i].width, rest = width - first - cardGap;
-                    if (!cards[i].collapsed) cards[i].height = tall;
-                    Place(cards[i], pad, y, first, l.lines.size(), l);
-                    float at = y;
-                    for (size_t c = i + 1; c < end; ++c)
-                    {
-                        cards[c].height = c + 1 == end && !cards[c].collapsed ? tall - (at - y) : tallest(cards[c]);
-                        Place(cards[c], pad + first + cardGap, at, rest, l.lines.size(), l);
-                        at += cards[c].height + cardGap;
-                    }
-                    y += tall + cardGap;
-                    i = end - 1;
-                    continue;
-                }
-                Place(cards[i], pad, y, width, l.lines.size(), l);
-                y += cards[i].height + cardGap;
+                if (!cards[c].collapsed) cards[c].height = tall;
+                Place(cards[c], x, lowest, cards[c].width + share, l.lines.size(), l);
+                x += cards[c].width + share + cardGap;
             }
-            lowest = y;
+            lowest += tall + cardGap;
         }
-        else
+        if (preview)
         {
-            // One column, or two when one runs tall: the split whose taller column is shortest, in their order. When that
-            // runs past the room, as many columns as fill it in order. Each card counts as its reserve, so a tab picked
-            // makes it grow down where it is. A popup that asks for one column keeps it.
-            float stacked = 0.0f;
-            for (const Block& b : cards)
-                stacked += b.reserve + cardGap;
-            std::vector<size_t> starts{0}; // each column's first card
-            if (!content.oneColumn && cards.size() >= 2 && stacked > unit * kTwoColumnsAbove)
-            {
-                float best = stacked, left = 0.0f;
-                size_t split = cards.size();
-                for (size_t i = 1; i < cards.size(); ++i)
-                {
-                    left += cards[i - 1].reserve + cardGap;
-                    if (const float taller = std::max(left, stacked - left); taller < best)
-                    {
-                        best  = taller;
-                        split = i;
-                    }
-                }
-                if (split < cards.size()) starts.push_back(split);
-                if (best - cardGap > tall)
-                {
-                    starts = {0};
-                    float column = 0.0f;
-                    for (size_t i = 0; i < cards.size(); ++i)
-                    {
-                        if (i > starts.back() && column + cards[i].reserve > tall)
-                        {
-                            starts.push_back(i);
-                            column = 0.0f;
-                        }
-                        column += cards[i].reserve + cardGap;
-                    }
-                }
-            }
-            const auto columnOf = [&](size_t card) {
-                return static_cast<size_t>(std::upper_bound(starts.begin(), starts.end(), card) - starts.begin() - 1);
-            };
-            std::vector<float> columnWidths(starts.size(), 0.0f);
-            for (size_t i = 0; i < cards.size(); ++i)
-                columnWidths[columnOf(i)] = std::max(columnWidths[columnOf(i)], cards[i].width);
-            float all = cardGap * static_cast<float>(columnWidths.size() - 1);
-            for (const float w : columnWidths)
-                all += w;
-            if (all < width) columnWidths.front() += width - all; // a wide title widens the first column
-            width = std::max(width, all);
-
-            std::vector<float> columnX(starts.size(), pad), columnY(starts.size(), top);
-            for (size_t c = 1; c < starts.size(); ++c)
-                columnX[c] = columnX[c - 1] + columnWidths[c - 1] + cardGap;
-            for (size_t i = 0; i < cards.size(); ++i)
-            {
-                const size_t c = columnOf(i);
-                Place(cards[i], columnX[c], columnY[c], columnWidths[c], l.lines.size(), l);
-                columnY[c] += cards[i].height + cardGap;
-            }
-            lowest = *std::max_element(columnY.begin(), columnY.end());
+            const float cardsHeight = cards.empty() ? 0.0f : lowest - cardGap - top;
+            const float under       = room - top - pad;
+            const float scale       = cardsHeight > under && under > 0.0f ? under / cardsHeight : 1.0f;
+            for (size_t i = 1; i < l.lines.size(); ++i)
+                l.lines[i].bottom = top + (l.lines[i].bottom - top) * scale;
+            // A picture of the cards: nothing in them takes a press. The title's chips are placed after.
+            l.chips.clear();
+            l.scrolls.clear();
+            // Beside the settings, a card gap from them, on the side the room says.
+            const float across = cards.empty() ? 0.0f : width * scale + cardGap;
+            l.preview = PopupPreview{scale, top, settings->cardsLeft ? 0.0f : settings->width + cardGap};
+            l.body    = BarRect{pad + (settings->cardsLeft ? across : 0.0f), top, settings->width, bodyTall};
+            l.width   = std::max(leastInside, across + settings->width) + 2.0f * pad;
+            l.height  = std::max({l.lines[0].bottom, bodyTall > 0.0f ? top + bodyTall : 0.0f,
+                            cards.empty() ? 0.0f : top + cardsHeight * scale}) + pad;
+            PlaceChips(l, chips, pad, unit);
+            return l;
         }
         const float bottom = std::max(cards.empty() ? top - metrics.rowGap : lowest - cardGap, l.lines[0].bottom);
         l.width            = width + 2.0f * pad;

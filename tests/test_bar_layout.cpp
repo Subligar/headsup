@@ -29,14 +29,24 @@ namespace
     int ShapeSeparators(BarShape shape) { return shape == BarShape::Ornate ? kAllSeparators : 0; }
     constexpr int kBetween = SeparatorBit(Separator::Between), kCaps = SeparatorBit(Separator::EndCaps);
 
-    // LayoutBar on the default panel, each widget in a pill of its own, unless the test says otherwise.
+    // The same for every widget, by SlotOf.
+    std::array<float, kPanelSlots> Every(float value)
+    {
+        std::array<float, kPanelSlots> each;
+        each.fill(value);
+        return each;
+    }
+
+    // LayoutBar on the default panel, each widget in a pill of its own, unless the test says otherwise; its Widget
+    // Spacing a pills gap, ornate's none.
     BarLayout Layout(float screenWidth, const BarMetrics& metrics, BarShape shape,
         const std::array<float, kPanelSlots>& natural, float targetMinimum,
         const BarPlacement& placement = DefaultPlacement(), std::optional<int> separators = std::nullopt,
-        float spacing = 0.0f, const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups())
+        std::optional<float> spacing = std::nullopt, const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups())
     {
         return LayoutBar(screenWidth, metrics, shape, natural, targetMinimum, placement,
-            separators.value_or(ShapeSeparators(shape)), spacing, groups);
+            separators.value_or(ShapeSeparators(shape)), Every(spacing.value_or(shape == BarShape::Ornate ? 0.0f : metrics.gap)),
+            groups);
     }
 
     std::array<float, kPanelSlots> Widths(float zone, float weather, float vana, float target, float gil,
@@ -166,9 +176,11 @@ TEST(hovering_opens_leaving_closes_and_only_the_widget_or_its_pin_chip_pins)
     CHECK(input.Press(pin.x + 5.0f, pin.y + 5.0f, true)); // its chip again unpins
     CHECK(!input.Pinned().has_value());
     const BarRect gil = *RectOf(l, BarWidget::Currency);
-    CHECK(input.Press(gil.x + 5.0f, 18.0f, true)); // the bar's, but gil has no popup
-    CHECK(!input.Pinned().has_value());
+    CHECK(input.Press(gil.x + 5.0f, 18.0f, true)); // the bar's, and gil has no popup: its settings instead
+    CHECK(input.SettingsShown() == BarWidget::Currency);
+    input.Pin(std::nullopt);
     CHECK(input.Press(5.0f, 30.0f, false)); // a right press on the strip is the bar's too
+    CHECK(!input.Pinned().has_value());
 }
 
 TEST(a_popup_unpinned_from_its_widget_hides_until_the_pointer_leaves_the_widget_and_comes_back)
@@ -213,61 +225,92 @@ TEST(a_fleeting_cards_pick_is_forgotten_once_the_popup_closes_and_another_cards_
 
 TEST(a_dragged_popup_is_kept_by_its_edges_nearest_the_screens_sides_and_grows_away_from_them)
 {
-    constexpr float W = 1920.0f, H = 1080.0f;
+    constexpr float W = 1920.0f, H = 1080.0f, top = 40.0f;
     const PopupSpot topLeft = SpotOf(BarRect{100.0f, 200.0f, 300.0f, 400.0f}, W, H);
     CHECK(topLeft == (PopupSpot{100, 200, false, false}));
     const PopupSpot bottomRight = SpotOf(BarRect{1500.0f, 600.0f, 300.0f, 400.0f}, W, H);
     CHECK(bottomRight == (PopupSpot{120, 80, true, true})); // 1920 - 1800 and 1080 - 1000
     // Placed back at another size, its kept edges stay and it grows away from them.
-    CHECK(PlaceAtSpot(topLeft, 500.0f, 450.0f, W, H) == (BarRect{100.0f, 200.0f, 500.0f, 450.0f}));
-    CHECK(PlaceAtSpot(bottomRight, 500.0f, 450.0f, W, H) == (BarRect{1300.0f, 550.0f, 500.0f, 450.0f}));
-    // Never off the screen.
-    const BarRect big = PlaceAtSpot(topLeft, 1900.0f, 1000.0f, W, H);
-    CHECK(big.x >= 0.0f && big.y >= 0.0f && big.x + big.width <= W && big.y + big.height <= H);
+    CHECK(PlaceAtSpot(topLeft, 500.0f, 450.0f, W, H, top, 0.0f) == (BarRect{100.0f, 200.0f, 500.0f, 450.0f}));
+    CHECK(PlaceAtSpot(bottomRight, 500.0f, 450.0f, W, H, top, 0.0f) == (BarRect{1300.0f, 550.0f, 500.0f, 450.0f}));
+    // Never off the screen or over the panel.
+    const BarRect big = PlaceAtSpot(topLeft, 1900.0f, 1000.0f, W, H, top, 0.0f);
+    CHECK(big.x >= 0.0f && big.y >= top && big.x + big.width <= W && big.y + big.height <= H);
 }
 
 TEST(a_popup_shows_where_it_is_dragged_else_at_its_kept_spot_else_under_its_widget)
 {
-    constexpr float W = 1920.0f, H = 1080.0f;
+    constexpr float W = 1920.0f, H = 1080.0f, top = 40.0f;
     const BarRect under{800.0f, 44.0f, 300.0f, 200.0f};
     CHECK(!PlacedSpot(std::nullopt, std::nullopt));
-    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H) == under);
+    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H, top, 0.0f) == under);
     const PopupSpot kept{120, 80, true, true};
     CHECK(PlacedSpot(std::nullopt, kept) == kept);
-    CHECK(PopupAt(under, 200.0f, kept, W, H) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, kept, W, H, top, 0.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
     // Dragged, by its top left, wherever it was kept.
     const std::optional<PopupSpot> dragged = PlacedSpot(BarRect{400.0f, 500.0f, 300.0f, 200.0f}, kept);
     CHECK(dragged == (PopupSpot{400, 500, false, false}));
-    CHECK(PopupAt(under, 200.0f, dragged, W, H) == (BarRect{400.0f, 500.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, dragged, W, H, top, 0.0f) == (BarRect{400.0f, 500.0f, 300.0f, 200.0f}));
     // Open, it stays across where it opened while its widget changes width, on the screen, and grows from there.
-    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H, 700.0f) == (BarRect{700.0f, 44.0f, 300.0f, 200.0f}));
-    CHECK(PopupAt(BarRect{800.0f, 44.0f, 500.0f, 200.0f}, 200.0f, std::nullopt, W, H, 1600.0f) ==
+    CHECK(PopupAt(under, 200.0f, std::nullopt, W, H, top, 0.0f, 700.0f) == (BarRect{700.0f, 44.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(BarRect{800.0f, 44.0f, 500.0f, 200.0f}, 200.0f, std::nullopt, W, H, top, 0.0f, 1600.0f) ==
           (BarRect{1420.0f, 44.0f, 500.0f, 200.0f}));
     // A spot of its own wins over where it opened.
-    CHECK(PopupAt(under, 200.0f, kept, W, H, 700.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, kept, W, H, top, 0.0f, 700.0f) == (BarRect{1500.0f, 800.0f, 300.0f, 200.0f}));
 }
 
-TEST(a_popup_cut_to_the_room_under_the_bar_drags_down_as_far_as_it_is_put_cut_to_the_room_below_it)
+// The card "Pop-out repositioning bugs": dragged low, a pop-out was laid out for the room under it, its cards flowed
+// into more columns and it turned the width of the screen. Its size is its own wherever it goes.
+TEST(a_placed_popup_keeps_its_size_wherever_it_goes_on_the_screen_and_under_the_panel)
 {
-    // The card "General Changes": pop-outs moved no more than a few pixels. One taller than the room under a 34 px bar
-    // was cut to that room, and kept on the screen at that height it could go no lower than 2 gaps under the bar.
-    constexpr float W = 1920.0f, H = 1080.0f, bar = 34.0f, gap = 6.0f;
-    const float underBar = PopupRoom(bar, H, gap, 0.0f);
-    const BarRect under  = PlacePopup(BarRect{900.0f, 3.0f, 100.0f, 29.0f}, bar, 400.0f, 1500.0f, W, H, gap, 0.0f);
-    CHECK(Near(under.height, underBar));
-    // Dragged 300 px down, its top goes there and its room is the screen below it.
-    const std::optional<PopupSpot> placed = PlacedSpot(BarRect{under.x, under.y + 300.0f, under.width, under.height}, std::nullopt);
-    const float room = SpotRoom(*placed, H);
-    CHECK(Near(room, H - under.y - 300.0f));
-    const BarRect dragged = PopupAt(under, room, placed, W, H);
-    CHECK(Near(dragged.y, under.y + 300.0f) && Near(dragged.height, room));
-    // Let go there it stays there: reaching the screen's bottom, it is kept by its top, with the same room.
-    const PopupSpot left = SpotOf(dragged, W, H);
-    CHECK(!left.fromBottom && Near(SpotRoom(left, H), room) && PopupAt(under, room, left, W, H) == dragged);
-    // One that fits, let go in the lower half, is kept by its bottom and has the room above that.
-    const BarRect low{100.0f, 600.0f, under.width, 300.0f};
-    const PopupSpot bottom = SpotOf(low, W, H);
-    CHECK(bottom.fromBottom && Near(SpotRoom(bottom, H), 900.0f) && PopupAt(under, 300.0f, bottom, W, H) == low);
+    constexpr float W = 1920.0f, H = 1080.0f, top = 40.0f;
+    // As tall as the screen under the panel lets it be, and a small one.
+    for (const BarRect under : {BarRect{900.0f, 46.0f, 400.0f, H - top}, BarRect{900.0f, 46.0f, 250.0f, 120.0f}})
+        for (float x = -300.0f; x <= W + 300.0f; x += 150.0f)
+            for (float y = -300.0f; y <= H + 300.0f; y += 150.0f)
+            {
+                const BarRect at = PopupAt(under, under.height, PlacedSpot(BarRect{x, y, under.width, under.height}, std::nullopt), W, H, top, 0.0f);
+                CHECK(Near(at.width, under.width) && Near(at.height, under.height));
+                CHECK(at.x >= 0.0f && at.x + at.width <= W && at.y >= top && at.y + at.height <= H);
+                // Where it fits, it is where it was put.
+                if (x >= 0.0f && x + under.width <= W) CHECK(Near(at.x, x));
+                if (y >= top && y + under.height <= H) CHECK(Near(at.y, y));
+            }
+}
+
+// The card: a pop-out left near an edge opens pushed in just enough when it is bigger this time, and at its spot
+// again when it is small enough, as the spot is never changed by the push.
+TEST(a_popup_kept_near_an_edge_is_pushed_in_while_too_big_and_opens_at_its_spot_once_it_fits)
+{
+    constexpr float W = 1920.0f, H = 1080.0f, top = 40.0f;
+    const BarRect under{900.0f, 46.0f, 300.0f, 200.0f};
+    const PopupSpot nearRight{1700, 300, false, false}, nearBottom{100, 900, false, false};
+    CHECK(PopupAt(under, 200.0f, nearRight, W, H, top, 0.0f) == (BarRect{1620.0f, 300.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(BarRect{900.0f, 46.0f, 150.0f, 200.0f}, 200.0f, nearRight, W, H, top, 0.0f) == (BarRect{1700.0f, 300.0f, 150.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, nearBottom, W, H, top, 0.0f) == (BarRect{100.0f, 880.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 100.0f, nearBottom, W, H, top, 0.0f) == (BarRect{100.0f, 900.0f, 300.0f, 100.0f}));
+    // Kept from the right, it is pushed off the left edge the same way.
+    const PopupSpot nearLeft{1700, 300, true, false};
+    CHECK(PopupAt(under, 200.0f, nearLeft, W, H, top, 0.0f) == (BarRect{0.0f, 300.0f, 300.0f, 200.0f}));
+    // Kept above the panel's bottom, it shows under it.
+    CHECK(PopupAt(under, 200.0f, PopupSpot{100, 0, false, false}, W, H, top, 0.0f).y == top);
+}
+
+// The card: on Ornate a popup has a ring drawn outside its box, which a popup pushed to the screen's left or right
+// edge left a few pixels off the screen.
+TEST(a_popup_pushed_onto_the_screen_keeps_its_ring_on_it_too)
+{
+    constexpr float W = 1920.0f, H = 1080.0f, ring = 6.0f, top = 40.0f + ring;
+    const BarRect under{900.0f, 46.0f, 300.0f, 200.0f};
+    const PopupSpot pastLeft{-50, 300, false, false}, pastRight{-50, 300, true, false}, pastBottom{100, -50, false, true};
+    CHECK(PopupAt(under, 200.0f, pastLeft, W, H, top, ring) == (BarRect{ring, 300.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, pastRight, W, H, top, ring) == (BarRect{W - ring - 300.0f, 300.0f, 300.0f, 200.0f}));
+    CHECK(PopupAt(under, 200.0f, pastBottom, W, H, top, ring) == (BarRect{100.0f, H - ring - 200.0f, 300.0f, 200.0f}));
+    // One too big for the screen is cut to it, ring and all.
+    const BarRect big = PlaceAtSpot(PopupSpot{0, 0, false, false}, W, H, W, H, top, ring);
+    CHECK(big == (BarRect{ring, top, W - 2.0f * ring, H - ring - top}));
+    // Open under its widget where it opened, as its widget grows.
+    CHECK(PopupAt(BarRect{800.0f, 46.0f, 500.0f, 200.0f}, 200.0f, std::nullopt, W, H, top, ring, 1600.0f).x == W - ring - 500.0f);
 }
 
 TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
@@ -298,7 +341,7 @@ TEST(a_pinned_popup_drags_by_its_title_row_and_tells_where_it_was_left)
     CHECK(!input.TakeMoved() && !input.DraggedPopup(BarWidget::Target));
 }
 
-TEST(popups_shown_after_the_one_whose_settings_show_go_over_its_settings_and_under_the_window_unless_come_out_after_it)
+TEST(popups_shown_after_the_one_whose_settings_show_go_over_its_settings)
 {
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
     std::array<bool, kPanelSlots> popups{};
@@ -314,44 +357,10 @@ TEST(popups_shown_after_the_one_whose_settings_show_go_over_its_settings_and_und
     input.ShowSettings(BarWidget::Job);
     CHECK(press(BarWidget::Bags));
     CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings}));
-    // The card: the window opened over them all, Job's settings with it.
-    input.MenuOpen(true);
-    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings}));
     CHECK(press(BarWidget::Target));
-    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings, OverMenu}));
-    // Settings shown after the window opened stay under it with their popup.
+    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, OverSettings, OverSettings}));
     input.ShowSettings(BarWidget::Target);
     CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, UnderSettings, UnderSettings}));
-    input.MenuOpen(false);
-    CHECK(input.Layers() == (std::vector<PopupLayer>{UnderSettings, UnderSettings, UnderSettings, UnderSettings}));
-}
-
-TEST(the_settings_window_goes_over_the_popups_open_before_it_and_under_those_opened_after)
-{
-    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
-    std::array<bool, kPanelSlots> popups{};
-    for (const BarWidget w : {BarWidget::Target, BarWidget::Zone, BarWidget::Job})
-        popups[SlotOf(w)] = true;
-    BarInput input;
-    input.Frame(l, popups);
-    input.Pin(BarWidget::Zone);
-    CHECK(!input.OverMenu(BarWidget::Zone)); // no window open
-    input.MenuOpen(true);
-    input.Pin(BarWidget::Job);
-    CHECK(!input.OverMenu(BarWidget::Zone) && input.OverMenu(BarWidget::Job));
-    // Each frame the window stays open changes nothing.
-    input.MenuOpen(true);
-    CHECK(!input.OverMenu(BarWidget::Zone) && input.OverMenu(BarWidget::Job));
-    // One open before it, closed and opened again, comes out over it.
-    input.Pin(std::nullopt);
-    input.Frame(l, popups);
-    input.Pin(BarWidget::Zone);
-    input.Pin(BarWidget::Job);
-    CHECK(input.OverMenu(BarWidget::Zone) && input.OverMenu(BarWidget::Job));
-    // Opened anew, the window goes over everything showing.
-    input.MenuOpen(false);
-    input.MenuOpen(true);
-    CHECK(!input.OverMenu(BarWidget::Zone) && !input.OverMenu(BarWidget::Job));
 }
 
 TEST(a_press_on_a_tab_picks_it_and_leaves_the_pin_alone)
@@ -413,6 +422,23 @@ TEST(a_cut_help_bar_under_the_strip_opens_its_popup_and_takes_only_its_own_press
     CHECK(!input.Press(600.0f, 70.0f, true)); // beside it, the game's
     CHECK(input.Press(100.0f, 70.0f, true)); // its own, which pins it as any widget's does
     CHECK(input.Pinned() == BarWidget::GameHelp);
+}
+
+TEST(a_popup_over_the_cut_help_bar_keeps_the_pointer_from_the_help_bar_under_it)
+{
+    BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    l.widgets.push_back(PlacedWidget{BarWidget::GameHelp, BarRect{0.0f, 46.0f, 480.0f, 60.0f}});
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::GameHelp)] = true;
+    popups[SlotOf(BarWidget::Zone)]     = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const BarRect zone = *RectOf(l, BarWidget::Zone);
+    input.Move(zone.x + 5.0f, 18.0f);
+    SetPopup(input, BarRect{0.0f, 44.0f, 600.0f, 300.0f}); // drawn over the help bar
+    input.Move(100.0f, 70.0f);
+    CHECK(input.Open() == BarWidget::Zone && !input.Hovered() && !input.Lit(BarWidget::GameHelp, true));
+    CHECK(input.Press(100.0f, 70.0f, true) && !input.Pinned());
 }
 
 TEST(pinning_another_widget_keeps_the_first_pinned_beside_it)
@@ -1022,7 +1048,7 @@ namespace
     // each frame where rml_bar puts it and kept where a drag leaves it as the plugin keeps it.
     struct DraggedPopup
     {
-        static constexpr float W = 1920.0f, H = 1080.0f, kTitleRow = 30.0f;
+        static constexpr float W = 1920.0f, H = 1080.0f, kTitleRow = 30.0f, kPanelBottom = 40.0f;
         Clicks c;
         BarRect under{1300.6f, 44.0f, 400.4f, 300.0f};
         std::optional<PopupSpot> spot;
@@ -1034,7 +1060,7 @@ namespace
         }
         void Frame()
         {
-            shown = PopupAt(under, under.height, PlacedSpot(c.input.DraggedPopup(BarWidget::Target), spot), W, H);
+            shown = PopupAt(under, under.height, PlacedSpot(c.input.DraggedPopup(BarWidget::Target), spot), W, H, kPanelBottom, 0.0f);
             SetPopup(c.input, shown, {}, {}, {}, {}, BarRect{shown.x, shown.y, shown.width, kTitleRow});
             if (const auto moved = c.input.TakeMoved()) spot = SpotOf(moved->second, W, H);
         }
@@ -1116,6 +1142,44 @@ TEST(a_popup_drag_follows_windows_pointer_each_frame_and_ends_once_its_button_is
     CHECK_EQ(d.Top(), top + 300.0f);
 }
 
+// The card "Pop-out repositioning bugs": dragged past the screen's edge or over the panel, a pop-out stops there at its
+// own size and is kept there; opened bigger it is pushed in for that showing, and smaller it is back at its spot.
+TEST(a_popup_dragged_off_the_screen_or_over_the_panel_stays_on_it_under_the_panel_at_its_size)
+{
+    DraggedPopup d;
+    const float width = d.shown.width, height = d.shown.height;
+    const float x = d.shown.x + 50.0f, y = d.shown.y + 10.0f;
+    CHECK(d.Take(WM_LBUTTONDOWN, x, y));
+    CHECK(d.Take(WM_MOUSEMOVE, x + 900.0f, y - 300.0f));
+    d.Frame();
+    CHECK(Near(d.shown.width, width) && Near(d.shown.height, height));
+    CHECK_EQ(d.Top(), DraggedPopup::kPanelBottom);
+    CHECK_EQ(d.Left(), std::round(DraggedPopup::W - width));
+    CHECK(d.Take(WM_LBUTTONUP, x + 900.0f, y - 300.0f));
+    d.Frame();
+    const std::optional<PopupSpot> kept = d.spot;
+    CHECK(kept == (PopupSpot{0, static_cast<int>(DraggedPopup::kPanelBottom), true, false}));
+    // Dragged to the bottom left and let go there.
+    CHECK(d.Take(WM_LBUTTONDOWN, d.shown.x + 50.0f, d.shown.y + 10.0f));
+    CHECK(d.Take(WM_MOUSEMOVE, -2000.0f, 2000.0f));
+    d.Frame();
+    CHECK_EQ(d.Left(), 0.0f);
+    CHECK_EQ(d.Top(), DraggedPopup::H - height);
+    CHECK(d.Take(WM_LBUTTONUP, -2000.0f, 2000.0f));
+    d.Frame();
+    const std::optional<PopupSpot> low = d.spot;
+    CHECK(low.has_value() && low->x == 0);
+    // Taller next time, it is pushed up to fit, and its spot stays.
+    d.under.height = height + 200.0f;
+    d.Frame();
+    CHECK_EQ(d.Top(), DraggedPopup::H - height - 200.0f);
+    CHECK(d.spot == low);
+    // Smaller again, it is where it was left.
+    d.under.height = height;
+    d.Frame();
+    CHECK_EQ(d.Top(), DraggedPopup::H - height);
+}
+
 TEST(the_bar_going_off_gives_the_game_every_release)
 {
     Clicks c;
@@ -1151,9 +1215,10 @@ TEST(every_widget_has_one_place_on_the_bar_and_none_overlap_on_a_narrow_screen)
     std::array<float, kPanelSlots> natural{};
     natural.fill(10.0f);
     const BarLayout wide = Layout(4000.0f, kPills, BarShape::Pills, natural, 0.0f);
-    CHECK_EQ(wide.widgets.size(), static_cast<size_t>(kPlacedWidgetCount));
+    CHECK_EQ(wide.widgets.size(), static_cast<size_t>(kDefaultPlacedCount));
     for (int w = 0; w < kBarWidgetCount; ++w)
-        CHECK((RectOf(wide, static_cast<BarWidget>(w)) != nullptr) == OnTheBar(static_cast<BarWidget>(w)));
+        CHECK((RectOf(wide, static_cast<BarWidget>(w)) != nullptr) ==
+              (OnTheBar(static_cast<BarWidget>(w)) && static_cast<BarWidget>(w) != BarWidget::Custom));
     for (const auto& [width, screen] : {std::pair{120.0f, 1280.0f}, std::pair{250.0f, 640.0f}})
     {
         natural.fill(width);
@@ -1298,7 +1363,7 @@ TEST(any_widget_in_any_section_keeps_every_widget_apart_and_on_screen)
 {
     std::array<float, kPanelSlots> natural{};
     for (int w = 0; w < kBarWidgetCount; ++w)
-        for (int s = 0; s < kBarSectionCount && OnTheBar(static_cast<BarWidget>(w)); ++s)
+        for (int s = 0; s < kBarSectionCount && OnTheBar(static_cast<BarWidget>(w)) && static_cast<BarWidget>(w) != BarWidget::Custom; ++s)
             for (const auto& [width, screen] : {std::pair{10.0f, 4000.0f}, std::pair{120.0f, 1280.0f},
                      std::pair{250.0f, 640.0f}})
             {
@@ -1314,7 +1379,7 @@ TEST(any_widget_in_any_section_keeps_every_widget_apart_and_on_screen)
                 {
                     const BarLayout l = Layout(screen, shape == BarShape::Pills ? kPills : kOrnate, shape, natural,
                         60.0f, p);
-                    if (screen > 3000.0f) CHECK_EQ(l.widgets.size(), static_cast<size_t>(kPlacedWidgetCount));
+                    if (screen > 3000.0f) CHECK_EQ(l.widgets.size(), static_cast<size_t>(kDefaultPlacedCount));
                     CheckApartAndInside(l, screen, p, shape);
                     // The target gives way first: whatever shows without it shows with it.
                     std::array<float, kPanelSlots> noTarget = natural;
@@ -1432,17 +1497,19 @@ TEST(end_caps_take_the_room_between_the_panels_edges_and_its_sections)
 
 TEST(pills_with_diamonds_center_one_in_a_wider_gap_between_neighbours_of_a_section)
 {
-    const float g = kPills.gap, d = static_cast<float>(WholePixels(kPills.diamond));
+    // The spacing, the diamond and 2 px clear either side of it.
+    const float s = kPills.gap, d = static_cast<float>(WholePixels(kPills.diamond)), clear = 2.0f;
     const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f,
-        DefaultPlacement(), kBetween);
+        DefaultPlacement(), kBetween, s);
     const BarRect& zone = *RectOf(l, BarWidget::Zone);
     const BarRect& weather = *RectOf(l, BarWidget::Weather);
-    CHECK(Near(weather.x, zone.x + zone.width + g + d + g)); // a gap, the diamond, a gap
-    CHECK(l.dividers.size() == 4);                          // two on the left, two on the right, none by the target
-    CHECK(Near(l.dividers[0], zone.x + zone.width + g + d / 2.0f));
-    for (const float dx : l.dividers) // every diamond keeps a gap from both pills beside it
+    CHECK(Near(weather.x, zone.x + zone.width + s + d + 2.0f * clear));
+    CHECK(l.dividers.size() == 4); // two on the left, two on the right, none by the target
+    CHECK(Near(l.dividers[0], zone.x + zone.width + (s + d) / 2.0f + clear));
+    for (const float dx : l.dividers) // every diamond keeps half the spacing and its clear space from both pills
         for (const PlacedWidget& p : l.widgets)
-            CHECK(dx + d / 2.0f + g <= p.rect.x + 0.01f || p.rect.x + p.rect.width + g <= dx - d / 2.0f + 0.01f);
+            CHECK(dx + d / 2.0f + clear + s / 2.0f <= p.rect.x + 0.01f ||
+                  p.rect.x + p.rect.width + clear + s / 2.0f <= dx - d / 2.0f + 0.01f);
     CHECK(Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 80, 120, 200, 90, 60, 50), 0.0f).dividers.empty());
 }
 
@@ -1498,21 +1565,21 @@ TEST(each_copy_of_a_widget_takes_a_place_of_its_own)
     CHECK(Near(second->width, 70.0f) && Near(second->x, first->x + first->width + kPills.gap)); // right after it
 }
 
-TEST(widget_spacing_adds_room_between_every_widget_and_each_neighbour)
+TEST(widget_spacing_adds_its_room_once_between_every_widget_and_its_neighbour)
 {
     const std::array<float, kPanelSlots> natural = Widths(100, 80, 120, 200, 90, 60, 50);
     for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
     {
-        const BarLayout plain = Layout(1920.0f, metrics, shape, natural, 0.0f);
+        const BarLayout plain = Layout(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), std::nullopt, 0.0f);
         const BarLayout spaced = Layout(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), std::nullopt, 5.0f);
         CHECK(Near(RectOf(spaced, BarWidget::Zone)->x, RectOf(plain, BarWidget::Zone)->x));
-        CHECK(Near(RectOf(spaced, BarWidget::Weather)->x, RectOf(plain, BarWidget::Weather)->x + 10.0f));
-        CHECK(Near(RectOf(spaced, BarWidget::Job)->x, RectOf(plain, BarWidget::Job)->x + 20.0f));
+        CHECK(Near(RectOf(spaced, BarWidget::Weather)->x, RectOf(plain, BarWidget::Weather)->x + 5.0f));
+        CHECK(Near(RectOf(spaced, BarWidget::Job)->x, RectOf(plain, BarWidget::Job)->x + 10.0f));
         // An ornate divider stands in the middle of the room it is in.
         if (shape == BarShape::Ornate)
         {
             const BarRect& zone = *RectOf(spaced, BarWidget::Zone);
-            CHECK(Near(spaced.dividers[0], zone.x + zone.width + 5.0f));
+            CHECK(Near(spaced.dividers[0], zone.x + zone.width + 2.5f));
         }
     }
 }
@@ -1573,7 +1640,7 @@ TEST(a_linked_pills_widgets_keep_no_padding_between_them_but_the_linked_padding)
              BarWidget::Bags, BarWidget::EarthTime})
         shown[SlotOf(w)] = 1.0f;
     constexpr float kPad = 9.0f;
-    const std::array<WidgetPads, kPanelSlots> pads = PillPads(g.placement, g.group, shown, linked, kPad);
+    const std::array<WidgetPads, kPanelSlots> pads = PillPads(g.placement, g.group, shown, linked, Every(kPad));
     const auto of = [&](BarWidget w) { return pads[SlotOf(w)]; };
     CHECK(of(BarWidget::Zone).left == kPad && of(BarWidget::Zone).right == 12.0f);
     CHECK(of(BarWidget::Weather).left == 0.0f && of(BarWidget::Weather).right == kPad);
@@ -1582,7 +1649,55 @@ TEST(a_linked_pills_widgets_keep_no_padding_between_them_but_the_linked_padding)
     CHECK(of(BarWidget::Job).left == kPad && of(BarWidget::Job).right == kPad); // in a pill of its own
     // A widget of the pill with nothing to show leaves its neighbour the edge.
     shown[SlotOf(BarWidget::Weather)] = 0.0f;
-    CHECK(PillPads(g.placement, g.group, shown, linked, kPad)[SlotOf(BarWidget::Zone)].right == kPad);
+    CHECK(PillPads(g.placement, g.group, shown, linked, Every(kPad))[SlotOf(BarWidget::Zone)].right == kPad);
+}
+
+TEST(each_widget_keeps_its_own_padding_on_the_sides_it_does_not_share)
+{
+    const PanelGroups g = Combined();
+    std::array<float, kPanelSlots> linked{}, shown{};
+    linked[SlotOf(BarWidget::Zone)] = 12.0f;
+    for (const BarWidget w : {BarWidget::Zone, BarWidget::Weather, BarWidget::Job})
+        shown[SlotOf(w)] = 1.0f;
+    std::array<float, kPanelSlots> padding = Every(9.0f);
+    padding[SlotOf(BarWidget::Zone)]    = 3.0f;
+    padding[SlotOf(BarWidget::Weather)] = 15.0f;
+    padding[SlotOf(BarWidget::Job)]     = 20.0f;
+    const std::array<WidgetPads, kPanelSlots> pads = PillPads(g.placement, g.group, shown, linked, padding);
+    const auto of = [&](BarWidget w) { return pads[SlotOf(w)]; };
+    CHECK(of(BarWidget::Zone).left == 3.0f && of(BarWidget::Zone).right == 12.0f);
+    CHECK(of(BarWidget::Weather).left == 0.0f && of(BarWidget::Weather).right == 15.0f);
+    CHECK(of(BarWidget::Job).left == 20.0f && of(BarWidget::Job).right == 20.0f);
+}
+
+TEST(neighbours_are_half_of_each_ones_widget_spacing_apart_and_a_pill_spaces_by_its_first_widget)
+{
+    const std::array<float, kPanelSlots> natural = Widths(100, 80, 120, 200, 90, 60, 50);
+    std::array<float, kPanelSlots> spacing = Every(2.0f);
+    spacing[SlotOf(BarWidget::Weather)] = 10.0f;
+    const auto apart = [](const BarLayout& l, BarWidget left, BarWidget right) {
+        return RectOf(l, right)->x - (RectOf(l, left)->x + RectOf(l, left)->width);
+    };
+    for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
+    {
+        const BarLayout l = LayoutBar(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), 0, spacing, AloneGroups());
+        CHECK(Near(apart(l, BarWidget::Zone, BarWidget::Weather), 6.0f) && Near(apart(l, BarWidget::Weather, BarWidget::Job), 6.0f));
+        CHECK(Near(apart(l, BarWidget::Currency, BarWidget::Bags), 2.0f));
+    }
+    // An ornate diamond stands in the middle of that room.
+    const BarLayout ornate = LayoutBar(1920.0f, kOrnate, BarShape::Ornate, natural, 0.0f, DefaultPlacement(), kBetween, spacing,
+        AloneGroups());
+    const BarRect& zone = *RectOf(ornate, BarWidget::Zone);
+    CHECK(Near(ornate.dividers[0], zone.x + zone.width + 3.0f));
+    // Zone's pill holds Weather after it: the pill is spaced by Zone's, Weather's own left out.
+    const PanelGroups g = Combined();
+    const auto pillToJob = [&](const std::array<float, kPanelSlots>& each) {
+        return apart(LayoutBar(1920.0f, kPills, BarShape::Pills, natural, 0.0f, g.placement, 0, each, g.group), BarWidget::Weather,
+            BarWidget::Job);
+    };
+    CHECK(Near(pillToJob(spacing), 2.0f));
+    spacing[SlotOf(BarWidget::Zone)] = 20.0f;
+    CHECK(Near(pillToJob(spacing), 11.0f));
 }
 
 TEST(a_combined_pill_that_does_not_fit_goes_whole)
@@ -1685,4 +1800,86 @@ TEST(a_widget_lights_under_the_pointer_whether_or_not_it_has_a_popup)
     input.Pin(BarWidget::Target);
     input.Leave();
     CHECK(lit(BarWidget::Zone) && !lit(BarWidget::Target) && !lit(BarWidget::Settings));
+}
+
+// The card "Hover select bug": the pointer on a widget with nothing to pop out, here the Settings widget inside a
+// wide popup's column, closes the popup another widget opened by hovering, and leaves a pinned one.
+TEST(hovering_a_widget_without_a_popup_closes_the_hovered_popup_and_keeps_the_pinned_ones)
+{
+    std::array<float, kPanelSlots> widths = Widths(100, 0, 120, 200, 90, 60, 50);
+    widths[SlotOf(BarWidget::Settings)]   = 30.0f;
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, widths, 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Zone)]      = true;
+    popups[SlotOf(BarWidget::EarthTime)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const auto over = [&](BarWidget w) { input.Move(RectOf(l, w)->x + 5.0f, 18.0f); };
+    const auto lit  = [&](BarWidget w) { return input.Lit(w, popups[SlotOf(w)]); };
+    const BarRect wide{0.0f, 44.0f, 1920.0f, 300.0f}; // every widget in its column
+    over(BarWidget::EarthTime);
+    SetPopup(input, wide);
+    CHECK(input.Open() == BarWidget::EarthTime);
+    over(BarWidget::Settings);
+    CHECK(!input.Open() && input.Shown().empty() && !lit(BarWidget::EarthTime) && lit(BarWidget::Settings));
+    // A pinned one stays out, and lit, while the hovered one goes.
+    input.Pin(BarWidget::Zone);
+    over(BarWidget::EarthTime);
+    SetPopup(input, wide);
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Zone, BarWidget::EarthTime}));
+    over(BarWidget::Settings);
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Zone}) && lit(BarWidget::Zone) && !lit(BarWidget::EarthTime));
+}
+
+// The card: a widget that has settings but nothing to pop out now (Party alone, Target with nothing targeted) shows
+// nothing hovered, and a click on it opens its pop-out on its settings, which a second click closes.
+TEST(a_click_on_a_widget_without_a_popup_opens_its_settings_pop_out_and_another_closes_it)
+{
+    const BarLayout l = Layout(1920.0f, kPills, BarShape::Pills, Widths(100, 0, 120, 200, 90, 60, 50), 0.0f);
+    std::array<bool, kPanelSlots> popups{};
+    popups[SlotOf(BarWidget::Zone)] = true;
+    BarInput input;
+    input.Frame(l, popups);
+    const BarRect target = *RectOf(l, BarWidget::Target);
+    input.Move(target.x + 5.0f, 18.0f);
+    CHECK(input.Shown().empty());
+    CHECK(input.Press(target.x + 5.0f, 18.0f, true));
+    CHECK(input.SettingsShown() == BarWidget::Target && (input.Shown() == std::vector<PanelWidget>{BarWidget::Target}));
+    input.Leave();
+    CHECK(input.SettingsShown() == BarWidget::Target && input.Lit(BarWidget::Target, false)); // it stays, lit
+    input.Move(target.x + 5.0f, 18.0f);
+    CHECK(input.Press(target.x + 5.0f, 18.0f, true));
+    CHECK(!input.SettingsShown() && input.Shown().empty() && !input.Pinned());
+    // A pinned popup of another widget stays out through both.
+    input.Pin(BarWidget::Zone);
+    CHECK(input.Press(target.x + 5.0f, 18.0f, true));
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Zone, BarWidget::Target}));
+    CHECK(input.Press(target.x + 5.0f, 18.0f, true));
+    CHECK((input.Shown() == std::vector<PanelWidget>{BarWidget::Zone}) && !input.SettingsShown());
+}
+
+TEST(neighbours_are_the_widget_spacing_apart_and_a_separator_between_them_adds_its_diamonds_room)
+{
+    const auto left = Sections({BarWidget::Zone, BarWidget::Weather, BarWidget::Target}, {}, {});
+    std::array<float, kPanelSlots> natural{};
+    natural[SlotOf(BarWidget::Zone)]    = 100.0f;
+    natural[SlotOf(BarWidget::Weather)] = 80.0f;
+    natural[SlotOf(BarWidget::Target)]  = 200.0f;
+    constexpr float kSpacing = 2.0f;
+    for (const BarShape shape : {BarShape::Pills, BarShape::Glass, BarShape::Window, BarShape::Ornate})
+    {
+        const BarMetrics m = MetricsFor(36, shape);
+        const BarLayout l  = Layout(1920.0f, m, shape, natural, 0.0f, left, 0, kSpacing);
+        const BarRect &zone = *RectOf(l, BarWidget::Zone), &weather = *RectOf(l, BarWidget::Weather),
+                      &target = *RectOf(l, BarWidget::Target);
+        CHECK(Near(weather.x - (zone.x + zone.width), kSpacing) && Near(target.x - (weather.x + weather.width), kSpacing));
+        // Ornate's diamond room is in its plain widgets' margins (SideOf).
+        if (shape == BarShape::Ornate) continue;
+        // A diamond drawn WholePixels(diamond) wide, 2 px clear of what is beside it, sits in the middle of the gap.
+        const float diamond = static_cast<float>(WholePixels(m.diamond)) + 2.0f * 2.0f;
+        const BarLayout d   = Layout(1920.0f, m, shape, natural, 0.0f, left, kBetween, kSpacing);
+        const BarRect &dz = *RectOf(d, BarWidget::Zone), &dw = *RectOf(d, BarWidget::Weather);
+        CHECK(Near(dw.x - (dz.x + dz.width), kSpacing + diamond));
+        CHECK(d.dividers.size() == 2 && Near(d.dividers[0], (dz.x + dz.width + dw.x) / 2.0f));
+    }
 }

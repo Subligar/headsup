@@ -6,6 +6,7 @@
 
 #include <RmlUi/Core.h>
 
+#include <bitset>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -48,10 +49,14 @@ namespace headsup
         // A mouse message in back-buffer pixels, to the overlay: true when an element of it is under the pointer or
         // being dragged, so neither the game nor the bar gets the message.
         bool Mouse(uint32_t message, float x, float y, int wheelDelta);
+        // Whether the overlay's element under the pointer is in a document loaded from that source.
+        bool HoverIn(const char* source) const;
         // A key to the overlay, typed into its focused text field as well: true when a text field has the focus,
         // so the game must not get the key.
         bool Key(uint32_t virtualKey, bool down);
         bool WantsText() const;
+        // Whether the game must not read the keyboard: a text field has it, or a key pressed into one is still down.
+        bool HoldsKeys();
 
         // Each updates its context and draws it; the caller saves and restores the game's states around them.
         void RenderBar();
@@ -74,5 +79,7 @@ namespace headsup
         Rml::Context* m_Bar     = nullptr;
         Rml::Context* m_Overlay = nullptr;
         int m_Width = 0, m_Height = 0;
+        // Keys that went down into a text field and are not up yet, by virtual key: Enter blurs its box as it goes down.
+        std::bitset<256> m_Swallowed;
     };
 }

@@ -106,7 +106,7 @@ HeadsUp reads what the game already shows and the server already sends. It never
 |---|---|
 | Region Info's conquest request | After each zone change, while the Zone widget or World Info's conquest is on |
 | The Currencies menu's two requests | After loading and each zone, while the Currency widget is on |
-| A `/check` of nearby monsters | Only with Auto-Check on (off by default). Never a player |
+| A `/check` of nearby monsters | Only with Auto-Check Mobs on (off by default). Never a player |
 | A ping to the server | Once a second, only while the Performance widget shows your connection |
 | Today's guild turn-ins from api.phoenix-xi.com | Once a day, while the World Info widget is on |
 

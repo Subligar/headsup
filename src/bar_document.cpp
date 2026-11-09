@@ -6,6 +6,7 @@
 #include "bar_layout.h"
 #include "bar_placement.h"
 #include "markup.h"
+#include "menu_document.h"
 
 #include <array>
 #include <charconv>
@@ -23,12 +24,12 @@ namespace headsup
                                    kResetKind = "reset", kCogKind = "cog", kGameKind = "game",
                                    kItemKind = "item", kStatusKind = "status";
         // A separator's, by DashMark.
-        constexpr std::string_view kSeparatorKinds[kDashMarkCount] = {"dash", "dot", "square", "diamond"};
+        constexpr std::string_view kSeparatorKinds[kDashMarkCount] = {"dash", "dot", "square", "diamond", "blank"};
         // XIUI's party list draws a status's background 1.1 icons wide and 0.75 as wide as tall, from 0.3 of its width
-        // above the icon for a buff and 0.1 for a debuff, the icon 0.1 / 1.5 of an icon in from its left. Here the
-        // background fills its mark's box, centered across it as the picture is in its square, and the icon is in it so.
+        // above the icon for a buff and 0.1 for a debuff, the icon 0.1 / 1.5 of an icon in from its left. Here the icon
+        // fills its mark's box as it does with no background, and the background's square picture reaches past it.
         constexpr float kBackWide = 1.1f, kBackAspect = 0.75f, kBuffDrop = 0.3f, kDebuffDrop = 0.1f, kBackInset = 0.1f / 1.5f;
-        constexpr float kBackedIcon = kBackAspect / kBackWide; // the icon's side, of the box's
+        constexpr float kBackedIcon = kBackAspect / kBackWide; // the icon's side, of the background's square
         // RmlUi blurs a glow by a Gaussian of this share of its width; the bar's shadow is a CSS blur radius, twice
         // its Gaussian's.
         constexpr float kGlowSigmaPerWidth = 0.4f;
@@ -88,23 +89,22 @@ namespace headsup
             return value;
         }
 
-        // A status's icon in a square box of side at x, y in unit, over its background with Show Status Background,
-        // each moved and sized by its own icon adjustment.
+        // A status's icon filling a square box of side at x, y in unit, each moved and sized by its own icon
+        // adjustment. With Show Status Background its background is drawn under it, larger than the box.
         std::string StatusPictures(const StatusMark& mark, float x, float y, float side, const char* unit)
         {
             const auto at = [&](float left, float top, float size) {
                 return "left:" + RcssNumber(x + left * side) + unit + ";top:" + RcssNumber(y + top * side) + unit +
                        ";width:" + RcssNumber(size * side) + unit + ";height:" + RcssNumber(size * side) + unit + ";";
             };
-            if (!mark.back)
-                return "<img class=\"p\" src=\"" + StatusSource(mark) + "\" style=\"" + at(0.0f, 0.0f, 1.0f) +
-                       AdjustRules(AdjustOf(mark)) + "\"/>";
+            const std::string icon = "<img class=\"p\" src=\"" + StatusSource(mark) + "\" style=\"" + at(0.0f, 0.0f, 1.0f) +
+                                     AdjustRules(AdjustOf(mark)) + "\"/>";
+            if (!mark.back) return icon;
             const Icon back   = IsDebuff(mark.id) ? Icon::DebuffBack : Icon::BuffBack;
             const float drop  = (IsDebuff(mark.id) ? kDebuffDrop : kBuffDrop) * kBackWide * kBackedIcon;
             const float inset = (1.0f - kBackAspect) / 2.0f + kBackInset * kBackedIcon;
-            return "<img class=\"p\" src=\"" + IconSource(back) + "\" style=\"" + at(0.0f, 0.0f, 1.0f) +
-                   AdjustRules(AdjustOf(back)) + "\"/><img class=\"p\" src=\"" + StatusSource(mark) + "\" style=\"" +
-                   at(inset, drop, kBackedIcon) + AdjustRules(AdjustOf(mark)) + "\"/>";
+            return "<img class=\"p\" src=\"" + IconSource(back) + "\" style=\"" +
+                   at(-inset / kBackedIcon, -drop / kBackedIcon, 1.0f / kBackedIcon) + AdjustRules(AdjustOf(back)) + "\"/>" + icon;
         }
 
         // A span's mark, before its text.
@@ -450,8 +450,9 @@ namespace headsup
     WidgetSide SideOf(const BarLook& look, PanelWidget widget, float room, bool shared)
     {
         if (shared) return WidgetSide{0.0f, room};
-        const bool plain = look.ornate && widget.kind != BarWidget::Target;
-        const float margin = plain ? DiamondClearance(look.metrics) : 0.0f;
+        const bool plain    = look.ornate && widget.kind != BarWidget::Target;
+        const bool diamonds = (look.settings.panelSeparators & SeparatorBit(Separator::Between)) != 0;
+        const float margin  = plain && diamonds ? DiamondClearance(look.metrics) : 0.0f;
         return WidgetSide{margin, std::max(0.0f, room - (plain ? margin : kBoxBorder))};
     }
 
@@ -470,7 +471,7 @@ namespace headsup
             css += ".glint.a{left:0%;width:30%;decorator:horizontal-gradient(" + RcssColor(Faded(cyan, 0)) + " " + c + ");}";
             css += ".glint.b{left:30%;width:40%;decorator:horizontal-gradient(" + c + " " + v + ");}";
             css += ".glint.c{left:70%;width:30%;decorator:horizontal-gradient(" + v + " " + RcssColor(Faded(violet, 0)) + ");}";
-            css += ".pills .widget,.pills .widget.flat{background-color:transparent;border-color:transparent;}";
+            css += ".pills .widget{background-color:transparent;border-color:transparent;}";
             css += ".pills .widget.target,.pills .widget.backed{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
             css += ".pills .widget.lit{background-color:" + RcssColor(Faded(cyan, 0x2E)) + ";border-color:" +
                    RcssColor(Faded(cyan, 0xB3)) + ";}";
@@ -515,7 +516,7 @@ namespace headsup
         }
     }
 
-    std::string BarDocument(const BarLook& look, const BarTextPlace& place)
+    std::string BarStyle(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own)
     {
         const BarPalette& p  = look.palette;
         const BarMetrics& m  = look.metrics;
@@ -529,9 +530,8 @@ namespace headsup
         const float rowTop      = row.y + kContentInset; // where a widget's content starts
         const float clear       = DiamondClearance(m);
         const int divider       = WholePixels(m.diamond), cap = WholePixels(m.diamond * kCapScale);
-        const std::string capSource     = SeparatorSource(p.separator, p.accent, cap);
-        const std::string dividerSource = SeparatorSource(p.separator, look.ornate ? p.divider : p.accent, divider);
-        auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit); };
+        // Show Background is each widget's own: its backed class.
+        auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit, true); };
         auto square = [](float size) { return "width:" + Px(size) + ";height:" + Px(size) + ";"; };
         auto centered = [&](float size) { return Px(std::round(mid - size / 2.0f)); };
         const std::string shape = look.ornate ? ".ornate" : ".pills";
@@ -565,8 +565,8 @@ namespace headsup
         }
         else
         {
-            css += ".pills .widget{" + BoxRules(boxOf(BarWidget::Weather, false)) + "}";
-            css += ".pills .widget.flat{" + BoxRules(boxOf(BarWidget::Zone, false)) + "}";
+            css += ".pills .widget{" + BoxRules(look.BoxOf(BarWidget::Weather, false, false)) + "}";
+            css += ".pills .widget.backed{" + BoxRules(boxOf(BarWidget::Weather, false)) + "}";
             // Before the lit rule, which then gives it the accent as every lit pill has.
             css += ".pills .widget.target{" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             css += ".pills .widget.lit{" + BoxRules(boxOf(BarWidget::Weather, true)) + "}";
@@ -593,17 +593,25 @@ namespace headsup
             css += std::string(".widget.") + AlignClass(align) + " .content,.widget." + AlignClass(align) + " .text{text-align:" +
                    side + ";}";
         css += ".icon,.text,.line-icon,.t{display:inline-block;vertical-align:top;}";
-        css += ".icon{" + square(m.icon) + "margin-top:" + Px(std::round(mid - m.icon / 2.0f) - rowTop) + ";margin-right:" +
-               Px(m.gap) + ";}";
+        auto icon = [&](float size) { return square(size) + "margin-top:" + Px(std::round(mid - size / 2.0f) - rowTop) + ";"; };
+        css += ".icon{" + icon(m.icon) + "margin-right:" + Px(m.gap) + ";}";
         css += ".icon.right{margin-right:0px;margin-left:" + Px(m.gap) + ";}";
         css += ".icon.cog{margin-right:0px;}";
         css += ".t{white-space:pre;}";
         css += ".cell{display:inline-block;white-space:pre;}";
-        css += ".steady{display:inline-block;white-space:pre;text-align:right;}.fig{display:inline-block;text-align:center;}";
+        // Only a figure in its steady box: the second line of figures is a .fig too, and must stay a block as wide as
+        // the text, or its runs line up against its own width (Job & EXP's earned EXP short of the bar's end).
+        css += ".steady{display:inline-block;white-space:pre;text-align:right;}.steady .fig{display:inline-block;text-align:center;}";
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
         css += ".smark{position:relative;}"; // a status's icon and its background, placed inside it
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";
         css += TextRules("", look.titleFont, look.detailFont, lines, place, rowTop);
+        for (const WidgetText& text : own)
+        {
+            const std::string scope = "#" + WidgetId(text.widget) + " ";
+            css += TextRules(scope, text.titleFont, text.detailFont, text.lines, text.place, rowTop);
+            css += scope + ".icon{" + icon(text.metrics.icon) + "}";
+        }
         // An EXP bar among a line's text, taking no height of its line: its track from its capitals' middle up and down
         // (TextRules), its fill a block, as a span takes no width, and its text over it on the line's own baseline.
         css += ".ibar{display:inline-block;vertical-align:top;position:relative;height:0px;}";
@@ -624,17 +632,33 @@ namespace headsup
         const int help = HelpTextPixels(look.settings.helpBarTextSize, lines.title);
         css += ".hc{" + FaceRules(look.titleFont, help, place.helpCaption.height) + ShadowEffect(help) + "}";
         css += ".hh{" + FaceRules(look.detailFont, help, place.help.height) + ShadowEffect(help) + "}";
-        const bool glass = look.palette.shape == BarShape::Glass;
-        if (glass) css += GlassBarRules(look);
-        // Last, over every shape's own corners and borders.
-        css += shape + " .widget." + kJoinBeforeClass +
-               "{border-left-width:0px;border-top-left-radius:0px;border-bottom-left-radius:0px;}";
-        css += shape + " .widget." + kJoinAfterClass +
-               "{border-right-width:0px;border-top-right-radius:0px;border-bottom-right-radius:0px;}";
+        if (look.palette.shape == BarShape::Glass) css += GlassBarRules(look);
+        // Last, over every shape's own corners and borders, and a pill's own corners, its first widget's.
+        const std::string joinBefore = std::string(".") + kJoinBeforeClass +
+                                       "{border-left-width:0px;border-top-left-radius:0px;border-bottom-left-radius:0px;}";
+        const std::string joinAfter = std::string(".") + kJoinAfterClass +
+                                      "{border-right-width:0px;border-top-right-radius:0px;border-bottom-right-radius:0px;}";
+        css += shape + " .widget" + joinBefore + shape + " .widget" + joinAfter;
+        const PanelGroups panel = Panel(look.settings);
+        for (int slot = 0; slot < kPanelSlots; ++slot)
+            if (const std::optional<int> own = look.settings.Widget(panel.group[slot]).rounding)
+            {
+                const std::string id = "#" + WidgetId(WidgetInSlot(slot));
+                css += id + "{border-radius:" + Px(look.WidgetRadius(*own)) + ";}" + id + joinBefore + id + joinAfter;
+            }
+        return css;
+    }
 
-        std::string rml = "<rml><head><style>" + css + "</style></head><body class=\"" + shape.substr(1) + "\">";
+    std::string BarMarkup(const BarLook& look)
+    {
+        const BarPalette& p = look.palette;
+        const BarMetrics& m = look.metrics;
+        const int divider = WholePixels(m.diamond), cap = WholePixels(m.diamond * kCapScale);
+        const std::string capSource     = SeparatorSource(p.separator, p.accent, cap);
+        const std::string dividerSource = SeparatorSource(p.separator, look.ornate ? p.divider : p.accent, divider);
+        std::string rml = std::string("<body class=\"") + (look.ornate ? "ornate" : "pills") + "\">";
         rml += std::string("<div id=\"") + kStripId + "\"></div>";
-        if (glass) rml += "<div class=\"glint a\"></div><div class=\"glint b\"></div><div class=\"glint c\"></div>";
+        if (p.shape == BarShape::Glass) rml += "<div class=\"glint a\"></div><div class=\"glint b\"></div><div class=\"glint c\"></div>";
         if ((look.settings.panelSeparators & SeparatorBit(Separator::EndCaps)) != 0)
             rml += "<img class=\"cap\" id=\"cap-left\" src=\"" + capSource + "\"/><img class=\"cap\" id=\"" + kRightCapId +
                    "\" src=\"" + capSource + "\"/>";
@@ -644,13 +668,16 @@ namespace headsup
         {
             const PanelWidget widget = WidgetInSlot(slot);
             if (!OnTheBar(widget.kind) || (widget.copy > 0 && !HasCopies(widget.kind))) continue;
-            // Zone and Earth time show no pill until lit.
-            const bool flat = !look.ornate && !boxOf(widget.kind, false);
             rml += std::string("<div class=\"widget hidden") + (widget.kind == BarWidget::Target ? std::string(" ") + kTargetClass : "") +
-                   (flat ? std::string(" ") + kFlatClass : "") + "\" id=\"" + WidgetId(widget) + "\"></div>";
+                   "\" id=\"" + WidgetId(widget) + "\"></div>";
         }
         rml += std::string("<div id=\"") + kHelpId + "\"></div>";
-        return rml + "</body></rml>";
+        return rml + "</body>";
+    }
+
+    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own)
+    {
+        return "<rml><head><style>" + BarStyle(look, place, own) + "</style></head>" + BarMarkup(look) + "</rml>";
     }
 
     std::string HelpBarRml(const HelpBarParts& parts, const BarLook& look, const BarTextPlace& place)
@@ -686,21 +713,29 @@ namespace headsup
                ";border-radius:" + Px(radius) + ";background-color:" + RcssColor(kSocketFill) + ";";
     }
 
-    std::string PopupDocument(const BarLook& look, const PopupFaces& faces)
+    std::string PopupScope(PanelWidget pill) { return "of-" + WidgetId(pill); }
+
+    std::string PopupStyle(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own)
     {
         const BoxStyle panel = PopupPanel(look);
-        std::string css = "body{display:block;width:100%;height:100%;pointer-events:none;z-index:10;}";
+        std::string css = "body{display:block;width:100%;height:100%;pointer-events:none;z-index:" + std::to_string(kPopupsZ) + ";}";
         css += "div{display:block;}";
         css += std::string(".") + kHiddenClass + "{display:none;}";
         // A popup drops in from its widget.
-        css += std::string(".") + kPopupClass + "{position:absolute;transform-origin:50% 0%;}";
+        // A popup takes the pointer in RmlUi, so a window under it gets no hover or press through it.
+        css += std::string(".") + kPopupClass + "{position:absolute;transform-origin:50% 0%;pointer-events:auto;}";
         css += std::string(".") + kPopupClass + "." + kOpenClass + "{animation:0.2s cubic-out drop-in;}";
         css += "@keyframes drop-in{from{opacity:0;transform:translateY(-10px) scale(0.96);}to{opacity:1;"
                "transform:translateY(0px) scale(1);}}";
         css += ".p{position:absolute;white-space:pre;}";
-        for (int f = 0; f < kPopupFontCount; ++f)
-            css += ".f" + std::to_string(f) + "{" + FaceRules(faces[f].family, faces[f].pixels, faces[f].line) +
-                   ShadowEffect(faces[f].pixels) + "}";
+        const auto faceRules = [&](const std::string& scope, const PopupFaces& each) {
+            for (int f = 0; f < kPopupFontCount; ++f)
+                css += scope + ".f" + std::to_string(f) + "{" + FaceRules(each[f].family, each[f].pixels, each[f].line) +
+                       ShadowEffect(each[f].pixels) + "}";
+        };
+        faceRules("", faces);
+        for (const PillFaces& pill : own)
+            faceRules("." + PopupScope(pill.pill) + " ", pill.faces);
         if (panel.outer != 0)
             css += "#outer{position:absolute;box-sizing:border-box;border:1px " + RcssColor(panel.outer) +
                    ";border-radius:" + Px(panel.radius + static_cast<float>(OuterPad(panel))) + ";}";
@@ -725,7 +760,12 @@ namespace headsup
             css += "#panel{background-color:transparent;decorator:vertical-gradient(" + RcssColor(kGlassTop) + " " +
                    RcssColor(kGlassFoot) + ");border-color:" + RcssColor(Faded(look.palette.accent, kGlassFrame)) + ";}";
         }
-        return "<rml><head><style>" + css + "</style></head><body></body></rml>";
+        return css;
+    }
+
+    std::string PopupDocument(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own)
+    {
+        return "<rml><head><style>" + PopupStyle(look, faces, own) + "</style></head><body></body></rml>";
     }
 
     std::string PopupRml(const PopupLayout& layout, const BarLook& look, const PopupFaces& faces)
@@ -741,8 +781,19 @@ namespace headsup
             rml += "<div id=\"outer\" style=\"left:" + Px(-out) + ";top:" + Px(-out) + ";" +
                    size(layout.width + 2.0f * out, layout.height + 2.0f * out) + "\"></div>";
         rml += "<div id=\"panel\" style=\"" + size(layout.width, layout.height) + "\"></div>";
+        // Previewed cards keep their places inside one box the popup's size, scaled about the title's foot and moved to
+        // the middle; the pieces come line by line, so every card's are in it.
+        bool boxed = false;
         for (const PopupPiece& piece : layout.pieces)
         {
+            if (layout.preview && !boxed && piece.line > 0)
+            {
+                boxed = true;
+                rml += std::string("<div class=\"p ") + kPreviewClass + "\" style=\"left:0px;top:0px;" +
+                       size(layout.width, layout.height) + "transform-origin:" + Px(look.metrics.popupPadding) + " " +
+                       Px(layout.preview->top) + ";transform:translateX(" + Px(layout.preview->shift) + ") scale(" +
+                       RcssNumber(layout.preview->scale) + ");\">";
+            }
             const std::string face  = "f" + std::to_string(static_cast<int>(piece.font));
             const uint32_t color    = look.PopupColor(piece.span);
             const std::string place = "left:" + Px(std::round(piece.x)) + ";top:" + Px(std::round(piece.y)) + ";";
@@ -835,6 +886,7 @@ namespace headsup
                 break;
             }
         }
+        if (boxed) rml += "</div>";
         return rml;
     }
 

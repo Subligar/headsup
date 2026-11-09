@@ -15,6 +15,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace headsup
@@ -98,6 +99,7 @@ namespace headsup
             std::array<WidgetContent, kPanelSlots> contents;
             std::array<bool, kPanelSlots> hasPopup{}; // a combined pill's first widget's when any of its widgets has one
             PanelGroups panel;                        // the panel as it is drawn, its widgets combined
+            std::array<std::optional<WidgetText>, kPanelSlots> text; // a widget's own, where its fonts or sizes are
         };
         // The help bar's text follows the game's, its fonts and their sizes, and the room its lines and its caption
         // have beside the bag's count.
@@ -143,27 +145,39 @@ namespace headsup
             const char* titleFont, const char* detailFont);
         Rows MakeRows(RmlHost& host, const BarMetrics& metrics, const char* titleFont, const char* detailFont,
             int helpText = kAutoBarTextSize);
+        // The same for a widget's own text, kept for each one asked for while it is asked for.
+        const Rows& OwnRowsFor(RmlHost& host, const BarMetrics& metrics, BarShape shape, float fontRatio,
+            const char* titleFont, const char* detailFont);
+        // The widgets with text of their own, as the document's rules, their content and their popups take it.
+        void OwnText(RmlHost& host, const BarLook& look, Widgets& widgets);
+        // The look a widget is measured and drawn in, and its pill's popup: the bar's, with its own text where it has some.
+        static BarLook LookOf(const BarLook& look, const Widgets& widgets, int slot);
         BarLinePlace PlaceLine(RmlHost& host, const char* family, int pixels, const char* glyphs, float top);
         // Builds the document again when what it is made from changed. False when RmlUi refused it.
-        bool Document(RmlHost& host, const BarLook& look, const BarTextPlace& place);
+        bool Document(RmlHost& host, const BarLook& look, const BarTextPlace& place, const Widgets& widgets);
         BarLayout PlaceWidgets(RmlHost& host, const BarLook& look, const BarState& state, float screenWidth,
-            Widgets& widgets);
+            std::optional<PanelWidget> settingsShown, Widgets& widgets);
         void ShowWidgets(const BarLook& look, const BarLayout& layout, const Widgets& widgets, const BarInput& input,
             float screenWidth);
-        // Game help's own bar under the top bar, from top and moved offsetX: where its box went (empty for none).
+        // Game help's own bar under the top bar, from top: where its box went (empty for none).
         // cut: its text was, so the bar has a popup with all of it.
         BarRect ShowHelpBar(RmlHost& host, const BarLook& look, const Rows& rows, const BarState& state, float top,
-            float offsetX, float screenWidth, bool& cut);
+            float screenWidth, bool& cut);
         // Places each popup the input shows in the host's overlay, the last on top, and hides the others: where each
         // went, with its cards' tabs and the parts that scroll at their places on the screen.
         std::vector<PopupPlace> ShowPopups(RmlHost& host, const BarLook& look, const BarState& state,
-            const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden);
+            const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
+            const Widgets& widgets);
         // One pill's popup, as ShowPopups places it, in its layer's document; nothing when its pill is not on the bar.
         std::optional<PopupPlace> ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-            PanelWidget open, PopupLayer layer);
-        bool PopupDocumentFor(RmlHost& host, const BarLook& look);
+            const Widgets& widgets, PanelWidget open, PopupLayer layer);
+        bool PopupDocumentFor(RmlHost& host, const BarLook& look, const Widgets& widgets);
+        // A look's popup faces, as RmlUi sets them.
+        PopupFaces FacesOf(RmlHost& host, const BarLook& look);
         void ClosePopup();
+        // What was measured and marked in the look before, done again in the new one: its style was swapped in place.
+        void ForgetLooks();
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);
 
         float Width(RmlHost& host, const std::string& text, const TextFace& face) const;
@@ -177,8 +191,9 @@ namespace headsup
 
         GdiText m_Gdi; // the bar's text rows are sized by GDI's ink, as the bar drawn with it is
         Memo<LinesKey, Rows> m_Rows;
+        std::vector<std::pair<LinesKey, Rows>> m_OwnRows, m_OwnRowsBefore; // this frame's, and the last frame's
         Rml::ElementDocument* m_Document = nullptr;
-        std::string m_DocumentText, m_StripSource; // what the document was built from, and its strip image
+        std::string m_DocumentText, m_StyleText, m_StripSource; // the document's markup and style, and its strip image
         bool m_Visible = false;
         std::array<Shown, kPanelSlots> m_Shown;
         std::array<Divider, kDividerCount> m_Dividers;
@@ -190,7 +205,7 @@ namespace headsup
         Memo<HelpBarKey, HelpBarFit> m_HelpBar;
         // The popups' documents, by PopupLayer.
         std::array<Rml::ElementDocument*, kPopupLayers> m_PopupDocuments{};
-        std::string m_PopupDocumentText;
+        std::string m_PopupStyleText;
         // Each pill's popup, by its first widget's SlotOf.
         struct Popup
         {
@@ -199,16 +214,16 @@ namespace headsup
             bool marked = false; // its markup is the layout's
             std::optional<float> left, top, width, height;
             Memo<PopupKey, PopupLayout> layout;
-            // The widest it has been since it opened, which it keeps as its text changes with the time; its content's
-            // or its settings' (settings), apart.
+            // The widest it has been since it opened, which it keeps as its text changes with the time; its content's,
+            // its settings' (settings) or its preview's beside them (preview), apart.
             bool shown = false, settings = false;
+            SettingsPreview preview = SettingsPreview::None;
             float widest = 0.0f;
             std::optional<float> keptX; // where across it opened under its widget, which it keeps while open
             // Each popup font's widths of the texts it measured, its figures at the font's widest digit.
             std::array<std::unordered_map<std::string, float>, kPopupFontCount> widths;
         };
         std::array<Popup, kPanelSlots> m_Popups;
-        PopupFaces m_PopupFaces;
         std::vector<FaceLine> m_FaceLines;
         Memo<FitKey, std::string> m_TitleFit, m_SubtitleFit;
         std::vector<FaceDigit> m_WidestDigits;

@@ -18,6 +18,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace headsup
 {
@@ -65,10 +66,25 @@ namespace headsup
         bool operator==(const BarTextPlace&) const = default;
     };
 
+    // A widget's own text, where its fonts or sizes are not the bar's: those fonts, its sizes, and the text row and
+    // places they come to.
+    struct WidgetText
+    {
+        PanelWidget widget;
+        const char* titleFont  = nullptr; // interned, as the bar's are
+        const char* detailFont = nullptr;
+        BarMetrics metrics{};
+        TextRow lines;
+        BarTextPlace place;
+    };
+
     // The bar's markup and style: the strip across the screen, the end caps when the settings show them, a divider
-    // for each pair of neighbours and every placed widget's element, all sized from the look. The widgets and dividers
-    // carry the hidden class and no place: the plugin shows and places them.
-    std::string BarDocument(const BarLook& look, const BarTextPlace& place);
+    // for each pair of neighbours and every placed widget's element, all sized from the look, with own's text rules
+    // and icon sizes under each one's widget. The widgets and dividers carry the hidden class and no place: the plugin
+    // shows and places them. Its style and its markup apart: a widget's own looks are all style, swapped in place.
+    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own = {});
+    std::string BarStyle(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own = {});
+    std::string BarMarkup(const BarLook& look);
     std::string WidgetId(PanelWidget widget);
     // A widget's margin and padding on one side as its element takes them, for a room from its edge to what it
     // shows: inside a pill's or a frame's border, or past a plain ornate widget's margin. A side it shares in a
@@ -85,7 +101,6 @@ namespace headsup
     constexpr const char* kHiddenClass = "hidden";
     constexpr const char* kLitClass    = "lit"; // hovered or open, with a popup
     constexpr const char* kTargetClass     = "target"; // the target's own frame and tint: off with Show Background off
-    constexpr const char* kFlatClass       = "flat"; // a pill shown only while lit
     constexpr const char* kBackedClass     = "backed"; // showing its pill or tint while not lit (Show Background)
     // Shares its pill with the widget before it, or after it, and has no edge or round corners on that side.
     constexpr const char* kJoinBeforeClass = "join-before";
@@ -128,14 +143,27 @@ namespace headsup
     constexpr float kPercentWhole = 100.0f; // a share's whole, as RCSS percentages count it
     constexpr int kPopupFontCount = static_cast<int>(PopupFont::Pin) + 1;
     using PopupFaces = std::array<PopupFace, kPopupFontCount>;
-    // The popups' document: an empty popup over the whole screen that takes no clicks, styled from the look.
-    std::string PopupDocument(const BarLook& look, const PopupFaces& faces);
+    // A pill's popup's own faces, by the pill's first widget, where its fonts or Pop-out Text Scale are its own.
+    struct PillFaces
+    {
+        PanelWidget pill;
+        PopupFaces faces;
+    };
+    // The class of a pill's popup's element, which its own faces are under.
+    std::string PopupScope(PanelWidget pill);
+    // The popups' document: an empty popup over the whole screen that takes no clicks, styled from the look, its text
+    // in faces but where a pill's popup has its own. Its markup is the same for every look: only its style changes.
+    std::string PopupDocument(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own = {});
+    std::string PopupStyle(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own = {});
     // Sunk into what holds it: darker, its upper edges in shadow and its lower ones lit.
     std::string SocketRules(float radius);
     // The panel's text shadow as a font effect, for text of that many pixels.
     std::string ShadowEffect(int pixels);
     constexpr const char* kOpenClass = "open"; // on a popup while it shows, so what it does as it opens plays each time
     constexpr const char* kPopupClass = "popup"; // each pill's popup's element
+    constexpr const char* kPreviewClass = "preview"; // the box a pop-out's previewed cards are drawn scaled in
+    // The source the overlay loads the popups' documents from: the pointer over them is the bar's.
+    constexpr const char* kPopupDocumentName = "top panel popup";
     // A laid out popup's markup, from its top left corner: its panel, then each piece where the layout put it.
     std::string PopupRml(const PopupLayout& layout, const BarLook& look, const PopupFaces& faces);
 }

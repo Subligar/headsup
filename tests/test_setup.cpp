@@ -207,7 +207,8 @@ TEST(the_widget_groups_hold_every_widget_once)
     for (const SetupWidgetGroup& group : SetupWidgetGroups())
         for (BarWidget widget : group.widgets)
             CHECK(seen.insert(widget).second);
-    CHECK_EQ(seen.size(), static_cast<size_t>(kBarWidgetCount));
+    CHECK(!seen.contains(BarWidget::Custom)); // none is there until you make one
+    CHECK_EQ(seen.size(), static_cast<size_t>(kBarWidgetCount - 1));
 }
 
 TEST(a_widget_turned_off_takes_its_copies_with_it_and_turned_on_shows_its_first)

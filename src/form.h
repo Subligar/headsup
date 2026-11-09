@@ -86,9 +86,13 @@ namespace headsup
     // own tag held, which would leave its place.
     constexpr const char* kGhostClass    = "ghost";
     constexpr const char* kGhostSlotClass = "ghost-slot", *kGhostTextClass = "ghost-text"; // its place, and the letters before it
-    // A Widget Designer line: a drop on it but on none of its buttons goes before the button after the pointer, or on
-    // its end.
+    // A Widget Designer line: a drop on it goes before the button whose left half the pointer is on, or the one after
+    // the pointer, or on its end.
     constexpr const char* kDesignLineClass = "design-line", *kDesignChipClass = "dchip";
+    // The Pop-out Designer's lists of cards to drag in, and the words in its empty row.
+    constexpr const char* kPaletteClass = "palette", *kHintClass = "hint";
+    // A Widget Layout tray: a drop on it goes above the button whose top half the pointer is on, or the first under it.
+    constexpr const char* kWidgetTrayClass = "widget-tray", *kTrayChipClass = "wtwo";
     // On a stretch split by a held tag: the bytes of it that stand before the tag, which it does not show.
     constexpr const char* kSplitAttribute = "split";
     constexpr const char* kReplacedClass = "replaced";
@@ -259,8 +263,8 @@ namespace headsup
             std::string heading;
             std::vector<std::string> rows, tips;
         };
-        void GroupedDropdown(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown,
-            const char* tip);
+        // Inside a row the caller opens, so other controls can sit before it.
+        void GroupedDropdownAt(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown);
         // A dropdown whose rows, and the closed control, show RML of the page's own where the others show words.
         void MarkupDropdown(const char* label, int& value, const std::vector<std::string>& rows, const char* tip,
             const OptionTip& option = {});

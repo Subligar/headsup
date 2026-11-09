@@ -36,7 +36,8 @@ TEST(the_default_placement_is_todays_bar_with_every_widget_once)
         int seen = 0;
         for (const List& section : d)
             seen += static_cast<int>(std::count(section.begin(), section.end(), static_cast<BarWidget>(w)));
-        CHECK_EQ(seen, OnTheBar(static_cast<BarWidget>(w)) ? 1 : 0); // Game help has its own bar
+        // Game help has its own bar, and a created widget is on it only once made.
+        CHECK_EQ(seen, OnTheBar(static_cast<BarWidget>(w)) && static_cast<BarWidget>(w) != BarWidget::Custom ? 1 : 0);
         CHECK(BarWidgetName(static_cast<BarWidget>(w)) != nullptr);
     }
 }
@@ -194,4 +195,57 @@ TEST(a_combined_widget_names_its_partner_as_the_settings_file_does)
     CHECK(PanelWidgetNamed("party") == std::optional<PanelWidget>(BarWidget::Party));
     CHECK(PanelWidgetNamed("world:3") == std::optional<PanelWidget>(PanelWidget{BarWidget::World, 2}));
     CHECK(!PanelWidgetNamed("") && !PanelWidgetNamed("target:2") && !PanelWidgetNamed("nothing"));
+}
+
+TEST(every_copy_of_every_widget_has_a_slot_of_its_own)
+{
+    std::vector<bool> taken(kPanelSlots);
+    for (int w = 0; w < kBarWidgetCount; ++w)
+        for (int copy = 0; copy < CopiesOf(static_cast<BarWidget>(w)); ++copy)
+        {
+            const PanelWidget widget{static_cast<BarWidget>(w), copy};
+            const int slot = SlotOf(widget);
+            CHECK(slot >= 0 && slot < kPanelSlots && !taken[static_cast<size_t>(slot)]);
+            taken[static_cast<size_t>(slot)] = true;
+            CHECK(WidgetInSlot(slot) == widget);
+        }
+    CHECK(std::ranges::all_of(taken, [](bool t) { return t; }));
+    CHECK_EQ(CopiesOf(BarWidget::Custom), kMostCreatedWidgets);
+}
+
+TEST(a_created_widget_goes_at_the_right_sections_end_with_the_lowest_number_free_up_to_the_most)
+{
+    BarPlacement p = DefaultPlacement();
+    for (const List& section : p)
+        CHECK(std::ranges::none_of(section, [](PanelWidget w) { return w.kind == BarWidget::Custom; }));
+    CHECK(AddCreated(p) == (PanelWidget{BarWidget::Custom, 0}));
+    CHECK(In(p, kRight).back() == (PanelWidget{BarWidget::Custom, 0}));
+    MoveWidget(p, kRight, In(p, kRight).size() - 1, kLeft, 0);
+    CHECK(AddCreated(p) == (PanelWidget{BarWidget::Custom, 1}));
+    CHECK(In(p, kRight).back() == (PanelWidget{BarWidget::Custom, 1})); // not after the first, which moved
+    // Every created widget can be taken off, its number given again.
+    CHECK(RemoveCopy(p, PanelWidget{BarWidget::Custom, 0}) && !Placed(p, PanelWidget{BarWidget::Custom, 0}));
+    CHECK(AddCreated(p) == (PanelWidget{BarWidget::Custom, 0}));
+    while (AddCreated(p)) {}
+    for (int copy = 0; copy < kMostCreatedWidgets; ++copy)
+        CHECK(Placed(p, PanelWidget{BarWidget::Custom, copy}));
+    // A clone of one goes after the last of them, as any copy does, while there is room.
+    CHECK(RemoveCopy(p, PanelWidget{BarWidget::Custom, 5}));
+    CHECK(AddCopy(p, BarWidget::Custom) == (PanelWidget{BarWidget::Custom, 5}));
+    CHECK(!AddCopy(p, BarWidget::Custom));
+}
+
+TEST(created_widgets_read_back_by_their_numbers_past_nine)
+{
+    CHECK(PanelWidgetNamed("custom") == std::optional(PanelWidget{BarWidget::Custom, 0}));
+    CHECK(PanelWidgetNamed("custom:20") == std::optional(PanelWidget{BarWidget::Custom, kMostCreatedWidgets - 1}));
+    CHECK(PanelWidgetName(PanelWidget{BarWidget::Custom, 11}) == "custom:12");
+    CHECK(!PanelWidgetNamed("custom:21") && !PanelWidgetNamed("custom:1") && !PanelWidgetNamed("gil:12") &&
+          !PanelWidgetNamed("custom:2x"));
+    BarPlacement p = DefaultPlacement();
+    for (int i = 0; i < 12; ++i)
+        AddCreated(p);
+    const std::array<std::string, kBarSectionCount> names{PlacementNames(In(p, kLeft)), PlacementNames(In(p, kCenter)),
+        PlacementNames(In(p, kRight))};
+    CHECK(PlacementFrom(names) == p);
 }

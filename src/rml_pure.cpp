@@ -168,6 +168,11 @@ namespace headsup
 
     float WheelNotches(int delta) { return -static_cast<float>(delta) / static_cast<float>(kWheelDelta); }
 
+    size_t ColumnSlotAt(std::span<const float> middles, float y)
+    {
+        return static_cast<size_t>(std::ranges::upper_bound(middles, y) - middles.begin());
+    }
+
     size_t ByteUnder(std::string_view text, float x, FunctionRef<float(std::string_view)> widthOf)
     {
         size_t nearest = 0;

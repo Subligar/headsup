@@ -77,6 +77,10 @@ TEST(image_names_round_trip_to_their_images)
         CHECK_EQ(mark->argb[5 * 10] == 0xFFC9A24Au, std::string(kind) == "dash"); // the left edge's middle
         CHECK_EQ(mark->argb[0], 0u);                                             // a corner is clear
     }
+    // None draws no mark in the separator's room.
+    const std::optional<Image> blank = HostImage(SeparatorSource(DashMark::Blank, 0xFFC9A24Au, 10));
+    CHECK(blank && blank->width == 10 && blank->height == 10);
+    CHECK(std::ranges::all_of(blank->argb, [](uint32_t pixel) { return pixel == 0u; }));
     CHECK(!HostImage("hu:stars/ffc9a24a/10"));
     CHECK(!HostImage("hu:coin/17")); // gil is XIUI's picture, no longer a painted coin
     CHECK(!HostImage("hu:icon/999") && !HostImage("hu:nothing") && !HostImage("icon.png") && !HostImage("hu:strip/9/45/13"));
@@ -102,10 +106,11 @@ TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
     CHECK(Has(rml, "height:59px")); // those, and the gold theme's line under the strip
     CHECK(Has(rml, "id=\"w-zone\"") && Has(rml, "id=\"w-target\"") && Has(rml, "id=\"w-earthTime\""));
     CHECK(!Has(rml, "id=\"w-gameHelp\"")); // never on the bar
-    // A divider between each two of the most widgets there can be: the target, and four copies of each of the rest.
+    // A divider between each two of the most widgets there can be: the target, every created widget, and four copies of
+    // each of the rest.
     CHECK(Has(rml, "id=\"d-0\"") && Has(rml, ("id=\"d-" + std::to_string(kDividerCount - 1) + "\"").c_str()) &&
           !Has(rml, ("id=\"d-" + std::to_string(kDividerCount) + "\"").c_str()));
-    CHECK_EQ(kDividerCount, 1 + (kBarWidgetCount - 2) * kMostCopies - 1); // game help is not on the bar
+    CHECK_EQ(kDividerCount, 1 + kMostCreatedWidgets + (kBarWidgetCount - 3) * kMostCopies - 1); // game help is not on the bar
     CHECK(Has(rml, "id=\"w-gil-2\"") && Has(rml, "id=\"w-gil-4\"") && !Has(rml, "id=\"w-gil-5\""));
     CHECK(!Has(rml, "id=\"w-target-2\"")); // one target only
     CHECK(Has(rml, "class=\"widget hidden target\" id=\"w-target\""));
@@ -154,14 +159,13 @@ TEST(a_pill_theme_frames_each_widget_and_its_caps_follow_the_settings)
     Settings settings;
     CHECK(Has(BarDocument(LookOf(BarTheme::UmbraDark, settings), Place()), "cap-right\" src"));
     settings.panelSeparators = SeparatorBit(Separator::Between);
-    const std::string rml = BarDocument(LookOf(BarTheme::UmbraDark, settings), Place());
+    const std::string rml    = BarDocument(LookOf(BarTheme::UmbraDark, settings), Place());
     CHECK(Has(rml, "<body class=\"pills\">") && !Has(rml, "cap-right\" src"));
-    // 0.17 H corners, the pill's fill and edge.
-    CHECK(Has(rml, ".pills .widget{background-color:#222226ff;border-color:#3a3a42ff;border-radius:7.65px;}"));
-    CHECK(Has(rml, ".pills .widget.flat{background-color:transparent;border-color:transparent;}"));
+    // Without its Show Background a widget has no pill until lit; with it, 0.17 H corners, the pill's fill and edge.
+    CHECK(Has(rml, ".pills .widget{background-color:transparent;border-color:transparent;}"));
+    CHECK(Has(rml, ".pills .widget.backed{background-color:#222226ff;border-color:#3a3a42ff;border-radius:7.65px;}"));
     CHECK(Has(rml, ".pills .widget.lit{background-color:#2a2a30ff;border-color:#5b8defff;"));
-    CHECK(Has(rml, "class=\"widget hidden flat\" id=\"w-zone\"")); // zone and Earth time show no pill until lit
-    CHECK(Has(rml, "class=\"widget hidden\" id=\"w-weather\""));
+    CHECK(Has(rml, "class=\"widget hidden\" id=\"w-zone\""));
     CHECK(Has(rml, "hu:diamond/ff5b8def/10")); // a pill theme's dividers take the accent
     CHECK(Has(rml, "height:58px")); // no line under this strip
 }
@@ -186,7 +190,8 @@ TEST(a_widgets_icon_on_the_right_comes_after_its_lines_and_a_picture_is_drawn_as
 
 TEST(a_widgets_lines_line_up_with_the_side_of_the_panel_its_section_is_on)
 {
-    const BarLook look    = LookOf(BarTheme::UmbraDark, Settings{});
+    const Settings settings;
+    const BarLook look    = LookOf(BarTheme::UmbraDark, settings);
     const std::string css = BarDocument(look, Place());
     const auto rule = [&](BarSection section) {
         return std::string(".widget.") + SectionClass(section) + " .text{text-align:";
@@ -369,6 +374,35 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     CHECK(!Has(pills, "id=\"outer\""));
 }
 
+TEST(a_previewed_pop_outs_cards_are_drawn_in_one_box_scaled_about_the_titles_foot_and_shifted_beside_the_settings)
+{
+    Settings settings;
+    const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
+    PopupLayout layout;
+    layout.width = 220.0f, layout.height = 120.0f;
+    PopupPiece title;
+    title.kind = PopupPiece::Kind::Text, title.x = 16.0f, title.y = 16.0f, title.width = 80.0f, title.height = 24.0f;
+    title.span = Text("Mule"), title.font = PopupFont::Title;
+    PopupPiece card;
+    card.kind = PopupPiece::Kind::Card, card.x = 16.0f, card.y = 48.0f, card.width = 100.0f, card.height = 60.0f, card.line = 1;
+    PopupPiece value = title;
+    value.span = Text("50%"), value.font = PopupFont::Text, value.y = 60.0f, value.line = 1;
+    layout.pieces  = {title, card, value};
+    layout.preview = PopupPreview{0.5f, 44.0f, 35.0f};
+    const PopupFaces faces{};
+    const std::string rml = PopupRml(layout, look, faces);
+    const std::string box = std::string("<div class=\"p ") + kPreviewClass + "\" style=\"left:0px;top:0px;width:220px;height:120px;transform-origin:" +
+                            Px(look.metrics.popupPadding) + " " + Px(44.0f) + ";transform:translateX(" + Px(35.0f) + ") scale(" +
+                            RcssNumber(0.5f) + ");\">";
+    const size_t at = rml.find(box);
+    CHECK(at != std::string::npos && rml.find("Mule") < at && rml.find("class=\"p card\"") > at && rml.find("50%") > at);
+    CHECK(rml.ends_with("</div></div>")); // the value's own close, then the box's
+    // Without a preview, no box: the pieces as before.
+    layout.preview.reset();
+    const std::string plain = PopupRml(layout, look, faces);
+    CHECK(plain.find(kPreviewClass) == std::string::npos && !plain.ends_with("</div></div>"));
+}
+
 TEST(the_popup_document_styles_its_faces_and_boxes_from_the_look)
 {
     Settings settings;
@@ -468,7 +502,7 @@ TEST(every_theme_eases_breathes_and_pulses_in_its_own_colors)
         CHECK(Has(rml, "@keyframes pulse{from{opacity:0.65;}to{opacity:1;}}"));
         // A popup drops in from its widget.
         const std::string popup = PopupDocument(look, faces);
-        CHECK(Has(popup, ".popup{position:absolute;transform-origin:50% 0%;}"));
+        CHECK(Has(popup, ".popup{position:absolute;transform-origin:50% 0%;pointer-events:auto;}"));
         CHECK(Has(popup, ".popup.open{animation:0.2s cubic-out drop-in;}"));
         CHECK(Has(popup, "@keyframes drop-in{from{opacity:0;transform:translateY(-10px) scale(0.96);}to{opacity:1;"
                          "transform:translateY(0px) scale(1);}}"));
@@ -637,9 +671,10 @@ TEST(a_span_of_a_game_picture_draws_that_picture_as_tall_as_its_letters_from_wha
 TEST(a_side_shared_in_a_combined_pill_keeps_its_text_where_it_was_and_draws_no_edge)
 {
     constexpr float kRoom = 9.0f;
+    const Settings settings;
     for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark, BarTheme::Aurora})
     {
-        const BarLook look = LookOf(theme, Settings{});
+        const BarLook look = LookOf(theme, settings);
         const std::string css = BarDocument(look, Place());
         for (const BarWidget kind : {BarWidget::Zone, BarWidget::Currency})
         {

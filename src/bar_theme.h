@@ -29,6 +29,7 @@ namespace headsup
     constexpr int kBarBackgroundCount = static_cast<int>(BarBackground::Window) + 1;
     constexpr int kWindowTypes      = 8; // the game's, in Config > Windows > Shared
     constexpr int kFollowGameWindow = 0; // a Window Type setting's: the type the game is set to, where 1 to 8 pin one
+    constexpr uint32_t kVanillaPill = 0x32000000; // Vanilla's pills, art read or not: black at an alpha of 50 of 255
 
     // D3DCOLORs (ARGB); 0 is none.
     struct BarPalette
@@ -48,8 +49,8 @@ namespace headsup
         BarBackground background = BarBackground::Gradient; // Plain is stripTop alone
         int windowType    = kFollowGameWindow; // the art's, for the Window background
         DashMark separator = DashMark::Diamond; // the panel's separators, and what a nameplate's dash is drawn as
-        int statusIcons = kVanillaStatusIcons;  // the game's status icons or a pack's
-        bool statusBack = false;                // a buff's or debuff's background behind each status icon
+        int statusIcons = kHdStatusIcons;       // the game's status icons or a pack's
+        bool statusBack = true;                 // a buff's or debuff's background behind each status icon
         BarTheme parent    = BarTheme::PhoenixGold; // a custom theme's: the built-in one it was first copied from
         bool operator==(const BarPalette&) const = default;
     };
@@ -71,7 +72,7 @@ namespace headsup
         {"TagText", &BarPalette::tagText}, {"Highlight", &BarPalette::highlight}};
     inline constexpr const char* kBarShapeNames[kBarShapeCount] = {"ornate", "pills", "glass", "window"};
     inline constexpr const char* kBarBackgroundNames[kBarBackgroundCount] = {"plain", "gradient", "window"};
-    inline constexpr const char* kDashMarkNames[kDashMarkCount] = {"no", "dot", "square", "diamond"};
+    inline constexpr const char* kDashMarkNames[kDashMarkCount] = {"no", "dot", "square", "diamond", "blank"};
     inline constexpr const char* kBarThemeNames[kBarThemeCount] = {"phoenixGold", "umbraDark", "phoenixRedOrnate", "aurora",
         "custom", "gameWindow"};
 

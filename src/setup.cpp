@@ -241,7 +241,7 @@ namespace headsup
             return;
         }
         s.Widget(PanelWidget{widget}).on = false;
-        for (int copy = 1; copy < kMostCopies; ++copy)
+        for (int copy = 0; copy < CopiesOf(widget); ++copy)
             RemoveWidgetCopy(s, PanelWidget{widget, copy});
     }
 

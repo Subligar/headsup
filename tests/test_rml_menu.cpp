@@ -87,6 +87,7 @@ namespace
                 m_Readings.settingsOf = shown ? PillSettings(settings, *shown) : std::vector<PanelWidget>{};
                 const std::optional<SettingsRoom> room = menu.RoomFor(m_Readings.settingsOf, settings);
                 menu.settingsAt = room ? std::optional(BarRect{kSettingsX, kSettingsY, room->width, kSettingsHeight}) : std::nullopt;
+                m_Readings.skin = m_Host.skin ? &*m_Host.skin : nullptr;
                 changed = menu.Update(m_Host, settings, m_Readings, m_Fonts, kVersion) || changed;
                 if (const std::optional<PanelWidget> asked = menu.TakeSettingsAsked())
                 {
@@ -609,8 +610,9 @@ TEST(a_dash_mark_is_shown_as_its_shape_in_the_list_and_in_the_closed_control)
     CHECK_EQ(shape(list), 1u); // the diamond a new install draws, on the control itself
     window.Click(list);
     CHECK_EQ(shape(list + "-o-0"), 0u); // no mark: a dash stays a dash
-    for (int mark = 1; mark < kDashMarkCount; ++mark)
-        CHECK_EQ(shape(list + "-o-" + std::to_string(mark)), 1u);
+    for (const DashMark mark : {DashMark::Dot, DashMark::Square, DashMark::Diamond})
+        CHECK_EQ(shape(list + "-o-" + std::to_string(static_cast<int>(mark))), 1u);
+    CHECK_EQ(shape(list + "-o-" + std::to_string(static_cast<int>(DashMark::Blank))), 0u); // None: a name, no mark
     window.Click(list + "-o-0");
     CHECK_EQ(shape(list), 0u);
 }
@@ -1384,7 +1386,7 @@ TEST(every_control_of_every_page_takes_a_click_and_the_window_stands)
         {
             window.Page(page.key);
             const std::vector<std::string> ids = window.Clickable();
-            CHECK(!ids.empty());
+            CHECK(ids.empty() == (page.cardCount == 0));
             for (const std::string& id : ids)
             {
                 // A click may fold a card or change a tab, and take later controls away with it.
@@ -1648,6 +1650,21 @@ TEST(the_window_takes_its_opacity_once_as_a_whole_and_never_more_than_its_settin
     CHECK_EQ(window.Said(), "");
 }
 
+TEST(a_slider_given_its_value_never_writes_it_back_over_a_newer_one)
+{
+    Window window;
+    window.Page("configmenu");
+    // A slider set to a setting changed outside the window says so; the setting changing again before the next frame
+    // must not take that back.
+    window.settings.menuOpacity = 60;
+    CHECK(!window.Frames());
+    window.settings.menuOpacity = 70;
+    CHECK(!window.Frames(2));
+    CHECK_EQ(window.settings.menuOpacity, 70);
+    auto* slider = rmlui_dynamic_cast<Rml::ElementFormControl*>(window.Find("configmenu-settings-window-window-opacity"));
+    CHECK(slider != nullptr && std::strtof(slider->GetValue().c_str(), nullptr) == 70.0f);
+}
+
 TEST(a_setting_of_something_switched_off_is_not_shown)
 {
     Window window;
@@ -1667,6 +1684,42 @@ TEST(a_setting_of_something_switched_off_is_not_shown)
     window.settings.enabled = false;
     window.Frames(2);
     CHECK(!window.Shows("entities-target-cursor-head") && !window.Shows(least));
+}
+
+TEST(deleting_a_custom_theme_that_differs_from_its_theme_goes_back_to_that_theme_and_its_looks)
+{
+    Window window(BarTheme::Custom);
+    window.settings.customThemeName = "Dusk";
+    window.settings.customPalette   = PaletteOf(BarTheme::Aurora);
+    window.settings.customPalette.parent      = BarTheme::Aurora;
+    window.settings.customPalette.border      = PaletteOf(BarTheme::Aurora).border + 2;
+    window.settings.customPalette.rounding    = PaletteOf(BarTheme::Aurora).rounding + 3;
+    window.settings.customPalette.statusIcons = kVanillaStatusIcons;
+    window.settings.customPalette.statusBack  = !PaletteOf(BarTheme::Aurora).statusBack;
+    window.settings.customPalette.separator   = DashMark::Dot;
+    window.settings.customPalette.panelTop    = 0x40102030u;
+    window.Page("theme");
+    CHECK(window.Click("theme-theme-look-theme-delete"));
+    CHECK_EQ(window.menu.TakeThemeDelete().value_or(""), std::string("Dusk"));
+    window.Frames(5);
+    CHECK(window.settings.barTheme == BarTheme::Aurora);
+    CHECK(!window.menu.TakeThemeDelete());
+    CHECK(OwnPalette(window.settings) == PaletteOf(BarTheme::Aurora));
+}
+
+TEST(a_custom_themes_pencil_puts_its_name_in_a_box_with_the_keyboard_and_enter_renames_it_and_brings_back_the_list)
+{
+    Window window(BarTheme::Custom);
+    window.settings.customThemeName = "Dusk";
+    window.Page("theme");
+    CHECK(window.Shows("theme-theme-look-theme") && !window.Shows("theme-theme-look-theme-name"));
+    window.Click("theme-theme-look-theme-rename");
+    CHECK(window.Focused() != nullptr && window.Focused()->GetId() == "theme-theme-look-theme-name");
+    window.Type("2");
+    window.Key(Rml::Input::KI_RETURN);
+    CHECK_EQ(window.menu.TakeThemeRename().value_or(""), std::string("Dusk2"));
+    window.Frames(3);
+    CHECK(window.Shows("theme-theme-look-theme") && !window.Shows("theme-theme-look-theme-name"));
 }
 
 TEST(the_game_window_theme_draws_the_window_in_the_art_and_its_colors)
@@ -1947,6 +2000,25 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     CHECK_EQ(window.Said(), "");
 }
 
+TEST(a_created_widgets_edit_choice_tells_its_popup_to_keep_its_cards_and_a_built_ins_never)
+{
+    Window window;
+    const PanelWidget made = *CreateWidget(window.settings);
+    window.shown           = made;
+    window.Frames(2);
+    const std::string slot = std::to_string(SlotOf(made));
+    CHECK(window.menu.RoomFor({made}, window.settings)->preview == SettingsPreview::None);
+    CHECK(window.Shows("toppanel-widgets-part-" + slot + "-end-0") && !window.Shows("toppanel-widgets-card-" + slot + "-end-0"));
+    CHECK(!window.Click("toppanel-widgets-edit-custom-s-1")); // no setting changed
+    CHECK(window.menu.RoomFor({made}, window.settings)->preview == SettingsPreview::Cards);
+    CHECK(window.menu.RoomFor({PanelWidget{BarWidget::Zone}, made}, window.settings)->preview == SettingsPreview::Cards);
+    CHECK(window.menu.RoomFor({PanelWidget{BarWidget::Zone}}, window.settings)->preview == SettingsPreview::None);
+    CHECK(window.Shows("toppanel-widgets-card-" + slot + "-end-0") && !window.Shows("toppanel-widgets-part-" + slot + "-end-0"));
+    CHECK(!window.Click("toppanel-widgets-edit-custom-s-0"));
+    CHECK(window.menu.RoomFor({made}, window.settings)->preview == SettingsPreview::None);
+    CHECK_EQ(window.Said(), "");
+}
+
 TEST(the_currency_dropdowns_show_each_currencys_picture_left_of_its_name_in_a_column)
 {
     Window window;
@@ -1971,6 +2043,22 @@ TEST(the_currency_dropdowns_show_each_currencys_picture_left_of_its_name_in_a_co
         CHECK(nameX(row("gil")) > row("gil")->GetFirstChild()->GetAbsoluteOffset(Rml::BoxArea::Border).x);
         window.Click(list); // closes it
     }
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(the_inventorys_two_bag_dropdowns_each_pick_their_own_bag_in_the_lists_order)
+{
+    Window window;
+    window.Page("toppanel");
+    window.Click("toppanel-layout-chip-" + std::to_string(SlotOf(BarWidget::Bags)));
+    const WidgetOptions& o = window.settings.Widget(BarWidget::Bags);
+    const int second = o.secondBag;
+    window.Click("toppanel-widgets-bag-1-bags");
+    CHECK(window.Click("toppanel-widgets-bag-1-bags-o-1"));
+    CHECK(o.bag == kStorage && o.secondBag == second);
+    window.Click("toppanel-widgets-bag-2-bags");
+    CHECK(window.Click("toppanel-widgets-bag-2-bags-o-3"));
+    CHECK(o.bag == kStorage && o.secondBag == kMogSafe2);
     CHECK_EQ(window.Said(), "");
 }
 
@@ -2368,7 +2456,7 @@ TEST(a_designer_button_dropped_in_the_gap_between_two_buttons_goes_between_them)
     window.Frames(3);
     Rml::ElementList lines;
     window.Find(kMenuViewBodyId)->GetElementsByClassName(lines, "design-line");
-    CHECK(lines.size() == 2);
+    CHECK_EQ(lines.size(), 2u); // the Widget Designer's two lines: a built-in widget has no Pop-out Designer
     std::vector<Rml::Element*> top;
     for (int i = 0; i < lines[0]->GetNumChildren(); ++i)
         if (lines[0]->GetChild(i)->IsClassSet("dchip")) top.push_back(lines[0]->GetChild(i));
@@ -2383,5 +2471,169 @@ TEST(a_designer_button_dropped_in_the_gap_between_two_buttons_goes_between_them)
     const Rml::Vector2f gap{(gapLeft + gapRight) / 2.0f, window.Center(top[0]->GetId()).y};
     CHECK(window.Drag(percent->GetId(), gap - window.Center(percent->GetId())));
     window.Frames(2);
-    CHECK_EQ(DesignText(window.settings.Widget(job).design), "jobs percent earned tonext | bar");
+    CHECK_EQ(DesignText(BarWidget::Job, window.settings.Widget(job).design), "jobs percent earned tonext | bar");
+}
+
+TEST(a_widget_dropped_on_a_buttons_bottom_half_goes_below_it_on_its_top_half_above_and_in_a_gap_between)
+{
+    const auto chip = [](PanelWidget w) { return "toppanel-layout-chip-" + std::to_string(SlotOf(w)); };
+    // The tray's first three buttons in view.
+    const auto opened = [&](Window& window) {
+        window.Page("toppanel");
+        const std::vector<PanelWidget> left = window.settings.barSections[static_cast<int>(BarSection::Left)];
+        CHECK(left.size() >= 3);
+        window.Center(chip(left[0]));
+        window.Center(chip(left[2]));
+        return left;
+    };
+    // The place share of the way down a button, at its middle across.
+    const auto place = [&](Window& window, PanelWidget w, float share) {
+        Rml::Element* e = window.Find(chip(w));
+        return Rml::Vector2f(e->GetAbsoluteOffset(Rml::BoxArea::Border).x + e->GetBox().GetSize(Rml::BoxArea::Border).x / 2.0f,
+            e->GetAbsoluteOffset(Rml::BoxArea::Border).y + share * e->GetBox().GetSize(Rml::BoxArea::Border).y);
+    };
+    const auto order = [](const std::vector<PanelWidget>& was, const std::vector<PanelWidget>& now) {
+        std::vector<size_t> indices;
+        for (size_t i = 0; i < 3; ++i)
+            indices.push_back(static_cast<size_t>(std::ranges::find(was, now[i]) - was.begin()));
+        return indices;
+    };
+    const auto drop = [&](size_t from, size_t onto, float share) {
+        Window window;
+        const std::vector<PanelWidget> left = opened(window);
+        const Rml::Vector2f start = place(window, left[from], 0.5f);
+        CHECK(window.DragFrom(start, place(window, left[onto], share) - start));
+        return order(left, window.settings.barSections[static_cast<int>(BarSection::Left)]);
+    };
+    using Order = std::vector<size_t>;
+    CHECK(drop(0, 2, 0.75f) == (Order{1, 2, 0})); // the bottom half: below it
+    CHECK(drop(0, 2, 0.25f) == (Order{1, 0, 2})); // the top half: above it
+    CHECK(drop(2, 0, 0.75f) == (Order{0, 2, 1}));
+    CHECK(drop(2, 0, 0.25f) == (Order{2, 0, 1}));
+    // The gap between the first and second buttons.
+    Window window;
+    const std::vector<PanelWidget> left = opened(window);
+    const Rml::Vector2f below = place(window, left[0], 1.0f), above = place(window, left[1], 0.0f);
+    CHECK(above.y - below.y >= 2.0f);
+    const Rml::Vector2f start = place(window, left[2], 0.5f);
+    CHECK(window.DragFrom(start, (below + above) / 2.0f - start));
+    CHECK(order(left, window.settings.barSections[static_cast<int>(BarSection::Left)]) == (Order{0, 2, 1}));
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(a_designer_button_dropped_on_a_buttons_right_half_goes_after_it)
+{
+    Window window;
+    const PanelWidget job{BarWidget::Job};
+    window.settings.Widget(job).on     = true;
+    window.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs earned tonext | percent bar");
+    window.shown = job;
+    window.Frames(3);
+    Rml::ElementList lines;
+    window.Find(kMenuViewBodyId)->GetElementsByClassName(lines, "design-line");
+    CHECK_EQ(lines.size(), 2u); // the Widget Designer's two lines: a built-in widget has no Pop-out Designer
+    Rml::Element* jobs = lines[0]->GetChild(0);
+    Rml::Element* bar  = lines[1]->GetChild(1);
+    CHECK(jobs->IsClassSet("dchip") && bar->IsClassSet("dchip"));
+    const Rml::Vector2f at{jobs->GetAbsoluteOffset(Rml::BoxArea::Border).x + 0.8f * jobs->GetBox().GetSize(Rml::BoxArea::Border).x,
+        window.Center(jobs->GetId()).y};
+    CHECK(window.Drag(bar->GetId(), at - window.Center(bar->GetId())));
+    window.Frames(2);
+    CHECK_EQ(DesignText(BarWidget::Job, window.settings.Widget(job).design), "jobs bar earned tonext | percent");
+}
+
+TEST(a_created_widgets_listed_button_dragged_onto_a_line_goes_in_and_one_dragged_off_the_lines_goes_back)
+{
+    Window window;
+    const PanelWidget made = *CreateWidget(window.settings);
+    window.shown = made;
+    window.Frames(3);
+    const std::string slot = std::to_string(SlotOf(made));
+    const auto part   = [&](const char* start, WidgetPart p) { return "toppanel-widgets-" + std::string(start) + "-" + slot + "-" + std::to_string(static_cast<int>(p)); };
+    const auto design = [&] { return DesignText(BarWidget::Custom, window.settings.Widget(made).design); };
+    CHECK(window.Drag(part("lpart", WidgetPart::ZoneName), "toppanel-widgets-part-" + slot + "-end-1"));
+    CHECK_EQ(design(), "name | zone.name");
+    CHECK(window.Drag(part("part", WidgetPart::ZoneName), part("lpart", WidgetPart::ZoneCrest)));
+    CHECK_EQ(design(), "name |");
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(a_pop_out_designer_card_dropped_on_a_card_goes_beside_it_on_the_empty_row_makes_one_and_off_the_rows_leaves)
+{
+    Window window;
+    const PanelWidget made = *CreateWidget(window.settings);
+    window.shown = made;
+    window.Frames(3);
+    window.Click("toppanel-widgets-edit-custom-s-1");
+    const std::string slot = std::to_string(SlotOf(made));
+    const auto card   = [&](CardKind c) { return "toppanel-widgets-card-" + slot + "-" + std::to_string(static_cast<int>(c)); };
+    const auto listed = [&](CardKind c) { return "toppanel-widgets-pcard-" + slot + "-" + std::to_string(static_cast<int>(c)); };
+    const auto design = [&] { return PopupDesignText(window.settings.Widget(made).popup); };
+    // The list of cards to add is the widget picked over it: Zone, then Weather the second, then Bags the fifth.
+    const std::string from = "toppanel-widgets-cards-from-" + slot;
+    const auto pick = [&](int at) {
+        window.Click(from);
+        window.Click(from + "-o-" + std::to_string(at));
+    };
+    CHECK_EQ(design(), "none");
+    // Listed cards onto a row's end, and onto the empty row under it for a row of their own.
+    pick(1);
+    CHECK(window.Drag(listed(CardKind::WeatherToday), "toppanel-widgets-card-" + slot + "-end-0"));
+    CHECK(window.Drag(listed(CardKind::WeatherForecast), "toppanel-widgets-card-" + slot + "-end-0"));
+    pick(0);
+    CHECK(window.Drag(listed(CardKind::ZoneInfluence), "toppanel-widgets-card-" + slot + "-end-1"));
+    CHECK_EQ(design(), "weather.today weather.forecast | zone.influence");
+    // On the right half of Today: after it.
+    Rml::Element* today = window.Find(card(CardKind::WeatherToday));
+    CHECK(today != nullptr);
+    window.Center(card(CardKind::WeatherToday));
+    const Rml::Vector2f right{today->GetAbsoluteOffset(Rml::BoxArea::Border).x + 0.8f * today->GetBox().GetSize(Rml::BoxArea::Border).x,
+        window.Center(card(CardKind::WeatherToday)).y};
+    CHECK(window.Drag(card(CardKind::ZoneInfluence), right - window.Center(card(CardKind::ZoneInfluence))));
+    CHECK_EQ(design(), "weather.today zone.influence weather.forecast");
+    // A row's card onto the list: out of the pop-out.
+    pick(4);
+    CHECK(window.Drag(card(CardKind::WeatherForecast), listed(CardKind::BagsList)));
+    CHECK_EQ(design(), "weather.today zone.influence");
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(a_theme_colors_custom_button_and_its_swatch_sit_side_by_side_without_overlapping)
+{
+    for (const char* font : {kBarlowCondensed, kCinzel})
+    {
+        Window window(BarTheme::PhoenixGold, font);
+        const PanelWidget job{BarWidget::Job};
+        window.settings.Widget(job).on = true;
+        window.shown                   = job;
+        window.Frames(3);
+        Rml::ElementList rows;
+        window.Find(kMenuViewBodyId)->GetElementsByClassName(rows, "swatched");
+        CHECK_EQ(rows.size(), size_t{2}); // EXP Bar Background and EXP Bar Color
+        Rml::ElementList sliders;
+        window.Find(kMenuViewBodyId)->GetElementsByClassName(sliders, "slider");
+        CHECK(!sliders.empty());
+        const auto rightOf = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x + e->GetBox().GetSize(Rml::BoxArea::Border).x; };
+        const auto leftOf  = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+        const auto middleOf = [](Rml::Element* e) {
+            return e->GetAbsoluteOffset(Rml::BoxArea::Border).y + e->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f;
+        };
+        for (Rml::Element* row : rows)
+        {
+            Rml::Element* swatch = row->GetNextSibling();
+            CHECK(swatch != nullptr && swatch->IsClassSet("swatch"));
+            Rml::ElementList segments;
+            row->GetElementsByClassName(segments, "seg");
+            CHECK_EQ(segments.size(), size_t{2});
+            Rml::Element* custom = segments.back();
+            if (rightOf(custom) > leftOf(swatch))
+                throw test::Failure{std::string(font) + ": Custom ends at " + std::to_string(rightOf(custom)) +
+                                    ", past the swatch's left at " + std::to_string(leftOf(swatch))};
+            // On one line, together as wide as a slider and ending where the other controls do.
+            CHECK(std::abs(middleOf(swatch) - middleOf(custom)) <= 1.0f);
+            CHECK(std::abs(leftOf(segments.front()) - leftOf(sliders.front())) <= 1.0f);
+            CHECK(std::abs(rightOf(swatch) - rightOf(sliders.front())) <= 1.0f);
+        }
+        CHECK_EQ(window.Said(), "");
+    }
 }

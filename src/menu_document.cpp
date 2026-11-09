@@ -23,7 +23,7 @@ namespace headsup
         constexpr float kHeadHeight   = 2.05f; // the window's title row
         constexpr float kScrollbar    = 0.7f;
         constexpr float kPopupTall    = 18.0f; // the most of a dropdown's list shown before it scrolls
-        constexpr float kNavHeight    = 1.85f; // each page in the sidebar: short enough that all fit a window at its first size
+        constexpr float kNavHeight    = 1.75f; // each page in the sidebar: short enough that all fit a window at its first size
         constexpr float kNavGap       = 0.2f;  // between two pages of the sidebar
         constexpr float kNavSlide     = 0.35f; // how far a page's name moves under the pointer
         constexpr float kToggleKnob   = kToggleHeight - 2.0f * kToggleInset; // its peg's height
@@ -203,6 +203,7 @@ namespace headsup
         css += ".note{color:" + color(c.muted) + ";margin-bottom:" + Em(kSpacing) + ";}";
         // A description's bullet point hangs its dot in the room left of its text, so a long one wraps under itself.
         css += ".note .bullet{position:relative;padding-left:" + Em(kBulletIndent) + ";margin-top:0.2em;}";
+        css += std::string(".") + kPageNoteClass + " .bullet{margin-top:" + Em(kPageBulletGap) + ";}";
         css += ".note .bullet .dot{position:absolute;left:" + Em(kBulletIndent / 3.0f) + ";top:0px;}";
         css += std::string(".") + kSetupPreviewClass + "{display:block;width:" + Em(kPreviewWide) + ";height:" + Em(kPreviewTall) +
                ";margin:0px auto " + Em(kSpacing) + " auto;}";
@@ -251,7 +252,9 @@ namespace headsup
         css += ".seg{flex:1 0 auto;height:" + frame + ";" + framed + "padding:0px " + Em(kSegmentPad) + ";margin-left:" +
                Em(kSegmentGap) + ";border-radius:" + radius + ";text-align:center;white-space:nowrap;background-color:" +
                color(c.control) + ";color:" + color(c.muted) + ";}";
-        css += ".swatched .segs{min-width:" + Em(kControlWidth - kFrame - kControlGap) + ";}"; // a swatch beside it
+        // A swatch beside them. Their box is a flex one: as a block, RmlUi sized it to their least width, and the swatch
+        // went over Custom.
+        css += ".swatched{display:flex;}.swatched .segs{min-width:" + Em(kControlWidth - kFrame - kControlGap) + ";}";
         css += ".seg:first-child{margin-left:0px;}";
         css += ".seg:hover{background-color:" + color(c.hover) + ";}";
         css += ".seg.picked{background-color:" + color(c.accent) + ";}";
@@ -268,9 +271,13 @@ namespace headsup
         css += "input.range sliderarrowdec,input.range sliderarrowinc{width:0px;height:0px;}";
         css += ".val{position:absolute;left:0px;top:0px;width:100%;" + framed + "text-align:center;pointer-events:none;}";
         // Text boxes: the edge lights while one has the keyboard.
+        // A text box clips to its inside: its line fills it, so a tall font's descenders are not cut off.
+        constexpr float kTextBoxBorder = 1.0f;
         css += "input.text,textarea{box-sizing:border-box;height:" + frame + ";padding:0.2em " + Em(kPadX) + ";border-radius:" +
-               radius + ";border:1px transparent;background-color:" + color(c.control) + ";color:" + color(c.text) +
-               ";transition:border-color" + kEase + ";}";
+               radius + ";border:" + Px(kTextBoxBorder) + " transparent;background-color:" + color(c.control) + ";color:" +
+               color(c.text) + ";transition:border-color" + kEase + ";}";
+        css += "input.text{padding-top:0px;padding-bottom:0px;line-height:" +
+               Px(kFrame * static_cast<float>(look.fontPixels) - 2.0f * kTextBoxBorder) + ";}";
         css += "input.text:hover,input.text:focus,textarea:hover,textarea:focus{background-color:" + color(c.hover) + ";}";
         css += "input.text:focus,textarea:focus{border-color:" + color(Faded(c.accent, kFocus)) + ";}";
         css += "input.text:placeholder-shown{color:" + color(c.muted) + ";}";
@@ -337,6 +344,11 @@ namespace headsup
         css += ".reset{width:" + frame + ";height:" + frame + ";decorator:image(\"" + ResetSource(c.muted, kResetArrowPixels) +
                "\" contain);}";
         css += ".reset:hover{decorator:image(\"" + ResetSource(c.accent, kResetArrowPixels) + "\" contain);}";
+        css += std::string(".") + kThemeIconClass + "{width:" + Em(kChipClone) + ";height:" + frame + ";margin-right:" + Em(kThemeIconGap) +
+               ";text-align:center;}";
+        css += std::string(".") + kThemeIconClass + " img{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) +
+               ";margin-top:" + Em((kFrame - kChipClone) / 2.0f) + ";image-color:" + color(c.muted) + ";}";
+        css += std::string(".") + kThemeIconClass + ":hover img{image-color:" + color(c.accent) + ";}";
         css += ".picker{padding:0.4em;}";
         css += ".pick-row{position:relative;display:flex;flex-direction:row;align-items:center;margin-bottom:0.3em;}";
         css += ".pick-name{width:1.2em;color:" + color(c.label) + ";}";
@@ -427,12 +439,13 @@ namespace headsup
         css += ".wtwo .wname{display:block;height:" + Em(kChipLine) + ";white-space:nowrap;pointer-events:none;}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
         // The Widget Designer: its two lines as trays of chips side by side, wrapping, each line's end taking a drop.
-        css += ".tray.design-line{display:flex;flex-wrap:wrap;margin-bottom:0.3em;}";
+        css += std::string(".tray.design-line,.tray.") + kPaletteClass + "{display:flex;flex-wrap:wrap;margin-bottom:0.3em;}";
         css += ".dchip{display:inline-block;margin-right:0.3em;}";
         // A designer chip's picture, and a currency's in its dropdown, where one with none keeps the room.
         css += ".dchip .dmark,.omark{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) + ";vertical-align:middle;margin-right:0.4em;}";
         css += ".omark{display:inline-block;}";
         css += ".design-line .tray-end{flex:1 1 2em;}";
+        css += std::string(".tray-end.") + kHintClass + "{line-height:" + Em(kChipHeight) + ";padding-left:0.3em;color:" + color(c.muted) + ";}";
         css += ".error{margin-bottom:" + Em(kSpacing) + ";color:" + color(kErrorColor) + ";}";
         // What a control says under the pointer.
         css += std::string("#") + kMenuTipId + "{position:absolute;z-index:60;box-sizing:border-box;max-width:" +

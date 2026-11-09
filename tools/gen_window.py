@@ -101,7 +101,7 @@ VISIBILITY_ROWS = {**rows('aggressive', 'passive', 'nm-aggressive', 'nm-passive'
 PIECES = Pieces(
     pages={'theme': 'Theme', 'entities': 'Entities', 'mobs': 'Mobs', 'players': 'Players', 'self': 'Self', 'npcs': 'Npcs', 'pets': 'Pets',
            'userinterface': 'UserInterface', 'helpbar': 'HelpBar', 'fishingbar': 'FishingBar', 'vanillaui': 'VanillaUi', 'toppanel': 'TopPanel',
-           'colors': 'Colors', 'configmenu': 'ConfigMenu', 'feedback': 'Feedback'},
+           'colors': 'Colors', 'configmenu': 'ConfigMenu', 'feedback': 'Feedback', 'credits': 'Credits'},
     cards={
         'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(),
         'colors-aggression': Card(), 'colors-toughness': Card(), 'colors-claim-status': Card(),
@@ -173,11 +173,11 @@ PIECES = Pieces(
         'window-list': Setting(unnamed=True, words={'note': True, 'find': True, 'name-hint': True, 'all-windows': False,
                                                     'hide': True, 'keep': True, 'row-tip': False}),
         # Top Panel and Widgets
-        'theme': Setting(words={'built-in': True, 'custom': True, 'copy': True, 'copy-again': True}), 'delete-theme': Setting(), 'window-type': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
+        'theme': Setting(words={'built-in': True, 'custom': True, 'copy': True, 'copy-again': True, 'delete': True, 'rename': True}), 'window-type': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
         'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'corner-rounding': Setting(), 'text-scale': Setting(), 'popup-width': Setting(), 'popup-height': Setting(), 'popup-rounding': Setting(), 'section-rounding': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
-        'theme-name': Setting(), 'background-style': Setting(options=3),
-        'separator-style': Setting(options=4, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
+        'background-style': Setting(options=3),
+        'separator-style': Setting(options=5, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
         'theme-top': Setting(), 'theme-middle': Setting(), 'theme-bottom': Setting(), 'background-opacity': Setting(),
         'theme-border-thickness': Setting(), 'theme-rounding': Setting(), 'popup-opacity': Setting(),
         'status-icons': Setting(words={'vanilla': True}), 'status-background': Setting(),
@@ -187,11 +187,14 @@ PIECES = Pieces(
             'tag-text', 'highlight', 'border-color')),
         'save-automatically': Setting(), 'save-changes': Setting(words={'save': True, 'revert': True}),
         'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
-        'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-rounding': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'help-width': Setting(), 'help-height': Setting(),
+        'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-rounding': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'shrink-to-text': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
-            'design', 'icon', 'alignment', 'show-zone-id', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
-            'seconds', 'date-format', 'job-text', 'job-text-align', 'earned-align', 'tnl-align', 'percent-align', 'bar-width', 'bar-height', 'bar-back', 'bar-color', 'bar-text', 'bar-text-align', 'mem-text', 'status-display'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),
+            'name', 'edit', 'design', 'popup-design', 'icon', 'alignment', 'show-zone-id', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag-1', 'bag-2', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
+            'seconds', 'date-format', 'job-text', 'job-text-align', 'earned-align', 'tnl-align', 'percent-align', 'bar-width', 'bar-height', 'bar-back', 'bar-color', 'bar-text', 'bar-text-align', 'mem-text', 'status-display',
+            'own-looks', 'widget-spacing', 'widget-padding', 'show-background', 'corner-rounding', 'primary-font', 'secondary-font', 'font-ratio', 'icon-scale', 'popup-text-scale'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True, 'add-from': True, 'top-panel': True,
+                                    'popup-row-full': True, 'popup-new-row': True}),
         'trays': Setting(unnamed=True),
+        'create-widget': Setting(words={'all-made': True}),
         # Mouse Cursor and HeadsUp Config
         'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'lock-cursor': Setting(), 'keep-pointer': Setting(),
         'enable-headsup': Setting(), 'font': Setting(), 'size': Setting(),
@@ -211,7 +214,7 @@ PIECES = Pieces(
         'plate-mode': List(4), 'outline-mode': List(4, extra={3: 'tipOnClaimRows'}), 'color-source': List(7),
         'show-condition': List(13), 'ornament-place': List(5), 'align': List(3), 'font-style': List(3),
         'smoothness': List(4), 'bar-theme': List(6), 'bar-sections': List(3),
-        'bar-widgets': List(13), 'plate-lines': List(3), 'job-text': List(3), 'exp-bar-text': List(5), 'target-shows': List(5), 'widget-parts': List(57), 'custom-icons': List(3), 'icon-sides': List(3), 'widget-aligns': List(4), 'status-display': List(3), 'blue-learned': List(2), 'detection-icons': List(8), 'tags': List(30),
+        'bar-widgets': List(14), 'plate-lines': List(3), 'job-text': List(3), 'exp-bar-text': List(5), 'target-shows': List(5), 'widget-parts': List(60), 'popup-cards': List(46), 'custom-icons': List(3), 'icon-sides': List(3), 'edit-side': List(2), 'own-background': List(3), 'widget-aligns': List(4), 'status-display': List(3), 'blue-learned': List(2), 'detection-icons': List(8), 'tags': List(30),
         'setup-theme': List(5), 'setup-mob-plates': List(4), 'setup-mob-design': List(3), 'setup-outlines': List(4),
         'setup-outline-thickness': List(3), 'setup-cursor': List(4), 'setup-players': List(2), 'setup-self': List(3),
         'setup-player-icons': List(3), 'setup-line-kinds': List(3), 'setup-npcs': List(2), 'setup-pets': List(3), 'setup-panel': List(4), 'setup-nameplates': List(3), 'setup-pointer': List(2),
@@ -359,7 +362,7 @@ class Reader:
                     self.bad(f'{owner} shares the entity cards and cannot have cards of its own')
             else:
                 entry.cards = self.cards(page.get('cards'), owner, in_entity=False, page=key)
-                if not entry.cards:
+                if not entry.cards and description is None:
                     self.bad(f'{owner} has no cards')
             pages.append(entry)
         for key in self.pieces.pages:

@@ -42,8 +42,8 @@ namespace headsup
     constexpr const char* kBadgeFont   = kBarlowCondensed; // what badges were set in before they took the default font
     constexpr size_t kMaxFontName      = 31; // a Windows font name's longest, without its terminator
 
-    constexpr int kMaxWidgetSpacing = 40; // pixels
-    constexpr int kThemePadding = -1, kMaxWidgetPadding = 40; // pixels; the slider's leftmost is the theme's own
+    constexpr int kDefaultWidgetSpacing = 2, kMaxWidgetSpacing = 40; // pixels
+    constexpr int kDefaultWidgetPadding = 8, kMaxWidgetPadding = 40; // pixels
     constexpr int kThemeRounding = -1; // a corner's radius in pixels up to kMaxRounding, or the theme's own
     // Where the Zone widget shows who holds its region: not at all, before or after the zone's name, or under it.
     // The Target widget's Visibility: the targets it shows for.
@@ -55,13 +55,18 @@ namespace headsup
 
     // The Conquest widget's nations, when it shows several: two lines of two, or one line of all.
     // One copy of a widget on the panel: whether it shows, what of it, and its own settings.
+    constexpr const char* kCreatedWidgetName = "Custom Widget"; // a created widget's first Name, then with its number
+    constexpr size_t kMaxWidgetName = 32; // bytes
     struct WidgetOptions
     {
         bool on         = false;
+        std::string name; // a created widget's: its Name part, its pop-out's title and its chip's
         WidgetDesign design; // what it shows on its two lines (NewWidget gives each kind its default)
+        PopupDesign popup;   // the cards its pop-out shows, in rows
         int currency    = kGilCurrency;             // Gil: by kCurrencyTable, or kYourConquestCurrency
         int secondCurrency = kYourConquestCurrency; // its Currency 2 buttons', the same way
-        int bag         = 0;                        // Bags: the container on the panel, by Ashita's number
+        int bag         = 0;                        // Bags: the container of its Bag 1 buttons, by Ashita's number
+        int secondBag   = kMogSatchel;              // its Bag 2 buttons', the same way
         CustomIcons weatherIcons = CustomIcons::Always; // Forecast: its weather pictures
         bool zoneId = true;                         // Zone: its number after its name in the pop-out's header
         bool memText = false;                       // Performance: "Mem" before its Memory button's figures
@@ -88,6 +93,13 @@ namespace headsup
         IconSide iconSide = IconSide::Left; // its icon's, for a widget with one (IconPartOf)
         WidgetAlign align = WidgetAlign::Location; // all but Game Help's, whose text is the help bar's
         std::optional<PopupSpot> popupSpot; // where its pop-out shows while pinned; none for under its pill
+        // Its own of the Top Panel's looks, for a widget with them (HasOwnLooks): none, or no font, for the Top Panel's.
+        // Its pill's spacing, background, rounding and pop-out are the pill's first widget's.
+        std::optional<int> spacing, padding, rounding; // pixels; rounding may be kThemeRounding
+        std::optional<int> iconScale;                  // percent, as barIconScale
+        std::optional<bool> background;
+        std::string titleFont, textFont;
+        std::optional<float> fontRatio, popupTextScale;
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.
@@ -173,8 +185,8 @@ namespace headsup
         int barIconScale   = kDefaultIconScale; // its icons, in percent of the most it holds
         std::string barTitleFont; // widget titles and popup headings; empty for the theme's
         std::string barTextFont;  // details, figures and popup text; empty for the theme's
-        int barWidgetSpacing = 0;             // every widget's, unless it has its own
-        int barWidgetPadding = kThemePadding; // likewise
+        int barWidgetSpacing = kDefaultWidgetSpacing; // between neighbouring widgets
+        int barWidgetPadding = kDefaultWidgetPadding; // inside every widget, from its edges to its content
         float popupTextScale   = kDefaultPopupScale; // the pop-outs' text sizes, times their own
         float popupWidthScale  = kDefaultPopupScale; // each pop-out's sections, and so the pop-out, this much wider
         float popupHeightScale = kDefaultPopupScale; // and taller
@@ -197,6 +209,7 @@ namespace headsup
         int helpBarHeight   = kAutoHelpBarHeight;
         HelpAnchor helpBarAnchor = HelpAnchor::Left;
         bool helpBarFullWidth    = false; // the whole screen's width, whatever the text's
+        bool helpBarShrink       = false; // as wide as its text, up to its width
         std::string menuFont = kDefaultMenuFont; // the settings window's text, by its kMenuFonts name
         int menuFontSize     = kDefaultMenuFontSize; // pixels: the settings window's text and everything sized by it
         int menuOpacity      = 100;              // percent
@@ -292,9 +305,15 @@ namespace headsup
     // Another copy of a widget, after the last of its copies, shown and with that copy's settings but its Combine;
     // none when it has no more. Taking a copy off forgets its settings.
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);
+    // A new created widget at the right section's end, shown; none when every one there can be is made.
+    std::optional<PanelWidget> CreateWidget(Settings& s);
+    // A created widget's Name before you give it one: kCreatedWidgetName, and after the first its number.
+    std::string CreatedWidgetName(PanelWidget widget);
     void RemoveWidgetCopy(Settings& s, PanelWidget widget);
     // The panel as it is drawn, each widget's combine pulling its partner after it.
     PanelGroups Panel(const Settings& s);
+    // Whether another widget of widget's pill in panel is on with a part on, so widget may have none.
+    bool PillShowsOther(const Settings& s, const PanelGroups& panel, PanelWidget widget);
     // The widgets whose settings a pill's popup shows: those of its widgets that are on, or its first alone.
     std::vector<PanelWidget> PillSettings(const Settings& s, PanelWidget head);
     // What a widget can be combined with, in the panel's order: every placed widget that combines, but itself, one

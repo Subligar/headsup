@@ -13,6 +13,9 @@ namespace headsup
     // A theme's Status Icons: the game's own, or a pack's by its place in kStatusPackNames.
     constexpr int kVanillaStatusIcons       = -1;
     constexpr const char* kVanillaStatusName = "vanilla";
+    // Every built-in theme's: the HD pack.
+    constexpr int kHdStatusIcons = 0;
+    static_assert(kStatusPackNames[kHdStatusIcons] == "HD");
     // Status Icons by name in the settings and a theme's file, kVanillaStatusName or a pack's folder; fallback for a
     // name of none.
     std::string StatusIconsName(int pack);

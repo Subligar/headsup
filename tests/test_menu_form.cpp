@@ -5,6 +5,7 @@
 #include "test.h"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <string>
 #include <vector>
@@ -94,13 +95,38 @@ TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
     CHECK(w.layout.PageOf(Page::Entities).description == nullptr && !w.Pass().blocks[1].bare);
 }
 
-TEST(the_palettes_are_on_their_own_colors_page_after_the_mouse_cursor)
+TEST(the_credits_page_comes_after_feedback_and_shows_its_words_with_no_cards)
+{
+    Window w;
+    const std::string side = w.Pass().blocks.front().rml;
+    CHECK(Has(side, "<div class=\"nav\" id=\"nav-credits\">"));
+    CHECK(side.find("id=\"nav-feedback\"") < side.find("id=\"nav-credits\""));
+    const Form form = w.Pass({{"nav-credits", kClickEvent, ""}});
+    CHECK(w.state.page == Page::Credits && ClassOn(form, "nav-credits", "picked"));
+    const std::string_view words = w.layout.PageOf(Page::Credits).description;
+    CHECK(words.find('\n') != std::string_view::npos);
+    CHECK_EQ(form.blocks.size(), 2u);
+    CHECK(form.blocks[1].bare);
+    // Each thanks is a bullet point.
+    for (size_t start = 0; start <= words.size();)
+    {
+        const size_t end           = std::min(words.find('\n', start), words.size());
+        const std::string_view one = words.substr(start, end - start);
+        CHECK(one.starts_with("- "));
+        CHECK(Has(form.blocks[1].rml,
+            ("<div class=\"bullet\"><span class=\"dot\">•</span>" + std::string(one.substr(2)) + "</div>").c_str()));
+        start = end + 1;
+    }
+}
+
+TEST(the_palettes_are_on_their_own_colors_page_under_the_theme_above_the_config_page)
 {
     Window w;
     const Form entities    = w.Pass();
     const std::string side = entities.blocks.front().rml;
     CHECK(Has(side, "<div class=\"nav\" id=\"nav-colors\">"));
-    CHECK(side.find("id=\"nav-vanillaui\"") < side.find("id=\"nav-colors\"") &&
+    CHECK(side.find("id=\"nav-vanillaui\"") < side.find("id=\"nav-theme\"") &&
+          side.find("id=\"nav-theme\"") < side.find("id=\"nav-colors\"") &&
           side.find("id=\"nav-colors\"") < side.find("id=\"nav-configmenu\""));
     const char* kPalettes[] = {
         "colors-aggression", "colors-toughness", "colors-claim-status", "colors-targeting", "colors-entity-type"};
@@ -200,6 +226,118 @@ TEST(a_pages_controls_change_the_settings_they_show)
     w.state.page = Page::TopPanel;
     w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}});
     CHECK(w.settings.showBar);
+}
+
+TEST(a_created_widget_goes_by_its_name_on_its_chip_in_link_widgets_list_and_over_its_settings)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.settings.Widget(made).name = "Mule";
+    CHECK(Has(Block(w.Pass(), "toppanel-layout")->rml, ">Mule</div>"));
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}};
+    const Form open = w.Pass({{"toppanel-widgets-combine-zone", kClickEvent, ""}});
+    CHECK(open.popup && Has(open.popup->rml, ">Mule</div>") && !Has(open.popup->rml, "Custom Widget"));
+    w.settings.Widget(BarWidget::Zone).combine = made;
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}, made};
+    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, ">Mule</div>"));
+}
+
+TEST(a_created_widget_takes_its_name_once_its_box_is_left_and_an_empty_one_is_the_default)
+{
+    Window w;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {made};
+    const std::string box  = "toppanel-widgets-name-custom";
+    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, ("id=\"" + box + "\"").c_str()));
+    CHECK(w.Pass({{box, kCommitEvent, "Mule"}}).changed);
+    CHECK_EQ(w.settings.Widget(made).name, std::string("Mule"));
+    w.Pass({{box, kCommitEvent, ""}});
+    CHECK_EQ(w.settings.Widget(made).name, std::string(kCreatedWidgetName));
+    // A built-in widget has no Name box.
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}};
+    CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "toppanel-widgets-name-zone"));
+}
+
+TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_designer_and_is_no_setting)
+{
+    Window w;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {made};
+    const std::string slot = std::to_string(SlotOf(made)), edit = "toppanel-widgets-edit-custom";
+    const auto rml   = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
+    const auto shown = [&](const Form& f, const std::string& id) { return Has(rml(f), ("id=\"" + id + "\"").c_str()); };
+    const Form first = w.Pass();
+    CHECK(shown(first, edit + "-s-0") && shown(first, edit + "-s-1"));
+    CHECK(shown(first, "toppanel-widgets-part-" + slot + "-end-0") && !Has(rml(first), "-card-"));
+    CHECK(shown(first, "toppanel-widgets-alignment-custom") && shown(first, "toppanel-widgets-name-custom"));
+    // Pop-out: its designer alone under the Name and the choice, and no save for a choice of what to edit.
+    const Form popup = w.Pass({{edit + "-s-1", kClickEvent, ""}});
+    CHECK(w.state.editSide == EditSide::Popup && !popup.changed);
+    CHECK(shown(popup, "toppanel-widgets-card-" + slot + "-end-0") && !Has(rml(popup), "-part-"));
+    CHECK(!shown(popup, "toppanel-widgets-alignment-custom") && shown(popup, "toppanel-widgets-name-custom") &&
+          shown(popup, edit + "-s-0"));
+    // A built-in widget's pop-out is fixed: no choice, its rows as before, whatever the pick.
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}, made};
+    const Form pill = w.Pass();
+    CHECK(!Has(rml(pill), "toppanel-widgets-edit-zone") && shown(pill, "toppanel-widgets-alignment-zone") &&
+          shown(pill, edit + "-s-1"));
+    w.Pass({{edit + "-s-0", kClickEvent, ""}});
+    CHECK(w.state.editSide == EditSide::Widget);
+}
+
+TEST(a_created_widgets_pop_out_designer_is_its_caption_then_its_rows_with_no_note_between)
+{
+    Window w;
+    w.readings.settingsOf = {*CreateWidget(w.settings)};
+    w.state.editSide      = EditSide::Popup;
+    const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
+    const size_t rows     = rml.find("<div class=\"design\">");
+    CHECK(rows != std::string::npos && rml.rfind("class=\"caption\"", rows) != std::string::npos);
+    CHECK(rml.rfind("class=\"note\"", rows) == std::string::npos);
+}
+
+TEST(create_new_widget_adds_one_at_the_rights_end_on_with_its_settings_asked_until_every_one_is_made)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const std::string button = "toppanel-layout-create-widget";
+    const Form first = w.Pass();
+    CHECK(At(Block(first, "toppanel-layout"), button) != std::string::npos);
+    CHECK(At(Block(first, "toppanel-layout"), button) > At(Block(first, "toppanel-layout"), "toppanel-layout-tray-end-2"));
+    const Form made = w.Pass({{button, kClickEvent, ""}});
+    const PanelWidget first1{BarWidget::Custom, 0};
+    CHECK(made.changed && w.state.settingsAsked == first1 && Shows(w.settings, first1));
+    CHECK(w.settings.barSections[static_cast<int>(BarSection::Right)].back() == first1);
+    CHECK(Has(Block(w.Pass(), "toppanel-layout")->rml, (std::string(">") + kCreatedWidgetName + "</div>").c_str()));
+    const std::string full = Filled(Said(w.layout.WordOf(WindowWord::CreateWidgetAllMade).name), kCountMark, std::to_string(kMostCreatedWidgets));
+    CHECK(!Has(Block(made, "toppanel-layout")->rml, full.c_str()));
+    for (int i = 1; i < kMostCreatedWidgets; ++i)
+        w.Pass({{button, kClickEvent, ""}});
+    const Form last = w.Pass({{button, kClickEvent, ""}});
+    CHECK(!last.changed && Has(Block(last, "toppanel-layout")->rml, full.c_str()));
+    int created = 0;
+    for (const auto& section : w.settings.barSections)
+        for (const PanelWidget p : section)
+            created += p.kind == BarWidget::Custom;
+    CHECK_EQ(created, kMostCreatedWidgets);
+}
+
+TEST(removing_a_created_widget_whose_settings_show_asks_the_plugin_to_close_them)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {made};
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(made));
+    w.Pass({{chip + "-remove", kClickEvent, ""}});
+    CHECK(!Placed(w.settings.barSections, made) && w.state.settingsAsked == made);
+    // One whose settings do not show asks for nothing.
+    const PanelWidget other = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {PanelWidget{BarWidget::Zone}};
+    w.state.settingsAsked.reset();
+    w.Pass({{"toppanel-layout-chip-" + std::to_string(SlotOf(other)) + "-remove", kClickEvent, ""}});
+    CHECK(!Placed(w.settings.barSections, other) && !w.state.settingsAsked);
 }
 
 TEST(a_widgets_chip_dropped_on_another_goes_before_it)
@@ -1107,16 +1245,28 @@ TEST(an_edit_of_a_built_in_theme_makes_a_custom_copy_of_it_named_after_it)
     CHECK(w.state.themeLoad == "umbra dark (custom)" && w.settings.barTheme == BarTheme::Aurora);
 }
 
-TEST(delete_custom_theme_shows_for_a_custom_theme_and_goes_back_to_the_theme_it_was_copied_from)
+// Round 22: "The delete custom theme should just sit to the left of the dropdown so the window doesnt shift on making
+// an edit" (an edit makes a custom copy).
+TEST(delete_custom_theme_sits_left_of_the_theme_dropdown_for_a_custom_theme_and_goes_back_to_the_theme_it_was_copied_from)
 {
     Window w;
     w.state.page = Page::Theme;
-    const std::string button = "theme-theme-look-delete-theme";
-    CHECK(At(Block(w.Pass(), "theme-theme-look"), button) == std::string::npos);
+    const std::string button = "theme-theme-look-theme-delete", dropdown = "id=\"theme-theme-look-theme\"";
+    const auto rows = [](const std::string& rml) {
+        size_t n = 0;
+        for (size_t at = rml.find("class=\"row"); at != std::string::npos; at = rml.find("class=\"row", at + 1)) ++n;
+        return n;
+    };
+    const Form first           = w.Pass();
+    const FormBlock* builtIn   = Block(first, "theme-theme-look");
+    CHECK(builtIn != nullptr && At(builtIn, button) == std::string::npos);
     w.settings.barTheme             = BarTheme::Custom;
     w.settings.customThemeName      = "Dusk";
     w.settings.customPalette.parent = BarTheme::Aurora;
-    CHECK(At(Block(w.Pass(), "theme-theme-look"), button) != std::string::npos);
+    const Form second          = w.Pass();
+    const FormBlock* custom    = Block(second, "theme-theme-look");
+    CHECK(custom != nullptr && At(custom, button) != std::string::npos && At(custom, button) < custom->rml.find(dropdown));
+    CHECK_EQ(rows(custom->rml), rows(builtIn->rml));
     CHECK(w.Pass({{button, kClickEvent, ""}}).changed);
     CHECK(w.settings.barTheme == BarTheme::Aurora && w.state.themeDelete == "Dusk");
 }
@@ -1159,9 +1309,8 @@ TEST(the_background_style_shows_the_color_the_gradient_or_the_window_settings)
     // Phoenix Gold's strip is a gradient: its top and bottom show, and no one color or window.
     CHECK(shows("theme-top") && shows("theme-bottom") && !shows("theme-background"));
     CHECK(shows("border-color-theme-palette") && shows("background-opacity") && shows("popup-opacity"));
-    CHECK(!shows("theme-name")); // a built-in theme has no name to change
     CHECK(w.Pass({{"theme-theme-colors-background-style-s-0", kClickEvent, ""}}).changed);
-    CHECK(p.background == BarBackground::Plain && w.settings.barTheme == BarTheme::Custom && shows("theme-name"));
+    CHECK(p.background == BarBackground::Plain && w.settings.barTheme == BarTheme::Custom);
     CHECK(!shows("theme-top") && !shows("theme-bottom") && shows("theme-background"));
     // Its stops are kept for the gradient's return, each its own: an edit of one leaves the others.
     w.Pass({{"theme-theme-colors-background-style-s-1", kClickEvent, ""}});
@@ -1235,16 +1384,27 @@ TEST(the_help_bar_has_a_corner_rounding_of_its_own)
     CHECK_EQ(w.settings.helpBarRounding, 8);
 }
 
-TEST(a_custom_theme_takes_a_new_name_once_its_box_is_left_unless_it_cannot_have_it)
+// Round 22: "We should be able to rename the theme. Add a pencil icon to the left also. The delete should be more left
+// of the pencil."
+TEST(a_custom_themes_pencil_turns_its_dropdown_into_a_box_that_renames_it_once_left_unless_it_cannot_have_that_name)
 {
     Window w;
     w.state.page               = Page::Theme;
+    const std::string box = "theme-theme-look-theme-name", pencil = "theme-theme-look-theme-rename",
+                      remove = "theme-theme-look-theme-delete", dropdown = "theme-theme-look-theme";
+    const Form builtIn = w.Pass();
+    CHECK(At(Block(builtIn, "theme-theme-look"), pencil) == std::string::npos); // a built-in theme keeps its name
     w.settings.barTheme        = BarTheme::Custom;
     w.settings.customThemeName = "Dusk";
     const std::vector<std::string> files = {"Dawn", "Dusk"};
     w.readings.themeFiles = &files;
-    const std::string box = "theme-theme-colors-theme-name";
-    w.Pass();
+    const Form shown       = w.Pass();
+    const FormBlock* look  = Block(shown, "theme-theme-look");
+    CHECK(At(look, remove) < At(look, pencil) && At(look, pencil) < At(look, dropdown) && At(look, box) == std::string::npos);
+    const Form renaming = w.Pass({{pencil, kClickEvent, ""}});
+    look                = Block(renaming, "theme-theme-look");
+    CHECK(At(look, box) != std::string::npos && At(look, dropdown) == std::string::npos);
+    CHECK(renaming.focus && renaming.focus->id == box); // it takes the keyboard
     CHECK_EQ(w.state.themeName, std::string("Dusk"));
     for (const char* refused : {"a/b", "dawn", ""})
     {
@@ -1369,6 +1529,41 @@ TEST(a_widget_with_an_icon_has_a_row_putting_it_left_right_or_nowhere)
     CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "-icon-performance"));
 }
 
+TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone}, weather{BarWidget::Weather};
+    WidgetOptions& own    = w.settings.Widget(zone);
+    w.readings.settingsOf = {zone};
+    const auto id = [](const char* key, const char* widget = "zone") { return std::string("toppanel-widgets-") + key + "-" + widget; };
+    w.Pass({{id("widget-spacing"), kChangeEvent, "10"}});
+    CHECK(own.spacing == 10);
+    w.Pass({{id("widget-spacing"), kChangeEvent, "-1"}}); // the step under 0 px
+    CHECK(!own.spacing);
+    w.Pass({{id("corner-rounding"), kChangeEvent, std::to_string(kThemeRounding)}});
+    CHECK(own.rounding == kThemeRounding);
+    w.Pass({{id("icon-scale"), kChangeEvent, "4"}}); // four steps of 5% over 20%
+    CHECK(own.iconScale == 40);
+    w.Pass({{id("popup-text-scale"), kChangeEvent, "13"}}); // thirteen tenths over 0.2x
+    CHECK(own.popupTextScale && std::fabs(*own.popupTextScale - 1.5f) < 0.001f);
+    w.Pass({{id("font-ratio"), kChangeEvent, std::to_string(kFontRatioSteps)}}); // the slider's middle, 1x
+    CHECK(own.fontRatio && std::fabs(*own.fontRatio - 1.0f) < 0.001f);
+    w.Pass({{id("font-ratio"), kChangeEvent, "-1"}});
+    CHECK(!own.fontRatio);
+    w.Pass({{id("show-background") + "-s-2", kClickEvent, ""}});
+    CHECK(own.background == false);
+    w.Pass({{id("show-background") + "-s-0", kClickEvent, ""}});
+    CHECK(!own.background);
+    // Linked, the pill's spacing, background, rounding and pop-out are Zone's to set; Weather keeps its own text.
+    own.combine           = weather;
+    w.readings.settingsOf = {zone, weather};
+    const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
+    for (const char* key : {"widget-spacing", "show-background", "corner-rounding", "popup-text-scale"})
+        CHECK(Has(rml, id(key).c_str()) && !Has(rml, id(key, "weather").c_str()));
+    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "icon-scale"})
+        CHECK(Has(rml, id(key, "weather").c_str()));
+}
+
 TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
 {
     Window w;
@@ -1378,7 +1573,7 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     const auto chip        = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
     const auto toggle      = [&](WidgetPart part) { return FormEvent{chip(part) + "-on", kClickEvent, ""}; };
     const auto rml         = [](const Form& form) { return Block(form, "toppanel-widgets")->rml; };
-    const auto design      = [&] { return DesignText(w.settings.Widget(zone).design); };
+    const auto design      = [&] { return DesignText(BarWidget::Zone, w.settings.Widget(zone).design); };
     const Form first = w.Pass();
     CHECK(Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneNation) + "\"").c_str()));
     CHECK(!Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str())); // its Icon setting has it
@@ -1406,6 +1601,130 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
                                 std::to_string(static_cast<int>(WidgetPart::WeatherName));
     w.Pass({{base + "end-1", kDropEvent, weather}});
     CHECK_EQ(design(), "-nation name | region");
+}
+
+TEST(a_created_widgets_designer_lists_the_picked_widgets_unplaced_buttons_and_puts_takes_and_names_them)
+{
+    Window w;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {made};
+    const std::string slot = std::to_string(SlotOf(made));
+    const std::string base = "toppanel-widgets-part-" + slot + "-", lists = "toppanel-widgets-lpart-" + slot + "-";
+    const std::string from = "toppanel-widgets-parts-from-" + slot;
+    const auto chip   = [&](WidgetPart p) { return base + std::to_string(static_cast<int>(p)); };
+    const auto listed = [&](WidgetPart p) { return lists + std::to_string(static_cast<int>(p)); };
+    const auto rml    = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
+    const auto design = [&] { return DesignText(BarWidget::Custom, w.settings.Widget(made).design); };
+    const auto shown  = [&](const Form& f, const std::string& id) { return Has(rml(f), ("id=\"" + id + "\"").c_str()); };
+    const Form first = w.Pass();
+    CHECK(shown(first, chip(WidgetPart::CustomName)) && !shown(first, listed(WidgetPart::CustomName)));
+    // Under the lines, the unplaced buttons of the one widget picked to add from: Zone's at first.
+    CHECK(shown(first, from) && shown(first, listed(WidgetPart::ZoneName)) && shown(first, listed(WidgetPart::ZoneCrest)) &&
+          !shown(first, listed(WidgetPart::WorldBeastmen)));
+    // Its own, then every widget with buttons: World Info is the twelfth. Picking it is no setting.
+    w.Pass({{from, kClickEvent, ""}});
+    const Form world = w.Pass({{from + "-o-11", kClickEvent, ""}});
+    CHECK(!world.changed && shown(world, listed(WidgetPart::WorldBeastmen)) && !shown(world, listed(WidgetPart::ZoneName)));
+    w.Pass({{from, kClickEvent, ""}});
+    w.Pass({{from + "-o-1", kClickEvent, ""}});
+    // A listed button dropped at a line's end goes there, on, and leaves the lists; on a chip, before it; it is
+    // named after its widget on the line.
+    w.Pass({{base + "end-1", kDropEvent, listed(WidgetPart::ZoneName)}});
+    CHECK_EQ(design(), "name | zone.name");
+    const Form placed = w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, listed(WidgetPart::Bag1Count)}});
+    CHECK_EQ(design(), "name | bags.count1 zone.name");
+    CHECK(!shown(placed, listed(WidgetPart::ZoneName)) && Has(rml(placed), "Name (Zone)</div>"));
+    // Let go off the lines, a button goes back to the lists; the last one on stays, and the designer says why.
+    w.Pass({{chip(WidgetPart::ZoneName), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "name | bags.count1");
+    CHECK(shown(w.Pass(), listed(WidgetPart::ZoneName)));
+    w.Pass({{chip(WidgetPart::Bag1Count) + "-on", kClickEvent, ""}});
+    CHECK_EQ(design(), "name | -bags.count1");
+    const Form refused = w.Pass({{chip(WidgetPart::CustomName), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "name | -bags.count1");
+    CHECK(Has(rml(refused), "class=\"error\""));
+    // A drop ends the drag too: the button moves once and stays.
+    w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::Bag1Count)}, {chip(WidgetPart::Bag1Count), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "name -bags.count1 |");
+    // A Pinned Status button has no switch here either: the pins turn it on.
+    w.Pass({{base + "end-1", kDropEvent, listed(WidgetPart::StatusPin1)}});
+    CHECK(!Has(rml(w.Pass()), (chip(WidgetPart::StatusPin1) + "-on").c_str()));
+    // A built-in widget's designer has no lists.
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}};
+    CHECK(!Has(rml(w.Pass()), "-lpart-"));
+}
+
+TEST(the_pop_out_designer_adds_moves_and_removes_cards_and_refuses_a_fourth_in_a_row)
+{
+    Window w;
+    const PanelWidget zone = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {zone};
+    w.state.editSide       = EditSide::Popup;
+    const std::string slot = std::to_string(SlotOf(zone));
+    const std::string base = "toppanel-widgets-card-" + slot + "-", palette = "toppanel-widgets-pcard-" + slot + "-";
+    const auto card        = [&](CardKind c) { return base + std::to_string(static_cast<int>(c)); };
+    const auto listed      = [&](CardKind c) { return palette + std::to_string(static_cast<int>(c)); };
+    const auto rml         = [](const Form& form) { return Block(form, "toppanel-widgets")->rml; };
+    const auto design      = [&] { return PopupDesignText(w.settings.Widget(zone).popup); };
+    const auto shown       = [&](const Form& form, const std::string& id) { return Has(rml(form), ("id=\"" + id + "\"").c_str()); };
+    const std::string from = "toppanel-widgets-cards-from-" + slot;
+    const Form first = w.Pass();
+    // A new widget's pop-out has no card; under the rows are the cards of the one widget picked to add from, Zone's
+    // at first.
+    CHECK(!shown(first, card(CardKind::ZoneInfluence)) && shown(first, listed(CardKind::ZoneInfluence)));
+    CHECK(shown(first, from) && !shown(first, listed(CardKind::WeatherToday)) && !shown(first, listed(CardKind::WorldGuilds)));
+    // Every widget with cards, Weather the second; picking it is no setting.
+    w.Pass({{from, kClickEvent, ""}});
+    const Form weather = w.Pass({{from + "-o-1", kClickEvent, ""}});
+    CHECK(!weather.changed && shown(weather, listed(CardKind::WeatherToday)) && !shown(weather, listed(CardKind::ZoneInfluence)));
+    CHECK(!shown(weather, listed(CardKind::WeatherToday) + "-2"));
+    w.Pass({{from, kClickEvent, ""}});
+    w.Pass({{from + "-o-0", kClickEvent, ""}});
+    w.Pass({{base + "end-0", kDropEvent, listed(CardKind::ZoneInfluence)}});
+    CHECK_EQ(design(), "zone.influence");
+    CHECK(!shown(w.Pass(), listed(CardKind::ZoneInfluence)));
+    // A card from the lists dropped on a row's card goes before it; on the empty row, in a row of its own.
+    w.Pass({{card(CardKind::ZoneInfluence), kDropEvent, listed(CardKind::WeatherToday)}});
+    CHECK_EQ(design(), "weather.today zone.influence");
+    w.Pass({{base + "end-1", kDropEvent, card(CardKind::ZoneInfluence)}});
+    CHECK_EQ(design(), "weather.today | zone.influence");
+    w.Pass({{base + "end-0", kDropEvent, listed(CardKind::WeatherForecast)}});
+    w.Pass({{base + "end-0", kDropEvent, listed(CardKind::WorldGuilds)}});
+    CHECK_EQ(design(), "weather.today weather.forecast world.guilds | zone.influence");
+    // A fourth in a full row is refused, and the designer says why until the next change.
+    const Form refused = w.Pass({{card(CardKind::WeatherToday), kDropEvent, card(CardKind::ZoneInfluence)}});
+    CHECK_EQ(design(), "weather.today weather.forecast world.guilds | zone.influence");
+    CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
+    w.Pass({{card(CardKind::WeatherToday), kDropEvent, card(CardKind::WorldGuilds)}});
+    CHECK_EQ(design(), "world.guilds weather.today weather.forecast | zone.influence");
+    CHECK(!Has(rml(w.Pass()), "class=\"error\""));
+    // A row's card let go off every row leaves the pop-out, back into the lists.
+    const Form removed = w.Pass({{card(CardKind::ZoneInfluence), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "world.guilds weather.today weather.forecast");
+    CHECK(shown(w.Pass(), listed(CardKind::ZoneInfluence)));
+    // Let go on a row, it moves and stays.
+    w.Pass({{base + "end-1", kDropEvent, card(CardKind::WorldGuilds)}, {card(CardKind::WorldGuilds), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "weather.today weather.forecast | world.guilds");
+    // Another widget's designer chips move nothing here.
+    const std::string other = "toppanel-widgets-card-" + std::to_string(SlotOf(PanelWidget{BarWidget::Custom, 1})) + "-" +
+                              std::to_string(static_cast<int>(CardKind::WeatherByElement));
+    w.Pass({{base + "end-0", kDropEvent, other}});
+    CHECK_EQ(design(), "weather.today weather.forecast | world.guilds");
+}
+
+TEST(only_a_created_widget_has_a_pop_out_designer)
+{
+    Window w;
+    for (int kind = 0; kind < kBarWidgetCount; ++kind)
+    {
+        if (static_cast<BarWidget>(kind) == BarWidget::Custom) continue;
+        w.readings.settingsOf = {PanelWidget{static_cast<BarWidget>(kind)}};
+        const FormBlock* block = Block(w.Pass(), "toppanel-widgets");
+        CHECK(block == nullptr || !Has(block->rml, "-card-"));
+    }
+    w.readings.settingsOf = {*CreateWidget(w.settings)};
+    w.state.editSide      = EditSide::Popup;
+    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, "-card-"));
 }
 
 TEST(the_pinned_status_buttons_have_no_switch_and_are_on_while_a_status_is_pinned_at_their_rank)
@@ -1513,9 +1832,9 @@ TEST(a_designer_buttons_picture_is_drawn_with_its_icons_adjustment)
     w.readings.partMarks[static_cast<size_t>(WidgetPart::WorldShip)]   = PartMark{Icon::Star};
     const Form form = w.Pass();
     const std::string& rml = std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
-    // Bastok's crest at 85% of its room, the star as it is.
+    // Bastok's crest a pixel down at 85% of its room, the star as it is.
     CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + GamePictureSource(GamePicture::BastokCrest) +
-                    "\" style=\"transform:scale(0.85);\"/>").c_str()));
+                    "\" style=\"transform:translate(0px,1px) scale(0.85);\"/>").c_str()));
     CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + IconSource(Icon::Star) + "\"/>").c_str()));
 }
 
@@ -1554,9 +1873,9 @@ TEST(status_icons_offers_vanilla_then_each_pack_and_with_show_status_background_
     // The second pack, after Vanilla and the first.
     CHECK(w.Pass({{icons + "-o-2", kClickEvent, ""}}).changed);
     CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.statusIcons == 1);
-    CHECK(!w.settings.customPalette.statusBack);
-    w.Pass({{back, kClickEvent, ""}});
     CHECK(w.settings.customPalette.statusBack);
+    w.Pass({{back, kClickEvent, ""}});
+    CHECK(!w.settings.customPalette.statusBack);
 }
 
 TEST(display_shows_on_the_status_timers_widget_alone_and_picks_how_its_pins_show)
@@ -1576,4 +1895,23 @@ TEST(display_shows_on_the_status_timers_widget_alone_and_picks_how_its_pins_show
     w.Pass({{list, kClickEvent, ""}});
     CHECK(w.Pass({{list + "-o-1", kClickEvent, ""}}).changed);
     CHECK(w.settings.Widget(statuses).statusDisplay == StatusDisplay::Icon);
+}
+
+// The card: the Icon, Alignment and Linked Padding tips are shared by every widget, and named one default for them
+// all. Each widget's default, as default_settings.h has it (barBagsIcon=right, barGilIcon=hide, barTargetIcon=hide,
+// barJobAlign=left, barZoneLinkPadding=19), or the struct's for a widget it leaves out and for a copy.
+TEST(a_shared_widget_setting_names_that_widgets_own_default)
+{
+    const WindowLayout& layout = kWindowLayout;
+    const auto side  = [&](IconSide s) { return std::string(layout.OptionsOf(WindowList::IconSides)[static_cast<size_t>(s)].name); };
+    const auto align = [&](WidgetAlign a) { return std::string(layout.OptionsOf(WindowList::WidgetAligns)[static_cast<size_t>(a)].name); };
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Bags), side(IconSide::Right));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Currency), side(IconSide::Hide));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Target), side(IconSide::Hide));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Zone), side(IconSide::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, PanelWidget{BarWidget::Currency, 1}), side(IconSide::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Job), align(WidgetAlign::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Zone), align(WidgetAlign::Location));
+    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Zone), "19"));
+    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Target), "0"));
 }

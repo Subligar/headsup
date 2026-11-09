@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <map>
+#include <set>
 #include <span>
 #include <string>
 #include <utility>
@@ -633,7 +634,7 @@ TEST(gil_bags_and_earth_time)
     const PopupRow& rows         = bagsPopup.sections[0].rows[0];
     CHECK(rows.kind == RowKind::Grid && rows.columns == 2 && rows.cells.size() == 6 && rows.roomy); // Storage too, with no room
     CHECK(Joined(rows.cells[2].text) == "Storage");
-    CHECK(Joined(rows.cells[4].text) == "Mog Satchel");
+    CHECK(Joined(rows.cells[4].text) == "Satchel");
     CHECK(rows.cells[5].text == (std::vector<Span>{{"30 / 30", Tone::Resist}}));
     state.earthHour   = 21;
     state.earthMinute = 7;
@@ -762,10 +763,10 @@ TEST(the_forecast_pop_out_has_the_weather_for_a_title_today_beside_the_next_four
     state.unixMs = kVanaEpochUnixMs;
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
     CHECK(Joined(popup.title) == "Sunshine (50%)" && popup.icon == std::optional<Icon>(Icon::WeatherSunny));
-    // Today first, the forecast beside it, then the elements.
+    // Today first, the forecast, then the elements.
     const PopupSection* today    = &popup.sections[0];
     const PopupSection* forecast = Section(popup, "Weather Forecast (Valkurm Dunes)");
-    CHECK(today->heading.starts_with("Today (") && forecast == &popup.sections[1] && forecast->beside && !today->beside);
+    CHECK(today->heading.starts_with("Today (") && forecast == &popup.sections[1]);
     // Today's weathers on one line between the day and time and the moon, a slash between them.
     const std::vector<PopupCell>& weathers = today->rows[1].cells;
     CHECK(weathers.size() == 3 && Joined(weathers[0].text) == "Sunshine (50%)" && Joined(weathers[1].text) == "/" &&
@@ -1528,6 +1529,40 @@ TEST(the_job_widget_says_one_merit_and_promises_no_merit_without_limit_mode)
     CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("Next Merit in") == 0; }));
 }
 
+// Round 22: "If there are no messages and its the only thing selected for Performance it should just hide itself".
+TEST(the_performance_widget_hides_while_messages_alone_are_on_and_none_wait)
+{
+    Settings settings;
+    settings.Widget(BarWidget::Performance).design = DesignFrom(BarWidget::Performance, "messages |");
+    BarState state;
+    state.connection = SteadyLink();
+    const PanelWidget performance{BarWidget::Performance};
+    const auto room = [&](std::optional<PanelWidget> settingsShown) {
+        return TakesRoom(Content(BarWidget::Performance, state, settings), performance, settingsShown);
+    };
+    CHECK(!room(std::nullopt));
+    state.connection->playOnline = PlayOnlineCounts{0, 0};
+    CHECK(!room(std::nullopt) && !room(PanelWidget{BarWidget::Zone}));
+    // The user: "since Performance is hidden because of no message, I can't open the edit for it".
+    CHECK(room(performance) && Joined(Content(BarWidget::Performance, state, settings).title) == "-");
+    state.connection->playOnline = PlayOnlineCounts{0, 2};
+    const WidgetContent mail     = Content(BarWidget::Performance, state, settings);
+    CHECK(TakesRoom(mail, performance, std::nullopt) && !mail.title.empty());
+}
+
+// The card "Allow disabling widget text when linked": a widget linked into a pill may have every part off.
+TEST(a_widget_with_every_part_off_hides_and_one_with_a_part_on_and_nothing_to_say_shows_a_dash)
+{
+    Settings settings;
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "-name -region -nation |");
+    BarState state;
+    CHECK(!TakesRoom(Content(BarWidget::Zone, state, settings), BarWidget::Zone, std::nullopt));
+    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), BarWidget::Zone, PanelWidget{BarWidget::Zone}));
+    settings.Widget(BarWidget::Bags).design = DesignFrom(BarWidget::Bags, "count1 |");
+    CHECK(Joined(Content(BarWidget::Bags, state, settings).title) == "-");
+    CHECK(TakesRoom(Content(BarWidget::Bags, state, settings), BarWidget::Bags, std::nullopt));
+}
+
 TEST(the_performance_widget_shows_the_games_rates_on_one_line_and_turns_amber_then_red)
 {
     Settings settings;
@@ -1809,7 +1844,7 @@ TEST(the_status_timers_widget_shows_each_pin_at_its_rank_where_its_design_puts_i
     settings.Widget(BarWidget::StatusTimers).statusDisplay = StatusDisplay::Name;
     settings.statusPins = {40, 33, kSignetEffect}; // ranks 1, 2 and 3
     // As new: 1, 3 and 5 on the first line, 2, 4 and 6 on the second.
-    CHECK_EQ(DesignText(settings.Widget(BarWidget::StatusTimers).design), "pin1 pin3 pin5 | pin2 pin4 pin6");
+    CHECK_EQ(DesignText(BarWidget::StatusTimers, settings.Widget(BarWidget::StatusTimers).design), "pin1 pin3 pin5 | pin2 pin4 pin6");
     const WidgetContent w = Content(BarWidget::StatusTimers, state, settings);
     CHECK(Joined(w.title) == "Protect 30m 00s  Signet 0s" && Joined(w.subtitle) == "Haste 1m 30s");
     // Pinned or not decides what shows, not the design's switches.
@@ -1854,7 +1889,7 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     state.gil    = 4751;
     state.nation = Nation::Bastok;
     PopupContent p = BarPopupContent(BarWidget::Currency, state, settings);
-    CHECK(Joined(p.title) == "Currencies" && p.sections.size() == 2 && p.sections[0].heading == "Favorites" && p.oneColumn);
+    CHECK(Joined(p.title) == "Currencies" && p.sections.size() == 2 && p.sections[0].heading == "Favorites");
     // By default gil and your nation's conquest points, each starred; a star's press takes it off.
     const PopupRow& top = p.sections[0].rows[0];
     CHECK((gridLines(top) == std::vector<std::string>{"Gil 4,751", "Conquest Points (Bastok) -"}));
@@ -2586,9 +2621,9 @@ TEST(the_bags_popup_lists_mog_safe_2_only_once_it_holds_something)
                         if (span.text == name) return true;
         return false;
     };
-    CHECK(listed("Inventory") && !listed("Mog Safe 2"));
+    CHECK(listed("Inventory") && !listed("Safe (2)"));
     state.bags[kMogSafe2] = BagCount{3, 50};
-    CHECK(listed("Mog Safe 2"));
+    CHECK(listed("Safe (2)"));
 }
 
 TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)
@@ -2599,12 +2634,72 @@ TEST(the_bags_widget_shows_the_bag_picked_for_it_and_the_plugin_reads_that_far)
     state.bags[5] = BagCount{12, 80}; // the satchel
     CHECK_EQ(Content(BarWidget::Bags, state, settings).title.front().text, "26 / 30");
     settings.Widget(BarWidget::Bags).bag = 5;
+    settings.Widget(BarWidget::Bags).design = DesignFrom(BarWidget::Bags, "count1 | name1");
     const WidgetContent satchel = Content(BarWidget::Bags, state, settings);
-    CHECK(satchel.title.front().text == "12 / 80" && satchel.subtitle.front().text == ContainerName(5));
+    CHECK(satchel.title.front().text == "12 / 80" && satchel.subtitle.front().text == "Satchel");
     CHECK_EQ(NeedsOf(settings, {}).containers, 6);
     // A bag the character has no room in reads as nothing yet.
     settings.Widget(BarWidget::Bags).bag = 6;
     CHECK_EQ(Content(BarWidget::Bags, state, settings).title.front().text, "-");
+}
+
+TEST(the_bags_widget_shows_two_bags_at_once_each_by_its_own_buttons)
+{
+    Settings settings;
+    BarState state;
+    state.bags[0]  = BagCount{26, 30};
+    state.bags[11] = BagCount{40, 80}; // the third wardrobe
+    WidgetOptions& o = settings.Widget(BarWidget::Bags);
+    o.bag            = 0;
+    o.secondBag      = 11;
+    o.design         = DesignFrom(BarWidget::Bags, "name1 count1 | name2 count2");
+    const WidgetContent both = Content(BarWidget::Bags, state, settings);
+    CHECK_EQ(Joined(both.title), "Inventory  26 / 30");
+    CHECK_EQ(Joined(both.subtitle), "Wardrobe (3)  40 / 80");
+    // The plugin counts the second bag only while its count shows.
+    CHECK_EQ(NeedsOf(settings, {}).containers, 12);
+    o.design = DesignFrom(BarWidget::Bags, "name1 count1 | name2 -count2");
+    CHECK_EQ(NeedsOf(settings, {}).containers, 1);
+    // A bag of its own each: the second picked alone moves nothing of the first.
+    o.design    = DesignFrom(BarWidget::Bags, "count2 | count1");
+    o.secondBag = 5;
+    const WidgetContent swapped = Content(BarWidget::Bags, state, settings);
+    CHECK(Joined(swapped.title) == "-" && Joined(swapped.subtitle) == "26 / 30");
+}
+
+TEST(a_bag_is_named_without_mog_and_its_number_in_brackets)
+{
+    CHECK_EQ(ContainerName(0), "Inventory");
+    CHECK_EQ(ContainerName(1), "Safe");
+    CHECK_EQ(ContainerName(2), "Storage");
+    CHECK_EQ(ContainerName(5), "Satchel");
+    CHECK_EQ(ContainerName(8), "Wardrobe");
+    CHECK_EQ(ContainerName(9), "Safe (2)");
+    CHECK_EQ(ContainerName(11), "Wardrobe (3)");
+    CHECK_EQ(ContainerName(16), "Wardrobe (8)");
+}
+
+TEST(the_bags_to_pick_start_with_the_inventory_storage_and_both_safes)
+{
+    // Then the rest in Ashita's order, the temporary items left out.
+    CHECK(BagChoices() == (std::vector<int>{0, 2, 1, 9, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16}));
+}
+
+// The user: "Use short name everywhere", as the widget and its Bag dropdowns write them.
+TEST(the_bags_popup_lists_the_bags_in_ashitas_order_by_their_short_names)
+{
+    Settings settings;
+    BarState state;
+    for (int c = 0; c < kContainerCount; ++c)
+        state.bags[static_cast<size_t>(c)] = BagCount{1, 80};
+    std::vector<std::string> names;
+    for (const PopupSection& section : BarPopupContent(BarWidget::Bags, state, settings).sections)
+        for (const PopupRow& row : section.rows)
+            for (size_t i = 0; i < row.cells.size(); i += 2)
+                names.push_back(row.cells[i].text.front().text);
+    CHECK(names == (std::vector<std::string>{"Inventory", "Safe", "Storage", "Locker", "Satchel", "Sack", "Case", "Wardrobe",
+                       "Safe (2)", "Wardrobe (2)", "Wardrobe (3)", "Wardrobe (4)", "Wardrobe (5)", "Wardrobe (6)",
+                       "Wardrobe (7)", "Wardrobe (8)"}));
 }
 
 TEST(a_targeted_players_jobs_show_from_whatever_knows_them_unless_switched_off)
@@ -2827,19 +2922,18 @@ TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim_in_pare
     CHECK(Joined(both.title).starts_with("Jeuno") && Joined(both.subtitle).starts_with("Woodworking"));
 }
 
-TEST(the_world_info_popup_has_conquest_beside_travel_over_the_calendar_and_guilds_under_them)
+TEST(the_world_info_popup_has_conquest_travel_and_the_calendar_in_a_row_and_guilds_under_them)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
     state.zone   = 79;
     const Settings settings = WorldShowing("ship |");
-    const PopupContent all  = BarPopupContent(BarWidget::World, state, settings);
+    const PopupContent all  = PanelPopupContent(BarWidget::World, state, settings);
     std::vector<std::string> headings;
     for (const PopupSection& section : all.sections)
         headings.push_back(std::string(CardKey(section.heading)));
     CHECK((headings == std::vector<std::string>{"Conquest", "Travel", "Calendar", "Guilds"}));
-    CHECK(!all.sections[0].beside && all.sections[1].beside && all.sections[2].under && !all.sections[3].beside &&
-          !all.sections[3].under);
+    CHECK(!all.sections[0].beside && all.sections[1].beside && all.sections[2].beside && !all.sections[3].beside);
     const std::vector<std::string> lines = Lines(all.sections[2]);
     // Who, then where and when on the right, the time last and alone; the tally is in the Conquest card's heading.
     CHECK_EQ(lines.size(), static_cast<size_t>(4));
@@ -3024,8 +3118,7 @@ TEST(the_forecast_pop_out_puts_today_beside_the_forecast_over_the_elements)
     BarState state;
     state.zone   = 103;
     state.unixMs = kVanaEpochUnixMs + 777LL * 3456 * 1000;
-    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(popup.oneColumn);
+    const PopupContent popup = PanelPopupContent(BarWidget::Weather, state, settings);
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
@@ -3139,13 +3232,13 @@ TEST(the_standings_are_asked_for_while_the_zone_or_a_world_info_showing_a_nation
     Settings settings;
     settings.Widget(BarWidget::Zone).on  = false;
     settings.Widget(BarWidget::World).on = true;
-    CHECK(!StandingsShown(settings)); // its next ship
+    CHECK(!StandingsShown(settings, {})); // its next ship
     settings.Widget(BarWidget::World).design = DesignFrom(BarWidget::World, "ship | windurst");
-    CHECK(StandingsShown(settings));
+    CHECK(StandingsShown(settings, {}));
     settings.Widget(BarWidget::World).on = false;
-    CHECK(!StandingsShown(settings));
+    CHECK(!StandingsShown(settings, {}));
     settings.Widget(BarWidget::Zone).on = true;
-    CHECK(StandingsShown(settings));
+    CHECK(StandingsShown(settings, {}));
 }
 
 TEST(a_designer_chip_shows_its_parts_picture_as_the_game_is_now_or_a_stand_in)
@@ -3183,4 +3276,236 @@ TEST(the_settings_widget_is_its_cog_alone_with_no_popup_copies_or_alignment)
     CHECK(BarPopupContent(BarWidget::Settings, state, settings).sections.empty());
     CHECK(!CloneWidget(settings, BarWidget::Settings) && !HasCopies(BarWidget::Settings) && !Combines(BarWidget::Settings));
     CHECK(!Aligns(BarWidget::Settings) && !Aligns(BarWidget::GameHelp) && Aligns(BarWidget::Currency));
+}
+
+namespace
+{
+    // Each card's heading without its brackets, and whether it joins the row of the one before.
+    std::vector<std::pair<std::string, bool>> Rows(const PopupContent& popup)
+    {
+        std::vector<std::pair<std::string, bool>> rows;
+        for (const PopupSection& s : popup.sections)
+            rows.emplace_back(std::string(CardKey(s.heading)), s.beside);
+        return rows;
+    }
+
+    // The Zone in West Ronfaure with its influence known.
+    BarState RonfaureState()
+    {
+        BarState state;
+        state.zone   = 100;
+        state.unixMs = 1791527400000;
+        RegionOwners owners{};
+        owners[0]    = Nation::SanDoria;
+        state.owners = owners;
+        state.shares =
+            RegionShares{{{Nation::SanDoria, 61}, {Nation::Bastok, 21}, {Nation::Windurst, 11}, {Nation::Beastmen, 5}}};
+        return state;
+    }
+}
+
+TEST(a_pop_out_shows_any_widgets_cards_in_its_designs_rows_each_from_its_own_widget)
+{
+    Settings settings;
+    const BarState state = RonfaureState();
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday},
+        {CardKind::CurrencyFavorites}}};
+    const PopupContent zone = PanelPopupContent(made, state, settings);
+    CHECK((Rows(zone) == std::vector<std::pair<std::string, bool>>{{"Influence", false}, {"Today", true}, {"Favorites", false}}));
+    CHECK(Joined(zone.title) == "Custom Widget"); // a created widget's pop-out goes by its Name
+    // Each card as its own widget's pop-out has it, collapsing under this pill's name.
+    PopupSection today = *Section(BarPopupContent(BarWidget::Weather, state, settings), zone.sections[1].heading);
+    today.beside        = true;
+    today.collapsePress = kCollapsePress + CollapseKey(made, today.heading);
+    CHECK(zone.sections[1] == today);
+    CHECK(zone.sections[2].rows == Section(BarPopupContent(BarWidget::Currency, state, settings), "Favorites")->rows);
+    // A card the design leaves out is not shown, and the Forecast card without its own Today has the rest.
+    settings.Widget(made).popup = PopupDesign{{{CardKind::WeatherForecast}}};
+    CHECK((Rows(PanelPopupContent(made, state, settings)) ==
+           std::vector<std::pair<std::string, bool>>{{"Weather Forecast", false}}));
+}
+
+TEST(a_card_with_nothing_to_show_drops_out_of_its_row_and_the_rest_take_its_place)
+{
+    Settings settings;
+    BarState state = RonfaureState();
+    state.shares.reset(); // no influence known yet
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday},
+        {CardKind::TargetDamage, CardKind::ZoneInfluence}}};
+    // Nothing targeted: the Target's cards have nothing to show, and their row goes.
+    CHECK((Rows(PanelPopupContent(made, state, settings)) == std::vector<std::pair<std::string, bool>>{{"Today", false}}));
+}
+
+TEST(a_previewed_pop_outs_target_cards_show_a_made_up_mob_while_nothing_is_targeted_and_the_target_once_one_is)
+{
+    Settings settings;
+    BarState state  = RonfaureState();
+    state.spellName = SpellNumber;
+    state.itemName  = [](uint16_t) { return "Item"; };
+    const PanelWidget made      = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::TargetSpells, CardKind::TargetMoves}, {CardKind::TargetDrops},
+        {CardKind::TargetSpawn, CardKind::ZoneInfluence}}};
+    // Nothing targeted, the pop-out itself has no Target card.
+    CHECK((Rows(PanelPopupContent(made, state, settings)) == std::vector<std::pair<std::string, bool>>{{"Influence", false}}));
+    // Its preview has Yagudo Acolyte's (data/phoenix_mobs.tsv 17371176, Giddeus, level 5 to 7): at 7, the spells of
+    // its list 14 (data/phoenix_spells.tsv) whose levels hold 7, and the moves of its list 183 (phoenix_skills.tsv).
+    const PopupContent preview = PreviewPopupContent(made, state, settings);
+    CHECK((Rows(preview) == std::vector<std::pair<std::string, bool>>{{"Spells", false}, {"TP Moves", true}, {"Drops", false},
+                                {"Spawn", false}, {"Influence", true}}));
+    std::vector<std::string> spells;
+    for (const PopupCell& cell : preview.sections[0].rows[0].cells)
+        spells.push_back(Joined(cell.text));
+    CHECK((spells == std::vector<std::string>{"S1", "S23", "S58", "S28", "S14", "S43"}));
+    CHECK(Joined(preview.sections[1].rows[0].cells[0].text) == "Feather Storm");
+    CHECK(Joined(preview.title) == "Custom Widget"); // the created widget's, not the mob's
+    // A target of its own is shown as the pop-out shows it.
+    const ActorInfo goblin = Goblin();
+    state.target           = &goblin;
+    CHECK(PreviewPopupContent(made, state, settings) == PanelPopupContent(made, state, settings));
+    CHECK(Rows(PanelPopupContent(made, state, settings)).size() == 4); // the goblin casts nothing
+}
+
+TEST(another_widgets_card_takes_that_widgets_first_copys_settings)
+{
+    Settings settings;
+    BarState state = RonfaureState();
+    state.unixMs   = kVanaEpochUnixMs;
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::WeatherToday}}};
+    const auto todayIcon = [&] { return PanelPopupContent(made, state, settings).sections.at(0).rows.at(1).cells.at(0).icon; };
+    settings.Widget(BarWidget::Weather).weatherIcons = CustomIcons::Always;
+    const std::optional<Icon> custom = todayIcon();
+    settings.Widget(BarWidget::Weather).weatherIcons = CustomIcons::Never;
+    CHECK(custom.has_value() && todayIcon() != custom);
+    // A second Forecast's own settings do not reach it.
+    const PanelWidget second = *CloneWidget(settings, BarWidget::Weather);
+    settings.Widget(second).weatherIcons = CustomIcons::Always;
+    CHECK(todayIcon() != custom);
+}
+
+TEST(a_linked_pill_shows_each_widgets_rows_in_turn_without_repeating_a_card)
+{
+    Settings settings;
+    const BarState state = RonfaureState();
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).combine = PanelWidget{BarWidget::Weather};
+    settings.Widget(made).popup   = PopupDesign{{{CardKind::WeatherByElement, CardKind::ZoneInfluence}}};
+    const PopupContent pill = PanelPopupContent(made, state, settings);
+    // The created widget's row, then the Forecast's own rows but By Element, which that row has already.
+    CHECK((Rows(pill) == std::vector<std::pair<std::string, bool>>{
+                             {"By Element", false}, {"Influence", true}, {"Today", false}, {"Weather Forecast", true}}));
+}
+
+TEST(a_card_placed_in_another_widgets_pop_out_has_its_widgets_data_gathered_while_that_pop_out_shows)
+{
+    Settings settings;
+    for (WidgetOptions& each : settings.widgets)
+        each.on = false;
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::TargetOverview, CardKind::BagsList},
+        {CardKind::JobExp, CardKind::PartyMembers, CardKind::CurrencyFavorites}}};
+    const BarNeeds closed = NeedsOf(settings, {}), open = NeedsOf(settings, {made});
+    CHECK(!closed.target && !closed.job && !closed.party && !closed.gil && closed.containers == 0);
+    CHECK(open.target && open.job && open.party && open.gil && open.containers == kContainerCount);
+    CHECK(PopupShows(settings, {made}, BarWidget::Target) && !PopupShows(settings, {made}, BarWidget::World));
+    // Status Timers' cards there read the statuses while it shows, as its own pop-out does.
+    settings.Widget(made).popup = PopupDesign{{{CardKind::StatusBuffs}}};
+    CHECK(NeedsOf(settings, {made}).statuses && !NeedsOf(settings, {}).statuses);
+    // The conquest standings for World Info's Conquest card, with World Info off.
+    settings.Widget(made).popup = PopupDesign{{{CardKind::WorldConquest}}};
+    CHECK(StandingsShown(settings, {made}) && !StandingsShown(settings, {}));
+    CHECK(NeedsOf(settings, {made}).conquest);
+}
+
+TEST(every_card_a_widget_builds_is_one_of_its_own_and_its_default_pop_out_shows_them_all)
+{
+    const FullState full;
+    BarState state = full.state;
+    state.itemName = NpcItemName;
+    std::vector<ActorInfo> targets{full.target};
+    for (const uint32_t npc : {16785729u, 16912886u, 16798100u, 16793970u, 16785730u, 17207852u, 16785781u, 16982252u,
+             17678362u, 17719350u, 17772597u, 16916828u, 16818249u, 16806290u, 16879936u, 17105705u, 16822535u})
+        targets.push_back(NpcTarget(npc, "NPC"));
+    std::set<CardKind> built;
+    const Settings settings;
+    for (const ActorInfo& target : targets)
+    {
+        state.target = &target;
+        for (int k = 0; k < kBarWidgetCount; ++k)
+        {
+            const auto kind = static_cast<BarWidget>(k);
+            const PopupContent own = BarPopupContent(kind, state, settings);
+            if (!own.settings || !Content(kind, state, settings).hasPopup) continue;
+            std::vector<std::string> made, shown;
+            for (const PopupSection& section : own.sections)
+            {
+                CHECK(section.card.has_value() && WidgetOfCard(*section.card) == kind);
+                if (section.card) built.insert(*section.card);
+                made.push_back(section.heading);
+            }
+            for (const PopupSection& section : PanelPopupContent(kind, state, settings).sections)
+                shown.push_back(section.heading);
+            std::ranges::sort(made);
+            std::ranges::sort(shown);
+            CHECK(made == shown);
+        }
+    }
+    CHECK(built.size() >= static_cast<size_t>(kCardKindCount) / 2); // the fixtures reach most of them
+}
+
+TEST(a_created_widget_shows_its_name_and_any_widgets_parts_each_as_that_widgets_first_copy_has_them)
+{
+    Settings settings;
+    BarState state = RonfaureState();
+    state.bags[static_cast<size_t>(kMogSatchel)] = BagCount{3, 30};
+    const PanelWidget made = *CreateWidget(settings);
+    WidgetContent w = Content(made, state, settings);
+    CHECK(w.shown && Joined(w.title) == "Custom Widget" && w.subtitle.empty() && !w.hasPopup);
+    // The Zone's name beside it and the first Inventory's Bag 1 under it, that widget's bag as its settings pick it.
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name zone.name | bags.count1");
+    settings.Widget(BarWidget::Bags).bag = kMogSatchel;
+    w = Content(made, state, settings);
+    CHECK_EQ(Joined(w.title), "Custom Widget  " + std::string(KnownZone(state.zone)->name));
+    CHECK_EQ(Joined(w.subtitle), "3 / 30");
+    settings.Widget(made).name = "Mule";
+    CHECK(Joined(Content(made, state, settings).title).starts_with("Mule  "));
+    // A widget's icon leads at the start of the first line, as an icon part does.
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "bags.icon name |");
+    w = Content(made, state, settings);
+    CHECK(w.icons == std::vector{Icon::Bag} && Joined(w.title) == "Mule");
+    // Its pop-out is its name over the cards its design rows, any widget's.
+    settings.Widget(made).popup = PopupDesign{{{CardKind::ZoneInfluence}}};
+    CHECK(Content(made, state, settings).hasPopup);
+    const PopupContent popup = PanelPopupContent(made, state, settings);
+    CHECK(Joined(popup.title) == "Mule" && Rows(popup) == (std::vector<std::pair<std::string, bool>>{{"Influence", false}}));
+    CHECK(!popup.removePress.empty() && !popup.clonePress.empty());
+    // Its designer's chips show what each widget shows now.
+    state.weather = Weather::DustStorm;
+    const auto marks = PartMarksNow({made}, state, settings);
+    CHECK(marks[static_cast<size_t>(WidgetPart::WeatherIcon)] == PartMark{Content(BarWidget::Weather, state, settings).icons.front()});
+}
+
+TEST(a_created_widgets_parts_have_their_widgets_data_gathered_while_it_shows)
+{
+    Settings settings;
+    for (WidgetOptions& each : settings.widgets)
+        each.on = false;
+    const PanelWidget made = *CreateWidget(settings);
+    const auto needs = [&](const char* design) {
+        settings.Widget(made).design = DesignFrom(BarWidget::Custom, design);
+        return NeedsOf(settings, {});
+    };
+    const BarNeeds name = needs("name |");
+    CHECK(!name.frames && !name.gil && !name.statuses && !name.localTime && name.containers == 0 && !name.zone);
+    CHECK(needs("name | performance.fps").frames && !needs("name | -performance.fps").frames);
+    CHECK(needs("gil.amount1 |").gil && WidgetShown(settings, BarWidget::Currency) && !AnyCopyShown(settings, BarWidget::Currency));
+    CHECK(needs("statusTimers.pin1 |").statuses && needs("earthTime.date |").localTime);
+    settings.Widget(BarWidget::Bags).secondBag = kMogSatchel;
+    CHECK_EQ(needs("bags.count2 |").containers, kMogSatchel + 1);
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | world.windurst");
+    CHECK(StandingsShown(settings, {}));
+    settings.Widget(made).on = false;
+    CHECK(!StandingsShown(settings, {}) && !WidgetShown(settings, BarWidget::World));
 }

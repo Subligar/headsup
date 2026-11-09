@@ -29,8 +29,9 @@ namespace headsup
         HelpBar,
         FishingBar,
         VanillaUi,
+        Credits,
     };
-    constexpr int kPageCount = static_cast<int>(Page::VanillaUi) + 1;
+    constexpr int kPageCount = static_cast<int>(Page::Credits) + 1;
 
     // A kind as a bit of a kinds mask: which of the entity pages a card, a setting or a row is drawn on.
     constexpr uint8_t KindBit(PlateKind kind) { return static_cast<uint8_t>(1u << static_cast<int>(kind)); }
@@ -125,9 +126,9 @@ namespace headsup
     inline std::string_view Said(const char* text) { return text != nullptr ? std::string_view(text) : std::string_view(); }
 
     // In a word of the layout, where the code puts what it stands for: a line's name, a count (and what it is out of),
-    // the yalms a fade starts at, the tags a note names.
+    // the yalms a fade starts at, the tags a note names, the default of the widget a shared setting is shown for.
     constexpr std::string_view kLineMark = "{line}", kCountMark = "{count}", kNearMark = "{near}", kTagsMark = "{tags}";
-    constexpr std::string_view kFileMark = "{file}", kTotalMark = "{total}";
+    constexpr std::string_view kFileMark = "{file}", kTotalMark = "{total}", kDefaultMark = "{default}";
     // The text with every mark in it replaced by what it stands for.
     std::string Filled(std::string_view text, std::string_view mark, std::string_view with);
 

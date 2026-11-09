@@ -25,8 +25,10 @@ namespace headsup
     // Game help has its own bar under the top bar, so no section holds it.
     constexpr bool OnTheBar(BarWidget widget) { return widget != BarWidget::GameHelp; }
     constexpr int kPlacedWidgetCount = kBarWidgetCount - 1;
-    // With every copy there can be: the target once, and the rest kMostCopies times.
-    constexpr int kMostPlaced = 1 + (kPlacedWidgetCount - 1) * kMostCopies;
+    constexpr int kDefaultPlacedCount = kPlacedWidgetCount - 1; // the first panel's: all but the created widgets
+    // With every copy there can be: the target once, the created widgets kMostCreatedWidgets, and the rest kMostCopies
+    // times.
+    constexpr int kMostPlaced = 1 + (kPlacedWidgetCount - 2) * kMostCopies + kMostCreatedWidgets;
 
     // Zone, weather and Vana'diel time on the left, the target alone in the center, gil, bags and Earth time on the
     // right, with each newer widget in its place among them.
@@ -45,9 +47,11 @@ namespace headsup
     // Whether the placement holds this copy.
     bool Placed(const BarPlacement& placement, PanelWidget widget);
     // Another copy of a widget, after the last of its copies: the lowest number not placed. None for a widget
-    // without copies, or with kMostCopies of them.
+    // without copies, or with CopiesOf of them.
     std::optional<PanelWidget> AddCopy(BarPlacement& placement, BarWidget widget);
-    // Takes a copy off the panel; the first copy of a widget stays. False when nothing went.
+    // A created widget with the lowest number not placed, at the right section's end; none when every one is.
+    std::optional<PanelWidget> AddCreated(BarPlacement& placement);
+    // Takes a copy off the panel; the first copy of a widget stays (IsFirstCopy). False when nothing went.
     bool RemoveCopy(BarPlacement& placement, PanelWidget widget);
     // A drop: the widget at index in section from goes before position at of section to, at past the end making it
     // the last; at counts the section as it was before the move. False, with nothing changed, for an index or a

@@ -384,6 +384,10 @@ TEST(only_a_dash_typed_in_a_design_is_drawn_as_the_mark_chosen)
     CHECK_EQ(level(), "Lv 17-20 " + dot + " EP-EM");
     s.customPalette.separator = DashMark::None;
     CHECK_EQ(level(), "Lv 17-20 - EP-EM");
+    // The card "Add Space as a separator style option": None leaves the dash's room blank.
+    s.customPalette.separator = DashMark::Blank;
+    CHECK_EQ(level(), "Lv 17-20   EP-EM");
+    CHECK((SplitMarks(level()) == std::vector<TextPiece>{{"Lv 17-20   EP-EM", DashMark::None}}));
     // Each mark has a character of its own, none of them a dash, and a report reads them as dashes.
     CHECK(diamond != dot && diamond != "-" && dot != "-");
     CHECK(MarkOfChar(diamond[0]) == DashMark::Diamond && MarkOfChar(dot[0]) == DashMark::Dot && !MarkOfChar('-'));

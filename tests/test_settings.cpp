@@ -365,7 +365,7 @@ helpBarY=8.0000
         s.hideNetstat  = true;
         s.screenshotKey       = 0x79; // F10
         s.screenshotHidesGame = false;
-        for (int w = 0; w < kBarWidgetCount; ++w)
+        for (int w = 0; w < static_cast<int>(BarWidget::Custom); ++w) // none is made
             s.Widget(static_cast<BarWidget>(w)).on = !kBarWidgetDefaults[w];
         s.barSections = DefaultPlacement();
         MoveWidget(s.barSections, BarSection::Center, 0, BarSection::Right, 0); // the target first on the right
@@ -509,8 +509,8 @@ TEST(a_new_install_takes_the_built_in_defaults_and_a_saved_file_its_own)
     MapStore file;
     file.values["settingsVersion"] = "2.0000";
     CHECK(LoadSettings(file).barTheme == Settings{}.barTheme);
-    // The faded names stay off.
-    CHECK_EQ(DefaultSettings().opacity.notTargeted, Settings{}.opacity.notTargeted);
+    // Untargeted names fade to half and every name fades in, as the tester's file the defaults came from has them.
+    CHECK(DefaultSettings().opacity.notTargeted == 50 && DefaultSettings().opacity.fadeIn);
 }
 
 TEST(a_whole_number_too_large_for_an_int_is_clamped_like_any_other)
@@ -958,7 +958,7 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     garbled.values["customThemeRounding"] = "-5";
     garbled.values["customThemeStatusIcons"] = "Missing Pack";
     const Settings read = LoadSettings(garbled);
-    CHECK_EQ(read.customPalette.statusIcons, kVanillaStatusIcons);
+    CHECK_EQ(read.customPalette.statusIcons, PaletteOf(BarTheme::PhoenixGold).statusIcons);
     CHECK(read.customPalette.accent == PaletteOf(BarTheme::PhoenixGold).accent && read.customPalette.border == kMaxStripBorder);
     CHECK_EQ(read.customPalette.rounding, kShapeRounding);
 }
@@ -1038,15 +1038,15 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"}; // in BarWidget's order
-    static_assert(std::size(widgetKeys) == kBarWidgetCount);
-    for (int w = 0; w < kBarWidgetCount; ++w)
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"}; // in BarWidget's order, but a created widget's
+    static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
+    for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {
         const Settings d = DefaultSettings();
         MapStore store;
         store.values[widgetKeys[w]] = d.Widget(static_cast<BarWidget>(w)).on ? "false" : "true";
         const Settings s = LoadSettings(store);
-        for (int other = 0; other < kBarWidgetCount; ++other)
+        for (int other = 0; other < kBarWidgetCount - 1; ++other)
             CHECK(s.Widget(static_cast<BarWidget>(other)).on == (d.Widget(static_cast<BarWidget>(other)).on != (other == w)));
     }
 }
@@ -1138,6 +1138,23 @@ TEST(the_clocks_date_format_is_saved_by_name_and_an_unknown_name_keeps_the_defau
     CHECK(LoadSettings(saved).Widget(BarWidget::EarthTime).dateFormat == DateFormat::MonthDayYear);
 }
 
+TEST(a_created_widget_emptied_in_a_pill_that_shows_another_widget_saves_and_loads_empty)
+{
+    Settings s;
+    const PanelWidget made = *CreateWidget(s);
+    s.Widget(made).combine = PanelWidget{BarWidget::Zone};
+    s.Widget(made).design  = WidgetDesign{};
+    CHECK(Clamp(s).Widget(made).design == WidgetDesign{});
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barCustomDesign"], "|");
+    const WidgetDesign loaded = LoadSettings(saved).Widget(made).design;
+    CHECK(loaded.lines[0].empty() && loaded.lines[1].empty());
+    // Once its pill shows nothing else, it gets its Name back rather than vanish from the panel.
+    s.Widget(BarWidget::Zone).on = false;
+    CHECK(Clamp(s).Widget(made).design == DefaultDesign(BarWidget::Custom));
+}
+
 TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
 {
     Settings s;
@@ -1156,7 +1173,42 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     CHECK(!saved.values.contains("barGameHelpDesign"));
     // A design a hand broke is made whole: every part once.
     saved.values["barZoneDesign"] = "name name";
-    CHECK_EQ(DesignText(LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
+    CHECK_EQ(DesignText(BarWidget::Zone, LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
+}
+
+TEST(a_created_widgets_pop_out_design_saves_under_its_own_key_and_clones_with_it_and_a_built_ins_is_always_its_own)
+{
+    Settings s;
+    const PanelWidget made = *CreateWidget(s);
+    CHECK(s.Widget(made).popup.rows.empty());
+    s.Widget(made).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday}}};
+    const PanelWidget second = *CloneWidget(s, made);
+    CHECK(s.Widget(second).popup == s.Widget(made).popup);
+    s.Widget(second).popup = PopupDesign{};
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barCustomPopupDesign"], "zone.influence weather.today");
+    CHECK_EQ(saved.values["barCustomPopupDesign_2"], "none");
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(made).popup == s.Widget(made).popup && loaded.Widget(second).popup.rows.empty());
+    // A built-in widget's pop-out is its own, whatever a hand or an older test build wrote.
+    CHECK(!saved.values.contains("barZonePopupDesign") && !saved.values.contains("barGameHelpPopupDesign"));
+    s.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::WeatherToday}}};
+    CHECK(Clamp(s).Widget(BarWidget::Zone).popup == DefaultPopupDesign(BarWidget::Zone));
+    saved.values["barZonePopupDesign"] = "weather.today";
+    CHECK(LoadSettings(saved).Widget(BarWidget::Zone).popup == DefaultPopupDesign(BarWidget::Zone));
+    // A row a hand filled past three keeps its first three.
+    saved.values["barCustomPopupDesign"] = "world.guilds world.travel world.calendar world.conquest";
+    CHECK_EQ(PopupDesignText(LoadSettings(saved).Widget(made).popup), "world.guilds world.travel world.calendar");
+}
+
+TEST(a_pop_out_row_given_more_than_three_cards_keeps_three_once_clamped)
+{
+    Settings s;
+    const PanelWidget made = *CreateWidget(s);
+    s.Widget(made).popup = PopupDesign{{{CardKind::JobExp, CardKind::PartyMembers, CardKind::BagsList, CardKind::ZoneInfluence},
+        {CardKind::JobExp}}};
+    CHECK_EQ(PopupDesignText(Clamp(s).Widget(made).popup), "job.exp party.members bags.list");
 }
 
 TEST(each_widgets_icon_side_saves_under_its_own_key_and_loads_back)
@@ -1195,6 +1247,59 @@ TEST(each_widgets_alignment_saves_under_its_own_key_and_loads_back_set_by_locati
     CHECK(loaded.Widget(BarWidget::Zone).align == WidgetAlign::Right && loaded.Widget(second).align == WidgetAlign::Center);
     saved.values["barZoneAlign"] = "nonsense";
     CHECK(LoadSettings(saved).Widget(BarWidget::Zone).align == WidgetAlign::Location);
+}
+
+TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keeps_its_own)
+{
+    Settings s;
+    const WidgetOptions fresh;
+    CHECK(!fresh.spacing && !fresh.padding && !fresh.background && fresh.titleFont.empty() && fresh.textFont.empty() &&
+          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale);
+    WidgetOptions& zone = s.Widget(BarWidget::Zone);
+    zone.spacing        = 12;
+    zone.padding        = 0;
+    zone.background     = false;
+    zone.titleFont      = "Arial";
+    zone.textFont       = "Verdana";
+    zone.fontRatio      = 1.5f;
+    zone.iconScale      = 40;
+    zone.rounding       = kThemeRounding;
+    zone.popupTextScale = 1.4f;
+    const PanelWidget copy = *CloneWidget(s, BarWidget::Zone);
+    CHECK(s.Widget(copy).spacing == 12 && s.Widget(copy).textFont == "Verdana" && s.Widget(copy).popupTextScale == 1.4f);
+    s.Widget(copy).iconScale  = 75;
+    s.Widget(copy).background = true;
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barZoneWidgetSpacing"], "12.0000");
+    CHECK_EQ(saved.values["barZoneShowBackground"], "false");
+    CHECK_EQ(saved.values["barZonePrimaryFont"], "Arial");
+    CHECK_EQ(saved.values["barZoneIconScale_2"], "75.0000");
+    CHECK_EQ(saved.values["barZoneShowBackground_2"], "true");
+    CHECK(saved.values.contains("barWeatherWidgetSpacing") && saved.values["barWeatherWidgetSpacing"].empty());
+    CHECK(!saved.values.contains("barGameHelpWidgetSpacing")); // the help bar has its own looks
+    CHECK(!saved.values.contains("barSettingsWidgetSpacing")); // only its cog, with no settings of its own
+    const Settings read = LoadSettings(saved);
+    CHECK(read.Widget(BarWidget::Zone) == s.Widget(BarWidget::Zone) && read.Widget(copy) == s.Widget(copy));
+    const WidgetOptions& weather = read.Widget(BarWidget::Weather);
+    CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale);
+}
+
+TEST(a_widgets_own_looks_out_of_their_range_are_held_to_it)
+{
+    MapStore store;
+    SaveSettings(Settings{}, store);
+    store.values["barZoneWidgetSpacing"]  = "500";
+    store.values["barZoneWidgetPadding"]  = "-9";
+    store.values["barZoneIconScale"]      = "43";
+    store.values["barZoneCornerRounding"] = "-9";
+    store.values["barZoneFontRatio"]      = "9";
+    store.values["barZonePopupTextScale"] = "0.01";
+    store.values["barZonePrimaryFont"]    = std::string(kMaxFontName + 1, 'a');
+    const WidgetOptions zone = LoadSettings(store).Widget(BarWidget::Zone);
+    CHECK(zone.spacing == kMaxWidgetSpacing && zone.padding == 0 && zone.iconScale == 45);
+    CHECK(zone.rounding == kThemeRounding && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
+    CHECK(zone.titleFont.empty());
 }
 
 TEST(separators_out_of_their_bits_are_held_to_them)
@@ -2765,6 +2870,30 @@ TEST(a_combined_widget_is_kept_by_its_partners_name_and_loses_a_partner_taken_of
     CHECK(s.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Party));
 }
 
+// The card "Allow disabling widget text when linked": a pill needs one part on among its widgets, a widget alone one
+// of its own.
+TEST(a_linked_widget_keeps_every_part_off_while_its_pill_has_one_on_and_gets_one_back_alone)
+{
+    Settings s;
+    s.Widget(BarWidget::Zone).on = s.Widget(BarWidget::Weather).on = true;
+    const WidgetDesign off = DesignFrom(BarWidget::Zone, "-name -region -nation |");
+    s.Widget(BarWidget::Zone).design  = off;
+    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Weather};
+    s = Clamp(std::move(s));
+    CHECK(s.Widget(BarWidget::Zone).design == off);
+    // Both all off: the pill's first widget gets its first part back.
+    s.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "-weather -date -day -time -moon |");
+    s = Clamp(std::move(s));
+    CHECK(PartOn(s.Widget(BarWidget::Zone).design, WidgetPart::ZoneName));
+    CHECK(s.Widget(BarWidget::Weather).design == DesignFrom(BarWidget::Weather, "-weather -date -day -time -moon |"));
+    // Unlinked, each needs its own.
+    s.Widget(BarWidget::Zone).design = off;
+    s.Widget(BarWidget::Zone).combine.reset();
+    s = Clamp(std::move(s));
+    CHECK(PartOn(s.Widget(BarWidget::Zone).design, WidgetPart::ZoneName));
+    CHECK(std::ranges::any_of(PartsOf(BarWidget::Weather), [&](WidgetPart p) { return PartOn(s.Widget(BarWidget::Weather).design, p); }));
+}
+
 TEST(a_widget_combines_with_any_placed_widget_but_the_target_settings_itself_and_ones_taken)
 {
     Settings s;
@@ -2798,7 +2927,10 @@ TEST(the_panels_widget_spacing_and_padding_are_kept_and_held_to_their_range)
     store.values["barWidgetSpacing"] = "500";
     store.values["barWidgetPadding"] = "-9";
     const Settings held = LoadSettings(store);
-    CHECK(held.barWidgetSpacing == kMaxWidgetSpacing && held.barWidgetPadding == kThemePadding);
+    CHECK(held.barWidgetSpacing == kMaxWidgetSpacing && held.barWidgetPadding == 0);
+    // A file from before Padding lost its Set by Theme, -1, reads as the default 8 px.
+    store.values["barWidgetPadding"] = "-1.0000";
+    CHECK_EQ(LoadSettings(store).barWidgetPadding, 8);
 }
 
 TEST(the_target_widgets_detection_icons_and_visibility_are_kept_and_held_to_their_range)
@@ -2922,15 +3054,27 @@ TEST(the_status_timers_display_starts_with_name_and_icon_and_is_kept_by_each_cop
     CHECK(LoadSettings(store).Widget(BarWidget::StatusTimers).statusDisplay == StatusDisplay::Both);
 }
 
-TEST(the_bags_widgets_bag_is_kept_and_one_past_the_last_reads_as_the_inventory)
+TEST(the_bags_widgets_two_bags_are_kept_and_one_past_the_last_reads_as_its_default)
 {
     Settings s;
-    s.Widget(BarWidget::Bags).bag = 5;
+    CHECK(s.Widget(BarWidget::Bags).bag == 0 && s.Widget(BarWidget::Bags).secondBag == 5); // the inventory and satchel
+    s.Widget(BarWidget::Bags).bag       = 8;
+    s.Widget(BarWidget::Bags).secondBag = 11;
     MapStore store;
     SaveSettings(s, store);
-    CHECK_EQ(LoadSettings(store).Widget(BarWidget::Bags).bag, 5);
-    store.values["barBag"] = std::to_string(kContainerCount);
-    CHECK_EQ(LoadSettings(store).Widget(BarWidget::Bags).bag, 0);
+    CHECK(LoadSettings(store).Widget(BarWidget::Bags).bag == 8 && LoadSettings(store).Widget(BarWidget::Bags).secondBag == 11);
+    store.values["barBag"]  = std::to_string(kContainerCount);
+    store.values["barBag2"] = std::to_string(kContainerCount);
+    CHECK(LoadSettings(store).Widget(BarWidget::Bags).bag == 0 && LoadSettings(store).Widget(BarWidget::Bags).secondBag == 5);
+}
+
+TEST(a_new_installs_inventory_widget_shows_the_first_bags_count_alone)
+{
+    const WidgetDesign d = DefaultSettings().Widget(BarWidget::Bags).design;
+    CHECK(PartOn(d, WidgetPart::Bag1Count));
+    for (const WidgetPart off : {WidgetPart::Bag1Name, WidgetPart::Bag2Count, WidgetPart::Bag2Name})
+        CHECK(!PartOn(d, off));
+    CHECK_EQ(DefaultSettings().Widget(BarWidget::Bags).bag, 0);
 }
 
 TEST(the_world_info_widget_keeps_its_picks_by_name)
@@ -3056,4 +3200,55 @@ TEST(the_status_favorites_and_pins_are_kept_and_an_unknown_or_repeated_one_is_le
     CHECK(read.statusFavorites == s.statusFavorites && read.statusPins == s.statusPins);
     store.values["statusFavorites"] = "40 x 65000 40 253";
     CHECK((LoadSettings(store).statusFavorites == std::vector<uint16_t>{40, kSignetEffect}));
+}
+
+TEST(a_created_widget_shows_once_made_saves_under_its_own_keys_and_forgets_them_when_taken_off)
+{
+    Settings s;
+    const PanelWidget first{BarWidget::Custom, 0};
+    CHECK(!Shows(s, first));
+    MapStore none;
+    SaveSettings(s, none);
+    CHECK(std::ranges::none_of(none.values, [](const auto& kv) { return kv.first.starts_with("barCustom"); }));
+    CHECK(CreateWidget(s) == std::optional(first));
+    const std::optional<PanelWidget> second = CreateWidget(s);
+    CHECK(second == std::optional(PanelWidget{BarWidget::Custom, 1}));
+    CHECK(Shows(s, first) && Shows(s, *second) && s.Widget(*second).on);
+    s.Widget(*second).align = WidgetAlign::Right;
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barCustom"], "true");
+    CHECK_EQ(saved.values["barCustomAlign_2"], "right");
+    const Settings read = LoadSettings(saved);
+    CHECK(read.Widget(*second) == s.Widget(*second) && Shows(read, first) && Shows(read, *second));
+    // Taken off, every created widget's settings go, the first's too.
+    RemoveWidgetCopy(s, first);
+    CHECK(!Placed(s.barSections, first) && !Shows(s, first) && s.Widget(first) == NewWidget(first));
+    MapStore after;
+    SaveSettings(s, after);
+    CHECK(!after.values.contains("barCustom") && after.values.contains("barCustom_2"));
+    while (CreateWidget(s)) {}
+    CHECK(Shows(s, PanelWidget{BarWidget::Custom, kMostCreatedWidgets - 1}) && !CreateWidget(s));
+}
+
+TEST(a_created_widget_is_named_by_its_number_keeps_its_name_and_a_clone_gets_one_of_its_own)
+{
+    Settings s;
+    const PanelWidget first = *CreateWidget(s), second = *CreateWidget(s);
+    CHECK_EQ(s.Widget(first).name, std::string(kCreatedWidgetName));
+    CHECK_EQ(s.Widget(second).name, std::string(kCreatedWidgetName) + " 2");
+    s.Widget(second).name = "Gil & Bags";
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barCustomName_2"], "Gil & Bags");
+    CHECK(!saved.values.contains("barZoneName")); // a built-in widget's name is its own
+    CHECK_EQ(LoadSettings(saved).Widget(second).name, "Gil & Bags");
+    // Emptied, it goes back to its own; past the most a name holds, it is cut there.
+    s.Widget(second).name.clear();
+    CHECK_EQ(Clamp(s).Widget(second).name, std::string(kCreatedWidgetName) + " 2");
+    s.Widget(second).name = std::string(kMaxWidgetName + 5, 'x');
+    CHECK_EQ(Clamp(s).Widget(second).name, std::string(kMaxWidgetName, 'x'));
+    s.Widget(second).name = "Gil & Bags";
+    const PanelWidget clone = *CloneWidget(s, second);
+    CHECK_EQ(s.Widget(clone).name, std::string(kCreatedWidgetName) + " 3");
 }

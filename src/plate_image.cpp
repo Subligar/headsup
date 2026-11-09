@@ -259,7 +259,8 @@ namespace headsup
             case DashMark::Dot: return dx * dx + dy * dy <= half * half;
             case DashMark::Square: return dx <= half && dy <= half;
             case DashMark::Diamond: return dx + dy <= half;
-            case DashMark::None: break;
+            case DashMark::None:
+            case DashMark::Blank: break;
             }
             return false;
         };
@@ -516,7 +517,8 @@ namespace headsup
             case DashMark::Dot: return std::hypot(dx, dy) <= half * kDotShare;
             case DashMark::Square: return dx <= half * kSquareShare && dy <= half * kSquareShare;
             case DashMark::None: return dy <= dash;
-            case DashMark::Diamond: break;
+            case DashMark::Diamond:
+            case DashMark::Blank: break;
             }
             return false;
         };

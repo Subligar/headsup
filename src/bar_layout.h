@@ -75,23 +75,24 @@ namespace headsup
     // where they would reach the left, and the center loses them from its end; the target then takes back the room
     // those leave. In ornate, the target's frame keeps DiamondClearance from the diamond on a
     // neighbour's edge. Pills with diamonds sit a gap, the diamond and a gap apart.
-    // spacing: every widget's room more between it and each neighbour; an ornate diamond stands in the middle of the
-    // room it is in.
+    // spacing: each widget's Widget Spacing, by SlotOf. Two pills keep half of each one's first widget's between them;
+    // an ornate diamond stands in the middle of the room it is in.
     // groups: by SlotOf, the first widget of each one's pill (PanelGroups). The widgets of a pill have no gap, room
     // or diamond between them, only linked's room after each (by SlotOf), and are placed or dropped together.
     BarLayout LayoutBar(float screenWidth, const BarMetrics& metrics, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
-                        const BarPlacement& placement, int separators, float spacing,
+                        const BarPlacement& placement, int separators, const std::array<float, kPanelSlots>& spacing,
                         const std::array<PanelWidget, kPanelSlots>& groups);
-    // A widget's padding inside its box on each side: padding, but none where it shares its pill with the shown widget
-    // before it, and its Linked Padding (linked, by SlotOf) where it shares it with the one after. shown is above 0
-    // for a widget with something to show.
+    // A widget's padding inside its box on each side: its own padding (by SlotOf), but none where it shares its pill
+    // with the shown widget before it, and its Linked Padding (linked, by SlotOf) where it shares it with the one
+    // after. shown is above 0 for a widget with something to show.
     struct WidgetPads
     {
         float left = 0.0f, right = 0.0f;
     };
     std::array<WidgetPads, kPanelSlots> PillPads(const BarPlacement& placement, const std::array<PanelWidget, kPanelSlots>& groups,
-        const std::array<float, kPanelSlots>& shown, const std::array<float, kPanelSlots>& linked, float padding);
+        const std::array<float, kPanelSlots>& shown, const std::array<float, kPanelSlots>& linked,
+        const std::array<float, kPanelSlots>& padding);
     // The widget under the point, or for a combined pill its first widget, which names the pill's popup.
     std::optional<PanelWidget> WidgetAt(const BarLayout& layout, float x, float y);
     const BarRect* RectOf(const BarLayout& layout, PanelWidget widget);
@@ -105,24 +106,24 @@ namespace headsup
     PillJoins JoinsOf(const BarLayout& layout, PanelWidget widget);
     // A combined pill has a popup when any of its widgets has one: its first widget's hasPopup says so.
     void SharePopups(std::array<bool, kPanelSlots>& hasPopup, const std::array<PanelWidget, kPanelSlots>& groups);
-    // Which of the popups' documents a popup is drawn in: under the settings a popup shows, over them, or over the
-    // settings window.
-    enum class PopupLayer : uint8_t { UnderSettings, OverSettings, OverMenu };
-    constexpr size_t kPopupLayers = static_cast<size_t>(PopupLayer::OverMenu) + 1;
+    // Which of the popups' documents a popup is drawn in: under the settings a popup shows, or over them.
+    enum class PopupLayer : uint8_t { UnderSettings, OverSettings };
+    constexpr size_t kPopupLayers = static_cast<size_t>(PopupLayer::OverSettings) + 1;
     // A dragged popup's spot, by which half of the screen its middle is in across and down. One reaching the screen's
-    // bottom, cut to the room below its top, is kept by its top: kept by its bottom it would grow up past where it was left.
+    // bottom is kept by its top: kept by its bottom, a tall one shown smaller would drop away from where its top was left.
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight);
-    // A popup of this size at the spot, its kept edges where the spot says, moved onto the screen if it would leave it.
-    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight);
+    // A popup of this size at the spot, its kept edges where the spot says, pushed onto the screen under top (the
+    // panel's bottom) where it would leave it, for this showing only: the spot stays as it was. Its ring, drawn ring
+    // pixels around it, stays on the screen too.
+    BarRect PlaceAtSpot(const PopupSpot& spot, float width, float height, float screenWidth, float screenHeight, float top,
+        float ring);
     // Where a popup is placed instead of under its widget: by its top left where it is being dragged, else at the spot
     // it was left, pinned or not; nothing for under its widget.
     std::optional<PopupSpot> PlacedSpot(const std::optional<BarRect>& dragged, const std::optional<PopupSpot>& spot);
-    // The height a popup placed at the spot is cut to: the screen's below its top, or above its bottom.
-    float SpotRoom(const PopupSpot& spot, float screenHeight);
     // Where a popup shows: placed, at its height, else under its widget, across at keptX, where it opened, so a widget
     // changing width while it is open does not move it.
     BarRect PopupAt(const BarRect& underWidget, float height, const std::optional<PopupSpot>& placed, float screenWidth,
-        float screenHeight, std::optional<float> keptX = std::nullopt);
+        float screenHeight, float top, float ring, std::optional<float> keptX = std::nullopt);
     // Under its widget below the bar, moved inward from the screen's sides, its height cut at the bottom: a ring
     // drawn ring pixels around it stays gap from the bar and the screen's edges.
     BarRect PlacePopup(const BarRect& widget, float barHeight, float width, float height, float screenWidth,
@@ -167,9 +168,10 @@ namespace headsup
     // What a press on the Settings widget tells the plugin (BarInput::TakePresses): open the settings window.
     constexpr const char* kOpenSettingsPress = "open settings";
 
-    // Which popups show. Hovering a widget that has one opens it; leaving both the widget and its popup, or the widget
-    // losing its popup, closes it, and the pointer crossing the gap between them does not. A press on a widget or a
-    // popup's pin chip pins its popup, or unpins it if it was pinned; a pinned popup stays open beside the others.
+    // Which popups show. Hovering a widget that has one opens it; leaving both the widget and its popup, hovering a
+    // widget without one, or the widget losing its popup, closes it, and the pointer crossing the gap between them does
+    // not. A press on a widget or a popup's pin chip pins its popup, or unpins it if it was pinned; a pinned popup stays
+    // open beside the others. A press on a widget with nothing to pop out shows its popup on its settings, or closes it.
     class BarInput
     {
     public:
@@ -203,8 +205,8 @@ namespace headsup
         // Forget the layout, the pointer and any pin, as before the first frame.
         void Reset() { *this = BarInput{}; }
         // True when the press landed on the bar, a widget placed under it or a popup: the game must not get it. A left
-        // press on a widget or a popup's pin chip pins or unpins its popup, leaving the others; on a tab it picks it,
-        // and pins nothing.
+        // press on a widget or a popup's pin chip pins or unpins its popup, leaving the others (on a widget without
+        // one, its settings); on a tab it picks it, and pins nothing.
         bool Press(float x, float y, bool left);
         // The tab picked last in each card since loading, by the card's heading.
         const std::map<std::string, std::string>& PickedTabs() const { return m_Tabs; }
@@ -227,21 +229,20 @@ namespace headsup
         std::optional<PanelWidget> Pinned() const { return m_Pinned.empty() ? std::nullopt : std::optional(m_Pinned.back()); }
         bool IsPinned(PanelWidget pill) const { return std::ranges::find(m_Pinned, pill) != m_Pinned.end(); }
         std::optional<PanelWidget> Hovered() const { return m_Under; }
-        // Whether a pill shows lit: under the pointer, or showing its popup.
-        bool Lit(PanelWidget pill, bool hasPopup) const { return m_Under == pill || (hasPopup && (Open() == pill || IsPinned(pill))); }
-        // Each frame, whether the settings window is open: the popups showing when it opened are drawn under it, and
-        // those that came out after it over it.
-        void MenuOpen(bool open);
-        bool OverMenu(PanelWidget pill) const;
-        // By Shown, bottom to top: each popup's layer. Those shown after the one with settings go over its settings,
-        // and those come out after the window opened over the window, but for the one with settings, which stays under
-        // the window with them.
+        // Whether a pill shows lit: under the pointer, or showing its popup or its settings.
+        bool Lit(PanelWidget pill, bool hasPopup) const
+        {
+            return m_Under == pill || SettingsShown() == pill || (hasPopup && (Open() == pill || IsPinned(pill)));
+        }
+        // By Shown, bottom to top: each popup's layer. Those shown after the one with settings go over its settings.
         std::vector<PopupLayer> Layers() const;
 
     private:
         void Reevaluate();
         // Pins or unpins the pill's popup, as its widget or its pin chip do.
         void TogglePin(PanelWidget pill);
+        // The widget under the point, none where a popup is drawn over it (the cut help bar).
+        std::optional<PanelWidget> WidgetUnder(float x, float y) const;
         // The topmost popup drawn over the point, if any.
         const PopupPlace* PlaceAt(float x, float y) const;
         // The hovered popup and everything above it down from the screen's top: the pointer crossing the gap keeps it
@@ -278,7 +279,6 @@ namespace headsup
         std::optional<PanelWidget> m_Hover;  // the popup hovering keeps open
         std::optional<PanelWidget> m_Dismissed; // unpinned from its widget: no hover until the pointer leaves it
         std::vector<PanelWidget> m_Pinned;   // in the order pinned
-        std::optional<std::vector<PanelWidget>> m_UnderMenu; // while the window is open: those it opened over, still shown
         std::optional<PanelWidget> m_Settings; // a pinned pill, while its popup shows its settings
         bool m_PinnedForSettings = false;      // its pin came with its settings, and goes when they close
     };

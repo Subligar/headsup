@@ -30,6 +30,7 @@ namespace headsup
             "Mog Locker", "Mog Satchel", "Mog Sack", "Mog Case", "Mog Wardrobe", "Mog Safe 2", "Mog Wardrobe 2",
             "Mog Wardrobe 3", "Mog Wardrobe 4", "Mog Wardrobe 5", "Mog Wardrobe 6", "Mog Wardrobe 7", "Mog Wardrobe 8"};
         constexpr const char* kItemsMenu = "Items";
+        constexpr std::string_view kMogWord = "Mog "; // the start of most bags' names, which the panel leaves out
         constexpr const char* kAnonymousJobs = "? ? ?"; // as the game writes an anonymous player's
         // The Mog House's own short captions for some of them, as the game's strip titles their lists.
         struct ShortCaption
@@ -185,13 +186,13 @@ namespace headsup
         }
 
         // A grid of names, kListColumns a line; none when there are no names.
-        std::optional<PopupSection> NameList(std::string heading, const std::vector<std::string>& names)
+        std::optional<PopupSection> NameList(CardKind card, std::string heading, const std::vector<std::string>& names)
         {
             if (names.empty()) return std::nullopt;
             PopupRow grid = Grid(kListColumns, names.size());
             for (const std::string& name : names)
                 grid.cells.push_back(Cell(Text(name)));
-            return PopupSection{std::move(heading), ListOf(std::move(grid))};
+            return Section(card, std::move(heading), ListOf(std::move(grid)));
         }
 
         // Its TP moves, those a blue mage can learn in the blue magic color, and the ones you have learned starred or
@@ -214,7 +215,7 @@ namespace headsup
                 cell.star      = learned;
                 grid.cells.push_back(std::move(cell));
             }
-            return PopupSection{"TP Moves", ListOf(std::move(grid))};
+            return Section(CardKind::TargetMoves, "TP Moves", ListOf(std::move(grid)));
         }
 
         // The spells it casts at a level: each whose levels hold it, by the game's name.
@@ -255,7 +256,8 @@ namespace headsup
         // name, without the entries a group picks for nothing.
         std::vector<PopupSection> Loot(const MobRecord& mob, const BarState& state)
         {
-            PopupSection drops{"Drops", {}}, steal{"Steal", {}}, despoil{"Despoil", {}};
+            PopupSection drops = Section(CardKind::TargetDrops, "Drops"), steal = Section(CardKind::TargetSteal, "Steal"),
+                         despoil = Section(CardKind::TargetDespoil, "Despoil");
             for (const MobDrop& d : DropsOf(mob))
             {
                 const char* name = state.itemName != nullptr ? state.itemName(d.item) : nullptr;
@@ -285,7 +287,7 @@ namespace headsup
 
         PopupSection Spawn(const MobRecord& mob, const BarState& state)
         {
-            PopupSection spawn{"Spawn", {}};
+            PopupSection spawn = Section(CardKind::TargetSpawn, "Spawn");
             const MobInfo& info = InfoOf(mob);
             spawn.rows.push_back(LineOf(mob.respawn > 0 ? "Respawn " + Countdown(mob.respawn) : "No Respawn Timer"));
             if (info.windowStart != kNoWindow)
@@ -465,7 +467,7 @@ namespace headsup
         // nothing. A trade the probe found takes the place of the plain list of what its scripts check for.
         bool AddActs(std::vector<PopupSection>& sections, const NpcRecord& npc, const BarState& state)
         {
-            PopupSection click{"Click", {}}, trade{"Trade", {}};
+            PopupSection click = Section(CardKind::TargetClick, "Click"), trade = Section(CardKind::TargetTrade, "Trade");
             for (const NpcAct& act : ActsOf(npc))
             {
                 if (act.kind == kActClick) AddActRows(click, act, state);
@@ -513,11 +515,11 @@ namespace headsup
 
         // A name a line, and a dim note when its scripts do more of it than the data could read; none when there is
         // neither.
-        void AddListing(std::vector<PopupSection>& sections, std::string heading, const std::vector<std::string>& names,
-            bool unread = false)
+        void AddListing(std::vector<PopupSection>& sections, CardKind card, std::string heading,
+            const std::vector<std::string>& names, bool unread = false)
         {
             if (names.empty() && !unread) return;
-            PopupSection section{std::move(heading), {}};
+            PopupSection section = Section(card, std::move(heading));
             for (const std::string& name : names)
                 section.rows.push_back(LineOf(name));
             if (unread) section.rows.push_back(UnreadNote(!names.empty()));
@@ -533,7 +535,7 @@ namespace headsup
         {
             const NpcShop* shop  = ShopOf(npc);
             const bool unread    = (npc.unread & kNpcUnreadShop) != 0;
-            PopupSection section = {"Shop", {}};
+            PopupSection section = Section(CardKind::TargetShop, "Shop");
             const auto add = [&](uint8_t place, const char* note) {
                 bool first = true;
                 for (const NpcStockItem& entry : shop != nullptr ? StockOf(*shop) : std::span<const NpcStockItem>())
@@ -560,7 +562,9 @@ namespace headsup
         // Its quests (hidden ones too), missions and battlefields, each by name, a quest's and mission's log after it.
         void AddLinks(std::vector<PopupSection>& sections, const NpcRecord& npc)
         {
-            PopupSection quests{"Quests", {}}, missions{"Missions", {}}, battlefields{"Battlefields", {}};
+            PopupSection quests = Section(CardKind::TargetQuests, "Quests"),
+                         missions = Section(CardKind::TargetMissions, "Missions"),
+                         battlefields = Section(CardKind::TargetBattlefields, "Battlefields");
             for (const NpcLink* link : LinksOf(npc))
             {
                 const char* log = LogNameOf(*link);
@@ -584,8 +588,8 @@ namespace headsup
         // and checks for, and its quests, missions and battlefields.
         std::vector<PopupSection> NpcSections(const ActorInfo& target, const NpcRecord& npc, const BarState& state)
         {
-            std::vector<PopupSection> sections = ListOf(PopupSection{"",
-                ListOf(Line(Cell(Text("ID " + Printed("%03X", target.serverId & kTargetIndexBits), Tone::Dim))))});
+            std::vector<PopupSection> sections = ListOf(Section(CardKind::TargetOverview, "",
+                ListOf(Line(Cell(Text("ID " + Printed("%03X", target.serverId & kTargetIndexBits), Tone::Dim))))));
             // What it is for, as a mob's tags say what it does.
             PopupRow purposes{RowKind::Tags, 0, {}};
             for (const char* purpose : PurposesOf(npc))
@@ -594,11 +598,13 @@ namespace headsup
             if (const std::string appears = AppearsWords(npc); !appears.empty()) sections[0].rows.push_back(LineOf(appears));
             AddShop(sections, npc, state);
             if (!AddActs(sections, npc, state))
-                AddListing(sections, "Trade", ItemNames(TradesOf(npc), state), (npc.unread & kNpcUnreadTrade) != 0);
-            AddListing(sections, "Pops", MobNames(PopsOf(npc)), (npc.unread & kNpcUnreadPops) != 0);
-            AddListing(sections, "Gives", ItemNames(GivesOf(npc), state), (npc.unread & kNpcUnreadGives) != 0);
-            AddListing(sections, "Key Items", KeyItemNames(KeyItemsOf(npc)));
-            AddListing(sections, "Checks for", KeyItemNames(NeedsOf(npc)));
+                AddListing(sections, CardKind::TargetTrade, "Trade", ItemNames(TradesOf(npc), state),
+                    (npc.unread & kNpcUnreadTrade) != 0);
+            AddListing(sections, CardKind::TargetPops, "Pops", MobNames(PopsOf(npc)), (npc.unread & kNpcUnreadPops) != 0);
+            AddListing(sections, CardKind::TargetGives, "Gives", ItemNames(GivesOf(npc), state),
+                (npc.unread & kNpcUnreadGives) != 0);
+            AddListing(sections, CardKind::TargetKeyItems, "Key Items", KeyItemNames(KeyItemsOf(npc)));
+            AddListing(sections, CardKind::TargetChecks, "Checks for", KeyItemNames(NeedsOf(npc)));
             AddLinks(sections, npc);
             return sections;
         }
@@ -618,7 +624,7 @@ namespace headsup
                 if (target->kind == EntityKind::Player && state.targetCheck)
                 {
                     const PlayerCheck& c = *state.targetCheck;
-                    PopupSection rows;
+                    PopupSection rows = Section(CardKind::TargetOverview, "");
                     rows.rows.push_back(Labeled("Jobs", Text(CheckedJobs(c.general))));
                     if (c.general.masterLevel > 0)
                         rows.rows.push_back(Labeled("Master Level", Text(std::to_string(c.general.masterLevel))));
@@ -652,7 +658,7 @@ namespace headsup
             PopupRow damage = Grid(kDamageColumns, kFirstElementSdt);
             for (int i = 0; i < kFirstElementSdt; ++i)
                 damage.cells.push_back(Cell(Percent(SdtPercent(res.sdt[i])), SdtIcon(i)));
-            PopupSection damageTaken{"Damage Taken", ListOf(std::move(damage))};
+            PopupSection damageTaken = Section(CardKind::TargetDamage, "Damage Taken", ListOf(std::move(damage)));
             PopupRow kinds = Grid(kDamageColumns, kDamageKindCount);
             for (int k = 0; k < kDamageKindCount; ++k)
                 if (const int percent = SdtPercent(defenses.damageTaken[k]); percent != 0)
@@ -692,17 +698,17 @@ namespace headsup
                 immune.cells.push_back(PopupCell{immunities.icons[i].icon, true, {}});
             if (immune.cells.empty()) immune.cells.push_back(Cell(Text("None", Tone::Neutral)));
 
-            PopupSection identityRows{"", ListOf(std::move(identity), Tags(mob))};
+            PopupSection identityRows = Section(CardKind::TargetOverview, "", ListOf(std::move(identity), Tags(mob)));
             if (PopupRow traits = Traits(mob); !traits.cells.empty()) identityRows.rows.push_back(std::move(traits));
             popup.sections = ListOf(std::move(identityRows), std::move(damageTaken),
-                PopupSection{"Elements", ListOf(std::move(elements))},
-                PopupSection{"Statuses", ListOf(std::move(statuses))},
-                PopupSection{"Immune", ListOf(std::move(immune))});
+                Section(CardKind::TargetElements, "Elements", ListOf(std::move(elements))),
+                Section(CardKind::TargetStatuses, "Statuses", ListOf(std::move(statuses))),
+                Section(CardKind::TargetImmune, "Immune", ListOf(std::move(immune))));
             // At the level the chances are figured for: the check's, else the top of its range.
             const int level = numbers.target ? numbers.target->level : mob.maxLevel;
             if (numbers.target)
             {
-                PopupSection stats{"Stats at Level " + std::to_string(level), {}};
+                PopupSection stats = Section(CardKind::TargetStats, "Stats at Level " + std::to_string(level));
                 if (const MobCombat* combat = CombatAt(mob, level))
                 {
                     PopupRow row = Grid(2 * kStatColumns, 2 * kCombatCount);
@@ -717,7 +723,7 @@ namespace headsup
                 popup.sections.push_back(std::move(stats));
             }
             if (std::optional<PopupSection> moves = TpMoves(mob, state, settings)) popup.sections.push_back(std::move(*moves));
-            if (std::optional<PopupSection> list = NameList("Spells", SpellsAt(mob, level, state)))
+            if (std::optional<PopupSection> list = NameList(CardKind::TargetSpells, "Spells", SpellsAt(mob, level, state)))
                 popup.sections.push_back(std::move(*list));
             popup.sections.push_back(Spawn(mob, state));
             for (PopupSection& loot : Loot(mob, state))
@@ -972,7 +978,7 @@ namespace headsup
         // likeliest first, then tomorrow's. The server tells only your own zone's weather.
         PopupSection ByElement(const BarState& state, uint32_t today)
         {
-            PopupSection section{"By Element", {}};
+            PopupSection section = Section(CardKind::WeatherByElement, "By Element");
             // Each element's zones rolling it today and tomorrow, which change only with the day.
             using Rolls = std::array<std::pair<std::vector<ZoneRoll>, std::vector<ZoneRoll>>, kElementCount>;
             static Memo<uint32_t, Rolls> days;
@@ -1157,7 +1163,7 @@ namespace headsup
                 grid.cells.push_back(std::move(value));
             };
             constexpr int kColumns = 4; // the star, the picture, the name and the amount
-            PopupSection top{"Favorites", {}};
+            PopupSection top = Section(CardKind::CurrencyFavorites, "Favorites");
             if (favorites.empty())
                 top.rows.push_back(LineOf("Click a currency's star to keep it here.", Tone::Dim));
             else
@@ -1170,7 +1176,7 @@ namespace headsup
                 ScrollsBy(grid, state, top.heading);
                 top.rows.push_back(std::move(grid));
             }
-            PopupSection all{"All Currencies", {}};
+            PopupSection all = Section(CardKind::CurrencyAll, "All Currencies");
             if (std::ranges::none_of(state.currencies, [](const std::optional<uint32_t>& a) { return a.has_value(); }))
                 all.rows.push_back(LineOf("Their amounts show once the server sends them.", Tone::Dim));
             std::vector<int> order(kCurrencyCount);
@@ -1196,7 +1202,6 @@ namespace headsup
             }
             all.tab        = Picked(state, all);
             popup.sections  = ListOf(std::move(top), std::move(all));
-            popup.oneColumn = true;
             return popup;
         }
 
@@ -1206,7 +1211,8 @@ namespace headsup
         // opens. Your nation's say which outposts you have not run supplies to, as far as overseers told.
         PopupSection ConquestSection(const BarState& state)
         {
-            PopupSection conquest{"Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")", {}};
+            PopupSection conquest =
+                Section(CardKind::WorldConquest, "Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")");
             conquest.tabsAcross  = 2;
             conquest.tabEachOpen = true;
             if (!state.owners)
@@ -1276,8 +1282,7 @@ namespace headsup
             popup.sections.push_back(ConquestSection(state));
             {
                 // A tab for each kind of ship, its routes together in the data.
-                PopupSection travel{"Travel", {}};
-                travel.beside = true;
+                PopupSection travel = Section(CardKind::WorldTravel, "Travel");
                 const std::span<const TravelRoute> routes = TravelRoutes();
                 for (size_t first = 0, last = 0; first < routes.size(); first = last)
                 {
@@ -1306,8 +1311,7 @@ namespace headsup
             {
                 const Rse now = RseAt(state.unixMs), next = RseAt(state.unixMs, 1);
                 const uint32_t today = VanaAt(state.unixMs).day;
-                PopupSection calendar{"Calendar", {}};
-                calendar.under = true;
+                PopupSection calendar = Section(CardKind::WorldCalendar, "Calendar");
                 // Each line's name and who on the left; where and when on the right, the time last.
                 const auto race = [](const char* label, const Rse& rse) {
                     PopupRow row = Labeled(label, Text(rse.place));
@@ -1327,7 +1331,7 @@ namespace headsup
             {
                 // A tab for each guild, its shops together in the data: each shop's hours in columns, open or closed
                 // against when that changes and where, then a craft's turn-ins.
-                PopupSection guilds{"Guilds", {}};
+                PopupSection guilds = Section(CardKind::WorldGuilds, "Guilds");
                 const std::span<const GuildShop> shops = GuildShops();
                 for (size_t first = 0, last = 0; first < shops.size(); first = last)
                 {
@@ -1361,12 +1365,36 @@ namespace headsup
             return popup;
         }
 
-        // Calls each with the options of every copy of a widget that Shows.
+        // The widgets of the pill head names, or head alone when it heads none, as a widget linked into another's does.
+        std::vector<PanelWidget> PillOf(const PanelGroups& panel, PanelWidget head)
+        {
+            std::vector<PanelWidget> pill = Members(panel, head);
+            if (pill.empty()) pill.push_back(head);
+            return pill;
+        }
+
+        // Whether a created widget shows one of widget's parts.
+        bool HoldsPartOn(const WidgetOptions& created, BarWidget widget)
+        {
+            return std::ranges::any_of(created.design.lines, [&](const std::vector<DesignChip>& line) {
+                return std::ranges::any_of(line, [&](const DesignChip& chip) { return chip.on && WidgetOfPart(chip.part) == widget; });
+            });
+        }
+
+        // Calls each with the options of every copy of a widget that Shows, and for each created widget that shows its
+        // parts, its first copy's with that widget's design.
         template <typename Each>
         void EachShownCopy(const Settings& settings, BarWidget widget, const Each& each)
         {
-            for (int copy = 0; copy < kMostCopies; ++copy)
+            for (int copy = 0; copy < CopiesOf(widget); ++copy)
                 if (const PanelWidget w{widget, copy}; Shows(settings, w)) each(settings.Widget(w));
+            for (int copy = 0; copy < kMostCreatedWidgets && widget != BarWidget::Custom; ++copy)
+                if (const PanelWidget w{BarWidget::Custom, copy}; Shows(settings, w) && HoldsPartOn(settings.Widget(w), widget))
+                {
+                    WidgetOptions first = settings.Widget(PanelWidget{widget});
+                    first.design        = settings.Widget(w).design;
+                    each(first);
+                }
         }
 
         // Red when full; dim for a bag with no room yet, which is not full.
@@ -1487,10 +1515,14 @@ namespace headsup
             case BarWidget::Currency: return CurrencyParts(state, o, base);
             case BarWidget::Bags:
             {
-                const std::optional<BagCount>& bag = state.bags[o.bag];
+                const auto count = [&](int c) {
+                    const std::optional<BagCount>& bag = state.bags[static_cast<size_t>(c)];
+                    return ListOf(bag ? BagFill(*bag) : Text("-"));
+                };
                 base.hasPopup = true;
-                return {{WidgetPart::BagIcon, ListOf(Mark(Icon::Bag))}, {WidgetPart::BagCount, ListOf(bag ? BagFill(*bag) : Text("-"))},
-                    {WidgetPart::BagName, ListOf(Text(ContainerName(o.bag)))}};
+                return {{WidgetPart::BagIcon, ListOf(Mark(Icon::Bag))}, {WidgetPart::Bag1Count, count(o.bag)},
+                    {WidgetPart::Bag2Count, count(o.secondBag)}, {WidgetPart::Bag1Name, ListOf(Text(ContainerName(o.bag)))},
+                    {WidgetPart::Bag2Name, ListOf(Text(ContainerName(o.secondBag)))}};
             }
             case BarWidget::EarthTime:
                 base.hasPopup = true;
@@ -1524,6 +1556,26 @@ namespace headsup
             }
             case BarWidget::World: return WorldParts(state, o, base);
             case BarWidget::Settings: base.cog = true; return {};
+            case BarWidget::Custom:
+            {
+                // Its Name, then the parts of each widget it holds, as that widget's first copy shows them.
+                std::vector<PartContent> parts{{WidgetPart::CustomName, o.name.empty() ? std::vector<Span>{} : ListOf(Text(o.name))}};
+                std::vector<BarWidget> from;
+                for (const std::vector<DesignChip>& line : o.design.lines)
+                    for (const DesignChip& chip : line)
+                        if (const BarWidget kind = WidgetOfPart(chip.part);
+                            kind != BarWidget::Custom && std::ranges::find(from, kind) == from.end())
+                            from.push_back(kind);
+                for (const BarWidget kind : from)
+                {
+                    WidgetContent theirs;
+                    for (PartContent& part : PartsNow(PanelWidget{kind}, state, settings, theirs))
+                        parts.push_back(std::move(part));
+                    base.figures = base.figures || theirs.figures;
+                }
+                base.hasPopup = !o.popup.rows.empty();
+                return parts;
+            }
             }
             return {};
         }
@@ -1552,15 +1604,24 @@ namespace headsup
                 }
             // The pins decide which Pinned Status buttons show, not their switches.
             WidgetDesign design = o.design;
-            if (widget.kind == BarWidget::StatusTimers)
-                for (std::vector<DesignChip>& line : design.lines)
-                    for (DesignChip& chip : line)
-                        chip.on = true;
+            for (std::vector<DesignChip>& line : design.lines)
+                for (DesignChip& chip : line)
+                    chip.on = chip.on || IsPinnedStatus(chip.part);
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && widget.kind == BarWidget::StatusTimers) w.title = ListOf(Text("Status Timers", Tone::Dim));
-            if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None) w.title = ListOf(Text("-"));
+            if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
+            {
+                // Linked with every part off, or Performance with no messages waiting, it takes no room.
+                w.idle  = !AnyPartOn(design) || widget.kind == BarWidget::Performance;
+                w.title = ListOf(Text("-"));
+            }
             return w;
         }
+    }
+
+    bool TakesRoom(const WidgetContent& content, PanelWidget pill, std::optional<PanelWidget> settingsShown)
+    {
+        return content.shown && (!content.idle || settingsShown == pill);
     }
 
     uint32_t ElementColor(Element element) { return kElementColors[static_cast<int>(element)]; }
@@ -1592,14 +1653,21 @@ namespace headsup
         return max > 0 ? std::optional<BagCount>(BagCount{used, max}) : std::nullopt;
     }
 
-    const char* ContainerName(int container) { return kContainerNames[std::clamp(container, 0, kContainerCount - 1)]; }
+    std::string ContainerName(int container)
+    {
+        std::string_view name = kContainerNames[std::clamp(container, 0, kContainerCount - 1)];
+        if (name.starts_with(kMogWord)) name.remove_prefix(kMogWord.size());
+        const size_t space = name.rfind(' ');
+        if (space == std::string_view::npos || !std::isdigit(static_cast<unsigned char>(name[space + 1]))) return std::string(name);
+        return std::string(name.substr(0, space)) + " (" + std::string(name.substr(space + 1)) + ")";
+    }
 
     const std::vector<int>& BagChoices()
     {
         static const std::vector<int> choices = [] {
-            std::vector<int> all;
+            std::vector<int> all{static_cast<int>(kInventory), kStorage, kMogSafe, kMogSafe2};
             for (int c = 0; c < kContainerCount; ++c)
-                if (c != kTemporaryItems) all.push_back(c);
+                if (c != kTemporaryItems && std::ranges::find(all, c) == all.end()) all.push_back(c);
             return all;
         }();
         return choices;
@@ -1679,9 +1747,17 @@ namespace headsup
         return PressResult::Changed;
     }
 
-    bool StandingsShown(const Settings& settings)
+    bool WidgetShown(const Settings& settings, BarWidget widget)
     {
-        bool shown = AnyCopyShown(settings, BarWidget::Zone);
+        bool shown = AnyCopyShown(settings, widget);
+        EachShownCopy(settings, widget, [&](const WidgetOptions&) { shown = true; });
+        return shown;
+    }
+
+    bool StandingsShown(const Settings& settings, const std::vector<PanelWidget>& showing)
+    {
+        bool shown = WidgetShown(settings, BarWidget::Zone) || PopupShows(settings, showing, BarWidget::Zone) ||
+                     PopupShows(settings, showing, BarWidget::World);
         EachShownCopy(settings, BarWidget::World,
             [&](const WidgetOptions& o) {
                 for (int n = 0; n < kContenderNations; ++n)
@@ -1692,9 +1768,13 @@ namespace headsup
 
     bool PopupShows(const Settings& settings, const std::vector<PanelWidget>& shown, BarWidget widget)
     {
+        const PanelGroups panel = Panel(settings);
         return std::ranges::any_of(shown, [&](PanelWidget open) {
-            return open.kind == widget ||
-                   std::ranges::any_of(Members(Panel(settings), open), [&](PanelWidget w) { return w.kind == widget; });
+            return std::ranges::any_of(PillOf(panel, open), [&](PanelWidget w) {
+                return Shows(settings, w) && (w.kind == widget || std::ranges::any_of(CardsOf(widget), [&](CardKind card) {
+                    return HoldsCard(settings.Widget(w).popup, card);
+                }));
+            });
         });
     }
 
@@ -1718,7 +1798,7 @@ namespace headsup
 
     BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing)
     {
-        const auto shown  = [&](BarWidget widget) { return AnyCopyShown(settings, widget); };
+        const auto shown  = [&](BarWidget widget) { return WidgetShown(settings, widget); };
         const auto opened = [&](BarWidget widget) { return PopupShows(settings, showing, widget); };
         BarNeeds needs;
         // A Clock in a zone of its own goes by the time alone, as its server line and its popup's resets do; in the
@@ -1732,13 +1812,15 @@ namespace headsup
             serverClock = serverClock || second || PartOn(o.design, WidgetPart::ClockVana);
             localClock  = localClock || (second && !o.clockSecondZone);
         });
-        needs.unixTime   = shown(BarWidget::Weather) || zonedClock || serverClock ||
-                           shown(BarWidget::World) || opened(BarWidget::EarthTime) ||
+        // A widget's cards read what its widget does wherever they are placed (PopupShows).
+        const auto either = [&](BarWidget widget) { return shown(widget) || opened(widget); };
+        needs.unixTime   = either(BarWidget::Weather) || zonedClock || serverClock ||
+                           either(BarWidget::World) || opened(BarWidget::EarthTime) ||
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
         needs.localTime  = localClock;
-        needs.zone       = shown(BarWidget::Zone) || shown(BarWidget::Weather);
-        needs.target     = shown(BarWidget::Target);
-        needs.gil        = shown(BarWidget::Currency);
+        needs.zone       = either(BarWidget::Zone) || either(BarWidget::Weather);
+        needs.target     = either(BarWidget::Target);
+        needs.gil        = either(BarWidget::Currency);
         needs.strip      = shown(BarWidget::GameHelp);
         // The Performance widget reads what its copies show on the panel, and everything for its popup.
         uint8_t perf = 0;
@@ -1749,19 +1831,21 @@ namespace headsup
         const bool perfPopup = opened(BarWidget::Performance);
         needs.conquest   = opened(BarWidget::World) || opened(BarWidget::Currency);
         needs.frames     = (perf & PerfBit(PerfPart::Fps)) != 0 || perfPopup;
-        needs.job        = shown(BarWidget::Job);
+        needs.job        = either(BarWidget::Job);
         needs.connection = (perf & kConnectionParts) != 0 || perfPopup;
-        needs.party      = shown(BarWidget::Party);
+        needs.party      = either(BarWidget::Party);
         needs.statuses   = (shown(BarWidget::StatusTimers) && !settings.statusPins.empty()) || opened(BarWidget::StatusTimers);
         needs.memory     = (perf & PerfBit(PerfPart::Memory)) != 0 || perfPopup;
         needs.cpu        = perfPopup;
         needs.linuxxi    = perfPopup;
         // Ashita counts a container's items by walking its slots, so the others wait for the popup that lists them.
-        if (shown(BarWidget::Bags))
+        if (either(BarWidget::Bags))
         {
             needs.containers = opened(BarWidget::Bags) ? kContainerCount : 1;
-            EachShownCopy(settings, BarWidget::Bags,
-                [&](const WidgetOptions& o) { needs.containers = std::max(needs.containers, o.bag + 1); });
+            EachShownCopy(settings, BarWidget::Bags, [&](const WidgetOptions& o) {
+                if (PartOn(o.design, WidgetPart::Bag1Count)) needs.containers = std::max(needs.containers, o.bag + 1);
+                if (PartOn(o.design, WidgetPart::Bag2Count)) needs.containers = std::max(needs.containers, o.secondBag + 1);
+            });
         }
         return needs;
     }
@@ -1777,30 +1861,58 @@ namespace headsup
         std::array<PartMark, kWidgetPartCount> marks;
         for (int p = 0; p < kWidgetPartCount; ++p)
             marks[static_cast<size_t>(p)] = DefaultMark(static_cast<WidgetPart>(p));
-        for (const PanelWidget widget : widgets)
-        {
+        const auto take = [&](PanelWidget widget) {
             WidgetContent base;
             for (const PartContent& part : PartsNow(widget, state, settings, base))
                 if (const std::optional<PartMark> mark = MarkOf(part.spans)) marks[static_cast<size_t>(part.part)] = *mark;
-        }
+        };
+        for (const PanelWidget widget : widgets)
+            if (widget.kind != BarWidget::Custom)
+                take(widget);
+            else // it offers every widget's parts
+                for (int k = 0; k < static_cast<int>(BarWidget::Custom); ++k)
+                    take(PanelWidget{static_cast<BarWidget>(k)});
         return marks;
     }
 
     namespace
     {
-        // Every popup of a pill's widgets, joined: a title or card shown already, as two copies of a widget have, is
-        // left out.
+        // A copy's cards as its design rows them, each from its own widget's pop-out (another widget's as its first copy
+        // has it), a card with nothing to show now left out of its row.
+        std::vector<std::vector<PopupSection>> DesignedRows(PanelWidget widget, const std::vector<PopupSection>& own,
+            const BarState& state, const Settings& settings)
+        {
+            std::map<BarWidget, std::vector<PopupSection>> others;
+            std::vector<std::vector<PopupSection>> rows;
+            for (const std::vector<CardKind>& design : settings.Widget(widget).popup.rows)
+            {
+                std::vector<PopupSection>& row = rows.emplace_back();
+                for (const CardKind card : design)
+                {
+                    const BarWidget kind = WidgetOfCard(card);
+                    if (kind != widget.kind && !others.contains(kind))
+                        others[kind] = BarPopupContent(PanelWidget{kind}, state, settings).sections;
+                    const std::vector<PopupSection>& from = kind == widget.kind ? own : others[kind];
+                    const auto section = std::ranges::find(from, std::optional(card), &PopupSection::card);
+                    if (section != from.end()) row.push_back(*section);
+                }
+            }
+            return rows;
+        }
+
+        // Every popup of a pill's widgets, joined, each widget's cards as its design rows them: a title or card shown
+        // already, as two copies of a widget have, is left out.
         PopupContent JoinedPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
         {
-            const std::vector<PanelWidget> pill = Members(Panel(settings), head);
-            if (pill.size() <= 1) return BarPopupContent(head, state, settings);
+            const std::vector<PanelWidget> pill = PillOf(Panel(settings), head);
             PopupContent joined;
-            joined.oneColumn = true;
             std::vector<std::vector<Span>> titles;
+            std::vector<PopupSection> seen;
             for (const PanelWidget w : pill)
             {
-                if (!ContentOf(w, state, settings).hasPopup) continue;
+                if (pill.size() > 1 && !ContentOf(w, state, settings).hasPopup) continue;
                 PopupContent own = BarPopupContent(w, state, settings);
+                if (!own.settings) return own; // Game help's, which links with nothing and has no design
                 if (!own.title.empty() && std::ranges::find(titles, own.title) == titles.end())
                 {
                     if (joined.title.empty())
@@ -1812,10 +1924,18 @@ namespace headsup
                     if (!joined.subtitle.empty() && !own.subtitle.empty()) joined.subtitle.push_back(Text(kDot, Tone::Dim));
                     joined.subtitle.insert(joined.subtitle.end(), own.subtitle.begin(), own.subtitle.end());
                 }
-                for (PopupSection& section : own.sections)
-                    if (std::ranges::find(joined.sections, section) == joined.sections.end())
+                for (std::vector<PopupSection>& row : DesignedRows(w, own.sections, state, settings))
+                {
+                    bool first = true;
+                    for (PopupSection& section : row)
+                    {
+                        if (std::ranges::find(seen, section) != seen.end()) continue;
+                        seen.push_back(section);
+                        section.beside = !first;
+                        first          = false;
                         joined.sections.push_back(std::move(section));
-                joined.oneColumn = joined.oneColumn && own.oneColumn;
+                    }
+                }
             }
             return joined;
         }
@@ -1841,9 +1961,10 @@ namespace headsup
             if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return std::nullopt;
             const PanelWidget widget = WidgetInSlot(static_cast<int>(slot));
             if (kind == kWidgetClonePress) return HasCopies(widget.kind) ? CloneWidget(settings, widget) : std::nullopt;
-            if (widget.copy == 0 || !Placed(settings.barSections, widget)) return std::nullopt;
+            if (IsFirstCopy(widget) || !Placed(settings.barSections, widget)) return std::nullopt;
             RemoveWidgetCopy(settings, widget);
-            return PanelWidget{widget.kind};
+            // A created widget has no first copy: its own settings, gone from the panel, close.
+            return widget.kind == BarWidget::Custom ? widget : PanelWidget{widget.kind};
         }
         return std::nullopt;
     }
@@ -1868,9 +1989,36 @@ namespace headsup
             section.collapsed     = std::ranges::find(settings.collapsedSections, key) != settings.collapsedSections.end();
         }
         if (HasCopies(head.kind)) content.clonePress = kWidgetClonePress + std::to_string(SlotOf(head));
-        if (head.copy > 0) content.removePress = kWidgetRemovePress + std::to_string(SlotOf(head));
+        if (!IsFirstCopy(head)) content.removePress = kWidgetRemovePress + std::to_string(SlotOf(head));
         if (settings.Widget(head).popupSpot) content.resetPress = kPopupResetPress + std::to_string(SlotOf(head));
         return content;
+    }
+
+    PopupContent PreviewPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
+    {
+        if (state.target != nullptr) return PanelPopupContent(head, state, settings);
+        // Alive and unchecked, as the tracker fills a mob it sees with your level unknown.
+        static const ActorInfo mob = [] {
+            ActorInfo a;
+            a.kind     = EntityKind::Mob;
+            a.alive    = true;
+            a.serverId = kPreviewMob;
+            a.index    = kPreviewMob & kTargetIndexBits;
+            a.mob      = MobById(kPreviewMob);
+            a.level    = MakeLabel(a.mob, nullptr, 0);
+            std::snprintf(a.name, sizeof(a.name), "%s", a.mob->name);
+            EntityState& st = a.state;
+            st.kind       = EntityKind::Mob;
+            st.alive      = true;
+            st.classified = Classify(a.mob, 0, PlayerState{});
+            st.nature     = NatureOf(st.classified, false);
+            st.row        = MobRowOf(st.nature, false, false, true);
+            st.toughness  = a.level.shade;
+            return a;
+        }();
+        BarState previewed = state;
+        previewed.target   = &mob;
+        return PanelPopupContent(head, previewed, settings);
     }
 
     PopupContent BarPopupContent(PanelWidget widget, const BarState& state, const Settings& settings)
@@ -1889,7 +2037,7 @@ namespace headsup
             if (!region.empty()) popup.subtitle = ListOf(Text(std::string(region), Tone::Dim));
             if (InConquest(zone) && state.shares)
             {
-                PopupSection influence{"Influence", {}};
+                PopupSection influence = Section(CardKind::ZoneInfluence, "Influence");
                 const Nation owner = OwnerOf(zone, state);
                 for (const RegionShare& share : *state.shares)
                 {
@@ -1924,9 +2072,9 @@ namespace headsup
                 popup.icon  = iconOf(now);
             }
             // Today, by Vana'diel's date: the day and time, the zone's weathers today, then the moon, each with what is next.
-            PopupSection day{"Today (" + VanaDate(t) + ")", ListOf(Line(Cell(ListOf(WeekdayText(t),
+            PopupSection day = Section(CardKind::WeatherToday, "Today (" + VanaDate(t) + ")", ListOf(Line(Cell(ListOf(WeekdayText(t),
                 Text(" " + HourMinute(t.hour, t.minute)),
-                Text(" (Next Day in " + Countdown(SecondsToNextDay(state.unixMs)) + ")", Tone::Dim)))))};
+                Text(" (Next Day in " + Countdown(SecondsToNextDay(state.unixMs)) + ")", Tone::Dim))))));
             // Its weathers on one line, a slash between them.
             PopupRow weathers{RowKind::Line, 0, {}};
             for (const WeatherChance& c : today)
@@ -1958,11 +2106,9 @@ namespace headsup
             }
             // Zone 0 is the data's "unknown": the heading names no zone for it.
             const ZoneRecord* zone = state.zone != 0 ? ZoneById(state.zone) : nullptr;
-            PopupSection forecast{zone != nullptr ? "Weather Forecast (" + std::string(zone->name) + ")" : "Weather Forecast",
-                ListOf(std::move(grid))};
-            forecast.beside = true;
+            PopupSection forecast = Section(CardKind::WeatherForecast,
+                zone != nullptr ? "Weather Forecast (" + std::string(zone->name) + ")" : "Weather Forecast", ListOf(std::move(grid)));
             popup.sections  = ListOf(std::move(day), std::move(forecast), ByElement(state, t.day));
-            popup.oneColumn = true;
             break;
         }
         case BarWidget::Target: return TargetPopup(state, settings);
@@ -1972,16 +2118,17 @@ namespace headsup
             popup.title   = ListOf(Text("Inventory"));
             PopupRow grid = Grid(kBagColumns, kBagColumns * kContainerCount);
             grid.roomy    = true;
-            for (const int c : BagChoices())
+            for (int c = 0; c < kContainerCount; ++c)
             {
+                if (c == kTemporaryItems) continue;
                 // Storage shows before its furniture gives it room. The server gives Mog Safe 2 its room before the
                 // second floor is open: only what is in it says it can be used.
                 const std::optional<BagCount> bag = c == kStorage && !state.bags[c] ? std::optional(BagCount{}) : state.bags[c];
                 if (!bag || (c == kMogSafe2 && bag->used == 0)) continue;
-                grid.cells.push_back(Cell(Text(kContainerNames[c])));
+                grid.cells.push_back(Cell(Text(ContainerName(c))));
                 grid.cells.push_back(Cell(BagFill(*bag)));
             }
-            popup.sections = ListOf(PopupSection{"", ListOf(std::move(grid))});
+            popup.sections = ListOf(Section(CardKind::BagsList, "", ListOf(std::move(grid))));
             break;
         }
         case BarWidget::EarthTime:
@@ -2012,6 +2159,9 @@ namespace headsup
         case BarWidget::World:
             return WorldPopup(state);
         case BarWidget::Settings: break;
+        case BarWidget::Custom:
+            if (!o.name.empty()) popup.title = ListOf(Text(o.name));
+            break;
         }
         return popup;
     }

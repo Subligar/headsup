@@ -5,6 +5,7 @@
 #include "menu_state.h"
 #include "settings.h"
 #include "setup.h"
+#include "window_skin.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -37,7 +38,7 @@ namespace headsup
         const std::vector<WindowPlace>* windowPlaces = nullptr; // where each window seen last stood
         const std::vector<std::string>* cursorFiles = nullptr; // the cursors folder's files, without their extensions
         const std::vector<std::string>* themeFiles  = nullptr; // the themes folder's, the same way
-        const BarPalette* palette = nullptr; // the palette the panel was drawn in last frame, the game's art's for Vanilla
+        const GameSkinLook* skin = nullptr; // the game's window art of the Window Type in use, once it is read
         const std::vector<std::string>* profiles    = nullptr; // the profiles folder's, the same way
         const std::string* profile = nullptr; // the profile in use, empty while the old settings.ini is
         bool unsaved = false; // changes not yet in the file
@@ -85,6 +86,9 @@ namespace headsup
     constexpr const char* kSetupBackupWhen = "<date>-<time>";
     constexpr const char* kSetupPicture    = "hu:setup/scene";
 
+    // Which of a created widget's designs its settings edit: the widget on the panel, or its pop-out.
+    enum class EditSide : uint8_t { Widget, Popup };
+
     // What the settings window keeps between passes that is no setting.
     struct MenuFormState
     {
@@ -95,13 +99,20 @@ namespace headsup
         std::optional<PanelWidget> settingsAsked;
         // A widget whose designer was asked to switch off its last part: it says why under its lines.
         std::optional<PanelWidget> partRefused;
+        // A widget whose Pop-out Designer was asked to put a card in a full row: it says why under its rows.
+        std::optional<PanelWidget> popupRefused;
+        EditSide editSide = EditSide::Widget; // one pick for every created widget's settings
+        // The widget whose parts and whose cards a created widget's designers list to add, for every created widget.
+        BarWidget partsFrom = BarWidget::Zone, cardsFrom = BarWidget::Zone;
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool watchRequested = false; // the debug watch is to start, or stop
         bool exportRequested = false;
         bool cursorsRequested = false; // a list of pictures was opened: the cursors folder is to be read again
         bool themesRequested  = false; // the list of themes was opened: the themes folder is to be read again
-        std::string themeName, themeNameOf; // Theme Name's box, and the custom theme's name it was filled from
+        std::string themeName, themeNameOf; // the rename box's text, and the custom theme's name it was filled from
+        // The Theme row's pencil: its box asks for the keyboard until it has it, and goes once it loses it.
+        enum class ThemeRenaming : uint8_t { Off, Asked, Typing } themeRenaming = ThemeRenaming::Off;
         // What the plugin is to do once: read a custom theme in and pick it, or give the one in use a new name.
         std::optional<std::string> themeLoad, themeRename, themeDelete;
         bool saveRequested = false, revertRequested = false; // by hand: write the changes, or drop them
@@ -143,6 +154,10 @@ namespace headsup
     // Setup ended, never to open by itself again: Finish keeps the picks, and Skip, Cancel or the window's close
     // button put back the settings it opened with and close the window.
     void EndSetup(Settings& s, MenuFormState& state, bool keep);
+
+    // The default a widget's setting has, as its tip names it, for the settings every widget shares whose defaults
+    // differ by widget: Icon, Alignment and Linked Padding. Empty for any other row.
+    std::string WidgetDefaultText(const WindowLayout& layout, WidgetTabsRow row, PanelWidget widget);
 
     // One pass of the window: the sidebar, then the open page's cards, as the layout orders and words them. fonts:
     // FontChoices, for the nameplates' and the bar's fonts. menuFonts: the fonts the window itself can be set in.

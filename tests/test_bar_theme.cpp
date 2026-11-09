@@ -33,6 +33,12 @@ TEST(each_theme_has_the_mockups_colors_and_shape)
     CHECK(aurora.shape == BarShape::Glass && aurora.accent == 0xFF5EE6FFu && aurora.title == 0xFFEAF2FFu);
 }
 
+TEST(every_built_in_theme_shows_the_hd_status_icons_on_their_backgrounds)
+{
+    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark, BarTheme::PhoenixRed, BarTheme::Aurora, BarTheme::Vanilla})
+        CHECK(StatusIconsName(PaletteOf(theme).statusIcons) == "HD" && PaletteOf(theme).statusBack);
+}
+
 TEST(a_theme_file_reads_back_every_part_of_its_palette)
 {
     BarPalette p = PaletteOf(BarTheme::UmbraDark);
@@ -60,9 +66,12 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     // A rounding past the most is the most, and none read is the shape's own.
     const std::optional<BarPalette> round = PaletteFromThemeFile("[theme]\nTitle=ff102030\nRounding=99\n");
     CHECK(round && round->rounding == kMaxRounding && partial->rounding == kShapeRounding);
-    // Status icons of no pack's name, and none read, are the game's; no background unless it says so.
+    // Status icons of no pack's name, and none read, are Phoenix Gold's; a background read is on only when it says
+    // true, and none read is Phoenix Gold's.
+    const BarPalette& gold = PaletteOf(BarTheme::PhoenixGold);
     const std::optional<BarPalette> icons = PaletteFromThemeFile("[theme]\nTitle=ff102030\nStatusIcons=Gone\nStatusBackground=yes\n");
-    CHECK(icons && icons->statusIcons == kVanillaStatusIcons && !icons->statusBack && partial->statusIcons == kVanillaStatusIcons);
+    CHECK(icons && icons->statusIcons == gold.statusIcons && !icons->statusBack && partial->statusIcons == gold.statusIcons);
+    CHECK_EQ(partial->statusBack, gold.statusBack);
 }
 
 TEST(the_themes_folder_lists_its_theme_files_by_name)
