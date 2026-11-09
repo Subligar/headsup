@@ -136,12 +136,6 @@ namespace headsup
         return frame;
     }
 
-    bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head)
-    {
-        return !look.ornate && !look.settings.widgetBackground &&
-               std::ranges::none_of(Members(panel, head), [&](PanelWidget member) { return look.BoxOf(member.kind, false).has_value(); });
-    }
-
     const char* BarTitleFont(const Settings& settings, BarShape shape)
     {
         return settings.barTitleFont.empty() ? TitleFont(shape) : Interned(settings.barTitleFont);
@@ -195,8 +189,7 @@ namespace headsup
             return BoxStyle{.radius = Rounded(settings.widgetRounding, palette, kFrameRadius), .top = fill, .bottom = fill,
                 .border = isTarget ? palette.accent : 0u};
         }
-        const bool flat = widget == BarWidget::Zone || widget == BarWidget::EarthTime;
-        if (flat && !lit) return std::nullopt;
+        if (!lit && !settings.widgetBackground) return std::nullopt;
         const uint32_t fill = lit ? palette.highlight : palette.pill;
         return BoxStyle{.radius = Rounded(settings.widgetRounding, palette, metrics.pillRadius), .top = fill, .bottom = fill,
             .border = isTarget || lit ? palette.accent : palette.pillBorder};

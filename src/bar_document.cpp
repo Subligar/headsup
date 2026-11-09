@@ -470,7 +470,7 @@ namespace headsup
             css += ".glint.a{left:0%;width:30%;decorator:horizontal-gradient(" + RcssColor(Faded(cyan, 0)) + " " + c + ");}";
             css += ".glint.b{left:30%;width:40%;decorator:horizontal-gradient(" + c + " " + v + ");}";
             css += ".glint.c{left:70%;width:30%;decorator:horizontal-gradient(" + v + " " + RcssColor(Faded(violet, 0)) + ");}";
-            css += ".pills .widget,.pills .widget.flat{background-color:transparent;border-color:transparent;}";
+            css += ".pills .widget{background-color:transparent;border-color:transparent;}";
             css += ".pills .widget.target,.pills .widget.backed{background-color:" + RcssColor(Faded(cyan, 0x14)) + ";}";
             css += ".pills .widget.lit{background-color:" + RcssColor(Faded(cyan, 0x2E)) + ";border-color:" +
                    RcssColor(Faded(cyan, 0xB3)) + ";}";
@@ -566,7 +566,6 @@ namespace headsup
         else
         {
             css += ".pills .widget{" + BoxRules(boxOf(BarWidget::Weather, false)) + "}";
-            css += ".pills .widget.flat{" + BoxRules(boxOf(BarWidget::Zone, false)) + "}";
             // Before the lit rule, which then gives it the accent as every lit pill has.
             css += ".pills .widget.target{" + BoxRules(boxOf(BarWidget::Target, false)) + "}";
             css += ".pills .widget.lit{" + BoxRules(boxOf(BarWidget::Weather, true)) + "}";
@@ -646,10 +645,8 @@ namespace headsup
         {
             const PanelWidget widget = WidgetInSlot(slot);
             if (!OnTheBar(widget.kind) || (widget.copy > 0 && !HasCopies(widget.kind))) continue;
-            // Zone and Earth time show no pill until lit.
-            const bool flat = !look.ornate && !boxOf(widget.kind, false);
             rml += std::string("<div class=\"widget hidden") + (widget.kind == BarWidget::Target ? std::string(" ") + kTargetClass : "") +
-                   (flat ? std::string(" ") + kFlatClass : "") + "\" id=\"" + WidgetId(widget) + "\"></div>";
+                   "\" id=\"" + WidgetId(widget) + "\"></div>";
         }
         rml += std::string("<div id=\"") + kHelpId + "\"></div>";
         return rml + "</body></rml>";

@@ -208,7 +208,7 @@ TEST(the_target_widget_goes_back_to_breathing_after_its_popup_without_a_complain
     }
 }
 
-TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it_unlit)
+TEST(every_widget_lit_has_the_same_corners_and_shows_its_background_unlit_only_with_show_widget_background)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
         BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
@@ -224,18 +224,17 @@ TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it
     }
     for (const BarPalette& palette : palettes)
     {
-        const BarLook look = LookOf(palette, settings);
         test::RmlSession rml;
-        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
-        bar->Show();
-        // Each widget as the panel marks it.
+        Rml::ElementDocument* bar = nullptr;
+        // Each widget as the panel marks it, in the document its settings make.
         const auto drawn = [&](PanelWidget widget, bool lit, bool backed) -> const Rml::Style::ComputedValues& {
-            settings.widgetBackground          = backed;
-            const PanelGroups panel            = Panel(settings);
-            Rml::Element* element              = bar->GetElementById(WidgetId(widget));
+            settings.widgetBackground = backed;
+            if (bar != nullptr) bar->Close();
+            bar = rml.context->LoadDocumentFromMemory(BarDocument(LookOf(palette, settings), place), "bar");
+            bar->Show();
+            Rml::Element* element = bar->GetElementById(WidgetId(widget));
             CHECK(element != nullptr);
             element->SetClass(kHiddenClass, false);
-            element->SetClass(kFlatClass, FlatPill(look, panel, widget));
             element->SetClass(kBackedClass, backed);
             element->SetClass(kLitClass, lit);
             for (int update = 0; update < 3; ++update)
@@ -259,6 +258,8 @@ TEST(every_widget_lit_has_the_same_corners_and_one_showing_its_background_has_it
                 const int alpha = drawn(widget, false, true).background_color().alpha;
                 if (palette.shape == BarShape::Pills ? alpha != static_cast<int>(palette.pill >> 24) : alpha == 0)
                     throw test::Failure{std::string(BarWidgetName(widget.kind)) + " shows no background"};
+                if (drawn(widget, false, false).background_color().alpha != 0)
+                    throw test::Failure{std::string(BarWidgetName(widget.kind)) + " shows a background with it off"};
             }
         CHECK_EQ(rml.Said(), "");
     }

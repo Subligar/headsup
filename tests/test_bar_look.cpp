@@ -138,22 +138,29 @@ TEST(the_ornate_target_is_framed_and_a_lit_widget_tinted)
     CHECK(hovered->top == 0x34C9A24Au && hovered->bottom == 0x34C9A24Au);
 }
 
-TEST(pills_frame_every_widget_but_zone_and_earth_time_until_lit)
+// Round 22: with Show Widget Background off the Zone and Clock were flat and every other widget still framed.
+TEST(pills_frame_every_widget_while_unlit_only_with_show_widget_background)
 {
     Settings settings;
-    const BarLook look  = LookOf(BarTheme::UmbraDark, settings);
-    const BarPalette& p = look.palette;
-    for (const BarWidget flat : {BarWidget::Zone, BarWidget::EarthTime})
+    settings.widgetBackground = false;
+    const BarLook bare        = LookOf(BarTheme::UmbraDark, settings);
+    const BarPalette& p       = bare.palette;
+    for (const BarWidget widget : {BarWidget::Zone, BarWidget::EarthTime, BarWidget::Bags, BarWidget::Job, BarWidget::Target})
     {
-        CHECK(!look.BoxOf(flat, false).has_value());
-        const std::optional<BoxStyle> lit = look.BoxOf(flat, true);
+        CHECK(!bare.BoxOf(widget, false).has_value());
+        const std::optional<BoxStyle> lit = bare.BoxOf(widget, true);
         CHECK(lit.has_value() && lit->top == p.highlight && lit->border == p.accent);
     }
-    const std::optional<BoxStyle> bags = look.BoxOf(BarWidget::Bags, false);
-    CHECK(bags.has_value() && bags->top == p.pill && bags->border == p.pillBorder);
-    const std::optional<BoxStyle> target = look.BoxOf(BarWidget::Target, false);
+    settings.widgetBackground = true;
+    const BarLook backed      = LookOf(BarTheme::UmbraDark, settings);
+    for (const BarWidget widget : {BarWidget::Zone, BarWidget::EarthTime, BarWidget::Bags})
+    {
+        const std::optional<BoxStyle> box = backed.BoxOf(widget, false);
+        CHECK(box.has_value() && box->top == p.pill && box->border == p.pillBorder);
+        CHECK(Near(box->radius, backed.metrics.pillRadius));
+    }
+    const std::optional<BoxStyle> target = backed.BoxOf(BarWidget::Target, false);
     CHECK(target.has_value() && target->top == p.pill && target->border == p.accent);
-    CHECK(Near(bags->radius, look.metrics.pillRadius));
 }
 
 TEST(a_widget_of_figures_draws_its_title_in_the_detail_font_in_every_theme)

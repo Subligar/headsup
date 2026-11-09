@@ -307,7 +307,6 @@ namespace headsup
             shown.element->SetClass(kJoinBeforeClass, joins.before);
             shown.element->SetClass(kJoinAfterClass, joins.after);
             const PanelWidget head = widgets.panel.group[w];
-            shown.element->SetClass(kFlatClass, FlatPill(look, widgets.panel, head));
             shown.element->SetClass(kBackedClass, look.settings.widgetBackground);
             shown.element->SetClass(kLitClass, input.Lit(head, widgets.hasPopup[SlotOf(head)]));
             if (widget.kind == BarWidget::Target) shown.element->SetClass(kTargetClass, look.settings.widgetBackground);

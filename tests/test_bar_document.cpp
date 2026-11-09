@@ -154,14 +154,16 @@ TEST(a_pill_theme_frames_each_widget_and_its_caps_follow_the_settings)
     Settings settings;
     CHECK(Has(BarDocument(LookOf(BarTheme::UmbraDark, settings), Place()), "cap-right\" src"));
     settings.panelSeparators = SeparatorBit(Separator::Between);
-    const std::string rml = BarDocument(LookOf(BarTheme::UmbraDark, settings), Place());
+    // Without Show Widget Background no widget has a pill until lit.
+    CHECK(Has(BarDocument(LookOf(BarTheme::UmbraDark, settings), Place()),
+        ".pills .widget{background-color:transparent;border-color:transparent;}"));
+    settings.widgetBackground = true;
+    const std::string rml     = BarDocument(LookOf(BarTheme::UmbraDark, settings), Place());
     CHECK(Has(rml, "<body class=\"pills\">") && !Has(rml, "cap-right\" src"));
     // 0.17 H corners, the pill's fill and edge.
     CHECK(Has(rml, ".pills .widget{background-color:#222226ff;border-color:#3a3a42ff;border-radius:7.65px;}"));
-    CHECK(Has(rml, ".pills .widget.flat{background-color:transparent;border-color:transparent;}"));
     CHECK(Has(rml, ".pills .widget.lit{background-color:#2a2a30ff;border-color:#5b8defff;"));
-    CHECK(Has(rml, "class=\"widget hidden flat\" id=\"w-zone\"")); // zone and Earth time show no pill until lit
-    CHECK(Has(rml, "class=\"widget hidden\" id=\"w-weather\""));
+    CHECK(Has(rml, "class=\"widget hidden\" id=\"w-zone\""));
     CHECK(Has(rml, "hu:diamond/ff5b8def/10")); // a pill theme's dividers take the accent
     CHECK(Has(rml, "height:58px")); // no line under this strip
 }

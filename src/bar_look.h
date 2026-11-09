@@ -62,7 +62,6 @@ namespace headsup
     SkinFrame FrameAsSet(const Settings& settings, SkinFrame frame);
     // Whether a pill shows only while lit: the theme gives none of its widgets a box then and Show Widget Background
     // is off.
-    bool FlatPill(const BarLook& look, const PanelGroups& panel, PanelWidget head);
 
     // The palette the bar is drawn with: the picked theme's, the player's own for Custom, or the skin's for Vanilla
     // (Phoenix Gold's colors while none is read).
