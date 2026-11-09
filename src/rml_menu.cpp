@@ -190,8 +190,12 @@ namespace headsup
         const float across = static_cast<float>(std::min(widgets.size(), kSettingsAcross));
         const float ems    = widgets.size() > 1 ? across * (kSettingsWidth + 2.0f * kSettingsBoxPad) + (across - 1.0f) * kSettingsBoxGap
                                                 : kSettingsWidth;
+        // A created widget's Pop-out Designer shows the pill's pop-out over them; a built-in's pop-out is fixed.
+        const bool previewed = m_State.editSide == EditSide::Popup &&
+                               std::ranges::any_of(widgets, [](PanelWidget w) { return w.kind == BarWidget::Custom; });
         return SettingsRoom{std::round(ems * static_cast<float>(settings.menuFontSize)),
-            shown != nullptr ? std::ceil(shown->GetBox().GetSize(Rml::BoxArea::Border).y) : 0.0f};
+            shown != nullptr ? std::ceil(shown->GetBox().GetSize(Rml::BoxArea::Border).y) : 0.0f,
+            previewed ? SettingsPreview::Cards : SettingsPreview::None};
     }
 
     std::optional<PanelWidget> RmlMenu::TakeSettingsAsked() { return std::exchange(m_State.settingsAsked, std::nullopt); }

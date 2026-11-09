@@ -1984,6 +1984,25 @@ TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_
     CHECK_EQ(window.Said(), "");
 }
 
+TEST(a_created_widgets_edit_choice_tells_its_popup_to_keep_its_cards_and_a_built_ins_never)
+{
+    Window window;
+    const PanelWidget made = *CreateWidget(window.settings);
+    window.shown           = made;
+    window.Frames(2);
+    const std::string slot = std::to_string(SlotOf(made));
+    CHECK(window.menu.RoomFor({made}, window.settings)->preview == SettingsPreview::None);
+    CHECK(window.Shows("toppanel-widgets-part-" + slot + "-end-0") && !window.Shows("toppanel-widgets-card-" + slot + "-end-0"));
+    CHECK(!window.Click("toppanel-widgets-edit-custom-s-1")); // no setting changed
+    CHECK(window.menu.RoomFor({made}, window.settings)->preview == SettingsPreview::Cards);
+    CHECK(window.menu.RoomFor({PanelWidget{BarWidget::Zone}, made}, window.settings)->preview == SettingsPreview::Cards);
+    CHECK(window.menu.RoomFor({PanelWidget{BarWidget::Zone}}, window.settings)->preview == SettingsPreview::None);
+    CHECK(window.Shows("toppanel-widgets-card-" + slot + "-end-0") && !window.Shows("toppanel-widgets-part-" + slot + "-end-0"));
+    CHECK(!window.Click("toppanel-widgets-edit-custom-s-0"));
+    CHECK(window.menu.RoomFor({made}, window.settings)->preview == SettingsPreview::None);
+    CHECK_EQ(window.Said(), "");
+}
+
 TEST(the_currency_dropdowns_show_each_currencys_picture_left_of_its_name_in_a_column)
 {
     Window window;

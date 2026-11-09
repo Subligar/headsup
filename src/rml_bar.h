@@ -212,9 +212,10 @@ namespace headsup
             bool marked = false; // its markup is the layout's
             std::optional<float> left, top, width, height;
             Memo<PopupKey, PopupLayout> layout;
-            // The widest it has been since it opened, which it keeps as its text changes with the time; its content's
-            // or its settings' (settings), apart.
+            // The widest it has been since it opened, which it keeps as its text changes with the time; its content's,
+            // its settings' (settings) or its preview's over them (preview), apart.
             bool shown = false, settings = false;
+            SettingsPreview preview = SettingsPreview::None;
             float widest = 0.0f;
             std::optional<float> keptX; // where across it opened under its widget, which it keeps while open
             // Each popup font's widths of the texts it measured, its figures at the font's widest digit.

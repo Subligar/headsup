@@ -541,15 +541,17 @@ namespace headsup
             popup.marked  = false;
             popup.left = popup.top = popup.width = popup.height = std::nullopt;
         }
-        const bool settings = input.SettingsShown() == open;
+        const bool settings           = input.SettingsShown() == open;
+        const SettingsPreview preview = settings ? settingsRoom.value_or(SettingsRoom{}).preview : SettingsPreview::None;
         if (!popup.shown) popup.keptX.reset();
-        if (!popup.shown || popup.settings != settings)
+        if (!popup.shown || popup.settings != settings || popup.preview != preview)
         {
             popup.widest = 0.0f;
             popup.widths = {};
         }
         popup.shown    = true;
         popup.settings = settings;
+        popup.preview  = preview;
         const BarPalette& p = look.palette;
         const BarMetrics& m = look.metrics;
         // Figures measured at the font's widest digit, so a popup does not change its width as its times tick.
