@@ -271,9 +271,13 @@ namespace headsup
         css += "input.range sliderarrowdec,input.range sliderarrowinc{width:0px;height:0px;}";
         css += ".val{position:absolute;left:0px;top:0px;width:100%;" + framed + "text-align:center;pointer-events:none;}";
         // Text boxes: the edge lights while one has the keyboard.
+        // A text box clips to its inside: its line fills it, so a tall font's descenders are not cut off.
+        constexpr float kTextBoxBorder = 1.0f;
         css += "input.text,textarea{box-sizing:border-box;height:" + frame + ";padding:0.2em " + Em(kPadX) + ";border-radius:" +
-               radius + ";border:1px transparent;background-color:" + color(c.control) + ";color:" + color(c.text) +
-               ";transition:border-color" + kEase + ";}";
+               radius + ";border:" + Px(kTextBoxBorder) + " transparent;background-color:" + color(c.control) + ";color:" +
+               color(c.text) + ";transition:border-color" + kEase + ";}";
+        css += "input.text{padding-top:0px;padding-bottom:0px;line-height:" +
+               Px(kFrame * static_cast<float>(look.fontPixels) - 2.0f * kTextBoxBorder) + ";}";
         css += "input.text:hover,input.text:focus,textarea:hover,textarea:focus{background-color:" + color(c.hover) + ";}";
         css += "input.text:focus,textarea:focus{border-color:" + color(Faded(c.accent, kFocus)) + ";}";
         css += "input.text:placeholder-shown{color:" + color(c.muted) + ";}";

@@ -1348,3 +1348,35 @@ TEST(a_widgets_icon_stands_on_the_middle_of_its_lone_lines_figures_as_a_clock_ti
     }
     CHECK_EQ(rml.Said(), "");
 }
+
+// Round 22: "the naming for the widget cuts off the bottom of that text". A text box clips to its inside, and the
+// 0.2 em padding over a font's own line (Segoe UI's is 1.33 em) pushed its descenders past the bottom.
+TEST(a_text_box_holds_its_fonts_descenders_in_every_bundled_window_font)
+{
+    for (const char* font : {kBarlowCondensed, kMarcellusSC, "Cinzel", "Cormorant SC"})
+        for (const int pixels : {12, 16, 18, 24})
+        {
+            test::RmlSession rml;
+            const MenuLook menu{MenuTheme::Phoenix, font, kMarcellusSC, pixels, 0, false, kPhoenixMenuColors, std::nullopt};
+            Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
+            window->SetProperty(Rml::PropertyId::FontSize, Rml::Property(static_cast<float>(pixels), Rml::Unit::PX));
+            Rml::Element* box = window->AppendChild(window->CreateElement("input"));
+            box->SetAttribute("type", "text");
+            box->SetClass("text", true);
+            box->SetAttribute("value", "Gjpqy");
+            window->Show();
+            rml.context->Update();
+            const Rml::Box& b         = box->GetBox();
+            const float inside        = b.GetSize(Rml::BoxArea::Padding).y;
+            const float above         = b.GetEdge(Rml::BoxArea::Padding, Rml::BoxEdge::Top);
+            const float line          = box->GetComputedValues().line_height().value;
+            Rml::FontEngineInterface* engine = Rml::GetFontEngineInterface();
+            const Rml::FontMetrics& m = engine->GetFontMetrics(engine->GetFontFaceHandle(Rml::StringUtilities::ToLower(font),
+                Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal, pixels));
+            // The line's glyphs sit in its middle: the descenders end half the line and half the glyphs below its top.
+            const float bottom = above + (line + m.ascent + m.descent) / 2.0f;
+            if (bottom > inside + 0.5f)
+                throw test::Failure{std::string(font) + " at " + std::to_string(pixels) + " px: its descenders end at " +
+                                    std::to_string(bottom) + " px of a box " + std::to_string(inside) + " px inside"};
+        }
+}
