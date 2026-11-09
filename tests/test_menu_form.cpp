@@ -285,6 +285,23 @@ TEST(create_new_widget_adds_one_at_the_rights_end_on_with_its_settings_asked_unt
     CHECK_EQ(created, kMostCreatedWidgets);
 }
 
+TEST(removing_a_created_widget_whose_settings_show_asks_the_plugin_to_close_them)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {made};
+    const std::string chip = "toppanel-layout-chip-" + std::to_string(SlotOf(made));
+    w.Pass({{chip + "-remove", kClickEvent, ""}});
+    CHECK(!Placed(w.settings.barSections, made) && w.state.settingsAsked == made);
+    // One whose settings do not show asks for nothing.
+    const PanelWidget other = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {PanelWidget{BarWidget::Zone}};
+    w.state.settingsAsked.reset();
+    w.Pass({{"toppanel-layout-chip-" + std::to_string(SlotOf(other)) + "-remove", kClickEvent, ""}});
+    CHECK(!Placed(w.settings.barSections, other) && !w.state.settingsAsked);
+}
+
 TEST(a_widgets_chip_dropped_on_another_goes_before_it)
 {
     Window w;

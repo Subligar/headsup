@@ -1308,9 +1308,8 @@ namespace headsup
             if (remove)
             {
                 // Its settings, if they showed, give way to the first copy's; a created widget's close with it.
-                if (remove->kind != BarWidget::Custom &&
-                    std::ranges::find(c.readings.settingsOf, *remove) != c.readings.settingsOf.end())
-                    c.state.settingsAsked = PanelWidget{remove->kind};
+                if (std::ranges::find(c.readings.settingsOf, *remove) != c.readings.settingsOf.end())
+                    c.state.settingsAsked = remove->kind == BarWidget::Custom ? *remove : PanelWidget{remove->kind};
                 RemoveWidgetCopy(s, *remove);
                 form.changed = true;
             }

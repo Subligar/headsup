@@ -989,7 +989,9 @@ public:
             else if (const std::optional<headsup::PanelWidget> next = headsup::ApplyWidgetPress(m_Settings, press))
             {
                 m_SettingsChangedAt = now;
-                m_BarInput.ShowSettings(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)]);
+                m_BarInput.ShowSettings(headsup::Placed(m_Settings.barSections, *next)
+                                            ? std::optional(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)])
+                                            : std::nullopt);
             }
             else switch (headsup::ApplyPopupPress(m_Settings, press, NationNow()))
             {
@@ -1155,11 +1157,13 @@ public:
             m_SettingsChangedAt = now;
             SayGameFontFailure();
         }
-        // A chip clicked opens its pill's popup on its settings, or closes it when it shows them already.
+        // A chip clicked opens its pill's popup on its settings, or closes it when it shows them already; a created
+        // widget just removed has none to show.
         if (const std::optional<headsup::PanelWidget> asked = m_RmlMenu.TakeSettingsAsked())
         {
             const headsup::PanelWidget pill = headsup::Panel(m_Settings).group[headsup::SlotOf(*asked)];
-            m_BarInput.ShowSettings(m_BarInput.SettingsShown() == pill ? std::nullopt : std::optional(pill));
+            const bool shut = m_BarInput.SettingsShown() == pill || !headsup::Placed(m_Settings.barSections, *asked);
+            m_BarInput.ShowSettings(shut ? std::nullopt : std::optional(pill));
         }
         if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
         if (m_RmlMenu.TakeSetupBackup()) BackUpSettings();
