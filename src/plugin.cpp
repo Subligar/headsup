@@ -4,6 +4,7 @@
 #include "profiles.h"
 #include "bar_connection.h"
 #include "bar_document.h"
+#include "c_numbers.h"
 #include "bar_fps.h"
 #include "bar_job.h"
 #include "bar_memory.h"
@@ -172,7 +173,11 @@ namespace
     HRESULT __attribute__((stdcall)) HookedPresent(IDirect3DDevice8* device, const RECT* source, const RECT* dest,
         HWND window, const RGNDATA* dirty)
     {
-        if (g_AfterGui != nullptr) g_AfterGui();
+        if (g_AfterGui != nullptr)
+        {
+            const headsup::CNumbers numbers;
+            g_AfterGui();
+        }
         return reinterpret_cast<PresentFn>(g_RealPresent)(device, source, dest, window, dirty);
     }
 
@@ -273,6 +278,7 @@ namespace
 
     BOOL __stdcall OnMouse(uint32_t message, WPARAM wParam, LPARAM lParam, bool blocked)
     {
+        const headsup::CNumbers numbers;
         return g_GamePresses.Keep(message, blocked || KeepMouse(message, wParam, lParam, blocked)) ? TRUE : FALSE;
     }
 
@@ -281,6 +287,7 @@ namespace
     BOOL __stdcall OnKeyboard(WPARAM wParam, LPARAM lParam, bool blocked)
     {
         if (blocked || g_Rml == nullptr || !g_Rml->Running()) return FALSE;
+        const headsup::CNumbers numbers;
         return g_Rml->Key(static_cast<uint32_t>(wParam), (static_cast<uint32_t>(lParam) & kKeyUpFlag) == 0) ? TRUE : FALSE;
     }
 }
@@ -517,6 +524,7 @@ public:
     {
         UNREFERENCED_PARAMETER(logger);
         UNREFERENCED_PARAMETER(id);
+        const headsup::CNumbers numbers;
         m_AshitaCore = core;
         g_Plugin     = this;
         g_Resources  = core->GetResourceManager();
@@ -567,6 +575,7 @@ public:
 
     void Release(void) override
     {
+        const headsup::CNumbers numbers;
         SavePending();
         SetScreenshot(false);
         HoldGameKeys(false);
@@ -847,6 +856,7 @@ public:
         UNREFERENCED_PARAMETER(dest);
         UNREFERENCED_PARAMETER(window);
         UNREFERENCED_PARAMETER(dirty);
+        const headsup::CNumbers numbers;
         MeasureFrame();
         RunCommands();
 #ifdef HEADSUP_DEV
@@ -1240,6 +1250,7 @@ public:
     {
         if (!Ours()) RecordDraw(isRenderingBackBuffer ? 'E' : 'e', D3DPT_POINTLIST, 0u, nullptr, 0u, 0u, 0u);
         if (Ours() || !isRenderingBackBuffer) return;
+        const headsup::CNumbers numbers;
         DrawLoneCursors();
         bool plates = false;
         if (!m_PlatesPlaced)
