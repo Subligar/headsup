@@ -75,23 +75,24 @@ namespace headsup
     // where they would reach the left, and the center loses them from its end; the target then takes back the room
     // those leave. In ornate, the target's frame keeps DiamondClearance from the diamond on a
     // neighbour's edge. Pills with diamonds sit a gap, the diamond and a gap apart.
-    // spacing: every widget's room more between it and each neighbour; an ornate diamond stands in the middle of the
-    // room it is in.
+    // spacing: each widget's Widget Spacing, by SlotOf. Two pills keep half of each one's first widget's between them;
+    // an ornate diamond stands in the middle of the room it is in.
     // groups: by SlotOf, the first widget of each one's pill (PanelGroups). The widgets of a pill have no gap, room
     // or diamond between them, only linked's room after each (by SlotOf), and are placed or dropped together.
     BarLayout LayoutBar(float screenWidth, const BarMetrics& metrics, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
-                        const BarPlacement& placement, int separators, float spacing,
+                        const BarPlacement& placement, int separators, const std::array<float, kPanelSlots>& spacing,
                         const std::array<PanelWidget, kPanelSlots>& groups);
-    // A widget's padding inside its box on each side: padding, but none where it shares its pill with the shown widget
-    // before it, and its Linked Padding (linked, by SlotOf) where it shares it with the one after. shown is above 0
-    // for a widget with something to show.
+    // A widget's padding inside its box on each side: its own padding (by SlotOf), but none where it shares its pill
+    // with the shown widget before it, and its Linked Padding (linked, by SlotOf) where it shares it with the one
+    // after. shown is above 0 for a widget with something to show.
     struct WidgetPads
     {
         float left = 0.0f, right = 0.0f;
     };
     std::array<WidgetPads, kPanelSlots> PillPads(const BarPlacement& placement, const std::array<PanelWidget, kPanelSlots>& groups,
-        const std::array<float, kPanelSlots>& shown, const std::array<float, kPanelSlots>& linked, float padding);
+        const std::array<float, kPanelSlots>& shown, const std::array<float, kPanelSlots>& linked,
+        const std::array<float, kPanelSlots>& padding);
     // The widget under the point, or for a combined pill its first widget, which names the pill's popup.
     std::optional<PanelWidget> WidgetAt(const BarLayout& layout, float x, float y);
     const BarRect* RectOf(const BarLayout& layout, PanelWidget widget);

@@ -17,6 +17,15 @@ namespace headsup
             return room;
         }
 
+        // Each widget's own of a Top Panel size in pixels, else the Top Panel's, by SlotOf.
+        std::array<float, kPanelSlots> EachOwn(const Settings& settings, std::optional<int> WidgetOptions::* own, int panel)
+        {
+            std::array<float, kPanelSlots> each{};
+            for (int slot = 0; slot < kPanelSlots; ++slot)
+                each[static_cast<size_t>(slot)] = static_cast<float>((settings.widgets[static_cast<size_t>(slot)].*own).value_or(panel));
+            return each;
+        }
+
         constexpr float kFitSteps = 10.0f; // a fitted text's room is kept in tenths of a pixel
         constexpr int kFewLetters = 3;     // the least of the target's name worth its room on the bar
         constexpr const char* kCapital = "H"; // its ink is a font's capitals'
@@ -240,7 +249,7 @@ namespace headsup
         }
         const std::array<WidgetPads, kPanelSlots> pads =
             PillPads(widgets.panel.placement, widgets.panel.group, natural, LinkedRoom(look.settings),
-                static_cast<float>(look.settings.barWidgetPadding));
+                EachOwn(look.settings, &WidgetOptions::padding, look.settings.barWidgetPadding));
         for (int i = 0; i < kPanelSlots; ++i)
         {
             m_Shown[i].pads = pads[static_cast<size_t>(i)];
@@ -258,8 +267,8 @@ namespace headsup
                     : Width(host, Shortest(target.title[targetName].text, kFewLetters), look.TitleFace(target)));
         SharePopups(widgets.hasPopup, widgets.panel.group);
         const BarLayout layout = LayoutBar(screenWidth, m, look.palette.shape, natural, targetMinimum,
-            widgets.panel.placement, look.settings.panelSeparators, static_cast<float>(look.settings.barWidgetSpacing),
-            widgets.panel.group);
+            widgets.panel.placement, look.settings.panelSeparators,
+            EachOwn(look.settings, &WidgetOptions::spacing, look.settings.barWidgetSpacing), widgets.panel.group);
         if (layout.targetWidth > 0.0f && layout.targetWidth < natural[SlotOf(BarWidget::Target)])
         {
             // On each line the longest text is cut, as the name is; the rest keeps its room.

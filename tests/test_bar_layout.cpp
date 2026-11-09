@@ -29,6 +29,14 @@ namespace
     int ShapeSeparators(BarShape shape) { return shape == BarShape::Ornate ? kAllSeparators : 0; }
     constexpr int kBetween = SeparatorBit(Separator::Between), kCaps = SeparatorBit(Separator::EndCaps);
 
+    // The same for every widget, by SlotOf.
+    std::array<float, kPanelSlots> Every(float value)
+    {
+        std::array<float, kPanelSlots> each;
+        each.fill(value);
+        return each;
+    }
+
     // LayoutBar on the default panel, each widget in a pill of its own, unless the test says otherwise; its Widget
     // Spacing a pills gap, ornate's none.
     BarLayout Layout(float screenWidth, const BarMetrics& metrics, BarShape shape,
@@ -37,7 +45,8 @@ namespace
         std::optional<float> spacing = std::nullopt, const std::array<PanelWidget, kPanelSlots>& groups = AloneGroups())
     {
         return LayoutBar(screenWidth, metrics, shape, natural, targetMinimum, placement,
-            separators.value_or(ShapeSeparators(shape)), spacing.value_or(shape == BarShape::Ornate ? 0.0f : metrics.gap), groups);
+            separators.value_or(ShapeSeparators(shape)), Every(spacing.value_or(shape == BarShape::Ornate ? 0.0f : metrics.gap)),
+            groups);
     }
 
     std::array<float, kPanelSlots> Widths(float zone, float weather, float vana, float target, float gil,
@@ -1630,7 +1639,7 @@ TEST(a_linked_pills_widgets_keep_no_padding_between_them_but_the_linked_padding)
              BarWidget::Bags, BarWidget::EarthTime})
         shown[SlotOf(w)] = 1.0f;
     constexpr float kPad = 9.0f;
-    const std::array<WidgetPads, kPanelSlots> pads = PillPads(g.placement, g.group, shown, linked, kPad);
+    const std::array<WidgetPads, kPanelSlots> pads = PillPads(g.placement, g.group, shown, linked, Every(kPad));
     const auto of = [&](BarWidget w) { return pads[SlotOf(w)]; };
     CHECK(of(BarWidget::Zone).left == kPad && of(BarWidget::Zone).right == 12.0f);
     CHECK(of(BarWidget::Weather).left == 0.0f && of(BarWidget::Weather).right == kPad);
@@ -1639,7 +1648,55 @@ TEST(a_linked_pills_widgets_keep_no_padding_between_them_but_the_linked_padding)
     CHECK(of(BarWidget::Job).left == kPad && of(BarWidget::Job).right == kPad); // in a pill of its own
     // A widget of the pill with nothing to show leaves its neighbour the edge.
     shown[SlotOf(BarWidget::Weather)] = 0.0f;
-    CHECK(PillPads(g.placement, g.group, shown, linked, kPad)[SlotOf(BarWidget::Zone)].right == kPad);
+    CHECK(PillPads(g.placement, g.group, shown, linked, Every(kPad))[SlotOf(BarWidget::Zone)].right == kPad);
+}
+
+TEST(each_widget_keeps_its_own_padding_on_the_sides_it_does_not_share)
+{
+    const PanelGroups g = Combined();
+    std::array<float, kPanelSlots> linked{}, shown{};
+    linked[SlotOf(BarWidget::Zone)] = 12.0f;
+    for (const BarWidget w : {BarWidget::Zone, BarWidget::Weather, BarWidget::Job})
+        shown[SlotOf(w)] = 1.0f;
+    std::array<float, kPanelSlots> padding = Every(9.0f);
+    padding[SlotOf(BarWidget::Zone)]    = 3.0f;
+    padding[SlotOf(BarWidget::Weather)] = 15.0f;
+    padding[SlotOf(BarWidget::Job)]     = 20.0f;
+    const std::array<WidgetPads, kPanelSlots> pads = PillPads(g.placement, g.group, shown, linked, padding);
+    const auto of = [&](BarWidget w) { return pads[SlotOf(w)]; };
+    CHECK(of(BarWidget::Zone).left == 3.0f && of(BarWidget::Zone).right == 12.0f);
+    CHECK(of(BarWidget::Weather).left == 0.0f && of(BarWidget::Weather).right == 15.0f);
+    CHECK(of(BarWidget::Job).left == 20.0f && of(BarWidget::Job).right == 20.0f);
+}
+
+TEST(neighbours_are_half_of_each_ones_widget_spacing_apart_and_a_pill_spaces_by_its_first_widget)
+{
+    const std::array<float, kPanelSlots> natural = Widths(100, 80, 120, 200, 90, 60, 50);
+    std::array<float, kPanelSlots> spacing = Every(2.0f);
+    spacing[SlotOf(BarWidget::Weather)] = 10.0f;
+    const auto apart = [](const BarLayout& l, BarWidget left, BarWidget right) {
+        return RectOf(l, right)->x - (RectOf(l, left)->x + RectOf(l, left)->width);
+    };
+    for (const auto& [shape, metrics] : {std::pair{BarShape::Pills, kPills}, std::pair{BarShape::Ornate, kOrnate}})
+    {
+        const BarLayout l = LayoutBar(1920.0f, metrics, shape, natural, 0.0f, DefaultPlacement(), 0, spacing, AloneGroups());
+        CHECK(Near(apart(l, BarWidget::Zone, BarWidget::Weather), 6.0f) && Near(apart(l, BarWidget::Weather, BarWidget::Job), 6.0f));
+        CHECK(Near(apart(l, BarWidget::Currency, BarWidget::Bags), 2.0f));
+    }
+    // An ornate diamond stands in the middle of that room.
+    const BarLayout ornate = LayoutBar(1920.0f, kOrnate, BarShape::Ornate, natural, 0.0f, DefaultPlacement(), kBetween, spacing,
+        AloneGroups());
+    const BarRect& zone = *RectOf(ornate, BarWidget::Zone);
+    CHECK(Near(ornate.dividers[0], zone.x + zone.width + 3.0f));
+    // Zone's pill holds Weather after it: the pill is spaced by Zone's, Weather's own left out.
+    const PanelGroups g = Combined();
+    const auto pillToJob = [&](const std::array<float, kPanelSlots>& each) {
+        return apart(LayoutBar(1920.0f, kPills, BarShape::Pills, natural, 0.0f, g.placement, 0, each, g.group), BarWidget::Weather,
+            BarWidget::Job);
+    };
+    CHECK(Near(pillToJob(spacing), 2.0f));
+    spacing[SlotOf(BarWidget::Zone)] = 20.0f;
+    CHECK(Near(pillToJob(spacing), 11.0f));
 }
 
 TEST(a_combined_pill_that_does_not_fit_goes_whole)

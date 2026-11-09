@@ -625,6 +625,8 @@ TEST(two_neighbouring_widgets_are_drawn_the_widget_spacing_apart_in_every_shape)
     std::array<float, kPanelSlots> natural{};
     natural[SlotOf(BarWidget::Zone)]    = 100.0f;
     natural[SlotOf(BarWidget::Weather)] = 80.0f;
+    std::array<float, kPanelSlots> spacing;
+    spacing.fill(static_cast<float>(kSpacing));
     for (const BarTheme theme : {BarTheme::UmbraDark, BarTheme::Aurora, BarTheme::Vanilla, BarTheme::PhoenixGold})
     {
         test::RmlSession rml;
@@ -632,7 +634,7 @@ TEST(two_neighbouring_widgets_are_drawn_the_widget_spacing_apart_in_every_shape)
         Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
         bar->Show();
         const BarLayout layout = LayoutBar(1920.0f, look.metrics, look.palette.shape, natural, 0.0f, left,
-            settings.panelSeparators, static_cast<float>(kSpacing), AloneGroups());
+            settings.panelSeparators, spacing, AloneGroups());
         // Placed as the bar places them.
         const auto show = [&](BarWidget kind) {
             Rml::Element* e = bar->GetElementById(WidgetId(kind));

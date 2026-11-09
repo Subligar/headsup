@@ -31,22 +31,27 @@ namespace headsup
 
         constexpr float kDiamondGap = 2.0f; // pixels clear between a frame or hover tint and a divider's diamond
 
-        // Between neighbours in a section: the Widget Spacing, with `between` more for a separator's diamond, and in
-        // ornate, where that diamond on the plain neighbour's edge divides them, the framed target's clear space from it.
+        // Between neighbours in a section: half of each one's pill's Widget Spacing, with `between` more for a
+        // separator's diamond, and in ornate, where that diamond on the plain neighbour's edge divides them, the framed
+        // target's clear space from it.
         struct Spacing
         {
             float between = 0.0f, frameClear = 0.0f;
-            float room = 0.0f; // the Widget Spacing
+            const std::array<float, kPanelSlots>* room = nullptr; // each widget's Widget Spacing
             const std::array<PanelWidget, kPanelSlots>* groups = nullptr;
             bool Together(PanelWidget a, PanelWidget b) const { return (*groups)[SlotOf(a)] == (*groups)[SlotOf(b)]; }
             float Frame(PanelWidget w) const { return w.kind == BarWidget::Target ? frameClear : 0.0f; }
+            float Room(PanelWidget a, PanelWidget b) const
+            {
+                return ((*room)[SlotOf((*groups)[SlotOf(a)])] + (*room)[SlotOf((*groups)[SlotOf(b)])]) / 2.0f;
+            }
             // left is the one placed further left.
             float Apart(PanelWidget left, PanelWidget right) const
             {
-                return Together(left, right) ? 0.0f : between + Frame(left) + Frame(right) + room;
+                return Together(left, right) ? 0.0f : between + Frame(left) + Frame(right) + Room(left, right);
             }
-            // From a's edge: the middle of what is between them, but for a's frame's clear space.
-            float Middle(PanelWidget a) const { return Frame(a) + (between + room) / 2.0f; }
+            // From a's edge: the middle of what is between it and b, but for a's frame's clear space.
+            float Middle(PanelWidget a, PanelWidget b) const { return Frame(a) + (between + Room(a, b)) / 2.0f; }
         };
 
         struct Group
@@ -86,7 +91,7 @@ namespace headsup
                     break;
                 }
                 if (!first && diamonds && !spacing.Together(g.widgets.back().widget, w))
-                    g.dividers.push_back(at + dir * spacing.Middle(g.widgets.back().widget));
+                    g.dividers.push_back(at + dir * spacing.Middle(g.widgets.back().widget, w));
                 const float x       = dir > 0.0f ? at + gap : at - gap - width;
                 const bool isTarget = w.kind == BarWidget::Target; // framed on the pill row in every shape
                 const PanelWidget head = (*spacing.groups)[SlotOf(w)];
@@ -121,7 +126,7 @@ namespace headsup
 
     BarLayout LayoutBar(float screenWidth, const BarMetrics& m, BarShape shape,
                         const std::array<float, kPanelSlots>& natural, float targetMinimum,
-                        const BarPlacement& placement, int separators, float spacing,
+                        const BarPlacement& placement, int separators, const std::array<float, kPanelSlots>& spacing,
                         const std::array<PanelWidget, kPanelSlots>& groups)
     {
         const bool ornate   = shape == BarShape::Ornate;
@@ -129,7 +134,7 @@ namespace headsup
         // Neighbours are the Widget Spacing apart. A diamond between them takes its clear space more: ornate's sits on
         // the plain neighbour's edge, inside its margin (SideOf), the framed target keeping clear of it.
         const float clear = diamonds ? DiamondClearance(m) : 0.0f;
-        const Spacing apart{.between = ornate ? 0.0f : 2.0f * clear, .frameClear = ornate ? clear : 0.0f, .room = spacing,
+        const Spacing apart{.between = ornate ? 0.0f : 2.0f * clear, .frameClear = ornate ? clear : 0.0f, .room = &spacing,
             .groups = &groups};
         const bool caps     = (separators & SeparatorBit(Separator::EndCaps)) != 0;
         const float edge    = caps ? m.cap : m.gap; // between a section and the screen's edge
@@ -330,10 +335,12 @@ namespace headsup
     }
 
     std::array<WidgetPads, kPanelSlots> PillPads(const BarPlacement& placement, const std::array<PanelWidget, kPanelSlots>& groups,
-        const std::array<float, kPanelSlots>& shown, const std::array<float, kPanelSlots>& linked, float padding)
+        const std::array<float, kPanelSlots>& shown, const std::array<float, kPanelSlots>& linked,
+        const std::array<float, kPanelSlots>& padding)
     {
         std::array<WidgetPads, kPanelSlots> pads;
-        pads.fill(WidgetPads{padding, padding});
+        for (int slot = 0; slot < kPanelSlots; ++slot)
+            pads[slot] = WidgetPads{padding[slot], padding[slot]};
         for (const std::vector<PanelWidget>& section : placement)
         {
             std::optional<PanelWidget> last;
