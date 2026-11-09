@@ -2797,8 +2797,11 @@ private:
                 s.earthSecond = local->tm_sec;
             }
         }
-        // Today's guild point turn-ins while World Info shows: kept for the day in Japan, fetched again after its reset.
-        if (headsup::AnyCopyShown(m_Settings, headsup::BarWidget::World) && s.unixMs != 0)
+        // Today's guild point turn-ins while World Info or a pop-out with its cards shows: kept for the day in Japan,
+        // fetched again after its reset.
+        if ((headsup::AnyCopyShown(m_Settings, headsup::BarWidget::World) ||
+                headsup::PopupShows(m_Settings, m_BarInput.Shown(), headsup::BarWidget::World)) &&
+            s.unixMs != 0)
         {
             KeepTurnIns(s.unixMs, now);
             s.turnIns       = m_TurnIns && m_TurnInsDay == headsup::JstDay(s.unixMs) ? &*m_TurnIns : nullptr;
