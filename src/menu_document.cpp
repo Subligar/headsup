@@ -430,12 +430,13 @@ namespace headsup
         css += ".wtwo .wname{display:block;height:" + Em(kChipLine) + ";white-space:nowrap;pointer-events:none;}";
         css += ".tray-end{height:" + Em(kChipHeight) + ";}";
         // The Widget Designer: its two lines as trays of chips side by side, wrapping, each line's end taking a drop.
-        css += ".tray.design-line{display:flex;flex-wrap:wrap;margin-bottom:0.3em;}";
+        css += std::string(".tray.design-line,.tray.") + kPaletteClass + "{display:flex;flex-wrap:wrap;margin-bottom:0.3em;}";
         css += ".dchip{display:inline-block;margin-right:0.3em;}";
         // A designer chip's picture, and a currency's in its dropdown, where one with none keeps the room.
         css += ".dchip .dmark,.omark{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) + ";vertical-align:middle;margin-right:0.4em;}";
         css += ".omark{display:inline-block;}";
         css += ".design-line .tray-end{flex:1 1 2em;}";
+        css += std::string(".tray-end.") + kHintClass + "{line-height:" + Em(kChipHeight) + ";padding-left:0.3em;color:" + color(c.muted) + ";}";
         css += ".error{margin-bottom:" + Em(kSpacing) + ";color:" + color(kErrorColor) + ";}";
         // What a control says under the pointer.
         css += std::string("#") + kMenuTipId + "{position:absolute;z-index:60;box-sizing:border-box;max-width:" +

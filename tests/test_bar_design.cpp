@@ -2,6 +2,7 @@
 #include "test.h"
 
 #include <algorithm>
+#include <string>
 #include <vector>
 
 using namespace headsup;
@@ -178,4 +179,105 @@ TEST(a_narrow_target_cuts_its_name_wherever_it_sits)
     Span far = Text("(12.3)", Tone::Dim);
     far.room = {"(99.9)"};
     CHECK_EQ(WidestTextSpan({far}), 1u);
+}
+
+namespace
+{
+    std::vector<CardKind> CardsIn(const PopupDesign& d)
+    {
+        std::vector<CardKind> cards;
+        for (const auto& row : d.rows)
+            cards.insert(cards.end(), row.begin(), row.end());
+        return cards;
+    }
+}
+
+TEST(every_pop_out_card_is_one_widgets_and_saves_by_a_name_of_its_own)
+{
+    std::vector<std::string> names;
+    size_t listed = 0;
+    for (int k = 0; k < kBarWidgetCount; ++k)
+    {
+        const auto kind = static_cast<BarWidget>(k);
+        const std::vector<CardKind> cards = CardsOf(kind);
+        CHECK_EQ(cards.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings);
+        for (const CardKind card : cards)
+            CHECK(WidgetOfCard(card) == kind);
+        listed += cards.size();
+    }
+    CHECK_EQ(listed, static_cast<size_t>(kCardKindCount));
+    for (int c = 0; c < kCardKindCount; ++c)
+        names.emplace_back(CardFileName(static_cast<CardKind>(c)));
+    std::ranges::sort(names);
+    CHECK(std::ranges::adjacent_find(names) == names.end());
+}
+
+TEST(each_widgets_default_pop_out_holds_its_own_cards_once_at_most_three_a_row)
+{
+    for (int k = 0; k < kBarWidgetCount; ++k)
+    {
+        const auto kind = static_cast<BarWidget>(k);
+        const PopupDesign d = DefaultPopupDesign(kind);
+        std::vector<CardKind> held = CardsIn(d), own = CardsOf(kind);
+        for (const auto& row : d.rows)
+            CHECK(!row.empty() && row.size() <= kMostCardsInRow);
+        std::ranges::sort(held);
+        CHECK(held == own);
+    }
+    // Forecast's as its pop-out was: Today beside the forecast, By Element under both.
+    CHECK((DefaultPopupDesign(BarWidget::Weather).rows ==
+           std::vector<std::vector<CardKind>>{{CardKind::WeatherToday, CardKind::WeatherForecast}, {CardKind::WeatherByElement}}));
+}
+
+TEST(a_pop_out_design_saves_as_text_and_loads_back)
+{
+    PopupDesign d{{{CardKind::ZoneInfluence, CardKind::WeatherToday}, {CardKind::CurrencyFavorites}}};
+    const std::string text = PopupDesignText(d);
+    CHECK_EQ(text, "zone.influence weather.today | gil.favorites");
+    CHECK(PopupDesignFrom(BarWidget::Zone, text) == d);
+    for (int k = 0; k < kBarWidgetCount; ++k)
+    {
+        const auto kind = static_cast<BarWidget>(k);
+        CHECK(PopupDesignFrom(kind, PopupDesignText(DefaultPopupDesign(kind))) == DefaultPopupDesign(kind));
+    }
+    // Nothing saved is the default; a design of no cards saves as one.
+    CHECK(PopupDesignFrom(BarWidget::Job, "") == DefaultPopupDesign(BarWidget::Job));
+    CHECK(PopupDesignFrom(BarWidget::Job, PopupDesignText(PopupDesign{})).rows.empty());
+}
+
+TEST(a_pop_out_design_from_text_drops_unknown_and_repeated_cards_a_fourth_in_a_row_and_empty_rows)
+{
+    const PopupDesign d = PopupDesignFrom(BarWidget::Zone,
+        "zone.influence nonsense zone.influence weather.today world.guilds job.exp party.members | | world.guilds bags.list");
+    CHECK((d.rows == std::vector<std::vector<CardKind>>{
+                         {CardKind::ZoneInfluence, CardKind::WeatherToday, CardKind::WorldGuilds}, {CardKind::BagsList}}));
+}
+
+TEST(a_card_moves_within_and_across_rows_and_into_a_new_one)
+{
+    PopupDesign d{{{CardKind::WorldConquest, CardKind::WorldTravel, CardKind::WorldCalendar}, {CardKind::WorldGuilds}}};
+    CHECK(PlaceCard(d, CardKind::WorldCalendar, 0, 0)); // first in its row
+    CHECK_EQ(PopupDesignText(d), "world.calendar world.conquest world.travel | world.guilds");
+    CHECK(!PlaceCard(d, CardKind::WorldConquest, 0, 1)); // onto its own place
+    CHECK(!PlaceCard(d, CardKind::WorldConquest, 0, 2)); // or just after itself
+    CHECK(PlaceCard(d, CardKind::WorldGuilds, 2, 0)); // a row of its own after the others: its old one goes
+    CHECK_EQ(PopupDesignText(d), "world.calendar world.conquest world.travel | world.guilds");
+    CHECK(PlaceCard(d, CardKind::WorldTravel, 1, 5)); // to the end of the next row
+    CHECK_EQ(PopupDesignText(d), "world.calendar world.conquest | world.guilds world.travel");
+    CHECK(PlaceCard(d, CardKind::ZoneInfluence, 2, 0)); // one from the palette, in a new row
+    CHECK_EQ(PopupDesignText(d), "world.calendar world.conquest | world.guilds world.travel | zone.influence");
+    CHECK(RemoveCard(d, CardKind::WorldConquest) && !RemoveCard(d, CardKind::WorldConquest));
+    CHECK(RemoveCard(d, CardKind::ZoneInfluence)); // its row goes with it
+    CHECK_EQ(PopupDesignText(d), "world.calendar | world.guilds world.travel");
+}
+
+TEST(a_full_row_takes_no_fourth_card_but_moves_its_own)
+{
+    PopupDesign d{{{CardKind::WorldConquest, CardKind::WorldTravel, CardKind::WorldCalendar}, {CardKind::WorldGuilds}}};
+    CHECK(!RowTakes(d, 0, CardKind::WorldGuilds) && RowTakes(d, 0, CardKind::WorldTravel));
+    CHECK(RowTakes(d, 1, CardKind::WorldConquest) && RowTakes(d, 2, CardKind::WorldGuilds));
+    CHECK(!PlaceCard(d, CardKind::WorldGuilds, 0, 0));
+    CHECK_EQ(PopupDesignText(d), "world.conquest world.travel world.calendar | world.guilds");
+    CHECK(PlaceCard(d, CardKind::WorldConquest, 0, 3));
+    CHECK_EQ(PopupDesignText(d), "world.travel world.calendar world.conquest | world.guilds");
 }

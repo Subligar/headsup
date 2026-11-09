@@ -152,6 +152,7 @@
               "key": "widget-tabs",
               "rows": [
                 {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
+                {"key": "popup-design", "name": "Pop-out Designer", "tip": "Use the rows below to set which sections this widget's pop-out shows, and in what order. Drag a section from the lists under them into a row, or onto the empty row to start a new one. A row holds up to 3 sections side by side, and a row with fewer stretches them across the pop-out. Drag a section off the rows to take it out. Any widget's sections can go in."},
                 {"key": "icon", "name": "Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is {default}."},
                 {"key": "alignment", "name": "Alignment", "tip": "Puts the widget's content against the left or right of its pill, or in its middle. Set by Location lines it up with the side of the panel it is on. Default is {default}."},
                 {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is off."},
@@ -194,7 +195,10 @@
                 {"key": "combine-none", "name": "None"},
                 {"key": "link-disabled", "name": "(disabled)"},
                 {"key": "design-last-on", "name": "At least one button must be enabled."},
-                {"key": "design-status-timers", "name": "Use the lines below to change how info is organized in the widget."}
+                {"key": "design-status-timers", "name": "Use the lines below to change how info is organized in the widget."},
+                {"key": "popup-row-full", "name": "A row can hold at most 3 sections."},
+                {"key": "popup-new-row", "name": "Drop a section here for a new row"},
+                {"key": "popup-add", "name": "Drag a section into a row to add it:"}
               ]
             }
           ]
@@ -1366,6 +1370,57 @@
         {"name": "Bastok", "tip": "Bastok's crest and how many regions it holds."},
         {"name": "Windurst", "tip": "Windurst's crest and how many regions it holds."},
         {"name": "Beastmen", "tip": "The beastmen's crest and how many regions they hold."}
+      ]
+    },
+    {
+      "key": "popup-cards",
+      "options": [
+        {"name": "Influence", "tip": "How much of the zone's region each nation holds, and when the tally is."},
+        {"name": "Today", "tip": "Vana'diel's day and time, today's weather in your zone and the moon."},
+        {"name": "Weather Forecast", "tip": "The weather your zone can have on the next days."},
+        {"name": "By Element", "tip": "The zones that can roll each element's weather today and tomorrow."},
+        {"name": "Overview", "tip": "A mob's level, jobs and what it does; an NPC's ID and what it is for; a player's check."},
+        {"name": "Damage Taken", "tip": "How much damage a mob takes from each kind of hit."},
+        {"name": "Elements", "tip": "How a mob takes each element."},
+        {"name": "Statuses", "tip": "How a mob resists each status."},
+        {"name": "Immune", "tip": "What a mob is immune to."},
+        {"name": "Stats", "tip": "A mob's stats at its level, once checked."},
+        {"name": "TP Moves", "tip": "A mob's TP moves."},
+        {"name": "Spells", "tip": "The spells a mob casts at its level."},
+        {"name": "Spawn", "tip": "When a mob comes back and when it can spawn."},
+        {"name": "Drops", "tip": "What a mob drops and how often."},
+        {"name": "Steal", "tip": "What can be stolen from a mob."},
+        {"name": "Despoil", "tip": "What can be despoiled from a mob."},
+        {"name": "Shop", "tip": "What an NPC sells."},
+        {"name": "Click", "tip": "What an NPC does when you talk to it."},
+        {"name": "Trade", "tip": "What an NPC takes in trade, and what that does."},
+        {"name": "Pops", "tip": "The mobs an NPC pops."},
+        {"name": "Gives", "tip": "What an NPC gives."},
+        {"name": "Key Items", "tip": "The key items an NPC gives."},
+        {"name": "Checks For", "tip": "The key items an NPC checks for."},
+        {"name": "Quests", "tip": "The quests an NPC is part of."},
+        {"name": "Missions", "tip": "The missions an NPC is part of."},
+        {"name": "Battlefields", "tip": "The battlefields an NPC leads to."},
+        {"name": "Favorites", "tip": "The currencies you starred."},
+        {"name": "All Currencies", "tip": "Every currency, by amount or by name."},
+        {"name": "Bags", "tip": "Every bag and how full it is."},
+        {"name": "Server Time", "tip": "The server's time, and how long until the daily reset and the conquest tally."},
+        {"name": "Connection", "tip": "What is sent and received each second, and the last server data."},
+        {"name": "This Session", "tip": "What was sent and received since HeadsUp started counting."},
+        {"name": "PlayOnline", "tip": "PlayOnline's messages and mail, while something waits."},
+        {"name": "Memory", "tip": "The game's memory used and left."},
+        {"name": "Processor", "tip": "The CPU used and the frame times."},
+        {"name": "LinuxXI", "tip": "The LinuxXI plugin's fixes, while it is loaded."},
+        {"name": "Lua Memory", "tip": "Each addon's Lua memory, from the LinuxXI plugin."},
+        {"name": "EXP", "tip": "Your EXP or merits, per hour and until the next level."},
+        {"name": "Members", "tip": "Each party member's jobs, HP, MP and TP."},
+        {"name": "Favorites", "tip": "The statuses you starred, with a pin to show one on the panel."},
+        {"name": "Buffs", "tip": "Every buff, those you have first."},
+        {"name": "Debuffs", "tip": "Every debuff, those you have first."},
+        {"name": "Conquest", "tip": "The regions each nation holds, and your supply runs."},
+        {"name": "Travel", "tip": "When each boat and airship leaves or arrives."},
+        {"name": "Calendar", "tip": "The RSE and the next full and new moons."},
+        {"name": "Guilds", "tip": "Each guild's shop hours and today's turn-ins."}
       ]
     },
     {

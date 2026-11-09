@@ -113,7 +113,7 @@ TEST(the_popup_lists_your_favorites_with_pins_over_every_buff_then_every_debuff_
     // Protect and Haste are buffs; Dia and Paralysis are debuffs.
     const std::vector<ActiveStatus> active{{40, 1800.0}, {33, 90.0}, {134, 30.0}};
     const PopupContent p = StatusTimersPopup(active, {kSignetEffect, 40}, {40}, theme, 3, 5);
-    CHECK(Joined(p.title) == "Status Timers" && p.sections.size() == 3 && p.oneColumn);
+    CHECK(Joined(p.title) == "Status Timers" && p.sections.size() == 3);
     CHECK(p.sections[0].heading == "Favorites" && p.sections[1].heading == "Buffs" && p.sections[2].heading == "Debuffs");
     const PopupRow& top = p.sections[0].rows[0];
     CHECK(top.columns == 4 && top.cells.size() == 8);

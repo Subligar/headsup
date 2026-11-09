@@ -102,7 +102,7 @@ namespace headsup
             grid.cells.push_back(
                 Cell(m->tp >= kWeaponSkillTp ? Colored(Grouped(m->tp), kReadyColor) : Text(Grouped(m->tp))));
         }
-        PopupSection rows{"", ListOf(std::move(grid))};
+        PopupSection rows = Section(CardKind::PartyMembers, "", ListOf(std::move(grid)));
         for (PopupRow& row : away)
             rows.rows.push_back(std::move(row));
         popup.sections = ListOf(std::move(rows));

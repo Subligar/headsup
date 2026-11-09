@@ -165,7 +165,6 @@ namespace headsup
     {
         PopupContent popup;
         popup.title     = ListOf(Text("Status Timers"));
-        popup.oneColumn = true;
         if (refused)
             popup.subtitle = ListOf(Colored(pins.size() >= kMostStatusPins ? "You can not pin more than 6 status effects"
                                                                              : "Must have at least one status pinned.",
@@ -178,7 +177,7 @@ namespace headsup
         };
         // Favorites: a pin, a star, the icon and name, and the time, matched by name as the panel's are.
         constexpr int kFavoriteColumns = 4, kListColumns = 3;
-        PopupSection top{"Favorites", {}};
+        PopupSection top = Section(CardKind::StatusFavorites, "Favorites");
         std::vector<std::string> favoriteNames;
         if (favorites.empty())
             top.rows.push_back(LineOf("Click a status's star to keep it here, then its pin to show it on the panel.", Tone::Dim));
@@ -234,7 +233,7 @@ namespace headsup
             list.spread   = true;
             list.scroll   = debuffs ? kDebuffsKey : kBuffsKey;
             list.scrolled = debuffs ? debuffsScrolled : buffsScrolled;
-            PopupSection section{list.scroll, {}};
+            PopupSection section = Section(debuffs ? CardKind::StatusDebuffs : CardKind::StatusBuffs, list.scroll);
             section.rows.push_back(std::move(list));
             popup.sections.push_back(std::move(section));
         }

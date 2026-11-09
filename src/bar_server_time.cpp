@@ -179,7 +179,7 @@ namespace headsup
     PopupSection ServerTimeRows(int64_t unixMs)
     {
         const ZoneTime t = ZoneAt(ClockZone::Japan, unixMs);
-        PopupSection rows;
+        PopupSection rows = Section(CardKind::ClockServer, "");
         rows.rows.push_back(Labeled("Server Time", Text(std::string(JstWeekdayName(t.weekday)) + " " +
                                                         HourMinute(t.hour, t.minute) + " " + t.abbreviation)));
         rows.rows.push_back(Labeled("Daily Reset in", Text(SpanText(SecondsToDailyReset(unixMs)))));

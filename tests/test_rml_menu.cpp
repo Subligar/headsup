@@ -2421,7 +2421,7 @@ TEST(a_designer_button_dropped_in_the_gap_between_two_buttons_goes_between_them)
     window.Frames(3);
     Rml::ElementList lines;
     window.Find(kMenuViewBodyId)->GetElementsByClassName(lines, "design-line");
-    CHECK(lines.size() == 2);
+    CHECK(lines.size() > 2); // the Widget Designer's two lines, then the Pop-out Designer's rows
     std::vector<Rml::Element*> top;
     for (int i = 0; i < lines[0]->GetNumChildren(); ++i)
         if (lines[0]->GetChild(i)->IsClassSet("dchip")) top.push_back(lines[0]->GetChild(i));
@@ -2496,7 +2496,7 @@ TEST(a_designer_button_dropped_on_a_buttons_right_half_goes_after_it)
     window.Frames(3);
     Rml::ElementList lines;
     window.Find(kMenuViewBodyId)->GetElementsByClassName(lines, "design-line");
-    CHECK(lines.size() == 2);
+    CHECK(lines.size() > 2); // the Widget Designer's two lines, then the Pop-out Designer's rows
     Rml::Element* jobs = lines[0]->GetChild(0);
     Rml::Element* bar  = lines[1]->GetChild(1);
     CHECK(jobs->IsClassSet("dchip") && bar->IsClassSet("dchip"));
@@ -2505,6 +2505,35 @@ TEST(a_designer_button_dropped_on_a_buttons_right_half_goes_after_it)
     CHECK(window.Drag(bar->GetId(), at - window.Center(bar->GetId())));
     window.Frames(2);
     CHECK_EQ(DesignText(window.settings.Widget(job).design), "jobs bar earned tonext | percent");
+}
+
+TEST(a_pop_out_designer_card_dropped_on_a_card_goes_beside_it_on_the_empty_row_makes_one_and_off_the_rows_leaves)
+{
+    Window window;
+    const PanelWidget weather{BarWidget::Weather};
+    window.settings.Widget(weather).on = true;
+    window.shown = weather;
+    window.Frames(3);
+    const std::string slot = std::to_string(SlotOf(weather));
+    const auto card   = [&](CardKind c) { return "toppanel-widgets-card-" + slot + "-" + std::to_string(static_cast<int>(c)); };
+    const auto listed = [&](CardKind c) { return "toppanel-widgets-pcard-" + slot + "-" + std::to_string(static_cast<int>(c)); };
+    const auto design = [&] { return PopupDesignText(window.settings.Widget(weather).popup); };
+    CHECK_EQ(design(), "weather.today weather.forecast | weather.byElement");
+    // On the right half of Today: after it.
+    Rml::Element* today = window.Find(card(CardKind::WeatherToday));
+    CHECK(today != nullptr);
+    window.Center(card(CardKind::WeatherToday));
+    const Rml::Vector2f right{today->GetAbsoluteOffset(Rml::BoxArea::Border).x + 0.8f * today->GetBox().GetSize(Rml::BoxArea::Border).x,
+        window.Center(card(CardKind::WeatherToday)).y};
+    CHECK(window.Drag(card(CardKind::WeatherByElement), right - window.Center(card(CardKind::WeatherByElement))));
+    CHECK_EQ(design(), "weather.today weather.byElement weather.forecast");
+    // A listed card onto the empty row under them: a row of its own.
+    CHECK(window.Drag(listed(CardKind::ZoneInfluence), "toppanel-widgets-card-" + slot + "-end-1"));
+    CHECK_EQ(design(), "weather.today weather.byElement weather.forecast | zone.influence");
+    // A row's card onto the lists: out of the pop-out.
+    CHECK(window.Drag(card(CardKind::WeatherForecast), listed(CardKind::BagsList)));
+    CHECK_EQ(design(), "weather.today weather.byElement | zone.influence");
+    CHECK_EQ(window.Said(), "");
 }
 
 TEST(a_theme_colors_custom_button_and_its_swatch_sit_side_by_side_without_overlapping)

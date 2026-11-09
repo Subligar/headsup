@@ -312,35 +312,6 @@ TEST(a_card_with_tabs_shows_the_picked_ones_rows_under_its_tabs_at_one_width)
     CHECK(Near(widths[0], widths[1]) && heights[1] > heights[0]);
 }
 
-TEST(cards_keep_their_columns_whichever_tab_is_picked)
-{
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
-    std::vector<std::vector<float>> places;
-    for (const size_t picked : {0u, 1u})
-    {
-        PopupContent c;
-        c.title = {{"World Info", Tone::Normal}};
-        // Short airships and many boats: by their heights alone, the two tabs would split the cards differently.
-        PopupSection travel = Travel(picked);
-        for (int i = 0; i < 12; ++i)
-            travel.tabs[1].rows.push_back(Labeled("Boat " + std::to_string(i), Text("Boards in 2:23")));
-        c.sections.push_back(travel);
-        for (const char* heading : {"One", "Two", "Three"})
-        {
-            PopupSection card{heading, {}};
-            for (int i = 0; i < 5; ++i)
-                card.rows.push_back(Labeled("Row " + std::to_string(i), Text("in 1:00")));
-            c.sections.push_back(card);
-        }
-        std::vector<float> place; // each card's left: its column
-        for (const PopupPiece* card : Of(LayoutPopup(c, m, false, Fake), PopupPiece::Kind::Card))
-            place.push_back(card->x);
-        places.push_back(place);
-    }
-    // The longer tab grows the card down where it is: the cards stay in their columns.
-    CHECK(places[0].size() == 4 && places[0] == places[1]);
-}
-
 namespace
 {
     // A tab's rows: a count, then a table of 30 zones under its heads.
@@ -479,20 +450,27 @@ TEST(a_card_beside_another_shares_its_row_at_one_height_and_one_alone_fills_the_
     CHECK(Near(layouts[0][0]->height, layouts[1][0]->height));
 }
 
-TEST(a_card_keeps_its_own_width_and_the_one_beside_it_takes_the_rest_of_the_row)
+TEST(cards_in_a_row_share_what_their_own_widths_leave_of_it_evenly)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);
     PopupContent c;
     c.title = {{"Sunshine", Tone::Normal}};
-    c.sections.push_back(PopupSection{"Today", {Labeled("Firesday", Text("12:00"))}});
+    c.sections.push_back(PopupSection{"Today", {Labeled("Firesday at noon in the dunes", Text("12:00"))}});
     PopupSection forecast{"Weather Forecast", {Labeled("A day with a far longer forecast than today has", Text("50%"))}};
     forecast.beside = true;
     c.sections.push_back(forecast);
+    // As wide as the row alone needs, each card at its own width.
+    const PopupLayout own = LayoutPopup(c, m, false, Fake);
+    const std::vector<const PopupPiece*> was = Of(own, PopupPiece::Kind::Card);
+    CHECK_EQ(was.size(), static_cast<size_t>(2));
+    // Under a far wider card, the two take the rest of the width half each.
+    c.sections.push_back(PopupSection{"Guilds", {Labeled(std::string(140, 'w'), Text("Open"))}});
     const PopupLayout l = LayoutPopup(c, m, false, Fake);
     const std::vector<const PopupPiece*> cards = Of(l, PopupPiece::Kind::Card);
-    CHECK_EQ(cards.size(), static_cast<size_t>(2));
+    CHECK_EQ(cards.size(), static_cast<size_t>(3));
     const PopupPiece &today = *cards[0], &later = *cards[1];
-    CHECK(today.width < later.width && Near(today.height, later.height));
+    const float more = today.width - was[0]->width;
+    CHECK(more > 0.0f && Near(later.width - was[1]->width, more) && Near(today.height, later.height));
     CHECK(Near(later.x + later.width, l.width - m.popupPadding)); // to the popup's right padding
     CHECK(AllInside(l, m));
 }
@@ -541,7 +519,7 @@ TEST(the_pop_out_width_and_height_scale_each_card_and_leave_its_text_alone)
     CHECK(Near(t0.width, t1.width) && Near(t0.height, t1.height));
 }
 
-TEST(a_collapsed_card_in_a_column_keeps_its_width)
+TEST(a_collapsed_card_alone_in_its_row_keeps_its_width)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);
     const auto popup = [&](bool collapsed) {
@@ -557,41 +535,6 @@ TEST(a_collapsed_card_in_a_column_keeps_its_width)
     const PopupLayout open = popup(false), shut = popup(true);
     CHECK(Near(shut.width, open.width));
     CHECK(Near(Of(shut, PopupPiece::Kind::Card)[1]->width, Of(open, PopupPiece::Kind::Card)[1]->width));
-}
-
-TEST(cards_under_the_one_beside_another_make_a_column_as_tall_as_the_card_beside_it)
-{
-    const BarMetrics m = MetricsFor(36, BarShape::Pills);
-    const auto lines = [](size_t count) {
-        std::vector<PopupRow> rows;
-        for (size_t i = 0; i < count; ++i)
-            rows.push_back(Labeled("Region", Text(std::to_string(i))));
-        return rows;
-    };
-    for (const size_t tall : {12u, 1u}) // the card beside the column taller, then the column
-    {
-        PopupContent c;
-        c.title = {{"World Info", Tone::Normal}};
-        c.sections.push_back(PopupSection{"Conquest", lines(tall)});
-        PopupSection travel{"Travel", lines(3)};
-        travel.beside = true;
-        PopupSection calendar{"Calendar", lines(2)};
-        calendar.under = true;
-        c.sections.push_back(travel);
-        c.sections.push_back(calendar);
-        c.sections.push_back(PopupSection{"Guilds", lines(1)});
-        const PopupLayout l = LayoutPopup(c, m, false, Fake);
-        CHECK(AllInside(l, m));
-        const std::vector<const PopupPiece*> cards = Of(l, PopupPiece::Kind::Card);
-        CHECK_EQ(cards.size(), static_cast<size_t>(4));
-        const PopupPiece &conquest = *cards[0], &shipCard = *cards[1], &days = *cards[2], &guilds = *cards[3];
-        // Travel beside Conquest, the Calendar under it in its column, the column's bottom at Conquest's.
-        CHECK(shipCard.x > conquest.x + conquest.width && Near(shipCard.y, conquest.y));
-        CHECK(Near(days.x, shipCard.x) && Near(days.width, shipCard.width) && days.y > shipCard.y + shipCard.height);
-        CHECK(Near(days.y + days.height, conquest.y + conquest.height));
-        // Guilds under them all, across the row.
-        CHECK(guilds.y > conquest.y + conquest.height && Near(guilds.x + guilds.width, shipCard.x + shipCard.width));
-    }
 }
 
 TEST(a_card_can_put_its_tabs_two_to_a_row)
@@ -714,32 +657,32 @@ TEST(a_pairs_value_ends_at_its_cards_right_edge_and_its_label_at_the_left)
     CHECK(gil.right && standing.right && !Find(l, "Gil ")->right);
 }
 
-TEST(a_tall_popup_flows_its_cards_into_two_columns)
+TEST(cards_not_beside_another_go_down_a_row_each_however_tall_and_three_beside_share_one)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);
     PopupContent c;
     c.title = {{"Mob", Tone::Normal}};
-    for (const char* heading : {"One", "Two", "Three", "Four"})
+    for (const char* heading : {"One", "Two", "Three", "Four", "Five", "Six"})
     {
         PopupSection s{heading, {}};
         for (int i = 0; i < 4; ++i)
             s.rows.push_back(PopupRow{RowKind::Line, 0, {Word("row")}});
         c.sections.push_back(s);
     }
+    const PopupLayout down = LayoutPopup(c, m, false, Fake);
+    const auto stacked     = Of(down, PopupPiece::Kind::Card);
+    CHECK(stacked.size() == 6);
+    for (size_t i = 1; i < stacked.size(); ++i)
+        CHECK(Near(stacked[i]->x, stacked[0]->x) && stacked[i]->y >= stacked[i - 1]->y + stacked[i - 1]->height);
+    // Two to Four in a row, in their order left to right; Five and Six each a row under it.
+    c.sections[2].beside = c.sections[3].beside = true;
     const PopupLayout l = LayoutPopup(c, m, false, Fake);
     const auto cards    = Of(l, PopupPiece::Kind::Card);
-    CHECK(cards.size() == 4);
-    // Two and two, in order down the left then the right, the right column level with the left.
-    CHECK(Near(cards[0]->x, cards[1]->x) && Near(cards[2]->x, cards[3]->x) && cards[2]->x > cards[0]->x);
-    CHECK(Near(cards[0]->y, cards[2]->y) && cards[1]->y > cards[0]->y);
-    CHECK(cards[2]->x >= cards[0]->x + cards[0]->width);
+    CHECK(Near(cards[1]->y, cards[2]->y) && Near(cards[2]->y, cards[3]->y));
+    CHECK(cards[2]->x > cards[1]->x + cards[1]->width && cards[3]->x > cards[2]->x + cards[2]->width);
     CHECK(Near(cards[3]->x + cards[3]->width, l.width - m.popupPadding));
-    // A short popup keeps one column.
-    c.sections.resize(2);
-    c.sections[0].rows.resize(1);
-    c.sections[1].rows.resize(1);
-    const PopupLayout shortOne = LayoutPopup(c, m, false, Fake);
-    CHECK(Near(Of(shortOne, PopupPiece::Kind::Card)[0]->x, Of(shortOne, PopupPiece::Kind::Card)[1]->x));
+    CHECK(cards[4]->y >= cards[1]->y + cards[1]->height && Near(cards[4]->x, cards[0]->x));
+    CHECK(AllInside(l, m));
 }
 
 TEST(a_table_taller_than_the_room_sets_its_lines_side_by_side_in_its_card_and_drops_nothing)
@@ -756,6 +699,7 @@ TEST(a_table_taller_than_the_room_sets_its_lines_side_by_side_in_its_card_and_dr
         grid.cells.push_back(Word(i % 3 == 0 ? "Snow 50% wide" : "-"));
     }
     c.sections.push_back(PopupSection{"By Element", {grid}});
+    c.sections.back().beside = true; // in the forecast's row, as the room there is what the table has to fit
     const PopupLayout whole = LayoutPopup(c, m, false, Fake);
     const float room        = whole.height / 3.0f;
     const PopupLayout l     = LayoutPopup(c, m, false, Fake, room);
@@ -795,7 +739,7 @@ TEST(a_table_taller_than_the_room_sets_its_lines_side_by_side_in_its_card_and_dr
     CHECK(Near(roomy.width, whole.width) && Near(roomy.height, whole.height));
 }
 
-TEST(a_card_too_tall_for_the_room_without_a_table_goes_on_in_another_column)
+TEST(a_card_too_tall_for_the_room_without_a_table_goes_on_beside_itself_in_its_row)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);
     PopupContent c;
@@ -804,9 +748,14 @@ TEST(a_card_too_tall_for_the_room_without_a_table_goes_on_in_another_column)
     for (int i = 0; i < 40; ++i)
         currencies.rows.push_back(PopupRow{RowKind::Line, 0, {Word(("Currency " + std::to_string(i)).c_str())}});
     c.sections.push_back(currencies);
+    c.sections.push_back(PopupSection{"Note", {PopupRow{RowKind::Line, 0, {Word("Under them")}}}});
     const float room    = LayoutPopup(c, m, false, Fake).height / 2.5f;
     const PopupLayout l = LayoutPopup(c, m, false, Fake, room);
-    CHECK(l.height <= room + 0.01f && Of(l, PopupPiece::Kind::Card).size() >= 3);
+    const auto cards    = Of(l, PopupPiece::Kind::Card);
+    CHECK(l.height <= room + 0.01f && cards.size() >= 4);
+    for (size_t i = 1; i + 1 < cards.size(); ++i)
+        CHECK(Near(cards[i]->y, cards[0]->y) && cards[i]->x > cards[i - 1]->x);
+    CHECK(cards.back()->y > cards[0]->y);
     for (int i = 0; i < 40; ++i)
         CHECK(Find(l, "Currency " + std::to_string(i)) != nullptr);
 }

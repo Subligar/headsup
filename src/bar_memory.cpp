@@ -32,7 +32,7 @@ namespace headsup
 
         void AddLinuxXI(std::vector<PopupSection>& sections, const LinuxXIReport& r)
         {
-            PopupSection fixes{"LinuxXI", {}};
+            PopupSection fixes = Section(CardKind::PerfLinuxXI, "LinuxXI");
             fixes.rows.push_back(Labeled("Packet Copies",
                 FixSpan(r.flags, kPoolHooked, kPoolOn, Grouped(r.copiesHeld) + " (" + Grouped(r.copiesPeak) + " at most)")));
             if ((r.flags & kPoolHooked) != 0)
@@ -43,7 +43,7 @@ namespace headsup
             fixes.rows.push_back(Labeled("Registry Compares", FixSpan(r.flags, kLocaleActive, kLocaleOn, "C Locale")));
             sections.push_back(std::move(fixes));
             if (r.addonCount == 0) return;
-            PopupSection lua{"Lua Memory", {}};
+            PopupSection lua = Section(CardKind::PerfLua, "Lua Memory");
             uint64_t total = 0;
             for (uint32_t i = 0; i < r.addonCount; ++i)
                 total += r.lua[i].kilobytes;
@@ -89,14 +89,14 @@ namespace headsup
         if (memory)
         {
             const Headroom headroom = HeadroomOf(*memory);
-            PopupSection space{"Memory", {}};
+            PopupSection space = Section(CardKind::PerfMemory, "Memory");
             space.rows.push_back(Labeled("Used", Text(MbText(memory->usedMb))));
             space.rows.push_back(Labeled("Left", HeadroomSpan(MbText(memory->leftMb), headroom)));
             space.rows.push_back(Labeled("Of", Text(MbText(memory->ceilingMb))));
             if (headroom != Headroom::Plenty) space.rows.push_back(LineOf("The game closes once none is left.", Tone::Dim));
             sections.push_back(std::move(space));
         }
-        PopupSection processor{"Processor", {}};
+        PopupSection processor = Section(CardKind::PerfProcessor, "Processor");
         if (cpuPercent) processor.rows.push_back(Labeled("CPU", Text(Printed("%.0f%%", *cpuPercent) + " of one core")));
         if (frames)
         {
@@ -108,8 +108,8 @@ namespace headsup
         if (linuxxi.report)
             AddLinuxXI(sections, *linuxxi.report);
         else if (linuxxi.otherVersion)
-            sections.push_back(PopupSection{"LinuxXI", ListOf(LineOf("It sends report version " + std::to_string(*linuxxi.otherVersion) +
-                                                                     "; this HeadsUp reads " + std::to_string(kLinuxXIReportVersion) + ".", Tone::Dim))});
+            sections.push_back(Section(CardKind::PerfLinuxXI, "LinuxXI", ListOf(LineOf("It sends report version " + std::to_string(*linuxxi.otherVersion) +
+                                                                     "; this HeadsUp reads " + std::to_string(kLinuxXIReportVersion) + ".", Tone::Dim))));
         return sections;
     }
 }

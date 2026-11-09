@@ -120,14 +120,12 @@ namespace headsup
     };
     using SpanMeasure = FunctionRef<TextSize(const Span&, PopupFont)>;
 
-    // The title, then each section with a heading as a card holding it and its rows; rows without a heading sit
-    // under the title, on the panel. A pair's value ends at its card's right edge. When the cards stacked would run
-    // taller than kTwoColumnsAbove popup text sizes, they flow into two columns as even as their order allows, and
-    // into more when two would run taller than room, a card too tall for it going on in the next under its heading.
-    // The round pin chip sits at the title row's top right: an empty pin, or lit with a filled one while pinned, with
-    // the settings chip left of it, lit while settings show. It is never narrower than least, its cards widening to
-    // fill it. With settings, their room is left under the title in place of the sections, no taller than room leaves.
-    constexpr float kTwoColumnsAbove = 24.0f;
+    // The title, then each section as a card holding its heading and rows, down in rows: a section beside the one before
+    // shares its row. A pair's value ends at its card's right edge. A card too tall for room has its long grids set
+    // side by side, or goes on beside itself under its heading. The round pin chip sits at the title row's top right: an
+    // empty pin, or lit with a filled one while pinned, with the settings chip left of it, lit while settings show. It
+    // is never narrower than least, its cards widening to fill it. With settings, their room is left under the title in
+    // place of the sections, no taller than room leaves.
     PopupLayout LayoutPopup(const PopupContent& content, const BarMetrics& metrics, bool pinned,
                             SpanMeasure measure, float room = std::numeric_limits<float>::infinity(), float least = 0.0f,
                             std::optional<SettingsRoom> settings = std::nullopt);

@@ -189,8 +189,9 @@ PIECES = Pieces(
         'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
         'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-rounding': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'shrink-to-text': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
-            'design', 'icon', 'alignment', 'show-zone-id', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag-1', 'bag-2', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
-            'seconds', 'date-format', 'job-text', 'job-text-align', 'earned-align', 'tnl-align', 'percent-align', 'bar-width', 'bar-height', 'bar-back', 'bar-color', 'bar-text', 'bar-text-align', 'mem-text', 'status-display'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),
+            'design', 'popup-design', 'icon', 'alignment', 'show-zone-id', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag-1', 'bag-2', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
+            'seconds', 'date-format', 'job-text', 'job-text-align', 'earned-align', 'tnl-align', 'percent-align', 'bar-width', 'bar-height', 'bar-back', 'bar-color', 'bar-text', 'bar-text-align', 'mem-text', 'status-display'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True,
+                                    'popup-row-full': True, 'popup-new-row': True, 'popup-add': True}),
         'trays': Setting(unnamed=True),
         # Mouse Cursor and HeadsUp Config
         'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'lock-cursor': Setting(), 'keep-pointer': Setting(),
@@ -211,7 +212,7 @@ PIECES = Pieces(
         'plate-mode': List(4), 'outline-mode': List(4, extra={3: 'tipOnClaimRows'}), 'color-source': List(7),
         'show-condition': List(13), 'ornament-place': List(5), 'align': List(3), 'font-style': List(3),
         'smoothness': List(4), 'bar-theme': List(6), 'bar-sections': List(3),
-        'bar-widgets': List(13), 'plate-lines': List(3), 'job-text': List(3), 'exp-bar-text': List(5), 'target-shows': List(5), 'widget-parts': List(59), 'custom-icons': List(3), 'icon-sides': List(3), 'widget-aligns': List(4), 'status-display': List(3), 'blue-learned': List(2), 'detection-icons': List(8), 'tags': List(30),
+        'bar-widgets': List(13), 'plate-lines': List(3), 'job-text': List(3), 'exp-bar-text': List(5), 'target-shows': List(5), 'widget-parts': List(59), 'popup-cards': List(46), 'custom-icons': List(3), 'icon-sides': List(3), 'widget-aligns': List(4), 'status-display': List(3), 'blue-learned': List(2), 'detection-icons': List(8), 'tags': List(30),
         'setup-theme': List(5), 'setup-mob-plates': List(4), 'setup-mob-design': List(3), 'setup-outlines': List(4),
         'setup-outline-thickness': List(3), 'setup-cursor': List(4), 'setup-players': List(2), 'setup-self': List(3),
         'setup-player-icons': List(3), 'setup-line-kinds': List(3), 'setup-npcs': List(2), 'setup-pets': List(3), 'setup-panel': List(4), 'setup-nameplates': List(3), 'setup-pointer': List(2),

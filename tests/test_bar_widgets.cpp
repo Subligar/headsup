@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <map>
+#include <set>
 #include <span>
 #include <string>
 #include <utility>
@@ -762,10 +763,10 @@ TEST(the_forecast_pop_out_has_the_weather_for_a_title_today_beside_the_next_four
     state.unixMs = kVanaEpochUnixMs;
     const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
     CHECK(Joined(popup.title) == "Sunshine (50%)" && popup.icon == std::optional<Icon>(Icon::WeatherSunny));
-    // Today first, the forecast beside it, then the elements.
+    // Today first, the forecast, then the elements.
     const PopupSection* today    = &popup.sections[0];
     const PopupSection* forecast = Section(popup, "Weather Forecast (Valkurm Dunes)");
-    CHECK(today->heading.starts_with("Today (") && forecast == &popup.sections[1] && forecast->beside && !today->beside);
+    CHECK(today->heading.starts_with("Today (") && forecast == &popup.sections[1]);
     // Today's weathers on one line between the day and time and the moon, a slash between them.
     const std::vector<PopupCell>& weathers = today->rows[1].cells;
     CHECK(weathers.size() == 3 && Joined(weathers[0].text) == "Sunshine (50%)" && Joined(weathers[1].text) == "/" &&
@@ -1888,7 +1889,7 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
     state.gil    = 4751;
     state.nation = Nation::Bastok;
     PopupContent p = BarPopupContent(BarWidget::Currency, state, settings);
-    CHECK(Joined(p.title) == "Currencies" && p.sections.size() == 2 && p.sections[0].heading == "Favorites" && p.oneColumn);
+    CHECK(Joined(p.title) == "Currencies" && p.sections.size() == 2 && p.sections[0].heading == "Favorites");
     // By default gil and your nation's conquest points, each starred; a star's press takes it off.
     const PopupRow& top = p.sections[0].rows[0];
     CHECK((gridLines(top) == std::vector<std::string>{"Gil 4,751", "Conquest Points (Bastok) -"}));
@@ -2921,19 +2922,18 @@ TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim_in_pare
     CHECK(Joined(both.title).starts_with("Jeuno") && Joined(both.subtitle).starts_with("Woodworking"));
 }
 
-TEST(the_world_info_popup_has_conquest_beside_travel_over_the_calendar_and_guilds_under_them)
+TEST(the_world_info_popup_has_conquest_travel_and_the_calendar_in_a_row_and_guilds_under_them)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
     state.zone   = 79;
     const Settings settings = WorldShowing("ship |");
-    const PopupContent all  = BarPopupContent(BarWidget::World, state, settings);
+    const PopupContent all  = PanelPopupContent(BarWidget::World, state, settings);
     std::vector<std::string> headings;
     for (const PopupSection& section : all.sections)
         headings.push_back(std::string(CardKey(section.heading)));
     CHECK((headings == std::vector<std::string>{"Conquest", "Travel", "Calendar", "Guilds"}));
-    CHECK(!all.sections[0].beside && all.sections[1].beside && all.sections[2].under && !all.sections[3].beside &&
-          !all.sections[3].under);
+    CHECK(!all.sections[0].beside && all.sections[1].beside && all.sections[2].beside && !all.sections[3].beside);
     const std::vector<std::string> lines = Lines(all.sections[2]);
     // Who, then where and when on the right, the time last and alone; the tally is in the Conquest card's heading.
     CHECK_EQ(lines.size(), static_cast<size_t>(4));
@@ -3118,8 +3118,7 @@ TEST(the_forecast_pop_out_puts_today_beside_the_forecast_over_the_elements)
     BarState state;
     state.zone   = 103;
     state.unixMs = kVanaEpochUnixMs + 777LL * 3456 * 1000;
-    const PopupContent popup = BarPopupContent(BarWidget::Weather, state, settings);
-    CHECK(popup.oneColumn);
+    const PopupContent popup = PanelPopupContent(BarWidget::Weather, state, settings);
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
@@ -3233,13 +3232,13 @@ TEST(the_standings_are_asked_for_while_the_zone_or_a_world_info_showing_a_nation
     Settings settings;
     settings.Widget(BarWidget::Zone).on  = false;
     settings.Widget(BarWidget::World).on = true;
-    CHECK(!StandingsShown(settings)); // its next ship
+    CHECK(!StandingsShown(settings, {})); // its next ship
     settings.Widget(BarWidget::World).design = DesignFrom(BarWidget::World, "ship | windurst");
-    CHECK(StandingsShown(settings));
+    CHECK(StandingsShown(settings, {}));
     settings.Widget(BarWidget::World).on = false;
-    CHECK(!StandingsShown(settings));
+    CHECK(!StandingsShown(settings, {}));
     settings.Widget(BarWidget::Zone).on = true;
-    CHECK(StandingsShown(settings));
+    CHECK(StandingsShown(settings, {}));
 }
 
 TEST(a_designer_chip_shows_its_parts_picture_as_the_game_is_now_or_a_stand_in)
@@ -3277,4 +3276,150 @@ TEST(the_settings_widget_is_its_cog_alone_with_no_popup_copies_or_alignment)
     CHECK(BarPopupContent(BarWidget::Settings, state, settings).sections.empty());
     CHECK(!CloneWidget(settings, BarWidget::Settings) && !HasCopies(BarWidget::Settings) && !Combines(BarWidget::Settings));
     CHECK(!Aligns(BarWidget::Settings) && !Aligns(BarWidget::GameHelp) && Aligns(BarWidget::Currency));
+}
+
+namespace
+{
+    // Each card's heading without its brackets, and whether it joins the row of the one before.
+    std::vector<std::pair<std::string, bool>> Rows(const PopupContent& popup)
+    {
+        std::vector<std::pair<std::string, bool>> rows;
+        for (const PopupSection& s : popup.sections)
+            rows.emplace_back(std::string(CardKey(s.heading)), s.beside);
+        return rows;
+    }
+
+    // The Zone in West Ronfaure with its influence known.
+    BarState RonfaureState()
+    {
+        BarState state;
+        state.zone   = 100;
+        state.unixMs = 1791527400000;
+        RegionOwners owners{};
+        owners[0]    = Nation::SanDoria;
+        state.owners = owners;
+        state.shares =
+            RegionShares{{{Nation::SanDoria, 61}, {Nation::Bastok, 21}, {Nation::Windurst, 11}, {Nation::Beastmen, 5}}};
+        return state;
+    }
+}
+
+TEST(a_pop_out_shows_any_widgets_cards_in_its_designs_rows_each_from_its_own_widget)
+{
+    Settings settings;
+    const BarState state = RonfaureState();
+    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday},
+        {CardKind::CurrencyFavorites}}};
+    const PopupContent zone = PanelPopupContent(BarWidget::Zone, state, settings);
+    CHECK((Rows(zone) == std::vector<std::pair<std::string, bool>>{{"Influence", false}, {"Today", true}, {"Favorites", false}}));
+    CHECK(Joined(zone.title).starts_with("West Ronfaure")); // the Zone's own title
+    // Each card as its own widget's pop-out has it, collapsing under this pill's name.
+    PopupSection today = *Section(BarPopupContent(BarWidget::Weather, state, settings), zone.sections[1].heading);
+    today.beside        = true;
+    today.collapsePress = kCollapsePress + CollapseKey(BarWidget::Zone, today.heading);
+    CHECK(zone.sections[1] == today);
+    CHECK(zone.sections[2].rows == Section(BarPopupContent(BarWidget::Currency, state, settings), "Favorites")->rows);
+    // A card the design leaves out is not shown, and the Forecast pop-out without its own Today has the rest.
+    settings.Widget(BarWidget::Weather).popup = PopupDesign{{{CardKind::WeatherForecast}}};
+    CHECK((Rows(PanelPopupContent(BarWidget::Weather, state, settings)) ==
+           std::vector<std::pair<std::string, bool>>{{"Weather Forecast", false}}));
+}
+
+TEST(a_card_with_nothing_to_show_drops_out_of_its_row_and_the_rest_take_its_place)
+{
+    Settings settings;
+    BarState state = RonfaureState();
+    state.shares.reset(); // no influence known yet
+    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday},
+        {CardKind::TargetDamage, CardKind::ZoneInfluence}}};
+    // Nothing targeted: the Target's cards have nothing to show, and their row goes.
+    CHECK((Rows(PanelPopupContent(BarWidget::Zone, state, settings)) == std::vector<std::pair<std::string, bool>>{{"Today", false}}));
+}
+
+TEST(another_widgets_card_takes_that_widgets_first_copys_settings)
+{
+    Settings settings;
+    BarState state = RonfaureState();
+    state.unixMs   = kVanaEpochUnixMs;
+    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::WeatherToday}}};
+    const auto todayIcon = [&] { return PanelPopupContent(BarWidget::Zone, state, settings).sections.at(0).rows.at(1).cells.at(0).icon; };
+    settings.Widget(BarWidget::Weather).weatherIcons = CustomIcons::Always;
+    const std::optional<Icon> custom = todayIcon();
+    settings.Widget(BarWidget::Weather).weatherIcons = CustomIcons::Never;
+    CHECK(custom.has_value() && todayIcon() != custom);
+    // A second Forecast's own settings do not reach it.
+    const PanelWidget second = *CloneWidget(settings, BarWidget::Weather);
+    settings.Widget(second).weatherIcons = CustomIcons::Always;
+    CHECK(todayIcon() != custom);
+}
+
+TEST(a_linked_pill_shows_each_widgets_rows_in_turn_without_repeating_a_card)
+{
+    Settings settings;
+    const BarState state = RonfaureState();
+    settings.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Weather};
+    settings.Widget(BarWidget::Zone).popup   = PopupDesign{{{CardKind::WeatherByElement, CardKind::ZoneInfluence}}};
+    const PopupContent pill = PanelPopupContent(BarWidget::Zone, state, settings);
+    // The Zone's row, then the Forecast's own rows but By Element, which the Zone's row has already.
+    CHECK((Rows(pill) == std::vector<std::pair<std::string, bool>>{
+                             {"By Element", false}, {"Influence", true}, {"Today", false}, {"Weather Forecast", true}}));
+}
+
+TEST(a_card_placed_in_another_widgets_pop_out_has_its_widgets_data_gathered_while_that_pop_out_shows)
+{
+    Settings settings;
+    for (WidgetOptions& each : settings.widgets)
+        each.on = false;
+    settings.Widget(BarWidget::Zone).on    = true;
+    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::TargetOverview, CardKind::BagsList},
+        {CardKind::JobExp, CardKind::PartyMembers, CardKind::CurrencyFavorites}}};
+    const BarNeeds closed = NeedsOf(settings, {}), open = NeedsOf(settings, {BarWidget::Zone});
+    CHECK(!closed.target && !closed.job && !closed.party && !closed.gil && closed.containers == 0);
+    CHECK(open.target && open.job && open.party && open.gil && open.containers == kContainerCount);
+    CHECK(PopupShows(settings, {BarWidget::Zone}, BarWidget::Target) && !PopupShows(settings, {BarWidget::Zone}, BarWidget::World));
+    // Status Timers' cards there read the statuses while it shows, as its own pop-out does.
+    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::StatusBuffs}}};
+    CHECK(NeedsOf(settings, {BarWidget::Zone}).statuses && !NeedsOf(settings, {}).statuses);
+    // The conquest standings for World Info's Conquest card in the Currency pop-out, with neither widget on.
+    settings.Widget(BarWidget::Zone).on        = false;
+    settings.Widget(BarWidget::Currency).on    = true;
+    settings.Widget(BarWidget::Currency).popup = PopupDesign{{{CardKind::WorldConquest}}};
+    CHECK(StandingsShown(settings, {BarWidget::Currency}) && !StandingsShown(settings, {}));
+    CHECK(NeedsOf(settings, {BarWidget::Currency}).conquest);
+}
+
+TEST(every_card_a_widget_builds_is_one_of_its_own_and_its_default_pop_out_shows_them_all)
+{
+    const FullState full;
+    BarState state = full.state;
+    state.itemName = NpcItemName;
+    std::vector<ActorInfo> targets{full.target};
+    for (const uint32_t npc : {16785729u, 16912886u, 16798100u, 16793970u, 16785730u, 17207852u, 16785781u, 16982252u,
+             17678362u, 17719350u, 17772597u, 16916828u, 16818249u, 16806290u, 16879936u, 17105705u, 16822535u})
+        targets.push_back(NpcTarget(npc, "NPC"));
+    std::set<CardKind> built;
+    const Settings settings;
+    for (const ActorInfo& target : targets)
+    {
+        state.target = &target;
+        for (int k = 0; k < kBarWidgetCount; ++k)
+        {
+            const auto kind = static_cast<BarWidget>(k);
+            const PopupContent own = BarPopupContent(kind, state, settings);
+            if (!own.settings || !Content(kind, state, settings).hasPopup) continue;
+            std::vector<std::string> made, shown;
+            for (const PopupSection& section : own.sections)
+            {
+                CHECK(section.card.has_value() && WidgetOfCard(*section.card) == kind);
+                if (section.card) built.insert(*section.card);
+                made.push_back(section.heading);
+            }
+            for (const PopupSection& section : PanelPopupContent(kind, state, settings).sections)
+                shown.push_back(section.heading);
+            std::ranges::sort(made);
+            std::ranges::sort(shown);
+            CHECK(made == shown);
+        }
+    }
+    CHECK(built.size() >= static_cast<size_t>(kCardKindCount) / 2); // the fixtures reach most of them
 }

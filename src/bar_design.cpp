@@ -39,6 +39,46 @@ namespace headsup
 
         constexpr char kLineBreak = '|', kOffMark = '-', kSpace = ' ';
 
+        using W = BarWidget;
+        struct CardEntry
+        {
+            BarWidget widget;
+            const char* file;
+        };
+        // By CardKind.
+        constexpr CardEntry kCards[kCardKindCount] = {{W::Zone, "zone.influence"}, {W::Weather, "weather.today"},
+            {W::Weather, "weather.forecast"}, {W::Weather, "weather.byElement"}, {W::Target, "target.overview"},
+            {W::Target, "target.damage"}, {W::Target, "target.elements"}, {W::Target, "target.statuses"},
+            {W::Target, "target.immune"}, {W::Target, "target.stats"}, {W::Target, "target.moves"},
+            {W::Target, "target.spells"}, {W::Target, "target.spawn"}, {W::Target, "target.drops"},
+            {W::Target, "target.steal"}, {W::Target, "target.despoil"}, {W::Target, "target.shop"},
+            {W::Target, "target.click"}, {W::Target, "target.trade"}, {W::Target, "target.pops"},
+            {W::Target, "target.gives"}, {W::Target, "target.keyItems"}, {W::Target, "target.checks"},
+            {W::Target, "target.quests"}, {W::Target, "target.missions"}, {W::Target, "target.battlefields"},
+            {W::Currency, "gil.favorites"}, {W::Currency, "gil.all"}, {W::Bags, "bags.list"},
+            {W::EarthTime, "earthTime.server"}, {W::Performance, "performance.connection"},
+            {W::Performance, "performance.session"}, {W::Performance, "performance.playOnline"},
+            {W::Performance, "performance.memory"}, {W::Performance, "performance.processor"},
+            {W::Performance, "performance.linuxxi"}, {W::Performance, "performance.lua"}, {W::Job, "job.exp"},
+            {W::Party, "party.members"}, {W::StatusTimers, "statusTimers.favorites"},
+            {W::StatusTimers, "statusTimers.buffs"}, {W::StatusTimers, "statusTimers.debuffs"},
+            {W::World, "world.conquest"}, {W::World, "world.travel"}, {W::World, "world.calendar"},
+            {W::World, "world.guilds"}};
+
+        // By BarWidget: each pop-out's cards as it laid them out before it had a design.
+        constexpr const char* kPopupDefaults[kBarWidgetCount] = {"zone.influence",
+            "weather.today weather.forecast | weather.byElement",
+            "target.overview | target.damage target.elements | target.statuses target.immune | target.stats target.spawn"
+            " | target.moves target.spells | target.drops target.steal target.despoil | target.shop target.trade"
+            " | target.click target.pops | target.gives target.keyItems target.checks"
+            " | target.quests target.missions target.battlefields",
+            "gil.favorites | gil.all", "bags.list", "earthTime.server", "",
+            "performance.connection performance.session | performance.memory performance.processor"
+            " | performance.playOnline performance.linuxxi performance.lua",
+            "job.exp", "party.members", "statusTimers.favorites | statusTimers.buffs | statusTimers.debuffs",
+            "world.conquest world.travel world.calendar | world.guilds", ""};
+        constexpr const char* kNoCards = "none"; // a pop-out design with no card, which "" would not be
+
         bool Holds(std::span<const WidgetPart> parts, WidgetPart part) { return std::ranges::find(parts, part) != parts.end(); }
 
         // The text's parts as written, unknown names left out; Whole does the rest.
@@ -63,6 +103,117 @@ namespace headsup
             }
             return design;
         }
+    }
+
+    namespace
+    {
+        // The text's cards as written, row by row, unknown names left out; WholePopup does the rest.
+        PopupDesign ParsedCards(std::string_view text)
+        {
+            PopupDesign design{{{}}};
+            while (!text.empty())
+            {
+                const size_t at = text.find_first_of(" |");
+                const std::string_view word = text.substr(0, at);
+                for (int c = 0; c < kCardKindCount; ++c)
+                    if (word == kCards[c].file) design.rows.back().push_back(static_cast<CardKind>(c));
+                if (at == std::string_view::npos) break;
+                if (text[at] == kLineBreak) design.rows.emplace_back();
+                text.remove_prefix(at + 1);
+            }
+            return design;
+        }
+    }
+
+    BarWidget WidgetOfCard(CardKind card) { return kCards[static_cast<int>(card)].widget; }
+
+    std::vector<CardKind> CardsOf(BarWidget kind)
+    {
+        std::vector<CardKind> cards;
+        for (int c = 0; c < kCardKindCount; ++c)
+            if (kCards[c].widget == kind) cards.push_back(static_cast<CardKind>(c));
+        return cards;
+    }
+
+    const char* CardFileName(CardKind card) { return kCards[static_cast<int>(card)].file; }
+
+    PopupDesign DefaultPopupDesign(BarWidget kind) { return WholePopup(ParsedCards(kPopupDefaults[static_cast<int>(kind)])); }
+
+    std::string PopupDesignText(const PopupDesign& design)
+    {
+        std::string text;
+        for (const auto& row : design.rows)
+        {
+            if (!text.empty()) text += std::string(1, kSpace) + kLineBreak;
+            for (const CardKind card : row)
+                text += (text.empty() ? "" : std::string(1, kSpace)) + CardFileName(card);
+        }
+        return text.empty() ? kNoCards : text;
+    }
+
+    PopupDesign PopupDesignFrom(BarWidget kind, std::string_view text)
+    {
+        return text.empty() ? DefaultPopupDesign(kind) : WholePopup(ParsedCards(text));
+    }
+
+    PopupDesign WholePopup(PopupDesign design)
+    {
+        std::vector<CardKind> seen;
+        for (auto& row : design.rows)
+        {
+            std::erase_if(row, [&](CardKind card) {
+                if (std::ranges::find(seen, card) != seen.end()) return true;
+                seen.push_back(card);
+                return false;
+            });
+            if (row.size() > kMostCardsInRow) row.resize(kMostCardsInRow);
+        }
+        std::erase_if(design.rows, [](const auto& row) { return row.empty(); });
+        return design;
+    }
+
+    bool HoldsCard(const PopupDesign& design, CardKind card)
+    {
+        return std::ranges::any_of(design.rows, [&](const auto& row) { return std::ranges::find(row, card) != row.end(); });
+    }
+
+    bool RowTakes(const PopupDesign& design, size_t row, CardKind card)
+    {
+        if (row >= design.rows.size()) return true;
+        const auto& cards = design.rows[row];
+        return cards.size() < kMostCardsInRow || std::ranges::find(cards, card) != cards.end();
+    }
+
+    bool PlaceCard(PopupDesign& design, CardKind card, size_t row, size_t at)
+    {
+        std::optional<std::pair<size_t, size_t>> from; // its row and place
+        for (size_t r = 0; r < design.rows.size(); ++r)
+            if (const auto i = std::ranges::find(design.rows[r], card); i != design.rows[r].end())
+                from = std::pair{r, static_cast<size_t>(i - design.rows[r].begin())};
+        row = std::min(row, design.rows.size());
+        if (!RowTakes(design, row, card)) return false;
+        if (row == design.rows.size()) design.rows.emplace_back();
+        auto& target = design.rows[row];
+        at           = std::min(at, target.size());
+        if (from && from->first == row && (at == from->second || at == from->second + 1)) return false;
+        target.insert(target.begin() + static_cast<std::ptrdiff_t>(at), card);
+        if (from)
+        {
+            auto& source = design.rows[from->first];
+            const size_t old = from->first == row && at <= from->second ? from->second + 1 : from->second;
+            source.erase(source.begin() + static_cast<std::ptrdiff_t>(old));
+        }
+        std::erase_if(design.rows, [](const auto& r) { return r.empty(); });
+        return true;
+    }
+
+    bool RemoveCard(PopupDesign& design, CardKind card)
+    {
+        bool removed = false;
+        for (auto& row : design.rows)
+            removed = std::erase(row, card) > 0 || removed;
+        std::erase_if(design.rows, [](const auto& r) { return r.empty(); });
+        return removed;
     }
 
     std::optional<WidgetPart> IconPartOf(BarWidget kind)
