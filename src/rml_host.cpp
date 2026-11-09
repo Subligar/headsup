@@ -203,14 +203,26 @@ namespace headsup
         if (!Running()) return false;
         const bool typing   = WantsText();
         const int modifiers = Modifiers();
+        const size_t key    = virtualKey % m_Swallowed.size();
         if (down)
         {
             m_Overlay->ProcessKeyDown(KeyOf(virtualKey), modifiers);
             if (typing && (modifiers & (Rml::Input::KM_CTRL | Rml::Input::KM_ALT)) == 0) Type(virtualKey);
+            if (typing) m_Swallowed.set(key);
+            return typing;
         }
-        else
-            m_Overlay->ProcessKeyUp(KeyOf(virtualKey), modifiers);
-        return typing;
+        m_Overlay->ProcessKeyUp(KeyOf(virtualKey), modifiers);
+        const bool swallowed = m_Swallowed.test(key);
+        m_Swallowed.reset(key);
+        return typing || swallowed;
+    }
+
+    bool RmlHost::HoldsKeys()
+    {
+        // A key let go while the game had the focus sends no message here.
+        for (size_t key = 0; key < m_Swallowed.size(); ++key)
+            if (m_Swallowed.test(key) && (GetAsyncKeyState(static_cast<int>(key)) & kKeyDownBit) == 0) m_Swallowed.reset(key);
+        return WantsText() || m_Swallowed.any();
     }
 
     // What the key types with the keyboard as it is: Ashita's hook gives key messages, never the characters.

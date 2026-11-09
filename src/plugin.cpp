@@ -1019,7 +1019,7 @@ public:
         if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
         UpdatePointer();
         LockCursor(m_Settings.enabled && m_Settings.lockCursor);
-        HoldGameKeys(m_Rml.WantsText());
+        HoldGameKeys(m_Rml.HoldsKeys());
         m_NameHook.NewFrame(NameOwners());
         DrawPanel();
     }
