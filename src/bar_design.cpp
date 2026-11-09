@@ -140,14 +140,23 @@ namespace headsup
             });
         for (const WidgetPart part : parts)
             if (std::ranges::find(seen, part) == seen.end()) design.lines.back().push_back({part, false});
-        if (!parts.empty() && std::ranges::none_of(parts, [&](WidgetPart p) { return PartOn(design, p); }))
-            for (auto& line : design.lines)
-                if (!line.empty())
-                {
-                    line.front().on = true;
-                    break;
-                }
         return design;
+    }
+
+    void TurnOnFirst(WidgetDesign& design)
+    {
+        if (AnyPartOn(design)) return;
+        for (auto& line : design.lines)
+            if (!line.empty())
+            {
+                line.front().on = true;
+                return;
+            }
+    }
+
+    bool AnyPartOn(const WidgetDesign& design)
+    {
+        return std::ranges::any_of(design.lines, [](const auto& line) { return std::ranges::any_of(line, &DesignChip::on); });
     }
 
     bool PartOn(const WidgetDesign& design, WidgetPart part)
@@ -264,7 +273,7 @@ namespace headsup
         return widest;
     }
 
-    bool TurnOff(WidgetDesign& design, WidgetPart part)
+    bool TurnOff(WidgetDesign& design, WidgetPart part, bool pillShows)
     {
         DesignChip* found = nullptr;
         int on            = 0;
@@ -274,7 +283,7 @@ namespace headsup
                 on += chip.on ? 1 : 0;
                 if (chip.part == part) found = &chip;
             }
-        if (found == nullptr || !found->on || on <= 1) return false;
+        if (found == nullptr || !found->on || (on <= 1 && !pillShows)) return false;
         found->on = false;
         return true;
     }

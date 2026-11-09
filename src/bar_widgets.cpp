@@ -1563,7 +1563,12 @@ namespace headsup
                         chip.on = true;
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && widget.kind == BarWidget::StatusTimers) w.title = ListOf(Text("Status Timers", Tone::Dim));
-            if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None) w.title = ListOf(Text("-"));
+            if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
+            {
+                // Linked with every part off, or Performance with no messages waiting, it takes no room.
+                if (!AnyPartOn(design) || widget.kind == BarWidget::Performance) w.shown = false;
+                else w.title = ListOf(Text("-"));
+            }
             return w;
         }
     }

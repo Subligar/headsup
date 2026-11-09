@@ -684,7 +684,7 @@ namespace headsup
                         toggled = true;
                         if (on)
                             chip.on = true;
-                        else if (!TurnOff(d, chip.part))
+                        else if (!TurnOff(d, chip.part, PillShowsOther(c.s, Panel(c.s), widget)))
                         {
                             refused = true;
                             form.Set(form.Named(name + kChipToggle), FormValueKind::Class, "on", {}, true);

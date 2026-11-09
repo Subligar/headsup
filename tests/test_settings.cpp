@@ -2765,6 +2765,30 @@ TEST(a_combined_widget_is_kept_by_its_partners_name_and_loses_a_partner_taken_of
     CHECK(s.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Party));
 }
 
+// The card "Allow disabling widget text when linked": a pill needs one part on among its widgets, a widget alone one
+// of its own.
+TEST(a_linked_widget_keeps_every_part_off_while_its_pill_has_one_on_and_gets_one_back_alone)
+{
+    Settings s;
+    s.Widget(BarWidget::Zone).on = s.Widget(BarWidget::Weather).on = true;
+    const WidgetDesign off = DesignFrom(BarWidget::Zone, "-name -region -nation |");
+    s.Widget(BarWidget::Zone).design  = off;
+    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Weather};
+    s = Clamp(std::move(s));
+    CHECK(s.Widget(BarWidget::Zone).design == off);
+    // Both all off: the pill's first widget gets its first part back.
+    s.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "-weather -date -day -time -moon |");
+    s = Clamp(std::move(s));
+    CHECK(PartOn(s.Widget(BarWidget::Zone).design, WidgetPart::ZoneName));
+    CHECK(s.Widget(BarWidget::Weather).design == DesignFrom(BarWidget::Weather, "-weather -date -day -time -moon |"));
+    // Unlinked, each needs its own.
+    s.Widget(BarWidget::Zone).design = off;
+    s.Widget(BarWidget::Zone).combine.reset();
+    s = Clamp(std::move(s));
+    CHECK(PartOn(s.Widget(BarWidget::Zone).design, WidgetPart::ZoneName));
+    CHECK(std::ranges::any_of(PartsOf(BarWidget::Weather), [&](WidgetPart p) { return PartOn(s.Widget(BarWidget::Weather).design, p); }));
+}
+
 TEST(a_widget_combines_with_any_placed_widget_but_the_target_settings_itself_and_ones_taken)
 {
     Settings s;

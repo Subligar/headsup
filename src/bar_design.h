@@ -57,14 +57,17 @@ namespace headsup
     // The text DesignText writes back as a design, made whole; nothing for the default.
     WidgetDesign DesignFrom(BarWidget kind, std::string_view text);
     // Each of kind's parts once, the first kept: another widget's dropped, a missing one added off at the end of the
-    // second line, and the first part on when none is.
+    // second line.
     WidgetDesign Whole(BarWidget kind, WidgetDesign design);
+    // The first part on when none is, for a widget with parts.
+    void TurnOnFirst(WidgetDesign& design);
     bool PartOn(const WidgetDesign& design, WidgetPart part);
+    bool AnyPartOn(const WidgetDesign& design);
     // The part at from on fromLine moved to toLine before the part at at (counted before the move), or to its end.
     // False when nothing moved.
     bool MovePart(WidgetDesign& design, int fromLine, size_t from, int toLine, size_t at);
-    // False, and nothing changed, for the last part on: a widget always shows something.
-    bool TurnOff(WidgetDesign& design, WidgetPart part);
+    // False, and nothing changed, for the last part on, unless pillShows: another widget of its pill has a part on.
+    bool TurnOff(WidgetDesign& design, WidgetPart part, bool pillShows);
 
     // What a part shows now: nothing when it has nothing to say.
     struct PartContent

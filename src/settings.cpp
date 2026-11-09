@@ -1264,7 +1264,11 @@ namespace headsup
             status.resistRank = std::clamp(status.resistRank, kMinResistRank, kNoResistRank);
         }
         // A linked widget sits just after its own in the layout too, as the panel draws it.
-        s.barSections = Panel(s).placement;
+        const PanelGroups panel = Panel(s);
+        s.barSections           = panel.placement;
+        // A pill needs a part on among its widgets that are on, a widget alone one of its own.
+        for (int slot = 0; slot < kPanelSlots; ++slot)
+            if (!PillShowsOther(s, panel, WidgetInSlot(slot))) TurnOnFirst(s.widgets[slot].design);
         return s;
     }
 
@@ -1464,6 +1468,12 @@ namespace headsup
         for (int slot = 0; slot < kPanelSlots; ++slot)
             widgets[slot] = NewWidget(WidgetInSlot(slot));
         return widgets;
+    }
+
+    bool PillShowsOther(const Settings& s, const PanelGroups& panel, PanelWidget widget)
+    {
+        return std::ranges::any_of(Members(panel, panel.group[SlotOf(widget)]),
+            [&](PanelWidget w) { return w != widget && s.Widget(w).on && AnyPartOn(s.Widget(w).design); });
     }
 
     bool Shows(const Settings& s, PanelWidget widget)

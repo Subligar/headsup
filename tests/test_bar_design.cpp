@@ -67,9 +67,9 @@ TEST(a_design_from_text_keeps_each_part_once_and_adds_the_missing_off)
     const WidgetDesign d = DesignFrom(BarWidget::Zone, "nation nation nonsense amount crest | name");
     CHECK((d.lines[0] == std::vector<DesignChip>{{WidgetPart::ZoneNation, true}}));
     CHECK((d.lines[1] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneRegion, false}}));
-    // Never all off: the first part comes back on.
+    // All off stays so: Clamp keeps one on where the widget's pill needs it.
     const WidgetDesign off = DesignFrom(BarWidget::Zone, "-name -region -nation |");
-    CHECK(PartOn(off, WidgetPart::ZoneName) && !PartOn(off, WidgetPart::ZoneRegion));
+    CHECK(!PartOn(off, WidgetPart::ZoneName) && !PartOn(off, WidgetPart::ZoneRegion) && !PartOn(off, WidgetPart::ZoneNation));
 }
 
 TEST(a_part_moves_within_and_across_lines)
@@ -87,13 +87,14 @@ TEST(a_part_moves_within_and_across_lines)
     CHECK_EQ(DesignText(d), "name | nation region");
 }
 
-TEST(the_last_part_on_cannot_be_turned_off)
+TEST(the_last_part_on_turns_off_only_when_the_widgets_pill_shows_another)
 {
     WidgetDesign d = DesignFrom(BarWidget::Bags, "count1 | -name1");
-    CHECK(!TurnOff(d, WidgetPart::Bag1Count));
+    CHECK(!TurnOff(d, WidgetPart::Bag1Count, false));
     CHECK(PartOn(d, WidgetPart::Bag1Count));
+    CHECK(TurnOff(d, WidgetPart::Bag1Count, true) && !PartOn(d, WidgetPart::Bag1Count));
     d = DefaultDesign(BarWidget::Bags);
-    CHECK(TurnOff(d, WidgetPart::Bag1Name) && !PartOn(d, WidgetPart::Bag1Name));
+    CHECK(TurnOff(d, WidgetPart::Bag1Name, false) && !PartOn(d, WidgetPart::Bag1Name));
 }
 
 namespace

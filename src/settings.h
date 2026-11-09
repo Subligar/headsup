@@ -296,6 +296,8 @@ namespace headsup
     void RemoveWidgetCopy(Settings& s, PanelWidget widget);
     // The panel as it is drawn, each widget's combine pulling its partner after it.
     PanelGroups Panel(const Settings& s);
+    // Whether another widget of widget's pill in panel is on with a part on, so widget may have none.
+    bool PillShowsOther(const Settings& s, const PanelGroups& panel, PanelWidget widget);
     // The widgets whose settings a pill's popup shows: those of its widgets that are on, or its first alone.
     std::vector<PanelWidget> PillSettings(const Settings& s, PanelWidget head);
     // What a widget can be combined with, in the panel's order: every placed widget that combines, but itself, one

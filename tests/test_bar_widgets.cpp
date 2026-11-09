@@ -1528,6 +1528,32 @@ TEST(the_job_widget_says_one_merit_and_promises_no_merit_without_limit_mode)
     CHECK(std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l.find("Next Merit in") == 0; }));
 }
 
+// Round 22: "If there are no messages and its the only thing selected for Performance it should just hide itself".
+TEST(the_performance_widget_hides_while_messages_alone_are_on_and_none_wait)
+{
+    Settings settings;
+    settings.Widget(BarWidget::Performance).design = DesignFrom(BarWidget::Performance, "messages |");
+    BarState state;
+    state.connection = SteadyLink();
+    CHECK(!Content(BarWidget::Performance, state, settings).shown);
+    state.connection->playOnline = PlayOnlineCounts{0, 0};
+    CHECK(!Content(BarWidget::Performance, state, settings).shown);
+    state.connection->playOnline = PlayOnlineCounts{0, 2};
+    const WidgetContent mail     = Content(BarWidget::Performance, state, settings);
+    CHECK(mail.shown && !mail.title.empty());
+}
+
+// The card "Allow disabling widget text when linked": a widget linked into a pill may have every part off.
+TEST(a_widget_with_every_part_off_hides_and_one_with_a_part_on_and_nothing_to_say_shows_a_dash)
+{
+    Settings settings;
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "-name -region -nation |");
+    BarState state;
+    CHECK(!Content(BarWidget::Zone, state, settings).shown);
+    settings.Widget(BarWidget::Bags).design = DesignFrom(BarWidget::Bags, "count1 |");
+    CHECK(Joined(Content(BarWidget::Bags, state, settings).title) == "-");
+}
+
 TEST(the_performance_widget_shows_the_games_rates_on_one_line_and_turns_amber_then_red)
 {
     Settings settings;
