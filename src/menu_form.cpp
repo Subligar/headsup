@@ -541,7 +541,7 @@ namespace headsup
                                "><img src=\"" + IconSource(icon) + "\"" + AdjustStyle(AdjustOf(icon)) + "/></div>");
                 return ownTheme && c.form.Clicked(id);
             };
-            if (picture(kThemeDelete, Icon::Delete, WindowWord::ThemeDelete))
+            if (picture(kThemeDelete, Icon::Trash, WindowWord::ThemeDelete))
             {
                 st.themeDelete = s.customThemeName;
                 s.barTheme     = s.customPalette.parent;

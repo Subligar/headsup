@@ -42,6 +42,7 @@ ICONS = [(name, f'third_party/mobdb-icons/{name}.png', '') for name in
     ('Clone', 'resources/icons/copy.png', 'clones a widget'),
     ('Delete', 'resources/icons/delete.png', "takes a widget's copy off"),
     ('Pencil', 'resources/icons/pencil.png', 'renames a custom theme'),
+    ('Trash', 'resources/icons/trash.png', 'deletes a custom theme'),
     ('Flag', 'resources/icons/flag.png', 'a region with no supply run yet'),
     ('Bag', 'resources/icons/bag.png', "the Inventory widget's bag"),
     ('Clock', 'resources/icons/clock.png', "the Clock widget's clock"),

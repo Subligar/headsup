@@ -35,7 +35,7 @@ namespace headsup
     constexpr float kChipDot        = 0.5f;
     constexpr float kChipToggle     = 0.6f; // a widget chip's toggle, as a share of a table's
     constexpr float kChipClone      = 1.0f; // a widget chip's clone picture
-    constexpr float kThemeIconGap   = 0.1f; // after each of the Theme row's delete and rename pictures
+    constexpr float kThemeIconGap   = 0.06f; // after each of the Theme row's delete and rename pictures
     constexpr float kChipLine       = 1.5f;  // each line of a tray's widget chip
     constexpr float kChipLinePad    = 0.25f; // above and below its lines
     constexpr float kBulletIndent   = 1.2f; // a description's bullet point: its text from the card's edge
