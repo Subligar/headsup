@@ -259,6 +259,33 @@ TEST(a_created_widget_takes_its_name_once_its_box_is_left_and_an_empty_one_is_th
     CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "toppanel-widgets-name-zone"));
 }
 
+TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_designer_and_is_no_setting)
+{
+    Window w;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {made};
+    const std::string slot = std::to_string(SlotOf(made)), edit = "toppanel-widgets-edit-custom";
+    const auto rml   = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
+    const auto shown = [&](const Form& f, const std::string& id) { return Has(rml(f), ("id=\"" + id + "\"").c_str()); };
+    const Form first = w.Pass();
+    CHECK(shown(first, edit + "-s-0") && shown(first, edit + "-s-1"));
+    CHECK(shown(first, "toppanel-widgets-part-" + slot + "-end-0") && !Has(rml(first), "-card-"));
+    CHECK(shown(first, "toppanel-widgets-alignment-custom") && shown(first, "toppanel-widgets-name-custom"));
+    // Pop-out: its designer alone under the Name and the choice, and no save for a choice of what to edit.
+    const Form popup = w.Pass({{edit + "-s-1", kClickEvent, ""}});
+    CHECK(w.state.editSide == EditSide::Popup && !popup.changed);
+    CHECK(shown(popup, "toppanel-widgets-card-" + slot + "-end-0") && !Has(rml(popup), "-part-"));
+    CHECK(!shown(popup, "toppanel-widgets-alignment-custom") && shown(popup, "toppanel-widgets-name-custom") &&
+          shown(popup, edit + "-s-0"));
+    // A built-in widget's pop-out is fixed: no choice, its rows as before, whatever the pick.
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}, made};
+    const Form pill = w.Pass();
+    CHECK(!Has(rml(pill), "toppanel-widgets-edit-zone") && shown(pill, "toppanel-widgets-alignment-zone") &&
+          shown(pill, edit + "-s-1"));
+    w.Pass({{edit + "-s-0", kClickEvent, ""}});
+    CHECK(w.state.editSide == EditSide::Widget);
+}
+
 TEST(create_new_widget_adds_one_at_the_rights_end_on_with_its_settings_asked_until_every_one_is_made)
 {
     Window w;
@@ -1591,6 +1618,7 @@ TEST(the_pop_out_designer_adds_moves_and_removes_cards_and_refuses_a_fourth_in_a
     Window w;
     const PanelWidget zone = *CreateWidget(w.settings);
     w.readings.settingsOf  = {zone};
+    w.state.editSide       = EditSide::Popup;
     const std::string slot = std::to_string(SlotOf(zone));
     const std::string base = "toppanel-widgets-card-" + slot + "-", palette = "toppanel-widgets-pcard-" + slot + "-";
     const auto card        = [&](CardKind c) { return base + std::to_string(static_cast<int>(c)); };
@@ -1646,6 +1674,7 @@ TEST(only_a_created_widget_has_a_pop_out_designer)
         CHECK(block == nullptr || !Has(block->rml, "-card-"));
     }
     w.readings.settingsOf = {*CreateWidget(w.settings)};
+    w.state.editSide      = EditSide::Popup;
     CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, "-card-"));
 }
 

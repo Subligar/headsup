@@ -86,6 +86,9 @@ namespace headsup
     constexpr const char* kSetupBackupWhen = "<date>-<time>";
     constexpr const char* kSetupPicture    = "hu:setup/scene";
 
+    // Which of a created widget's designs its settings edit: the widget on the panel, or its pop-out.
+    enum class EditSide : uint8_t { Widget, Popup };
+
     // What the settings window keeps between passes that is no setting.
     struct MenuFormState
     {
@@ -98,6 +101,7 @@ namespace headsup
         std::optional<PanelWidget> partRefused;
         // A widget whose Pop-out Designer was asked to put a card in a full row: it says why under its rows.
         std::optional<PanelWidget> popupRefused;
+        EditSide editSide = EditSide::Widget; // one pick for every created widget's settings
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool watchRequested = false; // the debug watch is to start, or stop

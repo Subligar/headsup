@@ -870,6 +870,7 @@ namespace headsup
             Settings& s = c.s;
             headsup::WidgetOptions& o = s.Widget(widget);
             const BarWidget kind      = widget.kind;
+            const bool created = kind == BarWidget::Custom;
             const bool jobs = kind == BarWidget::Job && PartOn(o.design, WidgetPart::JobJobs);
             const bool bar  = kind == BarWidget::Job && PartOn(o.design, WidgetPart::JobBar);
             const bool off = !BarOn(s) || !o.on;
@@ -880,6 +881,12 @@ namespace headsup
             const std::string scope = std::string(" ") + BarWidgetName(kind) + (widget.copy > 0 ? " " + std::to_string(widget.copy + 1) : "");
             for (const LayoutRow& row : c.layout.RowsOf(e))
             {
+                const auto which = static_cast<WidgetTabsRow>(row.row);
+                // A created widget's rows are its Name, the Edit choice, then one side's: the Pop-out Designer, or all the
+                // rest. The pick is read here, as a press on it lands in this pass.
+                if (created && which != WidgetTabsRow::Name && which != WidgetTabsRow::Edit &&
+                    (which == WidgetTabsRow::PopupDesign) != (c.state.editSide == EditSide::Popup))
+                    continue;
                 const std::string label = Labeled(row.name, row.key, scope);
                 // A tip shared by every widget, naming this one's default.
                 const auto ownDefault = [&] {
@@ -900,7 +907,7 @@ namespace headsup
                     form.Segments(label.c_str(), align, names.data(), kAlignCount, row.tip);
                 };
                 form.Fade(off);
-                switch (static_cast<WidgetTabsRow>(row.row))
+                switch (which)
                 {
                 case WidgetTabsRow::Combine:
                 {
@@ -964,7 +971,6 @@ namespace headsup
                 case WidgetTabsRow::Currency2:
                     if (kind == BarWidget::Currency)
                     {
-                        const auto which   = static_cast<WidgetTabsRow>(row.row);
                         int& currency      = which == WidgetTabsRow::Currency1 ? o.currency : o.secondCurrency;
                         const Nation yours = c.readings.nation;
                         const std::vector<int> choices = CurrencyChoices(yours);
@@ -1073,6 +1079,15 @@ namespace headsup
                     form.Row(label.c_str(), row.tip);
                     if (form.TextAt(label.c_str(), o.name, nullptr, kControlWidth, false, kMaxWidgetName)) form.changed = true;
                     form.EndRow();
+                    break;
+                case WidgetTabsRow::Edit:
+                    if (created)
+                    {
+                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::EditSide));
+                        const bool was = form.changed; // which design is edited is no setting
+                        form.Segments(label.c_str(), c.state.editSide, names.data(), static_cast<int>(names.size()), row.tip);
+                        form.changed = was;
+                    }
                     break;
                 case WidgetTabsRow::Design:
                     // the Widget Designer's description

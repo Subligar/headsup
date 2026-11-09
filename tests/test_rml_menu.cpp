@@ -2529,6 +2529,7 @@ TEST(a_pop_out_designer_card_dropped_on_a_card_goes_beside_it_on_the_empty_row_m
     const PanelWidget made = *CreateWidget(window.settings);
     window.shown = made;
     window.Frames(3);
+    window.Click("toppanel-widgets-edit-custom-s-1");
     const std::string slot = std::to_string(SlotOf(made));
     const auto card   = [&](CardKind c) { return "toppanel-widgets-card-" + slot + "-" + std::to_string(static_cast<int>(c)); };
     const auto listed = [&](CardKind c) { return "toppanel-widgets-pcard-" + slot + "-" + std::to_string(static_cast<int>(c)); };
