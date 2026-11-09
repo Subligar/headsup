@@ -1566,11 +1566,16 @@ namespace headsup
             if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
             {
                 // Linked with every part off, or Performance with no messages waiting, it takes no room.
-                if (!AnyPartOn(design) || widget.kind == BarWidget::Performance) w.shown = false;
-                else w.title = ListOf(Text("-"));
+                w.idle  = !AnyPartOn(design) || widget.kind == BarWidget::Performance;
+                w.title = ListOf(Text("-"));
             }
             return w;
         }
+    }
+
+    bool TakesRoom(const WidgetContent& content, PanelWidget pill, std::optional<PanelWidget> settingsShown)
+    {
+        return content.shown && (!content.idle || settingsShown == pill);
     }
 
     uint32_t ElementColor(Element element) { return kElementColors[static_cast<int>(element)]; }

@@ -98,6 +98,7 @@ namespace headsup
     struct WidgetContent
     {
         bool shown = false;
+        bool idle  = false; // nothing to show now: it takes room only while its settings show (TakesRoom)
         std::vector<Icon> icons; // before the text, beside both lines
         bool cog = false;        // the settings cog, alone: the Settings widget
         GamePicture picture = GamePicture::None; // a picture from the game's files there, as an icon is

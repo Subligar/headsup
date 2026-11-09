@@ -154,6 +154,8 @@ namespace headsup
 
     // Game help is never shown on the bar: it has a bar of its own, under the top bar.
     WidgetContent BarWidgetContent(PanelWidget widget, const BarState& state, const Settings& settings);
+    // Whether a widget whose pill is pill is laid out on the bar: shown, and not idle unless its settings show.
+    bool TakesRoom(const WidgetContent& content, PanelWidget pill, std::optional<PanelWidget> settingsShown);
     // The used and total slots of the bag the game's caption names, as the Bags widget writes them.
     std::optional<Span> StripBagFill(const BarState& state);
     PopupContent BarPopupContent(PanelWidget widget, const BarState& state, const Settings& settings);

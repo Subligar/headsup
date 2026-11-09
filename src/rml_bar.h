@@ -147,7 +147,7 @@ namespace headsup
         // Builds the document again when what it is made from changed. False when RmlUi refused it.
         bool Document(RmlHost& host, const BarLook& look, const BarTextPlace& place);
         BarLayout PlaceWidgets(RmlHost& host, const BarLook& look, const BarState& state, float screenWidth,
-            Widgets& widgets);
+            std::optional<PanelWidget> settingsShown, Widgets& widgets);
         void ShowWidgets(const BarLook& look, const BarLayout& layout, const Widgets& widgets, const BarInput& input,
             float screenWidth);
         // Game help's own bar under the top bar, from top: where its box went (empty for none).

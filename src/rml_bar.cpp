@@ -201,7 +201,7 @@ namespace headsup
     }
 
     BarLayout RmlBar::PlaceWidgets(RmlHost& host, const BarLook& look, const BarState& state, float screenWidth,
-        Widgets& widgets)
+        std::optional<PanelWidget> settingsShown, Widgets& widgets)
     {
         const BarMetrics& m = look.metrics;
         std::array<float, kPanelSlots> natural{};
@@ -211,7 +211,7 @@ namespace headsup
             WidgetContent& c = widgets.contents[i];
             c                = BarWidgetContent(WidgetInSlot(i), state, look.settings);
             widgets.hasPopup[i] = c.hasPopup; // kept off the panel, a combined widget's popup still joins its pill's
-            if (!c.shown) continue;
+            if (!TakesRoom(c, widgets.panel.group[i], settingsShown)) continue;
             const auto steady = [&](std::vector<Span>& line, const TextFace& face) {
                 if (std::ranges::none_of(line, [](const Span& s) { return !s.room.empty(); })) return;
                 SteadyBoxes(line, Width(host, std::string(1, WidestDigitOf(host, face)), face),
@@ -571,7 +571,7 @@ namespace headsup
             input.SetPopups({});
             return;
         }
-        BarLayout layout = PlaceWidgets(host, look, state, screenWidth, widgets);
+        BarLayout layout = PlaceWidgets(host, look, state, screenWidth, input.SettingsShown(), widgets);
         ShowWidgets(look, layout, widgets, input, screenWidth);
         // The help bar where the player moved it from its place under the top bar.
         bool helpCut        = false;

@@ -1535,12 +1535,18 @@ TEST(the_performance_widget_hides_while_messages_alone_are_on_and_none_wait)
     settings.Widget(BarWidget::Performance).design = DesignFrom(BarWidget::Performance, "messages |");
     BarState state;
     state.connection = SteadyLink();
-    CHECK(!Content(BarWidget::Performance, state, settings).shown);
+    const PanelWidget performance{BarWidget::Performance};
+    const auto room = [&](std::optional<PanelWidget> settingsShown) {
+        return TakesRoom(Content(BarWidget::Performance, state, settings), performance, settingsShown);
+    };
+    CHECK(!room(std::nullopt));
     state.connection->playOnline = PlayOnlineCounts{0, 0};
-    CHECK(!Content(BarWidget::Performance, state, settings).shown);
+    CHECK(!room(std::nullopt) && !room(PanelWidget{BarWidget::Zone}));
+    // The user: "since Performance is hidden because of no message, I can't open the edit for it".
+    CHECK(room(performance) && Joined(Content(BarWidget::Performance, state, settings).title) == "-");
     state.connection->playOnline = PlayOnlineCounts{0, 2};
     const WidgetContent mail     = Content(BarWidget::Performance, state, settings);
-    CHECK(mail.shown && !mail.title.empty());
+    CHECK(TakesRoom(mail, performance, std::nullopt) && !mail.title.empty());
 }
 
 // The card "Allow disabling widget text when linked": a widget linked into a pill may have every part off.
@@ -1549,9 +1555,11 @@ TEST(a_widget_with_every_part_off_hides_and_one_with_a_part_on_and_nothing_to_sa
     Settings settings;
     settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "-name -region -nation |");
     BarState state;
-    CHECK(!Content(BarWidget::Zone, state, settings).shown);
+    CHECK(!TakesRoom(Content(BarWidget::Zone, state, settings), BarWidget::Zone, std::nullopt));
+    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), BarWidget::Zone, PanelWidget{BarWidget::Zone}));
     settings.Widget(BarWidget::Bags).design = DesignFrom(BarWidget::Bags, "count1 |");
     CHECK(Joined(Content(BarWidget::Bags, state, settings).title) == "-");
+    CHECK(TakesRoom(Content(BarWidget::Bags, state, settings), BarWidget::Bags, std::nullopt));
 }
 
 TEST(the_performance_widget_shows_the_games_rates_on_one_line_and_turns_amber_then_red)
