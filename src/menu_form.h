@@ -102,6 +102,8 @@ namespace headsup
         // A widget whose Pop-out Designer was asked to put a card in a full row: it says why under its rows.
         std::optional<PanelWidget> popupRefused;
         EditSide editSide = EditSide::Widget; // one pick for every created widget's settings
+        // The widget whose parts and whose cards a created widget's designers list to add, for every created widget.
+        BarWidget partsFrom = BarWidget::Zone, cardsFrom = BarWidget::Zone;
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool watchRequested = false; // the debug watch is to start, or stop

@@ -1581,13 +1581,14 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK_EQ(design(), "-nation name | region");
 }
 
-TEST(a_created_widgets_designer_lists_every_widgets_unplaced_buttons_and_puts_takes_and_names_them)
+TEST(a_created_widgets_designer_lists_the_picked_widgets_unplaced_buttons_and_puts_takes_and_names_them)
 {
     Window w;
     const PanelWidget made = *CreateWidget(w.settings);
     w.readings.settingsOf  = {made};
     const std::string slot = std::to_string(SlotOf(made));
     const std::string base = "toppanel-widgets-part-" + slot + "-", lists = "toppanel-widgets-lpart-" + slot + "-";
+    const std::string from = "toppanel-widgets-parts-from-" + slot;
     const auto chip   = [&](WidgetPart p) { return base + std::to_string(static_cast<int>(p)); };
     const auto listed = [&](WidgetPart p) { return lists + std::to_string(static_cast<int>(p)); };
     const auto rml    = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
@@ -1595,8 +1596,15 @@ TEST(a_created_widgets_designer_lists_every_widgets_unplaced_buttons_and_puts_ta
     const auto shown  = [&](const Form& f, const std::string& id) { return Has(rml(f), ("id=\"" + id + "\"").c_str()); };
     const Form first = w.Pass();
     CHECK(shown(first, chip(WidgetPart::CustomName)) && !shown(first, listed(WidgetPart::CustomName)));
-    CHECK(shown(first, listed(WidgetPart::ZoneName)) && shown(first, listed(WidgetPart::ZoneCrest)) &&
-          shown(first, listed(WidgetPart::WorldBeastmen)));
+    // Under the lines, the unplaced buttons of the one widget picked to add from: Zone's at first.
+    CHECK(shown(first, from) && shown(first, listed(WidgetPart::ZoneName)) && shown(first, listed(WidgetPart::ZoneCrest)) &&
+          !shown(first, listed(WidgetPart::WorldBeastmen)));
+    // Its own, then every widget with buttons: World Info is the twelfth. Picking it is no setting.
+    w.Pass({{from, kClickEvent, ""}});
+    const Form world = w.Pass({{from + "-o-11", kClickEvent, ""}});
+    CHECK(!world.changed && shown(world, listed(WidgetPart::WorldBeastmen)) && !shown(world, listed(WidgetPart::ZoneName)));
+    w.Pass({{from, kClickEvent, ""}});
+    w.Pass({{from + "-o-1", kClickEvent, ""}});
     // A listed button dropped at a line's end goes there, on, and leaves the lists; on a chip, before it; it is
     // named after its widget on the line.
     w.Pass({{base + "end-1", kDropEvent, listed(WidgetPart::ZoneName)}});
@@ -1637,11 +1645,19 @@ TEST(the_pop_out_designer_adds_moves_and_removes_cards_and_refuses_a_fourth_in_a
     const auto rml         = [](const Form& form) { return Block(form, "toppanel-widgets")->rml; };
     const auto design      = [&] { return PopupDesignText(w.settings.Widget(zone).popup); };
     const auto shown       = [&](const Form& form, const std::string& id) { return Has(rml(form), ("id=\"" + id + "\"").c_str()); };
+    const std::string from = "toppanel-widgets-cards-from-" + slot;
     const Form first = w.Pass();
-    // A new widget's pop-out has no card; every card is in the lists, once.
+    // A new widget's pop-out has no card; under the rows are the cards of the one widget picked to add from, Zone's
+    // at first.
     CHECK(!shown(first, card(CardKind::ZoneInfluence)) && shown(first, listed(CardKind::ZoneInfluence)));
-    CHECK(shown(first, listed(CardKind::WeatherToday)) && shown(first, listed(CardKind::WorldGuilds)));
-    CHECK(!shown(first, listed(CardKind::WeatherToday) + "-2"));
+    CHECK(shown(first, from) && !shown(first, listed(CardKind::WeatherToday)) && !shown(first, listed(CardKind::WorldGuilds)));
+    // Every widget with cards, Weather the second; picking it is no setting.
+    w.Pass({{from, kClickEvent, ""}});
+    const Form weather = w.Pass({{from + "-o-1", kClickEvent, ""}});
+    CHECK(!weather.changed && shown(weather, listed(CardKind::WeatherToday)) && !shown(weather, listed(CardKind::ZoneInfluence)));
+    CHECK(!shown(weather, listed(CardKind::WeatherToday) + "-2"));
+    w.Pass({{from, kClickEvent, ""}});
+    w.Pass({{from + "-o-0", kClickEvent, ""}});
     w.Pass({{base + "end-0", kDropEvent, listed(CardKind::ZoneInfluence)}});
     CHECK_EQ(design(), "zone.influence");
     CHECK(!shown(w.Pass(), listed(CardKind::ZoneInfluence)));

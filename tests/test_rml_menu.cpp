@@ -2537,7 +2537,7 @@ TEST(a_created_widgets_listed_button_dragged_onto_a_line_goes_in_and_one_dragged
     const auto design = [&] { return DesignText(BarWidget::Custom, window.settings.Widget(made).design); };
     CHECK(window.Drag(part("lpart", WidgetPart::ZoneName), "toppanel-widgets-part-" + slot + "-end-1"));
     CHECK_EQ(design(), "name | zone.name");
-    CHECK(window.Drag(part("part", WidgetPart::ZoneName), part("lpart", WidgetPart::BagIcon)));
+    CHECK(window.Drag(part("part", WidgetPart::ZoneName), part("lpart", WidgetPart::ZoneCrest)));
     CHECK_EQ(design(), "name |");
     CHECK_EQ(window.Said(), "");
 }
@@ -2553,10 +2553,18 @@ TEST(a_pop_out_designer_card_dropped_on_a_card_goes_beside_it_on_the_empty_row_m
     const auto card   = [&](CardKind c) { return "toppanel-widgets-card-" + slot + "-" + std::to_string(static_cast<int>(c)); };
     const auto listed = [&](CardKind c) { return "toppanel-widgets-pcard-" + slot + "-" + std::to_string(static_cast<int>(c)); };
     const auto design = [&] { return PopupDesignText(window.settings.Widget(made).popup); };
+    // The list of cards to add is the widget picked over it: Zone, then Weather the second, then Bags the fifth.
+    const std::string from = "toppanel-widgets-cards-from-" + slot;
+    const auto pick = [&](int at) {
+        window.Click(from);
+        window.Click(from + "-o-" + std::to_string(at));
+    };
     CHECK_EQ(design(), "none");
     // Listed cards onto a row's end, and onto the empty row under it for a row of their own.
+    pick(1);
     CHECK(window.Drag(listed(CardKind::WeatherToday), "toppanel-widgets-card-" + slot + "-end-0"));
     CHECK(window.Drag(listed(CardKind::WeatherForecast), "toppanel-widgets-card-" + slot + "-end-0"));
+    pick(0);
     CHECK(window.Drag(listed(CardKind::ZoneInfluence), "toppanel-widgets-card-" + slot + "-end-1"));
     CHECK_EQ(design(), "weather.today weather.forecast | zone.influence");
     // On the right half of Today: after it.
@@ -2567,7 +2575,8 @@ TEST(a_pop_out_designer_card_dropped_on_a_card_goes_beside_it_on_the_empty_row_m
         window.Center(card(CardKind::WeatherToday)).y};
     CHECK(window.Drag(card(CardKind::ZoneInfluence), right - window.Center(card(CardKind::ZoneInfluence))));
     CHECK_EQ(design(), "weather.today zone.influence weather.forecast");
-    // A row's card onto the lists: out of the pop-out.
+    // A row's card onto the list: out of the pop-out.
+    pick(4);
     CHECK(window.Drag(card(CardKind::WeatherForecast), listed(CardKind::BagsList)));
     CHECK_EQ(design(), "weather.today zone.influence");
     CHECK_EQ(window.Said(), "");

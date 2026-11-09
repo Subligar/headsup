@@ -639,10 +639,28 @@ namespace headsup
             return widget.copy == 0 ? said : said + " " + std::to_string(widget.copy + 1);
         }
 
+        // A created widget's designer's dropdown of the widgets in from, picked kept in picked, which is no setting.
+        void AddFrom(Context& c, PanelWidget widget, const char* name, const std::vector<BarWidget>& from, BarWidget& picked)
+        {
+            const auto widgets = c.layout.OptionsOf(WindowList::BarWidgets);
+            const auto at      = std::ranges::find(from, picked);
+            int index          = at == from.end() ? 0 : static_cast<int>(at - from.begin());
+            const bool was     = c.form.changed;
+            c.form.NumberDropdown(Labeled(Word(c, WindowWord::WidgetTabsAddFrom), name, " " + std::to_string(SlotOf(widget))).c_str(),
+                index, 0, static_cast<int>(from.size()) - 1,
+                [&](int i) {
+                    const BarWidget kind = from[static_cast<size_t>(i)];
+                    return kind == BarWidget::Custom ? CopyName(c, widget) : std::string(Said(widgets[static_cast<size_t>(kind)].name));
+                },
+                WordTip(c, WindowWord::WidgetTabsAddFrom));
+            c.form.changed = was;
+            picked         = from[static_cast<size_t>(index)];
+        }
+
         // A widget's parts as chips on its two lines, each with a toggle and its icon where it has one: a chip drags
         // within its line or to the other, before the chip it is dropped on or to the end. The last part on cannot be
         // switched off; trying says so under the lines until the next toggle or move. A created widget's lines take
-        // any widget's parts from the lists under them, by widget, and a chip let go off the lines goes back there.
+        // any widget's parts from the list under them of the widget picked, and a chip let go off the lines goes back.
         void Designer(Context& c, PanelWidget widget)
         {
             Form& form          = c.form;
@@ -751,29 +769,25 @@ namespace headsup
                 form.Raw(std::string("<div class=\"error\">") + EscapedRml(Said(Word(c, WindowWord::WidgetTabsDesignLastOn))) +
                          "</div>");
             if (!created) return;
-            form.Note(Word(c, WindowWord::WidgetTabsDesignAdd));
-            std::optional<BarWidget> group;
+            std::vector<BarWidget> from;
+            for (const WidgetPart part : PartsOf(BarWidget::Custom))
+                if (from.empty() || from.back() != WidgetOfPart(part)) from.push_back(WidgetOfPart(part));
+            AddFrom(c, widget, "parts from", from, c.state.partsFrom);
+            form.Raw(std::string("<div class=\"tray ") + kPaletteClass + "\">");
             for (const WidgetPart part : PartsOf(BarWidget::Custom))
             {
-                if (HoldsPart(d, part)) continue;
-                if (const BarWidget of = WidgetOfPart(part); of != group)
-                {
-                    if (group) form.Raw("</div>");
-                    form.Raw("<div class=\"tray-name\">" + EscapedRml(of == BarWidget::Custom ? CopyName(c, widget) : widgetName(of)) + "</div>");
-                    form.Raw(std::string("<div class=\"tray ") + kPaletteClass + "\">");
-                    group = of;
-                }
+                if (HoldsPart(d, part) || WidgetOfPart(part) != c.state.partsFrom) continue;
                 const auto at        = static_cast<size_t>(part);
                 const std::string id = form.Id(list + " " + std::to_string(at));
                 form.Raw(std::string("<div class=\"btn raised wchip ") + kDesignChipClass + " drag\" id=\"" + id + "\"" +
                          TipAttribute(names[at].tip) + ">" + picture(at) + EscapedRml(Said(names[at].name)) + "</div>");
                 form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
             }
-            if (group) form.Raw("</div>");
+            form.Raw("</div>");
         }
 
-        // A widget's pop-out as rows of chips, a card each, then the lists of the cards it does not show, by widget, its
-        // own first: a chip drags within its row, to another, or onto the empty row after them for a new one; a row's chip
+        // A widget's pop-out as rows of chips, a card each, then the list of the cards it does not show of the widget
+        // picked: a chip drags within its row, to another, or onto the empty row after them for a new one; a row's chip
         // let go off every row leaves the pop-out. A row of kMostCardsInRow takes no other card; trying says so under the
         // rows until the next change.
         void PopupDesigner(Context& c, PanelWidget widget)
@@ -845,21 +859,14 @@ namespace headsup
             if (c.state.popupRefused == widget)
                 form.Raw(std::string("<div class=\"error\">") + EscapedRml(Said(Word(c, WindowWord::WidgetTabsPopupRowFull))) +
                          "</div>");
-            form.Note(Word(c, WindowWord::WidgetTabsPopupAdd));
-            std::vector<BarWidget> order{widget.kind};
+            std::vector<BarWidget> from;
             for (int k = 0; k < kBarWidgetCount; ++k)
-                if (static_cast<BarWidget>(k) != widget.kind) order.push_back(static_cast<BarWidget>(k));
-            for (const BarWidget kind : order)
-            {
-                std::vector<CardKind> cards = CardsOf(kind);
-                std::erase_if(cards, [&](CardKind card) { return HoldsCard(d, card); });
-                if (cards.empty()) continue;
-                form.Raw("<div class=\"tray-name\">" + EscapedRml(widgetName(kind)) + "</div>");
-                form.Raw(std::string("<div class=\"tray ") + kPaletteClass + "\">");
-                for (const CardKind card : cards)
-                    chip(list + " " + std::to_string(static_cast<int>(card)), card, false);
-                form.Raw("</div>");
-            }
+                if (!CardsOf(static_cast<BarWidget>(k)).empty()) from.push_back(static_cast<BarWidget>(k));
+            AddFrom(c, widget, "cards from", from, c.state.cardsFrom);
+            form.Raw(std::string("<div class=\"tray ") + kPaletteClass + "\">");
+            for (const CardKind card : CardsOf(c.state.cardsFrom))
+                if (!HoldsCard(d, card)) chip(list + " " + std::to_string(static_cast<int>(card)), card, false);
+            form.Raw("</div>");
         }
 
         // One widget's options: what it shows and its own settings, as the layout orders them, a row the widget has
