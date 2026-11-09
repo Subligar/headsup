@@ -1018,7 +1018,7 @@ namespace headsup
                     Designer(c, widget);
                     break;
                 case WidgetTabsRow::PopupDesign:
-                    if (CardsOf(kind).empty()) break;
+                    if (kind != BarWidget::Custom) break;
                     form.Caption(row.name);
                     form.Note(row.tip);
                     PopupDesigner(c, widget);

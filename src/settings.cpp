@@ -1253,8 +1253,9 @@ namespace headsup
         {
             WidgetOptions& w = s.widgets[slot];
             const WidgetOptions fresh;
-            w.design = Whole(WidgetInSlot(slot).kind, std::move(w.design));
-            w.popup  = WholePopup(std::move(w.popup));
+            const BarWidget kind = WidgetInSlot(slot).kind;
+            w.design = Whole(kind, std::move(w.design));
+            w.popup  = kind == BarWidget::Custom ? WholePopup(std::move(w.popup)) : DefaultPopupDesign(kind);
             for (int WidgetOptions::* const which : {&WidgetOptions::currency, &WidgetOptions::secondCurrency})
                 if (w.*which < kYourConquestCurrency || w.*which >= kCurrencyCount) w.*which = fresh.*which;
             for (int WidgetOptions::* const which : {&WidgetOptions::bag, &WidgetOptions::secondBag})
@@ -1321,7 +1322,7 @@ namespace headsup
             o.on         = flag(widget, o.on);
             o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
             if (w.kind == BarWidget::Custom) o.name = text((widget + kNameSuffix).c_str());
-            if (!CardsOf(w.kind).empty()) o.popup = PopupDesignFrom(w.kind, text((widget + kPopupDesignSuffix).c_str()));
+            if (w.kind == BarWidget::Custom) o.popup = PopupDesignFrom(w.kind, text((widget + kPopupDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
             o.linkPadding = number(widget + kLinkPaddingSuffix, o.linkPadding);
             {
@@ -1447,7 +1448,7 @@ namespace headsup
             flag(widget, o.on);
             if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
             if (w.kind == BarWidget::Custom) text((widget + kNameSuffix).c_str(), o.name.c_str());
-            if (!CardsOf(w.kind).empty()) text((widget + kPopupDesignSuffix).c_str(), PopupDesignText(o.popup).c_str());
+            if (w.kind == BarWidget::Custom) text((widget + kPopupDesignSuffix).c_str(), PopupDesignText(o.popup).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
             if (IconPartOf(w.kind)) text((widget + kIconSideSuffix).c_str(), kIconSideNames[static_cast<int>(o.iconSide)]);

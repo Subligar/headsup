@@ -3308,20 +3308,21 @@ TEST(a_pop_out_shows_any_widgets_cards_in_its_designs_rows_each_from_its_own_wid
 {
     Settings settings;
     const BarState state = RonfaureState();
-    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday},
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday},
         {CardKind::CurrencyFavorites}}};
-    const PopupContent zone = PanelPopupContent(BarWidget::Zone, state, settings);
+    const PopupContent zone = PanelPopupContent(made, state, settings);
     CHECK((Rows(zone) == std::vector<std::pair<std::string, bool>>{{"Influence", false}, {"Today", true}, {"Favorites", false}}));
-    CHECK(Joined(zone.title).starts_with("West Ronfaure")); // the Zone's own title
+    CHECK(Joined(zone.title) == "Custom Widget"); // a created widget's pop-out goes by its Name
     // Each card as its own widget's pop-out has it, collapsing under this pill's name.
     PopupSection today = *Section(BarPopupContent(BarWidget::Weather, state, settings), zone.sections[1].heading);
     today.beside        = true;
-    today.collapsePress = kCollapsePress + CollapseKey(BarWidget::Zone, today.heading);
+    today.collapsePress = kCollapsePress + CollapseKey(made, today.heading);
     CHECK(zone.sections[1] == today);
     CHECK(zone.sections[2].rows == Section(BarPopupContent(BarWidget::Currency, state, settings), "Favorites")->rows);
-    // A card the design leaves out is not shown, and the Forecast pop-out without its own Today has the rest.
-    settings.Widget(BarWidget::Weather).popup = PopupDesign{{{CardKind::WeatherForecast}}};
-    CHECK((Rows(PanelPopupContent(BarWidget::Weather, state, settings)) ==
+    // A card the design leaves out is not shown, and the Forecast card without its own Today has the rest.
+    settings.Widget(made).popup = PopupDesign{{{CardKind::WeatherForecast}}};
+    CHECK((Rows(PanelPopupContent(made, state, settings)) ==
            std::vector<std::pair<std::string, bool>>{{"Weather Forecast", false}}));
 }
 
@@ -3330,10 +3331,11 @@ TEST(a_card_with_nothing_to_show_drops_out_of_its_row_and_the_rest_take_its_plac
     Settings settings;
     BarState state = RonfaureState();
     state.shares.reset(); // no influence known yet
-    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday},
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday},
         {CardKind::TargetDamage, CardKind::ZoneInfluence}}};
     // Nothing targeted: the Target's cards have nothing to show, and their row goes.
-    CHECK((Rows(PanelPopupContent(BarWidget::Zone, state, settings)) == std::vector<std::pair<std::string, bool>>{{"Today", false}}));
+    CHECK((Rows(PanelPopupContent(made, state, settings)) == std::vector<std::pair<std::string, bool>>{{"Today", false}}));
 }
 
 TEST(another_widgets_card_takes_that_widgets_first_copys_settings)
@@ -3341,8 +3343,9 @@ TEST(another_widgets_card_takes_that_widgets_first_copys_settings)
     Settings settings;
     BarState state = RonfaureState();
     state.unixMs   = kVanaEpochUnixMs;
-    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::WeatherToday}}};
-    const auto todayIcon = [&] { return PanelPopupContent(BarWidget::Zone, state, settings).sections.at(0).rows.at(1).cells.at(0).icon; };
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::WeatherToday}}};
+    const auto todayIcon = [&] { return PanelPopupContent(made, state, settings).sections.at(0).rows.at(1).cells.at(0).icon; };
     settings.Widget(BarWidget::Weather).weatherIcons = CustomIcons::Always;
     const std::optional<Icon> custom = todayIcon();
     settings.Widget(BarWidget::Weather).weatherIcons = CustomIcons::Never;
@@ -3357,10 +3360,11 @@ TEST(a_linked_pill_shows_each_widgets_rows_in_turn_without_repeating_a_card)
 {
     Settings settings;
     const BarState state = RonfaureState();
-    settings.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Weather};
-    settings.Widget(BarWidget::Zone).popup   = PopupDesign{{{CardKind::WeatherByElement, CardKind::ZoneInfluence}}};
-    const PopupContent pill = PanelPopupContent(BarWidget::Zone, state, settings);
-    // The Zone's row, then the Forecast's own rows but By Element, which the Zone's row has already.
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).combine = PanelWidget{BarWidget::Weather};
+    settings.Widget(made).popup   = PopupDesign{{{CardKind::WeatherByElement, CardKind::ZoneInfluence}}};
+    const PopupContent pill = PanelPopupContent(made, state, settings);
+    // The created widget's row, then the Forecast's own rows but By Element, which that row has already.
     CHECK((Rows(pill) == std::vector<std::pair<std::string, bool>>{
                              {"By Element", false}, {"Influence", true}, {"Today", false}, {"Weather Forecast", true}}));
 }
@@ -3370,22 +3374,20 @@ TEST(a_card_placed_in_another_widgets_pop_out_has_its_widgets_data_gathered_whil
     Settings settings;
     for (WidgetOptions& each : settings.widgets)
         each.on = false;
-    settings.Widget(BarWidget::Zone).on    = true;
-    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::TargetOverview, CardKind::BagsList},
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::TargetOverview, CardKind::BagsList},
         {CardKind::JobExp, CardKind::PartyMembers, CardKind::CurrencyFavorites}}};
-    const BarNeeds closed = NeedsOf(settings, {}), open = NeedsOf(settings, {BarWidget::Zone});
+    const BarNeeds closed = NeedsOf(settings, {}), open = NeedsOf(settings, {made});
     CHECK(!closed.target && !closed.job && !closed.party && !closed.gil && closed.containers == 0);
     CHECK(open.target && open.job && open.party && open.gil && open.containers == kContainerCount);
-    CHECK(PopupShows(settings, {BarWidget::Zone}, BarWidget::Target) && !PopupShows(settings, {BarWidget::Zone}, BarWidget::World));
+    CHECK(PopupShows(settings, {made}, BarWidget::Target) && !PopupShows(settings, {made}, BarWidget::World));
     // Status Timers' cards there read the statuses while it shows, as its own pop-out does.
-    settings.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::StatusBuffs}}};
-    CHECK(NeedsOf(settings, {BarWidget::Zone}).statuses && !NeedsOf(settings, {}).statuses);
-    // The conquest standings for World Info's Conquest card in the Currency pop-out, with neither widget on.
-    settings.Widget(BarWidget::Zone).on        = false;
-    settings.Widget(BarWidget::Currency).on    = true;
-    settings.Widget(BarWidget::Currency).popup = PopupDesign{{{CardKind::WorldConquest}}};
-    CHECK(StandingsShown(settings, {BarWidget::Currency}) && !StandingsShown(settings, {}));
-    CHECK(NeedsOf(settings, {BarWidget::Currency}).conquest);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::StatusBuffs}}};
+    CHECK(NeedsOf(settings, {made}).statuses && !NeedsOf(settings, {}).statuses);
+    // The conquest standings for World Info's Conquest card, with World Info off.
+    settings.Widget(made).popup = PopupDesign{{{CardKind::WorldConquest}}};
+    CHECK(StandingsShown(settings, {made}) && !StandingsShown(settings, {}));
+    CHECK(NeedsOf(settings, {made}).conquest);
 }
 
 TEST(every_card_a_widget_builds_is_one_of_its_own_and_its_default_pop_out_shows_them_all)

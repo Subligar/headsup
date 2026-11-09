@@ -1159,36 +1159,39 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     CHECK_EQ(DesignText(BarWidget::Zone, LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
 }
 
-TEST(each_widgets_pop_out_design_saves_under_its_own_key_each_copys_under_its_own_and_clones_with_it)
+TEST(a_created_widgets_pop_out_design_saves_under_its_own_key_and_clones_with_it_and_a_built_ins_is_always_its_own)
 {
     Settings s;
-    CHECK(s.Widget(BarWidget::Zone).popup == DefaultPopupDesign(BarWidget::Zone));
-    s.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday}}};
-    const PanelWidget second = *CloneWidget(s, BarWidget::Zone);
-    CHECK(s.Widget(second).popup == s.Widget(BarWidget::Zone).popup);
+    const PanelWidget made = *CreateWidget(s);
+    CHECK(s.Widget(made).popup.rows.empty());
+    s.Widget(made).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday}}};
+    const PanelWidget second = *CloneWidget(s, made);
+    CHECK(s.Widget(second).popup == s.Widget(made).popup);
     s.Widget(second).popup = PopupDesign{};
     MapStore saved;
     SaveSettings(s, saved);
-    CHECK_EQ(saved.values["barZonePopupDesign"], "zone.influence weather.today");
+    CHECK_EQ(saved.values["barCustomPopupDesign"], "zone.influence weather.today");
+    CHECK_EQ(saved.values["barCustomPopupDesign_2"], "none");
     const Settings loaded = LoadSettings(saved);
-    CHECK(loaded.Widget(BarWidget::Zone).popup == s.Widget(BarWidget::Zone).popup);
-    CHECK(loaded.Widget(second).popup.rows.empty());
-    // Game help's pop-out keeps its own content, and the Settings widget has none.
-    CHECK(!saved.values.contains("barGameHelpPopupDesign") && !saved.values.contains("barSettingsPopupDesign"));
-    // A file from before the designer has the defaults; a row a hand filled past three keeps its first three.
-    saved.values.erase("barZonePopupDesign");
-    saved.values["barWorldPopupDesign"] = "world.guilds world.travel world.calendar world.conquest";
-    const Settings older = LoadSettings(saved);
-    CHECK(older.Widget(BarWidget::Zone).popup == DefaultPopupDesign(BarWidget::Zone));
-    CHECK_EQ(PopupDesignText(older.Widget(BarWidget::World).popup), "world.guilds world.travel world.calendar");
+    CHECK(loaded.Widget(made).popup == s.Widget(made).popup && loaded.Widget(second).popup.rows.empty());
+    // A built-in widget's pop-out is its own, whatever a hand or an older test build wrote.
+    CHECK(!saved.values.contains("barZonePopupDesign") && !saved.values.contains("barGameHelpPopupDesign"));
+    s.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::WeatherToday}}};
+    CHECK(Clamp(s).Widget(BarWidget::Zone).popup == DefaultPopupDesign(BarWidget::Zone));
+    saved.values["barZonePopupDesign"] = "weather.today";
+    CHECK(LoadSettings(saved).Widget(BarWidget::Zone).popup == DefaultPopupDesign(BarWidget::Zone));
+    // A row a hand filled past three keeps its first three.
+    saved.values["barCustomPopupDesign"] = "world.guilds world.travel world.calendar world.conquest";
+    CHECK_EQ(PopupDesignText(LoadSettings(saved).Widget(made).popup), "world.guilds world.travel world.calendar");
 }
 
 TEST(a_pop_out_row_given_more_than_three_cards_keeps_three_once_clamped)
 {
     Settings s;
-    s.Widget(BarWidget::Job).popup = PopupDesign{{{CardKind::JobExp, CardKind::PartyMembers, CardKind::BagsList, CardKind::ZoneInfluence},
+    const PanelWidget made = *CreateWidget(s);
+    s.Widget(made).popup = PopupDesign{{{CardKind::JobExp, CardKind::PartyMembers, CardKind::BagsList, CardKind::ZoneInfluence},
         {CardKind::JobExp}}};
-    CHECK_EQ(PopupDesignText(Clamp(s).Widget(BarWidget::Job).popup), "job.exp party.members bags.list");
+    CHECK_EQ(PopupDesignText(Clamp(s).Widget(made).popup), "job.exp party.members bags.list");
 }
 
 TEST(each_widgets_icon_side_saves_under_its_own_key_and_loads_back)
