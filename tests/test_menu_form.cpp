@@ -118,14 +118,15 @@ TEST(the_credits_page_comes_after_feedback_and_shows_its_words_with_no_cards)
     }
 }
 
-TEST(the_palettes_are_on_their_own_colors_page_under_the_theme)
+TEST(the_palettes_are_on_their_own_colors_page_under_the_theme_above_the_config_page)
 {
     Window w;
     const Form entities    = w.Pass();
     const std::string side = entities.blocks.front().rml;
     CHECK(Has(side, "<div class=\"nav\" id=\"nav-colors\">"));
-    CHECK(side.find("id=\"nav-theme\"") < side.find("id=\"nav-colors\"") &&
-          side.find("id=\"nav-colors\"") < side.find("id=\"nav-entities\""));
+    CHECK(side.find("id=\"nav-vanillaui\"") < side.find("id=\"nav-theme\"") &&
+          side.find("id=\"nav-theme\"") < side.find("id=\"nav-colors\"") &&
+          side.find("id=\"nav-colors\"") < side.find("id=\"nav-configmenu\""));
     const char* kPalettes[] = {
         "colors-aggression", "colors-toughness", "colors-claim-status", "colors-targeting", "colors-entity-type"};
     w.state.page      = Page::Colors;

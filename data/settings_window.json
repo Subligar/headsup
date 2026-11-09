@@ -2,199 +2,6 @@
   "version": "0.8",
   "pages": [
     {
-      "key": "theme",
-      "name": "Theme",
-      "cards": [
-        {
-          "key": "theme-look",
-          "name": "Theme",
-          "description": "The look of the top panel, this config menu, the fishing bar and many more parts of HeadsUp.",
-          "settings": [
-            {
-              "key": "theme",
-              "name": "Theme",
-              "tip": "The look of the top panel, its pop-outs, this config window, the fishing bar and many more parts of HeadsUp. Your own themes are listed under the built-in ones.",
-              "words": [
-                {"key": "built-in", "name": "Built-in Themes"},
-                {"key": "custom", "name": "Custom Themes"},
-                {"key": "copy", "name": "{file} (custom)"},
-                {"key": "copy-again", "name": "{file} (custom {count})"}
-              ]
-            },
-            {"key": "delete-theme", "name": "Delete Custom Theme", "tip": "Deletes this custom theme's file from the themes folder, and goes back to the built-in theme it was first copied from."}
-          ]
-        },
-        {
-          "key": "theme-colors",
-          "name": "Customize Appearance",
-          "description": "Every part of the theme in use. Changing one on a built-in theme makes a custom theme from it, named after it, and picks it. A custom theme saves each change as you make it, in config/headsup/themes.",
-          "settings": [
-            {"key": "theme-name", "name": "Theme Name", "tip": "The custom theme's name, which is its file's name too. It changes once you click out of the box or close this window."},
-            {
-              "key": "background-style",
-              "name": "Background Style",
-              "tip": "What the top panel's strip is drawn with.",
-              "options": [
-                {"name": "Plain", "tip": "One color, with its opacity."},
-                {"name": "Gradient", "tip": "A top color running into a bottom color."},
-                {"name": "Vanilla Window", "tip": "The game's own window art, of the Window Type below."}
-              ]
-            },
-            {"key": "theme-background", "name": "Background Color", "indent": true, "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
-            {"key": "theme-top", "name": "Top Color", "indent": true, "tip": "The strip's color at its top, with its opacity."},
-            {"key": "theme-middle", "name": "Middle Color", "indent": true, "tip": "The panel's color just past halfway down its gradient."},
-            {"key": "theme-bottom", "name": "Bottom Color", "indent": true, "tip": "The strip's color at its foot, with its opacity."},
-            {"key": "background-opacity", "name": "Background Opacity", "indent": true, "tip": "How much of the game shows through the top panel's strip. At 100% none of it does."},
-            {"key": "window-type", "name": "Window Type", "indent": true, "tip": "Which of the game's eight window frames the art is. Auto is the one picked in the game's Config, Windows, Shared, followed as you change it. Default: Auto."},
-            {
-              "key": "separator-style",
-              "name": "Separator Style",
-              "tip": "The shape of the top panel's separators, and what a dash (-) in a nameplate's design is drawn as.",
-              "options": [
-                {"name": "Dash", "tip": "A plain dash: the top panel shows short lines, and a nameplate's dashes stay as they are."},
-                {"tip": "Dot"},
-                {"tip": "Square"},
-                {"tip": "Diamond"}
-              ]
-            },
-            {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels thick the border is: the line along the strip's foot, or with Vanilla Window the frame around the top panel, the help bar, the pop-outs, the fishing bar and this window. 0 for none."},
-            {"key": "theme-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets, the pop-outs, their sections and the help bar are, wherever those are Set by Theme. Auto keeps the corners of the theme's own style. Default: Auto."},
-            {"key": "popup-opacity", "name": "Pop-out Opacity", "tip": "How much of the game shows through the pop-outs. At 100% none of it does."},
-            {
-              "key": "status-icons",
-              "name": "Status Icons",
-              "tip": "The pictures of the status effects in the Status Timers widget and its pop-out: the game's own, or a pack's. A status a pack has no picture for shows the game's. Default: HD.",
-              "words": [
-                {"key": "vanilla", "name": "Vanilla"}
-              ]
-            },
-            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: on."},
-            {
-              "key": "theme-palette",
-              "rows": [
-                {"key": "under-line", "name": "Under Line", "tip": "A row just under the border; clear for none."},
-                {"key": "glow-below", "name": "Glow Below", "tip": "What fades out under the strip."},
-                {"key": "accent", "name": "Accent", "tip": "Diamonds, frames, the pin mark and a lit widget."},
-                {"key": "accent-end", "name": "Accent End", "tip": "What the accent runs into where it is a gradient."},
-                {"key": "pill", "name": "Pill", "tip": "A widget's pill."},
-                {"key": "pill-border", "name": "Pill Border"},
-                {"key": "title", "name": "Title", "tip": "A widget's title on the strip."},
-                {"key": "subtitle", "name": "Subtitle", "tip": "A widget's second line, and dim text in pop-outs."},
-                {"key": "divider", "name": "Divider", "tip": "The diamonds between widgets on an ornate strip."},
-                {"key": "panel-top", "name": "Pop-out Top", "tip": "A pop-out's color at its top."},
-                {"key": "panel-bottom", "name": "Pop-out Bottom", "tip": "A pop-out's color at its foot."},
-                {"key": "panel-border", "name": "Pop-out Border"},
-                {"key": "panel-outer", "name": "Pop-out Outer Border", "tip": "A ring around an ornate pop-out's border; clear for none."},
-                {"key": "text", "name": "Pop-out Text"},
-                {"key": "heading", "name": "Pop-out Heading"},
-                {"key": "tag-fill", "name": "Tag Fill", "tip": "The small labels in pop-outs."},
-                {"key": "tag-border", "name": "Tag Border"},
-                {"key": "tag-text", "name": "Tag Text"},
-                {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."},
-                {"key": "border-color", "name": "Border Color", "tip": "The line along the strip's foot."}
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "colors",
-      "name": "Colors",
-      "cards": [
-        {
-          "key": "colors-aggression",
-          "name": "Aggression",
-          "description": "Colors indicating a mob's level of aggression towards you, as well as their status as a notorious monster (or placeholder for a notorious monster).",
-          "settings": [
-            {
-              "key": "aggression-colors",
-              "rows": [
-                {"key": "passive", "name": "Passive"},
-                {"key": "aggressive", "name": "Aggressive"},
-                {"key": "nm-passive", "name": "NM (Passive)"},
-                {"key": "nm-aggressive", "name": "NM (Aggressive)"},
-                {"key": "nm-placeholder", "name": "NM (Placeholder)"},
-                {"key": "no-data", "name": "No Data"}
-              ]
-            }
-          ]
-        },
-        {
-          "key": "colors-toughness",
-          "name": "Toughness",
-          "description": "Colors indicating how difficult a mob is at your current level.",
-          "settings": [
-            {
-              "key": "toughness-colors",
-              "rows": [
-                {"key": "unknown-level", "name": "Unknown"},
-                {"key": "too-weak", "name": "Too Weak"},
-                {"key": "easy-prey", "name": "Easy Prey"},
-                {"key": "decent-challenge", "name": "Decent Challenge"},
-                {"key": "even-match", "name": "Even Match"},
-                {"key": "tough", "name": "Tough"},
-                {"key": "very-tough", "name": "Very Tough"},
-                {"key": "incredibly-tough", "name": "Incredibly Tough"}
-              ]
-            }
-          ]
-        },
-        {
-          "key": "colors-claim-status",
-          "name": "Claim Status",
-          "description": "Colors indicating whether or not a mob is claimed and by whom.",
-          "settings": [
-            {
-              "key": "claim-colors",
-              "rows": [
-                {"key": "unclaimed", "name": "Unclaimed"},
-                {"key": "claimed-others", "name": "Claimed (Others')"},
-                {"key": "claimed-yours", "name": "Claimed (Yours)"},
-                {"key": "called-for-help", "name": "Called for Help", "tip": "Used when the mob is engaged in combat and the player who claimed it has used the 'Call for Help' feature, allowing anyone to attack it."}
-              ]
-            }
-          ]
-        },
-        {
-          "key": "colors-targeting",
-          "name": "Targeting",
-          "description": "Colors indicating your targeting and lock-on status for the entity.",
-          "settings": [
-            {
-              "key": "targeting-colors",
-              "rows": [
-                {"key": "not-targeted", "name": "Not Targeted"},
-                {"key": "targeted", "name": "Targeted"},
-                {"key": "locked-on", "name": "Locked On"},
-                {"key": "sub-target", "name": "Sub-Target", "tip": "Used when switching targets or choosing a target for your spells and abilities."},
-                {"key": "out-of-range", "name": "Out of Range", "tip": "Used when sub-targeting and the target is out of range."}
-              ]
-            }
-          ]
-        },
-        {
-          "key": "colors-entity-type",
-          "name": "Entity Type",
-          "description": "Colors indicating the type of entity and their relation to the player.",
-          "settings": [
-            {
-              "key": "entity-type-colors",
-              "rows": [
-                {"key": "player", "name": "Player"},
-                {"key": "friend", "name": "Friend"},
-                {"key": "party-member", "name": "Party Member"},
-                {"key": "linkshell-member", "name": "Linkshell Member", "tip": "A member of the same linkshell as you."},
-                {"key": "mob", "name": "Mob"},
-                {"key": "npc-or-object", "name": "NPC/Object"},
-                {"key": "pet", "name": "Pet"}
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
       "key": "entities",
       "name": "Nameplates & Outlines",
       "cards": [
@@ -546,6 +353,199 @@
                 {"key": "help-off", "name": "Game Help Off", "tip": "The shifts while no help shows under the top panel."},
                 {"key": "starts-at", "name": "Windows Start At", "tip": "Where each menu's highest window goes, in the game's menu pixels from the top of the screen."},
                 {"key": "row-tip", "tip": "Its shift down from where the game puts its windows, up when below zero."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "theme",
+      "name": "Theme",
+      "cards": [
+        {
+          "key": "theme-look",
+          "name": "Theme",
+          "description": "The look of the top panel, this config menu, the fishing bar and many more parts of HeadsUp.",
+          "settings": [
+            {
+              "key": "theme",
+              "name": "Theme",
+              "tip": "The look of the top panel, its pop-outs, this config window, the fishing bar and many more parts of HeadsUp. Your own themes are listed under the built-in ones.",
+              "words": [
+                {"key": "built-in", "name": "Built-in Themes"},
+                {"key": "custom", "name": "Custom Themes"},
+                {"key": "copy", "name": "{file} (custom)"},
+                {"key": "copy-again", "name": "{file} (custom {count})"}
+              ]
+            },
+            {"key": "delete-theme", "name": "Delete Custom Theme", "tip": "Deletes this custom theme's file from the themes folder, and goes back to the built-in theme it was first copied from."}
+          ]
+        },
+        {
+          "key": "theme-colors",
+          "name": "Customize Appearance",
+          "description": "Every part of the theme in use. Changing one on a built-in theme makes a custom theme from it, named after it, and picks it. A custom theme saves each change as you make it, in config/headsup/themes.",
+          "settings": [
+            {"key": "theme-name", "name": "Theme Name", "tip": "The custom theme's name, which is its file's name too. It changes once you click out of the box or close this window."},
+            {
+              "key": "background-style",
+              "name": "Background Style",
+              "tip": "What the top panel's strip is drawn with.",
+              "options": [
+                {"name": "Plain", "tip": "One color, with its opacity."},
+                {"name": "Gradient", "tip": "A top color running into a bottom color."},
+                {"name": "Vanilla Window", "tip": "The game's own window art, of the Window Type below."}
+              ]
+            },
+            {"key": "theme-background", "name": "Background Color", "indent": true, "tip": "The strip's one color, with its opacity: lower it to see the game through the strip."},
+            {"key": "theme-top", "name": "Top Color", "indent": true, "tip": "The strip's color at its top, with its opacity."},
+            {"key": "theme-middle", "name": "Middle Color", "indent": true, "tip": "The panel's color just past halfway down its gradient."},
+            {"key": "theme-bottom", "name": "Bottom Color", "indent": true, "tip": "The strip's color at its foot, with its opacity."},
+            {"key": "background-opacity", "name": "Background Opacity", "indent": true, "tip": "How much of the game shows through the top panel's strip. At 100% none of it does."},
+            {"key": "window-type", "name": "Window Type", "indent": true, "tip": "Which of the game's eight window frames the art is. Auto is the one picked in the game's Config, Windows, Shared, followed as you change it. Default: Auto."},
+            {
+              "key": "separator-style",
+              "name": "Separator Style",
+              "tip": "The shape of the top panel's separators, and what a dash (-) in a nameplate's design is drawn as.",
+              "options": [
+                {"name": "Dash", "tip": "A plain dash: the top panel shows short lines, and a nameplate's dashes stay as they are."},
+                {"tip": "Dot"},
+                {"tip": "Square"},
+                {"tip": "Diamond"}
+              ]
+            },
+            {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels thick the border is: the line along the strip's foot, or with Vanilla Window the frame around the top panel, the help bar, the pop-outs, the fishing bar and this window. 0 for none."},
+            {"key": "theme-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets, the pop-outs, their sections and the help bar are, wherever those are Set by Theme. Auto keeps the corners of the theme's own style. Default: Auto."},
+            {"key": "popup-opacity", "name": "Pop-out Opacity", "tip": "How much of the game shows through the pop-outs. At 100% none of it does."},
+            {
+              "key": "status-icons",
+              "name": "Status Icons",
+              "tip": "The pictures of the status effects in the Status Timers widget and its pop-out: the game's own, or a pack's. A status a pack has no picture for shows the game's. Default: HD.",
+              "words": [
+                {"key": "vanilla", "name": "Vanilla"}
+              ]
+            },
+            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: on."},
+            {
+              "key": "theme-palette",
+              "rows": [
+                {"key": "under-line", "name": "Under Line", "tip": "A row just under the border; clear for none."},
+                {"key": "glow-below", "name": "Glow Below", "tip": "What fades out under the strip."},
+                {"key": "accent", "name": "Accent", "tip": "Diamonds, frames, the pin mark and a lit widget."},
+                {"key": "accent-end", "name": "Accent End", "tip": "What the accent runs into where it is a gradient."},
+                {"key": "pill", "name": "Pill", "tip": "A widget's pill."},
+                {"key": "pill-border", "name": "Pill Border"},
+                {"key": "title", "name": "Title", "tip": "A widget's title on the strip."},
+                {"key": "subtitle", "name": "Subtitle", "tip": "A widget's second line, and dim text in pop-outs."},
+                {"key": "divider", "name": "Divider", "tip": "The diamonds between widgets on an ornate strip."},
+                {"key": "panel-top", "name": "Pop-out Top", "tip": "A pop-out's color at its top."},
+                {"key": "panel-bottom", "name": "Pop-out Bottom", "tip": "A pop-out's color at its foot."},
+                {"key": "panel-border", "name": "Pop-out Border"},
+                {"key": "panel-outer", "name": "Pop-out Outer Border", "tip": "A ring around an ornate pop-out's border; clear for none."},
+                {"key": "text", "name": "Pop-out Text"},
+                {"key": "heading", "name": "Pop-out Heading"},
+                {"key": "tag-fill", "name": "Tag Fill", "tip": "The small labels in pop-outs."},
+                {"key": "tag-border", "name": "Tag Border"},
+                {"key": "tag-text", "name": "Tag Text"},
+                {"key": "highlight", "name": "Highlight", "tip": "Over a widget under the pointer."},
+                {"key": "border-color", "name": "Border Color", "tip": "The line along the strip's foot."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "colors",
+      "name": "Colors",
+      "cards": [
+        {
+          "key": "colors-aggression",
+          "name": "Aggression",
+          "description": "Colors indicating a mob's level of aggression towards you, as well as their status as a notorious monster (or placeholder for a notorious monster).",
+          "settings": [
+            {
+              "key": "aggression-colors",
+              "rows": [
+                {"key": "passive", "name": "Passive"},
+                {"key": "aggressive", "name": "Aggressive"},
+                {"key": "nm-passive", "name": "NM (Passive)"},
+                {"key": "nm-aggressive", "name": "NM (Aggressive)"},
+                {"key": "nm-placeholder", "name": "NM (Placeholder)"},
+                {"key": "no-data", "name": "No Data"}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "colors-toughness",
+          "name": "Toughness",
+          "description": "Colors indicating how difficult a mob is at your current level.",
+          "settings": [
+            {
+              "key": "toughness-colors",
+              "rows": [
+                {"key": "unknown-level", "name": "Unknown"},
+                {"key": "too-weak", "name": "Too Weak"},
+                {"key": "easy-prey", "name": "Easy Prey"},
+                {"key": "decent-challenge", "name": "Decent Challenge"},
+                {"key": "even-match", "name": "Even Match"},
+                {"key": "tough", "name": "Tough"},
+                {"key": "very-tough", "name": "Very Tough"},
+                {"key": "incredibly-tough", "name": "Incredibly Tough"}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "colors-claim-status",
+          "name": "Claim Status",
+          "description": "Colors indicating whether or not a mob is claimed and by whom.",
+          "settings": [
+            {
+              "key": "claim-colors",
+              "rows": [
+                {"key": "unclaimed", "name": "Unclaimed"},
+                {"key": "claimed-others", "name": "Claimed (Others')"},
+                {"key": "claimed-yours", "name": "Claimed (Yours)"},
+                {"key": "called-for-help", "name": "Called for Help", "tip": "Used when the mob is engaged in combat and the player who claimed it has used the 'Call for Help' feature, allowing anyone to attack it."}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "colors-targeting",
+          "name": "Targeting",
+          "description": "Colors indicating your targeting and lock-on status for the entity.",
+          "settings": [
+            {
+              "key": "targeting-colors",
+              "rows": [
+                {"key": "not-targeted", "name": "Not Targeted"},
+                {"key": "targeted", "name": "Targeted"},
+                {"key": "locked-on", "name": "Locked On"},
+                {"key": "sub-target", "name": "Sub-Target", "tip": "Used when switching targets or choosing a target for your spells and abilities."},
+                {"key": "out-of-range", "name": "Out of Range", "tip": "Used when sub-targeting and the target is out of range."}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "colors-entity-type",
+          "name": "Entity Type",
+          "description": "Colors indicating the type of entity and their relation to the player.",
+          "settings": [
+            {
+              "key": "entity-type-colors",
+              "rows": [
+                {"key": "player", "name": "Player"},
+                {"key": "friend", "name": "Friend"},
+                {"key": "party-member", "name": "Party Member"},
+                {"key": "linkshell-member", "name": "Linkshell Member", "tip": "A member of the same linkshell as you."},
+                {"key": "mob", "name": "Mob"},
+                {"key": "npc-or-object", "name": "NPC/Object"},
+                {"key": "pet", "name": "Pet"}
               ]
             }
           ]
