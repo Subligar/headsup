@@ -1699,7 +1699,7 @@ TEST(deleting_a_custom_theme_that_differs_from_its_theme_goes_back_to_that_theme
     window.settings.customPalette.separator   = DashMark::Dot;
     window.settings.customPalette.panelTop    = 0x40102030u;
     window.Page("theme");
-    CHECK(window.Click("theme-theme-look-delete-theme"));
+    CHECK(window.Click("theme-theme-look-theme-delete"));
     CHECK_EQ(window.menu.TakeThemeDelete().value_or(""), std::string("Dusk"));
     window.Frames(5);
     CHECK(window.settings.barTheme == BarTheme::Aurora);

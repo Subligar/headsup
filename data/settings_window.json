@@ -402,10 +402,10 @@
                 {"key": "built-in", "name": "Built-in Themes"},
                 {"key": "custom", "name": "Custom Themes"},
                 {"key": "copy", "name": "{file} (custom)"},
-                {"key": "copy-again", "name": "{file} (custom {count})"}
+                {"key": "copy-again", "name": "{file} (custom {count})"},
+                {"key": "delete", "name": "Delete Custom Theme", "tip": "Deletes this custom theme's file from the themes folder, and goes back to the built-in theme it was first copied from."}
               ]
-            },
-            {"key": "delete-theme", "name": "Delete Custom Theme", "tip": "Deletes this custom theme's file from the themes folder, and goes back to the built-in theme it was first copied from."}
+            }
           ]
         },
         {

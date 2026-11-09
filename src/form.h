@@ -263,8 +263,8 @@ namespace headsup
             std::string heading;
             std::vector<std::string> rows, tips;
         };
-        void GroupedDropdown(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown,
-            const char* tip);
+        // Inside a row the caller opens, so other controls can sit before it.
+        void GroupedDropdownAt(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown);
         // A dropdown whose rows, and the closed control, show RML of the page's own where the others show words.
         void MarkupDropdown(const char* label, int& value, const std::vector<std::string>& rows, const char* tip,
             const OptionTip& option = {});

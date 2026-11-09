@@ -39,6 +39,7 @@ namespace headsup
         constexpr const char* kChipToggle  = " on";   // after it, its toggle's
         constexpr const char* kChipClone   = " clone"; // and its clone button's
         constexpr const char* kChipRemove  = " remove"; // and a copy's remove button's
+        constexpr const char* kThemeDelete = " delete"; // the Theme row's delete button, after the row's id
         // A designer chip's name on a line and, for a created widget, in the lists, before its widget's slot and its part.
         constexpr const char* kPartChip = "part ", *kListedPartChip = "lpart ";
         // A Pop-out Designer chip's name in a row and in the lists, before its widget's slot and its card.
@@ -526,7 +527,21 @@ namespace headsup
             const std::string shown = s.barTheme == BarTheme::Custom ? s.customThemeName : builtIn.rows[static_cast<size_t>(picked)];
             const Form::ListGroup groups[] = {builtIn, custom};
             const int was = picked;
-            c.form.GroupedDropdown(label.c_str(), picked, groups, shown, tip);
+            c.form.Row(label.c_str(), tip);
+            // Beside the dropdown, so an edit that makes a custom copy moves nothing in the window.
+            const std::string deleteId = c.form.Id(label + kThemeDelete);
+            if (s.barTheme == BarTheme::Custom)
+                c.form.Raw(std::string("<div class=\"") + kThemeDeleteClass + "\" id=\"" + deleteId + "\"" +
+                           TipAttribute(WordTip(c, WindowWord::ThemeDelete)) + "><img src=\"" + IconSource(Icon::Delete) + "\"" +
+                           AdjustStyle(AdjustOf(Icon::Delete)) + "/></div>");
+            if (s.barTheme == BarTheme::Custom && c.form.Clicked(deleteId))
+            {
+                c.state.themeDelete = s.customThemeName;
+                s.barTheme          = s.customPalette.parent;
+                c.form.changed      = true;
+            }
+            c.form.GroupedDropdownAt(label.c_str(), picked, groups, shown);
+            c.form.EndRow();
             if (c.form.Opened(label)) c.state.themesRequested = true;
             if (picked == was) return;
             if (picked < customAt)
@@ -2076,15 +2091,6 @@ namespace headsup
             case SettingPiece::Theme:
                 form.Fade(false);
                 ThemeDropdown(c, label, tip);
-                break;
-            case SettingPiece::DeleteTheme:
-                form.Fade(false);
-                if (s.barTheme == BarTheme::Custom && form.Button(label.c_str(), label.c_str(), kResetPill, tip))
-                {
-                    c.state.themeDelete = s.customThemeName;
-                    s.barTheme          = s.customPalette.parent;
-                    form.changed        = true;
-                }
                 break;
             case SettingPiece::WidgetBackground:
                 form.Fade(!BarOn(s));

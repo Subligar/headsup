@@ -1245,16 +1245,28 @@ TEST(an_edit_of_a_built_in_theme_makes_a_custom_copy_of_it_named_after_it)
     CHECK(w.state.themeLoad == "umbra dark (custom)" && w.settings.barTheme == BarTheme::Aurora);
 }
 
-TEST(delete_custom_theme_shows_for_a_custom_theme_and_goes_back_to_the_theme_it_was_copied_from)
+// Round 22: "The delete custom theme should just sit to the left of the dropdown so the window doesnt shift on making
+// an edit" (an edit makes a custom copy).
+TEST(delete_custom_theme_sits_left_of_the_theme_dropdown_for_a_custom_theme_and_goes_back_to_the_theme_it_was_copied_from)
 {
     Window w;
     w.state.page = Page::Theme;
-    const std::string button = "theme-theme-look-delete-theme";
-    CHECK(At(Block(w.Pass(), "theme-theme-look"), button) == std::string::npos);
+    const std::string button = "theme-theme-look-theme-delete", dropdown = "id=\"theme-theme-look-theme\"";
+    const auto rows = [](const std::string& rml) {
+        size_t n = 0;
+        for (size_t at = rml.find("class=\"row"); at != std::string::npos; at = rml.find("class=\"row", at + 1)) ++n;
+        return n;
+    };
+    const Form first           = w.Pass();
+    const FormBlock* builtIn   = Block(first, "theme-theme-look");
+    CHECK(builtIn != nullptr && At(builtIn, button) == std::string::npos);
     w.settings.barTheme             = BarTheme::Custom;
     w.settings.customThemeName      = "Dusk";
     w.settings.customPalette.parent = BarTheme::Aurora;
-    CHECK(At(Block(w.Pass(), "theme-theme-look"), button) != std::string::npos);
+    const Form second          = w.Pass();
+    const FormBlock* custom    = Block(second, "theme-theme-look");
+    CHECK(custom != nullptr && At(custom, button) != std::string::npos && At(custom, button) < custom->rml.find(dropdown));
+    CHECK_EQ(rows(custom->rml), rows(builtIn->rml));
     CHECK(w.Pass({{button, kClickEvent, ""}}).changed);
     CHECK(w.settings.barTheme == BarTheme::Aurora && w.state.themeDelete == "Dusk");
 }

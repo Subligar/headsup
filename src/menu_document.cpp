@@ -344,6 +344,11 @@ namespace headsup
         css += ".reset{width:" + frame + ";height:" + frame + ";decorator:image(\"" + ResetSource(c.muted, kResetArrowPixels) +
                "\" contain);}";
         css += ".reset:hover{decorator:image(\"" + ResetSource(c.accent, kResetArrowPixels) + "\" contain);}";
+        css += std::string(".") + kThemeDeleteClass + "{width:" + frame + ";height:" + frame + ";margin-right:" + Em(kControlGap) +
+               ";text-align:center;}";
+        css += std::string(".") + kThemeDeleteClass + " img{width:" + Em(kChipClone) + ";height:" + Em(kChipClone) +
+               ";margin-top:" + Em((kFrame - kChipClone) / 2.0f) + ";image-color:" + color(c.muted) + ";}";
+        css += std::string(".") + kThemeDeleteClass + ":hover img{image-color:" + color(c.accent) + ";}";
         css += ".picker{padding:0.4em;}";
         css += ".pick-row{position:relative;display:flex;flex-direction:row;align-items:center;margin-bottom:0.3em;}";
         css += ".pick-name{width:1.2em;color:" + color(c.label) + ";}";

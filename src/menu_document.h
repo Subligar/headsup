@@ -75,6 +75,7 @@ namespace headsup
     constexpr int kMenuViewZ           = 11;
     constexpr int kPopupsOverSettingsZ = 12;
     constexpr const char* kMenuCardClass   = "card";
+    constexpr const char* kThemeDeleteClass = "theme-delete"; // the delete picture left of the Theme dropdown
     constexpr const char* kMenuFootClass   = "foot"; // a block under the cards with no card around it
     constexpr const char* kSetupPreviewClass = "setup-preview"; // Setup's picture, as wide as its card
     constexpr const char* kPageNoteClass   = "page-note"; // a page's own words over its cards

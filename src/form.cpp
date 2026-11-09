@@ -420,10 +420,8 @@ namespace headsup
         EndRow();
     }
 
-    void Form::GroupedDropdown(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown,
-        const char* tip)
+    void Form::GroupedDropdownAt(const char* label, int& value, std::span<const ListGroup> groups, const std::string& shown)
     {
-        Row(label, tip);
         const std::string control = Id(label);
         if (ListControl(control, shown, kControlWidth))
         {
@@ -443,7 +441,6 @@ namespace headsup
                 changed = true;
             }
         }
-        EndRow();
     }
 
     std::string Form::ListRow(const std::string& control, int index, const std::string& name, bool picked,
