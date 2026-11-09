@@ -1163,7 +1163,7 @@ TEST(each_widgets_pop_out_design_saves_under_its_own_key_each_copys_under_its_ow
 {
     Settings s;
     CHECK(s.Widget(BarWidget::Zone).popup == DefaultPopupDesign(BarWidget::Zone));
-    s.Widget(BarWidget::Zone).popup = PopupDesign{{{PopupCard::ZoneInfluence, PopupCard::WeatherToday}}};
+    s.Widget(BarWidget::Zone).popup = PopupDesign{{{CardKind::ZoneInfluence, CardKind::WeatherToday}}};
     const PanelWidget second = *CloneWidget(s, BarWidget::Zone);
     CHECK(s.Widget(second).popup == s.Widget(BarWidget::Zone).popup);
     s.Widget(second).popup = PopupDesign{};
@@ -1186,8 +1186,8 @@ TEST(each_widgets_pop_out_design_saves_under_its_own_key_each_copys_under_its_ow
 TEST(a_pop_out_row_given_more_than_three_cards_keeps_three_once_clamped)
 {
     Settings s;
-    s.Widget(BarWidget::Job).popup = PopupDesign{{{PopupCard::JobExp, PopupCard::PartyMembers, PopupCard::BagsList, PopupCard::ZoneInfluence},
-        {PopupCard::JobExp}}};
+    s.Widget(BarWidget::Job).popup = PopupDesign{{{CardKind::JobExp, CardKind::PartyMembers, CardKind::BagsList, CardKind::ZoneInfluence},
+        {CardKind::JobExp}}};
     CHECK_EQ(PopupDesignText(Clamp(s).Widget(BarWidget::Job).popup), "job.exp party.members bags.list");
 }
 

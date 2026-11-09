@@ -904,7 +904,7 @@ public:
         const auto opened = [&](headsup::BarWidget w) { return headsup::PopupShows(m_Settings, m_BarInput.Shown(), w); };
         if (m_GameState.ConquestRequestDue(now,
                 g_BarOn &&
-                    headsup::StandingsShown(m_Settings) &&
+                    headsup::StandingsShown(m_Settings, m_BarInput.Shown()) &&
                     m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
                 opened(headsup::BarWidget::Zone) || opened(headsup::BarWidget::World)))
         {
@@ -916,7 +916,7 @@ public:
         // Opening the Currencies menu asks for them; HeadsUp asks the same, as for the conquest standings.
         const bool gilOpen = opened(headsup::BarWidget::Currency);
         if (m_GameState.CurrencyRequestDue(now,
-                g_BarOn && headsup::AnyCopyShown(m_Settings, headsup::BarWidget::Currency) &&
+                g_BarOn && (headsup::AnyCopyShown(m_Settings, headsup::BarWidget::Currency) || gilOpen) &&
                     m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
                 gilOpen))
         {

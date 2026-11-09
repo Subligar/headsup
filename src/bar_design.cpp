@@ -45,8 +45,8 @@ namespace headsup
             BarWidget widget;
             const char* file;
         };
-        // By PopupCard.
-        constexpr CardEntry kCards[kPopupCardCount] = {{W::Zone, "zone.influence"}, {W::Weather, "weather.today"},
+        // By CardKind.
+        constexpr CardEntry kCards[kCardKindCount] = {{W::Zone, "zone.influence"}, {W::Weather, "weather.today"},
             {W::Weather, "weather.forecast"}, {W::Weather, "weather.byElement"}, {W::Target, "target.overview"},
             {W::Target, "target.damage"}, {W::Target, "target.elements"}, {W::Target, "target.statuses"},
             {W::Target, "target.immune"}, {W::Target, "target.stats"}, {W::Target, "target.moves"},
@@ -105,17 +105,17 @@ namespace headsup
         }
     }
 
-    BarWidget WidgetOfCard(PopupCard card) { return kCards[static_cast<int>(card)].widget; }
+    BarWidget WidgetOfCard(CardKind card) { return kCards[static_cast<int>(card)].widget; }
 
-    std::vector<PopupCard> CardsOf(BarWidget kind)
+    std::vector<CardKind> CardsOf(BarWidget kind)
     {
-        std::vector<PopupCard> cards;
-        for (int c = 0; c < kPopupCardCount; ++c)
-            if (kCards[c].widget == kind) cards.push_back(static_cast<PopupCard>(c));
+        std::vector<CardKind> cards;
+        for (int c = 0; c < kCardKindCount; ++c)
+            if (kCards[c].widget == kind) cards.push_back(static_cast<CardKind>(c));
         return cards;
     }
 
-    const char* CardFileName(PopupCard card) { return kCards[static_cast<int>(card)].file; }
+    const char* CardFileName(CardKind card) { return kCards[static_cast<int>(card)].file; }
 
     PopupDesign DefaultPopupDesign(BarWidget kind) { return PopupDesignFrom(kind, kPopupDefaults[static_cast<int>(kind)]); }
 
@@ -123,7 +123,7 @@ namespace headsup
     {
         std::string text;
         for (const auto& row : design.rows)
-            for (const PopupCard& card : row)
+            for (const CardKind& card : row)
             {
                 if (!text.empty()) text += &card == &row.front() ? std::string(" ") + kLineBreak + kSpace : std::string(1, kSpace);
                 text += CardFileName(card);
@@ -139,8 +139,8 @@ namespace headsup
         {
             const size_t at = text.find_first_of(" |");
             const std::string_view word = text.substr(0, at);
-            for (int c = 0; c < kPopupCardCount; ++c)
-                if (word == kCards[c].file) design.rows.back().push_back(static_cast<PopupCard>(c));
+            for (int c = 0; c < kCardKindCount; ++c)
+                if (word == kCards[c].file) design.rows.back().push_back(static_cast<CardKind>(c));
             if (at == std::string_view::npos) break;
             if (text[at] == kLineBreak) design.rows.emplace_back();
             text.remove_prefix(at + 1);
@@ -150,10 +150,10 @@ namespace headsup
 
     PopupDesign WholePopup(PopupDesign design)
     {
-        std::vector<PopupCard> seen;
+        std::vector<CardKind> seen;
         for (auto& row : design.rows)
         {
-            std::erase_if(row, [&](PopupCard card) {
+            std::erase_if(row, [&](CardKind card) {
                 if (std::ranges::find(seen, card) != seen.end()) return true;
                 seen.push_back(card);
                 return false;
@@ -164,19 +164,19 @@ namespace headsup
         return design;
     }
 
-    bool HoldsCard(const PopupDesign& design, PopupCard card)
+    bool HoldsCard(const PopupDesign& design, CardKind card)
     {
         return std::ranges::any_of(design.rows, [&](const auto& row) { return std::ranges::find(row, card) != row.end(); });
     }
 
-    bool RowTakes(const PopupDesign& design, size_t row, PopupCard card)
+    bool RowTakes(const PopupDesign& design, size_t row, CardKind card)
     {
         if (row >= design.rows.size()) return true;
         const auto& cards = design.rows[row];
         return cards.size() < kMostCardsInRow || std::ranges::find(cards, card) != cards.end();
     }
 
-    bool PlaceCard(PopupDesign& design, PopupCard card, size_t row, size_t at)
+    bool PlaceCard(PopupDesign& design, CardKind card, size_t row, size_t at)
     {
         std::optional<std::pair<size_t, size_t>> from; // its row and place
         for (size_t r = 0; r < design.rows.size(); ++r)
@@ -199,7 +199,7 @@ namespace headsup
         return true;
     }
 
-    bool RemoveCard(PopupDesign& design, PopupCard card)
+    bool RemoveCard(PopupDesign& design, CardKind card)
     {
         bool removed = false;
         for (auto& row : design.rows)

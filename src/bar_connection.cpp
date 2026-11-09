@@ -121,7 +121,7 @@ namespace headsup
     {
         if (!report) return {};
         const ConnectionReport& r = *report;
-        PopupSection now{"Connection", {}};
+        PopupSection now = Section(CardKind::PerfConnection, "Connection");
         now.rows.push_back(Labeled("Sent", Text(PerSecond(r.counters, &NetCounters::sent))));
         now.rows.push_back(Labeled("Received", Text(PerSecond(r.counters, &NetCounters::received))));
         now.rows.push_back(LastData(r));
@@ -129,7 +129,7 @@ namespace headsup
             now.rows.push_back(LineOf("The game's own meter is at " + std::to_string(r.counters->health) +
                                           "%: it falls once 10 s pass without server data.",
                 Tone::Dim));
-        PopupSection totals{"This Session", {}};
+        PopupSection totals = Section(CardKind::PerfSession, "This Session");
         if (r.countedSeconds > 0.0)
         {
             totals.rows.push_back(Labeled("Sent", Text(ByteText(r.sentBytes))));
@@ -140,9 +140,9 @@ namespace headsup
             totals.rows.push_back(LineOf("Counted once the game's counters can be read.", Tone::Dim));
         std::vector<PopupSection> sections = ListOf(std::move(now), std::move(totals));
         if (Waiting(r.playOnline))
-            sections.push_back(PopupSection{"PlayOnline",
+            sections.push_back(Section(CardKind::PerfPlayOnline, "PlayOnline",
                 ListOf(Labeled("Messages", Text(std::to_string(r.playOnline->messages))),
-                    Labeled("Mail", Text(std::to_string(r.playOnline->mail))))});
+                    Labeled("Mail", Text(std::to_string(r.playOnline->mail))))));
         return sections;
     }
 }

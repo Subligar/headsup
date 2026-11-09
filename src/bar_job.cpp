@@ -165,7 +165,7 @@ namespace headsup
         if (!job) return popup;
         const JobSample& s = job->sample;
         popup.title = ListOf(Text("Job and EXP")); // the jobs and levels are on the bar, in the detail font
-        PopupSection rows;
+        PopupSection rows = Section(CardKind::JobExp, "");
         if (AtCap(s))
         {
             rows.rows.push_back(Labeled("Merits", Text(std::to_string(s.merits) + " / " + std::to_string(s.meritsMax))));

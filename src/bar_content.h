@@ -164,7 +164,7 @@ namespace headsup
     };
 
     // Each card a widget's pop-out can show: the Pop-out Designer puts any of them in any widget's pop-out.
-    enum class PopupCard : uint8_t
+    enum class CardKind : uint8_t
     {
         ZoneInfluence,
         WeatherToday, WeatherForecast, WeatherByElement,
@@ -180,7 +180,7 @@ namespace headsup
         StatusFavorites, StatusBuffs, StatusDebuffs,
         WorldConquest, WorldTravel, WorldCalendar, WorldGuilds,
     };
-    constexpr int kPopupCardCount = static_cast<int>(PopupCard::WorldGuilds) + 1;
+    constexpr int kCardKindCount = static_cast<int>(CardKind::WorldGuilds) + 1;
 
     struct PopupSection
     {
@@ -188,15 +188,14 @@ namespace headsup
         std::vector<PopupRow> rows;
         std::vector<PopupTab> tabs{}; // under the heading, a click picking one, by the heading
         size_t tab = 0;               // the picked one, whose rows follow the section's own
-        bool beside = false; // in one row with the card before it, the two as tall as each other
+        bool beside = false; // in one row with the card before it, the row's cards as tall as each other
         // A headed card's chip at its heading's right tells this when pressed, which collapses or opens it; none
         // without it. Collapsed, it shows its heading alone.
         std::string collapsePress{};
         bool collapsed = false;
-        bool under = false; // in the column of the card before it, under it: after a card beside, a column beside a card
         size_t tabsAcross = 0; // its tabs a row; 0 for as many as fit
         bool tabEachOpen  = false; // its tab is tab again each time the popup opens, until another is picked
-        std::optional<PopupCard> card{}; // which it is, for the Pop-out Designer; none for Game help's
+        std::optional<CardKind> card{}; // which it is, for the Pop-out Designer; none for Game help's
         bool operator==(const PopupSection&) const = default;
     };
 
@@ -206,7 +205,6 @@ namespace headsup
         std::vector<Span> title;
         std::vector<Span> subtitle; // a line right under the title, outside any card
         std::vector<PopupSection> sections;
-        bool oneColumn = false; // its cards down one column, however tall
         bool settings  = true;  // its widget's settings show in place of it behind a cog: Game help's are in their own card
         // While its settings show, what its title's clone and remove chips tell when pressed; empty for none.
         std::string clonePress{}, removePress{};
@@ -265,6 +263,8 @@ namespace headsup
     Span Colored(std::string text, uint32_t argb);
     PopupCell Cell(std::vector<Span> text, std::optional<Icon> icon = std::nullopt);
     PopupCell Cell(Span text, std::optional<Icon> icon = std::nullopt);
+    // A card of a pop-out: which it is, its heading and its rows.
+    PopupSection Section(CardKind card, std::string heading, std::vector<PopupRow> rows = {});
     PopupRow Line(PopupCell cell);
     PopupRow LineOf(std::string text, Tone tone = Tone::Normal);
     // "Label value", the label dim and the value at the right edge.

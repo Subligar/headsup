@@ -143,9 +143,11 @@ namespace headsup
     // first copy; nothing for any other press, or when nothing changed.
     std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press);
     PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
-    // Whether the panel shows the conquest standings: the Zone widget, or a World Info showing Conquest Info.
-    bool StandingsShown(const Settings& settings);
-    // Whether the open popup shows a widget's: its own, or a combined pill's with that widget in it.
+    // Whether the conquest standings show: the Zone widget, a World Info showing a nation, or a popup in showing with
+    // the Zone's or World Info's cards.
+    bool StandingsShown(const Settings& settings, const std::vector<PanelWidget>& showing);
+    // Whether a popup shown shows a widget's: its own, a linked pill's with that widget in it, or one whose design
+    // holds one of that widget's cards.
     bool PopupShows(const Settings& settings, const std::vector<PanelWidget>& shown, BarWidget widget);
 
     // The picture each part's chip in the Widget Designer shows: the one these widgets show now, else its stand-in.

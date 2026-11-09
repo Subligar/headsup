@@ -37,6 +37,13 @@ namespace headsup
 
     PopupCell Cell(Span text, std::optional<Icon> icon) { return Cell(ListOf(std::move(text)), icon); }
 
+    PopupSection Section(CardKind card, std::string heading, std::vector<PopupRow> rows)
+    {
+        PopupSection section{std::move(heading), std::move(rows)};
+        section.card = card;
+        return section;
+    }
+
     PopupRow Line(PopupCell cell) { return PopupRow{RowKind::Line, 0, ListOf(std::move(cell))}; }
 
     PopupRow LineOf(std::string text, Tone tone) { return Line(Cell(Text(std::move(text), tone))); }
