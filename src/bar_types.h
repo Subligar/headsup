@@ -90,6 +90,9 @@ namespace headsup
     }
     // Game help's text is the help bar's, placed by its Anchor; the Settings widget is its cog alone.
     constexpr bool Aligns(BarWidget widget) { return widget != BarWidget::GameHelp && widget != BarWidget::Settings; }
+    // The widgets with their own of the Top Panel's looks: the same ones, as the help bar has looks of its own and
+    // the Settings widget no settings.
+    constexpr bool HasOwnLooks(BarWidget widget) { return Aligns(widget); }
 
     // What an EXP text says: what is earned of the level, what is left to the next, or the share earned as a percent;
     // the EXP bar's can say the jobs too, as Job Text writes them.

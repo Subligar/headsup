@@ -89,6 +89,13 @@ namespace headsup
         IconSide iconSide = IconSide::Left; // its icon's, for a widget with one (IconPartOf)
         WidgetAlign align = WidgetAlign::Location; // all but Game Help's, whose text is the help bar's
         std::optional<PopupSpot> popupSpot; // where its pop-out shows while pinned; none for under its pill
+        // Its own of the Top Panel's looks, for a widget with them (HasOwnLooks): none, or no font, for the Top Panel's.
+        // Its pill's spacing, background, rounding and pop-out are the pill's first widget's.
+        std::optional<int> spacing, padding, rounding; // pixels; rounding may be kThemeRounding
+        std::optional<int> iconScale;                  // percent, as barIconScale
+        std::optional<bool> background;
+        std::string titleFont, textFont;
+        std::optional<float> fontRatio, popupTextScale;
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.
