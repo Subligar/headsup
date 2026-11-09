@@ -403,8 +403,6 @@ namespace headsup
         }
         m_PopupDocuments[static_cast<size_t>(PopupLayer::OverSettings)]->SetProperty(Rml::PropertyId::ZIndex,
             Rml::Property(static_cast<float>(kPopupsOverSettingsZ), Rml::Unit::NUMBER));
-        m_PopupDocuments[static_cast<size_t>(PopupLayer::OverMenu)]->SetProperty(Rml::PropertyId::ZIndex,
-            Rml::Property(static_cast<float>(kPopupsOverMenuZ), Rml::Unit::NUMBER));
         m_PopupDocumentText = std::move(text);
         return true;
     }

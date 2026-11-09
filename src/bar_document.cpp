@@ -6,6 +6,7 @@
 #include "bar_layout.h"
 #include "bar_placement.h"
 #include "markup.h"
+#include "menu_document.h"
 
 #include <array>
 #include <charconv>
@@ -688,7 +689,7 @@ namespace headsup
     std::string PopupDocument(const BarLook& look, const PopupFaces& faces)
     {
         const BoxStyle panel = PopupPanel(look);
-        std::string css = "body{display:block;width:100%;height:100%;pointer-events:none;z-index:10;}";
+        std::string css = "body{display:block;width:100%;height:100%;pointer-events:none;z-index:" + std::to_string(kPopupsZ) + ";}";
         css += "div{display:block;}";
         css += std::string(".") + kHiddenClass + "{display:none;}";
         // A popup drops in from its widget.

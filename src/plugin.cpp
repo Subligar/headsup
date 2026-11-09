@@ -971,7 +971,6 @@ public:
         }
         UpdateSkin();
         m_RmlBar.settingsRoom = m_RmlMenu.RoomFor(SettingsShownNow(), m_Settings);
-        m_BarInput.MenuOpen(m_RmlMenu.open);
         // Off, the bar is given nothing to show, and releases what it made.
         if (m_Rml.Running())
             m_RmlBar.Update(m_Rml, g_BarOn ? BarStateNow(now) : headsup::BarState{}, m_Settings, SkinNow(),

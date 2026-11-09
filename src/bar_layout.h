@@ -105,10 +105,9 @@ namespace headsup
     PillJoins JoinsOf(const BarLayout& layout, PanelWidget widget);
     // A combined pill has a popup when any of its widgets has one: its first widget's hasPopup says so.
     void SharePopups(std::array<bool, kPanelSlots>& hasPopup, const std::array<PanelWidget, kPanelSlots>& groups);
-    // Which of the popups' documents a popup is drawn in: under the settings a popup shows, over them, or over the
-    // settings window.
-    enum class PopupLayer : uint8_t { UnderSettings, OverSettings, OverMenu };
-    constexpr size_t kPopupLayers = static_cast<size_t>(PopupLayer::OverMenu) + 1;
+    // Which of the popups' documents a popup is drawn in: under the settings a popup shows, or over them.
+    enum class PopupLayer : uint8_t { UnderSettings, OverSettings };
+    constexpr size_t kPopupLayers = static_cast<size_t>(PopupLayer::OverSettings) + 1;
     // A dragged popup's spot, by which half of the screen its middle is in across and down. One reaching the screen's
     // bottom is kept by its top: kept by its bottom, a tall one shown smaller would drop away from where its top was left.
     PopupSpot SpotOf(const BarRect& popup, float screenWidth, float screenHeight);
@@ -234,13 +233,7 @@ namespace headsup
         {
             return m_Under == pill || SettingsShown() == pill || (hasPopup && (Open() == pill || IsPinned(pill)));
         }
-        // Each frame, whether the settings window is open: the popups showing when it opened are drawn under it, and
-        // those that came out after it over it.
-        void MenuOpen(bool open);
-        bool OverMenu(PanelWidget pill) const;
-        // By Shown, bottom to top: each popup's layer. Those shown after the one with settings go over its settings,
-        // and those come out after the window opened over the window, but for the one with settings, which stays under
-        // the window with them.
+        // By Shown, bottom to top: each popup's layer. Those shown after the one with settings go over its settings.
         std::vector<PopupLayer> Layers() const;
 
     private:
@@ -285,7 +278,6 @@ namespace headsup
         std::optional<PanelWidget> m_Hover;  // the popup hovering keeps open
         std::optional<PanelWidget> m_Dismissed; // unpinned from its widget: no hover until the pointer leaves it
         std::vector<PanelWidget> m_Pinned;   // in the order pinned
-        std::optional<std::vector<PanelWidget>> m_UnderMenu; // while the window is open: those it opened over, still shown
         std::optional<PanelWidget> m_Settings; // a pinned pill, while its popup shows its settings
         bool m_PinnedForSettings = false;      // its pin came with its settings, and goes when they close
     };

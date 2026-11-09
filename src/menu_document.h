@@ -69,12 +69,11 @@ namespace headsup
     constexpr const char* kMenuPopupId     = "popup";
     constexpr const char* kMenuTipId       = "tip";
     constexpr const char* kMenuViewBodyId  = "view-body"; // the settings the panel's popup shows, in their own document
-    // Bottom to top: the popups (their document's 10), the settings one shows (always under the window, as that popup
-    // is), the popups shown after it, the window, and the popups come out after the window opened.
+    // Bottom to top: the window, the popups, the settings one shows, and the popups shown after it.
+    constexpr int kMenuWindowZ         = 5;
+    constexpr int kPopupsZ             = 10;
     constexpr int kMenuViewZ           = 11;
     constexpr int kPopupsOverSettingsZ = 12;
-    constexpr int kMenuWindowZ         = 15;
-    constexpr int kPopupsOverMenuZ     = 16;
     constexpr const char* kMenuCardClass   = "card";
     constexpr const char* kMenuFootClass   = "foot"; // a block under the cards with no card around it
     constexpr const char* kSetupPreviewClass = "setup-preview"; // Setup's picture, as wide as its card

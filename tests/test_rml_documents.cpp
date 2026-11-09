@@ -470,9 +470,9 @@ TEST(a_pop_outs_title_card_heading_and_text_draw_at_18_16_and_14_px_and_a_headin
     }
 }
 
-// Where they all overlap, what the pointer finds on top is what is drawn on top. The card: a popup's settings, opened
-// before the window, drew over the window while the rest of that popup was under it.
-TEST(the_settings_window_draws_over_a_popup_and_its_settings_opened_before_it_and_under_those_after)
+// Where they all overlap, what the pointer finds on top is what is drawn on top. Round 22: "The popups should go above
+// the headsup config menu", whenever the window opened.
+TEST(every_popup_and_the_settings_it_shows_draw_over_the_settings_window)
 {
     test::RmlSession rml;
     Settings settings;
@@ -504,15 +504,17 @@ TEST(the_settings_window_draws_over_a_popup_and_its_settings_opened_before_it_an
     Rml::ElementDocument* view = rml.context->LoadDocumentFromMemory(MenuViewDocument(menu), "view");
     view->GetElementById(kMenuViewBodyId)->SetAttribute("style", "width:200px;height:200px;");
     shown(view);
-    CHECK(top() == view); // the settings over their popup
     Rml::Element* overSettings = popups(kPopupsOverSettingsZ);
-    CHECK(top() == overSettings->GetOwnerDocument()); // a popup shown after it over both
+    // Opened after them all, the window still goes under them.
     Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
     shown(window);
+    CHECK(top() == overSettings->GetOwnerDocument());
+    overSettings->GetOwnerDocument()->Hide();
+    CHECK(top() == view); // the settings over their popup
+    view->Hide();
+    CHECK(top() == under->GetOwnerDocument());
+    under->GetOwnerDocument()->Hide();
     CHECK(top() == window);
-    CHECK(top() != under->GetOwnerDocument());
-    Rml::Element* overMenu = popups(kPopupsOverMenuZ);
-    CHECK(top() == overMenu->GetOwnerDocument()); // one come out after the window opened
 }
 
 // The card "Clicking through pop-outs onto the config menu": a pop-out over the settings window takes the pointer, so
@@ -532,7 +534,6 @@ TEST(a_popup_over_the_settings_window_keeps_the_pointer_from_the_window_under_it
     window->SetProperty(Rml::PropertyId::Height, Rml::Property(600.0f, Rml::Unit::PX));
     window->Show();
     Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), kPopupDocumentName);
-    popups->SetProperty(Rml::PropertyId::ZIndex, Rml::Property(static_cast<float>(kPopupsOverMenuZ), Rml::Unit::NUMBER));
     Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
     popup->SetClass(kPopupClass, true);
     popup->SetAttribute("style", "left:100px;top:100px;width:200px;height:200px;");

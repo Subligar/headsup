@@ -447,19 +447,6 @@ namespace headsup
         Reevaluate();
     }
 
-    void BarInput::MenuOpen(bool open)
-    {
-        if (!open)
-            m_UnderMenu.reset();
-        else if (!m_UnderMenu)
-            m_UnderMenu = Shown();
-    }
-
-    bool BarInput::OverMenu(PanelWidget pill) const
-    {
-        return m_UnderMenu && std::ranges::find(*m_UnderMenu, pill) == m_UnderMenu->end();
-    }
-
     std::vector<PopupLayer> BarInput::Layers() const
     {
         std::vector<PopupLayer> layers;
@@ -467,9 +454,7 @@ namespace headsup
         bool past = false;
         for (const PanelWidget pill : Shown())
         {
-            layers.push_back(OverMenu(pill) && pill != settings ? PopupLayer::OverMenu
-                             : past                             ? PopupLayer::OverSettings
-                                                                : PopupLayer::UnderSettings);
+            layers.push_back(past ? PopupLayer::OverSettings : PopupLayer::UnderSettings);
             past = past || pill == settings;
         }
         return layers;
@@ -595,8 +580,6 @@ namespace headsup
             m_Hover = m_Under;
         else if (m_Under || !(m_Hover && m_HasPopup[SlotOf(*m_Hover)] && InHoverColumn(m_X, m_Y)))
             m_Hover.reset();
-        if (m_UnderMenu)
-            std::erase_if(*m_UnderMenu, [shown = Shown()](PanelWidget pill) { return std::ranges::find(shown, pill) == shown.end(); });
         if (Shown().empty())
         {
             m_Scrolled.clear();
