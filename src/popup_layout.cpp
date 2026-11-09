@@ -119,7 +119,7 @@ namespace headsup
             };
             std::vector<Scroll> scrolls;
             bool card     = false;
-            float reserve = 0.0f; // its height with its tallest tab picked, which sets its column
+            float reserve = 0.0f; // its height with its tallest tab picked, which sets its row's
             bool beside   = false; // in one row with the card before it
             bool collapsed = false; // as tall as its heading, wherever it is
             float natural  = 0.0f;  // its height as laid out, before a row makes it taller

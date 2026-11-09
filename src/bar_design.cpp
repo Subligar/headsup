@@ -105,6 +105,26 @@ namespace headsup
         }
     }
 
+    namespace
+    {
+        // The text's cards as written, row by row, unknown names left out; WholePopup does the rest.
+        PopupDesign ParsedCards(std::string_view text)
+        {
+            PopupDesign design{{{}}};
+            while (!text.empty())
+            {
+                const size_t at = text.find_first_of(" |");
+                const std::string_view word = text.substr(0, at);
+                for (int c = 0; c < kCardKindCount; ++c)
+                    if (word == kCards[c].file) design.rows.back().push_back(static_cast<CardKind>(c));
+                if (at == std::string_view::npos) break;
+                if (text[at] == kLineBreak) design.rows.emplace_back();
+                text.remove_prefix(at + 1);
+            }
+            return design;
+        }
+    }
+
     BarWidget WidgetOfCard(CardKind card) { return kCards[static_cast<int>(card)].widget; }
 
     std::vector<CardKind> CardsOf(BarWidget kind)
@@ -117,35 +137,23 @@ namespace headsup
 
     const char* CardFileName(CardKind card) { return kCards[static_cast<int>(card)].file; }
 
-    PopupDesign DefaultPopupDesign(BarWidget kind) { return PopupDesignFrom(kind, kPopupDefaults[static_cast<int>(kind)]); }
+    PopupDesign DefaultPopupDesign(BarWidget kind) { return WholePopup(ParsedCards(kPopupDefaults[static_cast<int>(kind)])); }
 
     std::string PopupDesignText(const PopupDesign& design)
     {
         std::string text;
         for (const auto& row : design.rows)
-            for (const CardKind& card : row)
-            {
-                if (!text.empty()) text += &card == &row.front() ? std::string(" ") + kLineBreak + kSpace : std::string(1, kSpace);
-                text += CardFileName(card);
-            }
+        {
+            if (!text.empty()) text += std::string(1, kSpace) + kLineBreak;
+            for (const CardKind card : row)
+                text += (text.empty() ? "" : std::string(1, kSpace)) + CardFileName(card);
+        }
         return text.empty() ? kNoCards : text;
     }
 
     PopupDesign PopupDesignFrom(BarWidget kind, std::string_view text)
     {
-        if (text.empty()) return kPopupDefaults[static_cast<int>(kind)][0] == '\0' ? PopupDesign{} : DefaultPopupDesign(kind);
-        PopupDesign design{{{}}};
-        while (!text.empty())
-        {
-            const size_t at = text.find_first_of(" |");
-            const std::string_view word = text.substr(0, at);
-            for (int c = 0; c < kCardKindCount; ++c)
-                if (word == kCards[c].file) design.rows.back().push_back(static_cast<CardKind>(c));
-            if (at == std::string_view::npos) break;
-            if (text[at] == kLineBreak) design.rows.emplace_back();
-            text.remove_prefix(at + 1);
-        }
-        return WholePopup(std::move(design));
+        return text.empty() ? DefaultPopupDesign(kind) : WholePopup(ParsedCards(text));
     }
 
     PopupDesign WholePopup(PopupDesign design)
