@@ -2507,6 +2507,22 @@ TEST(a_designer_button_dropped_on_a_buttons_right_half_goes_after_it)
     CHECK_EQ(DesignText(BarWidget::Job, window.settings.Widget(job).design), "jobs bar earned tonext | percent");
 }
 
+TEST(a_created_widgets_listed_button_dragged_onto_a_line_goes_in_and_one_dragged_off_the_lines_goes_back)
+{
+    Window window;
+    const PanelWidget made = *CreateWidget(window.settings);
+    window.shown = made;
+    window.Frames(3);
+    const std::string slot = std::to_string(SlotOf(made));
+    const auto part   = [&](const char* start, WidgetPart p) { return "toppanel-widgets-" + std::string(start) + "-" + slot + "-" + std::to_string(static_cast<int>(p)); };
+    const auto design = [&] { return DesignText(BarWidget::Custom, window.settings.Widget(made).design); };
+    CHECK(window.Drag(part("lpart", WidgetPart::ZoneName), "toppanel-widgets-part-" + slot + "-end-1"));
+    CHECK_EQ(design(), "name | zone.name");
+    CHECK(window.Drag(part("part", WidgetPart::ZoneName), part("lpart", WidgetPart::BagIcon)));
+    CHECK_EQ(design(), "name |");
+    CHECK_EQ(window.Said(), "");
+}
+
 TEST(a_pop_out_designer_card_dropped_on_a_card_goes_beside_it_on_the_empty_row_makes_one_and_off_the_rows_leaves)
 {
     Window window;
@@ -2518,21 +2534,22 @@ TEST(a_pop_out_designer_card_dropped_on_a_card_goes_beside_it_on_the_empty_row_m
     const auto listed = [&](CardKind c) { return "toppanel-widgets-pcard-" + slot + "-" + std::to_string(static_cast<int>(c)); };
     const auto design = [&] { return PopupDesignText(window.settings.Widget(made).popup); };
     CHECK_EQ(design(), "none");
+    // Listed cards onto a row's end, and onto the empty row under it for a row of their own.
     CHECK(window.Drag(listed(CardKind::WeatherToday), "toppanel-widgets-card-" + slot + "-end-0"));
-    CHECK_EQ(design(), "weather.today");
+    CHECK(window.Drag(listed(CardKind::WeatherForecast), "toppanel-widgets-card-" + slot + "-end-0"));
+    CHECK(window.Drag(listed(CardKind::ZoneInfluence), "toppanel-widgets-card-" + slot + "-end-1"));
+    CHECK_EQ(design(), "weather.today weather.forecast | zone.influence");
     // On the right half of Today: after it.
     Rml::Element* today = window.Find(card(CardKind::WeatherToday));
     CHECK(today != nullptr);
+    window.Center(card(CardKind::WeatherToday));
     const Rml::Vector2f right{today->GetAbsoluteOffset(Rml::BoxArea::Border).x + 0.8f * today->GetBox().GetSize(Rml::BoxArea::Border).x,
         window.Center(card(CardKind::WeatherToday)).y};
-    CHECK(window.Drag(listed(CardKind::WeatherByElement), right - window.Center(listed(CardKind::WeatherByElement))));
-    CHECK_EQ(design(), "weather.today weather.byElement");
-    // A listed card onto the empty row under them: a row of its own.
-    CHECK(window.Drag(listed(CardKind::ZoneInfluence), "toppanel-widgets-card-" + slot + "-end-1"));
-    CHECK_EQ(design(), "weather.today weather.byElement | zone.influence");
+    CHECK(window.Drag(card(CardKind::ZoneInfluence), right - window.Center(card(CardKind::ZoneInfluence))));
+    CHECK_EQ(design(), "weather.today zone.influence weather.forecast");
     // A row's card onto the lists: out of the pop-out.
-    CHECK(window.Drag(card(CardKind::WeatherByElement), listed(CardKind::BagsList)));
-    CHECK_EQ(design(), "weather.today | zone.influence");
+    CHECK(window.Drag(card(CardKind::WeatherForecast), listed(CardKind::BagsList)));
+    CHECK_EQ(design(), "weather.today zone.influence");
     CHECK_EQ(window.Said(), "");
 }
 

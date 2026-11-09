@@ -334,6 +334,7 @@ TEST(a_part_put_into_a_line_is_on_and_one_taken_out_goes_unless_it_is_the_last_o
     CHECK(!PutPart(d, WidgetPart::ZoneName, 0, 0)); // held already: a move does that
     CHECK(PutPart(d, WidgetPart::Bag1Count, 0, 99)); // past the end, at the end
     CHECK_EQ(DesignText(BarWidget::Custom, d), "performance.fps name bags.count1 | zone.name");
+    CHECK(HoldsPart(d, WidgetPart::ZoneName) && !HoldsPart(d, WidgetPart::WorldShip));
     CHECK(TakePart(d, WidgetPart::PerfFps, false) && TakePart(d, WidgetPart::ZoneName, false));
     CHECK(!TakePart(d, WidgetPart::ZoneName, false)); // not there
     CHECK(TurnOff(d, WidgetPart::Bag1Count, false));

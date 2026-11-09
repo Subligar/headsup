@@ -207,6 +207,7 @@
                 {"key": "link-disabled", "name": "(disabled)"},
                 {"key": "design-last-on", "name": "At least one button must be enabled."},
                 {"key": "design-status-timers", "name": "Use the lines below to change how info is organized in the widget."},
+                {"key": "design-add", "name": "Drag a button into a line to add it:"},
                 {"key": "popup-row-full", "name": "A row can hold at most 3 sections."},
                 {"key": "popup-new-row", "name": "Drop a section here for a new row"},
                 {"key": "popup-add", "name": "Drag a section into a row to add it:"},

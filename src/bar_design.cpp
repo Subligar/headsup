@@ -330,13 +330,15 @@ namespace headsup
 
     bool PutPart(WidgetDesign& design, WidgetPart part, int line, size_t at)
     {
-        if (line < 0 || line >= kDesignLines || std::ranges::any_of(design.lines, [&](const auto& l) {
-                return std::ranges::find(l, part, &DesignChip::part) != l.end();
-            }))
-            return false;
+        if (line < 0 || line >= kDesignLines || HoldsPart(design, part)) return false;
         auto& into = design.lines[static_cast<size_t>(line)];
         into.insert(into.begin() + static_cast<std::ptrdiff_t>(std::min(at, into.size())), DesignChip{part, true});
         return true;
+    }
+
+    bool HoldsPart(const WidgetDesign& design, WidgetPart part)
+    {
+        return std::ranges::any_of(design.lines, [&](const auto& line) { return std::ranges::find(line, part, &DesignChip::part) != line.end(); });
     }
 
     bool TakePart(WidgetDesign& design, WidgetPart part, bool pillShows)

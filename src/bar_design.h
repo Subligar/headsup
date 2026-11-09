@@ -68,6 +68,7 @@ namespace headsup
     WidgetDesign Whole(BarWidget kind, WidgetDesign design);
     // A part the design lacks, on, in line before the part at at, or at its end. False when the design holds it.
     bool PutPart(WidgetDesign& design, WidgetPart part, int line, size_t at);
+    bool HoldsPart(const WidgetDesign& design, WidgetPart part);
     // The part out of the design. False, and nothing changed, when it is not there, or is the last part on and not
     // pillShows (as TurnOff).
     bool TakePart(WidgetDesign& design, WidgetPart part, bool pillShows);

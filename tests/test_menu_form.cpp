@@ -1500,6 +1500,49 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK_EQ(design(), "-nation name | region");
 }
 
+TEST(a_created_widgets_designer_lists_every_widgets_unplaced_buttons_and_puts_takes_and_names_them)
+{
+    Window w;
+    const PanelWidget made = *CreateWidget(w.settings);
+    w.readings.settingsOf  = {made};
+    const std::string slot = std::to_string(SlotOf(made));
+    const std::string base = "toppanel-widgets-part-" + slot + "-", lists = "toppanel-widgets-lpart-" + slot + "-";
+    const auto chip   = [&](WidgetPart p) { return base + std::to_string(static_cast<int>(p)); };
+    const auto listed = [&](WidgetPart p) { return lists + std::to_string(static_cast<int>(p)); };
+    const auto rml    = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
+    const auto design = [&] { return DesignText(BarWidget::Custom, w.settings.Widget(made).design); };
+    const auto shown  = [&](const Form& f, const std::string& id) { return Has(rml(f), ("id=\"" + id + "\"").c_str()); };
+    const Form first = w.Pass();
+    CHECK(shown(first, chip(WidgetPart::CustomName)) && !shown(first, listed(WidgetPart::CustomName)));
+    CHECK(shown(first, listed(WidgetPart::ZoneName)) && shown(first, listed(WidgetPart::ZoneCrest)) &&
+          shown(first, listed(WidgetPart::WorldBeastmen)));
+    // A listed button dropped at a line's end goes there, on, and leaves the lists; on a chip, before it; it is
+    // named after its widget on the line.
+    w.Pass({{base + "end-1", kDropEvent, listed(WidgetPart::ZoneName)}});
+    CHECK_EQ(design(), "name | zone.name");
+    const Form placed = w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, listed(WidgetPart::Bag1Count)}});
+    CHECK_EQ(design(), "name | bags.count1 zone.name");
+    CHECK(!shown(placed, listed(WidgetPart::ZoneName)) && Has(rml(placed), "Name (Zone)</div>"));
+    // Let go off the lines, a button goes back to the lists; the last one on stays, and the designer says why.
+    w.Pass({{chip(WidgetPart::ZoneName), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "name | bags.count1");
+    CHECK(shown(w.Pass(), listed(WidgetPart::ZoneName)));
+    w.Pass({{chip(WidgetPart::Bag1Count) + "-on", kClickEvent, ""}});
+    CHECK_EQ(design(), "name | -bags.count1");
+    const Form refused = w.Pass({{chip(WidgetPart::CustomName), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "name | -bags.count1");
+    CHECK(Has(rml(refused), "class=\"error\""));
+    // A drop ends the drag too: the button moves once and stays.
+    w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::Bag1Count)}, {chip(WidgetPart::Bag1Count), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "name -bags.count1 |");
+    // A Pinned Status button has no switch here either: the pins turn it on.
+    w.Pass({{base + "end-1", kDropEvent, listed(WidgetPart::StatusPin1)}});
+    CHECK(!Has(rml(w.Pass()), (chip(WidgetPart::StatusPin1) + "-on").c_str()));
+    // A built-in widget's designer has no lists.
+    w.readings.settingsOf = {PanelWidget{BarWidget::Zone}};
+    CHECK(!Has(rml(w.Pass()), "-lpart-"));
+}
+
 TEST(the_pop_out_designer_adds_moves_and_removes_cards_and_refuses_a_fourth_in_a_row)
 {
     Window w;

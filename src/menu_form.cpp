@@ -39,7 +39,8 @@ namespace headsup
         constexpr const char* kChipToggle  = " on";   // after it, its toggle's
         constexpr const char* kChipClone   = " clone"; // and its clone button's
         constexpr const char* kChipRemove  = " remove"; // and a copy's remove button's
-        constexpr const char* kPartChip    = "part ";   // a designer chip's name, before its widget's slot and its part
+        // A designer chip's name on a line and, for a created widget, in the lists, before its widget's slot and its part.
+        constexpr const char* kPartChip = "part ", *kListedPartChip = "lpart ";
         // A Pop-out Designer chip's name in a row and in the lists, before its widget's slot and its card.
         constexpr const char* kCardChip = "card ", *kListedCardChip = "pcard ";
         constexpr int kFirstSense = static_cast<int>(DetectionIcon::Link); // Detection Icons' first, after the aggression
@@ -640,14 +641,17 @@ namespace headsup
 
         // A widget's parts as chips on its two lines, each with a toggle and its icon where it has one: a chip drags
         // within its line or to the other, before the chip it is dropped on or to the end. The last part on cannot be
-        // switched off; trying says so under the lines until the next toggle or move.
+        // switched off; trying says so under the lines until the next toggle or move. A created widget's lines take
+        // any widget's parts from the lists under them, by widget, and a chip let go off the lines goes back there.
         void Designer(Context& c, PanelWidget widget)
         {
             Form& form          = c.form;
             WidgetDesign& d     = c.s.Widget(widget).design;
             const auto names    = c.layout.OptionsOf(WindowList::WidgetParts);
-            const std::string base = kPartChip + std::to_string(SlotOf(widget));
-            const std::string chipStart = form.Named(base) + "-";
+            const auto widgets  = c.layout.OptionsOf(WindowList::BarWidgets);
+            const bool created  = widget.kind == BarWidget::Custom;
+            const std::string base = kPartChip + std::to_string(SlotOf(widget)), list = kListedPartChip + std::to_string(SlotOf(widget));
+            const std::string chipStart = form.Named(base) + "-", listedStart = form.Named(list) + "-";
             struct Move
             {
                 int line;
@@ -655,16 +659,39 @@ namespace headsup
                 int toLine;
                 size_t at;
             };
+            struct Put
+            {
+                WidgetPart part;
+                int line;
+                size_t at;
+            };
             std::optional<Move> move; // applied after the lines are written, as the trays' drop is
+            std::optional<Put> put;   // a listed chip dropped on a line
+            std::optional<WidgetPart> taken; // a line's chip let go
             bool toggled = false, refused = false;
             const auto dropped = [&](const std::string& target, int toLine, size_t at) {
                 const FormEvent* event = form.Took(target, kDropEvent);
-                if (event == nullptr || event->value.compare(0, chipStart.size(), chipStart) != 0) return;
+                if (event == nullptr) return;
+                if (event->value.compare(0, listedStart.size(), listedStart) == 0)
+                {
+                    const int part = std::atoi(event->value.c_str() + listedStart.size());
+                    if (part >= 0 && part < kWidgetPartCount) put = Put{static_cast<WidgetPart>(part), toLine, at};
+                    return;
+                }
+                if (event->value.compare(0, chipStart.size(), chipStart) != 0) return;
                 const int part = std::atoi(event->value.c_str() + chipStart.size());
                 for (int line = 0; line < kDesignLines; ++line)
                     for (size_t i = 0; i < d.lines[static_cast<size_t>(line)].size(); ++i)
                         if (static_cast<int>(d.lines[static_cast<size_t>(line)][i].part) == part) move = Move{line, i, toLine, at};
             };
+            const auto picture = [&](size_t part) {
+                const PartMark& mark = c.readings.partMarks[part];
+                const std::string source = PartPicture(mark);
+                return source.empty() ? source
+                                      : "<img class=\"dmark\" src=\"" + source + "\"" +
+                                            AdjustStyle(mark.icon ? AdjustOf(*mark.icon) : AdjustOf(mark.picture)) + "/>";
+            };
+            const auto widgetName = [&](BarWidget kind) { return std::string(Said(widgets[static_cast<size_t>(kind)].name)); };
             form.Raw("<div class=\"design\">");
             for (int line = 0; line < kDesignLines; ++line)
             {
@@ -679,7 +706,7 @@ namespace headsup
                     form.Raw(std::string("<div class=\"btn raised wchip ") + kDesignChipClass + " drag\" id=\"" + id + "\"" + TipAttribute(names[part].tip) + ">");
                     // A Pinned Status button is on while a status is pinned at its rank, which its pin sets.
                     const auto pin = static_cast<size_t>(chip.part) - static_cast<size_t>(WidgetPart::StatusPin1);
-                    const bool pinned = widget.kind == BarWidget::StatusTimers;
+                    const bool pinned = IsPinnedStatus(chip.part);
                     if (pinned) chip.on = pin < c.s.statusPins.size();
                     bool on = chip.on;
                     if (!pinned) form.CheckAt((name + kChipToggle).c_str(), on);
@@ -694,28 +721,55 @@ namespace headsup
                             form.Set(form.Named(name + kChipToggle), FormValueKind::Class, "on", {}, true);
                         }
                     }
-                    const PartMark& mark = c.readings.partMarks[part];
-                    if (const std::string picture = PartPicture(mark); !picture.empty())
-                        form.Raw("<img class=\"dmark\" src=\"" + picture + "\"" +
-                                 AdjustStyle(mark.icon ? AdjustOf(*mark.icon) : AdjustOf(mark.picture)) + "/>");
-                    form.Raw(EscapedRml(Said(names[part].name)) + "</div>");
+                    std::string text(Said(names[part].name));
+                    if (created && WidgetOfPart(chip.part) != BarWidget::Custom) text += " (" + widgetName(WidgetOfPart(chip.part)) + ")";
+                    form.Raw(picture(part) + EscapedRml(text) + "</div>");
                     form.Set(id, FormValueKind::Class, "on", {}, chip.on);
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
                     dropped(id, line, i);
+                    if (created && form.Took(id, kDragEndEvent) != nullptr) taken = chip.part;
                 }
                 const std::string end = form.Id(base + " end " + std::to_string(line));
                 form.Raw("<div class=\"tray-end\" id=\"" + end + "\"></div></div>");
                 dropped(end, line, chips.size());
             }
             form.Raw("</div>");
-            if (move && MovePart(d, move->line, move->index, move->toLine, move->at)) form.changed = true;
+            // A drop also ends its drag: the drop wins.
+            bool changed = false;
+            if (move)
+                changed = MovePart(d, move->line, move->index, move->toLine, move->at);
+            else if (put)
+                changed = PutPart(d, put->part, put->line, put->at);
+            else if (taken && !(changed = TakePart(d, *taken, PillShowsOther(c.s, Panel(c.s), widget))))
+                refused = true;
+            if (changed) form.changed = true;
             if (refused)
                 c.state.partRefused = widget;
-            else if ((toggled || move) && c.state.partRefused == widget)
+            else if ((toggled || changed) && c.state.partRefused == widget)
                 c.state.partRefused.reset();
             if (c.state.partRefused == widget)
                 form.Raw(std::string("<div class=\"error\">") + EscapedRml(Said(Word(c, WindowWord::WidgetTabsDesignLastOn))) +
                          "</div>");
+            if (!created) return;
+            form.Note(Word(c, WindowWord::WidgetTabsDesignAdd));
+            std::optional<BarWidget> group;
+            for (const WidgetPart part : PartsOf(BarWidget::Custom))
+            {
+                if (HoldsPart(d, part)) continue;
+                if (const BarWidget of = WidgetOfPart(part); of != group)
+                {
+                    if (group) form.Raw("</div>");
+                    form.Raw("<div class=\"tray-name\">" + EscapedRml(of == BarWidget::Custom ? CopyName(c, widget) : widgetName(of)) + "</div>");
+                    form.Raw(std::string("<div class=\"tray ") + kPaletteClass + "\">");
+                    group = of;
+                }
+                const auto at        = static_cast<size_t>(part);
+                const std::string id = form.Id(list + " " + std::to_string(at));
+                form.Raw(std::string("<div class=\"btn raised wchip ") + kDesignChipClass + " drag\" id=\"" + id + "\"" +
+                         TipAttribute(names[at].tip) + ">" + picture(at) + EscapedRml(Said(names[at].name)) + "</div>");
+                form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
+            }
+            if (group) form.Raw("</div>");
         }
 
         // A widget's pop-out as rows of chips, a card each, then the lists of the cards it does not show, by widget, its
