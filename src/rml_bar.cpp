@@ -571,11 +571,13 @@ namespace headsup
         const std::optional<PopupSpot> placed = PlacedSpot(input.DraggedPopup(open), look.settings.Widget(open).popupSpot);
         // Laid out for the room under the bar wherever it is placed: a lower spot's smaller room would flow its cards
         // into more columns, widening it.
+        std::optional<SettingsRoom> room = settings ? std::optional(settingsRoom.value_or(SettingsRoom{})) : std::nullopt;
+        // The preview goes on the side of the popup with more of the screen: toward its middle, from the widget.
+        if (preview == SettingsPreview::Cards) room->cardsLeft = anchor->x + anchor->width / 2.0f > screenWidth / 2.0f;
         PopupKey key{preview == SettingsPreview::Cards ? PreviewPopupContent(open, state, look.settings)
                                                        : PanelPopupContent(open, state, look.settings),
             pinned, m.height, m.popupText,
-            PopupRoom(barBottom, screenHeight, m.gap, out), popup.widest,
-            settings ? std::optional(settingsRoom.value_or(SettingsRoom{})) : std::nullopt};
+            PopupRoom(barBottom, screenHeight, m.gap, out), popup.widest, room};
         bool fresh            = false;
         const PopupLayout& pl = popup.layout.Get(std::move(key), [&](const PopupKey& k) {
             fresh           = true;

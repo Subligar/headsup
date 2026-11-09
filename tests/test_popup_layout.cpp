@@ -830,49 +830,62 @@ TEST(the_cog_chip_sits_left_of_the_pin_and_settings_take_the_room_they_ask_in_pl
     CHECK(alone.pin.width > 0.0f && alone.cog.width == 0.0f && Of(alone, PopupPiece::Kind::CogChip).empty());
 }
 
-TEST(a_pop_out_being_designed_keeps_its_cards_over_its_settings_at_their_own_width_scaled_to_half_the_room_as_a_picture)
+TEST(a_pop_out_being_designed_shows_its_cards_beside_its_settings_at_their_own_size_shrunk_only_to_the_room_as_a_picture)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);
     const float pad    = m.popupPadding;
     PopupContent content = Sample();
     content.sections[0].collapsePress = "collapse elements"; // a card chip, which a picture of the cards has not
-    const SettingsRoom wide{900.0f, 200.0f, SettingsPreview::Cards};
     const PopupLayout real = LayoutPopup(content, m, true, Fake, 2000.0f, 0.0f, std::nullopt);
-    const PopupLayout l    = LayoutPopup(content, m, true, Fake, 2000.0f, 0.0f, wide);
-    const float top        = l.lines[0].bottom + m.rowGap; // under the title, as the cards start
-    const float cardsBottom = real.lines.back().bottom, cardsWidth = real.width - 2.0f * pad;
-    // The same cards where the real pop-out has them, unscaled in the layout (RmlUi scales them), at the pop-out's
-    // own width and not the settings'.
+    const std::vector<const PopupPiece*> stacked = Of(real, PopupPiece::Kind::Card);
+    CHECK(stacked.size() == 2);
+    if (stacked.size() != 2) return;
+    // The gap between two cards, which the cards keep from the settings too.
+    const float gap = stacked[1]->y - (stacked[0]->y + stacked[0]->height);
+    const SettingsRoom right{300.0f, 200.0f, SettingsPreview::Cards};
+    SettingsRoom left = right;
+    left.cardsLeft    = true;
+    const PopupLayout l = LayoutPopup(content, m, true, Fake, 2000.0f, 0.0f, right);
+    const float top     = l.lines[0].bottom + m.rowGap; // under the title, as the cards start
+    const float cardsBottom = real.lines.back().bottom, cardsWidth = real.width - 2.0f * pad, cardsHeight = cardsBottom - top;
+    // The same cards where the real pop-out has them, unscaled in the layout (RmlUi scales and moves them).
     const auto cards = [](const PopupLayout& p) {
         std::vector<std::tuple<float, float, float, float>> out;
         for (const PopupPiece* c : Of(p, PopupPiece::Kind::Card)) out.emplace_back(c->x, c->y, c->width, c->height);
         return out;
     };
-    CHECK(!cards(l).empty() && cards(l) == cards(real));
-    // The popup kept as wide as it has been (least) widens the popup, not the cards.
-    const PopupLayout kept = LayoutPopup(content, m, true, Fake, 2000.0f, 1000.0f, wide);
-    CHECK(cards(kept) == cards(real) && Near(kept.width, 1000.0f));
-    CHECK(l.preview && Near(l.preview->scale, 1.0f) && Near(l.preview->top, top));
-    CHECK(Near(l.width, 900.0f + 2.0f * pad) && Near(l.preview->shift, (900.0f - cardsWidth) / 2.0f));
-    // The settings body a row gap under the cards, its height as asked, the popup ending under it.
-    CHECK(Near(l.body.y, cardsBottom + m.rowGap) && Near(l.body.height, 200.0f) && Near(l.body.width, 900.0f));
-    CHECK(Near(l.height, l.body.y + 200.0f + pad));
+    CHECK(gap > 0.0f && cards(l) == cards(real));
+    // The settings at their own width and height under the title, the cards at their own size right of them.
+    CHECK(l.preview && Near(l.preview->scale, 1.0f) && Near(l.preview->top, top) && Near(l.preview->shift, 300.0f + gap));
+    CHECK(Near(l.body.x, pad) && Near(l.body.y, top) && Near(l.body.width, 300.0f) && Near(l.body.height, 200.0f));
+    CHECK(Near(l.width, 300.0f + gap + cardsWidth + 2.0f * pad) && Near(l.height, std::max(top + 200.0f, cardsBottom) + pad));
+    // Toward the middle of a screen on their left, the cards go first and the settings after them.
+    const PopupLayout toLeft = LayoutPopup(content, m, true, Fake, 2000.0f, 0.0f, left);
+    CHECK(cards(toLeft) == cards(real) && Near(toLeft.preview->shift, 0.0f) && Near(toLeft.body.x, pad + cardsWidth + gap));
+    CHECK(Near(toLeft.width, l.width) && Near(toLeft.body.width, 300.0f));
     // A picture: no chip or scroll of a card; the title's pin and cog kept.
     CHECK(l.chips.empty() && l.scrolls.empty() && l.pin.width > 0.0f && l.cog.width > 0.0f);
     CHECK(real.chips.size() == 1); // the collapse chip was there to drop
-    // Taller than half the room under the title, the cards shrink to half of it; the body gets the rest.
-    const float cardsHeight = cardsBottom - top;
-    const float room        = top + cardsHeight + pad; // half of what is under the title is half the cards
-    const PopupLayout small = LayoutPopup(content, m, true, Fake, room, 0.0f, wide);
-    CHECK(Near(small.preview->scale, 0.5f) && Near(small.lines.back().bottom, top + cardsHeight / 2.0f));
-    CHECK(Near(small.body.y, top + cardsHeight / 2.0f + m.rowGap) && Near(small.body.height, room - small.body.y - pad));
-    CHECK(Near(small.preview->shift, (900.0f - cardsWidth / 2.0f) / 2.0f) && small.height <= room);
-    // Not yet laid out, the title and the cards alone; a pop-out of no cards puts the body straight under the title.
+    // The popup kept as wide as it has been (least) widens the popup, not the cards or the settings.
+    const PopupLayout kept = LayoutPopup(content, m, true, Fake, 2000.0f, 1000.0f, right);
+    CHECK(cards(kept) == cards(real) && Near(kept.width, 1000.0f) && Near(kept.body.width, 300.0f));
+    // Taller than the room under the title, they shrink to it: the room of the taller card alone, which no card
+    // outgrows, so none goes on beside itself. The settings are cut to it and scroll.
+    const float under = std::max(stacked[0]->height, stacked[1]->height), room = top + under + pad;
+    const PopupLayout small = LayoutPopup(content, m, true, Fake, room, 0.0f, right);
+    CHECK(cards(small) == cards(real) && Near(small.preview->scale, under / cardsHeight));
+    CHECK(Near(small.lines.back().bottom, top + under) && Near(small.body.y, top) && Near(small.body.height, under));
+    CHECK(Near(small.width, 300.0f + gap + cardsWidth * under / cardsHeight + 2.0f * pad) && Near(small.height, room));
+    // Not yet laid out, the title and the cards alone; a pop-out of no cards has the settings alone under the title.
     const PopupLayout early = LayoutPopup(content, m, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 0.0f, SettingsPreview::Cards});
     CHECK(Near(early.height, cardsBottom + pad) && early.body.height == 0.0f);
-    const PopupLayout bare = LayoutPopup(PopupContent{}, m, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 80.0f, SettingsPreview::Cards});
-    CHECK(Of(bare, PopupPiece::Kind::Card).empty() && Near(bare.body.y, bare.lines[0].bottom + m.rowGap) &&
-          Near(bare.body.height, 80.0f) && bare.preview && Near(bare.preview->scale, 1.0f));
+    for (const bool side : {false, true})
+    {
+        const PopupLayout bare =
+            LayoutPopup(PopupContent{}, m, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 80.0f, SettingsPreview::Cards, side});
+        CHECK(Of(bare, PopupPiece::Kind::Card).empty() && Near(bare.body.x, pad) && Near(bare.body.y, bare.lines[0].bottom + m.rowGap));
+        CHECK(Near(bare.body.height, 80.0f) && Near(bare.height, bare.body.y + 80.0f + pad) && bare.preview);
+    }
     // Without the preview, as before: no cards.
     CHECK(Of(LayoutPopup(content, m, true, Fake, 2000.0f, 0.0f, SettingsRoom{100.0f, 200.0f}), PopupPiece::Kind::Card).empty());
 }

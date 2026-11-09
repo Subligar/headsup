@@ -160,7 +160,7 @@
               "key": "widget-tabs",
               "rows": [
                 {"key": "name", "name": "Name", "tip": "What this widget is called: on its button in Widget Layout, in Link Widget's list and at the top of its pop-out. Its Widget Name button shows it on the panel. Up to 32 characters; left empty, it goes back to Custom Widget."},
-                {"key": "edit", "name": "Edit", "tip": "Which of this widget's two designs you are editing. Top Panel Widget shows its Widget Designer and the rest of its settings. Pop-out shows its Pop-out Designer, with the pop-out itself above these settings as you build it. It starts on Top Panel Widget."},
+                {"key": "edit", "name": "Edit", "tip": "Which of this widget's two designs you are editing. Top Panel Widget shows its Widget Designer and the rest of its settings. Pop-out shows its Pop-out Designer, with the pop-out itself beside these settings as you build it. It starts on Top Panel Widget."},
                 {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
                 {"key": "popup-design", "name": "Pop-out Designer"},
                 {"key": "icon", "name": "Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is {default}."},

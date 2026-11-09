@@ -370,7 +370,7 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     CHECK(!Has(pills, "id=\"outer\""));
 }
 
-TEST(a_previewed_pop_outs_cards_are_drawn_in_one_box_scaled_about_the_titles_foot_and_shifted_to_the_middle)
+TEST(a_previewed_pop_outs_cards_are_drawn_in_one_box_scaled_about_the_titles_foot_and_shifted_beside_the_settings)
 {
     Settings settings;
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);

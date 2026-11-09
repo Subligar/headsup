@@ -213,7 +213,7 @@ namespace headsup
             std::optional<float> left, top, width, height;
             Memo<PopupKey, PopupLayout> layout;
             // The widest it has been since it opened, which it keeps as its text changes with the time; its content's,
-            // its settings' (settings) or its preview's over them (preview), apart.
+            // its settings' (settings) or its preview's beside them (preview), apart.
             bool shown = false, settings = false;
             SettingsPreview preview = SettingsPreview::None;
             float widest = 0.0f;
