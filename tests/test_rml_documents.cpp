@@ -318,6 +318,86 @@ TEST(a_widget_shows_its_background_by_its_own_class_and_its_pill_is_rounded_by_i
         }
 }
 
+TEST(a_widget_with_its_own_text_draws_its_lines_and_icons_at_its_sizes_and_the_others_at_the_panels)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    for (const BarShape shape : {BarShape::Ornate, BarShape::Pills})
+    {
+        BarPalette palette = settings.customPalette;
+        palette.shape      = shape;
+        const BarLook look = LookOf(palette, settings);
+        // Weather's own: Marcellus SC 20 px over 10 px, and icons at 40% of the pill's inside.
+        const BarMetrics own = MetricsFor(kBarHeight, shape, kDefaultFontRatio, kDefaultPopupScale, 40);
+        const WidgetText weather{BarWidget::Weather, kMarcellusSC, kMarcellusSC, own, TextRow{20, 10, 6.0f, 26.0f, 20, 10.0f},
+            BarTextPlace{BarLinePlace{24, 6.0f, 2.0f}, BarLinePlace{24, 6.0f, 2.0f}, BarLinePlace{24, 10.0f, 2.0f},
+                BarLinePlace{24, 10.0f, 2.0f}, BarLinePlace{12, 26.0f, 1.0f}, {}, {}}};
+        test::RmlSession rml;
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, {weather}), "bar");
+        bar->Show();
+        WidgetContent c;
+        c.shown    = true;
+        c.icons    = {Icon::Gil};
+        c.title    = {Text("Clear")};
+        c.subtitle = {Text("Firesday")};
+        struct Drawn
+        {
+            float title = 0.0f, detail = 0.0f, icon = 0.0f;
+        };
+        const auto drawn = [&](BarWidget kind) {
+            Rml::Element* e = bar->GetElementById(WidgetId(kind));
+            e->SetClass(kHiddenClass, false);
+            e->SetInnerRML(WidgetRml(c, look, {}));
+            rml.context->Update();
+            Rml::ElementList icons, titles, details;
+            e->GetElementsByClassName(icons, "icon");
+            e->GetElementsByClassName(titles, "title");
+            e->GetElementsByClassName(details, "detail");
+            CHECK(!icons.empty() && !titles.empty() && !details.empty());
+            return Drawn{titles.front()->GetComputedValues().font_size(), details.front()->GetComputedValues().font_size(),
+                icons.front()->GetBox().GetSize(Rml::BoxArea::Content).x};
+        };
+        const Drawn zone = drawn(BarWidget::Zone), ownDrawn = drawn(BarWidget::Weather);
+        CHECK(zone.title == 13.0f && zone.detail == 11.0f && std::fabs(zone.icon - look.metrics.icon) < 0.01f);
+        CHECK(ownDrawn.title == 20.0f && ownDrawn.detail == 10.0f && std::fabs(ownDrawn.icon - own.icon) < 0.01f);
+        CHECK(own.icon < look.metrics.icon);
+        CHECK_EQ(rml.Said(), "");
+    }
+}
+
+TEST(a_pills_pop_out_draws_in_its_own_faces_and_every_other_in_the_panels)
+{
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    const PopupFaces panel = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
+        PopupFace{"Barlow Condensed", 16, 20}, PopupFace{"Barlow Condensed", 16, 20}};
+    PopupFaces own = panel;
+    for (PopupFace& face : own)
+    {
+        face.family = kMarcellusSC;
+        face.pixels += 6;
+        face.line += 7;
+    }
+    test::RmlSession rml;
+    Rml::ElementDocument* popups =
+        rml.context->LoadDocumentFromMemory(PopupDocument(look, panel, {PillFaces{BarWidget::Zone, own}}), "popups");
+    popups->Show();
+    const auto text = [&](PanelWidget pill) {
+        Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+        popup->SetClass(kPopupClass, true);
+        popup->SetClass(PopupScope(pill), true);
+        popup->SetInnerRML("<div class=\"p f1\">Firesday</div>");
+        rml.context->Update();
+        return popup->GetFirstChild();
+    };
+    Rml::Element* zone = text(BarWidget::Zone);
+    Rml::Element* weather = text(BarWidget::Weather);
+    CHECK_EQ(zone->GetComputedValues().font_size(), 20.0f);
+    CHECK_EQ(weather->GetComputedValues().font_size(), 14.0f);
+    CHECK_EQ(rml.Said(), "");
+}
+
 TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_shape)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},

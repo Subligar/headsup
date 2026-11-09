@@ -146,6 +146,22 @@ namespace headsup
         return settings.barTextFont.empty() ? kDetailFont : Interned(settings.barTextFont);
     }
 
+    const char* WidgetTitleFont(const Settings& settings, BarShape shape, const WidgetOptions& own)
+    {
+        return own.titleFont.empty() ? BarTitleFont(settings, shape) : Interned(own.titleFont);
+    }
+
+    const char* WidgetTextFont(const Settings& settings, const WidgetOptions& own)
+    {
+        return own.textFont.empty() ? BarTextFont(settings) : Interned(own.textFont);
+    }
+
+    BarMetrics MetricsOf(const Settings& s, BarShape shape, const WidgetOptions& own)
+    {
+        return MetricsFor(s.barHeight, shape, own.fontRatio.value_or(s.barFontRatio), own.popupTextScale.value_or(s.popupTextScale),
+            own.iconScale.value_or(s.barIconScale), s.popupWidthScale, s.popupHeightScale);
+    }
+
     const char* FishBarFont(const Settings& settings)
     {
         return settings.fishBarFont.empty() ? BarTextFont(settings) : Interned(settings.fishBarFont);

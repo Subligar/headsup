@@ -15,6 +15,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace headsup
@@ -98,6 +99,7 @@ namespace headsup
             std::array<WidgetContent, kPanelSlots> contents;
             std::array<bool, kPanelSlots> hasPopup{}; // a combined pill's first widget's when any of its widgets has one
             PanelGroups panel;                        // the panel as it is drawn, its widgets combined
+            std::array<std::optional<WidgetText>, kPanelSlots> text; // a widget's own, where its fonts or sizes are
         };
         // The help bar's text follows the game's, its fonts and their sizes, and the room its lines and its caption
         // have beside the bag's count.
@@ -143,9 +145,16 @@ namespace headsup
             const char* titleFont, const char* detailFont);
         Rows MakeRows(RmlHost& host, const BarMetrics& metrics, const char* titleFont, const char* detailFont,
             int helpText = kAutoBarTextSize);
+        // The same for a widget's own text, kept for each one asked for while it is asked for.
+        const Rows& OwnRowsFor(RmlHost& host, const BarMetrics& metrics, BarShape shape, float fontRatio,
+            const char* titleFont, const char* detailFont);
+        // The widgets with text of their own, as the document's rules, their content and their popups take it.
+        void OwnText(RmlHost& host, const BarLook& look, Widgets& widgets);
+        // The look a widget is measured and drawn in, and its pill's popup: the bar's, with its own text where it has some.
+        static BarLook LookOf(const BarLook& look, const Widgets& widgets, int slot);
         BarLinePlace PlaceLine(RmlHost& host, const char* family, int pixels, const char* glyphs, float top);
         // Builds the document again when what it is made from changed. False when RmlUi refused it.
-        bool Document(RmlHost& host, const BarLook& look, const BarTextPlace& place);
+        bool Document(RmlHost& host, const BarLook& look, const BarTextPlace& place, const Widgets& widgets);
         BarLayout PlaceWidgets(RmlHost& host, const BarLook& look, const BarState& state, float screenWidth,
             Widgets& widgets);
         void ShowWidgets(const BarLook& look, const BarLayout& layout, const Widgets& widgets, const BarInput& input,
@@ -157,12 +166,15 @@ namespace headsup
         // Places each popup the input shows in the host's overlay, the last on top, and hides the others: where each
         // went, with its cards' tabs and the parts that scroll at their places on the screen.
         std::vector<PopupPlace> ShowPopups(RmlHost& host, const BarLook& look, const BarState& state,
-            const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden);
+            const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
+            const Widgets& widgets);
         // One pill's popup, as ShowPopups places it, in its layer's document; nothing when its pill is not on the bar.
         std::optional<PopupPlace> ShowPopup(RmlHost& host, const BarLook& look, const BarState& state,
             const BarLayout& layout, float screenWidth, float screenHeight, const BarInput& input, bool hidden,
-            PanelWidget open, PopupLayer layer);
-        bool PopupDocumentFor(RmlHost& host, const BarLook& look);
+            const Widgets& widgets, PanelWidget open, PopupLayer layer);
+        bool PopupDocumentFor(RmlHost& host, const BarLook& look, const Widgets& widgets);
+        // A look's popup faces, as RmlUi sets them.
+        PopupFaces FacesOf(RmlHost& host, const BarLook& look);
         void ClosePopup();
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);
 
@@ -177,6 +189,7 @@ namespace headsup
 
         GdiText m_Gdi; // the bar's text rows are sized by GDI's ink, as the bar drawn with it is
         Memo<LinesKey, Rows> m_Rows;
+        std::vector<std::pair<LinesKey, Rows>> m_OwnRows, m_OwnRowsBefore; // this frame's, and the last frame's
         Rml::ElementDocument* m_Document = nullptr;
         std::string m_DocumentText, m_StripSource; // what the document was built from, and its strip image
         bool m_Visible = false;
@@ -208,7 +221,6 @@ namespace headsup
             std::array<std::unordered_map<std::string, float>, kPopupFontCount> widths;
         };
         std::array<Popup, kPanelSlots> m_Popups;
-        PopupFaces m_PopupFaces;
         std::vector<FaceLine> m_FaceLines;
         Memo<FitKey, std::string> m_TitleFit, m_SubtitleFit;
         std::vector<FaceDigit> m_WidestDigits;

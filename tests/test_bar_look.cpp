@@ -160,6 +160,30 @@ TEST(pills_frame_every_widget_while_unlit_only_with_show_widget_background)
     CHECK(target.has_value() && target->top == p.pill && target->border == p.accent);
 }
 
+TEST(a_widgets_own_sizes_and_fonts_take_the_place_of_the_top_panels_where_it_set_them)
+{
+    Settings s;
+    s.barIconScale = 80;
+    s.barTitleFont = "Georgia";
+    WidgetOptions own;
+    const BarMetrics panel = MetricsOf(s, BarShape::Pills, own);
+    CHECK(panel == MetricsFor(s.barHeight, BarShape::Pills, s.barFontRatio, s.popupTextScale, s.barIconScale,
+                       s.popupWidthScale, s.popupHeightScale));
+    CHECK(std::string(WidgetTitleFont(s, BarShape::Pills, own)) == "Georgia");
+    CHECK(WidgetTextFont(s, own) == BarTextFont(s));
+    own.fontRatio      = 2.0f;
+    own.iconScale      = 40;
+    own.popupTextScale = 1.5f;
+    own.titleFont      = "Verdana";
+    own.textFont       = "Arial";
+    const BarMetrics m = MetricsOf(s, BarShape::Pills, own);
+    CHECK(Near(m.title, panel.title) && Near(m.subtitle, m.title / 2.0f) && Near(m.icon, panel.icon / 2.0f));
+    CHECK(Near(m.popupText, 1.5f * kPopupTextPixels) && Near(m.popupWidth, panel.popupWidth));
+    CHECK(std::string(WidgetTitleFont(s, BarShape::Pills, own)) == "Verdana");
+    CHECK(std::string(WidgetTextFont(s, own)) == "Arial");
+    CHECK(WidgetTextFont(s, own) == WidgetTextFont(s, own)); // one pointer per name, as the panel's
+}
+
 TEST(a_widget_of_figures_draws_its_title_in_the_detail_font_in_every_theme)
 {
     // Marcellus SC's 0 reads as an O and its small caps turn "2d 8h" into capitals: figures take Barlow Condensed at
