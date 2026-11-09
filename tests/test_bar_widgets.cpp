@@ -3338,6 +3338,35 @@ TEST(a_card_with_nothing_to_show_drops_out_of_its_row_and_the_rest_take_its_plac
     CHECK((Rows(PanelPopupContent(made, state, settings)) == std::vector<std::pair<std::string, bool>>{{"Today", false}}));
 }
 
+TEST(a_previewed_pop_outs_target_cards_show_a_made_up_mob_while_nothing_is_targeted_and_the_target_once_one_is)
+{
+    Settings settings;
+    BarState state  = RonfaureState();
+    state.spellName = SpellNumber;
+    state.itemName  = [](uint16_t) { return "Item"; };
+    const PanelWidget made      = *CreateWidget(settings);
+    settings.Widget(made).popup = PopupDesign{{{CardKind::TargetSpells, CardKind::TargetMoves}, {CardKind::TargetDrops},
+        {CardKind::TargetSpawn, CardKind::ZoneInfluence}}};
+    // Nothing targeted, the pop-out itself has no Target card.
+    CHECK((Rows(PanelPopupContent(made, state, settings)) == std::vector<std::pair<std::string, bool>>{{"Influence", false}}));
+    // Its preview has Yagudo Acolyte's (data/phoenix_mobs.tsv 17371176, Giddeus, level 5 to 7): at 7, the spells of
+    // its list 14 (data/phoenix_spells.tsv) whose levels hold 7, and the moves of its list 183 (phoenix_skills.tsv).
+    const PopupContent preview = PreviewPopupContent(made, state, settings);
+    CHECK((Rows(preview) == std::vector<std::pair<std::string, bool>>{{"Spells", false}, {"TP Moves", true}, {"Drops", false},
+                                {"Spawn", false}, {"Influence", true}}));
+    std::vector<std::string> spells;
+    for (const PopupCell& cell : preview.sections[0].rows[0].cells)
+        spells.push_back(Joined(cell.text));
+    CHECK((spells == std::vector<std::string>{"S1", "S23", "S58", "S28", "S14", "S43"}));
+    CHECK(Joined(preview.sections[1].rows[0].cells[0].text) == "Feather Storm");
+    CHECK(Joined(preview.title) == "Custom Widget"); // the created widget's, not the mob's
+    // A target of its own is shown as the pop-out shows it.
+    const ActorInfo goblin = Goblin();
+    state.target           = &goblin;
+    CHECK(PreviewPopupContent(made, state, settings) == PanelPopupContent(made, state, settings));
+    CHECK(Rows(PanelPopupContent(made, state, settings)).size() == 4); // the goblin casts nothing
+}
+
 TEST(another_widgets_card_takes_that_widgets_first_copys_settings)
 {
     Settings settings;

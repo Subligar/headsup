@@ -1994,6 +1994,33 @@ namespace headsup
         return content;
     }
 
+    PopupContent PreviewPopupContent(PanelWidget head, const BarState& state, const Settings& settings)
+    {
+        if (state.target != nullptr) return PanelPopupContent(head, state, settings);
+        // Alive and unchecked, as the tracker fills a mob it sees with your level unknown.
+        static const ActorInfo mob = [] {
+            ActorInfo a;
+            a.kind     = EntityKind::Mob;
+            a.alive    = true;
+            a.serverId = kPreviewMob;
+            a.index    = kPreviewMob & kTargetIndexBits;
+            a.mob      = MobById(kPreviewMob);
+            a.level    = MakeLabel(a.mob, nullptr, 0);
+            std::snprintf(a.name, sizeof(a.name), "%s", a.mob->name);
+            EntityState& st = a.state;
+            st.kind       = EntityKind::Mob;
+            st.alive      = true;
+            st.classified = Classify(a.mob, 0, PlayerState{});
+            st.nature     = NatureOf(st.classified, false);
+            st.row        = MobRowOf(st.nature, false, false, true);
+            st.toughness  = a.level.shade;
+            return a;
+        }();
+        BarState previewed = state;
+        previewed.target   = &mob;
+        return PanelPopupContent(head, previewed, settings);
+    }
+
     PopupContent BarPopupContent(PanelWidget widget, const BarState& state, const Settings& settings)
     {
         PopupContent popup;

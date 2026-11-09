@@ -166,6 +166,12 @@ namespace headsup
     // The popup a pill opens, named by its first widget: that widget's, or for a combined pill each of its widgets'
     // that is shown and has one, their titles joined and their cards one after another.
     PopupContent PanelPopupContent(PanelWidget head, const BarState& state, const Settings& settings);
+    // The mob a pop-out's preview shows its Target cards for while nothing is targeted, so you see them filled: Yagudo
+    // Acolyte in Giddeus, a white mage with drops, a steal, TP moves, spells and a respawn.
+    constexpr uint32_t kPreviewMob = 17371176;
+    // The popup a pill opens while its design is previewed beside its settings: PanelPopupContent, its Target's cards
+    // for kPreviewMob while nothing is targeted.
+    PopupContent PreviewPopupContent(PanelWidget head, const BarState& state, const Settings& settings);
     // A widget's currency's picture (kCurrencyTable's place, or kYourConquestCurrency) as a span of no text: gil's coin,
     // a nation's crest for its conquest points, or the game's item; one with none has no mark (HasMark).
     Span CurrencyMark(int currency, Nation yours);
