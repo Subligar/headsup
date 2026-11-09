@@ -79,11 +79,11 @@ TEST(the_help_bar_lines_up_its_caption_the_bags_count_and_its_help_in_one_row)
 {
     const HelpBarSpan room{8.0f, 1000.0f};
     // From x 8: padding 16, the caption's 80, a gap of 6, the count's 40, padding again, the help's 200, padding.
-    const HelpBarRow row = PlaceHelpBar(room, HelpAnchor::Left, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f);
+    const HelpBarRow row = PlaceHelpBar(room, HelpAnchor::Left, false, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f);
     CHECK(row.captionX == 24.0f && row.bagX == 110.0f && row.helpX == 166.0f);
     // The help alone starts at the padding, and so does the caption alone.
-    CHECK(PlaceHelpBar(room, HelpAnchor::Left, 50.0f, 28.0f, 16.0f, 6.0f, 0.0f, 0.0f, 200.0f).helpX == 24.0f);
-    CHECK(PlaceHelpBar(room, HelpAnchor::Left, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 0.0f, 0.0f).captionX == 24.0f);
+    CHECK(PlaceHelpBar(room, HelpAnchor::Left, false, 50.0f, 28.0f, 16.0f, 6.0f, 0.0f, 0.0f, 200.0f).helpX == 24.0f);
+    CHECK(PlaceHelpBar(room, HelpAnchor::Left, false, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 0.0f, 0.0f).captionX == 24.0f);
 }
 
 // Round 22, "The width doesnt change anything for the help bar": its box wrapped its text, and Width only cut it.
@@ -92,10 +92,30 @@ TEST(the_help_bars_box_is_its_room_whatever_its_text_with_the_text_at_the_anchor
     const HelpBarSpan room{8.0f, 1000.0f};
     for (const HelpAnchor anchor : {HelpAnchor::Left, HelpAnchor::Center, HelpAnchor::Right})
         for (const float help : {0.0f, 200.0f, 600.0f})
-            CHECK(PlaceHelpBar(room, anchor, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, help).box ==
+            CHECK(PlaceHelpBar(room, anchor, false, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, help).box ==
                   (BarRect{8.0f, 50.0f, 1000.0f, 28.0f}));
     // The 374 px row against the room's right edge, or in its middle (626 spare, 313 each side).
-    const HelpBarRow right = PlaceHelpBar(room, HelpAnchor::Right, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f);
+    const HelpBarRow right = PlaceHelpBar(room, HelpAnchor::Right, false, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f);
     CHECK(right.captionX == 650.0f && right.bagX == 736.0f && right.helpX == 792.0f);
-    CHECK(PlaceHelpBar(room, HelpAnchor::Center, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f).captionX == 337.0f);
+    CHECK(PlaceHelpBar(room, HelpAnchor::Center, false, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f).captionX == 337.0f);
+}
+
+// Round 22: "a setting to shrink help to size of text and make width Max Width".
+TEST(a_shrunk_help_bars_box_wraps_its_text_at_the_anchor_inside_its_room)
+{
+    const HelpBarSpan room{8.0f, 1000.0f};
+    // The 374 px row of padding 16, the caption's 80, a gap of 6, the count's 40, padding, the help's 200, padding.
+    const HelpBarRow left = PlaceHelpBar(room, HelpAnchor::Left, true, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f);
+    CHECK(left.box == (BarRect{8.0f, 50.0f, 374.0f, 28.0f}) && left.captionX == 24.0f && left.helpX == 166.0f);
+    const HelpBarRow right = PlaceHelpBar(room, HelpAnchor::Right, true, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f);
+    CHECK(right.box == (BarRect{634.0f, 50.0f, 374.0f, 28.0f}) && right.captionX == 650.0f);
+    const HelpBarRow center = PlaceHelpBar(room, HelpAnchor::Center, true, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f);
+    CHECK(center.box == (BarRect{321.0f, 50.0f, 374.0f, 28.0f}) && center.captionX == 337.0f);
+    // The same row placed in the whole room, unshrunk, puts its text in the same place.
+    for (const HelpAnchor anchor : {HelpAnchor::Left, HelpAnchor::Center, HelpAnchor::Right})
+    {
+        const HelpBarRow shrunk = PlaceHelpBar(room, anchor, true, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f);
+        const HelpBarRow whole  = PlaceHelpBar(room, anchor, false, 50.0f, 28.0f, 16.0f, 6.0f, 80.0f, 40.0f, 200.0f);
+        CHECK(shrunk.captionX == whole.captionX && shrunk.bagX == whole.bagX && shrunk.helpX == whole.helpX);
+    }
 }

@@ -95,7 +95,7 @@ namespace headsup
         return HelpBarSpan{margin + AnchorShift(anchor, whole - width) + static_cast<float>(offset), width};
     }
 
-    HelpBarRow PlaceHelpBar(HelpBarSpan room, HelpAnchor anchor, float top, float height, float padding,
+    HelpBarRow PlaceHelpBar(HelpBarSpan room, HelpAnchor anchor, bool shrink, float top, float height, float padding,
         float gap, float captionWidth, float bagWidth, float helpWidth)
     {
         HelpBarRow row;
@@ -114,11 +114,14 @@ namespace headsup
             row.helpX = x;
             x += helpWidth;
         }
-        const float rowX = room.x + AnchorShift(anchor, room.width - (x + padding));
+        const float rowWidth = x + padding;
+        const float boxWidth = shrink ? std::min(rowWidth, room.width) : room.width;
+        const float boxX     = room.x + AnchorShift(anchor, room.width - boxWidth);
+        const float rowX     = boxX + AnchorShift(anchor, boxWidth - rowWidth);
         row.captionX += rowX;
         if (bagWidth > 0.0f) row.bagX += rowX;
         if (helpWidth > 0.0f) row.helpX += rowX;
-        row.box = BarRect{room.x, top, room.width, height};
+        row.box = BarRect{boxX, top, boxWidth, height};
         return row;
     }
 

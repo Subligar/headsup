@@ -46,7 +46,7 @@ namespace headsup
         float captionX = 0.0f, bagX = 0.0f, helpX = 0.0f;
         bool operator==(const HelpBarRow&) const = default;
     };
-    HelpBarRow PlaceHelpBar(HelpBarSpan room, HelpAnchor anchor, float top, float height, float padding,
+    HelpBarRow PlaceHelpBar(HelpBarSpan room, HelpAnchor anchor, bool shrink, float top, float height, float padding,
         float gap, float captionWidth, float bagWidth, float helpWidth);
     // The room the help bar may take: margin in from both sides of the screen, percent of the screen's width less the
     // left margin, at anchor and moved offset pixels right; with full the whole screen, edge to edge, unmoved.

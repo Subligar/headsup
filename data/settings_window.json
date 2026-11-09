@@ -262,7 +262,8 @@
               ]
             },
             {"key": "full-width", "name": "Full Width", "tip": "The help bar spans the screen from edge to edge. Default: On."},
-            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar takes. Help too long for it is cut and shows in full when you hover it. Default: 100%."},
+            {"key": "shrink-to-text", "name": "Shrink to Text", "tip": "The help bar is only as wide as its text, up to its Max Width. Default: Off."},
+            {"key": "help-width", "name": "Max Width", "tip": "How much of the screen's width the help bar takes, or with Shrink to Text on, the most it can take. Help too long for it is cut and shows in full when you hover it. Default: 100%."},
             {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
           ]
         }

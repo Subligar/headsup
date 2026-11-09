@@ -48,7 +48,8 @@ namespace headsup
             {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
-            {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"widgetBackground", &Settings::widgetBackground}};
+            {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"helpBarShrink", &Settings::helpBarShrink},
+            {"widgetBackground", &Settings::widgetBackground}};
 
         // Whole numbers are stored as floats, like every other number in settings.ini.
         struct IntKey

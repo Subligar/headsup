@@ -187,7 +187,7 @@ PIECES = Pieces(
             'tag-text', 'highlight', 'border-color')),
         'save-automatically': Setting(), 'save-changes': Setting(words={'save': True, 'revert': True}),
         'profile-files': Setting(unnamed=True, words={'profile': True, 'use': True, 'delete': True, 'new': True, 'name-hint': True, 'create': True, 'rename': True}),
-        'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-rounding': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'help-width': Setting(), 'help-height': Setting(),
+        'hide-game-help': Setting(), 'position': Setting(), 'background': Setting(), 'help-rounding': Setting(), 'help-text-size': Setting(), 'anchor': Setting(options=3), 'full-width': Setting(), 'shrink-to-text': Setting(), 'help-width': Setting(), 'help-height': Setting(),
         'widget-tabs': Setting(unnamed=True, rows=rows(
             'design', 'icon', 'alignment', 'show-zone-id', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag-1', 'bag-2', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
             'seconds', 'date-format', 'job-text', 'job-text-align', 'earned-align', 'tnl-align', 'percent-align', 'bar-width', 'bar-height', 'bar-back', 'bar-color', 'bar-text', 'bar-text-align', 'mem-text', 'status-display'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True}),

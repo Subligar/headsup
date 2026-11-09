@@ -198,6 +198,7 @@ namespace headsup
         int helpBarHeight   = kAutoHelpBarHeight;
         HelpAnchor helpBarAnchor = HelpAnchor::Left;
         bool helpBarFullWidth    = false; // the whole screen's width, whatever the text's
+        bool helpBarShrink       = false; // as wide as its text, up to its width
         std::string menuFont = kDefaultMenuFont; // the settings window's text, by its kMenuFonts name
         int menuFontSize     = kDefaultMenuFontSize; // pixels: the settings window's text and everything sized by it
         int menuOpacity      = 100;              // percent

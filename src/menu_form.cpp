@@ -2054,6 +2054,10 @@ namespace headsup
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on);
                 form.Switch(label.c_str(), s.helpBarFullWidth, tip);
                 break;
+            case SettingPiece::ShrinkToText:
+                form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on || s.helpBarFullWidth);
+                form.Switch(label.c_str(), s.helpBarShrink, tip);
+                break;
             case SettingPiece::HelpWidth:
                 form.Fade(!BarOn(s) || !s.Widget(BarWidget::GameHelp).on || s.helpBarFullWidth);
                 form.SliderInt(label.c_str(), s.helpBarWidth, kMinHelpBarWidth, kMaxHelpBarWidth, [](int percent) { return Formatted("%d%%", percent); }, tip);

@@ -49,6 +49,7 @@ cursorWidth=16.0000
 defaultFont=Bahnschrift
 helpBarAnchor=center
 helpBarFullWidth=true
+helpBarShrink=false
 helpBarTextSize=14.0000
 helpBarWidth=100.0000
 hideHelpBar=true
