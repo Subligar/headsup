@@ -364,7 +364,7 @@ namespace headsup
             parts.caption = fit.text.caption;
             parts.help    = fit.text.help;
             const float height = HelpBarHeight(look.settings.helpBarHeight, rows.helpBarHeight);
-            parts.row          = PlaceHelpBar(span, s.helpBarAnchor, s.helpBarFullWidth, top, height, m.padding, m.gap,
+            parts.row          = PlaceHelpBar(span, s.helpBarAnchor, top, height, m.padding, m.gap,
                          fit.captionWidth, bagWidth, fit.helpWidth);
         }
         const BarRect box = parts.row.box;

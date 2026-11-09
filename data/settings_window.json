@@ -454,8 +454,8 @@
                 {"name": "Right", "tip": "Against the screen's right edge, with its text on the right."}
               ]
             },
-            {"key": "full-width", "name": "Full Width", "tip": "The help bar takes the screen's whole width, however short its text. Default: On."},
-            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar can take. Longer help is cut and shows in full when you hover it. Default: 100%."},
+            {"key": "full-width", "name": "Full Width", "tip": "The help bar spans the screen from edge to edge. Default: On."},
+            {"key": "help-width", "name": "Width", "tip": "How much of the screen's width the help bar takes. Help too long for it is cut and shows in full when you hover it. Default: 100%."},
             {"key": "help-height", "name": "Height", "tip": "How tall the help bar is. Auto fits it to its text. Default: Auto."}
           ]
         }
