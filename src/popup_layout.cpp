@@ -24,6 +24,7 @@ namespace headsup
         constexpr float kHeadingGap  = 0.2f;  // more under a card's heading than between its rows
         constexpr float kCardGap     = 0.45f; // between cards, and between the columns of them
         constexpr float kMinWidth    = 12.0f; // popupText, so a short popup is not a sliver
+        constexpr float kPreviewShare = 0.5f; // the most of the room under the title previewed cards take; the settings get the rest
         constexpr float kPinChip     = 1.4f;  // the round pin chip's side, in popup text sizes
         constexpr float kMarkShare   = 0.7f;  // the pin or cog, of its chip's height
         constexpr float kSocketInset = 0.9f;  // a socket's rows from its left and right edges
@@ -768,17 +769,19 @@ namespace headsup
             top += subHeight + metrics.rowGap;
         }
 
-        float width = std::max({unit * kMinWidth, titleWidth, least - 2.0f * pad});
-        if (settings)
-        {
-            width        = std::max(width, settings->width);
-            const float tall = std::clamp(room - top - pad, 0.0f, settings->height);
-            l.body       = BarRect{pad, top, width, tall};
-            l.width      = width + 2.0f * pad;
-            l.height     = (tall > 0.0f ? top + tall : l.lines[0].bottom) + pad;
+        // Previewed over the settings, the cards are laid out at the width the pop-out opens at: least is the settings'.
+        const bool preview = settings && settings->preview == SettingsPreview::Cards;
+        float width        = std::max({unit * kMinWidth, titleWidth, preview ? 0.0f : least - 2.0f * pad});
+        // The settings body at under, as wide as inner, the popup ending at above when it has no height yet.
+        const auto withSettings = [&](float inner, float under, float above) {
+            const float tall = std::clamp(room - under - pad, 0.0f, settings->height);
+            l.body           = BarRect{pad, under, inner, tall};
+            l.width          = inner + 2.0f * pad;
+            l.height         = (tall > 0.0f ? under + tall : above) + pad;
             PlaceChips(l, chips, pad, unit);
-            return l;
-        }
+            return std::move(l);
+        };
+        if (settings && !preview) return withSettings(std::max(width, settings->width), top, l.lines[0].bottom);
         // The cards under the title. The most a column of them may run, with the padding under it: a card taller goes
         // on in another column.
         const float tall = room - top - pad;
@@ -832,6 +835,22 @@ namespace headsup
                 x += cards[c].width + share + cardGap;
             }
             lowest += tall + cardGap;
+        }
+        if (preview)
+        {
+            const float cardsHeight = cards.empty() ? 0.0f : lowest - cardGap - top;
+            const float cap         = kPreviewShare * (room - top - pad);
+            const float scale       = cardsHeight > cap && cap > 0.0f ? cap / cardsHeight : 1.0f;
+            for (size_t i = 1; i < l.lines.size(); ++i)
+                l.lines[i].bottom = top + (l.lines[i].bottom - top) * scale;
+            // A picture of the cards: nothing in them takes a press. The title's chips are placed after.
+            l.chips.clear();
+            l.scrolls.clear();
+            const float inner = std::max({width * scale, settings->width, least - 2.0f * pad});
+            l.preview         = PopupPreview{scale, top, (inner - width * scale) / 2.0f};
+            if (cards.empty()) return withSettings(inner, top, l.lines[0].bottom);
+            const float under = top + cardsHeight * scale + metrics.rowGap;
+            return withSettings(inner, under, under - metrics.rowGap);
         }
         const float bottom = std::max(cards.empty() ? top - metrics.rowGap : lowest - cardGap, l.lines[0].bottom);
         l.width            = width + 2.0f * pad;

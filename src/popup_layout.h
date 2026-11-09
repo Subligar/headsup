@@ -91,6 +91,14 @@ namespace headsup
         float bottom = 0.0f; // from the popup's top
     };
 
+    // The cards previewed over the settings: drawn scaled about (padding, top), the title's foot, and shifted right to
+    // sit in the middle of the popup.
+    struct PopupPreview
+    {
+        float scale = 1.0f, top = 0.0f, shift = 0.0f;
+        bool operator==(const PopupPreview&) const = default;
+    };
+
     struct PopupLayout
     {
         float width = 0.0f, height = 0.0f;
@@ -102,13 +110,17 @@ namespace headsup
         BarRect cog{}; // the settings chip, which a press shows the widget's settings by, or its content again
         float titleRow = 0.0f; // the title row's height, by which a pinned popup is dragged
         BarRect body{}; // where the settings go while they show: under the title, as wide as the popup's inside
+        std::optional<PopupPreview> preview; // its cards are a preview over the settings body (SettingsPreview::Cards)
     };
 
+    // What the settings body shows above itself: nothing, or the pop-out's own cards while its design is edited.
+    enum class SettingsPreview : uint8_t { None, Cards };
     // The room the widget's settings take, as the settings window lays them out, which a popup showing them leaves
     // under its title in place of its sections. 0 tall before they were first laid out.
     struct SettingsRoom
     {
         float width = 0.0f, height = 0.0f;
+        SettingsPreview preview = SettingsPreview::None;
         bool operator==(const SettingsRoom&) const = default;
     };
 
