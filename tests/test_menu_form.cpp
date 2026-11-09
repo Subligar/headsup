@@ -1439,7 +1439,7 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     const auto chip        = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
     const auto toggle      = [&](WidgetPart part) { return FormEvent{chip(part) + "-on", kClickEvent, ""}; };
     const auto rml         = [](const Form& form) { return Block(form, "toppanel-widgets")->rml; };
-    const auto design      = [&] { return DesignText(w.settings.Widget(zone).design); };
+    const auto design      = [&] { return DesignText(BarWidget::Zone, w.settings.Widget(zone).design); };
     const Form first = w.Pass();
     CHECK(Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneNation) + "\"").c_str()));
     CHECK(!Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str())); // its Icon setting has it

@@ -140,7 +140,7 @@ namespace headsup
     // so the Today card is one card whatever the date. One word: lower case, a '-' for each space.
     std::string CollapseKey(PanelWidget head, std::string_view heading);
     // Clones the widget a press names or takes its copy off: the widget whose settings show next, the clone or the
-    // first copy; nothing for any other press, or when nothing changed.
+    // first copy (a created widget itself, gone, so they close); nothing for any other press, or when nothing changed.
     std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press);
     PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
     // Whether the conquest standings show: the Zone widget, a World Info showing a nation, or a popup in showing with

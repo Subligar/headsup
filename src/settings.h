@@ -302,6 +302,8 @@ namespace headsup
     // Another copy of a widget, after the last of its copies, shown and with that copy's settings but its Combine;
     // none when it has no more. Taking a copy off forgets its settings.
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);
+    // A new created widget at the right section's end, shown; none when every one there can be is made.
+    std::optional<PanelWidget> CreateWidget(Settings& s);
     void RemoveWidgetCopy(Settings& s, PanelWidget widget);
     // The panel as it is drawn, each widget's combine pulling its partner after it.
     PanelGroups Panel(const Settings& s);

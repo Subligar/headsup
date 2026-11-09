@@ -1377,7 +1377,7 @@ namespace headsup
         template <typename Each>
         void EachShownCopy(const Settings& settings, BarWidget widget, const Each& each)
         {
-            for (int copy = 0; copy < kMostCopies; ++copy)
+            for (int copy = 0; copy < CopiesOf(widget); ++copy)
                 if (const PanelWidget w{widget, copy}; Shows(settings, w)) each(settings.Widget(w));
         }
 
@@ -1540,6 +1540,7 @@ namespace headsup
             }
             case BarWidget::World: return WorldParts(state, o, base);
             case BarWidget::Settings: base.cog = true; return {};
+            case BarWidget::Custom: return {};
             }
             return {};
         }
@@ -1914,9 +1915,10 @@ namespace headsup
             if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return std::nullopt;
             const PanelWidget widget = WidgetInSlot(static_cast<int>(slot));
             if (kind == kWidgetClonePress) return HasCopies(widget.kind) ? CloneWidget(settings, widget) : std::nullopt;
-            if (widget.copy == 0 || !Placed(settings.barSections, widget)) return std::nullopt;
+            if (IsFirstCopy(widget) || !Placed(settings.barSections, widget)) return std::nullopt;
             RemoveWidgetCopy(settings, widget);
-            return PanelWidget{widget.kind};
+            // A created widget has no first copy: its own settings, gone from the panel, close.
+            return widget.kind == BarWidget::Custom ? widget : PanelWidget{widget.kind};
         }
         return std::nullopt;
     }
@@ -1941,7 +1943,7 @@ namespace headsup
             section.collapsed     = std::ranges::find(settings.collapsedSections, key) != settings.collapsedSections.end();
         }
         if (HasCopies(head.kind)) content.clonePress = kWidgetClonePress + std::to_string(SlotOf(head));
-        if (head.copy > 0) content.removePress = kWidgetRemovePress + std::to_string(SlotOf(head));
+        if (!IsFirstCopy(head)) content.removePress = kWidgetRemovePress + std::to_string(SlotOf(head));
         if (settings.Widget(head).popupSpot) content.resetPress = kPopupResetPress + std::to_string(SlotOf(head));
         return content;
     }
@@ -2083,7 +2085,8 @@ namespace headsup
                 ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
             return WorldPopup(state);
-        case BarWidget::Settings: break;
+        case BarWidget::Settings:
+        case BarWidget::Custom: break;
         }
         return popup;
     }

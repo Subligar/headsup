@@ -365,7 +365,7 @@ helpBarY=8.0000
         s.hideNetstat  = true;
         s.screenshotKey       = 0x79; // F10
         s.screenshotHidesGame = false;
-        for (int w = 0; w < kBarWidgetCount; ++w)
+        for (int w = 0; w < static_cast<int>(BarWidget::Custom); ++w) // none is made
             s.Widget(static_cast<BarWidget>(w)).on = !kBarWidgetDefaults[w];
         s.barSections = DefaultPlacement();
         MoveWidget(s.barSections, BarSection::Center, 0, BarSection::Right, 0); // the target first on the right
@@ -1038,15 +1038,15 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"}; // in BarWidget's order
-    static_assert(std::size(widgetKeys) == kBarWidgetCount);
-    for (int w = 0; w < kBarWidgetCount; ++w)
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"}; // in BarWidget's order, but a created widget's
+    static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
+    for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {
         const Settings d = DefaultSettings();
         MapStore store;
         store.values[widgetKeys[w]] = d.Widget(static_cast<BarWidget>(w)).on ? "false" : "true";
         const Settings s = LoadSettings(store);
-        for (int other = 0; other < kBarWidgetCount; ++other)
+        for (int other = 0; other < kBarWidgetCount - 1; ++other)
             CHECK(s.Widget(static_cast<BarWidget>(other)).on == (d.Widget(static_cast<BarWidget>(other)).on != (other == w)));
     }
 }
@@ -1156,7 +1156,7 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     CHECK(!saved.values.contains("barGameHelpDesign"));
     // A design a hand broke is made whole: every part once.
     saved.values["barZoneDesign"] = "name name";
-    CHECK_EQ(DesignText(LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
+    CHECK_EQ(DesignText(BarWidget::Zone, LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
 }
 
 TEST(each_widgets_pop_out_design_saves_under_its_own_key_each_copys_under_its_own_and_clones_with_it)
@@ -3180,4 +3180,33 @@ TEST(the_status_favorites_and_pins_are_kept_and_an_unknown_or_repeated_one_is_le
     CHECK(read.statusFavorites == s.statusFavorites && read.statusPins == s.statusPins);
     store.values["statusFavorites"] = "40 x 65000 40 253";
     CHECK((LoadSettings(store).statusFavorites == std::vector<uint16_t>{40, kSignetEffect}));
+}
+
+TEST(a_created_widget_shows_once_made_saves_under_its_own_keys_and_forgets_them_when_taken_off)
+{
+    Settings s;
+    const PanelWidget first{BarWidget::Custom, 0};
+    CHECK(!Shows(s, first));
+    MapStore none;
+    SaveSettings(s, none);
+    CHECK(std::ranges::none_of(none.values, [](const auto& kv) { return kv.first.starts_with("barCustom"); }));
+    CHECK(CreateWidget(s) == std::optional(first));
+    const std::optional<PanelWidget> second = CreateWidget(s);
+    CHECK(second == std::optional(PanelWidget{BarWidget::Custom, 1}));
+    CHECK(Shows(s, first) && Shows(s, *second) && s.Widget(*second).on);
+    s.Widget(*second).align = WidgetAlign::Right;
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barCustom"], "true");
+    CHECK_EQ(saved.values["barCustomAlign_2"], "right");
+    const Settings read = LoadSettings(saved);
+    CHECK(read.Widget(*second) == s.Widget(*second) && Shows(read, first) && Shows(read, *second));
+    // Taken off, every created widget's settings go, the first's too.
+    RemoveWidgetCopy(s, first);
+    CHECK(!Placed(s.barSections, first) && !Shows(s, first) && s.Widget(first) == NewWidget(first));
+    MapStore after;
+    SaveSettings(s, after);
+    CHECK(!after.values.contains("barCustom") && after.values.contains("barCustom_2"));
+    while (CreateWidget(s)) {}
+    CHECK(Shows(s, PanelWidget{BarWidget::Custom, kMostCreatedWidgets - 1}) && !CreateWidget(s));
 }

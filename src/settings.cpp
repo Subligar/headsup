@@ -308,7 +308,7 @@ namespace headsup
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barCustom"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1435,7 +1435,7 @@ namespace headsup
             const auto flag = [&](const std::string& key, bool v) { StoreBool(store, CopyKey(key, w), v); };
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
-            if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(o.design).c_str());
+            if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
             if (!CardsOf(w.kind).empty()) text((widget + kPopupDesignSuffix).c_str(), PopupDesignText(o.popup).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
             StoreFloat(store, CopyKey(widget + kLinkPaddingSuffix, w), static_cast<float>(o.linkPadding));
@@ -1543,12 +1543,12 @@ namespace headsup
 
     bool Shows(const Settings& s, PanelWidget widget)
     {
-        return s.Widget(widget).on && (widget.copy == 0 || Placed(s.barSections, widget));
+        return s.Widget(widget).on && (IsFirstCopy(widget) || Placed(s.barSections, widget));
     }
 
     bool AnyCopyShown(const Settings& s, BarWidget widget)
     {
-        for (int copy = 0; copy < kMostCopies; ++copy)
+        for (int copy = 0; copy < CopiesOf(widget); ++copy)
             if (Shows(s, PanelWidget{widget, copy})) return true;
         return false;
     }
@@ -1561,6 +1561,17 @@ namespace headsup
         clone.on             = true;
         clone.combine.reset();
         return added;
+    }
+
+    std::optional<PanelWidget> CreateWidget(Settings& s)
+    {
+        const std::optional<PanelWidget> made = AddCreated(s.barSections);
+        if (made)
+        {
+            s.Widget(*made)    = NewWidget(*made);
+            s.Widget(*made).on = true;
+        }
+        return made;
     }
 
     void RemoveWidgetCopy(Settings& s, PanelWidget widget)
@@ -1882,7 +1893,7 @@ namespace headsup
         store.Set(kBlueMagicLearnedKey, kBlueLearnedNames[static_cast<int>(s.blueMagicLearned)]);
         // A copy's keys are written while it is on the panel; the first copy's always.
         for (int slot = 0; slot < kPanelSlots; ++slot)
-            if (const PanelWidget w = WidgetInSlot(slot); w.copy == 0 || Placed(s.barSections, w))
+            if (const PanelWidget w = WidgetInSlot(slot); IsFirstCopy(w) || Placed(s.barSections, w))
                 SaveWidget(store, w, s.widgets[slot]);
         for (int i = 0; i < kBarSectionCount; ++i)
             store.Set(kBarSectionKeys[i], PlacementNames(s.barSections[i]).c_str());

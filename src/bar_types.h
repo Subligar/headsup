@@ -49,12 +49,13 @@ namespace headsup
         StatusTimers,
         World,
         Settings, // the cog alone, which opens the settings window: no popup, settings or copies
+        Custom,   // the widgets the player creates, each a copy, shown only once made: any widget's parts and cards
     };
-    constexpr int kBarWidgetCount = static_cast<int>(BarWidget::Settings) + 1;
+    constexpr int kBarWidgetCount = static_cast<int>(BarWidget::Custom) + 1;
     // Which widgets a new settings file shows, by BarWidget. to_array takes its size from the list, so a widget added
     // to BarWidget without a default here fails the assert.
     constexpr auto kBarWidgetDefaults =
-        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false, false});
+        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false, false, false});
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
     // What the Performance widget shows on the panel, a bit each, in this order on its line.
@@ -67,8 +68,11 @@ namespace headsup
     constexpr int kContainerCount = 17; // Ashita's containers 0 (inventory) to 16 (wardrobe 8), the bags a widget can show
 
     // A widget on the panel: which, and which of its copies. Copy 0 is the one every settings file has; the others are
-    // there while the player keeps them on the panel.
+    // there while the player keeps them on the panel. Every created widget is a copy of the kind there while kept.
     constexpr int kMostCopies = 4; // of one widget
+    // shortcut: a fixed slot per created widget caps them at 20; give PanelWidget a slot table if players want more.
+    constexpr int kMostCreatedWidgets = 20;
+    constexpr int CopiesOf(BarWidget widget) { return widget == BarWidget::Custom ? kMostCreatedWidgets : kMostCopies; }
     struct PanelWidget
     {
         BarWidget kind = BarWidget::Zone;
@@ -79,10 +83,17 @@ namespace headsup
         {}
         bool operator==(const PanelWidget&) const = default;
     };
-    // Tables by PanelWidget hold a slot for every copy of every widget.
-    constexpr int kPanelSlots = kBarWidgetCount * kMostCopies;
+    // The copy every settings file has: a widget's first, for every widget but the created ones.
+    constexpr bool IsFirstCopy(PanelWidget widget) { return widget.copy == 0 && widget.kind != BarWidget::Custom; }
+    // Tables by PanelWidget hold a slot for every copy of every widget, the created widgets' last.
+    constexpr int kFirstCreatedSlot = static_cast<int>(BarWidget::Custom) * kMostCopies;
+    constexpr int kPanelSlots       = kFirstCreatedSlot + kMostCreatedWidgets;
     constexpr int SlotOf(PanelWidget widget) { return static_cast<int>(widget.kind) * kMostCopies + widget.copy; }
-    constexpr PanelWidget WidgetInSlot(int slot) { return PanelWidget{static_cast<BarWidget>(slot / kMostCopies), slot % kMostCopies}; }
+    constexpr PanelWidget WidgetInSlot(int slot)
+    {
+        return slot >= kFirstCreatedSlot ? PanelWidget{BarWidget::Custom, slot - kFirstCreatedSlot}
+                                         : PanelWidget{static_cast<BarWidget>(slot / kMostCopies), slot % kMostCopies};
+    }
     // The target has one frame the bar gives way around, and game help a bar of its own: neither has copies.
     constexpr bool HasCopies(BarWidget widget)
     {

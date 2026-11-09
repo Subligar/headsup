@@ -1844,7 +1844,7 @@ TEST(the_status_timers_widget_shows_each_pin_at_its_rank_where_its_design_puts_i
     settings.Widget(BarWidget::StatusTimers).statusDisplay = StatusDisplay::Name;
     settings.statusPins = {40, 33, kSignetEffect}; // ranks 1, 2 and 3
     // As new: 1, 3 and 5 on the first line, 2, 4 and 6 on the second.
-    CHECK_EQ(DesignText(settings.Widget(BarWidget::StatusTimers).design), "pin1 pin3 pin5 | pin2 pin4 pin6");
+    CHECK_EQ(DesignText(BarWidget::StatusTimers, settings.Widget(BarWidget::StatusTimers).design), "pin1 pin3 pin5 | pin2 pin4 pin6");
     const WidgetContent w = Content(BarWidget::StatusTimers, state, settings);
     CHECK(Joined(w.title) == "Protect 30m 00s  Signet 0s" && Joined(w.subtitle) == "Haste 1m 30s");
     // Pinned or not decides what shows, not the design's switches.

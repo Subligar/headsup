@@ -1,6 +1,7 @@
 #include "bar_placement.h"
 
 #include <algorithm>
+#include <charconv>
 #include <iterator>
 #include <optional>
 #include <sstream>
@@ -11,7 +12,7 @@ namespace headsup
     namespace
     {
         const char* const kWidgetNames[] = {"zone", "weather", "target", "gil", "bags", "earthTime", "gameHelp",
-            "performance", "job", "party", "statusTimers", "world", "settings"};
+            "performance", "job", "party", "statusTimers", "world", "settings", "custom"};
         static_assert(std::size(kWidgetNames) == kBarWidgetCount); // by BarWidget
         constexpr BarWidget kDefaultLeft[]   = {BarWidget::Zone, BarWidget::Weather, BarWidget::Job,
             BarWidget::Party, BarWidget::StatusTimers, BarWidget::World};
@@ -19,7 +20,7 @@ namespace headsup
         constexpr BarWidget kDefaultRight[]  = {BarWidget::Currency, BarWidget::Bags, BarWidget::Performance, BarWidget::EarthTime,
             BarWidget::Settings};
         static_assert(std::size(kDefaultLeft) + std::size(kDefaultCenter) + std::size(kDefaultRight) ==
-                      kPlacedWidgetCount);
+                      kDefaultPlacedCount);
 
         constexpr char kCopyMark = ':'; // between a widget's name and its copy's number in the settings file
 
@@ -38,12 +39,15 @@ namespace headsup
         if (mark != std::string::npos)
         {
             const std::string number = name.substr(mark + 1);
-            if (number.empty() || number.size() > 1 || number[0] < '2' || number[0] > '0' + kMostCopies) return std::nullopt;
-            copy = number[0] - '1';
+            int said = 0;
+            const auto [end, error] = std::from_chars(number.data(), number.data() + number.size(), said);
+            if (error != std::errc() || end != number.data() + number.size() || said < 2) return std::nullopt;
+            copy = said - 1;
         }
         for (int w = 0; w < kBarWidgetCount; ++w)
-            if (kind == kWidgetNames[w] && (copy == 0 || HasCopies(static_cast<BarWidget>(w))))
-                return PanelWidget{static_cast<BarWidget>(w), copy};
+            if (const auto widget = static_cast<BarWidget>(w);
+                kind == kWidgetNames[w] && (copy == 0 || HasCopies(widget)) && copy < CopiesOf(widget))
+                return PanelWidget{widget, copy};
         return std::nullopt;
     }
 
@@ -162,13 +166,13 @@ namespace headsup
     std::optional<PanelWidget> AddCopy(BarPlacement& placement, BarWidget widget)
     {
         if (!HasCopies(widget)) return std::nullopt;
-        int copy = 1;
-        while (copy < kMostCopies && Placed(placement, PanelWidget{widget, copy}))
+        int copy = 0;
+        while (copy < CopiesOf(widget) && Placed(placement, PanelWidget{widget, copy}))
             ++copy;
-        if (copy == kMostCopies) return std::nullopt;
+        if (copy == CopiesOf(widget)) return std::nullopt;
         // After the last copy there is, in its section.
         std::pair<int, size_t> after = PlaceOf(placement, widget);
-        for (int c = 1; c < kMostCopies; ++c)
+        for (int c = 1; c < CopiesOf(widget); ++c)
             if (Placed(placement, PanelWidget{widget, c})) after = PlaceOf(placement, PanelWidget{widget, c});
         std::vector<PanelWidget>& section = placement[after.first];
         const PanelWidget added{widget, copy};
@@ -176,9 +180,20 @@ namespace headsup
         return added;
     }
 
+    std::optional<PanelWidget> AddCreated(BarPlacement& placement)
+    {
+        for (int copy = 0; copy < kMostCreatedWidgets; ++copy)
+            if (const PanelWidget created{BarWidget::Custom, copy}; !Placed(placement, created))
+            {
+                placement[static_cast<int>(BarSection::Right)].push_back(created);
+                return created;
+            }
+        return std::nullopt;
+    }
+
     bool RemoveCopy(BarPlacement& placement, PanelWidget widget)
     {
-        if (widget.copy == 0) return false;
+        if (IsFirstCopy(widget)) return false;
         for (std::vector<PanelWidget>& section : placement)
             if (const auto at = std::ranges::find(section, widget); at != section.end())
             {

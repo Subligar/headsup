@@ -2436,7 +2436,7 @@ TEST(a_designer_button_dropped_in_the_gap_between_two_buttons_goes_between_them)
     const Rml::Vector2f gap{(gapLeft + gapRight) / 2.0f, window.Center(top[0]->GetId()).y};
     CHECK(window.Drag(percent->GetId(), gap - window.Center(percent->GetId())));
     window.Frames(2);
-    CHECK_EQ(DesignText(window.settings.Widget(job).design), "jobs percent earned tonext | bar");
+    CHECK_EQ(DesignText(BarWidget::Job, window.settings.Widget(job).design), "jobs percent earned tonext | bar");
 }
 
 TEST(a_widget_dropped_on_a_buttons_bottom_half_goes_below_it_on_its_top_half_above_and_in_a_gap_between)
@@ -2504,7 +2504,7 @@ TEST(a_designer_button_dropped_on_a_buttons_right_half_goes_after_it)
         window.Center(jobs->GetId()).y};
     CHECK(window.Drag(bar->GetId(), at - window.Center(bar->GetId())));
     window.Frames(2);
-    CHECK_EQ(DesignText(window.settings.Widget(job).design), "jobs bar earned tonext | percent");
+    CHECK_EQ(DesignText(BarWidget::Job, window.settings.Widget(job).design), "jobs bar earned tonext | percent");
 }
 
 TEST(a_pop_out_designer_card_dropped_on_a_card_goes_beside_it_on_the_empty_row_makes_one_and_off_the_rows_leaves)

@@ -1215,9 +1215,10 @@ TEST(every_widget_has_one_place_on_the_bar_and_none_overlap_on_a_narrow_screen)
     std::array<float, kPanelSlots> natural{};
     natural.fill(10.0f);
     const BarLayout wide = Layout(4000.0f, kPills, BarShape::Pills, natural, 0.0f);
-    CHECK_EQ(wide.widgets.size(), static_cast<size_t>(kPlacedWidgetCount));
+    CHECK_EQ(wide.widgets.size(), static_cast<size_t>(kDefaultPlacedCount));
     for (int w = 0; w < kBarWidgetCount; ++w)
-        CHECK((RectOf(wide, static_cast<BarWidget>(w)) != nullptr) == OnTheBar(static_cast<BarWidget>(w)));
+        CHECK((RectOf(wide, static_cast<BarWidget>(w)) != nullptr) ==
+              (OnTheBar(static_cast<BarWidget>(w)) && static_cast<BarWidget>(w) != BarWidget::Custom));
     for (const auto& [width, screen] : {std::pair{120.0f, 1280.0f}, std::pair{250.0f, 640.0f}})
     {
         natural.fill(width);
@@ -1362,7 +1363,7 @@ TEST(any_widget_in_any_section_keeps_every_widget_apart_and_on_screen)
 {
     std::array<float, kPanelSlots> natural{};
     for (int w = 0; w < kBarWidgetCount; ++w)
-        for (int s = 0; s < kBarSectionCount && OnTheBar(static_cast<BarWidget>(w)); ++s)
+        for (int s = 0; s < kBarSectionCount && OnTheBar(static_cast<BarWidget>(w)) && static_cast<BarWidget>(w) != BarWidget::Custom; ++s)
             for (const auto& [width, screen] : {std::pair{10.0f, 4000.0f}, std::pair{120.0f, 1280.0f},
                      std::pair{250.0f, 640.0f}})
             {
@@ -1378,7 +1379,7 @@ TEST(any_widget_in_any_section_keeps_every_widget_apart_and_on_screen)
                 {
                     const BarLayout l = Layout(screen, shape == BarShape::Pills ? kPills : kOrnate, shape, natural,
                         60.0f, p);
-                    if (screen > 3000.0f) CHECK_EQ(l.widgets.size(), static_cast<size_t>(kPlacedWidgetCount));
+                    if (screen > 3000.0f) CHECK_EQ(l.widgets.size(), static_cast<size_t>(kDefaultPlacedCount));
                     CheckApartAndInside(l, screen, p, shape);
                     // The target gives way first: whatever shows without it shows with it.
                     std::array<float, kPanelSlots> noTarget = natural;

@@ -28,8 +28,9 @@ namespace headsup
         PartyCount, PartyHealth,
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,
         WorldShip, WorldGuild, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
+        CustomName, // a created widget's Name
     };
-    constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::WorldBeastmen) + 1;
+    constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::CustomName) + 1;
 
     struct DesignChip
     {
@@ -45,20 +46,29 @@ namespace headsup
         bool operator==(const WidgetDesign&) const = default;
     };
 
-    std::span<const WidgetPart> PartsOf(BarWidget kind); // none for the game's help
+    // None for the game's help; for a created widget every part of every widget, icons too, and its own Name.
+    std::span<const WidgetPart> PartsOf(BarWidget kind);
+    // The widget whose part it is: its icon's too, and the created widget's for its Name.
+    BarWidget WidgetOfPart(WidgetPart part);
     // The part that is the widget's icon, placed by its Icon setting rather than in its design; none for a widget
     // without one.
     std::optional<WidgetPart> IconPartOf(BarWidget kind);
     WidgetDesign DefaultDesign(BarWidget kind);
     // A part's name in the settings file, one of its widget's alone. Saved: never rename one.
     const char* PartFileName(WidgetPart part);
-    // The lines' file names a space apart, " | " between the lines, an off part's after a '-'.
-    std::string DesignText(const WidgetDesign& design);
+    // The lines' file names a space apart, " | " between the lines, an off part's after a '-'. A part of another widget
+    // than kind's, as a created widget holds, is named after its widget's file name and a '.': "zone.name".
+    std::string DesignText(BarWidget kind, const WidgetDesign& design);
     // The text DesignText writes back as a design, made whole; nothing for the default.
     WidgetDesign DesignFrom(BarWidget kind, std::string_view text);
     // Each of kind's parts once, the first kept: another widget's dropped, a missing one added off at the end of the
-    // second line.
+    // second line, but for a created widget, which holds only the parts placed in it.
     WidgetDesign Whole(BarWidget kind, WidgetDesign design);
+    // A part the design lacks, on, in line before the part at at, or at its end. False when the design holds it.
+    bool PutPart(WidgetDesign& design, WidgetPart part, int line, size_t at);
+    // The part out of the design. False, and nothing changed, when it is not there, or is the last part on and not
+    // pillShows (as TurnOff).
+    bool TakePart(WidgetDesign& design, WidgetPart part, bool pillShows);
     // The first part on when none is, for a widget with parts.
     void TurnOnFirst(WidgetDesign& design);
     bool PartOn(const WidgetDesign& design, WidgetPart part);

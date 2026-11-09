@@ -1221,7 +1221,7 @@ namespace headsup
                     };
                     // Floated right, so the first is the rightmost.
                     if (HasCopies(held[i].kind) && action(kChipClone, Icon::Clone, WindowWord::WidgetTabsClone)) clone = held[i];
-                    if (held[i].copy > 0 && action(kChipRemove, Icon::Delete, WindowWord::WidgetTabsRemoveCopy)) remove = held[i];
+                    if (!IsFirstCopy(held[i]) && action(kChipRemove, Icon::Delete, WindowWord::WidgetTabsRemoveCopy)) remove = held[i];
                     form.Raw("</div><div class=\"wname\">" + EscapedRml(CopyName(c, held[i])) + "</div></div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
                     if (!form.Off() && was && s.widgets[w].on && held[i].kind != BarWidget::Settings && form.Clicked(id))
@@ -1245,8 +1245,9 @@ namespace headsup
             }
             if (remove)
             {
-                // Its settings, if they showed, give way to the first copy's.
-                if (std::ranges::find(c.readings.settingsOf, *remove) != c.readings.settingsOf.end())
+                // Its settings, if they showed, give way to the first copy's; a created widget's close with it.
+                if (remove->kind != BarWidget::Custom &&
+                    std::ranges::find(c.readings.settingsOf, *remove) != c.readings.settingsOf.end())
                     c.state.settingsAsked = PanelWidget{remove->kind};
                 RemoveWidgetCopy(s, *remove);
                 form.changed = true;
