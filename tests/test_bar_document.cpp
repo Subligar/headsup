@@ -77,6 +77,10 @@ TEST(image_names_round_trip_to_their_images)
         CHECK_EQ(mark->argb[5 * 10] == 0xFFC9A24Au, std::string(kind) == "dash"); // the left edge's middle
         CHECK_EQ(mark->argb[0], 0u);                                             // a corner is clear
     }
+    // None draws no mark in the separator's room.
+    const std::optional<Image> blank = HostImage(SeparatorSource(DashMark::Blank, 0xFFC9A24Au, 10));
+    CHECK(blank && blank->width == 10 && blank->height == 10);
+    CHECK(std::ranges::all_of(blank->argb, [](uint32_t pixel) { return pixel == 0u; }));
     CHECK(!HostImage("hu:stars/ffc9a24a/10"));
     CHECK(!HostImage("hu:coin/17")); // gil is XIUI's picture, no longer a painted coin
     CHECK(!HostImage("hu:icon/999") && !HostImage("hu:nothing") && !HostImage("icon.png") && !HostImage("hu:strip/9/45/13"));

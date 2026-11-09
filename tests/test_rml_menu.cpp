@@ -610,8 +610,9 @@ TEST(a_dash_mark_is_shown_as_its_shape_in_the_list_and_in_the_closed_control)
     CHECK_EQ(shape(list), 1u); // the diamond a new install draws, on the control itself
     window.Click(list);
     CHECK_EQ(shape(list + "-o-0"), 0u); // no mark: a dash stays a dash
-    for (int mark = 1; mark < kDashMarkCount; ++mark)
-        CHECK_EQ(shape(list + "-o-" + std::to_string(mark)), 1u);
+    for (const DashMark mark : {DashMark::Dot, DashMark::Square, DashMark::Diamond})
+        CHECK_EQ(shape(list + "-o-" + std::to_string(static_cast<int>(mark))), 1u);
+    CHECK_EQ(shape(list + "-o-" + std::to_string(static_cast<int>(DashMark::Blank))), 0u); // None: a name, no mark
     window.Click(list + "-o-0");
     CHECK_EQ(shape(list), 0u);
 }

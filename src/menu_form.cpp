@@ -2222,7 +2222,7 @@ namespace headsup
                 BarPalette edited  = ShownPalette(c);
                 const auto options = c.layout.OptionsOf(e);
                 int dash           = static_cast<int>(edited.separator);
-                form.MarkupDropdown(label.c_str(), dash, {Words(options[0].name), kDotMark, kSquareMark, kDiamondMark}, tip,
+                form.MarkupDropdown(label.c_str(), dash, {Words(options[0].name), kDotMark, kSquareMark, kDiamondMark, Words(options[4].name)}, tip,
                     [&](int mark) { return Words(options[static_cast<size_t>(mark)].tip); });
                 edited.separator = static_cast<DashMark>(dash);
                 EditTheme(c, edited);

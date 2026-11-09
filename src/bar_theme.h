@@ -72,7 +72,7 @@ namespace headsup
         {"TagText", &BarPalette::tagText}, {"Highlight", &BarPalette::highlight}};
     inline constexpr const char* kBarShapeNames[kBarShapeCount] = {"ornate", "pills", "glass", "window"};
     inline constexpr const char* kBarBackgroundNames[kBarBackgroundCount] = {"plain", "gradient", "window"};
-    inline constexpr const char* kDashMarkNames[kDashMarkCount] = {"no", "dot", "square", "diamond"};
+    inline constexpr const char* kDashMarkNames[kDashMarkCount] = {"no", "dot", "square", "diamond", "blank"};
     inline constexpr const char* kBarThemeNames[kBarThemeCount] = {"phoenixGold", "umbraDark", "phoenixRedOrnate", "aurora",
         "custom", "gameWindow"};
 

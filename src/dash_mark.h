@@ -8,9 +8,9 @@
 
 namespace headsup
 {
-    // What a dash of a nameplate's text is drawn as: itself, or a small mark.
-    enum class DashMark : uint8_t { None, Dot, Square, Diamond };
-    constexpr int kDashMarkCount = 4;
+    // What a dash of a nameplate's text is drawn as: itself, a small mark, or nothing (Blank, the window's "None").
+    enum class DashMark : uint8_t { None, Dot, Square, Diamond, Blank };
+    constexpr int kDashMarkCount = 5;
 
     constexpr char kDash = '-';
     // In a composed text, the character standing for a dash that is drawn as a mark: control characters, which no
@@ -18,7 +18,10 @@ namespace headsup
     constexpr char DashChar(DashMark mark)
     {
         constexpr char kFirstMarkChar = '\x1D'; // Dot's; Square's and Diamond's follow
-        return mark == DashMark::None ? kDash : static_cast<char>(kFirstMarkChar + static_cast<int>(mark) - 1);
+        constexpr char kBlankChar     = ' ';    // plain text, no mark
+        return mark == DashMark::None    ? kDash
+               : mark == DashMark::Blank ? kBlankChar
+                                         : static_cast<char>(kFirstMarkChar + static_cast<int>(mark) - 1);
     }
     constexpr std::optional<DashMark> MarkOfChar(char c)
     {

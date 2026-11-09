@@ -24,7 +24,7 @@ namespace headsup
                                    kResetKind = "reset", kCogKind = "cog", kGameKind = "game",
                                    kItemKind = "item", kStatusKind = "status";
         // A separator's, by DashMark.
-        constexpr std::string_view kSeparatorKinds[kDashMarkCount] = {"dash", "dot", "square", "diamond"};
+        constexpr std::string_view kSeparatorKinds[kDashMarkCount] = {"dash", "dot", "square", "diamond", "blank"};
         // XIUI's party list draws a status's background 1.1 icons wide and 0.75 as wide as tall, from 0.3 of its width
         // above the icon for a buff and 0.1 for a debuff, the icon 0.1 / 1.5 of an icon in from its left. Here the icon
         // fills its mark's box as it does with no background, and the background's square picture reaches past it.

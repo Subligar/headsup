@@ -177,7 +177,7 @@ PIECES = Pieces(
         'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'corner-rounding': Setting(), 'text-scale': Setting(), 'popup-width': Setting(), 'popup-height': Setting(), 'popup-rounding': Setting(), 'section-rounding': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
         'theme-name': Setting(), 'background-style': Setting(options=3),
-        'separator-style': Setting(options=4, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
+        'separator-style': Setting(options=5, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
         'theme-top': Setting(), 'theme-middle': Setting(), 'theme-bottom': Setting(), 'background-opacity': Setting(),
         'theme-border-thickness': Setting(), 'theme-rounding': Setting(), 'popup-opacity': Setting(),
         'status-icons': Setting(words={'vanilla': True}), 'status-background': Setting(),

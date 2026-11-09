@@ -438,7 +438,8 @@
                 {"name": "Dash", "tip": "A plain dash: the top panel shows short lines, and a nameplate's dashes stay as they are."},
                 {"tip": "Dot"},
                 {"tip": "Square"},
-                {"tip": "Diamond"}
+                {"tip": "Diamond"},
+                {"name": "None", "tip": "No mark: the top panel keeps the room between widgets, and a nameplate's dashes become spaces."}
               ]
             },
             {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels thick the border is: the line along the strip's foot, or with Vanilla Window the frame around the top panel, the help bar, the pop-outs, the fishing bar and this window. 0 for none."},
