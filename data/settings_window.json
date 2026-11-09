@@ -403,7 +403,8 @@
                 {"key": "custom", "name": "Custom Themes"},
                 {"key": "copy", "name": "{file} (custom)"},
                 {"key": "copy-again", "name": "{file} (custom {count})"},
-                {"key": "delete", "name": "Delete Custom Theme", "tip": "Deletes this custom theme's file from the themes folder, and goes back to the built-in theme it was first copied from."}
+                {"key": "delete", "name": "Delete Custom Theme", "tip": "Deletes this custom theme's file from the themes folder, and goes back to the built-in theme it was first copied from."},
+                {"key": "rename", "name": "Rename Custom Theme", "tip": "Puts the custom theme's name in a box to change. It is also its file's name, and changes once you press Enter or click out of the box."}
               ]
             }
           ]
@@ -413,7 +414,6 @@
           "name": "Customize Appearance",
           "description": "Every part of the theme in use. Changing one on a built-in theme makes a custom theme from it, named after it, and picks it. A custom theme saves each change as you make it, in config/headsup/themes.",
           "settings": [
-            {"key": "theme-name", "name": "Theme Name", "tip": "The custom theme's name, which is its file's name too. It changes once you click out of the box or close this window."},
             {
               "key": "background-style",
               "name": "Background Style",

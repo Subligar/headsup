@@ -40,6 +40,8 @@ namespace headsup
         constexpr const char* kChipClone   = " clone"; // and its clone button's
         constexpr const char* kChipRemove  = " remove"; // and a copy's remove button's
         constexpr const char* kThemeDelete = " delete"; // the Theme row's delete button, after the row's id
+        constexpr const char* kThemeRename = " rename"; // and its pencil
+        constexpr const char* kThemeNameBox = " name";  // and the box the pencil opens
         // A designer chip's name on a line and, for a created widget, in the lists, before its widget's slot and its part.
         constexpr const char* kPartChip = "part ", *kListedPartChip = "lpart ";
         // A Pop-out Designer chip's name in a row and in the lists, before its widget's slot and its card.
@@ -529,42 +531,54 @@ namespace headsup
             const int was = picked;
             c.form.Row(label.c_str(), tip);
             // Beside the dropdown, so an edit that makes a custom copy moves nothing in the window.
-            const std::string deleteId = c.form.Id(label + kThemeDelete);
-            if (s.barTheme == BarTheme::Custom)
-                c.form.Raw(std::string("<div class=\"") + kThemeDeleteClass + "\" id=\"" + deleteId + "\"" +
-                           TipAttribute(WordTip(c, WindowWord::ThemeDelete)) + "><img src=\"" + IconSource(Icon::Delete) + "\"" +
-                           AdjustStyle(AdjustOf(Icon::Delete)) + "/></div>");
-            if (s.barTheme == BarTheme::Custom && c.form.Clicked(deleteId))
+            using Renaming     = MenuFormState::ThemeRenaming;
+            MenuFormState& st  = c.state;
+            const bool ownTheme = s.barTheme == BarTheme::Custom;
+            const auto picture = [&](const char* name, Icon icon, WindowWord word) {
+                const std::string id = c.form.Id(label + name);
+                if (ownTheme)
+                    c.form.Raw(std::string("<div class=\"") + kThemeIconClass + "\" id=\"" + id + "\"" + TipAttribute(WordTip(c, word)) +
+                               "><img src=\"" + IconSource(icon) + "\"" + AdjustStyle(AdjustOf(icon)) + "/></div>");
+                return ownTheme && c.form.Clicked(id);
+            };
+            if (picture(kThemeDelete, Icon::Delete, WindowWord::ThemeDelete))
             {
-                c.state.themeDelete = s.customThemeName;
-                s.barTheme          = s.customPalette.parent;
-                c.form.changed      = true;
+                st.themeDelete = s.customThemeName;
+                s.barTheme     = s.customPalette.parent;
+                c.form.changed = true;
+            }
+            if (picture(kThemeRename, Icon::Pencil, WindowWord::ThemeRename))
+                st.themeRenaming = st.themeRenaming == Renaming::Off ? Renaming::Asked : Renaming::Off;
+            if (s.barTheme != BarTheme::Custom) st.themeRenaming = Renaming::Off;
+            if (st.themeRenaming != Renaming::Off)
+            {
+                if (st.themeNameOf != s.customThemeName) st.themeName = st.themeNameOf = s.customThemeName;
+                // Renamed once the box is left; a name another theme has, or no file could take, is put back.
+                if (c.form.TextAt((label + kThemeNameBox).c_str(), st.themeName, nullptr, kControlWidth, false, kMaxFileName))
+                {
+                    if (IsFolderFileName(st.themeName) && !ThemeTaken(c, st.themeName))
+                        st.themeRename = st.themeName;
+                    else
+                        st.themeName = s.customThemeName;
+                }
+                const std::string box = c.form.Named(label + kThemeNameBox);
+                if (c.form.focused == box)
+                    st.themeRenaming = Renaming::Typing;
+                else if (st.themeRenaming == Renaming::Typing)
+                    st.themeRenaming = Renaming::Off;
+                else
+                    c.form.focus = FormFocus{box, st.themeName.size()};
+                c.form.EndRow();
+                return;
             }
             c.form.GroupedDropdownAt(label.c_str(), picked, groups, shown);
             c.form.EndRow();
-            if (c.form.Opened(label)) c.state.themesRequested = true;
+            if (c.form.Opened(label)) st.themesRequested = true;
             if (picked == was) return;
             if (picked < customAt)
                 s.barTheme = themes[static_cast<size_t>(picked)];
             else if (const std::string& name = custom.rows[static_cast<size_t>(picked - customAt)]; name != s.customThemeName || s.barTheme != BarTheme::Custom)
                 c.state.themeLoad = name;
-        }
-
-        // The custom theme's name, renamed once the box is left: a name another theme has, or no file could take, is
-        // put back.
-        void ThemeName(Context& c, const std::string& label, const char* tip)
-        {
-            MenuFormState& st = c.state;
-            if (st.themeNameOf != c.s.customThemeName) st.themeName = st.themeNameOf = c.s.customThemeName;
-            c.form.Row(label.c_str(), tip);
-            if (c.form.TextAt(label.c_str(), st.themeName, nullptr, kControlWidth, false, kMaxFileName))
-            {
-                if (IsFolderFileName(st.themeName) && !ThemeTaken(c, st.themeName))
-                    st.themeRename = st.themeName;
-                else
-                    st.themeName = c.s.customThemeName;
-            }
-            c.form.EndRow();
         }
 
         // The topic, with a box beside it for what an Other topic is.
@@ -2174,10 +2188,6 @@ namespace headsup
                 form.Switch(label.c_str(), s.shiftVanillaUi, tip);
                 break;
             // The theme's looks as the panel shows them; a change to a built-in theme's makes a custom theme of it.
-            case SettingPiece::ThemeName:
-                form.Fade(!BarOn(s));
-                if (s.barTheme == BarTheme::Custom) ThemeName(c, label, tip);
-                break;
             case SettingPiece::BackgroundStyle:
             {
                 form.Fade(!BarOn(s));

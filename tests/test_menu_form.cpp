@@ -1309,9 +1309,8 @@ TEST(the_background_style_shows_the_color_the_gradient_or_the_window_settings)
     // Phoenix Gold's strip is a gradient: its top and bottom show, and no one color or window.
     CHECK(shows("theme-top") && shows("theme-bottom") && !shows("theme-background"));
     CHECK(shows("border-color-theme-palette") && shows("background-opacity") && shows("popup-opacity"));
-    CHECK(!shows("theme-name")); // a built-in theme has no name to change
     CHECK(w.Pass({{"theme-theme-colors-background-style-s-0", kClickEvent, ""}}).changed);
-    CHECK(p.background == BarBackground::Plain && w.settings.barTheme == BarTheme::Custom && shows("theme-name"));
+    CHECK(p.background == BarBackground::Plain && w.settings.barTheme == BarTheme::Custom);
     CHECK(!shows("theme-top") && !shows("theme-bottom") && shows("theme-background"));
     // Its stops are kept for the gradient's return, each its own: an edit of one leaves the others.
     w.Pass({{"theme-theme-colors-background-style-s-1", kClickEvent, ""}});
@@ -1385,16 +1384,27 @@ TEST(the_help_bar_has_a_corner_rounding_of_its_own)
     CHECK_EQ(w.settings.helpBarRounding, 8);
 }
 
-TEST(a_custom_theme_takes_a_new_name_once_its_box_is_left_unless_it_cannot_have_it)
+// Round 22: "We should be able to rename the theme. Add a pencil icon to the left also. The delete should be more left
+// of the pencil."
+TEST(a_custom_themes_pencil_turns_its_dropdown_into_a_box_that_renames_it_once_left_unless_it_cannot_have_that_name)
 {
     Window w;
     w.state.page               = Page::Theme;
+    const std::string box = "theme-theme-look-theme-name", pencil = "theme-theme-look-theme-rename",
+                      remove = "theme-theme-look-theme-delete", dropdown = "theme-theme-look-theme";
+    const Form builtIn = w.Pass();
+    CHECK(At(Block(builtIn, "theme-theme-look"), pencil) == std::string::npos); // a built-in theme keeps its name
     w.settings.barTheme        = BarTheme::Custom;
     w.settings.customThemeName = "Dusk";
     const std::vector<std::string> files = {"Dawn", "Dusk"};
     w.readings.themeFiles = &files;
-    const std::string box = "theme-theme-colors-theme-name";
-    w.Pass();
+    const Form shown       = w.Pass();
+    const FormBlock* look  = Block(shown, "theme-theme-look");
+    CHECK(At(look, remove) < At(look, pencil) && At(look, pencil) < At(look, dropdown) && At(look, box) == std::string::npos);
+    const Form renaming = w.Pass({{pencil, kClickEvent, ""}});
+    look                = Block(renaming, "theme-theme-look");
+    CHECK(At(look, box) != std::string::npos && At(look, dropdown) == std::string::npos);
+    CHECK(renaming.focus && renaming.focus->id == box); // it takes the keyboard
     CHECK_EQ(w.state.themeName, std::string("Dusk"));
     for (const char* refused : {"a/b", "dawn", ""})
     {

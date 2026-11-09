@@ -173,10 +173,10 @@ PIECES = Pieces(
         'window-list': Setting(unnamed=True, words={'note': True, 'find': True, 'name-hint': True, 'all-windows': False,
                                                     'hide': True, 'keep': True, 'row-tip': False}),
         # Top Panel and Widgets
-        'theme': Setting(words={'built-in': True, 'custom': True, 'copy': True, 'copy-again': True, 'delete': True}), 'window-type': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
+        'theme': Setting(words={'built-in': True, 'custom': True, 'copy': True, 'copy-again': True, 'delete': True, 'rename': True}), 'window-type': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
         'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'corner-rounding': Setting(), 'text-scale': Setting(), 'popup-width': Setting(), 'popup-height': Setting(), 'popup-rounding': Setting(), 'section-rounding': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
-        'theme-name': Setting(), 'background-style': Setting(options=3),
+        'background-style': Setting(options=3),
         'separator-style': Setting(options=5, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
         'theme-top': Setting(), 'theme-middle': Setting(), 'theme-bottom': Setting(), 'background-opacity': Setting(),
         'theme-border-thickness': Setting(), 'theme-rounding': Setting(), 'popup-opacity': Setting(),

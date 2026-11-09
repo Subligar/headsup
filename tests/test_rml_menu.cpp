@@ -1707,6 +1707,21 @@ TEST(deleting_a_custom_theme_that_differs_from_its_theme_goes_back_to_that_theme
     CHECK(OwnPalette(window.settings) == PaletteOf(BarTheme::Aurora));
 }
 
+TEST(a_custom_themes_pencil_puts_its_name_in_a_box_with_the_keyboard_and_enter_renames_it_and_brings_back_the_list)
+{
+    Window window(BarTheme::Custom);
+    window.settings.customThemeName = "Dusk";
+    window.Page("theme");
+    CHECK(window.Shows("theme-theme-look-theme") && !window.Shows("theme-theme-look-theme-name"));
+    window.Click("theme-theme-look-theme-rename");
+    CHECK(window.Focused() != nullptr && window.Focused()->GetId() == "theme-theme-look-theme-name");
+    window.Type("2");
+    window.Key(Rml::Input::KI_RETURN);
+    CHECK_EQ(window.menu.TakeThemeRename().value_or(""), std::string("Dusk2"));
+    window.Frames(3);
+    CHECK(window.Shows("theme-theme-look-theme") && !window.Shows("theme-theme-look-theme-name"));
+}
+
 TEST(the_game_window_theme_draws_the_window_in_the_art_and_its_colors)
 {
     Window window(BarTheme::Vanilla);
