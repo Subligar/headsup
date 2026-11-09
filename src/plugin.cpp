@@ -4,6 +4,7 @@
 #include "profiles.h"
 #include "bar_connection.h"
 #include "bar_document.h"
+#include "c_numbers.h"
 #include "bar_fps.h"
 #include "bar_job.h"
 #include "bar_memory.h"
@@ -83,9 +84,8 @@ namespace
     bool KeyDown(uint8_t vk) { return (GetAsyncKeyState(vk) & headsup::kKeyDownBit) != 0; }
 
     constexpr const char* kName              = "HeadsUp"; // as Ashita lists it and the chat names it
-    // Ashita takes a plugin's version as one number, so it holds the release tag's major.minor; the release workflow
-    // checks the two agree.
-    constexpr double kVersion                = 0.5;
+    // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
+    constexpr const char* kVersion           = "0.5.1";
     constexpr const char* kConfigAlias       = "headsup";
     constexpr const char* kConfigFolder      = "config";
     constexpr const char* kWindowFile        = "settings_window.json"; // a developer's build reads one in its config folder
@@ -172,7 +172,11 @@ namespace
     HRESULT __attribute__((stdcall)) HookedPresent(IDirect3DDevice8* device, const RECT* source, const RECT* dest,
         HWND window, const RGNDATA* dirty)
     {
-        if (g_AfterGui != nullptr) g_AfterGui();
+        if (g_AfterGui != nullptr)
+        {
+            const headsup::CNumbers numbers;
+            g_AfterGui();
+        }
         return reinterpret_cast<PresentFn>(g_RealPresent)(device, source, dest, window, dirty);
     }
 
@@ -273,6 +277,7 @@ namespace
 
     BOOL __stdcall OnMouse(uint32_t message, WPARAM wParam, LPARAM lParam, bool blocked)
     {
+        const headsup::CNumbers numbers;
         return g_GamePresses.Keep(message, blocked || KeepMouse(message, wParam, lParam, blocked)) ? TRUE : FALSE;
     }
 
@@ -281,6 +286,7 @@ namespace
     BOOL __stdcall OnKeyboard(WPARAM wParam, LPARAM lParam, bool blocked)
     {
         if (blocked || g_Rml == nullptr || !g_Rml->Running()) return FALSE;
+        const headsup::CNumbers numbers;
         return g_Rml->Key(static_cast<uint32_t>(wParam), (static_cast<uint32_t>(lParam) & kKeyUpFlag) == 0) ? TRUE : FALSE;
     }
 }
@@ -489,7 +495,12 @@ public:
         return "Outlines monsters by whether they will attack you and replaces the game's nameplates with its own.";
     }
     const char* GetLink(void) const override { return ""; }
-    double GetVersion(void) const override { return kVersion; }
+    double GetVersion(void) const override
+    {
+        double version = 0.0;
+        std::from_chars(kVersion, kVersion + std::strlen(kVersion), version);
+        return version;
+    }
     uint32_t GetFlags(void) const override
     {
         return static_cast<uint32_t>(Ashita::PluginFlags::UseCommands | Ashita::PluginFlags::UseText |
@@ -517,6 +528,7 @@ public:
     {
         UNREFERENCED_PARAMETER(logger);
         UNREFERENCED_PARAMETER(id);
+        const headsup::CNumbers numbers;
         m_AshitaCore = core;
         g_Plugin     = this;
         g_Resources  = core->GetResourceManager();
@@ -567,6 +579,7 @@ public:
 
     void Release(void) override
     {
+        const headsup::CNumbers numbers;
         SavePending();
         SetScreenshot(false);
         HoldGameKeys(false);
@@ -847,6 +860,7 @@ public:
         UNREFERENCED_PARAMETER(dest);
         UNREFERENCED_PARAMETER(window);
         UNREFERENCED_PARAMETER(dirty);
+        const headsup::CNumbers numbers;
         MeasureFrame();
         RunCommands();
 #ifdef HEADSUP_DEV
@@ -1197,12 +1211,7 @@ public:
         }
         if (m_RmlMenu.TakeProfilesRequest()) ScanProfiles();
         if (const std::optional<headsup::FeedbackDraft> feedback = m_RmlMenu.TakeFeedback())
-        {
-            char version[16];
-            const auto printed = std::to_chars(version, version + sizeof(version), kVersion);
-            m_FeedbackPost.Post(headsup::kFeedbackHost, headsup::kFeedbackPath,
-                headsup::FeedbackBody(*feedback, std::string_view(version, static_cast<size_t>(printed.ptr - version))));
-        }
+            m_FeedbackPost.Post(headsup::kFeedbackHost, headsup::kFeedbackPath, headsup::FeedbackBody(*feedback, kVersion));
         if (const std::optional<headsup::WebGet::Answer> answer = m_FeedbackPost.Take()) m_RmlMenu.FeedbackAnswered(answer->ok);
         // The switch itself is always saved, so a profile keeps whether it saves by hand.
         if (m_Settings.autoSave != std::exchange(m_AutoSaveWas, m_Settings.autoSave) || m_RmlMenu.TakeSaveRequest())
@@ -1240,6 +1249,7 @@ public:
     {
         if (!Ours()) RecordDraw(isRenderingBackBuffer ? 'E' : 'e', D3DPT_POINTLIST, 0u, nullptr, 0u, 0u, 0u);
         if (Ours() || !isRenderingBackBuffer) return;
+        const headsup::CNumbers numbers;
         DrawLoneCursors();
         bool plates = false;
         if (!m_PlatesPlaced)

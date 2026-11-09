@@ -37,7 +37,7 @@ namespace headsup
         float menuWidth, menuHeight;
         uint16_t zone;
         double now;
-        double version;
+        const char* version;
     };
 
     // What every outline and nameplate shows, after the connection's counters (net), the last conquest packet, your

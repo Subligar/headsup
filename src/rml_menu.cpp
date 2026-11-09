@@ -789,7 +789,7 @@ namespace headsup
     }
 
     bool RmlMenu::Update(const MenuHost& host, Settings& settings, const MenuReadings& readings,
-        const std::vector<std::string>& fonts, double version)
+        const std::vector<std::string>& fonts, std::string_view version)
     {
         m_Layout = host.layout;
         bool changed = false;
@@ -870,9 +870,7 @@ namespace headsup
             m_Document->SetProperty(Rml::PropertyId::Visibility, Rml::Property(Rml::Style::Visibility::Hidden));
             m_Revealing = true;
             m_Visible   = true;
-            char text[32];
-            std::snprintf(text, sizeof(text), "v%g", version);
-            if (Rml::Element* shown = m_Document->GetElementById(kMenuVersionId)) shown->SetInnerRML(text);
+            if (Rml::Element* shown = m_Document->GetElementById(kMenuVersionId)) shown->SetInnerRML("v" + std::string(version));
             if (Rml::Element* button = m_Document->GetElementById(kMenuReloadId))
             {
                 button->SetInnerRML(EscapedRml(host.layout->WordOf(WindowWord::Reload).name));

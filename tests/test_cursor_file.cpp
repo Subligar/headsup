@@ -256,17 +256,22 @@ TEST(an_animation_is_its_list_of_whole_frames_and_nothing_nested_deeper)
     CHECK_EQ(frames(whole), 1u);
     // Frames stand one list deep. A list within a list is not gone into, however many there are: a file of them
     // nested by the hundred thousand is read as having no frames, and the reading returns.
-    std::vector<uint8_t> nested = FrameList({TinyCursor()});
-    for (int depth = 0; depth < 200000; ++depth)
-    {
-        std::vector<uint8_t> outer = {'L', 'I', 'S', 'T'};
-        Put32(outer, static_cast<uint32_t>(nested.size() + 4));
-        outer.insert(outer.end(), {'f', 'r', 'a', 'm'});
-        outer.insert(outer.end(), nested.begin(), nested.end());
-        nested = std::move(outer);
-        if (depth == 0) CHECK_EQ(frames(Animation(nested)), 0u);
-    }
-    CHECK_EQ(frames(Animation(nested)), 0u);
+    const std::vector<uint8_t> innermost = FrameList({TinyCursor()});
+    const auto nest = [&](int depth) {
+        constexpr size_t kLayer = 12; // "LIST", its size, "fram"
+        std::vector<uint8_t> nested;
+        nested.reserve(depth * kLayer + innermost.size());
+        for (int d = depth; d > 0; --d)
+        {
+            nested.insert(nested.end(), {'L', 'I', 'S', 'T'});
+            Put32(nested, static_cast<uint32_t>((d - 1) * kLayer + innermost.size() + 4));
+            nested.insert(nested.end(), {'f', 'r', 'a', 'm'});
+        }
+        nested.insert(nested.end(), innermost.begin(), innermost.end());
+        return nested;
+    };
+    CHECK_EQ(frames(Animation(nest(1))), 0u);
+    CHECK_EQ(frames(Animation(nest(200000))), 0u);
 }
 
 TEST(the_chocobo_pointer_has_two_frames_each_shown_five_sixths_of_a_second)
