@@ -114,7 +114,15 @@
           "name": "Widget Layout",
           "description": "Drag a widget to move it, and click one that is on to open its settings in its pop-out on the top panel. Click it again to close them. Its toggle turns it on and off. You can also open a widget's settings from the cog in its pop-out.",
           "settings": [
-            {"key": "trays"}
+            {"key": "trays"},
+            {
+              "key": "create-widget",
+              "name": "Create New Widget",
+              "tip": "Adds a widget of your own at the end of the Right section, switched on, and opens its settings in its pop-out. It starts with its name alone: its Widget Designer takes any widget's buttons and its Pop-out Designer any widget's sections.",
+              "words": [
+                {"key": "all-made", "name": "Every widget there can be is made ({count}). Delete one to make another."}
+              ]
+            }
           ]
         },
         {

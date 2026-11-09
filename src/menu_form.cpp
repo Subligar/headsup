@@ -1316,6 +1316,23 @@ namespace headsup
             }
         }
 
+        // A new created widget, on at the Right section's end, its settings asked for; with every one made, nothing, and
+        // a note says so.
+        void CreateWidgetButton(Context& c, const std::string& label, const char* tip)
+        {
+            Form& form          = c.form;
+            BarPlacement placed = c.s.barSections;
+            const bool full     = !AddCreated(placed);
+            form.Fade(!BarOn(c.s) || full);
+            if (form.Action(label.c_str(), tip) && !form.Off())
+            {
+                c.state.settingsAsked = CreateWidget(c.s);
+                form.changed          = true;
+            }
+            if (full)
+                form.Note(Filled(Said(Word(c, WindowWord::CreateWidgetAllMade)), kCountMark, std::to_string(kMostCreatedWidgets)).c_str());
+        }
+
         // A palette's colors in two columns, the first the longer, each with an arrow back to its default.
         void PaletteSwatches(Context& c, const LayoutSetting& e, Color* colors, const Color* defaults)
         {
@@ -2302,6 +2319,7 @@ namespace headsup
                 break;
             case SettingPiece::WidgetTabs: break; // in the panel's popup, by BuildWidgetSettings
             case SettingPiece::Trays: Trays(c); break;
+            case SettingPiece::CreateWidget: CreateWidgetButton(c, label, tip); break;
             // Mouse Cursor and HeadsUp Config
             case SettingPiece::PointerIcon:
             {

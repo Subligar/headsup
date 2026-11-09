@@ -259,6 +259,32 @@ TEST(a_created_widget_takes_its_name_once_its_box_is_left_and_an_empty_one_is_th
     CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "toppanel-widgets-name-zone"));
 }
 
+TEST(create_new_widget_adds_one_at_the_rights_end_on_with_its_settings_asked_until_every_one_is_made)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const std::string button = "toppanel-layout-create-widget";
+    const Form first = w.Pass();
+    CHECK(At(Block(first, "toppanel-layout"), button) != std::string::npos);
+    CHECK(At(Block(first, "toppanel-layout"), button) > At(Block(first, "toppanel-layout"), "toppanel-layout-tray-end-2"));
+    const Form made = w.Pass({{button, kClickEvent, ""}});
+    const PanelWidget first1{BarWidget::Custom, 0};
+    CHECK(made.changed && w.state.settingsAsked == first1 && Shows(w.settings, first1));
+    CHECK(w.settings.barSections[static_cast<int>(BarSection::Right)].back() == first1);
+    CHECK(Has(Block(w.Pass(), "toppanel-layout")->rml, (std::string(">") + kCreatedWidgetName + "</div>").c_str()));
+    const std::string full = Filled(Said(w.layout.WordOf(WindowWord::CreateWidgetAllMade).name), kCountMark, std::to_string(kMostCreatedWidgets));
+    CHECK(!Has(Block(made, "toppanel-layout")->rml, full.c_str()));
+    for (int i = 1; i < kMostCreatedWidgets; ++i)
+        w.Pass({{button, kClickEvent, ""}});
+    const Form last = w.Pass({{button, kClickEvent, ""}});
+    CHECK(!last.changed && Has(Block(last, "toppanel-layout")->rml, full.c_str()));
+    int created = 0;
+    for (const auto& section : w.settings.barSections)
+        for (const PanelWidget p : section)
+            created += p.kind == BarWidget::Custom;
+    CHECK_EQ(created, kMostCreatedWidgets);
+}
+
 TEST(a_widgets_chip_dropped_on_another_goes_before_it)
 {
     Window w;

@@ -194,6 +194,7 @@ PIECES = Pieces(
             'own-looks', 'widget-spacing', 'widget-padding', 'show-background', 'corner-rounding', 'primary-font', 'secondary-font', 'font-ratio', 'icon-scale', 'popup-text-scale'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True, 'design-add': True, 'top-panel': True,
                                     'popup-row-full': True, 'popup-new-row': True, 'popup-add': True}),
         'trays': Setting(unnamed=True),
+        'create-widget': Setting(words={'all-made': True}),
         # Mouse Cursor and HeadsUp Config
         'pointer-icon': Setting(options=3, nameless=frozenset({2})), 'pointer-size': Setting(), 'pointer-fix': Setting(), 'lock-cursor': Setting(), 'keep-pointer': Setting(),
         'enable-headsup': Setting(), 'font': Setting(), 'size': Setting(),
