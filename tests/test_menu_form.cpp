@@ -1432,6 +1432,63 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK_EQ(design(), "-nation name | region");
 }
 
+TEST(the_pop_out_designer_adds_moves_and_removes_cards_and_refuses_a_fourth_in_a_row)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone};
+    w.readings.settingsOf  = {zone};
+    const std::string slot = std::to_string(SlotOf(zone));
+    const std::string base = "toppanel-widgets-card-" + slot + "-", palette = "toppanel-widgets-pcard-" + slot + "-";
+    const auto card        = [&](CardKind c) { return base + std::to_string(static_cast<int>(c)); };
+    const auto listed      = [&](CardKind c) { return palette + std::to_string(static_cast<int>(c)); };
+    const auto rml         = [](const Form& form) { return Block(form, "toppanel-widgets")->rml; };
+    const auto design      = [&] { return PopupDesignText(w.settings.Widget(zone).popup); };
+    const auto shown       = [&](const Form& form, const std::string& id) { return Has(rml(form), ("id=\"" + id + "\"").c_str()); };
+    const Form first = w.Pass();
+    // Its own card in its row; every other card in the lists, a card it shows in none of them.
+    CHECK(shown(first, card(CardKind::ZoneInfluence)) && !shown(first, listed(CardKind::ZoneInfluence)));
+    CHECK(shown(first, listed(CardKind::WeatherToday)) && shown(first, listed(CardKind::WorldGuilds)));
+    CHECK(!shown(first, listed(CardKind::WeatherToday) + "-2")); // each card listed once
+    // A card from the lists dropped on a row's card goes before it; on the empty row, in a row of its own.
+    w.Pass({{card(CardKind::ZoneInfluence), kDropEvent, listed(CardKind::WeatherToday)}});
+    CHECK_EQ(design(), "weather.today zone.influence");
+    w.Pass({{base + "end-1", kDropEvent, card(CardKind::ZoneInfluence)}});
+    CHECK_EQ(design(), "weather.today | zone.influence");
+    w.Pass({{base + "end-0", kDropEvent, listed(CardKind::WeatherForecast)}});
+    w.Pass({{base + "end-0", kDropEvent, listed(CardKind::WorldGuilds)}});
+    CHECK_EQ(design(), "weather.today weather.forecast world.guilds | zone.influence");
+    // A fourth in a full row is refused, and the designer says why until the next change.
+    const Form refused = w.Pass({{card(CardKind::WeatherToday), kDropEvent, card(CardKind::ZoneInfluence)}});
+    CHECK_EQ(design(), "weather.today weather.forecast world.guilds | zone.influence");
+    CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
+    w.Pass({{card(CardKind::WeatherToday), kDropEvent, card(CardKind::WorldGuilds)}});
+    CHECK_EQ(design(), "world.guilds weather.today weather.forecast | zone.influence");
+    CHECK(!Has(rml(w.Pass()), "class=\"error\""));
+    // A row's card let go off every row leaves the pop-out, back into the lists.
+    const Form removed = w.Pass({{card(CardKind::ZoneInfluence), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "world.guilds weather.today weather.forecast");
+    CHECK(shown(w.Pass(), listed(CardKind::ZoneInfluence)));
+    // Let go on a row, it moves and stays.
+    w.Pass({{base + "end-1", kDropEvent, card(CardKind::WorldGuilds)}, {card(CardKind::WorldGuilds), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "weather.today weather.forecast | world.guilds");
+    // Another widget's designer chips move nothing here.
+    const std::string weather = "toppanel-widgets-card-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
+                                std::to_string(static_cast<int>(CardKind::WeatherByElement));
+    w.Pass({{base + "end-0", kDropEvent, weather}});
+    CHECK_EQ(design(), "weather.today weather.forecast | world.guilds");
+}
+
+TEST(game_help_and_the_settings_widget_have_no_pop_out_designer)
+{
+    Window w;
+    for (const BarWidget kind : {BarWidget::GameHelp, BarWidget::Settings})
+    {
+        w.readings.settingsOf = {PanelWidget{kind}};
+        const FormBlock* block = Block(w.Pass(), "toppanel-widgets");
+        CHECK(block == nullptr || !Has(block->rml, "-card-"));
+    }
+}
+
 TEST(the_pinned_status_buttons_have_no_switch_and_are_on_while_a_status_is_pinned_at_their_rank)
 {
     Window w;

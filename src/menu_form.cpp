@@ -40,6 +40,8 @@ namespace headsup
         constexpr const char* kChipClone   = " clone"; // and its clone button's
         constexpr const char* kChipRemove  = " remove"; // and a copy's remove button's
         constexpr const char* kPartChip    = "part ";   // a designer chip's name, before its widget's slot and its part
+        // A Pop-out Designer chip's name in a row and in the lists, before its widget's slot and its card.
+        constexpr const char* kCardChip = "card ", *kListedCardChip = "pcard ";
         constexpr int kFirstSense = static_cast<int>(DetectionIcon::Link); // Detection Icons' first, after the aggression
 
         // The picture a designer chip shows before its name, or none.
@@ -714,6 +716,96 @@ namespace headsup
                          "</div>");
         }
 
+        // A widget's pop-out as rows of chips, a card each, then the lists of the cards it does not show, by widget, its
+        // own first: a chip drags within its row, to another, or onto the empty row after them for a new one; a row's chip
+        // let go off every row leaves the pop-out. A row of kMostCardsInRow takes no other card; trying says so under the
+        // rows until the next change.
+        void PopupDesigner(Context& c, PanelWidget widget)
+        {
+            Form& form            = c.form;
+            PopupDesign& d        = c.s.Widget(widget).popup;
+            const auto names      = c.layout.OptionsOf(WindowList::PopupCards);
+            const auto widgets    = c.layout.OptionsOf(WindowList::BarWidgets);
+            const std::string row = kCardChip + std::to_string(SlotOf(widget)), list = kListedCardChip + std::to_string(SlotOf(widget));
+            const std::string rowStart = form.Named(row) + "-", listStart = form.Named(list) + "-";
+            const auto widgetName = [&](BarWidget kind) { return std::string(Said(widgets[static_cast<size_t>(kind)].name)); };
+            const auto cardIn     = [&](const std::string& id) -> std::optional<CardKind> {
+                for (const std::string* start : {&rowStart, &listStart})
+                    if (id.compare(0, start->size(), *start) == 0)
+                    {
+                        const int card = std::atoi(id.c_str() + start->size());
+                        if (card >= 0 && card < kCardKindCount) return static_cast<CardKind>(card);
+                    }
+                return std::nullopt;
+            };
+            struct Drop
+            {
+                CardKind card;
+                size_t row, at;
+            };
+            std::optional<Drop> drop; // applied after the rows are written, as the Widget Designer's move
+            std::optional<CardKind> taken; // a row's chip let go
+            const auto dropped = [&](const std::string& target, size_t r, size_t at) {
+                const FormEvent* event = form.Took(target, kDropEvent);
+                if (event == nullptr) return;
+                if (const std::optional<CardKind> card = cardIn(event->value)) drop = Drop{*card, r, at};
+            };
+            const auto chip = [&](const std::string& name, CardKind card, bool shown) {
+                const std::string id      = form.Id(name);
+                const LayoutOption& said  = names[static_cast<size_t>(card)];
+                std::string text(Said(said.name));
+                if (shown && WidgetOfCard(card) != widget.kind) text += " (" + widgetName(WidgetOfCard(card)) + ")";
+                form.Raw(std::string("<div class=\"btn raised wchip ") + kDesignChipClass + " drag\" id=\"" + id + "\"" +
+                         TipAttribute(said.tip) + ">" + EscapedRml(text) + "</div>");
+                form.Set(id, FormValueKind::Class, "on", {}, shown);
+                form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
+                return id;
+            };
+            form.Raw("<div class=\"design\">");
+            for (size_t r = 0; r <= d.rows.size(); ++r)
+            {
+                const bool last = r == d.rows.size();
+                form.Raw(std::string("<div class=\"tray ") + kDesignLineClass + "\">");
+                for (size_t i = 0; !last && i < d.rows[r].size(); ++i)
+                {
+                    const CardKind card  = d.rows[r][i];
+                    const std::string id = chip(row + " " + std::to_string(static_cast<int>(card)), card, true);
+                    dropped(id, r, i);
+                    if (form.Took(id, kDragEndEvent) != nullptr) taken = card;
+                }
+                const std::string end = form.Id(row + " end " + std::to_string(r));
+                form.Raw(std::string("<div class=\"tray-end") + (last ? std::string(" ") + kHintClass : "") + "\" id=\"" + end + "\">" +
+                         (last ? EscapedRml(Said(Word(c, WindowWord::WidgetTabsPopupNewRow))) : "") + "</div></div>");
+                dropped(end, r, last ? 0 : d.rows[r].size());
+            }
+            form.Raw("</div>");
+            const bool refused = drop && !RowTakes(d, drop->row, drop->card);
+            const bool changed = drop ? !refused && PlaceCard(d, drop->card, drop->row, drop->at) : taken && RemoveCard(d, *taken);
+            if (changed) form.changed = true;
+            if (refused)
+                c.state.popupRefused = widget;
+            else if (changed && c.state.popupRefused == widget)
+                c.state.popupRefused.reset();
+            if (c.state.popupRefused == widget)
+                form.Raw(std::string("<div class=\"error\">") + EscapedRml(Said(Word(c, WindowWord::WidgetTabsPopupRowFull))) +
+                         "</div>");
+            form.Note(Word(c, WindowWord::WidgetTabsPopupAdd));
+            std::vector<BarWidget> order{widget.kind};
+            for (int k = 0; k < kBarWidgetCount; ++k)
+                if (static_cast<BarWidget>(k) != widget.kind) order.push_back(static_cast<BarWidget>(k));
+            for (const BarWidget kind : order)
+            {
+                std::vector<CardKind> cards = CardsOf(kind);
+                std::erase_if(cards, [&](CardKind card) { return HoldsCard(d, card); });
+                if (cards.empty()) continue;
+                form.Raw("<div class=\"tray-name\">" + EscapedRml(widgetName(kind)) + "</div>");
+                form.Raw(std::string("<div class=\"tray ") + kPaletteClass + "\">");
+                for (const CardKind card : cards)
+                    chip(list + " " + std::to_string(static_cast<int>(card)), card, false);
+                form.Raw("</div>");
+            }
+        }
+
         // One widget's options: what it shows and its own settings, as the layout orders them, a row the widget has
         // nothing for left out; then its Clone and, on a copy, its Remove.
         void WidgetOptions(Context& c, const LayoutSetting& e, PanelWidget widget)
@@ -913,6 +1005,12 @@ namespace headsup
                     // the Widget Designer's description
                     form.Note(kind == BarWidget::StatusTimers ? Word(c, WindowWord::WidgetTabsDesignStatusTimers) : row.tip);
                     Designer(c, widget);
+                    break;
+                case WidgetTabsRow::PopupDesign:
+                    if (CardsOf(kind).empty()) break;
+                    form.Caption(row.name);
+                    form.Note(row.tip);
+                    PopupDesigner(c, widget);
                     break;
                 case WidgetTabsRow::BarText:
                     if (bar)
