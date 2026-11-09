@@ -398,6 +398,77 @@ TEST(a_pills_pop_out_draws_in_its_own_faces_and_every_other_in_the_panels)
     CHECK_EQ(rml.Said(), "");
 }
 
+TEST(a_widgets_own_text_takes_effect_when_the_bars_style_is_swapped_under_its_drawn_widgets)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    const BarLook look   = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    const BarMetrics own = MetricsFor(kBarHeight, look.palette.shape, kDefaultFontRatio, kDefaultPopupScale, 40);
+    const WidgetText weather{BarWidget::Weather, kMarcellusSC, kMarcellusSC, own, TextRow{20, 10, 6.0f, 26.0f, 20, 10.0f},
+        BarTextPlace{BarLinePlace{24, 6.0f, 2.0f}, BarLinePlace{24, 6.0f, 2.0f}, BarLinePlace{24, 10.0f, 2.0f},
+            BarLinePlace{24, 10.0f, 2.0f}, BarLinePlace{12, 26.0f, 1.0f}, {}, {}}};
+    test::RmlSession rml;
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    WidgetContent c;
+    c.shown    = true;
+    c.icons    = {Icon::Gil};
+    c.title    = {Text("Clear")};
+    c.subtitle = {Text("Firesday")};
+    Rml::Element* e = bar->GetElementById(WidgetId(BarWidget::Weather));
+    e->SetClass(kHiddenClass, false);
+    e->SetInnerRML(WidgetRml(c, look, {}));
+    rml.context->Update();
+    Rml::ElementList icons, titles;
+    e->GetElementsByClassName(icons, "icon");
+    e->GetElementsByClassName(titles, "title");
+    CHECK(!icons.empty() && !titles.empty());
+    CHECK_EQ(titles.front()->GetComputedValues().font_size(), 13.0f);
+    // The same elements, as a slider's step leaves them.
+    bar->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(BarStyle(look, place, {weather})));
+    rml.context->Update();
+    CHECK_EQ(titles.front()->GetComputedValues().font_size(), 20.0f);
+    CHECK(std::fabs(icons.front()->GetBox().GetSize(Rml::BoxArea::Content).x - own.icon) < 0.01f);
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(a_pop_outs_own_faces_take_effect_when_the_popups_style_is_swapped_and_it_does_not_drop_in_again)
+{
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    const PopupFaces panel = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
+        PopupFace{"Barlow Condensed", 16, 20}, PopupFace{"Barlow Condensed", 16, 20}};
+    PopupFaces own = panel;
+    for (PopupFace& face : own)
+    {
+        face.pixels += 6;
+        face.line += 7;
+    }
+    test::RmlSession rml;
+    Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, panel), "popups");
+    popups->Show();
+    Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+    popup->SetClass(kPopupClass, true);
+    popup->SetClass(PopupScope(BarWidget::Zone), true);
+    popup->SetClass(kOpenClass, true);
+    popup->SetInnerRML("<div class=\"p f1\">Firesday</div>");
+    for (int update = 0; update < 3; ++update)
+    {
+        rml.complaints.seconds += 1.0; // past its drop-in
+        rml.context->Update();
+    }
+    CHECK_EQ(popup->GetComputedValues().opacity(), 1.0f);
+    CHECK_EQ(popup->GetFirstChild()->GetComputedValues().font_size(), 14.0f);
+    popups->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(PopupStyle(look, panel, {PillFaces{BarWidget::Zone, own}})));
+    rml.context->Update();
+    rml.complaints.seconds += 0.05; // a quarter into a drop-in, were it played again
+    rml.context->Update();
+    CHECK_EQ(popup->GetFirstChild()->GetComputedValues().font_size(), 20.0f);
+    CHECK_EQ(popup->GetComputedValues().opacity(), 1.0f);
+    CHECK_EQ(rml.Said(), "");
+}
+
 TEST(a_widgets_content_stands_a_pixel_above_where_its_lines_are_placed_in_every_shape)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},

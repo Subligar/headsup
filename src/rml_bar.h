@@ -176,6 +176,8 @@ namespace headsup
         // A look's popup faces, as RmlUi sets them.
         PopupFaces FacesOf(RmlHost& host, const BarLook& look);
         void ClosePopup();
+        // What was measured and marked in the look before, done again in the new one: its style was swapped in place.
+        void ForgetLooks();
         const FaceLine& FaceLineOf(RmlHost& host, const char* family, int pixels);
 
         float Width(RmlHost& host, const std::string& text, const TextFace& face) const;
@@ -191,7 +193,7 @@ namespace headsup
         Memo<LinesKey, Rows> m_Rows;
         std::vector<std::pair<LinesKey, Rows>> m_OwnRows, m_OwnRowsBefore; // this frame's, and the last frame's
         Rml::ElementDocument* m_Document = nullptr;
-        std::string m_DocumentText, m_StripSource; // what the document was built from, and its strip image
+        std::string m_DocumentText, m_StyleText, m_StripSource; // the document's markup and style, and its strip image
         bool m_Visible = false;
         std::array<Shown, kPanelSlots> m_Shown;
         std::array<Divider, kDividerCount> m_Dividers;
@@ -203,7 +205,7 @@ namespace headsup
         Memo<HelpBarKey, HelpBarFit> m_HelpBar;
         // The popups' documents, by PopupLayer.
         std::array<Rml::ElementDocument*, kPopupLayers> m_PopupDocuments{};
-        std::string m_PopupDocumentText;
+        std::string m_PopupStyleText;
         // Each pill's popup, by its first widget's SlotOf.
         struct Popup
         {

@@ -61,6 +61,20 @@ namespace headsup
         m_SettingsBody.reset();
     }
 
+    void RmlBar::ForgetLooks()
+    {
+        for (Shown& shown : m_Shown)
+            shown.measured = shown.marked = false;
+        m_HelpDrawn.reset();
+        for (Popup& popup : m_Popups)
+        {
+            popup.layout = {};
+            popup.marked = false;
+            popup.widest = 0.0f;
+            popup.widths = {};
+        }
+    }
+
     const RmlBar::FaceLine& RmlBar::FaceLineOf(RmlHost& host, const char* family, int pixels)
     {
         for (const FaceLine& known : m_FaceLines)
@@ -235,18 +249,27 @@ namespace headsup
         std::vector<WidgetText> own;
         for (const std::optional<WidgetText>& text : widgets.text)
             if (text) own.push_back(*text);
-        // Built again whenever its text would differ, so every setting it reads takes effect.
-        std::string text = BarDocument(look, place, own);
-        if (m_Document != nullptr && text == m_DocumentText) return true;
+        // Every setting it reads takes effect: built again when its markup would differ, its style swapped in place
+        // when only that would, or every step of a widget's own slider would make the bar and its popups anew.
+        std::string markup = BarMarkup(look), style = BarStyle(look, place, own);
+        if (m_Document != nullptr && markup == m_DocumentText && style == m_StyleText) return true;
         // A strip of other colors or rows is another image: the one before is let go, or every step of a color's
         // slider would keep its own.
         std::string strip = StripSource(look.palette, WholePixels(look.metrics.height), WholePixels(look.metrics.below));
         if (m_Document != nullptr && strip != m_StripSource) Rml::ReleaseTexture(m_StripSource);
+        m_StripSource = std::move(strip);
+        if (m_Document != nullptr && markup == m_DocumentText)
+        {
+            m_Document->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(style));
+            m_StyleText = std::move(style);
+            ForgetLooks();
+            return true;
+        }
         Close();
-        m_Document = host.Bar()->LoadDocumentFromMemory(text, kDocumentName);
+        m_Document = host.Bar()->LoadDocumentFromMemory(BarDocument(look, place, own), kDocumentName);
         if (m_Document == nullptr) return false;
-        m_DocumentText = std::move(text);
-        m_StripSource  = std::move(strip);
+        m_DocumentText = std::move(markup);
+        m_StyleText    = std::move(style);
         for (int slot = 0; slot < kPanelSlots; ++slot)
             if (OnTheBar(WidgetInSlot(slot).kind)) m_Shown[slot].element = m_Document->GetElementById(WidgetId(WidgetInSlot(slot)));
         for (int d = 0; d < kDividerCount; ++d)
@@ -458,9 +481,19 @@ namespace headsup
         std::vector<PillFaces> own;
         for (const std::optional<WidgetText>& text : widgets.text)
             if (text) own.push_back(PillFaces{text->widget, FacesOf(host, LookOf(look, widgets, SlotOf(text->widget)))});
-        std::string text = PopupDocument(look, FacesOf(host, look), own);
-        if (m_PopupDocuments[0] != nullptr && text == m_PopupDocumentText) return true;
-        ClosePopup();
+        const PopupFaces faces = FacesOf(host, look);
+        std::string style      = PopupStyle(look, faces, own);
+        if (m_PopupDocuments[0] != nullptr)
+        {
+            if (style == m_PopupStyleText) return true;
+            // Swapped in place, an open popup stays where it is and does not drop in again.
+            for (Rml::ElementDocument* document : m_PopupDocuments)
+                document->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(style));
+            m_PopupStyleText = std::move(style);
+            ForgetLooks();
+            return true;
+        }
+        const std::string text = PopupDocument(look, faces, own);
         for (Rml::ElementDocument*& document : m_PopupDocuments)
         {
             document = host.Overlay()->LoadDocumentFromMemory(text, kPopupDocumentName);
@@ -473,7 +506,7 @@ namespace headsup
         }
         m_PopupDocuments[static_cast<size_t>(PopupLayer::OverSettings)]->SetProperty(Rml::PropertyId::ZIndex,
             Rml::Property(static_cast<float>(kPopupsOverSettingsZ), Rml::Unit::NUMBER));
-        m_PopupDocumentText = std::move(text);
+        m_PopupStyleText = std::move(style);
         return true;
     }
 

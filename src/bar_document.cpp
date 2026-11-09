@@ -516,7 +516,7 @@ namespace headsup
         }
     }
 
-    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own)
+    std::string BarStyle(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own)
     {
         const BarPalette& p  = look.palette;
         const BarMetrics& m  = look.metrics;
@@ -530,8 +530,6 @@ namespace headsup
         const float rowTop      = row.y + kContentInset; // where a widget's content starts
         const float clear       = DiamondClearance(m);
         const int divider       = WholePixels(m.diamond), cap = WholePixels(m.diamond * kCapScale);
-        const std::string capSource     = SeparatorSource(p.separator, p.accent, cap);
-        const std::string dividerSource = SeparatorSource(p.separator, look.ornate ? p.divider : p.accent, divider);
         // Show Background is each widget's own: its backed class.
         auto boxOf = [&](BarWidget widget, bool lit) { return look.BoxOf(widget, lit, true); };
         auto square = [](float size) { return "width:" + Px(size) + ";height:" + Px(size) + ";"; };
@@ -634,8 +632,7 @@ namespace headsup
         const int help = HelpTextPixels(look.settings.helpBarTextSize, lines.title);
         css += ".hc{" + FaceRules(look.titleFont, help, place.helpCaption.height) + ShadowEffect(help) + "}";
         css += ".hh{" + FaceRules(look.detailFont, help, place.help.height) + ShadowEffect(help) + "}";
-        const bool glass = look.palette.shape == BarShape::Glass;
-        if (glass) css += GlassBarRules(look);
+        if (look.palette.shape == BarShape::Glass) css += GlassBarRules(look);
         // Last, over every shape's own corners and borders, and a pill's own corners, its first widget's.
         const std::string joinBefore = std::string(".") + kJoinBeforeClass +
                                        "{border-left-width:0px;border-top-left-radius:0px;border-bottom-left-radius:0px;}";
@@ -649,10 +646,19 @@ namespace headsup
                 const std::string id = "#" + WidgetId(WidgetInSlot(slot));
                 css += id + "{border-radius:" + Px(look.WidgetRadius(*own)) + ";}" + id + joinBefore + id + joinAfter;
             }
+        return css;
+    }
 
-        std::string rml = "<rml><head><style>" + css + "</style></head><body class=\"" + shape.substr(1) + "\">";
+    std::string BarMarkup(const BarLook& look)
+    {
+        const BarPalette& p = look.palette;
+        const BarMetrics& m = look.metrics;
+        const int divider = WholePixels(m.diamond), cap = WholePixels(m.diamond * kCapScale);
+        const std::string capSource     = SeparatorSource(p.separator, p.accent, cap);
+        const std::string dividerSource = SeparatorSource(p.separator, look.ornate ? p.divider : p.accent, divider);
+        std::string rml = std::string("<body class=\"") + (look.ornate ? "ornate" : "pills") + "\">";
         rml += std::string("<div id=\"") + kStripId + "\"></div>";
-        if (glass) rml += "<div class=\"glint a\"></div><div class=\"glint b\"></div><div class=\"glint c\"></div>";
+        if (p.shape == BarShape::Glass) rml += "<div class=\"glint a\"></div><div class=\"glint b\"></div><div class=\"glint c\"></div>";
         if ((look.settings.panelSeparators & SeparatorBit(Separator::EndCaps)) != 0)
             rml += "<img class=\"cap\" id=\"cap-left\" src=\"" + capSource + "\"/><img class=\"cap\" id=\"" + kRightCapId +
                    "\" src=\"" + capSource + "\"/>";
@@ -666,7 +672,12 @@ namespace headsup
                    "\" id=\"" + WidgetId(widget) + "\"></div>";
         }
         rml += std::string("<div id=\"") + kHelpId + "\"></div>";
-        return rml + "</body></rml>";
+        return rml + "</body>";
+    }
+
+    std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own)
+    {
+        return "<rml><head><style>" + BarStyle(look, place, own) + "</style></head>" + BarMarkup(look) + "</rml>";
     }
 
     std::string HelpBarRml(const HelpBarParts& parts, const BarLook& look, const BarTextPlace& place)
@@ -704,7 +715,7 @@ namespace headsup
 
     std::string PopupScope(PanelWidget pill) { return "of-" + WidgetId(pill); }
 
-    std::string PopupDocument(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own)
+    std::string PopupStyle(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own)
     {
         const BoxStyle panel = PopupPanel(look);
         std::string css = "body{display:block;width:100%;height:100%;pointer-events:none;z-index:" + std::to_string(kPopupsZ) + ";}";
@@ -749,7 +760,12 @@ namespace headsup
             css += "#panel{background-color:transparent;decorator:vertical-gradient(" + RcssColor(kGlassTop) + " " +
                    RcssColor(kGlassFoot) + ");border-color:" + RcssColor(Faded(look.palette.accent, kGlassFrame)) + ";}";
         }
-        return "<rml><head><style>" + css + "</style></head><body></body></rml>";
+        return css;
+    }
+
+    std::string PopupDocument(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own)
+    {
+        return "<rml><head><style>" + PopupStyle(look, faces, own) + "</style></head><body></body></rml>";
     }
 
     std::string PopupRml(const PopupLayout& layout, const BarLook& look, const PopupFaces& faces)

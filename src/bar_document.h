@@ -81,8 +81,10 @@ namespace headsup
     // The bar's markup and style: the strip across the screen, the end caps when the settings show them, a divider
     // for each pair of neighbours and every placed widget's element, all sized from the look, with own's text rules
     // and icon sizes under each one's widget. The widgets and dividers carry the hidden class and no place: the plugin
-    // shows and places them.
+    // shows and places them. Its style and its markup apart: a widget's own looks are all style, swapped in place.
     std::string BarDocument(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own = {});
+    std::string BarStyle(const BarLook& look, const BarTextPlace& place, const std::vector<WidgetText>& own = {});
+    std::string BarMarkup(const BarLook& look);
     std::string WidgetId(PanelWidget widget);
     // A widget's margin and padding on one side as its element takes them, for a room from its edge to what it
     // shows: inside a pill's or a frame's border, or past a plain ornate widget's margin. A side it shares in a
@@ -150,8 +152,9 @@ namespace headsup
     // The class of a pill's popup's element, which its own faces are under.
     std::string PopupScope(PanelWidget pill);
     // The popups' document: an empty popup over the whole screen that takes no clicks, styled from the look, its text
-    // in faces but where a pill's popup has its own.
+    // in faces but where a pill's popup has its own. Its markup is the same for every look: only its style changes.
     std::string PopupDocument(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own = {});
+    std::string PopupStyle(const BarLook& look, const PopupFaces& faces, const std::vector<PillFaces>& own = {});
     // Sunk into what holds it: darker, its upper edges in shadow and its lower ones lit.
     std::string SocketRules(float radius);
     // The panel's text shadow as a font effect, for text of that many pixels.
