@@ -1209,6 +1209,33 @@ TEST(a_gms_icon_is_on_every_plate_of_theirs_where_the_design_puts_it_or_before_t
     CHECK(Compose(PlayerWith(PlayerStatus{}), s).lines.empty());
 }
 
+TEST(a_player_timing_out_shows_only_the_link_dead_icon_wherever_the_design_puts_icons)
+{
+    Settings s;
+    KindSettings& players = s.Kind(PlateKind::Players);
+    players.lines[2].text = "$gm$mentor$away$linkshell $name ${sync|bazaar}";
+    PlayerStatus dropping;
+    dropping.gm = dropping.mentor = dropping.away = dropping.linkshell = dropping.levelSync = dropping.bazaar = true;
+    dropping.linkDead = true;
+    // Every other icon gives way, GM's too; R0 goes before the name as GM's would.
+    const ComposedPlate plate = Compose(PlayerWith(dropping), s);
+    CHECK((IconsOn(plate) == std::vector<Icon>{Icon::LinkDead}));
+    CHECK_EQ(Rendered(plate.lines.back()), "[1] Chadmage");
+    // Where the design puts it, once.
+    players.lines[2].text = "$name $linkdead$away";
+    CHECK_EQ(Rendered(Compose(PlayerWith(dropping), s).lines.back()), "Chadmage [1]");
+    // Back online, the design's icons return and R0 is gone.
+    dropping.linkDead = false;
+    CHECK((IconsOn(Compose(PlayerWith(dropping), s)) == std::vector<Icon>{Icon::Gm, Icon::Away}));
+    // A plate whatever their row says.
+    dropping = PlayerStatus{};
+    dropping.linkDead = true;
+    for (RowSettings& row : players.rows)
+        row.plate = PlateMode::Hidden;
+    CHECK((IconsOn(Compose(PlayerWith(dropping), s)) == std::vector<Icon>{Icon::LinkDead}));
+    CHECK(HookActionFor(PlayerWith(dropping), s, kPlayer, false, false) == HookAction::Replace);
+}
+
 TEST(a_gm_has_a_plate_whatever_their_row_is_set_to)
 {
     Settings s;

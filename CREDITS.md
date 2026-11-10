@@ -20,3 +20,5 @@ HeadsUp is free software under the GNU General Public License, version 3 or late
   backgrounds (`BuffIcon.png`, `DebuffIcon.png`) are XIUI 1.8.4's (tirem/xiui, MIT License, see
   `third_party/xiui-icons/LICENSE`); its Tetsouou pack credits Tesouou on FFXIAH HD. Which statuses are debuffs
   (`kDebuffs` in `src/status_icons.cpp`) is copied from XIUI's `libs/bufftable.lua`.
+- **Disconnecting icon:** `resources/icons/link_dead.png` is the game's own red circle (the 32x32 square at (0, 96) of
+  `MENU ustatsHD` in `ROM/119/51.DAT`), upscaled with Real-ESRGAN's x4plus-anime model.

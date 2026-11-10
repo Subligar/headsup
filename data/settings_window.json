@@ -1166,6 +1166,7 @@
         {"name": "Feeling", "tip": "How the game says it feels about the catch, such as Good Feeling, Bad Feeling, Terrible Feeling, Low Skill or Epic Catch."},
         {"name": "Line Break", "tip": "Shows Line Break when your line could snap. The game warns of this only with a bad feeling."},
         {"name": "Rod Break", "tip": "Shows Rod Break when your rod could break. The game warns of this only with a terrible feeling."},
+        {"name": "Disconnecting", "tip": "Shows the game's red circle (R0) while a player is losing their connection. While it shows, it is the only icon on their nameplate, and it shows even if no line has this tag."},
         {"name": "Line Break", "tip": "Puts what follows on a row of its own under the rest of the line, in the line's own style. Press Enter in a line to make one."}
       ]
     },

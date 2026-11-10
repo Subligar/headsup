@@ -21,6 +21,7 @@ namespace headsup
         const TagEntry kTags[] = {
             {Tag::Name, "$name", kAnyKinds, kText},
             {Tag::Gm, "$gm", kPlayerKinds, false, Icon::Gm, &PlayerStatus::gm},
+            {Tag::LinkDead, "$linkdead", kPlayerKinds, false, Icon::LinkDead, &PlayerStatus::linkDead},
             {Tag::Mentor, "$mentor", kPlayerKinds, false, Icon::Mentor, &PlayerStatus::mentor},
             {Tag::New, "$new", kPlayerKinds, false, Icon::NewAdventurer, &PlayerStatus::newAdventurer},
             {Tag::Sync, "$sync", kPlayerKinds, false, Icon::LevelSync, &PlayerStatus::levelSync},
