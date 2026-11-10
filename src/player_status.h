@@ -24,6 +24,7 @@ namespace headsup
         bool gm            = false;
         bool levelSync     = false;
         bool anonymous     = false; // the game hides their jobs and levels
+        bool linkDead      = false; // the server is timing them out: the game's red circle, R0
         uint32_t linkshellArgb = kWhite;
     };
 
@@ -79,6 +80,6 @@ namespace headsup
     bool LevelSyncInBuffs(const int16_t* buffs);
     bool LevelSyncInPartyIcons(const uint8_t* icons, uint64_t bitMask);
 
-    // Away, mentor, new adventurer and GM are only in the packets; memory is current for the rest.
+    // Away, mentor, new adventurer, GM and link-dead are only in the packets; memory is current for the rest.
     PlayerStatus WithPacketStatus(const PlayerStatus& memory, const PlayerStatus* packet);
 }

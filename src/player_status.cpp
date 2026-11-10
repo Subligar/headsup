@@ -21,6 +21,7 @@ namespace headsup
         constexpr int kOtherAnonymousBit = 12;
         constexpr int kOtherAwayBit     = 14;
         constexpr int kOtherLinkshellBit = 17;
+        constexpr int kOtherLinkDeadBit = 18;
         constexpr int kOtherGmShift     = 24;
         constexpr int kOtherBazaarBit   = 31;
         constexpr int kOtherNewBit      = 23;
@@ -84,6 +85,7 @@ namespace headsup
         s.anonymous     = Bit(flags1, kOtherAnonymousBit);
         s.away          = Bit(flags1, kOtherAwayBit);
         s.linkshell     = Bit(flags1, kOtherLinkshellBit);
+        s.linkDead      = Bit(flags1, kOtherLinkDeadBit);
         s.gm            = (flags1 >> kOtherGmShift & kGmLevelMask) != 0;
         s.bazaar        = Bit(flags1, kOtherBazaarBit);
         s.newAdventurer = Bit(flags3, kOtherNewBit);
@@ -172,6 +174,7 @@ namespace headsup
         s.mentor        = packet->mentor;
         s.newAdventurer = packet->newAdventurer;
         s.gm            = packet->gm;
+        s.linkDead      = packet->linkDead;
         return s;
     }
 }

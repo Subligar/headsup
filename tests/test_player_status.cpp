@@ -221,6 +221,17 @@ TEST(an_anonymous_player_says_so_in_their_update)
     CHECK(!ParseOtherPlayer(seeking.data(), static_cast<uint32_t>(seeking.size()))->status->anonymous);
 }
 
+TEST(a_player_timing_out_says_so_in_their_update)
+{
+    // Phoenix's char_update.cpp: LinkDeadFlag is the bit after LinkShellFlag (17) in the first flags word.
+    const auto dropping = OtherPlayer(1105, kGeneral, 1u << 18, 0, 0);
+    const auto update   = ParseOtherPlayer(dropping.data(), static_cast<uint32_t>(dropping.size()));
+    CHECK(update && update->status && update->status->linkDead);
+    CHECK(!update->status->linkshell); // its neighbor
+    const auto pearl = OtherPlayer(1105, kGeneral, 1u << 17 | 1u << 19, 0, 0);
+    CHECK(!ParseOtherPlayer(pearl.data(), static_cast<uint32_t>(pearl.size()))->status->linkDead);
+}
+
 TEST(your_level_sync_comes_from_your_buffs)
 {
     int16_t buffs[kStatusIconSlots];
@@ -299,8 +310,10 @@ TEST(the_rest_comes_from_the_packets_once_known)
     PlayerStatus packet;
     packet.away = packet.mentor = packet.newAdventurer = packet.gm = true;
     packet.linkshellArgb = 0xFF405060;
+    packet.linkDead = true;
     const PlayerStatus both = WithPacketStatus(memory, &packet);
     CheckStatus(both, {true, true, true, true, true, true, true});
+    CHECK(both.linkDead && !WithPacketStatus(packet, &memory).linkDead);
     CHECK_EQ(both.linkshellArgb, 0xFF102030u);
     const PlayerStatus stale = WithPacketStatus(packet, &memory); // the other way round, every field differs
     CheckStatus(stale, {false, false, false, false, false, false, false});

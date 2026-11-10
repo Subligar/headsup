@@ -107,8 +107,17 @@ namespace headsup
             }
         }
 
-        // A player's status icon that the kind's limit counts: every one but GM's, which is always drawn.
-        bool IsCountedIcon(Tag tag) { return tag != Tag::Gm && EntryOf(tag).icon.has_value(); }
+        // A player's status icon that the kind's limit counts: every one but GM's and link-dead's, which are always drawn.
+        bool IsCountedIcon(Tag tag) { return tag != Tag::Gm && tag != Tag::LinkDead && EntryOf(tag).icon.has_value(); }
+
+        // The icon a player's plate always shows (Phoenix's rule for a GM's; the user's for R0, which then stands alone).
+        std::optional<Tag> ForcedTag(const ActorInfo& info)
+        {
+            if (info.state.kind != EntityKind::Player || !info.status) return std::nullopt;
+            if (info.status->linkDead) return Tag::LinkDead;
+            if (info.status->gm) return Tag::Gm;
+            return std::nullopt;
+        }
 
         // What a mob's badge tags draw from, figured once for every badge group on its plate.
         struct MobBadges
@@ -236,12 +245,12 @@ namespace headsup
 
     namespace
     {
-        // A GM's icon is on every plate of theirs, whatever the design shows (Phoenix's rule): where the design did
-        // not draw it, at the end of the icons before their name, or before it a space apart, else at the start of
-        // the first line, else on a line of its own in the bottom line's look.
-        void PutGmIcon(ComposedPlate& plate, const LineLook& bottomLook)
+        // A forced icon is on every plate of theirs, whatever the design shows: where the design did not draw it, at
+        // the end of the icons before their name, or before it a space apart, else at the start of the first line,
+        // else on a line of its own in the bottom line's look.
+        void PutForcedIcon(ComposedPlate& plate, Tag tag, const LineLook& bottomLook)
         {
-            PlateItem icon{.kind = ItemKind::Icons, .icons = {IconDraw{.icon = *TagIcon(Tag::Gm)}}};
+            PlateItem icon{.kind = ItemKind::Icons, .icons = {IconDraw{.icon = *TagIcon(tag)}}};
             const PlateItem gap{.kind = ItemKind::Space, .spaces = 1};
             for (ComposedLine& line : plate.lines)
                 if (const auto name = std::ranges::find_if(line.items, [](const PlateItem& item) { return item.name; });
@@ -268,10 +277,10 @@ namespace headsup
 
     namespace
     {
-        // A GM has a plate whatever their row says (Phoenix's rule), so their icon always shows.
+        // A forced icon's player has a plate whatever their row says, so the icon always shows.
         PlateMode PlateModeOf(const ActorInfo& info, const Settings& s)
         {
-            if (info.state.kind == EntityKind::Player && info.status && info.status->gm) return PlateMode::Shown;
+            if (ForcedTag(info)) return PlateMode::Shown;
             return s.Kind(PlateKindOf(info.state)).rows[RowOf(info.state)].plate;
         }
     }
@@ -309,8 +318,9 @@ namespace headsup
             return text;
         };
         std::optional<MobBadges> badges;
-        int statusIcons = 0; // the plate's so far, of those its kind limits
-        bool gmDrawn    = false;
+        int statusIcons                 = 0; // the plate's so far, of those its kind limits
+        const std::optional<Tag> forced = ForcedTag(info);
+        bool forcedDrawn                = false;
         plate.lines.reserve(kPlateLines);
         for (int i = 0; i < kPlateLines; ++i)
         {
@@ -354,10 +364,11 @@ namespace headsup
                     }
                     const bool counted = IsCountedIcon(tag);
                     if (counted && statusIcons >= kind.maxIcons) continue;
+                    if (forced == Tag::LinkDead && tag != Tag::LinkDead && EntryOf(tag).icon) continue;
                     std::vector<IconDraw> icons = TagIcons(tag, info, player, s, badges);
                     drawn                       = !icons.empty();
                     if (drawn && counted) ++statusIcons;
-                    gmDrawn = gmDrawn || (drawn && tag == Tag::Gm);
+                    forcedDrawn = forcedDrawn || (drawn && tag == forced);
                     if (drawn) builder.Icons(std::move(icons), EntryOf(tag).group.has_value());
                 }
                 if (!drawn && !deadMob) builder.Empty();
@@ -366,8 +377,7 @@ namespace headsup
             for (size_t row = firstRow; row + 1 < plate.lines.size(); ++row)
                 plate.lines[row].lastRow = false;
         }
-        if (!gmDrawn && st.kind == EntityKind::Player && info.status && info.status->gm)
-            PutGmIcon(plate, LookOf(StyleLine(kind, kBottomLine), st, s, gameArgb));
+        if (forced && !forcedDrawn) PutForcedIcon(plate, *forced, LookOf(StyleLine(kind, kBottomLine), st, s, gameArgb));
         plate.ornament      = kind.ornament.place;
         plate.ornamentColor = ResolveColor(kind.ornament.color, st, s.palette, gameArgb);
         return plate;

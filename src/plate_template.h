@@ -19,7 +19,7 @@ namespace headsup
     enum class Tag : uint8_t
     {
         Name, Level, Con, Id, ServerId, Ph, Detect, Weak, Resist, Status, Immune, Gm, Mentor, New, Sync, Away, Linkshell,
-        Bazaar, Seeking, Job, Owner, Title, JobLevel, SubLevel, Fish, FishSize, Feeling, LineSnap, RodBreak, Break
+        Bazaar, Seeking, Job, Owner, Title, JobLevel, SubLevel, Fish, FishSize, Feeling, LineSnap, RodBreak, LinkDead, Break
     };
     constexpr int kTagCount = static_cast<int>(Tag::Break) + 1;
     constexpr char kTagMark = '$';
