@@ -262,3 +262,16 @@ TEST(the_conquest_request_is_a_bare_header_naming_0x05a_and_one_word)
     CHECK(static_cast<size_t>(word >> 9) * 4 == kConquestRequest.size()); // XiPackets: 0x0004 bytes
     CHECK(kConquestRequest[2] == 0 && kConquestRequest[3] == 0);         // the sync word, the game's to fill
 }
+
+TEST(a_catch_message_names_who_caught_what)
+{
+    // A Moat Carp caught in West Ronfaure on the live server: everyone near the angler is sent this.
+    const uint8_t caught[] = {0x27, 0x38, 0x59, 0xD5, 0x31, 0x13, 0x00, 0x00, 0x0B, 0x04, 0x7D, 0x9C, 0x00, 0x00, 0x00, 0x00,
+        0x31, 0x11, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    const std::optional<CatchMessage> message = ParseCatchMessage(caught, sizeof(caught));
+    CHECK(message.has_value());
+    CHECK_EQ(message->who, 0x1331u);
+    CHECK_EQ(message->message, 0x1C7D); // its top bit dropped: West Ronfaure's 7254 and a catch's 0x27
+    CHECK_EQ(message->item, 4401);
+    CHECK(!ParseCatchMessage(caught, 0x13).has_value());
+}

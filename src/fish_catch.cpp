@@ -31,6 +31,8 @@ namespace headsup
             {0x2B, FishFeeling::Terrible, "Terrible Feeling"}, {0x2C, FishFeeling::LowSkill, "Low Skill"},
             {0x2D, FishFeeling::VeryLowSkill, "Very Low Skill"},
             {0x2E, FishFeeling::ExtremelyLowSkill, "Extremely Low Skill"}, {0x36, FishFeeling::Epic, "Epic Catch"}};
+        // A catch landed, and several landed at once; landed and let go for want of room (0x0A) is not kept.
+        constexpr uint16_t kCaught = 0x27, kCaughtSeveral = 0x0E;
         constexpr const char* kFishWord = "Fish", *kLineSnapWords = "Line Break", *kRodBreakWords = "Rod Break";
 
         // Phoenix warns of a line that will snap only with a bad feeling, and of a rod that will break only with a
@@ -57,6 +59,8 @@ namespace headsup
             }
         }
     }
+
+    bool CatchKept(uint16_t message) { return message == kCaught || message == kCaughtSeveral; }
 
     void ReadFishMessage(FishCatch& fish, uint16_t message)
     {

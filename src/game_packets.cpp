@@ -70,6 +70,14 @@ namespace headsup
         return TalkMessage{ReadAt<uint32_t>(data, kTalkWho), static_cast<uint16_t>(ReadAt<uint16_t>(data, at) & ~kTalkNameBit)};
     }
 
+    std::optional<CatchMessage> ParseCatchMessage(const uint8_t* data, uint32_t size)
+    {
+        constexpr uint32_t kCatchItem = 0x10;
+        if (data == nullptr || size < kCatchItem + sizeof(uint32_t)) return std::nullopt;
+        return CatchMessage{ReadAt<uint32_t>(data, kTalkWho), static_cast<uint16_t>(ReadAt<uint16_t>(data, kTalkNumMessage) & ~kTalkNameBit),
+            static_cast<uint16_t>(ReadAt<uint32_t>(data, kCatchItem))};
+    }
+
     std::optional<CraftRanks> ParseCraftRanks(const uint8_t* data, uint32_t size)
     {
         // Two bytes a skill from 0x80; a craft's rank is the low 5 bits, under its level and cap flag.

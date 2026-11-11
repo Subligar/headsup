@@ -9,6 +9,14 @@ namespace headsup
 {
     namespace
     {
+        // A message number past the zone's first fishing message; nothing in a zone without fishing or not yet known.
+        std::optional<uint16_t> FishingStep(std::optional<uint16_t> zoneId, uint16_t message)
+        {
+            const ZoneRecord* zone = zoneId ? ZoneById(*zoneId) : nullptr;
+            if (zone == nullptr || zone->fishing == kNoFishing || message < zone->fishing) return std::nullopt;
+            return static_cast<uint16_t>(message - zone->fishing);
+        }
+
         // What a zone-in owes goes at once, though never within kConquestAskGap of the last ask; after that, every
         // kPopupRefresh while refresh.
         bool RequestDue(double now, bool owed, const std::optional<double>& asked, bool refresh)
@@ -62,9 +70,12 @@ namespace headsup
         case kTalkNumPacket:
         case kTalkNumWorkPacket:
             if (const std::optional<TalkMessage> talk = ParseTalkMessage(id, data, size); talk && talk->who == m_Player)
-                if (const ZoneRecord* zone = m_Zone ? ZoneById(*m_Zone) : nullptr;
-                    zone != nullptr && zone->fishing != kNoFishing && talk->message >= zone->fishing)
-                    ReadFishMessage(m_Fish, static_cast<uint16_t>(talk->message - zone->fishing));
+                if (const std::optional<uint16_t> step = FishingStep(m_Zone, talk->message)) ReadFishMessage(m_Fish, *step);
+            break;
+        case kCatchPacket:
+            if (const std::optional<CatchMessage> caught = ParseCatchMessage(data, size); caught && caught->who == m_Player)
+                if (const std::optional<uint16_t> step = FishingStep(m_Zone, caught->message); step && CatchKept(*step))
+                    next.caught = caught->item;
             break;
         case kSkillsPacket:
             if (const auto crafts = ParseCraftRanks(data, size)) m_Crafts = *crafts;
