@@ -30,6 +30,7 @@ namespace headsup
         constexpr int kHexBase            = 16;
         constexpr const char* kNoteName      = "note";     // a note's id, as its card's controls are named
         constexpr const char* kCaptionSuffix = " caption"; // a caption's, after its text
+        constexpr const char* kFoldSuffix    = " fold";    // a fold's, after its title
         constexpr const char* kChannels[] = {"r", "g", "b", "a"};
         constexpr const char* kChannelNames[] = {"R", "G", "B", "A"};
         constexpr size_t kRgbChannels   = 3;
@@ -1127,6 +1128,17 @@ namespace headsup
         const std::string chip = kTagIdStart + std::to_string(static_cast<int>(tag));
         Out() += TagMarkup(*layout, chip, tag, "btn accent chip drag", layout->OptionsOf(WindowList::Tags)[static_cast<size_t>(tag)].tip);
         Set(chip, FormValueKind::Class, kOffClass, {}, m_Off);
+    }
+
+    bool Form::Fold(const char* title)
+    {
+        const std::string id = Id(std::string(title) + kFoldSuffix);
+        if (!m_Off && Clicked(id) && !m_State.unfolded.erase(id)) m_State.unfolded.insert(id);
+        const bool open = !m_Off && m_State.unfolded.contains(id);
+        Out() += "<div class=\"fold\" id=\"" + id + "\"><div class=\"arrow" + (open ? " open" : "") +
+                 "\"></div><div class=\"fold-title\">" + EscapedRml(LabelText(title)) + "</div></div>";
+        Set(id, FormValueKind::Class, kOffClass, {}, m_Off);
+        return open;
     }
 
     void Form::Caption(const char* text, const char* classes, float width)

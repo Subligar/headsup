@@ -1536,6 +1536,9 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     WidgetOptions& own    = w.settings.Widget(zone);
     w.readings.settingsOf = {zone};
     const auto id = [](const char* key, const char* widget = "zone") { return std::string("toppanel-widgets-") + key + "-" + widget; };
+    // The overrides start folded away.
+    CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, id("widget-spacing").c_str()));
+    w.Pass({{id("own-looks") + "-fold", kClickEvent, ""}});
     w.Pass({{id("widget-spacing"), kChangeEvent, "10"}});
     CHECK(own.spacing == 10);
     w.Pass({{id("widget-spacing"), kChangeEvent, "-1"}}); // the step under 0 px
@@ -1557,6 +1560,7 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     // Linked, the pill's spacing, background, rounding and pop-out are Zone's to set; Weather keeps its own text.
     own.combine           = weather;
     w.readings.settingsOf = {zone, weather};
+    w.Pass({{id("own-looks", "weather") + "-fold", kClickEvent, ""}});
     const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
     for (const char* key : {"widget-spacing", "show-background", "corner-rounding", "popup-text-scale"})
         CHECK(Has(rml, id(key).c_str()) && !Has(rml, id(key, "weather").c_str()));

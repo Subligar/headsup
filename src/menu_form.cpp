@@ -913,6 +913,7 @@ namespace headsup
             // Its pill's spacing, background, rounding and pop-out are its first widget's, set there alone.
             const bool pillLooks = HasOwnLooks(kind) && Panel(s).group[SlotOf(widget)] == widget;
             const char* topPanel = Word(c, WindowWord::WidgetTabsTopPanel);
+            bool overrides = false; // the Overrides fold is open: its rows follow it
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
             const std::string scope = std::string(" ") + BarWidgetName(kind) + (widget.copy > 0 ? " " + std::to_string(widget.copy + 1) : "");
             for (const LayoutRow& row : c.layout.RowsOf(e))
@@ -1185,16 +1186,16 @@ namespace headsup
                         form.Switch(label.c_str(), o.memText, row.tip);
                     break;
                 case WidgetTabsRow::OwnLooks:
-                    if (HasOwnLooks(kind)) form.Caption(label.c_str());
+                    overrides = HasOwnLooks(kind) && form.Fold(label.c_str());
                     break;
                 case WidgetTabsRow::WidgetSpacing:
-                    if (pillLooks) ownSlider(o.spacing, 0, kMaxWidgetSpacing, Pixels);
+                    if (pillLooks && overrides) ownSlider(o.spacing, 0, kMaxWidgetSpacing, Pixels);
                     break;
                 case WidgetTabsRow::WidgetPadding:
-                    if (HasOwnLooks(kind)) ownSlider(o.padding, 0, kMaxWidgetPadding, Pixels);
+                    if (overrides) ownSlider(o.padding, 0, kMaxWidgetPadding, Pixels);
                     break;
                 case WidgetTabsRow::ShowBackground:
-                    if (pillLooks)
+                    if (pillLooks && overrides)
                     {
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::OwnBackground));
                         int picked = !o.background ? 0 : *o.background ? 1 : 2; // as the list has them
@@ -1203,17 +1204,17 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::CornerRounding:
-                    if (pillLooks)
+                    if (pillLooks && overrides)
                         ownSlider(o.rounding, kThemeRounding, kMaxRounding, PixelsOr(Word(c, WindowWord::Themes), kThemeRounding));
                     break;
                 case WidgetTabsRow::PrimaryFont:
-                    if (HasOwnLooks(kind)) form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, topPanel);
+                    if (overrides) form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, topPanel);
                     break;
                 case WidgetTabsRow::SecondaryFont:
-                    if (HasOwnLooks(kind)) form.FontDropdown(label.c_str(), o.textFont, c.fonts, row.tip, topPanel);
+                    if (overrides) form.FontDropdown(label.c_str(), o.textFont, c.fonts, row.tip, topPanel);
                     break;
                 case WidgetTabsRow::FontRatio:
-                    if (HasOwnLooks(kind))
+                    if (overrides)
                     {
                         // By the Top Panel's slider's positions, set only when moved, so a ratio between them is kept.
                         std::optional<int> at = o.fontRatio ? std::optional<int>(FontRatioPosition(*o.fontRatio)) : std::nullopt;
@@ -1223,7 +1224,7 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::IconScale:
-                    if (HasOwnLooks(kind))
+                    if (overrides)
                     {
                         std::optional<int> at =
                             o.iconScale ? std::optional<int>((*o.iconScale - kMinIconScale) / kPercentStep) : std::nullopt;
@@ -1233,7 +1234,7 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::PopupTextScale:
-                    if (pillLooks)
+                    if (pillLooks && overrides)
                     {
                         const auto step = [](float scale) { return static_cast<int>(std::lround((scale - kMinPopupScale) / kPopupScaleStep)); };
                         std::optional<int> at = o.popupTextScale ? std::optional<int>(step(*o.popupTextScale)) : std::nullopt;
