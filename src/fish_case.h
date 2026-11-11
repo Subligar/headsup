@@ -1,6 +1,12 @@
 #pragma once
 
+#include "bar_theme.h"
 #include "fish_pool.h"
+#include "settings.h"
+
+#include <RmlUi/Core.h>
+
+#include <optional>
 
 #include <cstdint>
 #include <string>
@@ -84,4 +90,29 @@ namespace headsup
         CaseBox band, line, icon, name;
     };
     CaseBoxSet CaseBoxesAt(const CaseSpot& spot);
+
+    constexpr const char* kCaseBoxesDocument = "case";
+    constexpr const char* kCaseGroupId       = "casegroup"; // the dragged piece, holding the four boxes
+
+    // Move's boxes: where the Case's strip, line and reveal go, dragged as one piece.
+    class CaseBoxes : private Rml::EventListener
+    {
+    public:
+        ~CaseBoxes() override { Close(); }
+        // Each frame: shows them while moving, else hides. True when they were dragged somewhere new, which the
+        // settings then hold.
+        bool Update(Rml::Context* context, const BarPalette& palette, Settings& settings, bool moving);
+        // Before the context goes.
+        void Close();
+
+    private:
+        void ProcessEvent(Rml::Event& event) override;
+
+        Rml::ElementDocument* m_Document = nullptr;
+        Rml::Element* m_Group            = nullptr;
+        BarPalette m_Palette{};
+        std::optional<CaseSpot> m_Shown;   // where the boxes stand now
+        Rml::Vector2f m_From{}, m_By{};     // a drag's first pointer and how far it has come
+        bool m_Dragging = false, m_Dropped = false;
+    };
 }

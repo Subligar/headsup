@@ -1,5 +1,6 @@
 #include "fish_case.h"
 
+#include "markup.h"
 #include "settings.h"
 
 #include <algorithm>
@@ -166,6 +167,23 @@ namespace headsup
             paint.Centered(CasePicture::Solid, false, x + halfWide + out, y, out, halfHigh, edge);
         }
 
+        constexpr const char* kHiddenBoxes = "hidden";
+        constexpr int kCaseBoxCount = 4; // CaseBoxSet's band, line, icon and name
+        constexpr const char* kBoxesOpacity = "0.7"; // the boxes are a guide: the game shows through them
+
+        std::string CaseBoxesRml(const BarPalette& p)
+        {
+            std::string css = "body{display:block;width:100%;height:100%;pointer-events:none;z-index:5;}div{display:block;}";
+            css += std::string(".") + kHiddenBoxes + "{display:none;}";
+            css += std::string("#") + kCaseGroupId + "{position:absolute;pointer-events:auto;drag:drag;opacity:" + kBoxesOpacity + ";}";
+            css += ".box{position:absolute;box-sizing:border-box;border:1px " + RcssColor(p.accent) + ";background-color:" +
+                   RcssColor(p.panelTop) + ";}";
+            std::string boxes;
+            for (int i = 0; i < kCaseBoxCount; ++i) boxes += "<div class=\"box\"></div>";
+            return "<rml><head><style>" + css + "</style></head><body id=\"" + std::string(kCaseBoxesDocument) + "\"><div id=\"" +
+                   kCaseGroupId + "\" class=\"" + kHiddenBoxes + "\">" + boxes + "</div></body></rml>";
+        }
+
         float Along(const CaseRun& run, float t) { return kStartTile + (run.stop - kStartTile) * EaseOut(Ramp(kSpinFrom, kSpinTo, t)); }
     }
 
@@ -294,5 +312,102 @@ namespace headsup
         paint.Centered(CasePicture::Name, false, kMiddle, kNameY, kShown, kCaseNameHeight / 2.0f, kOpaque);
         const auto box = [](const CaseQuad& q) { return CaseBox{q.x, q.y, q.width, q.height}; };
         return CaseBoxSet{box(out[0]), box(out[1]), box(out[2]), box(out[3])};
+    }
+
+    bool CaseBoxes::Update(Rml::Context* context, const BarPalette& palette, Settings& settings, bool moving)
+    {
+        if (!moving && m_Document == nullptr) return false;
+        if (m_Document != nullptr && !(palette == m_Palette)) Close();
+        if (m_Document == nullptr)
+        {
+            m_Document = context->LoadDocumentFromMemory(CaseBoxesRml(palette), kCaseBoxesDocument);
+            if (m_Document == nullptr) return false;
+            m_Palette = palette;
+            m_Group   = m_Document->GetElementById(kCaseGroupId);
+            for (const Rml::EventId id : {Rml::EventId::Dragstart, Rml::EventId::Drag, Rml::EventId::Dragend})
+                m_Group->AddEventListener(id, this);
+            m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        }
+        // Boxes hidden mid-drag (the window closed) may never hear the button let go: the drag ends with them.
+        if (!moving) m_Dragging = false;
+        const Rml::Vector2i screen = context->GetDimensions();
+        const float width = static_cast<float>(screen.x), height = static_cast<float>(screen.y);
+        const CaseSpot placed = CasePlace(settings.fishCaseX, settings.fishCaseY, settings.fishCaseScale, width, height);
+        bool moved = false;
+        if (m_Dropped && !m_Dragging)
+        {
+            settings.fishCaseX = static_cast<int>(std::lround(std::clamp(placed.x + m_By.x, 0.0f, width)));
+            settings.fishCaseY = static_cast<int>(std::lround(std::clamp(placed.y + m_By.y, 0.0f, height)));
+            m_Dropped = false;
+            m_By      = {};
+            moved     = true;
+        }
+        m_Group->SetClass(kHiddenBoxes, !moving);
+        if (!moving)
+        {
+            m_Shown.reset();
+            return moved;
+        }
+        CaseSpot spot = CasePlace(settings.fishCaseX, settings.fishCaseY, settings.fishCaseScale, width, height);
+        if (m_Dragging)
+        {
+            spot.x += m_By.x;
+            spot.y += m_By.y;
+        }
+        if (m_Shown == spot) return moved;
+        m_Shown               = spot;
+        const CaseBoxSet set  = CaseBoxesAt(spot);
+        const CaseBox boxes[] = {set.band, set.line, set.icon, set.name};
+        float left = boxes[0].x, top = boxes[0].y, right = left, bottom = top;
+        for (const CaseBox& b : boxes)
+        {
+            left   = std::min(left, b.x);
+            top    = std::min(top, b.y);
+            right  = std::max(right, b.x + b.width);
+            bottom = std::max(bottom, b.y + b.height);
+        }
+        const auto place = [](Rml::Element* element, float x, float y, float w, float h) {
+            element->SetProperty(Rml::PropertyId::Left, Rml::Property(x, Rml::Unit::PX));
+            element->SetProperty(Rml::PropertyId::Top, Rml::Property(y, Rml::Unit::PX));
+            element->SetProperty(Rml::PropertyId::Width, Rml::Property(w, Rml::Unit::PX));
+            element->SetProperty(Rml::PropertyId::Height, Rml::Property(h, Rml::Unit::PX));
+        };
+        place(m_Group, left, top, right - left, bottom - top);
+        for (int i = 0; i < m_Group->GetNumChildren(); ++i)
+            place(m_Group->GetChild(i), boxes[i].x - left, boxes[i].y - top, boxes[i].width, boxes[i].height);
+        return moved;
+    }
+
+    void CaseBoxes::Close()
+    {
+        if (m_Document == nullptr) return;
+        for (const Rml::EventId id : {Rml::EventId::Dragstart, Rml::EventId::Drag, Rml::EventId::Dragend})
+            m_Group->RemoveEventListener(id, this);
+        m_Document->Close();
+        m_Document = nullptr;
+        m_Group    = nullptr;
+        m_Shown.reset();
+        m_Dragging = m_Dropped = false;
+        m_By       = {};
+    }
+
+    void CaseBoxes::ProcessEvent(Rml::Event& event)
+    {
+        const Rml::Vector2f pointer{event.GetParameter<float>("mouse_x", 0.0f), event.GetParameter<float>("mouse_y", 0.0f)};
+        switch (event.GetId())
+        {
+        case Rml::EventId::Dragstart:
+            m_From     = pointer;
+            m_By       = {};
+            m_Dragging = true;
+            break;
+        case Rml::EventId::Drag: m_By = pointer - m_From; break;
+        case Rml::EventId::Dragend:
+            m_By       = pointer - m_From;
+            m_Dragging = false;
+            m_Dropped  = true;
+            break;
+        default: break;
+        }
     }
 }

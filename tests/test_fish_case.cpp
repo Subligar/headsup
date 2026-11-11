@@ -1,6 +1,10 @@
+#include "bar_theme.h"
 #include "fish_case.h"
+#include "rml_session.h"
 #include "settings.h"
 #include "test.h"
+
+#include <RmlUi/Core.h>
 
 #include <algorithm>
 #include <cmath>
@@ -263,4 +267,123 @@ TEST(the_move_boxes_stand_where_the_case_draws)
         const CaseQuad name = Of(shown, CasePicture::Name).at(0);
         CHECK(Near(boxes.name.height, name.height, 0.01f) && Near(boxes.name.y + boxes.name.height / 2.0f, CenterY(name), 0.01f));
     }
+}
+
+namespace
+{
+    Rml::Element* Group(test::RmlSession& rml)
+    {
+        Rml::ElementDocument* document = rml.context->GetDocument(kCaseBoxesDocument);
+        return document == nullptr ? nullptr : document->GetElementById(kCaseGroupId);
+    }
+    Rml::Vector2f Screen(test::RmlSession& rml)
+    {
+        const Rml::Vector2i size = rml.context->GetDimensions();
+        return {static_cast<float>(size.x), static_cast<float>(size.y)};
+    }
+    CaseBox Shown(Rml::Element* box)
+    {
+        const Rml::Vector2f at = box->GetAbsoluteOffset(Rml::BoxArea::Border), size = box->GetBox().GetSize(Rml::BoxArea::Border);
+        return CaseBox{at.x, at.y, size.x, size.y};
+    }
+    bool Within(const CaseBox& a, const CaseBox& b)
+    {
+        return std::abs(a.x - b.x) <= 1 && std::abs(a.y - b.y) <= 1 && std::abs(a.width - b.width) <= 1 && std::abs(a.height - b.height) <= 1;
+    }
+}
+
+TEST(the_boxes_show_only_while_moving)
+{
+    test::RmlSession rml;
+    Settings settings;
+    CaseBoxes boxes;
+    const BarPalette& palette = PaletteOf(BarTheme::PhoenixGold);
+    boxes.Update(rml.context, palette, settings, false);
+    CHECK(rml.context->GetDocument(kCaseBoxesDocument) == nullptr);
+    boxes.Update(rml.context, palette, settings, true);
+    rml.context->Update();
+    CHECK(Group(rml) != nullptr && Group(rml)->IsVisible());
+    const Rml::Vector2f screen = Screen(rml);
+    const CaseBoxSet want = CaseBoxesAt(CasePlace(kFishBarUnplaced, kFishBarUnplaced, settings.fishCaseScale, screen.x, screen.y));
+    const CaseBox expected[] = {want.band, want.line, want.icon, want.name};
+    CHECK_EQ(Group(rml)->GetNumChildren(), 4);
+    for (int i = 0; i < 4; ++i) CHECK(Within(Shown(Group(rml)->GetChild(i)), expected[i]));
+    boxes.Update(rml.context, palette, settings, false);
+    rml.context->Update();
+    CHECK(!Group(rml)->IsVisible());
+    CHECK_EQ(rml.Said(), "");
+    boxes.Close();
+}
+
+TEST(the_boxes_drag_the_case_to_a_place_of_its_own)
+{
+    test::RmlSession rml;
+    Settings settings;
+    CaseBoxes boxes;
+    const BarPalette& palette = PaletteOf(BarTheme::PhoenixGold);
+    CHECK(!boxes.Update(rml.context, palette, settings, true));
+    rml.context->Update();
+    const Rml::Vector2f screen = Screen(rml);
+    const CaseBox band = Shown(Group(rml)->GetChild(0));
+    const auto drag = [&](int dx, int dy) {
+        const int x = static_cast<int>(band.x + band.width / 2.0f), y = static_cast<int>(band.y + band.height / 2.0f);
+        rml.context->ProcessMouseMove(x, y, 0);
+        rml.context->ProcessMouseButtonDown(0, 0);
+        for (int step = 1; step <= 4; ++step)
+        {
+            rml.context->ProcessMouseMove(x + dx * step / 4, y + dy * step / 4, 0);
+            rml.context->Update();
+            CHECK(!boxes.Update(rml.context, palette, settings, true)); // written once, when it is let go
+        }
+        rml.context->ProcessMouseButtonUp(0, 0);
+    };
+    drag(200, -100);
+    CHECK(boxes.Update(rml.context, palette, settings, true));
+    CHECK_EQ(settings.fishCaseX, static_cast<int>(screen.x / 2.0f) + 200);
+    CHECK_EQ(settings.fishCaseY, static_cast<int>(screen.y / 2.0f) - 100);
+    CHECK(!boxes.Update(rml.context, palette, settings, true));
+    settings.fishCaseX = settings.fishCaseY = kFishBarUnplaced;
+    boxes.Update(rml.context, palette, settings, true);
+    rml.context->Update();
+    drag(static_cast<int>(screen.x) * 2, 0);
+    boxes.Update(rml.context, palette, settings, true);
+    CHECK_EQ(settings.fishCaseX, static_cast<int>(screen.x));
+    CHECK_EQ(rml.Said(), "");
+    boxes.Close();
+}
+
+TEST(the_boxes_follow_the_scale)
+{
+    test::RmlSession rml;
+    Settings settings;
+    CaseBoxes boxes;
+    const BarPalette& palette = PaletteOf(BarTheme::PhoenixGold);
+    boxes.Update(rml.context, palette, settings, true);
+    rml.context->Update();
+    const float before = Shown(Group(rml)->GetChild(0)).width;
+    settings.fishCaseScale = 200;
+    boxes.Update(rml.context, palette, settings, true);
+    rml.context->Update();
+    CHECK(std::abs(Shown(Group(rml)->GetChild(0)).width - 2.0f * before) <= 1.0f);
+    CHECK_EQ(rml.Said(), "");
+    boxes.Close();
+}
+
+TEST(hidden_boxes_take_no_click)
+{
+    test::RmlSession rml;
+    Settings settings;
+    CaseBoxes boxes;
+    const BarPalette& palette = PaletteOf(BarTheme::PhoenixGold);
+    boxes.Update(rml.context, palette, settings, true);
+    rml.context->Update();
+    const CaseBox band = Shown(Group(rml)->GetChild(0));
+    boxes.Update(rml.context, palette, settings, false);
+    rml.context->Update();
+    rml.context->ProcessMouseMove(static_cast<int>(band.x + band.width / 2.0f), static_cast<int>(band.y + band.height / 2.0f), 0);
+    rml.context->Update();
+    const Rml::Element* hover = rml.context->GetHoverElement();
+    CHECK(hover == nullptr || hover->GetOwnerDocument() != rml.context->GetDocument(kCaseBoxesDocument));
+    CHECK_EQ(rml.Said(), "");
+    boxes.Close();
 }
