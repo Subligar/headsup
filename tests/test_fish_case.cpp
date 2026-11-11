@@ -121,9 +121,12 @@ TEST(the_test_button_spins_to_a_moat_carp_without_bait)
     CHECK(bucket && crayfish);
 }
 
-TEST(the_case_starts_in_the_middle_and_stays_on_the_screen)
+TEST(the_case_starts_centered_a_third_down_and_stays_on_the_screen)
 {
-    CHECK(CasePlace(kFishBarUnplaced, kFishBarUnplaced, 100, 2560, 1440) == (CaseSpot{1280, 720, 2.0f}));
+    // Where the user placed it on their 2560 by 1440 screen: its middle at x 1275 (the middle, by hand) and y 484.
+    const CaseSpot start = CasePlace(kFishBarUnplaced, kFishBarUnplaced, 100, 2560, 1440);
+    CHECK(Near(start.x, 1280) && Near(start.y, 484, 0.01f) && Near(start.unit, 2.0f));
+    CHECK(Near(CasePlace(kFishBarUnplaced, kFishBarUnplaced, 100, 1920, 1080).y, 363, 0.01f)); // the same share of a smaller one
     CHECK(CasePlace(300, 200, 50, 1920, 1080) == (CaseSpot{300, 200, 0.75f}));
     CHECK(CasePlace(5000, -40, 200, 1920, 1080) == (CaseSpot{1920, 0, 3.0f})); // a spot from a larger screen
 }
@@ -340,7 +343,7 @@ TEST(the_boxes_drag_the_case_to_a_place_of_its_own)
     drag(200, -100);
     CHECK(boxes.Update(rml.context, palette, settings, true));
     CHECK_EQ(settings.fishCaseX, static_cast<int>(screen.x / 2.0f) + 200);
-    CHECK_EQ(settings.fishCaseY, static_cast<int>(screen.y / 2.0f) - 100);
+    CHECK_EQ(settings.fishCaseY, static_cast<int>(std::lround(CasePlace(kFishBarUnplaced, kFishBarUnplaced, 100, screen.x, screen.y).y)) - 100);
     CHECK(!boxes.Update(rml.context, palette, settings, true));
     settings.fishCaseX = settings.fishCaseY = kFishBarUnplaced;
     boxes.Update(rml.context, palette, settings, true);

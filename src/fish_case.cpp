@@ -14,6 +14,7 @@ namespace headsup
     {
         constexpr float kLayoutHeight = 720.0f;
         constexpr float kFullScale    = 100.0f; // percent
+        constexpr float kStartDown    = 484.0f / 1440.0f; // its middle's first place down the screen, where the user put it
 
         // The tile the strip starts on and how far from the winner's middle it may stop, in tiles.
         constexpr int kStartTile    = 3;
@@ -245,10 +246,11 @@ namespace headsup
 
     CaseSpot CasePlace(int x, int y, int scalePercent, float screenWidth, float screenHeight)
     {
-        const auto at = [](int placed, float side) {
-            return placed == kFishBarUnplaced ? side / 2.0f : std::clamp(static_cast<float>(placed), 0.0f, side);
+        const auto at = [](int placed, float side, float start) {
+            return placed == kFishBarUnplaced ? side * start : std::clamp(static_cast<float>(placed), 0.0f, side);
         };
-        return CaseSpot{at(x, screenWidth), at(y, screenHeight), screenHeight / kLayoutHeight * static_cast<float>(scalePercent) / kFullScale};
+        return CaseSpot{at(x, screenWidth, 0.5f), at(y, screenHeight, kStartDown),
+            screenHeight / kLayoutHeight * static_cast<float>(scalePercent) / kFullScale};
     }
 
     std::vector<CaseQuad> CaseFrame(const CaseRun& run, float seconds, float length, const CaseSpot& spot, float screenWidth,
