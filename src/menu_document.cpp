@@ -209,6 +209,14 @@ namespace headsup
                ";margin:0px auto " + Em(kSpacing) + " auto;}";
         css += ".row.indent{margin-left:" + Em(kGutter) + ";}";
         css += ".caption{color:" + color(c.muted) + ";" + raised + "}";
+        // A fold: its arrow, then its title a gutter in.
+        css += ".fold{position:relative;height:" + frame + ";margin-bottom:" + Em(kSpacing) + ";}";
+        css += ".fold .arrow{left:0px;top:" + Em(kFrame / 2.0f - kArrow) + ";}";
+        css += ".fold .arrow.open{left:0px;top:" + Em(kFrame / 2.0f - kArrowDepth / 2.0f) + ";}";
+        css += ".fold-title{padding-left:" + Em(kGutter) + ";line-height:" + frame + ";color:" + color(c.label) + ";transition:color" + kEase + ";}";
+        css += ".fold:hover .fold-title{color:" + color(c.accent) + ";}";
+        css += ".fold:hover .arrow{border-left-color:" + color(c.text) + ";}";
+        css += ".fold:hover .arrow.open{border-left-color:transparent;border-top-color:" + color(c.text) + ";}";
         // A column's name over its controls.
         css += ".head{color:" + color(c.label) + ";" + raised + "text-align:center;}";
         css += ".line-name{color:" + color(c.label) + ";" + raised + "}";

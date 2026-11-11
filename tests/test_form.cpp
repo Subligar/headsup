@@ -167,6 +167,27 @@ TEST(a_click_on_a_cards_title_folds_it)
     CHECK(state.collapsed.empty() && Has(open.blocks[0].rml, "card-body"));
 }
 
+TEST(a_fold_starts_shut_and_a_click_on_it_opens_and_shuts_it)
+{
+    FormState state;
+    const auto pass = [&](const std::vector<FormEvent>& events, bool faded = false) {
+        Form form(events, state);
+        form.pageKey = "p";
+        form.BeginCard("C");
+        form.Fade(faded);
+        const bool open = form.Fold("More");
+        form.EndCard();
+        return std::pair{open, form.blocks[0].rml};
+    };
+    const auto [shut, shutRml] = pass({});
+    CHECK(!shut && Has(shutRml, "<div class=\"arrow\"></div>"));
+    CHECK(!pass({{"p-c-more-fold", kClickEvent, ""}}, true).first); // faded, it takes no clicks
+    const auto [open, openRml] = pass({{"p-c-more-fold", kClickEvent, ""}});
+    CHECK(open && Has(openRml, "<div class=\"arrow open\"></div>"));
+    CHECK(pass({}).first); // it stays open
+    CHECK(!pass({{"p-c-more-fold", kClickEvent, ""}}).first);
+}
+
 TEST(a_slider_takes_its_newest_value_within_its_ends)
 {
     FormState state;

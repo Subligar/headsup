@@ -156,6 +156,7 @@ namespace headsup
     struct FormState
     {
         std::unordered_set<std::string> collapsed; // the ids of the collapsed cards
+        std::unordered_set<std::string> unfolded;  // the ids of the open folds
         std::string popup;                         // the control whose popup is open, or none
         std::optional<FormEvent> dragOver;         // what a held drag is over (kDragOverEvent)
     };
@@ -362,6 +363,8 @@ namespace headsup
         // A tag as a chip that reads its name, after its icon when it draws one. Only a drag places it: it drops onto a
         // line's box, and a click puts it nowhere.
         void TagChip(Tag tag);
+        // A title over the rows that follow, shut until clicked: true while they are to be built.
+        bool Fold(const char* title);
         // Muted or plain text among a row's controls.
         void Caption(const char* text, const char* classes = "caption", float width = 0.0f);
         // Markup of the page's own, for what the kit has no control for; and a value for an element of it.
