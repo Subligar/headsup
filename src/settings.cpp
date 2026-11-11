@@ -99,9 +99,9 @@ namespace headsup
             {"fishBarWidth", &Settings::fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth},
             {"fishBarX", &Settings::fishBarX, kFishBarUnplaced, kMaxFishBarPlace},
             {"fishBarY", &Settings::fishBarY, kFishBarUnplaced, kMaxFishBarPlace},
+            {"fishCaseAcross", &Settings::fishCaseAcross, kFishBarUnplaced, kCasePlaceWhole},
+            {"fishCaseDown", &Settings::fishCaseDown, kFishBarUnplaced, kCasePlaceWhole},
             {"fishCaseScale", &Settings::fishCaseScale, kMinCaseScale, kMaxCaseScale},
-            {"fishCaseX", &Settings::fishCaseX, kFishBarUnplaced, kMaxFishBarPlace},
-            {"fishCaseY", &Settings::fishCaseY, kFishBarUnplaced, kMaxFishBarPlace},
             {"helpBarX", &Settings::helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset},
             {"helpBarY", &Settings::helpBarY, -kMaxHelpBarOffset, kMaxHelpBarOffset}};
 

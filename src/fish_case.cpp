@@ -244,12 +244,13 @@ namespace headsup
         return Pick(pool, draws);
     }
 
-    CaseSpot CasePlace(int x, int y, int scalePercent, float screenWidth, float screenHeight)
+    CaseSpot CasePlace(int across, int down, int scalePercent, float screenWidth, float screenHeight)
     {
         const auto at = [](int placed, float side, float start) {
-            return placed == kFishBarUnplaced ? side * start : std::clamp(static_cast<float>(placed), 0.0f, side);
+            const float share = placed == kFishBarUnplaced ? start : static_cast<float>(placed) / kCasePlaceWhole;
+            return side * std::clamp(share, 0.0f, 1.0f);
         };
-        return CaseSpot{at(x, screenWidth, 0.5f), at(y, screenHeight, kStartDown),
+        return CaseSpot{at(across, screenWidth, 0.5f), at(down, screenHeight, kStartDown),
             screenHeight / kLayoutHeight * static_cast<float>(scalePercent) / kFullScale};
     }
 
@@ -334,12 +335,13 @@ namespace headsup
         if (!moving) m_Dragging = false;
         const Rml::Vector2i screen = context->GetDimensions();
         const float width = static_cast<float>(screen.x), height = static_cast<float>(screen.y);
-        const CaseSpot placed = CasePlace(settings.fishCaseX, settings.fishCaseY, settings.fishCaseScale, width, height);
+        const CaseSpot placed = CasePlace(settings.fishCaseAcross, settings.fishCaseDown, settings.fishCaseScale, width, height);
         bool moved = false;
         if (m_Dropped && !m_Dragging)
         {
-            settings.fishCaseX = static_cast<int>(std::lround(std::clamp(placed.x + m_By.x, 0.0f, width)));
-            settings.fishCaseY = static_cast<int>(std::lround(std::clamp(placed.y + m_By.y, 0.0f, height)));
+            const auto share        = [](float at, float side) { return static_cast<int>(std::lround(std::clamp(at / side, 0.0f, 1.0f) * kCasePlaceWhole)); };
+            settings.fishCaseAcross = share(placed.x + m_By.x, width);
+            settings.fishCaseDown   = share(placed.y + m_By.y, height);
             m_Dropped = false;
             m_By      = {};
             moved     = true;
@@ -350,7 +352,7 @@ namespace headsup
             m_Shown.reset();
             return moved;
         }
-        CaseSpot spot = CasePlace(settings.fishCaseX, settings.fishCaseY, settings.fishCaseScale, width, height);
+        CaseSpot spot = CasePlace(settings.fishCaseAcross, settings.fishCaseDown, settings.fishCaseScale, width, height);
         if (m_Dragging)
         {
             spot.x += m_By.x;

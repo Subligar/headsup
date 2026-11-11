@@ -47,13 +47,14 @@ namespace headsup
     uint16_t TestCatch(const Angler& angler, const std::vector<PoolEntry>& pool, uint32_t seed);
 
     // The Case's middle on the screen and the pixels of one layout pixel: the layout is 1280 by 720, scaled to the
-    // screen's height, times the scale in percent. Unplaced, it is centered across and a third down; it stays on the screen.
+    // screen's height, times the scale in percent. Placed, across and down are ten-thousandths of the screen; unplaced, it
+    // is centered across and a third down. It stays on the screen.
     struct CaseSpot
     {
         float x = 0, y = 0, unit = 1;
         bool operator==(const CaseSpot&) const = default;
     };
-    CaseSpot CasePlace(int x, int y, int scalePercent, float screenWidth, float screenHeight);
+    CaseSpot CasePlace(int across, int down, int scalePercent, float screenWidth, float screenHeight);
 
     enum class CasePicture : uint8_t { Solid, Vignette, Glow, Tile, Rise, Band, Title, Name, Skill, Item, ItemCrisp };
     constexpr int kCaseFixedPictures = static_cast<int>(CasePicture::Title); // those painted once, by CaseImage

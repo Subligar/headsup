@@ -2250,7 +2250,7 @@ private:
 
     headsup::CaseSpot CaseSpotNow()
     {
-        return headsup::CasePlace(m_Settings.fishCaseX, m_Settings.fishCaseY, m_Settings.fishCaseScale,
+        return headsup::CasePlace(m_Settings.fishCaseAcross, m_Settings.fishCaseDown, m_Settings.fishCaseScale,
             static_cast<float>(m_Names.BackBufferWidth()), static_cast<float>(m_Names.BackBufferHeight()));
     }
 
