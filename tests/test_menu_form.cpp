@@ -871,6 +871,26 @@ TEST(the_fishing_bar_page_shows_its_bars_settings_only_for_headsups_fish_stamina
     CHECK(w.settings.fishBarX == 1920 && w.settings.fishBarY == 1080);
 }
 
+TEST(the_case_cards_buttons_ask_the_plugin_once)
+{
+    Window w;
+    w.state.page           = Page::FishingBar;
+    const std::string card = "fishingbar-fishing-case", test = card + "-case-test", move = card + "-case-move";
+    // Switched off, its rows take no clicks.
+    w.Pass({{test, kClickEvent, ""}, {move, kClickEvent, ""}});
+    CHECK(!w.state.caseTestRequested && !w.state.caseMoveRequested);
+    w.Pass({{card + "-on", kClickEvent, ""}});
+    CHECK(w.settings.fishCase);
+    w.Pass({{test, kClickEvent, ""}});
+    CHECK(w.state.caseTestRequested && !w.state.caseMoveRequested);
+    w.Pass({{move, kClickEvent, ""}});
+    CHECK(w.state.caseMoveRequested);
+    CHECK(w.Pass({{card + "-case-scale", kChangeEvent, "150"}}).changed);
+    CHECK_EQ(w.settings.fishCaseScale, 150);
+    w.Pass({{card + "-case-background", kClickEvent, ""}});
+    CHECK(!w.settings.fishCaseBackground);
+}
+
 TEST(the_pages_of_the_kinds_with_status_icons_set_how_many_a_nameplate_shows)
 {
     Window w;

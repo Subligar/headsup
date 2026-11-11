@@ -143,6 +143,7 @@ namespace headsup
     constexpr int kMinFishBarWidth = 100, kMaxFishBarWidth = 1000; // pixels
     constexpr int kMinFishBarHeight = 6, kDefaultFishBarHeight = 18, kMaxFishBarHeight = 80; // pixels, its frame counted
     constexpr int kMinFishTextSize = 8, kDefaultFishTextSize = 15, kMaxFishTextSize = 40;    // pixels
+    constexpr int kMinCaseScale = 50, kDefaultCaseScale = 100, kMaxCaseScale = 200;         // percent
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
@@ -223,6 +224,10 @@ namespace headsup
         int fishBarTextSize = kDefaultFishTextSize;
         std::string fishBarFont;     // its line's font, or the theme's text font
         bool fishBarDraggable = true; // off, the pointer goes through it to the game
+        bool fishCase           = false; // a case opens on each catch that reaches your bag
+        int fishCaseScale       = kDefaultCaseScale;
+        bool fishCaseBackground = true;                                          // the tint over the whole screen
+        int fishCaseX = kFishBarUnplaced, fishCaseY = kFishBarUnplaced;          // its middle, in screen pixels
         std::string fishBarLine = "${size|fish} $feeling";
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
         Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};

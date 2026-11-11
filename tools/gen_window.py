@@ -109,7 +109,7 @@ PIECES = Pieces(
         'visibility': Card(), 'outline-design': Card(), 'nameplate-design': Card(), 'line-style': Card(),
         'ornament': Card(), 'nameplate-opacity': Card(), 'detection-icons': Card(), 'badges': Card(),
         'weaknesses': Card(), 'statuses': Card(), 'placeholder-timers': Card(),
-        'screenshot-mode': Card(), 'window-groups': Card(), 'fishing-appearance': Card(), 'base-game-ui': Card(),
+        'screenshot-mode': Card(), 'window-groups': Card(), 'fishing-appearance': Card(), 'fishing-case': Card(switch=True), 'base-game-ui': Card(),
         'top-panel': Card(switch=True), 'theme-colors': Card(), 'help-bar': Card(switch=True), 'widgets': Card(), 'layout': Card(), 'widget-appearance': Card(), 'popup-appearance': Card(),
         'mouse-pointer': Card(), 'settings-window': Card(), 'profiles': Card(), 'reset': Card(), 'debug-mode': Card(switch=True),
         'feedback-form': Card(),
@@ -164,7 +164,7 @@ PIECES = Pieces(
             words={'weak': True, 'resist': True}),
         'respawn-timers': Setting(), 'timer-size': Setting(), 'up-time': Setting(),
         # User Interface
-        'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(options=3), 'fishing-bar-width': Setting(), 'fishing-bar-height': Setting(), 'fishing-bar-x': Setting(), 'fishing-bar-y': Setting(), 'fishing-bar-draggable': Setting(), 'fishing-bar-font': Setting(), 'fishing-bar-text-size': Setting(), 'fishing-bar-line': Setting(), 'fish-color-by-catch': Setting(), 'fish-small-color': Setting(), 'fish-large-color': Setting(), 'fish-item-color': Setting(), 'fish-monster-color': Setting(), 'fish-line-color': Setting(), 'fish-rod-color': Setting(),
+        'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(options=3), 'fishing-bar-width': Setting(), 'fishing-bar-height': Setting(), 'fishing-bar-x': Setting(), 'fishing-bar-y': Setting(), 'fishing-bar-draggable': Setting(), 'fishing-bar-font': Setting(), 'fishing-bar-text-size': Setting(), 'fishing-bar-line': Setting(), 'fish-color-by-catch': Setting(), 'fish-small-color': Setting(), 'fish-large-color': Setting(), 'fish-item-color': Setting(), 'fish-monster-color': Setting(), 'fish-line-color': Setting(), 'fish-rod-color': Setting(), 'case-scale': Setting(), 'case-background': Setting(), 'case-move': Setting(), 'case-test': Setting(),
         'groups': Setting(unnamed=True, words={'note': True, 'help-on': True, 'help-off': True, 'starts-at': True,
                                                'row-tip': False}),
         'game-help': Setting(), 'auto-adjust': Setting(),

@@ -200,6 +200,8 @@ namespace headsup
 
     std::optional<PanelWidget> RmlMenu::TakeSettingsAsked() { return std::exchange(m_State.settingsAsked, std::nullopt); }
     bool RmlMenu::TakeDebugRequest() { return std::exchange(m_State.debugRequested, false); }
+    bool RmlMenu::TakeCaseMove() { return std::exchange(m_State.caseMoveRequested, false); }
+    bool RmlMenu::TakeCaseTest() { return std::exchange(m_State.caseTestRequested, false); }
     bool RmlMenu::TakeSetupBackup() { return std::exchange(m_State.setupBackup, false); }
 
     void RmlMenu::StartSetup(const Settings& settings, bool rerun)

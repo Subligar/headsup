@@ -330,6 +330,17 @@
             {"key": "fish-line-color", "name": "Line Break", "tip": "The bar's color when your line could snap, which the game warns of with a bad feeling. Default: orange."},
             {"key": "fish-rod-color", "name": "Rod Break", "tip": "The bar's color when your rod could break, which the game warns of with a terrible feeling. Default: red."}
           ]
+        },
+        {
+          "key": "fishing-case",
+          "name": "Case Opening",
+          "description": "Opens a case each time you catch a fish or an item. A strip of what you could have caught there spins, stops on your catch and shows it. It lasts about as long as the catch's animation, and you can cast again while it shows. Default: Off.",
+          "settings": [
+            {"key": "case-scale", "name": "Scale", "tip": "How big the case is, strip and reveal together. Default: 100%."},
+            {"key": "case-background", "name": "Background", "tip": "Darkens the whole screen behind the case. Default: On."},
+            {"key": "case-move", "name": "Move", "tip": "Shows the case's boxes so you can drag them where you want it. They go away when you close this window, and the place is saved."},
+            {"key": "case-test", "name": "Test", "tip": "Plays a case now, with the bait you have on, in the zone you are in. With no bait on it stops on a Moat Carp."}
+          ]
         }
       ]
     },
