@@ -3132,7 +3132,7 @@ TEST(the_case_is_off_until_switched_on_and_keeps_its_scale_and_place)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
-    CHECK(!fresh.fishCase && fresh.fishCaseScale == 100 && fresh.fishCaseBackground);
+    CHECK(!fresh.fishCase && fresh.fishCaseScale == 65 && fresh.fishCaseBackground);
     CHECK(fresh.fishCaseX == kFishBarUnplaced && fresh.fishCaseY == kFishBarUnplaced);
     MapStore store;
     store.values["fishCase"]           = "true";

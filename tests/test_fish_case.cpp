@@ -204,7 +204,7 @@ TEST(the_reveal_is_the_catch_large_with_its_name_and_skill)
     const std::vector<CaseQuad> quads = Frame(8.5f);
     CHECK(Of(quads, CasePicture::Band).empty() && Of(quads, CasePicture::Tile).empty());
     const CaseQuad icon = Of(quads, CasePicture::ItemCrisp).at(0);
-    CHECK(icon.item == kMoatCarp && Box(icon, 528, 288, 224, 224));
+    CHECK(icon.item == kMoatCarp && Box(icon, 584, 344, 112, 112)); // half the original's 224, so it is less blocky
     const CaseQuad name = Of(quads, CasePicture::Name).at(0);
     CHECK(Near(name.width, 200) && Near(name.height, 50) && Near(CenterX(name), 640) && Near(CenterY(name), 162));
     const auto underline = std::ranges::find_if(quads, [](const CaseQuad& q) { return q.picture == CasePicture::Solid && Near(q.height, 3); });
@@ -356,6 +356,7 @@ TEST(the_boxes_follow_the_scale)
 {
     test::RmlSession rml;
     Settings settings;
+    settings.fishCaseScale = 100;
     CaseBoxes boxes;
     const BarPalette& palette = PaletteOf(BarTheme::PhoenixGold);
     boxes.Update(rml.context, palette, settings, true);

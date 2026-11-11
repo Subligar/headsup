@@ -106,7 +106,7 @@ namespace headsup
         constexpr float kLineGlow     = 10.0f;
         constexpr float kTitleY       = 246.0f;
         constexpr float kBigY         = 400.0f;
-        constexpr float kBigIcon      = 224.0f;
+        constexpr float kBigIcon      = 112.0f; // an icon is 32 pixels: larger, it shows its blocks
         constexpr float kHalo         = 280.0f;
         constexpr float kNameY        = 162.0f;
         constexpr float kUnderlineY   = 193.5f;

@@ -143,7 +143,7 @@ namespace headsup
     constexpr int kMinFishBarWidth = 100, kMaxFishBarWidth = 1000; // pixels
     constexpr int kMinFishBarHeight = 6, kDefaultFishBarHeight = 18, kMaxFishBarHeight = 80; // pixels, its frame counted
     constexpr int kMinFishTextSize = 8, kDefaultFishTextSize = 15, kMaxFishTextSize = 40;    // pixels
-    constexpr int kMinCaseScale = 50, kDefaultCaseScale = 100, kMaxCaseScale = 200;         // percent
+    constexpr int kMinCaseScale = 50, kDefaultCaseScale = 65, kMaxCaseScale = 200;         // percent
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
