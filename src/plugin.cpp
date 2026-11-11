@@ -382,7 +382,14 @@ class HeadsUp final : public IPlugin
         float length, unit;
     };
     std::optional<CasePlay> m_Case;
-    std::optional<uint16_t> m_CaseCaught; // a catch a packet told of, played the next frame
+    // A catch a packet told of, played the next frame, with where and with what you fished as it arrived: the game
+    // takes the bait off after it, so the last bait of a stack is gone a frame later.
+    struct CaseCaught
+    {
+        uint16_t item;
+        headsup::Angler angler;
+    };
+    std::optional<CaseCaught> m_CaseCaught;
     headsup::CaseRender m_CaseRender;
     headsup::CaseBoxes m_CaseBoxes;
     headsup::WaveOut m_CaseSound;
@@ -869,7 +876,7 @@ public:
             m_CaseCaught.reset();
             m_CaseSound.Stop();
         }
-        if (next.caught) m_CaseCaught = next.caught;
+        if (next.caught) m_CaseCaught = CaseCaught{*next.caught, AnglerNow()};
         if (next.check) OnCheckReply(*next.check);
         if (next.guardEvent) HeardOverseer(*next.guardEvent);
         if (next.mobDied && m_Settings.phTimers)
@@ -1055,7 +1062,7 @@ public:
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
-        if (const std::optional<uint16_t> caught = std::exchange(m_CaseCaught, std::nullopt)) StartCase(*caught);
+        if (const std::optional<CaseCaught> caught = std::exchange(m_CaseCaught, std::nullopt)) StartCase(caught->item, caught->angler);
         if (m_Case && (now - m_Case->started >= m_Case->length || !m_Settings.enabled || !m_Settings.fishCase)) m_Case.reset();
         if (!m_Case) m_CaseSound.Stop();
         if (!m_RmlMenu.open) m_CaseMoving = false;
@@ -1226,7 +1233,7 @@ public:
         if (m_RmlMenu.TakeCaseTest())
         {
             const headsup::Angler angler = AnglerNow();
-            StartCase(headsup::TestCatch(angler, PoolNow(angler), static_cast<uint32_t>(Now() * kSeedsPerSecond)));
+            StartCase(headsup::TestCatch(angler, PoolNow(angler), static_cast<uint32_t>(Now() * kSeedsPerSecond)), angler);
         }
         if (m_RmlMenu.TakeSetupBackup()) BackUpSettings();
 #ifdef HEADSUP_DEV
@@ -2227,20 +2234,12 @@ private:
     // Where and with what you fish, as the server reads it: its y is your height, the client's Z.
     headsup::Angler AnglerNow() const
     {
-        constexpr uint32_t kContainerShift = 8, kSlotBits = 0xFF;
         IMemoryManager* memory = m_AshitaCore->GetMemoryManager();
         IEntity* entity        = memory->GetEntity();
-        IInventory* inventory  = memory->GetInventory();
-        const auto equipped    = [&](int slot) -> uint16_t {
-            const Ashita::FFXI::equipmententry_t* entry = inventory->GetEquippedItem(static_cast<uint32_t>(slot));
-            if (entry == nullptr || entry->Index == 0) return 0;
-            const Ashita::FFXI::item_t* item = inventory->GetContainerItem((entry->Index >> kContainerShift) & kSlotBits, entry->Index & kSlotBits);
-            return item != nullptr ? item->Id : 0;
-        };
         const Ashita::FFXI::player_t* raw = memory->GetPlayer()->GetRawStructure();
         return headsup::Angler{static_cast<uint16_t>(memory->GetParty()->GetMemberZone(0)), entity->GetLocalPositionX(m_SelfIndex),
-            entity->GetLocalPositionZ(m_SelfIndex), entity->GetLocalPositionY(m_SelfIndex), equipped(headsup::kRodSlot),
-            equipped(headsup::kBaitSlot), raw != nullptr ? raw->CraftSkills.Fishing.GetSkill() : 0};
+            entity->GetLocalPositionZ(m_SelfIndex), entity->GetLocalPositionY(m_SelfIndex), EquippedItem(headsup::kRodSlot),
+            EquippedItem(headsup::kBaitSlot), raw != nullptr ? raw->CraftSkills.Fishing.GetSkill() : 0};
     }
 
     std::vector<headsup::PoolEntry> PoolNow(const headsup::Angler& angler) const
@@ -2271,10 +2270,10 @@ private:
     }
 
     // A new Case in place of any playing.
-    void StartCase(uint16_t caught)
+    void StartCase(uint16_t caught, const headsup::Angler& angler)
     {
         if (!m_Settings.enabled || !m_Settings.fishCase || m_Device == nullptr || m_CaseRefused) return;
-        headsup::CaseRun run = headsup::SpinCase(caught, PoolNow(AnglerNow()), static_cast<uint32_t>(Now() * kSeedsPerSecond));
+        headsup::CaseRun run = headsup::SpinCase(caught, PoolNow(angler), static_cast<uint32_t>(Now() * kSeedsPerSecond));
         const float unit     = CaseSpotNow().unit;
         if (!PrepareCase(run, unit)) return;
         m_CaseSound.Play(headsup::ClickTrack(headsup::CaseClicks(run, headsup::kCaseSeconds), headsup::kCaseSeconds), headsup::kClickRate);
@@ -3106,13 +3105,22 @@ private:
                 m_BuffSynced.insert(static_cast<uint16_t>(party->GetStatusIconsTargetIndex(member)));
     }
 
+    // The item in an equipment slot, or 0. An equipped item's index holds its container over its slot.
+    uint16_t EquippedItem(uint32_t slot) const
+    {
+        constexpr uint32_t kContainerShift = 8, kSlotBits = 0xFF;
+        IInventory* inventory                       = m_AshitaCore->GetMemoryManager()->GetInventory();
+        const Ashita::FFXI::equipmententry_t* entry = inventory->GetEquippedItem(slot);
+        if (entry == nullptr || entry->Index == 0) return 0;
+        const Ashita::FFXI::item_t* item = inventory->GetContainerItem((entry->Index >> kContainerShift) & kSlotBits, entry->Index & kSlotBits);
+        return item != nullptr ? item->Id : 0;
+    }
+
     // Your magic accuracy as the game knows it; nullopt before the game reports your level.
     std::optional<headsup::Caster> CasterNow() const
     {
-        // Ashita's stat IDs of INT, MND and CHR, in CasterStat order; an equipped item's index holds its container
-        // over its slot.
+        // Ashita's stat IDs of INT, MND and CHR, in CasterStat order.
         constexpr uint32_t kStatIds[headsup::kCasterStatCount] = {4, 5, 6};
-        constexpr uint32_t kContainerShift = 8, kSlotBits = 0xFF;
         IPlayer* player                   = m_AshitaCore->GetMemoryManager()->GetPlayer();
         const Ashita::FFXI::player_t* raw = player->GetRawStructure();
         if (raw == nullptr || player->GetMainJobLevel() == 0) return std::nullopt;
@@ -3122,15 +3130,7 @@ private:
         std::memcpy(reading.combatSkills, &raw->CombatSkills, sizeof(reading.combatSkills));
         for (int i = 0; i < headsup::kCasterStatCount; ++i)
             reading.stat[i] = player->GetStat(kStatIds[i]) + player->GetStatModifier(kStatIds[i]);
-        IInventory* inventory = m_AshitaCore->GetMemoryManager()->GetInventory();
-        for (uint32_t slot = 0; slot < headsup::kEquipSlotCount; ++slot)
-        {
-            const Ashita::FFXI::equipmententry_t* entry = inventory->GetEquippedItem(slot);
-            if (entry == nullptr || entry->Index == 0) continue;
-            const Ashita::FFXI::item_t* item =
-                inventory->GetContainerItem((entry->Index >> kContainerShift) & kSlotBits, entry->Index & kSlotBits);
-            if (item != nullptr) reading.equipped[slot] = item->Id;
-        }
+        for (uint32_t slot = 0; slot < headsup::kEquipSlotCount; ++slot) reading.equipped[slot] = EquippedItem(slot);
         if (const int16_t* buffs = player->GetBuffs(); buffs != nullptr)
             reading.buffs = std::span(buffs, headsup::kStatusIconSlots);
         return headsup::CasterOf(reading);

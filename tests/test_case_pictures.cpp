@@ -46,6 +46,9 @@ TEST(a_band_fades_out_to_both_ends)
 TEST(a_vignette_is_clear_in_the_middle_and_dark_in_its_corners)
 {
     const Image vignette = CaseImage(CasePicture::Vignette);
+    // Square, so no padding to a power of two blends a clear edge into the screen's last rows.
+    CHECK(vignette.width == 256 && vignette.height == 256);
+    CHECK_EQ(AlphaAt(vignette, 0, vignette.height - 1), AlphaAt(vignette, 0, 0));
     CHECK_EQ(AlphaAt(vignette, vignette.width / 2, vignette.height / 2), 0);
     // The corner pixel is 146.2 from the middle: (146.2 - 0.3 * 144) / (0.75 * 256 - 0.3 * 144) of the way to dark.
     CHECK(std::abs(AlphaAt(vignette, 0, 0) - 176) <= 1);

@@ -64,10 +64,13 @@ namespace headsup
         case CasePicture::Vignette:
         {
             // A 16:9 frame at a fifth of 1280 by 720: clear within 0.3 of its height of the middle, dark at 0.75 of its width.
-            constexpr int kWidth = 256, kHeight = 144;
+            // Painted square and stretched, as a texture padded to a power of two would blend its clear rows into the screen's last.
+            constexpr int kSide = 256;
+            constexpr float kWidth = 256.0f, kHeight = 144.0f;
             constexpr float kClear = 0.3f * kHeight, kDark = 0.75f * kWidth;
-            return Painted(kWidth, kHeight, [](int x, int y) {
-                const float d = std::hypot(static_cast<float>(x) + 0.5f - kWidth / 2.0f, static_cast<float>(y) + 0.5f - kHeight / 2.0f);
+            return Painted(kSide, kSide, [](int x, int y) {
+                const float fx = (static_cast<float>(x) + 0.5f) * kWidth / kSide, fy = (static_cast<float>(y) + 0.5f) * kHeight / kSide;
+                const float d  = std::hypot(fx - kWidth / 2.0f, fy - kHeight / 2.0f);
                 return Pixel(kWhiteRgb, (d - kClear) / (kDark - kClear));
             });
         }
