@@ -48,4 +48,40 @@ namespace headsup
         bool operator==(const CaseSpot&) const = default;
     };
     CaseSpot CasePlace(int x, int y, int scalePercent, float screenWidth, float screenHeight);
+
+    enum class CasePicture : uint8_t { Solid, Vignette, Glow, Tile, Rise, Band, Title, Name, Skill, Item, ItemCrisp };
+    constexpr int kCaseFixedPictures = static_cast<int>(CasePicture::Title); // those painted once, by CaseImage
+    // One upright rectangle of a frame, in screen pixels from its top left, tinted by argb. add: its light is added to
+    // what is under it. item: whose icon, for Item (smoothed) and ItemCrisp (its pixels kept square).
+    struct CaseQuad
+    {
+        CasePicture picture;
+        bool add;
+        float x, y, width, height;
+        uint32_t argb;
+        uint16_t item = 0;
+    };
+    // Each text picture's width over its height; 0 for none.
+    struct CaseWords
+    {
+        float title = 0, name = 0, skill = 0;
+    };
+    // What a Case draws `seconds` in, back to front. background off: no tint and no vignette. Nothing before it
+    // starts or once it is over.
+    std::vector<CaseQuad> CaseFrame(const CaseRun& run, float seconds, float length, const CaseSpot& spot, float screenWidth,
+        float screenHeight, bool background, const CaseWords& words);
+    // The heights the three texts show at, in layout pixels.
+    constexpr float kCaseTitleHeight = 30.0f, kCaseNameHeight = 50.0f, kCaseSkillHeight = 22.0f;
+
+    // Where Move's boxes go, in screen pixels: the band, the line, the reveal's icon and its name's line.
+    struct CaseBox
+    {
+        float x = 0, y = 0, width = 0, height = 0;
+        bool operator==(const CaseBox&) const = default;
+    };
+    struct CaseBoxSet
+    {
+        CaseBox band, line, icon, name;
+    };
+    CaseBoxSet CaseBoxesAt(const CaseSpot& spot);
 }

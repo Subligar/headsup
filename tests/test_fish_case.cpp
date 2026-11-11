@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <tuple>
 #include <vector>
 
 using namespace headsup;
@@ -121,4 +122,145 @@ TEST(the_case_starts_in_the_middle_and_stays_on_the_screen)
     CHECK(CasePlace(kFishBarUnplaced, kFishBarUnplaced, 100, 2560, 1440) == (CaseSpot{1280, 720, 2.0f}));
     CHECK(CasePlace(300, 200, 50, 1920, 1080) == (CaseSpot{300, 200, 0.75f}));
     CHECK(CasePlace(5000, -40, 200, 1920, 1080) == (CaseSpot{1920, 0, 3.0f})); // a spot from a larger screen
+}
+
+namespace
+{
+    // A 1280 by 720 screen with the Case in its middle at full size: screen pixels are the layout's own.
+    constexpr CaseSpot kLayoutSpot{640, 360, 1};
+    constexpr CaseWords kWords{5, 4, 6};
+    constexpr uint32_t kGold = 0xF2C94C, kTint = 0x0E0924, kBandInk = 0x080A14;
+
+    std::vector<CaseQuad> Frame(float seconds, bool background = true, CaseWords words = kWords, CaseSpot spot = kLayoutSpot,
+        float width = 1280, float height = 720, float length = kFull)
+    {
+        return CaseFrame(SpinCase(kMoatCarp, {{kMoatCarp, 1}, {kRustyBucket, 1}}, 3), seconds, length, spot, width, height, background, words);
+    }
+    std::vector<CaseQuad> Of(const std::vector<CaseQuad>& quads, CasePicture picture)
+    {
+        std::vector<CaseQuad> found;
+        for (const CaseQuad& q : quads)
+            if (q.picture == picture) found.push_back(q);
+        return found;
+    }
+    uint32_t Rgb(const CaseQuad& q) { return q.argb & 0xFFFFFF; }
+    int Alpha(const CaseQuad& q) { return static_cast<int>(q.argb >> 24); }
+    float CenterX(const CaseQuad& q) { return q.x + q.width / 2.0f; }
+    float CenterY(const CaseQuad& q) { return q.y + q.height / 2.0f; }
+    bool Box(const CaseQuad& q, float x, float y, float w, float h)
+    {
+        return Near(q.x, x, 0.01f) && Near(q.y, y, 0.01f) && Near(q.width, w, 0.01f) && Near(q.height, h, 0.01f);
+    }
+}
+
+TEST(the_spinning_strip_is_a_band_tiles_a_title_and_a_gold_line)
+{
+    const std::vector<CaseQuad> quads = Frame(3.5f);
+    CHECK(Box(Of(quads, CasePicture::Band).at(0), 120, 274, 1040, 132));
+    const CaseQuad title = Of(quads, CasePicture::Title).at(0);
+    CHECK(Near(title.width, 150) && Near(title.height, 30) && Near(CenterX(title), 640) && Near(CenterY(title), 246));
+    const CaseQuad line = Of(quads, CasePicture::Solid).back();
+    CHECK(Box(line, 639, 276, 2, 128) && Rgb(line) == kGold);
+    const float along = CaseAt(SpinCase(kMoatCarp, {{kMoatCarp, 1}, {kRustyBucket, 1}}, 3), 3.5f, kFull).along;
+    const std::vector<CaseQuad> tiles = Of(quads, CasePicture::Tile);
+    const auto nearest = std::ranges::min_element(tiles, {}, [](const CaseQuad& q) { return std::abs(CenterX(q) - 640.0f); });
+    CHECK(Near(CenterX(*nearest), 640.0f + (std::round(along) - along) * 136.0f, 0.01f));
+    CHECK(Near(nearest->width, 132) && Near(nearest->height, 104));
+    CHECK(Of(quads, CasePicture::Name).empty() && Of(quads, CasePicture::Skill).empty() && Of(quads, CasePicture::ItemCrisp).empty());
+}
+
+TEST(tiles_fade_out_toward_the_strips_ends)
+{
+    bool faded = false;
+    for (const CaseQuad& tile : Of(Frame(3.5f), CasePicture::Tile))
+    {
+        const float off = std::abs(CenterX(tile) - 640.0f);
+        CHECK(off < 520.0f);
+        CHECK(std::abs(Alpha(tile) - 255.0f * std::clamp((520.0f - off) / 170.0f, 0.0f, 1.0f)) <= 1.0f);
+        faded |= Alpha(tile) < 255;
+    }
+    CHECK(faded);
+}
+
+TEST(once_it_stops_the_catch_is_lit_and_the_rest_dimmed)
+{
+    const std::vector<CaseQuad> quads = Frame(7.0f);
+    int edges = 0, dims = 0;
+    for (const CaseQuad& q : Of(quads, CasePicture::Solid))
+    {
+        if (Rgb(q) == CaseColor(kMoatCarp) && (Near(q.width, 3) || Near(q.height, 3))) ++edges;
+        if (Rgb(q) == kBandInk && Near(q.width, 132) && Near(q.height, 104)) ++dims;
+    }
+    CHECK_EQ(edges, 4);
+    CHECK_EQ(dims, static_cast<int>(Of(quads, CasePicture::Tile).size()) - 1);
+}
+
+TEST(the_reveal_is_the_catch_large_with_its_name_and_skill)
+{
+    const std::vector<CaseQuad> quads = Frame(8.5f);
+    CHECK(Of(quads, CasePicture::Band).empty() && Of(quads, CasePicture::Tile).empty());
+    const CaseQuad icon = Of(quads, CasePicture::ItemCrisp).at(0);
+    CHECK(icon.item == kMoatCarp && Box(icon, 528, 288, 224, 224));
+    const CaseQuad name = Of(quads, CasePicture::Name).at(0);
+    CHECK(Near(name.width, 200) && Near(name.height, 50) && Near(CenterX(name), 640) && Near(CenterY(name), 162));
+    const auto underline = std::ranges::find_if(quads, [](const CaseQuad& q) { return q.picture == CasePicture::Solid && Near(q.height, 3); });
+    CHECK(underline != quads.end() && Near(underline->width, 248) && Near(CenterY(*underline), 193.5f) && Rgb(*underline) == CaseColor(kMoatCarp));
+    const CaseQuad skill = Of(quads, CasePicture::Skill).at(0);
+    CHECK(Near(skill.width, 132) && Near(skill.height, 22) && Near(CenterX(skill), 640) && Near(CenterY(skill), 217));
+}
+
+TEST(only_the_glows_add_their_light)
+{
+    for (float t = 0.0f; t < kFull; t += 0.1f)
+        for (const CaseQuad& q : Frame(t)) CHECK(q.add == (q.picture == CasePicture::Glow));
+}
+
+TEST(the_tint_covers_the_screen_and_goes_with_the_background)
+{
+    const std::vector<CaseQuad> quads = Frame(0.25f);
+    CHECK(quads.at(0).picture == CasePicture::Solid && Box(quads[0], 0, 0, 1280, 720) && Rgb(quads[0]) == kTint);
+    CHECK(std::abs(Alpha(quads[0]) - 255.0f * 0.62f * 0.5f) <= 1.0f);
+    CHECK(quads.at(1).picture == CasePicture::Vignette && Box(quads[1], 0, 0, 1280, 720));
+    const std::vector<CaseQuad> bare = Frame(0.25f, false);
+    CHECK(Of(bare, CasePicture::Vignette).empty() && !Of(bare, CasePicture::Band).empty());
+    CHECK(std::ranges::none_of(bare, [](const CaseQuad& q) { return Box(q, 0, 0, 1280, 720); }));
+}
+
+TEST(the_case_follows_its_spot_and_scale)
+{
+    const std::vector<CaseQuad> quads = Frame(3.5f, true, kWords, CaseSpot{1000, 500, 2}, 2560, 1440);
+    CHECK(Near(CenterX(Of(quads, CasePicture::Solid).back()), 1000));
+    const CaseQuad band = Of(quads, CasePicture::Band).at(0);
+    CHECK(Near(band.width, 2080) && Near(CenterX(band), 1000) && Near(CenterY(band), 460));
+    CHECK(Box(quads.at(0), 0, 0, 2560, 1440));
+}
+
+TEST(a_catch_with_no_skill_line_shows_only_its_name)
+{
+    const std::vector<CaseQuad> quads = Frame(8.5f, true, CaseWords{5, 4, 0});
+    CHECK(!Of(quads, CasePicture::Name).empty() && Of(quads, CasePicture::Skill).empty());
+}
+
+TEST(nothing_is_drawn_before_it_starts_or_after_it_ends)
+{
+    CHECK(Frame(0.0f).empty() && Frame(kFull).empty());
+    const std::vector<CaseQuad> half = Frame(1.75f, true, kWords, kLayoutSpot, 1280, 720, kFull / 2.0f), full = Frame(3.5f);
+    CHECK_EQ(half.size(), full.size());
+    for (size_t i = 0; i < std::min(half.size(), full.size()); ++i)
+        CHECK(half[i].picture == full[i].picture && Box(half[i], full[i].x, full[i].y, full[i].width, full[i].height) && half[i].argb == full[i].argb);
+}
+
+TEST(the_move_boxes_stand_where_the_case_draws)
+{
+    for (const auto& [spot, width, height] : {std::tuple{kLayoutSpot, 1280.0f, 720.0f}, std::tuple{CaseSpot{1000, 500, 2}, 2560.0f, 1440.0f}})
+    {
+        const CaseBoxSet boxes = CaseBoxesAt(spot);
+        const auto same = [](const CaseBox& b, const CaseQuad& q) { return Box(q, b.x, b.y, b.width, b.height); };
+        const std::vector<CaseQuad> spinning = Frame(3.5f, true, kWords, spot, width, height), shown = Frame(8.5f, true, kWords, spot, width, height);
+        CHECK(same(boxes.band, Of(spinning, CasePicture::Band).at(0)));
+        CHECK(same(boxes.line, Of(spinning, CasePicture::Solid).back()));
+        CHECK(same(boxes.icon, Of(shown, CasePicture::ItemCrisp).at(0)));
+        const CaseQuad name = Of(shown, CasePicture::Name).at(0);
+        CHECK(Near(boxes.name.height, name.height, 0.01f) && Near(boxes.name.y + boxes.name.height / 2.0f, CenterY(name), 0.01f));
+    }
 }

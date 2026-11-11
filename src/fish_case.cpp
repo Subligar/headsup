@@ -84,6 +84,88 @@ namespace headsup
             return pool.back().item;
         }
 
+        // The layout's pixels, on its 1280 by 720 frame.
+        constexpr float kMiddle       = 640.0f;
+        constexpr float kFrameMiddleY = 360.0f;
+        constexpr float kStripY       = 340.0f;
+        constexpr float kTileWidth    = 132.0f;
+        constexpr float kTileHeight   = 104.0f;
+        constexpr float kPitch        = 136.0f;
+        constexpr float kShown        = 520.0f; // from the line, where the tiles have faded out
+        constexpr float kEdge         = 170.0f; // the fade's width
+        constexpr float kBandMargin   = 14.0f;
+        constexpr float kIcon         = 72.0f;
+        constexpr float kIconTop      = 10.0f;
+        constexpr float kBarHeight    = 5.0f;
+        constexpr float kRiseHeight   = 44.0f;
+        constexpr float kLitGlow      = 26.0f;
+        constexpr float kLitEdge      = 3.0f;
+        constexpr float kLineWidth    = 2.0f;
+        constexpr float kLineReach    = 12.0f; // past the tiles
+        constexpr float kLineGlow     = 10.0f;
+        constexpr float kTitleY       = 246.0f;
+        constexpr float kBigY         = 400.0f;
+        constexpr float kBigIcon      = 224.0f;
+        constexpr float kHalo         = 280.0f;
+        constexpr float kNameY        = 162.0f;
+        constexpr float kUnderlineY   = 193.5f;
+        constexpr float kUnderline    = 3.0f;
+        constexpr float kUnderlinePad = 48.0f;
+        constexpr float kSkillY       = 217.0f;
+
+        constexpr uint32_t kVeil = 0x0E0924, kShade = 0x05030F, kBand = 0x080A14, kLineGold = 0xF2C94C, kLineHalo = 0xF4C76B;
+        constexpr uint32_t kTitleInk = 0xEBE7F6, kNameInk = 0xF4F1FB, kSkillInk = 0xB9B5D3, kWhiteInk = 0xFFFFFF;
+        constexpr uint32_t kOpaque = 0xFFFFFFFF;
+        constexpr float kVeilLevel     = 0.62f;
+        constexpr float kShadeLevel    = 0.6f;
+        constexpr float kBandLevel     = 0.6f;
+        constexpr float kDimLevel      = 0.55f; // the tiles but the catch's, once it stops
+        constexpr float kRiseLevel     = 0.6f;
+        constexpr float kLitGlowLevel  = 0.7f;
+        constexpr float kLineHaloLevel = 0.5f;
+        constexpr float kLineSettled   = 0.6f; // of the line, faded once it stops
+        constexpr float kHaloLevel     = 0.55f;
+        constexpr float kFullByte      = 255.0f;
+
+        uint32_t Argb(uint32_t rgb, float alpha) { return static_cast<uint32_t>(std::lround(Clamp01(alpha) * kFullByte)) << 24 | rgb; }
+
+        // Writes quads in screen pixels from the layout's, around the Case's spot; a clear one is left out.
+        struct Painter
+        {
+            std::vector<CaseQuad>& out;
+            const CaseSpot& spot;
+            void Centered(CasePicture picture, bool add, float x, float y, float halfWidth, float halfHeight, uint32_t argb, uint16_t item = 0)
+            {
+                if (argb >> 24 == 0 || halfWidth <= 0.0f || halfHeight <= 0.0f) return;
+                out.push_back(CaseQuad{picture, add, spot.x + (x - halfWidth - kMiddle) * spot.unit,
+                    spot.y + (y - halfHeight - kFrameMiddleY) * spot.unit, 2.0f * halfWidth * spot.unit, 2.0f * halfHeight * spot.unit, argb, item});
+            }
+            void Cover(CasePicture picture, float width, float height, uint32_t argb)
+            {
+                if (argb >> 24 != 0) out.push_back(CaseQuad{picture, false, 0.0f, 0.0f, width, height, argb});
+            }
+        };
+
+        // dim: the dark laid over it; lit: the catch's frame and glow once the strip stops.
+        void Tile(Painter& paint, uint16_t item, float x, float y, float alpha, float dim, float lit)
+        {
+            if (alpha <= 0.0f) return;
+            const uint32_t color = CaseColor(item);
+            const float halfWide = kTileWidth / 2.0f, halfHigh = kTileHeight / 2.0f, top = y - halfHigh, bottom = y + halfHigh;
+            paint.Centered(CasePicture::Glow, true, x, y, halfWide + kLitGlow, halfHigh + kLitGlow, Argb(color, kLitGlowLevel * lit * alpha));
+            paint.Centered(CasePicture::Tile, false, x, y, halfWide, halfHigh, Argb(kWhiteInk, alpha));
+            paint.Centered(CasePicture::Rise, false, x, bottom - kRiseHeight / 2.0f, halfWide, kRiseHeight / 2.0f, Argb(color, kRiseLevel * alpha));
+            paint.Centered(CasePicture::Item, false, x, top + kIconTop + kIcon / 2.0f, kIcon / 2.0f, kIcon / 2.0f, Argb(kWhiteInk, alpha), item);
+            paint.Centered(CasePicture::Solid, false, x, bottom - kBarHeight / 2.0f, halfWide, kBarHeight / 2.0f, Argb(color, alpha));
+            paint.Centered(CasePicture::Solid, false, x, y, halfWide, halfHigh, Argb(kBand, dim * alpha));
+            const uint32_t edge = Argb(color, lit * alpha);
+            const float out     = kLitEdge / 2.0f;
+            paint.Centered(CasePicture::Solid, false, x, top - out, halfWide + kLitEdge, out, edge);
+            paint.Centered(CasePicture::Solid, false, x, bottom + out, halfWide + kLitEdge, out, edge);
+            paint.Centered(CasePicture::Solid, false, x - halfWide - out, y, out, halfHigh, edge);
+            paint.Centered(CasePicture::Solid, false, x + halfWide + out, y, out, halfHigh, edge);
+        }
+
         float Along(const CaseRun& run, float t) { return kStartTile + (run.stop - kStartTile) * EaseOut(Ramp(kSpinFrom, kSpinTo, t)); }
     }
 
@@ -149,5 +231,68 @@ namespace headsup
             return placed == kFishBarUnplaced ? side / 2.0f : std::clamp(static_cast<float>(placed), 0.0f, side);
         };
         return CaseSpot{at(x, screenWidth), at(y, screenHeight), screenHeight / kLayoutHeight * static_cast<float>(scalePercent) / kFullScale};
+    }
+
+    std::vector<CaseQuad> CaseFrame(const CaseRun& run, float seconds, float length, const CaseSpot& spot, float screenWidth,
+        float screenHeight, bool background, const CaseWords& words)
+    {
+        std::vector<CaseQuad> out;
+        const CaseView view = CaseAt(run, seconds, length);
+        if (view.over || seconds <= 0.0f) return out;
+        Painter paint{out, spot};
+        if (background)
+        {
+            paint.Cover(CasePicture::Solid, screenWidth, screenHeight, Argb(kVeil, kVeilLevel * view.veil));
+            paint.Cover(CasePicture::Vignette, screenWidth, screenHeight, Argb(kShade, kShadeLevel * view.veil));
+        }
+        if (view.strip > 0.0f)
+        {
+            const float y = kStripY + view.lift;
+            paint.Centered(CasePicture::Band, false, kMiddle, y, kShown, kTileHeight / 2.0f + kBandMargin, Argb(kBand, kBandLevel * view.strip));
+            paint.Centered(CasePicture::Title, false, kMiddle, kTitleY + view.lift, kCaseTitleHeight / 2.0f * words.title,
+                kCaseTitleHeight / 2.0f, Argb(kTitleInk, view.strip));
+            for (size_t i = 0; i < run.tiles.size(); ++i)
+            {
+                const float x = kMiddle + (static_cast<float>(i) - view.along) * kPitch, off = std::fabs(x - kMiddle);
+                if (off >= kShown) continue;
+                const bool caught = i == static_cast<size_t>(kCaseWinner);
+                Tile(paint, run.tiles[i], x, y, view.strip * Clamp01((kShown - off) / kEdge), caught ? 0.0f : kDimLevel * view.settled,
+                    caught ? view.settled : 0.0f);
+            }
+            const float line = view.strip * (1.0f - kLineSettled * view.settled), reach = kTileHeight / 2.0f + kLineReach;
+            paint.Centered(CasePicture::Glow, true, kMiddle, y, kLineGlow, reach + kLineGlow, Argb(kLineHalo, kLineHaloLevel * line));
+            paint.Centered(CasePicture::Solid, false, kMiddle, y, kLineWidth / 2.0f, reach, Argb(kLineGold, line));
+        }
+        if (view.reveal > 0.0f)
+        {
+            const uint16_t caught = run.tiles[kCaseWinner];
+            const uint32_t color  = CaseColor(caught);
+            paint.Centered(CasePicture::Glow, true, kMiddle, kBigY, kHalo, kHalo, Argb(color, kHaloLevel * view.reveal));
+            const float half = kBigIcon / 2.0f * view.iconScale;
+            paint.Centered(CasePicture::ItemCrisp, false, kMiddle, kBigY, half, half, Argb(kWhiteInk, view.reveal), caught);
+            if (view.named > 0.0f)
+            {
+                const float nameWide = kCaseNameHeight * words.name;
+                paint.Centered(CasePicture::Name, false, kMiddle, kNameY, nameWide / 2.0f, kCaseNameHeight / 2.0f, Argb(kNameInk, view.named));
+                paint.Centered(CasePicture::Solid, false, kMiddle, kUnderlineY, (nameWide + kUnderlinePad) / 2.0f * EaseOut(view.named),
+                    kUnderline / 2.0f, Argb(color, view.named));
+                paint.Centered(CasePicture::Skill, false, kMiddle, kSkillY, kCaseSkillHeight / 2.0f * words.skill, kCaseSkillHeight / 2.0f,
+                    Argb(kSkillInk, view.named));
+            }
+        }
+        return out;
+    }
+
+    CaseBoxSet CaseBoxesAt(const CaseSpot& spot)
+    {
+        std::vector<CaseQuad> out;
+        Painter paint{out, spot};
+        const float reach = kTileHeight / 2.0f + kLineReach, half = kBigIcon / 2.0f;
+        paint.Centered(CasePicture::Band, false, kMiddle, kStripY, kShown, kTileHeight / 2.0f + kBandMargin, kOpaque);
+        paint.Centered(CasePicture::Solid, false, kMiddle, kStripY, kLineWidth / 2.0f, reach, kOpaque);
+        paint.Centered(CasePicture::ItemCrisp, false, kMiddle, kBigY, half, half, kOpaque);
+        paint.Centered(CasePicture::Name, false, kMiddle, kNameY, kShown, kCaseNameHeight / 2.0f, kOpaque);
+        const auto box = [](const CaseQuad& q) { return CaseBox{q.x, q.y, q.width, q.height}; };
+        return CaseBoxSet{box(out[0]), box(out[1]), box(out[2]), box(out[3])};
     }
 }
