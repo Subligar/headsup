@@ -654,3 +654,24 @@ TEST(loaded_mid_zone_the_game_says_where_you_are_until_a_zone_in_does)
     Feed(game, TalkNum(kYou, 6578 + 0x08));
     CHECK(game.Fish().size == FishSize::Small);
 }
+
+TEST(only_your_own_catch_that_reaches_the_bag_is_a_catch)
+{
+    constexpr uint32_t kYou = 1001, kSomeone = 2002;
+    constexpr uint16_t kValkurm = 7254, kMoatCarp = 4401;
+    // GP_SERV_COMMAND_TALKNUMNAME's catches (0x027): who at 0x04, the message at 0x0A (its top bit set), the item at 0x10.
+    const auto caught = [](uint32_t who, uint16_t message) {
+        return Blank(0x027, 0x30).Put(0x04, who).Put<uint16_t>(0x0A, message | 0x8000).Put<uint32_t>(0x10, kMoatCarp);
+    };
+    GameState game;
+    CHECK(!Feed(game, caught(kYou, kValkurm + 0x27)).caught); // before any zone-in
+    Feed(game, ZoneIn(kRain).Put<uint32_t>(0x04, kYou));
+    CHECK(Feed(game, caught(kYou, kValkurm + 0x27)).caught == kMoatCarp);
+    CHECK(Feed(game, caught(kYou, kValkurm + 0x0E)).caught == kMoatCarp); // landed several
+    CHECK(!Feed(game, caught(kYou, kValkurm + 0x0A)).caught);             // landed and let go for want of room
+    CHECK(!Feed(game, caught(kYou, kValkurm + 0x05)).caught);
+    CHECK(!Feed(game, caught(kSomeone, kValkurm + 0x27)).caught);
+    Feed(game, ZoneIn(kRain).Put<uint32_t>(0x04, kYou).Put<uint16_t>(0x30, 248)); // Selbina, from 6578
+    CHECK(!Feed(game, caught(kYou, kValkurm + 0x27)).caught);
+    CHECK(Feed(game, caught(kYou, 6578 + 0x27)).caught == kMoatCarp);
+}

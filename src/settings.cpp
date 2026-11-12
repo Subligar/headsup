@@ -46,6 +46,7 @@ namespace headsup
             {"autoCheck", &Settings::autoCheck}, {"lookUpPlayers", &Settings::lookUpPlayers},
 
             {"fishBarDraggable", &Settings::fishBarDraggable},
+            {"fishCase", &Settings::fishCase}, {"fishCaseBackground", &Settings::fishCaseBackground},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
             {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"helpBarShrink", &Settings::helpBarShrink},
@@ -98,6 +99,9 @@ namespace headsup
             {"fishBarWidth", &Settings::fishBarWidth, kMinFishBarWidth, kMaxFishBarWidth},
             {"fishBarX", &Settings::fishBarX, kFishBarUnplaced, kMaxFishBarPlace},
             {"fishBarY", &Settings::fishBarY, kFishBarUnplaced, kMaxFishBarPlace},
+            {"fishCaseAcross", &Settings::fishCaseAcross, kFishBarUnplaced, kCasePlaceWhole},
+            {"fishCaseDown", &Settings::fishCaseDown, kFishBarUnplaced, kCasePlaceWhole},
+            {"fishCaseScale", &Settings::fishCaseScale, kMinCaseScale, kMaxCaseScale},
             {"helpBarX", &Settings::helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset},
             {"helpBarY", &Settings::helpBarY, -kMaxHelpBarOffset, kMaxHelpBarOffset}};
 

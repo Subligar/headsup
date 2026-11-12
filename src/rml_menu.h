@@ -55,6 +55,8 @@ namespace headsup
         std::optional<PanelWidget> TakeSettingsAsked();
         // True once after the Debug Report button was pressed: write the /hu debug report.
         bool TakeDebugRequest();
+        bool TakeCaseMove();
+        bool TakeCaseTest();
         // Opens the window on Setup, from the settings as they are: the first time, or again (rerun), which warns.
         void StartSetup(const Settings& settings, bool rerun);
         bool InSetup() const { return m_State.setup.has_value(); }

@@ -106,6 +106,7 @@ namespace headsup
         BarWidget partsFrom = BarWidget::Zone, cardsFrom = BarWidget::Zone;
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
+        bool caseMoveRequested = false, caseTestRequested = false; // pressed: the plugin shows the boxes, or plays one
         bool watchRequested = false; // the debug watch is to start, or stop
         bool exportRequested = false;
         bool cursorsRequested = false; // a list of pictures was opened: the cursors folder is to be read again

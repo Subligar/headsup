@@ -23,6 +23,8 @@ namespace headsup
     // message: the server's number past the zone's first fishing message (ZoneRecord::fishing). A bite starts a new
     // catch; a feeling adds to it; anything else leaves it.
     void ReadFishMessage(FishCatch& fish, uint16_t message);
+    // Whether a catch message (past the zone's first fishing message) put the catch in your bag.
+    bool CatchKept(uint16_t message);
 
     // The fishing bar's line, its tags (FishBarTags) as the catch says them.
     std::vector<Tag> FishBarTags();

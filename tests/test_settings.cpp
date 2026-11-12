@@ -3128,6 +3128,32 @@ TEST(the_fishing_bar_keeps_its_fish_stamina_width_and_place)
     CHECK(odd.fishStamina == FishBarShown::HeadsUp && odd.fishBarWidth == kMinFishBarWidth && odd.fishBarX == kFishBarUnplaced);
 }
 
+TEST(the_case_is_off_until_switched_on_and_keeps_its_scale_and_place)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    CHECK(!fresh.fishCase && fresh.fishCaseScale == 65 && fresh.fishCaseBackground);
+    CHECK(fresh.fishCaseAcross == kFishBarUnplaced && fresh.fishCaseDown == kFishBarUnplaced);
+    MapStore store;
+    store.values["fishCase"]           = "true";
+    store.values["fishCaseScale"]      = "150";
+    store.values["fishCaseBackground"] = "false";
+    store.values["fishCaseAcross"]     = "5000";
+    store.values["fishCaseDown"]       = "3361";
+    const Settings s = LoadSettings(store);
+    CHECK(s.fishCase && s.fishCaseScale == 150 && !s.fishCaseBackground && s.fishCaseAcross == 5000 && s.fishCaseDown == 3361);
+    MapStore saved;
+    SaveSettings(s, saved);
+    const Settings back = LoadSettings(saved);
+    CHECK(back.fishCase && back.fishCaseScale == 150 && !back.fishCaseBackground && back.fishCaseAcross == 5000 && back.fishCaseDown == 3361);
+    store.values["fishCaseScale"] = "999";
+    CHECK_EQ(LoadSettings(store).fishCaseScale, 200);
+    store.values["fishCaseScale"] = "7";
+    CHECK_EQ(LoadSettings(store).fishCaseScale, 50);
+    store.values["fishCaseAcross"] = "20000"; // past the screen's edge
+    CHECK_EQ(LoadSettings(store).fishCaseAcross, 10000);
+}
+
 TEST(the_currency_widget_keeps_its_two_currencies)
 {
     Settings s;

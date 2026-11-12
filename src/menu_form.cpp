@@ -2037,6 +2037,22 @@ namespace headsup
                     PixelsOr(Word(c, WindowWord::Auto), kFishBarUnplaced), tip);
                 break;
             }
+            case SettingPiece::CaseScale:
+                form.Fade(!s.fishCase);
+                form.SliderPercent(label.c_str(), s.fishCaseScale, kMinCaseScale, kMaxCaseScale, tip);
+                break;
+            case SettingPiece::CaseBackground:
+                form.Fade(!s.fishCase);
+                form.Switch(label.c_str(), s.fishCaseBackground, tip);
+                break;
+            case SettingPiece::CaseMove:
+                form.Fade(!s.fishCase);
+                if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.caseMoveRequested = true;
+                break;
+            case SettingPiece::CaseTest:
+                form.Fade(!s.fishCase);
+                if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.caseTestRequested = true;
+                break;
             case SettingPiece::FishingBarDraggable:
                 form.Fade(false);
                 form.Switch(label.c_str(), s.fishBarDraggable, tip);
@@ -2534,6 +2550,7 @@ namespace headsup
             case CardPiece::PopupAppearance: return {false, !BarOn(s)};
             case CardPiece::DebugMode: return {false, false, &s.debugMode};
             case CardPiece::FishingAppearance: return {false, !on};
+            case CardPiece::FishingCase: return {false, !on, &s.fishCase};
             }
             return {};
         }

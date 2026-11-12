@@ -39,6 +39,7 @@ namespace headsup
     constexpr uint16_t kInspectMessagePacket = 0x0CA; // server to client: a check's name, title and bazaar message
     constexpr uint16_t kTalkNumPacket        = 0x036; // server to client: a message from the zone's dialog
     constexpr uint16_t kTalkNumWorkPacket    = 0x02A; // server to client: one with numbers in it
+    constexpr uint16_t kCatchPacket          = 0x027; // server to client: a numbered message with an item and a count
 
     // Offsets count Ashita's 4-byte header. Phoenix's s2c 0x00A: WeatherNumber at 0x68.
     std::optional<Weather> ParseZoneInWeather(const uint8_t* data, uint32_t size);
@@ -56,6 +57,15 @@ namespace headsup
         uint16_t message = 0;
     };
     std::optional<TalkMessage> ParseTalkMessage(uint16_t id, const uint8_t* data, uint32_t size);
+    // A kCatchPacket's message, whose it is and its item: UniqueNo at 0x04, MesNum at 0x0A (its top bit dropped), the
+    // item at 0x10. The server sends a catch to everyone near the angler.
+    struct CatchMessage
+    {
+        uint32_t who = 0;
+        uint16_t message = 0;
+        uint16_t item = 0;
+    };
+    std::optional<CatchMessage> ParseCatchMessage(const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x057: WeatherNumber at 0x08.
     std::optional<Weather> ParseWeather(const uint8_t* data, uint32_t size);
     // Your rank in each craft, by guild id (0 Amateur on), from the skills packet.

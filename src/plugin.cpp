@@ -5,6 +5,8 @@
 #include "bar_connection.h"
 #include "bar_document.h"
 #include "c_numbers.h"
+#include "case_click.h"
+#include "case_render.h"
 #include "bar_fps.h"
 #include "bar_job.h"
 #include "bar_memory.h"
@@ -14,6 +16,7 @@
 #include "cursor_picture.h"
 #include "d3d_util.h"
 #include "debug_report.h"
+#include "fish_case.h"
 #include "fonts.h"
 #include "game_font.h"
 #include "game_cursor.h"
@@ -39,6 +42,7 @@
 #include "guild_points.h"
 #include "item_picture.h"
 #include "web_get.h"
+#include "wave_out.h"
 #include "settings.h"
 #include "shot_watch.h"
 #include "tracker.h"
@@ -84,8 +88,10 @@ namespace
     bool KeyDown(uint8_t vk) { return (GetAsyncKeyState(vk) & headsup::kKeyDownBit) != 0; }
 
     constexpr const char* kName              = "HeadsUp"; // as Ashita lists it and the chat names it
+    constexpr const char* kCaseRefused = "The case opening can't be drawn: Direct3D refused one of its pictures. Reload HeadsUp to try again.";
+    constexpr double kSeedsPerSecond   = 1000.0; // a Case's seed is the time in milliseconds
     // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
-    constexpr const char* kVersion           = "0.5.2";
+    constexpr const char* kVersion           = "0.5.3";
     constexpr const char* kConfigAlias       = "headsup";
     constexpr const char* kConfigFolder      = "config";
     constexpr const char* kWindowFile        = "settings_window.json"; // a developer's build reads one in its config folder
@@ -217,6 +223,14 @@ namespace
     {
         const IItem* found = g_Resources != nullptr ? g_Resources->GetItemById(item) : nullptr;
         return found != nullptr ? found->Name[0] : nullptr;
+    }
+
+    // An item's picture, from the game's own resources.
+    std::optional<headsup::Image> ItemPicture(uint16_t item)
+    {
+        const IItem* found = g_Resources != nullptr ? g_Resources->GetItemById(item) : nullptr;
+        if (found == nullptr) return std::nullopt;
+        return headsup::ResourcePicture(found->Bitmap, std::min<size_t>(found->ImageSize, sizeof(found->Bitmap)));
     }
 
     const char* SpellName(uint16_t spell)
@@ -360,6 +374,26 @@ class HeadsUp final : public IPlugin
     headsup::FishReader m_Fish;
     bool m_FishTried = false; // it scans the client's code, so once
     headsup::FishBar m_FishBar;
+    // A Case playing: its strip, when it started, how long it runs and the size its texts were drawn at.
+    struct CasePlay
+    {
+        headsup::CaseRun run;
+        double started;
+        float length, unit;
+    };
+    std::optional<CasePlay> m_Case;
+    // A catch a packet told of, played the next frame, with where and with what you fished as it arrived: the game
+    // takes the bait off after it, so the last bait of a stack is gone a frame later.
+    struct CaseCaught
+    {
+        uint16_t item;
+        headsup::Angler angler;
+    };
+    std::optional<CaseCaught> m_CaseCaught;
+    headsup::CaseRender m_CaseRender;
+    headsup::CaseBoxes m_CaseBoxes;
+    headsup::WaveOut m_CaseSound;
+    bool m_CaseMoving = false, m_CaseRefused = false;
     bool m_PlayOnlineTried = false; // it scans the client's code, so once
     std::optional<headsup::PlayOnlineCounts> m_PlayOnlineCounts; // read with the counters
     headsup::ConnectionMeter m_Connection;
@@ -611,6 +645,10 @@ public:
         m_RmlBar.Release();
         m_RmlMenu.Close();
         m_FishBar.Close();
+        m_CaseBoxes.Close();
+        m_CaseRender.Release();
+        m_CaseSound.Stop();
+        m_Case.reset();
         m_Rml.Stop();
         // After the renderers, which hold fonts made from these until they release.
         for (HANDLE handle : m_LoadedFonts)
@@ -834,7 +872,11 @@ public:
             m_AutoCheck.Clear();
             m_Lookups.Zoned();
             m_PhTimers.Zoned();
+            m_Case.reset();
+            m_CaseCaught.reset();
+            m_CaseSound.Stop();
         }
+        if (next.caught) m_CaseCaught = CaseCaught{*next.caught, AnglerNow()};
         if (next.check) OnCheckReply(*next.check);
         if (next.guardEvent) HeardOverseer(*next.guardEvent);
         if (next.mobDied && m_Settings.phTimers)
@@ -1020,6 +1062,13 @@ public:
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
+        if (const std::optional<CaseCaught> caught = std::exchange(m_CaseCaught, std::nullopt)) StartCase(caught->item, caught->angler);
+        if (m_Case && (now - m_Case->started >= m_Case->length || !m_Settings.enabled || !m_Settings.fishCase)) m_Case.reset();
+        if (!m_Case) m_CaseSound.Stop();
+        if (!m_RmlMenu.open) m_CaseMoving = false;
+        if (m_Rml.Running() &&
+            m_CaseBoxes.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings, m_CaseMoving && !m_Case))
+            m_SettingsChangedAt = now;
         if (!Logging()) CloseNotes();
         m_ArrowHook.Hide(m_Settings.enabled && m_Settings.cursorStyle != headsup::CursorStyle::Vanilla);
         LoadCursorFile();
@@ -1180,6 +1229,12 @@ public:
             m_BarInput.ShowSettings(shut ? std::nullopt : std::optional(pill));
         }
         if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
+        if (m_RmlMenu.TakeCaseMove()) m_CaseMoving = true;
+        if (m_RmlMenu.TakeCaseTest())
+        {
+            const headsup::Angler angler = AnglerNow();
+            StartCase(headsup::TestCatch(angler, PoolNow(angler), static_cast<uint32_t>(Now() * kSeedsPerSecond)), angler);
+        }
         if (m_RmlMenu.TakeSetupBackup()) BackUpSettings();
 #ifdef HEADSUP_DEV
         if (m_RmlMenu.TakeWatchRequest())
@@ -2007,7 +2062,10 @@ private:
     {
         if (m_Device == nullptr || FAILED(m_Device->BeginScene())) return;
         if (m_Rml.Running() && !m_Screenshot && m_RmlMenu.open && m_RmlMenu.SetupShown() != nullptr) DrawSetupPreview();
-        if (m_Rml.Running() && !m_Screenshot) WithQuadStates([&] { m_Rml.RenderOverlay(); });
+        if (!m_Screenshot && (m_Case || m_Rml.Running())) WithQuadStates([&] {
+            DrawCase();
+            if (m_Rml.Running()) m_Rml.RenderOverlay();
+        });
         m_Device->EndScene();
     }
 
@@ -2166,7 +2224,74 @@ private:
     {
         m_Rml.RenderBar();
         // Without Present hooked nothing draws over ImGui: the overlay goes under it, with the bar.
-        if (g_PresentSlot == nullptr) m_Rml.RenderOverlay();
+        if (g_PresentSlot == nullptr)
+        {
+            DrawCase();
+            m_Rml.RenderOverlay();
+        }
+    }
+
+    // Where and with what you fish, as the server reads it: its y is your height, the client's Z.
+    headsup::Angler AnglerNow() const
+    {
+        IMemoryManager* memory = m_AshitaCore->GetMemoryManager();
+        IEntity* entity        = memory->GetEntity();
+        const Ashita::FFXI::player_t* raw = memory->GetPlayer()->GetRawStructure();
+        return headsup::Angler{static_cast<uint16_t>(memory->GetParty()->GetMemberZone(0)), entity->GetLocalPositionX(m_SelfIndex),
+            entity->GetLocalPositionZ(m_SelfIndex), entity->GetLocalPositionY(m_SelfIndex), EquippedItem(headsup::kRodSlot),
+            EquippedItem(headsup::kBaitSlot), raw != nullptr ? raw->CraftSkills.Fishing.GetSkill() : 0};
+    }
+
+    std::vector<headsup::PoolEntry> PoolNow(const headsup::Angler& angler) const
+    {
+        IPlayer* player = m_AshitaCore->GetMemoryManager()->GetPlayer();
+        return headsup::CatchPool(angler, [player](uint16_t key) { return player->HasKeyItem(key); });
+    }
+
+    headsup::CaseSpot CaseSpotNow()
+    {
+        return headsup::CasePlace(m_Settings.fishCaseAcross, m_Settings.fishCaseDown, m_Settings.fishCaseScale,
+            static_cast<float>(m_Names.BackBufferWidth()), static_cast<float>(m_Names.BackBufferHeight()));
+    }
+
+    // Its icons and texts for the size it shows at; a refused picture is said once and keeps the Case off until a reload.
+    bool PrepareCase(const headsup::CaseRun& run, float unit)
+    {
+        const uint16_t caught = run.tiles[headsup::kCaseWinner];
+        const char* name      = ItemName(caught);
+        if (m_CaseRender.Prepare(m_Device, run, name != nullptr ? name : "", headsup::CaseSkillLine(caught), unit,
+                [](uint16_t item) { return ItemPicture(item); }))
+            return true;
+        Print(kCaseRefused);
+        m_CaseRefused = true;
+        m_Case.reset();
+        m_CaseSound.Stop();
+        return false;
+    }
+
+    // A new Case in place of any playing.
+    void StartCase(uint16_t caught, const headsup::Angler& angler)
+    {
+        if (!m_Settings.enabled || !m_Settings.fishCase || m_Device == nullptr || m_CaseRefused) return;
+        headsup::CaseRun run = headsup::SpinCase(caught, PoolNow(angler), static_cast<uint32_t>(Now() * kSeedsPerSecond));
+        const float unit     = CaseSpotNow().unit;
+        if (!PrepareCase(run, unit)) return;
+        m_CaseSound.Play(headsup::ClickTrack(headsup::CaseClicks(run, headsup::kCaseSeconds), headsup::kCaseSeconds), headsup::kClickRate);
+        m_Case = CasePlay{std::move(run), Now(), headsup::kCaseSeconds, unit};
+    }
+
+    void DrawCase()
+    {
+        if (!m_Case || m_Screenshot || m_Device == nullptr) return;
+        const headsup::CaseSpot spot = CaseSpotNow();
+        if (spot.unit != m_Case->unit)
+        {
+            if (!PrepareCase(m_Case->run, spot.unit)) return;
+            m_Case->unit = spot.unit;
+        }
+        m_CaseRender.Draw(m_Device, headsup::CaseFrame(m_Case->run, static_cast<float>(Now() - m_Case->started), m_Case->length, spot,
+                                        static_cast<float>(m_Names.BackBufferWidth()), static_cast<float>(m_Names.BackBufferHeight()),
+                                        m_Settings.fishCaseBackground, m_CaseRender.Words()));
     }
 
     bool PlayerLoaded() const
@@ -2200,13 +2325,7 @@ private:
             [this](const std::string& name) {
                 if (std::optional<headsup::Image> piece = headsup::SkinImage(m_WindowSkins, name)) return piece;
                 if (std::optional<headsup::Image> picture = headsup::GamePictureImage(m_PlayOnlineIcons, m_NationCrests, name)) return picture;
-                // An item's picture, from the game's own resources.
-                if (const std::optional<uint16_t> item = headsup::ItemOfSource(name))
-                {
-                    const IItem* found = g_Resources != nullptr ? g_Resources->GetItemById(*item) : nullptr;
-                    if (found == nullptr) return std::optional<headsup::Image>{};
-                    return headsup::ResourcePicture(found->Bitmap, std::min<size_t>(found->ImageSize, sizeof(found->Bitmap)));
-                }
+                if (const std::optional<uint16_t> item = headsup::ItemOfSource(name)) return ItemPicture(*item);
                 if (std::optional<headsup::Image> status = headsup::StatusImage(name, [](uint16_t id) {
                         const IStatusIcon* icon = g_Resources != nullptr ? g_Resources->GetStatusIconById(id) : nullptr;
                         if (icon == nullptr) return std::optional<headsup::Image>{};
@@ -2986,13 +3105,22 @@ private:
                 m_BuffSynced.insert(static_cast<uint16_t>(party->GetStatusIconsTargetIndex(member)));
     }
 
+    // The item in an equipment slot, or 0. An equipped item's index holds its container over its slot.
+    uint16_t EquippedItem(uint32_t slot) const
+    {
+        constexpr uint32_t kContainerShift = 8, kSlotBits = 0xFF;
+        IInventory* inventory                       = m_AshitaCore->GetMemoryManager()->GetInventory();
+        const Ashita::FFXI::equipmententry_t* entry = inventory->GetEquippedItem(slot);
+        if (entry == nullptr || entry->Index == 0) return 0;
+        const Ashita::FFXI::item_t* item = inventory->GetContainerItem((entry->Index >> kContainerShift) & kSlotBits, entry->Index & kSlotBits);
+        return item != nullptr ? item->Id : 0;
+    }
+
     // Your magic accuracy as the game knows it; nullopt before the game reports your level.
     std::optional<headsup::Caster> CasterNow() const
     {
-        // Ashita's stat IDs of INT, MND and CHR, in CasterStat order; an equipped item's index holds its container
-        // over its slot.
+        // Ashita's stat IDs of INT, MND and CHR, in CasterStat order.
         constexpr uint32_t kStatIds[headsup::kCasterStatCount] = {4, 5, 6};
-        constexpr uint32_t kContainerShift = 8, kSlotBits = 0xFF;
         IPlayer* player                   = m_AshitaCore->GetMemoryManager()->GetPlayer();
         const Ashita::FFXI::player_t* raw = player->GetRawStructure();
         if (raw == nullptr || player->GetMainJobLevel() == 0) return std::nullopt;
@@ -3002,15 +3130,7 @@ private:
         std::memcpy(reading.combatSkills, &raw->CombatSkills, sizeof(reading.combatSkills));
         for (int i = 0; i < headsup::kCasterStatCount; ++i)
             reading.stat[i] = player->GetStat(kStatIds[i]) + player->GetStatModifier(kStatIds[i]);
-        IInventory* inventory = m_AshitaCore->GetMemoryManager()->GetInventory();
-        for (uint32_t slot = 0; slot < headsup::kEquipSlotCount; ++slot)
-        {
-            const Ashita::FFXI::equipmententry_t* entry = inventory->GetEquippedItem(slot);
-            if (entry == nullptr || entry->Index == 0) continue;
-            const Ashita::FFXI::item_t* item =
-                inventory->GetContainerItem((entry->Index >> kContainerShift) & kSlotBits, entry->Index & kSlotBits);
-            if (item != nullptr) reading.equipped[slot] = item->Id;
-        }
+        for (uint32_t slot = 0; slot < headsup::kEquipSlotCount; ++slot) reading.equipped[slot] = EquippedItem(slot);
         if (const int16_t* buffs = player->GetBuffs(); buffs != nullptr)
             reading.buffs = std::span(buffs, headsup::kStatusIconSlots);
         return headsup::CasterOf(reading);
