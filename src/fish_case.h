@@ -15,7 +15,7 @@
 namespace headsup
 {
     // The longest the game's catch animation was seen to take, from the catch message until you can cast again.
-    constexpr float kCatchAnimationSeconds = 9.0f;
+    constexpr float kCatchAnimationSeconds = 6.2f;
     constexpr float kCaseBuffer            = 0.5f; // so the Case never ends before you can cast
     constexpr float kCaseSeconds           = kCatchAnimationSeconds + kCaseBuffer;
 
