@@ -91,7 +91,7 @@ namespace
     constexpr const char* kCaseRefused = "The case opening can't be drawn: Direct3D refused one of its pictures. Reload HeadsUp to try again.";
     constexpr double kSeedsPerSecond   = 1000.0; // a Case's seed is the time in milliseconds
     // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
-    constexpr const char* kVersion           = "0.5.3";
+    constexpr const char* kVersion           = "0.5.4";
     constexpr const char* kConfigAlias       = "headsup";
     constexpr const char* kConfigFolder      = "config";
     constexpr const char* kWindowFile        = "settings_window.json"; // a developer's build reads one in its config folder
