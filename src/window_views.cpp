@@ -170,7 +170,8 @@ namespace headsup
             {
                 if (OnLeftSide(w.left, screenRight) != leftSide || !HangsInView(w, screenBottom)) continue;
                 sideTop = std::min(sideTop.value_or(w.top), w.top);
-                if (w.top < kGameUnderStripRow)
+                // Not one hung just under the strip: the battlefield timer at 47, with the macro palette beside it.
+                if (w.top == kGameTopRow)
                     shift.topRow = TopRow{std::min(shift.topRow ? shift.topRow->left : w.left, w.left),
                         std::max(shift.topRow ? shift.topRow->right : w.right, w.right)};
             }
