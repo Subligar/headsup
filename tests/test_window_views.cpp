@@ -316,6 +316,16 @@ TEST(a_window_the_game_hangs_under_the_strip_beside_the_status_column_rises_to_l
     CHECK(FrameShifts{}.For(130, 382, kScreenRight) == 0); // windows not moved
 }
 
+TEST(a_battlefield_timer_under_the_strip_does_not_lift_the_macro_palette_beside_it)
+{
+    // The test client with HeadsUp unloaded: the timer at 47, under the strip, and the palette moved beside it at 48.
+    const std::vector<FrameWindow> battlefield = {{Key("buff"), 142, 48, 382, false},
+        {Key("cnttime"), 16, 47, 144, false}, {Key("mcr1long"), 146, 48, 1008, false}};
+    const FrameShifts placed = ShiftsOf(battlefield, std::nullopt, 64, 64, kScreenRight, kScreenBottom);
+    CHECK_EQ(placed.For(16, 144, kScreenRight), 17);
+    CHECK_EQ(placed.For(146, 1008, kScreenRight), 17);
+}
+
 TEST(the_full_map_covers_the_panel_and_other_windows_do_not)
 {
     // The windows the test client drew with the map open, and before it in West Ronfaure (/hu windowlog).
