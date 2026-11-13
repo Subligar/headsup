@@ -1929,13 +1929,47 @@ TEST(a_shared_widget_setting_names_that_widgets_own_default)
     const WindowLayout& layout = kWindowLayout;
     const auto side  = [&](IconSide s) { return std::string(layout.OptionsOf(WindowList::IconSides)[static_cast<size_t>(s)].name); };
     const auto align = [&](WidgetAlign a) { return std::string(layout.OptionsOf(WindowList::WidgetAligns)[static_cast<size_t>(a)].name); };
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Bags), side(IconSide::Right));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Currency), side(IconSide::Hide));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Target), side(IconSide::Hide));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Zone), side(IconSide::Left));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, PanelWidget{BarWidget::Currency, 1}), side(IconSide::Left));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Job), align(WidgetAlign::Left));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Zone), align(WidgetAlign::Location));
-    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Zone), "19"));
-    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Target), "0"));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Bags, {}), side(IconSide::Right));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Currency, {}), side(IconSide::Hide));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Target, {}), side(IconSide::Hide));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Zone, {}), side(IconSide::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, PanelWidget{BarWidget::Currency, 1}, {}), side(IconSide::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Job, {}), align(WidgetAlign::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Zone, {}), align(WidgetAlign::Location));
+    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Zone, {}), "19"));
+    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Target, {}), "0"));
+}
+
+// Every other tip that names a widget's own default fills it in the same way, as a copy gets the struct's defaults
+// where default_settings.h sets the first widget's (barEarnedAlign=right, barExpBarText=percent, zoneId=false,
+// statusDisplay=icon, clockDateFormat=monthDay).
+TEST(a_widgets_tips_name_a_copys_own_defaults)
+{
+    const WindowLayout& layout = kWindowLayout;
+    const CalendarDay day{2026, 11, 7};
+    const auto named = [&](WidgetTabsRow row, BarWidget kind, int copy) { return WidgetDefaultText(layout, row, PanelWidget{kind, copy}, day); };
+    const auto option = [&](WindowList list, size_t i) { return std::string(layout.OptionsOf(list)[i].name); };
+    CHECK_EQ(named(WidgetTabsRow::EarnedAlign, BarWidget::Job, 0), option(WindowList::Align, static_cast<size_t>(Align::Right)));
+    CHECK_EQ(named(WidgetTabsRow::EarnedAlign, BarWidget::Job, 1), option(WindowList::Align, static_cast<size_t>(Align::Left)));
+    CHECK_EQ(named(WidgetTabsRow::BarTextAlign, BarWidget::Job, 1), option(WindowList::Align, static_cast<size_t>(Align::Center)));
+    // The EXP Bar's text list starts with None.
+    CHECK_EQ(named(WidgetTabsRow::BarText, BarWidget::Job, 0), option(WindowList::ExpBarText, static_cast<size_t>(ExpText::Percent) + 1));
+    CHECK_EQ(named(WidgetTabsRow::BarText, BarWidget::Job, 1), option(WindowList::ExpBarText, 0));
+    CHECK_EQ(named(WidgetTabsRow::JobText, BarWidget::Job, 1), option(WindowList::JobText, static_cast<size_t>(JobText::MainSub)));
+    CHECK(Has(named(WidgetTabsRow::BarWidth, BarWidget::Job, 1), std::to_string(kDefaultExpBarWidth).c_str()));
+    CHECK(Has(named(WidgetTabsRow::BarHeight, BarWidget::Job, 1), std::to_string(kDefaultExpBarHeight).c_str()));
+    CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 0), layout.WordOf(WindowWord::SwitchOff).name);
+    CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 1), layout.WordOf(WindowWord::SwitchOn).name);
+    CHECK_EQ(named(WidgetTabsRow::MemText, BarWidget::Performance, 1), layout.WordOf(WindowWord::SwitchOff).name);
+    CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 0), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Icon)));
+    CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 1), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Both)));
+    // A date format is named as the list shows it, by the day.
+    CHECK_EQ(named(WidgetTabsRow::DateFormat, BarWidget::EarthTime, 0), "November 7th");
+    CHECK_EQ(named(WidgetTabsRow::DateFormat, BarWidget::EarthTime, 1), "11/07/2026");
+    CHECK_EQ(named(WidgetTabsRow::CustomIcons, BarWidget::Weather, 1), option(WindowList::CustomIcons, static_cast<size_t>(CustomIcons::Always)));
+    CHECK_EQ(named(WidgetTabsRow::Bag1, BarWidget::Bags, 1), ContainerName(0));
+    CHECK_EQ(named(WidgetTabsRow::Bag2, BarWidget::Bags, 1), ContainerName(kMogSatchel));
+    // The tips themselves leave the default to the code.
+    for (const LayoutRow& row : layout.RowsOf(*layout.SettingOf(SettingPiece::WidgetTabs)))
+        if (!named(static_cast<WidgetTabsRow>(row.row), BarWidget::Job, 1).empty()) CHECK(Said(row.tip).find(kDefaultMark) != std::string_view::npos);
 }
