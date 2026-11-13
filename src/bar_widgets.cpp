@@ -810,12 +810,9 @@ namespace headsup
             const Sailing next = NextSailing(route, unixMs);
             std::vector<Span> spans;
             if (next.boarding)
-            {
-                spans = ListOf(Text("Boarding"), Text(kDot, Tone::Dim));
-                AddTime(spans, "leaves in ", next.leaveIn);
-            }
+                AddTime(spans, "Departing in ", next.leaveIn);
             else
-                AddTime(spans, "Boards in ", next.boardIn);
+                AddTime(spans, "Boarding in ", next.boardIn);
             return spans;
         }
 
@@ -1286,18 +1283,20 @@ namespace headsup
                 const std::span<const TravelRoute> routes = TravelRoutes();
                 for (size_t first = 0, last = 0; first < routes.size(); first = last)
                 {
-                    // The route, whether its ship arrives or departs next against how long until it does.
+                    // The route, whether its ship boards or departs next against how long until it does.
                     constexpr int kColumns = 3;
                     PopupTab kind{Text(routes[first].group), {}};
                     PopupRow grid{RowKind::Grid, kColumns, {}};
                     for (last = first; last < routes.size() && std::string_view(routes[last].group) == routes[first].group; ++last)
                     {
                         const Sailing next = NextSailing(routes[last], state.unixMs);
-                        PopupCell stage    = Cell(Text(next.boarding ? "Departs in" : "Arrives in", Tone::Dim));
+                        PopupCell stage    = Cell(Text(next.boarding ? "Departing in" : "Boarding in", Tone::Dim));
                         stage.align        = Align::Right;
+                        PopupCell time     = Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn)));
+                        time.align         = Align::Center;
                         grid.cells.push_back(Cell(Text(routes[last].name)));
                         grid.cells.push_back(std::move(stage));
-                        grid.cells.push_back(Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn))));
+                        grid.cells.push_back(std::move(time));
                     }
                     grid.nested   = true;
                     grid.trailing = true;

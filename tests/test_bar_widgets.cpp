@@ -2904,7 +2904,11 @@ TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim_in_pare
         return Joined(w.title);
     };
     // The airship's door opens at 28 s into the next cycle: 864 - 576 + 28 s from now.
-    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria (Boards in 5:16)");
+    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria (Boarding in 5:16)");
+    // 100 s into a cycle its door is open, and it says when it leaves.
+    state.unixMs = kVanaEpochUnixMs + 864LL * 1000 + 100 * 1000;
+    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria (Departing in 1:22)");
+    state.unixMs = kEarthsdayTen;
     // Open until 21:00, 11 Vana'diel hours away: it says when it closes, and not that it is open.
     CHECK_EQ(shown("guild"), "Woodworking (Closes in 26:24)");
     // Closed, it says when it opens.
@@ -2964,8 +2968,8 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
         kinds.push_back(tab.name.text);
     CHECK((kinds == std::vector<std::string>{"Airships", "Boats", "Manaclipper", "Barge"}));
     CHECK(first.tab == 0 && first.rows.empty());
-    // Each tab lists its kind's routes, set in, in three columns: the route, whether the ship arrives or departs
-    // next against its right, and how long until it does against its left.
+    // Each tab lists its kind's routes, set in, in three columns: the route, whether the ship boards or departs
+    // next against its right, and how long until it does, centered.
     const auto airships = std::ranges::count_if(TravelRoutes(), [](const TravelRoute& r) { return std::string(r.group) == "Airships"; });
     const auto rows = [](const PopupTab& tab) {
         CHECK(tab.rows.size() == 1 && tab.rows[0].kind == RowKind::Grid && tab.rows[0].columns == 3 && tab.rows[0].nested &&
@@ -2974,7 +2978,7 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
         const std::vector<PopupCell>& cells = tab.rows[0].cells;
         for (size_t i = 0; i + 2 < cells.size(); i += 3)
         {
-            CHECK(cells[i + 1].align == Align::Right && cells[i + 2].align == Align::Left && cells[i + 2].text.size() == 1);
+            CHECK(cells[i + 1].align == Align::Right && cells[i + 2].align == Align::Center && cells[i + 2].text.size() == 1);
             out.push_back({Joined(cells[i].text), Joined(cells[i + 1].text), Joined(cells[i + 2].text)});
         }
         return out;
@@ -2985,14 +2989,14 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
         return std::array<std::string, 3>{};
     };
     CHECK_EQ(rows(first.tabs[0]).size(), static_cast<size_t>(airships));
-    CHECK((route(first.tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Arrives in", "5:16"}));
+    CHECK((route(first.tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Boarding in", "5:16"}));
     // Picking Boats picks its tab.
     std::map<std::string, std::string> picked{{"Travel", "Boats"}};
     state.pickedTabs = &picked;
     CHECK_EQ(travel().tab, static_cast<size_t>(1));
     picked["Travel"] = "Airships";
     state.unixMs = kVanaEpochUnixMs + 864LL * 1000 + 100 * 1000; // 100 s into a cycle: its door opened at 28 s
-    CHECK((route(travel().tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Departs in", "1:22"}));
+    CHECK((route(travel().tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Departing in", "1:22"}));
 }
 
 TEST(each_guild_has_a_tab_of_its_shops_hours_in_columns)
