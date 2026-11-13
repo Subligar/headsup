@@ -41,6 +41,9 @@ TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
     CHECK(IconPartOf(BarWidget::Currency) == std::optional(WidgetPart::CurrencyCoin));
     CHECK(IconPartOf(BarWidget::Bags) == std::optional(WidgetPart::BagIcon));
     CHECK(IconPartOf(BarWidget::EarthTime) == std::optional(WidgetPart::ClockIcon));
+    CHECK(IconPartOf(BarWidget::HomePoint) == std::optional(WidgetPart::HomePointIcon));
+    CHECK(WidgetOfPart(WidgetPart::HomePointIcon) == BarWidget::HomePoint);
+    CHECK_EQ(DesignText(BarWidget::HomePoint, DefaultDesign(BarWidget::HomePoint)), "name |");
     CHECK(!IconPartOf(BarWidget::Performance) && !IconPartOf(BarWidget::GameHelp));
     for (int k = 0; k < kBarWidgetCount; ++k)
     {
@@ -201,7 +204,8 @@ TEST(every_pop_out_card_is_one_widgets_and_saves_by_a_name_of_its_own)
     {
         const auto kind = static_cast<BarWidget>(k);
         const std::vector<CardKind> cards = CardsOf(kind);
-        CHECK_EQ(cards.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings || kind == BarWidget::Custom);
+        CHECK_EQ(cards.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings || kind == BarWidget::HomePoint ||
+                                    kind == BarWidget::Custom);
         for (const CardKind card : cards)
             CHECK(WidgetOfCard(card) == kind);
         listed += cards.size();

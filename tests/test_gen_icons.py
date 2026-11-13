@@ -208,6 +208,7 @@ class GenIcons(unittest.TestCase):
         files = ids.split('kIconFiles[] = {')[1].split('};')[0]
         self.assertEqual(re.findall(r'"([^"]+)"', files), [path.rsplit('/', 1)[1] for _, path, _ in gen.ICONS])
         self.assertIn('"bag.png"', files)
+        self.assertIn('"home_point.png"', files)
         self.assertIn('"ImmuneSleep.png"', files)
         twice = gen.ICONS + [('Again', 'resources/icons/weather/bag.png', '')]
         with self.assertRaises(gen.IconError):

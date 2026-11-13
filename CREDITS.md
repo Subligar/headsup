@@ -22,3 +22,5 @@ HeadsUp is free software under the GNU General Public License, version 3 or late
   (`kDebuffs` in `src/status_icons.cpp`) is copied from XIUI's `libs/bufftable.lua`.
 - **Disconnecting icon:** `resources/icons/link_dead.png` is the game's own red circle (the 32x32 square at (0, 96) of
   `MENU ustatsHD` in `ROM/119/51.DAT`), upscaled with Real-ESRGAN's x4plus-anime model.
+- **Home point icon:** `resources/icons/home_point.png` is "Floating crystal" by Lorc, from game-icons.net, under
+  the Creative Commons Attribution 3.0 license (https://creativecommons.org/licenses/by/3.0/).

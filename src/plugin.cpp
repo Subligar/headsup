@@ -2910,6 +2910,7 @@ private:
         s.weather = WeatherNow();
         s.owners   = m_GameState.Owners();
         s.shares   = m_GameState.Shares();
+        s.homePoint  = m_AshitaCore->GetMemoryManager()->GetPlayer()->GetHomepoint();
         s.pickedTabs = &m_BarInput.PickedTabs();
         s.scrolled   = &m_BarInput.Scrolled();
         s.pinRefused = m_BarInput.Refused();

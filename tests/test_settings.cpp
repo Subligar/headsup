@@ -260,6 +260,7 @@ barParty=true
 barStatusTimers=true
 barWorld=true
 barSettings=true
+barHomePoint=true
 barZoneLine2=true
 barZoneIcons=true
 barWeatherLine2=true
@@ -300,7 +301,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather job party statusTimers world
+barLeft=zone weather job party statusTimers world homePoint
 barCenter=
 barRight=target gil bags performance earthTime settings
 hideHelpBar=true
@@ -1038,7 +1039,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"}; // in BarWidget's order, but a created widget's
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint"}; // in BarWidget's order, but a created widget's
     static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
     for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {

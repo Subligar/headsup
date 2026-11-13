@@ -51,6 +51,7 @@ namespace headsup
         int64_t unixMs = 0; // Earth time, UTC, for the Vana'diel clock
         int earthYear = 0, earthMonth = 0, earthDay = 0, earthHour = 0, earthMinute = 0, earthSecond = 0; // local
         uint16_t zone = 0; // 0 while unknown
+        uint16_t homePoint = 0; // the zone your home point is in; 0 while unknown
         const ActorInfo* target = nullptr;
         std::optional<float> targetDistance;   // yalms, with the target
         // The game's name for an item ID, for a mob's drops; nullptr, or an empty name, when it has none.
@@ -98,13 +99,14 @@ namespace headsup
         std::array<std::optional<BagCount>, kContainerCount> bags{};
         std::vector<ActiveStatus> statuses;
         int64_t unixMs = 0; // when the statuses were read
+        uint16_t homePoint = 0;
     };
     // Loaded, held takes state's readings; while loading, state shows held's instead, their status timers run down
     // since.
     void HoldWhileLoading(BarState& state, CharacterReadings& held, bool loaded);
 
     // The parts of BarState that the shown widgets and the open popup read, for the plugin to gather only those; it
-    // always copies the weather, the owners and the shares, which GameState keeps from packets.
+    // always copies the weather, the owners, the shares and your home point.
     struct BarNeeds
     {
         bool unixTime   = false; // unixMs

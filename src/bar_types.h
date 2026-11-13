@@ -49,13 +49,14 @@ namespace headsup
         StatusTimers,
         World,
         Settings, // the cog alone, which opens the settings window: no popup, settings or copies
+        HomePoint, // the zone your home point is in: no popup
         Custom,   // the widgets the player creates, each a copy, shown only once made: any widget's parts and cards
     };
     constexpr int kBarWidgetCount = static_cast<int>(BarWidget::Custom) + 1;
     // Which widgets a new settings file shows, by BarWidget. to_array takes its size from the list, so a widget added
     // to BarWidget without a default here fails the assert.
     constexpr auto kBarWidgetDefaults =
-        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false, false, false});
+        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false, false, false, false});
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
     // What the Performance widget shows on the panel, a bit each, in this order on its line.

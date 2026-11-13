@@ -28,6 +28,7 @@ namespace headsup
         PartyCount, PartyHealth,
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,
         WorldShip, WorldGuild, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
+        HomePointName, HomePointIcon,
         CustomName, // a created widget's Name
     };
     constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::CustomName) + 1;

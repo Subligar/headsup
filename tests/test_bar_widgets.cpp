@@ -673,6 +673,7 @@ TEST(while_your_data_loads_the_panel_keeps_what_it_last_read_and_the_status_time
     loaded.bags[0]    = BagCount{45, 80};
     loaded.job        = JobReport{war, std::nullopt};
     loaded.statuses   = {{33, 120.0}, {40, std::nullopt}}; // Haste with two minutes left, and Protect untimed
+    loaded.homePoint  = 230;
     CharacterReadings held;
     BarState first = loaded;
     HoldWhileLoading(first, held, true);
@@ -685,7 +686,7 @@ TEST(while_your_data_loads_the_panel_keeps_what_it_last_read_and_the_status_time
     CHECK(Joined(Content(BarWidget::Currency, zoning, settings).title) == "1,234,567");
     CHECK(Joined(Content(BarWidget::Bags, zoning, settings).title) == "45 / 80");
     CHECK(Joined(Content(BarWidget::Job, zoning, settings).title) == "WAR 30 / NIN 15");
-    CHECK(zoning.zone == 103 && zoning.weather == Weather::Rain);
+    CHECK(zoning.zone == 103 && zoning.weather == Weather::Rain && zoning.homePoint == 230);
     CHECK(zoning.statuses == (std::vector<ActiveStatus>{{33, 115.0}, {40, std::nullopt}}));
     CHECK(zoning.unixMs == loaded.unixMs + 5'000); // the clock is not held
 
@@ -1223,6 +1224,7 @@ namespace
             state.connection = SteadyLink();
             state.party      = FourMembers();
             state.statuses   = {ActiveStatus{kSignetEffect, 6130.0}};
+            state.homePoint  = 230; // Southern San d'Oria
             state.memory     = MemoryReport{1532, 2563, 4095};
             state.cpuPercent = 18.0;
             LinuxXIReport report;
@@ -1241,6 +1243,7 @@ namespace
         s.weather = full.weather;
         s.owners  = full.owners;
         s.shares   = full.shares;
+        s.homePoint = full.homePoint;
         if (needs.unixTime) s.unixMs = full.unixMs;
         if (needs.localTime)
         {
@@ -3512,4 +3515,36 @@ TEST(a_created_widgets_parts_have_their_widgets_data_gathered_while_it_shows)
     CHECK(StandingsShown(settings, {}));
     settings.Widget(made).on = false;
     CHECK(!StandingsShown(settings, {}) && !WidgetShown(settings, BarWidget::World));
+}
+
+// Zone 103 is Valkurm Dunes and 230 Southern San d'Oria (Phoenix's zone ids).
+TEST(the_home_point_widget_is_its_icon_and_the_name_of_your_home_points_zone_with_no_popup)
+{
+    Settings settings;
+    BarState state;
+    state.zone      = 103;
+    state.homePoint = 230;
+    CHECK(!Content(BarWidget::HomePoint, state, settings).shown); // off on a new install
+    settings.Widget(BarWidget::HomePoint).on = true;
+    WidgetContent w = Content(BarWidget::HomePoint, state, settings);
+    CHECK_EQ(Joined(w.title), "Southern San d'Oria"); // not the zone you are in
+    CHECK(w.shown && w.subtitle.empty() && !w.hasPopup && !w.iconsRight);
+    CHECK(w.icons == std::vector<Icon>{Icon::HomePoint});
+    CHECK(BarPopupContent(BarWidget::HomePoint, state, settings).sections.empty());
+    state.homePoint = 0; // not known yet
+    CHECK_EQ(Joined(Content(BarWidget::HomePoint, state, settings).title), "-");
+    state.homePoint = 9999;
+    CHECK_EQ(Joined(Content(BarWidget::HomePoint, state, settings).title), "Zone 9999");
+    state.homePoint = 230;
+    settings.Widget(BarWidget::HomePoint).iconSide = IconSide::Right;
+    w = Content(BarWidget::HomePoint, state, settings);
+    CHECK(w.iconsRight && w.icons == std::vector<Icon>{Icon::HomePoint});
+    settings.Widget(BarWidget::HomePoint).iconSide = IconSide::Hide;
+    w = Content(BarWidget::HomePoint, state, settings);
+    CHECK(w.icons.empty() && Joined(w.title) == "Southern San d'Oria");
+    CHECK(HasCopies(BarWidget::HomePoint) && Combines(BarWidget::HomePoint) && Aligns(BarWidget::HomePoint));
+    // A created widget can show it too.
+    const PanelWidget made       = *CreateWidget(settings);
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "homePoint.name |");
+    CHECK_EQ(Joined(Content(made, state, settings).title), "Southern San d'Oria");
 }

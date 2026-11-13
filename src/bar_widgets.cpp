@@ -1555,6 +1555,9 @@ namespace headsup
             }
             case BarWidget::World: return WorldParts(state, o, base);
             case BarWidget::Settings: base.cog = true; return {};
+            case BarWidget::HomePoint:
+                return {{WidgetPart::HomePointIcon, ListOf(Mark(Icon::HomePoint))},
+                    {WidgetPart::HomePointName, ListOf(Text(ZoneTitle(state.homePoint)))}};
             case BarWidget::Custom:
             {
                 // Its Name, then the parts of each widget it holds, as that widget's first copy shows them.
@@ -1781,7 +1784,7 @@ namespace headsup
     {
         if (loaded)
         {
-            held = {state.zone, state.weather, state.job, state.gil, state.bags, state.statuses, state.unixMs};
+            held = {state.zone, state.weather, state.job, state.gil, state.bags, state.statuses, state.unixMs, state.homePoint};
             return;
         }
         const double since = static_cast<double>(state.unixMs - held.unixMs) / kMsPerSecond;
@@ -1791,6 +1794,7 @@ namespace headsup
         state.gil      = held.gil;
         state.bags     = held.bags;
         state.statuses = held.statuses;
+        state.homePoint = held.homePoint;
         for (ActiveStatus& status : state.statuses)
             if (status.secondsLeft) status.secondsLeft = std::max(0.0, *status.secondsLeft - since);
     }
@@ -2157,7 +2161,8 @@ namespace headsup
                 ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
             return WorldPopup(state);
-        case BarWidget::Settings: break;
+        case BarWidget::Settings:
+        case BarWidget::HomePoint: break;
         case BarWidget::Custom:
             if (!o.name.empty()) popup.title = ListOf(Text(o.name));
             break;

@@ -1116,6 +1116,7 @@
         {"name": "Status Timers", "tip": "The time left on each status you pin. Hover for your favorite statuses, with a pin to show one here, and every other status with a star to add it to them."},
         {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."},
         {"name": "Settings", "tip": "Just the settings cog. Click it to open these settings on the Top Panel page, at Widget Layout."},
+        {"name": "Home Point", "tip": "The zone your home point is in."},
         {"name": "Custom Widget", "tip": "A widget you made. It can show any widget's buttons on the panel and any widget's sections in its pop-out."}
       ]
     },
@@ -1307,7 +1308,7 @@
     {
       "key": "setup-widget-groups",
       "options": [
-        {"name": "Where You Are", "tip": "The zone, its weather and what is around you."},
+        {"name": "Where You Are", "tip": "The zone, its weather, your home point and what is around you."},
         {"name": "Time", "tip": "Your computer's time."},
         {"name": "You", "tip": "Your job, experience, gil, inventory, party and target."},
         {"name": "System", "tip": "Your frame rate, connection, memory and the game's help line."}
@@ -1405,6 +1406,8 @@
         {"name": "Bastok", "tip": "Bastok's crest and how many regions it holds."},
         {"name": "Windurst", "tip": "Windurst's crest and how many regions it holds."},
         {"name": "Beastmen", "tip": "The beastmen's crest and how many regions they hold."},
+        {"name": "Home Point Name", "tip": "The zone your home point is in."},
+        {"name": "Home Point Icon", "tip": "A home point crystal."},
         {"name": "Widget Name", "tip": "This widget's name, as its Name setting has it."}
       ]
     },
