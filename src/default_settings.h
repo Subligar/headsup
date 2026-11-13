@@ -27,7 +27,6 @@ barPerformanceDesign=fps memory messages | sent received percent
 barRight=target bags gil earthTime performance settings
 barSettings=true
 barStatusTimers=true
-barStatusTimersDesign=pin1 -pin3 -pin5 | -pin2 -pin4 -pin6
 barTargetDesign=name distance -detection -level | -player -weak
 barTargetIcon=hide
 barTextFont=Bahnschrift

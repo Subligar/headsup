@@ -204,6 +204,21 @@ namespace headsup
             }
             return ids;
         }
+        StatusDesign StatusDesignFrom(const std::string& text)
+        {
+            StatusDesign design;
+            const size_t bar = text.find(kDesignLineBreak);
+            design[0] = StatusIds(text.substr(0, bar));
+            if (bar != std::string::npos) design[1] = StatusIds(text.substr(bar + 1));
+            std::erase_if(design[1], [&](uint16_t id) { return std::ranges::find(design[0], id) != design[0].end(); });
+            return design;
+        }
+        std::string StatusDesignText(const StatusDesign& design)
+        {
+            std::string text = SpaceApart(design[0]);
+            text += (text.empty() ? "" : " ") + std::string(1, kDesignLineBreak);
+            return design[1].empty() ? text : text + " " + SpaceApart(design[1]);
+        }
         constexpr const char* kPinnedWindowsKey = "pinnedWindows"; // "equip:100,200 statcom:0,40"
         constexpr const char* kHiddenWindowsKey = "hiddenWindows"; // "statcom inventor"
         constexpr const char* kShiftVanillaUiKey = "shiftVanillaUi";
@@ -256,7 +271,9 @@ namespace headsup
         constexpr const char* kBlueMagicLearnedKey = "blueMagicLearned";
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
+        // The Status Timers' Design held the Pinned Status #1 to #6 buttons: never read it or give it another meaning.
         constexpr const char* kDesignSuffix     = "Design";
+        constexpr const char* kPinDesignSuffix  = "PinDesign"; // the Status Timers' StatusDesign, "40 253 | 33"
         constexpr const char* kNameSuffix       = "Name";
         constexpr const char* kCombineSuffix    = "Combine";
         constexpr const char* kLinkPaddingSuffix = "LinkPadding";
@@ -1330,7 +1347,8 @@ namespace headsup
             const auto text = [&](const char* key) { return store.GetString(CopyKey(key, w).c_str(), ""); };
             const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
-            o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
+            if (w.kind == BarWidget::StatusTimers) o.pinDesign = StatusDesignFrom(text((widget + kPinDesignSuffix).c_str()));
+            else o.design = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
             if (w.kind == BarWidget::Custom) o.name = text((widget + kNameSuffix).c_str());
             if (w.kind == BarWidget::Custom) o.popup = PopupDesignFrom(w.kind, text((widget + kPopupDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
@@ -1456,7 +1474,8 @@ namespace headsup
             const auto flag = [&](const std::string& key, bool v) { StoreBool(store, CopyKey(key, w), v); };
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
-            if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
+            if (w.kind == BarWidget::StatusTimers) text((widget + kPinDesignSuffix).c_str(), StatusDesignText(o.pinDesign).c_str());
+            else if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
             if (w.kind == BarWidget::Custom) text((widget + kNameSuffix).c_str(), o.name.c_str());
             if (w.kind == BarWidget::Custom) text((widget + kPopupDesignSuffix).c_str(), PopupDesignText(o.popup).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");

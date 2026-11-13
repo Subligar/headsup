@@ -3229,6 +3229,32 @@ TEST(the_status_favorites_and_pins_are_kept_and_an_unknown_or_repeated_one_is_le
     CHECK((LoadSettings(store).statusFavorites == std::vector<uint16_t>{40, kSignetEffect}));
 }
 
+TEST(each_status_timers_copy_keeps_where_every_status_ever_pinned_goes_and_a_hand_edits_unknown_or_repeated_one_is_left_out)
+{
+    Settings s;
+    s.statusPins = {40, kSignetEffect, 33};
+    s.Widget(BarWidget::StatusTimers).pinDesign = {std::vector<uint16_t>{40, kSignetEffect}, {41, 33}};
+    const PanelWidget second = *CloneWidget(s, BarWidget::StatusTimers);
+    s.Widget(second).pinDesign = {std::vector<uint16_t>{33}, {40, kSignetEffect}};
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barStatusTimersPinDesign"], "40 253 | 41 33");
+    CHECK_EQ(saved.values["barStatusTimersPinDesign_2"], "33 | 40 253");
+    // Its Pinned Status buttons' design is no longer read or written.
+    CHECK(!saved.values.contains("barStatusTimersDesign") && !saved.values.contains("barStatusTimersDesign_2"));
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(BarWidget::StatusTimers).pinDesign == s.Widget(BarWidget::StatusTimers).pinDesign);
+    CHECK(loaded.Widget(second).pinDesign == s.Widget(second).pinDesign);
+    saved.values["barStatusTimersPinDesign"] = "253 x 65000 253 | 40 253 41";
+    CHECK((LoadSettings(saved).Widget(BarWidget::StatusTimers).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect}, {40, 41}}));
+    // Lines with nothing on them save as nothing around the bar.
+    s.Widget(BarWidget::StatusTimers).pinDesign = {std::vector<uint16_t>{}, {33}};
+    s.Widget(second).pinDesign = {};
+    SaveSettings(s, saved);
+    CHECK(saved.values["barStatusTimersPinDesign"] == "| 33" && saved.values["barStatusTimersPinDesign_2"] == "|");
+    CHECK(LoadSettings(saved).Widget(second).pinDesign == StatusDesign{});
+}
+
 TEST(a_created_widget_shows_once_made_saves_under_its_own_keys_and_forgets_them_when_taken_off)
 {
     Settings s;

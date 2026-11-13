@@ -44,6 +44,9 @@ namespace headsup
         constexpr const char* kThemeNameBox = " name";  // and the box the pencil opens
         // A designer chip's name on a line and, for a created widget, in the lists, before its widget's slot and its part.
         constexpr const char* kPartChip = "part ", *kListedPartChip = "lpart ";
+        // The Status Timers designer's chip, before its widget's slot and its status.
+        constexpr const char* kStatusChip = "pin ";
+        constexpr size_t kFewestPinsToDesign = 2; // one pin has nowhere to move
         // A Pop-out Designer chip's name in a row and in the lists, before its widget's slot and its card.
         constexpr const char* kCardChip = "card ", *kListedCardChip = "pcard ";
         constexpr int kFirstSense = static_cast<int>(DetectionIcon::Link); // Detection Icons' first, after the aggression
@@ -815,6 +818,50 @@ namespace headsup
             form.Raw("</div>");
         }
 
+        // The Status Timers' pinned statuses as chips on its two lines, each named after its status: a chip drags within
+        // its line or to the other, before the chip it is dropped on or to the end.
+        void StatusDesigner(Context& c, PanelWidget widget)
+        {
+            Form& form      = c.form;
+            StatusDesign& d = c.s.Widget(widget).pinDesign;
+            const std::string base = kStatusChip + std::to_string(SlotOf(widget)), chipStart = form.Named(base) + "-";
+            struct Move
+            {
+                uint16_t status;
+                int line;
+                std::optional<uint16_t> before;
+            };
+            std::optional<Move> move; // applied after the lines are written, as the Widget Designer's
+            const auto dropped = [&](const std::string& target, int line, std::optional<uint16_t> before) {
+                const FormEvent* event = form.Took(target, kDropEvent);
+                if (event == nullptr || event->value.compare(0, chipStart.size(), chipStart) != 0) return;
+                const unsigned long status = std::strtoul(event->value.c_str() + chipStart.size(), nullptr, 10);
+                if (status <= UINT16_MAX) move = Move{static_cast<uint16_t>(status), line, before};
+            };
+            const StatusDesign lines = PinnedLines(d, c.s.statusPins);
+            form.Raw("<div class=\"design\">");
+            for (int line = 0; line < kDesignLines; ++line)
+            {
+                form.Raw(std::string("<div class=\"tray ") + kDesignLineClass + "\">");
+                for (const uint16_t status : lines[static_cast<size_t>(line)])
+                {
+                    const std::string id = form.Id(base + " " + std::to_string(status));
+                    form.Raw(std::string("<div class=\"btn raised wchip ") + kDesignChipClass + " drag\" id=\"" + id + "\">" +
+                             EscapedRml(StatusName(status)) + "</div>");
+                    form.Set(id, FormValueKind::Class, "on", {}, true);
+                    form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
+                    dropped(id, line, status);
+                }
+                const std::string end = form.Id(base + " end " + std::to_string(line));
+                form.Raw("<div class=\"tray-end\" id=\"" + end + "\"></div></div>");
+                dropped(end, line, std::nullopt);
+            }
+            form.Raw("</div>");
+            if (!move) return;
+            PlacePins(d, c.s.statusPins); // as they show
+            if (MoveStatus(d, move->status, move->line, move->before)) form.changed = true;
+        }
+
         // A widget's pop-out as rows of chips, a card each, then the list of the cards it does not show of the widget
         // picked: a chip drags within its row, to another, or onto the empty row after them for a new one; a row's chip
         // let go off every row leaves the pop-out. A row of kMostCardsInRow takes no other card; trying says so under the
@@ -1128,8 +1175,16 @@ namespace headsup
                     break;
                 case WidgetTabsRow::Design:
                     // the Widget Designer's description
-                    form.Note(kind == BarWidget::StatusTimers ? Word(c, WindowWord::WidgetTabsDesignStatusTimers) : row.tip);
-                    Designer(c, widget);
+                    if (kind != BarWidget::StatusTimers)
+                    {
+                        form.Note(row.tip);
+                        Designer(c, widget);
+                    }
+                    else if (s.statusPins.size() >= kFewestPinsToDesign)
+                    {
+                        form.Note(Word(c, WindowWord::WidgetTabsDesignStatusTimers));
+                        StatusDesigner(c, widget);
+                    }
                     break;
                 case WidgetTabsRow::PopupDesign:
                     if (kind != BarWidget::Custom) break;

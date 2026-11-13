@@ -1751,25 +1751,36 @@ TEST(only_a_created_widget_has_a_pop_out_designer)
     CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, "-card-"));
 }
 
-TEST(the_pinned_status_buttons_have_no_switch_and_are_on_while_a_status_is_pinned_at_their_rank)
+TEST(the_status_timers_designer_has_a_button_named_after_each_pinned_status_which_moves_it)
 {
     Window w;
     const PanelWidget timers{BarWidget::StatusTimers};
     w.readings.settingsOf = {timers};
-    w.settings.statusPins = {40, 33}; // ranks 1 and 2
-    const std::string base = "toppanel-widgets-part-" + std::to_string(SlotOf(timers)) + "-";
-    const auto chip = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
-    const Form form = w.Pass();
-    const std::string rml = Block(form, "toppanel-widgets")->rml;
-    CHECK(Has(rml, ("id=\"" + chip(WidgetPart::StatusPin6) + "\"").c_str()));
-    CHECK(!Has(rml, (chip(WidgetPart::StatusPin1) + "-on").c_str()));
-    const auto on = [&](WidgetPart part) {
-        bool shown = false;
-        for (const FormValue& v : form.values)
-            if (v.id == chip(part) && v.kind == FormValueKind::Class && v.name == "on") shown = v.on;
-        return shown;
+    w.settings.statusPins = {40, 33};
+    w.settings.Widget(timers).pinDesign = {std::vector<uint16_t>{40, 41}, {33}};
+    const std::string base = "toppanel-widgets-pin-" + std::to_string(SlotOf(timers)) + "-";
+    const auto chip   = [&](uint16_t status) { return base + std::to_string(status); };
+    const auto rml    = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
+    const auto shown  = [&](const Form& f, uint16_t status) {
+        return Has(rml(f), ("id=\"" + chip(status) + "\"").c_str()) && Has(rml(f), (std::string(">") + StatusName(status) + "</div>").c_str());
     };
-    CHECK(on(WidgetPart::StatusPin1) && on(WidgetPart::StatusPin2) && !on(WidgetPart::StatusPin3));
+    const Form first = w.Pass();
+    CHECK(shown(first, 40) && shown(first, 33) && !shown(first, 41)); // only the pinned
+    CHECK(!Has(rml(first), "-part-")); // and no Pinned Status #1 to #6
+    // A button dropped on another goes before it, on a line's end to its end.
+    const Form moved = w.Pass({{chip(40), kDropEvent, chip(33)}});
+    CHECK(moved.changed && (w.settings.Widget(timers).pinDesign == StatusDesign{std::vector<uint16_t>{33, 40, 41}, {}}));
+    w.Pass({{base + "end-1", kDropEvent, chip(40)}});
+    CHECK((w.settings.Widget(timers).pinDesign == StatusDesign{std::vector<uint16_t>{33, 41}, {40}}));
+    // A pin its design lacks shows, where a new pin goes, and moves from there.
+    w.settings.statusPins = {40, 33, kSignetEffect};
+    CHECK(shown(w.Pass(), kSignetEffect));
+    w.Pass({{chip(33), kDropEvent, chip(kSignetEffect)}});
+    CHECK((w.settings.Widget(timers).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect, 33, 41}, {40}}));
+    // Fewer than two pins leave nothing to arrange: no designer.
+    w.settings.statusPins = {40};
+    const Form one = w.Pass();
+    CHECK(!Has(rml(one), "-pin-") && !Has(rml(one), "class=\"design\""));
 }
 
 TEST(world_infos_designer_has_a_button_for_each_thing_it_can_tell_and_each_nation)

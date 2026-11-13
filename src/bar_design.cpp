@@ -40,7 +40,7 @@ namespace headsup
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
             "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "name |"};
 
-        constexpr char kLineBreak = '|', kOffMark = '-', kSpace = ' ', kWidgetMark = '.';
+        constexpr char kOffMark = '-', kSpace = ' ', kWidgetMark = '.';
 
         // A part's name in kind's design: its own, or after its widget's.
         std::string PartKey(BarWidget kind, WidgetPart part)
@@ -108,7 +108,7 @@ namespace headsup
                         if (name == PartKey(kind, part)) design.lines[static_cast<size_t>(line)].push_back({part, !off});
                 }
                 if (at == std::string_view::npos) break;
-                if (text[at] == kLineBreak) line = std::min(line + 1, kDesignLines - 1);
+                if (text[at] == kDesignLineBreak) line = std::min(line + 1, kDesignLines - 1);
                 text.remove_prefix(at + 1);
             }
             return design;
@@ -128,7 +128,7 @@ namespace headsup
                 for (int c = 0; c < kCardKindCount; ++c)
                     if (word == kCards[c].file) design.rows.back().push_back(static_cast<CardKind>(c));
                 if (at == std::string_view::npos) break;
-                if (text[at] == kLineBreak) design.rows.emplace_back();
+                if (text[at] == kDesignLineBreak) design.rows.emplace_back();
                 text.remove_prefix(at + 1);
             }
             return design;
@@ -154,7 +154,7 @@ namespace headsup
         std::string text;
         for (const auto& row : design.rows)
         {
-            if (!text.empty()) text += std::string(1, kSpace) + kLineBreak;
+            if (!text.empty()) text += std::string(1, kSpace) + kDesignLineBreak;
             for (const CardKind card : row)
                 text += (text.empty() ? "" : std::string(1, kSpace)) + CardFileName(card);
         }
@@ -294,7 +294,7 @@ namespace headsup
         std::string text;
         for (int line = 0; line < kDesignLines; ++line)
         {
-            if (line > 0) text += text.empty() ? std::string(1, kLineBreak) : std::string(" ") + kLineBreak;
+            if (line > 0) text += text.empty() ? std::string(1, kDesignLineBreak) : std::string(" ") + kDesignLineBreak;
             for (const DesignChip& chip : design.lines[static_cast<size_t>(line)])
             {
                 if (!text.empty()) text += kSpace;
@@ -392,6 +392,38 @@ namespace headsup
         if (fromLine == toLine && at > from) --at;
         target.insert(target.begin() + static_cast<std::ptrdiff_t>(std::min(at, target.size())), chip);
         return true;
+    }
+
+    void PlacePins(StatusDesign& design, const std::vector<uint16_t>& pins)
+    {
+        const auto pinned = [&](const std::vector<uint16_t>& line) {
+            return std::ranges::count_if(line, [&](uint16_t id) { return std::ranges::find(pins, id) != pins.end(); });
+        };
+        for (const uint16_t pin : pins)
+            if (std::ranges::none_of(design, [&](const auto& line) { return std::ranges::find(line, pin) != line.end(); }))
+                std::ranges::min_element(design, {}, pinned)->push_back(pin);
+    }
+
+    StatusDesign PinnedLines(const StatusDesign& design, const std::vector<uint16_t>& pins)
+    {
+        StatusDesign lines = design;
+        PlacePins(lines, pins);
+        for (auto& line : lines)
+            std::erase_if(line, [&](uint16_t id) { return std::ranges::find(pins, id) == pins.end(); });
+        return lines;
+    }
+
+    bool MoveStatus(StatusDesign& design, uint16_t status, int toLine, std::optional<uint16_t> before)
+    {
+        if (toLine < 0 || toLine >= kDesignLines || before == status) return false;
+        const StatusDesign was = design;
+        size_t taken = 0;
+        for (auto& line : design)
+            taken += std::erase(line, status);
+        if (taken == 0) return false;
+        auto& into = design[static_cast<size_t>(toLine)];
+        into.insert(before ? std::ranges::find(into, *before) : into.end(), status);
+        return design != was;
     }
 
     WidgetContent ComposeContent(const WidgetDesign& design, std::vector<PartContent> parts, WidgetContent base)

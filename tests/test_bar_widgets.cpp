@@ -1833,29 +1833,74 @@ TEST(a_statuss_star_and_pin_add_it_and_take_it_off_and_its_star_takes_its_pin_to
           (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
     for (const char* bad : {"status favorite ", "status favorite 4x", "status pin 65000", "status pin 99999999"})
         CHECK(ApplyPopupPress(s, bad, Nation::None) == PressResult::None);
-    // Six at most: a seventh pin is refused.
-    s.statusPins = {40, 33, 41, 42, 43, kSignetEffect};
-    CHECK(press(kStatusPinPress, 116) == PressResult::Refused && s.statusPins.size() == kMostStatusPins);
 }
 
-TEST(the_status_timers_widget_shows_each_pin_at_its_rank_where_its_design_puts_it)
+TEST(a_new_pin_takes_its_place_in_every_status_timers_copy_and_an_unpinned_one_keeps_its_own)
+{
+    Settings s;
+    const PanelWidget first{BarWidget::StatusTimers};
+    const PanelWidget second = *CloneWidget(s, first);
+    s.Widget(first).pinDesign  = {std::vector<uint16_t>{kSignetEffect}, {}};
+    s.Widget(second).pinDesign = {std::vector<uint16_t>{}, {kSignetEffect}};
+    const auto press = [&](uint16_t id) { return ApplyPopupPress(s, std::string(kStatusPinPress) + std::to_string(id), Nation::None); };
+    CHECK(press(40) == PressResult::Changed);
+    CHECK((s.Widget(first).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect}, {40}}));
+    CHECK((s.Widget(second).pinDesign == StatusDesign{std::vector<uint16_t>{40}, {kSignetEffect}}));
+    // Unpinned, it stays in each design, so its next pin finds it where it was moved.
+    CHECK(MoveStatus(s.Widget(first).pinDesign, 40, 0, kSignetEffect));
+    CHECK(press(40) == PressResult::Changed && (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
+    CHECK(press(40) == PressResult::Changed);
+    CHECK((s.Widget(first).pinDesign == StatusDesign{std::vector<uint16_t>{40, kSignetEffect}, {}}));
+    CHECK((s.Widget(second).pinDesign == StatusDesign{std::vector<uint16_t>{40}, {kSignetEffect}}));
+    // A pin a copy's design lacks keeps the place it showed at when another goes.
+    s.statusPins = {kSignetEffect, 40, 33};
+    s.Widget(second).pinDesign = {};
+    CHECK(press(kSignetEffect) == PressResult::Changed);
+    CHECK((s.Widget(second).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect, 33}, {40}}));
+    // There is no most there can be.
+    s.statusPins = {kSignetEffect, 40, 33, 41, 42, 43};
+    CHECK(press(116) == PressResult::Changed && s.statusPins.size() == 7);
+}
+
+TEST(the_status_timers_widget_shows_each_pinned_status_where_its_design_puts_it)
 {
     Settings settings;
     BarState state;
     state.statuses = {{40, 1800.0}, {33, 90.0}};
     settings.Widget(BarWidget::StatusTimers).on            = true;
     settings.Widget(BarWidget::StatusTimers).statusDisplay = StatusDisplay::Name;
-    settings.statusPins = {40, 33, kSignetEffect}; // ranks 1, 2 and 3
-    // As new: 1, 3 and 5 on the first line, 2, 4 and 6 on the second.
-    CHECK_EQ(DesignText(BarWidget::StatusTimers, settings.Widget(BarWidget::StatusTimers).design), "pin1 pin3 pin5 | pin2 pin4 pin6");
-    const WidgetContent w = Content(BarWidget::StatusTimers, state, settings);
+    settings.statusPins = {40, 33, kSignetEffect};
+    // Placed as pinned, the line with fewer pins first: Protect and Signet over Haste.
+    WidgetContent w = Content(BarWidget::StatusTimers, state, settings);
     CHECK(Joined(w.title) == "Protect 30m 00s  Signet 0s" && Joined(w.subtitle) == "Haste 1m 30s");
-    // Pinned or not decides what shows, not the design's switches.
-    settings.Widget(BarWidget::StatusTimers).design = DesignFrom(BarWidget::StatusTimers, "-pin1 -pin2 -pin3 | -pin4 -pin5 -pin6");
-    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Protect 30m 00s  Haste 1m 30s  Signet 0s");
+    // Its design decides, and a status in it that is not pinned takes no room.
+    settings.Widget(BarWidget::StatusTimers).pinDesign = {std::vector<uint16_t>{33, 41}, {kSignetEffect, 40}};
+    w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(w.title) == "Haste 1m 30s" && Joined(w.subtitle) == "Signet 0s  Protect 30m 00s");
+    // Every pin shows, past the six Pinned Status buttons there were.
+    settings.statusPins = {40, 33, kSignetEffect, 41, 42, 43, 116};
+    w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(w.title) == "Haste 1m 30s  Shell 0s  Regen 0s  Phalanx 0s" &&
+          Joined(w.subtitle) == "Signet 0s  Protect 30m 00s  Refresh 0s");
+    // A second line alone draws as the first.
+    settings.statusPins = {kSignetEffect};
+    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Signet 0s");
     // None pinned: its name, dim.
     settings.statusPins.clear();
     CHECK(Content(BarWidget::StatusTimers, state, settings).title == ListOf(Text("Status Timers", Tone::Dim)));
+}
+
+TEST(a_created_widget_borrows_the_pinned_statuses_by_the_order_they_were_pinned)
+{
+    Settings settings;
+    BarState state;
+    state.statuses = {{40, 1800.0}, {33, 90.0}};
+    settings.Widget(BarWidget::StatusTimers).statusDisplay = StatusDisplay::Name;
+    settings.statusPins = {40, 33};
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "statusTimers.pin2 statusTimers.pin3 | statusTimers.pin1");
+    const WidgetContent w = Content(made, state, settings);
+    CHECK(Joined(w.title) == "Haste 1m 30s" && Joined(w.subtitle) == "Protect 30m 00s");
 }
 
 TEST(a_widgets_clone_and_remove_presses_clone_it_or_take_the_copy_off_and_name_whose_settings_show_next)

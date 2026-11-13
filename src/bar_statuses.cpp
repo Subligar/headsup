@@ -143,16 +143,15 @@ namespace headsup
         return out;
     }
 
-    std::vector<Span> PinnedStatus(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& pins, size_t rank,
-        StatusDisplay display, const BarPalette& theme)
+    std::vector<Span> PinnedStatus(const std::vector<ActiveStatus>& active, uint16_t id, StatusDisplay display,
+        const BarPalette& theme)
     {
-        if (rank >= pins.size()) return {};
-        const std::string name = NameOf(pins[rank]);
+        const std::string name = NameOf(id);
         std::vector<Span> out;
         if (display != StatusDisplay::Name)
         {
             Span mark   = Text("");
-            mark.status = MarkOf(pins[rank], theme);
+            mark.status = MarkOf(id, theme);
             out.push_back(std::move(mark));
         }
         if (display != StatusDisplay::Icon) out.push_back(Text(out.empty() ? name : " " + name));
@@ -166,9 +165,7 @@ namespace headsup
         PopupContent popup;
         popup.title     = ListOf(Text("Status Timers"));
         if (refused)
-            popup.subtitle = ListOf(Colored(pins.size() >= kMostStatusPins ? "You can not pin more than 6 status effects"
-                                                                             : "Must have at least one status pinned.",
-                kErrorColor));
+            popup.subtitle = ListOf(Colored("Must have at least one status pinned.", kErrorColor));
         const std::vector<Named> named = NamedAll(active);
         const auto nameCell = [&](uint16_t id, const std::string& name) {
             PopupCell cell = Cell(Text(name));

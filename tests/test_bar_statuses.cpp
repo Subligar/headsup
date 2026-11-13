@@ -76,20 +76,18 @@ TEST(status_names_are_phoenixs_and_one_it_lacks_has_none)
     CHECK(StatusRecords().size() > 600);
 }
 
-TEST(each_pinned_status_shows_with_its_time_left_at_its_rank_and_a_rank_without_one_shows_nothing)
+TEST(each_pinned_status_shows_with_its_time_left)
 {
     const BarPalette& theme = PaletteOf(BarTheme::PhoenixGold);
-    const auto pinned = [&](const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& pins, size_t rank) {
-        return PinnedStatus(active, pins, rank, StatusDisplay::Name, theme);
+    const auto pinned = [&](const std::vector<ActiveStatus>& active, uint16_t id) {
+        return PinnedStatus(active, id, StatusDisplay::Name, theme);
     };
     std::vector<ActiveStatus> active{{40, 1800.0}, {kSignetEffect, std::nullopt}};
-    const std::vector<uint16_t> pins{40, kSignetEffect, 33}; // Protect, Signet and Haste
-    CHECK(pinned(active, pins, 0) == (std::vector<Span>{Text("Protect"), Text(" 30m 00s", Tone::Dim)}));
-    CHECK(Joined(pinned(active, pins, 1)) == "Signet -" && Joined(pinned(active, pins, 2)) == "Haste 0s");
-    CHECK(pinned(active, pins, 3).empty() && pinned(active, {}, 0).empty());
+    CHECK(pinned(active, 40) == (std::vector<Span>{Text("Protect"), Text(" 30m 00s", Tone::Dim)}));
+    CHECK(Joined(pinned(active, kSignetEffect)) == "Signet -" && Joined(pinned(active, 33)) == "Haste 0s");
     // A status matches by name: Sleep II's time shows for a pinned Sleep.
     active.push_back(ActiveStatus{19, 60.0});
-    CHECK(Joined(pinned(active, {2}, 0)) == "Sleep 1m 00s");
+    CHECK(Joined(pinned(active, 2)) == "Sleep 1m 00s");
 }
 
 TEST(display_shows_a_pinned_statuss_icon_before_its_name_or_alone_in_the_themes_status_icons)
@@ -99,12 +97,12 @@ TEST(display_shows_a_pinned_statuss_icon_before_its_name_or_alone_in_the_themes_
     theme.statusBack  = true;
     const std::vector<ActiveStatus> active{{40, 1800.0}};
     const StatusMark protect{40, 1, true};
-    const std::vector<Span> both = PinnedStatus(active, {40}, 0, StatusDisplay::Both, theme);
+    const std::vector<Span> both = PinnedStatus(active, 40, StatusDisplay::Both, theme);
     CHECK(both.size() == 3 && both[0].status == protect && both[0].text.empty());
     CHECK(!both[1].status && both[1].text == " Protect" && both[2].text == " 30m 00s");
-    const std::vector<Span> icon = PinnedStatus(active, {40}, 0, StatusDisplay::Icon, theme);
+    const std::vector<Span> icon = PinnedStatus(active, 40, StatusDisplay::Icon, theme);
     CHECK(icon.size() == 2 && icon[0].status == protect && Joined(icon) == " 30m 00s");
-    CHECK(std::ranges::none_of(PinnedStatus(active, {40}, 0, StatusDisplay::Name, theme), [](const Span& s) { return s.status.has_value(); }));
+    CHECK(std::ranges::none_of(PinnedStatus(active, 40, StatusDisplay::Name, theme), [](const Span& s) { return s.status.has_value(); }));
 }
 
 TEST(the_popup_lists_your_favorites_with_pins_over_every_buff_then_every_debuff_those_you_have_first)
@@ -151,9 +149,6 @@ TEST(the_popup_lists_your_favorites_with_pins_over_every_buff_then_every_debuff_
     CHECK(Joined(refused.subtitle) == "Must have at least one status pinned." && refused.subtitle[0].tone == Tone::Own &&
           refused.subtitle[0].argb == kErrorColor);
     CHECK(refused.sections[0].rows[0].kind == RowKind::Grid);
-    // And a seventh pin refused says the most there can be.
-    const std::vector<uint16_t> six{40, 33, 41, 42, 43, kSignetEffect};
-    CHECK(Joined(StatusTimersPopup(active, six, six, theme, 0, 0, true).subtitle) == "You can not pin more than 6 status effects");
 }
 
 TEST(the_popups_status_icons_are_the_themes_with_its_background_setting)
