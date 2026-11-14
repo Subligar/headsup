@@ -196,6 +196,7 @@
                 {"key": "bar-text-align", "name": "Bar Text Alignment", "tip": "Puts the EXP Bar's text at its left or right end, or in its middle. Default is {default}."},
                 {"key": "mem-text", "name": "Show Mem Text", "tip": "Puts \"Mem\" before the Memory button's figures. Off, the figures alone. Default is {default}."},
                 {"key": "status-display", "name": "Display", "tip": "What shows for each pinned status: its name, its icon, or both with the icon first. Default is {default}."},
+                {"key": "timer-format", "name": "Timer Format", "tip": "How each pinned status's time left reads on the widget. The pop-out keeps its own. Default is {default}."},
                 {"key": "earned-align", "name": "Earned EXP Alignment", "tip": "Puts the Earned EXP text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
                 {"key": "tnl-align", "name": "EXP TNL Alignment", "tip": "Puts the EXP Til Next Level text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
                 {"key": "percent-align", "name": "EXP Percentage Alignment", "tip": "Puts the EXP Percentage text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
@@ -1479,6 +1480,14 @@
         {"name": "Only Name"},
         {"name": "Only Icon"},
         {"name": "Both Name & Icon"}
+      ]
+    },
+    {
+      "key": "timer-format",
+      "options": [
+        {"name": "Full", "tip": "Hours, minutes and seconds: 1:05:09."},
+        {"name": "Simple", "tip": "Each part that counts: 1h 5m, 5m 9s or 9s."},
+        {"name": "Short", "tip": "The biggest part alone: 12h, 1.5h, 25m, 2.5m or 9s."}
       ]
     },
     {

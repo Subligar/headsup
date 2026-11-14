@@ -132,6 +132,14 @@ namespace headsup
         Both,
     };
     constexpr int kStatusDisplayCount = static_cast<int>(StatusDisplay::Both) + 1;
+    // How the Status Timers widget writes a pinned status's time left (TimerText).
+    enum class TimerFormat : uint8_t
+    {
+        Full,
+        Simple,
+        Short,
+    };
+    constexpr int kTimerFormatCount = static_cast<int>(TimerFormat::Short) + 1;
     constexpr int kMinExpBarWidth = 40, kMaxExpBarWidth = 400, kDefaultExpBarWidth = 100;  // pixels
     constexpr int kMinExpBarHeight = 2, kMaxExpBarHeight = 16, kDefaultExpBarHeight = 6;   // pixels
 

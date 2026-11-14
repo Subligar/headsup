@@ -80,14 +80,55 @@ TEST(each_pinned_status_shows_with_its_time_left)
 {
     const BarPalette& theme = PaletteOf(BarTheme::PhoenixGold);
     const auto pinned = [&](const std::vector<ActiveStatus>& active, uint16_t id) {
-        return PinnedStatus(active, id, StatusDisplay::Name, theme);
+        return PinnedStatus(active, id, StatusDisplay::Name, TimerFormat::Full, theme);
     };
     std::vector<ActiveStatus> active{{40, 1800.0}, {kSignetEffect, std::nullopt}};
-    CHECK(pinned(active, 40) == (std::vector<Span>{Text("Protect"), Text(" 30m 00s", Tone::Dim)}));
-    CHECK(Joined(pinned(active, kSignetEffect)) == "Signet -" && Joined(pinned(active, 33)) == "Haste 0s");
+    CHECK(pinned(active, 40) == (std::vector<Span>{Text("Protect"), Text(" 0:30:00", Tone::Dim)}));
+    // One that never runs out, and one you do not have (the card: "-", not "0s").
+    CHECK(Joined(pinned(active, kSignetEffect)) == "Signet -" && Joined(pinned(active, 33)) == "Haste -");
     // A status matches by name: Sleep II's time shows for a pinned Sleep.
     active.push_back(ActiveStatus{19, 60.0});
-    CHECK(Joined(pinned(active, 2)) == "Sleep 1m 00s");
+    CHECK(Joined(pinned(active, 2)) == "Sleep 0:01:00");
+    CHECK(Joined(PinnedStatus(active, 2, StatusDisplay::Name, TimerFormat::Short, theme)) == "Sleep 1.0m");
+}
+
+// The card "Condensing status widget timer text", each format's rules at their edges: X hours, Y minutes, Z seconds
+// left, a doubled letter two digits.
+TEST(a_status_timers_time_left_reads_as_its_timer_format_says)
+{
+    struct Read
+    {
+        double seconds;
+        const char *full, *simple, *short_;
+    };
+    constexpr Read kReads[] = {
+        {0, "0:00:00", "0s", "0s"},
+        {59, "0:00:59", "59s", "59s"},
+        // Minutes only past a whole minute; a minute alone is all seconds.
+        {60, "0:01:00", "60s", "1.0m"},
+        {61, "0:01:01", "1m 1s", "1.0m"},
+        {89, "0:01:29", "1m 29s", "1.4m"},
+        {599, "0:09:59", "9m 59s", "9.9m"},
+        {600, "0:10:00", "10m 0s", "10m"},
+        {601, "0:10:01", "10m 1s", "10m"},
+        {3599, "0:59:59", "59m 59s", "59m"},
+        // Seconds only under an hour.
+        {3600, "1:00:00", "1h 0m", "1.0h"},
+        {3601, "1:00:01", "1h 0m", "1.0h"},
+        {5399, "1:29:59", "1h 29m", "1.4h"},
+        {35999, "9:59:59", "9h 59m", "9.9h"},
+        {36000, "10:00:00", "10h 0m", "10h"},
+        {36001, "10:00:01", "10h 0m", "10h"},
+        {90061, "25:01:01", "25h 1m", "25h"},
+    };
+    for (const Read& read : kReads)
+    {
+        CHECK_EQ(TimerText(read.seconds, TimerFormat::Full), std::string(read.full));
+        CHECK_EQ(TimerText(read.seconds, TimerFormat::Simple), std::string(read.simple));
+        CHECK_EQ(TimerText(read.seconds, TimerFormat::Short), std::string(read.short_));
+    }
+    // A part of a second left counts as a whole one, as the game counts it down.
+    CHECK_EQ(TimerText(59.2, TimerFormat::Simple), std::string("60s"));
 }
 
 TEST(display_shows_a_pinned_statuss_icon_before_its_name_or_alone_in_the_themes_status_icons)
@@ -97,12 +138,13 @@ TEST(display_shows_a_pinned_statuss_icon_before_its_name_or_alone_in_the_themes_
     theme.statusBack  = true;
     const std::vector<ActiveStatus> active{{40, 1800.0}};
     const StatusMark protect{40, 1, true};
-    const std::vector<Span> both = PinnedStatus(active, 40, StatusDisplay::Both, theme);
+    const std::vector<Span> both = PinnedStatus(active, 40, StatusDisplay::Both, TimerFormat::Simple, theme);
     CHECK(both.size() == 3 && both[0].status == protect && both[0].text.empty());
-    CHECK(!both[1].status && both[1].text == " Protect" && both[2].text == " 30m 00s");
-    const std::vector<Span> icon = PinnedStatus(active, 40, StatusDisplay::Icon, theme);
-    CHECK(icon.size() == 2 && icon[0].status == protect && Joined(icon) == " 30m 00s");
-    CHECK(std::ranges::none_of(PinnedStatus(active, 40, StatusDisplay::Name, theme), [](const Span& s) { return s.status.has_value(); }));
+    CHECK(!both[1].status && both[1].text == " Protect" && both[2].text == " 30m 0s");
+    const std::vector<Span> icon = PinnedStatus(active, 40, StatusDisplay::Icon, TimerFormat::Simple, theme);
+    CHECK(icon.size() == 2 && icon[0].status == protect && Joined(icon) == " 30m 0s");
+    CHECK(std::ranges::none_of(PinnedStatus(active, 40, StatusDisplay::Name, TimerFormat::Simple, theme),
+        [](const Span& s) { return s.status.has_value(); }));
 }
 
 TEST(the_popup_lists_your_favorites_with_pins_over_every_buff_then_every_debuff_those_you_have_first)

@@ -1316,6 +1316,16 @@ namespace headsup
                         o.statusDisplay = static_cast<StatusDisplay>(display);
                     }
                     break;
+                case WidgetTabsRow::TimerFormat:
+                    if (kind == BarWidget::StatusTimers)
+                    {
+                        int format = static_cast<int>(o.timerFormat);
+                        form.NumberDropdown(label.c_str(), format, 0, kTimerFormatCount - 1,
+                            [&](int i) { return std::string(c.layout.OptionsOf(WindowList::TimerFormat)[static_cast<size_t>(i)].name); },
+                            ownDefault().c_str());
+                        o.timerFormat = static_cast<TimerFormat>(format);
+                    }
+                    break;
                 }
             }
         }
@@ -2844,6 +2854,7 @@ namespace headsup
         case WidgetTabsRow::MemText: return onOff(o.memText);
         case WidgetTabsRow::WrapText: return onOff(o.wrapText);
         case WidgetTabsRow::StatusDisplay: return option(WindowList::StatusDisplay, o.statusDisplay);
+        case WidgetTabsRow::TimerFormat: return option(WindowList::TimerFormat, o.timerFormat);
         case WidgetTabsRow::CustomIcons: return option(WindowList::CustomIcons, o.weatherIcons);
         case WidgetTabsRow::Bag1: return ContainerName(o.bag);
         case WidgetTabsRow::Bag2: return ContainerName(o.secondBag);

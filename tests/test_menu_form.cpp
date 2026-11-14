@@ -2005,6 +2005,25 @@ TEST(display_shows_on_the_status_timers_widget_alone_and_picks_how_its_pins_show
     CHECK(w.settings.Widget(statuses).statusDisplay == StatusDisplay::Icon);
 }
 
+TEST(timer_format_shows_on_the_status_timers_widget_alone_and_picks_how_its_times_read)
+{
+    Window w;
+    const PanelWidget statuses{BarWidget::StatusTimers}, clock{BarWidget::EarthTime};
+    w.settings.Widget(statuses).on = w.settings.Widget(clock).on = true;
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.readings.settingsOf = {clock};
+    CHECK(!Has(rows(), "timer-format"));
+    w.readings.settingsOf = {statuses};
+    CHECK(Has(rows(), "timer-format"));
+    const std::string list = "toppanel-widgets-timer-format-statustimers";
+    w.Pass({{list, kClickEvent, ""}});
+    CHECK(w.Pass({{list + "-o-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.Widget(statuses).timerFormat == TimerFormat::Short);
+}
+
 // The card: the Icon, Alignment and Linked Padding tips are shared by every widget, and named one default for them
 // all. Each widget's default, as default_settings.h has it (barBagsIcon=right, barGilIcon=hide, barTargetIcon=hide,
 // barJobAlign=left, barZoneLinkPadding=19), or the struct's for a widget it leaves out and for a copy.

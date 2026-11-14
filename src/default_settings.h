@@ -199,6 +199,7 @@ selfLine3TextSize=75.0000
 selfRowSelfPlate=hidden
 smoothness=16.0000
 statusDisplay=icon
+statusTimerFormat=simple
 timerPercent=120.0000
 widgetBackground=true
 zoneId=false

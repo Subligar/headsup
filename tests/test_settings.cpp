@@ -3073,6 +3073,26 @@ TEST(the_status_timers_display_starts_with_name_and_icon_and_is_kept_by_each_cop
     CHECK(LoadSettings(store).Widget(BarWidget::StatusTimers).statusDisplay == StatusDisplay::Both);
 }
 
+TEST(the_status_timers_timer_format_starts_simple_and_is_kept_by_each_copy)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::StatusTimers).timerFormat == TimerFormat::Simple);
+    CHECK(DefaultSettings().Widget(BarWidget::StatusTimers).timerFormat == TimerFormat::Simple);
+    s.Widget(BarWidget::StatusTimers).timerFormat = TimerFormat::Short;
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::StatusTimers);
+    CHECK(copy.has_value());
+    s.Widget(*copy).timerFormat = TimerFormat::Full;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["statusTimerFormat"], "short");
+    CHECK_EQ(store.values["statusTimerFormat_2"], "full");
+    const Settings loaded = LoadSettings(store);
+    CHECK(loaded.Widget(BarWidget::StatusTimers).timerFormat == TimerFormat::Short);
+    CHECK(loaded.Widget(*copy).timerFormat == TimerFormat::Full);
+    store.values["statusTimerFormat"] = "condensed";
+    CHECK(LoadSettings(store).Widget(BarWidget::StatusTimers).timerFormat == TimerFormat::Simple);
+}
+
 TEST(the_bags_widgets_two_bags_are_kept_and_one_past_the_last_reads_as_its_default)
 {
     Settings s;

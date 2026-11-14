@@ -1874,19 +1874,24 @@ TEST(the_status_timers_widget_shows_each_pinned_status_where_its_design_puts_it)
     settings.statusPins = {40, 33, kSignetEffect};
     // Placed as pinned, the line with fewer pins first: Protect and Signet over Haste.
     WidgetContent w = Content(BarWidget::StatusTimers, state, settings);
-    CHECK(Joined(w.title) == "Protect 30m 00s  Signet 0s" && Joined(w.subtitle) == "Haste 1m 30s");
+    CHECK(Joined(w.title) == "Protect 30m 0s  Signet -" && Joined(w.subtitle) == "Haste 1m 30s");
     // Its design decides, and a status in it that is not pinned takes no room.
     settings.Widget(BarWidget::StatusTimers).pinDesign = {std::vector<uint16_t>{33, 41}, {kSignetEffect, 40}};
     w = Content(BarWidget::StatusTimers, state, settings);
-    CHECK(Joined(w.title) == "Haste 1m 30s" && Joined(w.subtitle) == "Signet 0s  Protect 30m 00s");
+    CHECK(Joined(w.title) == "Haste 1m 30s" && Joined(w.subtitle) == "Signet -  Protect 30m 0s");
     // Every pin shows, past the six Pinned Status buttons there were.
     settings.statusPins = {40, 33, kSignetEffect, 41, 42, 43, 116};
     w = Content(BarWidget::StatusTimers, state, settings);
-    CHECK(Joined(w.title) == "Haste 1m 30s  Shell 0s  Regen 0s  Phalanx 0s" &&
-          Joined(w.subtitle) == "Signet 0s  Protect 30m 00s  Refresh 0s");
+    CHECK(Joined(w.title) == "Haste 1m 30s  Shell -  Regen -  Phalanx -" &&
+          Joined(w.subtitle) == "Signet -  Protect 30m 0s  Refresh -");
     // A second line alone draws as the first.
     settings.statusPins = {kSignetEffect};
-    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Signet 0s");
+    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Signet -");
+    // Its Timer Format writes each time left.
+    settings.statusPins = {40, 33};
+    settings.Widget(BarWidget::StatusTimers).timerFormat = TimerFormat::Short;
+    w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(w.title) == "Haste 1.5m" && Joined(w.subtitle) == "Protect 30m");
     // None pinned: its name, dim.
     settings.statusPins.clear();
     CHECK(Content(BarWidget::StatusTimers, state, settings).title == ListOf(Text("Status Timers", Tone::Dim)));
@@ -1902,7 +1907,7 @@ TEST(a_created_widget_borrows_the_pinned_statuses_by_the_order_they_were_pinned)
     const PanelWidget made = *CreateWidget(settings);
     settings.Widget(made).design = DesignFrom(BarWidget::Custom, "statusTimers.pin2 statusTimers.pin3 | statusTimers.pin1");
     const WidgetContent w = Content(made, state, settings);
-    CHECK(Joined(w.title) == "Haste 1m 30s" && Joined(w.subtitle) == "Protect 30m 00s");
+    CHECK(Joined(w.title) == "Haste 1m 30s" && Joined(w.subtitle) == "Protect 30m 0s");
 }
 
 TEST(a_widgets_clone_and_remove_presses_clone_it_or_take_the_copy_off_and_name_whose_settings_show_next)

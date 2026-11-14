@@ -6,6 +6,8 @@
 #include "vanadiel.h"      // kVanaEpochUnixMs
 
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <iterator>
 #include <utility>
 
@@ -61,11 +63,13 @@ namespace headsup
             return out;
         }
 
+        constexpr const char* kNoTime = "-";
+
         // Its time left, as the game counts it down; "-" for one that never runs out, and 0 for one you do not have.
         Span TimeOf(const Held& held)
         {
             if (!held.held) return Text(SpanText(0.0), Tone::Dim);
-            return held.secondsLeft ? Text(SpanText(*held.secondsLeft)) : Text("-", Tone::Dim);
+            return held.secondsLeft ? Text(SpanText(*held.secondsLeft)) : Text(kNoTime, Tone::Dim);
         }
 
         PopupCell Pressable(Icon icon, Span tint, std::string press)
@@ -143,8 +147,50 @@ namespace headsup
         return out;
     }
 
+    std::string TimerText(double seconds, TimerFormat format)
+    {
+        constexpr int64_t kTenths = 10;
+        const auto total = static_cast<int64_t>(std::ceil(std::max(0.0, seconds)));
+        const int64_t hours = total / kSecondsPerHour, minutes = total % kSecondsPerHour / kSecondsPerMinute;
+        const int64_t rest = total % kSecondsPerMinute;
+        // A tenth of a unit, cut down, so a time never reads as the next bigger rule's.
+        const auto tenths = [&](int64_t unit, const char* mark) {
+            const int64_t count = total * kTenths / unit;
+            return std::to_string(count / kTenths) + "." + std::to_string(count % kTenths) + mark;
+        };
+        switch (format)
+        {
+        case TimerFormat::Full:
+        {
+            char text[32];
+            std::snprintf(text, sizeof(text), "%lld:%02lld:%02lld", static_cast<long long>(hours),
+                static_cast<long long>(minutes), static_cast<long long>(rest));
+            return text;
+        }
+        case TimerFormat::Simple:
+        {
+            // Hours past none, minutes past a whole minute, seconds under an hour: a minute alone is all seconds.
+            std::vector<std::string> parts;
+            if (hours > 0) parts.push_back(std::to_string(hours) + "h");
+            if (total > kSecondsPerMinute) parts.push_back(std::to_string(minutes) + "m");
+            if (total < kSecondsPerHour) parts.push_back(std::to_string(total > kSecondsPerMinute ? rest : total) + "s");
+            std::string text;
+            for (const std::string& part : parts)
+                text += (text.empty() ? "" : " ") + part;
+            return text;
+        }
+        case TimerFormat::Short:
+            if (total >= kTenths * kSecondsPerHour) return std::to_string(hours) + "h";
+            if (total >= kSecondsPerHour) return tenths(kSecondsPerHour, "h");
+            if (total >= kTenths * kSecondsPerMinute) return std::to_string(total / kSecondsPerMinute) + "m";
+            if (total >= kSecondsPerMinute) return tenths(kSecondsPerMinute, "m");
+            return std::to_string(total) + "s";
+        }
+        return {};
+    }
+
     std::vector<Span> PinnedStatus(const std::vector<ActiveStatus>& active, uint16_t id, StatusDisplay display,
-        const BarPalette& theme)
+        TimerFormat format, const BarPalette& theme)
     {
         const std::string name = NameOf(id);
         std::vector<Span> out;
@@ -155,7 +201,8 @@ namespace headsup
             out.push_back(std::move(mark));
         }
         if (display != StatusDisplay::Icon) out.push_back(Text(out.empty() ? name : " " + name));
-        out.push_back(Text(" " + TimeOf(HeldAs(NamedAll(active), name)).text, Tone::Dim));
+        const Held held = HeldAs(NamedAll(active), name);
+        out.push_back(Text(" " + (held.secondsLeft ? TimerText(*held.secondsLeft, format) : std::string(kNoTime)), Tone::Dim));
         return out;
     }
 

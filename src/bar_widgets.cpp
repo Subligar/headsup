@@ -1553,7 +1553,7 @@ namespace headsup
                 {
                     const auto rank = static_cast<size_t>(part) - static_cast<size_t>(WidgetPart::StatusPin1);
                     parts.push_back({part, rank < settings.statusPins.size()
-                                               ? PinnedStatus(state.statuses, settings.statusPins[rank], o.statusDisplay, OwnPalette(settings))
+                                               ? PinnedStatus(state.statuses, settings.statusPins[rank], o.statusDisplay, o.timerFormat, OwnPalette(settings))
                                                : std::vector<Span>{}});
                 }
                 return parts;
@@ -1603,7 +1603,7 @@ namespace headsup
                 const StatusDesign pinned = PinnedLines(o.pinDesign, settings.statusPins);
                 for (size_t line = 0; line < lines.size(); ++line)
                     for (const uint16_t id : pinned[line])
-                        AddPart(lines[line], PinnedStatus(state.statuses, id, o.statusDisplay, OwnPalette(settings)));
+                        AddPart(lines[line], PinnedStatus(state.statuses, id, o.statusDisplay, o.timerFormat, OwnPalette(settings)));
                 if (lines[0].empty()) std::swap(lines[0], lines[1]);
                 base.title    = lines[0].empty() ? ListOf(Text("Status Timers", Tone::Dim)) : std::move(lines[0]);
                 base.subtitle = std::move(lines[1]);

@@ -317,6 +317,8 @@ namespace headsup
         constexpr const char* kHomePointWrapKey = "homePointWrap";
         constexpr const char* kStatusDisplayKey = "statusDisplay";
         const char* const kStatusDisplayNames[kStatusDisplayCount] = {"name", "icon", "both"};
+        constexpr const char* kTimerFormatKey = "statusTimerFormat";
+        const char* const kTimerFormatNames[kTimerFormatCount] = {"full", "simple", "short"};
         constexpr const char* kJobTextKey   = "jobText";
         const char* const kJobTextNames[kJobTextCount] = {"mainSub", "main", "levelFirst"};
         constexpr const char* kClock24Key   = "clock24";
@@ -1431,6 +1433,8 @@ namespace headsup
             case BarWidget::StatusTimers:
                 o.statusDisplay = static_cast<StatusDisplay>(NameIndex(kStatusDisplayNames, kStatusDisplayCount,
                     text(kStatusDisplayKey), static_cast<int>(o.statusDisplay)));
+                o.timerFormat = static_cast<TimerFormat>(NameIndex(kTimerFormatNames, kTimerFormatCount,
+                    text(kTimerFormatKey), static_cast<int>(o.timerFormat)));
                 break;
             case BarWidget::EarthTime:
             {
@@ -1539,6 +1543,7 @@ namespace headsup
                 break;
             case BarWidget::StatusTimers:
                 text(kStatusDisplayKey, kStatusDisplayNames[static_cast<int>(o.statusDisplay)]);
+                text(kTimerFormatKey, kTimerFormatNames[static_cast<int>(o.timerFormat)]);
                 break;
             case BarWidget::EarthTime:
                 text(kClockZoneKey, o.clockZone ? kClockZoneNames[static_cast<int>(*o.clockZone)] : kLocalZone);

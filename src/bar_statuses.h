@@ -45,9 +45,12 @@ namespace headsup
     constexpr const char* kStatusFavoritePress = "status favorite ", *kStatusPinPress = "status pin ";
     constexpr const char* kBuffsKey = "Buffs", *kDebuffsKey = "Debuffs"; // the popup's lists' headings, which keep their scrolls
 
-    // A pinned status with its time left, matched by name, shown by display in the theme's status icons.
+    // A time left as format writes it, a part of a second a whole one.
+    std::string TimerText(double seconds, TimerFormat format);
+    // A pinned status with its time left as format writes it, "-" for one you do not have or that never runs out,
+    // matched by name, shown by display in the theme's status icons.
     std::vector<Span> PinnedStatus(const std::vector<ActiveStatus>& active, uint16_t id, StatusDisplay display,
-        const BarPalette& theme);
+        TimerFormat format, const BarPalette& theme);
     // Your favorites, each with its pin and star, over every other buff in a scrolling list and every other debuff in
     // another, each scrolled its many lines: those you have first, the rest by name, one line a name, each name with
     // its icon in the theme's status icons, in one column. refused: the last pin was kept, which it says under its
