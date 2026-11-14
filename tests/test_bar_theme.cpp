@@ -33,10 +33,11 @@ TEST(each_theme_has_the_mockups_colors_and_shape)
     CHECK(aurora.shape == BarShape::Glass && aurora.accent == 0xFF5EE6FFu && aurora.title == 0xFFEAF2FFu);
 }
 
-TEST(every_built_in_theme_shows_the_hd_status_icons_on_their_backgrounds)
+// Round 23: "Change default Show Status Background for all themes to OFF".
+TEST(every_built_in_theme_shows_the_hd_status_icons_with_no_background)
 {
     for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark, BarTheme::PhoenixRed, BarTheme::Aurora, BarTheme::Vanilla})
-        CHECK(StatusIconsName(PaletteOf(theme).statusIcons) == "HD" && PaletteOf(theme).statusBack);
+        CHECK(StatusIconsName(PaletteOf(theme).statusIcons) == "HD" && !PaletteOf(theme).statusBack);
 }
 
 TEST(a_theme_file_reads_back_every_part_of_its_palette)
@@ -72,6 +73,8 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     const std::optional<BarPalette> icons = PaletteFromThemeFile("[theme]\nTitle=ff102030\nStatusIcons=Gone\nStatusBackground=yes\n");
     CHECK(icons && icons->statusIcons == gold.statusIcons && !icons->statusBack && partial->statusIcons == gold.statusIcons);
     CHECK_EQ(partial->statusBack, gold.statusBack);
+    const std::optional<BarPalette> backed = PaletteFromThemeFile("[theme]\nTitle=ff102030\nStatusBackground=true\n");
+    CHECK(backed && backed->statusBack);
 }
 
 TEST(the_themes_folder_lists_its_theme_files_by_name)

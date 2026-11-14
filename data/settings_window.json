@@ -466,7 +466,7 @@
                 {"key": "vanilla", "name": "Vanilla"}
               ]
             },
-            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: on."},
+            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: off."},
             {
               "key": "theme-palette",
               "rows": [
