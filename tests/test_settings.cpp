@@ -260,6 +260,7 @@ barParty=true
 barStatusTimers=true
 barWorld=true
 barSettings=true
+barHomePoint=true
 barZoneLine2=true
 barZoneIcons=true
 barWeatherLine2=true
@@ -300,7 +301,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather job party statusTimers world
+barLeft=zone weather job party statusTimers world homePoint
 barCenter=
 barRight=target gil bags performance earthTime settings
 hideHelpBar=true
@@ -1038,7 +1039,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"}; // in BarWidget's order, but a created widget's
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint"}; // in BarWidget's order, but a created widget's
     static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
     for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {
@@ -3226,6 +3227,32 @@ TEST(the_status_favorites_and_pins_are_kept_and_an_unknown_or_repeated_one_is_le
     CHECK(read.statusFavorites == s.statusFavorites && read.statusPins == s.statusPins);
     store.values["statusFavorites"] = "40 x 65000 40 253";
     CHECK((LoadSettings(store).statusFavorites == std::vector<uint16_t>{40, kSignetEffect}));
+}
+
+TEST(each_status_timers_copy_keeps_where_every_status_ever_pinned_goes_and_a_hand_edits_unknown_or_repeated_one_is_left_out)
+{
+    Settings s;
+    s.statusPins = {40, kSignetEffect, 33};
+    s.Widget(BarWidget::StatusTimers).pinDesign = {std::vector<uint16_t>{40, kSignetEffect}, {41, 33}};
+    const PanelWidget second = *CloneWidget(s, BarWidget::StatusTimers);
+    s.Widget(second).pinDesign = {std::vector<uint16_t>{33}, {40, kSignetEffect}};
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barStatusTimersPinDesign"], "40 253 | 41 33");
+    CHECK_EQ(saved.values["barStatusTimersPinDesign_2"], "33 | 40 253");
+    // Its Pinned Status buttons' design is no longer read or written.
+    CHECK(!saved.values.contains("barStatusTimersDesign") && !saved.values.contains("barStatusTimersDesign_2"));
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(BarWidget::StatusTimers).pinDesign == s.Widget(BarWidget::StatusTimers).pinDesign);
+    CHECK(loaded.Widget(second).pinDesign == s.Widget(second).pinDesign);
+    saved.values["barStatusTimersPinDesign"] = "253 x 65000 253 | 40 253 41";
+    CHECK((LoadSettings(saved).Widget(BarWidget::StatusTimers).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect}, {40, 41}}));
+    // Lines with nothing on them save as nothing around the bar.
+    s.Widget(BarWidget::StatusTimers).pinDesign = {std::vector<uint16_t>{}, {33}};
+    s.Widget(second).pinDesign = {};
+    SaveSettings(s, saved);
+    CHECK(saved.values["barStatusTimersPinDesign"] == "| 33" && saved.values["barStatusTimersPinDesign_2"] == "|");
+    CHECK(LoadSettings(saved).Widget(second).pinDesign == StatusDesign{});
 }
 
 TEST(a_created_widget_shows_once_made_saves_under_its_own_keys_and_forgets_them_when_taken_off)

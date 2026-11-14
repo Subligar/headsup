@@ -810,12 +810,9 @@ namespace headsup
             const Sailing next = NextSailing(route, unixMs);
             std::vector<Span> spans;
             if (next.boarding)
-            {
-                spans = ListOf(Text("Boarding"), Text(kDot, Tone::Dim));
-                AddTime(spans, "leaves in ", next.leaveIn);
-            }
+                AddTime(spans, "Departing in ", next.leaveIn);
             else
-                AddTime(spans, "Boards in ", next.boardIn);
+                AddTime(spans, "Boarding in ", next.boardIn);
             return spans;
         }
 
@@ -1286,18 +1283,20 @@ namespace headsup
                 const std::span<const TravelRoute> routes = TravelRoutes();
                 for (size_t first = 0, last = 0; first < routes.size(); first = last)
                 {
-                    // The route, whether its ship arrives or departs next against how long until it does.
+                    // The route, whether its ship boards or departs next against how long until it does.
                     constexpr int kColumns = 3;
                     PopupTab kind{Text(routes[first].group), {}};
                     PopupRow grid{RowKind::Grid, kColumns, {}};
                     for (last = first; last < routes.size() && std::string_view(routes[last].group) == routes[first].group; ++last)
                     {
                         const Sailing next = NextSailing(routes[last], state.unixMs);
-                        PopupCell stage    = Cell(Text(next.boarding ? "Departs in" : "Arrives in", Tone::Dim));
+                        PopupCell stage    = Cell(Text(next.boarding ? "Departing in" : "Boarding in", Tone::Dim));
                         stage.align        = Align::Right;
+                        PopupCell time     = Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn)));
+                        time.align         = Align::Center;
                         grid.cells.push_back(Cell(Text(routes[last].name)));
                         grid.cells.push_back(std::move(stage));
-                        grid.cells.push_back(Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn))));
+                        grid.cells.push_back(std::move(time));
                     }
                     grid.nested   = true;
                     grid.trailing = true;
@@ -1548,14 +1547,22 @@ namespace headsup
             case BarWidget::StatusTimers:
                 base.hasPopup = true;
             {
+                // A created widget's Pinned Status buttons, each the status pinned at its rank.
                 std::vector<PartContent> parts;
-                for (size_t rank = 0; rank < kMostStatusPins; ++rank)
-                    parts.push_back({static_cast<WidgetPart>(static_cast<size_t>(WidgetPart::StatusPin1) + rank),
-                        PinnedStatus(state.statuses, settings.statusPins, rank, o.statusDisplay, OwnPalette(settings))});
+                for (const WidgetPart part : PartsOf(BarWidget::StatusTimers))
+                {
+                    const auto rank = static_cast<size_t>(part) - static_cast<size_t>(WidgetPart::StatusPin1);
+                    parts.push_back({part, rank < settings.statusPins.size()
+                                               ? PinnedStatus(state.statuses, settings.statusPins[rank], o.statusDisplay, OwnPalette(settings))
+                                               : std::vector<Span>{}});
+                }
                 return parts;
             }
             case BarWidget::World: return WorldParts(state, o, base);
             case BarWidget::Settings: base.cog = true; return {};
+            case BarWidget::HomePoint:
+                return {{WidgetPart::HomePointIcon, ListOf(Mark(Icon::HomePoint))},
+                    {WidgetPart::HomePointName, ListOf(Text(ZoneTitle(state.homePoint)))}};
             case BarWidget::Custom:
             {
                 // Its Name, then the parts of each widget it holds, as that widget's first copy shows them.
@@ -1589,6 +1596,18 @@ namespace headsup
             if (!base.shown) return base;
             std::vector<PartContent> parts = PartsNow(widget, state, settings, base);
             if (!base.shown) return base;
+            if (widget.kind == BarWidget::StatusTimers)
+            {
+                std::array<std::vector<Span>, kDesignLines> lines;
+                const StatusDesign pinned = PinnedLines(o.pinDesign, settings.statusPins);
+                for (size_t line = 0; line < lines.size(); ++line)
+                    for (const uint16_t id : pinned[line])
+                        AddPart(lines[line], PinnedStatus(state.statuses, id, o.statusDisplay, OwnPalette(settings)));
+                if (lines[0].empty()) std::swap(lines[0], lines[1]);
+                base.title    = lines[0].empty() ? ListOf(Text("Status Timers", Tone::Dim)) : std::move(lines[0]);
+                base.subtitle = std::move(lines[1]);
+                return base;
+            }
             // The widget's icon goes beside both lines, where its Icon setting puts it.
             if (const std::optional<WidgetPart> icon = IconPartOf(widget.kind))
                 if (const auto part = std::ranges::find(parts, *icon, &PartContent::part); part != parts.end())
@@ -1608,7 +1627,6 @@ namespace headsup
                 for (DesignChip& chip : line)
                     chip.on = chip.on || IsPinnedStatus(chip.part);
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
-            if (w.title.empty() && widget.kind == BarWidget::StatusTimers) w.title = ListOf(Text("Status Timers", Tone::Dim));
             if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
             {
                 // Linked with every part off, or Performance with no messages waiting, it takes no room.
@@ -1696,17 +1714,23 @@ namespace headsup
             if (number.empty() || *end != '\0' || id > UINT16_MAX || *StatusName(static_cast<uint16_t>(id)) == '\0')
                 return PressResult::None;
             const auto status = static_cast<uint16_t>(id);
+            // Every pin keeps the place it shows at in each copy, before and after the change.
+            const auto place = [&] {
+                for (int copy = 0; copy < CopiesOf(BarWidget::StatusTimers); ++copy)
+                    PlacePins(settings.Widget(PanelWidget{BarWidget::StatusTimers, copy}).pinDesign, settings.statusPins);
+            };
             std::vector<uint16_t>& list = kind == kStatusPinPress ? settings.statusPins : settings.statusFavorites;
-            if (const auto at = std::ranges::find(list, status); at != list.end())
+            const auto at = std::ranges::find(list, status);
+            if (at != list.end() && settings.statusPins == std::vector<uint16_t>{status}) return PressResult::Refused;
+            place();
+            if (at != list.end())
             {
-                if (settings.statusPins == std::vector<uint16_t>{status}) return PressResult::Refused;
                 list.erase(at);
                 if (kind == kStatusFavoritePress) std::erase(settings.statusPins, status);
             }
-            else if (kind == kStatusPinPress && list.size() >= kMostStatusPins)
-                return PressResult::Refused;
             else
                 list.push_back(status);
+            place();
             return PressResult::Changed;
         }
         if (press.starts_with(kPopupResetPress))
@@ -1782,7 +1806,7 @@ namespace headsup
     {
         if (loaded)
         {
-            held = {state.zone, state.weather, state.job, state.gil, state.bags, state.statuses, state.unixMs};
+            held = {state.zone, state.weather, state.job, state.gil, state.bags, state.statuses, state.unixMs, state.homePoint};
             return;
         }
         const double since = static_cast<double>(state.unixMs - held.unixMs) / kMsPerSecond;
@@ -1792,6 +1816,7 @@ namespace headsup
         state.gil      = held.gil;
         state.bags     = held.bags;
         state.statuses = held.statuses;
+        state.homePoint = held.homePoint;
         for (ActiveStatus& status : state.statuses)
             if (status.secondsLeft) status.secondsLeft = std::max(0.0, *status.secondsLeft - since);
     }
@@ -2158,7 +2183,8 @@ namespace headsup
                 ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
             return WorldPopup(state);
-        case BarWidget::Settings: break;
+        case BarWidget::Settings:
+        case BarWidget::HomePoint: break;
         case BarWidget::Custom:
             if (!o.name.empty()) popup.title = ListOf(Text(o.name));
             break;

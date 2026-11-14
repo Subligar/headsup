@@ -71,6 +71,7 @@ namespace headsup
         bool zoneId = true;                         // Zone: its number after its name in the pop-out's header
         bool memText = false;                       // Performance: "Mem" before its Memory button's figures
         StatusDisplay statusDisplay = StatusDisplay::Both; // Status Timers: how each pinned status shows
+        StatusDesign pinDesign;                     // and where, its own while the pins are every copy's
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         std::optional<ClockZone> clockSecondZone = ClockZone::Japan; // its Secondary Timezone part's, the same way
         bool clock24         = true;                // its two lines

@@ -28,6 +28,7 @@ namespace headsup
         PartyCount, PartyHealth,
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,
         WorldShip, WorldGuild, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
+        HomePointName, HomePointIcon,
         CustomName, // a created widget's Name
     };
     constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::CustomName) + 1;
@@ -41,6 +42,7 @@ namespace headsup
         bool operator==(const DesignChip&) const = default;
     };
     constexpr int kDesignLines = 2;
+    constexpr char kDesignLineBreak = '|'; // between a design's lines, and a pop-out's rows, in the settings file
     // A widget's two lines, each its parts in order, shown or not. Every part of its widget is on one line once.
     struct WidgetDesign
     {
@@ -81,6 +83,16 @@ namespace headsup
     bool MovePart(WidgetDesign& design, int fromLine, size_t from, int toLine, size_t at);
     // False, and nothing changed, for the last part on, unless pillShows: another widget of its pill has a part on.
     bool TurnOff(WidgetDesign& design, WidgetPart part, bool pillShows);
+
+    // The Status Timers' two lines of status ids: every status ever pinned, where it was last put; the pinned show.
+    using StatusDesign = std::array<std::vector<uint16_t>, kDesignLines>;
+    // Each pin the design lacks at the end of the line holding fewer of the pins, the first on a tie.
+    void PlacePins(StatusDesign& design, const std::vector<uint16_t>& pins);
+    // The pins as the design places them, a pin it lacks as PlacePins would.
+    StatusDesign PinnedLines(const StatusDesign& design, const std::vector<uint16_t>& pins);
+    // The status moved to toLine before the status before, or to its end when before is not there. False when nothing
+    // moved or the design lacks it.
+    bool MoveStatus(StatusDesign& design, uint16_t status, int toLine, std::optional<uint16_t> before);
 
     // What a part shows now: nothing when it has nothing to say.
     struct PartContent

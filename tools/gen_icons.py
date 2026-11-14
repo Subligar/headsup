@@ -57,6 +57,7 @@ ICONS = [(name, f'third_party/mobdb-icons/{name}.png', '') for name in
     ('UnknownStatus', 'resources/icons/status/XIView/unknown.png', 'a status with no icon in its pack or the game'),
     ('Gil', 'third_party/xiui-icons/gil.png', "gil's coins"),
     ('LinkDead', 'resources/icons/link_dead.png', "a player timing out, the game's red circle (R0)"),
+    ('HomePoint', 'resources/icons/home_point.png', "the Home Point widget's crystal"),
 ]
 # Each folder here is a pack of status icons, each named by its status id, as XIUI's are.
 STATUS_PACKS = 'resources/icons/status'

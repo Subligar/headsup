@@ -92,6 +92,8 @@ namespace
     constexpr double kSeedsPerSecond   = 1000.0; // a Case's seed is the time in milliseconds
     // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
     constexpr const char* kVersion           = "0.5.4";
+    // Before the addon host (LinuxXI's -1000 is seen to be), so an addon that skips blocked packets misses Auto-Check's.
+    constexpr int32_t kPriority              = -1000;
     constexpr const char* kConfigAlias       = "headsup";
     constexpr const char* kConfigFolder      = "config";
     constexpr const char* kWindowFile        = "settings_window.json"; // a developer's build reads one in its config folder
@@ -535,6 +537,7 @@ public:
         std::from_chars(kVersion, kVersion + std::strlen(kVersion), version);
         return version;
     }
+    int32_t GetPriority(void) const override { return kPriority; }
     uint32_t GetFlags(void) const override
     {
         return static_cast<uint32_t>(Ashita::PluginFlags::UseCommands | Ashita::PluginFlags::UseText |
@@ -2907,6 +2910,7 @@ private:
         s.weather = WeatherNow();
         s.owners   = m_GameState.Owners();
         s.shares   = m_GameState.Shares();
+        s.homePoint  = m_AshitaCore->GetMemoryManager()->GetPlayer()->GetHomepoint();
         s.pickedTabs = &m_BarInput.PickedTabs();
         s.scrolled   = &m_BarInput.Scrolled();
         s.pinRefused = m_BarInput.Refused();

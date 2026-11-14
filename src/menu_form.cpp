@@ -44,6 +44,9 @@ namespace headsup
         constexpr const char* kThemeNameBox = " name";  // and the box the pencil opens
         // A designer chip's name on a line and, for a created widget, in the lists, before its widget's slot and its part.
         constexpr const char* kPartChip = "part ", *kListedPartChip = "lpart ";
+        // The Status Timers designer's chip, before its widget's slot and its status.
+        constexpr const char* kStatusChip = "pin ";
+        constexpr size_t kFewestPinsToDesign = 2; // one pin has nowhere to move
         // A Pop-out Designer chip's name in a row and in the lists, before its widget's slot and its card.
         constexpr const char* kCardChip = "card ", *kListedCardChip = "pcard ";
         constexpr int kFirstSense = static_cast<int>(DetectionIcon::Link); // Detection Icons' first, after the aggression
@@ -815,6 +818,50 @@ namespace headsup
             form.Raw("</div>");
         }
 
+        // The Status Timers' pinned statuses as chips on its two lines, each named after its status: a chip drags within
+        // its line or to the other, before the chip it is dropped on or to the end.
+        void StatusDesigner(Context& c, PanelWidget widget)
+        {
+            Form& form      = c.form;
+            StatusDesign& d = c.s.Widget(widget).pinDesign;
+            const std::string base = kStatusChip + std::to_string(SlotOf(widget)), chipStart = form.Named(base) + "-";
+            struct Move
+            {
+                uint16_t status;
+                int line;
+                std::optional<uint16_t> before;
+            };
+            std::optional<Move> move; // applied after the lines are written, as the Widget Designer's
+            const auto dropped = [&](const std::string& target, int line, std::optional<uint16_t> before) {
+                const FormEvent* event = form.Took(target, kDropEvent);
+                if (event == nullptr || event->value.compare(0, chipStart.size(), chipStart) != 0) return;
+                const unsigned long status = std::strtoul(event->value.c_str() + chipStart.size(), nullptr, 10);
+                if (status <= UINT16_MAX) move = Move{static_cast<uint16_t>(status), line, before};
+            };
+            const StatusDesign lines = PinnedLines(d, c.s.statusPins);
+            form.Raw("<div class=\"design\">");
+            for (int line = 0; line < kDesignLines; ++line)
+            {
+                form.Raw(std::string("<div class=\"tray ") + kDesignLineClass + "\">");
+                for (const uint16_t status : lines[static_cast<size_t>(line)])
+                {
+                    const std::string id = form.Id(base + " " + std::to_string(status));
+                    form.Raw(std::string("<div class=\"btn raised wchip ") + kDesignChipClass + " drag\" id=\"" + id + "\">" +
+                             EscapedRml(StatusName(status)) + "</div>");
+                    form.Set(id, FormValueKind::Class, "on", {}, true);
+                    form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
+                    dropped(id, line, status);
+                }
+                const std::string end = form.Id(base + " end " + std::to_string(line));
+                form.Raw("<div class=\"tray-end\" id=\"" + end + "\"></div></div>");
+                dropped(end, line, std::nullopt);
+            }
+            form.Raw("</div>");
+            if (!move) return;
+            PlacePins(d, c.s.statusPins); // as they show
+            if (MoveStatus(d, move->status, move->line, move->before)) form.changed = true;
+        }
+
         // A widget's pop-out as rows of chips, a card each, then the list of the cards it does not show of the widget
         // picked: a chip drags within its row, to another, or onto the empty row after them for a new one; a row's chip
         // let go off every row leaves the pop-out. A row of kMostCardsInRow takes no other card; trying says so under the
@@ -925,9 +972,9 @@ namespace headsup
                     (which == WidgetTabsRow::PopupDesign) != (c.state.editSide == EditSide::Popup))
                     continue;
                 const std::string label = Labeled(row.name, row.key, scope);
-                // A tip shared by every widget, naming this one's default.
+                // The tip, naming this widget's own default.
                 const auto ownDefault = [&] {
-                    return Filled(Said(row.tip), kDefaultMark, WidgetDefaultText(c.layout, static_cast<WidgetTabsRow>(row.row), widget));
+                    return Filled(Said(row.tip), kDefaultMark, WidgetDefaultText(c.layout, which, widget, c.readings.today));
                 };
                 // A look of its own on a slider whose step under lowest is the Top Panel's.
                 const auto ownSlider = [&](std::optional<int>& own, int lowest, int highest, FunctionRef<std::string(int)> shown) {
@@ -941,7 +988,7 @@ namespace headsup
                 const auto alignRow = [&](WidgetPart part, Align& align) {
                     if (kind != BarWidget::Job || !PartOn(o.design, part)) return;
                     const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Align));
-                    form.Segments(label.c_str(), align, names.data(), kAlignCount, row.tip);
+                    form.Segments(label.c_str(), align, names.data(), kAlignCount, ownDefault().c_str());
                 };
                 form.Fade(off);
                 switch (which)
@@ -1028,7 +1075,7 @@ namespace headsup
                         int use = static_cast<int>(o.weatherIcons);
                         form.NumberDropdown(label.c_str(), use, 0, kCustomIconsCount - 1,
                             [&](int i) { return std::string(c.layout.OptionsOf(WindowList::CustomIcons)[static_cast<size_t>(i)].name); },
-                            row.tip);
+                            ownDefault().c_str());
                         o.weatherIcons = static_cast<CustomIcons>(use);
                     }
                     break;
@@ -1055,7 +1102,7 @@ namespace headsup
                         const auto at = std::ranges::find(bags, bag);
                         int choice    = at != bags.end() ? static_cast<int>(at - bags.begin()) : 0;
                         form.NumberDropdown(label.c_str(), choice, 0, static_cast<int>(bags.size()) - 1,
-                            [&](int i) { return ContainerName(bags[static_cast<size_t>(i)]); }, row.tip);
+                            [&](int i) { return ContainerName(bags[static_cast<size_t>(i)]); }, ownDefault().c_str());
                         bag = bags[static_cast<size_t>(choice)];
                     }
                     break;
@@ -1084,12 +1131,12 @@ namespace headsup
                         // Each format as today reads in it.
                         int format = static_cast<int>(o.dateFormat);
                         form.NumberDropdown(label.c_str(), format, 0, kDateFormatCount - 1,
-                            [&](int i) { return DateText(static_cast<DateFormat>(i), c.readings.today); }, row.tip);
+                            [&](int i) { return DateText(static_cast<DateFormat>(i), c.readings.today); }, ownDefault().c_str());
                         o.dateFormat = static_cast<DateFormat>(format);
                     }
                     break;
                 case WidgetTabsRow::ShowZoneId:
-                    if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, row.tip);
+                    if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, ownDefault().c_str());
                     break;
                 case WidgetTabsRow::Icon:
                     // Named after its widget's icon, as the Widget Designer's button for it was.
@@ -1128,8 +1175,16 @@ namespace headsup
                     break;
                 case WidgetTabsRow::Design:
                     // the Widget Designer's description
-                    form.Note(kind == BarWidget::StatusTimers ? Word(c, WindowWord::WidgetTabsDesignStatusTimers) : row.tip);
-                    Designer(c, widget);
+                    if (kind != BarWidget::StatusTimers)
+                    {
+                        form.Note(row.tip);
+                        Designer(c, widget);
+                    }
+                    else if (s.statusPins.size() >= kFewestPinsToDesign)
+                    {
+                        form.Note(Word(c, WindowWord::WidgetTabsDesignStatusTimers));
+                        StatusDesigner(c, widget);
+                    }
                     break;
                 case WidgetTabsRow::PopupDesign:
                     if (kind != BarWidget::Custom) break;
@@ -1143,7 +1198,7 @@ namespace headsup
                         int text = o.expBarText ? static_cast<int>(*o.expBarText) + 1 : 0;
                         form.NumberDropdown(label.c_str(), text, 0, kExpTextCount,
                             [&](int i) { return std::string(c.layout.OptionsOf(WindowList::ExpBarText)[static_cast<size_t>(i)].name); },
-                            row.tip);
+                            ownDefault().c_str());
                         o.expBarText = text == 0 ? std::nullopt : std::optional(static_cast<ExpText>(text - 1));
                     }
                     break;
@@ -1153,7 +1208,7 @@ namespace headsup
                         int text = static_cast<int>(o.jobText);
                         form.NumberDropdown(label.c_str(), text, 0, kJobTextCount - 1,
                             [&](int i) { return std::string(c.layout.OptionsOf(WindowList::JobText)[static_cast<size_t>(i)].name); },
-                            row.tip);
+                            ownDefault().c_str());
                         o.jobText = static_cast<JobText>(text);
                     }
                     break;
@@ -1175,15 +1230,15 @@ namespace headsup
                     break;
                 case WidgetTabsRow::BarWidth:
                     if (bar)
-                        form.SliderInt(label.c_str(), o.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth, Pixels, row.tip);
+                        form.SliderInt(label.c_str(), o.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth, Pixels, ownDefault().c_str());
                     break;
                 case WidgetTabsRow::BarHeight:
                     if (bar)
-                        form.SliderInt(label.c_str(), o.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight, Pixels, row.tip);
+                        form.SliderInt(label.c_str(), o.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight, Pixels, ownDefault().c_str());
                     break;
                 case WidgetTabsRow::MemText:
                     if (kind == BarWidget::Performance && PartOn(o.design, WidgetPart::PerfMemory))
-                        form.Switch(label.c_str(), o.memText, row.tip);
+                        form.Switch(label.c_str(), o.memText, ownDefault().c_str());
                     break;
                 case WidgetTabsRow::OwnLooks:
                     overrides = HasOwnLooks(kind) && form.Fold(label.c_str());
@@ -1252,7 +1307,7 @@ namespace headsup
                         int display = static_cast<int>(o.statusDisplay);
                         form.NumberDropdown(label.c_str(), display, 0, kStatusDisplayCount - 1,
                             [&](int i) { return std::string(c.layout.OptionsOf(WindowList::StatusDisplay)[static_cast<size_t>(i)].name); },
-                            row.tip);
+                            ownDefault().c_str());
                         o.statusDisplay = static_cast<StatusDisplay>(display);
                     }
                     break;
@@ -2772,15 +2827,34 @@ namespace headsup
         }
     }
 
-    std::string WidgetDefaultText(const WindowLayout& layout, WidgetTabsRow row, PanelWidget widget)
+    std::string WidgetDefaultText(const WindowLayout& layout, WidgetTabsRow row, PanelWidget widget, CalendarDay today)
     {
         static const Settings defaults = DefaultSettings();
         const headsup::WidgetOptions& o = defaults.Widget(widget);
+        const auto option = [&](headsup::WindowList list, auto value) { return layout.OptionsOf(list)[static_cast<size_t>(value)].name; };
+        const auto onOff  = [&](bool on) { return layout.WordOf(on ? WindowWord::SwitchOn : WindowWord::SwitchOff).name; };
         switch (row)
         {
-        case WidgetTabsRow::Icon: return layout.OptionsOf(WindowList::IconSides)[static_cast<size_t>(o.iconSide)].name;
-        case WidgetTabsRow::Alignment: return layout.OptionsOf(WindowList::WidgetAligns)[static_cast<size_t>(o.align)].name;
+        case WidgetTabsRow::Icon: return option(WindowList::IconSides, o.iconSide);
+        case WidgetTabsRow::Alignment: return option(WindowList::WidgetAligns, o.align);
         case WidgetTabsRow::LinkedPadding: return Pixels(o.linkPadding);
+        case WidgetTabsRow::ShowZoneId: return onOff(o.zoneId);
+        case WidgetTabsRow::MemText: return onOff(o.memText);
+        case WidgetTabsRow::StatusDisplay: return option(WindowList::StatusDisplay, o.statusDisplay);
+        case WidgetTabsRow::CustomIcons: return option(WindowList::CustomIcons, o.weatherIcons);
+        case WidgetTabsRow::Bag1: return ContainerName(o.bag);
+        case WidgetTabsRow::Bag2: return ContainerName(o.secondBag);
+        case WidgetTabsRow::DateFormat: return DateText(o.dateFormat, today);
+        // The EXP Bar's text list starts with None.
+        case WidgetTabsRow::BarText: return option(WindowList::ExpBarText, o.expBarText ? static_cast<int>(*o.expBarText) + 1 : 0);
+        case WidgetTabsRow::JobText: return option(WindowList::JobText, o.jobText);
+        case WidgetTabsRow::BarWidth: return Pixels(o.expBarWidth);
+        case WidgetTabsRow::BarHeight: return Pixels(o.expBarHeight);
+        case WidgetTabsRow::BarTextAlign: return option(WindowList::Align, o.expBarTextAlign);
+        case WidgetTabsRow::JobTextAlign: return option(WindowList::Align, o.jobInfoAlign);
+        case WidgetTabsRow::EarnedAlign: return option(WindowList::Align, o.earnedAlign);
+        case WidgetTabsRow::TnlAlign: return option(WindowList::Align, o.toNextAlign);
+        case WidgetTabsRow::PercentAlign: return option(WindowList::Align, o.percentAlign);
         default: return {};
         }
     }

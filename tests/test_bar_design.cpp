@@ -41,6 +41,9 @@ TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
     CHECK(IconPartOf(BarWidget::Currency) == std::optional(WidgetPart::CurrencyCoin));
     CHECK(IconPartOf(BarWidget::Bags) == std::optional(WidgetPart::BagIcon));
     CHECK(IconPartOf(BarWidget::EarthTime) == std::optional(WidgetPart::ClockIcon));
+    CHECK(IconPartOf(BarWidget::HomePoint) == std::optional(WidgetPart::HomePointIcon));
+    CHECK(WidgetOfPart(WidgetPart::HomePointIcon) == BarWidget::HomePoint);
+    CHECK_EQ(DesignText(BarWidget::HomePoint, DefaultDesign(BarWidget::HomePoint)), "name |");
     CHECK(!IconPartOf(BarWidget::Performance) && !IconPartOf(BarWidget::GameHelp));
     for (int k = 0; k < kBarWidgetCount; ++k)
     {
@@ -201,7 +204,8 @@ TEST(every_pop_out_card_is_one_widgets_and_saves_by_a_name_of_its_own)
     {
         const auto kind = static_cast<BarWidget>(k);
         const std::vector<CardKind> cards = CardsOf(kind);
-        CHECK_EQ(cards.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings || kind == BarWidget::Custom);
+        CHECK_EQ(cards.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings || kind == BarWidget::HomePoint ||
+                                    kind == BarWidget::Custom);
         for (const CardKind card : cards)
             CHECK(WidgetOfCard(card) == kind);
         listed += cards.size();
@@ -341,4 +345,44 @@ TEST(a_part_put_into_a_line_is_on_and_one_taken_out_goes_unless_it_is_the_last_o
     CHECK(TakePart(d, WidgetPart::Bag1Count, false)); // off, it goes whatever is left
     CHECK(!TakePart(d, WidgetPart::CustomName, false)); // the last on stays
     CHECK(TakePart(d, WidgetPart::CustomName, true) && PartsIn(d).empty()); // unless another of its pill shows
+}
+
+TEST(each_new_pin_goes_to_the_end_of_the_line_with_fewer_pins_the_first_on_a_tie)
+{
+    // Six pins into an empty design come out as the Pinned Status #1 to #6 buttons were placed: 1 3 5 | 2 4 6.
+    StatusDesign d;
+    PlacePins(d, {1, 2, 3, 4, 5, 6});
+    CHECK((d == StatusDesign{std::vector<uint16_t>{1, 3, 5}, {2, 4, 6}}));
+    // One the design holds stays where it is; only those pinned now count toward a line's share.
+    d = {std::vector<uint16_t>{10, 11, 12}, {20, 21}};
+    PlacePins(d, {20, 21, 12, 30});
+    CHECK((d == StatusDesign{std::vector<uint16_t>{10, 11, 12, 30}, {20, 21}}));
+    PlacePins(d, {20, 21, 12, 30, 40, 50});
+    CHECK((d == StatusDesign{std::vector<uint16_t>{10, 11, 12, 30, 40}, {20, 21, 50}}));
+}
+
+TEST(only_the_pinned_statuses_show_and_one_unpinned_keeps_its_place_for_its_next_pin)
+{
+    const StatusDesign d{std::vector<uint16_t>{40, 253, 41}, {33}};
+    CHECK((PinnedLines(d, {33, 41}) == StatusDesign{std::vector<uint16_t>{41}, {33}}));
+    CHECK((PinnedLines(d, {33, 41, 253}) == StatusDesign{std::vector<uint16_t>{253, 41}, {33}}));
+    // A pin the design lacks shows where PlacePins would put it.
+    CHECK((PinnedLines(StatusDesign{}, {40, 33, 253}) == StatusDesign{std::vector<uint16_t>{40, 253}, {33}}));
+}
+
+TEST(a_status_moves_before_another_or_to_a_lines_end_and_nowhere_else)
+{
+    StatusDesign d{std::vector<uint16_t>{40, 253}, {33}};
+    CHECK(MoveStatus(d, 33, 0, 40)); // Haste before Protect
+    CHECK((d == StatusDesign{std::vector<uint16_t>{33, 40, 253}, {}}));
+    CHECK(MoveStatus(d, 33, 1, std::nullopt)); // and to the end of the second line
+    CHECK((d == StatusDesign{std::vector<uint16_t>{40, 253}, {33}}));
+    CHECK(MoveStatus(d, 40, 0, std::nullopt)); // Protect to the end of its own line
+    CHECK((d == StatusDesign{std::vector<uint16_t>{253, 40}, {33}}));
+    CHECK(!MoveStatus(d, 40, 0, 40));           // onto itself
+    CHECK(!MoveStatus(d, 253, 0, 40));          // just before the one after it
+    CHECK(!MoveStatus(d, 40, 0, std::nullopt)); // to the end it is at
+    CHECK(!MoveStatus(d, 41, 0, 40));           // one the design lacks
+    CHECK(!MoveStatus(d, 40, kDesignLines, std::nullopt));
+    CHECK((d == StatusDesign{std::vector<uint16_t>{253, 40}, {33}}));
 }
