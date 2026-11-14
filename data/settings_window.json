@@ -1484,8 +1484,8 @@
       "key": "icon-sides",
       "options": [
         {"name": "Hide"},
-        {"name": "Show on Left"},
-        {"name": "Show on Right"}
+        {"name": "On Left"},
+        {"name": "On Right"}
       ]
     },
     {
