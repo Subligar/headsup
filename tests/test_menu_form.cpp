@@ -200,19 +200,17 @@ TEST(a_pages_controls_change_the_settings_they_show)
     CHECK(w.settings.showBar && w.settings.barHeight == 45);
     const Form form = w.Pass({{"toppanel-top-panel-height", kChangeEvent, "52"}});
     CHECK(form.changed && w.settings.barHeight == 52);
-    // Show Separator's Never clears the rest; another check then takes Never off.
+    // Show Separator picks one of Never, Between Widgets, At Ends and Both, and nothing else with it.
     const std::string separators = "toppanel-top-panel-show-separator";
     CHECK_EQ(w.settings.panelSeparators, kAllSeparators);
-    w.Pass({{separators, kClickEvent, ""}});
-    w.Pass({{separators + "-o-0", kClickEvent, ""}});
-    CHECK_EQ(w.settings.panelSeparators, 0);
-    w.Pass({{separators + "-o-0", kClickEvent, ""}}); // Never stays while nothing else is checked
-    CHECK_EQ(w.settings.panelSeparators, 0);
-    w.Pass({{separators + "-o-2", kClickEvent, ""}});
-    CHECK_EQ(w.settings.panelSeparators, static_cast<int>(SeparatorBit(Separator::EndCaps)));
-    w.Pass({{separators + "-o-1", kClickEvent, ""}});
-    CHECK_EQ(w.settings.panelSeparators, kAllSeparators);
-    w.Pass({{separators, kClickEvent, ""}});
+    const std::pair<int, int> picks[] = {{0, 0}, {2, SeparatorBit(Separator::EndCaps)}, {1, SeparatorBit(Separator::Between)},
+        {3, kAllSeparators}};
+    for (const auto& [option, separators_] : picks)
+    {
+        w.Pass({{separators, kClickEvent, ""}});
+        w.Pass({{separators + "-o-" + std::to_string(option), kClickEvent, ""}});
+        CHECK_EQ(w.settings.panelSeparators, separators_);
+    }
     // With the panel switched off by its card's checkbox, its settings are faint and take nothing.
     const Form off = w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}, {"toppanel-top-panel-height", kChangeEvent, "30"}});
     CHECK(off.changed && !w.settings.showBar && w.settings.barHeight == 52);
@@ -226,6 +224,24 @@ TEST(a_pages_controls_change_the_settings_they_show)
     w.state.page = Page::TopPanel;
     w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}});
     CHECK(w.settings.showBar);
+}
+
+// Round 23: "Ensure existing settings are properly transferred" from the list of checks to the one pick.
+TEST(show_separators_list_opens_on_what_a_file_saved_by_its_checks_shows)
+{
+    // The checks saved their bits: none, Between Widgets', End Caps' or both.
+    const std::pair<int, int> saved[] = {{0, 0}, {SeparatorBit(Separator::Between), 1}, {SeparatorBit(Separator::EndCaps), 2},
+        {kAllSeparators, 3}};
+    for (const auto& [bits, option] : saved)
+    {
+        Window w;
+        w.settings.panelSeparators = bits;
+        w.state.page               = Page::TopPanel;
+        const std::string id = "toppanel-top-panel-show-separator";
+        const Form open      = w.Pass({{id, kClickEvent, ""}});
+        for (int o = 0; o < 4; ++o)
+            CHECK_EQ(ClassOn(open, (id + "-o-" + std::to_string(o)).c_str(), "picked"), o == option);
+    }
 }
 
 TEST(a_created_widget_goes_by_its_name_on_its_chip_in_link_widgets_list_and_over_its_settings)

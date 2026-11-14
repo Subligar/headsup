@@ -2183,15 +2183,11 @@ namespace headsup
                 form.Switch(label.c_str(), s.widgetBackground, tip);
                 break;
             case SettingPiece::ShowSeparator:
-            {
-                // Never is the first check, on alone when nothing else is; picking it clears the rest.
+                // Never, Between Widgets, At Ends and Both are the separators' bits in order, as files saved them.
+                static_assert(SeparatorBit(Separator::Between) == 1 && SeparatorBit(Separator::EndCaps) == 2);
                 form.Fade(!BarOn(s));
-                const uint32_t shown = s.panelSeparators == 0 ? 1u : static_cast<uint32_t>(s.panelSeparators) << 1;
-                uint32_t bits        = shown;
-                form.BitsDropdown(label.c_str(), bits, c.layout.OptionsOf(e), tip);
-                if (bits != shown) s.panelSeparators = (bits & ~shown & 1u) != 0 ? 0 : static_cast<int>(bits >> 1);
+                OptionsDropdown(form, label, s.panelSeparators, c.layout.OptionsOf(e), tip);
                 break;
-            }
             case SettingPiece::TitleFont:
                 form.Fade(!BarOn(s));
                 form.FontDropdown(label.c_str(), s.barTitleFont, c.fonts, tip, Word(c, WindowWord::Themes));

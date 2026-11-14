@@ -98,9 +98,10 @@
               "name": "Show Separator",
               "tip": "Where the top panel shows its separators, whatever the theme. Separator Style on the Theme page picks their shape. Default: Never.",
               "options": [
-                {"name": "Never", "tip": "No separators. Picking it clears the others."},
+                {"name": "Never", "tip": "No separators."},
                 {"name": "Between Widgets", "tip": "A separator between each widget and the next."},
-                {"name": "End Caps", "tip": "A separator at the far left and far right of the top panel."}
+                {"name": "At Ends", "tip": "A separator at the far left and far right of the top panel."},
+                {"name": "Both", "tip": "A separator between each widget and the next, and at both ends of the top panel."}
               ]
             },
             {"key": "height", "name": "Panel Height", "tip": "How tall the top panel is. The text and icons of every widget grow and shrink with it."},
