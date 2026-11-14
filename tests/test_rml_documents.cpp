@@ -1381,6 +1381,7 @@ TEST(a_widgets_icon_stands_on_the_middle_of_its_lone_lines_figures_as_a_clock_ti
     o.design              = DesignFrom(BarWidget::EarthTime, "time | -server -vana -date");
     o.clock24             = true;
     o.clockSeconds        = false;
+    o.iconSide            = IconSide::Left;
     const BarPalette& p   = PaletteOf(BarTheme::Vanilla);
     const BarMetrics m    = MetricsFor(kBarHeight, p.shape, settings.barFontRatio, kDefaultPopupScale, settings.barIconScale);
     const char* font      = BarTitleFont(settings, p.shape);

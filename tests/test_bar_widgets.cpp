@@ -997,7 +997,7 @@ TEST(the_zone_says_who_holds_its_region_once_known)
     CHECK(Content(BarWidget::Zone, state, settings).picture == GamePicture::SanDoriaCrest);
 }
 
-TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
+TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all_and_the_clocks_starts_hidden)
 {
     Settings settings;
     BarState state;
@@ -1022,6 +1022,8 @@ TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
     // And the clock's.
     WidgetOptions& clock = settings.Widget(BarWidget::EarthTime);
     clock.on = true;
+    CHECK(Content(BarWidget::EarthTime, state, settings).icons.empty());
+    clock.iconSide = IconSide::Left;
     CHECK(Content(BarWidget::EarthTime, state, settings).icons == std::vector<Icon>{Icon::Clock});
     clock.iconSide = IconSide::Right;
     CHECK(Content(BarWidget::EarthTime, state, settings).iconsRight);

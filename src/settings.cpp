@@ -1567,6 +1567,7 @@ namespace headsup
         o.design     = DefaultDesign(widget.kind);
         if (widget.kind == BarWidget::Custom) o.name = CreatedWidgetName(widget);
         o.popup      = DefaultPopupDesign(widget.kind);
+        if (widget.kind == BarWidget::EarthTime) o.iconSide = IconSide::Hide;
         return o;
     }
 
