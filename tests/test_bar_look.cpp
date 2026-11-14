@@ -110,16 +110,16 @@ TEST(a_widgets_text_starts_after_its_icons_and_coin_each_with_a_gap)
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
     WidgetContent weather;
     weather.icons = {Icon::Lightning, Icon::Lightning};
-    CHECK(Near(look.Leading(weather), 2.0f * (0.65f * 34.0f + 7.65f))); // icons 65% of the pill's 34 px inside, gaps 0.17 H
+    CHECK(Near(look.Leading(weather), 2.0f * (0.85f * 34.0f + 7.65f))); // icons 85% of the pill's 34 px inside, gaps 0.17 H
     CHECK(Near(look.Leading(WidgetContent{}), 0.0f));
     // Gil's picture has an icon's room, as every icon.
     WidgetContent gil;
     gil.icons = {Icon::Gil};
-    CHECK(Near(look.Leading(gil), 0.65f * 34.0f + 7.65f));
+    CHECK(Near(look.Leading(gil), 0.85f * 34.0f + 7.65f));
     // A zone's crest has an icon's room (its adjustment draws it smaller inside it).
     WidgetContent zone;
     zone.picture = GamePicture::BastokCrest;
-    CHECK(Near(look.Leading(zone), 0.65f * 34.0f + 7.65f));
+    CHECK(Near(look.Leading(zone), 0.85f * 34.0f + 7.65f));
 }
 
 TEST(the_ornate_target_is_framed_and_a_lit_widget_tinted)

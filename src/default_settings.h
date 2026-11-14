@@ -18,7 +18,6 @@ barExpBarWidth=250.0000
 barGilDesign=amount1 icon1 -name1 | amount2 icon2 -name2
 barGilIcon=hide
 barHeight=40.0000
-barIconScale=80.0000
 barJobAlign=left
 barJobDesign=bar | jobs earned -tonext -percent
 barLeft=zone weather world statusTimers party homePoint

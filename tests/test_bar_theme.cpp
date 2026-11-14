@@ -86,8 +86,8 @@ TEST(the_themes_folder_lists_its_theme_files_by_name)
 TEST(sizes_follow_the_bar_height)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Ornate);
-    // An icon at 65% of the pill's inside: 29 px rounded, less a pixel of border a side.
-    CHECK(Near(m.height, 36.0f) && Near(m.title, 14.4f) && Near(m.subtitle, 12.0f) && Near(m.icon, 0.65f * 27.0f));
+    // An icon at 85% of the pill's inside: 29 px rounded, less a pixel of border a side.
+    CHECK(Near(m.height, 36.0f) && Near(m.title, 14.4f) && Near(m.subtitle, 12.0f) && Near(m.icon, 0.85f * 27.0f));
     // The pill leaves room above and below it for its text; the end cap, room either side of its diamond.
     CHECK(Near(m.pillHeight, 28.8f) && Near(m.cap, 23.04f));
     CHECK(Near(MetricsFor(36, BarShape::Pills).panelRadius, 0.28f * 12.0f / 0.39f) && Near(m.panelRadius, 0.11f * 12.0f / 0.39f));

@@ -96,8 +96,9 @@ namespace headsup
         const float popupText = kPopupTextPixels * popupTextScale, u = kPopupSpacingPixels / kPopupTextShare;
         const float title     = kTitleShare * h;
         const float pill      = kPillHeightShare * h;
+        const float iconShare = static_cast<float>(iconScale) / 100.0f;
         return BarMetrics{.height = h, .title = title, .subtitle = title / fontRatio,
-            .icon = static_cast<float>(iconScale) / 100.0f * (std::round(pill) - 2.0f * kPillBorder), .padding = kPaddingShare * h,
+            .icon = iconShare * (std::round(pill) - 2.0f * kPillBorder), .iconShare = iconShare, .padding = kPaddingShare * h,
             .gap = kGapShare * h, .cap = kCapShare * h, .diamond = kDiamondShare * h, .pillHeight = pill,
             .pillRadius = kPillRadiusShare * h, .below = kBelowShare * h, .popupText = popupText,
             .popupTitle = kPopupTitlePixels * popupTextScale, .heading = kPopupHeadingPixels * popupTextScale,

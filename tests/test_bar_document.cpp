@@ -592,6 +592,7 @@ TEST(a_title_alone_is_drawn_at_its_own_size_and_place)
     Settings settings;
     BarLook look     = LookOf(BarTheme::PhoenixGold, settings);
     look.lines.alone = 18; // a short row: two lines at 13 and 11 px, a line alone larger
+    look.metrics.iconShare = 1.0f; // icons in a line as tall as its letters
     BarTextPlace place = Place();
     place.alone        = BarLinePlace{22, 11.0f, 2.0f};
     const std::string rml = BarDocument(look, place);
@@ -627,7 +628,8 @@ TEST(a_widget_of_cells_lays_each_in_its_column_a_gap_apart)
 TEST(a_widget_of_cells_on_two_lines_draws_its_top_line_at_the_detail_size_so_its_pictures_match)
 {
     Settings settings;
-    const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
+    BarLook look           = LookOf(BarTheme::PhoenixGold, settings);
+    look.metrics.iconShare = 1.0f; // icons in a line as tall as its letters
     WidgetContent c;
     c.shown    = true;
     c.cells    = true;

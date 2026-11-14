@@ -489,30 +489,35 @@ namespace headsup
     {
         // The rules of a widget's lines in its fonts and on its rows, each selector after scope.
         std::string TextRules(const std::string& scope, const char* titleFont, const char* detailFont, const TextRow& lines,
-            const BarTextPlace& place, float rowTop)
+            const BarTextPlace& place, float rowTop, float iconShare)
         {
-            auto square = [](float size) { return "width:" + Px(size) + ";height:" + Px(size) + ";"; };
+            const auto side = [&](int line) { return LineIconSide(static_cast<float>(line), iconShare); };
+            // It takes no height of its line, or one larger than its line would push the line under it down.
+            auto square = [&](int line) {
+                return "width:" + Px(side(line)) + ";height:" + Px(side(line)) + ";margin-bottom:" + Px(-side(line)) + ";";
+            };
+            // A line's iconDrop is for an icon of the room's size: one of another size moves to stay on its middle.
+            const auto drop = [&](const BarLinePlace& at, int room, int line) {
+                return "margin-top:" + Px(at.iconDrop + std::round((static_cast<float>(room) - side(line)) / 2.0f)) + ";";
+            };
             std::string css;
             css += scope + ".title{" + LineRules(titleFont, lines.title, place.title, rowTop) + "}";
             css += scope + ".title.alone{" + LineRules(titleFont, lines.alone, place.alone, rowTop) + "}";
             css += scope + ".title.figures{" + LineRules(detailFont, lines.title, place.figures, rowTop) + "}";
             css += scope + ".title.figures.alone{" + LineRules(detailFont, lines.alone, place.figuresAlone, rowTop) + "}";
-            css += scope + ".title .line-icon{" + square(static_cast<float>(lines.title)) + "margin-top:" + Px(place.title.iconDrop) + ";}";
-            css += scope + ".title.alone .line-icon{" + square(static_cast<float>(lines.alone)) + "margin-top:" + Px(place.alone.iconDrop) + ";}";
-            css += scope + ".title.figures .line-icon{margin-top:" + Px(place.figures.iconDrop) + ";}";
-            css += scope + ".title.figures.alone .line-icon{margin-top:" + Px(place.figuresAlone.iconDrop) + ";}";
+            css += scope + ".title .line-icon{" + square(lines.title) + drop(place.title, lines.title, lines.title) + "}";
+            css += scope + ".title.alone .line-icon{" + square(lines.alone) + drop(place.alone, lines.alone, lines.alone) + "}";
+            css += scope + ".title.figures .line-icon{" + drop(place.figures, lines.title, lines.title) + "}";
+            css += scope + ".title.figures.alone .line-icon{" + drop(place.figuresAlone, lines.alone, lines.alone) + "}";
             const float underTitle   = std::round(place.title.top) + static_cast<float>(place.title.height);
             const float underFigures = std::round(place.figures.top) + static_cast<float>(place.figures.height);
             css += scope + ".detail{" + LineRules(detailFont, lines.detail, place.detail, underTitle) + "}";
             css += scope + ".detail.fig{margin-top:" + Px(std::round(place.detail.top) - underFigures) + ";}";
-            css += scope + ".detail .line-icon{" + square(static_cast<float>(lines.detail)) + "margin-top:" +
-                   Px(place.detail.iconDrop) + ";}";
+            css += scope + ".detail .line-icon{" + square(lines.detail) + drop(place.detail, lines.detail, lines.detail) + "}";
             // A widget of cells draws its top line at the detail size too, so a picture is as big on either line.
-            const float smaller = std::round(static_cast<float>(lines.title - lines.detail) / 2.0f);
             css += scope + ".title.cells{font-size:" + Px(static_cast<float>(lines.detail)) + ";}";
-            css += scope + ".title.cells .line-icon{" + square(static_cast<float>(lines.detail)) + "margin-top:" +
-                   Px(place.title.iconDrop + smaller) + ";}";
-            css += scope + ".title.figures.cells .line-icon{margin-top:" + Px(place.figures.iconDrop + smaller) + ";}";
+            css += scope + ".title.cells .line-icon{" + square(lines.detail) + drop(place.title, lines.title, lines.detail) + "}";
+            css += scope + ".title.figures.cells .line-icon{" + drop(place.figures, lines.title, lines.detail) + "}";
             // An EXP bar's middle on its line's capitals.
             for (const auto& [line, at] : {std::pair{".title", &place.title}, std::pair{".title.alone", &place.alone},
                      std::pair{".title.figures", &place.figures}, std::pair{".title.figures.alone", &place.figuresAlone},
@@ -619,11 +624,11 @@ namespace headsup
         css += ".line-icon{margin-left:" + Px(kLineIconGap) + ";}";
         css += ".smark{position:relative;}"; // a status's icon and its background, placed inside it
         css += ".line-icon.pic{margin-left:" + Px(kPictureGap) + ";}";
-        css += TextRules("", look.titleFont, look.detailFont, lines, place, rowTop);
+        css += TextRules("", look.titleFont, look.detailFont, lines, place, rowTop, m.iconShare);
         for (const WidgetText& text : own)
         {
             const std::string scope = "#" + WidgetId(text.widget) + " ";
-            css += TextRules(scope, text.titleFont, text.detailFont, text.lines, text.place, rowTop);
+            css += TextRules(scope, text.titleFont, text.detailFont, text.lines, text.place, rowTop, text.metrics.iconShare);
             css += scope + ".icon{" + icon(text.metrics.icon) + "}";
         }
         // An EXP bar among a line's text, taking no height of its line: its track from its capitals' middle up and down

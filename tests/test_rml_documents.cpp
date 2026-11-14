@@ -952,7 +952,8 @@ TEST(an_adjusted_icon_draws_moved_or_sized_in_its_own_room_in_the_bar_and_the_po
 TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its_background_sits_in_it_as_xiuis_does)
 {
     Settings settings;
-    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    BarLook look           = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    look.metrics.iconShare = 1.0f; // icons in a line as tall as its letters
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
         BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
     test::RmlSession rml;
@@ -1043,6 +1044,74 @@ TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its
     Rml::ElementList bareImages;
     popup->GetElementsByTagName(bareImages, "img");
     CHECK(near(box(bareImages[1])[2], box(bareImages[2])[2]) && near(box(bareImages[1])[3], box(bareImages[2])[3]));
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(icon_scale_sizes_the_icons_in_a_widgets_lines_on_each_lines_middle_as_the_bar_measures_them)
+{
+    Settings settings;
+    const BarPalette& p = PaletteOf(BarTheme::UmbraDark);
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    test::RmlSession rml;
+    struct Drawn
+    {
+        float top, height, width;
+    };
+    // A status on each of the Status Timers' lines, at the Top Panel's Icon Scale or the widget's own.
+    const auto drawn = [&](int barScale, std::optional<int> ownScale) {
+        BarLook look = LookOf(p, settings);
+        look.metrics = MetricsFor(kBarHeight, p.shape, kDefaultFontRatio, kDefaultPopupScale, barScale);
+        BarLook widgetLook = look;
+        std::vector<WidgetText> own;
+        if (ownScale)
+        {
+            widgetLook.metrics = MetricsFor(kBarHeight, p.shape, kDefaultFontRatio, kDefaultPopupScale, *ownScale);
+            own.push_back(WidgetText{BarWidget::StatusTimers, look.titleFont, look.detailFont, widgetLook.metrics, look.lines, place});
+        }
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, own), "bar");
+        bar->Show();
+        Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::StatusTimers));
+        widget->SetClass(kHiddenClass, false);
+        WidgetContent c;
+        c.shown = true;
+        Span top = Text(""), under = Text("");
+        top.status   = StatusMark{40, 0, false};
+        under.status = StatusMark{33, 1, false};
+        c.title      = {top, Text(" Protect")};
+        c.subtitle   = {under, Text(" Haste")};
+        widget->SetInnerRML(WidgetRml(c, widgetLook, {}));
+        rml.context->Update();
+        Rml::ElementList marks;
+        widget->GetElementsByClassName(marks, "smark");
+        std::array<Drawn, 2> boxes{};
+        CHECK_EQ(marks.size(), static_cast<size_t>(2));
+        for (size_t i = 0; i < std::min(marks.size(), boxes.size()); ++i)
+        {
+            const Rml::Vector2f size = marks[i]->GetBox().GetSize(Rml::BoxArea::Border);
+            boxes[i] = Drawn{marks[i]->GetAbsoluteOffset(Rml::BoxArea::Border).y, size.y, size.x};
+        }
+        // The bar makes room for each as it is drawn.
+        CHECK_EQ(MarkWidth(top, widgetLook.TitleFace(c)), kLineIconGap + boxes[0].width);
+        CHECK_EQ(MarkWidth(under, widgetLook.DetailFace()), kLineIconGap + boxes[1].width);
+        bar->Close();
+        return boxes;
+    };
+    const std::array<Drawn, 2> whole = drawn(100, std::nullopt);
+    const int sizes[] = {LookOf(p, settings).lines.title, LookOf(p, settings).lines.detail};
+    for (size_t i = 0; i < whole.size(); ++i)
+        CHECK_EQ(whole[i].height, static_cast<float>(sizes[i])); // at 100% an icon is as tall as its line
+    for (const int scale : {50, 150})
+    {
+        for (const std::array<Drawn, 2>& at : {drawn(scale, std::nullopt), drawn(100, scale)})
+            for (size_t i = 0; i < whole.size(); ++i)
+            {
+                CHECK_EQ(at[i].height, std::round(static_cast<float>(sizes[i]) * static_cast<float>(scale) / 100.0f));
+                CHECK_EQ(at[i].width, at[i].height);
+                // Still on its line's middle, to the half pixel its rounding leaves.
+                CHECK(std::fabs(at[i].top + at[i].height / 2.0f - (whole[i].top + whole[i].height / 2.0f)) <= 0.5f);
+            }
+    }
     CHECK_EQ(rml.Said(), "");
 }
 

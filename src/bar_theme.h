@@ -94,6 +94,7 @@ namespace headsup
         float title;        // the most, as FitTextRow makes both lines smaller when their ink would not fit
         float subtitle;     // the title over the Font Size Ratio: the most, as the title's is
         float icon;         // Icon Scale's share of the pill's inside
+        float iconShare;    // Icon Scale over 100, which an icon in a line is of its line's size
         float padding;      // inside a widget, left and right
         float gap;          // between pills, around the target, after a widget's icons and around a popup
         float cap;          // an ornate end cap's width, with clear space either side of its diamond

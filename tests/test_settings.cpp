@@ -1348,6 +1348,8 @@ TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges
     CHECK(s.popupWidthScale == kMaxPopupScale && s.popupHeightScale == 1.0f);
     store.values["popupWidthScale"] = "0.3";
     CHECK(LoadSettings(store).popupWidthScale == 1.0f);
+    store.values["barIconScale"] = "150";
+    CHECK(LoadSettings(store).barIconScale == 150);
     CHECK(s.barRounding == kMaxRounding && s.widgetRounding == 0 && s.popupRounding == kMaxRounding && s.sectionRounding == 12);
     CHECK(d.helpBarRounding == kThemeRounding && s.helpBarRounding == kMaxRounding);
 }

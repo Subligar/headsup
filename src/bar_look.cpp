@@ -161,10 +161,10 @@ namespace headsup
     TextFace BarLook::TitleFace(const WidgetContent& content) const
     {
         const auto size = static_cast<float>(content.subtitle.empty() ? lines.alone : lines.title);
-        return TextFace{content.figures ? detailFont : titleFont, size};
+        return TextFace{content.figures ? detailFont : titleFont, size, metrics.iconShare};
     }
 
-    TextFace BarLook::DetailFace() const { return TextFace{detailFont, static_cast<float>(lines.detail)}; }
+    TextFace BarLook::DetailFace() const { return TextFace{detailFont, static_cast<float>(lines.detail), metrics.iconShare}; }
 
     TextFace BarLook::FaceOf(PopupFont font) const
     {
@@ -202,9 +202,11 @@ namespace headsup
             .border = isTarget || lit ? palette.accent : palette.pillBorder};
     }
 
-    float MarkWidth(const Span& span, float size)
+    float LineIconSide(float size, float iconShare) { return std::round(size * iconShare); }
+
+    float MarkWidth(const Span& span, const TextFace& face)
     {
-        const float side = std::round(size);
+        const float side = LineIconSide(face.size, face.iconShare);
         return span.picture != GamePicture::None ? kPictureGap + side
                : span.icon || span.coin || span.item != 0 || span.status ? kLineIconGap + side
                : span.bar                        ? static_cast<float>(span.bar->width)
