@@ -42,6 +42,8 @@ namespace headsup
         constexpr uint32_t kWash = 0x59, kGlow = 0x66, kLine = 0xB3, kFocus = 0x99, kPickedStart = 0x47, kPickedEnd = 0x14;
         constexpr uint32_t kAuroraFrame = 0x40, kAuroraPopupFrame = 0x66; // the accent's alpha in Aurora's edges
         constexpr float kHeadLineGap = 0.2f; // from the title row down to the line of light under it
+        // A widget's settings section: its title row, and the collapse chip at its right with its sign's bars.
+        constexpr float kSectionHead = 2.0f, kSectionChip = 1.25f, kSectionSignArm = 0.6f, kSectionSignBar = 0.12f;
         constexpr const char* kEase  = " 0.16s cubic-out"; // a control between two of its looks
         constexpr const char* kSlide = " 0.18s cubic-out"; // a switch's knob and its track
 
@@ -217,14 +219,22 @@ namespace headsup
                ";margin:0px auto " + Em(kSpacing) + " auto;}";
         css += ".row.indent{margin-left:" + Em(kGutter) + ";}";
         css += ".caption{color:" + color(c.muted) + ";" + raised + "}";
-        // A fold: its arrow, then its title a gutter in.
-        css += ".fold{position:relative;height:" + frame + ";margin-bottom:" + Em(kSpacing) + ";}";
-        css += ".fold .arrow{left:0px;top:" + Em(kFrame / 2.0f - kArrow) + ";}";
-        css += ".fold .arrow.open{left:0px;top:" + Em(kFrame / 2.0f - kArrowDepth / 2.0f) + ";}";
-        css += ".fold-title{padding-left:" + Em(kGutter) + ";line-height:" + frame + ";color:" + color(c.label) + ";transition:color" + kEase + ";}";
-        css += ".fold:hover .fold-title{color:" + color(c.accent) + ";}";
-        css += ".fold:hover .arrow{border-left-color:" + color(c.text) + ";}";
-        css += ".fold:hover .arrow.open{border-left-color:transparent;border-top-color:" + color(c.text) + ";}";
+        // A widget's settings section, as a pop-out's card: its title, and the collapse chip with a minus or plus.
+        css += ".wsection{padding:0px " + Em(kCardPad) + " " + Em(kSpacing) + " " + Em(kCardPad) + ";margin-bottom:" +
+               Em(kSpacing) + ";background-color:" + color(c.card) + ";border:1px " + color(c.border) + ";border-radius:" +
+               Em(kCardRadius) + ";}";
+        css += ".wsection-head{position:relative;height:" + Em(kSectionHead) + ";}";
+        css += ".wsection-title{line-height:" + Em(kSectionHead / kCardTitleScale) + ";font-family:\"" + look.titleFont +
+               "\";font-size:" + Em(kCardTitleScale) + ";color:" + color(c.heading) + ";}";
+        css += ".wfold{position:absolute;right:0px;top:" + Em((kSectionHead - kSectionChip) / 2.0f) + ";width:" + Em(kSectionChip) +
+               ";height:" + Em(kSectionChip) + ";box-sizing:border-box;border:1px " + color(c.raisedEdge) + ";border-radius:" +
+               Em(kSectionChip / 2.0f) + ";background-color:" + color(c.control) + ";transition:background-color" + kEase + ";}";
+        css += ".wfold:hover{background-color:" + color(c.hover) + ";}";
+        css += ".wsign{position:absolute;left:" + Em((kSectionChip - kSectionSignArm) / 2.0f) + ";top:" +
+               Em((kSectionChip - kSectionSignBar) / 2.0f) + ";width:" + Em(kSectionSignArm) + ";height:" + Em(kSectionSignBar) +
+               ";background-color:" + color(c.text) + ";}";
+        css += ".wsign.up{left:" + Em((kSectionChip - kSectionSignBar) / 2.0f) + ";top:" + Em((kSectionChip - kSectionSignArm) / 2.0f) +
+               ";width:" + Em(kSectionSignBar) + ";height:" + Em(kSectionSignArm) + ";}";
         // A column's name over its controls.
         css += ".head{color:" + color(c.label) + ";" + raised + "text-align:center;}";
         css += ".line-name{color:" + color(c.label) + ";" + raised + "}";

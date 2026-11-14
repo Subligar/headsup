@@ -30,7 +30,8 @@ namespace headsup
         constexpr int kHexBase            = 16;
         constexpr const char* kNoteName      = "note";     // a note's id, as its card's controls are named
         constexpr const char* kCaptionSuffix = " caption"; // a caption's, after its text
-        constexpr const char* kFoldSuffix    = " fold";    // a fold's, after its title
+        constexpr const char* kFoldSuffix    = " fold";    // a section's collapse chip's, after its title
+        constexpr const char* kSectionSuffix = " section"; // a section's, after its title
         constexpr const char* kChannels[] = {"r", "g", "b", "a"};
         constexpr const char* kChannelNames[] = {"R", "G", "B", "A"};
         constexpr size_t kRgbChannels   = 3;
@@ -1137,15 +1138,39 @@ namespace headsup
         Set(chip, FormValueKind::Class, kOffClass, {}, m_Off);
     }
 
-    bool Form::Fold(const char* title)
+    bool Form::BeginSection(const char* title, bool folds)
     {
-        const std::string id = Id(std::string(title) + kFoldSuffix);
-        if (!m_Off && Clicked(id) && !m_State.unfolded.erase(id)) m_State.unfolded.insert(id);
-        const bool open = !m_Off && m_State.unfolded.contains(id);
-        Out() += "<div class=\"fold\" id=\"" + id + "\"><div class=\"arrow" + (open ? " open" : "") +
-                 "\"></div><div class=\"fold-title\">" + EscapedRml(LabelText(title)) + "</div></div>";
-        Set(id, FormValueKind::Class, kOffClass, {}, m_Off);
+        const std::string section = Id(std::string(title) + kSectionSuffix);
+        m_SectionAt     = Out().size();
+        m_SectionValues = values.size();
+        m_SectionFolds  = folds;
+        Out() += "<div class=\"wsection\" id=\"" + section + "\"><div class=\"wsection-head\"><div class=\"wsection-title\">" +
+                 EscapedRml(LabelText(title)) + "</div>";
+        Set(section, FormValueKind::Class, kOffClass, {}, m_Off);
+        bool open = true;
+        if (folds)
+        {
+            const std::string chip = Id(std::string(title) + kFoldSuffix);
+            if (!m_Off && Clicked(chip) && !m_State.unfolded.erase(chip)) m_State.unfolded.insert(chip);
+            open = !m_Off && m_State.unfolded.contains(chip);
+            // The pop-out's: a minus while open, a plus while shut.
+            Out() += "<div class=\"wfold\" id=\"" + chip + "\"><div class=\"wsign\"></div>" +
+                     (open ? "" : "<div class=\"wsign up\"></div>") + "</div>";
+        }
+        Out() += "</div>";
+        m_SectionBody = Out().size();
         return open;
+    }
+
+    void Form::EndSection()
+    {
+        if (Out().size() == m_SectionBody && !m_SectionFolds)
+        {
+            Out().resize(m_SectionAt);
+            values.resize(m_SectionValues);
+            return;
+        }
+        Out() += "</div>";
     }
 
     void Form::Caption(const char* text, const char* classes, float width)

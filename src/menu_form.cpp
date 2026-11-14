@@ -46,6 +46,7 @@ namespace headsup
         constexpr const char* kPartChip = "part ", *kListedPartChip = "lpart ";
         // The Status Timers designer's chip, before its widget's slot and its status.
         constexpr const char* kStatusChip = "pin ";
+        constexpr const char* kSettingsSectionKey = "settings"; // a widget's settings' section, after its designer
         constexpr size_t kFewestPinsToDesign = 2; // one pin has nowhere to move
         // A Pop-out Designer chip's name in a row and in the lists, before its widget's slot and its card.
         constexpr const char* kCardChip = "card ", *kListedCardChip = "pcard ";
@@ -959,29 +960,31 @@ namespace headsup
             const bool off = !BarOn(s) || !o.on;
             // Its pill's spacing, background, rounding and pop-out are its first widget's, set there alone.
             const bool pillLooks = HasOwnLooks(kind) && Panel(s).group[SlotOf(widget)] == widget;
-            const char* topPanel = Word(c, WindowWord::WidgetTabsTopPanel);
-            bool overrides = false; // the Overrides fold is open: its rows follow it
+            // An override at the Top Panel's step, with what the Top Panel has now.
+            const auto unchanged = [&](const std::string& panel) {
+                return Words(Word(c, WindowWord::WidgetTabsUnchanged)) + " (" + panel + ")";
+            };
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
             const std::string scope = std::string(" ") + BarWidgetName(kind) + (widget.copy > 0 ? " " + std::to_string(widget.copy + 1) : "");
-            for (const LayoutRow& row : c.layout.RowsOf(e))
-            {
+            const auto show = [&](const LayoutRow& row) {
                 const auto which = static_cast<WidgetTabsRow>(row.row);
                 // A created widget's rows are its Name, the Edit choice, then one side's: the Pop-out Designer, or all the
                 // rest. The pick is read here, as a press on it lands in this pass.
                 if (created && which != WidgetTabsRow::Name && which != WidgetTabsRow::Edit &&
                     (which == WidgetTabsRow::PopupDesign) != (c.state.editSide == EditSide::Popup))
-                    continue;
+                    return;
                 const std::string label = Labeled(row.name, row.key, scope);
                 // The tip, naming this widget's own default.
                 const auto ownDefault = [&] {
                     return Filled(Said(row.tip), kDefaultMark, WidgetDefaultText(c.layout, which, widget, c.readings.today));
                 };
                 // A look of its own on a slider whose step under lowest is the Top Panel's.
-                const auto ownSlider = [&](std::optional<int>& own, int lowest, int highest, FunctionRef<std::string(int)> shown) {
+                const auto ownSlider = [&](std::optional<int>& own, int lowest, int highest, FunctionRef<std::string(int)> shown,
+                                           const std::string& panelShown) {
                     const int panel = lowest - 1;
                     int at          = own.value_or(panel);
                     form.SliderInt(label.c_str(), at, panel, highest,
-                        [&](int v) { return v == panel ? Words(topPanel) : shown(v); }, row.tip);
+                        [&](int v) { return v == panel ? unchanged(panelShown) : shown(v); }, row.tip);
                     own = at == panel ? std::nullopt : std::optional<int>(at);
                 };
                 // A Job & EXP alignment, shown while the part it places is on.
@@ -1193,7 +1196,6 @@ namespace headsup
                     break;
                 case WidgetTabsRow::PopupDesign:
                     if (kind != BarWidget::Custom) break;
-                    form.Caption(row.name);
                     PopupDesigner(c, widget);
                     break;
                 case WidgetTabsRow::BarText:
@@ -1245,78 +1247,78 @@ namespace headsup
                     if (kind == BarWidget::Performance && PartOn(o.design, WidgetPart::PerfMemory))
                         form.Switch(label.c_str(), o.memText, ownDefault().c_str());
                     break;
-                case WidgetTabsRow::OwnLooks:
-                    overrides = HasOwnLooks(kind) && form.Fold(label.c_str());
-                    break;
+                case WidgetTabsRow::OwnLooks: break; // its section's title
                 case WidgetTabsRow::WidgetSpacing:
-                    if (pillLooks && overrides) ownSlider(o.spacing, 0, kMaxWidgetSpacing, Pixels);
+                    if (pillLooks) ownSlider(o.spacing, 0, kMaxWidgetSpacing, Pixels, Pixels(s.barWidgetSpacing));
                     break;
-                case WidgetTabsRow::WidgetPadding:
-                    if (overrides) ownSlider(o.padding, 0, kMaxWidgetPadding, Pixels);
-                    break;
+                case WidgetTabsRow::WidgetPadding: ownSlider(o.padding, 0, kMaxWidgetPadding, Pixels, Pixels(s.barWidgetPadding)); break;
                 case WidgetTabsRow::ShowBackground:
-                    if (pillLooks && overrides)
+                    if (pillLooks)
                     {
-                        const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::OwnBackground));
+                        // Unchanged, then On and Off, as the list has them.
+                        std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::OwnBackground));
+                        const std::string panel = unchanged(names[s.widgetBackground ? 1 : 2]);
+                        names[0] = panel.c_str();
                         int picked = !o.background ? 0 : *o.background ? 1 : 2; // as the list has them
                         form.Segments(label.c_str(), picked, names.data(), static_cast<int>(names.size()), row.tip);
                         o.background = picked == 0 ? std::nullopt : std::optional<bool>(picked == 1);
                     }
                     break;
                 case WidgetTabsRow::CornerRounding:
-                    if (pillLooks && overrides)
-                        ownSlider(o.rounding, 0, kMaxRounding, Pixels);
+                    if (pillLooks) ownSlider(o.rounding, 0, kMaxRounding, Pixels, Pixels(s.widgetRounding));
                     break;
                 case WidgetTabsRow::PrimaryFont:
-                    if (overrides) form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, topPanel);
-                    break;
                 case WidgetTabsRow::SecondaryFont:
-                    if (overrides) form.FontDropdown(label.c_str(), o.textFont, c.fonts, row.tip, topPanel);
+                {
+                    const bool primary      = which == WidgetTabsRow::PrimaryFont;
+                    const std::string& font = primary ? s.barTitleFont : s.barTextFont;
+                    const std::string panel = unchanged(font.empty() ? Words(Word(c, WindowWord::Themes)) : font);
+                    form.FontDropdown(label.c_str(), primary ? o.titleFont : o.textFont, c.fonts, row.tip, panel.c_str());
                     break;
+                }
                 case WidgetTabsRow::FontRatio:
-                    if (overrides)
-                    {
-                        // By the Top Panel's slider's positions, set only when moved, so a ratio between them is kept.
-                        std::optional<int> at = o.fontRatio ? std::optional<int>(FontRatioPosition(*o.fontRatio)) : std::nullopt;
-                        const std::optional<int> before = at;
-                        ownSlider(at, 0, 2 * kFontRatioSteps, [](int p) { return Printed("%.2fx", FontRatioAt(p)); });
-                        if (at != before) o.fontRatio = at ? std::optional<float>(FontRatioAt(*at)) : std::nullopt;
-                    }
+                {
+                    // By the Top Panel's slider's positions, set only when moved, so a ratio between them is kept.
+                    std::optional<int> at = o.fontRatio ? std::optional<int>(FontRatioPosition(*o.fontRatio)) : std::nullopt;
+                    const std::optional<int> before = at;
+                    ownSlider(at, 0, 2 * kFontRatioSteps, [](int p) { return Printed("%.2fx", FontRatioAt(p)); },
+                        Printed("%.2fx", s.barFontRatio));
+                    if (at != before) o.fontRatio = at ? std::optional<float>(FontRatioAt(*at)) : std::nullopt;
                     break;
+                }
                 case WidgetTabsRow::LineSeparation:
-                    if (overrides)
-                    {
-                        const auto step = [](float scale) {
-                            return static_cast<int>(std::lround((scale - kMinLineSeparation) / kLineSeparationStep));
-                        };
-                        std::optional<int> at = o.lineSeparation ? std::optional<int>(step(*o.lineSeparation)) : std::nullopt;
-                        const std::optional<int> before = at;
-                        ownSlider(at, 0, step(kMaxLineSeparation), [](int p) {
-                            return Printed("%.1fx", kMinLineSeparation + static_cast<float>(p) * kLineSeparationStep);
-                        });
-                        if (at != before)
-                            o.lineSeparation = at ? std::optional<float>(kMinLineSeparation + static_cast<float>(*at) * kLineSeparationStep)
-                                                  : std::nullopt;
-                    }
+                {
+                    const auto step = [](float scale) {
+                        return static_cast<int>(std::lround((scale - kMinLineSeparation) / kLineSeparationStep));
+                    };
+                    std::optional<int> at = o.lineSeparation ? std::optional<int>(step(*o.lineSeparation)) : std::nullopt;
+                    const std::optional<int> before = at;
+                    ownSlider(at, 0, step(kMaxLineSeparation), [](int p) {
+                        return Printed("%.1fx", kMinLineSeparation + static_cast<float>(p) * kLineSeparationStep);
+                    }, Printed("%.1fx", s.barLineSeparation));
+                    if (at != before)
+                        o.lineSeparation = at ? std::optional<float>(kMinLineSeparation + static_cast<float>(*at) * kLineSeparationStep)
+                                              : std::nullopt;
                     break;
+                }
                 case WidgetTabsRow::IconScale:
-                    if (overrides)
-                    {
-                        std::optional<int> at =
-                            o.iconScale ? std::optional<int>((*o.iconScale - kMinIconScale) / kPercentStep) : std::nullopt;
-                        ownSlider(at, 0, (kMaxIconScale - kMinIconScale) / kPercentStep,
-                            [](int p) { return Formatted("%d%%", kMinIconScale + p * kPercentStep); });
-                        o.iconScale = at ? std::optional<int>(kMinIconScale + *at * kPercentStep) : std::nullopt;
-                    }
+                {
+                    std::optional<int> at =
+                        o.iconScale ? std::optional<int>((*o.iconScale - kMinIconScale) / kPercentStep) : std::nullopt;
+                    ownSlider(at, 0, (kMaxIconScale - kMinIconScale) / kPercentStep,
+                        [](int p) { return Formatted("%d%%", kMinIconScale + p * kPercentStep); }, Formatted("%d%%", s.barIconScale));
+                    o.iconScale = at ? std::optional<int>(kMinIconScale + *at * kPercentStep) : std::nullopt;
                     break;
+                }
                 case WidgetTabsRow::PopupTextScale:
-                    if (pillLooks && overrides)
+                    if (pillLooks)
                     {
                         const auto step = [](float scale) { return static_cast<int>(std::lround((scale - kMinPopupScale) / kPopupScaleStep)); };
                         std::optional<int> at = o.popupTextScale ? std::optional<int>(step(*o.popupTextScale)) : std::nullopt;
                         const std::optional<int> before = at;
                         ownSlider(at, 0, step(kMaxPopupScale),
-                            [](int p) { return Printed("%.1fx", kMinPopupScale + static_cast<float>(p) * kPopupScaleStep); });
+                            [](int p) { return Printed("%.1fx", kMinPopupScale + static_cast<float>(p) * kPopupScaleStep); },
+                            Printed("%.1fx", s.popupTextScale));
                         if (at != before)
                             o.popupTextScale = at ? std::optional<float>(kMinPopupScale + static_cast<float>(*at) * kPopupScaleStep)
                                                   : std::nullopt;
@@ -1343,7 +1345,34 @@ namespace headsup
                     }
                     break;
                 }
-            }
+            };
+            // In sections, as a pop-out's cards: its designer, the rest, then the overrides, which fold. A created widget's
+            // Edit choice comes first, above the designer it picks.
+            const std::span<const LayoutRow> rows = c.layout.RowsOf(e);
+            const auto looks   = std::ranges::find(rows, static_cast<uint16_t>(WidgetTabsRow::OwnLooks), &LayoutRow::row);
+            const auto is      = [](const LayoutRow& row, WidgetTabsRow which) { return static_cast<WidgetTabsRow>(row.row) == which; };
+            const auto designs = [&](const LayoutRow& row) { return is(row, WidgetTabsRow::Design) || is(row, WidgetTabsRow::PopupDesign); };
+            for (const LayoutRow& row : rows)
+                if (is(row, WidgetTabsRow::Edit)) show(row);
+            for (const LayoutRow& row : rows)
+                if (designs(row))
+                {
+                    form.Fade(off);
+                    form.BeginSection(Labeled(row.name, row.key, scope).c_str(), false);
+                    show(row);
+                    form.EndSection();
+                }
+            form.Fade(off);
+            form.BeginSection(Labeled(Word(c, WindowWord::WidgetTabsSettings), kSettingsSectionKey, scope).c_str(), false);
+            for (auto row = rows.begin(); row != looks; ++row)
+                if (!designs(*row) && !is(*row, WidgetTabsRow::Edit)) show(*row);
+            form.EndSection();
+            if (looks == rows.end() || !HasOwnLooks(kind) || (created && c.state.editSide == EditSide::Popup)) return;
+            form.Fade(off);
+            if (form.BeginSection(Labeled(looks->name, looks->key, scope).c_str(), true))
+                for (auto row = looks + 1; row != rows.end(); ++row)
+                    show(*row);
+            form.EndSection();
         }
 
         // The settings of each widget the panel's popup shows; more than one, each in a box under its name, up to

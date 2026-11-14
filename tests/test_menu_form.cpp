@@ -8,6 +8,7 @@
 #include <cmath>
 #include <map>
 #include <string>
+#include <tuple>
 #include <vector>
 
 using namespace headsup;
@@ -307,7 +308,7 @@ TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_desi
     CHECK(shown(first, edit + "-s-0") && shown(first, edit + "-s-1"));
     CHECK(shown(first, "toppanel-widgets-part-" + slot + "-end-0") && !Has(rml(first), "-card-"));
     CHECK(shown(first, "toppanel-widgets-alignment-custom") && shown(first, "toppanel-widgets-name-custom"));
-    // Pop-out: its designer alone under the Name and the choice, and no save for a choice of what to edit.
+    // Pop-out: its designer alone under the choice, the Name after it, and no save for a choice of what to edit.
     const Form popup = w.Pass({{edit + "-s-1", kClickEvent, ""}});
     CHECK(w.state.editSide == EditSide::Popup && !popup.changed);
     CHECK(shown(popup, "toppanel-widgets-card-" + slot + "-end-0") && !Has(rml(popup), "-part-"));
@@ -322,15 +323,16 @@ TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_desi
     CHECK(w.state.editSide == EditSide::Widget);
 }
 
-TEST(a_created_widgets_pop_out_designer_is_its_caption_then_its_rows_with_no_note_between)
+TEST(a_created_widgets_pop_out_designer_is_its_sections_title_then_its_rows_with_no_note_between)
 {
     Window w;
     w.readings.settingsOf = {*CreateWidget(w.settings)};
     w.state.editSide      = EditSide::Popup;
     const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
     const size_t rows     = rml.find("<div class=\"design\">");
-    CHECK(rows != std::string::npos && rml.rfind("class=\"caption\"", rows) != std::string::npos);
-    CHECK(rml.rfind("class=\"note\"", rows) == std::string::npos);
+    const size_t title    = rml.rfind("class=\"wsection-title\"", rows);
+    CHECK(rows != std::string::npos && title != std::string::npos);
+    CHECK(rml.find("class=\"note\"", title) > rows);
 }
 
 TEST(create_new_widget_adds_one_at_the_rights_end_on_with_its_settings_asked_until_every_one_is_made)
@@ -1645,6 +1647,63 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
         CHECK(Has(rml, id(key).c_str()) && !Has(rml, id(key, "weather").c_str()));
     for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "line-separation", "icon-scale"})
         CHECK(Has(rml, id(key, "weather").c_str()));
+}
+
+TEST(a_widgets_settings_are_its_designers_section_then_the_rest_then_its_overrides)
+{
+    Window w;
+    // Where an id is in a widget's settings, past the end when it is not.
+    const auto place = [&](PanelWidget widget) {
+        w.readings.settingsOf = {widget};
+        const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
+        return [rml](const std::string& id) { return rml.find("id=\"toppanel-widgets-" + id + "\""); };
+    };
+    const auto sections = [](const auto& at, const std::string& widget) {
+        return std::tuple{at("design-" + widget + "-section"), at("settings-" + widget + "-section"), at("own-looks-" + widget + "-section")};
+    };
+    // Zone's designer, its Icon row and its overrides each in theirs, in that order.
+    const PanelWidget zone{BarWidget::Zone};
+    const auto inZone = place(zone);
+    const auto [design, settings, overrides] = sections(inZone, "zone");
+    const size_t chip = inZone("part-" + std::to_string(SlotOf(zone)) + "-" + std::to_string(static_cast<int>(WidgetPart::ZoneName)));
+    const size_t icon = inZone("icon-zone-s-2");
+    CHECK(design < chip && chip < settings && settings < icon && icon < overrides && overrides != std::string::npos);
+    // The Status Timers' own designer is in its designer's section.
+    const PanelWidget timers{BarWidget::StatusTimers};
+    w.settings.statusPins = {40, 33};
+    const auto inTimers = place(timers);
+    const auto [timersDesign, timersSettings, timersOverrides] = sections(inTimers, "statustimers");
+    const size_t pin = inTimers("pin-" + std::to_string(SlotOf(timers)) + "-40");
+    CHECK(timersDesign < pin && pin < timersSettings && timersSettings < timersOverrides && timersOverrides != std::string::npos);
+    // The Home Point has no designer, so no section for one.
+    const auto [homeDesign, homeSettings, homeOverrides] = sections(place(PanelWidget{BarWidget::HomePoint}), "homepoint");
+    CHECK(homeDesign == std::string::npos && homeSettings < homeOverrides && homeOverrides != std::string::npos);
+}
+
+TEST(an_override_left_unchanged_shows_the_top_panels_value_as_it_is_now)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone};
+    w.readings.settingsOf = {zone};
+    const auto id = [](const char* key) { return std::string("toppanel-widgets-") + key + "-zone"; };
+    w.Pass({{id("own-looks") + "-fold", kClickEvent, ""}});
+    const auto shown = [&](const char* key) {
+        const Form form = w.Pass();
+        for (const FormValue& v : form.values)
+            if (v.id == id(key) + "-val" && v.kind == FormValueKind::Text) return v.text;
+        return std::string("<none>");
+    };
+    w.settings.barWidgetSpacing = 7;
+    w.settings.barIconScale     = 85;
+    w.settings.popupTextScale   = 1.3f;
+    CHECK(shown("widget-spacing").ends_with("(7 px)"));
+    CHECK(shown("icon-scale").ends_with("(85%)"));
+    CHECK(shown("popup-text-scale").ends_with("(1.3x)"));
+    w.settings.barWidgetSpacing = 12;
+    CHECK(shown("widget-spacing").ends_with("(12 px)"));
+    // Set to its own, it shows its own.
+    w.settings.Widget(zone).spacing = 3;
+    CHECK_EQ(shown("widget-spacing"), "3 px");
 }
 
 TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)

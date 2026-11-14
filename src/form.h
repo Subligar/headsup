@@ -368,8 +368,11 @@ namespace headsup
         // A tag as a chip that reads its name, after its icon when it draws one. Only a drag places it: it drops onto a
         // line's box, and a click puts it nowhere.
         void TagChip(Tag tag);
-        // A title over the rows that follow, shut until clicked: true while they are to be built.
-        bool Fold(const char* title);
+        // A bubble of the rows that follow until EndSection, as a pop-out's card: its title, and for one that folds the
+        // pop-out's collapse chip at its right. One that folds starts shut: true while its rows are to be built. One
+        // left with nothing in it is left out.
+        bool BeginSection(const char* title, bool folds);
+        void EndSection();
         // Muted or plain text among a row's controls.
         void Caption(const char* text, const char* classes = "caption", float width = 0.0f);
         // Markup of the page's own, for what the kit has no control for; and a value for an element of it.
@@ -432,6 +435,8 @@ namespace headsup
         bool m_CardSwitched = false;  // whether the card has a switch in its title
         int m_ShownInCard = 0;        // its parts that show
         std::string m_CardId;
+        size_t m_SectionAt = 0, m_SectionBody = 0, m_SectionValues = 0; // where the open section's markup and values begin
+        bool m_SectionFolds = false;
         std::unordered_set<std::string> m_Ids; // this pass's, to keep them apart
     };
 }
