@@ -160,6 +160,9 @@ namespace headsup
         css += "#main{position:relative;flex:1 1 0px;margin-left:" + Em(kGutter) + ";}";
         css += std::string("#") + kMenuPageTitleId + "{font-family:\"" + look.titleFont + "\";font-size:" +
                Em(kPageTitleScale) + ";color:" + color(c.heading) + ";}";
+        // A page's own switch on its title's line, just after it.
+        css += "#page-head{display:flex;flex-direction:row;align-items:center;}";
+        css += std::string("#") + kPageSwitchBlock + "{margin-left:" + Em(kCardPad) + ";}";
         css += std::string("#") + kMenuPageId + "{position:absolute;left:0px;right:0px;top:" + Em(kPageTop) + ";bottom:0px;overflow-y:auto;}";
         css += "scrollbarvertical{width:" + Em(kScrollbar) + ";}";
         css += "scrollbarvertical sliderbar{width:" + Em(kScrollbar) + ";min-height:2em;border-radius:" +
@@ -501,7 +504,8 @@ namespace headsup
                                : std::string()) +
                "<div id=\"" + kMenuCloseId +
                "\"><div class=\"cross\"></div><div class=\"cross back\"></div></div><div id=\"columns\"><div id=\"" +
-               kMenuSidebarId + "\"></div><div id=\"main\"><div id=\"" + kMenuPageTitleId + "\"></div><div id=\"" +
+               kMenuSidebarId + "\"></div><div id=\"main\"><div id=\"page-head\"><div id=\"" + kMenuPageTitleId + "\"></div><div id=\"" +
+               kPageSwitchBlock + "\"></div></div><div id=\"" +
                kMenuPageId + "\"></div></div></div><div id=\"" + kMenuPopupId + "\" class=\"hidden\"></div><div id=\"" + kMenuTipId +
                "\" class=\"hidden\"></div><handle id=\"resize\" size_target=\"#document\"><div id=\"resize-mark\"></div>"
                "</handle></body></rml>";

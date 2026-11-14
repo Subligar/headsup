@@ -89,10 +89,12 @@ TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
     const char* described = w.layout.PageOf(Page::VanillaUi).description;
     CHECK(described != nullptr);
     const Form form = w.Pass();
-    CHECK(form.blocks.size() > 2 && form.blocks[1].bare && Has(form.blocks[1].rml, described) && !form.blocks[2].bare);
+    // After the sidebar and the title's switch.
+    CHECK(form.blocks.size() > 3 && form.blocks[1].id == kPageSwitchBlock);
+    CHECK(form.blocks[2].bare && Has(form.blocks[2].rml, described) && !form.blocks[3].bare);
     // A page without one starts with its first card.
     w.state.page = Page::Entities;
-    CHECK(w.layout.PageOf(Page::Entities).description == nullptr && !w.Pass().blocks[1].bare);
+    CHECK(w.layout.PageOf(Page::Entities).description == nullptr && !w.Pass().blocks[2].bare);
 }
 
 TEST(the_credits_page_comes_after_feedback_and_shows_its_words_with_no_cards)
@@ -105,15 +107,15 @@ TEST(the_credits_page_comes_after_feedback_and_shows_its_words_with_no_cards)
     CHECK(w.state.page == Page::Credits && ClassOn(form, "nav-credits", "picked"));
     const std::string_view words = w.layout.PageOf(Page::Credits).description;
     CHECK(words.find('\n') != std::string_view::npos);
-    CHECK_EQ(form.blocks.size(), 2u);
-    CHECK(form.blocks[1].bare);
+    CHECK_EQ(form.blocks.size(), 3u); // the sidebar, the title's switch and the words
+    CHECK(form.blocks[2].bare);
     // Each thanks is a bullet point.
     for (size_t start = 0; start <= words.size();)
     {
         const size_t end           = std::min(words.find('\n', start), words.size());
         const std::string_view one = words.substr(start, end - start);
         CHECK(one.starts_with("- "));
-        CHECK(Has(form.blocks[1].rml,
+        CHECK(Has(form.blocks[2].rml,
             ("<div class=\"bullet\"><span class=\"dot\">•</span>" + std::string(one.substr(2)) + "</div>").c_str()));
         start = end + 1;
     }
@@ -211,8 +213,8 @@ TEST(a_pages_controls_change_the_settings_they_show)
         w.Pass({{separators + "-o-" + std::to_string(option), kClickEvent, ""}});
         CHECK_EQ(w.settings.panelSeparators, separators_);
     }
-    // With the panel switched off by its card's checkbox, its settings are faint and take nothing.
-    const Form off = w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}, {"toppanel-top-panel-height", kChangeEvent, "30"}});
+    // With the panel switched off by its page's switch, its settings are faint and take nothing.
+    const Form off = w.Pass({{"toppanel-on", kClickEvent, ""}, {"toppanel-top-panel-height", kChangeEvent, "30"}});
     CHECK(off.changed && !w.settings.showBar && w.settings.barHeight == 52);
     CHECK(ClassOn(off, "toppanel-top-panel-height-box", "off"));
     // The theme's dropdown, on its own page as it themes this window too, lists every theme, and a click on one picks
@@ -222,8 +224,26 @@ TEST(a_pages_controls_change_the_settings_they_show)
     w.Pass({{"theme-theme-look-theme-o-1", kClickEvent, ""}});
     CHECK(w.settings.barTheme == BarTheme::UmbraDark);
     w.state.page = Page::TopPanel;
-    w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}});
+    w.Pass({{"toppanel-on", kClickEvent, ""}});
     CHECK(w.settings.showBar);
+}
+
+// Round 23: "Move the top panel ON/OFF toggle to be on the same line as the 'Top Panel' header ... it is enabling/
+// disabling the entire top panel, not just its appearance settings."
+TEST(the_top_panels_switch_is_beside_its_pages_title_and_no_cards)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const Form form = w.Pass();
+    const FormBlock* head = Block(form, kPageSwitchBlock);
+    CHECK(head != nullptr && Has(head->rml, "id=\"toppanel-on\""));
+    CHECK(ClassOn(form, "toppanel-on", "on"));
+    for (const FormBlock& block : form.blocks)
+        CHECK(block.id == kPageSwitchBlock || !Has(block.rml, "card-on"));
+    // Another page's title has none.
+    w.state.page = Page::Theme;
+    const FormBlock* theme = Block(w.Pass(), kPageSwitchBlock);
+    CHECK(theme != nullptr && theme->rml.empty());
 }
 
 // Round 23: "Ensure existing settings are properly transferred" from the list of checks to the one pick.
@@ -722,7 +742,7 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
     const auto shown = [](const Form& form) {
         std::vector<std::string> ids;
         for (const FormBlock& block : form.blocks)
-            if (block.id != kSidebarBlock && !ClassOn(form, block.id.c_str(), "off")) ids.push_back(block.id);
+            if (block.id != kSidebarBlock && block.id != kPageSwitchBlock && !ClassOn(form, block.id.c_str(), "off")) ids.push_back(block.id);
         return ids;
     };
     Window w;
@@ -1077,7 +1097,7 @@ TEST(a_card_moved_to_another_page_shows_there_with_its_settings)
     w.layout     = edited.Layout();
     w.state.page = Page::ConfigMenu;
     const Form form = w.Pass({{"configmenu-mouse-pointer-pointer-fix", kClickEvent, ""}});
-    CHECK(form.blocks.size() > 1 && form.blocks[1].id == "configmenu-mouse-pointer");
+    CHECK(form.blocks.size() > 2 && form.blocks[2].id == "configmenu-mouse-pointer"); // after the sidebar and the title's switch
     CHECK(form.changed && !w.settings.fixPointer);
 }
 

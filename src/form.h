@@ -74,6 +74,7 @@ namespace headsup
     constexpr const char* kCompactCheck = "check";       // a toggle among other controls
     constexpr const char* kWideCheck    = "check wide";  // a row's toggle, as wide as a slider
     constexpr const char* kCardCheck    = "check card-on"; // a card title's switch
+    constexpr const char* kPageCheck    = "check worded";  // a page title's
     constexpr const char* kWordedCheck  = "check worded";  // a toggle among a row's controls that says its state
     constexpr const char* kPickedClass  = "picked";  // the chosen one of a row of choices
     constexpr const char* kWheelClass   = "wheel";   // takes the wheel turned over it, which then scrolls nothing
@@ -136,6 +137,7 @@ namespace headsup
         bool operator==(const FormBlock&) const = default;
     };
     constexpr const char* kSidebarBlock = "sidebar";
+    constexpr const char* kPageSwitchBlock = "page-switch"; // beside the page's title
 
     // A text box to give the keyboard, with its caret at this byte: where a tag was just taken out beside it.
     struct FormFocus
@@ -209,6 +211,9 @@ namespace headsup
         // and set when it was clicked.
         bool BeginCard(const char* title, bool* enabled = nullptr, const char* about = nullptr, bool* reset = nullptr,
             bool differs = false);
+        // What the page's title says the whole page is for, on or off: a switch of this id beside it; none for a
+        // page with none.
+        void PageSwitch(const std::string& id, bool* enabled);
         // A block with the id a card of that title would have and no title or card of its own; EndCard ends it.
         void BeginBare(const char* title);
         void EndCard();
@@ -402,6 +407,8 @@ namespace headsup
         std::string ListRow(const std::string& control, int index, const std::string& name, bool picked,
             const std::string& tip = {}, bool markup = false);
         // Opens the popup with rows, and tells which of them was clicked.
+        // An on and off switch saying which it is, of these classes, flipped by its click.
+        void OnSwitch(const std::string& id, const char* classes, bool& enabled);
         bool ListChoice(const std::string& control, std::string rows, int count, int& chosen);
         // A slider's newest whole value, when it moved.
         void TakeWhole(const std::string& slider, int& value, int lo, int hi, int step = 1);

@@ -170,26 +170,33 @@ namespace headsup
         const bool open = !m_Off && !m_State.collapsed.contains(m_CardId);
         Out() += "<div class=\"card-head\" id=\"" + head + "\"><div class=\"arrow" + (open ? " open" : "") +
                  "\"></div><div class=\"card-title\">" + EscapedRml(LabelText(title)) + "</div>";
-        if (enabled != nullptr)
-        {
-            const std::string check = m_CardId + "-on";
-            if (!m_Off && Clicked(check))
-            {
-                *enabled = !*enabled;
-                changed  = true;
-            }
-            const char* word = layout->WordOf(*enabled ? WindowWord::SwitchOn : WindowWord::SwitchOff).name;
-            Out() += std::string("<div class=\"") + kCardCheck + "\" id=\"" + check + "\"><div class=\"mark\"></div><div class=\"state\" id=\"" +
-                     check + "-state\"></div></div>";
-            Set(check + "-state", FormValueKind::Text, {}, word);
-            Set(check, FormValueKind::Class, "on", {}, *enabled);
-        }
+        if (enabled != nullptr) OnSwitch(m_CardId + "-on", kCardCheck, *enabled);
         if (reset != nullptr) *reset = ResetAt("reset", differs);
         Out() += "</div>";
         if (!open) return false;
         Out() += "<div class=\"card-body\">";
         if (about != nullptr && *about != '\0') Out() += "<div class=\"note\">" + NoteRml(about) + "</div>";
         return true;
+    }
+
+    void Form::OnSwitch(const std::string& id, const char* classes, bool& enabled)
+    {
+        if (!m_Off && Clicked(id))
+        {
+            enabled = !enabled;
+            changed = true;
+        }
+        const char* word = layout->WordOf(enabled ? WindowWord::SwitchOn : WindowWord::SwitchOff).name;
+        Out() += std::string("<div class=\"") + classes + "\" id=\"" + id + "\"><div class=\"mark\"></div><div class=\"state\" id=\"" + id +
+                 "-state\"></div></div>";
+        Set(id + "-state", FormValueKind::Text, {}, word);
+        Set(id, FormValueKind::Class, "on", {}, enabled);
+    }
+
+    void Form::PageSwitch(const std::string& id, bool* enabled)
+    {
+        BeginBlock(kPageSwitchBlock);
+        if (enabled != nullptr) OnSwitch(id, kPageCheck, *enabled);
     }
 
     void Form::BeginBare(const char* title)

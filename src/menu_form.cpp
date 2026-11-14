@@ -2594,7 +2594,7 @@ namespace headsup
             case CardPiece::DetectionIcons:
             case CardPiece::Weaknesses:
             case CardPiece::Statuses: return {false, !plates};
-            case CardPiece::TopPanel: return {false, !on, &s.showBar};
+            case CardPiece::TopPanel: return {false, !on};
             case CardPiece::HelpBar: return {false, !BarOn(s), &s.Widget(BarWidget::GameHelp).on};
             case CardPiece::Widgets: return {.skipped = true}; // in the panel's popup, by BuildWidgetSettings
             case CardPiece::Layout:
@@ -2876,10 +2876,18 @@ namespace headsup
         const std::vector<std::string>& fonts, const std::vector<std::string>& menuFonts, const WindowLayout& layout)
     {
         form.layout = &layout;
+        // The top panel's switch is its page's, beside the title: it turns the whole panel on and off.
+        const auto pageSwitch = [&] {
+            form.Fade(!s.enabled);
+            form.PageSwitch(std::string(layout.PageOf(Page::TopPanel).key) + "-on",
+                !state.setup && state.page == Page::TopPanel ? &s.showBar : nullptr);
+            form.Fade(false);
+        };
         if (state.setup)
         {
             Context c{form, s, readings, state, fonts, menuFonts, layout, std::nullopt};
             BuildSetup(c);
+            pageSwitch();
             s = Clamp(std::move(s));
             return;
         }
@@ -2891,6 +2899,7 @@ namespace headsup
         }
         Context c{form, s, readings, state, fonts, menuFonts, layout, KindOfPage(state.page)};
         Sidebar(c);
+        pageSwitch(); // before the cards: switched off, they take nothing
         const LayoutPage& page = layout.PageOf(state.page);
         form.pageKey           = page.key;
         if (page.description != nullptr) form.PageNote(page.description);
