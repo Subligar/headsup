@@ -939,7 +939,7 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     s.customPalette.border       = 5;
     s.customPalette.background   = BarBackground::Window;
     s.customPalette.windowType   = 3;
-    s.customPalette.rounding     = 12;
+    s.customPalette.windowRounding = 12;
     s.customPalette.separator    = DashMark::Dot;
     s.customPalette.statusIcons  = 1;
     s.customPalette.statusBack   = true;
@@ -956,12 +956,12 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     MapStore garbled;
     garbled.values["customThemeAccent"] = "not a color";
     garbled.values["customThemeBorder"] = "99";
-    garbled.values["customThemeRounding"] = "-5";
+    garbled.values["customThemeWindowRounding"] = "-5";
     garbled.values["customThemeStatusIcons"] = "Missing Pack";
     const Settings read = LoadSettings(garbled);
     CHECK_EQ(read.customPalette.statusIcons, PaletteOf(BarTheme::PhoenixGold).statusIcons);
     CHECK(read.customPalette.accent == PaletteOf(BarTheme::PhoenixGold).accent && read.customPalette.border == kMaxStripBorder);
-    CHECK_EQ(read.customPalette.rounding, kShapeRounding);
+    CHECK_EQ(read.customPalette.windowRounding, kShapeRounding);
 }
 
 TEST(the_windows_help_mode_follows_the_panels_help_line_and_the_games_own_strip)
@@ -1264,7 +1264,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     zone.textFont       = "Verdana";
     zone.fontRatio      = 1.5f;
     zone.iconScale      = 40;
-    zone.rounding       = kThemeRounding;
+    zone.rounding       = 0;
     zone.popupTextScale = 1.4f;
     const PanelWidget copy = *CloneWidget(s, BarWidget::Zone);
     CHECK(s.Widget(copy).spacing == 12 && s.Widget(copy).textFont == "Verdana" && s.Widget(copy).popupTextScale == 1.4f);
@@ -1299,7 +1299,7 @@ TEST(a_widgets_own_looks_out_of_their_range_are_held_to_it)
     store.values["barZonePrimaryFont"]    = std::string(kMaxFontName + 1, 'a');
     const WidgetOptions zone = LoadSettings(store).Widget(BarWidget::Zone);
     CHECK(zone.spacing == kMaxWidgetSpacing && zone.padding == 0 && zone.iconScale == 45);
-    CHECK(zone.rounding == kThemeRounding && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
+    CHECK(zone.rounding == 0 && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
     CHECK(zone.titleFont.empty());
 }
 
@@ -1330,14 +1330,15 @@ TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges
     const Settings d;
     CHECK(d.barFontRatio == kDefaultFontRatio && d.popupTextScale == kDefaultPopupScale && d.barIconScale == kDefaultIconScale);
     CHECK(d.popupWidthScale == kDefaultPopupScale && d.popupHeightScale == kDefaultPopupScale);
-    CHECK(d.widgetRounding == kThemeRounding && d.popupRounding == kThemeRounding && d.sectionRounding == kThemeRounding);
+    CHECK(d.barRounding == 0 && d.widgetRounding == 8 && d.popupRounding == 0 && d.sectionRounding == 10);
     MapStore store;
     store.values["barFontRatio"]     = "9";
     store.values["popupTextScale"]   = "0.01";
     store.values["popupWidthScale"]  = "7";
     store.values["popupHeightScale"] = "0.5";
     store.values["barIconScale"]     = "3";
-    store.values["widgetRounding"]   = "-9";
+    store.values["barRounding"]      = "33";
+    store.values["widgetRounding"]   = "-1"; // Set by Theme, before round 23: none now
     store.values["popupRounding"]    = "999";
     store.values["sectionRounding"]  = "12";
     store.values["helpBarRounding"]  = "40";
@@ -1347,7 +1348,7 @@ TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges
     CHECK(s.popupWidthScale == kMaxPopupScale && s.popupHeightScale == 1.0f);
     store.values["popupWidthScale"] = "0.3";
     CHECK(LoadSettings(store).popupWidthScale == 1.0f);
-    CHECK(s.widgetRounding == kThemeRounding && s.popupRounding == kMaxRounding && s.sectionRounding == 12);
+    CHECK(s.barRounding == kMaxRounding && s.widgetRounding == 0 && s.popupRounding == kMaxRounding && s.sectionRounding == 12);
     CHECK(d.helpBarRounding == kThemeRounding && s.helpBarRounding == kMaxRounding);
 }
 

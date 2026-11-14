@@ -1693,7 +1693,7 @@ TEST(deleting_a_custom_theme_that_differs_from_its_theme_goes_back_to_that_theme
     window.settings.customPalette   = PaletteOf(BarTheme::Aurora);
     window.settings.customPalette.parent      = BarTheme::Aurora;
     window.settings.customPalette.border      = PaletteOf(BarTheme::Aurora).border + 2;
-    window.settings.customPalette.rounding    = PaletteOf(BarTheme::Aurora).rounding + 3;
+    window.settings.customPalette.windowRounding = PaletteOf(BarTheme::Aurora).windowRounding + 3;
     window.settings.customPalette.statusIcons = kVanillaStatusIcons;
     window.settings.customPalette.statusBack  = !PaletteOf(BarTheme::Aurora).statusBack;
     window.settings.customPalette.separator   = DashMark::Dot;
@@ -1726,7 +1726,7 @@ TEST(the_game_window_theme_draws_the_window_in_the_art_and_its_colors)
 {
     Window window(BarTheme::Vanilla);
     const GameSkinLook look{SkinFrame{5, 1.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors};
-    const MenuLook menu{MenuTheme::GameWindow, kBarlowCondensed, kMarcellusSC, 16, 0, false, look.menu, look.frame};
+    const MenuLook menu{MenuTheme::GameWindow, kBarlowCondensed, kMarcellusSC, 16, 0, false, look.menu, look.frame, std::nullopt};
     const std::string style = MenuStyle(menu);
     CHECK(style.find(SkinSource(5, SkinPiece::Back, kSkinTile)) != std::string::npos);
     CHECK(style.find(RcssColor(kAuroraMenuColors.text)) != std::string::npos);

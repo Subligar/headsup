@@ -174,12 +174,12 @@ PIECES = Pieces(
                                                     'hide': True, 'keep': True, 'row-tip': False}),
         # Top Panel and Widgets
         'theme': Setting(words={'built-in': True, 'custom': True, 'copy': True, 'copy-again': True, 'delete': True, 'rename': True}), 'window-type': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=3), 'title-font': Setting(), 'text-font': Setting(),
-        'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'widget-padding': Setting(), 'corner-rounding': Setting(), 'text-scale': Setting(), 'popup-width': Setting(), 'popup-height': Setting(), 'popup-rounding': Setting(), 'section-rounding': Setting(),
+        'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'panel-rounding': Setting(), 'widget-padding': Setting(), 'corner-rounding': Setting(), 'text-scale': Setting(), 'popup-width': Setting(), 'popup-height': Setting(), 'popup-rounding': Setting(), 'section-rounding': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
         'background-style': Setting(options=3),
         'separator-style': Setting(options=5, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
         'theme-top': Setting(), 'theme-middle': Setting(), 'theme-bottom': Setting(), 'background-opacity': Setting(),
-        'theme-border-thickness': Setting(), 'theme-rounding': Setting(), 'popup-opacity': Setting(),
+        'theme-border-thickness': Setting(), 'window-rounding': Setting(), 'popup-opacity': Setting(),
         'status-icons': Setting(words={'vanilla': True}), 'status-background': Setting(),
         'theme-palette': Setting(unnamed=True, rows=rows(
             'under-line', 'glow-below', 'accent', 'accent-end', 'pill', 'pill-border', 'title', 'subtitle', 'divider',

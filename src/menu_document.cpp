@@ -69,11 +69,14 @@ namespace headsup
             return css;
         }
 
-        // The game's art in place of the window's fill and edge, and of its lists' and tips'.
-        std::string SkinMenuRules(const SkinFrame& frame)
+        // The game's art in place of the window's fill and edge, and of its lists' and tips', which stay square. The
+        // window's is in a child that its border's inside rounds (ArtRules).
+        std::string SkinMenuRules(const SkinFrame& frame, float radius)
         {
-            const std::string art = "background-color:transparent;border-radius:0px;" + SkinRules(frame);
-            return "body{" + art + "}#" + std::string(kMenuPopupId) + ",#" + kMenuTipId + "{" + art + "}";
+            const float inside = std::max(0.0f, radius - static_cast<float>(frame.edge != 0 ? frame.width : 0));
+            return "body{background-color:transparent;border-radius:" + Px(radius) + ";" + SkinEdgeRules(frame) + "}" +
+                   ArtRules(std::string("#") + kMenuArtId, inside, SkinFillRules(frame)) + "#" + kMenuPopupId + ",#" +
+                   kMenuTipId + "{background-color:transparent;border-radius:0px;" + SkinRules(frame) + "}";
         }
     }
 
@@ -101,7 +104,9 @@ namespace headsup
         css += "body{position:absolute;display:block;box-sizing:border-box;width:" + Em(kWindowWidth) + ";height:" +
                Em(kWindowHeight) + ";min-width:" + Em(kMinWindowWidth) + ";min-height:" + Em(kMinWindowHeight) +
                ";background-color:" + color(c.background) + ";border:1px " + color(c.border) + ";border-radius:" +
-               Em(kCardRadius * 1.5f) + ";color:" + color(c.text) + ";font-family:\"" + look.textFont + "\";z-index:" + std::to_string(kMenuWindowZ) + ";}";
+               (look.rounding ? Px(static_cast<float>(*look.rounding)) : Em(kCardRadius * 1.5f)) + ";color:" + color(c.text) +
+               ";font-family:\"" + look.textFont + "\";z-index:" + std::to_string(kMenuWindowZ) + ";}";
+        css += std::string("#") + kMenuArtId + "{position:absolute;left:0px;top:0px;width:100%;height:100%;z-index:-1;pointer-events:none;}";
         // The window comes in a little small and grows to its size.
         // Its fade has no end of its own: it ends at the element's own opacity, under the window's filter.
         css += "body.open{animation:0.22s cubic-out window-in, 0.22s cubic-out window-fade;}";
@@ -461,7 +466,7 @@ namespace headsup
                ";background-color:" + color(Opaque(c.card)) + ";pointer-events:none;}";
 
         if (look.theme == MenuTheme::Aurora) css += AuroraMenuRules(c);
-        if (look.skin) css += SkinMenuRules(*look.skin);
+        if (look.skin) css += SkinMenuRules(*look.skin, static_cast<float>(look.rounding.value_or(0)));
         // The settings of what is switched off are not shown. Last, and with the body before it, so that no rule
         // that lays a row or a control out puts it back.
         css += std::string("body .") + kOffClass + "{display:none;}";
@@ -488,7 +493,7 @@ namespace headsup
     {
         // The title's handle lets the window off the screen but for kWindowKeptOn of it, and never off the top.
         const std::string offScreen = std::to_string(static_cast<int>(std::lround(-(1.0f - kWindowKeptOn) * 100.0f))) + "%";
-        return "<rml><head><style>" + MenuStyle(look) + "</style></head><body>"
+        return "<rml><head><style>" + MenuStyle(look) + "</style></head><body><div id=\"" + kMenuArtId + "\">" + kArtRml + "</div>"
                "<handle id=\"head\" move_target=\"#document\" edge_margin=\"0px " + offScreen + " " + offScreen + " " + offScreen + "\"><div id=\"title\">HeadsUp</div><div id=\"" +
                kMenuVersionId + "\"></div></handle><div id=\"head-line\"></div>" +
                (look.developer ? std::string("<div id=\"tools\"><div class=\"") + kRaisedPill + "\" id=\"" + kMenuReloadId +

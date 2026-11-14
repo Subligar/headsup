@@ -45,7 +45,7 @@ namespace headsup
         uint32_t text, heading, tagFill, tagBorder, tagText;
         uint32_t highlight; // over a hovered widget
         int border = 1;     // how many of the strip's last rows are bottomLine, or how wide the art's edge is
-        int rounding = kShapeRounding; // the corners of whatever is rounded by the theme
+        int windowRounding = kShapeRounding; // the corners of HeadsUp's windows, the settings window's
         BarBackground background = BarBackground::Gradient; // Plain is stripTop alone
         int windowType    = kFollowGameWindow; // the art's, for the Window background
         DashMark separator = DashMark::Diamond; // the panel's separators, and what a nameplate's dash is drawn as
@@ -77,7 +77,7 @@ namespace headsup
         "custom", "gameWindow"};
 
     // A saved theme's file, in the themes folder: a [theme] section of its palette's parts by kPaletteColors' names,
-    // Shape, Border, Rounding, Background, WindowType, Separator, StatusIcons, StatusBackground and Parent. Read back, a part it lacks or that cannot be
+    // Shape, Border, WindowRounding, Background, WindowType, Separator, StatusIcons, StatusBackground and Parent. Read back, a part it lacks or that cannot be
     // read is Phoenix Gold's, and a file of none of the colors is no theme.
     constexpr const char* kThemeExtensions[] = {".ini"};
     std::string ThemeFileText(const BarPalette& palette);

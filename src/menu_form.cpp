@@ -1260,7 +1260,7 @@ namespace headsup
                     break;
                 case WidgetTabsRow::CornerRounding:
                     if (pillLooks && overrides)
-                        ownSlider(o.rounding, kThemeRounding, kMaxRounding, PixelsOr(Word(c, WindowWord::Themes), kThemeRounding));
+                        ownSlider(o.rounding, 0, kMaxRounding, Pixels);
                     break;
                 case WidgetTabsRow::PrimaryFont:
                     if (overrides) form.FontDropdown(label.c_str(), o.titleFont, c.fonts, row.tip, topPanel);
@@ -2239,16 +2239,17 @@ namespace headsup
                 form.Fade(!BarOn(s));
                 form.SliderFloat(label.c_str(), s.popupHeightScale, kMinPopupBoxScale, kMaxPopupScale, "%.1fx", tip);
                 break;
+            case SettingPiece::PanelRounding:
             case SettingPiece::CornerRounding:
             case SettingPiece::PopupRounding:
             case SettingPiece::SectionRounding:
             {
-                int& rounding = e.piece == SettingPiece::CornerRounding ? s.widgetRounding
-                                : e.piece == SettingPiece::PopupRounding ? s.popupRounding
-                                                                               : s.sectionRounding;
+                int& rounding = e.piece == SettingPiece::PanelRounding    ? s.barRounding
+                                : e.piece == SettingPiece::CornerRounding ? s.widgetRounding
+                                : e.piece == SettingPiece::PopupRounding  ? s.popupRounding
+                                                                          : s.sectionRounding;
                 form.Fade(!BarOn(s));
-                form.SliderInt(label.c_str(), rounding, kThemeRounding, kMaxRounding,
-                    PixelsOr(Word(c, WindowWord::Themes), kThemeRounding), tip);
+                form.SliderInt(label.c_str(), rounding, 0, kMaxRounding, Pixels, tip);
                 break;
             }
             case SettingPiece::HideReadout:
@@ -2324,11 +2325,11 @@ namespace headsup
                 EditTheme(c, edited);
                 break;
             }
-            case SettingPiece::ThemeRounding:
+            case SettingPiece::WindowRounding:
             {
                 form.Fade(!BarOn(s));
                 BarPalette edited = ShownPalette(c);
-                form.SliderInt(label.c_str(), edited.rounding, kShapeRounding, kMaxRounding,
+                form.SliderInt(label.c_str(), edited.windowRounding, kShapeRounding, kMaxRounding,
                     PixelsOr(Word(c, WindowWord::Auto), kShapeRounding), tip);
                 EditTheme(c, edited);
                 break;

@@ -103,7 +103,12 @@ TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
     const std::string rml = BarDocument(LookOf(BarTheme::PhoenixGold, settings), Place());
     CHECK(Has(rml, "<rml>") && Has(rml, "</rml>") && Has(rml, "<body class=\"ornate\">"));
     CHECK(Has(rml, StripSource(PaletteOf(BarTheme::PhoenixGold), 45, 13).c_str())); // 45 rows and 0.28 H below
-    CHECK(Has(rml, "height:59px")); // those, and the gold theme's line under the strip
+    // Its rows and the gold theme's line under them, then the glow's: each the top or the foot of the one image.
+    const std::string strip = "image(\"" + StripSource(PaletteOf(BarTheme::PhoenixGold), 45, 13) + "\" none repeat-x left ";
+    CHECK(Has(rml, "#strip{position:absolute;left:0px;top:0px;width:100%;height:46px;}"));
+    CHECK(Has(rml, "#strip .art{position:absolute;left:0px;top:0px;width:100%;height:100%;decorator:" + strip + "top);}"));
+    CHECK(Has(rml, "#strip-glow{position:absolute;left:0px;top:46px;width:100%;height:13px;decorator:" + strip + "bottom);}"));
+    CHECK(Has(rml, "<div id=\"strip\"><div class=\"art\"></div></div><div id=\"strip-glow\"></div>"));
     CHECK(Has(rml, "id=\"w-zone\"") && Has(rml, "id=\"w-target\"") && Has(rml, "id=\"w-earthTime\""));
     CHECK(!Has(rml, "id=\"w-gameHelp\"")); // never on the bar
     // A divider between each two of the most widgets there can be: the target, every created widget, and four copies of
@@ -125,9 +130,9 @@ TEST(the_document_holds_the_strip_the_caps_the_dividers_and_every_placed_widget)
     CHECK(Has(rml, "line-height:14px;margin-top:-2px;"));
     // After a title of figures, whose line is 17 px from row 8: 23 - 25 again.
     CHECK(Has(rml, ".detail.fig{margin-top:-2px;}"));
-    // The target's frame: the accent around the hover tint, 3 px corners.
+    // The target's frame: the accent around the hover tint, the widgets' 8 px corners.
     CHECK(Has(rml, ".ornate .widget.target{border-width:1px;margin:0px;padding:0px 13.85px;"
-                   "background-color:#c9a24a1a;border-color:#c9a24aff;border-radius:3px;}"));
+                   "background-color:#c9a24a1a;border-color:#c9a24aff;border-radius:8px;}"));
     CHECK(Has(rml, ".ornate .widget.target.lit{background-color:#c9a24a34;")); // twice the tint
 }
 
@@ -140,7 +145,8 @@ TEST(a_strip_with_nothing_fading_below_it_is_as_tall_as_its_image)
     p.below      = 0;
     const std::string rml = BarDocument(LookOf(p, settings), Place());
     const std::string source = StripSource(p, 45, 0);
-    CHECK(Has(rml, "height:45px;decorator:image(\"" + source + "\");"));
+    CHECK(Has(rml, "height:45px;}") && Has(rml, "decorator:image(\"" + source + "\" none repeat-x left top);"));
+    CHECK(!Has(rml, "#strip-glow{"));
     const std::optional<Image> strip = HostImage(source);
     CHECK(strip && strip->height == 45);
 }
@@ -163,11 +169,11 @@ TEST(a_pill_theme_frames_each_widget_and_its_caps_follow_the_settings)
     CHECK(Has(rml, "<body class=\"pills\">") && !Has(rml, "cap-right\" src"));
     // Without its Show Background a widget has no pill until lit; with it, 0.17 H corners, the pill's fill and edge.
     CHECK(Has(rml, ".pills .widget{background-color:transparent;border-color:transparent;}"));
-    CHECK(Has(rml, ".pills .widget.backed{background-color:#222226ff;border-color:#3a3a42ff;border-radius:7.65px;}"));
+    CHECK(Has(rml, ".pills .widget.backed{background-color:#222226ff;border-color:#3a3a42ff;border-radius:8px;}"));
     CHECK(Has(rml, ".pills .widget.lit{background-color:#2a2a30ff;border-color:#5b8defff;"));
     CHECK(Has(rml, "class=\"widget hidden\" id=\"w-zone\""));
     CHECK(Has(rml, "hu:diamond/ff5b8def/10")); // a pill theme's dividers take the accent
-    CHECK(Has(rml, "height:58px")); // no line under this strip
+    CHECK(Has(rml, "#strip{position:absolute;left:0px;top:0px;width:100%;height:45px;}")); // no line under this strip
 }
 
 TEST(a_widgets_icon_on_the_right_comes_after_its_lines_and_a_picture_is_drawn_as_an_icon)
@@ -274,7 +280,7 @@ TEST(the_help_bar_is_its_box_and_its_three_texts_centered_on_the_row)
     parts.help    = "Use <this>";
     const std::string rml = HelpBarRml(parts, look, Place());
     // The panel's gradient and gold edge, 0.11 H corners.
-    CHECK(Has(rml, "<div class=\"help-box\" style=\"left:8px;top:54px;width:400px;height:24px;\"></div>"));
+    CHECK(Has(rml, "<div class=\"help-box\" style=\"left:8px;top:54px;width:400px;height:24px;\"><div class=\"art\"></div></div>"));
     // A 16 px line in a 24 px row starts 4 px down; the help's 17 px line, 4 (3.5 rounded).
     CHECK(Has(rml, "<div class=\"p hc\" style=\"left:23px;top:58px;color:#efe3c6ff;\">Items</div>"));
     CHECK(Has(rml, "<div class=\"p hc\" style=\"left:120px;top:58px;color:#6fe36fff;\">6/30</div>"));
@@ -344,7 +350,7 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     const std::string rml = PopupRml(layout, look, faces);
     // The gold theme's panel has a second border 2 px outside it.
     CHECK(Has(rml, "<div id=\"outer\" style=\"left:-3px;top:-3px;width:226px;height:126px;\"></div>"));
-    CHECK(Has(rml, "<div id=\"panel\" style=\"width:220px;height:120px;\"></div>"));
+    CHECK(Has(rml, "<div id=\"panel\" style=\"width:220px;height:120px;\"><div class=\"art\"></div></div>"));
     CHECK(Has(rml, "<div class=\"p card\" style=\"left:16px;top:40px;width:188px;height:60px;\"></div>"));
     CHECK(Has(rml, "<div class=\"p f0\" style=\"left:16px;top:19px;color:#e4d8bdff;\">Zone &amp; &lt;more&gt;</div>"));
     CHECK(Has(rml, "<div class=\"p f1\" style=\"left:100px;top:50px;color:#66ff66ff;\">50%</div>")); // the weak badge color
@@ -418,10 +424,10 @@ TEST(the_popup_document_styles_its_faces_and_boxes_from_the_look)
     CHECK(Has(rml, ".socket{box-sizing:border-box;border:1px;border-color:#00000059 #ffffff14 #ffffff14 #00000059;"));
     CHECK(Has(rml, ".tab{") && Has(rml, ".tab.lit{"));
     CHECK(Has(rml, ".track{") && Has(rml, ".thumb{"));
-    // The panel: one fill top to bottom, the theme's faint edge, 0.28 of the popup's unit (12 px over 0.39) rounded.
+    // The panel: one fill top to bottom, the theme's faint edge, square by default; its sections 10 px round.
     CHECK(Has(rml, "#panel{position:absolute;left:0px;top:0px;box-sizing:border-box;border:1px #3a3a42ff;"
-                   "border-radius:8.62px;decorator:vertical-gradient(#1d1d21ff #1d1d21ff);}"));
-    CHECK(Has(rml, ".card{box-sizing:border-box;border:1px #ffffff1e;border-radius:8.62px;background-color:#ffffff12;}"));
+                   "border-radius:0px;decorator:vertical-gradient(#1d1d21ff #1d1d21ff);}"));
+    CHECK(Has(rml, ".card{box-sizing:border-box;border:1px #ffffff1e;border-radius:10px;background-color:#ffffff12;}"));
     CHECK(Has(rml, ".tag{box-sizing:border-box;border:1px transparent;background-color:#2c2c33ff;}"));
     CHECK(!Has(rml, IconSource(Icon::Star)));
 }
@@ -552,15 +558,19 @@ TEST(the_strip_and_the_popups_are_drawn_with_the_games_art_when_the_shape_is_win
     // glow other themes fade out under the strip.
     const std::string strip = bar.substr(bar.find("#strip{"));
     CHECK(strip.substr(0, strip.find('}')).find("height:" + Px(look.metrics.height) + ";") != std::string::npos);
-    // The strip, the help bar and the popups are each the art's own rules: its fill in its even border.
-    const auto rule = [&](const std::string& document, const char* name) {
+    // The strip, the help bar and the popups are each the art's even border round its fill, in the child it clips to
+    // its corners.
+    const auto rule = [&](const std::string& document, const std::string& name) {
         const std::string box = document.substr(document.find(name));
         return box.substr(0, box.find('}'));
     };
     const PopupFaces faces{};
-    for (const char* name : {"#strip{", ".help-box{"})
-        CHECK(rule(bar, name).find(SkinRules(*look.skin)) != std::string::npos);
-    CHECK(rule(PopupDocument(look, faces), "#panel{").find(SkinRules(*look.skin)) != std::string::npos);
+    const std::string popup = PopupDocument(look, faces);
+    for (const auto& [document, name] : {std::pair{bar, "#strip"}, std::pair{bar, ".help-box"}, std::pair{popup, "#panel"}})
+    {
+        CHECK(rule(document, name + std::string("{")).find(SkinEdgeRules(*look.skin)) != std::string::npos);
+        CHECK(rule(document, name + std::string(" .art{")).find(SkinFillRules(*look.skin)) != std::string::npos);
+    }
     // The edge is Border Thickness's pixels wide, and none at 0: the same art without its edge, everywhere.
     settings.barTheme                 = BarTheme::Custom;
     settings.customPalette.background = BarBackground::Window;

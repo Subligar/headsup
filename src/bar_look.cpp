@@ -17,13 +17,11 @@ namespace headsup
         // and the alphas of the edges and the soft accent, as the Phoenix window has them.
         constexpr uint32_t kMenuPageAlpha = 0xF7, kMenuEdgeAlpha = 0x24, kMenuRaisedAlpha = 0x3D, kMenuSoftAlpha = 0x47;
         constexpr float kCardStep = 0.07f, kInsetShade = 0.4f, kLabelShare = 0.3f, kMutedShare = 0.4f;
-        constexpr float kFrameRadius     = 3.0f;  // the ornate target frame and hover tint
         constexpr int kLitTarget         = 2;     // a hovered ornate target's tint, in hover tints' alpha
         constexpr float kHelpPadShare    = 0.5f;   // of the gap: clear above and below the help bar's row
         constexpr int kOuterGap          = 2;          // an ornate popup's outer border
         constexpr uint32_t kCardFill     = 0x12FFFFFF; // a popup's section card: white over the panel, faintly
         constexpr uint32_t kCardEdge     = 0x1EFFFFFF;
-        constexpr float kCardRadius      = 6.0f;
 
         constexpr uint32_t MenuColors::*kMenuColorFields[] = {&MenuColors::background, &MenuColors::card,
             &MenuColors::control, &MenuColors::hover, &MenuColors::inset, &MenuColors::border, &MenuColors::raisedEdge,
@@ -34,13 +32,6 @@ namespace headsup
         BarTheme BuiltInOf(const Settings& settings)
         {
             return settings.barTheme == BarTheme::Custom ? settings.customPalette.parent : settings.barTheme;
-        }
-
-        // A corner's radius as set, else the theme's own, else its shape's.
-        float Rounded(int setting, const BarPalette& palette, float shape)
-        {
-            if (setting != kThemeRounding) return static_cast<float>(setting);
-            return palette.rounding != kShapeRounding ? static_cast<float>(palette.rounding) : shape;
         }
 
         const char* Interned(const std::string& name)
@@ -197,7 +188,7 @@ namespace headsup
     std::optional<BoxStyle> BarLook::BoxOf(BarWidget widget, bool lit, bool backed) const
     {
         const bool isTarget = widget == BarWidget::Target;
-        const float radius  = WidgetRadius(settings.widgetRounding);
+        const auto radius   = static_cast<float>(settings.widgetRounding);
         if (ornate)
         {
             if (!isTarget && !lit) return std::nullopt;
@@ -209,11 +200,6 @@ namespace headsup
         const uint32_t fill = lit ? palette.highlight : palette.pill;
         return BoxStyle{.radius = radius, .top = fill, .bottom = fill,
             .border = isTarget || lit ? palette.accent : palette.pillBorder};
-    }
-
-    float BarLook::WidgetRadius(int rounding) const
-    {
-        return Rounded(rounding, palette, ornate ? kFrameRadius : metrics.pillRadius);
     }
 
     float MarkWidth(const Span& span, float size)
@@ -251,14 +237,13 @@ namespace headsup
     BoxStyle PopupPanel(const BarLook& look)
     {
         const BarPalette& p = look.palette;
-        return BoxStyle{.radius = Rounded(look.settings.popupRounding, p, look.metrics.panelRadius), .top = p.panelTop,
+        return BoxStyle{.radius = static_cast<float>(look.settings.popupRounding), .top = p.panelTop,
             .bottom = p.panelBottom, .border = p.panelBorder, .outer = p.panelOuter, .outerGap = kOuterGap};
     }
 
     BoxStyle PopupCard(const BarLook& look)
     {
-        const float shape = std::max(look.metrics.panelRadius, kCardRadius);
-        return BoxStyle{.radius = Rounded(look.settings.sectionRounding, look.palette, shape), .top = kCardFill,
+        return BoxStyle{.radius = static_cast<float>(look.settings.sectionRounding), .top = kCardFill,
             .bottom = kCardFill, .border = kCardEdge};
     }
 
@@ -272,7 +257,8 @@ namespace headsup
     BoxStyle HelpBarPanel(const BarLook& look)
     {
         const BarPalette& p = look.palette;
-        return BoxStyle{.radius = Rounded(look.settings.helpBarRounding, p, look.metrics.panelRadius), .top = p.panelTop,
+        const int set = look.settings.helpBarRounding;
+        return BoxStyle{.radius = set != kThemeRounding ? static_cast<float>(set) : look.metrics.panelRadius, .top = p.panelTop,
             .bottom = p.panelBottom, .border = p.panelBorder};
     }
 

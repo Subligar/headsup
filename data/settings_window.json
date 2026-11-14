@@ -105,6 +105,7 @@
             },
             {"key": "height", "name": "Panel Height", "tip": "How tall the top panel is. The text and icons of every widget grow and shrink with it."},
             {"key": "widget-spacing", "name": "Widget Spacing", "tip": "The space between every widget and the widgets beside it. A separator between them adds its own room. Default: 2 px."},
+            {"key": "panel-rounding", "name": "Corner Rounding", "tip": "How round the corners of the top panel itself are. The widgets, the pop-outs and the help bar have their own. Default: 0 px."},
             {"key": "hide-readout", "name": "Hide Server Info", "tip": "The game's S, R and % numbers at the top right."},
             {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
           ]
@@ -136,7 +137,7 @@
             {"key": "title-font", "name": "Primary Font", "tip": "The font of each widget's top line, of a widget on one line, and of the pop-outs' headings. Default: the theme's."},
             {"key": "text-font", "name": "Secondary Font", "tip": "The font of each widget's second line, its numbers and the pop-outs' text. Default: the theme's."},
             {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of the primary line's text to the size of the secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Both lines grow or shrink together to fit the Panel Height. Default: 1.20x."},
-            {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets' backgrounds are. Set by Theme keeps the theme's own. Default: 8 px."}
+            {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets' backgrounds are. Default: 8 px."}
           ]
         },
         {
@@ -147,8 +148,8 @@
             {"key": "text-scale", "name": "Text Scale", "tip": "Makes the text in the pop-outs larger or smaller. At 1x a pop-out's title is 18 px, its section titles 16 px and its text 14 px. Default: 1.0x."},
             {"key": "popup-width", "name": "Width", "tip": "Makes each pop-out and its sections wider, without changing the text. Default: 1.0x."},
             {"key": "popup-height", "name": "Height", "tip": "Makes each pop-out and its sections taller, without changing the text. Default: 1.0x."},
-            {"key": "popup-rounding", "name": "Pop-out Rounding", "tip": "How round the corners of the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."},
-            {"key": "section-rounding", "name": "Section Rounding", "tip": "How round the corners of the sections in the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."}
+            {"key": "popup-rounding", "name": "Pop-out Rounding", "tip": "How round the corners of the pop-outs are. Default: 0 px."},
+            {"key": "section-rounding", "name": "Section Rounding", "tip": "How round the corners of the sections in the pop-outs are. Default: 10 px."}
           ]
         },
         {
@@ -202,7 +203,7 @@
                 {"key": "widget-spacing", "name": "Widget Spacing", "tip": "The space between this widget and the widgets beside it. The gap between two widgets is the average of their spacings. Default: the Top Panel's."},
                 {"key": "widget-padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default: the Top Panel's."},
                 {"key": "show-background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it, on top of what the theme gives it. Default: the Top Panel's."},
-                {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of this widget's background are. Set by Theme keeps the theme's own. Default: the Top Panel's."},
+                {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of this widget's background are. Default: the Top Panel's."},
                 {"key": "primary-font", "name": "Primary Font", "tip": "The font of this widget's top line, of the widget on one line, and of its pop-out's headings. Default: the Top Panel's."},
                 {"key": "secondary-font", "name": "Secondary Font", "tip": "The font of this widget's second line, its numbers and its pop-out's text. Default: the Top Panel's."},
                 {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of this widget's primary line's text to the size of its secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Default: the Top Panel's."},
@@ -454,7 +455,7 @@
               ]
             },
             {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels thick the border is: the line along the strip's foot, or with Vanilla Window the frame around the top panel, the help bar, the pop-outs, the fishing bar and this window. 0 for none."},
-            {"key": "theme-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets, the pop-outs, their sections and the help bar are, wherever those are Set by Theme. Auto keeps the corners of the theme's own style. Default: Auto."},
+            {"key": "window-rounding", "name": "Window Rounding", "tip": "How round the corners of HeadsUp's windows are, such as this settings window. It leaves the top panel, the widgets, the pop-outs and the help bar to their own Corner Rounding. Auto keeps the corners of the theme's own style. Default: Auto."},
             {"key": "popup-opacity", "name": "Pop-out Opacity", "tip": "How much of the game shows through the pop-outs. At 100% none of it does."},
             {
               "key": "status-icons",

@@ -202,7 +202,6 @@ smoothness=16.0000
 statusDisplay=icon
 timerPercent=120.0000
 widgetBackground=true
-widgetRounding=8.0000
 zoneId=false
 )";
 }

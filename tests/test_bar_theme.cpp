@@ -48,7 +48,7 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     p.border       = 4;
     p.background   = BarBackground::Window;
     p.windowType   = 6;
-    p.rounding     = 9;
+    p.windowRounding = 9;
     p.separator    = DashMark::Square;
     p.statusIcons  = 2;
     p.statusBack   = true;
@@ -63,9 +63,9 @@ TEST(a_theme_file_reads_back_every_part_of_its_palette)
     // A window type past the game's eight is its last; a background of no name is Phoenix Gold's.
     const std::optional<BarPalette> wild = PaletteFromThemeFile("[theme]\nTitle=ff102030\nWindowType=40\nBackground=stars\n");
     CHECK(wild && wild->windowType == kWindowTypes && wild->background == BarBackground::Gradient);
-    // A rounding past the most is the most, and none read is the shape's own.
-    const std::optional<BarPalette> round = PaletteFromThemeFile("[theme]\nTitle=ff102030\nRounding=99\n");
-    CHECK(round && round->rounding == kMaxRounding && partial->rounding == kShapeRounding);
+    // A window rounding past the most is the most, and none read is the shape's own.
+    const std::optional<BarPalette> round = PaletteFromThemeFile("[theme]\nTitle=ff102030\nWindowRounding=99\n");
+    CHECK(round && round->windowRounding == kMaxRounding && partial->windowRounding == kShapeRounding);
     // Status icons of no pack's name, and none read, are Phoenix Gold's; a background read is on only when it says
     // true, and none read is Phoenix Gold's.
     const BarPalette& gold = PaletteOf(BarTheme::PhoenixGold);

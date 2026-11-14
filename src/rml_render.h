@@ -53,7 +53,8 @@ namespace headsup
         // asked of Direct3D.
         void SetTransform(const Rml::Matrix4f* transform) override;
         // RmlUi clips what scrolls under a transform by a mask and no longer by the scissor: without these a list
-        // that drops in spills over its box until it lands. The mask is kept as a rectangle (MaskEdges).
+        // that drops in spills over its box until it lands. The mask is kept as a rectangle (MaskEdges), and a
+        // rounded box's as its outline too (MaskShape), which what is drawn is cut to.
         void EnableClipMask(bool enable) override;
         void RenderToClipMask(Rml::ClipMaskOperation operation, Rml::CompiledGeometryHandle geometry,
             Rml::Vector2f translation) override;
@@ -114,6 +115,7 @@ namespace headsup
         Rml::Rectanglei m_Region;
         bool m_Masked = false;
         PixelEdges m_Mask;
+        std::vector<ScreenVertex> m_MaskShape; // none while the mask is a box
         bool m_NothingVisible = false; // the scissor and the mask leave no pixel: nothing is drawn
         D3DVIEWPORT8 m_GameViewport{};
         bool m_Textured = true; // the color stage reads the texture; untextured geometry takes its vertex colors

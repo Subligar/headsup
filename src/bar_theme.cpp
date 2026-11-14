@@ -15,7 +15,7 @@ namespace headsup
     {
         constexpr const char* kThemeSection = "theme";
         constexpr const char* kShapeKey = "Shape", *kBorderKey = "Border", *kBackgroundKey = "Background";
-        constexpr const char* kWindowTypeKey = "WindowType", *kRoundingKey = "Rounding", *kSeparatorKey = "Separator";
+        constexpr const char* kWindowTypeKey = "WindowType", *kWindowRoundingKey = "WindowRounding", *kSeparatorKey = "Separator";
         constexpr const char* kParentKey = "Parent";
         constexpr const char* kStatusIconsKey = "StatusIcons", *kStatusBackKey = "StatusBackground";
         constexpr const char* kTrue = "true", *kFalse = "false";
@@ -121,7 +121,7 @@ namespace headsup
         values.push_back({kBorderKey, std::to_string(palette.border)});
         values.push_back({kBackgroundKey, kBarBackgroundNames[static_cast<int>(palette.background)]});
         values.push_back({kWindowTypeKey, std::to_string(palette.windowType)});
-        values.push_back({kRoundingKey, std::to_string(palette.rounding)});
+        values.push_back({kWindowRoundingKey, std::to_string(palette.windowRounding)});
         values.push_back({kSeparatorKey, kDashMarkNames[static_cast<int>(palette.separator)]});
         values.push_back({kStatusIconsKey, StatusIconsName(palette.statusIcons)});
         values.push_back({kStatusBackKey, palette.statusBack ? kTrue : kFalse});
@@ -152,8 +152,8 @@ namespace headsup
             palette.border = std::clamp(*border, 0, kMaxStripBorder);
         if (const std::optional<int> type = NumberIn(IniValue(file, kThemeSection, kWindowTypeKey), 10))
             palette.windowType = std::clamp(*type, kFollowGameWindow, kWindowTypes);
-        if (const std::optional<int> rounding = NumberIn(IniValue(file, kThemeSection, kRoundingKey), 10))
-            palette.rounding = std::clamp(*rounding, kShapeRounding, kMaxRounding);
+        if (const std::optional<int> rounding = NumberIn(IniValue(file, kThemeSection, kWindowRoundingKey), 10))
+            palette.windowRounding = std::clamp(*rounding, kShapeRounding, kMaxRounding);
         if (const std::optional<std::string> icons = IniValue(file, kThemeSection, kStatusIconsKey))
             palette.statusIcons = StatusIconsNamed(*icons, palette.statusIcons);
         if (const std::optional<std::string> back = IniValue(file, kThemeSection, kStatusBackKey)) palette.statusBack = *back == kTrue;

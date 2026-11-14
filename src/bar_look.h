@@ -47,8 +47,6 @@ namespace headsup
         // How a widget's box is drawn, or nothing for none. lit: hovered or open, with a popup; backed: its Show
         // Background on. Ornate: the target's frame and a lit widget's tint. Pills: a widget's pill while lit or backed.
         std::optional<BoxStyle> BoxOf(BarWidget widget, bool lit, bool backed) const;
-        // The corners of a widget's box at a Corner Rounding.
-        float WidgetRadius(int rounding) const;
     };
 
     // Whether the game's window art is drawn: the theme's background is the Window.

@@ -275,6 +275,12 @@ namespace headsup
         }
     }
 
+    std::string ArtRules(const std::string& box, float radius, const std::string& art)
+    {
+        return box + "{border-radius:" + Px(radius) + ";overflow:hidden;}" + box + " ." + kArtClass +
+               "{position:absolute;left:0px;top:0px;width:100%;height:100%;" + art + "}";
+    }
+
     std::string IconSource(Icon icon)
     {
         return std::string(kHostSource) + std::string(kIconKind) + kSeparator + std::to_string(static_cast<int>(icon));
@@ -525,7 +531,7 @@ namespace headsup
         // The game's art frames the bar alone: the glow other themes fade out under the strip would hang its frame low.
         // With no glow the strip's image has no rows for it, and the element must not either, or the image stretches.
         const int stripRows = WholePixels(m.height), belowRows = look.skin || p.below == 0 ? 0 : WholePixels(m.below);
-        const float stripHeight = static_cast<float>(stripRows + belowRows) + (p.underLine != 0 ? 1.0f : 0.0f);
+        const float faceHeight = static_cast<float>(stripRows) + (p.underLine != 0 ? 1.0f : 0.0f);
         const float mid         = row.y + row.height / 2.0f;
         const float rowTop      = row.y + kContentInset; // where a widget's content starts
         const float clear       = DiamondClearance(m);
@@ -541,8 +547,16 @@ namespace headsup
                RcssColor(p.title) + ";}";
         css += "div{display:block;}";
         css += std::string(".") + kHiddenClass + "{display:none;}";
-        css += std::string("#") + kStripId + "{position:absolute;left:0px;top:0px;width:100%;height:" + Px(stripHeight) + ";" +
-               (look.skin ? SkinRules(*look.skin) : "decorator:image(\"" + StripSource(p, stripRows, belowRows) + "\");") + "}";
+        // The strip's image is its rows and the glow's under them: each shows its own, at its own size.
+        const std::string strip = "\"" + StripSource(p, stripRows, belowRows) + "\" none repeat-x left ";
+        const std::string stripId = std::string("#") + kStripId;
+        css += stripId + "{position:absolute;left:0px;top:0px;width:100%;height:" + Px(faceHeight) + ";" +
+               (look.skin ? SkinEdgeRules(*look.skin) : std::string()) + "}";
+        css += ArtRules(stripId, static_cast<float>(look.settings.barRounding),
+            look.skin ? SkinFillRules(*look.skin) : "decorator:image(" + strip + "top);");
+        if (belowRows > 0)
+            css += std::string("#") + kStripGlowId + "{position:absolute;left:0px;top:" + Px(faceHeight) + ";width:100%;height:" +
+                   Px(static_cast<float>(belowRows)) + ";decorator:image(" + strip + "bottom);}";
         css += ".cap{position:absolute;top:" + centered(static_cast<float>(cap)) + ";" + square(static_cast<float>(cap)) + "}";
         css += "#cap-left{left:" + Px(std::round(m.cap / 2.0f - static_cast<float>(cap) / 2.0f)) + ";}";
         css += ".divider{position:absolute;top:" + centered(static_cast<float>(divider)) + ";" +
@@ -628,7 +642,8 @@ namespace headsup
         // Game help's bar: its pieces are placed in the screen's own pixels.
         css += std::string("#") + kHelpId + "{position:absolute;left:0px;top:0px;width:0px;height:0px;}";
         css += ".p{position:absolute;white-space:pre;}";
-        css += ".help-box{position:absolute;" + (look.skin ? SkinRules(*look.skin) : PanelRules(HelpBarPanel(look))) + "}";
+        css += ".help-box{position:absolute;" + (look.skin ? SkinEdgeRules(*look.skin) : PanelRules(HelpBarPanel(look))) + "}";
+        if (look.skin) css += ArtRules(".help-box", HelpBarPanel(look).radius, SkinFillRules(*look.skin));
         const int help = HelpTextPixels(look.settings.helpBarTextSize, lines.title);
         css += ".hc{" + FaceRules(look.titleFont, help, place.helpCaption.height) + ShadowEffect(help) + "}";
         css += ".hh{" + FaceRules(look.detailFont, help, place.help.height) + ShadowEffect(help) + "}";
@@ -644,7 +659,7 @@ namespace headsup
             if (const std::optional<int> own = look.settings.Widget(panel.group[slot]).rounding)
             {
                 const std::string id = "#" + WidgetId(WidgetInSlot(slot));
-                css += id + "{border-radius:" + Px(look.WidgetRadius(*own)) + ";}" + id + joinBefore + id + joinAfter;
+                css += id + "{border-radius:" + Px(static_cast<float>(*own)) + ";}" + id + joinBefore + id + joinAfter;
             }
         return css;
     }
@@ -657,7 +672,7 @@ namespace headsup
         const std::string capSource     = SeparatorSource(p.separator, p.accent, cap);
         const std::string dividerSource = SeparatorSource(p.separator, look.ornate ? p.divider : p.accent, divider);
         std::string rml = std::string("<body class=\"") + (look.ornate ? "ornate" : "pills") + "\">";
-        rml += std::string("<div id=\"") + kStripId + "\"></div>";
+        rml += std::string("<div id=\"") + kStripId + "\">" + kArtRml + "</div><div id=\"" + kStripGlowId + "\"></div>";
         if (p.shape == BarShape::Glass) rml += "<div class=\"glint a\"></div><div class=\"glint b\"></div><div class=\"glint c\"></div>";
         if ((look.settings.panelSeparators & SeparatorBit(Separator::EndCaps)) != 0)
             rml += "<img class=\"cap\" id=\"cap-left\" src=\"" + capSource + "\"/><img class=\"cap\" id=\"" + kRightCapId +
@@ -686,7 +701,7 @@ namespace headsup
         if (box.width <= 0.0f) return {};
         std::string rml;
         if (look.settings.helpBarBackground)
-            rml += "<div class=\"help-box\" style=\"" + BoxAt(box.x, box.y, box.width, box.height) + "\"></div>";
+            rml += "<div class=\"help-box\" style=\"" + BoxAt(box.x, box.y, box.width, box.height) + "\">" + kArtRml + "</div>";
         auto centered = [&](int lineHeight) { return box.y + (box.height - static_cast<float>(lineHeight)) / 2.0f; };
         const float captionY = centered(place.helpCaption.height);
         if (!parts.caption.empty()) rml += TextAt("hc", parts.row.captionX, captionY, look.palette.title, parts.caption);
@@ -739,7 +754,8 @@ namespace headsup
         if (panel.outer != 0)
             css += "#outer{position:absolute;box-sizing:border-box;border:1px " + RcssColor(panel.outer) +
                    ";border-radius:" + Px(panel.radius + static_cast<float>(OuterPad(panel))) + ";}";
-        css += "#panel{position:absolute;left:0px;top:0px;" + (look.skin ? SkinRules(*look.skin) : PanelRules(panel)) + "}";
+        css += "#panel{position:absolute;left:0px;top:0px;" + (look.skin ? SkinEdgeRules(*look.skin) : PanelRules(panel)) + "}";
+        if (look.skin) css += ArtRules("#panel", panel.radius, SkinFillRules(*look.skin));
         css += ".card{" + FlatRules(PopupCard(look), true) + "}";
         css += ".tag{" + FlatRules(PopupTag(look, 0.0f), false) + "}";
         // A card's tabs as tags, the picked one in the accent.
@@ -780,7 +796,7 @@ namespace headsup
         if (panel.outer != 0)
             rml += "<div id=\"outer\" style=\"left:" + Px(-out) + ";top:" + Px(-out) + ";" +
                    size(layout.width + 2.0f * out, layout.height + 2.0f * out) + "\"></div>";
-        rml += "<div id=\"panel\" style=\"" + size(layout.width, layout.height) + "\"></div>";
+        rml += "<div id=\"panel\" style=\"" + size(layout.width, layout.height) + "\">" + kArtRml + "</div>";
         // Previewed cards keep their places inside one box the popup's size, scaled about the title's foot and moved to
         // the middle; the pieces come line by line, so every card's are in it.
         bool boxed = false;

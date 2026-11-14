@@ -45,6 +45,7 @@ namespace headsup
         bool developer = false; // a developer's build: its frame has the layout file's Reload and Export
         MenuColors colors = kPhoenixMenuColors;
         std::optional<SkinFrame> skin; // the game's art the window is drawn in, for its Game Window theme
+        std::optional<int> rounding;   // pixels of its corners (Window Rounding); none for its look's own
         bool operator==(const MenuLook&) const = default;
         // The same but for the text's size, the colors and the art: the style changes and the document stays.
         bool SameFrame(const MenuLook& other) const
@@ -69,6 +70,7 @@ namespace headsup
     constexpr const char* kMenuPopupId     = "popup";
     constexpr const char* kMenuTipId       = "tip";
     constexpr const char* kMenuViewBodyId  = "view-body"; // the settings the panel's popup shows, in their own document
+    constexpr const char* kMenuArtId       = "window-art"; // under everything in the window: its art, clipped to its corners
     // Bottom to top: the window, the popups, the settings one shows, and the popups shown after it.
     constexpr int kMenuWindowZ         = 5;
     constexpr int kPopupsZ             = 10;

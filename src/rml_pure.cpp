@@ -150,6 +150,124 @@ namespace headsup
             std::min(a.bottom, b.bottom)};
     }
 
+    void Moved(ScreenVertex& v, float translateX, float translateY, const float* transform)
+    {
+        v.x += translateX;
+        v.y += translateY;
+        if (transform == nullptr) return;
+        v.x += kPixelCenter;
+        v.y += kPixelCenter;
+        Transformed(transform, v.x, v.y);
+        v.x -= kPixelCenter;
+        v.y -= kPixelCenter;
+    }
+
+    namespace
+    {
+        constexpr size_t kBoxCorners = 4;
+
+        // Which side of the line from a to b p is on: above 0 to its left, as an outline goes round.
+        float Side(const ScreenVertex& a, const ScreenVertex& b, const ScreenVertex& p)
+        {
+            return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+        }
+
+        uint32_t MixedColor(uint32_t from, uint32_t to, float t)
+        {
+            uint32_t color = 0;
+            for (int shift = 0; shift < 32; shift += 8)
+            {
+                const float a = static_cast<float>((from >> shift) & 0xFF), b = static_cast<float>((to >> shift) & 0xFF);
+                color |= static_cast<uint32_t>(std::lround(a + (b - a) * t)) << shift;
+            }
+            return color;
+        }
+
+        ScreenVertex Between(const ScreenVertex& p, const ScreenVertex& q, float t)
+        {
+            const auto mix = [t](float a, float b) { return a + (b - a) * t; };
+            return ScreenVertex{mix(p.x, q.x), mix(p.y, q.y), mix(p.z, q.z), mix(p.rhw, q.rhw), MixedColor(p.color, q.color, t),
+                mix(p.u, q.u), mix(p.v, q.v)};
+        }
+
+        bool Inside(const std::vector<ScreenVertex>& shape, const ScreenVertex& p)
+        {
+            for (size_t i = 0; i < shape.size(); ++i)
+                if (Side(shape[i], shape[(i + 1) % shape.size()], p) < 0.0f) return false;
+            return true;
+        }
+
+        // A convex polygon cut to the outline, one of its edges at a time (Sutherland and Hodgman's).
+        std::vector<ScreenVertex> Cut(std::vector<ScreenVertex> polygon, const std::vector<ScreenVertex>& shape)
+        {
+            std::vector<ScreenVertex> kept;
+            for (size_t e = 0; e < shape.size() && !polygon.empty(); ++e)
+            {
+                const ScreenVertex &a = shape[e], &b = shape[(e + 1) % shape.size()];
+                kept.clear();
+                for (size_t i = 0; i < polygon.size(); ++i)
+                {
+                    const ScreenVertex &p = polygon[i], &q = polygon[(i + 1) % polygon.size()];
+                    const float sp = Side(a, b, p), sq = Side(a, b, q);
+                    if (sp >= 0.0f) kept.push_back(p);
+                    if ((sp >= 0.0f) != (sq >= 0.0f)) kept.push_back(Between(p, q, sp / (sp - sq)));
+                }
+                polygon.swap(kept);
+            }
+            return polygon;
+        }
+    }
+
+    std::vector<ScreenVertex> MaskShape(const ScreenVertex* vertices, size_t count, float translateX, float translateY,
+        const float* transform)
+    {
+        if (count <= kBoxCorners) return {};
+        std::vector<ScreenVertex> points(vertices, vertices + count);
+        for (ScreenVertex& v : points)
+            Moved(v, translateX, translateY, transform);
+        std::ranges::sort(points, [](const ScreenVertex& a, const ScreenVertex& b) { return a.x != b.x ? a.x < b.x : a.y < b.y; });
+        // Andrew's monotone chain: the lower outline left to right, then the upper back, each turning left only.
+        std::vector<ScreenVertex> hull;
+        for (int pass = 0; pass < 2; ++pass)
+        {
+            const size_t start = hull.size();
+            for (const ScreenVertex& p : points)
+            {
+                while (hull.size() >= start + 2 && Side(hull[hull.size() - 2], hull.back(), p) <= 0.0f)
+                    hull.pop_back();
+                hull.push_back(p);
+            }
+            hull.pop_back(); // the next pass starts from it
+            std::ranges::reverse(points);
+        }
+        if (hull.size() <= kBoxCorners) hull.clear();
+        return hull;
+    }
+
+    std::vector<ScreenVertex> SharedShape(const std::vector<ScreenVertex>& a, const std::vector<ScreenVertex>& b)
+    {
+        return Cut(a, b);
+    }
+
+    void ClipToShape(std::vector<ScreenVertex>& triangles, const std::vector<ScreenVertex>& shape)
+    {
+        std::vector<ScreenVertex> out;
+        out.reserve(triangles.size());
+        for (size_t i = 0; i + 2 < triangles.size(); i += 3)
+        {
+            const ScreenVertex* t = &triangles[i];
+            if (Inside(shape, t[0]) && Inside(shape, t[1]) && Inside(shape, t[2]))
+            {
+                out.insert(out.end(), t, t + 3);
+                continue;
+            }
+            const std::vector<ScreenVertex> piece = Cut({t[0], t[1], t[2]}, shape);
+            for (size_t k = 1; k + 1 < piece.size(); ++k)
+                out.insert(out.end(), {piece[0], piece[k], piece[k + 1]});
+        }
+        triangles.swap(out);
+    }
+
     KeyIdentifier KeyOf(uint32_t virtualKey)
     {
         for (const KeyRun& run : kKeyRuns)

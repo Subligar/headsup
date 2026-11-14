@@ -1362,17 +1362,34 @@ TEST(border_color_is_the_last_color_of_the_themes_second_column)
     CHECK_EQ(w.settings.customPalette.bottomLine, (PaletteOf(BarTheme::PhoenixGold).bottomLine & 0xFF00FFFFu) | 0x00010000u);
 }
 
-TEST(the_themes_corner_rounding_starts_at_its_shapes_own_and_edits_a_copy)
+TEST(the_themes_window_rounding_starts_at_its_shapes_own_and_edits_a_copy)
 {
     Window w;
     w.state.page           = Page::Theme;
-    const std::string rounding = "theme-theme-colors-theme-rounding";
+    const std::string rounding = "theme-theme-colors-window-rounding";
     const FormBlock* card  = Block(w.Pass(), "theme-theme-colors");
     CHECK(At(card, "theme-theme-colors-theme-border-thickness") < At(card, rounding));
     CHECK(w.Pass({{rounding, kChangeEvent, "6"}}).changed);
-    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.rounding == 6);
+    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.windowRounding == 6);
     w.Pass({{rounding, kChangeEvent, std::to_string(kShapeRounding)}});
-    CHECK_EQ(w.settings.customPalette.rounding, kShapeRounding);
+    CHECK_EQ(w.settings.customPalette.windowRounding, kShapeRounding);
+}
+
+TEST(the_top_panel_the_widgets_and_the_pop_outs_take_a_rounding_of_none_up_and_no_theme_step)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    for (const auto& [id, rounding] : {std::pair{"toppanel-top-panel-panel-rounding", &Settings::barRounding},
+             std::pair{"toppanel-widget-appearance-corner-rounding", &Settings::widgetRounding},
+             std::pair{"toppanel-popup-appearance-popup-rounding", &Settings::popupRounding},
+             std::pair{"toppanel-popup-appearance-section-rounding", &Settings::sectionRounding}})
+    {
+        w.Pass({{id, kChangeEvent, "5"}});
+        CHECK_EQ(w.settings.*rounding, 5);
+        // The step under none, where Set by Theme was, is none.
+        w.Pass({{id, kChangeEvent, "-1"}});
+        CHECK_EQ(w.settings.*rounding, 0);
+    }
 }
 
 TEST(the_themes_opacities_set_the_alpha_of_the_strip_and_of_the_pop_outs)
@@ -1563,8 +1580,10 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     CHECK(own.spacing == 10);
     w.Pass({{id("widget-spacing"), kChangeEvent, "-1"}}); // the step under 0 px
     CHECK(!own.spacing);
-    w.Pass({{id("corner-rounding"), kChangeEvent, std::to_string(kThemeRounding)}});
-    CHECK(own.rounding == kThemeRounding);
+    w.Pass({{id("corner-rounding"), kChangeEvent, "0"}});
+    CHECK(own.rounding == 0);
+    w.Pass({{id("corner-rounding"), kChangeEvent, "-1"}}); // the Top Panel's, where Set by Theme was before it
+    CHECK(!own.rounding);
     w.Pass({{id("icon-scale"), kChangeEvent, "4"}}); // four steps of 5% over 20%
     CHECK(own.iconScale == 40);
     w.Pass({{id("popup-text-scale"), kChangeEvent, "13"}}); // thirteen tenths over 0.2x

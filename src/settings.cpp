@@ -75,9 +75,10 @@ namespace headsup
             {"barIconScale", &Settings::barIconScale, kMinIconScale, kMaxIconScale, kPercentStep},
             {"barWidgetSpacing", &Settings::barWidgetSpacing, 0, kMaxWidgetSpacing},
             {"barWidgetPadding", &Settings::barWidgetPadding, 0, kMaxWidgetPadding},
-            {"widgetRounding", &Settings::widgetRounding, kThemeRounding, kMaxRounding},
-            {"popupRounding", &Settings::popupRounding, kThemeRounding, kMaxRounding},
-            {"sectionRounding", &Settings::sectionRounding, kThemeRounding, kMaxRounding},
+            {"barRounding", &Settings::barRounding, 0, kMaxRounding},
+            {"widgetRounding", &Settings::widgetRounding, 0, kMaxRounding},
+            {"popupRounding", &Settings::popupRounding, 0, kMaxRounding},
+            {"sectionRounding", &Settings::sectionRounding, 0, kMaxRounding},
             {"helpBarRounding", &Settings::helpBarRounding, kThemeRounding, kMaxRounding},
             {"panelSeparators", &Settings::panelSeparators, 0, kAllSeparators},
             {"helpBarTextSize", &Settings::helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize},
@@ -247,7 +248,7 @@ namespace headsup
         constexpr const char* kBorderSuffix = "Border";
         constexpr const char* kBackgroundSuffix = "Background";
         constexpr const char* kWindowTypeSuffix = "WindowType";
-        constexpr const char* kRoundingSuffix = "Rounding";
+        constexpr const char* kWindowRoundingSuffix = "WindowRounding";
         constexpr const char* kSeparatorSuffix = "Separator";
         constexpr const char* kStatusIconsSuffix = "StatusIcons"; // by StatusIconsName
         constexpr const char* kStatusBackSuffix  = "StatusBackground";
@@ -1266,7 +1267,7 @@ namespace headsup
         if (static_cast<int>(s.barTheme) >= kBarThemeCount) s.barTheme = d.barTheme;
         if (static_cast<int>(s.customPalette.shape) >= kBarShapeCount) s.customPalette.shape = d.customPalette.shape;
         s.customPalette.border = std::clamp(s.customPalette.border, 0, kMaxStripBorder);
-        s.customPalette.rounding = std::clamp(s.customPalette.rounding, kShapeRounding, kMaxRounding);
+        s.customPalette.windowRounding = std::clamp(s.customPalette.windowRounding, kShapeRounding, kMaxRounding);
         s.customPalette.windowType = std::clamp(s.customPalette.windowType, kFollowGameWindow, kWindowTypes);
         s.customPalette.statusIcons = std::clamp(s.customPalette.statusIcons, kVanillaStatusIcons, kStatusPackCount - 1);
         if (!IsFolderFileName(s.customThemeName)) s.customThemeName = kUnnamedTheme;
@@ -1294,7 +1295,7 @@ namespace headsup
             if (w.worldGuild < 0 || w.worldGuild >= static_cast<int>(GuildShops().size())) w.worldGuild = fresh.worldGuild;
             if (w.spacing) w.spacing = std::clamp(*w.spacing, 0, kMaxWidgetSpacing);
             if (w.padding) w.padding = std::clamp(*w.padding, 0, kMaxWidgetPadding);
-            if (w.rounding) w.rounding = std::clamp(*w.rounding, kThemeRounding, kMaxRounding);
+            if (w.rounding) w.rounding = std::clamp(*w.rounding, 0, kMaxRounding);
             if (w.iconScale) w.iconScale = std::clamp(Stepped(*w.iconScale, kPercentStep), kMinIconScale, kMaxIconScale);
             if (w.fontRatio) w.fontRatio = std::clamp(*w.fontRatio, kMinFontRatio, kMaxFontRatio);
             if (w.popupTextScale) w.popupTextScale = std::clamp(*w.popupTextScale, kMinPopupScale, kMaxPopupScale);
@@ -1819,7 +1820,7 @@ namespace headsup
             s.customPalette.background = static_cast<BarBackground>(NameIndex(kBarBackgroundNames, kBarBackgroundCount,
                 store.GetString((custom + kBackgroundSuffix).c_str(), ""), static_cast<int>(s.customPalette.background)));
             s.customPalette.windowType   = LoadInt(store, custom + kWindowTypeSuffix, s.customPalette.windowType);
-            s.customPalette.rounding     = LoadInt(store, custom + kRoundingSuffix, s.customPalette.rounding);
+            s.customPalette.windowRounding = LoadInt(store, custom + kWindowRoundingSuffix, s.customPalette.windowRounding);
             s.customPalette.separator    = static_cast<DashMark>(NameIndex(kDashMarkNames, kDashMarkCount,
                 store.GetString((custom + kSeparatorSuffix).c_str(), ""), static_cast<int>(s.customPalette.separator)));
             s.customPalette.statusIcons =
@@ -1928,7 +1929,7 @@ namespace headsup
         store.Set((kCustomThemeKey + std::string(kBackgroundSuffix)).c_str(),
             kBarBackgroundNames[static_cast<int>(s.customPalette.background)]);
         StoreFloat(store, kCustomThemeKey + std::string(kWindowTypeSuffix), static_cast<float>(s.customPalette.windowType));
-        StoreFloat(store, kCustomThemeKey + std::string(kRoundingSuffix), static_cast<float>(s.customPalette.rounding));
+        StoreFloat(store, kCustomThemeKey + std::string(kWindowRoundingSuffix), static_cast<float>(s.customPalette.windowRounding));
         store.Set((kCustomThemeKey + std::string(kSeparatorSuffix)).c_str(), kDashMarkNames[static_cast<int>(s.customPalette.separator)]);
         store.Set((kCustomThemeKey + std::string(kStatusIconsSuffix)).c_str(), StatusIconsName(s.customPalette.statusIcons).c_str());
         StoreBool(store, kCustomThemeKey + std::string(kStatusBackSuffix), s.customPalette.statusBack);

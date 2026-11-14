@@ -154,7 +154,7 @@ TEST(pills_frame_every_widget_while_unlit_only_with_show_widget_background)
     {
         const std::optional<BoxStyle> box = look.BoxOf(widget, false, true);
         CHECK(box.has_value() && box->top == p.pill && box->border == p.pillBorder);
-        CHECK(Near(box->radius, look.metrics.pillRadius));
+        CHECK(Near(box->radius, static_cast<float>(kDefaultWidgetRounding)));
     }
     const std::optional<BoxStyle> target = look.BoxOf(BarWidget::Target, false, true);
     CHECK(target.has_value() && target->top == p.pill && target->border == p.accent);
@@ -320,52 +320,37 @@ TEST(a_window_from_a_panels_colors_reads_well_and_steps_up_from_its_page)
     }
 }
 
-TEST(widgets_pop_outs_and_their_sections_are_rounded_as_set_or_as_the_theme_does)
+TEST(widgets_pop_outs_and_their_sections_are_rounded_as_set_whatever_the_theme)
 {
     Settings settings;
-    for (const BarTheme theme : {BarTheme::PhoenixGold, BarTheme::UmbraDark})
+    BarPalette windowed = PaletteOf(BarTheme::UmbraDark);
+    windowed.windowRounding = 7; // the windows' own: none of these
+    for (const BarLook& own : {LookOf(BarTheme::PhoenixGold, settings), LookOf(BarTheme::UmbraDark, settings), LookOf(windowed, settings)})
     {
-        const BarLook own = LookOf(theme, settings);
-        const float widget = own.BoxOf(BarWidget::Target, true, false)->radius, popup = PopupPanel(own).radius,
-                    card   = PopupCard(own).radius;
-        Settings set = settings;
-        set.widgetRounding  = 11;
-        set.popupRounding   = 0;
-        set.sectionRounding = 20;
-        const BarLook rounded = LookOf(theme, set);
-        CHECK(Near(rounded.BoxOf(BarWidget::Target, true, false)->radius, 11.0f) && Near(rounded.BoxOf(BarWidget::Bags, true, false)->radius, 11.0f));
-        CHECK(Near(PopupPanel(rounded).radius, 0.0f) && Near(PopupCard(rounded).radius, 20.0f));
-        // The theme's own, by default.
-        CHECK(settings.widgetRounding == kThemeRounding && widget > 0.0f && popup > 0.0f && card > 0.0f);
-        CHECK(Near(widget, theme == BarTheme::PhoenixGold ? 3.0f : own.metrics.pillRadius) && Near(popup, own.metrics.panelRadius));
+        // 8, 0 and 10 px by default, the ornate target's frame too.
+        CHECK(Near(own.BoxOf(BarWidget::Target, true, false)->radius, 8.0f) && Near(own.BoxOf(BarWidget::Bags, true, false)->radius, 8.0f));
+        CHECK(Near(PopupPanel(own).radius, 0.0f) && Near(PopupCard(own).radius, 10.0f));
     }
+    settings.widgetRounding  = 11;
+    settings.popupRounding   = 3;
+    settings.sectionRounding = 20;
+    const BarLook rounded = LookOf(BarTheme::PhoenixGold, settings);
+    CHECK(Near(rounded.BoxOf(BarWidget::Target, true, false)->radius, 11.0f) && Near(rounded.BoxOf(BarWidget::Bags, true, false)->radius, 11.0f));
+    CHECK(Near(PopupPanel(rounded).radius, 3.0f) && Near(PopupCard(rounded).radius, 20.0f));
 }
 
-TEST(the_help_bar_is_rounded_as_set_or_as_the_theme_does)
+TEST(the_help_bar_is_rounded_as_set_or_as_its_themes_shape_does)
 {
     Settings settings;
     CHECK_EQ(settings.helpBarRounding, kThemeRounding);
     const BarLook own = LookOf(BarTheme::UmbraDark, settings);
     CHECK(Near(HelpBarPanel(own).radius, own.metrics.panelRadius));
+    // A theme's Window Rounding is the windows' alone.
+    BarPalette windowed = PaletteOf(BarTheme::UmbraDark);
+    windowed.windowRounding = 7;
+    CHECK(Near(HelpBarPanel(LookOf(windowed, settings)).radius, own.metrics.panelRadius));
     settings.helpBarRounding = 9;
     CHECK(Near(HelpBarPanel(LookOf(BarTheme::UmbraDark, settings)).radius, 9.0f));
-}
-
-TEST(a_themes_own_corner_rounding_rounds_whatever_is_set_by_theme)
-{
-    Settings settings;
-    BarPalette p = PaletteOf(BarTheme::PhoenixGold);
-    CHECK_EQ(p.rounding, kShapeRounding);
-    p.rounding = 7;
-    const BarLook look = LookOf(p, settings);
-    CHECK(Near(look.BoxOf(BarWidget::Target, true, false)->radius, 7.0f) && Near(PopupPanel(look).radius, 7.0f));
-    CHECK(Near(PopupCard(look).radius, 7.0f) && Near(HelpBarPanel(look).radius, 7.0f));
-    // A rounding of their own still wins.
-    settings.widgetRounding  = 2;
-    settings.helpBarRounding = 0;
-    const BarLook own = LookOf(p, settings);
-    CHECK(Near(own.BoxOf(BarWidget::Target, true, false)->radius, 2.0f) && Near(HelpBarPanel(own).radius, 0.0f));
-    CHECK(Near(PopupPanel(own).radius, 7.0f));
 }
 
 TEST(the_help_bar_takes_its_set_width_text_size_and_height)

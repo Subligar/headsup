@@ -279,7 +279,7 @@ TEST(a_widget_shows_its_background_by_its_own_class_and_its_pill_is_rounded_by_i
             settings.Widget(BarWidget::Zone).combine     = PanelWidget{BarWidget::Weather};
             settings.Widget(BarWidget::Zone).rounding    = 12;
             settings.Widget(BarWidget::Weather).rounding = 1; // in Zone's pill, which is rounded by Zone's
-            settings.Widget(BarWidget::Bags).rounding    = kThemeRounding;
+            settings.Widget(BarWidget::Bags).rounding    = 0;
             const BarLook look = LookOf(PaletteOf(theme), settings);
             test::RmlSession rml;
             Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
@@ -309,9 +309,7 @@ TEST(a_widget_shows_its_background_by_its_own_class_and_its_pill_is_rounded_by_i
             CHECK(w.border_top_right_radius() == 12.0f && w.border_bottom_right_radius() == 12.0f);
             CHECK(w.border_top_left_radius() == 0.0f && w.border_bottom_left_radius() == 0.0f);
             CHECK(gil->GetComputedValues().border_top_left_radius() == 4.0f);
-            // The shape's, which RmlUi keeps in whole pixels.
-            const float own = std::trunc(theme == BarTheme::PhoenixGold ? 3.0f : look.metrics.pillRadius);
-            CHECK_EQ(bags->GetComputedValues().border_top_left_radius(), own);
+            CHECK_EQ(bags->GetComputedValues().border_top_left_radius(), 0.0f);
             // Its class alone shows it, whatever the Top Panel's Show Background says.
             CHECK(z.background_color().alpha > 0 && clock->GetComputedValues().background_color().alpha == 0);
             CHECK_EQ(rml.Said(), "");
@@ -692,7 +690,7 @@ TEST(every_popup_and_the_settings_it_shows_draw_over_the_settings_window)
     const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
         PopupFace{"Barlow Condensed", 16, 19}, PopupFace{"Barlow Condensed", 16, 19}};
-    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt};
+    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
     // Each popup document as the bar makes it, a popup at the top left, and the settings view and window there too.
     const auto popups = [&](std::optional<int> z) {
         Rml::ElementDocument* d = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
@@ -739,7 +737,7 @@ TEST(a_popup_over_the_settings_window_keeps_the_pointer_from_the_window_under_it
     const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
         PopupFace{"Barlow Condensed", 16, 19}, PopupFace{"Barlow Condensed", 16, 19}};
-    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt};
+    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
     Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
     window->SetProperty(Rml::PropertyId::Left, Rml::Property(0.0f, Rml::Unit::PX));
     window->SetProperty(Rml::PropertyId::Top, Rml::Property(0.0f, Rml::Unit::PX));
@@ -1437,7 +1435,7 @@ TEST(a_text_box_holds_its_fonts_descenders_in_every_bundled_window_font)
         for (const int pixels : {12, 16, 18, 24})
         {
             test::RmlSession rml;
-            const MenuLook menu{MenuTheme::Phoenix, font, kMarcellusSC, pixels, 0, false, kPhoenixMenuColors, std::nullopt};
+            const MenuLook menu{MenuTheme::Phoenix, font, kMarcellusSC, pixels, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
             Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
             window->SetProperty(Rml::PropertyId::FontSize, Rml::Property(static_cast<float>(pixels), Rml::Unit::PX));
             Rml::Element* box = window->AppendChild(window->CreateElement("input"));
@@ -1458,5 +1456,102 @@ TEST(a_text_box_holds_its_fonts_descenders_in_every_bundled_window_font)
             if (bottom > inside + 0.5f)
                 throw test::Failure{std::string(font) + " at " + std::to_string(pixels) + " px: its descenders end at " +
                                     std::to_string(bottom) + " px of a box " + std::to_string(inside) + " px inside"};
+        }
+}
+
+namespace
+{
+    // Whether RmlUi hands the renderer a mask of its box's round corners to cut what an element draws to.
+    bool ClippedToCorners(Rml::Element* e)
+    {
+        Rml::Rectanglei region;
+        Rml::ClipMaskGeometryList masks;
+        Rml::ElementUtilities::GetClippingRegion(e, region, &masks);
+        return !masks.empty();
+    }
+
+    // An element's art child, filling the inside of its border.
+    Rml::Element* ArtOf(Rml::Element* box)
+    {
+        Rml::Element* art = box->GetNumChildren() > 0 ? box->GetChild(0) : nullptr;
+        if (art == nullptr || !art->IsClassSet(kArtClass)) return nullptr;
+        const Rml::Vector2f inside = box->GetBox().GetSize(Rml::BoxArea::Padding), size = art->GetBox().GetSize(Rml::BoxArea::Border);
+        return std::abs(inside.x - size.x) < 0.5f && std::abs(inside.y - size.y) < 0.5f ? art : nullptr;
+    }
+}
+
+// Round 23: "Pop-out Rounding setting does not affect pop-outs when using the Vanilla Window background style."
+TEST(the_top_panel_a_pop_out_and_the_help_bar_clip_their_art_to_their_own_rounding)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    const PopupFaces faces = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
+        PopupFace{"Barlow Condensed", 16, 19}, PopupFace{"Barlow Condensed", 16, 19}};
+    BarPalette window = Settings{}.customPalette;
+    window.shape      = BarShape::Window;
+    for (const std::optional<SkinFrame> skin : {std::optional<SkinFrame>(), std::optional(SkinFrame{0, 1.0f, 0.5f, 1.0f, 0xFF808080u})})
+        for (const int rounding : {0, 12})
+        {
+            Settings settings;
+            settings.barRounding     = rounding;
+            settings.popupRounding   = rounding;
+            settings.helpBarRounding = rounding;
+            BarLook look = LookOf(skin ? window : PaletteOf(BarTheme::UmbraDark), settings);
+            look.skin    = skin;
+            test::RmlSession rml;
+            Rml::ElementDocument* bar    = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+            Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
+            bar->Show();
+            popups->Show();
+            HelpBarParts help;
+            help.row = HelpBarRow{BarRect{8.0f, 54.0f, 400.0f, 24.0f}, 23.0f, 120.0f, 180.0f};
+            bar->GetElementById(kHelpId)->SetInnerRML(HelpBarRml(help, look, place));
+            Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+            popup->SetClass(kPopupClass, true);
+            PopupLayout layout;
+            layout.width  = 200.0f;
+            layout.height = 100.0f;
+            popup->SetInnerRML(PopupRml(layout, look, faces));
+            rml.context->Update();
+            // The strip's picture is in its art whatever the theme; the pop-out's and help bar's only in the game's.
+            Rml::Element* strip = ArtOf(bar->GetElementById(kStripId));
+            CHECK(strip != nullptr && ClippedToCorners(strip) == (rounding > 0));
+            Rml::ElementList boxes;
+            bar->GetElementsByClassName(boxes, "help-box");
+            for (Rml::Element* box : {popups->GetElementById("panel"), boxes.empty() ? nullptr : boxes.front()})
+            {
+                CHECK(box != nullptr);
+                if (box == nullptr) continue;
+                CHECK_EQ(box->GetComputedValues().border_top_left_radius(), static_cast<float>(rounding));
+                if (!skin) continue;
+                Rml::Element* art = ArtOf(box);
+                CHECK(art != nullptr && ClippedToCorners(art) == (rounding > 0));
+            }
+            CHECK_EQ(rml.Said(), "");
+        }
+}
+
+TEST(the_settings_windows_corners_are_its_window_rounding_in_the_games_art_too)
+{
+    const GameSkinLook art{SkinFrame{0, 1.0f, 0.5f, 1.0f, 0xFF808080u}, PaletteOf(BarTheme::UmbraDark), kPhoenixMenuColors};
+    for (const bool skinned : {false, true})
+        for (const std::optional<int> rounding : {std::optional<int>(), std::optional<int>(14)})
+        {
+            test::RmlSession rml;
+            const MenuLook menu{skinned ? MenuTheme::GameWindow : MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0,
+                false, kPhoenixMenuColors, skinned ? std::optional(art.frame) : std::nullopt, rounding};
+            Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "menu");
+            window->Show();
+            rml.context->Update();
+            // Its own look's corners by default: round in its colors, square in the game's art.
+            const float corners = window->GetComputedValues().border_top_left_radius();
+            if (rounding)
+                CHECK_EQ(corners, static_cast<float>(*rounding));
+            else
+                CHECK(skinned ? corners == 0.0f : corners > 0.0f);
+            if (!skinned) continue;
+            Rml::Element* art = ArtOf(window->GetElementById(kMenuArtId));
+            CHECK(art != nullptr && ClippedToCorners(art) == rounding.has_value());
+            CHECK_EQ(rml.Said(), "");
         }
 }

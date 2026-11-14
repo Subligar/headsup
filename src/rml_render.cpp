@@ -221,19 +221,14 @@ namespace headsup
         m_Placed.assign(geometry.vertices.begin(), geometry.vertices.end());
         for (ScreenVertex& v : m_Placed)
         {
-            v.x += translation.x;
-            v.y += translation.y;
-            if (m_Transform)
-            {
-                // The transform is of pixels' corners; the vertices are kept at their centers.
-                v.x += kPixelCenter;
-                v.y += kPixelCenter;
-                Transformed(m_Transform->data(), v.x, v.y);
-                v.x -= kPixelCenter;
-                v.y -= kPixelCenter;
-            }
+            Moved(v, translation.x, translation.y, m_Transform ? m_Transform->data() : nullptr);
             v.u *= shareU;
             v.v *= shareV;
+        }
+        if (m_Masked && !m_MaskShape.empty())
+        {
+            ClipToShape(m_Placed, m_MaskShape);
+            if (m_Placed.empty()) return;
         }
         const bool textured = texture != nullptr;
         UseTexture(textured);
@@ -341,13 +336,27 @@ namespace headsup
     {
         if (handle == 0) return;
         const Geometry& geometry = *reinterpret_cast<const Geometry*>(handle);
+        const float* transform = m_Transform ? m_Transform->data() : nullptr;
         const PixelEdges edges = MaskEdges(geometry.vertices.data(), geometry.vertices.size(), translation.x,
-            translation.y, m_Transform ? m_Transform->data() : nullptr);
+            translation.y, transform);
+        const std::vector<ScreenVertex> shape =
+            MaskShape(geometry.vertices.data(), geometry.vertices.size(), translation.x, translation.y, transform);
         // What lies outside a shape is no rectangle: that mask clips nothing.
         if (operation == Rml::ClipMaskOperation::SetInverse)
+        {
             m_Mask = PixelEdges{0, 0, m_Width, m_Height};
+            m_MaskShape.clear();
+        }
+        else if (operation == Rml::ClipMaskOperation::Intersect)
+        {
+            m_Mask = Shared(m_Mask, edges);
+            if (!shape.empty()) m_MaskShape = m_MaskShape.empty() ? shape : SharedShape(m_MaskShape, shape);
+        }
         else
-            m_Mask = operation == Rml::ClipMaskOperation::Intersect ? Shared(m_Mask, edges) : edges;
+        {
+            m_Mask      = edges;
+            m_MaskShape = shape;
+        }
         ApplyScissor();
     }
 
