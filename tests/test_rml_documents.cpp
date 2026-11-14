@@ -55,6 +55,19 @@ namespace
     }
 
     float LeftOf(Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x; }
+
+    // An element's text without its markup: a figure is drawn in an element of its own.
+    std::string Words(Rml::Element* e)
+    {
+        std::string words;
+        bool tag = false;
+        for (const char c : e->GetInnerRML())
+        {
+            if (c == '<' || c == '>') tag = c == '<';
+            else if (!tag) words += c;
+        }
+        return words;
+    }
 }
 
 TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
@@ -575,6 +588,7 @@ TEST(an_exp_bar_in_a_widgets_line_stands_on_its_texts_capitals_middle_with_its_o
             const std::vector<Span> line{Text("1,200 til next level"), Text("  "), exp};
             c.title    = onTitle ? line : ListOf(Text("WAR 30"));
             c.subtitle = onTitle ? ListOf(Text("WAR 30")) : line;
+            Steady(c, look);
             widget->SetInnerRML(WidgetRml(c, look, {}));
             rml.context->Update();
             Rml::ElementList bars, tracks, fills, texts, lines;
@@ -1206,6 +1220,96 @@ TEST(a_clocks_times_keep_their_room_and_each_figure_its_place_as_the_seconds_tic
         }
 }
 
+// The card "Improve all timer text": every timer reads as the clock does, each figure in its own place.
+TEST(a_world_info_countdown_keeps_each_figure_and_what_follows_in_its_place_as_it_ticks)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    settings.Widget(BarWidget::World).on     = true;
+    settings.Widget(BarWidget::World).design = DesignFrom(BarWidget::World, "ship |");
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    test::RmlSession rml;
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Target));
+    widget->SetClass(kHiddenClass, false);
+    widget->SetProperty(Rml::PropertyId::Width, Rml::Property(400.0f, Rml::Unit::PX));
+    BarState state;
+    // The line's text and the left of each of its elements, a second at a time.
+    const auto drawn = [&](int64_t unixMs) {
+        state.unixMs    = unixMs;
+        WidgetContent c = BarWidgetContent(BarWidget::World, state, settings);
+        Steady(c, look);
+        widget->SetInnerRML(WidgetRml(c, look, {}));
+        rml.context->Update();
+        std::string text;
+        for (const Span& s : c.title)
+            text += s.text;
+        Rml::ElementList lines;
+        widget->GetElementsByClassName(lines, "t");
+        std::vector<float> at;
+        for (int i = 0; !lines.empty() && i < lines.front()->GetNumChildren(); ++i)
+            at.push_back(LeftOf(lines.front()->GetChild(i)));
+        return std::pair{text, at};
+    };
+    constexpr int64_t kSecond = 1000, kFrom = 1'763'000'000'000;
+    const auto [firstText, first] = drawn(kFrom);
+    CHECK(first.size() >= 3);
+    int alike = 0;
+    for (int64_t s = 1; s < 120; ++s)
+    {
+        const auto [text, at] = drawn(kFrom + s * kSecond);
+        if (text.size() != firstText.size()) continue;
+        ++alike;
+        CHECK(at == first);
+    }
+    CHECK(alike > 60);
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(a_pop_outs_ticking_text_keeps_each_figure_in_its_place)
+{
+    test::RmlSession rml;
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    const TextFace face = look.FaceOf(PopupFont::Text);
+    const char digit    = WidestDigit([&](char d) { return DrawnWidth(std::string(1, d), face); });
+    PopupFaces faces;
+    for (PopupFace& f : faces)
+        f = PopupFace{face.family, WholePixels(face.size), 16, 0.0f, DrawnWidth(std::string(1, digit), face)};
+    Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
+    popups->Show();
+    Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+    popup->SetClass(kPopupClass, true);
+    // The left of each figure of a time set against the right of its piece, and of one from its left.
+    const auto drawn = [&](const std::string& time) {
+        PopupLayout layout;
+        layout.width  = 300.0f;
+        layout.height = 100.0f;
+        PopupPiece right{PopupPiece::Kind::Text, 10.0f, 10.0f, 120.0f, 16.0f, Text(time)};
+        right.right = true;
+        PopupPiece left{PopupPiece::Kind::Text, 10.0f, 40.0f, 0.0f, 16.0f, Text("Tally in " + time + " left")};
+        layout.pieces = {right, left};
+        popup->SetInnerRML(PopupRml(layout, look, faces));
+        rml.context->Update();
+        Rml::ElementList figures;
+        popup->GetElementsByClassName(figures, "fig");
+        std::vector<float> at;
+        for (Rml::Element* f : figures)
+            at.push_back(LeftOf(f));
+        Rml::ElementList texts;
+        popup->GetElementsByClassName(texts, "p");
+        at.push_back(LeftOf(texts.back()) + texts.back()->GetBox().GetSize(Rml::BoxArea::Border).x);
+        return at;
+    };
+    const std::vector<float> first = drawn("1:11:11");
+    CHECK_EQ(first.size(), static_cast<size_t>(11));
+    for (const char* time : {"4:48:08", "9:00:00", "2:22:47"})
+        CHECK(drawn(time) == first);
+    CHECK_EQ(rml.Said(), "");
+}
+
 TEST(a_ticking_span_keeps_its_gap_to_an_icon_after_it)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
@@ -1271,7 +1375,7 @@ TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_wit
         Rml::ElementList texts;
         widget->GetElementsByClassName(texts, "t");
         for (Rml::Element* t : texts)
-            if (t->GetInnerRML().find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
+            if (Words(t).find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
                 return t;
         return static_cast<Rml::Element*>(nullptr);
     };
@@ -1280,6 +1384,7 @@ TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_wit
     c.shown    = true;
     c.title    = {run("WAR 30", Align::Left), run("  61%", Align::Right)};
     c.subtitle = {Text("12,345 / 20,000 EXP and a long way to go")};
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     Rml::ElementList texts;
@@ -1290,12 +1395,16 @@ TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_wit
     CHECK(std::fabs(left(jobs) - left(text)) <= 0.5f);
     CHECK(std::fabs(right(percent) - right(text)) <= 0.5f);
     CHECK(std::fabs(right(detail) - right(text)) <= 0.5f && std::fabs(left(detail) - left(text)) <= 0.5f);
-    // Its gap is left off at the right: the percent ends at the edge as wide as its own text.
-    CHECK(std::fabs(percent->GetBox().GetSize(Rml::BoxArea::Border).x - DrawnWidth("61%", look.TitleFace(c))) <= 1.0f);
+    // Its gap is left off at the right: the percent ends at the edge as wide as its own text, two figures each as wide
+    // as the font's widest.
+    const TextFace titleFace = look.TitleFace(c);
+    const float figure = DrawnWidth(std::string(1, WidestDigit([&](char d) { return DrawnWidth(std::string(1, d), titleFace); })), titleFace);
+    CHECK(std::fabs(percent->GetBox().GetSize(Rml::BoxArea::Border).x - (2.0f * figure + DrawnWidth("%", titleFace))) <= 1.0f);
     // Drawn on the top line's own row.
     CHECK(std::fabs(jobs->GetAbsoluteOffset(Rml::BoxArea::Border).y - percent->GetAbsoluteOffset(Rml::BoxArea::Border).y) <= 0.01f);
     // A centered run in the middle of the text.
     c.title = {run("WAR 30", Align::Center)};
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     jobs = drawn("WAR 30");
@@ -1303,6 +1412,7 @@ TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_wit
     // The longer line: the text is as wide as all its runs, so they never overlap, two spaces apart.
     c.title    = {run("12,345 / 20,000 EXP and a long way", Align::Left), run("  WAR 30 / NIN 15", Align::Right)};
     c.subtitle = {Text("61%")};
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     Rml::Element *exp = drawn("long way"), *both = drawn("NIN 15");
@@ -1337,7 +1447,7 @@ TEST(the_job_widgets_text_alignments_line_up_against_the_whole_width_of_both_its
         Rml::ElementList texts;
         widget->GetElementsByClassName(texts, "t");
         for (Rml::Element* t : texts)
-            if (t->GetInnerRML().find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
+            if (Words(t).find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
                 return t;
         throw test::Failure{std::string("nothing drawn says ") + words};
     };
@@ -1359,7 +1469,8 @@ TEST(the_job_widgets_text_alignments_line_up_against_the_whole_width_of_both_its
             WidgetOptions o;
             o.expBarWidth  = 250;
             o.earnedAlign  = align;
-            const WidgetContent c = composed("bar | earned", o);
+            WidgetContent c = composed("bar | earned", o);
+            Steady(c, look);
             widget->SetInnerRML(WidgetRml(c, look, {}));
             rml.context->Update();
             Rml::ElementList tracks;
@@ -1378,6 +1489,7 @@ TEST(the_job_widgets_text_alignments_line_up_against_the_whole_width_of_both_its
     o.jobInfoAlign = Align::Left;
     o.earnedAlign  = Align::Right;
     WidgetContent c = composed("bar | jobs earned", o);
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     Rml::ElementList tracks;
@@ -1388,6 +1500,7 @@ TEST(the_job_widgets_text_alignments_line_up_against_the_whole_width_of_both_its
     o.expBarWidth  = 40;
     o.percentAlign = Align::Right;
     c = composed("jobs earned percent | bar", o);
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     Rml::ElementList texts;

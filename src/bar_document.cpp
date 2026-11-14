@@ -139,6 +139,16 @@ namespace headsup
             return {};
         }
 
+        // Each digit of text in a cell that wide, the rest as it is.
+        std::string Figures(std::string_view text, float digit)
+        {
+            std::string rml;
+            for (const std::string_view piece : FigurePieces(text))
+                rml += IsDigit(piece.front()) ? "<span class=\"fig\" style=\"width:" + Px(digit) + ";\">" + std::string(piece) + "</span>"
+                                              : EscapedRml(piece);
+            return rml;
+        }
+
         std::string Spans(const std::vector<Span>& spans, const BarLook& look)
         {
             // RmlUi's parser drops a text of spaces alone, which the width was measured with: those spaces go on the end
@@ -153,14 +163,14 @@ namespace headsup
             std::string carried;
             for (const Span& span : spans)
             {
-                const bool spaces = !HasMark(span) && !span.text.empty() && span.text.find_first_not_of(' ') == std::string::npos;
+                const bool spaces = SpacesAlone(span);
                 if (spaces && !runs.empty() && !runs.back().text.empty())
                     runs.back().text += span.text;
                 else if (spaces)
                     carried += span.text;
                 else
                     runs.push_back(Run{Picture(span, look), std::exchange(carried, {}) + span.text, look.BarColor(span),
-                        span.room.empty() ? nullptr : &span});
+                        Ticks(span) ? &span : nullptr});
             }
             std::string rml;
             for (const Run& run : runs)
@@ -174,12 +184,8 @@ namespace headsup
                     const size_t first = std::min(s.text.find_first_not_of(' '), s.text.size());
                     const size_t last  = std::max(first, s.text.find_last_not_of(' ') + 1);
                     rml += "<span class=\"steady\" style=\"width:" + Px(s.box - s.trail) + ";margin-right:" + Px(s.trail) +
-                           ";color:" + RcssColor(run.color) + ";\">";
-                    for (const std::string_view piece : FigurePieces(std::string_view(s.text).substr(first, last - first)))
-                        rml += IsDigit(piece.front())
-                                   ? "<span class=\"fig\" style=\"width:" + Px(s.digit) + ";\">" + std::string(piece) + "</span>"
-                                   : EscapedRml(piece);
-                    rml += "</span>";
+                           ";color:" + RcssColor(run.color) + ";\">" +
+                           Figures(std::string_view(s.text).substr(first, last - first), s.digit) + "</span>";
                 }
                 else if (!run.text.empty())
                     rml += "<span style=\"color:" + RcssColor(run.color) + ";\">" + EscapedRml(run.text) + "</span>";
@@ -211,7 +217,9 @@ namespace headsup
                 {
                 }
                 std::vector<Span> run(spans.begin() + static_cast<std::ptrdiff_t>(start), spans.begin() + static_cast<std::ptrdiff_t>(end));
-                run.front().text.erase(0, run.front().text.find_first_not_of(' ')); // its gap from the run before is the copy's
+                // Its gap from the run before is the copy's.
+                run.front().text.erase(0, run.front().text.find_first_not_of(' '));
+                run.front().box -= std::exchange(run.front().lead, 0.0f);
                 const std::optional<Align> align = spans[start].align;
                 rml += std::string("<div class=\"run\"") +
                        (align ? std::string(" style=\"text-align:") + kTextAligns[static_cast<int>(*align)] + ";\"" : "") +
@@ -249,13 +257,14 @@ namespace headsup
                    Px(static_cast<float>(WholePixels(width))) + ";height:" + Px(static_cast<float>(WholePixels(height))) + ";";
         }
 
-        // width: set against the right of the box from x that wide, in whole pixels; 0 for text from x.
-        std::string TextAt(const char* classes, float x, float y, uint32_t color, std::string_view text, float width = 0.0f)
+        // rml: the text's markup. width: set against the right of the box from x that wide, in whole pixels; 0 for text
+        // from x.
+        std::string TextAt(const char* classes, float x, float y, uint32_t color, const std::string& rml, float width = 0.0f)
         {
             const std::string box =
                 width > 0.0f ? "width:" + Px(std::round(x + width) - std::round(x)) + ";text-align:right;" : std::string();
             return std::string("<div class=\"p ") + classes + "\" style=\"left:" + Px(std::round(x)) + ";top:" +
-                   Px(std::round(y)) + ";" + box + "color:" + RcssColor(color) + ";\">" + EscapedRml(text) + "</div>";
+                   Px(std::round(y)) + ";" + box + "color:" + RcssColor(color) + ";\">" + rml + "</div>";
         }
 
         // A panel's fill top to bottom, its edge and its corners.
@@ -709,10 +718,10 @@ namespace headsup
             rml += "<div class=\"help-box\" style=\"" + BoxAt(box.x, box.y, box.width, box.height) + "\">" + kArtRml + "</div>";
         auto centered = [&](int lineHeight) { return box.y + (box.height - static_cast<float>(lineHeight)) / 2.0f; };
         const float captionY = centered(place.helpCaption.height);
-        if (!parts.caption.empty()) rml += TextAt("hc", parts.row.captionX, captionY, look.palette.title, parts.caption);
-        if (parts.bag) rml += TextAt("hc", parts.row.bagX, captionY, look.BarColor(*parts.bag), parts.bag->text);
+        if (!parts.caption.empty()) rml += TextAt("hc", parts.row.captionX, captionY, look.palette.title, EscapedRml(parts.caption));
+        if (parts.bag) rml += TextAt("hc", parts.row.bagX, captionY, look.BarColor(*parts.bag), EscapedRml(parts.bag->text));
         if (!parts.help.empty())
-            rml += TextAt("hh", parts.row.helpX, centered(place.help.height), look.palette.text, parts.help);
+            rml += TextAt("hh", parts.row.helpX, centered(place.help.height), look.palette.text, EscapedRml(parts.help));
         return rml;
     }
 
@@ -773,6 +782,7 @@ namespace headsup
         css += ".rule{height:1px;decorator:horizontal-gradient(" + RcssColor(look.palette.divider) + " " +
                RcssColor(look.palette.divider & ~kAlphaMask) + ");}";
         css += ".mark{text-align:center;}";
+        css += ".p .fig{display:inline-block;text-align:center;}";
         if (look.palette.shape == BarShape::Glass)
         {
             // Its panel and cards are glass.
@@ -821,9 +831,12 @@ namespace headsup
             switch (piece.kind)
             {
             case PopupPiece::Kind::Text:
-                rml += TextAt(face.c_str(), piece.x, std::round(piece.y) + faces[static_cast<size_t>(piece.font)].drop, color,
-                    piece.span.text, piece.right ? piece.width : 0.0f);
+            {
+                const PopupFace& drawn = faces[static_cast<size_t>(piece.font)];
+                rml += TextAt(face.c_str(), piece.x, std::round(piece.y) + drawn.drop, color, Figures(piece.span.text, drawn.digit),
+                    piece.right ? piece.width : 0.0f);
                 break;
+            }
             case PopupPiece::Kind::ImmuneMark:
                 rml += "<div class=\"p " + face + " mark\" style=\"" + BoxAt(piece.x, piece.y, piece.width, piece.height) +
                        "line-height:" + Px(static_cast<float>(WholePixels(piece.height))) + ";color:" + RcssColor(color) +

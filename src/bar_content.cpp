@@ -22,8 +22,6 @@ namespace headsup
         {
             if (!HasMark(part.front()))
                 part.front().text = kPartGap + part.front().text;
-            else if (!line.back().room.empty())
-                line.back().text += kPartGap; // a gap of its own between two elements would not be drawn
             else
                 line.push_back(Text(kPartGap));
         }
@@ -87,6 +85,13 @@ namespace headsup
         return widest;
     }
 
+    bool SpacesAlone(const Span& s)
+    {
+        return !HasMark(s) && !s.text.empty() && s.text.find_first_not_of(' ') == std::string::npos;
+    }
+
+    bool Ticks(const Span& s) { return !s.room.empty() || s.text.find_first_of(kDigits) != std::string::npos; }
+
     std::vector<std::string_view> FigurePieces(std::string_view text)
     {
         std::vector<std::string_view> pieces;
@@ -107,17 +112,26 @@ namespace headsup
                 total += IsDigit(piece.front()) ? digit : width(std::string(piece));
             return total;
         };
-        for (Span& s : line)
+        for (size_t i = 0; i < line.size(); ++i)
         {
-            if (s.room.empty()) continue;
+            Span& s = line[i];
+            if (!Ticks(s)) continue;
             const size_t first = std::min(s.text.find_first_not_of(' '), s.text.size());
             const size_t last  = std::max(first, s.text.find_last_not_of(' ') + 1);
             const std::string lead = s.text.substr(0, first), trail = s.text.substr(last);
             s.digit = digit;
+            s.lead  = lead.empty() ? 0.0f : width(lead);
             s.trail = trail.empty() ? 0.0f : width(trail);
             s.box   = drawn(s.text);
             for (const std::string& widest : s.room)
                 s.box = std::max(s.box, drawn(lead + widest + trail));
+            // RmlUi drops a text of spaces alone between two elements: spaces after this span in its run are its margin.
+            if (i + 1 < line.size() && SpacesAlone(line[i + 1]) && !line[i + 1].align)
+            {
+                const float gap = width(line[i + 1].text);
+                s.trail += gap;
+                s.box += gap;
+            }
         }
     }
 

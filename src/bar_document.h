@@ -141,12 +141,12 @@ namespace headsup
 
     // A popup's text faces, by PopupFont, as RmlUi sets them: the look's faces in whole pixels, each with the
     // height of its line box and how far under a laid out line's top that box starts, so its baseline is the
-    // layout's.
+    // layout's, and its widest digit's width, the cell each figure is drawn in.
     struct PopupFace
     {
         std::string family;
         int pixels = 0, line = 0;
-        float drop = 0.0f;
+        float drop = 0.0f, digit = 0.0f;
         bool operator==(const PopupFace&) const = default;
     };
     constexpr float kPercentWhole = 100.0f; // a share's whole, as RCSS percentages count it

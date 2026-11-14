@@ -233,10 +233,12 @@ TEST(a_widgets_markup_has_its_leading_icons_lines_and_marks_inside_its_lines_gil
     CHECK(title != std::string::npos && detail != std::string::npos);
     const size_t linkAt = rml.find("<img class=\"line-icon\" src=\"hu:icon/4\"/>");
     CHECK(linkAt > rml.find("[S]") && linkAt < detail);
-    // Gil's picture before its amount and the bar after it, filled 40%, on the second line.
+    // Gil's picture before its amount, each figure in a cell of its own, and the bar after it, filled 40%, on the
+    // second line.
     const size_t coinAt = rml.find("<img class=\"line-icon\" src=\"" + gil + "\"/>", detail);
-    CHECK(coinAt != std::string::npos && coinAt < rml.find(">12<", detail));
-    CHECK(rml.find("class=\"ibar\"", detail) > rml.find(">12<", detail) && Has(rml, "width: 40%"));
+    const size_t amount = rml.find("\">1</span><span class=\"fig\"", detail);
+    CHECK(coinAt != std::string::npos && coinAt < amount && amount < rml.find(">2</span>", detail));
+    CHECK(rml.find("class=\"ibar\"", detail) > rml.find(">2</span>", detail) && Has(rml, "width: 40%"));
     CHECK(Has(rml, "#a8936dff") && Has(rml, "Sandy"));
     c.subtitle.clear();
     const std::string bare = WidgetRml(c, look, {});
@@ -345,7 +347,7 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     minus.span              = Text(kOpenSign, Tone::Heading);
     layout.pieces = {card, title, value, icon, mark, star, rule, tag, socket, time, tab, track, thumb, item, plus, minus};
     // The title's line box starts 2 px under where the layout put its line; the text's, at it.
-    const PopupFaces faces = {PopupFace{"Marcellus SC", 24, 29, 2.0f}, PopupFace{"Barlow Condensed", 18, 22, 0.0f},
+    const PopupFaces faces = {PopupFace{"Marcellus SC", 24, 29, 2.0f}, PopupFace{"Barlow Condensed", 18, 22, 0.0f, 9.0f},
         PopupFace{"Marcellus SC", 15, 18, 0.0f}, PopupFace{"Marcellus SC", 15, 18, 0.0f}};
     const std::string rml = PopupRml(layout, look, faces);
     // The gold theme's panel has a second border 2 px outside it.
@@ -353,9 +355,13 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     CHECK(Has(rml, "<div id=\"panel\" style=\"width:220px;height:120px;\"><div class=\"art\"></div></div>"));
     CHECK(Has(rml, "<div class=\"p card\" style=\"left:16px;top:40px;width:188px;height:60px;\"></div>"));
     CHECK(Has(rml, "<div class=\"p f0\" style=\"left:16px;top:19px;color:#e4d8bdff;\">Zone &amp; &lt;more&gt;</div>"));
-    CHECK(Has(rml, "<div class=\"p f1\" style=\"left:100px;top:50px;color:#66ff66ff;\">50%</div>")); // the weak badge color
+    // The weak badge color, each figure in a cell as wide as the face's widest digit.
+    CHECK(Has(rml, "<div class=\"p f1\" style=\"left:100px;top:50px;color:#66ff66ff;\"><span class=\"fig\" style=\"width:9px;\">5</span>"
+                   "<span class=\"fig\" style=\"width:9px;\">0</span>%</div>"));
     // A value in its whole box, against its right: from its left's pixel to its right's.
-    CHECK(Has(rml, "<div class=\"p f1\" style=\"left:140px;top:30px;width:41px;text-align:right;color:#e4d8bdff;\">5:16</div>"));
+    CHECK(Has(rml, "<div class=\"p f1\" style=\"left:140px;top:30px;width:41px;text-align:right;color:#e4d8bdff;\">"
+                   "<span class=\"fig\" style=\"width:9px;\">5</span>:<span class=\"fig\" style=\"width:9px;\">1</span>"
+                   "<span class=\"fig\" style=\"width:9px;\">6</span></div>"));
     CHECK(Has(rml, "<img class=\"p\" src=\"hu:icon/4\" style=\"left:20px;top:50px;width:19.3px;height:19.3px;\"/>"));
     CHECK(Has(rml, "<div class=\"p f1 mark\" style=\"left:30px;top:60px;width:12px;height:12px;line-height:12px;color:#ff4040ff;\">x</div>"));
     // A star is HeadsUp's own white one, in the coin's gold.

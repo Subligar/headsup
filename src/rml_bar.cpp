@@ -303,7 +303,7 @@ namespace headsup
                 WrapTitle(c, [&](bool top, const std::string& text) { return Width(host, text, top ? title : detail); });
             }
             const auto steady = [&](std::vector<Span>& line, const TextFace& face) {
-                if (std::ranges::none_of(line, [](const Span& s) { return !s.room.empty(); })) return;
+                if (std::ranges::none_of(line, Ticks)) return;
                 SteadyBoxes(line, Width(host, std::string(1, WidestDigitOf(host, face)), face),
                     [&](const std::string& text) { return Width(host, text, face); });
             };
@@ -478,7 +478,8 @@ namespace headsup
             const TextFace face  = look.FaceOf(static_cast<PopupFont>(f));
             const int pixels     = WholePixels(face.size);
             const FaceLine& line = FaceLineOf(host, face.family, pixels);
-            faces[f]             = PopupFace{face.family, pixels, line.rmlHeight, line.drop};
+            const float digit    = Width(host, std::string(1, WidestDigitOf(host, face)), face);
+            faces[f]             = PopupFace{face.family, pixels, line.rmlHeight, line.drop, digit};
         }
         return faces;
     }
