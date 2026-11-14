@@ -122,11 +122,13 @@ namespace headsup
     // What a part of icons shows while it has none now (no target, no weather yet); nothing for a part of text.
     PartMark DefaultMark(WidgetPart part);
 
-    // A copy's pop-out: rows of cards, any widget's, each card once and a row 1 to kMostCardsInRow of them.
+    // A copy's pop-out: rows of cards, any widget's, each card once and a row 1 to kMostCardsInRow of them. A card in
+    // under goes under the card before it in its row, in a column with it.
     constexpr size_t kMostCardsInRow = 3;
     struct PopupDesign
     {
         std::vector<std::vector<CardKind>> rows;
+        std::vector<CardKind> under{};
         bool operator==(const PopupDesign&) const = default;
     };
     BarWidget WidgetOfCard(CardKind card);
@@ -135,17 +137,21 @@ namespace headsup
     const char* CardFileName(CardKind card);
     // The widget's own cards in rows, as its pop-out laid them out before it had a design.
     PopupDesign DefaultPopupDesign(BarWidget kind);
-    // The rows' file names a space apart, " | " between rows; kNoCards for none.
+    // The rows' file names a space apart, a card under the one before it after a "/", " | " between rows; kNoCards for
+    // none.
     std::string PopupDesignText(const PopupDesign& design);
     // The text PopupDesignText writes back as a design, made whole; nothing for kind's default.
     PopupDesign PopupDesignFrom(BarWidget kind, std::string_view text);
-    // Each card once, the first kept; a row past kMostCardsInRow cut there, an empty one dropped.
+    // Each card once, the first kept; a row past kMostCardsInRow cut there, an empty one dropped; under only cards held
+    // and not first in their row.
     PopupDesign WholePopup(PopupDesign design);
     bool HoldsCard(const PopupDesign& design, CardKind card);
+    bool IsUnder(const PopupDesign& design, CardKind card);
     // Whether card can go in row: one with room, one holding it already, or the new row after the last.
     bool RowTakes(const PopupDesign& design, size_t row, CardKind card);
     // card put in row before the card at at (counted before the move), or at its end; row past the last makes a new
-    // one. It leaves where it was, and a row left empty goes. False when nothing changed or the row has no room.
+    // one, beside the card before it. It leaves where it was, and a row left empty goes. False when nothing changed or
+    // the row has no room.
     bool PlaceCard(PopupDesign& design, CardKind card, size_t row, size_t at);
     // False when the design does not hold it.
     bool RemoveCard(PopupDesign& design, CardKind card);

@@ -2981,7 +2981,7 @@ TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim_in_pare
     CHECK(Joined(both.title).starts_with("Jeuno") && Joined(both.subtitle).starts_with("Woodworking"));
 }
 
-TEST(the_world_info_popup_has_conquest_travel_and_the_calendar_in_a_row_and_guilds_under_them)
+TEST(the_world_info_popup_has_conquest_beside_travel_over_the_calendar_and_guilds_under_them)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
@@ -2992,7 +2992,8 @@ TEST(the_world_info_popup_has_conquest_travel_and_the_calendar_in_a_row_and_guil
     for (const PopupSection& section : all.sections)
         headings.push_back(std::string(CardKey(section.heading)));
     CHECK((headings == std::vector<std::string>{"Conquest", "Travel", "Calendar", "Guilds"}));
-    CHECK(!all.sections[0].beside && all.sections[1].beside && all.sections[2].beside && !all.sections[3].beside);
+    CHECK(!all.sections[0].beside && all.sections[1].beside && !all.sections[1].under && all.sections[2].under &&
+          !all.sections[2].beside && !all.sections[3].beside && !all.sections[3].under);
     const std::vector<std::string> lines = Lines(all.sections[2]);
     // Who, then where and when on the right, the time last and alone; the tally is in the Conquest card's heading.
     CHECK_EQ(lines.size(), static_cast<size_t>(4));

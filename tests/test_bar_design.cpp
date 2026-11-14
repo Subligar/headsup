@@ -234,6 +234,26 @@ TEST(each_widgets_default_pop_out_holds_its_own_cards_once_at_most_three_a_row)
            std::vector<std::vector<CardKind>>{{CardKind::WeatherToday, CardKind::WeatherForecast}, {CardKind::WeatherByElement}}));
 }
 
+TEST(a_card_under_the_one_before_it_saves_and_loads_back_and_needs_a_card_before_it)
+{
+    // World Info's as its pop-out was: Conquest beside Travel, the Calendar under Travel, Guilds under them all.
+    const PopupDesign world = DefaultPopupDesign(BarWidget::World);
+    CHECK((world.rows == std::vector<std::vector<CardKind>>{
+                             {CardKind::WorldConquest, CardKind::WorldTravel, CardKind::WorldCalendar}, {CardKind::WorldGuilds}}));
+    CHECK(world.under == std::vector{CardKind::WorldCalendar});
+    CHECK_EQ(PopupDesignText(world), "world.conquest world.travel/world.calendar | world.guilds");
+    // One first in its row has nothing to go under.
+    CHECK(PopupDesignFrom(BarWidget::Zone, "/zone.influence weather.today").under.empty());
+    // Moved, a card goes beside the one before it.
+    PopupDesign moved = world;
+    CHECK(PlaceCard(moved, CardKind::WorldCalendar, 1, 1));
+    CHECK_EQ(PopupDesignText(moved), "world.conquest world.travel | world.guilds world.calendar");
+    // Taken out, the card under it is first in its row and goes beside.
+    PopupDesign taken = PopupDesignFrom(BarWidget::Zone, "world.travel/world.calendar");
+    CHECK(RemoveCard(taken, CardKind::WorldTravel));
+    CHECK(taken.under.empty());
+}
+
 TEST(a_pop_out_design_saves_as_text_and_loads_back)
 {
     PopupDesign d{{{CardKind::ZoneInfluence, CardKind::WeatherToday}, {CardKind::CurrencyFavorites}}};

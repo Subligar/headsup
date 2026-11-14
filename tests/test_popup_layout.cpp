@@ -537,6 +537,41 @@ TEST(a_collapsed_card_alone_in_its_row_keeps_its_width)
     CHECK(Near(Of(shut, PopupPiece::Kind::Card)[1]->width, Of(open, PopupPiece::Kind::Card)[1]->width));
 }
 
+TEST(cards_under_the_one_beside_another_make_a_column_as_tall_as_the_card_beside_it)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const auto lines = [](size_t count) {
+        std::vector<PopupRow> rows;
+        for (size_t i = 0; i < count; ++i)
+            rows.push_back(Labeled("Region", Text(std::to_string(i))));
+        return rows;
+    };
+    for (const size_t tall : {12u, 1u}) // the card beside the column taller, then the column
+    {
+        PopupContent c;
+        c.title = {{"World Info", Tone::Normal}};
+        c.sections.push_back(PopupSection{"Conquest", lines(tall)});
+        PopupSection travel{"Travel", lines(3)};
+        travel.beside = true;
+        PopupSection calendar{"Calendar", lines(2)};
+        calendar.under = true;
+        c.sections.push_back(travel);
+        c.sections.push_back(calendar);
+        c.sections.push_back(PopupSection{"Guilds", lines(1)});
+        const PopupLayout l = LayoutPopup(c, m, false, Fake);
+        CHECK(AllInside(l, m));
+        const std::vector<const PopupPiece*> cards = Of(l, PopupPiece::Kind::Card);
+        CHECK_EQ(cards.size(), static_cast<size_t>(4));
+        const PopupPiece &conquest = *cards[0], &shipCard = *cards[1], &days = *cards[2], &guilds = *cards[3];
+        // Travel beside Conquest, the Calendar under it in its column, the column's bottom at Conquest's.
+        CHECK(shipCard.x > conquest.x + conquest.width && Near(shipCard.y, conquest.y));
+        CHECK(Near(days.x, shipCard.x) && Near(days.width, shipCard.width) && days.y > shipCard.y + shipCard.height);
+        CHECK(Near(days.y + days.height, conquest.y + conquest.height));
+        // Guilds under them all, across the row.
+        CHECK(guilds.y > conquest.y + conquest.height && Near(guilds.x + guilds.width, shipCard.x + shipCard.width));
+    }
+}
+
 TEST(a_card_can_put_its_tabs_two_to_a_row)
 {
     const BarMetrics m = MetricsFor(36, BarShape::Pills);

@@ -121,6 +121,7 @@ namespace headsup
             bool card     = false;
             float reserve = 0.0f; // its height with its tallest tab picked, which sets its row's
             bool beside   = false; // in one row with the card before it
+            bool under    = false; // under the card before it, in its column of their row
             bool collapsed = false; // as tall as its heading, wherever it is
             float natural  = 0.0f;  // its height as laid out, before a row makes it taller
         };
@@ -532,6 +533,7 @@ namespace headsup
         {
             Block b     = LayoutSection(section, metrics, measure);
             b.beside    = section.beside;
+            b.under     = section.under;
             b.collapsed = section.collapsed && !section.heading.empty();
             PopupSection each = section;
             each.collapsed    = false;
@@ -798,41 +800,63 @@ namespace headsup
                 // Width and Height make each card's box larger or smaller; its text stays the size it is.
                 Block& b = cards.emplace_back(LayoutCard(part, metrics, measure));
                 b.beside = b.beside || &part != &parts.front(); // a card cut to fit goes on beside itself
+                b.under  = b.under && &part == &parts.front();
                 b.width *= metrics.popupWidth;
                 b.height *= metrics.popupHeight;
                 b.reserve *= metrics.popupHeight;
             }
         }
 
-        // In rows: a card beside the one before shares its row. A row fills the width, its cards sharing what their own
-        // widths leave evenly, each as tall as the row's tallest counted at its tallest tab, so a tab picked moves nothing;
-        // a card alone in its row is its own height.
+        // In rows: a card beside the one before shares its row, and one under it shares its column. A row fills the width,
+        // its columns sharing what their own widths leave evenly, each as tall as the row's tallest counted at its tallest
+        // tabs, so a tab picked moves nothing, the last card of a column taking what is left of it; a card alone in its
+        // row is its own height.
+        using Run = std::pair<size_t, size_t>; // cards [first, end)
         const auto tallest = [](const Block& b) { return std::max(b.reserve, b.height); };
-        std::vector<std::pair<size_t, size_t>> rows; // each row's cards, [first, end)
+        std::vector<std::vector<Run>> rows; // each row's columns
         for (size_t i = 0; i < cards.size(); ++i)
-            if (i == 0 || !cards[i].beside) rows.emplace_back(i, i + 1);
-            else rows.back().second = i + 1;
-        const auto natural = [&](std::pair<size_t, size_t> row) {
-            float across = cardGap * static_cast<float>(row.second - row.first - 1);
-            for (size_t c = row.first; c < row.second; ++c)
-                across += cards[c].width;
+            if (i == 0 || (!cards[i].beside && !cards[i].under)) rows.push_back({{i, i + 1}});
+            else if (cards[i].under) rows.back().back().second = i + 1;
+            else rows.back().emplace_back(i, i + 1);
+        const auto wide = [&](Run column) {
+            float most = 0.0f;
+            for (size_t c = column.first; c < column.second; ++c)
+                most = std::max(most, cards[c].width);
+            return most;
+        };
+        const auto natural = [&](const std::vector<Run>& row) {
+            float across = cardGap * static_cast<float>(row.size() - 1);
+            for (const Run column : row)
+                across += wide(column);
             return across;
         };
         for (const auto& row : rows)
             width = std::max(width, natural(row));
         float lowest = top;
-        for (const auto& [first, end] : rows)
+        for (const auto& row : rows)
         {
-            const float share = (width - natural({first, end})) / static_cast<float>(end - first);
+            const bool alone  = row.size() == 1 && row.front().second - row.front().first == 1;
+            const float share = (width - natural(row)) / static_cast<float>(row.size());
             float tall = 0.0f;
-            for (size_t c = first; c < end; ++c)
-                tall = std::max(tall, end - first == 1 ? cards[c].height : tallest(cards[c]));
-            float x = pad;
-            for (size_t c = first; c < end; ++c)
+            for (const auto& [first, end] : row)
             {
-                if (!cards[c].collapsed) cards[c].height = tall;
-                Place(cards[c], x, lowest, cards[c].width + share, l.lines.size(), l);
-                x += cards[c].width + share + cardGap;
+                float column = -cardGap;
+                for (size_t c = first; c < end; ++c)
+                    column += (alone ? cards[c].height : tallest(cards[c])) + cardGap;
+                tall = std::max(tall, column);
+            }
+            float x = pad;
+            for (const Run column : row)
+            {
+                const float across = wide(column) + share;
+                float at = lowest;
+                for (size_t c = column.first; c < column.second; ++c)
+                {
+                    if (!cards[c].collapsed) cards[c].height = c + 1 == column.second ? tall - (at - lowest) : tallest(cards[c]);
+                    Place(cards[c], x, at, across, l.lines.size(), l);
+                    at += cards[c].height + cardGap;
+                }
+                x += across + cardGap;
             }
             lowest += tall + cardGap;
         }

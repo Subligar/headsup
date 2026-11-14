@@ -1910,7 +1910,8 @@ namespace headsup
         {
             std::map<BarWidget, std::vector<PopupSection>> others;
             std::vector<std::vector<PopupSection>> rows;
-            for (const std::vector<CardKind>& design : settings.Widget(widget).popup.rows)
+            const PopupDesign& popup = settings.Widget(widget).popup;
+            for (const std::vector<CardKind>& design : popup.rows)
             {
                 std::vector<PopupSection>& row = rows.emplace_back();
                 for (const CardKind card : design)
@@ -1920,7 +1921,9 @@ namespace headsup
                         others[kind] = BarPopupContent(PanelWidget{kind}, state, settings).sections;
                     const std::vector<PopupSection>& from = kind == widget.kind ? own : others[kind];
                     const auto section = std::ranges::find(from, std::optional(card), &PopupSection::card);
-                    if (section != from.end()) row.push_back(*section);
+                    if (section == from.end()) continue;
+                    row.push_back(*section);
+                    row.back().under = IsUnder(popup, card);
                 }
             }
             return rows;
@@ -1955,9 +1958,11 @@ namespace headsup
                     bool first = true;
                     for (PopupSection& section : row)
                     {
+                        const bool under = std::exchange(section.under, false); // a copy's card is seen wherever it sits
                         if (std::ranges::find(seen, section) != seen.end()) continue;
                         seen.push_back(section);
-                        section.beside = !first;
+                        section.under  = under && !first;
+                        section.beside = !first && !section.under;
                         first          = false;
                         joined.sections.push_back(std::move(section));
                     }
