@@ -245,7 +245,8 @@ namespace headsup
         // The margin grows a pixel a side at a time, so a row a pixel taller can have a pixel less room for the ink: a
         // row takes no more than the next one's, and a taller bar never gets smaller text.
         const float room    = std::min(InkRoom(row.height), InkRoom(row.height + 1.0f));
-        const float maxGap  = std::max(kMinLineGap, std::round(kLineGap * m.height));
+        const float maxGap  = std::max(kMinLineGap, std::round(kLineGap * m.height)) * m.lineSeparation;
+        const float minGap  = kMinLineGap * m.lineSeparation;
         TextRow t;
         LineInk title, detail;
         float spare = 0.0f; // for the gap
@@ -258,7 +259,7 @@ namespace headsup
             title    = ink(true, t.title);
             detail   = ink(false, t.detail);
             spare    = room - (title.bottom - title.top) - (detail.bottom - detail.top);
-            if (spare >= kMinLineGap || t.title == 1) break;
+            if (spare >= minGap || t.title == 1) break;
         }
         const float gap   = std::clamp(spare, 0.0f, maxGap);
         const float block = (title.bottom - title.top) + gap + (detail.bottom - detail.top);

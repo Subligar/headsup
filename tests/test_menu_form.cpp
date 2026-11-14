@@ -1628,6 +1628,10 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     CHECK(own.fontRatio && std::fabs(*own.fontRatio - 1.0f) < 0.001f);
     w.Pass({{id("font-ratio"), kChangeEvent, "-1"}});
     CHECK(!own.fontRatio);
+    w.Pass({{id("line-separation"), kChangeEvent, "15"}}); // fifteen tenths over 0.5x
+    CHECK(own.lineSeparation && std::fabs(*own.lineSeparation - 2.0f) < 0.001f);
+    w.Pass({{id("line-separation"), kChangeEvent, "-1"}});
+    CHECK(!own.lineSeparation);
     w.Pass({{id("show-background") + "-s-2", kClickEvent, ""}});
     CHECK(own.background == false);
     w.Pass({{id("show-background") + "-s-0", kClickEvent, ""}});
@@ -1639,7 +1643,7 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
     for (const char* key : {"widget-spacing", "show-background", "corner-rounding", "popup-text-scale"})
         CHECK(Has(rml, id(key).c_str()) && !Has(rml, id(key, "weather").c_str()));
-    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "icon-scale"})
+    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "line-separation", "icon-scale"})
         CHECK(Has(rml, id(key, "weather").c_str()));
 }
 

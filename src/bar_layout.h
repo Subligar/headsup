@@ -60,9 +60,9 @@ namespace headsup
         bool operator==(const TextRow&) const = default;
     };
     // Placed by their ink, which ink gives for the title's or the detail's font at a size: the title's top to the
-    // detail's bottom, with a few clear pixels between the title's descenders and the detail's top, centered in the
-    // pill row inside its border with clear space above and below; a title alone, its top to its baseline centered and
-    // all of its ink inside. The sizes are the metrics', both lines made smaller together only as far as that needs,
+    // detail's bottom, with a few clear pixels between the title's descenders and the detail's top (times the metrics'
+    // Line Separation), centered in the pill row inside its border with clear space above and below; a title alone,
+    // its top to its baseline centered and all of its ink inside. The sizes are the metrics', both lines made smaller together only as far as that needs,
     // and a title alone only as far as it needs on its own.
     TextRow FitTextRow(const BarMetrics& metrics, FunctionRef<LineInk(bool title, int pixels)> ink);
 

@@ -192,4 +192,7 @@ namespace headsup
     constexpr float kMinPopupBoxScale = kDefaultPopupScale; // Width and Height: never smaller than a pop-out's own
     // Icon Scale: a widget's icons, in percent of the most its widget holds, and an icon in a line of its line's size.
     constexpr int kMinIconScale = 20, kMaxIconScale = 150, kDefaultIconScale = 85;
+    // Line Separation: the clear space between a widget's two lines, times what the panel's height gives it.
+    constexpr float kMinLineSeparation = 0.5f, kMaxLineSeparation = 2.0f, kDefaultLineSeparation = 1.0f;
+    constexpr float kLineSeparationStep = 0.1f; // a widget's own moves by this, as the Top Panel's "%.1fx" slider does
 }

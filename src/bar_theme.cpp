@@ -89,7 +89,7 @@ namespace headsup
     }
 
     BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio, float popupTextScale, int iconScale, float popupWidth,
-        float popupHeight)
+        float popupHeight, float lineSeparation)
     {
         const float h = static_cast<float>(std::clamp(barHeight, kMinBarHeight, kMaxBarHeight));
         // The pop-out's spacing stands for the height whose share its text is at a Text Scale of 1.
@@ -104,7 +104,7 @@ namespace headsup
             .popupTitle = kPopupTitlePixels * popupTextScale, .heading = kPopupHeadingPixels * popupTextScale,
             .popupPadding = kPopupPaddingShare * u, .rowGap = kRowGapShare * u,
             .panelRadius = (shape == BarShape::Ornate ? kOrnateRadiusShare : shape == BarShape::Window ? 0.0f : kPillsRadiusShare) * u,
-            .popupWidth = popupWidth, .popupHeight = popupHeight};
+            .popupWidth = popupWidth, .popupHeight = popupHeight, .lineSeparation = lineSeparation};
     }
 
     const char* TitleFont(BarShape shape) { return shape == BarShape::Ornate ? kMarcellusSC : kDetailFont; }

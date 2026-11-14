@@ -1255,7 +1255,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     Settings s;
     const WidgetOptions fresh;
     CHECK(!fresh.spacing && !fresh.padding && !fresh.background && fresh.titleFont.empty() && fresh.textFont.empty() &&
-          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale);
+          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale && !fresh.lineSeparation);
     WidgetOptions& zone = s.Widget(BarWidget::Zone);
     zone.spacing        = 12;
     zone.padding        = 0;
@@ -1266,6 +1266,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     zone.iconScale      = 40;
     zone.rounding       = 0;
     zone.popupTextScale = 1.4f;
+    zone.lineSeparation = 1.5f;
     const PanelWidget copy = *CloneWidget(s, BarWidget::Zone);
     CHECK(s.Widget(copy).spacing == 12 && s.Widget(copy).textFont == "Verdana" && s.Widget(copy).popupTextScale == 1.4f);
     s.Widget(copy).iconScale  = 75;
@@ -1275,6 +1276,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     CHECK_EQ(saved.values["barZoneWidgetSpacing"], "12.0000");
     CHECK_EQ(saved.values["barZoneShowBackground"], "false");
     CHECK_EQ(saved.values["barZonePrimaryFont"], "Arial");
+    CHECK_EQ(saved.values["barZoneLineSeparation"], "1.5000");
     CHECK_EQ(saved.values["barZoneIconScale_2"], "75.0000");
     CHECK_EQ(saved.values["barZoneShowBackground_2"], "true");
     CHECK(saved.values.contains("barWeatherWidgetSpacing") && saved.values["barWeatherWidgetSpacing"].empty());
@@ -1296,11 +1298,12 @@ TEST(a_widgets_own_looks_out_of_their_range_are_held_to_it)
     store.values["barZoneCornerRounding"] = "-9";
     store.values["barZoneFontRatio"]      = "9";
     store.values["barZonePopupTextScale"] = "0.01";
+    store.values["barZoneLineSeparation"] = "9";
     store.values["barZonePrimaryFont"]    = std::string(kMaxFontName + 1, 'a');
     const WidgetOptions zone = LoadSettings(store).Widget(BarWidget::Zone);
     CHECK(zone.spacing == kMaxWidgetSpacing && zone.padding == 0 && zone.iconScale == 45);
     CHECK(zone.rounding == 0 && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
-    CHECK(zone.titleFont.empty());
+    CHECK(zone.lineSeparation == kMaxLineSeparation && zone.titleFont.empty());
 }
 
 TEST(separators_out_of_their_bits_are_held_to_them)
@@ -1337,6 +1340,7 @@ TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges
     store.values["popupWidthScale"]  = "7";
     store.values["popupHeightScale"] = "0.5";
     store.values["barIconScale"]     = "3";
+    store.values["barLineSeparation"] = "0.01";
     store.values["barRounding"]      = "33";
     store.values["widgetRounding"]   = "-1"; // Set by Theme, before round 23: none now
     store.values["popupRounding"]    = "999";
@@ -1344,6 +1348,7 @@ TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges
     store.values["helpBarRounding"]  = "40";
     const Settings s = LoadSettings(store);
     CHECK(s.barFontRatio == kMaxFontRatio && s.popupTextScale == kMinPopupScale && s.barIconScale == kMinIconScale);
+    CHECK(s.barLineSeparation == kMinLineSeparation);
     // A pop-out is never narrower or shorter than its own size (the user's 1.0x), whatever its text is.
     CHECK(s.popupWidthScale == kMaxPopupScale && s.popupHeightScale == 1.0f);
     store.values["popupWidthScale"] = "0.3";

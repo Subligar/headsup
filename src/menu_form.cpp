@@ -1283,6 +1283,22 @@ namespace headsup
                         if (at != before) o.fontRatio = at ? std::optional<float>(FontRatioAt(*at)) : std::nullopt;
                     }
                     break;
+                case WidgetTabsRow::LineSeparation:
+                    if (overrides)
+                    {
+                        const auto step = [](float scale) {
+                            return static_cast<int>(std::lround((scale - kMinLineSeparation) / kLineSeparationStep));
+                        };
+                        std::optional<int> at = o.lineSeparation ? std::optional<int>(step(*o.lineSeparation)) : std::nullopt;
+                        const std::optional<int> before = at;
+                        ownSlider(at, 0, step(kMaxLineSeparation), [](int p) {
+                            return Printed("%.1fx", kMinLineSeparation + static_cast<float>(p) * kLineSeparationStep);
+                        });
+                        if (at != before)
+                            o.lineSeparation = at ? std::optional<float>(kMinLineSeparation + static_cast<float>(*at) * kLineSeparationStep)
+                                                  : std::nullopt;
+                    }
+                    break;
                 case WidgetTabsRow::IconScale:
                     if (overrides)
                     {
@@ -2226,6 +2242,10 @@ namespace headsup
                 if (position != before) s.barFontRatio = FontRatioAt(position);
                 break;
             }
+            case SettingPiece::LineSeparation:
+                form.Fade(!BarOn(s));
+                form.SliderFloat(label.c_str(), s.barLineSeparation, kMinLineSeparation, kMaxLineSeparation, "%.1fx", tip);
+                break;
             case SettingPiece::IconScale:
                 form.Fade(!BarOn(s));
                 form.SliderPercent(label.c_str(), s.barIconScale, kMinIconScale, kMaxIconScale, tip);

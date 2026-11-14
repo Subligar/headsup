@@ -165,20 +165,23 @@ TEST(a_widgets_own_sizes_and_fonts_take_the_place_of_the_top_panels_where_it_set
     Settings s;
     s.barIconScale = 80;
     s.barTitleFont = "Georgia";
+    s.barLineSeparation = 0.7f;
     WidgetOptions own;
     const BarMetrics panel = MetricsOf(s, BarShape::Pills, own);
     CHECK(panel == MetricsFor(s.barHeight, BarShape::Pills, s.barFontRatio, s.popupTextScale, s.barIconScale,
-                       s.popupWidthScale, s.popupHeightScale));
+                       s.popupWidthScale, s.popupHeightScale, s.barLineSeparation));
+    CHECK(Near(panel.lineSeparation, 0.7f));
     CHECK(std::string(WidgetTitleFont(s, BarShape::Pills, own)) == "Georgia");
     CHECK(WidgetTextFont(s, own) == BarTextFont(s));
     own.fontRatio      = 2.0f;
     own.iconScale      = 40;
     own.popupTextScale = 1.5f;
+    own.lineSeparation = 1.6f;
     own.titleFont      = "Verdana";
     own.textFont       = "Arial";
     const BarMetrics m = MetricsOf(s, BarShape::Pills, own);
     CHECK(Near(m.title, panel.title) && Near(m.subtitle, m.title / 2.0f) && Near(m.icon, panel.icon / 2.0f));
-    CHECK(Near(m.popupText, 1.5f * kPopupTextPixels) && Near(m.popupWidth, panel.popupWidth));
+    CHECK(Near(m.popupText, 1.5f * kPopupTextPixels) && Near(m.popupWidth, panel.popupWidth) && Near(m.lineSeparation, 1.6f));
     CHECK(std::string(WidgetTitleFont(s, BarShape::Pills, own)) == "Verdana");
     CHECK(std::string(WidgetTextFont(s, own)) == "Arial");
     CHECK(WidgetTextFont(s, own) == WidgetTextFont(s, own)); // one pointer per name, as the panel's

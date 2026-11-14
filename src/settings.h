@@ -102,7 +102,7 @@ namespace headsup
         std::optional<int> iconScale;                  // percent, as barIconScale
         std::optional<bool> background;
         std::string titleFont, textFont;
-        std::optional<float> fontRatio, popupTextScale;
+        std::optional<float> fontRatio, lineSeparation, popupTextScale;
         bool wrapText = true; // Home Point: its zone's name on two lines (WidgetContent::wrap)
         bool operator==(const WidgetOptions&) const = default;
     };
@@ -188,6 +188,7 @@ namespace headsup
         bool widgetBackground   = false; // every widget's pill or tint shown while not hovered, over the theme's look
         int barHeight      = 45; // pixels: the least at which titles are 13 px over 11 px detail lines
         float barFontRatio = kDefaultFontRatio; // a widget's top line's size over its second line's
+        float barLineSeparation = kDefaultLineSeparation; // the clear space between its two lines, times its own
         int barIconScale   = kDefaultIconScale; // its icons, in percent of the most it holds
         std::string barTitleFont; // widget titles and popup headings; empty for the theme's
         std::string barTextFont;  // details, figures and popup text; empty for the theme's

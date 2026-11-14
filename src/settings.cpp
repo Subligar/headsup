@@ -142,6 +142,7 @@ namespace headsup
         };
         constexpr FloatKey kFloats[] = {{"maxDistance", &Settings::maxDistance, kMinOutlineDistance, kMaxOutlineDistance},
             {"barFontRatio", &Settings::barFontRatio, kMinFontRatio, kMaxFontRatio},
+            {"barLineSeparation", &Settings::barLineSeparation, kMinLineSeparation, kMaxLineSeparation},
             {"popupTextScale", &Settings::popupTextScale, kMinPopupScale, kMaxPopupScale},
             {"popupWidthScale", &Settings::popupWidthScale, kMinPopupBoxScale, kMaxPopupScale},
             {"popupHeightScale", &Settings::popupHeightScale, kMinPopupBoxScale, kMaxPopupScale}};
@@ -292,6 +293,7 @@ namespace headsup
         constexpr const char* kOwnTitleFontSuffix  = "PrimaryFont";
         constexpr const char* kOwnTextFontSuffix   = "SecondaryFont";
         constexpr const char* kOwnFontRatioSuffix  = "FontRatio";
+        constexpr const char* kOwnLineSeparationSuffix = "LineSeparation";
         constexpr const char* kOwnIconScaleSuffix  = "IconScale";
         constexpr const char* kOwnPopupScaleSuffix = "PopupTextScale";
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
@@ -1301,6 +1303,7 @@ namespace headsup
             if (w.rounding) w.rounding = std::clamp(*w.rounding, 0, kMaxRounding);
             if (w.iconScale) w.iconScale = std::clamp(Stepped(*w.iconScale, kPercentStep), kMinIconScale, kMaxIconScale);
             if (w.fontRatio) w.fontRatio = std::clamp(*w.fontRatio, kMinFontRatio, kMaxFontRatio);
+            if (w.lineSeparation) w.lineSeparation = std::clamp(*w.lineSeparation, kMinLineSeparation, kMaxLineSeparation);
             if (w.popupTextScale) w.popupTextScale = std::clamp(*w.popupTextScale, kMinPopupScale, kMaxPopupScale);
             for (std::string* font : {&w.titleFont, &w.textFont})
                 if (font->size() > kMaxFontName) font->clear();
@@ -1387,6 +1390,7 @@ namespace headsup
                 o.rounding       = whole(kOwnRoundingSuffix);
                 o.iconScale      = whole(kOwnIconScaleSuffix);
                 o.fontRatio      = own(kOwnFontRatioSuffix);
+                o.lineSeparation = own(kOwnLineSeparationSuffix);
                 o.popupTextScale = own(kOwnPopupScaleSuffix);
                 const std::string background = widget + kOwnBackgroundSuffix;
                 if (!text(background.c_str()).empty()) o.background = flag(background, false);
@@ -1509,6 +1513,7 @@ namespace headsup
                 own(kOwnRoundingSuffix, o.rounding);
                 own(kOwnIconScaleSuffix, o.iconScale);
                 own(kOwnFontRatioSuffix, o.fontRatio);
+                own(kOwnLineSeparationSuffix, o.lineSeparation);
                 own(kOwnPopupScaleSuffix, o.popupTextScale);
                 if (o.background)
                     flag(widget + kOwnBackgroundSuffix, *o.background);

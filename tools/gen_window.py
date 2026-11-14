@@ -174,7 +174,7 @@ PIECES = Pieces(
                                                     'hide': True, 'keep': True, 'row-tip': False}),
         # Top Panel and Widgets
         'theme': Setting(words={'built-in': True, 'custom': True, 'copy': True, 'copy-again': True, 'delete': True, 'rename': True}), 'window-type': Setting(), 'widget-background': Setting(), 'show-separator': Setting(options=4), 'title-font': Setting(), 'text-font': Setting(),
-        'height': Setting(), 'font-ratio': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'panel-rounding': Setting(), 'widget-padding': Setting(), 'corner-rounding': Setting(), 'text-scale': Setting(), 'popup-width': Setting(), 'popup-height': Setting(), 'popup-rounding': Setting(), 'section-rounding': Setting(),
+        'height': Setting(), 'font-ratio': Setting(), 'line-separation': Setting(), 'icon-scale': Setting(), 'widget-spacing': Setting(), 'panel-rounding': Setting(), 'widget-padding': Setting(), 'corner-rounding': Setting(), 'text-scale': Setting(), 'popup-width': Setting(), 'popup-height': Setting(), 'popup-rounding': Setting(), 'section-rounding': Setting(),
         'hide-readout': Setting(), 'shift-vanilla-ui': Setting(),
         'background-style': Setting(options=3),
         'separator-style': Setting(options=5, nameless=frozenset({1, 2, 3})), 'theme-background': Setting(),
@@ -191,7 +191,7 @@ PIECES = Pieces(
         'widget-tabs': Setting(unnamed=True, rows=rows(
             'name', 'edit', 'design', 'popup-design', 'icon', 'alignment', 'show-zone-id', 'wrap-text', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag-1', 'bag-2', 'custom-icons', 'ship', 'guild', 'local-timezone', 'secondary-timezone', '24-hour',
             'seconds', 'date-format', 'job-text', 'job-text-align', 'earned-align', 'tnl-align', 'percent-align', 'bar-width', 'bar-height', 'bar-back', 'bar-color', 'bar-text', 'bar-text-align', 'mem-text', 'status-display', 'timer-format',
-            'own-looks', 'widget-spacing', 'widget-padding', 'show-background', 'corner-rounding', 'primary-font', 'secondary-font', 'font-ratio', 'icon-scale', 'popup-text-scale'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True, 'add-from': True, 'top-panel': True,
+            'own-looks', 'widget-spacing', 'widget-padding', 'show-background', 'corner-rounding', 'primary-font', 'secondary-font', 'font-ratio', 'line-separation', 'icon-scale', 'popup-text-scale'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True, 'add-from': True, 'top-panel': True,
                                     'popup-row-full': True, 'popup-new-row': True}),
         'trays': Setting(unnamed=True),
         'create-widget': Setting(words={'all-made': True}),

@@ -110,6 +110,7 @@ namespace headsup
         float panelRadius;  // by shape; none for the art's corners
         float popupWidth;   // each pop-out section's width, times its own
         float popupHeight;  // and its height
+        float lineSeparation; // the clear space between a widget's two lines, times FitTextRow's
         bool operator==(const BarMetrics&) const = default;
     };
     // A pop-out's text, title and card headings at a Text Scale of 1, and the text size its spacing is set by.
@@ -117,7 +118,7 @@ namespace headsup
     constexpr float kPillBorder      = 1.0f;                           // a pill's or frame's
     BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio = kDefaultFontRatio,
         float popupTextScale = kDefaultPopupScale, int iconScale = kDefaultIconScale, float popupWidth = kDefaultPopupScale,
-        float popupHeight = kDefaultPopupScale);
+        float popupHeight = kDefaultPopupScale, float lineSeparation = kDefaultLineSeparation);
 
     // Ornate titles are Marcellus SC; everything else is the bundled Barlow Condensed.
     const char* TitleFont(BarShape shape);

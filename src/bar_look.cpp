@@ -150,7 +150,8 @@ namespace headsup
     BarMetrics MetricsOf(const Settings& s, BarShape shape, const WidgetOptions& own)
     {
         return MetricsFor(s.barHeight, shape, own.fontRatio.value_or(s.barFontRatio), own.popupTextScale.value_or(s.popupTextScale),
-            own.iconScale.value_or(s.barIconScale), s.popupWidthScale, s.popupHeightScale);
+            own.iconScale.value_or(s.barIconScale), s.popupWidthScale, s.popupHeightScale,
+            own.lineSeparation.value_or(s.barLineSeparation));
     }
 
     const char* FishBarFont(const Settings& settings)

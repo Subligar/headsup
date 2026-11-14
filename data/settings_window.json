@@ -138,6 +138,7 @@
             {"key": "title-font", "name": "Primary Font", "tip": "The font of each widget's top line, of a widget on one line, and of the pop-outs' headings. Default: the theme's."},
             {"key": "text-font", "name": "Secondary Font", "tip": "The font of each widget's second line, its numbers and the pop-outs' text. Default: the theme's."},
             {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of the primary line's text to the size of the secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Both lines grow or shrink together to fit the Panel Height. Default: 1.20x."},
+            {"key": "line-separation", "name": "Line Separation", "tip": "The space between each widget's top and bottom line of text. Above 1, both lines shrink together if they need to, to fit the Panel Height. Default: 1.0x."},
             {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets' backgrounds are. Default: 8 px."}
           ]
         },
@@ -210,6 +211,7 @@
                 {"key": "primary-font", "name": "Primary Font", "tip": "The font of this widget's top line, of the widget on one line, and of its pop-out's headings. Default: the Top Panel's."},
                 {"key": "secondary-font", "name": "Secondary Font", "tip": "The font of this widget's second line, its numbers and its pop-out's text. Default: the Top Panel's."},
                 {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of this widget's primary line's text to the size of its secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Default: the Top Panel's."},
+                {"key": "line-separation", "name": "Line Separation", "tip": "The space between this widget's top and bottom line of text. Above 1, both lines shrink together if they need to, to fit the Panel Height. Default: the Top Panel's."},
                 {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of every icon in this widget. At 100% its own icon is as tall as the widget can hold, and an icon in a line of text is as tall as its letters. Default: the Top Panel's."},
                 {"key": "popup-text-scale", "name": "Pop-out Text Scale", "tip": "Makes the text in this widget's pop-out larger or smaller. Default: the Top Panel's."}
               ],
