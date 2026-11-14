@@ -698,7 +698,7 @@ TEST(a_side_shared_in_a_combined_pill_keeps_its_text_where_it_was_and_draws_no_e
     }
 }
 
-TEST(the_settings_widgets_cog_is_an_icon_alone_in_the_titles_color_with_no_room_after_it)
+TEST(the_settings_widgets_cog_is_an_icon_alone_in_the_titles_color_a_pixel_low_at_80_percent_with_no_room_after_it)
 {
     Settings settings;
     const BarLook look = LookOf(BarTheme::PhoenixGold, settings);
@@ -706,7 +706,8 @@ TEST(the_settings_widgets_cog_is_an_icon_alone_in_the_titles_color_with_no_room_
     c.shown = true;
     c.cog   = true;
     const std::string rml = WidgetRml(c, look, {});
-    CHECK(Has(rml, ("<img class=\"icon cog\" src=\"" + CogSource(look.palette.title, WholePixels(look.metrics.icon)) + "\"").c_str()));
+    CHECK(Has(rml, ("<img class=\"icon cog\" src=\"" + CogSource(look.palette.title, WholePixels(look.metrics.icon)) +
+                    "\" style=\"transform:translate(0px,1px) scale(0.8);\"/>").c_str()));
     // Centered in its widget: as wide as the icon, with no gap after it for text it has none of.
     CHECK_EQ(look.Leading(c), look.metrics.icon);
     CHECK(Has(BarDocument(look, Place()), ".icon.cog{margin-right:0px;}"));
