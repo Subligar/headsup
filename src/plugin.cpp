@@ -163,7 +163,6 @@ namespace
     float g_MenuScaleY              = 1.0f;
     IResourceManager* g_Resources   = nullptr; // for the target popup's drops, from Initialize to Release
     headsup::RmlHost* g_Rml         = nullptr; // for OnMouse and OnKeyboard, from Initialize to Release
-    bool g_RmlHasMouse              = false;   // OnMouse's last message: an overlay element is under the pointer
 #ifdef HEADSUP_DEV
     headsup::MouseWatch* g_MouseWatch = nullptr; // and the panel's input, for its log
     const headsup::BarInput* g_BarSeen = nullptr;
@@ -258,9 +257,9 @@ namespace
         const float x      = static_cast<float>(clientX) * g_BarScaleX;
         const float y      = static_cast<float>(clientY) * g_BarScaleY;
         // RmlUi's overlay lies over every window: what it takes, nothing under it sees. Its popups are the bar's.
-        g_RmlHasMouse      = !blocked && g_Rml != nullptr && g_Rml->Running() &&
-                             g_Rml->Mouse(message, x, y, static_cast<int16_t>(HIWORD(wParam)));
-        const bool overRml = g_RmlHasMouse && !g_Rml->HoverIn(headsup::kPopupDocumentName);
+        const bool overRml = !blocked && g_Rml != nullptr && g_Rml->Running() &&
+                             g_Rml->Mouse(message, x, y, static_cast<int16_t>(HIWORD(wParam))) &&
+                             !g_Rml->HoverIn(headsup::kPopupDocumentName);
         // An Ashita window takes the mouse. Asked only when read: the bar ignores it while off or for blocked messages.
         const bool overGui = overRml || (((g_BarOn && !g_BarHidden && !blocked) || g_SyncClicks) && g_Gui != nullptr &&
                                             g_Gui->GetIO().WantCaptureMouse);
@@ -441,7 +440,7 @@ class HeadsUp final : public IPlugin
     bool m_LoneCursorsDrawn = false; // this frame
     bool m_UiHidden = false;
     float m_GuiAlpha = 1.0f;
-    bool m_GuiMouseHeld = false; // HeadsUp set ImGui's NoMouse, and clears it again
+    int m_GuiFlags = 0;
     bool m_FontsWereVisible = true, m_PrimitivesWereVisible = true;
     bool m_PlatesPlaced = false; // this frame, in the scene or at the back-buffer EndScene
 
@@ -620,7 +619,6 @@ public:
         const headsup::CNumbers numbers;
         SavePending();
         SetScreenshot(false);
-        HoldGuiMouse(false);
         HoldGameKeys(false);
         LockCursor(false);
         m_AshitaCore->GetInputManager()->GetMouse()->RemoveCallback(kName);
@@ -957,7 +955,6 @@ public:
         if (loginStatus != headsup::kLoginInGame) m_BarInput.Reset();
         const bool mapShown = headsup::MapShown(m_OpenWindows);
         m_UiHidden          = m_Screenshot || m_Player.inEvent || mapShown;
-        HoldGuiMouse(m_Screenshot || g_RmlHasMouse);
         StartRml();
         g_BarOn     = headsup::BarRuns(m_Settings, loginStatus) && m_Rml.Running();
         g_BarHidden = m_UiHidden;
@@ -1605,7 +1602,9 @@ private:
         if (on)
         {
             m_GuiAlpha = gui->GetStyle().Alpha;
+            m_GuiFlags = gui->GetIO().ConfigFlags;
             gui->GetStyle().Alpha = 0.0f;
+            gui->GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
             m_FontsWereVisible      = fonts->GetVisible();
             m_PrimitivesWereVisible = primitives->GetVisible();
             fonts->SetVisible(false);
@@ -1614,20 +1613,12 @@ private:
         }
         else
         {
-            gui->GetStyle().Alpha = m_GuiAlpha;
+            gui->GetStyle().Alpha    = m_GuiAlpha;
+            gui->GetIO().ConfigFlags = m_GuiFlags;
             fonts->SetVisible(m_FontsWereVisible);
             primitives->SetVisible(m_PrimitivesWereVisible);
             Print("screenshot mode off.");
         }
-    }
-
-    // Ashita hands ImGui a press over its window before any plugin sees it, though the overlay is drawn over ImGui.
-    void HoldGuiMouse(bool hold)
-    {
-        if (hold == m_GuiMouseHeld) return;
-        m_GuiMouseHeld = hold;
-        ImGuiIO& io    = m_AshitaCore->GetGuiManager()->GetIO();
-        io.ConfigFlags = hold ? io.ConfigFlags | ImGuiConfigFlags_NoMouse : io.ConfigFlags & ~ImGuiConfigFlags_NoMouse;
     }
 
     // Whose names the hook may meet next frame, and what it does with each.
