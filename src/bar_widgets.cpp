@@ -1561,6 +1561,7 @@ namespace headsup
             case BarWidget::World: return WorldParts(state, o, base);
             case BarWidget::Settings: base.cog = true; return {};
             case BarWidget::HomePoint:
+                base.wrap = o.wrapText;
                 return {{WidgetPart::HomePointIcon, ListOf(Mark(Icon::HomePoint))},
                     {WidgetPart::HomePointName, ListOf(Text(ZoneTitle(state.homePoint)))}};
             case BarWidget::Custom:
@@ -2183,8 +2184,10 @@ namespace headsup
                 ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
             return WorldPopup(state);
-        case BarWidget::Settings:
-        case BarWidget::HomePoint: break;
+        case BarWidget::Settings: break;
+        case BarWidget::HomePoint:
+            popup.title = ListOf(Text("Home Point")); // its settings pop-out's
+            break;
         case BarWidget::Custom:
             if (!o.name.empty()) popup.title = ListOf(Text(o.name));
             break;

@@ -111,6 +111,7 @@ namespace headsup
         // Each span of either line is a cell, and the cells at one place of their lines a column, the columns a gap
         // apart: the Conquest widget's two by two.
         bool cells = false;
+        bool wrap  = false; // its title, one span, breaks onto its second line where that is narrowest (WrapTitle)
         bool operator==(const WidgetContent&) const = default;
     };
 

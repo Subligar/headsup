@@ -602,6 +602,31 @@ TEST(a_title_alone_is_drawn_at_its_own_size_and_place)
     CHECK(Has(rml, ".title.alone .line-icon{width:18px;height:18px;"));
 }
 
+TEST(a_wrapping_title_breaks_onto_its_second_line_at_the_space_that_leaves_the_wider_line_narrowest)
+{
+    // 10 px a letter on the first line, 8 on the second.
+    const auto width = [](bool title, const std::string& text) { return static_cast<float>(text.size()) * (title ? 10.0f : 8.0f); };
+    const auto text = [](const std::vector<Span>& line) { return line.size() == 1 ? line[0].text : std::string(); };
+    WidgetContent c;
+    c.wrap  = true;
+    c.title = {Text("Southern San d'Oria")};
+    WrapTitle(c, width);
+    // "Southern" over "San d'Oria" is 80 px wide; "Southern San" over "d'Oria" 120.
+    CHECK_EQ(text(c.title), "Southern");
+    CHECK_EQ(text(c.subtitle), "San d'Oria");
+    c.title    = {Text("The Sanctuary of Zi'Tah")};
+    c.subtitle = {};
+    WrapTitle(c, width);
+    // After "The" it is 152 px wide, after "Sanctuary" 130 and after "of" 160.
+    CHECK_EQ(text(c.title), "The Sanctuary");
+    CHECK_EQ(text(c.subtitle), "of Zi'Tah");
+    // A name of one word stays on one line.
+    c.title    = {Text("Selbina")};
+    c.subtitle = {};
+    WrapTitle(c, width);
+    CHECK(text(c.title) == "Selbina" && c.subtitle.empty());
+}
+
 TEST(a_widget_of_cells_lays_each_in_its_column_a_gap_apart)
 {
     Settings settings;

@@ -278,6 +278,8 @@ namespace headsup
         return {};
     }
 
+    bool HasDesigner(BarWidget kind) { return !PartsOf(kind).empty() && kind != BarWidget::HomePoint; }
+
     BarWidget WidgetOfPart(WidgetPart part)
     {
         for (int k = 0; k < static_cast<int>(BarWidget::Custom); ++k)

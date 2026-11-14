@@ -295,6 +295,13 @@ namespace headsup
             widgets.hasPopup[i] = c.hasPopup; // kept off the panel, a combined widget's popup still joins its pill's
             if (!TakesRoom(c, widgets.panel.group[i], settingsShown)) continue;
             const BarLook own = LookOf(look, widgets, i);
+            if (c.wrap)
+            {
+                WidgetContent two = c;
+                two.subtitle      = c.title; // any second line, for the faces of a widget on two
+                const TextFace title = own.TitleFace(two), detail = own.DetailFace();
+                WrapTitle(c, [&](bool top, const std::string& text) { return Width(host, text, top ? title : detail); });
+            }
             const auto steady = [&](std::vector<Span>& line, const TextFace& face) {
                 if (std::ranges::none_of(line, [](const Span& s) { return !s.room.empty(); })) return;
                 SteadyBoxes(line, Width(host, std::string(1, WidestDigitOf(host, face)), face),

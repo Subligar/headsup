@@ -123,6 +123,9 @@ namespace headsup
     // A widget of cells' columns: each as wide as its widest cell, which width measures (title: on the first line).
     std::vector<float> CellColumns(const WidgetContent& content, FunctionRef<float(bool title, const Span&)> width);
     float CellsWidth(const std::vector<float>& columns, float gap);
+    // A wrapping widget's title broken at the space that leaves the wider of its two lines narrowest, as width
+    // measures them (title: on the first line). One with no space, or on two lines already, stays as it is.
+    void WrapTitle(WidgetContent& content, FunctionRef<float(bool title, const std::string&)> width);
 
     // Game help's own bar under the top bar: its box when it has a background, and its caption, the bag's count and
     // its help where the row puts them, each centered on the row. Nothing for a row with no box.

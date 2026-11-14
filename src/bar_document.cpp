@@ -929,6 +929,25 @@ namespace headsup
         return columns.empty() ? 0.0f : total + gap * static_cast<float>(columns.size() - 1);
     }
 
+    void WrapTitle(WidgetContent& content, FunctionRef<float(bool title, const std::string&)> width)
+    {
+        if (content.title.size() != 1 || !content.subtitle.empty()) return;
+        const std::string text = content.title[0].text;
+        std::optional<size_t> best;
+        float narrowest = 0.0f;
+        for (size_t space = text.find(' '); space != std::string::npos; space = text.find(' ', space + 1))
+        {
+            const float wide = std::max(width(true, text.substr(0, space)), width(false, text.substr(space + 1)));
+            if (best && wide >= narrowest) continue;
+            best      = space;
+            narrowest = wide;
+        }
+        if (!best) return;
+        content.subtitle = content.title;
+        content.title[0].text    = text.substr(0, *best);
+        content.subtitle[0].text = text.substr(*best + 1);
+    }
+
     std::string WidgetRml(const WidgetContent& content, const BarLook& look, const std::vector<float>& columns)
     {
         const bool alone = content.subtitle.empty();

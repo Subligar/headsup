@@ -314,6 +314,7 @@ namespace headsup
             {kExpBarBackKey, &WidgetOptions::expBarBack}, {kExpBarFillKey, &WidgetOptions::expBarFill}};
         constexpr const char* kZoneIdKey    = "zoneId";
         constexpr const char* kMemTextKey   = "memText";
+        constexpr const char* kHomePointWrapKey = "homePointWrap";
         constexpr const char* kStatusDisplayKey = "statusDisplay";
         const char* const kStatusDisplayNames[kStatusDisplayCount] = {"name", "icon", "both"};
         constexpr const char* kJobTextKey   = "jobText";
@@ -1349,7 +1350,7 @@ namespace headsup
             const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
             if (w.kind == BarWidget::StatusTimers) o.pinDesign = StatusDesignFrom(text((widget + kPinDesignSuffix).c_str()));
-            else o.design = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
+            else if (HasDesigner(w.kind)) o.design = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
             if (w.kind == BarWidget::Custom) o.name = text((widget + kNameSuffix).c_str());
             if (w.kind == BarWidget::Custom) o.popup = PopupDesignFrom(w.kind, text((widget + kPopupDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
@@ -1424,6 +1425,9 @@ namespace headsup
             case BarWidget::Performance:
                 o.memText = flag(kMemTextKey, o.memText);
                 break;
+            case BarWidget::HomePoint:
+                o.wrapText = flag(kHomePointWrapKey, o.wrapText);
+                break;
             case BarWidget::StatusTimers:
                 o.statusDisplay = static_cast<StatusDisplay>(NameIndex(kStatusDisplayNames, kStatusDisplayCount,
                     text(kStatusDisplayKey), static_cast<int>(o.statusDisplay)));
@@ -1476,7 +1480,7 @@ namespace headsup
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
             if (w.kind == BarWidget::StatusTimers) text((widget + kPinDesignSuffix).c_str(), StatusDesignText(o.pinDesign).c_str());
-            else if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
+            else if (HasDesigner(w.kind)) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
             if (w.kind == BarWidget::Custom) text((widget + kNameSuffix).c_str(), o.name.c_str());
             if (w.kind == BarWidget::Custom) text((widget + kPopupDesignSuffix).c_str(), PopupDesignText(o.popup).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
@@ -1529,6 +1533,9 @@ namespace headsup
                 break;
             case BarWidget::Performance:
                 flag(kMemTextKey, o.memText);
+                break;
+            case BarWidget::HomePoint:
+                flag(kHomePointWrapKey, o.wrapText);
                 break;
             case BarWidget::StatusTimers:
                 text(kStatusDisplayKey, kStatusDisplayNames[static_cast<int>(o.statusDisplay)]);

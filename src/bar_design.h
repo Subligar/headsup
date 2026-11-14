@@ -52,6 +52,9 @@ namespace headsup
 
     // None for the game's help; for a created widget every part of every widget, icons too, and its own Name.
     std::span<const WidgetPart> PartsOf(BarWidget kind);
+    // A widget whose parts its Widget Designer arranges and its settings file keeps: Home Point's name is always on,
+    // so it has none.
+    bool HasDesigner(BarWidget kind);
     // The widget whose part it is: its icon's too, and the created widget's for its Name.
     BarWidget WidgetOfPart(WidgetPart part);
     // The part that is the widget's icon, placed by its Icon setting rather than in its design; none for a widget

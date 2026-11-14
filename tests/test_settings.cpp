@@ -3023,6 +3023,21 @@ TEST(the_zone_widgets_show_zone_id_in_header_is_kept)
     CHECK(!LoadSettings(store).Widget(BarWidget::Zone).zoneId);
 }
 
+TEST(the_home_point_widgets_wrap_text_starts_on_and_is_kept)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::HomePoint).wrapText);
+    s.Widget(BarWidget::HomePoint).wrapText = false;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK(!LoadSettings(store).Widget(BarWidget::HomePoint).wrapText);
+    // It has no Widget Designer: its name stays on, whatever design a settings file holds for it.
+    CHECK(!HasDesigner(BarWidget::HomePoint) && HasDesigner(BarWidget::Zone));
+    CHECK(!store.values.contains("barHomePointDesign"));
+    store.values["barHomePointDesign"] = "-name |";
+    CHECK(LoadSettings(store).Widget(BarWidget::HomePoint).design == DefaultDesign(BarWidget::HomePoint));
+}
+
 TEST(lock_cursor_to_window_starts_off_and_is_kept)
 {
     Settings s;

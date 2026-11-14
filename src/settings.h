@@ -102,6 +102,7 @@ namespace headsup
         std::optional<bool> background;
         std::string titleFont, textFont;
         std::optional<float> fontRatio, popupTextScale;
+        bool wrapText = true; // Home Point: its zone's name on two lines (WidgetContent::wrap)
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.

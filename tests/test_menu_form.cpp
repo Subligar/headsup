@@ -1928,6 +1928,24 @@ TEST(a_designer_buttons_picture_is_drawn_with_its_icons_adjustment)
     CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + IconSource(Icon::Star) + "\"/>").c_str()));
 }
 
+TEST(the_home_point_widgets_settings_have_no_designer_and_a_wrap_text_switch)
+{
+    Window w;
+    const PanelWidget home{BarWidget::HomePoint}, zone{BarWidget::Zone};
+    w.settings.Widget(home).on = w.settings.Widget(zone).on = true;
+    const auto rows = [&](PanelWidget widget) {
+        w.readings.settingsOf = {widget};
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    CHECK(Has(rows(zone), "class=\"design\"") && !Has(rows(zone), "wrap-text"));
+    const std::string shown = rows(home);
+    CHECK(!Has(shown, "class=\"design\"") && Has(shown, "wrap-text"));
+    CHECK(w.settings.Widget(home).wrapText);
+    w.Pass({{"toppanel-widgets-wrap-text-homepoint", kClickEvent, ""}});
+    CHECK(!w.settings.Widget(home).wrapText);
+}
+
 TEST(show_mem_text_shows_with_the_performance_widgets_memory_button_and_switches_its_label)
 {
     Window w;

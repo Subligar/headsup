@@ -3590,6 +3590,12 @@ TEST(the_home_point_widget_is_its_icon_and_the_name_of_your_home_points_zone_wit
     w = Content(BarWidget::HomePoint, state, settings);
     CHECK(w.icons.empty() && Joined(w.title) == "Southern San d'Oria");
     CHECK(HasCopies(BarWidget::HomePoint) && Combines(BarWidget::HomePoint) && Aligns(BarWidget::HomePoint));
+    // Its name wraps onto two lines unless Wrap Text is off.
+    CHECK(w.wrap);
+    settings.Widget(BarWidget::HomePoint).wrapText = false;
+    CHECK(!Content(BarWidget::HomePoint, state, settings).wrap);
+    // Its settings pop-out has a title.
+    CHECK_EQ(Joined(BarPopupContent(BarWidget::HomePoint, state, settings).title), "Home Point");
     // A created widget can show it too.
     const PanelWidget made       = *CreateWidget(settings);
     settings.Widget(made).design = DesignFrom(BarWidget::Custom, "homePoint.name |");

@@ -165,9 +165,10 @@
                 {"key": "edit", "name": "Edit", "tip": "Which of this widget's two designs you are editing. Top Panel Widget shows its Widget Designer and the rest of its settings. Pop-out shows its Pop-out Designer, with the pop-out itself beside these settings as you build it. It starts on Top Panel Widget."},
                 {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
                 {"key": "popup-design", "name": "Pop-out Designer"},
-                {"key": "icon", "name": "Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is {default}."},
+                {"key": "icon", "name": "Show Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is {default}."},
                 {"key": "alignment", "name": "Alignment", "tip": "Puts the widget's content against the left or right of its pill, or in its middle. Set by Location lines it up with the side of the panel it is on. Default is {default}."},
                 {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is {default}."},
+                {"key": "wrap-text", "name": "Wrap Text", "tip": "Puts the zone's name on two lines, broken where it keeps the widget narrowest. Off, it stays on one line. Default is {default}."},
                 {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
                 {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is {default}."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
@@ -1409,7 +1410,7 @@
         {"name": "Windurst", "tip": "Windurst's crest and how many regions it holds."},
         {"name": "Beastmen", "tip": "The beastmen's crest and how many regions they hold."},
         {"name": "Home Point Name", "tip": "The zone your home point is in."},
-        {"name": "Home Point Icon", "tip": "A home point crystal."},
+        {"name": "Home Point Icon", "tip": "A house with a map pin."},
         {"name": "Widget Name", "tip": "This widget's name, as its Name setting has it."}
       ]
     },

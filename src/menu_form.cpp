@@ -1138,14 +1138,18 @@ namespace headsup
                 case WidgetTabsRow::ShowZoneId:
                     if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, ownDefault().c_str());
                     break;
+                case WidgetTabsRow::WrapText:
+                    if (kind == BarWidget::HomePoint) form.Switch(label.c_str(), o.wrapText, ownDefault().c_str());
+                    break;
                 case WidgetTabsRow::Icon:
-                    // Named after its widget's icon, as the Widget Designer's button for it was.
+                    // Named after its widget's icon, as the Widget Designer's button for it was; the row's own name
+                    // for a widget with no designer.
                     if (const std::optional<WidgetPart> icon = IconPartOf(kind))
                     {
                         const LayoutOption& part = c.layout.OptionsOf(WindowList::WidgetParts)[static_cast<size_t>(*icon)];
                         const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::IconSides));
-                        form.Segments(Labeled(part.name, row.key, scope).c_str(), o.iconSide, names.data(), kIconSideCount,
-                            ownDefault().c_str());
+                        form.Segments(HasDesigner(kind) ? Labeled(part.name, row.key, scope).c_str() : label.c_str(), o.iconSide,
+                            names.data(), kIconSideCount, ownDefault().c_str());
                     }
                     break;
                 case WidgetTabsRow::Alignment:
@@ -1175,6 +1179,7 @@ namespace headsup
                     break;
                 case WidgetTabsRow::Design:
                     // the Widget Designer's description
+                    if (!HasDesigner(kind)) break;
                     if (kind != BarWidget::StatusTimers)
                     {
                         form.Note(row.tip);
@@ -2837,6 +2842,7 @@ namespace headsup
         case WidgetTabsRow::LinkedPadding: return Pixels(o.linkPadding);
         case WidgetTabsRow::ShowZoneId: return onOff(o.zoneId);
         case WidgetTabsRow::MemText: return onOff(o.memText);
+        case WidgetTabsRow::WrapText: return onOff(o.wrapText);
         case WidgetTabsRow::StatusDisplay: return option(WindowList::StatusDisplay, o.statusDisplay);
         case WidgetTabsRow::CustomIcons: return option(WindowList::CustomIcons, o.weatherIcons);
         case WidgetTabsRow::Bag1: return ContainerName(o.bag);
