@@ -49,6 +49,9 @@ namespace headsup
     constexpr const char* kWheelEvent  = "wheel";  // the wheel turned over an element of kWheelClass: notches, toward you above 0
     // An element of kPanClass dragged: across and down, shares of its size, a space apart, summed since the last pass.
     constexpr const char* kPanEvent    = "pan";
+    constexpr int kEventPlaces         = 6; // a wheel's and a pan's decimals, as std::to_string wrote them
+    std::string PanText(float across, float down);
+    std::pair<float, float> PanOf(std::string_view text);
     constexpr const char* kCaretEvent  = "caret"; // a text box's caret as it loses the keyboard
     constexpr const char* kDropEvent   = "drop";
     // After the open control's id: a click on its popup that is on none of the popup's parts, which is neither a
@@ -249,7 +252,8 @@ namespace headsup
         // A number stepped one at a time by the arrows either side of it, for one whose change moves the window under
         // the pointer, as a slider's would.
         void Stepper(const char* label, int& value, int lo, int hi, const char* format, const char* tip);
-        void SliderFloat(const char* label, float& value, float lo, float hi, const char* format, const char* tip);
+        // It steps by the last of the places it shows, its unit after them.
+        void SliderFloat(const char* label, float& value, float lo, float hi, int places, const char* unit, const char* tip);
         // A slider over a few named steps, the first being 0: it shows the name of the one it is on.
         void SliderNamed(const char* label, int& value, const char* const* names, int count, const char* tip);
         // A dropdown of the whole numbers from first to last, either way round, each shown as text gives it.

@@ -27,7 +27,6 @@ TEST(a_span_of_time_reads_as_its_two_largest_units_rounded_up)
 
 TEST(printed_text_is_one_value_in_a_printf_format)
 {
-    CHECK_EQ(Printed("%.1f ms", 16.66), std::string("16.7 ms"));
     CHECK_EQ(Printed("%02d", 7), std::string("07"));
     CHECK_EQ(Printed("%03X", 0x2Au), std::string("02A"));
 }

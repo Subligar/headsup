@@ -2,6 +2,7 @@
 #include "pointer_keys.h"
 #include "default_settings.h"
 #include "ini_text.h"
+#include "markup.h"
 #include "settings.h"
 #include "world_info.h"
 #include "release_file.h"
@@ -1728,14 +1729,14 @@ TEST(an_old_file_migrates_field_by_field)
           OutlineMode::Disabled); // willAttackShow=false
     // The category and label colors fill the palettes.
     CHECK(s.palette.aggression[static_cast<int>(Nature::Aggressive)] ==
-          (Color{{std::strtof(store.values.at("willAttackR").c_str(), nullptr), std::strtof(store.values.at("willAttackG").c_str(), nullptr),
-                 std::strtof(store.values.at("willAttackB").c_str(), nullptr)}}));
+          (Color{{*NumberIn(store.values.at("willAttackR")), *NumberIn(store.values.at("willAttackG")),
+                 *NumberIn(store.values.at("willAttackB"))}}));
     CHECK(s.palette.toughness[static_cast<int>(LabelShade::Tough)] ==
-          (Color{{std::strtof(store.values.at("labelToughR").c_str(), nullptr), std::strtof(store.values.at("labelToughG").c_str(), nullptr),
-                 std::strtof(store.values.at("labelToughB").c_str(), nullptr)}}));
+          (Color{{*NumberIn(store.values.at("labelToughR")), *NumberIn(store.values.at("labelToughG")),
+                 *NumberIn(store.values.at("labelToughB"))}}));
     CHECK(s.palette.target[static_cast<int>(TargetState::Locked)] ==
-          (Color{{std::strtof(store.values.at("lockedCursorColorR").c_str(), nullptr), std::strtof(store.values.at("lockedCursorColorG").c_str(), nullptr),
-                 std::strtof(store.values.at("lockedCursorColorB").c_str(), nullptr)}}));
+          (Color{{*NumberIn(store.values.at("lockedCursorColorR")), *NumberIn(store.values.at("lockedCursorColorG")),
+                 *NumberIn(store.values.at("lockedCursorColorB"))}}));
     // Fonts and sizes.
     CHECK_EQ(mobs.lines[2].font, store.values.at("fontName"));
     CHECK_EQ(mobs.lines[2].style, StyleBit(FontStyle::Bold)); // fontBold=true
@@ -1744,12 +1745,12 @@ TEST(an_old_file_migrates_field_by_field)
     CHECK_EQ(mobs.lines[1].font, store.values.at("labelFontName"));
     CHECK_EQ(s.Kind(PlateKind::Players).lines[2].font, store.values.at("fontName"));
     CHECK_EQ(s.Kind(PlateKind::Npcs).lines[2].font, store.values.at("fontName"));
-    const int base = static_cast<int>(std::strtof(store.values.at("mobNameSize").c_str(), nullptr));
+    const int base = static_cast<int>(*NumberIn(store.values.at("mobNameSize")));
     CHECK_EQ(s.baseSize, base);
     CHECK_EQ(mobs.lines[2].textSize, 100);
-    CHECK_EQ(mobs.lines[1].textSize, Stepped(static_cast<int>(std::lround(100.0f * std::strtof(store.values.at("labelSize").c_str(), nullptr) / static_cast<float>(base))), kPercentStep));
+    CHECK_EQ(mobs.lines[1].textSize, Stepped(static_cast<int>(std::lround(100.0f * *NumberIn(store.values.at("labelSize")) / static_cast<float>(base))), kPercentStep));
     CHECK_EQ(mobs.lines[0].iconSize, 150); // iconSize=24 px, of the 16 px base icon
-    CHECK_EQ(s.Kind(PlateKind::Self).lines[2].textSize, Stepped(static_cast<int>(std::lround(100.0f * std::strtof(store.values.at("selfNameSize").c_str(), nullptr) / static_cast<float>(base))), kPercentStep));
+    CHECK_EQ(s.Kind(PlateKind::Self).lines[2].textSize, Stepped(static_cast<int>(std::lround(100.0f * *NumberIn(store.values.at("selfNameSize")) / static_cast<float>(base))), kPercentStep));
     // showLabels=false with mobId=lastThree leaves the ID alone on line 2; showIcons=false leaves line 1 empty;
     // hideClaimed shows line 2 on unclaimed mobs only.
     CHECK_EQ(mobs.lines[0].text, "");
@@ -1765,8 +1766,8 @@ TEST(an_old_file_migrates_field_by_field)
             CHECK_EQ(line.glow, 0);
     CHECK(mobs.ornament.place == OrnamentPlace::Disabled); // showOrnament=false
     CHECK(mobs.ornament.color.source == ColorSource::Custom); // ownOrnamentColor=true
-    CHECK_EQ(mobs.ornament.width, static_cast<int>(std::strtof(store.values.at("ornamentWidth").c_str(), nullptr)));
-    CHECK_EQ(mobs.ornament.height, static_cast<int>(std::strtof(store.values.at("ornamentThickness").c_str(), nullptr)));
+    CHECK_EQ(mobs.ornament.width, static_cast<int>(*NumberIn(store.values.at("ornamentWidth"))));
+    CHECK_EQ(mobs.ornament.height, static_cast<int>(*NumberIn(store.values.at("ornamentThickness"))));
     CHECK_EQ(mobs.lines[2].shadow, 35); // nameShadow=50, of a unit that is now one and a half of it: 33, on the steps of five
     // ownNameColor, nameShadow and the player icon size reach the players' name line too.
     const LineDesign& playerName = s.Kind(PlateKind::Players).lines[2];

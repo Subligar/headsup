@@ -1,6 +1,6 @@
 #include "figures.h"
 
-#include <cstdio>
+#include "markup.h"
 
 namespace headsup
 {
@@ -25,8 +25,6 @@ namespace headsup
     std::string KbText(uint64_t kb)
     {
         if (kb < kKbPerMb) return Grouped(kb) + " KB";
-        char text[32];
-        std::snprintf(text, sizeof text, "%.1f MB", static_cast<double>(kb) / kKbPerMb);
-        return text;
+        return Decimal(static_cast<double>(kb) / kKbPerMb, 1) + " MB";
     }
 }

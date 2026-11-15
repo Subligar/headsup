@@ -1662,7 +1662,7 @@ TEST(a_slider_given_its_value_never_writes_it_back_over_a_newer_one)
     CHECK(!window.Frames(2));
     CHECK_EQ(window.settings.menuOpacity, 70);
     auto* slider = rmlui_dynamic_cast<Rml::ElementFormControl*>(window.Find("configmenu-settings-window-window-opacity"));
-    CHECK(slider != nullptr && std::strtof(slider->GetValue().c_str(), nullptr) == 70.0f);
+    CHECK(slider != nullptr && *NumberIn(slider->GetValue()) == 70.0f);
 }
 
 TEST(a_setting_of_something_switched_off_is_not_shown)

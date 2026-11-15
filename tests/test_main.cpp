@@ -1,9 +1,13 @@
 #include "test.h"
 
+#include <clocale>
 #include <exception>
 
 int main()
 {
+    // The environment's locale for every C call, as gdifonttexture sets the game's: LC_ALL=de_DE.UTF-8 runs the
+    // tests where decimals take a comma.
+    std::setlocale(LC_ALL, "");
     int failed = 0;
     for (const test::Case& c : test::Registry())
     {

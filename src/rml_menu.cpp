@@ -17,7 +17,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstdio>
 #include <utility>
 
 namespace headsup
@@ -660,7 +659,7 @@ namespace headsup
         case Rml::EventId::Mousescroll:
             if (named != nullptr && named->IsClassSet(kWheelClass))
             {
-                m_Events.push_back(FormEvent{id, kWheelEvent, std::to_string(event.GetParameter<float>("wheel_delta_y", 0.0f))});
+                m_Events.push_back(FormEvent{id, kWheelEvent, Decimal(event.GetParameter<float>("wheel_delta_y", 0.0f), kEventPlaces)});
                 event.StopPropagation();
             }
             break;
@@ -726,12 +725,11 @@ namespace headsup
                 // One event a pass, holding every move since the last.
                 if (!m_Events.empty() && m_Events.back().id == id && m_Events.back().type == kPanEvent)
                 {
-                    float across = 0.0f, down = 0.0f;
-                    std::sscanf(m_Events.back().value.c_str(), "%f %f", &across, &down);
+                    const auto [across, down] = PanOf(m_Events.back().value);
                     by += Rml::Vector2f(across, down);
                     m_Events.pop_back();
                 }
-                m_Events.push_back(FormEvent{id, kPanEvent, std::to_string(by.x) + " " + std::to_string(by.y)});
+                m_Events.push_back(FormEvent{id, kPanEvent, PanText(by.x, by.y)});
             }
             break;
         case Rml::EventId::Dragdrop:

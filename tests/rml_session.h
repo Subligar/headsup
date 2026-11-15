@@ -10,6 +10,7 @@
 #include FT_FREETYPE_H
 
 #include <algorithm>
+#include <clocale>
 #include <cstdint>
 #include <string>
 #include <map>
@@ -143,9 +144,30 @@ namespace test
         }
     };
 
+    // C numbers on this thread while it lives, as plugin.cpp's CNumbers gives HeadsUp's callbacks in the game: RmlUi
+    // reads RCSS's decimals with strtof, which follows the C locale.
+    class CNumbersHere
+    {
+    public:
+        CNumbersHere() : m_Was(uselocale(m_C)) {}
+        ~CNumbersHere()
+        {
+            uselocale(m_Was);
+            freelocale(m_C);
+        }
+        CNumbersHere(const CNumbersHere&)            = delete;
+        CNumbersHere& operator=(const CNumbersHere&) = delete;
+
+    private:
+        locale_t m_C = newlocale(LC_NUMERIC_MASK, "C", duplocale(uselocale(nullptr)));
+        locale_t m_Was;
+    };
+
     // RmlUi running with the bundled fonts and one context, for as long as this lives.
     class RmlSession
     {
+        CNumbersHere m_Numbers; // first, so RmlUi is shut down before the numbers go back
+
     public:
         static constexpr int kWidth = 1920, kHeight = 1080;
         Complaints complaints;

@@ -786,9 +786,8 @@ public:
             if (!m_RmlMenu.OpenPage(args[2])) Print("/hu menu: no page is named " + args[2] + ".");
 #ifdef HEADSUP_DEV
             // A number last scrolls the page that many pixels down.
-            char* end          = nullptr;
-            const float pixels = std::strtof(args.back().c_str(), &end);
-            if (args.size() > 3 && end != args.back().c_str() && *end == '\0') m_RmlMenu.ScrollTo(pixels);
+            const std::optional<float> pixels = headsup::NumberIn(args.back());
+            if (args.size() > 3 && pixels) m_RmlMenu.ScrollTo(*pixels);
 #endif
         }
 #ifdef HEADSUP_DEV
@@ -2143,7 +2142,7 @@ private:
         static const std::unordered_map<std::string, uint32_t> kKeys = {{"enter", VK_RETURN}, {"escape", VK_ESCAPE},
             {"tab", VK_TAB}, {"backspace", VK_BACK}, {"delete", VK_DELETE}, {"left", VK_LEFT}, {"right", VK_RIGHT},
             {"up", VK_UP}, {"down", VK_DOWN}, {"home", VK_HOME}, {"end", VK_END}, {"space", VK_SPACE}, {"a", 'A'}};
-        auto number = [&](size_t at) { return at < args.size() ? std::strtof(args[at].c_str(), nullptr) : 0.0f; };
+        auto number = [&](size_t at) { return at < args.size() ? headsup::NumberIn(args[at]).value_or(0.0f) : 0.0f; };
         auto at = [&](float x, float y) {
             return MAKELPARAM(static_cast<int>(x / g_BarScaleX), static_cast<int>(y / g_BarScaleY));
         };

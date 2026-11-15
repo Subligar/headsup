@@ -15,7 +15,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <cstring>
 #include <initializer_list>
 #include <optional>
@@ -128,6 +127,12 @@ namespace headsup
         }
 
         std::string Pixels(int px) { return Formatted("%d px", px); }
+        // A scale, as 1.5x.
+        constexpr const char* kTimes = "x";
+        std::string Times(double scale, int places) { return Decimal(scale, places) + kTimes; }
+        constexpr const char* kYalms = " yalms";
+        constexpr int kRatioPlaces = 2, kScalePlaces = 1; // a font ratio's, and the other scales'
+
         // A size as pixels, but the word at lowest, where the slider's lowest stands for no size of its own.
         auto PixelsOr(const char* word, int lowest)
         {
@@ -135,7 +140,7 @@ namespace headsup
         }
 
         // A tip that says how near a fade begins.
-        std::string Near(const char* tip) { return Filled(Said(tip), kNearMark, Formatted("%.0f", kFadeNearYalms)); }
+        std::string Near(const char* tip) { return Filled(Said(tip), kNearMark, Decimal(kFadeNearYalms, 0)); }
 
         // A list's names, for the kit's rows of choices and named steps.
         std::vector<const char*> NamesOf(std::span<const LayoutOption> options)
@@ -1281,8 +1286,8 @@ namespace headsup
                     // By the Top Panel's slider's positions, set only when moved, so a ratio between them is kept.
                     std::optional<int> at = o.fontRatio ? std::optional<int>(FontRatioPosition(*o.fontRatio)) : std::nullopt;
                     const std::optional<int> before = at;
-                    ownSlider(at, 0, 2 * kFontRatioSteps, [](int p) { return Printed("%.2fx", FontRatioAt(p)); },
-                        Printed("%.2fx", s.barFontRatio));
+                    ownSlider(at, 0, 2 * kFontRatioSteps, [](int p) { return Times(FontRatioAt(p), kRatioPlaces); },
+                        Times(s.barFontRatio, kRatioPlaces));
                     if (at != before) o.fontRatio = at ? std::optional<float>(FontRatioAt(*at)) : std::nullopt;
                     break;
                 }
@@ -1294,8 +1299,8 @@ namespace headsup
                     std::optional<int> at = o.lineSeparation ? std::optional<int>(step(*o.lineSeparation)) : std::nullopt;
                     const std::optional<int> before = at;
                     ownSlider(at, 0, step(kMaxLineSeparation), [](int p) {
-                        return Printed("%.1fx", kMinLineSeparation + static_cast<float>(p) * kLineSeparationStep);
-                    }, Printed("%.1fx", s.barLineSeparation));
+                        return Times(kMinLineSeparation + static_cast<float>(p) * kLineSeparationStep, kScalePlaces);
+                    }, Times(s.barLineSeparation, kScalePlaces));
                     if (at != before)
                         o.lineSeparation = at ? std::optional<float>(kMinLineSeparation + static_cast<float>(*at) * kLineSeparationStep)
                                               : std::nullopt;
@@ -1317,8 +1322,8 @@ namespace headsup
                         std::optional<int> at = o.popupTextScale ? std::optional<int>(step(*o.popupTextScale)) : std::nullopt;
                         const std::optional<int> before = at;
                         ownSlider(at, 0, step(kMaxPopupScale),
-                            [](int p) { return Printed("%.1fx", kMinPopupScale + static_cast<float>(p) * kPopupScaleStep); },
-                            Printed("%.1fx", s.popupTextScale));
+                            [](int p) { return Times(kMinPopupScale + static_cast<float>(p) * kPopupScaleStep, kScalePlaces); },
+                            Times(s.popupTextScale, kScalePlaces));
                         if (at != before)
                             o.popupTextScale = at ? std::optional<float>(kMinPopupScale + static_cast<float>(*at) * kPopupScaleStep)
                                                   : std::nullopt;
@@ -1960,7 +1965,7 @@ namespace headsup
             }
             case SettingPiece::OutlineRange:
                 form.Fade(!outlines);
-                form.SliderFloat(label.c_str(), s.maxDistance, kMinOutlineDistance, kMaxOutlineDistance, "%.0f yalms", tip);
+                form.SliderFloat(label.c_str(), s.maxDistance, kMinOutlineDistance, kMaxOutlineDistance, 0, kYalms, tip);
                 break;
             case SettingPiece::OutlineFadeIn:
                 form.Fade(!outlines);
@@ -2047,7 +2052,7 @@ namespace headsup
                 break;
             case SettingPiece::Range:
                 form.Fade(!plates || !s.opacity.fadeIn);
-                form.SliderFloat(label.c_str(), s.opacity.range, kMinOutlineDistance, kMaxOutlineDistance, "%.0f yalms", tip);
+                form.SliderFloat(label.c_str(), s.opacity.range, kMinOutlineDistance, kMaxOutlineDistance, 0, kYalms, tip);
                 break;
             case SettingPiece::Detection: Detection(c, e); break;
             // The Target widget's popup reads these too, but they are set with the nameplates.
@@ -2267,13 +2272,13 @@ namespace headsup
                 int position     = FontRatioPosition(s.barFontRatio);
                 const int before = position;
                 form.SliderInt(label.c_str(), position, 0, 2 * kFontRatioSteps,
-                    [](int p) { return Printed("%.2fx", FontRatioAt(p)); }, tip);
+                    [](int p) { return Times(FontRatioAt(p), kRatioPlaces); }, tip);
                 if (position != before) s.barFontRatio = FontRatioAt(position);
                 break;
             }
             case SettingPiece::LineSeparation:
                 form.Fade(!BarOn(s));
-                form.SliderFloat(label.c_str(), s.barLineSeparation, kMinLineSeparation, kMaxLineSeparation, "%.1fx", tip);
+                form.SliderFloat(label.c_str(), s.barLineSeparation, kMinLineSeparation, kMaxLineSeparation, kScalePlaces, kTimes, tip);
                 break;
             case SettingPiece::IconScale:
                 form.Fade(!BarOn(s));
@@ -2289,15 +2294,15 @@ namespace headsup
                 break;
             case SettingPiece::TextScale:
                 form.Fade(!BarOn(s));
-                form.SliderFloat(label.c_str(), s.popupTextScale, kMinPopupScale, kMaxPopupScale, "%.1fx", tip);
+                form.SliderFloat(label.c_str(), s.popupTextScale, kMinPopupScale, kMaxPopupScale, kScalePlaces, kTimes, tip);
                 break;
             case SettingPiece::PopupWidth:
                 form.Fade(!BarOn(s));
-                form.SliderFloat(label.c_str(), s.popupWidthScale, kMinPopupBoxScale, kMaxPopupScale, "%.1fx", tip);
+                form.SliderFloat(label.c_str(), s.popupWidthScale, kMinPopupBoxScale, kMaxPopupScale, kScalePlaces, kTimes, tip);
                 break;
             case SettingPiece::PopupHeight:
                 form.Fade(!BarOn(s));
-                form.SliderFloat(label.c_str(), s.popupHeightScale, kMinPopupBoxScale, kMaxPopupScale, "%.1fx", tip);
+                form.SliderFloat(label.c_str(), s.popupHeightScale, kMinPopupBoxScale, kMaxPopupScale, kScalePlaces, kTimes, tip);
                 break;
             case SettingPiece::PanelRounding:
             case SettingPiece::CornerRounding:
@@ -2596,12 +2601,13 @@ namespace headsup
                 break;
             case SettingPiece::FrameTime:
                 form.Fade(!s.debugMode);
-                form.Reading(label.c_str(), Formatted("%.2f ms (%.0f fps)", r.frameMs, r.frameMs > 0.0 ? 1000.0 / r.frameMs : 0.0));
+                form.Reading(label.c_str(), Decimal(r.frameMs, 2) + " ms (" + Decimal(r.frameMs > 0.0 ? 1000.0 / r.frameMs : 0.0, 0) + " fps)");
                 break;
             case SettingPiece::LastSave:
                 form.Fade(!s.debugMode);
                 form.Reading(label.c_str(),
-                    Formatted("%.0f ms, %zu %s", r.lastSaveMs, r.lastSaveKeys, Word(c, r.lastSaveKeys == 1 ? WindowWord::LastSaveKey : WindowWord::LastSaveKeys)));
+                    Decimal(r.lastSaveMs, 0) + Formatted(" ms, %zu %s", r.lastSaveKeys,
+                                                   Word(c, r.lastSaveKeys == 1 ? WindowWord::LastSaveKey : WindowWord::LastSaveKeys)));
                 break;
             case SettingPiece::YourLevel:
                 form.Fade(!s.debugMode);
@@ -2765,14 +2771,13 @@ namespace headsup
             form.Raw(std::string("<img class=\"") + kSetupPreviewClass + " " + kWheelClass + " " + kPanClass + "\" id=\"" +
                      kSetupPreviewClass + "\" src=\"" + kSetupPicture + "\"/>");
             if (const FormEvent* wheel = form.Took(kSetupPreviewClass, kWheelEvent))
-                run.zoom = std::clamp(run.zoom - static_cast<int>(std::lround(std::stof(wheel->value))) * kSetupZoomNotch, kLeastSetupZoom,
+                run.zoom = std::clamp(run.zoom - static_cast<int>(std::lround(NumberIn(wheel->value).value_or(0.0f))) * kSetupZoomNotch, kLeastSetupZoom,
                     kMostSetupZoom);
             form.SliderPercent(Labeled(Word(c, WindowWord::SetupZoom), "zoom").c_str(), run.zoom, kLeastSetupZoom, kMostSetupZoom,
                 WordTip(c, WindowWord::SetupZoom));
             if (const FormEvent* pan = form.Took(kSetupPreviewClass, kPanEvent))
             {
-                float across = 0.0f, down = 0.0f;
-                std::sscanf(pan->value.c_str(), "%f %f", &across, &down);
+                const auto [across, down] = PanOf(pan->value);
                 run.panX += across;
                 run.panY += down;
             }

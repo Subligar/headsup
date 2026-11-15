@@ -4,6 +4,7 @@
 #include "bar_game_help.h"
 #include "bar_job.h"
 #include "bar_look.h"
+#include "markup.h"
 #include "memo.h"
 #include "bar_server_time.h"
 #include "npcdata.h"
@@ -249,7 +250,7 @@ namespace headsup
         std::string ChanceText(double perMille)
         {
             const double percent = perMille / kPerMillePerPercent;
-            return percent == std::floor(percent) ? Printed("%.0f%%", percent) : Printed("%.1f%%", percent);
+            return Decimal(percent, percent == std::floor(percent) ? 0 : 1) + "%";
         }
 
         // What a mob drops at Treasure Hunter 0, and what can be stolen or despoiled from it: each by the game's
@@ -1458,7 +1459,7 @@ namespace headsup
             if (state.targetDistance && std::isfinite(*state.targetDistance))
             {
                 constexpr float kFarthest = 99.9f; // the farthest a target's distance reads
-                const auto said = [](float yalms) { return "(" + Printed("%.1f", yalms) + ")"; };
+                const auto said = [](float yalms) { return "(" + Decimal(yalms, 1) + ")"; };
                 Span far = Text(said(*state.targetDistance), Tone::Dim);
                 far.room = {said(kFarthest)};
                 parts.push_back({WidgetPart::TargetDistance, ListOf(std::move(far))});

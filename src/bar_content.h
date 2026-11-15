@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -226,8 +227,10 @@ namespace headsup
     constexpr int64_t kMsPerMinute = kMsPerSecond * kSecondsPerMinute, kMsPerHour = kMsPerSecond * kSecondsPerHour,
                       kMsPerDay = kMsPerSecond * kSecondsPerDay;
 
-    // value in a printf format: Printed("%.1f ms", 16.66) is "16.7 ms".
+    // A whole number in a printf format: Printed("%02d", 7) is "07". A decimal goes through Decimal, as printf's
+    // follows the C locale.
     template <typename Value>
+        requires std::is_integral_v<Value>
     std::string Printed(const char* format, Value value)
     {
         char text[48];

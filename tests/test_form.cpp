@@ -57,7 +57,7 @@ namespace
             form.Fade(faded);
             form.Switch("Chocobo", b.chocobo, "The chocobo.");
             form.SliderInt("Height", b.height, 24, 64, [](int px) { return std::to_string(px) + " px"; }, nullptr);
-            form.SliderFloat("Thickness", b.thick, 0.5f, 3.0f, "%.1f px", nullptr);
+            form.SliderFloat("Thickness", b.thick, 0.5f, 3.0f, 1, " px", nullptr);
             form.SliderNamed("Quality", b.quality, kQualities, 4, nullptr);
             form.SliderPercent("Opacity", b.opacity, 10, 100, nullptr);
             form.NumberDropdown("Theme", b.theme, 0, 2, [](int t) { return "Theme " + std::to_string(t); }, nullptr, 0.0f,

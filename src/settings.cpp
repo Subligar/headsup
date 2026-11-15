@@ -6,11 +6,13 @@
 #include "fonts.h"
 #include "game_font.h"
 #include "ini_text.h"
+#include "markup.h"
 #include "pointer_keys.h"
 #include "utf16.h"
 #include "world_info.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cstdlib>
 #include <sstream>
 #include <cctype>
@@ -408,10 +410,9 @@ namespace headsup
         // A key's number as the store holds it; nothing for a key it lacks or that holds no number.
         std::optional<float> HeldNumber(SettingsStore& store, const std::string& key)
         {
-            const std::string text = store.GetString(key.c_str(), kNoText);
-            char* end              = nullptr;
-            const float v          = std::strtof(text.c_str(), &end);
-            return text == kNoText || end == text.c_str() || !std::isfinite(v) ? std::nullopt : std::optional<float>(v);
+            const std::string text        = store.GetString(key.c_str(), kNoText);
+            const std::optional<float> v = text == kNoText ? std::nullopt : NumberIn(text);
+            return v && std::isfinite(*v) ? v : std::nullopt;
         }
 
         // A switch as the store holds it; nothing for a key it lacks. HeadsUp writes true or false, and Ashita wrote 1
@@ -469,11 +470,15 @@ namespace headsup
 
         void StoreFloat(SettingsStore& store, const std::string& key, float v)
         {
-            char text[32];
-            std::snprintf(text, sizeof(text), "%.4f", v);
+            constexpr int kPlaces = 4, kExactDigits = 9; // nine significant digits hold any float
+            std::string text = Decimal(v, kPlaces);
             // A value the four places do not hold, such as a color made from a hex code, keeps its precision.
-            if (std::strtof(text, nullptr) != v) std::snprintf(text, sizeof(text), "%.9g", v);
-            store.Set(key.c_str(), text);
+            if (NumberIn(text) != v)
+            {
+                char exact[32];
+                text.assign(exact, std::to_chars(exact, exact + sizeof(exact), v, std::chars_format::general, kExactDigits).ptr);
+            }
+            store.Set(key.c_str(), text.c_str());
         }
 
         void StoreColor(SettingsStore& store, const std::string& base, const Color& c)
@@ -2007,7 +2012,7 @@ namespace headsup
             any  = any || text != kNoText;
         }
         m_Outdated = any && (m_Held.at(kDesignsSavedKey) != marker ||
-                                std::strtof(m_Held.at(kVersionKey).c_str(), nullptr) < kSettingsVersion);
+                                NumberIn(m_Held.at(kVersionKey)).value_or(0.0f) < kSettingsVersion);
         return LoadSettings(m_Store);
     }
 

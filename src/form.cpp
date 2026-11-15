@@ -13,7 +13,6 @@
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
-#include <cstring>
 #include <utility>
 
 namespace headsup
@@ -85,15 +84,15 @@ namespace headsup
             return rml;
         }
 
-        // The step a float slider moves by: one of the last decimal its format shows.
-        float StepOf(const char* format)
-        {
-            const char* point = std::strstr(format, "%.");
-            const int decimals = point != nullptr ? std::atoi(point + 2) : 0;
-            return std::pow(10.0f, static_cast<float>(-decimals));
-        }
-
         uint32_t RgbOf(const Color& color) { return ToArgb(color) & ~kAlphaMask; }
+    }
+
+    std::string PanText(float across, float down) { return Decimal(across, kEventPlaces) + " " + Decimal(down, kEventPlaces); }
+
+    std::pair<float, float> PanOf(std::string_view text)
+    {
+        const size_t space = text.find(' ');
+        return {NumberIn(text).value_or(0.0f), space == std::string_view::npos ? 0.0f : NumberIn(text.substr(space + 1)).value_or(0.0f)};
     }
 
     Form::Form(std::vector<FormEvent> events, FormState& state, std::function<bool(uint8_t)> down)
@@ -326,7 +325,7 @@ namespace headsup
     {
         const FormEvent* moved = Took(slider, kChangeEvent);
         if (moved == nullptr || m_Off) return;
-        const int to = std::clamp(Stepped(static_cast<int>(std::lround(std::strtof(moved->value.c_str(), nullptr))), step), lo, hi);
+        const int to = std::clamp(Stepped(static_cast<int>(std::lround(NumberIn(moved->value).value_or(0.0f))), step), lo, hi);
         if (to == value) return;
         value   = to;
         changed = true;
@@ -375,19 +374,19 @@ namespace headsup
             names[std::clamp(value, 0, count - 1)], tip);
     }
 
-    void Form::SliderFloat(const char* label, float& value, float lo, float hi, const char* format, const char* tip)
+    void Form::SliderFloat(const char* label, float& value, float lo, float hi, int places, const char* unit, const char* tip)
     {
         const std::string slider = Id(label);
         if (const FormEvent* moved = Took(slider, kChangeEvent); moved != nullptr && !m_Off)
         {
-            const float to = std::clamp(std::strtof(moved->value.c_str(), nullptr), lo, hi);
+            const float to = std::clamp(NumberIn(moved->value).value_or(0.0f), lo, hi);
             if (to != value)
             {
                 value   = to;
                 changed = true;
             }
         }
-        Slider(slider, label, value, lo, hi, StepOf(format), Formatted(format, static_cast<double>(value)), tip);
+        Slider(slider, label, value, lo, hi, std::pow(10.0f, static_cast<float>(-places)), Decimal(value, places) + unit, tip);
     }
 
     void Form::TogglePopup(const std::string& control)
@@ -521,7 +520,7 @@ namespace headsup
         {
             const FormEvent* event = Took(swatch + "-p-" + kChannels[channel], kChangeEvent);
             if (event == nullptr) continue;
-            const int to = static_cast<int>(std::lround(std::clamp(std::strtof(event->value.c_str(), nullptr), 0.0f, kColorFull)));
+            const int to = static_cast<int>(std::lround(std::clamp(NumberIn(event->value).value_or(0.0f), 0.0f, kColorFull)));
             if (to == levels[channel]) continue;
             levels[channel] = to;
             moved |= 1u << channel;
@@ -546,7 +545,7 @@ namespace headsup
         {
             const std::string slider = swatch + "-p-" + kChannels[channel];
             rml += std::string("<div class=\"pick-row\"><div class=\"pick-name\">") + kChannelNames[channel] +
-                   "</div><input type=\"range\" id=\"" + slider + "\" min=\"0\" max=\"" + Formatted("%.0f", kColorFull) + "\" step=\"1\"/>" +
+                   "</div><input type=\"range\" id=\"" + slider + "\" min=\"0\" max=\"" + Decimal(kColorFull, 0) + "\" step=\"1\"/>" +
                    "<div class=\"val\" id=\"" + slider + "-val\"></div></div>";
             Set(slider, FormValueKind::Value, {}, std::to_string(levels[channel]));
             Set(slider + "-val", FormValueKind::Text, {}, std::to_string(levels[channel]));
