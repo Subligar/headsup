@@ -345,6 +345,21 @@ namespace
         if (!g_Rml->WantsText() && g_MenuInbox.Take({headsup::InputSource::Keyboard, key, down ? 1 : 0})) return TRUE;
         return g_Rml->Key(key, down) ? TRUE : FALSE;
     }
+
+    // A DirectInput pad's change, one DIDEVICEOBJECTDATA at a time, and XInput's, one button or axis at a time.
+    BOOL __stdcall OnDirectInput(uint32_t* offset, int32_t* data, bool blocked, bool injected)
+    {
+        UNREFERENCED_PARAMETER(injected);
+        if (blocked || offset == nullptr || data == nullptr) return FALSE;
+        return g_MenuInbox.Take({headsup::InputSource::DirectInput, *offset, *data}) ? TRUE : FALSE;
+    }
+
+    BOOL __stdcall OnXInput(uint8_t* button, int16_t* state, bool blocked, bool injected)
+    {
+        UNREFERENCED_PARAMETER(injected);
+        if (blocked || button == nullptr || state == nullptr) return FALSE;
+        return g_MenuInbox.Take({headsup::InputSource::XInput, *button, *state}) ? TRUE : FALSE;
+    }
 }
 
 class HeadsUp;
@@ -675,6 +690,8 @@ public:
 #endif
         core->GetInputManager()->GetMouse()->AddCallback(kName, OnMouse);
         core->GetInputManager()->GetKeyboard()->AddCallback(kName, nullptr, nullptr, OnKeyboard);
+        core->GetInputManager()->GetController()->AddCallback(kName, nullptr, nullptr, OnDirectInput);
+        core->GetInputManager()->GetXInput()->AddCallback(kName, nullptr, OnXInput);
         g_Rml = &m_Rml;
         return true;
     }
@@ -688,6 +705,8 @@ public:
         LockCursor(false);
         m_AshitaCore->GetInputManager()->GetMouse()->RemoveCallback(kName);
         m_AshitaCore->GetInputManager()->GetKeyboard()->RemoveCallback(kName);
+        m_AshitaCore->GetInputManager()->GetController()->RemoveCallback(kName);
+        m_AshitaCore->GetInputManager()->GetXInput()->RemoveCallback(kName);
         g_Rml = nullptr;
         {
             const std::lock_guard hold(g_MenuInbox.lock);
