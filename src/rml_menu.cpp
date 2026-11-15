@@ -289,15 +289,20 @@ namespace headsup
         }
     }
 
-    bool RmlMenu::Document(const MenuHost& host, const Settings& settings)
+    MenuLook MenuLookFor(const MenuHost& host, const Settings& settings)
     {
         const GameSkinLook* skin = host.skin ? &*host.skin : nullptr;
         const MenuTheme theme    = MenuThemeFor(settings, skin);
-        MenuLook look{theme, host.textFont, kMarcellusSC, settings.menuFontSize, m_Look.textLift, host.developer,
-            MenuColorsFor(settings, skin), theme == MenuTheme::GameWindow ? std::optional(FrameAsSet(settings, skin->frame)) : std::nullopt,
+        return MenuLook{theme, host.textFont, kMarcellusSC, settings.menuFontSize, LiftOf(host.textFont, settings.menuFontSize),
+            host.developer, MenuColorsFor(settings, skin),
+            theme == MenuTheme::GameWindow ? std::optional(FrameAsSet(settings, skin->frame)) : std::nullopt,
             OwnPalette(settings).windowRounding != kShapeRounding ? std::optional(OwnPalette(settings).windowRounding) : std::nullopt};
+    }
+
+    bool RmlMenu::Document(const MenuHost& host, const Settings& settings)
+    {
+        MenuLook look = MenuLookFor(host, settings);
         if (m_Document != nullptr && look == m_Look) return true;
-        look.textLift = LiftOf(host.textFont, settings.menuFontSize);
         if (m_Document != nullptr && look.SameFrame(m_Look))
         {
             m_Document->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(MenuStyle(look)));
