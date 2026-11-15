@@ -100,7 +100,8 @@ namespace headsup
             return rml + "</body></rml>";
         }
 
-        constexpr std::array kListened{Rml::EventId::Click, Rml::EventId::Mouseover, Rml::EventId::Mousedown};
+        // A move of the pointer, not a mouseover: one comes each update an element scrolls or opens under a pointer at rest.
+        constexpr std::array kListened{Rml::EventId::Click, Rml::EventId::Mousemove, Rml::EventId::Mousedown};
 
         Rml::Element* ListOf(Rml::Element* element)
         {
