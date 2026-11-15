@@ -345,3 +345,17 @@ TEST(a_new_look_restyles_the_open_windows_and_keeps_where_they_are)
         CHECK_EQ(w.rml.Said(), "");
     }
 }
+
+TEST(the_selection_follows_the_pointer_only_as_it_moves)
+{
+    // A list scrolled by the keys under a pointer at rest brings other entries under it: the keys' selection stays.
+    Windows w;
+    w.windows.Open(Bag());
+    w.PointAt("bag", "items-2");
+    CHECK_EQ(w.windows.Selected(), std::string("items-2"));
+    w.Acts(MenuAction::Down, 6);
+    for (int frame = 0; frame < 3; ++frame)
+        w.rml.context->Update();
+    CHECK(w.Element("bag", "items")->GetScrollTop() > 0.0f);
+    CHECK_EQ(w.windows.Selected(), std::string("items-8"));
+}
