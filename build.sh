@@ -14,7 +14,7 @@ PLUGIN_SOURCES=("${PURE_SOURCES[@]}" model_render.cpp setup_preview.cpp import_s
 DEV_DIR="$ROOT/../HeadsUp-dev"
 DEV_SOURCES=()
 DEV_FLAGS=()
-DEV_PURE_SOURCES=(window_file.cpp) # those of its files that join the unit tests, with its tests/
+DEV_PURE_SOURCES=(window_file.cpp testmenu.cpp) # those of its files that join the unit tests, with its tests/
 DEV_TESTS=()
 if [[ -d "$DEV_DIR" ]]; then
     DEV_SOURCES=("$DEV_DIR"/*.cpp)
