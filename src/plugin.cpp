@@ -59,6 +59,7 @@
 #include "mousewatch.h"
 #include "namedump.h"
 #include "pointerwatch.h"
+#include "popuplog.h"
 #include "stackdump.h"
 #include "stripdump.h"
 #include "window_file.h"
@@ -814,6 +815,9 @@ public:
             Print(headsup::ArmNameDump(m_NameHook.Running()));
         else if (args[1] == "stackdump")
             Print(headsup::ArmStackDump());
+        else if (args[1] == "popuplog")
+            Print(headsup::StartPopupLog(args.size() > 2 ? args[2] : "", Now(), OwnFolder(kLogsFolder),
+                m_CombatTextHook.Running() && m_CombatTextHook.TieProblem().empty()));
         else if (args[1] == "mousewatch")
             Print(args.size() > 2 && args[2] == "stop" ? m_MouseWatch.Stop() : m_MouseWatch.Start(OwnFolder(kLogsFolder)));
         else if (args[1] == "pointerwatch")
@@ -840,6 +844,7 @@ public:
             Print("/hu windowowners: write each open game window's owner, its class and its layout's first bytes to logs/headsup");
             Print("/hu namedump: write every call into the game's name routine during one frame to logs/headsup");
             Print("/hu stackdump: write the stack at the character draws of one frame to logs/headsup");
+            Print("/hu popuplog [seconds]: log every combat popup the game decides on, starts, builds and draws for that long (30 by default) to logs/headsup");
             Print("/hu pointerwatch [stop]: log every change in the mouse pointer and the game's own to logs/headsup until stopped");
             Print("/hu mousewatch [stop]: log every mouse message and what HeadsUp made of it to logs/headsup until stopped");
             Print("/hu stripdump: write the game's top-strip text, every level, to logs/headsup");
@@ -918,6 +923,7 @@ public:
         if (m_DrawDump.NextFrame(Now(), m_Names, m_NameHook, m_Tracker, m_Nameplates)) WriteDrawDump();
         if (headsup::NameDumpReady()) WriteNameDump();
         if (headsup::StackDumpReady()) WriteStackDump();
+        if (const std::string done = headsup::PopupLogFrame(Now(), m_CombatTextHook.Popups()); !done.empty()) Print(done);
         m_PointerWatch.Frame(m_AshitaCore, Now());
         if (!m_Played.empty())
         {

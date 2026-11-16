@@ -10,6 +10,7 @@
 
 #ifdef HEADSUP_DEV
 #include "namedump.h"
+#include "popuplog.h"
 #endif
 
 #include <algorithm>
@@ -435,6 +436,9 @@ namespace headsup
         {
             const uint8_t answer = reinterpret_cast<PopupDecisionFn>(g_PopupDecision)(actor, target, message, popup, kind);
             if (answer == 0) g_PopupTies.Decided(PopupEvent{message, actor[0], target[0]});
+#ifdef HEADSUP_DEV
+            LogPopupDecision(message, actor, target, answer, *kind);
+#endif
             return answer;
         }
 
@@ -443,6 +447,10 @@ namespace headsup
             uint8_t* built      = reinterpret_cast<PopupParticleBuildFn>(g_PopupParticleBuild)(particle, generator);
             const uint32_t task = generator != nullptr ? ReadAt<uint32_t>(generator, kPopupGeneratorTask) : 0;
             g_PopupTies.Built(Address(particle), task);
+#ifdef HEADSUP_DEV
+            LogPopupParticle(Address(particle), task, reinterpret_cast<const char*>(particle + kCombatTextOffset),
+                g_PopupTies.Of(Address(particle)));
+#endif
             return built;
         }
 
@@ -1640,6 +1648,9 @@ extern "C" uint32_t HeadsUpOnCombatText(const uint32_t* arguments)
 extern "C" void HeadsUpOnPopupStarted(uintptr_t task)
 {
     headsup::g_PopupTies.Started(task);
+#ifdef HEADSUP_DEV
+    headsup::LogPopupStart(task);
+#endif
 }
 
 extern "C" void HeadsUpAfterCombatText() { headsup::g_CombatPopups.End(); }
