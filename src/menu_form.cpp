@@ -2233,7 +2233,7 @@ namespace headsup
                 }
                 break;
             case SettingPiece::GameHelp:
-                form.Fade(false);
+                form.Fade(!BarOn(s));
                 form.Switch(label.c_str(), s.moveGameHelp, tip);
                 break;
             case SettingPiece::WindowDefaults: WindowDefaults(c); break;
@@ -2318,11 +2318,11 @@ namespace headsup
                 break;
             }
             case SettingPiece::HideReadout:
-                form.Fade(!on);
+                form.Fade(!BarOn(s));
                 form.Switch(label.c_str(), s.hideNetstat, tip);
                 break;
             case SettingPiece::ShiftVanillaUi:
-                form.Fade(!on);
+                form.Fade(!BarOn(s));
                 form.Switch(label.c_str(), s.shiftVanillaUi, tip);
                 break;
             // The theme's looks as the panel shows them; a change to a built-in theme's makes a custom theme of it.
@@ -2446,7 +2446,7 @@ namespace headsup
                 break;
             }
             case SettingPiece::HideGameHelp:
-                form.Fade(!on);
+                form.Fade(!BarOn(s));
                 form.Switch(label.c_str(), s.hideHelpBar, tip);
                 break;
             case SettingPiece::Position:

@@ -1107,8 +1107,8 @@ public:
         // The game's help bar is the only help left while an event or the map hides HeadsUp's bar; a screenshot wants
         // neither.
         const bool helpGone = m_Settings.hideHelpBar && (m_Screenshot || !(m_Player.inEvent || mapShown));
-        const headsup::HiddenWindows hidden{.helpBar = m_Settings.enabled && helpGone,
-            .netstat = m_Settings.enabled && m_Settings.hideNetstat};
+        const bool panel = headsup::BarOn(m_Settings);
+        const headsup::HiddenWindows hidden{.helpBar = panel && helpGone, .netstat = panel && m_Settings.hideNetstat};
         const std::optional<headsup::HelpBand> band = HelpBandNow();
         const auto mode         = static_cast<size_t>(headsup::WindowHelpMode(m_Settings));
         const bool movesWindows = (band && band->bottom != 0 && m_Settings.shiftVanillaUi) ||
