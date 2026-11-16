@@ -13,6 +13,38 @@
 
 namespace headsup
 {
+    void PopupTies::Ties::Put(uintptr_t key, const PopupEvent& event)
+    {
+        const auto known = std::find(keys.begin(), keys.end(), key);
+        const size_t at  = known != keys.end() ? static_cast<size_t>(known - keys.begin())
+                                               : std::exchange(next, (next + 1) % kKeptTies);
+        keys[at]   = key;
+        events[at] = event;
+    }
+
+    void PopupTies::Ties::Forget(uintptr_t key) { std::replace(keys.begin(), keys.end(), key, uintptr_t{0}); }
+
+    std::optional<PopupEvent> PopupTies::Ties::Of(uintptr_t key) const
+    {
+        const auto known = std::find(keys.begin(), keys.end(), key);
+        if (key == 0 || known == keys.end()) return std::nullopt;
+        return events[static_cast<size_t>(known - keys.begin())];
+    }
+
+    // A task or particle the game makes again at an address it freed is a new one.
+    void PopupTies::Started(uintptr_t task)
+    {
+        if (m_Pending) m_Tasks.Put(task, *m_Pending);
+        else m_Tasks.Forget(task);
+        m_Pending.reset();
+    }
+
+    void PopupTies::Built(uintptr_t particle, uintptr_t task)
+    {
+        if (const std::optional<PopupEvent> event = m_Tasks.Of(task)) m_Particles.Put(particle, *event);
+        else m_Particles.Forget(particle);
+    }
+
     void CombatPopupList::NewFrame()
     {
         m_Popups.clear();

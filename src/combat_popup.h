@@ -3,8 +3,10 @@
 #include "nameplate.h"
 #include "screen_box.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -13,6 +15,41 @@ namespace headsup
 {
     // The game keeps a combat popup's text in 16 bytes of its particle, with no room for a terminator.
     constexpr size_t kMaxCombatPopupText = 16;
+
+    // What a popup is: the message the game started it for (msg_basic's ids), and the entity indexes of who did it and
+    // to whom.
+    struct PopupEvent
+    {
+        uint32_t message = 0, actor = 0, target = 0;
+        bool operator==(const PopupEvent&) const = default;
+    };
+
+    // Ties each popup particle to its message, from the game's three calls as it starts one: its decision to pop, the
+    // effect's task it starts, and the particles it builds from that task. It keeps the last kKeptTies of each, in
+    // fixed arrays, as the calls come on the game's stack.
+    class PopupTies
+    {
+    public:
+        static constexpr size_t kKeptTies = 64;
+        // The game decided to pop one for event: the next start is its.
+        void Decided(const PopupEvent& event) { m_Pending = event; }
+        void Started(uintptr_t task);
+        void Built(uintptr_t particle, uintptr_t task);
+        std::optional<PopupEvent> Of(uintptr_t particle) const { return m_Particles.Of(particle); }
+
+    private:
+        struct Ties
+        {
+            std::array<uintptr_t, kKeptTies> keys{};
+            std::array<PopupEvent, kKeptTies> events{};
+            size_t next = 0; // the oldest, written over next
+            void Put(uintptr_t key, const PopupEvent& event);
+            void Forget(uintptr_t key);
+            std::optional<PopupEvent> Of(uintptr_t key) const;
+        };
+        std::optional<PopupEvent> m_Pending;
+        Ties m_Tasks, m_Particles;
+    };
 
     // One call of the game's popup draw: its text, and what the quads it sent drew. The box holds all its quads, in
     // the scene image's pixels; the depth and color are its last quad's (the color its first vertex's).

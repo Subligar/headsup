@@ -165,3 +165,74 @@ TEST(the_draw_dump_lines_hold_a_popups_text_color_place_and_depth)
     const ShownCombatPopup shown = ShownCombatPopups({miss}, 100)[0];
     CHECK_EQ(DescribeCombatPopup(shown), std::string("Miss | FF808080 alpha 255 | 1924.04,222.49 line 81.00 | 0.99876"));
 }
+
+namespace
+{
+    // Messages from the server's msg_basic.h: a hit, a miss, a cure; the actor and target are entity indexes.
+    constexpr PopupEvent kHit{1, 0x400, 0x0B2}, kMiss{15, 0x0B2, 0x400}, kCure{7, 0x400, 0x400};
+    constexpr uintptr_t kTask1 = 0x1000, kTask2 = 0x2000, kParticle1 = 0x9000, kParticle2 = 0xA000;
+}
+
+TEST(each_started_popup_takes_the_decision_before_it_and_its_particles_take_the_starts)
+{
+    PopupTies ties;
+    ties.Decided(kHit);
+    ties.Started(kTask1);
+    ties.Decided(kMiss);
+    ties.Started(kTask2);
+    ties.Built(kParticle1, kTask2);
+    ties.Built(kParticle2, kTask1);
+    CHECK(ties.Of(kParticle1) == kMiss);
+    CHECK(ties.Of(kParticle2) == kHit);
+}
+
+TEST(a_start_takes_only_the_last_decision_and_a_second_start_takes_none)
+{
+    PopupTies ties;
+    ties.Decided(kHit);
+    ties.Decided(kMiss);
+    ties.Started(kTask1);
+    ties.Started(kTask2);
+    ties.Built(kParticle1, kTask1);
+    ties.Built(kParticle2, kTask2);
+    CHECK(ties.Of(kParticle1) == kMiss);
+    CHECK(!ties.Of(kParticle2));
+}
+
+TEST(a_particle_of_a_task_nobody_started_has_no_message)
+{
+    PopupTies ties;
+    ties.Built(kParticle1, kTask1);
+    CHECK(!ties.Of(kParticle1));
+    CHECK(!ties.Of(kParticle2));
+}
+
+TEST(a_particle_built_again_at_its_address_takes_the_new_tasks_message_or_none)
+{
+    PopupTies ties;
+    ties.Decided(kHit);
+    ties.Started(kTask1);
+    ties.Decided(kCure);
+    ties.Started(kTask2);
+    ties.Built(kParticle1, kTask1);
+    ties.Built(kParticle1, kTask2);
+    CHECK(ties.Of(kParticle1) == kCure);
+    ties.Built(kParticle1, 0x3000);
+    CHECK(!ties.Of(kParticle1));
+}
+
+TEST(the_ties_keep_the_last_64_starts)
+{
+    PopupTies ties;
+    for (uint32_t i = 1; i <= 65; ++i)
+    {
+        ties.Decided(PopupEvent{i, 0, 0});
+        ties.Started(kTask1 * i);
+    }
+    ties.Built(kParticle1, kTask1);
+    ties.Built(kParticle2, kTask1 * 2);
+    ties.Built(kParticle2 + 1, kTask1 * 65);
+    CHECK(!ties.Of(kParticle1));
+    CHECK(ties.Of(kParticle2) == (PopupEvent{2, 0, 0}));
+    CHECK(ties.Of(kParticle2 + 1) == (PopupEvent{65, 0, 0}));
+}
