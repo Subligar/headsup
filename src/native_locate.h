@@ -83,6 +83,8 @@ namespace headsup
         AmbiguousFish,
         NoCombatText,
         AmbiguousCombatText,
+        NoPopupTies,
+        AmbiguousPopupTies,
     };
     const char* Describe(LocateProblem problem);
 
@@ -533,4 +535,17 @@ namespace headsup
     };
     constexpr uint32_t kCombatTextOffset = 0x198, kCombatTextArgumentBytes = 20;
     CombatTextSite LocateCombatText(const ImageSection& text);
+
+    // The three calls in a combat popup's start (0x9E090, once per message as its hit lands) that tie each popup to
+    // its message, RVAs of each five-byte call and of its routine. The decision: cdecl (actor, target, message, 1,
+    // uint8_t* kind), the actor and target each an index then an id, returning 0 to pop. The color: cdecl (class),
+    // called once the effect is started, with the new task in esi. The particle's build: thiscall (particle,
+    // generator), whose task is at kPopupGeneratorTask and its value at kPopupTaskValue.
+    struct PopupTieSites
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t decisionCall = 0, decision = 0, colorCall = 0, color = 0, particleCall = 0, particleBuild = 0;
+    };
+    constexpr uint32_t kPopupGeneratorTask = 0x64, kPopupTaskValue = 0xA8;
+    PopupTieSites LocatePopupTies(const ImageSection& text);
 }

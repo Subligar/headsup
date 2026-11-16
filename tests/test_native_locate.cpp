@@ -1462,3 +1462,67 @@ TEST(a_call_popping_other_arguments_is_not_the_combat_popups)
     PutCombatText(image, kCombatTextRva, kCombatTextArguments - 4);
     CHECK(LocateCombatText(image.Text()).problem == LocateProblem::NoCombatText);
 }
+
+namespace
+{
+    // A combat popup's start in the client of 2026-10-19, copied from its image: the call that decides whether it
+    // pops (0x9E21F to 0xAD950), the call for its color, just after the effect is started (0x9E30B to 0x129C70), and
+    // the call that builds its particle (0x5109F to 0x41F40).
+    constexpr uint32_t kPopupDecisionRva = 0x9E211, kPopupColorRva = 0x9E30A, kPopupParticleRva = 0x51083;
+    void PutPopupDecision(Image& image, uint32_t at)
+    {
+        image.Put(at, {0x52, 0x6A, 0x01, 0x8D, 0x44, 0x24, 0x34, 0x55, 0x8D, 0x4C, 0x24, 0x40, 0x50, 0x51, 0xE8, 0x2C, 0xF7,
+                          0x00, 0x00});
+    }
+    void PutPopupColor(Image& image, uint32_t at)
+    {
+        image.Put(at, {0x50, 0xE8, 0x60, 0xB9, 0x08, 0x00, 0x8B, 0x4C, 0x24, 0x48, 0x83, 0xC4, 0x10, 0x25, 0xFF, 0xFF, 0xFF,
+                          0x00, 0x89, 0x8E, 0xA8, 0x00, 0x00, 0x00, 0x89, 0x86, 0xA4, 0x00, 0x00, 0x00});
+    }
+    void PutPopupParticle(Image& image, uint32_t at)
+    {
+        image.Put(at, {0x68, 0xA8, 0x01, 0x00, 0x00, 0xE8, 0xD3, 0x19, 0x00, 0x00, 0x83, 0xC4, 0x08, 0x85, 0xC0, 0x0F, 0x84,
+                          0xFF, 0x00, 0x00, 0x00, 0x8B, 0x4C, 0x24, 0x10, 0x51, 0x8B, 0xC8, 0xE8, 0x9C, 0x0E, 0xFF, 0xFF});
+    }
+    Image PopupStart()
+    {
+        Image image;
+        PutPopupDecision(image, kPopupDecisionRva);
+        PutPopupColor(image, kPopupColorRva);
+        PutPopupParticle(image, kPopupParticleRva);
+        return image;
+    }
+}
+
+TEST(a_popups_three_ties_are_found_where_the_client_has_them)
+{
+    const PopupTieSites found = LocatePopupTies(PopupStart().Text());
+    CHECK(found.problem == LocateProblem::None);
+    CHECK_EQ(found.decisionCall, 0x9E21Fu);
+    CHECK_EQ(found.decision, 0xAD950u);
+    CHECK_EQ(found.colorCall, 0x9E30Bu);
+    CHECK_EQ(found.color, 0x129C70u);
+    CHECK_EQ(found.particleCall, 0x5109Fu);
+    CHECK_EQ(found.particleBuild, 0x41F40u);
+}
+
+TEST(a_popups_ties_go_together_so_one_missing_is_none_found)
+{
+    for (const uint32_t missing : {kPopupDecisionRva, kPopupColorRva, kPopupParticleRva})
+    {
+        Image image = PopupStart();
+        image.Put(missing, {0x90});
+        CHECK(LocatePopupTies(image.Text()).problem == LocateProblem::NoPopupTies);
+    }
+}
+
+TEST(a_popup_tie_found_twice_is_ambiguous)
+{
+    using Put = void (*)(Image&, uint32_t);
+    for (const Put put : {Put(PutPopupDecision), Put(PutPopupColor), Put(PutPopupParticle)})
+    {
+        Image image = PopupStart();
+        put(image, 0x150000);
+        CHECK(LocatePopupTies(image.Text()).problem == LocateProblem::AmbiguousPopupTies);
+    }
+}

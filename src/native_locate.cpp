@@ -244,6 +244,18 @@ namespace headsup
         constexpr uint32_t kCombatTextCallAt = 19;
         static_assert((kCombatTextCall[8] | kCombatTextCall[9] << 8) == kCombatTextOffset);
         static_assert(kCombatTextCall[std::size(kCombatTextCall) - 1] == kCombatTextArgumentBytes);
+        // push the kind's address; push 1 (the popup, not the chat line); push the target; push the message; push the
+        // actor; call the decision.
+        constexpr int16_t kPopupDecisionCall[] = {0x52, 0x6A, 0x01, 0x8D, 0x44, 0x24, 0x34, 0x55, 0x8D, 0x4C, 0x24, 0x40,
+            0x50, 0x51, 0xE8};
+        // push the color class; call the color; and eax,0FFFFFFh; then the task's value and color go in.
+        constexpr int16_t kPopupColorCall[] = {0x50, 0xE8, -1, -1, -1, -1, 0x8B, 0x4C, 0x24, 0x48, 0x83, 0xC4, 0x10, 0x25, 0xFF,
+            0xFF, 0xFF, 0x00, 0x89, 0x8E, 0xA8, 0x00, 0x00, 0x00, 0x89, 0x86, 0xA4, 0x00, 0x00, 0x00};
+        static_assert(kPopupColorCall[20] == kPopupTaskValue);
+        // push 1A8h (the particle's size); call the allocator; on one, push the generator; mov ecx,eax; call the build.
+        constexpr int16_t kPopupParticleCall[] = {0x68, 0xA8, 0x01, 0x00, 0x00, 0xE8, -1, -1, -1, -1, 0x83, 0xC4, 0x08, 0x85,
+            0xC0, 0x0F, 0x84, -1, -1, -1, -1, 0x8B, 0x4C, 0x24, 0x10, 0x51, 0x8B, 0xC8, 0xE8};
+        constexpr uint32_t kPopupColorCallAt = 1;
         // The 3-second update: xor eax,eax; push 3000; clear both byte counts; mov edx,[net]; mov eax,[edx+4190h], the
         // milliseconds since the last server data.
         constexpr int16_t kCounterUpdate[] = {0x33, 0xC0, 0x68, 0xB8, 0x0B, 0x00, 0x00, 0x89, 0x46, 0x0C, 0x89, 0x46,
@@ -372,6 +384,8 @@ namespace headsup
         case LocateProblem::AmbiguousFish: return "where the game keeps a hooked fish was found more than once";
         case LocateProblem::NoCombatText: return "the game's draw of combat popups was not found";
         case LocateProblem::AmbiguousCombatText: return "the game's draw of combat popups was found more than once";
+        case LocateProblem::NoPopupTies: return "where the game starts a combat popup was not found";
+        case LocateProblem::AmbiguousPopupTies: return "where the game starts a combat popup was found more than once";
         case LocateProblem::NoConfigGet: return "the game's config values were not found";
         case LocateProblem::NoSearchAddress: return "where the game keeps the search server's address was not found";
         case LocateProblem::NoWindowMove: return "the game's window move was not found";
@@ -1106,5 +1120,22 @@ namespace headsup
         if (found.size() > 1) return CombatTextSite{LocateProblem::AmbiguousCombatText};
         const uint32_t call = text.rva + found.front() + kCombatTextCallAt;
         return CombatTextSite{LocateProblem::None, call, CallTarget(call, text)};
+    }
+
+    PopupTieSites LocatePopupTies(const ImageSection& text)
+    {
+        using Pattern = std::span<const int16_t>;
+        std::array<uint32_t, 3> calls{};
+        const std::array<std::pair<Pattern, uint32_t>, 3> sites = {{{kPopupDecisionCall, std::size(kPopupDecisionCall) - 1},
+            {kPopupColorCall, kPopupColorCallAt}, {kPopupParticleCall, std::size(kPopupParticleCall) - 1}}};
+        for (size_t i = 0; i < sites.size(); ++i)
+        {
+            const std::vector<uint32_t> found = Find(sites[i].first, text);
+            if (found.empty()) return PopupTieSites{LocateProblem::NoPopupTies};
+            if (found.size() > 1) return PopupTieSites{LocateProblem::AmbiguousPopupTies};
+            calls[i] = text.rva + found.front() + sites[i].second;
+        }
+        return PopupTieSites{LocateProblem::None, calls[0], CallTarget(calls[0], text), calls[1], CallTarget(calls[1], text),
+            calls[2], CallTarget(calls[2], text)};
     }
 }
