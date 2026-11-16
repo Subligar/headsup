@@ -2153,6 +2153,9 @@ TEST(the_combat_popups_card_takes_changes_only_while_switched_on)
     CHECK(w.Pass({{size, kChangeEvent, "150"}}).changed);
     CHECK_EQ(w.settings.combatPopupSize, 150);
     CHECK(w.Pass({{font, kClickEvent, ""}}).popup);
-    w.Pass({{font + "-o-0", kClickEvent, ""}});
+    w.Pass({{font + "-o-1", kClickEvent, ""}});
     CHECK(w.settings.combatPopupFont == "Arial");
+    w.Pass({{font, kClickEvent, ""}});
+    w.Pass({{font + "-o-0", kClickEvent, ""}});
+    CHECK(w.settings.combatPopupFont.empty());
 }

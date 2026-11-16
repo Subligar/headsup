@@ -1626,7 +1626,7 @@ private:
             headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize);
         const bool saved = WithSavedState([&] {
             if (FAILED(m_Device->SetRenderTarget(m_CombatTextHook.Target(), m_CombatTextHook.Depth()))) return;
-            m_CombatPopups.Draw(m_Device, shown, m_Settings.combatPopupFont, toX, toY);
+            m_CombatPopups.Draw(m_Device, shown, headsup::CombatPopupFont(m_Settings), toX, toY);
         });
         if (!saved) NotDrawn("combat popups are");
     }

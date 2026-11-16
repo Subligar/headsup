@@ -3350,11 +3350,11 @@ TEST(a_created_widget_is_named_by_its_number_keeps_its_name_and_a_clone_gets_one
     CHECK_EQ(s.Widget(clone).name, std::string(kCreatedWidgetName) + " 3");
 }
 
-TEST(combat_popups_are_on_in_montserrat_at_the_games_own_size_until_changed)
+TEST(combat_popups_are_on_in_the_nameplates_font_at_the_games_own_size_until_changed)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
-    CHECK(fresh.combatPopups && fresh.combatPopupFont == kMontserratSemiBold && fresh.combatPopupSize == 100);
+    CHECK(fresh.combatPopups && fresh.combatPopupFont.empty() && fresh.combatPopupSize == 100);
     MapStore store;
     store.values["combatPopups"]    = "false";
     store.values["combatPopupFont"] = "Arial";
@@ -3372,7 +3372,7 @@ TEST(combat_popups_are_on_in_montserrat_at_the_games_own_size_until_changed)
     store.values["combatPopupSize"] = "52";
     CHECK_EQ(LoadSettings(store).combatPopupSize, 50);
     store.values["combatPopupFont"] = "";
-    CHECK(LoadSettings(store).combatPopupFont == kMontserratSemiBold);
+    CHECK(LoadSettings(store).combatPopupFont.empty());
     store.values["combatPopupFont"] = std::string(40, 'x');
-    CHECK(LoadSettings(store).combatPopupFont == kMontserratSemiBold);
+    CHECK(LoadSettings(store).combatPopupFont.empty());
 }

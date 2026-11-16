@@ -238,7 +238,7 @@ namespace headsup
         int fishCaseAcross = kFishBarUnplaced, fishCaseDown = kFishBarUnplaced; // its middle, in ten-thousandths of the screen
         std::string fishBarLine = "${size|fish} $feeling";
         bool combatPopups = true; // HeadsUp draws the game's damage, recovery and Miss popups in its own text
-        std::string combatPopupFont = kDefaultFont;
+        std::string combatPopupFont; // empty for the nameplates' default font
         int combatPopupSize         = kDefaultCombatPopupSize;
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
         Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};

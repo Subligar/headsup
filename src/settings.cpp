@@ -1251,7 +1251,7 @@ namespace headsup
         if (s.badgeFontName.size() > kMaxFontName) s.badgeFontName = d.badgeFontName;
         if (s.barTitleFont.size() > kMaxFontName) s.barTitleFont = d.barTitleFont;
         if (s.barTextFont.size() > kMaxFontName) s.barTextFont = d.barTextFont;
-        if (s.combatPopupFont.empty() || s.combatPopupFont.size() > kMaxFontName) s.combatPopupFont = d.combatPopupFont;
+        if (s.combatPopupFont.size() > kMaxFontName) s.combatPopupFont = d.combatPopupFont;
         std::vector<uint8_t> keys;
         for (const uint8_t vk : s.keepPointerKeys)
         {
