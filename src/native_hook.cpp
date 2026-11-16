@@ -48,6 +48,10 @@ extern "C"
     uintptr_t g_HeadsUpWindowBuild = 0;
     void HeadsUpBuildGate();
     __attribute__((used)) void HeadsUpOnBuilt(uint32_t mcd);
+    uintptr_t g_HeadsUpCombatTextDraw = 0;
+    void HeadsUpCombatTextGate();
+    __attribute__((used)) uint32_t HeadsUpOnCombatText(const uint32_t* arguments);
+    __attribute__((used)) void HeadsUpAfterCombatText();
     int __stdcall HeadsUpSystemMetric(int index);
 }
 
@@ -242,6 +246,37 @@ _HeadsUpWindowGate:
     .att_syntax prefix
 )");
 
+// Called in place of the combat popup's text draw, a cdecl of five arguments its caller pops. On 0 it jumps on to the
+// draw with the stack as it was; otherwise it calls the draw with the same five arguments, then tells HeadsUp the draw
+// is back, keeping the draw's eax for the caller.
+asm(R"(
+    .text
+    .p2align 4
+    .globl _HeadsUpCombatTextGate
+_HeadsUpCombatTextGate:
+    .intel_syntax noprefix
+    lea eax, [esp + 4]
+    push eax
+    call _HeadsUpOnCombatText
+    add esp, 4
+    test eax, eax
+    jnz .LHeadsUpCombatTextTaken
+    jmp dword ptr [_g_HeadsUpCombatTextDraw]
+.LHeadsUpCombatTextTaken:
+    push dword ptr [esp + 20]
+    push dword ptr [esp + 20]
+    push dword ptr [esp + 20]
+    push dword ptr [esp + 20]
+    push dword ptr [esp + 20]
+    call dword ptr [_g_HeadsUpCombatTextDraw]
+    add esp, 20
+    push eax
+    call _HeadsUpAfterCombatText
+    pop eax
+    ret
+    .att_syntax prefix
+)");
+
 namespace headsup
 {
     namespace
@@ -262,6 +297,8 @@ namespace headsup
 
         static_assert(sizeof(kNameHookBytes) == kBranchLength + 1, "the hook is a jump and one nop");
         static_assert(kArrowArgumentBytes == 32, "the arrow gate's ret 32");
+        static_assert(kCombatTextArgumentBytes == 20, "the combat text gate's five pushes and add esp, 20");
+        constexpr uint32_t kCombatTextArgument = 1; // the place, then the text
         static_assert(std::size(g_HeadsUpModelActors) == 8 && std::size(g_HeadsUpModelReturns) == 8,
             "the model gate's eight deep");
         constexpr uint32_t kArrowColorArgument = 4; // x, y, scale x, scale y, then the color
@@ -359,6 +396,33 @@ namespace headsup
         NameStats g_Stats;
         IDirect3DSurface8* g_SceneTarget    = nullptr; // identities only: the game owns them
         IDirect3DSurface8* g_SceneDepth     = nullptr;
+
+        // Written at Present and read by OnCombatText and the plugin's draw hook, all on the render thread.
+        bool g_TakeCombatText = false;
+        CombatPopupList g_CombatPopups;
+        IDirect3DSurface8* g_CombatTarget = nullptr; // identities only, as the names'
+        IDirect3DSurface8* g_CombatDepth  = nullptr;
+        uint32_t g_CombatTargetWidth = 0, g_CombatTargetHeight = 0;
+
+        // Where the game draws the frame's first popup: its image, depth buffer and the image's size.
+        void NoteCombatTarget()
+        {
+            if (g_CombatTarget != nullptr || g_Device == nullptr) return;
+            IDirect3DSurface8* target = nullptr;
+            IDirect3DSurface8* depth  = nullptr;
+            if (FAILED(g_Device->GetRenderTarget(&target)) || target == nullptr) return;
+            if (FAILED(g_Device->GetDepthStencilSurface(&depth))) depth = nullptr;
+            D3DSURFACE_DESC desc{};
+            if (SUCCEEDED(target->GetDesc(&desc)))
+            {
+                g_CombatTarget       = target;
+                g_CombatDepth        = depth;
+                g_CombatTargetWidth  = desc.Width;
+                g_CombatTargetHeight = desc.Height;
+            }
+            target->Release();
+            if (depth != nullptr) depth->Release();
+        }
 
         const NameOwner* FindOwner(uint32_t actor)
         {
@@ -638,6 +702,56 @@ namespace headsup
         return reinterpret_cast<RangeColorFn>(g_RangeColor)(window, yourActor, candidateActor, kArrowInRange, kArrowOutOfRange,
             kArrowThird);
     }
+}
+
+namespace headsup
+{
+    void CombatTextHook::SetDevice(IDirect3DDevice8* device) { g_Device = device; }
+
+    std::string CombatTextHook::Start()
+    {
+        if (Running()) return "";
+        ImageSection text{};
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
+        const CombatTextSite site = LocateCombatText(text);
+        if (site.problem != LocateProblem::None) return Describe(site.problem);
+        uint8_t* at            = base + site.call;
+        CodePatch call         = Retarget(at, Address(at), Address(&HeadsUpCombatTextGate));
+        g_HeadsUpCombatTextDraw = Address(base) + site.draw;
+        if (const std::string failure = PutIn({&call, 1}); !failure.empty()) return failure;
+        m_Call = call;
+        return "";
+    }
+
+    std::string CombatTextHook::Stop()
+    {
+        g_TakeCombatText = false; // a gate left in memory passes every popup on
+        g_CombatPopups.End();
+        if (!Running()) return "";
+        const CodePatch call = std::exchange(m_Call, {});
+        return TakeOut({&call, 1}, "the game's combat popups");
+    }
+
+    void CombatTextHook::Take(bool take) { g_TakeCombatText = take && Running(); }
+
+    void CombatTextHook::NewFrame()
+    {
+        g_CombatPopups.NewFrame();
+        g_CombatTarget       = nullptr;
+        g_CombatDepth        = nullptr;
+        g_CombatTargetWidth  = 0;
+        g_CombatTargetHeight = 0;
+    }
+
+    bool CombatTextHook::Open() { return g_CombatPopups.Open(); }
+    void CombatTextHook::Add(const void* vertices, size_t count, size_t stride) { g_CombatPopups.Add(vertices, count, stride); }
+    const std::vector<CombatPopup>& CombatTextHook::Popups() const { return g_CombatPopups.Popups(); }
+    IDirect3DSurface8* CombatTextHook::Target() const { return g_CombatTarget; }
+    IDirect3DSurface8* CombatTextHook::Depth() const { return g_CombatDepth; }
+    uint32_t CombatTextHook::TargetWidth() const { return g_CombatTargetWidth; }
+    uint32_t CombatTextHook::TargetHeight() const { return g_CombatTargetHeight; }
 }
 
 namespace headsup
@@ -1450,6 +1564,18 @@ extern "C" void HeadsUpAfterWindowDraw()
     headsup::g_SilentDraw = false;
     headsup::g_KeepInside = false;
 }
+
+// On the game's stack, inside a combat popup's particle draw: nothing here may allocate, throw or call Ashita.
+extern "C" uint32_t HeadsUpOnCombatText(const uint32_t* arguments)
+{
+    using namespace headsup;
+    if (!g_TakeCombatText) return 0;
+    NoteCombatTarget();
+    g_CombatPopups.Begin(reinterpret_cast<const char*>(arguments[kCombatTextArgument]));
+    return 1;
+}
+
+extern "C" void HeadsUpAfterCombatText() { headsup::g_CombatPopups.End(); }
 
 // On the game's stack, inside its name routine: nothing here may allocate, throw or call Ashita.
 extern "C" uint32_t HeadsUpOnName(uint32_t frame)

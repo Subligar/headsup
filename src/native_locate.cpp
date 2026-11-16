@@ -243,6 +243,7 @@ namespace headsup
             0x56, 0x8D, 0x4C, 0x24, 0x20, 0x57, 0x51, 0xE8, -1, -1, -1, -1, 0x83, 0xC4, 0x14};
         constexpr uint32_t kCombatTextCallAt = 19;
         static_assert((kCombatTextCall[8] | kCombatTextCall[9] << 8) == kCombatTextOffset);
+        static_assert(kCombatTextCall[std::size(kCombatTextCall) - 1] == kCombatTextArgumentBytes);
         // The 3-second update: xor eax,eax; push 3000; clear both byte counts; mov edx,[net]; mov eax,[edx+4190h], the
         // milliseconds since the last server data.
         constexpr int16_t kCounterUpdate[] = {0x33, 0xC0, 0x68, 0xB8, 0x0B, 0x00, 0x00, 0x89, 0x46, 0x0C, 0x89, 0x46,

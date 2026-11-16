@@ -531,6 +531,6 @@ namespace headsup
         LocateProblem problem = LocateProblem::None;
         uint32_t call = 0, draw = 0;
     };
-    constexpr uint32_t kCombatTextOffset = 0x198;
+    constexpr uint32_t kCombatTextOffset = 0x198, kCombatTextArgumentBytes = 20;
     CombatTextSite LocateCombatText(const ImageSection& text);
 }

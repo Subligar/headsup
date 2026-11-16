@@ -1,6 +1,7 @@
 #pragma once
 
 #include "code_patch.h"
+#include "combat_popup.h"
 #include "fish_bar.h"
 #include "friend_list.h"
 #include "name_frame.h"
@@ -126,6 +127,38 @@ namespace headsup
 
     private:
         std::vector<CodePatch> m_Calls;
+    };
+
+    // Takes the game's combat popups while asked: the call that draws a popup's text (native_locate.h) goes to a gate
+    // that opens a popup, lets the game draw it and closes it. Every quad the draw sends in between is the popup's,
+    // which the plugin's draw hook adds here and drops. Not taken, the gate passes the call straight on.
+    class CombatTextHook
+    {
+    public:
+        void SetDevice(IDirect3DDevice8* device);
+        ~CombatTextHook() { Stop(); }
+        // Only at a render boundary, where the game cannot be inside a popup's draw. Returns why it could not start, or
+        // an empty string.
+        std::string Start();
+        // Puts the game's call back if it is still HeadsUp's. Returns why it could not, or an empty string.
+        std::string Stop();
+        bool Running() const { return m_Call.at != nullptr; }
+        // Whether popups are taken from now on: never while the gate is not in.
+        void Take(bool take);
+        // At Present: the last frame's popups and their image are forgotten.
+        void NewFrame();
+        // Inside a taken popup's draw, whose quads go to Add.
+        static bool Open();
+        static void Add(const void* vertices, size_t count, size_t stride);
+        const std::vector<CombatPopup>& Popups() const;
+        // The image and depth buffer the frame's first popup was drawn into, and the image's size; none before one.
+        IDirect3DSurface8* Target() const;
+        IDirect3DSurface8* Depth() const;
+        uint32_t TargetWidth() const;
+        uint32_t TargetHeight() const;
+
+    private:
+        CodePatch m_Call;
     };
 
     // How the game's windows are placed this frame: the panel's band, and the settings for the help's mode.
