@@ -1926,8 +1926,15 @@ private:
         std::string path;
         std::FILE* out = OpenLog(m_DrawDump.FilePrefix().c_str(), path);
         if (out == nullptr) return;
+        std::vector<std::string> popups;
+        for (const headsup::CombatPopup& popup : m_CombatTextHook.Popups())
+            popups.push_back("call " + headsup::DescribeCombatPopup(popup));
+        if (m_PopupsDrawn)
+            for (const headsup::ShownCombatPopup& popup : headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize))
+                popups.push_back("drawn " + headsup::DescribeCombatPopup(popup));
         const size_t draws = m_DrawDump.Write(out, headsup::DrawDump::Sources{m_AshitaCore, m_Names, m_NameHook, m_Nameplates.CursorNames(),
-                                                       m_Nameplates.LastShown(), [&](uint32_t index) { return m_GameState.PlayerStatusOf(index, m_SelfIndex); }});
+                                                       m_Nameplates.LastShown(), [&](uint32_t index) { return m_GameState.PlayerStatusOf(index, m_SelfIndex); },
+                                                       std::move(popups)});
         std::fclose(out);
         m_DrawDump.Wrote(path, draws);
         if (!m_DrawDump.Watching()) Print("wrote " + std::to_string(draws) + " draw calls to " + path);
