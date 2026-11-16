@@ -2157,6 +2157,14 @@ namespace headsup
                     PixelsOr(Word(c, WindowWord::Auto), kFishBarUnplaced), tip);
                 break;
             }
+            case SettingPiece::CombatPopupFont:
+                form.Fade(!s.combatPopups);
+                form.FontDropdown(label.c_str(), s.combatPopupFont, c.fonts, tip);
+                break;
+            case SettingPiece::CombatPopupSize:
+                form.Fade(!s.combatPopups);
+                form.SliderPercent(label.c_str(), s.combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, tip);
+                break;
             case SettingPiece::CaseScale:
                 form.Fade(!s.fishCase);
                 form.SliderPercent(label.c_str(), s.fishCaseScale, kMinCaseScale, kMaxCaseScale, tip);
@@ -2673,6 +2681,7 @@ namespace headsup
             case CardPiece::DebugMode: return {false, false, &s.debugMode};
             case CardPiece::FishingAppearance: return {false, !on};
             case CardPiece::FishingCase: return {false, !on, &s.fishCase};
+            case CardPiece::CombatPopups: return {false, !on, &s.combatPopups};
             }
             return {};
         }

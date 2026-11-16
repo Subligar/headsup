@@ -2139,3 +2139,20 @@ TEST(a_widgets_tips_name_a_copys_own_defaults)
     for (const LayoutRow& row : layout.RowsOf(*layout.SettingOf(SettingPiece::WidgetTabs)))
         if (!named(static_cast<WidgetTabsRow>(row.row), BarWidget::Job, 1).empty()) CHECK(Said(row.tip).find(kDefaultMark) != std::string_view::npos);
 }
+
+TEST(the_combat_popups_card_takes_changes_only_while_switched_on)
+{
+    Window w;
+    w.state.page            = Page::Entities;
+    w.settings.combatPopups = false;
+    const std::string card = "entities-combat-popups", size = card + "-combat-popup-size", font = card + "-combat-popup-font";
+    w.Pass({{size, kChangeEvent, "150"}});
+    CHECK_EQ(w.settings.combatPopupSize, kDefaultCombatPopupSize);
+    w.Pass({{card + "-on", kClickEvent, ""}});
+    CHECK(w.settings.combatPopups);
+    CHECK(w.Pass({{size, kChangeEvent, "150"}}).changed);
+    CHECK_EQ(w.settings.combatPopupSize, 150);
+    CHECK(w.Pass({{font, kClickEvent, ""}}).popup);
+    w.Pass({{font + "-o-0", kClickEvent, ""}});
+    CHECK(w.settings.combatPopupFont == "Arial");
+}
