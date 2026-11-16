@@ -1,7 +1,13 @@
 #include "combat_popup.h"
 
+#include "argb.h"
+#include "bar_content.h"
+#include "markup.h"
+#include "plate_image.h"
 #include "screen_vertex.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <utility>
 
@@ -44,5 +50,63 @@ namespace headsup
                 popup.color = vertex.color;
             }
         }
+    }
+}
+
+namespace headsup
+{
+    std::string_view CombatPopupWords(std::string_view text)
+    {
+        return text == std::string_view(&kMissGlyph, 1) ? kMissWord : text;
+    }
+
+    namespace
+    {
+        bool Twins(const CombatPopup& earlier, const CombatPopup& later)
+        {
+            return std::string_view(earlier.text) == later.text &&
+                   std::hypot(later.box.CenterX() - earlier.box.CenterX(), later.box.CenterY() - earlier.box.CenterY()) <=
+                       later.box.Height() / 2.0f;
+        }
+    }
+
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent)
+    {
+        std::vector<ShownCombatPopup> shown;
+        for (size_t i = 0; i < popups.size(); ++i)
+        {
+            const CombatPopup& p = popups[i];
+            if (std::any_of(popups.begin() + static_cast<std::ptrdiff_t>(i) + 1, popups.end(),
+                    [&](const CombatPopup& later) { return Twins(p, later); }))
+                continue;
+            const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
+            shown.push_back(ShownCombatPopup{std::string(CombatPopupWords(p.text)), ShownColor(p.color, kCombatPopupModulate),
+                alpha, ScreenPoint{p.box.CenterX(), p.box.CenterY()}, p.box.Height() * static_cast<float>(sizePercent) / kPercent,
+                p.depth});
+        }
+        return shown;
+    }
+
+    SquareQuad PlaceCombatPopupText(ScreenPoint center, float lineHeight, const CombatTextSize& text, float pixelShape)
+    {
+        const float fit = lineHeight / static_cast<float>(text.raster), width = text.width * fit * pixelShape;
+        const float capitals = text.halo + (text.capitalTop + text.capitalBottom) / 2.0f;
+        return SquareQuad{std::round(center.x - width / 2.0f), std::round(center.y - capitals * fit), width, text.height * fit};
+    }
+
+    int CombatPopupEdge(int raster) { return WholePixels(static_cast<float>(raster) * kCombatPopupEdgePerHeight); }
+
+    std::string DescribeCombatPopup(const CombatPopup& popup)
+    {
+        const ScreenBox& b = popup.box;
+        return std::string(popup.text) + " | " + Printed("%08X", popup.color) + " | " + Decimal(b.minX, 2) + "," +
+               Decimal(b.minY, 2) + " to " + Decimal(b.maxX, 2) + "," + Decimal(b.maxY, 2) + " | " + Decimal(popup.depth, 5);
+    }
+
+    std::string DescribeCombatPopup(const ShownCombatPopup& popup)
+    {
+        return popup.words + " | " + Printed("%08X", popup.color) + " alpha " + std::to_string(popup.alpha) + " | " +
+               Decimal(popup.center.x, 2) + "," + Decimal(popup.center.y, 2) + " line " + Decimal(popup.lineHeight, 2) + " | " +
+               Decimal(popup.depth, 5);
     }
 }

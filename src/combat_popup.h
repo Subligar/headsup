@@ -1,9 +1,12 @@
 #pragma once
 
+#include "nameplate.h"
 #include "screen_box.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace headsup
@@ -40,4 +43,45 @@ namespace headsup
         char m_Text[kMaxCombatPopupText + 1] = {};
         bool m_Open = false, m_Added = false;
     };
+
+    // The game draws its Miss picture as this one glyph of its damage figures; HeadsUp writes the word.
+    constexpr char kMissGlyph       = ':';
+    constexpr const char* kMissWord = "Miss";
+    // The popup's draw treats 808080 as no tint, as the game's names do, so it shows a vertex color twice as bright.
+    constexpr uint32_t kCombatPopupModulate = 2;
+    // The black edge around a popup's letters, per pixel of the height they are drawn at.
+    constexpr float kCombatPopupEdgePerHeight = 0.1f;
+
+    std::string_view CombatPopupWords(std::string_view text);
+
+    // A popup as HeadsUp draws it, in the scene image's pixels: its words in an opaque color at an alpha out of
+    // kOpaqueAlpha, the middle of their capitals on center, in a line lineHeight tall, at the game's depth.
+    struct ShownCombatPopup
+    {
+        std::string words;
+        uint32_t color = 0, alpha = 0;
+        ScreenPoint center;
+        float lineHeight = 0.0f, depth = 0.0f;
+    };
+    // Two popups of a frame with the same text whose centers are within half a box height are one, the later, which the
+    // game draws on top. A line is as tall as its box at 100 percent: the box already shrinks with distance.
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent);
+
+    // A popup's text as drawn into its texture: the image's size and halo in its own pixels, and its capitals' top and
+    // bottom in rows under the halo, drawn raster pixels tall.
+    struct CombatTextSize
+    {
+        float width = 0.0f, height = 0.0f, halo = 0.0f, capitalTop = 0.0f, capitalBottom = 0.0f;
+        int raster = 0;
+    };
+    // Its quad in the scene image, its corner on whole pixels: centered across on center, the middle of its capitals on
+    // center down, its line lineHeight tall. pixelShape is the image's pixels per screen pixel across over those down
+    // (PlaceSquarePixels' toX / toY), so the game's copy to the screen gives the letters their shape back.
+    SquareQuad PlaceCombatPopupText(ScreenPoint center, float lineHeight, const CombatTextSize& text, float pixelShape);
+    // How many pixels the edge reaches around letters drawn raster pixels tall.
+    int CombatPopupEdge(int raster);
+
+    // One line each for the draw dump: what the game's call drew, and what HeadsUp drew.
+    std::string DescribeCombatPopup(const CombatPopup& popup);
+    std::string DescribeCombatPopup(const ShownCombatPopup& popup);
 }

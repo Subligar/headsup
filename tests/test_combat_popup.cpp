@@ -4,7 +4,9 @@
 #include "test.h"
 
 #include <array>
+#include <string>
 #include <string_view>
+#include <vector>
 
 using namespace headsup;
 using test::Near;
@@ -90,4 +92,76 @@ TEST(a_new_frame_forgets_every_popup_and_closes_an_open_one)
     CHECK(list.Popups().empty() && !list.Open());
     Add(list, Quad(kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0.5f, 0x80404040));
     CHECK(list.Popups().empty());
+}
+
+namespace
+{
+    CombatPopup Popup(std::string_view text, float x0, float y0, float x1, float y1, uint32_t color, float depth)
+    {
+        CombatPopup popup;
+        text.copy(popup.text, kMaxCombatPopupText);
+        popup.box   = test::Box(x0, y0, x1, y1);
+        popup.color = color;
+        popup.depth = depth;
+        return popup;
+    }
+
+    // The measured "Miss" came as two calls of one frame on boxes 0.005 px apart: here the first is faint and black.
+    const std::vector<CombatPopup> kMissTwins = {Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x40000000, 0.25f),
+        Popup(":", kMissLeft, kMissTop2, kMissRight, kMissBottom2, 0x80404040, 0.5f)};
+}
+
+TEST(the_games_two_calls_for_one_miss_are_one_word_where_the_later_was_as_tall_as_its_box)
+{
+    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(kMissTwins, 100);
+    CHECK_EQ(shown.size(), size_t{1});
+    CHECK(shown[0].words == "Miss");
+    CHECK_EQ(shown[0].color, 0xFF808080u);
+    CHECK_EQ(shown[0].alpha, 0xFFu);
+    CHECK(Near(shown[0].center.x, 1924.0444f) && Near(shown[0].center.y, 222.49231f));
+    CHECK(Near(shown[0].lineHeight, 81.0f));
+    CHECK_EQ(shown[0].depth, 0.5f);
+    CHECK(Near(ShownCombatPopups(kMissTwins, 50)[0].lineHeight, 40.5f));
+}
+
+TEST(popups_with_the_same_text_far_apart_or_other_texts_on_one_box_stay_apart)
+{
+    const std::vector<CombatPopup> apart = {Popup("12", 1000, 200, 1108, 281, 0x80404040, 0.5f),
+        Popup("12", 1200, 200, 1308, 281, 0x80404040, 0.5f)};
+    CHECK_EQ(ShownCombatPopups(apart, 100).size(), size_t{2});
+    const std::vector<CombatPopup> others = {Popup("12", 1000, 200, 1108, 281, 0x80404040, 0.5f),
+        Popup("21", 1000, 200, 1108, 281, 0x80404040, 0.5f)};
+    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(others, 100);
+    CHECK(shown.size() == 2 && shown[0].words == "12" && shown[1].words == "21");
+}
+
+TEST(a_popups_color_shows_twice_as_bright_and_its_alpha_twice_as_strong_up_to_opaque)
+{
+    const std::vector<ShownCombatPopup> half = ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0x40404040, 0.5f)}, 100);
+    CHECK(half.size() == 1 && half[0].color == 0xFF808080u && half[0].alpha == 0x80u);
+    CHECK_EQ(ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0xFF404040, 0.5f)}, 100)[0].alpha, 0xFFu);
+}
+
+TEST(only_the_miss_glyph_becomes_a_word)
+{
+    CHECK(CombatPopupWords(":") == kMissWord);
+    CHECK(CombatPopupWords("1234") == "1234");
+}
+
+TEST(a_popups_text_is_centered_across_with_its_capitals_middle_on_the_popups_middle)
+{
+    // Drawn 24 px tall in a 40 x 30 image with a 3 px halo, its capitals from row 5 to row 19 under the halo. Shown in a
+    // 48 px line each texture pixel is 2 image pixels, so the capitals' middle, 3 + 12 rows down, is 30 pixels down.
+    const CombatTextSize text{40.0f, 30.0f, 3.0f, 5.0f, 19.0f, 24};
+    const ScreenPoint center{100.4f, 200.6f};
+    CHECK(PlaceCombatPopupText(center, 48.0f, text, 1.0f) == (SquareQuad{60.0f, 171.0f, 80.0f, 60.0f}));
+    CHECK(PlaceCombatPopupText(center, 48.0f, text, 2.0f) == (SquareQuad{20.0f, 171.0f, 160.0f, 60.0f}));
+}
+
+TEST(the_draw_dump_lines_hold_a_popups_text_color_place_and_depth)
+{
+    const CombatPopup miss = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.99876f);
+    CHECK_EQ(DescribeCombatPopup(miss), std::string(": | 80404040 | 1874.54,181.99 to 1973.54,262.99 | 0.99876"));
+    const ShownCombatPopup shown = ShownCombatPopups({miss}, 100)[0];
+    CHECK_EQ(DescribeCombatPopup(shown), std::string("Miss | FF808080 alpha 255 | 1924.04,222.49 line 81.00 | 0.99876"));
 }
