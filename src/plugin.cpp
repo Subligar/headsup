@@ -7,6 +7,7 @@
 #include "c_numbers.h"
 #include "case_click.h"
 #include "case_render.h"
+#include "combat_popup_render.h"
 #include "bar_fps.h"
 #include "bar_job.h"
 #include "bar_memory.h"
@@ -350,6 +351,7 @@ class HeadsUp final : public IPlugin
     headsup::NameHook m_NameHook;
     headsup::ArrowHook m_ArrowHook;
     headsup::ModelHook m_ModelHook;
+    headsup::CombatTextHook m_CombatTextHook;
     headsup::WindowHook m_WindowHook;
     bool m_WindowHookTried = false; // it patches the game's code, so it starts only once someone wants it
     headsup::PointerFix m_PointerFix;
@@ -393,6 +395,7 @@ class HeadsUp final : public IPlugin
     };
     std::optional<CaseCaught> m_CaseCaught;
     headsup::CaseRender m_CaseRender;
+    headsup::CombatPopupRender m_CombatPopups;
     headsup::CaseBoxes m_CaseBoxes;
     headsup::WaveOut m_CaseSound;
     bool m_CaseMoving = false, m_CaseRefused = false;
@@ -464,6 +467,7 @@ class HeadsUp final : public IPlugin
 #endif
     bool m_Drawing      = false; // drawing nameplates: our own draws come back through the hooks
     bool m_DrewInScene  = false; // this frame
+    bool m_PopupsDrawn  = false; // this frame's combat popups, into the scene image
     // What HeadsUp works around: written to a log while Debug Mode's Logging is on, and never to chat.
     headsup::NoteLog m_Notes;
     std::FILE* m_NoteFile = nullptr;
@@ -631,6 +635,7 @@ public:
         if (const std::string failure = m_NameHook.Stop(); !failure.empty()) Print(failure + ".");
         if (const std::string failure = m_ArrowHook.Stop(); !failure.empty()) Print(failure + ".");
         if (const std::string failure = m_ModelHook.Stop(); !failure.empty()) Print(failure + ".");
+        if (const std::string failure = m_CombatTextHook.Stop(); !failure.empty()) Print(failure + ".");
         if (const std::string failure = m_WindowHook.Stop(); !failure.empty()) Print(failure + ".");
         if (const std::string failure = m_PointerFix.Stop(); !failure.empty()) Print(failure + ".");
         m_Pointer.Stop();
@@ -650,6 +655,7 @@ public:
         m_FishBar.Close();
         m_CaseBoxes.Close();
         m_CaseRender.Release();
+        m_CombatPopups.Release();
         m_CaseSound.Stop();
         m_Case.reset();
         m_Rml.Stop();
@@ -679,6 +685,7 @@ public:
         m_Nameplates.SetDevice(device);
         m_SetupPreview.SetDevice(device);
         m_NameHook.SetDevice(device);
+        m_CombatTextHook.SetDevice(device);
         return true;
     }
 
@@ -924,6 +931,11 @@ public:
 #endif
         StartHooks();
         m_ModelHook.NewFrame();
+        m_CombatTextHook.NewFrame();
+        m_PopupsDrawn = false;
+        m_CombatTextHook.Take(m_Settings.enabled && m_Settings.combatPopups && !m_CombatPopups.Failed());
+        if (const std::string failure = m_CombatPopups.TakeFailure(); !failure.empty())
+            Print("combat popups are off until HeadsUp reloads, and the game's are back: " + failure + ".");
         m_Outline.NewFrame();
         m_Names.NewFrame();
         if (m_Outline.TakeStencilWarning())
@@ -1328,6 +1340,7 @@ public:
         RecordDraw('P', type, primCount, nullptr, 0u, 0u, 0u);
         if (InSilentDraw()) return true;
         DrawNameplatesBeforeSceneCopy();
+        DrawCombatPopupsBeforeSceneCopy();
         return false;
     }
 
@@ -1337,6 +1350,7 @@ public:
         RecordDraw('I', type, primCount, nullptr, 0u, 0u, 0u);
         if (InSilentDraw()) return true;
         DrawNameplatesBeforeSceneCopy();
+        DrawCombatPopupsBeforeSceneCopy();
         const bool outlines = m_Settings.enabled && m_Tracker.OutlinedCount() > 0;
         const bool bodies   = headsup::NameplatesOn(m_Settings) && !m_Tracker.Actors().empty(); // labels wait for a drawn body
         if (!outlines && !bodies) return false;
@@ -1355,8 +1369,15 @@ public:
     {
         if (Ours()) return false;
         RecordDraw('U', type, primCount, vertices, stride, 0u, headsup::VertexCount(type, primCount));
+        if (headsup::CombatTextHook::Open())
+        {
+            headsup::CombatTextHook::Add(vertices, headsup::VertexCount(type, primCount), stride);
+            MarkHidden();
+            return true;
+        }
         if (InSilentDraw() || GameFishBarDraw(vertices, headsup::VertexCount(type, primCount), stride)) return true;
         DrawNameplatesBeforeSceneCopy();
+        DrawCombatPopupsBeforeSceneCopy();
         m_Names.OnDrawUP(m_Tracker, m_Settings);
         if (!InterfaceCopy(type, primCount, vertices, stride)) return false;
         DrawLoneCursors();
@@ -1376,6 +1397,7 @@ public:
             GameFishBarDraw(static_cast<const uint8_t*>(vertices) + static_cast<size_t>(minIndex) * stride, numVertices, stride))
             return true;
         DrawNameplatesBeforeSceneCopy();
+        DrawCombatPopupsBeforeSceneCopy();
         return false;
     }
 
@@ -1589,6 +1611,26 @@ private:
         if (!saved) PlatesNotDrawn();
     }
 
+    // The game draws its combat popups into the scene image a few draws before it copies that image to the back buffer.
+    // HeadsUp's go in at the copy, at the game's depth, after the nameplates so they sit over them; a frame with no
+    // draw to the back buffer after its popups shows none.
+    void DrawCombatPopupsBeforeSceneCopy()
+    {
+        if (m_PopupsDrawn || m_CombatTextHook.Popups().empty() || m_CombatTextHook.Target() == nullptr ||
+            m_Names.BackBufferWidth() <= 0.0f || m_Names.BackBufferHeight() <= 0.0f || !m_Names.DrawingToBackBuffer())
+            return;
+        m_PopupsDrawn = true;
+        const float toX = static_cast<float>(m_CombatTextHook.TargetWidth()) / m_Names.BackBufferWidth();
+        const float toY = static_cast<float>(m_CombatTextHook.TargetHeight()) / m_Names.BackBufferHeight();
+        const std::vector<headsup::ShownCombatPopup> shown =
+            headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize);
+        const bool saved = WithSavedState([&] {
+            if (FAILED(m_Device->SetRenderTarget(m_CombatTextHook.Target(), m_CombatTextHook.Depth()))) return;
+            m_CombatPopups.Draw(m_Device, shown, m_Settings.combatPopupFont, toX, toY);
+        });
+        if (!saved) NotDrawn("combat popups are");
+    }
+
     // Every name, HeadsUp's bar and menu, and every addon's ImGui, font and primitive drawing go, and come back when it
     // is run again or HeadsUp unloads. Outlines stay, and the game's own windows unless the settings take them too.
     void SetScreenshot(bool on)
@@ -1640,6 +1682,8 @@ private:
             Print("could not hook the game's names: " + failure + ".");
         if (const std::string failure = m_ArrowHook.Start(); !failure.empty())
             Print("could not hook the game's target arrows, so it draws its own and HeadsUp none: " + failure + ".");
+        if (const std::string failure = m_CombatTextHook.Start(); !failure.empty())
+            Print("could not hook the game's combat popups, so it draws its own: " + failure + ".");
         if (const std::string failure = m_ModelHook.Start(); !failure.empty())
             Note("could not hook the game's model draws, so outlines guess whose each one is: " + failure + ".");
         if (const std::string failure = m_PointerFix.Start(); !failure.empty())
