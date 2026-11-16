@@ -1878,6 +1878,12 @@ namespace headsup
             s.cursorFile  = choice.file;
         }
 
+        void CombatPopupColorRow(Form& form, const std::string& label, Settings& s, PopupType type, const char* tip)
+        {
+            form.Fade(!s.combatPopups);
+            form.ColorPickRow(label.c_str(), s.combatPopupColors[static_cast<size_t>(type)], CombatPopupSources(type), tip);
+        }
+
         // A setting, wherever the layout puts it. Each says when it shows, its card's condition included, as it may
         // be moved out of that card.
         void DrawSetting(Context& c, const LayoutSetting& e)
@@ -2173,6 +2179,13 @@ namespace headsup
                 form.Fade(!s.combatPopups);
                 form.SliderPercent(label.c_str(), s.combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, tip);
                 break;
+            case SettingPiece::CombatPopupDealtColor: CombatPopupColorRow(form, label, s, PopupType::Dealt, tip); break;
+            case SettingPiece::CombatPopupTakenColor: CombatPopupColorRow(form, label, s, PopupType::Taken, tip); break;
+            case SettingPiece::CombatPopupRecoveryColor: CombatPopupColorRow(form, label, s, PopupType::Recovery, tip); break;
+            case SettingPiece::CombatPopupMissColor: CombatPopupColorRow(form, label, s, PopupType::Miss, tip); break;
+            case SettingPiece::CombatPopupCriticalColor: CombatPopupColorRow(form, label, s, PopupType::Critical, tip); break;
+            case SettingPiece::CombatPopupBurstColor: CombatPopupColorRow(form, label, s, PopupType::Burst, tip); break;
+            case SettingPiece::CombatPopupSpellColor: CombatPopupColorRow(form, label, s, PopupType::Spell, tip); break;
             case SettingPiece::CaseScale:
                 form.Fade(!s.fishCase);
                 form.SliderPercent(label.c_str(), s.fishCaseScale, kMinCaseScale, kMaxCaseScale, tip);

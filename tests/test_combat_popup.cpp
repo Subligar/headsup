@@ -35,6 +35,14 @@ namespace
     // Messages from the server's msg_basic.h: a hit, a miss, a cure; the actor and target are entity indexes.
     constexpr PopupEvent kHit{1, 0x400, 0x0B2}, kMiss{15, 0x0B2, 0x400}, kCure{7, 0x400, 0x400};
     constexpr uintptr_t kTask1 = 0x1000, kTask2 = 0x2000, kParticle1 = 0x9000, kParticle2 = 0xA000;
+
+    std::array<ColorPick, kPopupTypeCount> Picks(const ColorPick& each)
+    {
+        std::array<ColorPick, kPopupTypeCount> picks{};
+        picks.fill(each);
+        return picks;
+    }
+    const std::array<ColorPick, kPopupTypeCount> kGamePicks = Picks(ColorPick{ColorSource::Game});
 }
 
 TEST(every_quad_inside_a_popups_draw_widens_its_box_and_the_last_gives_its_depth_and_color)
@@ -121,7 +129,7 @@ namespace
 
 TEST(the_games_two_calls_for_one_miss_are_one_word_where_the_later_was_as_tall_as_its_box)
 {
-    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(kMissTwins, 100);
+    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(kMissTwins, 100, kGamePicks);
     CHECK_EQ(shown.size(), size_t{1});
     CHECK(shown[0].words == "Miss");
     CHECK_EQ(shown[0].color, 0xFF808080u);
@@ -129,25 +137,25 @@ TEST(the_games_two_calls_for_one_miss_are_one_word_where_the_later_was_as_tall_a
     CHECK(Near(shown[0].center.x, 1924.0444f) && Near(shown[0].center.y, 222.49231f));
     CHECK(Near(shown[0].lineHeight, 81.0f));
     CHECK_EQ(shown[0].depth, 0.5f);
-    CHECK(Near(ShownCombatPopups(kMissTwins, 50)[0].lineHeight, 40.5f));
+    CHECK(Near(ShownCombatPopups(kMissTwins, 50, kGamePicks)[0].lineHeight, 40.5f));
 }
 
 TEST(popups_with_the_same_text_far_apart_or_other_texts_on_one_box_stay_apart)
 {
     const std::vector<CombatPopup> apart = {Popup("12", 1000, 200, 1108, 281, 0x80404040, 0.5f),
         Popup("12", 1200, 200, 1308, 281, 0x80404040, 0.5f)};
-    CHECK_EQ(ShownCombatPopups(apart, 100).size(), size_t{2});
+    CHECK_EQ(ShownCombatPopups(apart, 100, kGamePicks).size(), size_t{2});
     const std::vector<CombatPopup> others = {Popup("12", 1000, 200, 1108, 281, 0x80404040, 0.5f),
         Popup("21", 1000, 200, 1108, 281, 0x80404040, 0.5f)};
-    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(others, 100);
+    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(others, 100, kGamePicks);
     CHECK(shown.size() == 2 && shown[0].words == "12" && shown[1].words == "21");
 }
 
 TEST(a_popups_color_shows_twice_as_bright_and_its_alpha_twice_as_strong_up_to_opaque)
 {
-    const std::vector<ShownCombatPopup> half = ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0x40404040, 0.5f)}, 100);
+    const std::vector<ShownCombatPopup> half = ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0x40404040, 0.5f)}, 100, kGamePicks);
     CHECK(half.size() == 1 && half[0].color == 0xFF808080u && half[0].alpha == 0x80u);
-    CHECK_EQ(ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0xFF404040, 0.5f)}, 100)[0].alpha, 0xFFu);
+    CHECK_EQ(ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0xFF404040, 0.5f)}, 100, kGamePicks)[0].alpha, 0xFFu);
 }
 
 TEST(a_miss_says_what_happened_by_its_message)
@@ -206,7 +214,7 @@ TEST(with_labels_off_an_amount_or_a_drain_is_the_games_bare_number)
 TEST(a_shown_miss_has_its_messages_word)
 {
     const CombatPopup parry = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.5f, PopupEvent{70, 0, 0});
-    CHECK(ShownCombatPopups({parry}, 100)[0].words == "Parry");
+    CHECK(ShownCombatPopups({parry}, 100, kGamePicks)[0].words == "Parry");
 }
 
 TEST(a_popups_text_is_centered_across_with_its_capitals_middle_on_the_popups_middle)
@@ -225,7 +233,7 @@ TEST(the_draw_dump_lines_hold_a_popups_text_color_place_and_depth)
     CHECK_EQ(DescribeCombatPopup(miss), std::string(": | 80404040 | 1874.54,181.99 to 1973.54,262.99 | 0.99876 | message -"));
     const CombatPopup parry = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.99876f, PopupEvent{70, 0, 0});
     CHECK_EQ(DescribeCombatPopup(parry), std::string(": | 80404040 | 1874.54,181.99 to 1973.54,262.99 | 0.99876 | message 70"));
-    const ShownCombatPopup shown = ShownCombatPopups({miss}, 100)[0];
+    const ShownCombatPopup shown = ShownCombatPopups({miss}, 100, kGamePicks)[0];
     CHECK_EQ(DescribeCombatPopup(shown), std::string("Miss | FF808080 alpha 255 | 1924.04,222.49 line 81.00 | 0.99876"));
 }
 
@@ -289,6 +297,93 @@ TEST(the_ties_keep_the_last_64_starts)
     ties.Built(kParticle2, kTask1 * 2);
     ties.Built(kParticle2 + 1, kTask1 * 65);
     CHECK(!ties.Of(kParticle1));
-    CHECK(ties.Of(kParticle2) == (PopupEvent{2, 0, 0}));
-    CHECK(ties.Of(kParticle2 + 1) == (PopupEvent{65, 0, 0}));
+    CHECK(ties.Of(kParticle2) && ties.Of(kParticle2)->message == 2);
+    CHECK(ties.Of(kParticle2 + 1) && ties.Of(kParticle2 + 1)->message == 65);
+}
+
+namespace
+{
+    // The kinds are the client's own (its byte table at 0x35CAE0): 1 damage, 2 recovery, 3 miss.
+    constexpr uint8_t kDamageKind = 1, kRecoveryKind = 2, kMissKind = 3;
+    constexpr uint32_t kYou = 0x400, kYourPet = 0x701, kMob = 0x0B2, kPartyMember = 0x405;
+
+    // The type the ties give a popup the game decided on for event, after the ones decided before it.
+    std::optional<PopupType> TypeOf(PopupTies& ties, const PopupEvent& event)
+    {
+        ties.Decided(event);
+        ties.Started(kTask1);
+        ties.Built(kParticle1, kTask1);
+        return ties.Of(kParticle1)->type;
+    }
+
+    std::optional<PopupType> TypeOf(const PopupEvent& event)
+    {
+        PopupTies ties;
+        ties.SetYou(kYou, kYourPet);
+        return TypeOf(ties, event);
+    }
+}
+
+TEST(a_popup_is_typed_by_what_happened_and_plain_damage_by_whether_it_is_yours)
+{
+    CHECK(TypeOf(PopupEvent{67, kYou, kMob, kDamageKind}) == PopupType::Critical);
+    CHECK(TypeOf(PopupEvent{67, kMob, kYou, kDamageKind}) == PopupType::Critical);
+    CHECK(TypeOf(PopupEvent{353, kPartyMember, kMob, kDamageKind}) == PopupType::Critical);
+    CHECK(TypeOf(PopupEvent{1, kYou, kMob, kDamageKind}) == PopupType::Dealt);
+    CHECK(TypeOf(PopupEvent{1, kYourPet, kMob, kDamageKind}) == PopupType::Dealt);
+    CHECK(TypeOf(PopupEvent{1, kMob, kYou, kDamageKind}) == PopupType::Taken);
+    CHECK(TypeOf(PopupEvent{1, kMob, kYourPet, kDamageKind}) == PopupType::Taken);
+    CHECK(!TypeOf(PopupEvent{1, kPartyMember, kMob, kDamageKind}));
+    CHECK(!TypeOf(PopupEvent{1, kMob, kPartyMember, kDamageKind}));
+    CHECK(TypeOf(PopupEvent{2, kPartyMember, kMob, kDamageKind}) == PopupType::Spell);
+    CHECK(TypeOf(PopupEvent{252, kYou, kMob, kDamageKind}) == PopupType::Burst);
+    CHECK(TypeOf(PopupEvent{7, kPartyMember, kPartyMember, kRecoveryKind}) == PopupType::Recovery);
+    CHECK(TypeOf(PopupEvent{25, kYou, kYou, kRecoveryKind}) == PopupType::Recovery);
+    CHECK(TypeOf(PopupEvent{15, kMob, kYou, kMissKind}) == PopupType::Miss);
+    CHECK(TypeOf(PopupEvent{70, kYou, kMob, kMissKind}) == PopupType::Miss);
+}
+
+TEST(no_pet_is_not_an_entity_at_index_0)
+{
+    PopupTies ties;
+    ties.SetYou(kYou, 0);
+    CHECK(!TypeOf(ties, PopupEvent{1, 0, kMob, kDamageKind}));
+}
+
+TEST(damage_to_the_next_target_of_a_spell_is_the_spells_and_only_after_that_actors_spell)
+{
+    PopupTies ties;
+    ties.SetYou(kYou, kYourPet);
+    TypeOf(ties, PopupEvent{2, kPartyMember, kMob, kDamageKind});
+    CHECK(TypeOf(ties, PopupEvent{264, kPartyMember, kMob + 1, kDamageKind}) == PopupType::Spell);
+    CHECK(TypeOf(ties, PopupEvent{264, kPartyMember, kMob + 2, kDamageKind}) == PopupType::Spell);
+    TypeOf(ties, PopupEvent{252, kPartyMember, kMob, kDamageKind});
+    CHECK(TypeOf(ties, PopupEvent{264, kPartyMember, kMob + 1, kDamageKind}) == PopupType::Spell);
+    TypeOf(ties, PopupEvent{185, kPartyMember, kMob, kDamageKind});
+    CHECK(!TypeOf(ties, PopupEvent{264, kPartyMember, kMob + 1, kDamageKind}));
+    TypeOf(ties, PopupEvent{2, kYou, kMob, kDamageKind});
+    CHECK(!TypeOf(ties, PopupEvent{264, kPartyMember, kMob + 1, kDamageKind}));
+}
+
+TEST(a_popup_of_a_type_picked_custom_takes_that_color_at_the_games_alpha)
+{
+    const PopupEvent critical{67, kYou, kMob, kDamageKind, PopupType::Critical};
+    const CombatPopup popup = Popup("210", 0, 0, 54, 81, 0x40404040, 0.5f, critical);
+    std::array<ColorPick, kPopupTypeCount> picks{};
+    picks[static_cast<size_t>(PopupType::Critical)] = ColorPick{ColorSource::Custom, ColorFromRgb(0xFF0000)};
+    const ShownCombatPopup custom = ShownCombatPopups({popup}, 100, picks)[0];
+    CHECK_EQ(custom.color, 0xFFFF0000u);
+    CHECK_EQ(custom.alpha, 0x80u);
+    picks[static_cast<size_t>(PopupType::Critical)].source = ColorSource::Game;
+    CHECK_EQ(ShownCombatPopups({popup}, 100, picks)[0].color, 0xFF808080u);
+}
+
+TEST(a_popup_with_no_type_keeps_the_games_color_whatever_is_picked)
+{
+    const auto shown = [](std::optional<PopupEvent> event) {
+        return ShownCombatPopups({Popup("128", 0, 0, 54, 81, 0x40404040, 0.5f, event)}, 100, Picks(ColorPick{ColorSource::Custom, ColorFromRgb(0x00FF00)}))[0].color;
+    };
+    CHECK_EQ(shown(PopupEvent{1, kPartyMember, kMob, kDamageKind}), 0xFF808080u);
+    CHECK_EQ(shown(std::nullopt), 0xFF808080u);
+    CHECK_EQ(shown(PopupEvent{1, kYou, kMob, kDamageKind, PopupType::Dealt}), 0xFF00FF00u);
 }

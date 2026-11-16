@@ -3376,3 +3376,26 @@ TEST(combat_popups_are_on_in_the_nameplates_font_at_the_games_own_size_until_cha
     store.values["combatPopupFont"] = std::string(40, 'x');
     CHECK(LoadSettings(store).combatPopupFont.empty());
 }
+
+TEST(each_combat_popup_type_takes_the_games_color_until_picked_and_its_pick_saves)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    for (const ColorPick& pick : fresh.combatPopupColors)
+        CHECK(pick.source == ColorSource::Game);
+    MapStore store;
+    store.values["combatPopupMissColorSource"] = "custom";
+    store.values["combatPopupMissColorR"]      = "1.0000";
+    store.values["combatPopupMissColorG"]      = "0.0000";
+    store.values["combatPopupMissColorB"]      = "0.0000";
+    store.values["combatPopupCriticalColorSource"] = "aggression";
+    const Settings s = LoadSettings(store);
+    const ColorPick& miss = s.combatPopupColors[static_cast<size_t>(PopupType::Miss)];
+    CHECK(miss.source == ColorSource::Custom && miss.custom == ColorFromRgb(0xFF0000));
+    CHECK(s.combatPopupColors[static_cast<size_t>(PopupType::Critical)].source == ColorSource::Game);
+    CHECK(s.combatPopupColors[static_cast<size_t>(PopupType::Dealt)].source == ColorSource::Game);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["combatPopupMissColorSource"], "custom");
+    CHECK(LoadSettings(saved).combatPopupColors == s.combatPopupColors);
+}

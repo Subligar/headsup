@@ -148,6 +148,8 @@ namespace headsup
         void Take(bool take);
         // At Present: the last frame's popups and their image are forgotten.
         void NewFrame();
+        // At Present, for the popups the game starts next: your entity index and your pet's (0 for none).
+        static void SetYou(uint32_t you, uint32_t pet);
         // Inside a taken popup's draw, whose quads go to Add.
         static bool Open();
         static void Add(const void* vertices, size_t count, size_t stride);
@@ -157,7 +159,8 @@ namespace headsup
         IDirect3DSurface8* Depth() const;
         uint32_t TargetWidth() const;
         uint32_t TargetHeight() const;
-        // Why the calls that tie each popup to its message are not in, so a miss shows as Miss; empty when they are.
+        // Why the calls that tie each popup to its message are not in, so a miss shows as Miss and every popup in the
+        // game's color; empty when they are.
         const std::string& TieProblem() const { return m_TieProblem; }
 
     private:

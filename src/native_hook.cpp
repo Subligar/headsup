@@ -435,7 +435,7 @@ namespace headsup
             uint8_t* kind)
         {
             const uint8_t answer = reinterpret_cast<PopupDecisionFn>(g_PopupDecision)(actor, target, message, popup, kind);
-            if (answer == 0) g_PopupTies.Decided(PopupEvent{message, actor[0], target[0]});
+            if (answer == 0) g_PopupTies.Decided(PopupEvent{message, actor[0], target[0], *kind});
 #ifdef HEADSUP_DEV
             LogPopupDecision(message, actor, target, answer, *kind);
 #endif
@@ -814,6 +814,7 @@ namespace headsup
         g_CombatTargetHeight = 0;
     }
 
+    void CombatTextHook::SetYou(uint32_t you, uint32_t pet) { g_PopupTies.SetYou(you, pet); }
     bool CombatTextHook::Open() { return g_CombatPopups.Open(); }
     void CombatTextHook::Add(const void* vertices, size_t count, size_t stride) { g_CombatPopups.Add(vertices, count, stride); }
     const std::vector<CombatPopup>& CombatTextHook::Popups() const { return g_CombatPopups.Popups(); }

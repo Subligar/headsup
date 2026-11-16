@@ -31,6 +31,48 @@ namespace headsup
         return events[static_cast<size_t>(known - keys.begin())];
     }
 
+    namespace
+    {
+        // By the server's msg_basic.h ids; the first that fits wins. 264, damage to an area spell's next target, is the
+        // spell's when the popup before it, from the same actor, was a spell's.
+        std::optional<PopupType> TypeOf(const PopupEvent& e, bool byYou, bool onYou, bool afterSpell)
+        {
+            switch (e.message)
+            {
+            case 252:
+            case 379:
+            case 747: return PopupType::Burst;
+            case 67:
+            case 353: return PopupType::Critical;
+            case 2: return PopupType::Spell;
+            case 264:
+                if (afterSpell) return PopupType::Spell;
+                break;
+            default: break;
+            }
+            constexpr uint8_t kDamage = 1, kRecovery = 2, kMiss = 3;
+            switch (e.kind)
+            {
+            case kRecovery: return PopupType::Recovery;
+            case kMiss: return PopupType::Miss;
+            case kDamage:
+                if (byYou) return PopupType::Dealt;
+                if (onYou) return PopupType::Taken;
+                return std::nullopt;
+            default: return std::nullopt;
+            }
+        }
+    }
+
+    void PopupTies::Decided(PopupEvent event)
+    {
+        const auto yours      = [&](uint32_t index) { return index == m_You || (m_Pet != 0 && index == m_Pet); };
+        const bool afterSpell = m_Last && m_Last->actor == event.actor &&
+                                (m_Last->type == PopupType::Spell || m_Last->type == PopupType::Burst);
+        event.type = TypeOf(event, yours(event.actor), yours(event.target), afterSpell);
+        m_Pending = m_Last = event;
+    }
+
     // A task or particle the game makes again at an address it freed is a new one.
     void PopupTies::Started(uintptr_t task)
     {
@@ -177,7 +219,19 @@ namespace headsup
         }
     }
 
-    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent, const PopupSwitches& on)
+    namespace
+    {
+        uint32_t PickedColor(const CombatPopup& p, const std::array<ColorPick, kPopupTypeCount>& colors)
+        {
+            const uint32_t game = ShownColor(p.color, kCombatPopupModulate);
+            if (!p.event || !p.event->type) return game;
+            const ColorPick& pick = colors[static_cast<size_t>(*p.event->type)];
+            return pick.source == ColorSource::Custom ? ToArgb(pick.custom) : game;
+        }
+    }
+
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
+        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupSwitches& on)
     {
         std::vector<ShownCombatPopup> shown;
         for (size_t i = 0; i < popups.size(); ++i)
@@ -187,7 +241,7 @@ namespace headsup
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            shown.push_back(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), ShownColor(p.color, kCombatPopupModulate),
+            shown.push_back(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), PickedColor(p, colors),
                 alpha, ScreenPoint{p.box.CenterX(), p.box.CenterY()}, p.box.Height() * static_cast<float>(sizePercent) / kPercent,
                 p.depth});
         }

@@ -940,6 +940,7 @@ public:
         m_CombatTextHook.NewFrame();
         m_PopupsDrawn = false;
         m_CombatTextHook.Take(m_Settings.enabled && m_Settings.combatPopups && !m_CombatPopups.Failed());
+        m_CombatTextHook.SetYou(m_SelfIndex, m_AshitaCore->GetMemoryManager()->GetEntity()->GetPetTargetIndex(m_SelfIndex));
         if (const std::string failure = m_CombatPopups.TakeFailure(); !failure.empty())
             Print("combat popups are off until HeadsUp reloads, and the game's are back: " + failure + ".");
         m_Outline.NewFrame();
@@ -1629,7 +1630,8 @@ private:
         const float toX = static_cast<float>(m_CombatTextHook.TargetWidth()) / m_Names.BackBufferWidth();
         const float toY = static_cast<float>(m_CombatTextHook.TargetHeight()) / m_Names.BackBufferHeight();
         const std::vector<headsup::ShownCombatPopup> shown =
-            headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize, headsup::PopupSwitchesOf(m_Settings));
+            headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize, m_Settings.combatPopupColors,
+                headsup::PopupSwitchesOf(m_Settings));
         const bool saved = WithSavedState([&] {
             if (FAILED(m_Device->SetRenderTarget(m_CombatTextHook.Target(), m_CombatTextHook.Depth()))) return;
             m_CombatPopups.Draw(m_Device, shown, headsup::CombatPopupFont(m_Settings), toX, toY);
@@ -1691,8 +1693,8 @@ private:
         if (const std::string failure = m_CombatTextHook.Start(); !failure.empty())
             Print("could not hook the game's combat popups, so it draws its own: " + failure + ".");
         else if (!m_CombatTextHook.TieProblem().empty())
-            Note("could not tie the game's combat popups to their messages, so every miss shows Miss: " +
-                 m_CombatTextHook.TieProblem() + ".");
+            Note("could not tie the game's combat popups to their messages, so every miss shows Miss and every popup "
+                 "the game's color: " + m_CombatTextHook.TieProblem() + ".");
         if (const std::string failure = m_ModelHook.Start(); !failure.empty())
             Note("could not hook the game's model draws, so outlines guess whose each one is: " + failure + ".");
         if (const std::string failure = m_PointerFix.Start(); !failure.empty())
@@ -1939,8 +1941,8 @@ private:
         for (const headsup::CombatPopup& popup : m_CombatTextHook.Popups())
             popups.push_back("call " + headsup::DescribeCombatPopup(popup));
         if (m_PopupsDrawn)
-            for (const headsup::ShownCombatPopup& popup : headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize,
-                     headsup::PopupSwitchesOf(m_Settings)))
+            for (const headsup::ShownCombatPopup& popup : headsup::ShownCombatPopups(m_CombatTextHook.Popups(),
+                     m_Settings.combatPopupSize, m_Settings.combatPopupColors, headsup::PopupSwitchesOf(m_Settings)))
                 popups.push_back("drawn " + headsup::DescribeCombatPopup(popup));
         const size_t draws = m_DrawDump.Write(out, headsup::DrawDump::Sources{m_AshitaCore, m_Names, m_NameHook, m_Nameplates.CursorNames(),
                                                        m_Nameplates.LastShown(), [&](uint32_t index) { return m_GameState.PlayerStatusOf(index, m_SelfIndex); },

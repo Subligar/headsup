@@ -2159,3 +2159,20 @@ TEST(the_combat_popups_card_takes_changes_only_while_switched_on)
     w.Pass({{font + "-o-0", kClickEvent, ""}});
     CHECK(w.settings.combatPopupFont.empty());
 }
+
+TEST(a_combat_popup_types_color_is_picked_only_while_the_card_is_on)
+{
+    Window w;
+    w.state.page            = Page::Entities;
+    w.settings.combatPopups = false;
+    const std::string card = "entities-combat-popups", miss = card + "-combat-popup-miss-color";
+    const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Miss)];
+    w.Pass({{miss, kClickEvent, ""}});
+    w.Pass({{miss + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Game);
+    w.Pass({{card + "-on", kClickEvent, ""}});
+    CHECK(w.Pass({{miss, kClickEvent, ""}}).popup);
+    w.Pass({{miss + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Custom);
+    CHECK(w.settings.combatPopupColors[static_cast<size_t>(PopupType::Critical)].source == ColorSource::Game);
+}

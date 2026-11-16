@@ -168,6 +168,10 @@ namespace headsup
         // cursorColor, where a file from before the designer holds the target's color.
         constexpr const char* kCursorEdgePickKey = "cursorEdgeColor";
         constexpr const char* kCursorPickKey     = "cursorPick";
+        // By PopupType.
+        constexpr const char* kCombatPopupColorKeys[kPopupTypeCount] = {"combatPopupDealtColor", "combatPopupTakenColor",
+            "combatPopupRecoveryColor", "combatPopupMissColor", "combatPopupCriticalColor", "combatPopupBurstColor",
+            "combatPopupSpellColor"};
 
         constexpr const char* kBadgeFontKey = "badgeFontName";
         constexpr const char* kRankDisplayKey = "rankDisplay";
@@ -1240,6 +1244,8 @@ namespace headsup
         return !name.empty() && name.size() <= kMaxFileName && name.find_first_of(kPathCharacters) == std::string_view::npos;
     }
 
+    std::vector<ColorSource> CombatPopupSources(PopupType) { return {ColorSource::Custom, ColorSource::Game}; }
+
     Settings Clamp(Settings s)
     {
         const Settings d;
@@ -1280,6 +1286,8 @@ namespace headsup
             s.pointerIcon = d.pointerIcon;
         ClampPick(s.cursorColor, d.cursorColor, CursorSources());
         ClampPick(s.cursorEdgeColor, d.cursorEdgeColor, CursorSources());
+        for (int t = 0; t < kPopupTypeCount; ++t)
+            ClampPick(s.combatPopupColors[t], d.combatPopupColors[t], CombatPopupSources(static_cast<PopupType>(t)));
         if (static_cast<int>(s.barTheme) >= kBarThemeCount) s.barTheme = d.barTheme;
         if (static_cast<int>(s.customPalette.shape) >= kBarShapeCount) s.customPalette.shape = d.customPalette.shape;
         s.customPalette.border = std::clamp(s.customPalette.border, 0, kMaxStripBorder);
@@ -1801,6 +1809,8 @@ namespace headsup
                 LoadColor(store, c.key, s.*c.field);
             LoadPick(store, kCursorPickKey, s.cursorColor);
             LoadPick(store, kCursorEdgePickKey, s.cursorEdgeColor);
+            for (int t = 0; t < kPopupTypeCount; ++t)
+                LoadPick(store, kCombatPopupColorKeys[t], s.combatPopupColors[t]);
             // A file from before badges had a font of their own to name keeps the one they were set in.
             s.badgeFontName = store.GetString(kBadgeFontKey, file ? kBadgeFont : s.badgeFontName.c_str());
             s.barTitleFont  = store.GetString(kBarTitleFontKey, "");
@@ -1928,6 +1938,8 @@ namespace headsup
         store.Set(kRankDisplayKey, kRankDisplayNames[static_cast<int>(s.rankDisplay)]);
         SavePick(store, kCursorPickKey, s.cursorColor);
         SavePick(store, kCursorEdgePickKey, s.cursorEdgeColor);
+        for (int t = 0; t < kPopupTypeCount; ++t)
+            SavePick(store, kCombatPopupColorKeys[t], s.combatPopupColors[t]);
         store.Set(kBadgeFontKey, s.badgeFontName.c_str());
         store.Set(kBarTitleFontKey, s.barTitleFont.c_str());
         store.Set(kBarTextFontKey, s.barTextFont.c_str());

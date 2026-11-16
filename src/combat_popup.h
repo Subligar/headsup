@@ -21,6 +21,8 @@ namespace headsup
     struct PopupEvent
     {
         uint32_t message = 0, actor = 0, target = 0;
+        uint8_t kind = 0; // the game's: 1 damage, 2 recovery, 3 miss
+        std::optional<PopupType> type = std::nullopt; // PopupTies works it out; none for plain damage between others
         bool operator==(const PopupEvent&) const = default;
     };
 
@@ -31,8 +33,14 @@ namespace headsup
     {
     public:
         static constexpr size_t kKeptTies = 64;
-        // The game decided to pop one for event: the next start is its.
-        void Decided(const PopupEvent& event) { m_Pending = event; }
+        // Whose popups are yours, by entity index: yours and your pet's (0 for none).
+        void SetYou(uint32_t you, uint32_t pet)
+        {
+            m_You = you;
+            m_Pet = pet;
+        }
+        // The game decided to pop one for event: the next start is its, with the event's type.
+        void Decided(PopupEvent event);
         void Started(uintptr_t task);
         void Built(uintptr_t particle, uintptr_t task);
         std::optional<PopupEvent> Of(uintptr_t particle) const { return m_Particles.Of(particle); }
@@ -47,8 +55,9 @@ namespace headsup
             void Forget(uintptr_t key);
             std::optional<PopupEvent> Of(uintptr_t key) const;
         };
-        std::optional<PopupEvent> m_Pending;
+        std::optional<PopupEvent> m_Pending, m_Last;
         Ties m_Tasks, m_Particles;
+        uint32_t m_You = 0, m_Pet = 0;
     };
 
     // One call of the game's popup draw: its text, and what the quads it sent drew. The box holds all its quads, in
@@ -115,9 +124,10 @@ namespace headsup
         float lineHeight = 0.0f, depth = 0.0f;
     };
     // Two popups of a frame with the same text whose centers are within half a box height are one, the later, which the
-    // game draws on top. A line is as tall as its box at 100 percent: the box already shrinks with distance.
+    // game draws on top. A line is as tall as its box at 100 percent: the box already shrinks with distance. A popup
+    // with a type takes its pick's color, by PopupType, at the game's alpha.
     std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
-        const PopupSwitches& on = {});
+        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupSwitches& on = {});
 
     // A popup's text as drawn into its texture: the image's size and halo in its own pixels, and its capitals' top and
     // bottom in rows under the halo, drawn raster pixels tall.
