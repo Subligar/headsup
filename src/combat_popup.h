@@ -59,6 +59,8 @@ namespace headsup
         uint32_t color = 0;
         ScreenBox box;
         float depth = 0.0f;
+        uintptr_t particle = 0;
+        std::optional<PopupEvent> event;
     };
 
     // The frame's popups, grouped by the call that drew them, never by counting quads.
@@ -66,8 +68,8 @@ namespace headsup
     {
     public:
         void NewFrame();
-        // The game's draw of one popup starts.
-        void Begin(const char* text);
+        // The game's draw of one popup starts: its text, the particle it is drawn from and what that is for, if known.
+        void Begin(const char* text, uintptr_t particle, std::optional<PopupEvent> event);
         bool Open() const { return m_Open; }
         // A quad the open draw sent, as ScreenVertex vertices stride bytes apart; nothing outside a draw.
         void Add(const void* vertices, size_t count, size_t stride);
@@ -78,6 +80,8 @@ namespace headsup
     private:
         std::vector<CombatPopup> m_Popups;
         char m_Text[kMaxCombatPopupText + 1] = {};
+        uintptr_t m_Particle = 0;
+        std::optional<PopupEvent> m_Event;
         bool m_Open = false, m_Added = false;
     };
 
@@ -89,7 +93,9 @@ namespace headsup
     // The black edge around a popup's letters, per pixel of the height they are drawn at.
     constexpr float kCombatPopupEdgePerHeight = 0.1f;
 
-    std::string_view CombatPopupWords(std::string_view text);
+    // A number as the game wrote it; for the Miss glyph, what its message says happened (Evade, Parry, Shadow, Resist,
+    // No Effect, Fail and the like), or Miss.
+    std::string_view CombatPopupWords(std::string_view text, std::optional<PopupEvent> event);
 
     // A popup as HeadsUp draws it, in the scene image's pixels: its words in an opaque color at an alpha out of
     // kOpaqueAlpha, the middle of their capitals on center, in a line lineHeight tall, at the game's depth.

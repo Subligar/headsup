@@ -4,6 +4,7 @@
 #include "test.h"
 
 #include <array>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -30,12 +31,16 @@ namespace
     constexpr float kMissLeft = 1874.5444f, kMissRight = 1973.5444f;
     constexpr float kMissTop1 = 181.98697f, kMissBottom1 = 262.98697f, kMissTop2 = 181.99231f, kMissBottom2 = 262.99231f;
     constexpr float kFigureLeft = 1892.5444f, kFigureWidth = 54.0f, kFigureTop = 181.98697f, kFigureHeight = 81.0f;
+
+    // Messages from the server's msg_basic.h: a hit, a miss, a cure; the actor and target are entity indexes.
+    constexpr PopupEvent kHit{1, 0x400, 0x0B2}, kMiss{15, 0x0B2, 0x400}, kCure{7, 0x400, 0x400};
+    constexpr uintptr_t kTask1 = 0x1000, kTask2 = 0x2000, kParticle1 = 0x9000, kParticle2 = 0xA000;
 }
 
 TEST(every_quad_inside_a_popups_draw_widens_its_box_and_the_last_gives_its_depth_and_color)
 {
     CombatPopupList list;
-    list.Begin(":");
+    list.Begin(":", kParticle1, kMiss);
     CHECK(list.Open());
     Add(list, Quad(kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0.25f, 0x40000000));
     Add(list, Quad(kMissLeft, kMissTop2, kMissRight, kMissBottom2, 0.5f, 0x80404040));
@@ -48,12 +53,13 @@ TEST(every_quad_inside_a_popups_draw_widens_its_box_and_the_last_gives_its_depth
     CHECK(Near(miss.box.minY, kMissTop1) && Near(miss.box.maxY, kMissBottom2));
     CHECK_EQ(miss.depth, 0.5f);
     CHECK_EQ(miss.color, 0x80404040u);
+    CHECK(miss.particle == kParticle1 && miss.event == kMiss);
 }
 
 TEST(three_figures_side_by_side_are_one_popup_as_wide_as_all_three)
 {
     CombatPopupList list;
-    list.Begin("123");
+    list.Begin("123", {}, {});
     for (int i = 0; i < 3; ++i)
     {
         const float left = kFigureLeft + kFigureWidth * static_cast<float>(i);
@@ -68,7 +74,7 @@ TEST(three_figures_side_by_side_are_one_popup_as_wide_as_all_three)
 TEST(a_popup_that_sent_no_quad_is_dropped_and_a_quad_outside_a_popup_is_ignored)
 {
     CombatPopupList list;
-    list.Begin("12");
+    list.Begin("12", {}, {});
     list.End();
     Add(list, Quad(kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0.5f, 0x80404040));
     CHECK(list.Popups().empty());
@@ -77,7 +83,7 @@ TEST(a_popup_that_sent_no_quad_is_dropped_and_a_quad_outside_a_popup_is_ignored)
 TEST(a_popup_keeps_at_most_the_games_sixteen_bytes_of_text)
 {
     CombatPopupList list;
-    list.Begin("12345678901234567890");
+    list.Begin("12345678901234567890", {}, {});
     Add(list, Quad(kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0.5f, 0x80404040));
     list.End();
     CHECK(list.Popups().size() == 1 && std::string_view(list.Popups().front().text) == "1234567890123456");
@@ -86,7 +92,7 @@ TEST(a_popup_keeps_at_most_the_games_sixteen_bytes_of_text)
 TEST(a_new_frame_forgets_every_popup_and_closes_an_open_one)
 {
     CombatPopupList list;
-    list.Begin("7");
+    list.Begin("7", {}, {});
     Add(list, Quad(kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0.5f, 0x80404040));
     list.NewFrame();
     CHECK(list.Popups().empty() && !list.Open());
@@ -96,9 +102,11 @@ TEST(a_new_frame_forgets_every_popup_and_closes_an_open_one)
 
 namespace
 {
-    CombatPopup Popup(std::string_view text, float x0, float y0, float x1, float y1, uint32_t color, float depth)
+    CombatPopup Popup(std::string_view text, float x0, float y0, float x1, float y1, uint32_t color, float depth,
+        std::optional<PopupEvent> event = std::nullopt)
     {
         CombatPopup popup;
+        popup.event = event;
         text.copy(popup.text, kMaxCombatPopupText);
         popup.box   = test::Box(x0, y0, x1, y1);
         popup.color = color;
@@ -142,10 +150,32 @@ TEST(a_popups_color_shows_twice_as_bright_and_its_alpha_twice_as_strong_up_to_op
     CHECK_EQ(ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0xFF404040, 0.5f)}, 100)[0].alpha, 0xFFu);
 }
 
-TEST(only_the_miss_glyph_becomes_a_word)
+TEST(a_miss_says_what_happened_by_its_message)
 {
-    CHECK(CombatPopupWords(":") == kMissWord);
-    CHECK(CombatPopupWords("1234") == "1234");
+    const auto words = [](uint32_t message) { return CombatPopupWords(":", PopupEvent{message, 0, 0}); };
+    CHECK(words(15) == "Miss");
+    CHECK(words(282) == "Evade");
+    CHECK(words(32) == "Evade");
+    CHECK(words(70) == "Parry");
+    CHECK(words(31) == "Shadow");
+    CHECK(words(85) == "Resist");
+    CHECK(words(75) == "No Effect");
+    CHECK(words(30) == "Anticipate");
+    CHECK(words(114) == "Fail");
+    CHECK(words(63) == "Miss");
+    CHECK(CombatPopupWords(":", std::nullopt) == "Miss");
+}
+
+TEST(a_number_keeps_its_figures_whatever_its_message)
+{
+    CHECK(CombatPopupWords("1234", kHit) == "1234");
+    CHECK(CombatPopupWords("1234", PopupEvent{70, 0, 0}) == "1234");
+}
+
+TEST(a_shown_miss_has_its_messages_word)
+{
+    const CombatPopup parry = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.5f, PopupEvent{70, 0, 0});
+    CHECK(ShownCombatPopups({parry}, 100)[0].words == "Parry");
 }
 
 TEST(a_popups_text_is_centered_across_with_its_capitals_middle_on_the_popups_middle)
@@ -161,16 +191,11 @@ TEST(a_popups_text_is_centered_across_with_its_capitals_middle_on_the_popups_mid
 TEST(the_draw_dump_lines_hold_a_popups_text_color_place_and_depth)
 {
     const CombatPopup miss = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.99876f);
-    CHECK_EQ(DescribeCombatPopup(miss), std::string(": | 80404040 | 1874.54,181.99 to 1973.54,262.99 | 0.99876"));
+    CHECK_EQ(DescribeCombatPopup(miss), std::string(": | 80404040 | 1874.54,181.99 to 1973.54,262.99 | 0.99876 | message -"));
+    const CombatPopup parry = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.99876f, PopupEvent{70, 0, 0});
+    CHECK_EQ(DescribeCombatPopup(parry), std::string(": | 80404040 | 1874.54,181.99 to 1973.54,262.99 | 0.99876 | message 70"));
     const ShownCombatPopup shown = ShownCombatPopups({miss}, 100)[0];
     CHECK_EQ(DescribeCombatPopup(shown), std::string("Miss | FF808080 alpha 255 | 1924.04,222.49 line 81.00 | 0.99876"));
-}
-
-namespace
-{
-    // Messages from the server's msg_basic.h: a hit, a miss, a cure; the actor and target are entity indexes.
-    constexpr PopupEvent kHit{1, 0x400, 0x0B2}, kMiss{15, 0x0B2, 0x400}, kCure{7, 0x400, 0x400};
-    constexpr uintptr_t kTask1 = 0x1000, kTask2 = 0x2000, kParticle1 = 0x9000, kParticle2 = 0xA000;
 }
 
 TEST(each_started_popup_takes_the_decision_before_it_and_its_particles_take_the_starts)

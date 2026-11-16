@@ -1571,7 +1571,7 @@ extern "C" uint32_t HeadsUpOnCombatText(const uint32_t* arguments)
     using namespace headsup;
     if (!g_TakeCombatText) return 0;
     NoteCombatTarget();
-    g_CombatPopups.Begin(reinterpret_cast<const char*>(arguments[kCombatTextArgument]));
+    g_CombatPopups.Begin(reinterpret_cast<const char*>(arguments[kCombatTextArgument]), 0, std::nullopt);
     return 1;
 }
 

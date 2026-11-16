@@ -51,8 +51,10 @@ namespace headsup
         m_Open = false;
     }
 
-    void CombatPopupList::Begin(const char* text)
+    void CombatPopupList::Begin(const char* text, uintptr_t particle, std::optional<PopupEvent> event)
     {
+        m_Particle = particle;
+        m_Event    = event;
         // The game's text has no terminator when it fills its 16 bytes: nothing past them is read.
         const size_t length = text != nullptr ? strnlen(text, kMaxCombatPopupText) : 0;
         if (length > 0) std::memcpy(m_Text, text, length);
@@ -68,6 +70,8 @@ namespace headsup
         {
             m_Popups.emplace_back();
             std::memcpy(m_Popups.back().text, m_Text, sizeof(m_Text));
+            m_Popups.back().particle = m_Particle;
+            m_Popups.back().event    = m_Event;
         }
         CombatPopup& popup = m_Popups.back();
         const auto* bytes  = static_cast<const uint8_t*>(vertices);
@@ -87,9 +91,46 @@ namespace headsup
 
 namespace headsup
 {
-    std::string_view CombatPopupWords(std::string_view text)
+    namespace
     {
-        return text == std::string_view(&kMissGlyph, 1) ? kMissWord : text;
+        // By the server's msg_basic.h ids of the messages the game shows as a miss.
+        std::string_view MissWord(uint32_t message)
+        {
+            switch (message)
+            {
+            case 32:
+            case 282: return "Evade";
+            case 70: return "Parry";
+            case 30: return "Anticipate";
+            case 14:
+            case 31:
+            case 535: return "Shadow";
+            case 85:
+            case 284:
+            case 655: return "Resist";
+            case 75:
+            case 156:
+            case 189:
+            case 283:
+            case 323:
+            case 355:
+            case 408:
+            case 422:
+            case 423:
+            case 425: return "No Effect";
+            case 114:
+            case 137:
+            case 153:
+            case 244: return "Fail";
+            default: return kMissWord;
+            }
+        }
+    }
+
+    std::string_view CombatPopupWords(std::string_view text, std::optional<PopupEvent> event)
+    {
+        if (text != std::string_view(&kMissGlyph, 1)) return text;
+        return event ? MissWord(event->message) : kMissWord;
     }
 
     namespace
@@ -112,7 +153,7 @@ namespace headsup
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            shown.push_back(ShownCombatPopup{std::string(CombatPopupWords(p.text)), ShownColor(p.color, kCombatPopupModulate),
+            shown.push_back(ShownCombatPopup{std::string(CombatPopupWords(p.text, p.event)), ShownColor(p.color, kCombatPopupModulate),
                 alpha, ScreenPoint{p.box.CenterX(), p.box.CenterY()}, p.box.Height() * static_cast<float>(sizePercent) / kPercent,
                 p.depth});
         }
@@ -132,7 +173,8 @@ namespace headsup
     {
         const ScreenBox& b = popup.box;
         return std::string(popup.text) + " | " + Printed("%08X", popup.color) + " | " + Decimal(b.minX, 2) + "," +
-               Decimal(b.minY, 2) + " to " + Decimal(b.maxX, 2) + "," + Decimal(b.maxY, 2) + " | " + Decimal(popup.depth, 5);
+               Decimal(b.minY, 2) + " to " + Decimal(b.maxX, 2) + "," + Decimal(b.maxY, 2) + " | " + Decimal(popup.depth, 5) +
+               " | message " + (popup.event ? std::to_string(popup.event->message) : "-");
     }
 
     std::string DescribeCombatPopup(const ShownCombatPopup& popup)
