@@ -131,7 +131,8 @@ namespace headsup
 
     // Takes the game's combat popups while asked: the call that draws a popup's text (native_locate.h) goes to a gate
     // that opens a popup, lets the game draw it and closes it. Every quad the draw sends in between is the popup's,
-    // which the plugin's draw hook adds here and drops. Not taken, the gate passes the call straight on.
+    // which the plugin's draw hook adds here and drops. Not taken, the gate passes the call straight on. Three more
+    // calls, all in or none, tie each popup to its message (PopupTies) as the game starts it.
     class CombatTextHook
     {
     public:
@@ -156,9 +157,13 @@ namespace headsup
         IDirect3DSurface8* Depth() const;
         uint32_t TargetWidth() const;
         uint32_t TargetHeight() const;
+        // Why the calls that tie each popup to its message are not in, so a miss shows as Miss; empty when they are.
+        const std::string& TieProblem() const { return m_TieProblem; }
 
     private:
         CodePatch m_Call;
+        std::array<CodePatch, 3> m_Ties{};
+        std::string m_TieProblem;
     };
 
     // How the game's windows are placed this frame: the panel's band, and the settings for the help's mode.

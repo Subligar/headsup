@@ -52,6 +52,9 @@ extern "C"
     void HeadsUpCombatTextGate();
     __attribute__((used)) uint32_t HeadsUpOnCombatText(const uint32_t* arguments);
     __attribute__((used)) void HeadsUpAfterCombatText();
+    uintptr_t g_HeadsUpPopupColor = 0;
+    void HeadsUpPopupStartGate();
+    __attribute__((used)) void HeadsUpOnPopupStarted(uintptr_t task);
     int __stdcall HeadsUpSystemMetric(int index);
 }
 
@@ -277,6 +280,21 @@ _HeadsUpCombatTextGate:
     .att_syntax prefix
 )");
 
+// Called in place of the color call just after the game starts a popup's effect, its task in esi: tells HeadsUp of the
+// task, then jumps on to the color routine with the stack as it was.
+asm(R"(
+    .text
+    .p2align 4
+    .globl _HeadsUpPopupStartGate
+_HeadsUpPopupStartGate:
+    .intel_syntax noprefix
+    push esi
+    call _HeadsUpOnPopupStarted
+    add esp, 4
+    jmp dword ptr [_g_HeadsUpPopupColor]
+    .att_syntax prefix
+)");
+
 namespace headsup
 {
     namespace
@@ -403,6 +421,30 @@ namespace headsup
         IDirect3DSurface8* g_CombatTarget = nullptr; // identities only, as the names'
         IDirect3DSurface8* g_CombatDepth  = nullptr;
         uint32_t g_CombatTargetWidth = 0, g_CombatTargetHeight = 0;
+        // Written by the tie gates, on the game's thread, and read at the popup's draw.
+        PopupTies g_PopupTies;
+        uintptr_t g_PopupDecision = 0, g_PopupParticleBuild = 0;
+        using PopupDecisionFn = uint8_t(__cdecl*)(const uint32_t* actor, const uint32_t* target, uint32_t message,
+            uint32_t popup, uint8_t* kind);
+        using PopupParticleBuildFn = uint8_t*(__attribute__((thiscall))*)(uint8_t* particle, const uint8_t* generator);
+
+        // In place of the game's popup decision (LocatePopupTies), on its stack: nothing here may allocate, throw or
+        // call Ashita, nor in PopupParticleBuild.
+        uint8_t __cdecl PopupDecision(const uint32_t* actor, const uint32_t* target, uint32_t message, uint32_t popup,
+            uint8_t* kind)
+        {
+            const uint8_t answer = reinterpret_cast<PopupDecisionFn>(g_PopupDecision)(actor, target, message, popup, kind);
+            if (answer == 0) g_PopupTies.Decided(PopupEvent{message, actor[0], target[0]});
+            return answer;
+        }
+
+        __attribute__((thiscall)) uint8_t* PopupParticleBuild(uint8_t* particle, const uint8_t* generator)
+        {
+            uint8_t* built      = reinterpret_cast<PopupParticleBuildFn>(g_PopupParticleBuild)(particle, generator);
+            const uint32_t task = generator != nullptr ? ReadAt<uint32_t>(generator, kPopupGeneratorTask) : 0;
+            g_PopupTies.Built(Address(particle), task);
+            return built;
+        }
 
         // Where the game draws the frame's first popup: its image, depth buffer and the image's size.
         void NoteCombatTarget()
@@ -722,6 +764,22 @@ namespace headsup
         g_HeadsUpCombatTextDraw = Address(base) + site.draw;
         if (const std::string failure = PutIn({&call, 1}); !failure.empty()) return failure;
         m_Call = call;
+        // Without them every popup is still drawn, a miss as Miss.
+        const PopupTieSites ties = LocatePopupTies(text);
+        if (ties.problem != LocateProblem::None)
+        {
+            m_TieProblem = Describe(ties.problem);
+            return "";
+        }
+        std::array<CodePatch, 3> patches = {
+            Retarget(base + ties.decisionCall, Address(base + ties.decisionCall), Address(&PopupDecision)),
+            Retarget(base + ties.colorCall, Address(base + ties.colorCall), Address(&HeadsUpPopupStartGate)),
+            Retarget(base + ties.particleCall, Address(base + ties.particleCall), Address(&PopupParticleBuild))};
+        g_PopupDecision      = Address(base) + ties.decision;
+        g_HeadsUpPopupColor  = Address(base) + ties.color;
+        g_PopupParticleBuild = Address(base) + ties.particleBuild;
+        m_TieProblem         = PutIn(patches);
+        if (m_TieProblem.empty()) m_Ties = patches;
         return "";
     }
 
@@ -730,8 +788,11 @@ namespace headsup
         g_TakeCombatText = false; // a gate left in memory passes every popup on
         g_CombatPopups.End();
         if (!Running()) return "";
-        const CodePatch call = std::exchange(m_Call, {});
-        return TakeOut({&call, 1}, "the game's combat popups");
+        const std::array<CodePatch, 3> ties = std::exchange(m_Ties, {});
+        const std::string tiesBack = ties[0].at != nullptr ? TakeOut(ties, "the game's combat popup starts") : "";
+        const CodePatch call       = std::exchange(m_Call, {});
+        const std::string drawBack = TakeOut({&call, 1}, "the game's combat popups");
+        return drawBack.empty() ? tiesBack : drawBack;
     }
 
     void CombatTextHook::Take(bool take) { g_TakeCombatText = take && Running(); }
@@ -1571,8 +1632,14 @@ extern "C" uint32_t HeadsUpOnCombatText(const uint32_t* arguments)
     using namespace headsup;
     if (!g_TakeCombatText) return 0;
     NoteCombatTarget();
-    g_CombatPopups.Begin(reinterpret_cast<const char*>(arguments[kCombatTextArgument]), 0, std::nullopt);
+    const uintptr_t text = arguments[kCombatTextArgument];
+    g_CombatPopups.Begin(reinterpret_cast<const char*>(text), text - kCombatTextOffset, g_PopupTies.Of(text - kCombatTextOffset));
     return 1;
+}
+
+extern "C" void HeadsUpOnPopupStarted(uintptr_t task)
+{
+    headsup::g_PopupTies.Started(task);
 }
 
 extern "C" void HeadsUpAfterCombatText() { headsup::g_CombatPopups.End(); }

@@ -540,12 +540,12 @@ namespace headsup
     // its message, RVAs of each five-byte call and of its routine. The decision: cdecl (actor, target, message, 1,
     // uint8_t* kind), the actor and target each an index then an id, returning 0 to pop. The color: cdecl (class),
     // called once the effect is started, with the new task in esi. The particle's build: thiscall (particle,
-    // generator), whose task is at kPopupGeneratorTask and its value at kPopupTaskValue.
+    // generator), whose task is at kPopupGeneratorTask.
     struct PopupTieSites
     {
         LocateProblem problem = LocateProblem::None;
         uint32_t decisionCall = 0, decision = 0, colorCall = 0, color = 0, particleCall = 0, particleBuild = 0;
     };
-    constexpr uint32_t kPopupGeneratorTask = 0x64, kPopupTaskValue = 0xA8;
+    constexpr uint32_t kPopupGeneratorTask = 0x64;
     PopupTieSites LocatePopupTies(const ImageSection& text);
 }

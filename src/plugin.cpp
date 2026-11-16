@@ -1684,6 +1684,9 @@ private:
             Print("could not hook the game's target arrows, so it draws its own and HeadsUp none: " + failure + ".");
         if (const std::string failure = m_CombatTextHook.Start(); !failure.empty())
             Print("could not hook the game's combat popups, so it draws its own: " + failure + ".");
+        else if (!m_CombatTextHook.TieProblem().empty())
+            Note("could not tie the game's combat popups to their messages, so every miss shows Miss: " +
+                 m_CombatTextHook.TieProblem() + ".");
         if (const std::string failure = m_ModelHook.Start(); !failure.empty())
             Note("could not hook the game's model draws, so outlines guess whose each one is: " + failure + ".");
         if (const std::string failure = m_PointerFix.Start(); !failure.empty())
