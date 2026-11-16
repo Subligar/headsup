@@ -50,6 +50,7 @@ namespace headsup
             {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishCase", &Settings::fishCase}, {"fishCaseBackground", &Settings::fishCaseBackground},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
+            {"combatPopups", &Settings::combatPopups},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
             {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"helpBarShrink", &Settings::helpBarShrink},
             {"widgetBackground", &Settings::widgetBackground}};
@@ -105,6 +106,7 @@ namespace headsup
             {"fishCaseAcross", &Settings::fishCaseAcross, kFishBarUnplaced, kCasePlaceWhole},
             {"fishCaseDown", &Settings::fishCaseDown, kFishBarUnplaced, kCasePlaceWhole},
             {"fishCaseScale", &Settings::fishCaseScale, kMinCaseScale, kMaxCaseScale},
+            {"combatPopupSize", &Settings::combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, kPercentStep},
             {"helpBarX", &Settings::helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset},
             {"helpBarY", &Settings::helpBarY, -kMaxHelpBarOffset, kMaxHelpBarOffset}};
 
@@ -275,6 +277,7 @@ namespace headsup
         constexpr const char* kBlueMagicLearnedKey = "blueMagicLearned";
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
+        constexpr const char* kCombatPopupFontKey = "combatPopupFont";
         // The Status Timers' Design held the Pinned Status #1 to #6 buttons: never read it or give it another meaning.
         constexpr const char* kDesignSuffix     = "Design";
         constexpr const char* kPinDesignSuffix  = "PinDesign"; // the Status Timers' StatusDesign, "40 253 | 33"
@@ -1248,6 +1251,7 @@ namespace headsup
         if (s.badgeFontName.size() > kMaxFontName) s.badgeFontName = d.badgeFontName;
         if (s.barTitleFont.size() > kMaxFontName) s.barTitleFont = d.barTitleFont;
         if (s.barTextFont.size() > kMaxFontName) s.barTextFont = d.barTextFont;
+        if (s.combatPopupFont.empty() || s.combatPopupFont.size() > kMaxFontName) s.combatPopupFont = d.combatPopupFont;
         std::vector<uint8_t> keys;
         for (const uint8_t vk : s.keepPointerKeys)
         {
@@ -1859,6 +1863,7 @@ namespace headsup
             });
             s.fishBarFont  = store.GetString(kFishBarFontKey, s.fishBarFont.c_str());
             s.fishBarLine  = store.GetString(kFishBarLineKey, s.fishBarLine.c_str());
+            s.combatPopupFont = store.GetString(kCombatPopupFontKey, s.combatPopupFont.c_str());
             s.blueMagicLearned = static_cast<BlueLearned>(NameIndex(kBlueLearnedNames, kBlueLearnedCount,
                 store.GetString(kBlueMagicLearnedKey, ""), static_cast<int>(s.blueMagicLearned)));
             s.helpBarAnchor = static_cast<HelpAnchor>(NameIndex(kHelpAnchorNames, kHelpAnchorCount,
@@ -1962,6 +1967,7 @@ namespace headsup
         store.Set(kMenuFontKey, s.menuFont.c_str());
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());
         store.Set(kFishBarLineKey, s.fishBarLine.c_str());
+        store.Set(kCombatPopupFontKey, s.combatPopupFont.c_str());
         store.Set(kBlueMagicLearnedKey, kBlueLearnedNames[static_cast<int>(s.blueMagicLearned)]);
         // A copy's keys are written while it is on the panel; the first copy's always.
         for (int slot = 0; slot < kPanelSlots; ++slot)

@@ -149,6 +149,7 @@ namespace headsup
     constexpr int kMinFishTextSize = 8, kDefaultFishTextSize = 15, kMaxFishTextSize = 40;    // pixels
     constexpr int kCasePlaceWhole = 10000; // a placed Case's across and down count ten-thousandths of the screen
     constexpr int kMinCaseScale = 50, kDefaultCaseScale = 65, kMaxCaseScale = 200;         // percent
+    constexpr int kMinCombatPopupSize = 25, kDefaultCombatPopupSize = 100, kMaxCombatPopupSize = 200; // percent of the game's own size
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
@@ -236,6 +237,9 @@ namespace headsup
         bool fishCaseBackground = true;                                          // the tint over the whole screen
         int fishCaseAcross = kFishBarUnplaced, fishCaseDown = kFishBarUnplaced; // its middle, in ten-thousandths of the screen
         std::string fishBarLine = "${size|fish} $feeling";
+        bool combatPopups = true; // HeadsUp draws the game's damage, recovery and Miss popups in its own text
+        std::string combatPopupFont = kDefaultFont;
+        int combatPopupSize         = kDefaultCombatPopupSize;
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
         Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};
         BlueLearned blueMagicLearned = BlueLearned::Star;
