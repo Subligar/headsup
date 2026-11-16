@@ -151,8 +151,8 @@ namespace headsup
     constexpr int kMinCaseScale = 50, kDefaultCaseScale = 65, kMaxCaseScale = 200;         // percent
     constexpr int kMinCombatPopupSize = 25, kDefaultCombatPopupSize = 100, kMaxCombatPopupSize = 200; // percent of the game's own size
     // What a combat popup is, each with its own color pick, in the Combat Popups card's order.
-    enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Spell };
-    constexpr int kPopupTypeCount = 7;
+    enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Skillchain, Spell };
+    constexpr int kPopupTypeCount = 8;
     std::vector<ColorSource> CombatPopupSources(PopupType type);
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
@@ -251,7 +251,8 @@ namespace headsup
         std::array<ColorPick, kPopupTypeCount> combatPopupColors = {{{ColorSource::Game, ColorFromRgb(0xFFFFFF)},
             {ColorSource::Game, ColorFromRgb(0xFF6B6B)}, {ColorSource::Game, ColorFromRgb(0x7CE38B)},
             {ColorSource::Game, ColorFromRgb(0xC8C8C8)}, {ColorSource::Game, ColorFromRgb(0xFFD24A)},
-            {ColorSource::Game, ColorFromRgb(0xC58CFF)}, {ColorSource::Game, ColorFromRgb(0x8FD8FF)}}};
+            {ColorSource::Game, ColorFromRgb(0xC58CFF)}, {ColorSource::Element, ColorFromRgb(0xFFFFFF)},
+            {ColorSource::Game, ColorFromRgb(0x8FD8FF)}}};
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
         Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};
         BlueLearned blueMagicLearned = BlueLearned::Star;

@@ -2,6 +2,7 @@
 
 #include "argb.h"
 #include "bar_content.h"
+#include "bar_widgets.h"
 #include "markup.h"
 #include "plate_image.h"
 #include "screen_vertex.h"
@@ -33,10 +34,39 @@ namespace headsup
 
     namespace
     {
+        struct Skillchain
+        {
+            std::string_view name;
+            Element element; // its color's: one of the two or four it is made of
+        };
+        // By the server's ActionProcSkillChain, from 1.
+        constexpr Skillchain kSkillchains[] = {{"Light", Element::Light}, {"Darkness", Element::Dark},
+            {"Gravitation", Element::Earth}, {"Fragmentation", Element::Lightning}, {"Distortion", Element::Ice},
+            {"Fusion", Element::Fire}, {"Compression", Element::Dark}, {"Liquefaction", Element::Fire},
+            {"Induration", Element::Ice}, {"Reverberation", Element::Water}, {"Transfixion", Element::Light},
+            {"Scission", Element::Earth}, {"Detonation", Element::Wind}, {"Impaction", Element::Lightning},
+            {"Radiance", Element::Light}, {"Umbra", Element::Dark}};
+        constexpr uint32_t kSkillchainCount = std::size(kSkillchains);
+        // The server sends 287 + n for a skillchain's damage and 384 + n for what it heals. The client's own table
+        // also pops Radiance and Umbra as these.
+        constexpr uint32_t kSkillchainDamage = 287, kSkillchainHealing = 384;
+        constexpr uint32_t kRadianceDamage = 767, kUmbraDamage = 768, kRadianceHealing = 769, kUmbraHealing = 770;
+        constexpr uint32_t kRadiance = 15, kUmbra = 16;
+
+        std::optional<Skillchain> SkillchainOf(uint32_t message)
+        {
+            for (const uint32_t first : {kSkillchainDamage, kSkillchainHealing})
+                if (message > first && message <= first + kSkillchainCount) return kSkillchains[message - first - 1];
+            if (message == kRadianceDamage || message == kRadianceHealing) return kSkillchains[kRadiance - 1];
+            if (message == kUmbraDamage || message == kUmbraHealing) return kSkillchains[kUmbra - 1];
+            return std::nullopt;
+        }
+
         // By the server's msg_basic.h ids; the first that fits wins. 264, damage to an area spell's next target, is the
         // spell's when the popup before it, from the same actor, was a spell's.
         std::optional<PopupType> TypeOf(const PopupEvent& e, bool byYou, bool onYou, bool afterSpell)
         {
+            if (SkillchainOf(e.message)) return PopupType::Skillchain;
             switch (e.message)
             {
             case 252:
@@ -206,6 +236,8 @@ namespace headsup
     std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
         if (text == std::string_view(&kMissGlyph, 1)) return std::string(event && on.words ? MissWord(event->message) : kMissWord);
+        if (const std::optional<Skillchain> skillchain = event ? SkillchainOf(event->message) : std::nullopt)
+            return std::string(skillchain->name) + " " + std::string(text);
         const AmountLabel label = event && on.labels ? LabelOf(event->message) : AmountLabel{};
         return std::string(label.before) + std::string(text) + std::string(label.after);
     }
@@ -227,7 +259,9 @@ namespace headsup
             const uint32_t game = ShownColor(p.color, kCombatPopupModulate);
             if (!p.event || !p.event->type) return game;
             const ColorPick& pick = colors[static_cast<size_t>(*p.event->type)];
-            return pick.source == ColorSource::Custom ? ToArgb(pick.custom) : game;
+            if (pick.source == ColorSource::Custom) return ToArgb(pick.custom);
+            const std::optional<Skillchain> skillchain = SkillchainOf(p.event->message);
+            return pick.source == ColorSource::Element && skillchain ? ElementColor(skillchain->element) : game;
         }
     }
 

@@ -2190,3 +2190,19 @@ TEST(with_custom_colors_off_the_combat_popup_color_picks_take_no_change)
     w.Pass({{miss + "-o-0", kClickEvent, ""}});
     CHECK(pick.source == ColorSource::Game);
 }
+
+TEST(only_the_skillchains_color_can_be_its_elements)
+{
+    Window w;
+    w.state.page = Page::Colors;
+    const std::string card = "colors-colors-combat-popups";
+    const auto pickLast    = [&](PopupType type, const std::string& key) {
+        const std::string row = card + "-" + key;
+        w.Pass({{row, kClickEvent, ""}});
+        w.Pass({{row + "-o-2", kClickEvent, ""}});
+        return w.settings.combatPopupColors[static_cast<size_t>(type)].source;
+    };
+    w.settings.combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source = ColorSource::Game;
+    CHECK(pickLast(PopupType::Skillchain, "combat-popup-skillchain-color") == ColorSource::Element);
+    CHECK(pickLast(PopupType::Critical, "combat-popup-critical-color") == ColorSource::Game);
+}

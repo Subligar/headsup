@@ -47,8 +47,9 @@ namespace headsup
         const Category category = static_cast<Category>(row);
         return kind == PlateKind::Mobs && (category == Category::Placeholder || IsClaimRow(category));
     }
-    enum class ColorSource : uint8_t { Custom, Game, Aggression, Toughness, Claim, Target, Type };
-    constexpr int kColorSourceCount = 7;
+    // Element is a skillchain's, offered only for its combat popups.
+    enum class ColorSource : uint8_t { Custom, Game, Aggression, Toughness, Claim, Target, Type, Element };
+    constexpr int kColorSourceCount = 8;
     struct ColorPick
     {
         ColorSource source = ColorSource::Custom;

@@ -1,4 +1,5 @@
 #include "boxes.h"
+#include "bar_widgets.h"
 #include "combat_popup.h"
 #include "screen_vertex.h"
 #include "test.h"
@@ -397,4 +398,42 @@ TEST(with_custom_colors_off_every_popup_keeps_the_games_color)
     const CombatPopup popup = Popup("210", 0, 0, 54, 81, 0x40404040, 0.5f, critical);
     CHECK_EQ(ShownCombatPopups({popup}, 100, picks, off)[0].color, 0xFF808080u);
     CHECK_EQ(ShownCombatPopups({popup}, 100, picks)[0].color, 0xFFFF0000u);
+}
+
+TEST(a_skillchain_says_its_name_by_the_servers_number_for_it)
+{
+    // The server sends 287 + n for a skillchain's damage and 384 + n for what it heals, n by its ActionProcSkillChain.
+    const auto words = [](std::string_view text, uint32_t message) { return CombatPopupWords(text, PopupEvent{message, 0, 0}); };
+    CHECK_EQ(words("412", 287 + 6), std::string("Fusion 412"));
+    CHECK_EQ(words("412", 384 + 6), std::string("Fusion 412"));
+    CHECK_EQ(words("300", 287 + 1), std::string("Light 300"));
+    CHECK_EQ(words("57", 287 + 8), std::string("Liquefaction 57"));
+    CHECK_EQ(words("88", 287 + 14), std::string("Impaction 88"));
+    CHECK_EQ(words("900", 287 + 15), std::string("Radiance 900"));
+    CHECK_EQ(words("900", 767), std::string("Radiance 900"));
+    CHECK_EQ(words("900", 768), std::string("Umbra 900"));
+    CHECK_EQ(words("900", 770), std::string("Umbra 900"));
+}
+
+TEST(a_skillchain_is_its_own_type_whether_it_hurts_or_heals)
+{
+    CHECK(TypeOf(PopupEvent{287 + 6, kPartyMember, kMob, kDamageKind}) == PopupType::Skillchain);
+    CHECK(TypeOf(PopupEvent{384 + 6, kMob, kMob, kRecoveryKind}) == PopupType::Skillchain);
+    CHECK(TypeOf(PopupEvent{767, kYou, kMob, kDamageKind}) == PopupType::Skillchain);
+}
+
+TEST(a_skillchain_on_element_takes_its_elements_color_and_on_custom_the_custom_one)
+{
+    const auto shown = [](uint32_t message, const ColorPick& pick) {
+        std::array<ColorPick, kPopupTypeCount> picks = kGamePicks;
+        picks[static_cast<size_t>(PopupType::Skillchain)] = pick;
+        const PopupEvent skillchain{message, kYou, kMob, kDamageKind, PopupType::Skillchain};
+        return ShownCombatPopups({Popup("412", 0, 0, 54, 81, 0x40404040, 0.5f, skillchain)}, 100, picks)[0].color;
+    };
+    CHECK_EQ(shown(287 + 6, ColorPick{ColorSource::Element}), ElementColor(Element::Fire));
+    CHECK_EQ(shown(287 + 14, ColorPick{ColorSource::Element}), ElementColor(Element::Lightning));
+    CHECK_EQ(shown(287 + 3, ColorPick{ColorSource::Element}), ElementColor(Element::Earth));
+    CHECK_EQ(shown(768, ColorPick{ColorSource::Element}), ElementColor(Element::Dark));
+    CHECK_EQ(shown(287 + 6, ColorPick{ColorSource::Custom, ColorFromRgb(0x123456)}), 0xFF123456u);
+    CHECK_EQ(shown(287 + 6, ColorPick{ColorSource::Game}), 0xFF808080u);
 }

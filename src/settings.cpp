@@ -172,7 +172,7 @@ namespace headsup
         // By PopupType.
         constexpr const char* kCombatPopupColorKeys[kPopupTypeCount] = {"combatPopupDealtColor", "combatPopupTakenColor",
             "combatPopupRecoveryColor", "combatPopupMissColor", "combatPopupCriticalColor", "combatPopupBurstColor",
-            "combatPopupSpellColor"};
+            "combatPopupSkillchainColor", "combatPopupSpellColor"};
 
         constexpr const char* kBadgeFontKey = "badgeFontName";
         constexpr const char* kRankDisplayKey = "rankDisplay";
@@ -366,7 +366,8 @@ namespace headsup
         // A mode that is gone: its name alone, and the whole nameplate for a target. Such a row is Shown.
         constexpr const char* kExpandingName = "expanding";
         const char* const kOutlineModeNames[kOutlineModeCount]   = {"disabled", "shown", "whenTargeted", "byNature"};
-        const char* const kSourceNames[kColorSourceCount]        = {"custom", "game", "aggression", "toughness", "claim", "target", "type"};
+        const char* const kSourceNames[kColorSourceCount]        = {"custom", "game", "aggression", "toughness", "claim", "target", "type",
+            "element"};
         const char* const kAlignNames[kAlignCount]               = {"left", "center", "right"};
         const char* const kOrnamentPlaceNames[kOrnamentPlaceCount] = {"disabled", "top", "aboveMiddle", "belowMiddle", "bottom"};
         // Before it had a place over or under the plate, an ornament was a switch and one of two places between lines.
@@ -1245,7 +1246,11 @@ namespace headsup
         return !name.empty() && name.size() <= kMaxFileName && name.find_first_of(kPathCharacters) == std::string_view::npos;
     }
 
-    std::vector<ColorSource> CombatPopupSources(PopupType) { return {ColorSource::Custom, ColorSource::Game}; }
+    std::vector<ColorSource> CombatPopupSources(PopupType type)
+    {
+        if (type == PopupType::Skillchain) return {ColorSource::Custom, ColorSource::Game, ColorSource::Element};
+        return {ColorSource::Custom, ColorSource::Game};
+    }
 
     Settings Clamp(Settings s)
     {

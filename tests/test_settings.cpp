@@ -3381,8 +3381,8 @@ TEST(each_combat_popup_type_takes_the_games_color_until_picked_and_its_pick_save
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
-    for (const ColorPick& pick : fresh.combatPopupColors)
-        CHECK(pick.source == ColorSource::Game);
+    for (int t = 0; t < kPopupTypeCount; ++t)
+        if (static_cast<PopupType>(t) != PopupType::Skillchain) CHECK(fresh.combatPopupColors[t].source == ColorSource::Game);
     MapStore store;
     store.values["combatPopupMissColorSource"] = "custom";
     store.values["combatPopupMissColorR"]      = "1.0000";
@@ -3398,4 +3398,18 @@ TEST(each_combat_popup_type_takes_the_games_color_until_picked_and_its_pick_save
     SaveSettings(s, saved);
     CHECK_EQ(saved.values["combatPopupMissColorSource"], "custom");
     CHECK(LoadSettings(saved).combatPopupColors == s.combatPopupColors);
+}
+
+TEST(a_skillchain_takes_its_elements_color_until_picked_and_no_other_type_can)
+{
+    MapStore empty;
+    CHECK(LoadSettings(empty).combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Element);
+    MapStore store;
+    store.values["combatPopupSkillchainColorSource"] = "game";
+    store.values["combatPopupCriticalColorSource"]   = "element";
+    const Settings s = LoadSettings(store);
+    CHECK(s.combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Game);
+    CHECK(s.combatPopupColors[static_cast<size_t>(PopupType::Critical)].source == ColorSource::Game);
+    store.values["combatPopupSkillchainColorSource"] = "element";
+    CHECK(LoadSettings(store).combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Element);
 }

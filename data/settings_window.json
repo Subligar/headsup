@@ -618,6 +618,7 @@
             {"key": "combat-popup-miss-color", "name": "Miss", "tip": "The color of a miss, evade, parry, resist and the like, whoever it is on. Default: Vanilla Color."},
             {"key": "combat-popup-critical-color", "name": "Critical Hits", "tip": "The color of critical hits, yours and everyone else's. Default: Vanilla Color."},
             {"key": "combat-popup-burst-color", "name": "Magic Bursts", "tip": "The color of magic burst damage. Default: Vanilla Color."},
+            {"key": "combat-popup-skillchain-color", "name": "Skillchains", "tip": "The color of a skillchain's name and number. Default: By Element."},
             {"key": "combat-popup-spell-color", "name": "Spells", "tip": "The color of the damage a spell does. Default: Vanilla Color."}
           ]
         }
@@ -1058,7 +1059,8 @@
         {"name": "By Toughness", "tip": "Automatically changes the color based on how tough the mob is at your current level. (Set these colors in the 'Colors/Toughness' section.)"},
         {"name": "By Claim Status", "tip": "Automatically changes the color based on whether the enemy is claimed and by whom. (Set these colors in the 'Colors/Claim Status' section.)"},
         {"name": "By Targeting", "tip": "Automatically changes the color based on whether you are targeting the entity, locked on, sub-targeting, etc. (Set these colors in the 'Colors/Targeting' section.)"},
-        {"name": "By Entity Type", "tip": "Automatically changes the color based on the type of entity and their relation to you. (Set these colors in the 'Colors/Entity Type' section.)"}
+        {"name": "By Entity Type", "tip": "Automatically changes the color based on the type of entity and their relation to you. (Set these colors in the 'Colors/Entity Type' section.)"},
+        {"name": "By Element", "tip": "Uses the color of the skillchain's element."}
       ]
     },
     {

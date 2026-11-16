@@ -2189,6 +2189,7 @@ namespace headsup
             case SettingPiece::CombatPopupMissColor: CombatPopupColorRow(form, label, s, PopupType::Miss, tip); break;
             case SettingPiece::CombatPopupCriticalColor: CombatPopupColorRow(form, label, s, PopupType::Critical, tip); break;
             case SettingPiece::CombatPopupBurstColor: CombatPopupColorRow(form, label, s, PopupType::Burst, tip); break;
+            case SettingPiece::CombatPopupSkillchainColor: CombatPopupColorRow(form, label, s, PopupType::Skillchain, tip); break;
             case SettingPiece::CombatPopupSpellColor: CombatPopupColorRow(form, label, s, PopupType::Spell, tip); break;
             case SettingPiece::CaseScale:
                 form.Fade(!s.fishCase);
