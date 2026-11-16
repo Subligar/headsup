@@ -100,9 +100,9 @@ namespace headsup
     };
     PopupSwitches PopupSwitchesOf(const Settings& settings);
 
-    // A number as the game wrote it; for the Miss glyph, what its message says happened (Evade, Parry, Shadow, Resist,
-    // No Effect, Fail and the like), or Miss.
-    std::string_view CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on = {});
+    // A number as the game wrote it, an amount of MP or TP and a drain labeled ("20 MP", "Drain 55"); for the Miss
+    // glyph, what its message says happened (Evade, Parry, Shadow, Resist, No Effect, Fail and the like), or Miss.
+    std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on = {});
 
     // A popup as HeadsUp draws it, in the scene image's pixels: its words in an opaque color at an alpha out of
     // kOpaqueAlpha, the middle of their capitals on center, in a line lineHeight tall, at the game's depth.

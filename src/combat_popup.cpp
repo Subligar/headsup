@@ -125,14 +125,46 @@ namespace headsup
             default: return kMissWord;
             }
         }
+
+        constexpr std::string_view kDrainWord = "Drain ", kMpLabel = " MP", kTpLabel = " TP";
+        struct AmountLabel
+        {
+            std::string_view before, after;
+        };
+        // By the server's msg_basic.h ids of amounts of MP and TP, and of HP, MP and TP drained.
+        AmountLabel LabelOf(uint32_t message)
+        {
+            switch (message)
+            {
+            case 25:
+            case 152:
+            case 224:
+            case 276:
+            case 451:
+            case 588: return {{}, kMpLabel};
+            case 452: return {{}, kTpLabel};
+            case 132:
+            case 161:
+            case 187:
+            case 227: return {kDrainWord, {}};
+            case 162:
+            case 225:
+            case 228: return {kDrainWord, kMpLabel};
+            case 165:
+            case 226:
+            case 454: return {kDrainWord, kTpLabel};
+            default: return {};
+            }
+        }
     }
 
     PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords}; }
 
-    std::string_view CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
+    std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
-        if (text != std::string_view(&kMissGlyph, 1)) return text;
-        return event && on.words ? MissWord(event->message) : kMissWord;
+        if (text == std::string_view(&kMissGlyph, 1)) return std::string(event && on.words ? MissWord(event->message) : kMissWord);
+        const AmountLabel label = event ? LabelOf(event->message) : AmountLabel{};
+        return std::string(label.before) + std::string(text) + std::string(label.after);
     }
 
     namespace
@@ -155,7 +187,7 @@ namespace headsup
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            shown.push_back(ShownCombatPopup{std::string(CombatPopupWords(p.text, p.event, on)), ShownColor(p.color, kCombatPopupModulate),
+            shown.push_back(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), ShownColor(p.color, kCombatPopupModulate),
                 alpha, ScreenPoint{p.box.CenterX(), p.box.CenterY()}, p.box.Height() * static_cast<float>(sizePercent) / kPercent,
                 p.depth});
         }

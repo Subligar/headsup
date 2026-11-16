@@ -180,6 +180,19 @@ TEST(a_number_keeps_its_figures_whatever_its_message)
     CHECK(CombatPopupWords("1234", PopupEvent{70, 0, 0}) == "1234");
 }
 
+TEST(an_amount_of_mp_or_tp_and_a_drain_say_what_they_are_and_hp_stays_a_number)
+{
+    const auto words = [](std::string_view text, uint32_t message) { return CombatPopupWords(text, PopupEvent{message, 0, 0}); };
+    CHECK_EQ(words("20", 25), std::string("20 MP"));
+    CHECK_EQ(words("300", 452), std::string("300 TP"));
+    CHECK_EQ(words("55", 227), std::string("Drain 55"));
+    CHECK_EQ(words("12", 228), std::string("Drain 12 MP"));
+    CHECK_EQ(words("100", 165), std::string("Drain 100 TP"));
+    CHECK_EQ(words("34", 7), std::string("34"));
+    CHECK_EQ(words("128", 1), std::string("128"));
+    CHECK_EQ(CombatPopupWords("20", std::nullopt), std::string("20"));
+}
+
 TEST(a_shown_miss_has_its_messages_word)
 {
     const CombatPopup parry = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.5f, PopupEvent{70, 0, 0});
