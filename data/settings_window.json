@@ -80,7 +80,7 @@
         {
           "key": "combat-popups",
           "name": "Combat Popups",
-          "description": "Draws the game's damage, recovery and Miss popups in your own font and size, in place of the game's stretched ones. They only show while the game's own option for damage popups (in its Config menu) is on. Turn this off to keep the game's. Default: On.",
+          "description": "Draws the game's damage, recovery and Miss popups in your own font and size, in place of the game's stretched ones. They only show while the game's Config is set to display damage on the game screen. Turn this off to keep the game's. Default: On.",
           "settings": [
             {"key": "combat-popup-font", "name": "Font", "tip": "The font the popups are drawn in. Default: Montserrat SemiBold."},
             {"key": "combat-popup-size", "name": "Size", "tip": "How big the popups are against the game's own. They still shrink with distance. Default: 100%."}
