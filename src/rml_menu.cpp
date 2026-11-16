@@ -17,7 +17,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstdio>
 #include <utility>
 
 namespace headsup
@@ -168,9 +167,10 @@ namespace headsup
         m_ViewAt.reset();
         m_ViewPixels = 0;
         m_ViewFor.clear();
-        m_Sidebar = m_Page = m_PageTitle = m_Popup = m_Tip = m_PopupIn = m_TipIn = nullptr;
+        m_Sidebar = m_Page = m_PageTitle = m_PageSwitch = m_Popup = m_Tip = m_PopupIn = m_TipIn = nullptr;
         m_ViewBody = m_ViewPopup = m_ViewTip = nullptr;
         m_SidebarRml.clear();
+        m_PageSwitchRml.clear();
         m_PopupRml.clear();
         m_ViewRml.clear();
         m_TitleShown.clear();
@@ -288,7 +288,8 @@ namespace headsup
         const GameSkinLook* skin = host.skin ? &*host.skin : nullptr;
         const MenuTheme theme    = MenuThemeFor(settings, skin);
         MenuLook look{theme, host.textFont, kMarcellusSC, settings.menuFontSize, m_Look.textLift, host.developer,
-            MenuColorsFor(settings, skin), theme == MenuTheme::GameWindow ? std::optional(FrameAsSet(settings, skin->frame)) : std::nullopt};
+            MenuColorsFor(settings, skin), theme == MenuTheme::GameWindow ? std::optional(FrameAsSet(settings, skin->frame)) : std::nullopt,
+            OwnPalette(settings).windowRounding != kShapeRounding ? std::optional(OwnPalette(settings).windowRounding) : std::nullopt};
         if (m_Document != nullptr && look == m_Look) return true;
         look.textLift = LiftOf(host.textFont, settings.menuFontSize);
         if (m_Document != nullptr && look.SameFrame(m_Look))
@@ -312,6 +313,7 @@ namespace headsup
         m_Sidebar    = m_Document->GetElementById(kMenuSidebarId);
         m_Page       = m_Document->GetElementById(kMenuPageId);
         m_PageTitle  = m_Document->GetElementById(kMenuPageTitleId);
+        m_PageSwitch = m_Document->GetElementById(kPageSwitchBlock);
         m_Popup      = m_Document->GetElementById(kMenuPopupId);
         m_Tip        = m_Document->GetElementById(kMenuTipId);
         m_ViewBody   = m_View->GetElementById(kMenuViewBodyId);
@@ -327,7 +329,7 @@ namespace headsup
             for (const Rml::EventId id : {Rml::EventId::Focus, Rml::EventId::Blur, Rml::EventId::Keydown})
                 document->AddEventListener(id, this, true);
         }
-        return m_Sidebar != nullptr && m_Page != nullptr && m_PageTitle != nullptr && m_Popup != nullptr && m_Tip != nullptr &&
+        return m_Sidebar != nullptr && m_Page != nullptr && m_PageTitle != nullptr && m_PageSwitch != nullptr && m_Popup != nullptr && m_Tip != nullptr &&
                m_ViewBody != nullptr && m_ViewPopup != nullptr && m_ViewTip != nullptr;
     }
 
@@ -378,7 +380,7 @@ namespace headsup
         bool same         = true; // the cards are the ones shown, in their order
         for (const FormBlock& block : blocks)
         {
-            if (block.id == kSidebarBlock || block.popout) continue;
+            if (block.id == kSidebarBlock || block.id == kPageSwitchBlock || block.popout) continue;
             same = same && card < m_Cards.size() && m_Cards[card].id == block.id;
             ++card;
         }
@@ -394,6 +396,14 @@ namespace headsup
                 m_Sidebar->SetInnerRML(block.rml);
                 m_SidebarRml = block.rml;
                 replaced     = true;
+                continue;
+            }
+            if (block.id == kPageSwitchBlock)
+            {
+                if (block.rml == m_PageSwitchRml) continue;
+                m_PageSwitch->SetInnerRML(block.rml);
+                m_PageSwitchRml = block.rml;
+                replaced        = true;
                 continue;
             }
             if (!same)
@@ -413,7 +423,7 @@ namespace headsup
             m_Page->SetInnerRML(page);
             m_Cards.clear();
             for (const FormBlock& block : blocks)
-                if (block.id != kSidebarBlock && !block.popout) m_Cards.push_back(block);
+                if (block.id != kSidebarBlock && block.id != kPageSwitchBlock && !block.popout) m_Cards.push_back(block);
             replaced = true;
         }
         if (!replaced) return;
@@ -649,7 +659,7 @@ namespace headsup
         case Rml::EventId::Mousescroll:
             if (named != nullptr && named->IsClassSet(kWheelClass))
             {
-                m_Events.push_back(FormEvent{id, kWheelEvent, std::to_string(event.GetParameter<float>("wheel_delta_y", 0.0f))});
+                m_Events.push_back(FormEvent{id, kWheelEvent, Decimal(event.GetParameter<float>("wheel_delta_y", 0.0f), kEventPlaces)});
                 event.StopPropagation();
             }
             break;
@@ -715,12 +725,11 @@ namespace headsup
                 // One event a pass, holding every move since the last.
                 if (!m_Events.empty() && m_Events.back().id == id && m_Events.back().type == kPanEvent)
                 {
-                    float across = 0.0f, down = 0.0f;
-                    std::sscanf(m_Events.back().value.c_str(), "%f %f", &across, &down);
+                    const auto [across, down] = PanOf(m_Events.back().value);
                     by += Rml::Vector2f(across, down);
                     m_Events.pop_back();
                 }
-                m_Events.push_back(FormEvent{id, kPanEvent, std::to_string(by.x) + " " + std::to_string(by.y)});
+                m_Events.push_back(FormEvent{id, kPanEvent, PanText(by.x, by.y)});
             }
             break;
         case Rml::EventId::Dragdrop:

@@ -1,5 +1,7 @@
 #include "bar_connection.h"
 
+#include "markup.h"
+
 #include <algorithm>
 #include <array>
 
@@ -86,8 +88,8 @@ namespace headsup
     std::string ByteText(double bytes)
     {
         if (bytes < kBytesPerKb) return Grouped(static_cast<uint32_t>(std::max(0.0, bytes))) + " B";
-        if (bytes < kBytesPerKb * kBytesPerKb) return Printed("%.1f KB", bytes / kBytesPerKb);
-        return Printed("%.1f MB", bytes / (kBytesPerKb * kBytesPerKb));
+        if (bytes < kBytesPerKb * kBytesPerKb) return Decimal(bytes / kBytesPerKb, 1) + " KB";
+        return Decimal(bytes / (kBytesPerKb * kBytesPerKb), 1) + " MB";
     }
 
     std::vector<Span> ConnectionFigures(const std::optional<ConnectionReport>& report, uint8_t parts)

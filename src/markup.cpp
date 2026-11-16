@@ -2,6 +2,8 @@
 
 #include "argb.h"
 
+#include <algorithm>
+#include <charconv>
 #include <cstdio>
 
 namespace headsup
@@ -30,11 +32,26 @@ namespace headsup
         return text;
     }
 
+    std::string Decimal(double value, int places)
+    {
+        constexpr size_t kLongest = 512; // the largest double's 309 digits, its sign, the point and any places asked for
+        char text[kLongest];
+        return std::string(text, std::to_chars(text, text + kLongest, value, std::chars_format::fixed, places).ptr);
+    }
+
+    std::optional<float> NumberIn(std::string_view text)
+    {
+        text.remove_prefix(std::min(text.find_first_not_of(" \t"), text.size()));
+        if (text.starts_with('+')) text.remove_prefix(1);
+        float value             = 0.0f;
+        const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+        return error == std::errc() ? std::optional<float>(value) : std::nullopt;
+    }
+
     std::string RcssNumber(float value)
     {
-        char text[32];
-        std::snprintf(text, sizeof(text), "%.2f", static_cast<double>(value));
-        std::string out = text;
+        constexpr int kPlaces = 2;
+        std::string out = Decimal(value, kPlaces);
         while (out.back() == '0')
             out.pop_back();
         if (out.back() == '.') out.pop_back();

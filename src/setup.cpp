@@ -208,7 +208,7 @@ namespace headsup
         };
         static_assert(std::size(kPages) == kSetupSteps);
 
-        constexpr BarWidget kWhere[]{BarWidget::Zone, BarWidget::Weather, BarWidget::World};
+        constexpr BarWidget kWhere[]{BarWidget::Zone, BarWidget::Weather, BarWidget::World, BarWidget::HomePoint};
         constexpr BarWidget kTime[]{BarWidget::EarthTime};
         constexpr BarWidget kYou[]{BarWidget::Job, BarWidget::Currency, BarWidget::Bags, BarWidget::Party, BarWidget::Target};
         constexpr BarWidget kSystem[]{BarWidget::Performance, BarWidget::GameHelp, BarWidget::StatusTimers, BarWidget::Settings};

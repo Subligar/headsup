@@ -20,4 +20,7 @@ namespace headsup
     // The RCSS that draws it: the shade over the background repeated, in an even border all round. The
     // art's own frame is not drawn: its edges are a line thicker in the middle.
     std::string SkinRules(const SkinFrame& frame);
+    // Its border alone, and its fill alone.
+    std::string SkinEdgeRules(const SkinFrame& frame);
+    std::string SkinFillRules(const SkinFrame& frame);
 }

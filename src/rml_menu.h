@@ -141,6 +141,7 @@ namespace headsup
         Rml::Element* m_Sidebar   = nullptr;
         Rml::Element* m_Page      = nullptr;
         Rml::Element* m_PageTitle = nullptr;
+        Rml::Element* m_PageSwitch = nullptr; // beside the title
         Rml::Element* m_Popup     = nullptr;
         Rml::Element* m_Tip       = nullptr;
         Rml::Element* m_PopupIn   = nullptr; // the popup holding m_PopupRml: the window's or the settings'
@@ -154,7 +155,7 @@ namespace headsup
         int m_ViewPixels          = 0;
         std::optional<BarRect> m_ViewAt;
         std::vector<PanelWidget> m_ViewFor; // whose settings it holds
-        std::string m_SidebarRml, m_PopupRml, m_ViewRml, m_TitleShown, m_TipShown;
+        std::string m_SidebarRml, m_PageSwitchRml, m_PopupRml, m_ViewRml, m_TitleShown, m_TipShown;
         std::vector<FormBlock> m_Cards;
         std::unordered_map<std::string, Rml::Element*> m_ById;
         std::vector<Rml::Element*> m_Runs; // the stretches of the line boxes

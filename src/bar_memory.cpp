@@ -1,5 +1,7 @@
 #include "bar_memory.h"
 
+#include "markup.h"
+
 #include <string>
 
 namespace headsup
@@ -97,12 +99,12 @@ namespace headsup
             sections.push_back(std::move(space));
         }
         PopupSection processor = Section(CardKind::PerfProcessor, "Processor");
-        if (cpuPercent) processor.rows.push_back(Labeled("CPU", Text(Printed("%.0f%%", *cpuPercent) + " of one core")));
+        if (cpuPercent) processor.rows.push_back(Labeled("CPU", Text(Decimal(*cpuPercent, 0) + "% of one core")));
         if (frames)
         {
             processor.rows.push_back(Labeled("Frame Rate", Text(std::to_string(FramesPerSecond(frames->averageMs)) + " fps")));
-            processor.rows.push_back(Labeled("Frame Time", Text(Printed("%.1f ms", frames->averageMs))));
-            processor.rows.push_back(Labeled("Slowest Frame", Text(Printed("%.1f ms", frames->slowestMs))));
+            processor.rows.push_back(Labeled("Frame Time", Text(Decimal(frames->averageMs, 1) + " ms")));
+            processor.rows.push_back(Labeled("Slowest Frame", Text(Decimal(frames->slowestMs, 1) + " ms")));
         }
         if (!processor.rows.empty()) sections.push_back(std::move(processor));
         if (linuxxi.report)

@@ -8,6 +8,7 @@
 #include <cmath>
 #include <map>
 #include <string>
+#include <tuple>
 #include <vector>
 
 using namespace headsup;
@@ -89,10 +90,12 @@ TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
     const char* described = w.layout.PageOf(Page::VanillaUi).description;
     CHECK(described != nullptr);
     const Form form = w.Pass();
-    CHECK(form.blocks.size() > 2 && form.blocks[1].bare && Has(form.blocks[1].rml, described) && !form.blocks[2].bare);
+    // After the sidebar and the title's switch.
+    CHECK(form.blocks.size() > 3 && form.blocks[1].id == kPageSwitchBlock);
+    CHECK(form.blocks[2].bare && Has(form.blocks[2].rml, described) && !form.blocks[3].bare);
     // A page without one starts with its first card.
     w.state.page = Page::Entities;
-    CHECK(w.layout.PageOf(Page::Entities).description == nullptr && !w.Pass().blocks[1].bare);
+    CHECK(w.layout.PageOf(Page::Entities).description == nullptr && !w.Pass().blocks[2].bare);
 }
 
 TEST(the_credits_page_comes_after_feedback_and_shows_its_words_with_no_cards)
@@ -105,15 +108,15 @@ TEST(the_credits_page_comes_after_feedback_and_shows_its_words_with_no_cards)
     CHECK(w.state.page == Page::Credits && ClassOn(form, "nav-credits", "picked"));
     const std::string_view words = w.layout.PageOf(Page::Credits).description;
     CHECK(words.find('\n') != std::string_view::npos);
-    CHECK_EQ(form.blocks.size(), 2u);
-    CHECK(form.blocks[1].bare);
+    CHECK_EQ(form.blocks.size(), 3u); // the sidebar, the title's switch and the words
+    CHECK(form.blocks[2].bare);
     // Each thanks is a bullet point.
     for (size_t start = 0; start <= words.size();)
     {
         const size_t end           = std::min(words.find('\n', start), words.size());
         const std::string_view one = words.substr(start, end - start);
         CHECK(one.starts_with("- "));
-        CHECK(Has(form.blocks[1].rml,
+        CHECK(Has(form.blocks[2].rml,
             ("<div class=\"bullet\"><span class=\"dot\">•</span>" + std::string(one.substr(2)) + "</div>").c_str()));
         start = end + 1;
     }
@@ -200,21 +203,19 @@ TEST(a_pages_controls_change_the_settings_they_show)
     CHECK(w.settings.showBar && w.settings.barHeight == 45);
     const Form form = w.Pass({{"toppanel-top-panel-height", kChangeEvent, "52"}});
     CHECK(form.changed && w.settings.barHeight == 52);
-    // Show Separator's Never clears the rest; another check then takes Never off.
+    // Show Separator picks one of Never, Between Widgets, At Ends and Both, and nothing else with it.
     const std::string separators = "toppanel-top-panel-show-separator";
     CHECK_EQ(w.settings.panelSeparators, kAllSeparators);
-    w.Pass({{separators, kClickEvent, ""}});
-    w.Pass({{separators + "-o-0", kClickEvent, ""}});
-    CHECK_EQ(w.settings.panelSeparators, 0);
-    w.Pass({{separators + "-o-0", kClickEvent, ""}}); // Never stays while nothing else is checked
-    CHECK_EQ(w.settings.panelSeparators, 0);
-    w.Pass({{separators + "-o-2", kClickEvent, ""}});
-    CHECK_EQ(w.settings.panelSeparators, static_cast<int>(SeparatorBit(Separator::EndCaps)));
-    w.Pass({{separators + "-o-1", kClickEvent, ""}});
-    CHECK_EQ(w.settings.panelSeparators, kAllSeparators);
-    w.Pass({{separators, kClickEvent, ""}});
-    // With the panel switched off by its card's checkbox, its settings are faint and take nothing.
-    const Form off = w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}, {"toppanel-top-panel-height", kChangeEvent, "30"}});
+    const std::pair<int, int> picks[] = {{0, 0}, {2, SeparatorBit(Separator::EndCaps)}, {1, SeparatorBit(Separator::Between)},
+        {3, kAllSeparators}};
+    for (const auto& [option, separators_] : picks)
+    {
+        w.Pass({{separators, kClickEvent, ""}});
+        w.Pass({{separators + "-o-" + std::to_string(option), kClickEvent, ""}});
+        CHECK_EQ(w.settings.panelSeparators, separators_);
+    }
+    // With the panel switched off by its page's switch, its settings are faint and take nothing.
+    const Form off = w.Pass({{"toppanel-on", kClickEvent, ""}, {"toppanel-top-panel-height", kChangeEvent, "30"}});
     CHECK(off.changed && !w.settings.showBar && w.settings.barHeight == 52);
     CHECK(ClassOn(off, "toppanel-top-panel-height-box", "off"));
     // The theme's dropdown, on its own page as it themes this window too, lists every theme, and a click on one picks
@@ -224,8 +225,44 @@ TEST(a_pages_controls_change_the_settings_they_show)
     w.Pass({{"theme-theme-look-theme-o-1", kClickEvent, ""}});
     CHECK(w.settings.barTheme == BarTheme::UmbraDark);
     w.state.page = Page::TopPanel;
-    w.Pass({{"toppanel-top-panel-on", kClickEvent, ""}});
+    w.Pass({{"toppanel-on", kClickEvent, ""}});
     CHECK(w.settings.showBar);
+}
+
+// Round 23: "Move the top panel ON/OFF toggle to be on the same line as the 'Top Panel' header ... it is enabling/
+// disabling the entire top panel, not just its appearance settings."
+TEST(the_top_panels_switch_is_beside_its_pages_title_and_no_cards)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    const Form form = w.Pass();
+    const FormBlock* head = Block(form, kPageSwitchBlock);
+    CHECK(head != nullptr && Has(head->rml, "id=\"toppanel-on\""));
+    CHECK(ClassOn(form, "toppanel-on", "on"));
+    for (const FormBlock& block : form.blocks)
+        CHECK(block.id == kPageSwitchBlock || !Has(block.rml, "card-on"));
+    // Another page's title has none.
+    w.state.page = Page::Theme;
+    const FormBlock* theme = Block(w.Pass(), kPageSwitchBlock);
+    CHECK(theme != nullptr && theme->rml.empty());
+}
+
+// Round 23: "Ensure existing settings are properly transferred" from the list of checks to the one pick.
+TEST(show_separators_list_opens_on_what_a_file_saved_by_its_checks_shows)
+{
+    // The checks saved their bits: none, Between Widgets', End Caps' or both.
+    const std::pair<int, int> saved[] = {{0, 0}, {SeparatorBit(Separator::Between), 1}, {SeparatorBit(Separator::EndCaps), 2},
+        {kAllSeparators, 3}};
+    for (const auto& [bits, option] : saved)
+    {
+        Window w;
+        w.settings.panelSeparators = bits;
+        w.state.page               = Page::TopPanel;
+        const std::string id = "toppanel-top-panel-show-separator";
+        const Form open      = w.Pass({{id, kClickEvent, ""}});
+        for (int o = 0; o < 4; ++o)
+            CHECK_EQ(ClassOn(open, (id + "-o-" + std::to_string(o)).c_str(), "picked"), o == option);
+    }
 }
 
 TEST(a_created_widget_goes_by_its_name_on_its_chip_in_link_widgets_list_and_over_its_settings)
@@ -271,7 +308,7 @@ TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_desi
     CHECK(shown(first, edit + "-s-0") && shown(first, edit + "-s-1"));
     CHECK(shown(first, "toppanel-widgets-part-" + slot + "-end-0") && !Has(rml(first), "-card-"));
     CHECK(shown(first, "toppanel-widgets-alignment-custom") && shown(first, "toppanel-widgets-name-custom"));
-    // Pop-out: its designer alone under the Name and the choice, and no save for a choice of what to edit.
+    // Pop-out: its designer alone under the choice, the Name after it, and no save for a choice of what to edit.
     const Form popup = w.Pass({{edit + "-s-1", kClickEvent, ""}});
     CHECK(w.state.editSide == EditSide::Popup && !popup.changed);
     CHECK(shown(popup, "toppanel-widgets-card-" + slot + "-end-0") && !Has(rml(popup), "-part-"));
@@ -286,15 +323,16 @@ TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_desi
     CHECK(w.state.editSide == EditSide::Widget);
 }
 
-TEST(a_created_widgets_pop_out_designer_is_its_caption_then_its_rows_with_no_note_between)
+TEST(a_created_widgets_pop_out_designer_is_its_sections_title_then_its_rows_with_no_note_between)
 {
     Window w;
     w.readings.settingsOf = {*CreateWidget(w.settings)};
     w.state.editSide      = EditSide::Popup;
     const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
     const size_t rows     = rml.find("<div class=\"design\">");
-    CHECK(rows != std::string::npos && rml.rfind("class=\"caption\"", rows) != std::string::npos);
-    CHECK(rml.rfind("class=\"note\"", rows) == std::string::npos);
+    const size_t title    = rml.rfind("class=\"wsection-title\"", rows);
+    CHECK(rows != std::string::npos && title != std::string::npos);
+    CHECK(rml.find("class=\"note\"", title) > rows);
 }
 
 TEST(create_new_widget_adds_one_at_the_rights_end_on_with_its_settings_asked_until_every_one_is_made)
@@ -706,7 +744,7 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
     const auto shown = [](const Form& form) {
         std::vector<std::string> ids;
         for (const FormBlock& block : form.blocks)
-            if (block.id != kSidebarBlock && !ClassOn(form, block.id.c_str(), "off")) ids.push_back(block.id);
+            if (block.id != kSidebarBlock && block.id != kPageSwitchBlock && !ClassOn(form, block.id.c_str(), "off")) ids.push_back(block.id);
         return ids;
     };
     Window w;
@@ -1061,7 +1099,7 @@ TEST(a_card_moved_to_another_page_shows_there_with_its_settings)
     w.layout     = edited.Layout();
     w.state.page = Page::ConfigMenu;
     const Form form = w.Pass({{"configmenu-mouse-pointer-pointer-fix", kClickEvent, ""}});
-    CHECK(form.blocks.size() > 1 && form.blocks[1].id == "configmenu-mouse-pointer");
+    CHECK(form.blocks.size() > 2 && form.blocks[2].id == "configmenu-mouse-pointer"); // after the sidebar and the title's switch
     CHECK(form.changed && !w.settings.fixPointer);
 }
 
@@ -1362,17 +1400,34 @@ TEST(border_color_is_the_last_color_of_the_themes_second_column)
     CHECK_EQ(w.settings.customPalette.bottomLine, (PaletteOf(BarTheme::PhoenixGold).bottomLine & 0xFF00FFFFu) | 0x00010000u);
 }
 
-TEST(the_themes_corner_rounding_starts_at_its_shapes_own_and_edits_a_copy)
+TEST(the_themes_window_rounding_starts_at_its_shapes_own_and_edits_a_copy)
 {
     Window w;
     w.state.page           = Page::Theme;
-    const std::string rounding = "theme-theme-colors-theme-rounding";
+    const std::string rounding = "theme-theme-colors-window-rounding";
     const FormBlock* card  = Block(w.Pass(), "theme-theme-colors");
     CHECK(At(card, "theme-theme-colors-theme-border-thickness") < At(card, rounding));
     CHECK(w.Pass({{rounding, kChangeEvent, "6"}}).changed);
-    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.rounding == 6);
+    CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.windowRounding == 6);
     w.Pass({{rounding, kChangeEvent, std::to_string(kShapeRounding)}});
-    CHECK_EQ(w.settings.customPalette.rounding, kShapeRounding);
+    CHECK_EQ(w.settings.customPalette.windowRounding, kShapeRounding);
+}
+
+TEST(the_top_panel_the_widgets_and_the_pop_outs_take_a_rounding_of_none_up_and_no_theme_step)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    for (const auto& [id, rounding] : {std::pair{"toppanel-top-panel-panel-rounding", &Settings::barRounding},
+             std::pair{"toppanel-widget-appearance-corner-rounding", &Settings::widgetRounding},
+             std::pair{"toppanel-popup-appearance-popup-rounding", &Settings::popupRounding},
+             std::pair{"toppanel-popup-appearance-section-rounding", &Settings::sectionRounding}})
+    {
+        w.Pass({{id, kChangeEvent, "5"}});
+        CHECK_EQ(w.settings.*rounding, 5);
+        // The step under none, where Set by Theme was, is none.
+        w.Pass({{id, kChangeEvent, "-1"}});
+        CHECK_EQ(w.settings.*rounding, 0);
+    }
 }
 
 TEST(the_themes_opacities_set_the_alpha_of_the_strip_and_of_the_pop_outs)
@@ -1563,8 +1618,10 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     CHECK(own.spacing == 10);
     w.Pass({{id("widget-spacing"), kChangeEvent, "-1"}}); // the step under 0 px
     CHECK(!own.spacing);
-    w.Pass({{id("corner-rounding"), kChangeEvent, std::to_string(kThemeRounding)}});
-    CHECK(own.rounding == kThemeRounding);
+    w.Pass({{id("corner-rounding"), kChangeEvent, "0"}});
+    CHECK(own.rounding == 0);
+    w.Pass({{id("corner-rounding"), kChangeEvent, "-1"}}); // the Top Panel's, where Set by Theme was before it
+    CHECK(!own.rounding);
     w.Pass({{id("icon-scale"), kChangeEvent, "4"}}); // four steps of 5% over 20%
     CHECK(own.iconScale == 40);
     w.Pass({{id("popup-text-scale"), kChangeEvent, "13"}}); // thirteen tenths over 0.2x
@@ -1573,6 +1630,10 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     CHECK(own.fontRatio && std::fabs(*own.fontRatio - 1.0f) < 0.001f);
     w.Pass({{id("font-ratio"), kChangeEvent, "-1"}});
     CHECK(!own.fontRatio);
+    w.Pass({{id("line-separation"), kChangeEvent, "15"}}); // fifteen tenths over 0.5x
+    CHECK(own.lineSeparation && std::fabs(*own.lineSeparation - 2.0f) < 0.001f);
+    w.Pass({{id("line-separation"), kChangeEvent, "-1"}});
+    CHECK(!own.lineSeparation);
     w.Pass({{id("show-background") + "-s-2", kClickEvent, ""}});
     CHECK(own.background == false);
     w.Pass({{id("show-background") + "-s-0", kClickEvent, ""}});
@@ -1584,8 +1645,65 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
     for (const char* key : {"widget-spacing", "show-background", "corner-rounding", "popup-text-scale"})
         CHECK(Has(rml, id(key).c_str()) && !Has(rml, id(key, "weather").c_str()));
-    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "icon-scale"})
+    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "line-separation", "icon-scale"})
         CHECK(Has(rml, id(key, "weather").c_str()));
+}
+
+TEST(a_widgets_settings_are_its_designers_section_then_the_rest_then_its_overrides)
+{
+    Window w;
+    // Where an id is in a widget's settings, past the end when it is not.
+    const auto place = [&](PanelWidget widget) {
+        w.readings.settingsOf = {widget};
+        const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
+        return [rml](const std::string& id) { return rml.find("id=\"toppanel-widgets-" + id + "\""); };
+    };
+    const auto sections = [](const auto& at, const std::string& widget) {
+        return std::tuple{at("design-" + widget + "-section"), at("settings-" + widget + "-section"), at("own-looks-" + widget + "-section")};
+    };
+    // Zone's designer, its Icon row and its overrides each in theirs, in that order.
+    const PanelWidget zone{BarWidget::Zone};
+    const auto inZone = place(zone);
+    const auto [design, settings, overrides] = sections(inZone, "zone");
+    const size_t chip = inZone("part-" + std::to_string(SlotOf(zone)) + "-" + std::to_string(static_cast<int>(WidgetPart::ZoneName)));
+    const size_t icon = inZone("icon-zone-s-2");
+    CHECK(design < chip && chip < settings && settings < icon && icon < overrides && overrides != std::string::npos);
+    // The Status Timers' own designer is in its designer's section.
+    const PanelWidget timers{BarWidget::StatusTimers};
+    w.settings.statusPins = {40, 33};
+    const auto inTimers = place(timers);
+    const auto [timersDesign, timersSettings, timersOverrides] = sections(inTimers, "statustimers");
+    const size_t pin = inTimers("pin-" + std::to_string(SlotOf(timers)) + "-40");
+    CHECK(timersDesign < pin && pin < timersSettings && timersSettings < timersOverrides && timersOverrides != std::string::npos);
+    // The Home Point has no designer, so no section for one.
+    const auto [homeDesign, homeSettings, homeOverrides] = sections(place(PanelWidget{BarWidget::HomePoint}), "homepoint");
+    CHECK(homeDesign == std::string::npos && homeSettings < homeOverrides && homeOverrides != std::string::npos);
+}
+
+TEST(an_override_left_unchanged_shows_the_top_panels_value_as_it_is_now)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone};
+    w.readings.settingsOf = {zone};
+    const auto id = [](const char* key) { return std::string("toppanel-widgets-") + key + "-zone"; };
+    w.Pass({{id("own-looks") + "-fold", kClickEvent, ""}});
+    const auto shown = [&](const char* key) {
+        const Form form = w.Pass();
+        for (const FormValue& v : form.values)
+            if (v.id == id(key) + "-val" && v.kind == FormValueKind::Text) return v.text;
+        return std::string("<none>");
+    };
+    w.settings.barWidgetSpacing = 7;
+    w.settings.barIconScale     = 85;
+    w.settings.popupTextScale   = 1.3f;
+    CHECK(shown("widget-spacing").ends_with("(7 px)"));
+    CHECK(shown("icon-scale").ends_with("(85%)"));
+    CHECK(shown("popup-text-scale").ends_with("(1.3x)"));
+    w.settings.barWidgetSpacing = 12;
+    CHECK(shown("widget-spacing").ends_with("(12 px)"));
+    // Set to its own, it shows its own.
+    w.settings.Widget(zone).spacing = 3;
+    CHECK_EQ(shown("widget-spacing"), "3 px");
 }
 
 TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
@@ -1751,25 +1869,36 @@ TEST(only_a_created_widget_has_a_pop_out_designer)
     CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, "-card-"));
 }
 
-TEST(the_pinned_status_buttons_have_no_switch_and_are_on_while_a_status_is_pinned_at_their_rank)
+TEST(the_status_timers_designer_has_a_button_named_after_each_pinned_status_which_moves_it)
 {
     Window w;
     const PanelWidget timers{BarWidget::StatusTimers};
     w.readings.settingsOf = {timers};
-    w.settings.statusPins = {40, 33}; // ranks 1 and 2
-    const std::string base = "toppanel-widgets-part-" + std::to_string(SlotOf(timers)) + "-";
-    const auto chip = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
-    const Form form = w.Pass();
-    const std::string rml = Block(form, "toppanel-widgets")->rml;
-    CHECK(Has(rml, ("id=\"" + chip(WidgetPart::StatusPin6) + "\"").c_str()));
-    CHECK(!Has(rml, (chip(WidgetPart::StatusPin1) + "-on").c_str()));
-    const auto on = [&](WidgetPart part) {
-        bool shown = false;
-        for (const FormValue& v : form.values)
-            if (v.id == chip(part) && v.kind == FormValueKind::Class && v.name == "on") shown = v.on;
-        return shown;
+    w.settings.statusPins = {40, 33};
+    w.settings.Widget(timers).pinDesign = {std::vector<uint16_t>{40, 41}, {33}};
+    const std::string base = "toppanel-widgets-pin-" + std::to_string(SlotOf(timers)) + "-";
+    const auto chip   = [&](uint16_t status) { return base + std::to_string(status); };
+    const auto rml    = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
+    const auto shown  = [&](const Form& f, uint16_t status) {
+        return Has(rml(f), ("id=\"" + chip(status) + "\"").c_str()) && Has(rml(f), (std::string(">") + StatusName(status) + "</div>").c_str());
     };
-    CHECK(on(WidgetPart::StatusPin1) && on(WidgetPart::StatusPin2) && !on(WidgetPart::StatusPin3));
+    const Form first = w.Pass();
+    CHECK(shown(first, 40) && shown(first, 33) && !shown(first, 41)); // only the pinned
+    CHECK(!Has(rml(first), "-part-")); // and no Pinned Status #1 to #6
+    // A button dropped on another goes before it, on a line's end to its end.
+    const Form moved = w.Pass({{chip(40), kDropEvent, chip(33)}});
+    CHECK(moved.changed && (w.settings.Widget(timers).pinDesign == StatusDesign{std::vector<uint16_t>{33, 40, 41}, {}}));
+    w.Pass({{base + "end-1", kDropEvent, chip(40)}});
+    CHECK((w.settings.Widget(timers).pinDesign == StatusDesign{std::vector<uint16_t>{33, 41}, {40}}));
+    // A pin its design lacks shows, where a new pin goes, and moves from there.
+    w.settings.statusPins = {40, 33, kSignetEffect};
+    CHECK(shown(w.Pass(), kSignetEffect));
+    w.Pass({{chip(33), kDropEvent, chip(kSignetEffect)}});
+    CHECK((w.settings.Widget(timers).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect, 33, 41}, {40}}));
+    // Fewer than two pins leave nothing to arrange: no designer.
+    w.settings.statusPins = {40};
+    const Form one = w.Pass();
+    CHECK(!Has(rml(one), "-pin-") && !Has(rml(one), "class=\"design\""));
 }
 
 TEST(world_infos_designer_has_a_button_for_each_thing_it_can_tell_and_each_nation)
@@ -1862,6 +1991,24 @@ TEST(a_designer_buttons_picture_is_drawn_with_its_icons_adjustment)
     CHECK(Has(rml, ("<img class=\"dmark\" src=\"" + IconSource(Icon::Star) + "\"/>").c_str()));
 }
 
+TEST(the_home_point_widgets_settings_have_no_designer_and_a_wrap_text_switch)
+{
+    Window w;
+    const PanelWidget home{BarWidget::HomePoint}, zone{BarWidget::Zone};
+    w.settings.Widget(home).on = w.settings.Widget(zone).on = true;
+    const auto rows = [&](PanelWidget widget) {
+        w.readings.settingsOf = {widget};
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    CHECK(Has(rows(zone), "class=\"design\"") && !Has(rows(zone), "wrap-text"));
+    const std::string shown = rows(home);
+    CHECK(!Has(shown, "class=\"design\"") && Has(shown, "wrap-text"));
+    CHECK(w.settings.Widget(home).wrapText);
+    w.Pass({{"toppanel-widgets-wrap-text-homepoint", kClickEvent, ""}});
+    CHECK(!w.settings.Widget(home).wrapText);
+}
+
 TEST(show_mem_text_shows_with_the_performance_widgets_memory_button_and_switches_its_label)
 {
     Window w;
@@ -1897,9 +2044,9 @@ TEST(status_icons_offers_vanilla_then_each_pack_and_with_show_status_background_
     // The second pack, after Vanilla and the first.
     CHECK(w.Pass({{icons + "-o-2", kClickEvent, ""}}).changed);
     CHECK(w.settings.barTheme == BarTheme::Custom && w.settings.customPalette.statusIcons == 1);
-    CHECK(w.settings.customPalette.statusBack);
-    w.Pass({{back, kClickEvent, ""}});
     CHECK(!w.settings.customPalette.statusBack);
+    w.Pass({{back, kClickEvent, ""}});
+    CHECK(w.settings.customPalette.statusBack);
 }
 
 TEST(display_shows_on_the_status_timers_widget_alone_and_picks_how_its_pins_show)
@@ -1921,6 +2068,25 @@ TEST(display_shows_on_the_status_timers_widget_alone_and_picks_how_its_pins_show
     CHECK(w.settings.Widget(statuses).statusDisplay == StatusDisplay::Icon);
 }
 
+TEST(timer_format_shows_on_the_status_timers_widget_alone_and_picks_how_its_times_read)
+{
+    Window w;
+    const PanelWidget statuses{BarWidget::StatusTimers}, clock{BarWidget::EarthTime};
+    w.settings.Widget(statuses).on = w.settings.Widget(clock).on = true;
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.readings.settingsOf = {clock};
+    CHECK(!Has(rows(), "timer-format"));
+    w.readings.settingsOf = {statuses};
+    CHECK(Has(rows(), "timer-format"));
+    const std::string list = "toppanel-widgets-timer-format-statustimers";
+    w.Pass({{list, kClickEvent, ""}});
+    CHECK(w.Pass({{list + "-o-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.Widget(statuses).timerFormat == TimerFormat::Short);
+}
+
 // The card: the Icon, Alignment and Linked Padding tips are shared by every widget, and named one default for them
 // all. Each widget's default, as default_settings.h has it (barBagsIcon=right, barGilIcon=hide, barTargetIcon=hide,
 // barJobAlign=left, barZoneLinkPadding=19), or the struct's for a widget it leaves out and for a copy.
@@ -1929,13 +2095,47 @@ TEST(a_shared_widget_setting_names_that_widgets_own_default)
     const WindowLayout& layout = kWindowLayout;
     const auto side  = [&](IconSide s) { return std::string(layout.OptionsOf(WindowList::IconSides)[static_cast<size_t>(s)].name); };
     const auto align = [&](WidgetAlign a) { return std::string(layout.OptionsOf(WindowList::WidgetAligns)[static_cast<size_t>(a)].name); };
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Bags), side(IconSide::Right));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Currency), side(IconSide::Hide));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Target), side(IconSide::Hide));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Zone), side(IconSide::Left));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, PanelWidget{BarWidget::Currency, 1}), side(IconSide::Left));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Job), align(WidgetAlign::Left));
-    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Zone), align(WidgetAlign::Location));
-    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Zone), "19"));
-    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Target), "0"));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Bags, {}), side(IconSide::Right));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Currency, {}), side(IconSide::Hide));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Target, {}), side(IconSide::Hide));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, BarWidget::Zone, {}), side(IconSide::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Icon, PanelWidget{BarWidget::Currency, 1}, {}), side(IconSide::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Job, {}), align(WidgetAlign::Left));
+    CHECK_EQ(WidgetDefaultText(layout, WidgetTabsRow::Alignment, BarWidget::Zone, {}), align(WidgetAlign::Location));
+    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Zone, {}), "19"));
+    CHECK(Has(WidgetDefaultText(layout, WidgetTabsRow::LinkedPadding, BarWidget::Target, {}), "0"));
+}
+
+// Every other tip that names a widget's own default fills it in the same way, as a copy gets the struct's defaults
+// where default_settings.h sets the first widget's (barEarnedAlign=right, barExpBarText=percent, zoneId=false,
+// statusDisplay=icon, clockDateFormat=monthDay).
+TEST(a_widgets_tips_name_a_copys_own_defaults)
+{
+    const WindowLayout& layout = kWindowLayout;
+    const CalendarDay day{2026, 11, 7};
+    const auto named = [&](WidgetTabsRow row, BarWidget kind, int copy) { return WidgetDefaultText(layout, row, PanelWidget{kind, copy}, day); };
+    const auto option = [&](WindowList list, size_t i) { return std::string(layout.OptionsOf(list)[i].name); };
+    CHECK_EQ(named(WidgetTabsRow::EarnedAlign, BarWidget::Job, 0), option(WindowList::Align, static_cast<size_t>(Align::Right)));
+    CHECK_EQ(named(WidgetTabsRow::EarnedAlign, BarWidget::Job, 1), option(WindowList::Align, static_cast<size_t>(Align::Left)));
+    CHECK_EQ(named(WidgetTabsRow::BarTextAlign, BarWidget::Job, 1), option(WindowList::Align, static_cast<size_t>(Align::Center)));
+    // The EXP Bar's text list starts with None.
+    CHECK_EQ(named(WidgetTabsRow::BarText, BarWidget::Job, 0), option(WindowList::ExpBarText, static_cast<size_t>(ExpText::Percent) + 1));
+    CHECK_EQ(named(WidgetTabsRow::BarText, BarWidget::Job, 1), option(WindowList::ExpBarText, 0));
+    CHECK_EQ(named(WidgetTabsRow::JobText, BarWidget::Job, 1), option(WindowList::JobText, static_cast<size_t>(JobText::MainSub)));
+    CHECK(Has(named(WidgetTabsRow::BarWidth, BarWidget::Job, 1), std::to_string(kDefaultExpBarWidth).c_str()));
+    CHECK(Has(named(WidgetTabsRow::BarHeight, BarWidget::Job, 1), std::to_string(kDefaultExpBarHeight).c_str()));
+    CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 0), layout.WordOf(WindowWord::SwitchOff).name);
+    CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 1), layout.WordOf(WindowWord::SwitchOn).name);
+    CHECK_EQ(named(WidgetTabsRow::MemText, BarWidget::Performance, 1), layout.WordOf(WindowWord::SwitchOff).name);
+    CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 0), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Icon)));
+    CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 1), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Both)));
+    // A date format is named as the list shows it, by the day.
+    CHECK_EQ(named(WidgetTabsRow::DateFormat, BarWidget::EarthTime, 0), "November 7th");
+    CHECK_EQ(named(WidgetTabsRow::DateFormat, BarWidget::EarthTime, 1), "11/07/2026");
+    CHECK_EQ(named(WidgetTabsRow::CustomIcons, BarWidget::Weather, 1), option(WindowList::CustomIcons, static_cast<size_t>(CustomIcons::Always)));
+    CHECK_EQ(named(WidgetTabsRow::Bag1, BarWidget::Bags, 1), ContainerName(0));
+    CHECK_EQ(named(WidgetTabsRow::Bag2, BarWidget::Bags, 1), ContainerName(kMogSatchel));
+    // The tips themselves leave the default to the code.
+    for (const LayoutRow& row : layout.RowsOf(*layout.SettingOf(SettingPiece::WidgetTabs)))
+        if (!named(static_cast<WidgetTabsRow>(row.row), BarWidget::Job, 1).empty()) CHECK(Said(row.tip).find(kDefaultMark) != std::string_view::npos);
 }

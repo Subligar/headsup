@@ -42,6 +42,8 @@ namespace headsup
         constexpr uint32_t kWash = 0x59, kGlow = 0x66, kLine = 0xB3, kFocus = 0x99, kPickedStart = 0x47, kPickedEnd = 0x14;
         constexpr uint32_t kAuroraFrame = 0x40, kAuroraPopupFrame = 0x66; // the accent's alpha in Aurora's edges
         constexpr float kHeadLineGap = 0.2f; // from the title row down to the line of light under it
+        // A widget's settings section: its title row, and the collapse chip at its right with its sign's bars.
+        constexpr float kSectionHead = 2.0f, kSectionChip = 1.25f, kSectionSignArm = 0.6f, kSectionSignBar = 0.12f;
         constexpr const char* kEase  = " 0.16s cubic-out"; // a control between two of its looks
         constexpr const char* kSlide = " 0.18s cubic-out"; // a switch's knob and its track
 
@@ -69,11 +71,14 @@ namespace headsup
             return css;
         }
 
-        // The game's art in place of the window's fill and edge, and of its lists' and tips'.
-        std::string SkinMenuRules(const SkinFrame& frame)
+        // The game's art in place of the window's fill and edge, and of its lists' and tips', which stay square. The
+        // window's is in a child that its border's inside rounds (ArtRules).
+        std::string SkinMenuRules(const SkinFrame& frame, float radius)
         {
-            const std::string art = "background-color:transparent;border-radius:0px;" + SkinRules(frame);
-            return "body{" + art + "}#" + std::string(kMenuPopupId) + ",#" + kMenuTipId + "{" + art + "}";
+            const float inside = std::max(0.0f, radius - static_cast<float>(frame.edge != 0 ? frame.width : 0));
+            return "body{background-color:transparent;border-radius:" + Px(radius) + ";" + SkinEdgeRules(frame) + "}" +
+                   ArtRules(std::string("#") + kMenuArtId, inside, SkinFillRules(frame)) + "#" + kMenuPopupId + ",#" +
+                   kMenuTipId + "{background-color:transparent;border-radius:0px;" + SkinRules(frame) + "}";
         }
     }
 
@@ -101,7 +106,9 @@ namespace headsup
         css += "body{position:absolute;display:block;box-sizing:border-box;width:" + Em(kWindowWidth) + ";height:" +
                Em(kWindowHeight) + ";min-width:" + Em(kMinWindowWidth) + ";min-height:" + Em(kMinWindowHeight) +
                ";background-color:" + color(c.background) + ";border:1px " + color(c.border) + ";border-radius:" +
-               Em(kCardRadius * 1.5f) + ";color:" + color(c.text) + ";font-family:\"" + look.textFont + "\";z-index:" + std::to_string(kMenuWindowZ) + ";}";
+               (look.rounding ? Px(static_cast<float>(*look.rounding)) : Em(kCardRadius * 1.5f)) + ";color:" + color(c.text) +
+               ";font-family:\"" + look.textFont + "\";z-index:" + std::to_string(kMenuWindowZ) + ";}";
+        css += std::string("#") + kMenuArtId + "{position:absolute;left:0px;top:0px;width:100%;height:100%;z-index:-1;pointer-events:none;}";
         // The window comes in a little small and grows to its size.
         // Its fade has no end of its own: it ends at the element's own opacity, under the window's filter.
         css += "body.open{animation:0.22s cubic-out window-in, 0.22s cubic-out window-fade;}";
@@ -155,6 +162,9 @@ namespace headsup
         css += "#main{position:relative;flex:1 1 0px;margin-left:" + Em(kGutter) + ";}";
         css += std::string("#") + kMenuPageTitleId + "{font-family:\"" + look.titleFont + "\";font-size:" +
                Em(kPageTitleScale) + ";color:" + color(c.heading) + ";}";
+        // A page's own switch on its title's line, just after it.
+        css += "#page-head{display:flex;flex-direction:row;align-items:center;}";
+        css += std::string("#") + kPageSwitchBlock + "{margin-left:" + Em(kCardPad) + ";}";
         css += std::string("#") + kMenuPageId + "{position:absolute;left:0px;right:0px;top:" + Em(kPageTop) + ";bottom:0px;overflow-y:auto;}";
         css += "scrollbarvertical{width:" + Em(kScrollbar) + ";}";
         css += "scrollbarvertical sliderbar{width:" + Em(kScrollbar) + ";min-height:2em;border-radius:" +
@@ -209,14 +219,22 @@ namespace headsup
                ";margin:0px auto " + Em(kSpacing) + " auto;}";
         css += ".row.indent{margin-left:" + Em(kGutter) + ";}";
         css += ".caption{color:" + color(c.muted) + ";" + raised + "}";
-        // A fold: its arrow, then its title a gutter in.
-        css += ".fold{position:relative;height:" + frame + ";margin-bottom:" + Em(kSpacing) + ";}";
-        css += ".fold .arrow{left:0px;top:" + Em(kFrame / 2.0f - kArrow) + ";}";
-        css += ".fold .arrow.open{left:0px;top:" + Em(kFrame / 2.0f - kArrowDepth / 2.0f) + ";}";
-        css += ".fold-title{padding-left:" + Em(kGutter) + ";line-height:" + frame + ";color:" + color(c.label) + ";transition:color" + kEase + ";}";
-        css += ".fold:hover .fold-title{color:" + color(c.accent) + ";}";
-        css += ".fold:hover .arrow{border-left-color:" + color(c.text) + ";}";
-        css += ".fold:hover .arrow.open{border-left-color:transparent;border-top-color:" + color(c.text) + ";}";
+        // A widget's settings section, as a pop-out's card: its title, and the collapse chip with a minus or plus.
+        css += ".wsection{padding:0px " + Em(kCardPad) + " " + Em(kSpacing) + " " + Em(kCardPad) + ";margin-bottom:" +
+               Em(kSpacing) + ";background-color:" + color(c.card) + ";border:1px " + color(c.border) + ";border-radius:" +
+               Em(kCardRadius) + ";}";
+        css += ".wsection-head{position:relative;height:" + Em(kSectionHead) + ";}";
+        css += ".wsection-title{line-height:" + Em(kSectionHead / kCardTitleScale) + ";font-family:\"" + look.titleFont +
+               "\";font-size:" + Em(kCardTitleScale) + ";color:" + color(c.heading) + ";}";
+        css += ".wfold{position:absolute;right:0px;top:" + Em((kSectionHead - kSectionChip) / 2.0f) + ";width:" + Em(kSectionChip) +
+               ";height:" + Em(kSectionChip) + ";box-sizing:border-box;border:1px " + color(c.raisedEdge) + ";border-radius:" +
+               Em(kSectionChip / 2.0f) + ";background-color:" + color(c.control) + ";transition:background-color" + kEase + ";}";
+        css += ".wfold:hover{background-color:" + color(c.hover) + ";}";
+        css += ".wsign{position:absolute;left:" + Em((kSectionChip - kSectionSignArm) / 2.0f) + ";top:" +
+               Em((kSectionChip - kSectionSignBar) / 2.0f) + ";width:" + Em(kSectionSignArm) + ";height:" + Em(kSectionSignBar) +
+               ";background-color:" + color(c.text) + ";}";
+        css += ".wsign.up{left:" + Em((kSectionChip - kSectionSignBar) / 2.0f) + ";top:" + Em((kSectionChip - kSectionSignArm) / 2.0f) +
+               ";width:" + Em(kSectionSignBar) + ";height:" + Em(kSectionSignArm) + ";}";
         // A column's name over its controls.
         css += ".head{color:" + color(c.label) + ";" + raised + "text-align:center;}";
         css += ".line-name{color:" + color(c.label) + ";" + raised + "}";
@@ -461,7 +479,7 @@ namespace headsup
                ";background-color:" + color(Opaque(c.card)) + ";pointer-events:none;}";
 
         if (look.theme == MenuTheme::Aurora) css += AuroraMenuRules(c);
-        if (look.skin) css += SkinMenuRules(*look.skin);
+        if (look.skin) css += SkinMenuRules(*look.skin, static_cast<float>(look.rounding.value_or(0)));
         // The settings of what is switched off are not shown. Last, and with the body before it, so that no rule
         // that lays a row or a control out puts it back.
         css += std::string("body .") + kOffClass + "{display:none;}";
@@ -488,7 +506,7 @@ namespace headsup
     {
         // The title's handle lets the window off the screen but for kWindowKeptOn of it, and never off the top.
         const std::string offScreen = std::to_string(static_cast<int>(std::lround(-(1.0f - kWindowKeptOn) * 100.0f))) + "%";
-        return "<rml><head><style>" + MenuStyle(look) + "</style></head><body>"
+        return "<rml><head><style>" + MenuStyle(look) + "</style></head><body><div id=\"" + kMenuArtId + "\">" + kArtRml + "</div>"
                "<handle id=\"head\" move_target=\"#document\" edge_margin=\"0px " + offScreen + " " + offScreen + " " + offScreen + "\"><div id=\"title\">HeadsUp</div><div id=\"" +
                kMenuVersionId + "\"></div></handle><div id=\"head-line\"></div>" +
                (look.developer ? std::string("<div id=\"tools\"><div class=\"") + kRaisedPill + "\" id=\"" + kMenuReloadId +
@@ -496,7 +514,8 @@ namespace headsup
                                : std::string()) +
                "<div id=\"" + kMenuCloseId +
                "\"><div class=\"cross\"></div><div class=\"cross back\"></div></div><div id=\"columns\"><div id=\"" +
-               kMenuSidebarId + "\"></div><div id=\"main\"><div id=\"" + kMenuPageTitleId + "\"></div><div id=\"" +
+               kMenuSidebarId + "\"></div><div id=\"main\"><div id=\"page-head\"><div id=\"" + kMenuPageTitleId + "\"></div><div id=\"" +
+               kPageSwitchBlock + "\"></div></div><div id=\"" +
                kMenuPageId + "\"></div></div></div><div id=\"" + kMenuPopupId + "\" class=\"hidden\"></div><div id=\"" + kMenuTipId +
                "\" class=\"hidden\"></div><handle id=\"resize\" size_target=\"#document\"><div id=\"resize-mark\"></div>"
                "</handle></body></rml>";

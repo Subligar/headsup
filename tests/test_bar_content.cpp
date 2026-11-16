@@ -27,7 +27,6 @@ TEST(a_span_of_time_reads_as_its_two_largest_units_rounded_up)
 
 TEST(printed_text_is_one_value_in_a_printf_format)
 {
-    CHECK_EQ(Printed("%.1f ms", 16.66), std::string("16.7 ms"));
     CHECK_EQ(Printed("%02d", 7), std::string("07"));
     CHECK_EQ(Printed("%03X", 0x2Au), std::string("02A"));
 }
@@ -60,13 +59,24 @@ TEST(a_ticking_span_keeps_the_room_of_its_widest_text_with_its_spaces_and_a_cell
     std::vector<Span> line{plain, far, noon};
     SteadyBoxes(line, 8.0f, width);
     // "  (" 9, three digits 24, "." 3, ")  " 9.
-    CHECK(far.box == 0.0f && line[1].box == 45.0f && line[1].trail == 6.0f && line[1].digit == 8.0f);
+    CHECK(far.box == 0.0f && line[1].box == 45.0f && line[1].lead == 6.0f && line[1].trail == 6.0f && line[1].digit == 8.0f);
     CHECK(line[2].box == 9.0f && line[2].trail == 0.0f); // the widest of its texts
     CHECK(line[0].box == 0.0f);
     // A text wider than its room keeps all of it.
     line[1].text = "  (100.0)";
     SteadyBoxes(line, 8.0f, width);
     CHECK(line[1].box == 47.0f && line[1].trail == 0.0f);
+    // Any figure ticks, room or not; spaces alone after it in its run are its margin, as RmlUi drops them between two
+    // elements: "5:" 8 and 3, "16" 16, the gap 6.
+    Span sight;
+    sight.icon = Icon::Sight;
+    std::vector<Span> timed{Text("5:16"), Text("  "), sight};
+    SteadyBoxes(timed, 8.0f, width);
+    CHECK(timed[0].box == 33.0f && timed[0].trail == 6.0f && timed[0].digit == 8.0f);
+    // Spaces starting a run of their own are that run's.
+    timed[1].align = Align::Right;
+    SteadyBoxes(timed, 8.0f, width);
+    CHECK(timed[0].box == 27.0f && timed[0].trail == 0.0f);
 }
 
 TEST(a_clocks_spans_read_as_its_text_and_keep_the_room_of_its_widest_time)

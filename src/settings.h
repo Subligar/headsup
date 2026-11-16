@@ -44,7 +44,8 @@ namespace headsup
 
     constexpr int kDefaultWidgetSpacing = 2, kMaxWidgetSpacing = 40; // pixels
     constexpr int kDefaultWidgetPadding = 8, kMaxWidgetPadding = 40; // pixels
-    constexpr int kThemeRounding = -1; // a corner's radius in pixels up to kMaxRounding, or the theme's own
+    constexpr int kThemeRounding = -1; // the help bar's corners: pixels up to kMaxRounding, or its theme's shape's own
+    constexpr int kDefaultWidgetRounding = 8, kDefaultSectionRounding = 10; // pixels
     // Where the Zone widget shows who holds its region: not at all, before or after the zone's name, or under it.
     // The Target widget's Visibility: the targets it shows for.
     enum class TargetShow : uint8_t { NpcsObjects, Players, Mobs, Pets, NoTarget };
@@ -71,6 +72,8 @@ namespace headsup
         bool zoneId = true;                         // Zone: its number after its name in the pop-out's header
         bool memText = false;                       // Performance: "Mem" before its Memory button's figures
         StatusDisplay statusDisplay = StatusDisplay::Both; // Status Timers: how each pinned status shows
+        TimerFormat timerFormat = TimerFormat::Simple; // and how its time left reads
+        StatusDesign pinDesign;                     // and where, its own while the pins are every copy's
         std::optional<ClockZone> clockZone;         // Clock: none for the computer's own
         std::optional<ClockZone> clockSecondZone = ClockZone::Japan; // its Secondary Timezone part's, the same way
         bool clock24         = true;                // its two lines
@@ -95,11 +98,12 @@ namespace headsup
         std::optional<PopupSpot> popupSpot; // where its pop-out shows while pinned; none for under its pill
         // Its own of the Top Panel's looks, for a widget with them (HasOwnLooks): none, or no font, for the Top Panel's.
         // Its pill's spacing, background, rounding and pop-out are the pill's first widget's.
-        std::optional<int> spacing, padding, rounding; // pixels; rounding may be kThemeRounding
+        std::optional<int> spacing, padding, rounding; // pixels
         std::optional<int> iconScale;                  // percent, as barIconScale
         std::optional<bool> background;
         std::string titleFont, textFont;
-        std::optional<float> fontRatio, popupTextScale;
+        std::optional<float> fontRatio, lineSeparation, popupTextScale;
+        bool wrapText = true; // Home Point: its zone's name on two lines (WidgetContent::wrap)
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.
@@ -184,6 +188,7 @@ namespace headsup
         bool widgetBackground   = false; // every widget's pill or tint shown while not hovered, over the theme's look
         int barHeight      = 45; // pixels: the least at which titles are 13 px over 11 px detail lines
         float barFontRatio = kDefaultFontRatio; // a widget's top line's size over its second line's
+        float barLineSeparation = kDefaultLineSeparation; // the clear space between its two lines, times its own
         int barIconScale   = kDefaultIconScale; // its icons, in percent of the most it holds
         std::string barTitleFont; // widget titles and popup headings; empty for the theme's
         std::string barTextFont;  // details, figures and popup text; empty for the theme's
@@ -192,10 +197,11 @@ namespace headsup
         float popupTextScale   = kDefaultPopupScale; // the pop-outs' text sizes, times their own
         float popupWidthScale  = kDefaultPopupScale; // each pop-out's sections, and so the pop-out, this much wider
         float popupHeightScale = kDefaultPopupScale; // and taller
-        int widgetRounding  = kThemeRounding; // the widgets' boxes' corners
-        int popupRounding   = kThemeRounding; // the pop-outs'
-        int sectionRounding = kThemeRounding; // their sections'
-        int helpBarRounding = kThemeRounding; // the help bar's
+        int barRounding     = 0;                       // pixels: the top panel's own corners
+        int widgetRounding  = kDefaultWidgetRounding;  // the widgets' boxes' corners
+        int popupRounding   = 0;                       // the pop-outs'
+        int sectionRounding = kDefaultSectionRounding; // their sections'
+        int helpBarRounding = kThemeRounding;          // the help bar's
         std::array<WidgetOptions, kPanelSlots> widgets = DefaultWidgets(); // by SlotOf; a copy not placed has none
         std::vector<WindowPlace> pinnedWindows;  // game windows the player put at places of their own, never shifted
         std::vector<std::string> hiddenWindows;  // game windows drawn as nothing, by short name

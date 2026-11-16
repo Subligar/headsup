@@ -1,7 +1,7 @@
 #include "json_text.h"
 
 #include <algorithm>
-#include <cstdlib>
+#include <charconv>
 
 namespace headsup
 {
@@ -149,7 +149,7 @@ namespace headsup
                 }
                 JsonValue value;
                 value.kind   = JsonValue::Kind::Number;
-                value.number = std::strtod(std::string(m_Text.substr(start, m_At - start)).c_str(), nullptr);
+                std::from_chars(m_Text.data() + start, m_Text.data() + m_At, value.number);
                 return value;
             }
 

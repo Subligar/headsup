@@ -28,6 +28,7 @@ namespace headsup
         PartyCount, PartyHealth,
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,
         WorldShip, WorldGuild, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
+        HomePointName, HomePointIcon,
         CustomName, // a created widget's Name
     };
     constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::CustomName) + 1;
@@ -41,6 +42,7 @@ namespace headsup
         bool operator==(const DesignChip&) const = default;
     };
     constexpr int kDesignLines = 2;
+    constexpr char kDesignLineBreak = '|'; // between a design's lines, and a pop-out's rows, in the settings file
     // A widget's two lines, each its parts in order, shown or not. Every part of its widget is on one line once.
     struct WidgetDesign
     {
@@ -50,6 +52,9 @@ namespace headsup
 
     // None for the game's help; for a created widget every part of every widget, icons too, and its own Name.
     std::span<const WidgetPart> PartsOf(BarWidget kind);
+    // A widget whose parts its Widget Designer arranges and its settings file keeps: Home Point's name is always on,
+    // so it has none.
+    bool HasDesigner(BarWidget kind);
     // The widget whose part it is: its icon's too, and the created widget's for its Name.
     BarWidget WidgetOfPart(WidgetPart part);
     // The part that is the widget's icon, placed by its Icon setting rather than in its design; none for a widget
@@ -82,6 +87,16 @@ namespace headsup
     // False, and nothing changed, for the last part on, unless pillShows: another widget of its pill has a part on.
     bool TurnOff(WidgetDesign& design, WidgetPart part, bool pillShows);
 
+    // The Status Timers' two lines of status ids: every status ever pinned, where it was last put; the pinned show.
+    using StatusDesign = std::array<std::vector<uint16_t>, kDesignLines>;
+    // Each pin the design lacks at the end of the line holding fewer of the pins, the first on a tie.
+    void PlacePins(StatusDesign& design, const std::vector<uint16_t>& pins);
+    // The pins as the design places them, a pin it lacks as PlacePins would.
+    StatusDesign PinnedLines(const StatusDesign& design, const std::vector<uint16_t>& pins);
+    // The status moved to toLine before the status before, or to its end when before is not there. False when nothing
+    // moved or the design lacks it.
+    bool MoveStatus(StatusDesign& design, uint16_t status, int toLine, std::optional<uint16_t> before);
+
     // What a part shows now: nothing when it has nothing to say.
     struct PartContent
     {
@@ -107,11 +122,13 @@ namespace headsup
     // What a part of icons shows while it has none now (no target, no weather yet); nothing for a part of text.
     PartMark DefaultMark(WidgetPart part);
 
-    // A copy's pop-out: rows of cards, any widget's, each card once and a row 1 to kMostCardsInRow of them.
+    // A copy's pop-out: rows of cards, any widget's, each card once and a row 1 to kMostCardsInRow of them. A card in
+    // under goes under the card before it in its row, in a column with it.
     constexpr size_t kMostCardsInRow = 3;
     struct PopupDesign
     {
         std::vector<std::vector<CardKind>> rows;
+        std::vector<CardKind> under{};
         bool operator==(const PopupDesign&) const = default;
     };
     BarWidget WidgetOfCard(CardKind card);
@@ -120,17 +137,21 @@ namespace headsup
     const char* CardFileName(CardKind card);
     // The widget's own cards in rows, as its pop-out laid them out before it had a design.
     PopupDesign DefaultPopupDesign(BarWidget kind);
-    // The rows' file names a space apart, " | " between rows; kNoCards for none.
+    // The rows' file names a space apart, a card under the one before it after a "/", " | " between rows; kNoCards for
+    // none.
     std::string PopupDesignText(const PopupDesign& design);
     // The text PopupDesignText writes back as a design, made whole; nothing for kind's default.
     PopupDesign PopupDesignFrom(BarWidget kind, std::string_view text);
-    // Each card once, the first kept; a row past kMostCardsInRow cut there, an empty one dropped.
+    // Each card once, the first kept; a row past kMostCardsInRow cut there, an empty one dropped; under only cards held
+    // and not first in their row.
     PopupDesign WholePopup(PopupDesign design);
     bool HoldsCard(const PopupDesign& design, CardKind card);
+    bool IsUnder(const PopupDesign& design, CardKind card);
     // Whether card can go in row: one with room, one holding it already, or the new row after the last.
     bool RowTakes(const PopupDesign& design, size_t row, CardKind card);
     // card put in row before the card at at (counted before the move), or at its end; row past the last makes a new
-    // one. It leaves where it was, and a row left empty goes. False when nothing changed or the row has no room.
+    // one, beside the card before it. It leaves where it was, and a row left empty goes. False when nothing changed or
+    // the row has no room.
     bool PlaceCard(PopupDesign& design, CardKind card, size_t row, size_t at);
     // False when the design does not hold it.
     bool RemoveCard(PopupDesign& design, CardKind card);

@@ -98,13 +98,15 @@
               "name": "Show Separator",
               "tip": "Where the top panel shows its separators, whatever the theme. Separator Style on the Theme page picks their shape. Default: Never.",
               "options": [
-                {"name": "Never", "tip": "No separators. Picking it clears the others."},
+                {"name": "Never", "tip": "No separators."},
                 {"name": "Between Widgets", "tip": "A separator between each widget and the next."},
-                {"name": "End Caps", "tip": "A separator at the far left and far right of the top panel."}
+                {"name": "At Ends", "tip": "A separator at the far left and far right of the top panel."},
+                {"name": "Both", "tip": "A separator between each widget and the next, and at both ends of the top panel."}
               ]
             },
             {"key": "height", "name": "Panel Height", "tip": "How tall the top panel is. The text and icons of every widget grow and shrink with it."},
             {"key": "widget-spacing", "name": "Widget Spacing", "tip": "The space between every widget and the widgets beside it. A separator between them adds its own room. Default: 2 px."},
+            {"key": "panel-rounding", "name": "Corner Rounding", "tip": "How round the corners of the top panel itself are. The widgets, the pop-outs and the help bar have their own. Default: 0 px."},
             {"key": "hide-readout", "name": "Hide Server Info", "tip": "The game's S, R and % numbers at the top right."},
             {"key": "shift-vanilla-ui", "name": "Shift Vanilla UI", "tip": "Shifts base game UI elements downward that would otherwise be partially hidden by the top bar. NOTE: UI elements that are manually positioned or hidden in the User Interface tab will be ignored."}
           ]
@@ -131,12 +133,13 @@
           "description": "How every widget on the top panel looks.",
           "settings": [
             {"key": "widget-padding", "name": "Padding", "tip": "The room inside every widget, from its edges to its text. Default: 8 px."},
-            {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of the icons in widgets. At 100% an icon is as tall as its widget can hold. Default: 80%."},
+            {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of every icon in widgets. At 100% a widget's own icon is as tall as the widget can hold, and an icon in a line of text is as tall as its letters. Default: 85%."},
             {"key": "widget-background", "name": "Show Background", "tip": "Shows every widget's box even when the pointer is not on it, on top of what the theme gives it. Default: On."},
             {"key": "title-font", "name": "Primary Font", "tip": "The font of each widget's top line, of a widget on one line, and of the pop-outs' headings. Default: the theme's."},
             {"key": "text-font", "name": "Secondary Font", "tip": "The font of each widget's second line, its numbers and the pop-outs' text. Default: the theme's."},
             {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of the primary line's text to the size of the secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Both lines grow or shrink together to fit the Panel Height. Default: 1.20x."},
-            {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets' backgrounds are. Set by Theme keeps the theme's own. Default: 8 px."}
+            {"key": "line-separation", "name": "Line Separation", "tip": "The space between each widget's top and bottom line of text. Above 1, both lines shrink together if they need to, to fit the Panel Height. Default: 1.0x."},
+            {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets' backgrounds are. Default: 8 px."}
           ]
         },
         {
@@ -147,8 +150,8 @@
             {"key": "text-scale", "name": "Text Scale", "tip": "Makes the text in the pop-outs larger or smaller. At 1x a pop-out's title is 18 px, its section titles 16 px and its text 14 px. Default: 1.0x."},
             {"key": "popup-width", "name": "Width", "tip": "Makes each pop-out and its sections wider, without changing the text. Default: 1.0x."},
             {"key": "popup-height", "name": "Height", "tip": "Makes each pop-out and its sections taller, without changing the text. Default: 1.0x."},
-            {"key": "popup-rounding", "name": "Pop-out Rounding", "tip": "How round the corners of the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."},
-            {"key": "section-rounding", "name": "Section Rounding", "tip": "How round the corners of the sections in the pop-outs are. Set by Theme keeps the theme's own. Default: Set by Theme."}
+            {"key": "popup-rounding", "name": "Pop-out Rounding", "tip": "How round the corners of the pop-outs are. Default: 0 px."},
+            {"key": "section-rounding", "name": "Section Rounding", "tip": "How round the corners of the sections in the pop-outs are. Default: 10 px."}
           ]
         },
         {
@@ -163,9 +166,10 @@
                 {"key": "edit", "name": "Edit", "tip": "Which of this widget's two designs you are editing. Top Panel Widget shows its Widget Designer and the rest of its settings. Pop-out shows its Pop-out Designer, with the pop-out itself beside these settings as you build it. It starts on Top Panel Widget."},
                 {"key": "design", "name": "Widget Designer", "tip": "Use the lines below to set what info from this widget is shown in the top bar, along with how it is organized."},
                 {"key": "popup-design", "name": "Pop-out Designer"},
-                {"key": "icon", "name": "Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is {default}."},
+                {"key": "icon", "name": "Show Icon", "tip": "Where the widget's icon shows: before its text, after it, or not at all. Default is {default}."},
                 {"key": "alignment", "name": "Alignment", "tip": "Puts the widget's content against the left or right of its pill, or in its middle. Set by Location lines it up with the side of the panel it is on. Default is {default}."},
-                {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is off."},
+                {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is {default}."},
+                {"key": "wrap-text", "name": "Wrap Text", "tip": "Puts the zone's name on two lines, broken where it keeps the widget narrowest. Off, it stays on one line. Default is {default}."},
                 {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
                 {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is {default}."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
@@ -175,38 +179,40 @@
                 {"key": "blue-magic-learned", "name": "Learned Blue Magic", "tip": "How a TP move whose blue magic you already know is shown: still blue with a star after it, or as plain text. Default is Star."},
                 {"key": "currency-1", "name": "Currency 1", "tip": "The currency the widget's Currency 1 buttons show. Default is Gil."},
                 {"key": "currency-2", "name": "Currency 2", "tip": "The currency the widget's Currency 2 buttons show. Default is Conquest Points, your nation's."},
-                {"key": "custom-icons", "name": "Use Custom Icons", "tip": "When the widget and its pop-out show HeadsUp's own weather pictures in place of the game's element icons. Default is Always."},
+                {"key": "custom-icons", "name": "Use Custom Icons", "tip": "When the widget and its pop-out show HeadsUp's own weather pictures in place of the game's element icons. Default is {default}."},
                 {"key": "ship", "name": "Tracked Ship", "tip": "The boat or airship whose next sailing the Ship button shows."},
                 {"key": "guild", "name": "Tracked Guild", "tip": "The guild shop whose hours the Guild button shows."},
-                {"key": "bag-1", "name": "Bag 1", "tip": "The bag the widget's Bag 1 buttons show. Hover the widget for every bag. Default is Inventory."},
-                {"key": "bag-2", "name": "Bag 2", "tip": "The bag the widget's Bag 2 buttons show. Default is Satchel."},
+                {"key": "bag-1", "name": "Bag 1", "tip": "The bag the widget's Bag 1 buttons show. Hover the widget for every bag. Default is {default}."},
+                {"key": "bag-2", "name": "Bag 2", "tip": "The bag the widget's Bag 2 buttons show. Default is {default}."},
                 {"key": "local-timezone", "name": "Local Timezone", "tip": "The zone of the Local Time button. Automatic is your computer's. Another zone goes before the time, as in PDT 21:07. Default is Automatic."},
                 {"key": "secondary-timezone", "name": "Secondary Timezone", "tip": "The zone of the Secondary Timezone button, which goes before its time, as in JST 13:07. Default is Japan (JST), the server's time, which the daily reset and the conquest tally go by."},
                 {"key": "24-hour", "name": "24-Hour"},
                 {"key": "seconds", "name": "Seconds", "tip": "Adds seconds to the Local Time button and to the time in the pop-out's title."},
-                {"key": "date-format", "name": "Date Format", "tip": "How the Local Date button writes the date. Default is MM/DD."},
-                {"key": "bar-width", "name": "Bar Width", "tip": "How long the EXP Bar is. Default is 250 px."},
-                {"key": "bar-height", "name": "Bar Height", "tip": "How thick the EXP Bar is. Default is 8 px."},
+                {"key": "date-format", "name": "Date Format", "tip": "How the Local Date button writes the date. Default is {default}."},
+                {"key": "bar-width", "name": "Bar Width", "tip": "How long the EXP Bar is. Default is {default}."},
+                {"key": "bar-height", "name": "Bar Height", "tip": "How thick the EXP Bar is. Default is {default}."},
                 {"key": "bar-back", "name": "EXP Bar Background", "tip": "The color of the EXP Bar behind its fill. Set by Theme uses your theme's color. Picking a color switches it to Custom. Default is Set by Theme."},
                 {"key": "bar-color", "name": "EXP Bar Color", "tip": "The color of the EXP Bar's fill. Set by Theme uses your theme's colors. Picking a color switches it to Custom. Default is Set by Theme."},
-                {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows on it. Default is EXP Percentage."},
-                {"key": "bar-text-align", "name": "Bar Text Alignment", "tip": "Puts the EXP Bar's text at its left or right end, or in its middle. Default is Center."},
-                {"key": "mem-text", "name": "Show Mem Text", "tip": "Puts \"Mem\" before the Memory button's figures. Off, the figures alone. Default is off."},
-                {"key": "status-display", "name": "Display", "tip": "What shows for each pinned status: its name, its icon, or both with the icon first. Default is Only Icon."},
-                {"key": "earned-align", "name": "Earned EXP Alignment", "tip": "Puts the Earned EXP text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Right."},
-                {"key": "tnl-align", "name": "EXP TNL Alignment", "tip": "Puts the EXP Til Next Level text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
-                {"key": "percent-align", "name": "EXP Percentage Alignment", "tip": "Puts the EXP Percentage text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
-                {"key": "job-text", "name": "Job Text", "tip": "How Job Info and the EXP Bar's Job Text write your jobs and levels. Default is Main 75 / Sub 37."},
-                {"key": "job-text-align", "name": "Job Text Alignment", "tip": "Puts the Job Info text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is Left."},
-                {"key": "own-looks", "name": "Overrides"},
+                {"key": "bar-text", "name": "Bar Text", "tip": "What the EXP Bar shows on it. Default is {default}."},
+                {"key": "bar-text-align", "name": "Bar Text Alignment", "tip": "Puts the EXP Bar's text at its left or right end, or in its middle. Default is {default}."},
+                {"key": "mem-text", "name": "Show Mem Text", "tip": "Puts \"Mem\" before the Memory button's figures. Off, the figures alone. Default is {default}."},
+                {"key": "status-display", "name": "Display", "tip": "What shows for each pinned status: its name, its icon, or both with the icon first. Default is {default}."},
+                {"key": "timer-format", "name": "Timer Format", "tip": "How each pinned status's time left reads on the widget. The pop-out keeps its own. Default is {default}."},
+                {"key": "earned-align", "name": "Earned EXP Alignment", "tip": "Puts the Earned EXP text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
+                {"key": "tnl-align", "name": "EXP TNL Alignment", "tip": "Puts the EXP Til Next Level text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
+                {"key": "percent-align", "name": "EXP Percentage Alignment", "tip": "Puts the EXP Percentage text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
+                {"key": "job-text", "name": "Job Text", "tip": "How Job Info and the EXP Bar's Job Text write your jobs and levels. Default is {default}."},
+                {"key": "job-text-align", "name": "Job Text Alignment", "tip": "Puts the Job Info text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
+                {"key": "own-looks", "name": "Appearance Overrides"},
                 {"key": "widget-spacing", "name": "Widget Spacing", "tip": "The space between this widget and the widgets beside it. The gap between two widgets is the average of their spacings. Default: the Top Panel's."},
                 {"key": "widget-padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default: the Top Panel's."},
                 {"key": "show-background", "name": "Show Background", "tip": "Shows this widget's box even when the pointer is not on it, on top of what the theme gives it. Default: the Top Panel's."},
-                {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of this widget's background are. Set by Theme keeps the theme's own. Default: the Top Panel's."},
+                {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of this widget's background are. Default: the Top Panel's."},
                 {"key": "primary-font", "name": "Primary Font", "tip": "The font of this widget's top line, of the widget on one line, and of its pop-out's headings. Default: the Top Panel's."},
                 {"key": "secondary-font", "name": "Secondary Font", "tip": "The font of this widget's second line, its numbers and its pop-out's text. Default: the Top Panel's."},
                 {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of this widget's primary line's text to the size of its secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Default: the Top Panel's."},
-                {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of this widget's icons. At 100% an icon is as tall as the widget can hold. Default: the Top Panel's."},
+                {"key": "line-separation", "name": "Line Separation", "tip": "The space between this widget's top and bottom line of text. Above 1, both lines shrink together if they need to, to fit the Panel Height. Default: the Top Panel's."},
+                {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of every icon in this widget. At 100% its own icon is as tall as the widget can hold, and an icon in a line of text is as tall as its letters. Default: the Top Panel's."},
                 {"key": "popup-text-scale", "name": "Pop-out Text Scale", "tip": "Makes the text in this widget's pop-out larger or smaller. Default: the Top Panel's."}
               ],
               "words": [
@@ -219,7 +225,8 @@
                 {"key": "add-from", "name": "Add From", "tip": "The widget whose buttons or sections are listed under this, for you to drag into the lines or rows above. It starts on Zone."},
                 {"key": "popup-row-full", "name": "A row can hold at most 3 sections."},
                 {"key": "popup-new-row", "name": "Drop a section here for a new row"},
-                {"key": "top-panel", "name": "Top Panel's"}
+                {"key": "settings", "name": "Settings"},
+                {"key": "unchanged", "name": "Unchanged"}
               ]
             }
           ]
@@ -454,7 +461,7 @@
               ]
             },
             {"key": "theme-border-thickness", "name": "Border Thickness", "tip": "How many pixels thick the border is: the line along the strip's foot, or with Vanilla Window the frame around the top panel, the help bar, the pop-outs, the fishing bar and this window. 0 for none."},
-            {"key": "theme-rounding", "name": "Corner Rounding", "tip": "How round the corners of the widgets, the pop-outs, their sections and the help bar are, wherever those are Set by Theme. Auto keeps the corners of the theme's own style. Default: Auto."},
+            {"key": "window-rounding", "name": "Window Rounding", "tip": "How round the corners of HeadsUp's windows are, such as this settings window. It leaves the top panel, the widgets, the pop-outs and the help bar to their own Corner Rounding. Auto keeps the corners of the theme's own style. Default: Auto."},
             {"key": "popup-opacity", "name": "Pop-out Opacity", "tip": "How much of the game shows through the pop-outs. At 100% none of it does."},
             {
               "key": "status-icons",
@@ -464,7 +471,7 @@
                 {"key": "vanilla", "name": "Vanilla"}
               ]
             },
-            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: on."},
+            {"key": "status-background", "name": "Show Status Background", "tip": "Puts a buff's or a debuff's background behind each status icon. Default: off."},
             {
               "key": "theme-palette",
               "rows": [
@@ -1116,6 +1123,7 @@
         {"name": "Status Timers", "tip": "The time left on each status you pin. Hover for your favorite statuses, with a pin to show one here, and every other status with a star to add it to them."},
         {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."},
         {"name": "Settings", "tip": "Just the settings cog. Click it to open these settings on the Top Panel page, at Widget Layout."},
+        {"name": "Home Point", "tip": "The zone your home point is in."},
         {"name": "Custom Widget", "tip": "A widget you made. It can show any widget's buttons on the panel and any widget's sections in its pop-out."}
       ]
     },
@@ -1307,7 +1315,7 @@
     {
       "key": "setup-widget-groups",
       "options": [
-        {"name": "Where You Are", "tip": "The zone, its weather and what is around you."},
+        {"name": "Where You Are", "tip": "The zone, its weather, your home point and what is around you."},
         {"name": "Time", "tip": "Your computer's time."},
         {"name": "You", "tip": "Your job, experience, gil, inventory, party and target."},
         {"name": "System", "tip": "Your frame rate, connection, memory and the game's help line."}
@@ -1405,6 +1413,8 @@
         {"name": "Bastok", "tip": "Bastok's crest and how many regions it holds."},
         {"name": "Windurst", "tip": "Windurst's crest and how many regions it holds."},
         {"name": "Beastmen", "tip": "The beastmen's crest and how many regions they hold."},
+        {"name": "Home Point Name", "tip": "The zone your home point is in."},
+        {"name": "Home Point Icon", "tip": "A house with a map pin."},
         {"name": "Widget Name", "tip": "This widget's name, as its Name setting has it."}
       ]
     },
@@ -1476,11 +1486,19 @@
       ]
     },
     {
+      "key": "timer-format",
+      "options": [
+        {"name": "Full", "tip": "Hours, minutes and seconds: 1:05:09."},
+        {"name": "Simple", "tip": "Each part that counts: 1h 5m, 5m 9s or 9s."},
+        {"name": "Short", "tip": "The biggest part alone: 12h, 1.5h, 25m, 2.5m or 9s."}
+      ]
+    },
+    {
       "key": "icon-sides",
       "options": [
         {"name": "Hide"},
-        {"name": "Show on Left"},
-        {"name": "Show on Right"}
+        {"name": "On Left"},
+        {"name": "On Right"}
       ]
     },
     {
@@ -1493,7 +1511,7 @@
     {
       "key": "own-background",
       "options": [
-        {"name": "Top Panel's"},
+        {"name": "Unchanged"},
         {"name": "On"},
         {"name": "Off"}
       ]

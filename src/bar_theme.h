@@ -45,12 +45,12 @@ namespace headsup
         uint32_t text, heading, tagFill, tagBorder, tagText;
         uint32_t highlight; // over a hovered widget
         int border = 1;     // how many of the strip's last rows are bottomLine, or how wide the art's edge is
-        int rounding = kShapeRounding; // the corners of whatever is rounded by the theme
+        int windowRounding = kShapeRounding; // the corners of HeadsUp's windows, the settings window's
         BarBackground background = BarBackground::Gradient; // Plain is stripTop alone
         int windowType    = kFollowGameWindow; // the art's, for the Window background
         DashMark separator = DashMark::Diamond; // the panel's separators, and what a nameplate's dash is drawn as
         int statusIcons = kHdStatusIcons;       // the game's status icons or a pack's
-        bool statusBack = true;                 // a buff's or debuff's background behind each status icon
+        bool statusBack = false;                // a buff's or debuff's background behind each status icon
         BarTheme parent    = BarTheme::PhoenixGold; // a custom theme's: the built-in one it was first copied from
         bool operator==(const BarPalette&) const = default;
     };
@@ -77,7 +77,7 @@ namespace headsup
         "custom", "gameWindow"};
 
     // A saved theme's file, in the themes folder: a [theme] section of its palette's parts by kPaletteColors' names,
-    // Shape, Border, Rounding, Background, WindowType, Separator, StatusIcons, StatusBackground and Parent. Read back, a part it lacks or that cannot be
+    // Shape, Border, WindowRounding, Background, WindowType, Separator, StatusIcons, StatusBackground and Parent. Read back, a part it lacks or that cannot be
     // read is Phoenix Gold's, and a file of none of the colors is no theme.
     constexpr const char* kThemeExtensions[] = {".ini"};
     std::string ThemeFileText(const BarPalette& palette);
@@ -94,6 +94,7 @@ namespace headsup
         float title;        // the most, as FitTextRow makes both lines smaller when their ink would not fit
         float subtitle;     // the title over the Font Size Ratio: the most, as the title's is
         float icon;         // Icon Scale's share of the pill's inside
+        float iconShare;    // Icon Scale over 100, which an icon in a line is of its line's size
         float padding;      // inside a widget, left and right
         float gap;          // between pills, around the target, after a widget's icons and around a popup
         float cap;          // an ornate end cap's width, with clear space either side of its diamond
@@ -109,6 +110,7 @@ namespace headsup
         float panelRadius;  // by shape; none for the art's corners
         float popupWidth;   // each pop-out section's width, times its own
         float popupHeight;  // and its height
+        float lineSeparation; // the clear space between a widget's two lines, times FitTextRow's
         bool operator==(const BarMetrics&) const = default;
     };
     // A pop-out's text, title and card headings at a Text Scale of 1, and the text size its spacing is set by.
@@ -116,7 +118,7 @@ namespace headsup
     constexpr float kPillBorder      = 1.0f;                           // a pill's or frame's
     BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio = kDefaultFontRatio,
         float popupTextScale = kDefaultPopupScale, int iconScale = kDefaultIconScale, float popupWidth = kDefaultPopupScale,
-        float popupHeight = kDefaultPopupScale);
+        float popupHeight = kDefaultPopupScale, float lineSeparation = kDefaultLineSeparation);
 
     // Ornate titles are Marcellus SC; everything else is the bundled Barlow Condensed.
     const char* TitleFont(BarShape shape);

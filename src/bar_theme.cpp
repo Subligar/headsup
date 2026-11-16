@@ -15,7 +15,7 @@ namespace headsup
     {
         constexpr const char* kThemeSection = "theme";
         constexpr const char* kShapeKey = "Shape", *kBorderKey = "Border", *kBackgroundKey = "Background";
-        constexpr const char* kWindowTypeKey = "WindowType", *kRoundingKey = "Rounding", *kSeparatorKey = "Separator";
+        constexpr const char* kWindowTypeKey = "WindowType", *kWindowRoundingKey = "WindowRounding", *kSeparatorKey = "Separator";
         constexpr const char* kParentKey = "Parent";
         constexpr const char* kStatusIconsKey = "StatusIcons", *kStatusBackKey = "StatusBackground";
         constexpr const char* kTrue = "true", *kFalse = "false";
@@ -89,21 +89,22 @@ namespace headsup
     }
 
     BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio, float popupTextScale, int iconScale, float popupWidth,
-        float popupHeight)
+        float popupHeight, float lineSeparation)
     {
         const float h = static_cast<float>(std::clamp(barHeight, kMinBarHeight, kMaxBarHeight));
         // The pop-out's spacing stands for the height whose share its text is at a Text Scale of 1.
         const float popupText = kPopupTextPixels * popupTextScale, u = kPopupSpacingPixels / kPopupTextShare;
         const float title     = kTitleShare * h;
         const float pill      = kPillHeightShare * h;
+        const float iconShare = static_cast<float>(iconScale) / 100.0f;
         return BarMetrics{.height = h, .title = title, .subtitle = title / fontRatio,
-            .icon = static_cast<float>(iconScale) / 100.0f * (std::round(pill) - 2.0f * kPillBorder), .padding = kPaddingShare * h,
+            .icon = iconShare * (std::round(pill) - 2.0f * kPillBorder), .iconShare = iconShare, .padding = kPaddingShare * h,
             .gap = kGapShare * h, .cap = kCapShare * h, .diamond = kDiamondShare * h, .pillHeight = pill,
             .pillRadius = kPillRadiusShare * h, .below = kBelowShare * h, .popupText = popupText,
             .popupTitle = kPopupTitlePixels * popupTextScale, .heading = kPopupHeadingPixels * popupTextScale,
             .popupPadding = kPopupPaddingShare * u, .rowGap = kRowGapShare * u,
             .panelRadius = (shape == BarShape::Ornate ? kOrnateRadiusShare : shape == BarShape::Window ? 0.0f : kPillsRadiusShare) * u,
-            .popupWidth = popupWidth, .popupHeight = popupHeight};
+            .popupWidth = popupWidth, .popupHeight = popupHeight, .lineSeparation = lineSeparation};
     }
 
     const char* TitleFont(BarShape shape) { return shape == BarShape::Ornate ? kMarcellusSC : kDetailFont; }
@@ -121,7 +122,7 @@ namespace headsup
         values.push_back({kBorderKey, std::to_string(palette.border)});
         values.push_back({kBackgroundKey, kBarBackgroundNames[static_cast<int>(palette.background)]});
         values.push_back({kWindowTypeKey, std::to_string(palette.windowType)});
-        values.push_back({kRoundingKey, std::to_string(palette.rounding)});
+        values.push_back({kWindowRoundingKey, std::to_string(palette.windowRounding)});
         values.push_back({kSeparatorKey, kDashMarkNames[static_cast<int>(palette.separator)]});
         values.push_back({kStatusIconsKey, StatusIconsName(palette.statusIcons)});
         values.push_back({kStatusBackKey, palette.statusBack ? kTrue : kFalse});
@@ -152,8 +153,8 @@ namespace headsup
             palette.border = std::clamp(*border, 0, kMaxStripBorder);
         if (const std::optional<int> type = NumberIn(IniValue(file, kThemeSection, kWindowTypeKey), 10))
             palette.windowType = std::clamp(*type, kFollowGameWindow, kWindowTypes);
-        if (const std::optional<int> rounding = NumberIn(IniValue(file, kThemeSection, kRoundingKey), 10))
-            palette.rounding = std::clamp(*rounding, kShapeRounding, kMaxRounding);
+        if (const std::optional<int> rounding = NumberIn(IniValue(file, kThemeSection, kWindowRoundingKey), 10))
+            palette.windowRounding = std::clamp(*rounding, kShapeRounding, kMaxRounding);
         if (const std::optional<std::string> icons = IniValue(file, kThemeSection, kStatusIconsKey))
             palette.statusIcons = StatusIconsNamed(*icons, palette.statusIcons);
         if (const std::optional<std::string> back = IniValue(file, kThemeSection, kStatusBackKey)) palette.statusBack = *back == kTrue;

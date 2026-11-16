@@ -824,6 +824,39 @@ TEST(text_shrinks_only_when_its_ink_would_not_fit)
     CHECK(std::fabs(static_cast<float>(tight.detail) / static_cast<float>(tight.title) - m.subtitle / m.title) < 0.1f);
 }
 
+// The card "Line Separation setting": the clear space between a widget's two lines, times its Line Separation.
+TEST(line_separation_spaces_a_widgets_two_lines_and_shrinks_them_only_to_fit)
+{
+    const auto gapOf = [](const TextRow& t, LineInk (*ink)(bool, int)) {
+        return (t.detailY + ink(false, t.detail).top) - (t.titleY + ink(true, t.title).bottom);
+    };
+    for (const BarShape shape : {BarShape::Pills, BarShape::Ornate})
+    {
+        // 64 px tall, where small ink leaves room for any gap: 0.08 of the height, 5 px, at 1x.
+        BarMetrics m          = MetricsFor(64, shape);
+        const TextRow natural = FitTextRow(m, SmallInk);
+        CHECK(std::fabs(gapOf(natural, SmallInk) - 5.0f) < 0.01f);
+        for (const auto& [separation, gap] : {std::pair{2.0f, 10.0f}, std::pair{0.5f, 2.5f}})
+        {
+            m.lineSeparation = separation;
+            const TextRow t  = FitTextRow(m, SmallInk);
+            CHECK(std::fabs(gapOf(t, SmallInk) - gap) < 0.01f);
+            CHECK(t.title == natural.title && t.detail == natural.detail && t.alone == natural.alone);
+        }
+        // 36 px tall, where full-size ink fills the pill: twice the gap shrinks both lines together, never under
+        // twice the 3 px least, and keeps them inside it.
+        BarMetrics tight = MetricsFor(36, shape);
+        const TextRow one = FitTextRow(tight, FakeInk);
+        tight.lineSeparation = 2.0f;
+        const TextRow two    = FitTextRow(tight, FakeInk);
+        CHECK(two.title < one.title && two.detail <= one.detail && two.alone == one.alone);
+        CHECK(gapOf(two, FakeInk) >= 6.0f - 0.01f && gapOf(two, FakeInk) > gapOf(one, FakeInk));
+        const BarRow row = PillRow(tight);
+        CHECK(two.titleY + FakeInk(true, two.title).top >= row.y + 1.0f);
+        CHECK(two.detailY + FakeInk(false, two.detail).bottom <= row.y + row.height - 1.0f + 0.01f);
+    }
+}
+
 TEST(a_target_too_narrow_for_its_padding_icons_and_a_few_letters_is_dropped)
 {
     const auto natural = Widths(100, 0, 120, 300, 90, 60, 50);

@@ -311,11 +311,14 @@ namespace headsup
         }
     }
 
-    std::string SkinRules(const SkinFrame& f)
+    std::string SkinRules(const SkinFrame& f) { return SkinFillRules(f) + SkinEdgeRules(f); }
+
+    std::string SkinFillRules(const SkinFrame& f) { return "decorator:" + Fill(f) + ";"; }
+
+    std::string SkinEdgeRules(const SkinFrame& f)
     {
-        return "box-sizing:border-box;decorator:" + Fill(f) + ";" +
-               (f.edge != 0 ? "border:" + RcssNumber(static_cast<float>(f.width)) + "px " + RcssColor(f.edge) + ";"
-                            : std::string("border-width:0px;"));
+        return "box-sizing:border-box;" + (f.edge != 0 ? "border:" + RcssNumber(static_cast<float>(f.width)) + "px " + RcssColor(f.edge) + ";"
+                                                       : std::string("border-width:0px;"));
     }
 
     int SkinTypeOf(int windowType, std::optional<int> gameType)

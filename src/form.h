@@ -49,6 +49,9 @@ namespace headsup
     constexpr const char* kWheelEvent  = "wheel";  // the wheel turned over an element of kWheelClass: notches, toward you above 0
     // An element of kPanClass dragged: across and down, shares of its size, a space apart, summed since the last pass.
     constexpr const char* kPanEvent    = "pan";
+    constexpr int kEventPlaces         = 6; // a wheel's and a pan's decimals, as std::to_string wrote them
+    std::string PanText(float across, float down);
+    std::pair<float, float> PanOf(std::string_view text);
     constexpr const char* kCaretEvent  = "caret"; // a text box's caret as it loses the keyboard
     constexpr const char* kDropEvent   = "drop";
     // After the open control's id: a click on its popup that is on none of the popup's parts, which is neither a
@@ -74,6 +77,7 @@ namespace headsup
     constexpr const char* kCompactCheck = "check";       // a toggle among other controls
     constexpr const char* kWideCheck    = "check wide";  // a row's toggle, as wide as a slider
     constexpr const char* kCardCheck    = "check card-on"; // a card title's switch
+    constexpr const char* kPageCheck    = "check worded";  // a page title's
     constexpr const char* kWordedCheck  = "check worded";  // a toggle among a row's controls that says its state
     constexpr const char* kPickedClass  = "picked";  // the chosen one of a row of choices
     constexpr const char* kWheelClass   = "wheel";   // takes the wheel turned over it, which then scrolls nothing
@@ -136,6 +140,7 @@ namespace headsup
         bool operator==(const FormBlock&) const = default;
     };
     constexpr const char* kSidebarBlock = "sidebar";
+    constexpr const char* kPageSwitchBlock = "page-switch"; // beside the page's title
 
     // A text box to give the keyboard, with its caret at this byte: where a tag was just taken out beside it.
     struct FormFocus
@@ -209,6 +214,9 @@ namespace headsup
         // and set when it was clicked.
         bool BeginCard(const char* title, bool* enabled = nullptr, const char* about = nullptr, bool* reset = nullptr,
             bool differs = false);
+        // What the page's title says the whole page is for, on or off: a switch of this id beside it; none for a
+        // page with none.
+        void PageSwitch(const std::string& id, bool* enabled);
         // A block with the id a card of that title would have and no title or card of its own; EndCard ends it.
         void BeginBare(const char* title);
         void EndCard();
@@ -244,7 +252,8 @@ namespace headsup
         // A number stepped one at a time by the arrows either side of it, for one whose change moves the window under
         // the pointer, as a slider's would.
         void Stepper(const char* label, int& value, int lo, int hi, const char* format, const char* tip);
-        void SliderFloat(const char* label, float& value, float lo, float hi, const char* format, const char* tip);
+        // It steps by the last of the places it shows, its unit after them.
+        void SliderFloat(const char* label, float& value, float lo, float hi, int places, const char* unit, const char* tip);
         // A slider over a few named steps, the first being 0: it shows the name of the one it is on.
         void SliderNamed(const char* label, int& value, const char* const* names, int count, const char* tip);
         // A dropdown of the whole numbers from first to last, either way round, each shown as text gives it.
@@ -363,8 +372,11 @@ namespace headsup
         // A tag as a chip that reads its name, after its icon when it draws one. Only a drag places it: it drops onto a
         // line's box, and a click puts it nowhere.
         void TagChip(Tag tag);
-        // A title over the rows that follow, shut until clicked: true while they are to be built.
-        bool Fold(const char* title);
+        // A bubble of the rows that follow until EndSection, as a pop-out's card: its title, and for one that folds the
+        // pop-out's collapse chip at its right. One that folds starts shut: true while its rows are to be built. One
+        // left with nothing in it is left out.
+        bool BeginSection(const char* title, bool folds);
+        void EndSection();
         // Muted or plain text among a row's controls.
         void Caption(const char* text, const char* classes = "caption", float width = 0.0f);
         // Markup of the page's own, for what the kit has no control for; and a value for an element of it.
@@ -402,6 +414,8 @@ namespace headsup
         std::string ListRow(const std::string& control, int index, const std::string& name, bool picked,
             const std::string& tip = {}, bool markup = false);
         // Opens the popup with rows, and tells which of them was clicked.
+        // An on and off switch saying which it is, of these classes, flipped by its click.
+        void OnSwitch(const std::string& id, const char* classes, bool& enabled);
         bool ListChoice(const std::string& control, std::string rows, int count, int& chosen);
         // A slider's newest whole value, when it moved.
         void TakeWhole(const std::string& slider, int& value, int lo, int hi, int step = 1);
@@ -425,6 +439,8 @@ namespace headsup
         bool m_CardSwitched = false;  // whether the card has a switch in its title
         int m_ShownInCard = 0;        // its parts that show
         std::string m_CardId;
+        size_t m_SectionAt = 0, m_SectionBody = 0, m_SectionValues = 0; // where the open section's markup and values begin
+        bool m_SectionFolds = false;
         std::unordered_set<std::string> m_Ids; // this pass's, to keep them apart
     };
 }

@@ -19,6 +19,7 @@ namespace headsup
         constexpr FileAdjust kAdjusts[] = {
             {"bag.png", {0.0f, 1.0f, 1.0f}},
             {"clock.png", {0.0f, 0.0f, 0.8f}},
+            {kCogName, {0.0f, 1.0f, 0.8f}},
             {kSanDoriaCrestChunk, {0.0f, kConquestCrestDrop, kCrestScale}},
             {kBastokCrestChunk, {0.0f, kConquestCrestDrop, kCrestScale}},
             {kWindurstCrestChunk, {0.0f, kConquestCrestDrop, kCrestScale}},

@@ -24,6 +24,7 @@ namespace headsup
         constexpr P kStatus[] = {P::StatusPin1, P::StatusPin2, P::StatusPin3, P::StatusPin4, P::StatusPin5, P::StatusPin6};
         constexpr P kWorld[]  = {P::WorldShip, P::WorldGuild, P::WorldSanDoria, P::WorldBastok,
             P::WorldWindurst, P::WorldBeastmen};
+        constexpr P kHomePoint[] = {P::HomePointName};
 
         // By WidgetPart.
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
@@ -31,15 +32,15 @@ namespace headsup
             "coin", "name1", "name2", "amount1", "amount2", "icon1", "icon2", "count1", "count2", "name1", "name2", "icon", "time", "server", "vana", "icon", "date", "jobs", "earned", "tonext", "percent", "bar",
             "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "pin1", "pin2",
             "pin3", "pin4", "pin5", "pin6", "ship",
-            "guild", "sandoria", "bastok", "windurst", "beastmen", "name"};
+            "guild", "sandoria", "bastok", "windurst", "beastmen", "name", "icon", "name"};
 
         // As each widget showed before it had a design.
         constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation", "weather | day time -date -moon",
             "name distance -detection | level player -weak", "amount1 | icon2 amount2 -name1 -name2 -icon1", "count1 | name1", "time | -server -vana -date", "", "-fps sent received percent -memory messages |",
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
-            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |"};
+            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "name |"};
 
-        constexpr char kLineBreak = '|', kOffMark = '-', kSpace = ' ', kWidgetMark = '.';
+        constexpr char kOffMark = '-', kSpace = ' ', kWidgetMark = '.', kUnderMark = '/';
 
         // A part's name in kind's design: its own, or after its widget's.
         std::string PartKey(BarWidget kind, WidgetPart part)
@@ -85,7 +86,7 @@ namespace headsup
             "performance.connection performance.session | performance.memory performance.processor"
             " | performance.playOnline performance.linuxxi performance.lua",
             "job.exp", "party.members", "statusTimers.favorites | statusTimers.buffs | statusTimers.debuffs",
-            "world.conquest world.travel world.calendar | world.guilds", "", ""};
+            "world.conquest world.travel/world.calendar | world.guilds", "", "", ""};
         constexpr const char* kNoCards = "none"; // a pop-out design with no card, which "" would not be
 
         bool Holds(std::span<const WidgetPart> parts, WidgetPart part) { return std::ranges::find(parts, part) != parts.end(); }
@@ -107,7 +108,7 @@ namespace headsup
                         if (name == PartKey(kind, part)) design.lines[static_cast<size_t>(line)].push_back({part, !off});
                 }
                 if (at == std::string_view::npos) break;
-                if (text[at] == kLineBreak) line = std::min(line + 1, kDesignLines - 1);
+                if (text[at] == kDesignLineBreak) line = std::min(line + 1, kDesignLines - 1);
                 text.remove_prefix(at + 1);
             }
             return design;
@@ -120,14 +121,20 @@ namespace headsup
         PopupDesign ParsedCards(std::string_view text)
         {
             PopupDesign design{{{}}};
+            bool under = false; // the next card goes under the one before it
             while (!text.empty())
             {
-                const size_t at = text.find_first_of(" |");
+                const size_t at = text.find_first_of(std::string{kSpace, kDesignLineBreak, kUnderMark});
                 const std::string_view word = text.substr(0, at);
                 for (int c = 0; c < kCardKindCount; ++c)
-                    if (word == kCards[c].file) design.rows.back().push_back(static_cast<CardKind>(c));
+                    if (word == kCards[c].file)
+                    {
+                        design.rows.back().push_back(static_cast<CardKind>(c));
+                        if (under) design.under.push_back(static_cast<CardKind>(c));
+                    }
                 if (at == std::string_view::npos) break;
-                if (text[at] == kLineBreak) design.rows.emplace_back();
+                if (text[at] == kDesignLineBreak) design.rows.emplace_back();
+                under = text[at] == kUnderMark;
                 text.remove_prefix(at + 1);
             }
             return design;
@@ -153,9 +160,9 @@ namespace headsup
         std::string text;
         for (const auto& row : design.rows)
         {
-            if (!text.empty()) text += std::string(1, kSpace) + kLineBreak;
+            if (!text.empty()) text += std::string(1, kSpace) + kDesignLineBreak;
             for (const CardKind card : row)
-                text += (text.empty() ? "" : std::string(1, kSpace)) + CardFileName(card);
+                text += (text.empty() ? "" : std::string(1, IsUnder(design, card) ? kUnderMark : kSpace)) + CardFileName(card);
         }
         return text.empty() ? kNoCards : text;
     }
@@ -178,8 +185,18 @@ namespace headsup
             if (row.size() > kMostCardsInRow) row.resize(kMostCardsInRow);
         }
         std::erase_if(design.rows, [](const auto& row) { return row.empty(); });
+        std::erase_if(design.under, [&](CardKind card) {
+            return std::ranges::none_of(design.rows, [&](const auto& row) {
+                const auto at = std::ranges::find(row, card);
+                return at != row.end() && at != row.begin();
+            });
+        });
+        std::ranges::sort(design.under);
+        design.under.erase(std::ranges::unique(design.under).begin(), design.under.end());
         return design;
     }
+
+    bool IsUnder(const PopupDesign& design, CardKind card) { return std::ranges::find(design.under, card) != design.under.end(); }
 
     bool HoldsCard(const PopupDesign& design, CardKind card)
     {
@@ -212,7 +229,8 @@ namespace headsup
             const size_t old = from->first == row && at <= from->second ? from->second + 1 : from->second;
             source.erase(source.begin() + static_cast<std::ptrdiff_t>(old));
         }
-        std::erase_if(design.rows, [](const auto& r) { return r.empty(); });
+        std::erase(design.under, card);
+        design = WholePopup(std::move(design));
         return true;
     }
 
@@ -221,7 +239,7 @@ namespace headsup
         bool removed = false;
         for (auto& row : design.rows)
             removed = std::erase(row, card) > 0 || removed;
-        std::erase_if(design.rows, [](const auto& r) { return r.empty(); });
+        design = WholePopup(std::move(design));
         return removed;
     }
 
@@ -235,6 +253,7 @@ namespace headsup
         case BarWidget::Currency: return P::CurrencyCoin;
         case BarWidget::Bags: return P::BagIcon;
         case BarWidget::EarthTime: return P::ClockIcon;
+        case BarWidget::HomePoint: return P::HomePointIcon;
         default: return std::nullopt;
         }
     }
@@ -271,9 +290,12 @@ namespace headsup
         case BarWidget::Party: return kParty;
         case BarWidget::StatusTimers: return kStatus;
         case BarWidget::World: return kWorld;
+        case BarWidget::HomePoint: return kHomePoint;
         }
         return {};
     }
+
+    bool HasDesigner(BarWidget kind) { return !PartsOf(kind).empty() && kind != BarWidget::HomePoint; }
 
     BarWidget WidgetOfPart(WidgetPart part)
     {
@@ -291,7 +313,7 @@ namespace headsup
         std::string text;
         for (int line = 0; line < kDesignLines; ++line)
         {
-            if (line > 0) text += text.empty() ? std::string(1, kLineBreak) : std::string(" ") + kLineBreak;
+            if (line > 0) text += text.empty() ? std::string(1, kDesignLineBreak) : std::string(" ") + kDesignLineBreak;
             for (const DesignChip& chip : design.lines[static_cast<size_t>(line)])
             {
                 if (!text.empty()) text += kSpace;
@@ -391,6 +413,38 @@ namespace headsup
         return true;
     }
 
+    void PlacePins(StatusDesign& design, const std::vector<uint16_t>& pins)
+    {
+        const auto pinned = [&](const std::vector<uint16_t>& line) {
+            return std::ranges::count_if(line, [&](uint16_t id) { return std::ranges::find(pins, id) != pins.end(); });
+        };
+        for (const uint16_t pin : pins)
+            if (std::ranges::none_of(design, [&](const auto& line) { return std::ranges::find(line, pin) != line.end(); }))
+                std::ranges::min_element(design, {}, pinned)->push_back(pin);
+    }
+
+    StatusDesign PinnedLines(const StatusDesign& design, const std::vector<uint16_t>& pins)
+    {
+        StatusDesign lines = design;
+        PlacePins(lines, pins);
+        for (auto& line : lines)
+            std::erase_if(line, [&](uint16_t id) { return std::ranges::find(pins, id) == pins.end(); });
+        return lines;
+    }
+
+    bool MoveStatus(StatusDesign& design, uint16_t status, int toLine, std::optional<uint16_t> before)
+    {
+        if (toLine < 0 || toLine >= kDesignLines || before == status) return false;
+        const StatusDesign was = design;
+        size_t taken = 0;
+        for (auto& line : design)
+            taken += std::erase(line, status);
+        if (taken == 0) return false;
+        auto& into = design[static_cast<size_t>(toLine)];
+        into.insert(before ? std::ranges::find(into, *before) : into.end(), status);
+        return design != was;
+    }
+
     WidgetContent ComposeContent(const WidgetDesign& design, std::vector<PartContent> parts, WidgetContent base)
     {
         std::array<std::vector<PartContent>, kDesignLines> placed; // each line's parts with something to show
@@ -458,6 +512,7 @@ namespace headsup
         case WidgetPart::TargetDetection: return PartMark{Icon::Sight};
         case WidgetPart::BagIcon: return PartMark{Icon::Bag};
         case WidgetPart::ClockIcon: return PartMark{Icon::Clock};
+        case WidgetPart::HomePointIcon: return PartMark{Icon::HomePoint};
         case WidgetPart::ZoneCrest:
         case WidgetPart::WorldSanDoria: return PartMark{std::nullopt, GamePicture::SanDoriaCrest};
         case WidgetPart::WorldBastok: return PartMark{std::nullopt, GamePicture::BastokCrest};

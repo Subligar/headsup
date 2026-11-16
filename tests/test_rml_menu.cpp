@@ -1662,7 +1662,7 @@ TEST(a_slider_given_its_value_never_writes_it_back_over_a_newer_one)
     CHECK(!window.Frames(2));
     CHECK_EQ(window.settings.menuOpacity, 70);
     auto* slider = rmlui_dynamic_cast<Rml::ElementFormControl*>(window.Find("configmenu-settings-window-window-opacity"));
-    CHECK(slider != nullptr && std::strtof(slider->GetValue().c_str(), nullptr) == 70.0f);
+    CHECK(slider != nullptr && *NumberIn(slider->GetValue()) == 70.0f);
 }
 
 TEST(a_setting_of_something_switched_off_is_not_shown)
@@ -1693,7 +1693,7 @@ TEST(deleting_a_custom_theme_that_differs_from_its_theme_goes_back_to_that_theme
     window.settings.customPalette   = PaletteOf(BarTheme::Aurora);
     window.settings.customPalette.parent      = BarTheme::Aurora;
     window.settings.customPalette.border      = PaletteOf(BarTheme::Aurora).border + 2;
-    window.settings.customPalette.rounding    = PaletteOf(BarTheme::Aurora).rounding + 3;
+    window.settings.customPalette.windowRounding = PaletteOf(BarTheme::Aurora).windowRounding + 3;
     window.settings.customPalette.statusIcons = kVanillaStatusIcons;
     window.settings.customPalette.statusBack  = !PaletteOf(BarTheme::Aurora).statusBack;
     window.settings.customPalette.separator   = DashMark::Dot;
@@ -1726,7 +1726,7 @@ TEST(the_game_window_theme_draws_the_window_in_the_art_and_its_colors)
 {
     Window window(BarTheme::Vanilla);
     const GameSkinLook look{SkinFrame{5, 1.0f, 0.5f, 1.0f}, PaletteOf(BarTheme::UmbraDark), kAuroraMenuColors};
-    const MenuLook menu{MenuTheme::GameWindow, kBarlowCondensed, kMarcellusSC, 16, 0, false, look.menu, look.frame};
+    const MenuLook menu{MenuTheme::GameWindow, kBarlowCondensed, kMarcellusSC, 16, 0, false, look.menu, look.frame, std::nullopt};
     const std::string style = MenuStyle(menu);
     CHECK(style.find(SkinSource(5, SkinPiece::Back, kSkinTile)) != std::string::npos);
     CHECK(style.find(RcssColor(kAuroraMenuColors.text)) != std::string::npos);
@@ -2636,4 +2636,23 @@ TEST(a_theme_colors_custom_button_and_its_swatch_sit_side_by_side_without_overla
         }
         CHECK_EQ(window.Said(), "");
     }
+}
+
+TEST(the_top_panels_switch_is_on_its_pages_title_line_and_turns_the_panel_off_and_on)
+{
+    Window window;
+    window.Page("toppanel");
+    Rml::Element* title = window.Find(kMenuPageTitleId);
+    CHECK(window.Shows("toppanel-on") && window.Find("toppanel-on")->GetParentNode()->GetId() == kPageSwitchBlock);
+    // Level with the title, after it.
+    Rml::Element* on = window.Find("toppanel-on");
+    const float titleMiddle = title->GetAbsoluteOffset(Rml::BoxArea::Border).y + title->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f;
+    const float onMiddle    = on->GetAbsoluteOffset(Rml::BoxArea::Border).y + on->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f;
+    CHECK(std::abs(titleMiddle - onMiddle) < 2.0f);
+    CHECK(on->GetAbsoluteOffset(Rml::BoxArea::Border).x > title->GetAbsoluteOffset(Rml::BoxArea::Border).x + title->GetBox().GetSize(Rml::BoxArea::Border).x);
+    CHECK(window.Click("toppanel-on") && !window.settings.showBar);
+    CHECK(window.Click("toppanel-on") && window.settings.showBar);
+    // Another page's title has none.
+    window.Page("theme");
+    CHECK(!window.Shows("toppanel-on"));
 }

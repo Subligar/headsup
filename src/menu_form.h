@@ -156,9 +156,9 @@ namespace headsup
     // button put back the settings it opened with and close the window.
     void EndSetup(Settings& s, MenuFormState& state, bool keep);
 
-    // The default a widget's setting has, as its tip names it, for the settings every widget shares whose defaults
-    // differ by widget: Icon, Alignment and Linked Padding. Empty for any other row.
-    std::string WidgetDefaultText(const WindowLayout& layout, WidgetTabsRow row, PanelWidget widget);
+    // The default a widget's setting has, as its tip names it: a copy's are the struct's where the first widget's come
+    // from the defaults file. A date format is named by the day, as its list shows it. Empty for a row without one.
+    std::string WidgetDefaultText(const WindowLayout& layout, WidgetTabsRow row, PanelWidget widget, CalendarDay today);
 
     // One pass of the window: the sidebar, then the open page's cards, as the layout orders and words them. fonts:
     // FontChoices, for the nameplates' and the bar's fonts. menuFonts: the fonts the window itself can be set in.

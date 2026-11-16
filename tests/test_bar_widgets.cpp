@@ -673,6 +673,7 @@ TEST(while_your_data_loads_the_panel_keeps_what_it_last_read_and_the_status_time
     loaded.bags[0]    = BagCount{45, 80};
     loaded.job        = JobReport{war, std::nullopt};
     loaded.statuses   = {{33, 120.0}, {40, std::nullopt}}; // Haste with two minutes left, and Protect untimed
+    loaded.homePoint  = 230;
     CharacterReadings held;
     BarState first = loaded;
     HoldWhileLoading(first, held, true);
@@ -685,7 +686,7 @@ TEST(while_your_data_loads_the_panel_keeps_what_it_last_read_and_the_status_time
     CHECK(Joined(Content(BarWidget::Currency, zoning, settings).title) == "1,234,567");
     CHECK(Joined(Content(BarWidget::Bags, zoning, settings).title) == "45 / 80");
     CHECK(Joined(Content(BarWidget::Job, zoning, settings).title) == "WAR 30 / NIN 15");
-    CHECK(zoning.zone == 103 && zoning.weather == Weather::Rain);
+    CHECK(zoning.zone == 103 && zoning.weather == Weather::Rain && zoning.homePoint == 230);
     CHECK(zoning.statuses == (std::vector<ActiveStatus>{{33, 115.0}, {40, std::nullopt}}));
     CHECK(zoning.unixMs == loaded.unixMs + 5'000); // the clock is not held
 
@@ -996,7 +997,7 @@ TEST(the_zone_says_who_holds_its_region_once_known)
     CHECK(Content(BarWidget::Zone, state, settings).picture == GamePicture::SanDoriaCrest);
 }
 
-TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
+TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all_and_the_clocks_starts_hidden)
 {
     Settings settings;
     BarState state;
@@ -1021,6 +1022,8 @@ TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all)
     // And the clock's.
     WidgetOptions& clock = settings.Widget(BarWidget::EarthTime);
     clock.on = true;
+    CHECK(Content(BarWidget::EarthTime, state, settings).icons.empty());
+    clock.iconSide = IconSide::Left;
     CHECK(Content(BarWidget::EarthTime, state, settings).icons == std::vector<Icon>{Icon::Clock});
     clock.iconSide = IconSide::Right;
     CHECK(Content(BarWidget::EarthTime, state, settings).iconsRight);
@@ -1223,6 +1226,7 @@ namespace
             state.connection = SteadyLink();
             state.party      = FourMembers();
             state.statuses   = {ActiveStatus{kSignetEffect, 6130.0}};
+            state.homePoint  = 230; // Southern San d'Oria
             state.memory     = MemoryReport{1532, 2563, 4095};
             state.cpuPercent = 18.0;
             LinuxXIReport report;
@@ -1241,6 +1245,7 @@ namespace
         s.weather = full.weather;
         s.owners  = full.owners;
         s.shares   = full.shares;
+        s.homePoint = full.homePoint;
         if (needs.unixTime) s.unixMs = full.unixMs;
         if (needs.localTime)
         {
@@ -1830,29 +1835,79 @@ TEST(a_statuss_star_and_pin_add_it_and_take_it_off_and_its_star_takes_its_pin_to
           (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
     for (const char* bad : {"status favorite ", "status favorite 4x", "status pin 65000", "status pin 99999999"})
         CHECK(ApplyPopupPress(s, bad, Nation::None) == PressResult::None);
-    // Six at most: a seventh pin is refused.
-    s.statusPins = {40, 33, 41, 42, 43, kSignetEffect};
-    CHECK(press(kStatusPinPress, 116) == PressResult::Refused && s.statusPins.size() == kMostStatusPins);
 }
 
-TEST(the_status_timers_widget_shows_each_pin_at_its_rank_where_its_design_puts_it)
+TEST(a_new_pin_takes_its_place_in_every_status_timers_copy_and_an_unpinned_one_keeps_its_own)
+{
+    Settings s;
+    const PanelWidget first{BarWidget::StatusTimers};
+    const PanelWidget second = *CloneWidget(s, first);
+    s.Widget(first).pinDesign  = {std::vector<uint16_t>{kSignetEffect}, {}};
+    s.Widget(second).pinDesign = {std::vector<uint16_t>{}, {kSignetEffect}};
+    const auto press = [&](uint16_t id) { return ApplyPopupPress(s, std::string(kStatusPinPress) + std::to_string(id), Nation::None); };
+    CHECK(press(40) == PressResult::Changed);
+    CHECK((s.Widget(first).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect}, {40}}));
+    CHECK((s.Widget(second).pinDesign == StatusDesign{std::vector<uint16_t>{40}, {kSignetEffect}}));
+    // Unpinned, it stays in each design, so its next pin finds it where it was moved.
+    CHECK(MoveStatus(s.Widget(first).pinDesign, 40, 0, kSignetEffect));
+    CHECK(press(40) == PressResult::Changed && (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
+    CHECK(press(40) == PressResult::Changed);
+    CHECK((s.Widget(first).pinDesign == StatusDesign{std::vector<uint16_t>{40, kSignetEffect}, {}}));
+    CHECK((s.Widget(second).pinDesign == StatusDesign{std::vector<uint16_t>{40}, {kSignetEffect}}));
+    // A pin a copy's design lacks keeps the place it showed at when another goes.
+    s.statusPins = {kSignetEffect, 40, 33};
+    s.Widget(second).pinDesign = {};
+    CHECK(press(kSignetEffect) == PressResult::Changed);
+    CHECK((s.Widget(second).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect, 33}, {40}}));
+    // There is no most there can be.
+    s.statusPins = {kSignetEffect, 40, 33, 41, 42, 43};
+    CHECK(press(116) == PressResult::Changed && s.statusPins.size() == 7);
+}
+
+TEST(the_status_timers_widget_shows_each_pinned_status_where_its_design_puts_it)
 {
     Settings settings;
     BarState state;
     state.statuses = {{40, 1800.0}, {33, 90.0}};
     settings.Widget(BarWidget::StatusTimers).on            = true;
     settings.Widget(BarWidget::StatusTimers).statusDisplay = StatusDisplay::Name;
-    settings.statusPins = {40, 33, kSignetEffect}; // ranks 1, 2 and 3
-    // As new: 1, 3 and 5 on the first line, 2, 4 and 6 on the second.
-    CHECK_EQ(DesignText(BarWidget::StatusTimers, settings.Widget(BarWidget::StatusTimers).design), "pin1 pin3 pin5 | pin2 pin4 pin6");
-    const WidgetContent w = Content(BarWidget::StatusTimers, state, settings);
-    CHECK(Joined(w.title) == "Protect 30m 00s  Signet 0s" && Joined(w.subtitle) == "Haste 1m 30s");
-    // Pinned or not decides what shows, not the design's switches.
-    settings.Widget(BarWidget::StatusTimers).design = DesignFrom(BarWidget::StatusTimers, "-pin1 -pin2 -pin3 | -pin4 -pin5 -pin6");
-    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Protect 30m 00s  Haste 1m 30s  Signet 0s");
+    settings.statusPins = {40, 33, kSignetEffect};
+    // Placed as pinned, the line with fewer pins first: Protect and Signet over Haste.
+    WidgetContent w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(w.title) == "Protect 30m 0s  Signet -" && Joined(w.subtitle) == "Haste 1m 30s");
+    // Its design decides, and a status in it that is not pinned takes no room.
+    settings.Widget(BarWidget::StatusTimers).pinDesign = {std::vector<uint16_t>{33, 41}, {kSignetEffect, 40}};
+    w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(w.title) == "Haste 1m 30s" && Joined(w.subtitle) == "Signet -  Protect 30m 0s");
+    // Every pin shows, past the six Pinned Status buttons there were.
+    settings.statusPins = {40, 33, kSignetEffect, 41, 42, 43, 116};
+    w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(w.title) == "Haste 1m 30s  Shell -  Regen -  Phalanx -" &&
+          Joined(w.subtitle) == "Signet -  Protect 30m 0s  Refresh -");
+    // A second line alone draws as the first.
+    settings.statusPins = {kSignetEffect};
+    CHECK(Joined(Content(BarWidget::StatusTimers, state, settings).title) == "Signet -");
+    // Its Timer Format writes each time left.
+    settings.statusPins = {40, 33};
+    settings.Widget(BarWidget::StatusTimers).timerFormat = TimerFormat::Short;
+    w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(Joined(w.title) == "Haste 1.5m" && Joined(w.subtitle) == "Protect 30m");
     // None pinned: its name, dim.
     settings.statusPins.clear();
     CHECK(Content(BarWidget::StatusTimers, state, settings).title == ListOf(Text("Status Timers", Tone::Dim)));
+}
+
+TEST(a_created_widget_borrows_the_pinned_statuses_by_the_order_they_were_pinned)
+{
+    Settings settings;
+    BarState state;
+    state.statuses = {{40, 1800.0}, {33, 90.0}};
+    settings.Widget(BarWidget::StatusTimers).statusDisplay = StatusDisplay::Name;
+    settings.statusPins = {40, 33};
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "statusTimers.pin2 statusTimers.pin3 | statusTimers.pin1");
+    const WidgetContent w = Content(made, state, settings);
+    CHECK(Joined(w.title) == "Haste 1m 30s" && Joined(w.subtitle) == "Protect 30m 0s");
 }
 
 TEST(a_widgets_clone_and_remove_presses_clone_it_or_take_the_copy_off_and_name_whose_settings_show_next)
@@ -2904,7 +2959,11 @@ TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim_in_pare
         return Joined(w.title);
     };
     // The airship's door opens at 28 s into the next cycle: 864 - 576 + 28 s from now.
-    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria (Boards in 5:16)");
+    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria (Boarding in 5:16)");
+    // 100 s into a cycle its door is open, and it says when it leaves.
+    state.unixMs = kVanaEpochUnixMs + 864LL * 1000 + 100 * 1000;
+    CHECK_EQ(shown("ship"), "Jeuno to San d'Oria (Departing in 1:22)");
+    state.unixMs = kEarthsdayTen;
     // Open until 21:00, 11 Vana'diel hours away: it says when it closes, and not that it is open.
     CHECK_EQ(shown("guild"), "Woodworking (Closes in 26:24)");
     // Closed, it says when it opens.
@@ -2922,7 +2981,7 @@ TEST(world_infos_buttons_each_tell_their_name_and_then_its_countdown_dim_in_pare
     CHECK(Joined(both.title).starts_with("Jeuno") && Joined(both.subtitle).starts_with("Woodworking"));
 }
 
-TEST(the_world_info_popup_has_conquest_travel_and_the_calendar_in_a_row_and_guilds_under_them)
+TEST(the_world_info_popup_has_conquest_beside_travel_over_the_calendar_and_guilds_under_them)
 {
     BarState state;
     state.unixMs = kEarthsdayTen;
@@ -2933,7 +2992,8 @@ TEST(the_world_info_popup_has_conquest_travel_and_the_calendar_in_a_row_and_guil
     for (const PopupSection& section : all.sections)
         headings.push_back(std::string(CardKey(section.heading)));
     CHECK((headings == std::vector<std::string>{"Conquest", "Travel", "Calendar", "Guilds"}));
-    CHECK(!all.sections[0].beside && all.sections[1].beside && all.sections[2].beside && !all.sections[3].beside);
+    CHECK(!all.sections[0].beside && all.sections[1].beside && !all.sections[1].under && all.sections[2].under &&
+          !all.sections[2].beside && !all.sections[3].beside && !all.sections[3].under);
     const std::vector<std::string> lines = Lines(all.sections[2]);
     // Who, then where and when on the right, the time last and alone; the tally is in the Conquest card's heading.
     CHECK_EQ(lines.size(), static_cast<size_t>(4));
@@ -2964,8 +3024,8 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
         kinds.push_back(tab.name.text);
     CHECK((kinds == std::vector<std::string>{"Airships", "Boats", "Manaclipper", "Barge"}));
     CHECK(first.tab == 0 && first.rows.empty());
-    // Each tab lists its kind's routes, set in, in three columns: the route, whether the ship arrives or departs
-    // next against its right, and how long until it does against its left.
+    // Each tab lists its kind's routes, set in, in three columns: the route, whether the ship boards or departs
+    // next against its right, and how long until it does, centered.
     const auto airships = std::ranges::count_if(TravelRoutes(), [](const TravelRoute& r) { return std::string(r.group) == "Airships"; });
     const auto rows = [](const PopupTab& tab) {
         CHECK(tab.rows.size() == 1 && tab.rows[0].kind == RowKind::Grid && tab.rows[0].columns == 3 && tab.rows[0].nested &&
@@ -2974,7 +3034,7 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
         const std::vector<PopupCell>& cells = tab.rows[0].cells;
         for (size_t i = 0; i + 2 < cells.size(); i += 3)
         {
-            CHECK(cells[i + 1].align == Align::Right && cells[i + 2].align == Align::Left && cells[i + 2].text.size() == 1);
+            CHECK(cells[i + 1].align == Align::Right && cells[i + 2].align == Align::Center && cells[i + 2].text.size() == 1);
             out.push_back({Joined(cells[i].text), Joined(cells[i + 1].text), Joined(cells[i + 2].text)});
         }
         return out;
@@ -2985,14 +3045,14 @@ TEST(each_kind_of_ship_has_a_tab_of_its_routes)
         return std::array<std::string, 3>{};
     };
     CHECK_EQ(rows(first.tabs[0]).size(), static_cast<size_t>(airships));
-    CHECK((route(first.tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Arrives in", "5:16"}));
+    CHECK((route(first.tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Boarding in", "5:16"}));
     // Picking Boats picks its tab.
     std::map<std::string, std::string> picked{{"Travel", "Boats"}};
     state.pickedTabs = &picked;
     CHECK_EQ(travel().tab, static_cast<size_t>(1));
     picked["Travel"] = "Airships";
     state.unixMs = kVanaEpochUnixMs + 864LL * 1000 + 100 * 1000; // 100 s into a cycle: its door opened at 28 s
-    CHECK((route(travel().tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Departs in", "1:22"}));
+    CHECK((route(travel().tabs[0], "Jeuno to San d'Oria") == std::array<std::string, 3>{"Jeuno to San d'Oria", "Departing in", "1:22"}));
 }
 
 TEST(each_guild_has_a_tab_of_its_shops_hours_in_columns)
@@ -3508,4 +3568,42 @@ TEST(a_created_widgets_parts_have_their_widgets_data_gathered_while_it_shows)
     CHECK(StandingsShown(settings, {}));
     settings.Widget(made).on = false;
     CHECK(!StandingsShown(settings, {}) && !WidgetShown(settings, BarWidget::World));
+}
+
+// Zone 103 is Valkurm Dunes and 230 Southern San d'Oria (Phoenix's zone ids).
+TEST(the_home_point_widget_is_its_icon_and_the_name_of_your_home_points_zone_with_no_popup)
+{
+    Settings settings;
+    BarState state;
+    state.zone      = 103;
+    state.homePoint = 230;
+    CHECK(!Content(BarWidget::HomePoint, state, settings).shown); // off on a new install
+    settings.Widget(BarWidget::HomePoint).on = true;
+    WidgetContent w = Content(BarWidget::HomePoint, state, settings);
+    CHECK_EQ(Joined(w.title), "Southern San d'Oria"); // not the zone you are in
+    CHECK(w.shown && w.subtitle.empty() && !w.hasPopup && !w.iconsRight);
+    CHECK(w.icons == std::vector<Icon>{Icon::HomePoint});
+    CHECK(BarPopupContent(BarWidget::HomePoint, state, settings).sections.empty());
+    state.homePoint = 0; // not known yet
+    CHECK_EQ(Joined(Content(BarWidget::HomePoint, state, settings).title), "-");
+    state.homePoint = 9999;
+    CHECK_EQ(Joined(Content(BarWidget::HomePoint, state, settings).title), "Zone 9999");
+    state.homePoint = 230;
+    settings.Widget(BarWidget::HomePoint).iconSide = IconSide::Right;
+    w = Content(BarWidget::HomePoint, state, settings);
+    CHECK(w.iconsRight && w.icons == std::vector<Icon>{Icon::HomePoint});
+    settings.Widget(BarWidget::HomePoint).iconSide = IconSide::Hide;
+    w = Content(BarWidget::HomePoint, state, settings);
+    CHECK(w.icons.empty() && Joined(w.title) == "Southern San d'Oria");
+    CHECK(HasCopies(BarWidget::HomePoint) && Combines(BarWidget::HomePoint) && Aligns(BarWidget::HomePoint));
+    // Its name wraps onto two lines unless Wrap Text is off.
+    CHECK(w.wrap);
+    settings.Widget(BarWidget::HomePoint).wrapText = false;
+    CHECK(!Content(BarWidget::HomePoint, state, settings).wrap);
+    // Its settings pop-out has a title.
+    CHECK_EQ(Joined(BarPopupContent(BarWidget::HomePoint, state, settings).title), "Home Point");
+    // A created widget can show it too.
+    const PanelWidget made       = *CreateWidget(settings);
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "homePoint.name |");
+    CHECK_EQ(Joined(Content(made, state, settings).title), "Southern San d'Oria");
 }

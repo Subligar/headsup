@@ -55,6 +55,19 @@ namespace
     }
 
     float LeftOf(Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x; }
+
+    // An element's text without its markup: a figure is drawn in an element of its own.
+    std::string Words(Rml::Element* e)
+    {
+        std::string words;
+        bool tag = false;
+        for (const char c : e->GetInnerRML())
+        {
+            if (c == '<' || c == '>') tag = c == '<';
+            else if (!tag) words += c;
+        }
+        return words;
+    }
 }
 
 TEST(rmlui_reads_every_themes_bar_and_popups_without_a_complaint)
@@ -279,7 +292,7 @@ TEST(a_widget_shows_its_background_by_its_own_class_and_its_pill_is_rounded_by_i
             settings.Widget(BarWidget::Zone).combine     = PanelWidget{BarWidget::Weather};
             settings.Widget(BarWidget::Zone).rounding    = 12;
             settings.Widget(BarWidget::Weather).rounding = 1; // in Zone's pill, which is rounded by Zone's
-            settings.Widget(BarWidget::Bags).rounding    = kThemeRounding;
+            settings.Widget(BarWidget::Bags).rounding    = 0;
             const BarLook look = LookOf(PaletteOf(theme), settings);
             test::RmlSession rml;
             Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
@@ -309,9 +322,7 @@ TEST(a_widget_shows_its_background_by_its_own_class_and_its_pill_is_rounded_by_i
             CHECK(w.border_top_right_radius() == 12.0f && w.border_bottom_right_radius() == 12.0f);
             CHECK(w.border_top_left_radius() == 0.0f && w.border_bottom_left_radius() == 0.0f);
             CHECK(gil->GetComputedValues().border_top_left_radius() == 4.0f);
-            // The shape's, which RmlUi keeps in whole pixels.
-            const float own = std::trunc(theme == BarTheme::PhoenixGold ? 3.0f : look.metrics.pillRadius);
-            CHECK_EQ(bags->GetComputedValues().border_top_left_radius(), own);
+            CHECK_EQ(bags->GetComputedValues().border_top_left_radius(), 0.0f);
             // Its class alone shows it, whatever the Top Panel's Show Background says.
             CHECK(z.background_color().alpha > 0 && clock->GetComputedValues().background_color().alpha == 0);
             CHECK_EQ(rml.Said(), "");
@@ -577,6 +588,7 @@ TEST(an_exp_bar_in_a_widgets_line_stands_on_its_texts_capitals_middle_with_its_o
             const std::vector<Span> line{Text("1,200 til next level"), Text("  "), exp};
             c.title    = onTitle ? line : ListOf(Text("WAR 30"));
             c.subtitle = onTitle ? ListOf(Text("WAR 30")) : line;
+            Steady(c, look);
             widget->SetInnerRML(WidgetRml(c, look, {}));
             rml.context->Update();
             Rml::ElementList bars, tracks, fills, texts, lines;
@@ -692,7 +704,7 @@ TEST(every_popup_and_the_settings_it_shows_draw_over_the_settings_window)
     const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
         PopupFace{"Barlow Condensed", 16, 19}, PopupFace{"Barlow Condensed", 16, 19}};
-    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt};
+    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
     // Each popup document as the bar makes it, a popup at the top left, and the settings view and window there too.
     const auto popups = [&](std::optional<int> z) {
         Rml::ElementDocument* d = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
@@ -739,7 +751,7 @@ TEST(a_popup_over_the_settings_window_keeps_the_pointer_from_the_window_under_it
     const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
     const PopupFaces faces = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
         PopupFace{"Barlow Condensed", 16, 19}, PopupFace{"Barlow Condensed", 16, 19}};
-    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt};
+    const MenuLook menu{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
     Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
     window->SetProperty(Rml::PropertyId::Left, Rml::Property(0.0f, Rml::Unit::PX));
     window->SetProperty(Rml::PropertyId::Top, Rml::Property(0.0f, Rml::Unit::PX));
@@ -954,7 +966,8 @@ TEST(an_adjusted_icon_draws_moved_or_sized_in_its_own_room_in_the_bar_and_the_po
 TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its_background_sits_in_it_as_xiuis_does)
 {
     Settings settings;
-    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    BarLook look           = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    look.metrics.iconShare = 1.0f; // icons in a line as tall as its letters
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
         BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
     test::RmlSession rml;
@@ -1045,6 +1058,74 @@ TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its
     Rml::ElementList bareImages;
     popup->GetElementsByTagName(bareImages, "img");
     CHECK(near(box(bareImages[1])[2], box(bareImages[2])[2]) && near(box(bareImages[1])[3], box(bareImages[2])[3]));
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(icon_scale_sizes_the_icons_in_a_widgets_lines_on_each_lines_middle_as_the_bar_measures_them)
+{
+    Settings settings;
+    const BarPalette& p = PaletteOf(BarTheme::UmbraDark);
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    test::RmlSession rml;
+    struct Drawn
+    {
+        float top, height, width;
+    };
+    // A status on each of the Status Timers' lines, at the Top Panel's Icon Scale or the widget's own.
+    const auto drawn = [&](int barScale, std::optional<int> ownScale) {
+        BarLook look = LookOf(p, settings);
+        look.metrics = MetricsFor(kBarHeight, p.shape, kDefaultFontRatio, kDefaultPopupScale, barScale);
+        BarLook widgetLook = look;
+        std::vector<WidgetText> own;
+        if (ownScale)
+        {
+            widgetLook.metrics = MetricsFor(kBarHeight, p.shape, kDefaultFontRatio, kDefaultPopupScale, *ownScale);
+            own.push_back(WidgetText{BarWidget::StatusTimers, look.titleFont, look.detailFont, widgetLook.metrics, look.lines, place});
+        }
+        Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place, own), "bar");
+        bar->Show();
+        Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::StatusTimers));
+        widget->SetClass(kHiddenClass, false);
+        WidgetContent c;
+        c.shown = true;
+        Span top = Text(""), under = Text("");
+        top.status   = StatusMark{40, 0, false};
+        under.status = StatusMark{33, 1, false};
+        c.title      = {top, Text(" Protect")};
+        c.subtitle   = {under, Text(" Haste")};
+        widget->SetInnerRML(WidgetRml(c, widgetLook, {}));
+        rml.context->Update();
+        Rml::ElementList marks;
+        widget->GetElementsByClassName(marks, "smark");
+        std::array<Drawn, 2> boxes{};
+        CHECK_EQ(marks.size(), static_cast<size_t>(2));
+        for (size_t i = 0; i < std::min(marks.size(), boxes.size()); ++i)
+        {
+            const Rml::Vector2f size = marks[i]->GetBox().GetSize(Rml::BoxArea::Border);
+            boxes[i] = Drawn{marks[i]->GetAbsoluteOffset(Rml::BoxArea::Border).y, size.y, size.x};
+        }
+        // The bar makes room for each as it is drawn.
+        CHECK_EQ(MarkWidth(top, widgetLook.TitleFace(c)), kLineIconGap + boxes[0].width);
+        CHECK_EQ(MarkWidth(under, widgetLook.DetailFace()), kLineIconGap + boxes[1].width);
+        bar->Close();
+        return boxes;
+    };
+    const std::array<Drawn, 2> whole = drawn(100, std::nullopt);
+    const int sizes[] = {LookOf(p, settings).lines.title, LookOf(p, settings).lines.detail};
+    for (size_t i = 0; i < whole.size(); ++i)
+        CHECK_EQ(whole[i].height, static_cast<float>(sizes[i])); // at 100% an icon is as tall as its line
+    for (const int scale : {50, 150})
+    {
+        for (const std::array<Drawn, 2>& at : {drawn(scale, std::nullopt), drawn(100, scale)})
+            for (size_t i = 0; i < whole.size(); ++i)
+            {
+                CHECK_EQ(at[i].height, std::round(static_cast<float>(sizes[i]) * static_cast<float>(scale) / 100.0f));
+                CHECK_EQ(at[i].width, at[i].height);
+                // Still on its line's middle, to the half pixel its rounding leaves.
+                CHECK(std::fabs(at[i].top + at[i].height / 2.0f - (whole[i].top + whole[i].height / 2.0f)) <= 0.5f);
+            }
+    }
     CHECK_EQ(rml.Said(), "");
 }
 
@@ -1139,6 +1220,96 @@ TEST(a_clocks_times_keep_their_room_and_each_figure_its_place_as_the_seconds_tic
         }
 }
 
+// The card "Improve all timer text": every timer reads as the clock does, each figure in its own place.
+TEST(a_world_info_countdown_keeps_each_figure_and_what_follows_in_its_place_as_it_ticks)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    settings.Widget(BarWidget::World).on     = true;
+    settings.Widget(BarWidget::World).design = DesignFrom(BarWidget::World, "ship |");
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    test::RmlSession rml;
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Target));
+    widget->SetClass(kHiddenClass, false);
+    widget->SetProperty(Rml::PropertyId::Width, Rml::Property(400.0f, Rml::Unit::PX));
+    BarState state;
+    // The line's text and the left of each of its elements, a second at a time.
+    const auto drawn = [&](int64_t unixMs) {
+        state.unixMs    = unixMs;
+        WidgetContent c = BarWidgetContent(BarWidget::World, state, settings);
+        Steady(c, look);
+        widget->SetInnerRML(WidgetRml(c, look, {}));
+        rml.context->Update();
+        std::string text;
+        for (const Span& s : c.title)
+            text += s.text;
+        Rml::ElementList lines;
+        widget->GetElementsByClassName(lines, "t");
+        std::vector<float> at;
+        for (int i = 0; !lines.empty() && i < lines.front()->GetNumChildren(); ++i)
+            at.push_back(LeftOf(lines.front()->GetChild(i)));
+        return std::pair{text, at};
+    };
+    constexpr int64_t kSecond = 1000, kFrom = 1'763'000'000'000;
+    const auto [firstText, first] = drawn(kFrom);
+    CHECK(first.size() >= 3);
+    int alike = 0;
+    for (int64_t s = 1; s < 120; ++s)
+    {
+        const auto [text, at] = drawn(kFrom + s * kSecond);
+        if (text.size() != firstText.size()) continue;
+        ++alike;
+        CHECK(at == first);
+    }
+    CHECK(alike > 60);
+    CHECK_EQ(rml.Said(), "");
+}
+
+TEST(a_pop_outs_ticking_text_keeps_each_figure_in_its_place)
+{
+    test::RmlSession rml;
+    Settings settings;
+    const BarLook look = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    const TextFace face = look.FaceOf(PopupFont::Text);
+    const char digit    = WidestDigit([&](char d) { return DrawnWidth(std::string(1, d), face); });
+    PopupFaces faces;
+    for (PopupFace& f : faces)
+        f = PopupFace{face.family, WholePixels(face.size), 16, 0.0f, DrawnWidth(std::string(1, digit), face)};
+    Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
+    popups->Show();
+    Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+    popup->SetClass(kPopupClass, true);
+    // The left of each figure of a time set against the right of its piece, and of one from its left.
+    const auto drawn = [&](const std::string& time) {
+        PopupLayout layout;
+        layout.width  = 300.0f;
+        layout.height = 100.0f;
+        PopupPiece right{PopupPiece::Kind::Text, 10.0f, 10.0f, 120.0f, 16.0f, Text(time)};
+        right.right = true;
+        PopupPiece left{PopupPiece::Kind::Text, 10.0f, 40.0f, 0.0f, 16.0f, Text("Tally in " + time + " left")};
+        layout.pieces = {right, left};
+        popup->SetInnerRML(PopupRml(layout, look, faces));
+        rml.context->Update();
+        Rml::ElementList figures;
+        popup->GetElementsByClassName(figures, "fig");
+        std::vector<float> at;
+        for (Rml::Element* f : figures)
+            at.push_back(LeftOf(f));
+        Rml::ElementList texts;
+        popup->GetElementsByClassName(texts, "p");
+        at.push_back(LeftOf(texts.back()) + texts.back()->GetBox().GetSize(Rml::BoxArea::Border).x);
+        return at;
+    };
+    const std::vector<float> first = drawn("1:11:11");
+    CHECK_EQ(first.size(), static_cast<size_t>(11));
+    for (const char* time : {"4:48:08", "9:00:00", "2:22:47"})
+        CHECK(drawn(time) == first);
+    CHECK_EQ(rml.Said(), "");
+}
+
 TEST(a_ticking_span_keeps_its_gap_to_an_icon_after_it)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
@@ -1204,7 +1375,7 @@ TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_wit
         Rml::ElementList texts;
         widget->GetElementsByClassName(texts, "t");
         for (Rml::Element* t : texts)
-            if (t->GetInnerRML().find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
+            if (Words(t).find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
                 return t;
         return static_cast<Rml::Element*>(nullptr);
     };
@@ -1213,6 +1384,7 @@ TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_wit
     c.shown    = true;
     c.title    = {run("WAR 30", Align::Left), run("  61%", Align::Right)};
     c.subtitle = {Text("12,345 / 20,000 EXP and a long way to go")};
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     Rml::ElementList texts;
@@ -1223,12 +1395,16 @@ TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_wit
     CHECK(std::fabs(left(jobs) - left(text)) <= 0.5f);
     CHECK(std::fabs(right(percent) - right(text)) <= 0.5f);
     CHECK(std::fabs(right(detail) - right(text)) <= 0.5f && std::fabs(left(detail) - left(text)) <= 0.5f);
-    // Its gap is left off at the right: the percent ends at the edge as wide as its own text.
-    CHECK(std::fabs(percent->GetBox().GetSize(Rml::BoxArea::Border).x - DrawnWidth("61%", look.TitleFace(c))) <= 1.0f);
+    // Its gap is left off at the right: the percent ends at the edge as wide as its own text, two figures each as wide
+    // as the font's widest.
+    const TextFace titleFace = look.TitleFace(c);
+    const float figure = DrawnWidth(std::string(1, WidestDigit([&](char d) { return DrawnWidth(std::string(1, d), titleFace); })), titleFace);
+    CHECK(std::fabs(percent->GetBox().GetSize(Rml::BoxArea::Border).x - (2.0f * figure + DrawnWidth("%", titleFace))) <= 1.0f);
     // Drawn on the top line's own row.
     CHECK(std::fabs(jobs->GetAbsoluteOffset(Rml::BoxArea::Border).y - percent->GetAbsoluteOffset(Rml::BoxArea::Border).y) <= 0.01f);
     // A centered run in the middle of the text.
     c.title = {run("WAR 30", Align::Center)};
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     jobs = drawn("WAR 30");
@@ -1236,6 +1412,7 @@ TEST(a_lines_runs_of_text_each_line_up_on_their_own_side_of_the_widgets_text_wit
     // The longer line: the text is as wide as all its runs, so they never overlap, two spaces apart.
     c.title    = {run("12,345 / 20,000 EXP and a long way", Align::Left), run("  WAR 30 / NIN 15", Align::Right)};
     c.subtitle = {Text("61%")};
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     Rml::Element *exp = drawn("long way"), *both = drawn("NIN 15");
@@ -1270,7 +1447,7 @@ TEST(the_job_widgets_text_alignments_line_up_against_the_whole_width_of_both_its
         Rml::ElementList texts;
         widget->GetElementsByClassName(texts, "t");
         for (Rml::Element* t : texts)
-            if (t->GetInnerRML().find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
+            if (Words(t).find(words) != std::string::npos && t->GetComputedValues().visibility() == Rml::Style::Visibility::Visible)
                 return t;
         throw test::Failure{std::string("nothing drawn says ") + words};
     };
@@ -1292,7 +1469,8 @@ TEST(the_job_widgets_text_alignments_line_up_against_the_whole_width_of_both_its
             WidgetOptions o;
             o.expBarWidth  = 250;
             o.earnedAlign  = align;
-            const WidgetContent c = composed("bar | earned", o);
+            WidgetContent c = composed("bar | earned", o);
+            Steady(c, look);
             widget->SetInnerRML(WidgetRml(c, look, {}));
             rml.context->Update();
             Rml::ElementList tracks;
@@ -1311,6 +1489,7 @@ TEST(the_job_widgets_text_alignments_line_up_against_the_whole_width_of_both_its
     o.jobInfoAlign = Align::Left;
     o.earnedAlign  = Align::Right;
     WidgetContent c = composed("bar | jobs earned", o);
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     Rml::ElementList tracks;
@@ -1321,6 +1500,7 @@ TEST(the_job_widgets_text_alignments_line_up_against_the_whole_width_of_both_its
     o.expBarWidth  = 40;
     o.percentAlign = Align::Right;
     c = composed("jobs earned percent | bar", o);
+    Steady(c, look);
     widget->SetInnerRML(WidgetRml(c, look, {}));
     rml.context->Update();
     Rml::ElementList texts;
@@ -1383,6 +1563,7 @@ TEST(a_widgets_icon_stands_on_the_middle_of_its_lone_lines_figures_as_a_clock_ti
     o.design              = DesignFrom(BarWidget::EarthTime, "time | -server -vana -date");
     o.clock24             = true;
     o.clockSeconds        = false;
+    o.iconSide            = IconSide::Left;
     const BarPalette& p   = PaletteOf(BarTheme::Vanilla);
     const BarMetrics m    = MetricsFor(kBarHeight, p.shape, settings.barFontRatio, kDefaultPopupScale, settings.barIconScale);
     const char* font      = BarTitleFont(settings, p.shape);
@@ -1437,7 +1618,7 @@ TEST(a_text_box_holds_its_fonts_descenders_in_every_bundled_window_font)
         for (const int pixels : {12, 16, 18, 24})
         {
             test::RmlSession rml;
-            const MenuLook menu{MenuTheme::Phoenix, font, kMarcellusSC, pixels, 0, false, kPhoenixMenuColors, std::nullopt};
+            const MenuLook menu{MenuTheme::Phoenix, font, kMarcellusSC, pixels, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
             Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "window");
             window->SetProperty(Rml::PropertyId::FontSize, Rml::Property(static_cast<float>(pixels), Rml::Unit::PX));
             Rml::Element* box = window->AppendChild(window->CreateElement("input"));
@@ -1458,5 +1639,102 @@ TEST(a_text_box_holds_its_fonts_descenders_in_every_bundled_window_font)
             if (bottom > inside + 0.5f)
                 throw test::Failure{std::string(font) + " at " + std::to_string(pixels) + " px: its descenders end at " +
                                     std::to_string(bottom) + " px of a box " + std::to_string(inside) + " px inside"};
+        }
+}
+
+namespace
+{
+    // Whether RmlUi hands the renderer a mask of its box's round corners to cut what an element draws to.
+    bool ClippedToCorners(Rml::Element* e)
+    {
+        Rml::Rectanglei region;
+        Rml::ClipMaskGeometryList masks;
+        Rml::ElementUtilities::GetClippingRegion(e, region, &masks);
+        return !masks.empty();
+    }
+
+    // An element's art child, filling the inside of its border.
+    Rml::Element* ArtOf(Rml::Element* box)
+    {
+        Rml::Element* art = box->GetNumChildren() > 0 ? box->GetChild(0) : nullptr;
+        if (art == nullptr || !art->IsClassSet(kArtClass)) return nullptr;
+        const Rml::Vector2f inside = box->GetBox().GetSize(Rml::BoxArea::Padding), size = art->GetBox().GetSize(Rml::BoxArea::Border);
+        return std::abs(inside.x - size.x) < 0.5f && std::abs(inside.y - size.y) < 0.5f ? art : nullptr;
+    }
+}
+
+// Round 23: "Pop-out Rounding setting does not affect pop-outs when using the Vanilla Window background style."
+TEST(the_top_panel_a_pop_out_and_the_help_bar_clip_their_art_to_their_own_rounding)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    const PopupFaces faces = {PopupFace{"Barlow Condensed", 18, 22}, PopupFace{"Barlow Condensed", 14, 17},
+        PopupFace{"Barlow Condensed", 16, 19}, PopupFace{"Barlow Condensed", 16, 19}};
+    BarPalette window = Settings{}.customPalette;
+    window.shape      = BarShape::Window;
+    for (const std::optional<SkinFrame> skin : {std::optional<SkinFrame>(), std::optional(SkinFrame{0, 1.0f, 0.5f, 1.0f, 0xFF808080u})})
+        for (const int rounding : {0, 12})
+        {
+            Settings settings;
+            settings.barRounding     = rounding;
+            settings.popupRounding   = rounding;
+            settings.helpBarRounding = rounding;
+            BarLook look = LookOf(skin ? window : PaletteOf(BarTheme::UmbraDark), settings);
+            look.skin    = skin;
+            test::RmlSession rml;
+            Rml::ElementDocument* bar    = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+            Rml::ElementDocument* popups = rml.context->LoadDocumentFromMemory(PopupDocument(look, faces), "popups");
+            bar->Show();
+            popups->Show();
+            HelpBarParts help;
+            help.row = HelpBarRow{BarRect{8.0f, 54.0f, 400.0f, 24.0f}, 23.0f, 120.0f, 180.0f};
+            bar->GetElementById(kHelpId)->SetInnerRML(HelpBarRml(help, look, place));
+            Rml::Element* popup = popups->AppendChild(popups->CreateElement("div"));
+            popup->SetClass(kPopupClass, true);
+            PopupLayout layout;
+            layout.width  = 200.0f;
+            layout.height = 100.0f;
+            popup->SetInnerRML(PopupRml(layout, look, faces));
+            rml.context->Update();
+            // The strip's picture is in its art whatever the theme; the pop-out's and help bar's only in the game's.
+            Rml::Element* strip = ArtOf(bar->GetElementById(kStripId));
+            CHECK(strip != nullptr && ClippedToCorners(strip) == (rounding > 0));
+            Rml::ElementList boxes;
+            bar->GetElementsByClassName(boxes, "help-box");
+            for (Rml::Element* box : {popups->GetElementById("panel"), boxes.empty() ? nullptr : boxes.front()})
+            {
+                CHECK(box != nullptr);
+                if (box == nullptr) continue;
+                CHECK_EQ(box->GetComputedValues().border_top_left_radius(), static_cast<float>(rounding));
+                if (!skin) continue;
+                Rml::Element* art = ArtOf(box);
+                CHECK(art != nullptr && ClippedToCorners(art) == (rounding > 0));
+            }
+            CHECK_EQ(rml.Said(), "");
+        }
+}
+
+TEST(the_settings_windows_corners_are_its_window_rounding_in_the_games_art_too)
+{
+    const GameSkinLook art{SkinFrame{0, 1.0f, 0.5f, 1.0f, 0xFF808080u}, PaletteOf(BarTheme::UmbraDark), kPhoenixMenuColors};
+    for (const bool skinned : {false, true})
+        for (const std::optional<int> rounding : {std::optional<int>(), std::optional<int>(14)})
+        {
+            test::RmlSession rml;
+            const MenuLook menu{skinned ? MenuTheme::GameWindow : MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0,
+                false, kPhoenixMenuColors, skinned ? std::optional(art.frame) : std::nullopt, rounding};
+            Rml::ElementDocument* window = rml.context->LoadDocumentFromMemory(MenuDocument(menu), "menu");
+            window->Show();
+            rml.context->Update();
+            // Its own look's corners by default: round in its colors, square in the game's art.
+            const float corners = window->GetComputedValues().border_top_left_radius();
+            if (rounding)
+                CHECK_EQ(corners, static_cast<float>(*rounding));
+            else
+                CHECK(skinned ? corners == 0.0f : corners > 0.0f);
+            if (!skinned) continue;
+            Rml::Element* art = ArtOf(window->GetElementById(kMenuArtId));
+            CHECK(art != nullptr && ClippedToCorners(art) == rounding.has_value());
+            CHECK_EQ(rml.Said(), "");
         }
 }

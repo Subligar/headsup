@@ -6,11 +6,13 @@
 #include "fonts.h"
 #include "game_font.h"
 #include "ini_text.h"
+#include "markup.h"
 #include "pointer_keys.h"
 #include "utf16.h"
 #include "world_info.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cstdlib>
 #include <sstream>
 #include <cctype>
@@ -75,9 +77,10 @@ namespace headsup
             {"barIconScale", &Settings::barIconScale, kMinIconScale, kMaxIconScale, kPercentStep},
             {"barWidgetSpacing", &Settings::barWidgetSpacing, 0, kMaxWidgetSpacing},
             {"barWidgetPadding", &Settings::barWidgetPadding, 0, kMaxWidgetPadding},
-            {"widgetRounding", &Settings::widgetRounding, kThemeRounding, kMaxRounding},
-            {"popupRounding", &Settings::popupRounding, kThemeRounding, kMaxRounding},
-            {"sectionRounding", &Settings::sectionRounding, kThemeRounding, kMaxRounding},
+            {"barRounding", &Settings::barRounding, 0, kMaxRounding},
+            {"widgetRounding", &Settings::widgetRounding, 0, kMaxRounding},
+            {"popupRounding", &Settings::popupRounding, 0, kMaxRounding},
+            {"sectionRounding", &Settings::sectionRounding, 0, kMaxRounding},
             {"helpBarRounding", &Settings::helpBarRounding, kThemeRounding, kMaxRounding},
             {"panelSeparators", &Settings::panelSeparators, 0, kAllSeparators},
             {"helpBarTextSize", &Settings::helpBarTextSize, kAutoBarTextSize, kMaxBarTextSize},
@@ -141,6 +144,7 @@ namespace headsup
         };
         constexpr FloatKey kFloats[] = {{"maxDistance", &Settings::maxDistance, kMinOutlineDistance, kMaxOutlineDistance},
             {"barFontRatio", &Settings::barFontRatio, kMinFontRatio, kMaxFontRatio},
+            {"barLineSeparation", &Settings::barLineSeparation, kMinLineSeparation, kMaxLineSeparation},
             {"popupTextScale", &Settings::popupTextScale, kMinPopupScale, kMaxPopupScale},
             {"popupWidthScale", &Settings::popupWidthScale, kMinPopupBoxScale, kMaxPopupScale},
             {"popupHeightScale", &Settings::popupHeightScale, kMinPopupBoxScale, kMaxPopupScale}};
@@ -204,6 +208,21 @@ namespace headsup
             }
             return ids;
         }
+        StatusDesign StatusDesignFrom(const std::string& text)
+        {
+            StatusDesign design;
+            const size_t bar = text.find(kDesignLineBreak);
+            design[0] = StatusIds(text.substr(0, bar));
+            if (bar != std::string::npos) design[1] = StatusIds(text.substr(bar + 1));
+            std::erase_if(design[1], [&](uint16_t id) { return std::ranges::find(design[0], id) != design[0].end(); });
+            return design;
+        }
+        std::string StatusDesignText(const StatusDesign& design)
+        {
+            std::string text = SpaceApart(design[0]);
+            text += (text.empty() ? "" : " ") + std::string(1, kDesignLineBreak);
+            return design[1].empty() ? text : text + " " + SpaceApart(design[1]);
+        }
         constexpr const char* kPinnedWindowsKey = "pinnedWindows"; // "equip:100,200 statcom:0,40"
         constexpr const char* kHiddenWindowsKey = "hiddenWindows"; // "statcom inventor"
         constexpr const char* kShiftVanillaUiKey = "shiftVanillaUi";
@@ -232,7 +251,7 @@ namespace headsup
         constexpr const char* kBorderSuffix = "Border";
         constexpr const char* kBackgroundSuffix = "Background";
         constexpr const char* kWindowTypeSuffix = "WindowType";
-        constexpr const char* kRoundingSuffix = "Rounding";
+        constexpr const char* kWindowRoundingSuffix = "WindowRounding";
         constexpr const char* kSeparatorSuffix = "Separator";
         constexpr const char* kStatusIconsSuffix = "StatusIcons"; // by StatusIconsName
         constexpr const char* kStatusBackSuffix  = "StatusBackground";
@@ -256,7 +275,9 @@ namespace headsup
         constexpr const char* kBlueMagicLearnedKey = "blueMagicLearned";
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
+        // The Status Timers' Design held the Pinned Status #1 to #6 buttons: never read it or give it another meaning.
         constexpr const char* kDesignSuffix     = "Design";
+        constexpr const char* kPinDesignSuffix  = "PinDesign"; // the Status Timers' StatusDesign, "40 253 | 33"
         constexpr const char* kNameSuffix       = "Name";
         constexpr const char* kCombineSuffix    = "Combine";
         constexpr const char* kLinkPaddingSuffix = "LinkPadding";
@@ -274,6 +295,7 @@ namespace headsup
         constexpr const char* kOwnTitleFontSuffix  = "PrimaryFont";
         constexpr const char* kOwnTextFontSuffix   = "SecondaryFont";
         constexpr const char* kOwnFontRatioSuffix  = "FontRatio";
+        constexpr const char* kOwnLineSeparationSuffix = "LineSeparation";
         constexpr const char* kOwnIconScaleSuffix  = "IconScale";
         constexpr const char* kOwnPopupScaleSuffix = "PopupTextScale";
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
@@ -296,8 +318,11 @@ namespace headsup
             {kExpBarBackKey, &WidgetOptions::expBarBack}, {kExpBarFillKey, &WidgetOptions::expBarFill}};
         constexpr const char* kZoneIdKey    = "zoneId";
         constexpr const char* kMemTextKey   = "memText";
+        constexpr const char* kHomePointWrapKey = "homePointWrap";
         constexpr const char* kStatusDisplayKey = "statusDisplay";
         const char* const kStatusDisplayNames[kStatusDisplayCount] = {"name", "icon", "both"};
+        constexpr const char* kTimerFormatKey = "statusTimerFormat";
+        const char* const kTimerFormatNames[kTimerFormatCount] = {"full", "simple", "short"};
         constexpr const char* kJobTextKey   = "jobText";
         const char* const kJobTextNames[kJobTextCount] = {"mainSub", "main", "levelFirst"};
         constexpr const char* kClock24Key   = "clock24";
@@ -313,7 +338,7 @@ namespace headsup
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barCustom"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barCustom"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -385,10 +410,9 @@ namespace headsup
         // A key's number as the store holds it; nothing for a key it lacks or that holds no number.
         std::optional<float> HeldNumber(SettingsStore& store, const std::string& key)
         {
-            const std::string text = store.GetString(key.c_str(), kNoText);
-            char* end              = nullptr;
-            const float v          = std::strtof(text.c_str(), &end);
-            return text == kNoText || end == text.c_str() || !std::isfinite(v) ? std::nullopt : std::optional<float>(v);
+            const std::string text        = store.GetString(key.c_str(), kNoText);
+            const std::optional<float> v = text == kNoText ? std::nullopt : NumberIn(text);
+            return v && std::isfinite(*v) ? v : std::nullopt;
         }
 
         // A switch as the store holds it; nothing for a key it lacks. HeadsUp writes true or false, and Ashita wrote 1
@@ -446,11 +470,15 @@ namespace headsup
 
         void StoreFloat(SettingsStore& store, const std::string& key, float v)
         {
-            char text[32];
-            std::snprintf(text, sizeof(text), "%.4f", v);
+            constexpr int kPlaces = 4, kExactDigits = 9; // nine significant digits hold any float
+            std::string text = Decimal(v, kPlaces);
             // A value the four places do not hold, such as a color made from a hex code, keeps its precision.
-            if (std::strtof(text, nullptr) != v) std::snprintf(text, sizeof(text), "%.9g", v);
-            store.Set(key.c_str(), text);
+            if (NumberIn(text) != v)
+            {
+                char exact[32];
+                text.assign(exact, std::to_chars(exact, exact + sizeof(exact), v, std::chars_format::general, kExactDigits).ptr);
+            }
+            store.Set(key.c_str(), text.c_str());
         }
 
         void StoreColor(SettingsStore& store, const std::string& base, const Color& c)
@@ -1249,7 +1277,7 @@ namespace headsup
         if (static_cast<int>(s.barTheme) >= kBarThemeCount) s.barTheme = d.barTheme;
         if (static_cast<int>(s.customPalette.shape) >= kBarShapeCount) s.customPalette.shape = d.customPalette.shape;
         s.customPalette.border = std::clamp(s.customPalette.border, 0, kMaxStripBorder);
-        s.customPalette.rounding = std::clamp(s.customPalette.rounding, kShapeRounding, kMaxRounding);
+        s.customPalette.windowRounding = std::clamp(s.customPalette.windowRounding, kShapeRounding, kMaxRounding);
         s.customPalette.windowType = std::clamp(s.customPalette.windowType, kFollowGameWindow, kWindowTypes);
         s.customPalette.statusIcons = std::clamp(s.customPalette.statusIcons, kVanillaStatusIcons, kStatusPackCount - 1);
         if (!IsFolderFileName(s.customThemeName)) s.customThemeName = kUnnamedTheme;
@@ -1277,9 +1305,10 @@ namespace headsup
             if (w.worldGuild < 0 || w.worldGuild >= static_cast<int>(GuildShops().size())) w.worldGuild = fresh.worldGuild;
             if (w.spacing) w.spacing = std::clamp(*w.spacing, 0, kMaxWidgetSpacing);
             if (w.padding) w.padding = std::clamp(*w.padding, 0, kMaxWidgetPadding);
-            if (w.rounding) w.rounding = std::clamp(*w.rounding, kThemeRounding, kMaxRounding);
+            if (w.rounding) w.rounding = std::clamp(*w.rounding, 0, kMaxRounding);
             if (w.iconScale) w.iconScale = std::clamp(Stepped(*w.iconScale, kPercentStep), kMinIconScale, kMaxIconScale);
             if (w.fontRatio) w.fontRatio = std::clamp(*w.fontRatio, kMinFontRatio, kMaxFontRatio);
+            if (w.lineSeparation) w.lineSeparation = std::clamp(*w.lineSeparation, kMinLineSeparation, kMaxLineSeparation);
             if (w.popupTextScale) w.popupTextScale = std::clamp(*w.popupTextScale, kMinPopupScale, kMaxPopupScale);
             for (std::string* font : {&w.titleFont, &w.textFont})
                 if (font->size() > kMaxFontName) font->clear();
@@ -1330,7 +1359,8 @@ namespace headsup
             const auto text = [&](const char* key) { return store.GetString(CopyKey(key, w).c_str(), ""); };
             const auto number = [&](const std::string& key, int fallback) { return LoadInt(store, CopyKey(key, w), fallback); };
             o.on         = flag(widget, o.on);
-            o.design     = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
+            if (w.kind == BarWidget::StatusTimers) o.pinDesign = StatusDesignFrom(text((widget + kPinDesignSuffix).c_str()));
+            else if (HasDesigner(w.kind)) o.design = DesignFrom(w.kind, text((widget + kDesignSuffix).c_str()));
             if (w.kind == BarWidget::Custom) o.name = text((widget + kNameSuffix).c_str());
             if (w.kind == BarWidget::Custom) o.popup = PopupDesignFrom(w.kind, text((widget + kPopupDesignSuffix).c_str()));
             o.combine    = PanelWidgetNamed(text((widget + kCombineSuffix).c_str()));
@@ -1365,6 +1395,7 @@ namespace headsup
                 o.rounding       = whole(kOwnRoundingSuffix);
                 o.iconScale      = whole(kOwnIconScaleSuffix);
                 o.fontRatio      = own(kOwnFontRatioSuffix);
+                o.lineSeparation = own(kOwnLineSeparationSuffix);
                 o.popupTextScale = own(kOwnPopupScaleSuffix);
                 const std::string background = widget + kOwnBackgroundSuffix;
                 if (!text(background.c_str()).empty()) o.background = flag(background, false);
@@ -1405,9 +1436,14 @@ namespace headsup
             case BarWidget::Performance:
                 o.memText = flag(kMemTextKey, o.memText);
                 break;
+            case BarWidget::HomePoint:
+                o.wrapText = flag(kHomePointWrapKey, o.wrapText);
+                break;
             case BarWidget::StatusTimers:
                 o.statusDisplay = static_cast<StatusDisplay>(NameIndex(kStatusDisplayNames, kStatusDisplayCount,
                     text(kStatusDisplayKey), static_cast<int>(o.statusDisplay)));
+                o.timerFormat = static_cast<TimerFormat>(NameIndex(kTimerFormatNames, kTimerFormatCount,
+                    text(kTimerFormatKey), static_cast<int>(o.timerFormat)));
                 break;
             case BarWidget::EarthTime:
             {
@@ -1456,7 +1492,8 @@ namespace headsup
             const auto flag = [&](const std::string& key, bool v) { StoreBool(store, CopyKey(key, w), v); };
             const auto text = [&](const char* key, const char* v) { store.Set(CopyKey(key, w).c_str(), v); };
             flag(widget, o.on);
-            if (!PartsOf(w.kind).empty()) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
+            if (w.kind == BarWidget::StatusTimers) text((widget + kPinDesignSuffix).c_str(), StatusDesignText(o.pinDesign).c_str());
+            else if (HasDesigner(w.kind)) text((widget + kDesignSuffix).c_str(), DesignText(w.kind, o.design).c_str());
             if (w.kind == BarWidget::Custom) text((widget + kNameSuffix).c_str(), o.name.c_str());
             if (w.kind == BarWidget::Custom) text((widget + kPopupDesignSuffix).c_str(), PopupDesignText(o.popup).c_str());
             text((widget + kCombineSuffix).c_str(), o.combine ? PanelWidgetName(*o.combine).c_str() : "");
@@ -1481,6 +1518,7 @@ namespace headsup
                 own(kOwnRoundingSuffix, o.rounding);
                 own(kOwnIconScaleSuffix, o.iconScale);
                 own(kOwnFontRatioSuffix, o.fontRatio);
+                own(kOwnLineSeparationSuffix, o.lineSeparation);
                 own(kOwnPopupScaleSuffix, o.popupTextScale);
                 if (o.background)
                     flag(widget + kOwnBackgroundSuffix, *o.background);
@@ -1510,8 +1548,12 @@ namespace headsup
             case BarWidget::Performance:
                 flag(kMemTextKey, o.memText);
                 break;
+            case BarWidget::HomePoint:
+                flag(kHomePointWrapKey, o.wrapText);
+                break;
             case BarWidget::StatusTimers:
                 text(kStatusDisplayKey, kStatusDisplayNames[static_cast<int>(o.statusDisplay)]);
+                text(kTimerFormatKey, kTimerFormatNames[static_cast<int>(o.timerFormat)]);
                 break;
             case BarWidget::EarthTime:
                 text(kClockZoneKey, o.clockZone ? kClockZoneNames[static_cast<int>(*o.clockZone)] : kLocalZone);
@@ -1547,6 +1589,7 @@ namespace headsup
         o.design     = DefaultDesign(widget.kind);
         if (widget.kind == BarWidget::Custom) o.name = CreatedWidgetName(widget);
         o.popup      = DefaultPopupDesign(widget.kind);
+        if (widget.kind == BarWidget::EarthTime) o.iconSide = IconSide::Hide;
         return o;
     }
 
@@ -1800,7 +1843,7 @@ namespace headsup
             s.customPalette.background = static_cast<BarBackground>(NameIndex(kBarBackgroundNames, kBarBackgroundCount,
                 store.GetString((custom + kBackgroundSuffix).c_str(), ""), static_cast<int>(s.customPalette.background)));
             s.customPalette.windowType   = LoadInt(store, custom + kWindowTypeSuffix, s.customPalette.windowType);
-            s.customPalette.rounding     = LoadInt(store, custom + kRoundingSuffix, s.customPalette.rounding);
+            s.customPalette.windowRounding = LoadInt(store, custom + kWindowRoundingSuffix, s.customPalette.windowRounding);
             s.customPalette.separator    = static_cast<DashMark>(NameIndex(kDashMarkNames, kDashMarkCount,
                 store.GetString((custom + kSeparatorSuffix).c_str(), ""), static_cast<int>(s.customPalette.separator)));
             s.customPalette.statusIcons =
@@ -1909,7 +1952,7 @@ namespace headsup
         store.Set((kCustomThemeKey + std::string(kBackgroundSuffix)).c_str(),
             kBarBackgroundNames[static_cast<int>(s.customPalette.background)]);
         StoreFloat(store, kCustomThemeKey + std::string(kWindowTypeSuffix), static_cast<float>(s.customPalette.windowType));
-        StoreFloat(store, kCustomThemeKey + std::string(kRoundingSuffix), static_cast<float>(s.customPalette.rounding));
+        StoreFloat(store, kCustomThemeKey + std::string(kWindowRoundingSuffix), static_cast<float>(s.customPalette.windowRounding));
         store.Set((kCustomThemeKey + std::string(kSeparatorSuffix)).c_str(), kDashMarkNames[static_cast<int>(s.customPalette.separator)]);
         store.Set((kCustomThemeKey + std::string(kStatusIconsSuffix)).c_str(), StatusIconsName(s.customPalette.statusIcons).c_str());
         StoreBool(store, kCustomThemeKey + std::string(kStatusBackSuffix), s.customPalette.statusBack);
@@ -1969,7 +2012,7 @@ namespace headsup
             any  = any || text != kNoText;
         }
         m_Outdated = any && (m_Held.at(kDesignsSavedKey) != marker ||
-                                std::strtof(m_Held.at(kVersionKey).c_str(), nullptr) < kSettingsVersion);
+                                NumberIn(m_Held.at(kVersionKey)).value_or(0.0f) < kSettingsVersion);
         return LoadSettings(m_Store);
     }
 

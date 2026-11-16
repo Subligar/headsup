@@ -57,7 +57,7 @@ namespace
             form.Fade(faded);
             form.Switch("Chocobo", b.chocobo, "The chocobo.");
             form.SliderInt("Height", b.height, 24, 64, [](int px) { return std::to_string(px) + " px"; }, nullptr);
-            form.SliderFloat("Thickness", b.thick, 0.5f, 3.0f, "%.1f px", nullptr);
+            form.SliderFloat("Thickness", b.thick, 0.5f, 3.0f, 1, " px", nullptr);
             form.SliderNamed("Quality", b.quality, kQualities, 4, nullptr);
             form.SliderPercent("Opacity", b.opacity, 10, 100, nullptr);
             form.NumberDropdown("Theme", b.theme, 0, 2, [](int t) { return "Theme " + std::to_string(t); }, nullptr, 0.0f,
@@ -167,7 +167,7 @@ TEST(a_click_on_a_cards_title_folds_it)
     CHECK(state.collapsed.empty() && Has(open.blocks[0].rml, "card-body"));
 }
 
-TEST(a_fold_starts_shut_and_a_click_on_it_opens_and_shuts_it)
+TEST(a_section_that_folds_starts_shut_and_its_chip_opens_and_shuts_it)
 {
     FormState state;
     const auto pass = [&](const std::vector<FormEvent>& events, bool faded = false) {
@@ -175,17 +175,45 @@ TEST(a_fold_starts_shut_and_a_click_on_it_opens_and_shuts_it)
         form.pageKey = "p";
         form.BeginCard("C");
         form.Fade(faded);
-        const bool open = form.Fold("More");
+        const bool open = form.BeginSection("More", true);
+        if (open) form.Note("Inside");
+        form.EndSection();
         form.EndCard();
         return std::pair{open, form.blocks[0].rml};
     };
     const auto [shut, shutRml] = pass({});
-    CHECK(!shut && Has(shutRml, "<div class=\"arrow\"></div>"));
+    CHECK(!shut && Has(shutRml, "id=\"p-c-more-fold\"") && !Has(shutRml, "Inside"));
     CHECK(!pass({{"p-c-more-fold", kClickEvent, ""}}, true).first); // faded, it takes no clicks
     const auto [open, openRml] = pass({{"p-c-more-fold", kClickEvent, ""}});
-    CHECK(open && Has(openRml, "<div class=\"arrow open\"></div>"));
+    CHECK(open && Has(openRml, "Inside"));
+    // Shut it has the chip's plus, open its minus alone.
+    const auto signs = [](const std::string& rml) {
+        size_t count = 0;
+        for (size_t at = rml.find("class=\"wsign"); at != std::string::npos; at = rml.find("class=\"wsign", at + 1))
+            ++count;
+        return count;
+    };
+    CHECK_EQ(signs(shutRml), static_cast<size_t>(2));
+    CHECK_EQ(signs(openRml), static_cast<size_t>(1));
     CHECK(pass({}).first); // it stays open
     CHECK(!pass({{"p-c-more-fold", kClickEvent, ""}}).first);
+}
+
+TEST(a_section_is_open_without_a_chip_unless_it_folds_and_one_with_nothing_in_it_is_left_out)
+{
+    FormState state;
+    Form form({}, state);
+    form.pageKey = "p";
+    form.BeginCard("C");
+    CHECK(form.BeginSection("Shown", false));
+    form.Note("Inside");
+    form.EndSection();
+    CHECK(form.BeginSection("Empty", false));
+    form.EndSection();
+    form.EndCard();
+    const std::string& rml = form.blocks[0].rml;
+    CHECK(Has(rml, "Shown") && Has(rml, "Inside") && !Has(rml, "-fold\""));
+    CHECK(!Has(rml, "Empty"));
 }
 
 TEST(a_slider_takes_its_newest_value_within_its_ends)

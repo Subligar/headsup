@@ -92,6 +92,8 @@ namespace
     constexpr double kSeedsPerSecond   = 1000.0; // a Case's seed is the time in milliseconds
     // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
     constexpr const char* kVersion           = "0.5.4";
+    // Before the addon host (LinuxXI's -1000 is seen to be), so an addon that skips blocked packets misses Auto-Check's.
+    constexpr int32_t kPriority              = -1000;
     constexpr const char* kConfigAlias       = "headsup";
     constexpr const char* kConfigFolder      = "config";
     constexpr const char* kWindowFile        = "settings_window.json"; // a developer's build reads one in its config folder
@@ -535,6 +537,7 @@ public:
         std::from_chars(kVersion, kVersion + std::strlen(kVersion), version);
         return version;
     }
+    int32_t GetPriority(void) const override { return kPriority; }
     uint32_t GetFlags(void) const override
     {
         return static_cast<uint32_t>(Ashita::PluginFlags::UseCommands | Ashita::PluginFlags::UseText |
@@ -783,9 +786,8 @@ public:
             if (!m_RmlMenu.OpenPage(args[2])) Print("/hu menu: no page is named " + args[2] + ".");
 #ifdef HEADSUP_DEV
             // A number last scrolls the page that many pixels down.
-            char* end          = nullptr;
-            const float pixels = std::strtof(args.back().c_str(), &end);
-            if (args.size() > 3 && end != args.back().c_str() && *end == '\0') m_RmlMenu.ScrollTo(pixels);
+            const std::optional<float> pixels = headsup::NumberIn(args.back());
+            if (args.size() > 3 && pixels) m_RmlMenu.ScrollTo(*pixels);
 #endif
         }
 #ifdef HEADSUP_DEV
@@ -1105,8 +1107,8 @@ public:
         // The game's help bar is the only help left while an event or the map hides HeadsUp's bar; a screenshot wants
         // neither.
         const bool helpGone = m_Settings.hideHelpBar && (m_Screenshot || !(m_Player.inEvent || mapShown));
-        const headsup::HiddenWindows hidden{.helpBar = m_Settings.enabled && helpGone,
-            .netstat = m_Settings.enabled && m_Settings.hideNetstat};
+        const bool panel = headsup::BarOn(m_Settings);
+        const headsup::HiddenWindows hidden{.helpBar = panel && helpGone, .netstat = panel && m_Settings.hideNetstat};
         const std::optional<headsup::HelpBand> band = HelpBandNow();
         const auto mode         = static_cast<size_t>(headsup::WindowHelpMode(m_Settings));
         const bool movesWindows = (band && band->bottom != 0 && m_Settings.shiftVanillaUi) ||
@@ -2140,7 +2142,7 @@ private:
         static const std::unordered_map<std::string, uint32_t> kKeys = {{"enter", VK_RETURN}, {"escape", VK_ESCAPE},
             {"tab", VK_TAB}, {"backspace", VK_BACK}, {"delete", VK_DELETE}, {"left", VK_LEFT}, {"right", VK_RIGHT},
             {"up", VK_UP}, {"down", VK_DOWN}, {"home", VK_HOME}, {"end", VK_END}, {"space", VK_SPACE}, {"a", 'A'}};
-        auto number = [&](size_t at) { return at < args.size() ? std::strtof(args[at].c_str(), nullptr) : 0.0f; };
+        auto number = [&](size_t at) { return at < args.size() ? headsup::NumberIn(args[at]).value_or(0.0f) : 0.0f; };
         auto at = [&](float x, float y) {
             return MAKELPARAM(static_cast<int>(x / g_BarScaleX), static_cast<int>(y / g_BarScaleY));
         };
@@ -2907,6 +2909,7 @@ private:
         s.weather = WeatherNow();
         s.owners   = m_GameState.Owners();
         s.shares   = m_GameState.Shares();
+        s.homePoint  = m_AshitaCore->GetMemoryManager()->GetPlayer()->GetHomepoint();
         s.pickedTabs = &m_BarInput.PickedTabs();
         s.scrolled   = &m_BarInput.Scrolled();
         s.pinRefused = m_BarInput.Refused();

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 #include <vector>
 
 using namespace headsup;
@@ -226,4 +227,108 @@ TEST(two_clips_leave_what_both_cover)
     // Apart, they leave no pixel for the scissor to keep.
     const PixelEdges none = Shared(PixelEdges{0, 0, 10, 10}, PixelEdges{20, 20, 30, 30});
     CHECK(!ClampedRect(none.left, none.top, none.right, none.bottom, 80, 40));
+}
+
+namespace
+{
+    ScreenVertex At(float x, float y, uint32_t color = 0xFFFFFFFF)
+    {
+        return ScreenVertex{x, y, 0.0f, 1.0f, color, x / 1000.0f, y / 1000.0f};
+    }
+
+    // A box with its corners cut 10 px in, as RmlUi gives a rounded box to clip by: a fan of triangles around its
+    // middle, each corner given twice, kept at the pixel centers as the renderer keeps every vertex.
+    std::vector<ScreenVertex> CutBox(float left, float top, float right, float bottom)
+    {
+        const float c = 10.0f;
+        const std::vector<std::pair<float, float>> rim = {{left + c, top}, {right - c, top}, {right, top + c},
+            {right, bottom - c}, {right - c, bottom}, {left + c, bottom}, {left, bottom - c}, {left, top + c}};
+        const ScreenVertex middle = At((left + right) / 2.0f - kPixelCenter, (top + bottom) / 2.0f - kPixelCenter);
+        std::vector<ScreenVertex> fan;
+        for (size_t i = 0; i < rim.size(); ++i)
+        {
+            const auto [x0, y0] = rim[i];
+            const auto [x1, y1] = rim[(i + 1) % rim.size()];
+            fan.insert(fan.end(), {middle, At(x0 - kPixelCenter, y0 - kPixelCenter), At(x1 - kPixelCenter, y1 - kPixelCenter)});
+        }
+        return fan;
+    }
+
+    float Area(const std::vector<ScreenVertex>& triangles)
+    {
+        float area = 0.0f;
+        for (size_t i = 0; i + 2 < triangles.size(); i += 3)
+        {
+            const ScreenVertex &a = triangles[i], &b = triangles[i + 1], &c = triangles[i + 2];
+            area += std::abs((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)) / 2.0f;
+        }
+        return area;
+    }
+
+    std::vector<ScreenVertex> Quad(float left, float top, float right, float bottom)
+    {
+        return {At(left, top), At(right, top), At(right, bottom), At(left, top), At(right, bottom), At(left, bottom)};
+    }
+}
+
+TEST(a_rounded_clip_mask_is_the_outline_of_its_box_where_it_is_drawn)
+{
+    const std::vector<ScreenVertex> mask = CutBox(0.0f, 0.0f, 100.0f, 50.0f);
+    const std::vector<ScreenVertex> shape = MaskShape(mask.data(), mask.size(), 10.0f, 20.0f, nullptr);
+    // Its eight corners, not its middle nor a corner twice, moved by the translation as every vertex drawn is.
+    CHECK_EQ(shape.size(), size_t{8});
+    for (const ScreenVertex& v : shape)
+    {
+        CHECK(v.x >= 10.0f - kPixelCenter - 0.01f && v.x <= 110.0f - kPixelCenter + 0.01f);
+        CHECK(v.y >= 20.0f - kPixelCenter - 0.01f && v.y <= 70.0f - kPixelCenter + 0.01f);
+    }
+    // Clipping a box to it leaves the cut box: 100 by 50 less four corners of 10 by 10 halved.
+    std::vector<ScreenVertex> over = Quad(-100.0f, -100.0f, 300.0f, 300.0f);
+    ClipToShape(over, shape);
+    CHECK(std::abs(Area(over) - 4800.0f) < 0.5f);
+    // A quarter turn about the origin turns the outline with it: x from -70 to -20, y from 10 to 110.
+    const float turn[16] = {0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+    for (const ScreenVertex& v : MaskShape(mask.data(), mask.size(), 10.0f, 20.0f, turn))
+        CHECK(v.x >= -70.0f - kPixelCenter - 0.01f && v.x <= -20.0f - kPixelCenter + 0.01f && v.y >= 10.0f - kPixelCenter - 0.01f);
+    // A plain box is the scissor's to clip: it has no outline of its own.
+    const std::vector<ScreenVertex> box = Quad(0.0f, 0.0f, 100.0f, 50.0f);
+    CHECK(MaskShape(box.data(), box.size(), 0.0f, 0.0f, nullptr).empty());
+}
+
+TEST(clipping_to_a_rounded_mask_cuts_only_what_crosses_its_outline_and_carries_each_vertex_along)
+{
+    const std::vector<ScreenVertex> mask  = CutBox(0.0f, 0.0f, 100.0f, 50.0f);
+    const std::vector<ScreenVertex> shape = MaskShape(mask.data(), mask.size(), kPixelCenter, kPixelCenter, nullptr);
+    // A box well inside is drawn as it was.
+    const std::vector<ScreenVertex> inside = Quad(20.0f, 10.0f, 80.0f, 40.0f);
+    std::vector<ScreenVertex> kept = inside;
+    ClipToShape(kept, shape);
+    CHECK_EQ(kept.size(), inside.size());
+    for (size_t i = 0; i < kept.size(); ++i)
+        CHECK(kept[i].x == inside[i].x && kept[i].y == inside[i].y && kept[i].u == inside[i].u);
+    // The top left 20 by 20 loses its corner's 50 px; every new vertex keeps its texture where it lies.
+    std::vector<ScreenVertex> corner = Quad(0.0f, 0.0f, 20.0f, 20.0f);
+    ClipToShape(corner, shape);
+    CHECK(std::abs(Area(corner) - 350.0f) < 0.5f);
+    for (const ScreenVertex& v : corner)
+        CHECK(std::abs(v.u - v.x / 1000.0f) < 1e-5f && std::abs(v.v - v.y / 1000.0f) < 1e-5f && v.x + v.y >= 10.0f - 0.01f);
+    // Colors halfway along a cut edge are halfway between its ends: an edge from black to white cut at its middle.
+    std::vector<ScreenVertex> fading = {At(-10.0f, 25.0f, 0xFF000000), At(10.0f, 25.0f, 0xFFFFFFFF), At(10.0f, 30.0f, 0xFFFFFFFF)};
+    ClipToShape(fading, shape);
+    CHECK(std::ranges::any_of(fading, [](const ScreenVertex& v) { return std::abs(v.x) < 1e-4f && (v.color & 0xFF) >= 0x7F && (v.color & 0xFF) <= 0x80; }));
+    // Outside it altogether, nothing is left.
+    std::vector<ScreenVertex> outside = Quad(200.0f, 200.0f, 220.0f, 220.0f);
+    ClipToShape(outside, shape);
+    CHECK(outside.empty());
+}
+
+TEST(two_rounded_masks_clip_to_what_both_cover)
+{
+    const std::vector<ScreenVertex> a = CutBox(0.0f, 0.0f, 100.0f, 50.0f), b = CutBox(50.0f, 0.0f, 150.0f, 50.0f);
+    const std::vector<ScreenVertex> both = SharedShape(MaskShape(a.data(), a.size(), 0.0f, 0.0f, nullptr),
+        MaskShape(b.data(), b.size(), 0.0f, 0.0f, nullptr));
+    // x from 50 to 100 of the full height, less the two cut corners on each side that fall inside it: 2500 - 4 * 50.
+    std::vector<ScreenVertex> over = Quad(-100.0f, -100.0f, 300.0f, 300.0f);
+    ClipToShape(over, both);
+    CHECK(std::abs(Area(over) - 2300.0f) < 0.5f);
 }

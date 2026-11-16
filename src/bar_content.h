@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -80,12 +81,13 @@ namespace headsup
         std::optional<InlineBar> bar{};
         uint16_t item = 0; // a game item's picture
         std::optional<StatusMark> status{};
-        // A text that ticks (a time, a distance) keeps the room of the widest of these, its digits any digit: each
-        // digit drawn in a cell as wide as its font's widest, the text against the room's right, so nothing after it
-        // moves.
+        // Each digit is drawn in a cell as wide as its font's widest (Ticks). A text that ticks (a time, a distance)
+        // keeps the room of the widest of these too, its digits any digit, the text against the room's right, so
+        // nothing after it moves.
         std::vector<std::string> room{};
-        // That room's width with the text's trailing spaces, the spaces' width, and the widest digit's (SteadyBoxes).
-        float box = 0.0f, trail = 0.0f, digit = 0.0f;
+        // That room's width with the text's spaces, its leading and trailing spaces' widths, and the widest digit's
+        // (SteadyBoxes).
+        float box = 0.0f, lead = 0.0f, trail = 0.0f, digit = 0.0f;
         // A widget line's run of text with an alignment of its own starts here and goes to the next span with one.
         std::optional<Align> align{};
         bool operator==(const Span&) const = default;
@@ -111,6 +113,7 @@ namespace headsup
         // Each span of either line is a cell, and the cells at one place of their lines a column, the columns a gap
         // apart: the Conquest widget's two by two.
         bool cells = false;
+        bool wrap  = false; // its title, one span, breaks onto its second line where that is narrowest (WrapTitle)
         bool operator==(const WidgetContent&) const = default;
     };
 
@@ -190,6 +193,7 @@ namespace headsup
         std::vector<PopupTab> tabs{}; // under the heading, a click picking one, by the heading
         size_t tab = 0;               // the picked one, whose rows follow the section's own
         bool beside = false; // in one row with the card before it, the row's cards as tall as each other
+        bool under  = false; // under the card before it, in its column of their row
         // A headed card's chip at its heading's right tells this when pressed, which collapses or opens it; none
         // without it. Collapsed, it shows its heading alone.
         std::string collapsePress{};
@@ -223,8 +227,10 @@ namespace headsup
     constexpr int64_t kMsPerMinute = kMsPerSecond * kSecondsPerMinute, kMsPerHour = kMsPerSecond * kSecondsPerHour,
                       kMsPerDay = kMsPerSecond * kSecondsPerDay;
 
-    // value in a printf format: Printed("%.1f ms", 16.66) is "16.7 ms".
+    // A whole number in a printf format: Printed("%02d", 7) is "07". A decimal goes through Decimal, as printf's
+    // follows the C locale.
     template <typename Value>
+        requires std::is_integral_v<Value>
     std::string Printed(const char* format, Value value)
     {
         char text[48];
@@ -279,9 +285,13 @@ namespace headsup
     // The digit that measures widest, the lowest of those that tie.
     char WidestDigit(FunctionRef<float(char)> measure);
     constexpr bool IsDigit(char c) { return c >= '0' && c <= '9'; }
-    // text as a span with room draws it: each digit alone, each run of other characters together.
+    // Drawn with each digit in its cell, so its width never changes as its figures do: a span with a room or a figure.
+    bool Ticks(const Span& s);
+    // Text of spaces alone, with no mark, which RmlUi's parser drops: Spans puts it on the text beside it.
+    bool SpacesAlone(const Span& s);
+    // text as a span that Ticks draws it: each digit alone, each run of other characters together.
     std::vector<std::string_view> FigurePieces(std::string_view text);
-    // Sets box, trail and digit of each span with room on a line of one font: digit its widest digit's width, width a
-    // text's.
+    // Sets box, lead, trail and digit of each span that Ticks on a line of one font: digit its widest digit's width, width a
+    // text's. Spaces alone after one in its run go in its trail.
     void SteadyBoxes(std::vector<Span>& line, float digit, FunctionRef<float(const std::string&)> width);
 }

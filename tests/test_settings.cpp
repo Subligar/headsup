@@ -2,6 +2,7 @@
 #include "pointer_keys.h"
 #include "default_settings.h"
 #include "ini_text.h"
+#include "markup.h"
 #include "settings.h"
 #include "world_info.h"
 #include "release_file.h"
@@ -260,6 +261,7 @@ barParty=true
 barStatusTimers=true
 barWorld=true
 barSettings=true
+barHomePoint=true
 barZoneLine2=true
 barZoneIcons=true
 barWeatherLine2=true
@@ -300,7 +302,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather job party statusTimers world
+barLeft=zone weather job party statusTimers world homePoint
 barCenter=
 barRight=target gil bags performance earthTime settings
 hideHelpBar=true
@@ -938,7 +940,7 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     s.customPalette.border       = 5;
     s.customPalette.background   = BarBackground::Window;
     s.customPalette.windowType   = 3;
-    s.customPalette.rounding     = 12;
+    s.customPalette.windowRounding = 12;
     s.customPalette.separator    = DashMark::Dot;
     s.customPalette.statusIcons  = 1;
     s.customPalette.statusBack   = true;
@@ -955,12 +957,12 @@ TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_
     MapStore garbled;
     garbled.values["customThemeAccent"] = "not a color";
     garbled.values["customThemeBorder"] = "99";
-    garbled.values["customThemeRounding"] = "-5";
+    garbled.values["customThemeWindowRounding"] = "-5";
     garbled.values["customThemeStatusIcons"] = "Missing Pack";
     const Settings read = LoadSettings(garbled);
     CHECK_EQ(read.customPalette.statusIcons, PaletteOf(BarTheme::PhoenixGold).statusIcons);
     CHECK(read.customPalette.accent == PaletteOf(BarTheme::PhoenixGold).accent && read.customPalette.border == kMaxStripBorder);
-    CHECK_EQ(read.customPalette.rounding, kShapeRounding);
+    CHECK_EQ(read.customPalette.windowRounding, kShapeRounding);
 }
 
 TEST(the_windows_help_mode_follows_the_panels_help_line_and_the_games_own_strip)
@@ -1038,7 +1040,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings"}; // in BarWidget's order, but a created widget's
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint"}; // in BarWidget's order, but a created widget's
     static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
     for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {
@@ -1254,7 +1256,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     Settings s;
     const WidgetOptions fresh;
     CHECK(!fresh.spacing && !fresh.padding && !fresh.background && fresh.titleFont.empty() && fresh.textFont.empty() &&
-          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale);
+          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale && !fresh.lineSeparation);
     WidgetOptions& zone = s.Widget(BarWidget::Zone);
     zone.spacing        = 12;
     zone.padding        = 0;
@@ -1263,8 +1265,9 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     zone.textFont       = "Verdana";
     zone.fontRatio      = 1.5f;
     zone.iconScale      = 40;
-    zone.rounding       = kThemeRounding;
+    zone.rounding       = 0;
     zone.popupTextScale = 1.4f;
+    zone.lineSeparation = 1.5f;
     const PanelWidget copy = *CloneWidget(s, BarWidget::Zone);
     CHECK(s.Widget(copy).spacing == 12 && s.Widget(copy).textFont == "Verdana" && s.Widget(copy).popupTextScale == 1.4f);
     s.Widget(copy).iconScale  = 75;
@@ -1274,6 +1277,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     CHECK_EQ(saved.values["barZoneWidgetSpacing"], "12.0000");
     CHECK_EQ(saved.values["barZoneShowBackground"], "false");
     CHECK_EQ(saved.values["barZonePrimaryFont"], "Arial");
+    CHECK_EQ(saved.values["barZoneLineSeparation"], "1.5000");
     CHECK_EQ(saved.values["barZoneIconScale_2"], "75.0000");
     CHECK_EQ(saved.values["barZoneShowBackground_2"], "true");
     CHECK(saved.values.contains("barWeatherWidgetSpacing") && saved.values["barWeatherWidgetSpacing"].empty());
@@ -1295,11 +1299,12 @@ TEST(a_widgets_own_looks_out_of_their_range_are_held_to_it)
     store.values["barZoneCornerRounding"] = "-9";
     store.values["barZoneFontRatio"]      = "9";
     store.values["barZonePopupTextScale"] = "0.01";
+    store.values["barZoneLineSeparation"] = "9";
     store.values["barZonePrimaryFont"]    = std::string(kMaxFontName + 1, 'a');
     const WidgetOptions zone = LoadSettings(store).Widget(BarWidget::Zone);
     CHECK(zone.spacing == kMaxWidgetSpacing && zone.padding == 0 && zone.iconScale == 45);
-    CHECK(zone.rounding == kThemeRounding && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
-    CHECK(zone.titleFont.empty());
+    CHECK(zone.rounding == 0 && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
+    CHECK(zone.lineSeparation == kMaxLineSeparation && zone.titleFont.empty());
 }
 
 TEST(separators_out_of_their_bits_are_held_to_them)
@@ -1329,24 +1334,29 @@ TEST(the_font_ratio_pop_out_scales_icon_scale_and_roundings_hold_to_their_ranges
     const Settings d;
     CHECK(d.barFontRatio == kDefaultFontRatio && d.popupTextScale == kDefaultPopupScale && d.barIconScale == kDefaultIconScale);
     CHECK(d.popupWidthScale == kDefaultPopupScale && d.popupHeightScale == kDefaultPopupScale);
-    CHECK(d.widgetRounding == kThemeRounding && d.popupRounding == kThemeRounding && d.sectionRounding == kThemeRounding);
+    CHECK(d.barRounding == 0 && d.widgetRounding == 8 && d.popupRounding == 0 && d.sectionRounding == 10);
     MapStore store;
     store.values["barFontRatio"]     = "9";
     store.values["popupTextScale"]   = "0.01";
     store.values["popupWidthScale"]  = "7";
     store.values["popupHeightScale"] = "0.5";
     store.values["barIconScale"]     = "3";
-    store.values["widgetRounding"]   = "-9";
+    store.values["barLineSeparation"] = "0.01";
+    store.values["barRounding"]      = "33";
+    store.values["widgetRounding"]   = "-1"; // Set by Theme, before round 23: none now
     store.values["popupRounding"]    = "999";
     store.values["sectionRounding"]  = "12";
     store.values["helpBarRounding"]  = "40";
     const Settings s = LoadSettings(store);
     CHECK(s.barFontRatio == kMaxFontRatio && s.popupTextScale == kMinPopupScale && s.barIconScale == kMinIconScale);
+    CHECK(s.barLineSeparation == kMinLineSeparation);
     // A pop-out is never narrower or shorter than its own size (the user's 1.0x), whatever its text is.
     CHECK(s.popupWidthScale == kMaxPopupScale && s.popupHeightScale == 1.0f);
     store.values["popupWidthScale"] = "0.3";
     CHECK(LoadSettings(store).popupWidthScale == 1.0f);
-    CHECK(s.widgetRounding == kThemeRounding && s.popupRounding == kMaxRounding && s.sectionRounding == 12);
+    store.values["barIconScale"] = "150";
+    CHECK(LoadSettings(store).barIconScale == 150);
+    CHECK(s.barRounding == kMaxRounding && s.widgetRounding == 0 && s.popupRounding == kMaxRounding && s.sectionRounding == 12);
     CHECK(d.helpBarRounding == kThemeRounding && s.helpBarRounding == kMaxRounding);
 }
 
@@ -1719,14 +1729,14 @@ TEST(an_old_file_migrates_field_by_field)
           OutlineMode::Disabled); // willAttackShow=false
     // The category and label colors fill the palettes.
     CHECK(s.palette.aggression[static_cast<int>(Nature::Aggressive)] ==
-          (Color{{std::strtof(store.values.at("willAttackR").c_str(), nullptr), std::strtof(store.values.at("willAttackG").c_str(), nullptr),
-                 std::strtof(store.values.at("willAttackB").c_str(), nullptr)}}));
+          (Color{{*NumberIn(store.values.at("willAttackR")), *NumberIn(store.values.at("willAttackG")),
+                 *NumberIn(store.values.at("willAttackB"))}}));
     CHECK(s.palette.toughness[static_cast<int>(LabelShade::Tough)] ==
-          (Color{{std::strtof(store.values.at("labelToughR").c_str(), nullptr), std::strtof(store.values.at("labelToughG").c_str(), nullptr),
-                 std::strtof(store.values.at("labelToughB").c_str(), nullptr)}}));
+          (Color{{*NumberIn(store.values.at("labelToughR")), *NumberIn(store.values.at("labelToughG")),
+                 *NumberIn(store.values.at("labelToughB"))}}));
     CHECK(s.palette.target[static_cast<int>(TargetState::Locked)] ==
-          (Color{{std::strtof(store.values.at("lockedCursorColorR").c_str(), nullptr), std::strtof(store.values.at("lockedCursorColorG").c_str(), nullptr),
-                 std::strtof(store.values.at("lockedCursorColorB").c_str(), nullptr)}}));
+          (Color{{*NumberIn(store.values.at("lockedCursorColorR")), *NumberIn(store.values.at("lockedCursorColorG")),
+                 *NumberIn(store.values.at("lockedCursorColorB"))}}));
     // Fonts and sizes.
     CHECK_EQ(mobs.lines[2].font, store.values.at("fontName"));
     CHECK_EQ(mobs.lines[2].style, StyleBit(FontStyle::Bold)); // fontBold=true
@@ -1735,12 +1745,12 @@ TEST(an_old_file_migrates_field_by_field)
     CHECK_EQ(mobs.lines[1].font, store.values.at("labelFontName"));
     CHECK_EQ(s.Kind(PlateKind::Players).lines[2].font, store.values.at("fontName"));
     CHECK_EQ(s.Kind(PlateKind::Npcs).lines[2].font, store.values.at("fontName"));
-    const int base = static_cast<int>(std::strtof(store.values.at("mobNameSize").c_str(), nullptr));
+    const int base = static_cast<int>(*NumberIn(store.values.at("mobNameSize")));
     CHECK_EQ(s.baseSize, base);
     CHECK_EQ(mobs.lines[2].textSize, 100);
-    CHECK_EQ(mobs.lines[1].textSize, Stepped(static_cast<int>(std::lround(100.0f * std::strtof(store.values.at("labelSize").c_str(), nullptr) / static_cast<float>(base))), kPercentStep));
+    CHECK_EQ(mobs.lines[1].textSize, Stepped(static_cast<int>(std::lround(100.0f * *NumberIn(store.values.at("labelSize")) / static_cast<float>(base))), kPercentStep));
     CHECK_EQ(mobs.lines[0].iconSize, 150); // iconSize=24 px, of the 16 px base icon
-    CHECK_EQ(s.Kind(PlateKind::Self).lines[2].textSize, Stepped(static_cast<int>(std::lround(100.0f * std::strtof(store.values.at("selfNameSize").c_str(), nullptr) / static_cast<float>(base))), kPercentStep));
+    CHECK_EQ(s.Kind(PlateKind::Self).lines[2].textSize, Stepped(static_cast<int>(std::lround(100.0f * *NumberIn(store.values.at("selfNameSize")) / static_cast<float>(base))), kPercentStep));
     // showLabels=false with mobId=lastThree leaves the ID alone on line 2; showIcons=false leaves line 1 empty;
     // hideClaimed shows line 2 on unclaimed mobs only.
     CHECK_EQ(mobs.lines[0].text, "");
@@ -1756,8 +1766,8 @@ TEST(an_old_file_migrates_field_by_field)
             CHECK_EQ(line.glow, 0);
     CHECK(mobs.ornament.place == OrnamentPlace::Disabled); // showOrnament=false
     CHECK(mobs.ornament.color.source == ColorSource::Custom); // ownOrnamentColor=true
-    CHECK_EQ(mobs.ornament.width, static_cast<int>(std::strtof(store.values.at("ornamentWidth").c_str(), nullptr)));
-    CHECK_EQ(mobs.ornament.height, static_cast<int>(std::strtof(store.values.at("ornamentThickness").c_str(), nullptr)));
+    CHECK_EQ(mobs.ornament.width, static_cast<int>(*NumberIn(store.values.at("ornamentWidth"))));
+    CHECK_EQ(mobs.ornament.height, static_cast<int>(*NumberIn(store.values.at("ornamentThickness"))));
     CHECK_EQ(mobs.lines[2].shadow, 35); // nameShadow=50, of a unit that is now one and a half of it: 33, on the steps of five
     // ownNameColor, nameShadow and the player icon size reach the players' name line too.
     const LineDesign& playerName = s.Kind(PlateKind::Players).lines[2];
@@ -3019,6 +3029,21 @@ TEST(the_zone_widgets_show_zone_id_in_header_is_kept)
     CHECK(!LoadSettings(store).Widget(BarWidget::Zone).zoneId);
 }
 
+TEST(the_home_point_widgets_wrap_text_starts_on_and_is_kept)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::HomePoint).wrapText);
+    s.Widget(BarWidget::HomePoint).wrapText = false;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK(!LoadSettings(store).Widget(BarWidget::HomePoint).wrapText);
+    // It has no Widget Designer: its name stays on, whatever design a settings file holds for it.
+    CHECK(!HasDesigner(BarWidget::HomePoint) && HasDesigner(BarWidget::Zone));
+    CHECK(!store.values.contains("barHomePointDesign"));
+    store.values["barHomePointDesign"] = "-name |";
+    CHECK(LoadSettings(store).Widget(BarWidget::HomePoint).design == DefaultDesign(BarWidget::HomePoint));
+}
+
 TEST(lock_cursor_to_window_starts_off_and_is_kept)
 {
     Settings s;
@@ -3052,6 +3077,26 @@ TEST(the_status_timers_display_starts_with_name_and_icon_and_is_kept_by_each_cop
     CHECK(LoadSettings(store).Widget(BarWidget::StatusTimers).statusDisplay == StatusDisplay::Icon);
     store.values["statusDisplay"] = "pictures";
     CHECK(LoadSettings(store).Widget(BarWidget::StatusTimers).statusDisplay == StatusDisplay::Both);
+}
+
+TEST(the_status_timers_timer_format_starts_simple_and_is_kept_by_each_copy)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::StatusTimers).timerFormat == TimerFormat::Simple);
+    CHECK(DefaultSettings().Widget(BarWidget::StatusTimers).timerFormat == TimerFormat::Simple);
+    s.Widget(BarWidget::StatusTimers).timerFormat = TimerFormat::Short;
+    const std::optional<PanelWidget> copy = CloneWidget(s, BarWidget::StatusTimers);
+    CHECK(copy.has_value());
+    s.Widget(*copy).timerFormat = TimerFormat::Full;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["statusTimerFormat"], "short");
+    CHECK_EQ(store.values["statusTimerFormat_2"], "full");
+    const Settings loaded = LoadSettings(store);
+    CHECK(loaded.Widget(BarWidget::StatusTimers).timerFormat == TimerFormat::Short);
+    CHECK(loaded.Widget(*copy).timerFormat == TimerFormat::Full);
+    store.values["statusTimerFormat"] = "condensed";
+    CHECK(LoadSettings(store).Widget(BarWidget::StatusTimers).timerFormat == TimerFormat::Simple);
 }
 
 TEST(the_bags_widgets_two_bags_are_kept_and_one_past_the_last_reads_as_its_default)
@@ -3226,6 +3271,32 @@ TEST(the_status_favorites_and_pins_are_kept_and_an_unknown_or_repeated_one_is_le
     CHECK(read.statusFavorites == s.statusFavorites && read.statusPins == s.statusPins);
     store.values["statusFavorites"] = "40 x 65000 40 253";
     CHECK((LoadSettings(store).statusFavorites == std::vector<uint16_t>{40, kSignetEffect}));
+}
+
+TEST(each_status_timers_copy_keeps_where_every_status_ever_pinned_goes_and_a_hand_edits_unknown_or_repeated_one_is_left_out)
+{
+    Settings s;
+    s.statusPins = {40, kSignetEffect, 33};
+    s.Widget(BarWidget::StatusTimers).pinDesign = {std::vector<uint16_t>{40, kSignetEffect}, {41, 33}};
+    const PanelWidget second = *CloneWidget(s, BarWidget::StatusTimers);
+    s.Widget(second).pinDesign = {std::vector<uint16_t>{33}, {40, kSignetEffect}};
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barStatusTimersPinDesign"], "40 253 | 41 33");
+    CHECK_EQ(saved.values["barStatusTimersPinDesign_2"], "33 | 40 253");
+    // Its Pinned Status buttons' design is no longer read or written.
+    CHECK(!saved.values.contains("barStatusTimersDesign") && !saved.values.contains("barStatusTimersDesign_2"));
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(BarWidget::StatusTimers).pinDesign == s.Widget(BarWidget::StatusTimers).pinDesign);
+    CHECK(loaded.Widget(second).pinDesign == s.Widget(second).pinDesign);
+    saved.values["barStatusTimersPinDesign"] = "253 x 65000 253 | 40 253 41";
+    CHECK((LoadSettings(saved).Widget(BarWidget::StatusTimers).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect}, {40, 41}}));
+    // Lines with nothing on them save as nothing around the bar.
+    s.Widget(BarWidget::StatusTimers).pinDesign = {std::vector<uint16_t>{}, {33}};
+    s.Widget(second).pinDesign = {};
+    SaveSettings(s, saved);
+    CHECK(saved.values["barStatusTimersPinDesign"] == "| 33" && saved.values["barStatusTimersPinDesign_2"] == "|");
+    CHECK(LoadSettings(saved).Widget(second).pinDesign == StatusDesign{});
 }
 
 TEST(a_created_widget_shows_once_made_saves_under_its_own_keys_and_forgets_them_when_taken_off)

@@ -14,11 +14,12 @@
 
 namespace headsup
 {
-    // A text's font family and pixel size.
+    // A text's font family and pixel size, and the share of that size the icons in its line are (Icon Scale).
     struct TextFace
     {
         const char* family = nullptr;
         float size         = 0.0f;
+        float iconShare    = 1.0f;
     };
 
     // A frame's palette, sizes and fonts: what every part of the bar is drawn with.
@@ -47,8 +48,6 @@ namespace headsup
         // How a widget's box is drawn, or nothing for none. lit: hovered or open, with a popup; backed: its Show
         // Background on. Ornate: the target's frame and a lit widget's tint. Pills: a widget's pill while lit or backed.
         std::optional<BoxStyle> BoxOf(BarWidget widget, bool lit, bool backed) const;
-        // The corners of a widget's box at a Corner Rounding.
-        float WidgetRadius(int rounding) const;
     };
 
     // Whether the game's window art is drawn: the theme's background is the Window.
@@ -85,8 +84,10 @@ namespace headsup
     constexpr float kCapScale      = 1.4f;  // an end cap's diamond, in diamonds
     constexpr float kLineIconGap   = 2.0f;  // pixels before an icon among a line's text
     constexpr float kPictureGap    = 6.0f;  // before a game picture there
-    // The room a span's mark takes before its text, at letters size pixels tall.
-    float MarkWidth(const Span& span, float size);
+    // The side of an icon in a line of letters size pixels tall, at an Icon Scale's share.
+    float LineIconSide(float size, float iconShare);
+    // The room a span's mark takes before its text in a face.
+    float MarkWidth(const Span& span, const TextFace& face);
     // What a widget's title and detail line can hold, for how far their ink reaches: capitals, figures (taller
     // than the capitals in Marcellus, and some descend), a "[S]" zone's brackets, the bags' slash, descenders
     // (Marcellus's Q and J too) and commas; the detail line's ascenders, descenders and comma. Popup text holds

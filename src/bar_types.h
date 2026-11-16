@@ -49,13 +49,14 @@ namespace headsup
         StatusTimers,
         World,
         Settings, // the cog alone, which opens the settings window: no popup, settings or copies
+        HomePoint, // the zone your home point is in: no popup
         Custom,   // the widgets the player creates, each a copy, shown only once made: any widget's parts and cards
     };
     constexpr int kBarWidgetCount = static_cast<int>(BarWidget::Custom) + 1;
     // Which widgets a new settings file shows, by BarWidget. to_array takes its size from the list, so a widget added
     // to BarWidget without a default here fails the assert.
     constexpr auto kBarWidgetDefaults =
-        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false, false, false});
+        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false, false, false, false});
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
     // What the Performance widget shows on the panel, a bit each, in this order on its line.
@@ -131,6 +132,14 @@ namespace headsup
         Both,
     };
     constexpr int kStatusDisplayCount = static_cast<int>(StatusDisplay::Both) + 1;
+    // How the Status Timers widget writes a pinned status's time left (TimerText).
+    enum class TimerFormat : uint8_t
+    {
+        Full,
+        Simple,
+        Short,
+    };
+    constexpr int kTimerFormatCount = static_cast<int>(TimerFormat::Short) + 1;
     constexpr int kMinExpBarWidth = 40, kMaxExpBarWidth = 400, kDefaultExpBarWidth = 100;  // pixels
     constexpr int kMinExpBarHeight = 2, kMaxExpBarHeight = 16, kDefaultExpBarHeight = 6;   // pixels
 
@@ -181,6 +190,9 @@ namespace headsup
     constexpr float kMinPopupScale = 0.2f, kMaxPopupScale = 2.0f, kDefaultPopupScale = 1.0f;
     constexpr float kPopupScaleStep = 0.1f; // what a widget's own Pop-out Text Scale moves by, as the Top Panel's "%.1fx" slider does
     constexpr float kMinPopupBoxScale = kDefaultPopupScale; // Width and Height: never smaller than a pop-out's own
-    // Icon Scale: a widget's icons, in percent of the most its widget holds.
-    constexpr int kMinIconScale = 20, kMaxIconScale = 100, kDefaultIconScale = 65;
+    // Icon Scale: a widget's icons, in percent of the most its widget holds, and an icon in a line of its line's size.
+    constexpr int kMinIconScale = 20, kMaxIconScale = 150, kDefaultIconScale = 85;
+    // Line Separation: the clear space between a widget's two lines, times what the panel's height gives it.
+    constexpr float kMinLineSeparation = 0.5f, kMaxLineSeparation = 2.0f, kDefaultLineSeparation = 1.0f;
+    constexpr float kLineSeparationStep = 0.1f; // a widget's own moves by this, as the Top Panel's "%.1fx" slider does
 }
