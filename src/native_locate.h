@@ -81,6 +81,8 @@ namespace headsup
         NoSearchAddress,
         NoFish,
         AmbiguousFish,
+        NoCombatText,
+        AmbiguousCombatText,
     };
     const char* Describe(LocateProblem problem);
 
@@ -520,4 +522,15 @@ namespace headsup
     // and as its bar draws it are dwords at kFishFullStamina, kFishStamina and kFishDrawnStamina.
     GlobalSite LocateFish(const ImageSection& text);
     constexpr uint32_t kFishFullStamina = 0x00, kFishStamina = 0x04, kFishDrawnStamina = 0x08;
+
+    // The one call that draws a combat popup's text (a damage or recovery number, or ':' for the Miss picture) from
+    // its particle's draw: cdecl (place, text, ARGB color, float scale[2], 0.1f), popped by the caller. The text is
+    // the particle's own, at kCombatTextOffset. RVAs of the five-byte call and of the routine.
+    struct CombatTextSite
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t call = 0, draw = 0;
+    };
+    constexpr uint32_t kCombatTextOffset = 0x198;
+    CombatTextSite LocateCombatText(const ImageSection& text);
 }

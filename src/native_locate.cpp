@@ -237,6 +237,12 @@ namespace headsup
             0x85, 0xC9, 0xA3};
         constexpr uint32_t kFishSetupIntuition[] = {1, 23, 34};
         constexpr uint32_t kFishSetupGlobal      = 44;
+        // push 0.1f; push eax (the scale); add edi,kCombatTextOffset; push esi (the color); lea ecx,[esp+20h]; push
+        // edi; push ecx (the place); call; add esp,14h.
+        constexpr int16_t kCombatTextCall[] = {0x68, 0xCD, 0xCC, 0xCC, 0x3D, 0x50, 0x81, 0xC7, 0x98, 0x01, 0x00, 0x00,
+            0x56, 0x8D, 0x4C, 0x24, 0x20, 0x57, 0x51, 0xE8, -1, -1, -1, -1, 0x83, 0xC4, 0x14};
+        constexpr uint32_t kCombatTextCallAt = 19;
+        static_assert((kCombatTextCall[8] | kCombatTextCall[9] << 8) == kCombatTextOffset);
         // The 3-second update: xor eax,eax; push 3000; clear both byte counts; mov edx,[net]; mov eax,[edx+4190h], the
         // milliseconds since the last server data.
         constexpr int16_t kCounterUpdate[] = {0x33, 0xC0, 0x68, 0xB8, 0x0B, 0x00, 0x00, 0x89, 0x46, 0x0C, 0x89, 0x46,
@@ -363,6 +369,8 @@ namespace headsup
         case LocateProblem::AmbiguousWeather: return "the game's weather was found more than once";
         case LocateProblem::NoFish: return "where the game keeps a hooked fish was not found";
         case LocateProblem::AmbiguousFish: return "where the game keeps a hooked fish was found more than once";
+        case LocateProblem::NoCombatText: return "the game's draw of combat popups was not found";
+        case LocateProblem::AmbiguousCombatText: return "the game's draw of combat popups was found more than once";
         case LocateProblem::NoConfigGet: return "the game's config values were not found";
         case LocateProblem::NoSearchAddress: return "where the game keeps the search server's address was not found";
         case LocateProblem::NoWindowMove: return "the game's window move was not found";
@@ -1088,5 +1096,14 @@ namespace headsup
         if (found.empty()) return GlobalSite{LocateProblem::NoFish};
         if (found.size() > 1) return GlobalSite{LocateProblem::AmbiguousFish};
         return GlobalSite{LocateProblem::None, ReadAt<uint32_t>(text.bytes, found.front() + kFishSetupGlobal)};
+    }
+
+    CombatTextSite LocateCombatText(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kCombatTextCall, text);
+        if (found.empty()) return CombatTextSite{LocateProblem::NoCombatText};
+        if (found.size() > 1) return CombatTextSite{LocateProblem::AmbiguousCombatText};
+        const uint32_t call = text.rva + found.front() + kCombatTextCallAt;
+        return CombatTextSite{LocateProblem::None, call, CallTarget(call, text)};
     }
 }

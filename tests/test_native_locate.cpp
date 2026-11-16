@@ -1427,3 +1427,38 @@ TEST(a_setup_keeping_its_first_record_in_two_places_is_not_the_fish_packets)
     image.Put32(kFishSetupRva + 34, kIntuitionGlobal + 0x10);
     CHECK(LocateFish(image.Text()).problem == LocateProblem::NoFish);
 }
+
+namespace
+{
+    // The end of a combat popup's draw (RVA 0x41AF0) in the client of 2026-10-19, copied from its image: push 0.1f;
+    // push the scale; add edi,198h (the text); push the color; push the place; call 0x41C20; add esp,14h.
+    constexpr uint32_t kCombatTextRva  = 0x41BF7;
+    constexpr uint32_t kCombatTextCall = 0x41C0A;
+    constexpr uint32_t kCombatTextDraw = 0x41C20;
+    void PutCombatText(Image& image, uint32_t at, uint8_t popped)
+    {
+        image.Put(at, {0x68, 0xCD, 0xCC, 0xCC, 0x3D, 0x50, 0x81, 0xC7, 0x98, 0x01, 0x00, 0x00, 0x56, 0x8D, 0x4C, 0x24,
+                          0x20, 0x57, 0x51, 0xE8, 0x11, 0x00, 0x00, 0x00, 0x83, 0xC4, popped});
+    }
+    constexpr uint8_t kCombatTextArguments = 0x14;
+}
+
+TEST(the_combat_popups_text_is_drawn_by_its_one_call)
+{
+    Image image;
+    CHECK(LocateCombatText(image.Text()).problem == LocateProblem::NoCombatText);
+    PutCombatText(image, kCombatTextRva, kCombatTextArguments);
+    const CombatTextSite found = LocateCombatText(image.Text());
+    CHECK(found.problem == LocateProblem::None);
+    CHECK_EQ(found.call, kCombatTextCall);
+    CHECK_EQ(found.draw, kCombatTextDraw);
+    PutCombatText(image, kCombatTextRva + 0x1000, kCombatTextArguments);
+    CHECK(LocateCombatText(image.Text()).problem == LocateProblem::AmbiguousCombatText);
+}
+
+TEST(a_call_popping_other_arguments_is_not_the_combat_popups)
+{
+    Image image;
+    PutCombatText(image, kCombatTextRva, kCombatTextArguments - 4);
+    CHECK(LocateCombatText(image.Text()).problem == LocateProblem::NoCombatText);
+}
