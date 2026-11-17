@@ -1764,7 +1764,7 @@ namespace headsup
         uint8_t* task = reinterpret_cast<StartFn>(base + effects.start)(ReadAt<void*>(holder, 0), yourActor, yourActor, 0, 0);
         if (task == nullptr) return "the game started no effect";
         const uint32_t colorClass = reinterpret_cast<ColorClassFn>(base + ties.colorClass)(you, you, message);
-        const uint32_t color      = reinterpret_cast<ColorFn>(base + ties.color)(colorClass) & ~kAlphaMask;
+        const uint32_t color      = reinterpret_cast<ColorFn>(g_HeadsUpPopupColor)(colorClass) & ~kAlphaMask;
         std::memcpy(task + kPopupTaskValue, &value, sizeof(value));
         std::memcpy(task + kPopupTaskColor, &color, sizeof(color));
         g_PopupTies.Started(Address(task));
