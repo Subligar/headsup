@@ -434,7 +434,7 @@ link	kind	log	id	name	file	expansion	live
 433	quest	5	134	Everyones Grudge			1
 434	quest	5	135	Secret of the Damp Scroll	scripts/quests/outlands/Secret_of_the_Damp_Scroll		1
 435	quest	5	136	The Sahagins Stash	scripts/quests/outlands/The_Sahagins_Stash		1
-436	quest	5	137	Its Not Your Vault			1
+436	quest	5	137	Its Not Your Vault	scripts/quests/outlands/Its_Not_Your_Vault		1
 437	quest	5	138	Like a Shining Subligar	scripts/quests/outlands/Like_Shining_Subligar		1
 438	quest	5	139	Like Shining Leggings	scripts/quests/outlands/Like_Shining_Leggings		1
 439	quest	5	140	The Sacred Katana	scripts/quests/outlands/SAM_AF1_The_Sacred_Katana		1
@@ -787,197 +787,203 @@ link	kind	log	id	name	file	expansion	live
 786	battlefield	0	16	Todays Horoscope	scripts/battlefields/Horlais_Peak/todays_horoscope		1
 787	battlefield	0	17	Contaminated Colosseum	scripts/battlefields/Horlais_Peak/contaminated_colosseum		1
 788	battlefield	0	20	Beyond Infinity Horlais Peak	scripts/battlefields/Horlais_Peak/beyond_infinity		1
-789	battlefield	0	33	Holy Crest	scripts/battlefields/Ghelsba_Outpost/holy_crest		1
-790	battlefield	0	64	Rank 2 Mission 2	scripts/battlefields/Waughroon_Shrine/rank_2_mission		1
-791	battlefield	0	65	Worms Turn	scripts/battlefields/Waughroon_Shrine/worms_turn		1
-792	battlefield	0	66	Grimshell Shocktroopers	scripts/battlefields/Waughroon_Shrine/grimshell_shocktroopers		1
-793	battlefield	0	67	On My Way	scripts/battlefields/Waughroon_Shrine/on_my_way		1
-794	battlefield	0	68	Thief in Norg	scripts/battlefields/Waughroon_Shrine/thief_in_norg		1
-795	battlefield	0	69	Three Two One	scripts/battlefields/Waughroon_Shrine/3_2_1		1
-796	battlefield	0	70	Shattering Stars Rdm	scripts/battlefields/Waughroon_Shrine/shattering_stars_rdm		1
-797	battlefield	0	71	Shattering Stars Thf	scripts/battlefields/Waughroon_Shrine/shattering_stars_thf		1
-798	battlefield	0	72	Shattering Stars Bst	scripts/battlefields/Waughroon_Shrine/shattering_stars_bst		1
-799	battlefield	0	73	Birds of a Feather	scripts/battlefields/Waughroon_Shrine/birds_of_a_feather		1
-800	battlefield	0	74	Crustacean Conundrum	scripts/battlefields/Waughroon_Shrine/crustacean_conundrum		1
-801	battlefield	0	75	Grove Guardians	scripts/battlefields/Waughroon_Shrine/grove_guardians		1
-802	battlefield	0	76	Hills Are Alive	scripts/battlefields/Waughroon_Shrine/hills_are_alive		1
-803	battlefield	0	77	Royal Jelly	scripts/battlefields/Waughroon_Shrine/royal_jelly		1
-804	battlefield	0	78	Final Bout	scripts/battlefields/Waughroon_Shrine/final_bout		1
-805	battlefield	0	79	Up in Arms	scripts/battlefields/Waughroon_Shrine/up_in_arms		1
-806	battlefield	0	80	Copycat	scripts/battlefields/Waughroon_Shrine/copycat		1
-807	battlefield	0	81	Operation Desert Swarm	scripts/battlefields/Waughroon_Shrine/operation_desert_swarm		1
-808	battlefield	0	82	Prehistoric Pigeons	scripts/battlefields/Waughroon_Shrine/prehistoric_pigeons		1
-809	battlefield	0	85	Beyond Infinity Waughroon Shrine	scripts/battlefields/Waughroon_Shrine/beyond_infinity		1
-810	battlefield	0	96	Rank 2 Mission	scripts/battlefields/Balgas_Dais/rank_2_mission		1
-811	battlefield	0	97	Steamed Sprouts	scripts/battlefields/Balgas_Dais/steamed_sprouts		1
-812	battlefield	0	98	Divine Punishers	scripts/battlefields/Balgas_Dais/divine_punishers		1
-813	battlefield	0	99	Saintly Invitation	scripts/battlefields/Balgas_Dais/saintly_invitation		1
-814	battlefield	0	100	Treasure and Tribulations	scripts/battlefields/Balgas_Dais/treasure_and_tribulations		1
-815	battlefield	0	101	Shattering Stars Mnk	scripts/battlefields/Balgas_Dais/shattering_stars_mnk		1
-816	battlefield	0	102	Shattering Stars Whm	scripts/battlefields/Balgas_Dais/shattering_stars_whm		1
-817	battlefield	0	103	Shattering Stars Smn	scripts/battlefields/Balgas_Dais/shattering_stars_smn		1
-818	battlefield	0	104	Creeping Doom	scripts/battlefields/Balgas_Dais/creeping_doom		1
-819	battlefield	0	105	Charming Trio	scripts/battlefields/Balgas_Dais/charming_trio		1
-820	battlefield	0	106	Harem Scarem	scripts/battlefields/Balgas_Dais/harem_scarem		1
-821	battlefield	0	107	Early Bird Catches the Wyrm	scripts/battlefields/Balgas_Dais/early_bird_catches_the_wyrm		1
-822	battlefield	0	108	Royal Succession	scripts/battlefields/Balgas_Dais/royal_succession		1
-823	battlefield	0	109	Rapid Raptors	scripts/battlefields/Balgas_Dais/rapid_raptors		1
-824	battlefield	0	110	Wild Wild Whiskers	scripts/battlefields/Balgas_Dais/wild_wild_whiskers		1
-825	battlefield	0	111	Seasons Greetings	scripts/battlefields/Balgas_Dais/seasons_greetings		1
-826	battlefield	0	112	Royale Ramble	scripts/battlefields/Balgas_Dais/royale_ramble		1
-827	battlefield	0	113	Moa Constrictors	scripts/battlefields/Balgas_Dais/moa_constrictors		1
-828	battlefield	0	116	Beyond Infinity Balgas Dais	scripts/battlefields/Balgas_Dais/beyond_infinity		1
-829	battlefield	0	128	Temple of Uggalepih	scripts/battlefields/Sacrificial_Chamber/temple_of_uggalepih		1
-830	battlefield	0	129	Jungle Boogymen	scripts/battlefields/Sacrificial_Chamber/jungle_boogymen		1
-831	battlefield	0	130	Amphibian Assault	scripts/battlefields/Sacrificial_Chamber/amphibian_assault		1
-832	battlefield	0	160	Shadow Lord Battle	scripts/battlefields/Throne_Room/shadow_lord_battle		1
-833	battlefield	0	161	Where Two Paths Converge	scripts/battlefields/Throne_Room/where_two_paths_converge		1
-834	battlefield	0	162	Kindred Spirits	scripts/battlefields/Throne_Room/kindred_spirits		1
-835	battlefield	0	164	Smash a Malevolent Menace	scripts/battlefields/Throne_Room/smash_a_malevolent_menace		1
-836	battlefield	0	192	Through the Quicksand Caves	scripts/battlefields/Chamber_of_Oracles/through_the_quicksand_caves		1
-837	battlefield	0	193	Legion Xi Comitatensis	scripts/battlefields/Chamber_of_Oracles/legion_xi_comitatensis		1
-838	battlefield	0	194	Shattering Stars Sam	scripts/battlefields/Chamber_of_Oracles/shattering_stars_sam		1
-839	battlefield	0	195	Shattering Stars Nin	scripts/battlefields/Chamber_of_Oracles/shattering_stars_nin		1
-840	battlefield	0	196	Shattering Stars Drg	scripts/battlefields/Chamber_of_Oracles/shattering_stars_drg		1
-841	battlefield	0	197	Cactuar Suave	scripts/battlefields/Chamber_of_Oracles/cactuar_suave		1
-842	battlefield	0	198	Eye of the Storm	scripts/battlefields/Chamber_of_Oracles/eye_of_the_storm		1
-843	battlefield	0	199	Scarlet King	scripts/battlefields/Chamber_of_Oracles/the_scarlet_king		1
-844	battlefield	0	200	Cat Burglar Bares Fangs	scripts/battlefields/Chamber_of_Oracles/cat_burglar_bares_fangs		1
-845	battlefield	0	224	Moonlit Path	scripts/battlefields/Full_Moon_Fountain/moonlit_path		1
-846	battlefield	0	225	Moon Reading	scripts/battlefields/Full_Moon_Fountain/moon_reading		1
-847	battlefield	0	226	Waking the Beast Fullmoon	scripts/battlefields/Full_Moon_Fountain/waking_the_beast		1
-848	battlefield	0	256	Return to Delkfutts Tower	scripts/battlefields/Stellar_Fulcrum/return_to_delkfutts_tower		1
-849	battlefield	0	288	Ark Angels 1	scripts/battlefields/LaLoff_Amphitheater/ark_angels_1		1
-850	battlefield	0	289	Ark Angels 2	scripts/battlefields/LaLoff_Amphitheater/ark_angels_2		1
-851	battlefield	0	290	Ark Angels 3	scripts/battlefields/LaLoff_Amphitheater/ark_angels_3		1
-852	battlefield	0	291	Ark Angels 4	scripts/battlefields/LaLoff_Amphitheater/ark_angels_4		1
-853	battlefield	0	292	Ark Angels 5	scripts/battlefields/LaLoff_Amphitheater/ark_angels_5		1
-854	battlefield	0	320	Celestial Nexus	scripts/battlefields/The_Celestial_Nexus/celestial_nexus		1
-855	battlefield	0	416	Trial by Wind	scripts/battlefields/Cloister_of_Gales/trial_by_wind		1
-856	battlefield	0	417	Carbuncle Debacle Cloister of Gales	scripts/battlefields/Cloister_of_Gales/carbuncle_debacle		1
-857	battlefield	0	418	Trial Size Trial by Wind	scripts/battlefields/Cloister_of_Gales/trial-size_trial_by_wind		1
-858	battlefield	0	419	Waking the Beast Cloister of Gales	scripts/battlefields/Cloister_of_Gales/waking_the_beast		1
-859	battlefield	0	420	Sugar Coated Directive Cloister of Gales	scripts/battlefields/Cloister_of_Gales/sugar-coated_directive		1
-860	battlefield	0	448	Trial by Lightning	scripts/battlefields/Cloister_of_Storms/trial_by_lightning		1
-861	battlefield	0	449	Carbuncle Debacle Cloister of Storms	scripts/battlefields/Cloister_of_Storms/carbuncle_debacle		1
-862	battlefield	0	450	Trial Size Trial by Lightning	scripts/battlefields/Cloister_of_Storms/trial-size_trial_by_lightning		1
-863	battlefield	0	451	Waking the Beast Cloister of Storms	scripts/battlefields/Cloister_of_Storms/waking_the_beast		1
-864	battlefield	0	452	Sugar Coated Directive Cloister of Storms	scripts/battlefields/Cloister_of_Storms/sugar-coated_directive		1
-865	battlefield	0	480	Trial by Ice	scripts/battlefields/Cloister_of_Frost/trial_by_ice		1
-866	battlefield	0	481	Class Reunion	scripts/battlefields/Cloister_of_Frost/class_reunion		1
-867	battlefield	0	482	Trial Size Trial by Ice	scripts/battlefields/Cloister_of_Frost/trial-size_trial_by_ice		1
-868	battlefield	0	483	Waking the Beast Cloister of Frost	scripts/battlefields/Cloister_of_Frost/waking_the_beast		1
-869	battlefield	0	484	Sugar Coated Directive Cloister of Frost	scripts/battlefields/Cloister_of_Frost/sugar-coated_directive		1
-870	battlefield	0	512	Rank 5 Mission	scripts/battlefields/QuBia_Arena/rank_5_mission		1
-871	battlefield	0	513	Come into My Parlor	scripts/battlefields/QuBia_Arena/come_into_my_parlor		1
-872	battlefield	0	514	E Vase Ive Action	scripts/battlefields/QuBia_Arena/e_vase_ive_action		1
-873	battlefield	0	515	Infernal Swarm	scripts/battlefields/QuBia_Arena/infernal_swarm		1
-874	battlefield	0	516	Heir to the Light	scripts/battlefields/QuBia_Arena/heir_to_the_light		1
-875	battlefield	0	517	Shattering Stars Pld	scripts/battlefields/QuBia_Arena/shattering_stars_pld		1
-876	battlefield	0	518	Shattering Stars Drk	scripts/battlefields/QuBia_Arena/shattering_stars_drk		1
-877	battlefield	0	519	Shattering Stars Brd	scripts/battlefields/QuBia_Arena/shattering_stars_brd		1
-878	battlefield	0	520	Demolition Squad	scripts/battlefields/QuBia_Arena/demolition_squad		1
-879	battlefield	0	521	Die by the Sword	scripts/battlefields/QuBia_Arena/die_by_the_sword		1
-880	battlefield	0	522	Let Sleeping Dogs Die	scripts/battlefields/QuBia_Arena/let_sleeping_dogs_die		1
-881	battlefield	0	523	Brothers D Aurphe	scripts/battlefields/QuBia_Arena/brothers_d_aurphe		1
-882	battlefield	0	524	Undying Promise	scripts/battlefields/QuBia_Arena/undying_promise		1
-883	battlefield	0	525	Factory Rejects	scripts/battlefields/QuBia_Arena/factory_rejects		1
-884	battlefield	0	526	Idol Thoughts	scripts/battlefields/QuBia_Arena/idol_thoughts		1
-885	battlefield	0	527	Awful Autopsy	scripts/battlefields/QuBia_Arena/awful_autopsy		1
-886	battlefield	0	528	Celery	scripts/battlefields/QuBia_Arena/celery		1
-887	battlefield	0	532	Those Who Lurk in Shadows	scripts/battlefields/QuBia_Arena/those_who_lurk_in_shadows		1
-888	battlefield	0	533	Beyond Infinity	scripts/battlefields/QuBia_Arena/beyond_infinity		1
-889	battlefield	0	544	Trial by Fire	scripts/battlefields/Cloister_of_Flames/trial_by_fire		1
-890	battlefield	0	545	Trial Size Trial by Fire	scripts/battlefields/Cloister_of_Flames/trial-size_trial_by_fire		1
-891	battlefield	0	546	Waking the Beast Cloister of Flames	scripts/battlefields/Cloister_of_Flames/waking_the_beast		1
-892	battlefield	0	547	Sugar Coated Directive Cloister of Flames	scripts/battlefields/Cloister_of_Flames/sugar-coated_directive		1
-893	battlefield	0	576	Trial by Earth	scripts/battlefields/Cloister_of_Tremors/trial_by_earth		1
-894	battlefield	0	577	Puppet Master	scripts/battlefields/Cloister_of_Tremors/puppet_master		1
-895	battlefield	0	578	Trial Size Trial by Earth	scripts/battlefields/Cloister_of_Tremors/trial-size_trial_by_earth		1
-896	battlefield	0	579	Waking the Beast Cloister of Tremors	scripts/battlefields/Cloister_of_Tremors/waking_the_beast		1
-897	battlefield	0	580	Sugar Coated Directive Cloister of Tremors	scripts/battlefields/Cloister_of_Tremors/sugar-coated_directive		1
-898	battlefield	0	608	Trial by Water	scripts/battlefields/Cloister_of_Tides/trial_by_water		1
-899	battlefield	0	609	Trial Size Trial by Water	scripts/battlefields/Cloister_of_Tides/trial-size_trial_by_water		1
-900	battlefield	0	610	Waking the Beast Cloister of Tides	scripts/battlefields/Cloister_of_Tides/waking_the_beast		1
-901	battlefield	0	611	Sugar Coated Directive Cloister of Tides	scripts/battlefields/Cloister_of_Tides/sugar-coated_directive		1
-902	battlefield	0	640	Flames for the Dead	scripts/battlefields/Bearclaw_Pinnacle/flames_for_the_dead		1
-903	battlefield	0	641	Follow the White Rabbit	scripts/battlefields/Bearclaw_Pinnacle/follow_the_white_rabbit		1
-904	battlefield	0	642	When Hell Freezes Over	scripts/battlefields/Bearclaw_Pinnacle/when_hell_freezes_over		1
-905	battlefield	0	643	Brothers	scripts/battlefields/Bearclaw_Pinnacle/brothers		1
-906	battlefield	0	644	Holy Cow	scripts/battlefields/Bearclaw_Pinnacle/holy_cow		1
-907	battlefield	0	672	Head Wind	scripts/battlefields/Boneyard_Gully/head_wind		1
-908	battlefield	0	673	Like the Wind	scripts/battlefields/Boneyard_Gully/like_the_wind		1
-909	battlefield	0	674	Sheep in Antlions Clothing	scripts/battlefields/Boneyard_Gully/sheep_in_antlions_clothing		1
-910	battlefield	0	675	Shell We Dance	scripts/battlefields/Boneyard_Gully/shell_we_dance		1
-911	battlefield	0	677	Tango with a Tracker	scripts/battlefields/Boneyard_Gully/tango_with_a_tracker		1
-912	battlefield	0	678	Requiem of Sin	scripts/battlefields/Boneyard_Gully/requiem_of_sin		1
-913	battlefield	0	704	Darkness Named	scripts/battlefields/The_Shrouded_Maw/darkness_named		1
-914	battlefield	0	705	Test Your Mite	scripts/battlefields/The_Shrouded_Maw/test_your_mite		1
-915	battlefield	0	706	Waking Dreams	scripts/battlefields/The_Shrouded_Maw/waking_dreams		1
-916	battlefield	0	736	Century of Hardship	scripts/battlefields/Mine_Shaft_2716/century_of_hardship		1
-917	battlefield	0	737	Return to the Depths	scripts/battlefields/Mine_Shaft_2716/return_to_the_depths		1
-918	battlefield	0	738	Bionic Bug	scripts/battlefields/Mine_Shaft_2716/bionic_bug		1
-919	battlefield	0	739	Pulling the Strings	scripts/battlefields/Mine_Shaft_2716/pulling_the_strings		1
-920	battlefield	0	740	Automaton Assault	scripts/battlefields/Mine_Shaft_2716/automaton_assault		1
-921	battlefield	0	768	Ancient Flames Beckon Spire of Holla	scripts/battlefields/Spire_of_Holla/ancient_flames_beckon		1
-922	battlefield	0	769	Simulant	scripts/battlefields/Spire_of_Holla/simulant		1
-923	battlefield	0	800	Ancient Flames Beckon Spire of Dem	scripts/battlefields/Spire_of_Dem/ancient_flames_beckon		1
-924	battlefield	0	801	You Are What You Eat	scripts/battlefields/Spire_of_Dem/you_are_what_you_eat		1
-925	battlefield	0	832	Ancient Flames Beckon Spire of Mea	scripts/battlefields/Spire_of_Mea/ancient_flames_beckon		1
-926	battlefield	0	833	Playing Host	scripts/battlefields/Spire_of_Mea/playing_host		1
-927	battlefield	0	864	Desires of Emptiness	scripts/battlefields/Spire_of_Vahzl/desires_of_emptiness		1
-928	battlefield	0	865	Pulling the Plug	scripts/battlefields/Spire_of_Vahzl/pulling_the_plug		1
-929	battlefield	0	896	Storms of Fate	scripts/battlefields/Riverne_Site_B01/storms_of_fate		1
-930	battlefield	0	897	Wyrmking Descends	scripts/battlefields/Riverne_Site_B01/wyrmking_descends		1
-931	battlefield	0	928	Ouryu Cometh	scripts/battlefields/Riverne_Site_A01/ouryu_cometh		1
-932	battlefield	0	960	Ancient Vows	scripts/battlefields/Monarch_Linn/ancient_vows		1
-933	battlefield	0	961	Savage	scripts/battlefields/Monarch_Linn/savage		1
-934	battlefield	0	962	Fire in the Sky	scripts/battlefields/Monarch_Linn/fire_in_the_sky		1
-935	battlefield	0	964	Bugard in the Clouds	scripts/battlefields/Monarch_Linn/bugard_in_the_clouds		1
-936	battlefield	0	965	Beloved of the Atlantes	scripts/battlefields/Monarch_Linn/beloved_of_the_atlantes		1
-937	battlefield	0	966	Uninvited Guests	scripts/battlefields/Monarch_Linn/uninvited_guests		1
-938	battlefield	0	992	One to Be Feared	scripts/battlefields/Sealions_Den/one_to_be_feared		1
-939	battlefield	0	993	Warriors Path	scripts/battlefields/Sealions_Den/warriors_path		1
-940	battlefield	0	1024	When Angels Fall	scripts/battlefields/The_Garden_of_RuHmet/when_angels_fall		1
-941	battlefield	0	1056	Dawn	scripts/battlefields/Empyreal_Paradox/dawn		1
-942	battlefield	0	1057	Apocalypse Nigh	scripts/battlefields/Empyreal_Paradox/apocalypse_nigh		1
-943	battlefield	0	1088	Call to Arms	scripts/battlefields/Talacca_Cove/call_to_arms		1
-944	battlefield	0	1089	Compliments to the Chef	scripts/battlefields/Talacca_Cove/compliments_to_the_chef		1
-945	battlefield	0	1090	Puppetmaster Blues	scripts/battlefields/Talacca_Cove/puppetmaster_blues		1
-946	battlefield	0	1091	Breaking the Bonds of Fate	scripts/battlefields/Talacca_Cove/breaking_the_bonds_of_fate		1
-947	battlefield	0	1092	Legacy of the Lost	scripts/battlefields/Talacca_Cove/legacy_of_the_lost		1
-948	battlefield	0	1120	Tough Nut to Crack	scripts/battlefields/Navukgo_Execution_Chamber/tough_nut_to_crack		1
-949	battlefield	0	1121	Happy Caster	scripts/battlefields/Navukgo_Execution_Chamber/happy_caster		1
-950	battlefield	0	1122	Omens	scripts/battlefields/Navukgo_Execution_Chamber/omens		1
-951	battlefield	0	1123	Achieving True Power	scripts/battlefields/Navukgo_Execution_Chamber/achieving_true_power		1
-952	battlefield	0	1124	Shield of Diplomacy	scripts/battlefields/Navukgo_Execution_Chamber/shield_of_diplomacy		1
-953	battlefield	0	1152	Making a Mockery	scripts/battlefields/Jade_Sepulcher/making_a_mockery		1
-954	battlefield	0	1153	Shadows of the Mind	scripts/battlefields/Jade_Sepulcher/Shadows_of_the_Mind		1
-955	battlefield	0	1154	Beast Within	scripts/battlefields/Jade_Sepulcher/the_beast_within		1
-956	battlefield	0	1155	Moment of Truth	scripts/battlefields/Jade_Sepulcher/moment_of_truth		1
-957	battlefield	0	1156	Puppet in Peril	scripts/battlefields/Jade_Sepulcher/puppet_in_peril		1
-958	battlefield	0	1296	Central Apollyon	scripts/battlefields/Apollyon/central_apollyon		1
-959	battlefield	0	1303	Central Temenos 1st Floor	scripts/battlefields/Temenos/central_temenos_1st_floor		1
-960	hidden	0	0	Chocobo Whistle	scripts/quests/hiddenQuests/Chocobo_Whistle		1
-961	hidden	0	0	Cor Artifact	scripts/quests/hiddenQuests/Crafted_Corsair_Artifact		1
-962	hidden	0	0	Crimson Orb	scripts/quests/hiddenQuests/Crimson_Orb		1
-963	hidden	0	0	Dnc Artifact	scripts/quests/hiddenQuests/Crafted_Dancer_Artifact		1
-964	hidden	0	0	Invitation Cards	scripts/quests/hiddenQuests/Invitation_Cards		1
-965	hidden	0	0	Lost Chick	scripts/quests/hiddenQuests/Lost_Chick		1
-966	hidden	0	0	Magus Artifact	scripts/quests/hiddenQuests/Crafted_Magus_Artifact		1
-967	hidden	0	0	Puppetry Artifact	scripts/quests/hiddenQuests/Crafted_Puppetry_Artifact		1
-968	hidden	0	0	Trust Abquhbah	scripts/quests/hiddenQuests/Trust_Abquhbah		0
-969	hidden	0	0	Trust Cherukiki	scripts/quests/hiddenQuests/Trust_Cherukiki		0
-970	hidden	0	0	Trust Halver	scripts/quests/hiddenQuests/Trust_Halver		0
-971	hidden	0	0	Trust Maat	scripts/quests/hiddenQuests/Trust_Maat		0
-972	hidden	0	0	Trust Nashmeira	scripts/quests/hiddenQuests/Trust_Nashmeira		0
-973	hidden	0	0	Trust Prishe	scripts/quests/hiddenQuests/Trust_Prishe		0
-974	hidden	0	0	Trust Semih	scripts/quests/hiddenQuests/Trust_Semih		0
-975	hidden	0	0	Trust Shantotto	scripts/quests/hiddenQuests/Trust_Shantotto		0
-976	hidden	0	0	Trust Shikaree Z	scripts/quests/hiddenQuests/Trust_ShikareeZ		0
-977	hidden	0	0	Trust Ulmia	scripts/quests/hiddenQuests/Trust_Ulmia		0
-978	hidden	0	0	Trust Zeid II	scripts/quests/hiddenQuests/Trust_Zeid_II		0
-979	hidden	0	0	Tutorial	scripts/quests/hiddenQuests/Tutorial_Quest		1
-980	hidden	0	0	Mimeo Stone	scripts/quests/hiddenQuests/Mimeo_Stone		1
-981	hidden	0	0	Moghouse Expo	scripts/quests/hiddenQuests/Moghouse_Exposition		1
-982	hidden	0	0	Portal Charm	scripts/quests/hiddenQuests/Portal_Charm		1
+789	battlefield	0	24	Aman Trove Mars Horlais Peak	scripts/battlefields/Horlais_Peak/aman_trove_mars		1
+790	battlefield	0	25	Aman Trove Venus Horlais Peak	scripts/battlefields/Horlais_Peak/aman_trove_venus		1
+791	battlefield	0	33	Holy Crest	scripts/battlefields/Ghelsba_Outpost/holy_crest		1
+792	battlefield	0	64	Rank 2 Mission 2	scripts/battlefields/Waughroon_Shrine/rank_2_mission		1
+793	battlefield	0	65	Worms Turn	scripts/battlefields/Waughroon_Shrine/worms_turn		1
+794	battlefield	0	66	Grimshell Shocktroopers	scripts/battlefields/Waughroon_Shrine/grimshell_shocktroopers		1
+795	battlefield	0	67	On My Way	scripts/battlefields/Waughroon_Shrine/on_my_way		1
+796	battlefield	0	68	Thief in Norg	scripts/battlefields/Waughroon_Shrine/thief_in_norg		1
+797	battlefield	0	69	Three Two One	scripts/battlefields/Waughroon_Shrine/3_2_1		1
+798	battlefield	0	70	Shattering Stars Rdm	scripts/battlefields/Waughroon_Shrine/shattering_stars_rdm		1
+799	battlefield	0	71	Shattering Stars Thf	scripts/battlefields/Waughroon_Shrine/shattering_stars_thf		1
+800	battlefield	0	72	Shattering Stars Bst	scripts/battlefields/Waughroon_Shrine/shattering_stars_bst		1
+801	battlefield	0	73	Birds of a Feather	scripts/battlefields/Waughroon_Shrine/birds_of_a_feather		1
+802	battlefield	0	74	Crustacean Conundrum	scripts/battlefields/Waughroon_Shrine/crustacean_conundrum		1
+803	battlefield	0	75	Grove Guardians	scripts/battlefields/Waughroon_Shrine/grove_guardians		1
+804	battlefield	0	76	Hills Are Alive	scripts/battlefields/Waughroon_Shrine/hills_are_alive		1
+805	battlefield	0	77	Royal Jelly	scripts/battlefields/Waughroon_Shrine/royal_jelly		1
+806	battlefield	0	78	Final Bout	scripts/battlefields/Waughroon_Shrine/final_bout		1
+807	battlefield	0	79	Up in Arms	scripts/battlefields/Waughroon_Shrine/up_in_arms		1
+808	battlefield	0	80	Copycat	scripts/battlefields/Waughroon_Shrine/copycat		1
+809	battlefield	0	81	Operation Desert Swarm	scripts/battlefields/Waughroon_Shrine/operation_desert_swarm		1
+810	battlefield	0	82	Prehistoric Pigeons	scripts/battlefields/Waughroon_Shrine/prehistoric_pigeons		1
+811	battlefield	0	85	Beyond Infinity Waughroon Shrine	scripts/battlefields/Waughroon_Shrine/beyond_infinity		1
+812	battlefield	0	89	Aman Trove Mars Waughroon Shrine	scripts/battlefields/Waughroon_Shrine/aman_trove_mars		1
+813	battlefield	0	90	Aman Trove Venus Waughroon Shrine	scripts/battlefields/Waughroon_Shrine/aman_trove_venus		1
+814	battlefield	0	96	Rank 2 Mission	scripts/battlefields/Balgas_Dais/rank_2_mission		1
+815	battlefield	0	97	Steamed Sprouts	scripts/battlefields/Balgas_Dais/steamed_sprouts		1
+816	battlefield	0	98	Divine Punishers	scripts/battlefields/Balgas_Dais/divine_punishers		1
+817	battlefield	0	99	Saintly Invitation	scripts/battlefields/Balgas_Dais/saintly_invitation		1
+818	battlefield	0	100	Treasure and Tribulations	scripts/battlefields/Balgas_Dais/treasure_and_tribulations		1
+819	battlefield	0	101	Shattering Stars Mnk	scripts/battlefields/Balgas_Dais/shattering_stars_mnk		1
+820	battlefield	0	102	Shattering Stars Whm	scripts/battlefields/Balgas_Dais/shattering_stars_whm		1
+821	battlefield	0	103	Shattering Stars Smn	scripts/battlefields/Balgas_Dais/shattering_stars_smn		1
+822	battlefield	0	104	Creeping Doom	scripts/battlefields/Balgas_Dais/creeping_doom		1
+823	battlefield	0	105	Charming Trio	scripts/battlefields/Balgas_Dais/charming_trio		1
+824	battlefield	0	106	Harem Scarem	scripts/battlefields/Balgas_Dais/harem_scarem		1
+825	battlefield	0	107	Early Bird Catches the Wyrm	scripts/battlefields/Balgas_Dais/early_bird_catches_the_wyrm		1
+826	battlefield	0	108	Royal Succession	scripts/battlefields/Balgas_Dais/royal_succession		1
+827	battlefield	0	109	Rapid Raptors	scripts/battlefields/Balgas_Dais/rapid_raptors		1
+828	battlefield	0	110	Wild Wild Whiskers	scripts/battlefields/Balgas_Dais/wild_wild_whiskers		1
+829	battlefield	0	111	Seasons Greetings	scripts/battlefields/Balgas_Dais/seasons_greetings		1
+830	battlefield	0	112	Royale Ramble	scripts/battlefields/Balgas_Dais/royale_ramble		1
+831	battlefield	0	113	Moa Constrictors	scripts/battlefields/Balgas_Dais/moa_constrictors		1
+832	battlefield	0	116	Beyond Infinity Balgas Dais	scripts/battlefields/Balgas_Dais/beyond_infinity		1
+833	battlefield	0	120	Aman Trove Mars Balgas Dais	scripts/battlefields/Balgas_Dais/aman_trove_mars		1
+834	battlefield	0	121	Aman Trove Venus Balgas Dais	scripts/battlefields/Balgas_Dais/aman_trove_venus		1
+835	battlefield	0	128	Temple of Uggalepih	scripts/battlefields/Sacrificial_Chamber/temple_of_uggalepih		1
+836	battlefield	0	129	Jungle Boogymen	scripts/battlefields/Sacrificial_Chamber/jungle_boogymen		1
+837	battlefield	0	130	Amphibian Assault	scripts/battlefields/Sacrificial_Chamber/amphibian_assault		1
+838	battlefield	0	160	Shadow Lord Battle	scripts/battlefields/Throne_Room/shadow_lord_battle		1
+839	battlefield	0	161	Where Two Paths Converge	scripts/battlefields/Throne_Room/where_two_paths_converge		1
+840	battlefield	0	162	Kindred Spirits	scripts/battlefields/Throne_Room/kindred_spirits		1
+841	battlefield	0	164	Smash a Malevolent Menace	scripts/battlefields/Throne_Room/smash_a_malevolent_menace		1
+842	battlefield	0	192	Through the Quicksand Caves	scripts/battlefields/Chamber_of_Oracles/through_the_quicksand_caves		1
+843	battlefield	0	193	Legion Xi Comitatensis	scripts/battlefields/Chamber_of_Oracles/legion_xi_comitatensis		1
+844	battlefield	0	194	Shattering Stars Sam	scripts/battlefields/Chamber_of_Oracles/shattering_stars_sam		1
+845	battlefield	0	195	Shattering Stars Nin	scripts/battlefields/Chamber_of_Oracles/shattering_stars_nin		1
+846	battlefield	0	196	Shattering Stars Drg	scripts/battlefields/Chamber_of_Oracles/shattering_stars_drg		1
+847	battlefield	0	197	Cactuar Suave	scripts/battlefields/Chamber_of_Oracles/cactuar_suave		1
+848	battlefield	0	198	Eye of the Storm	scripts/battlefields/Chamber_of_Oracles/eye_of_the_storm		1
+849	battlefield	0	199	Scarlet King	scripts/battlefields/Chamber_of_Oracles/the_scarlet_king		1
+850	battlefield	0	200	Cat Burglar Bares Fangs	scripts/battlefields/Chamber_of_Oracles/cat_burglar_bares_fangs		1
+851	battlefield	0	224	Moonlit Path	scripts/battlefields/Full_Moon_Fountain/moonlit_path		1
+852	battlefield	0	225	Moon Reading	scripts/battlefields/Full_Moon_Fountain/moon_reading		1
+853	battlefield	0	226	Waking the Beast Fullmoon	scripts/battlefields/Full_Moon_Fountain/waking_the_beast		1
+854	battlefield	0	256	Return to Delkfutts Tower	scripts/battlefields/Stellar_Fulcrum/return_to_delkfutts_tower		1
+855	battlefield	0	288	Ark Angels 1	scripts/battlefields/LaLoff_Amphitheater/ark_angels_1		1
+856	battlefield	0	289	Ark Angels 2	scripts/battlefields/LaLoff_Amphitheater/ark_angels_2		1
+857	battlefield	0	290	Ark Angels 3	scripts/battlefields/LaLoff_Amphitheater/ark_angels_3		1
+858	battlefield	0	291	Ark Angels 4	scripts/battlefields/LaLoff_Amphitheater/ark_angels_4		1
+859	battlefield	0	292	Ark Angels 5	scripts/battlefields/LaLoff_Amphitheater/ark_angels_5		1
+860	battlefield	0	320	Celestial Nexus	scripts/battlefields/The_Celestial_Nexus/celestial_nexus		1
+861	battlefield	0	416	Trial by Wind	scripts/battlefields/Cloister_of_Gales/trial_by_wind		1
+862	battlefield	0	417	Carbuncle Debacle Cloister of Gales	scripts/battlefields/Cloister_of_Gales/carbuncle_debacle		1
+863	battlefield	0	418	Trial Size Trial by Wind	scripts/battlefields/Cloister_of_Gales/trial-size_trial_by_wind		1
+864	battlefield	0	419	Waking the Beast Cloister of Gales	scripts/battlefields/Cloister_of_Gales/waking_the_beast		1
+865	battlefield	0	420	Sugar Coated Directive Cloister of Gales	scripts/battlefields/Cloister_of_Gales/sugar-coated_directive		1
+866	battlefield	0	448	Trial by Lightning	scripts/battlefields/Cloister_of_Storms/trial_by_lightning		1
+867	battlefield	0	449	Carbuncle Debacle Cloister of Storms	scripts/battlefields/Cloister_of_Storms/carbuncle_debacle		1
+868	battlefield	0	450	Trial Size Trial by Lightning	scripts/battlefields/Cloister_of_Storms/trial-size_trial_by_lightning		1
+869	battlefield	0	451	Waking the Beast Cloister of Storms	scripts/battlefields/Cloister_of_Storms/waking_the_beast		1
+870	battlefield	0	452	Sugar Coated Directive Cloister of Storms	scripts/battlefields/Cloister_of_Storms/sugar-coated_directive		1
+871	battlefield	0	480	Trial by Ice	scripts/battlefields/Cloister_of_Frost/trial_by_ice		1
+872	battlefield	0	481	Class Reunion	scripts/battlefields/Cloister_of_Frost/class_reunion		1
+873	battlefield	0	482	Trial Size Trial by Ice	scripts/battlefields/Cloister_of_Frost/trial-size_trial_by_ice		1
+874	battlefield	0	483	Waking the Beast Cloister of Frost	scripts/battlefields/Cloister_of_Frost/waking_the_beast		1
+875	battlefield	0	484	Sugar Coated Directive Cloister of Frost	scripts/battlefields/Cloister_of_Frost/sugar-coated_directive		1
+876	battlefield	0	512	Rank 5 Mission	scripts/battlefields/QuBia_Arena/rank_5_mission		1
+877	battlefield	0	513	Come into My Parlor	scripts/battlefields/QuBia_Arena/come_into_my_parlor		1
+878	battlefield	0	514	E Vase Ive Action	scripts/battlefields/QuBia_Arena/e_vase_ive_action		1
+879	battlefield	0	515	Infernal Swarm	scripts/battlefields/QuBia_Arena/infernal_swarm		1
+880	battlefield	0	516	Heir to the Light	scripts/battlefields/QuBia_Arena/heir_to_the_light		1
+881	battlefield	0	517	Shattering Stars Pld	scripts/battlefields/QuBia_Arena/shattering_stars_pld		1
+882	battlefield	0	518	Shattering Stars Drk	scripts/battlefields/QuBia_Arena/shattering_stars_drk		1
+883	battlefield	0	519	Shattering Stars Brd	scripts/battlefields/QuBia_Arena/shattering_stars_brd		1
+884	battlefield	0	520	Demolition Squad	scripts/battlefields/QuBia_Arena/demolition_squad		1
+885	battlefield	0	521	Die by the Sword	scripts/battlefields/QuBia_Arena/die_by_the_sword		1
+886	battlefield	0	522	Let Sleeping Dogs Die	scripts/battlefields/QuBia_Arena/let_sleeping_dogs_die		1
+887	battlefield	0	523	Brothers D Aurphe	scripts/battlefields/QuBia_Arena/brothers_d_aurphe		1
+888	battlefield	0	524	Undying Promise	scripts/battlefields/QuBia_Arena/undying_promise		1
+889	battlefield	0	525	Factory Rejects	scripts/battlefields/QuBia_Arena/factory_rejects		1
+890	battlefield	0	526	Idol Thoughts	scripts/battlefields/QuBia_Arena/idol_thoughts		1
+891	battlefield	0	527	Awful Autopsy	scripts/battlefields/QuBia_Arena/awful_autopsy		1
+892	battlefield	0	528	Celery	scripts/battlefields/QuBia_Arena/celery		1
+893	battlefield	0	532	Those Who Lurk in Shadows	scripts/battlefields/QuBia_Arena/those_who_lurk_in_shadows		1
+894	battlefield	0	533	Beyond Infinity	scripts/battlefields/QuBia_Arena/beyond_infinity		1
+895	battlefield	0	544	Trial by Fire	scripts/battlefields/Cloister_of_Flames/trial_by_fire		1
+896	battlefield	0	545	Trial Size Trial by Fire	scripts/battlefields/Cloister_of_Flames/trial-size_trial_by_fire		1
+897	battlefield	0	546	Waking the Beast Cloister of Flames	scripts/battlefields/Cloister_of_Flames/waking_the_beast		1
+898	battlefield	0	547	Sugar Coated Directive Cloister of Flames	scripts/battlefields/Cloister_of_Flames/sugar-coated_directive		1
+899	battlefield	0	576	Trial by Earth	scripts/battlefields/Cloister_of_Tremors/trial_by_earth		1
+900	battlefield	0	577	Puppet Master	scripts/battlefields/Cloister_of_Tremors/puppet_master		1
+901	battlefield	0	578	Trial Size Trial by Earth	scripts/battlefields/Cloister_of_Tremors/trial-size_trial_by_earth		1
+902	battlefield	0	579	Waking the Beast Cloister of Tremors	scripts/battlefields/Cloister_of_Tremors/waking_the_beast		1
+903	battlefield	0	580	Sugar Coated Directive Cloister of Tremors	scripts/battlefields/Cloister_of_Tremors/sugar-coated_directive		1
+904	battlefield	0	608	Trial by Water	scripts/battlefields/Cloister_of_Tides/trial_by_water		1
+905	battlefield	0	609	Trial Size Trial by Water	scripts/battlefields/Cloister_of_Tides/trial-size_trial_by_water		1
+906	battlefield	0	610	Waking the Beast Cloister of Tides	scripts/battlefields/Cloister_of_Tides/waking_the_beast		1
+907	battlefield	0	611	Sugar Coated Directive Cloister of Tides	scripts/battlefields/Cloister_of_Tides/sugar-coated_directive		1
+908	battlefield	0	640	Flames for the Dead	scripts/battlefields/Bearclaw_Pinnacle/flames_for_the_dead		1
+909	battlefield	0	641	Follow the White Rabbit	scripts/battlefields/Bearclaw_Pinnacle/follow_the_white_rabbit		1
+910	battlefield	0	642	When Hell Freezes Over	scripts/battlefields/Bearclaw_Pinnacle/when_hell_freezes_over		1
+911	battlefield	0	643	Brothers	scripts/battlefields/Bearclaw_Pinnacle/brothers		1
+912	battlefield	0	644	Holy Cow	scripts/battlefields/Bearclaw_Pinnacle/holy_cow		1
+913	battlefield	0	672	Head Wind	scripts/battlefields/Boneyard_Gully/head_wind		1
+914	battlefield	0	673	Like the Wind	scripts/battlefields/Boneyard_Gully/like_the_wind		1
+915	battlefield	0	674	Sheep in Antlions Clothing	scripts/battlefields/Boneyard_Gully/sheep_in_antlions_clothing		1
+916	battlefield	0	675	Shell We Dance	scripts/battlefields/Boneyard_Gully/shell_we_dance		1
+917	battlefield	0	677	Tango with a Tracker	scripts/battlefields/Boneyard_Gully/tango_with_a_tracker		1
+918	battlefield	0	678	Requiem of Sin	scripts/battlefields/Boneyard_Gully/requiem_of_sin		1
+919	battlefield	0	704	Darkness Named	scripts/battlefields/The_Shrouded_Maw/darkness_named		1
+920	battlefield	0	705	Test Your Mite	scripts/battlefields/The_Shrouded_Maw/test_your_mite		1
+921	battlefield	0	706	Waking Dreams	scripts/battlefields/The_Shrouded_Maw/waking_dreams		1
+922	battlefield	0	736	Century of Hardship	scripts/battlefields/Mine_Shaft_2716/century_of_hardship		1
+923	battlefield	0	737	Return to the Depths	scripts/battlefields/Mine_Shaft_2716/return_to_the_depths		1
+924	battlefield	0	738	Bionic Bug	scripts/battlefields/Mine_Shaft_2716/bionic_bug		1
+925	battlefield	0	739	Pulling the Strings	scripts/battlefields/Mine_Shaft_2716/pulling_the_strings		1
+926	battlefield	0	740	Automaton Assault	scripts/battlefields/Mine_Shaft_2716/automaton_assault		1
+927	battlefield	0	768	Ancient Flames Beckon Spire of Holla	scripts/battlefields/Spire_of_Holla/ancient_flames_beckon		1
+928	battlefield	0	769	Simulant	scripts/battlefields/Spire_of_Holla/simulant		1
+929	battlefield	0	800	Ancient Flames Beckon Spire of Dem	scripts/battlefields/Spire_of_Dem/ancient_flames_beckon		1
+930	battlefield	0	801	You Are What You Eat	scripts/battlefields/Spire_of_Dem/you_are_what_you_eat		1
+931	battlefield	0	832	Ancient Flames Beckon Spire of Mea	scripts/battlefields/Spire_of_Mea/ancient_flames_beckon		1
+932	battlefield	0	833	Playing Host	scripts/battlefields/Spire_of_Mea/playing_host		1
+933	battlefield	0	864	Desires of Emptiness	scripts/battlefields/Spire_of_Vahzl/desires_of_emptiness		1
+934	battlefield	0	865	Pulling the Plug	scripts/battlefields/Spire_of_Vahzl/pulling_the_plug		1
+935	battlefield	0	896	Storms of Fate	scripts/battlefields/Riverne_Site_B01/storms_of_fate		1
+936	battlefield	0	897	Wyrmking Descends	scripts/battlefields/Riverne_Site_B01/wyrmking_descends		1
+937	battlefield	0	928	Ouryu Cometh	scripts/battlefields/Riverne_Site_A01/ouryu_cometh		1
+938	battlefield	0	960	Ancient Vows	scripts/battlefields/Monarch_Linn/ancient_vows		1
+939	battlefield	0	961	Savage	scripts/battlefields/Monarch_Linn/savage		1
+940	battlefield	0	962	Fire in the Sky	scripts/battlefields/Monarch_Linn/fire_in_the_sky		1
+941	battlefield	0	964	Bugard in the Clouds	scripts/battlefields/Monarch_Linn/bugard_in_the_clouds		1
+942	battlefield	0	965	Beloved of the Atlantes	scripts/battlefields/Monarch_Linn/beloved_of_the_atlantes		1
+943	battlefield	0	966	Uninvited Guests	scripts/battlefields/Monarch_Linn/uninvited_guests		1
+944	battlefield	0	992	One to Be Feared	scripts/battlefields/Sealions_Den/one_to_be_feared		1
+945	battlefield	0	993	Warriors Path	scripts/battlefields/Sealions_Den/warriors_path		1
+946	battlefield	0	1024	When Angels Fall	scripts/battlefields/The_Garden_of_RuHmet/when_angels_fall		1
+947	battlefield	0	1056	Dawn	scripts/battlefields/Empyreal_Paradox/dawn		1
+948	battlefield	0	1057	Apocalypse Nigh	scripts/battlefields/Empyreal_Paradox/apocalypse_nigh		1
+949	battlefield	0	1088	Call to Arms	scripts/battlefields/Talacca_Cove/call_to_arms		1
+950	battlefield	0	1089	Compliments to the Chef	scripts/battlefields/Talacca_Cove/compliments_to_the_chef		1
+951	battlefield	0	1090	Puppetmaster Blues	scripts/battlefields/Talacca_Cove/puppetmaster_blues		1
+952	battlefield	0	1091	Breaking the Bonds of Fate	scripts/battlefields/Talacca_Cove/breaking_the_bonds_of_fate		1
+953	battlefield	0	1092	Legacy of the Lost	scripts/battlefields/Talacca_Cove/legacy_of_the_lost		1
+954	battlefield	0	1120	Tough Nut to Crack	scripts/battlefields/Navukgo_Execution_Chamber/tough_nut_to_crack		1
+955	battlefield	0	1121	Happy Caster	scripts/battlefields/Navukgo_Execution_Chamber/happy_caster		1
+956	battlefield	0	1122	Omens	scripts/battlefields/Navukgo_Execution_Chamber/omens		1
+957	battlefield	0	1123	Achieving True Power	scripts/battlefields/Navukgo_Execution_Chamber/achieving_true_power		1
+958	battlefield	0	1124	Shield of Diplomacy	scripts/battlefields/Navukgo_Execution_Chamber/shield_of_diplomacy		1
+959	battlefield	0	1152	Making a Mockery	scripts/battlefields/Jade_Sepulcher/making_a_mockery		1
+960	battlefield	0	1153	Shadows of the Mind	scripts/battlefields/Jade_Sepulcher/Shadows_of_the_Mind		1
+961	battlefield	0	1154	Beast Within	scripts/battlefields/Jade_Sepulcher/the_beast_within		1
+962	battlefield	0	1155	Moment of Truth	scripts/battlefields/Jade_Sepulcher/moment_of_truth		1
+963	battlefield	0	1156	Puppet in Peril	scripts/battlefields/Jade_Sepulcher/puppet_in_peril		1
+964	battlefield	0	1296	Central Apollyon	scripts/battlefields/Apollyon/central_apollyon		1
+965	battlefield	0	1303	Central Temenos 1st Floor	scripts/battlefields/Temenos/central_temenos_1st_floor		1
+966	hidden	0	0	Chocobo Whistle	scripts/quests/hiddenQuests/Chocobo_Whistle		1
+967	hidden	0	0	Cor Artifact	scripts/quests/hiddenQuests/Crafted_Corsair_Artifact		1
+968	hidden	0	0	Crimson Orb	scripts/quests/hiddenQuests/Crimson_Orb		1
+969	hidden	0	0	Dnc Artifact	scripts/quests/hiddenQuests/Crafted_Dancer_Artifact		1
+970	hidden	0	0	Invitation Cards	scripts/quests/hiddenQuests/Invitation_Cards		1
+971	hidden	0	0	Lost Chick	scripts/quests/hiddenQuests/Lost_Chick		1
+972	hidden	0	0	Magus Artifact	scripts/quests/hiddenQuests/Crafted_Magus_Artifact		1
+973	hidden	0	0	Puppetry Artifact	scripts/quests/hiddenQuests/Crafted_Puppetry_Artifact		1
+974	hidden	0	0	Trust Abquhbah	scripts/quests/hiddenQuests/Trust_Abquhbah		0
+975	hidden	0	0	Trust Cherukiki	scripts/quests/hiddenQuests/Trust_Cherukiki		0
+976	hidden	0	0	Trust Halver	scripts/quests/hiddenQuests/Trust_Halver		0
+977	hidden	0	0	Trust Maat	scripts/quests/hiddenQuests/Trust_Maat		0
+978	hidden	0	0	Trust Nashmeira	scripts/quests/hiddenQuests/Trust_Nashmeira		0
+979	hidden	0	0	Trust Prishe	scripts/quests/hiddenQuests/Trust_Prishe		0
+980	hidden	0	0	Trust Semih	scripts/quests/hiddenQuests/Trust_Semih		0
+981	hidden	0	0	Trust Shantotto	scripts/quests/hiddenQuests/Trust_Shantotto		0
+982	hidden	0	0	Trust Shikaree Z	scripts/quests/hiddenQuests/Trust_ShikareeZ		0
+983	hidden	0	0	Trust Ulmia	scripts/quests/hiddenQuests/Trust_Ulmia		0
+984	hidden	0	0	Trust Zeid II	scripts/quests/hiddenQuests/Trust_Zeid_II		0
+985	hidden	0	0	Tutorial	scripts/quests/hiddenQuests/Tutorial_Quest		1
+986	hidden	0	0	Mimeo Stone	scripts/quests/hiddenQuests/Mimeo_Stone		1
+987	hidden	0	0	Moghouse Expo	scripts/quests/hiddenQuests/Moghouse_Exposition		1
+988	hidden	0	0	Portal Charm	scripts/quests/hiddenQuests/Portal_Charm		1

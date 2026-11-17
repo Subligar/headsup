@@ -97,11 +97,11 @@ list	skill	name
 20	461	Regeneration
 20	462	Maelstrom
 20	463	Whirlwind
-21	505	Venom Shell
-22	504	Gas Shell
-22	506	Palsynyxis
-22	507	Painful Whip
-22	508	Suctorial Tentacle
+21	504	Gas Shell
+21	506	Palsynyxis
+21	507	Painful Whip
+21	508	Suctorial Tentacle
+22	505	Venom Shell
 23	449	Intimidate
 23	450	Aqua Ball
 23	451	Splash Breath
@@ -993,9 +993,9 @@ list	skill	name
 200	1061	Battle Dance
 200	1062	Howl Dynamis
 200	1064	Jump
-201	869	Whispering Wind
-201	871	Aerial Armor
-201	873	Predator Claws
+201	878	Frost Armor
+201	880	Double Slap
+201	882	Rush
 202	1116	Seismostomp
 202	1117	Lead Breath
 203	1075	Ore Toss
@@ -1003,9 +1003,9 @@ list	skill	name
 203	1077	Shell Bash
 203	1078	Shell Guard Dynamis
 203	1079	Howl Dynamis
-204	878	Frost Armor
-204	880	Double Slap
-204	882	Rush
+204	888	Thunderspark
+204	889	Lightning Armor
+204	891	Chaotic Strike
 205	1112	Seismostomp
 205	1113	Tormentful Glare
 206	1068	Feather Storm
@@ -1013,31 +1013,31 @@ list	skill	name
 206	1070	Parry Dynamis
 206	1071	Sweep
 206	1072	Howl Dynamis
-207	852	Megalith Throw
-207	853	Earthen Ward
-207	855	Mountain Buster
-208	1114	Seismostomp
-208	1115	Torpid Glare
-209	1088	Goblin Rush
-209	1089	Bomb Toss
-209	1092	Frypan
-209	1093	Smokebomb
-209	1095	Crispy Candle
-209	1097	Paralysis Shower
-210	888	Thunderspark
-210	889	Lightning Armor
-210	891	Chaotic Strike
-211	321	Needleshot
-211	322	1000 Needles
-211	324	Photosynthesis Sabotender
-212	310	Queasyshroom
-212	311	Numbshroom
-212	314	Silence Gas
-212	315	Dark Spore
-212	1621	Frogkick
-213	909	Glittering Ruby
-213	910	Meteorite
-213	911	Healing Ruby II
+207	1114	Seismostomp
+207	1115	Torpid Glare
+208	1088	Goblin Rush
+208	1089	Bomb Toss
+208	1092	Frypan
+208	1093	Smokebomb
+208	1095	Crispy Candle
+208	1097	Paralysis Shower
+209	852	Megalith Throw
+209	853	Earthen Ward
+209	855	Mountain Buster
+210	321	Needleshot
+210	322	1000 Needles
+210	324	Photosynthesis Sabotender
+211	310	Queasyshroom
+211	311	Numbshroom
+211	314	Silence Gas
+211	315	Dark Spore
+211	1621	Frogkick
+212	860	Tail Whip
+212	861	Spring Water
+212	864	Spinning Dive
+213	869	Whispering Wind
+213	871	Aerial Armor
+213	873	Predator Claws
 214	1099	Dice Heal
 214	1100	Dice Gravity
 214	1101	Dice Damage
@@ -1049,16 +1049,16 @@ list	skill	name
 214	1107	Dice TP Loss
 214	1108	Dice Dispel
 214	1109	Dice Reset
-215	843	Double Punch
-215	844	Crimson Howl
-215	846	Flaming Crush
-216	1057	Aerial Wheel
-216	1058	Shoulder Attack
-216	1059	Slam Dunk
-216	1060	Arm Block Dynamis
-216	1061	Battle Dance
-216	1062	Howl Dynamis
-216	1066	Fanatic Dance
+215	1057	Aerial Wheel
+215	1058	Shoulder Attack
+215	1059	Slam Dunk
+215	1060	Arm Block Dynamis
+215	1061	Battle Dance
+215	1062	Howl Dynamis
+215	1066	Fanatic Dance
+216	843	Double Punch
+216	844	Crimson Howl
+216	846	Flaming Crush
 217	1057	Aerial Wheel
 217	1058	Shoulder Attack
 217	1059	Slam Dunk
@@ -1079,28 +1079,28 @@ list	skill	name
 219	1070	Parry Dynamis
 219	1071	Sweep
 219	1072	Howl Dynamis
-220	642	Flame Breath
-220	643	Poison Breath Dragon 1
-220	644	Wind Breath
-221	649	Voidsong
-221	650	Thornsong
-221	651	Lodesong
-222	645	Body Slam
-222	646	Heavy Stomp
-223	647	Chaos Blade
-223	648	Petro Eyes
-224	1571	Gas Shell Dynamis
-224	1573	Palsynyxis
-224	1574	Painful Whip
-224	1575	Suctorial Tentacle
-225	406	Hammer Beak
-225	407	Poison Pick
-225	408	Sound Vacuum Cockatrice
-225	410	Sound Blast
-225	411	Baleful Gaze Cockatrice
-226	860	Tail Whip
-226	861	Spring Water
-226	864	Spinning Dive
+220	909	Glittering Ruby
+220	910	Meteorite
+220	911	Healing Ruby II
+221	642	Flame Breath
+221	643	Poison Breath Dragon 1
+221	644	Wind Breath
+222	649	Voidsong
+222	650	Thornsong
+222	651	Lodesong
+223	645	Body Slam
+223	646	Heavy Stomp
+224	647	Chaos Blade
+224	648	Petro Eyes
+225	1571	Gas Shell Dynamis
+225	1573	Palsynyxis
+225	1574	Painful Whip
+225	1575	Suctorial Tentacle
+226	406	Hammer Beak
+226	407	Poison Pick
+226	408	Sound Vacuum Cockatrice
+226	410	Sound Blast
+226	411	Baleful Gaze Cockatrice
 227	393	Sonic Boom
 227	395	Jet Stream
 228	374	Ripper Fang
@@ -1540,372 +1540,374 @@ list	skill	name
 322	1753	Hysteric Barrage
 322	1758	Tail Slap
 323	2178	Sudden Lunge
-324	2178	Sudden Lunge
-324	2179	Noisome Powder
-324	2180	Nepenthean Hum
-324	2181	Spiral Spin
-325	2198	Winter Breeze
-326	1699	Pecking Flurry
-326	1701	Feather Tickle
-327	2216	Nocturnal Combustion
-327	2217	Berserk
-327	2218	Penumbral Impact
-327	2219	Dark Wave
-328	2178	Sudden Lunge
-328	2179	Noisome Powder
-328	2180	Nepenthean Hum
-328	2181	Spiral Spin
-328	2182	Spiral Burst
-329	2193	Zephyr Arrow
-329	2194	Lethe Arrows
-329	2195	Spring Breeze
-329	2196	Summer Breeze
-329	2197	Autumn Breeze
-329	2198	Winter Breeze
-329	2199	Cyclonic Turmoil
-329	2200	Cyclonic Torrent
-330	2187	Dustvoid
-330	2188	Slaverous Gale
-330	2189	Aeolian Void
-331	2333	Di Glow
-331	2337	Damsel Memento
-332	2519	Dexter Wing
-332	2520	Sinister Wing
-332	2521	Chaos Blast
-332	2522	Abyssic Buster
-332	2523	Dancing Tail
-332	2524	Dancing Tailv2
-332	2525	Chilling Roar
-332	2526	Chilling Roarv2
-332	2527	Soul Douse
-332	2528	Soul Dousev2
-332	2529	Dark Star
-332	2530	Dark Starv2
-333	442	Bubble Shower
-333	443	Bubble Curtain
-333	445	Scissor Guard
-333	448	Metallic Body
-333	2512	Venom Shower
-333	2513	Mega Scissors
-334	378	Thunderbolt Raptor
-335	2170	Fevered Pitch
-335	2171	Call of the Moon Up
-335	2172	Call of the Moon Down
-335	2173	Plenilune Embrace Up
-335	2174	Plenilune Embrace Down
-335	2175	Nox Blast
-335	2176	Asuran Claws
-336	770	Jumping Thrust
-337	2329	Di Horn Attack
-337	2330	Di Bite Attack
-337	2331	Di Kick Attack
-338	383	Tusk
-338	385	Bone Crunch
-339	2218	Penumbral Impact
-340	591	Bomb Toss
-341	968	Red Lotus Blade
-341	969	Flat Blade
-341	970	Savage Blade
-341	971	Royal Bash
-341	972	Royal Savior
-342	733	Jump
-343	663	Ice Roar
-343	664	Impact Roar
-343	665	Grand Slam
-343	667	Power Attack Armed
-344	624	Vulture 1
-344	625	Vulture 2
-344	626	Vulture 3
-344	627	Vulture 4
-345	1028	Tackle
-345	1033	Dragon Kick
-345	1034	Asuran Fists
-346	431	Fluid Spread
-346	433	Digest
-346	1317	Mucus Spread
-346	1319	Epoxy Spread
-346	2514	Cytokinesis
-347	813	Dispelling Wind
-347	814	Deadly Drive
-347	815	Wind Wall
-347	816	Fang Rush
-347	817	Dread Shriek
-347	818	Tail Crush
-347	819	Blizzard Breath
-347	820	Thunder Breath
-347	821	Radiant Breath
-347	822	Chaos Breath
-348	367	Fireball
-349	2725	Rending Talons
-349	2726	Shrieking Gale
-349	2727	Wings of Woe
-349	2728	Wings of Agony
-349	2729	Typhoean Rage
-349	2730	Ravenous Wail
-350	2427	Tail Lash
-350	2428	Bloody Beak
-350	2429	Feral Peck
-350	2431	Reaving Wind
-350	2432	Storm Wing
-350	2433	Calamitous Wind
-351	330	Shuffle
-351	333	Double Down
-351	683	Bludgeon
-351	684	Deal Out
-352	483	Charged Whisker
-352	652	Blaster
-352	653	Chaotic Eye
-353	2163	Seedspray
-353	2164	Viscid Emission
-353	2165	Rotten Stench
-353	2166	Floral Bouquet
-354	659	Cursed Sphere
-355	368	Blockhead
-356	2684	Dark Flare
-356	2685	Dark Freeze
-356	2686	Dark Tornado
-356	2687	Dark Quake
-356	2688	Dark Burst
-356	2689	Dark Flood
-356	2690	Dark Moon
-356	2691	Dark Sun
-356	2714	Yaksha Stance
-356	2715	Yaksha Damnation
-356	2716	Yaksha Bliss
-356	2717	Yaksha Oblivion
-356	2718	Raksha Stance
-356	2719	Raksha Judgement
-356	2720	Raksha Illusion
-356	2721	Raksha Vengeance
-357	480	Petrifactive Breath
-358	2162	Emetic Discharge
-359	374	Ripper Fang
-359	378	Thunderbolt Raptor
-359	379	Chomp Rush
-359	380	Scythe Tail
-360	499	Back Swish
-360	501	Frightful Roar
-361	452	Screwdriver
-361	453	Water Wall
-362	255	Dimensional Death
-363	2784	Diluvial Wakes
-363	2785	Kurugi Collapse
-363	2786	Searing Halitus
-363	2787	Divesting Gale
-363	2788	Bolt of Perdition
-363	2789	Crippling Rime
-363	2790	Oblivions Mantle
-364	402	Feather Barrier
-364	922	Blind Vortex
-364	923	Giga Scream
-364	924	Dread Dive
-364	926	Stormwind
-365	644	Wind Breath
-365	646	Heavy Stomp
-365	648	Petro Eyes
-365	650	Thornsong
-366	321	Needleshot
-366	322	1000 Needles
-366	324	Photosynthesis Sabotender
-366	1120	10000 Needles
-367	2423	Triumphant Roar
-367	2424	Terror Eye
-367	2425	Bloody Claw
-368	770	Jumping Thrust
-368	771	Hydro Ball
-368	774	Bubble Armor
-368	777	Hydro Shot
-368	780	Spinning Fin
-369	3511	Lunatic Voice
-369	3512	Sonic Buffet
-369	3513	Entice
-369	3514	Hysteric Assault
-369	3515	Clarsach Call
-370	354	Wild Rage
-370	722	Venom Storm
-370	723	Earthbreaker
-371	2410	Demonic Flower
-372	2922	Soulshattering Roar
-372	2923	Calcifying Claw
-372	2924	Divesting Stampede
-372	2925	Bonebreaking Barrage
-372	3506	Hellfire Arrow
-372	3507	Incensed Pummel
-373	2566	Diabolic Claw
-373	2567	Stygian Cyclone
-373	2568	Deathly Diminuendo
-373	2569	Hellish Crescendo
-373	2570	Afflicting Gaze
-373	2571	Stygian Sphere
-373	2572	Malign Invocation
-373	2573	Shadow Wreck
-373	2634	Interference
-373	2635	Dark Arrivisme
-373	2637	Besiegers Bane
-373	2692	Royal Decree
-374	536	Panzerfaust
-375	805	Head Butt Turtle
-375	806	Tortoise Stomp
-375	807	Harden Shell
-375	808	Earth Breath
-375	809	Aqua Breath
-376	262	Sheep Charge
-376	265	Rage
-376	1837	Feeble Bleat
-377	266	Ram Charge
-378	270	Roar
-379	664	Impact Roar
-379	665	Grand Slam
-379	666	Power Attack Unarmed
-380	663	Ice Roar
-381	658	Catapult
-381	662	Lightning Roar
-381	1636	Trebuchet Dynamis
-382	2193	Zephyr Arrow
-382	2194	Lethe Arrows
-383	1720	Wind Shear
-383	1721	Obfuscate
-383	1722	Zephyr Mantle
-383	1723	Ill Wind
-384	1957	Frog Song
-384	1959	Water Bomb
-385	308	Frogkick
-385	310	Queasyshroom
-385	311	Numbshroom
-386	2170	Fevered Pitch
-386	2171	Call of the Moon Up
-387	664	Impact Roar
-387	665	Grand Slam
-387	667	Power Attack Armed
-387	1636	Trebuchet Dynamis
-387	2576	Mercurial Strike
-387	2577	Mercurial Strike
-387	2578	Colossal Slam
-388	628	Wild Horn
-388	629	Thunderbolt Behemoth
-388	632	Flame Armor
-388	633	Howl
-389	257	Foot Kick
-389	259	Whirl Claws
-389	323	Wild Carrot
-390	424	Full-Force Blow
-391	335	Pollen
-392	1445	Damnation Dive
-393	290	Spinning Claw
-393	291	Claw Storm
-393	295	Magic Fruit
-394	1370	Vitriolic Barrage
-394	1371	Primal Drill
-394	1372	Concussive Oscillation
-394	1373	Ion Shower
-394	1375	Asthenic Fog
-395	907	Poison Nails
-395	908	Shining Ruby
-395	909	Glittering Ruby
-395	910	Meteorite
-396	1136	Blindeye
-396	1137	Eyes on Me
-396	1138	Hypnosis
-396	1139	Mind Break
-396	1140	Binding Wave
-396	1141	Airy Shield
-396	1143	Magic Barrier
-396	1144	Level 5 Petrify
-397	642	Flame Breath
+323	2179	Noisome Powder
+323	2180	Nepenthean Hum
+323	2181	Spiral Spin
+324	2198	Winter Breeze
+325	1699	Pecking Flurry
+325	1701	Feather Tickle
+326	2216	Nocturnal Combustion
+326	2217	Berserk
+326	2218	Penumbral Impact
+326	2219	Dark Wave
+327	2178	Sudden Lunge
+327	2179	Noisome Powder
+327	2180	Nepenthean Hum
+327	2181	Spiral Spin
+327	2182	Spiral Burst
+328	2193	Zephyr Arrow
+328	2194	Lethe Arrows
+328	2195	Spring Breeze
+328	2196	Summer Breeze
+328	2197	Autumn Breeze
+328	2198	Winter Breeze
+328	2199	Cyclonic Turmoil
+328	2200	Cyclonic Torrent
+329	2187	Dustvoid
+329	2188	Slaverous Gale
+329	2189	Aeolian Void
+330	2333	Di Glow
+330	2337	Damsel Memento
+331	2519	Dexter Wing
+331	2520	Sinister Wing
+331	2521	Chaos Blast
+331	2522	Abyssic Buster
+331	2523	Dancing Tail
+331	2524	Dancing Tailv2
+331	2525	Chilling Roar
+331	2526	Chilling Roarv2
+331	2527	Soul Douse
+331	2528	Soul Dousev2
+331	2529	Dark Star
+331	2530	Dark Starv2
+332	442	Bubble Shower
+332	443	Bubble Curtain
+332	445	Scissor Guard
+332	448	Metallic Body
+332	2512	Venom Shower
+332	2513	Mega Scissors
+333	378	Thunderbolt Raptor
+334	2170	Fevered Pitch
+334	2171	Call of the Moon Up
+334	2172	Call of the Moon Down
+334	2173	Plenilune Embrace Up
+334	2174	Plenilune Embrace Down
+334	2175	Nox Blast
+334	2176	Asuran Claws
+335	770	Jumping Thrust
+336	2329	Di Horn Attack
+336	2330	Di Bite Attack
+336	2331	Di Kick Attack
+337	383	Tusk
+337	385	Bone Crunch
+338	2218	Penumbral Impact
+339	591	Bomb Toss
+340	968	Red Lotus Blade
+340	969	Flat Blade
+340	970	Savage Blade
+340	971	Royal Bash
+340	972	Royal Savior
+341	733	Jump
+342	663	Ice Roar
+342	664	Impact Roar
+342	665	Grand Slam
+342	667	Power Attack Armed
+343	624	Vulture 1
+343	625	Vulture 2
+343	626	Vulture 3
+343	627	Vulture 4
+344	1028	Tackle
+344	1033	Dragon Kick
+344	1034	Asuran Fists
+345	431	Fluid Spread
+345	433	Digest
+345	1317	Mucus Spread
+345	1319	Epoxy Spread
+345	2514	Cytokinesis
+346	813	Dispelling Wind
+346	814	Deadly Drive
+346	815	Wind Wall
+346	816	Fang Rush
+346	817	Dread Shriek
+346	818	Tail Crush
+346	819	Blizzard Breath
+346	820	Thunder Breath
+346	821	Radiant Breath
+346	822	Chaos Breath
+347	367	Fireball
+348	2725	Rending Talons
+348	2726	Shrieking Gale
+348	2727	Wings of Woe
+348	2728	Wings of Agony
+348	2729	Typhoean Rage
+348	2730	Ravenous Wail
+349	2427	Tail Lash
+349	2428	Bloody Beak
+349	2429	Feral Peck
+349	2431	Reaving Wind
+349	2432	Storm Wing
+349	2433	Calamitous Wind
+350	330	Shuffle
+350	333	Double Down
+350	683	Bludgeon
+350	684	Deal Out
+351	483	Charged Whisker
+351	652	Blaster
+351	653	Chaotic Eye
+352	2163	Seedspray
+352	2164	Viscid Emission
+352	2165	Rotten Stench
+352	2166	Floral Bouquet
+353	659	Cursed Sphere
+354	368	Blockhead
+355	2684	Dark Flare
+355	2685	Dark Freeze
+355	2686	Dark Tornado
+355	2687	Dark Quake
+355	2688	Dark Burst
+355	2689	Dark Flood
+355	2690	Dark Moon
+355	2691	Dark Sun
+355	2714	Yaksha Stance
+355	2715	Yaksha Damnation
+355	2716	Yaksha Bliss
+355	2717	Yaksha Oblivion
+355	2718	Raksha Stance
+355	2719	Raksha Judgement
+355	2720	Raksha Illusion
+355	2721	Raksha Vengeance
+356	480	Petrifactive Breath
+357	2162	Emetic Discharge
+358	374	Ripper Fang
+358	378	Thunderbolt Raptor
+358	379	Chomp Rush
+358	380	Scythe Tail
+359	499	Back Swish
+359	501	Frightful Roar
+360	452	Screwdriver
+360	453	Water Wall
+361	255	Dimensional Death
+362	2784	Diluvial Wakes
+362	2785	Kurugi Collapse
+362	2786	Searing Halitus
+362	2787	Divesting Gale
+362	2788	Bolt of Perdition
+362	2789	Crippling Rime
+362	2790	Oblivions Mantle
+363	402	Feather Barrier
+363	922	Blind Vortex
+363	923	Giga Scream
+363	924	Dread Dive
+363	926	Stormwind
+364	644	Wind Breath
+364	646	Heavy Stomp
+364	648	Petro Eyes
+364	650	Thornsong
+365	321	Needleshot
+365	322	1000 Needles
+365	324	Photosynthesis Sabotender
+365	1120	10000 Needles
+366	2423	Triumphant Roar
+366	2424	Terror Eye
+366	2425	Bloody Claw
+367	770	Jumping Thrust
+367	771	Hydro Ball
+367	774	Bubble Armor
+367	777	Hydro Shot
+367	780	Spinning Fin
+368	3511	Lunatic Voice
+368	3512	Sonic Buffet
+368	3513	Entice
+368	3514	Hysteric Assault
+368	3515	Clarsach Call
+369	354	Wild Rage
+369	722	Venom Storm
+369	723	Earthbreaker
+370	2410	Demonic Flower
+371	2922	Soulshattering Roar
+371	2923	Calcifying Claw
+371	2924	Divesting Stampede
+371	2925	Bonebreaking Barrage
+371	3506	Hellfire Arrow
+371	3507	Incensed Pummel
+372	2566	Diabolic Claw
+372	2567	Stygian Cyclone
+372	2568	Deathly Diminuendo
+372	2569	Hellish Crescendo
+372	2570	Afflicting Gaze
+372	2571	Stygian Sphere
+372	2572	Malign Invocation
+372	2573	Shadow Wreck
+372	2634	Interference
+372	2635	Dark Arrivisme
+372	2637	Besiegers Bane
+372	2692	Royal Decree
+373	536	Panzerfaust
+374	805	Head Butt Turtle
+374	806	Tortoise Stomp
+374	807	Harden Shell
+374	808	Earth Breath
+374	809	Aqua Breath
+375	262	Sheep Charge
+375	265	Rage
+375	1837	Feeble Bleat
+376	266	Ram Charge
+377	270	Roar
+378	664	Impact Roar
+378	665	Grand Slam
+378	666	Power Attack Unarmed
+379	663	Ice Roar
+380	658	Catapult
+380	662	Lightning Roar
+380	1636	Trebuchet Dynamis
+381	2193	Zephyr Arrow
+381	2194	Lethe Arrows
+382	1720	Wind Shear
+382	1721	Obfuscate
+382	1722	Zephyr Mantle
+382	1723	Ill Wind
+383	1957	Frog Song
+383	1959	Water Bomb
+384	308	Frogkick
+384	310	Queasyshroom
+384	311	Numbshroom
+385	2170	Fevered Pitch
+385	2171	Call of the Moon Up
+386	664	Impact Roar
+386	665	Grand Slam
+386	667	Power Attack Armed
+386	1636	Trebuchet Dynamis
+386	2576	Mercurial Strike
+386	2577	Mercurial Strike
+386	2578	Colossal Slam
+387	628	Wild Horn
+387	629	Thunderbolt Behemoth
+387	632	Flame Armor
+387	633	Howl
+388	257	Foot Kick
+388	259	Whirl Claws
+388	323	Wild Carrot
+389	424	Full-Force Blow
+390	335	Pollen
+391	1445	Damnation Dive
+392	290	Spinning Claw
+392	291	Claw Storm
+392	295	Magic Fruit
+393	1370	Vitriolic Barrage
+393	1371	Primal Drill
+393	1372	Concussive Oscillation
+393	1373	Ion Shower
+393	1375	Asthenic Fog
+394	907	Poison Nails
+394	908	Shining Ruby
+394	909	Glittering Ruby
+394	910	Meteorite
+395	1136	Blindeye
+395	1137	Eyes on Me
+395	1138	Hypnosis
+395	1139	Mind Break
+395	1140	Binding Wave
+395	1141	Airy Shield
+395	1143	Magic Barrier
+395	1144	Level 5 Petrify
+396	642	Flame Breath
+396	645	Body Slam
+396	646	Heavy Stomp
+396	647	Chaos Blade
+397	643	Poison Breath Dragon 1
 397	645	Body Slam
 397	646	Heavy Stomp
 397	647	Chaos Blade
-398	643	Poison Breath Dragon 1
+398	644	Wind Breath
 398	645	Body Slam
 398	646	Heavy Stomp
 398	647	Chaos Blade
-399	644	Wind Breath
-399	645	Body Slam
-399	646	Heavy Stomp
-399	647	Chaos Blade
-400	648	Petro Eyes
-400	649	Voidsong
-400	650	Thornsong
-400	651	Lodesong
-401	1145	Soul Drain
-401	1146	Hecatomb Wave
-401	1147	Demonic Howl
-401	1148	Condemnation
-401	1150	Quadrastrike
-402	1188	Final Heaven
-403	1189	Mercy Stroke
-404	1190	Knights of Round
-405	1191	Scourge
-406	1192	Onslaught
-407	1193	Metatron Torment
-408	1195	Geirskogul
-409	1194	Catastrophe
-410	1196	Blade Metsu
-411	1197	Tachi Kaiten
-412	1198	Randgrith
-413	1199	Gate of Tartarus
-414	1200	Namas Arrow
-415	1201	Coronach
-416	645	Body Slam
+399	648	Petro Eyes
+399	649	Voidsong
+399	650	Thornsong
+399	651	Lodesong
+400	1145	Soul Drain
+400	1146	Hecatomb Wave
+400	1147	Demonic Howl
+400	1148	Condemnation
+400	1150	Quadrastrike
+401	1188	Final Heaven
+402	1189	Mercy Stroke
+403	1190	Knights of Round
+404	1191	Scourge
+405	1192	Onslaught
+406	1193	Metatron Torment
+407	1195	Geirskogul
+408	1194	Catastrophe
+409	1196	Blade Metsu
+410	1197	Tachi Kaiten
+411	1198	Randgrith
+412	1199	Gate of Tartarus
+413	1200	Namas Arrow
+414	1201	Coronach
+415	645	Body Slam
+415	646	Heavy Stomp
+415	647	Chaos Blade
+415	648	Petro Eyes
 416	646	Heavy Stomp
-416	647	Chaos Blade
 416	648	Petro Eyes
-417	646	Heavy Stomp
-417	648	Petro Eyes
-417	649	Voidsong
-417	650	Thornsong
-417	651	Lodesong
-418	642	Flame Breath
-418	643	Poison Breath Dragon 1
-418	644	Wind Breath
-418	645	Body Slam
-418	647	Chaos Blade
-419	1127	Dynamic Implosion
-419	1128	Transfusion
-419	1129	Mana Storm
-419	1130	Dynamic Assault
-419	1131	Violent Rupture
-419	1132	Oblivion Smash
-419	1133	Oblivion Smash 2
-419	1134	Tera Slash
-419	1135	Tera Slash 2
-420	2435	Severing Fang
-420	2436	Sub-Zero Smash
-420	2437	Aqua Blast
-420	2438	Frozen Mist
-420	2439	Hydro Wave
-421	2106	Bloodrake
-421	2107	Decollation
-421	2108	Nosferatus Kiss
-421	2109	Heliovoid
-421	2110	Wings of Gehenna
-421	2111	Eternal Damnation
-421	2388	Dirty Breath
-421	2534	Minax Glare
+416	649	Voidsong
+416	650	Thornsong
+416	651	Lodesong
+417	642	Flame Breath
+417	643	Poison Breath Dragon 1
+417	644	Wind Breath
+417	645	Body Slam
+417	647	Chaos Blade
+418	1127	Dynamic Implosion
+418	1128	Transfusion
+418	1129	Mana Storm
+418	1130	Dynamic Assault
+418	1131	Violent Rupture
+418	1132	Oblivion Smash
+418	1133	Oblivion Smash 2
+418	1134	Tera Slash
+418	1135	Tera Slash 2
+419	2435	Severing Fang
+419	2436	Sub-Zero Smash
+419	2437	Aqua Blast
+419	2438	Frozen Mist
+419	2439	Hydro Wave
+420	2106	Bloodrake
+420	2107	Decollation
+420	2108	Nosferatus Kiss
+420	2109	Heliovoid
+420	2110	Wings of Gehenna
+420	2111	Eternal Damnation
+420	2388	Dirty Breath
+420	2534	Minax Glare
+421	642	Flame Breath
+421	649	Voidsong
+421	1792	Nullsong
 422	642	Flame Breath
-422	649	Voidsong
+422	645	Body Slam
+422	650	Thornsong
 422	1792	Nullsong
-423	642	Flame Breath
-423	645	Body Slam
-423	650	Thornsong
-423	1792	Nullsong
-424	313	Counterspore
-425	660	Venom
-426	260	Lamb Chop
-426	261	Rage
-426	264	Sheep Song
-427	270	Roar
-427	271	Razor Fang
-427	273	Claw Cyclone
-427	1322	Gerjis Grip
-428	316	Impale Bind
-428	317	Vampiric Lash
-428	320	Sweet Breath
-429	7	Howling Fist
-429	9	Asuran Fists
-429	10	Final Heaven
-429	11	Ascetics Fury
-429	14	Victory Smite
+423	313	Counterspore
+424	660	Venom
+425	260	Lamb Chop
+425	261	Rage
+425	264	Sheep Song
+426	270	Roar
+426	271	Razor Fang
+426	273	Claw Cyclone
+426	1322	Gerjis Grip
+427	316	Impale Bind
+427	317	Vampiric Lash
+427	320	Sweet Breath
+428	7	Howling Fist
+428	9	Asuran Fists
+428	10	Final Heaven
+428	11	Ascetics Fury
+428	14	Victory Smite
+429	588	Death Trap
+429	654	Double Whammy
+429	656	Gilded Torpor
 430	813	Dispelling Wind
 430	814	Deadly Drive
 430	815	Wind Wall

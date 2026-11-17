@@ -9,7 +9,7 @@ item	skill	size	is_item	legendary	shellfish	quest	quest_only	rarity	key_item
 1624	54	0	1	0	0	0	0	700	0
 1638	54	0	1	0	0	0	0	800	0
 2216	3	0	0	0	0	0	0	1000	0
-2341	7	0	1	0	0	1	0	1000	0
+2341	7	0	1	0	0	1	1	1000	0
 3965	6	0	1	0	0	0	0	1000	0
 4288	70	0	0	0	0	0	0	800	0
 4289	20	0	0	0	0	0	0	1000	0

@@ -64,13 +64,6 @@ def parse_zone_ids(text: str) -> dict:
     return {name: int(value) for name, value in re.findall(r'^  ([a-z0-9_]+):\s+(\d+)', text, re.M)}
 
 
-def parse_region_enum(text: str) -> dict:
-    found = re.search(r'enum class REGION_TYPE[^{]*\{(.*?)\};', text, re.S)
-    if found is None:
-        raise ZoneDataError('zone.h has no REGION_TYPE')
-    return {name: int(value) for name, value in re.findall(r'(\w+)\s*=\s*(\d+)', found.group(1))}
-
-
 def pascal(snake: str) -> str:
     return ''.join(part.capitalize() for part in snake.split('_'))
 
@@ -86,14 +79,14 @@ def parse_regions(text: str, zone_ids: dict, region_ids: dict) -> dict:
     body = text[start:end]
     by_pascal = {pascal(name): zone for name, zone in zone_ids.items()}
     regions, pending = {}, []
-    for case, region in re.findall(r'case xi::ZoneId::(\w+):|return REGION_TYPE::(\w+);', body):
+    for case, region in re.findall(r'case xi::ZoneId::(\w+):|return xi::Region::(\w+);', body):
         if case:
             if case not in by_pascal:
                 raise ZoneDataError(f'zoneutils.cpp names zone {case}, which zone.yaml does not list')
             pending.append(by_pascal[case])
             continue
         if region not in region_ids:
-            raise ZoneDataError(f'zoneutils.cpp names region {region}, which zone.h does not list')
+            raise ZoneDataError(f'zoneutils.cpp names region {region}, which region.yaml does not list')
         for zone in pending:
             regions[zone] = region_ids[region]
         pending = []
@@ -122,7 +115,7 @@ def build(server: pathlib.Path):
 
     names = parse_zone_settings(read('sql/zone_settings.sql'))
     regions = parse_regions(read('src/map/utils/zoneutils.cpp'), parse_zone_ids(read('data/enums/zone.yaml')),
-                            parse_region_enum(read('src/map/zone.h')))
+                            {pascal(name): value for name, value in parse_zone_ids(read('data/enums/region.yaml')).items()})
     weather = parse_weather(read('sql/zone_weather.sql'))
     calendars, index, rows = [], {}, []
     for zone in sorted(names):
