@@ -3453,3 +3453,25 @@ TEST(status_popups_are_on_until_switched_off_and_the_switch_saves)
     SaveSettings(s, saved);
     CHECK(!LoadSettings(saved).combatPopupStatuses);
 }
+
+TEST(each_combat_popup_switch_is_on_until_switched_off_and_saves)
+{
+    using Switch = bool Settings::*;
+    const std::pair<const char*, Switch> switches[] = {{"combatPopupWords", &Settings::combatPopupWords},
+        {"combatPopupLabels", &Settings::combatPopupLabels}, {"combatPopupCustomColors", &Settings::combatPopupCustomColors},
+        {"combatPopupSkillchainNames", &Settings::combatPopupSkillchainNames},
+        {"combatPopupRightAway", &Settings::combatPopupRightAway}, {"combatPopupPlacement", &Settings::combatPopupPlacement}};
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    for (const auto& [key, field] : switches)
+    {
+        CHECK(fresh.*field);
+        MapStore store;
+        store.values[key] = "false";
+        const Settings s = LoadSettings(store);
+        CHECK(!(s.*field));
+        MapStore saved;
+        SaveSettings(s, saved);
+        CHECK(!(LoadSettings(saved).*field));
+    }
+}
