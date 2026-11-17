@@ -127,6 +127,7 @@ PIECES = Pieces(
         'outline-thickness': Setting(), 'scale': Setting(), 'float': Setting(), 'cursor-vertical-offset': Setting(),
         'color': Setting(), 'edge-color': Setting(),
         'combat-popup-font': Setting(), 'combat-popup-size': Setting(), 'combat-popup-words': Setting(), 'combat-popup-labels': Setting(),
+        'combat-popup-skillchain-names': Setting(),
         'combat-popup-custom-colors': Setting(), 'combat-popup-dealt-color': Setting(),
         'combat-popup-taken-color': Setting(), 'combat-popup-recovery-color': Setting(), 'combat-popup-miss-color': Setting(),
         'combat-popup-critical-color': Setting(), 'combat-popup-burst-color': Setting(), 'combat-popup-skillchain-color': Setting(),

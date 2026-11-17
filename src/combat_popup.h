@@ -108,6 +108,7 @@ namespace headsup
         bool words = true;
         bool labels = true;
         bool colors = true;
+        bool skillchainNames = true;
     };
     PopupSwitches PopupSwitchesOf(const Settings& settings);
 

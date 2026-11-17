@@ -437,3 +437,11 @@ TEST(a_skillchain_on_element_takes_its_elements_color_and_on_custom_the_custom_o
     CHECK_EQ(shown(287 + 6, ColorPick{ColorSource::Custom, ColorFromRgb(0x123456)}), 0xFF123456u);
     CHECK_EQ(shown(287 + 6, ColorPick{ColorSource::Game}), 0xFF808080u);
 }
+
+TEST(with_skillchain_names_off_a_skillchain_is_the_games_plain_number)
+{
+    PopupSwitches off;
+    off.skillchainNames = false;
+    CHECK_EQ(CombatPopupWords("412", PopupEvent{287 + 6, 0, 0}, off), std::string("412"));
+    CHECK_EQ(CombatPopupWords("900", PopupEvent{767, 0, 0}, off), std::string("900"));
+}

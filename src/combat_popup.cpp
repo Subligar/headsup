@@ -231,12 +231,12 @@ namespace headsup
     }
 
     PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords, settings.combatPopupLabels,
-            settings.combatPopupCustomColors}; }
+            settings.combatPopupCustomColors, settings.combatPopupSkillchainNames}; }
 
     std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
         if (text == std::string_view(&kMissGlyph, 1)) return std::string(event && on.words ? MissWord(event->message) : kMissWord);
-        if (const std::optional<Skillchain> skillchain = event ? SkillchainOf(event->message) : std::nullopt)
+        if (const std::optional<Skillchain> skillchain = event && on.skillchainNames ? SkillchainOf(event->message) : std::nullopt)
             return std::string(skillchain->name) + " " + std::string(text);
         const AmountLabel label = event && on.labels ? LabelOf(event->message) : AmountLabel{};
         return std::string(label.before) + std::string(text) + std::string(label.after);
