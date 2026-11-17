@@ -2191,16 +2191,20 @@ namespace headsup
                 form.Fade(!s.combatPopups);
                 form.Switch(label.c_str(), s.combatPopupCustomColors, tip);
                 break;
-            case SettingPiece::CombatPopupSide:
+            case SettingPiece::CombatPopupPlacement:
                 form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupPlacement, tip);
+                break;
+            case SettingPiece::CombatPopupSide:
+                form.Fade(!s.combatPopups || !s.combatPopupPlacement);
                 OptionsDropdown(form, label, s.combatPopupSide, c.layout.OptionsOf(e), tip);
                 break;
             case SettingPiece::CombatPopupX:
-                form.Fade(!s.combatPopups);
+                form.Fade(!s.combatPopups || !s.combatPopupPlacement);
                 form.SliderInt(label.c_str(), s.combatPopupX, -kMaxCombatPopupNudge, kMaxCombatPopupNudge, Pixels, tip);
                 break;
             case SettingPiece::CombatPopupY:
-                form.Fade(!s.combatPopups);
+                form.Fade(!s.combatPopups || !s.combatPopupPlacement);
                 form.SliderInt(label.c_str(), s.combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge, Pixels, tip);
                 break;
             case SettingPiece::CombatPopupTest:

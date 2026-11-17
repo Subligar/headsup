@@ -2245,3 +2245,15 @@ TEST(the_combat_popups_place_is_picked_and_nudged_only_while_the_card_is_on)
     CHECK(w.Pass({{y, kChangeEvent, "-25"}}).changed);
     CHECK(w.settings.combatPopupX == 40 && w.settings.combatPopupY == -25);
 }
+
+TEST(with_custom_placement_off_the_combat_popups_side_and_offsets_take_no_change)
+{
+    Window w;
+    w.state.page = Page::Entities;
+    const std::string card = "entities-combat-popups", side = card + "-combat-popup-side", x = card + "-combat-popup-x";
+    w.Pass({{card + "-combat-popup-placement", kClickEvent, ""}});
+    CHECK(!w.settings.combatPopupPlacement);
+    w.Pass({{side, kClickEvent, ""}});
+    w.Pass({{side + "-o-2", kClickEvent, ""}, {x, kChangeEvent, "40"}});
+    CHECK(w.settings.combatPopupSide == PopupSide::Right && w.settings.combatPopupX == 0);
+}

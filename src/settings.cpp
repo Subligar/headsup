@@ -56,6 +56,7 @@ namespace headsup
             {"combatPopupCustomColors", &Settings::combatPopupCustomColors},
             {"combatPopupSkillchainNames", &Settings::combatPopupSkillchainNames},
             {"combatPopupRightAway", &Settings::combatPopupRightAway},
+            {"combatPopupPlacement", &Settings::combatPopupPlacement},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
             {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"helpBarShrink", &Settings::helpBarShrink},
             {"widgetBackground", &Settings::widgetBackground}};

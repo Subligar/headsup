@@ -663,3 +663,16 @@ TEST(a_popups_text_starts_or_ends_on_its_place_when_it_is_beside_its_target)
     CHECK(PlaceCombatPopupText(center, 48.0f, text, 1.0f, 0.0f) == (SquareQuad{100.0f, 171.0f, 80.0f, 60.0f}));
     CHECK(PlaceCombatPopupText(center, 48.0f, text, 2.0f, 1.0f) == (SquareQuad{-60.0f, 171.0f, 160.0f, 60.0f}));
 }
+
+TEST(with_custom_placement_off_a_popup_stays_where_the_game_puts_it)
+{
+    PopupSwitches off;
+    off.placement = false;
+    PopupEvent event = kOnMob;
+    event.line       = 1;
+    const PopupPlacing placing{PopupSide::Above, ScreenPoint{10.0f, -20.0f}, [](uint32_t) { return std::optional(kMobBody); }};
+    const ShownCombatPopup shown =
+        ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks, placing, off)[0];
+    CHECK(Near(shown.center.x, 127.0f) && Near(shown.center.y, 240.5f + 81.0f));
+    CHECK_EQ(shown.across, 0.5f);
+}

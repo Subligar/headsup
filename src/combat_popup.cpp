@@ -264,7 +264,8 @@ namespace headsup
     }
 
     PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords, settings.combatPopupLabels,
-            settings.combatPopupCustomColors, settings.combatPopupSkillchainNames}; }
+            settings.combatPopupCustomColors, settings.combatPopupSkillchainNames,
+            settings.combatPopupPlacement}; }
 
     std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
@@ -300,6 +301,8 @@ namespace headsup
 
     namespace
     {
+        // Where the game puts a popup: on its target, not nudged.
+        const PopupPlacing kGamePlace{PopupSide::Target, {}, {}};
         // The share of a popup's words left of its place, by side.
         constexpr float kStartsAt = 0.0f, kCentered = 0.5f, kEndsAt = 1.0f;
 
@@ -348,7 +351,7 @@ namespace headsup
             shown.push_back(Place(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
                                       ScreenPoint{p.box.CenterX(), p.box.CenterY()},
                                       p.box.Height() * static_cast<float>(sizePercent) / kPercent, p.depth, kCentered},
-                p.event ? p.event->line : 0, body, placing));
+                p.event ? p.event->line : 0, body, on.placement ? placing : kGamePlace));
         }
         return shown;
     }

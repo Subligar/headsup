@@ -251,6 +251,7 @@ namespace headsup
         bool combatPopupCustomColors = true; // each kind takes its pick's color
         bool combatPopupSkillchainNames = true; // a skillchain's number comes with its name
         bool combatPopupRightAway = true; // popups start as their result arrives, not at the hit
+        bool combatPopupPlacement = true; // popups go where combatPopupSide and the nudges say
         std::string combatPopupFont; // empty for the nameplates' default font
         int combatPopupSize         = kDefaultCombatPopupSize;
         PopupSide combatPopupSide   = PopupSide::Right;
