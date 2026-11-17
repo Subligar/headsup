@@ -537,8 +537,9 @@ TEST(a_popup_on_a_later_line_is_drawn_that_many_lines_lower)
 TEST(an_early_call_says_no_to_the_chat_line_and_asks_the_game_about_the_popup)
 {
     EarlyPopups early;
-    uint16_t mark = 0xFFFF;
-    early.Begin(&mark);
+    uint16_t mark    = 0xFFFF;
+    uint32_t message = 1;
+    early.Begin(&mark, &message);
     CHECK_EQ(mark, 0);
     CHECK(early.Answer(false) == kPopupNo);
     CHECK(!early.Answer(true));
@@ -550,22 +551,23 @@ TEST(a_record_popped_early_skips_the_games_popup_once_and_keeps_its_line)
 {
     EarlyPopups early;
     uint16_t popped = 0, missed = 0;
-    early.Begin(&popped);
+    uint32_t message = 1;
+    early.Begin(&popped, &message);
     early.Started();
     early.End();
-    early.Begin(&missed);
+    early.Begin(&missed, &message);
     early.End();
     early.Started(); // a popup the game starts later, outside an early call, marks nothing
     CHECK_EQ(missed, 0);
-    early.Show(&popped);
+    early.Show(&popped, &message);
     CHECK(early.Answer(true) == kPopupNo);
     CHECK(!early.Answer(false));
     early.Shown();
     CHECK(!early.Answer(true));
-    early.Show(&popped);
+    early.Show(&popped, &message);
     CHECK(!early.Answer(true));
     early.Shown();
-    early.Show(&missed);
+    early.Show(&missed, &message);
     CHECK(!early.Answer(true));
 }
 
@@ -574,13 +576,14 @@ TEST(a_record_parsed_before_headsup_came_pops_as_the_game_pops_it)
     EarlyPopups early;
     for (uint16_t garbage : {uint16_t{0x0002}, uint16_t{0xFFFF}, uint16_t{0x5A58}})
     {
-        uint16_t mark = garbage;
-        early.Show(&mark);
+        uint16_t mark    = garbage;
+        uint32_t message = 0;
+        early.Show(&mark, &message);
         CHECK(!early.Answer(true));
         CHECK_EQ(mark, garbage);
         early.Shown();
     }
-    early.Show(nullptr);
+    early.Show(nullptr, nullptr);
     CHECK(!early.Answer(true));
 }
 
@@ -588,12 +591,13 @@ TEST(with_show_right_away_off_nothing_starts_early_and_the_chat_line_is_the_game
 {
     EarlyPopups early;
     early.SetOn(false);
-    uint16_t mark = 0x1234;
-    CHECK(!early.Begin(&mark));
+    uint16_t mark    = 0x1234;
+    uint32_t message = 1;
+    CHECK(!early.Begin(&mark, &message));
     CHECK_EQ(mark, 0x1234);
     CHECK(!early.Answer(false) && !early.Answer(true));
     early.SetOn(true);
-    CHECK(early.Begin(&mark));
+    CHECK(early.Begin(&mark, &message));
     CHECK(early.Answer(false) == kPopupNo);
 }
 
@@ -746,4 +750,153 @@ TEST(a_status_popup_says_the_statuss_name_and_is_a_buff_or_a_debuff)
     CHECK_EQ(CombatPopupWords("40", PopupEvent{1, kYou, kMob}), std::string("40"));
     CHECK(TypeOf(PopupEvent{236, kYou, kMob, kDamageKind}) == PopupType::Debuff);
     CHECK(TypeOf(PopupEvent{230, kMob, kMob, kRecoveryKind}) == PopupType::Buff);
+}
+
+namespace
+{
+    // A target record as the game parsed it after an addon (SimpleLog) blanked its message, which the server sent as 230,
+    // "gains the effect of", or as 327, "starts casting".
+    constexpr uint32_t kGainsEffect = 230, kStartsCasting = 327;
+}
+
+TEST(a_status_message_an_addon_blanked_is_back_in_its_record_only_while_the_game_starts_its_popup)
+{
+    EarlyPopups early;
+    early.SetRestore(true);
+    uint16_t mark    = 0xFFFF;
+    uint32_t message = 0;
+    early.Parsed(&mark, &message, kGainsEffect);
+    CHECK_EQ(message, 0u);
+    CHECK(early.Begin(&mark, &message));
+    CHECK_EQ(message, kGainsEffect);
+    CHECK(early.Answer(false) == kPopupNo);
+    CHECK(!early.Answer(true));
+    early.End();
+    CHECK_EQ(message, 0u);
+    CHECK(!early.Answer(false));
+}
+
+TEST(with_show_right_away_off_the_games_own_start_gets_the_blanked_status_message_and_no_chat_line)
+{
+    EarlyPopups early;
+    early.SetOn(false);
+    early.SetRestore(true);
+    uint16_t mark    = 0;
+    uint32_t message = 0;
+    early.Parsed(&mark, &message, kGainsEffect);
+    CHECK(!early.Begin(&mark, &message));
+    early.Show(&mark, &message);
+    CHECK_EQ(message, kGainsEffect);
+    CHECK(early.Answer(false) == kPopupNo);
+    CHECK(!early.Answer(true));
+    early.Shown();
+    CHECK_EQ(message, 0u);
+    CHECK(!early.Answer(false));
+}
+
+TEST(only_a_blanked_status_message_comes_back_and_only_while_statuses_pop)
+{
+    const auto restored = [](bool restore, uint32_t inRecord, uint32_t sent) {
+        EarlyPopups early;
+        early.SetOn(false);
+        early.SetRestore(restore);
+        uint16_t mark    = 0xFFFF;
+        uint32_t message = inRecord;
+        early.Parsed(&mark, &message, sent);
+        early.Show(&mark, &message);
+        const uint32_t during = message;
+        early.Shown();
+        CHECK_EQ(message, inRecord);
+        return during;
+    };
+    CHECK_EQ(restored(true, 0, kGainsEffect), kGainsEffect);
+    CHECK_EQ(restored(true, kGainsEffect, kGainsEffect), kGainsEffect); // no addon: the game's own message stands
+    CHECK_EQ(restored(true, 0, kStartsCasting), 0u);
+    CHECK_EQ(restored(true, 0, 0), 0u);
+    CHECK_EQ(restored(false, 0, kGainsEffect), 0u);
+}
+
+TEST(a_restored_status_that_popped_early_is_skipped_at_the_hit_without_coming_back)
+{
+    EarlyPopups early;
+    early.SetRestore(true);
+    uint16_t mark    = 0;
+    uint32_t message = 0;
+    early.Parsed(&mark, &message, kGainsEffect);
+    early.Begin(&mark, &message);
+    early.Started();
+    early.End();
+    early.Show(&mark, &message);
+    CHECK(early.Answer(true) == kPopupNo);
+    CHECK_EQ(message, 0u);
+    early.Shown();
+}
+
+namespace
+{
+    // An action packet (0x028) as the server packs it (0x028_battle2.cpp): fields of bits, each from its lowest, from
+    // byte 5 on, the bits of each byte from its lowest.
+    struct ActionPacket
+    {
+        std::vector<uint8_t> bytes = std::vector<uint8_t>(128, 0);
+        uint32_t bit               = 40;
+        ActionPacket& Put(uint64_t value, uint32_t bits)
+        {
+            for (uint32_t i = 0; i < bits; ++i, ++bit)
+                if (value >> i & 1) bytes[bit / 8] |= static_cast<uint8_t>(1 << bit % 8);
+            return *this;
+        }
+        ActionPacket& Head(uint32_t actor, uint32_t targets) { return Put(actor, 32).Put(targets, 6).Put(0, 4).Put(4, 4).Put(43, 32).Put(0, 32); }
+        ActionPacket& Target(uint32_t id, uint32_t results) { return Put(id, 32).Put(results, 4); }
+        // Miss, kind, animation, info, distortion and knockback; the value and message; the modifier; with an additional
+        // effect and spikes or none.
+        ActionPacket& Result(uint32_t value, uint32_t message, bool extras = false)
+        {
+            Put(0, 3).Put(0, 2).Put(0, 12).Put(0, 5).Put(0, 2).Put(0, 3).Put(value, 17).Put(message, 10).Put(0, 31);
+            if (!extras) return Put(0, 1).Put(0, 1);
+            return Put(1, 1).Put(0, 6).Put(0, 4).Put(5, 17).Put(163, 10).Put(1, 1).Put(0, 6).Put(0, 4).Put(9, 14).Put(374, 10);
+        }
+        uint32_t Size() const { return (bit + 7) / 8; }
+    };
+}
+
+TEST(a_sent_action_has_a_message_for_each_result_of_a_lone_target)
+{
+    ActionPacket p;
+    p.Head(65001, 1).Target(65001, 3).Result(40, 230, true).Result(12, 1).Result(0, 15);
+    const std::optional<SentAction> sent = ParseSentAction(p.bytes.data(), p.Size());
+    CHECK(sent && sent->actor == 65001 && sent->records == 3);
+    CHECK(sent->messages[0] == 230 && sent->messages[1] == 1 && sent->messages[2] == 15);
+}
+
+TEST(a_sent_action_on_several_targets_has_each_ones_first_message)
+{
+    ActionPacket p;
+    p.Head(65001, 2).Target(17000000, 2).Result(4, 236, true).Result(1, 1).Target(17000001, 1).Result(13, 237);
+    const std::optional<SentAction> sent = ParseSentAction(p.bytes.data(), p.Size());
+    CHECK(sent && sent->records == 2 && sent->messages[0] == 236 && sent->messages[1] == 237);
+}
+
+TEST(a_sent_action_cut_short_is_none)
+{
+    ActionPacket p;
+    p.Head(65001, 1).Target(65001, 2).Result(40, 230);
+    CHECK(!ParseSentAction(p.bytes.data(), p.Size()));
+    CHECK(!ParseSentAction(p.bytes.data(), 6));
+}
+
+TEST(the_sent_actions_go_to_their_parses_oldest_first_by_actor_and_records)
+{
+    SentActions sent;
+    sent.Put(SentAction{65001, 1, {230}});
+    sent.Put(SentAction{65002, 1, {236}});
+    sent.Put(SentAction{65001, 1, {237}});
+    CHECK(!sent.Take(65001, 2));
+    std::optional<SentAction> first = sent.Take(65001, 1);
+    CHECK(first && first->messages[0] == 230);
+    std::optional<SentAction> second = sent.Take(65001, 1);
+    CHECK(second && second->messages[0] == 237);
+    CHECK(!sent.Take(65001, 1));
+    sent.Clear();
+    CHECK(!sent.Take(65002, 1));
 }

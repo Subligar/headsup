@@ -116,6 +116,137 @@ namespace headsup
         return IsDebuff(status) ? kDamage : kRecovery;
     }
 
+    namespace
+    {
+        // The server's packing: fields of bits from byte kActionBits / 8, each from its lowest bit.
+        constexpr uint32_t kActionBits = 40;
+        constexpr uint32_t kActorBits = 32, kTargetsBits = 6, kResultsSumBits = 4, kCommandBits = 4, kArgumentBits = 32,
+                           kInfoBits = 32, kTargetIdBits = 32, kResultsBits = 4;
+        // A result: miss, kind, animation, info, distortion and knockback, then value, message and modifier; an
+        // additional effect's 37 bits and spikes' 34 after a bit each that says they are there.
+        constexpr uint32_t kResultLeadBits = 3 + 2 + 12 + 5 + 2 + 3, kValueBits = 17, kMessageBits = 10, kModifierBits = 31,
+                           kAddedBits = 6 + 4 + 17 + 10, kSpikesBits = 6 + 4 + 14 + 10;
+
+        class BitReader
+        {
+        public:
+            BitReader(const uint8_t* data, uint32_t size) : m_Data(data), m_Bits(size * 8) {}
+            // Nothing once past the end.
+            std::optional<uint32_t> Read(uint32_t bits)
+            {
+                if (m_Bit + bits > m_Bits) return std::nullopt;
+                uint32_t value = 0;
+                for (uint32_t i = 0; i < bits; ++i, ++m_Bit)
+                    value |= static_cast<uint32_t>(m_Data[m_Bit / 8] >> m_Bit % 8 & 1) << i;
+                return value;
+            }
+            void Skip(uint32_t bits) { m_Bit += bits; }
+
+        private:
+            const uint8_t* m_Data;
+            uint32_t m_Bits, m_Bit = kActionBits;
+        };
+    }
+
+    std::optional<SentAction> ParseSentAction(const uint8_t* data, uint32_t size)
+    {
+        BitReader bits(data, size);
+        SentAction sent;
+        const std::optional<uint32_t> actor = bits.Read(kActorBits), targets = bits.Read(kTargetsBits);
+        if (!actor || !targets) return std::nullopt;
+        sent.actor = *actor;
+        bits.Skip(kResultsSumBits + kCommandBits + kArgumentBits + kInfoBits);
+        const bool lone = *targets == 1;
+        for (uint32_t t = 0; t < *targets; ++t)
+        {
+            bits.Skip(kTargetIdBits);
+            const std::optional<uint32_t> results = bits.Read(kResultsBits);
+            if (!results) return std::nullopt;
+            for (uint32_t r = 0; r < *results; ++r)
+            {
+                bits.Skip(kResultLeadBits + kValueBits);
+                const std::optional<uint32_t> message = bits.Read(kMessageBits);
+                bits.Skip(kModifierBits);
+                const std::optional<uint32_t> added = bits.Read(1);
+                if (added && *added) bits.Skip(kAddedBits);
+                const std::optional<uint32_t> spikes = bits.Read(1);
+                if (spikes && *spikes) bits.Skip(kSpikesBits);
+                if (!message || !spikes) return std::nullopt;
+                const bool kept = lone ? r < kMostLoneResults : r == 0;
+                if (kept && sent.records < kMostSentRecords) sent.messages[sent.records++] = static_cast<uint16_t>(*message);
+            }
+        }
+        return sent;
+    }
+
+    void SentActions::Put(const SentAction& action)
+    {
+        if (m_Count < kKept) m_Kept[m_Count++] = action;
+    }
+
+    std::optional<SentAction> SentActions::Take(uint32_t actor, uint8_t records)
+    {
+        for (size_t i = 0; i < m_Count; ++i)
+        {
+            if (m_Kept[i].actor != actor || m_Kept[i].records != records) continue;
+            const SentAction taken = m_Kept[i];
+            std::copy(m_Kept.begin() + static_cast<std::ptrdiff_t>(i) + 1, m_Kept.begin() + static_cast<std::ptrdiff_t>(m_Count),
+                m_Kept.begin() + static_cast<std::ptrdiff_t>(i));
+            --m_Count;
+            return taken;
+        }
+        return std::nullopt;
+    }
+
+    void EarlyPopups::Parsed(uint16_t* mark, const uint32_t* message, uint32_t sent)
+    {
+        const bool blanked = m_Restore && *message == 0 && IsStatusMessage(sent);
+        *mark              = blanked ? static_cast<uint16_t>(kRestored | sent) : 0;
+    }
+
+    bool EarlyPopups::Begin(uint16_t* mark, uint32_t* message)
+    {
+        if (!m_On) return false;
+        const uint16_t was = *mark;
+        *mark              = 0;
+        m_Mark             = mark;
+        Restore(was, message);
+        return true;
+    }
+
+    void EarlyPopups::End()
+    {
+        m_Mark = nullptr;
+        Unrestore();
+    }
+
+    void EarlyPopups::Show(uint16_t* mark, uint32_t* message)
+    {
+        m_Skip = mark != nullptr && *mark == kEarlyPopped;
+        if (m_Skip) *mark = 0;
+        else if (mark != nullptr) Restore(*mark, message);
+    }
+
+    void EarlyPopups::Shown()
+    {
+        m_Skip = false;
+        Unrestore();
+    }
+
+    void EarlyPopups::Restore(uint16_t mark, uint32_t* message)
+    {
+        const uint32_t sent = mark & kRestoredMessage;
+        if ((mark & ~kRestoredMessage) != kRestored || !IsStatusMessage(sent) || *message != 0) return;
+        *message  = sent;
+        m_Message = message;
+    }
+
+    void EarlyPopups::Unrestore()
+    {
+        if (m_Message != nullptr) *m_Message = 0;
+        m_Message = nullptr;
+    }
+
     void PopupTies::SetParty(std::span<const uint32_t> ids)
     {
         m_Party.fill(0);

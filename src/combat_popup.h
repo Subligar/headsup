@@ -90,48 +90,81 @@ namespace headsup
     // The game's popup decision's answer that means "do not": anything but 0.
     constexpr uint8_t kPopupNo = 1;
 
+    // An action packet (0x028) as the server sent it, before any addon changed it: its actor's id, and the message of
+    // each target record the game builds from it, one for each result of a lone target (at most kMostLoneResults),
+    // else one for each target, its first result's.
+    constexpr uint16_t kActionPacket = 0x028;
+    constexpr size_t kMostSentRecords = 15, kMostLoneResults = 8;
+    struct SentAction
+    {
+        uint32_t actor  = 0;
+        uint8_t records = 0;
+        std::array<uint16_t, kMostSentRecords> messages{};
+    };
+    std::optional<SentAction> ParseSentAction(const uint8_t* data, uint32_t size);
+
+    // The frame's sent actions, each kept until the game's parse of it takes it, in fixed room: Ashita hands HeadsUp
+    // every packet of a chunk before the game parses the first.
+    class SentActions
+    {
+    public:
+        static constexpr size_t kKept = 32;
+        // At Present: one the game never parsed is no one's.
+        void Clear() { m_Count = 0; }
+        void Put(const SentAction& action);
+        // The oldest kept one from actor with that many records, taken; none.
+        std::optional<SentAction> Take(uint32_t actor, uint8_t records);
+
+    private:
+        std::array<SentAction, kKept> m_Kept{};
+        size_t m_Count = 0;
+    };
+
     // Popups started as soon as the game has parsed their action, not when its animation reaches the hit. HeadsUp calls
     // the game's own start for each target record's message then, and the game's later call for that record skips its
     // popup and prints only the chat line. A record's mark is two bytes of it the game never uses: kEarlyPopped once
     // its popup started early, so a record parsed before HeadsUp loaded pops as it always did.
+    // An addon that prints its own chat line (SimpleLog) blanks the message of the packet the game parses, and the
+    // game's start leaves a record with message 0 before its decision. For a status message HeadsUp would pop, the
+    // mark keeps the message the server sent (kRestored and its id), and the record holds it again only while the
+    // start runs, with the chat line's decision saying no, so the line stays the addon's.
     class EarlyPopups
     {
     public:
-        static constexpr uint16_t kEarlyPopped = 0x5A59;
-        // At Present: whether popups start early (Show Right Away).
+        static constexpr uint16_t kEarlyPopped = 0x5A59, kRestored = 0xA400, kRestoredMessage = 0x03FF;
+        // At Present: whether popups start early (Show Right Away), and whether blanked statuses come back (Status
+        // Popups is on and statuses pop).
         void SetOn(bool on) { m_On = on; }
+        void SetRestore(bool restore) { m_Restore = restore; }
+        // Once the game has parsed a record: its mark, kRestored with sent where the record's message is blanked and
+        // sent, the message the server sent, is a status message; else cleared.
+        void Parsed(uint16_t* mark, const uint32_t* message, uint32_t sent);
         // Around HeadsUp's early call for one record, whose mark is cleared; false, and nothing to call, while off.
-        bool Begin(uint16_t* mark)
-        {
-            if (!m_On) return false;
-            *mark  = 0;
-            m_Mark = mark;
-            return true;
-        }
-        void End() { m_Mark = nullptr; }
+        bool Begin(uint16_t* mark, uint32_t* message);
+        void End();
         // The game started a popup's effect: inside an early call, its record is marked.
         void Started()
         {
             if (m_Mark != nullptr) *m_Mark = kEarlyPopped;
         }
-        // Around the game's own call for a record (its mark, or none): a popup it started early is skipped, once.
-        void Show(uint16_t* mark)
-        {
-            m_Skip = mark != nullptr && *mark == kEarlyPopped;
-            if (m_Skip) *mark = 0;
-        }
-        void Shown() { m_Skip = false; }
+        // Around the game's own call for a record (its mark and message, or none): a popup it started early is
+        // skipped, once.
+        void Show(uint16_t* mark, uint32_t* message);
+        void Shown();
         // What HeadsUp answers the game's decision for the popup or for the chat line, or none to ask the game.
         std::optional<uint8_t> Answer(bool popup) const
         {
-            if (popup ? m_Skip : m_Mark != nullptr) return kPopupNo;
+            if (popup ? m_Skip : m_Mark != nullptr || m_Message != nullptr) return kPopupNo;
             return std::nullopt;
         }
 
     private:
-        uint16_t* m_Mark = nullptr;
-        bool m_Skip      = false;
-        bool m_On        = true;
+        // The record holds its mark's message until Unrestore.
+        void Restore(uint16_t mark, uint32_t* message);
+        void Unrestore();
+        uint16_t* m_Mark    = nullptr;
+        uint32_t* m_Message = nullptr; // a record holding a message it is to lose again
+        bool m_Skip = false, m_On = true, m_Restore = false;
     };
 
     // One of the Test button's samples: a message (msg_basic's ids) with its value and the game's kind for it, done by

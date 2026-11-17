@@ -883,6 +883,9 @@ public:
         m_DrawDump.SawPacket(id, data, size, Now());
 #endif
         if (!injected) m_Connection.Received(Now()); // an addon's injected packet never came from the server
+        // data is the packet as the server sent it, before any addon blanked a message in what the game gets.
+        if (id == headsup::kActionPacket)
+            if (const std::optional<headsup::SentAction> sent = headsup::ParseSentAction(data, size)) m_CombatTextHook.Sent(*sent);
         const headsup::PacketFollowUp next = m_GameState.Received(id, data, size);
         if (next.zonedIn)
         {
@@ -946,7 +949,9 @@ public:
         m_PopupsDrawn = false;
         m_CombatTextHook.Take(m_Settings.enabled && m_Settings.combatPopups && !m_CombatPopups.Failed());
         m_CombatTextHook.SetYou(m_SelfIndex, m_AshitaCore->GetMemoryManager()->GetEntity()->GetPetTargetIndex(m_SelfIndex));
-        m_CombatTextHook.SetStatuses(m_Settings.combatPopupStatuses && m_WindowTypeReader.DamagePopupsShown(), m_PartyIds);
+        m_CombatTextHook.SetStatuses(m_Settings.enabled && m_Settings.combatPopups && m_Settings.combatPopupStatuses &&
+                                         m_WindowTypeReader.DamagePopupsShown(),
+            m_PartyIds);
         PopTestSamples(Now());
         if (const std::string failure = m_CombatPopups.TakeFailure(); !failure.empty())
             Print("combat popups are off until HeadsUp reloads, and the game's are back: " + failure + ".");

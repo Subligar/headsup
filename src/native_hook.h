@@ -159,6 +159,8 @@ namespace headsup
         static void SetRightAway(bool on);
         // At Present: whether buffs and debuffs pop, and the server ids of you, your party and your alliance.
         static void SetStatuses(bool pop, std::span<const uint32_t> party);
+        // An action packet as the server sent it, for the game's parse of it this frame.
+        static void Sent(const SentAction& action);
         // Whether StartPopup can start one: the ties are in and the game's popup effects were found.
         bool CanStartPopups() const;
         // On the game's thread: starts the game's popup effect of event's kind over the character whose actor pointer

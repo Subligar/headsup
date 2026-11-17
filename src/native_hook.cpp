@@ -426,6 +426,7 @@ namespace headsup
         // Written by the tie gates, on the game's thread, and read at the popup's draw.
         PopupTies g_PopupTies;
         EarlyPopups g_EarlyPopups;
+        SentActions g_SentActions;
         uintptr_t g_PopupDecision = 0, g_PopupParticleBuild = 0, g_PopupParse = 0, g_PopupShow = 0;
         using PopupParseFn = uint8_t*(__attribute__((thiscall))*)(uint8_t* action, const uint8_t* bits);
         using PopupShowFn  = void(__cdecl*)(uint8_t* action, uint32_t index, uint32_t slot);
@@ -459,18 +460,23 @@ namespace headsup
         }
 
         // The game's action and the mark of its target record index, or none when it has no such record.
-        uint16_t* EarlyMark(uint8_t* action, uint32_t index)
+        // The game's action's target record index, or none when it has no such record.
+        uint8_t* TargetRecord(uint8_t* action, uint32_t index)
         {
             const uint8_t* record = ReadAt<const uint8_t*>(action, kActionRecord);
             if (record == nullptr || index >= std::min<uint32_t>(TargetRecords(record), kMostTargets)) return nullptr;
             uint8_t* targets = ReadAt<uint8_t*>(record, kRecordTargets);
-            return targets != nullptr ? reinterpret_cast<uint16_t*>(targets + index * kTargetSize + kTargetEarlyMark) : nullptr;
+            return targets != nullptr ? targets + index * kTargetSize : nullptr;
         }
+        uint16_t* MarkOf(uint8_t* target) { return reinterpret_cast<uint16_t*>(target + kTargetEarlyMark); }
+        uint32_t* MessageOf(uint8_t* target) { return reinterpret_cast<uint32_t*>(target + kTargetMessage); }
 
-        // In place of the game's show of an action's next target record: skips the popup it started early.
+        // In place of the game's show of an action's next target record: skips the popup it started early, and gives
+        // the start a status message an addon blanked.
         void __cdecl PopupShowNext(uint8_t* action, uint32_t index, uint32_t slot)
         {
-            g_EarlyPopups.Show(EarlyMark(action, index));
+            uint8_t* target = TargetRecord(action, index);
+            g_EarlyPopups.Show(target != nullptr ? MarkOf(target) : nullptr, target != nullptr ? MessageOf(target) : nullptr);
 #ifdef HEADSUP_DEV
             LogPopupShow(Address(action), index, g_EarlyPopups.Answer(true).has_value(), g_PopupShow);
 #endif
@@ -478,21 +484,28 @@ namespace headsup
             g_EarlyPopups.Shown();
         }
 
-        // In place of the game's parse of an action packet: once it is parsed, each target record's popup starts now,
-        // through the game's own start, as if its hit had landed. The chat line waits for the hit.
+        // In place of the game's parse of an action packet: once it is parsed, each target record is marked with the
+        // status message the server sent where an addon blanked it, and each one's popup starts now, through the
+        // game's own start, as if its hit had landed. The chat line waits for the hit.
         __attribute__((thiscall)) uint8_t* PopupParse(uint8_t* action, const uint8_t* bits)
         {
             uint8_t* parsed = reinterpret_cast<PopupParseFn>(g_PopupParse)(action, bits);
-            if (parsed == nullptr || !g_TakeCombatText) return parsed;
+            const uint8_t* record = parsed != nullptr ? ReadAt<const uint8_t*>(parsed, kActionRecord) : nullptr;
+            if (record == nullptr) return parsed;
+            const uint32_t records = std::min<uint32_t>(TargetRecords(record), kMostTargets);
+            const std::optional<SentAction> sent = g_SentActions.Take(ReadAt<uint32_t>(record, kRecordActorId), static_cast<uint8_t>(records));
+            for (uint32_t index = 0; index < records; ++index)
+                if (uint8_t* target = TargetRecord(parsed, index))
+                    g_EarlyPopups.Parsed(MarkOf(target), MessageOf(target), sent && index < sent->records ? sent->messages[index] : 0);
+            if (!g_TakeCombatText) return parsed;
             constexpr uint32_t kFirstSlot = 0; // additional effects and spikes wait for the animation, as the game's do
-            for (uint32_t index = 0; index < kMostTargets; ++index)
+            for (uint32_t index = 0; index < records; ++index)
             {
-                uint16_t* mark = EarlyMark(parsed, index);
-                if (mark == nullptr) break;
+                uint8_t* target = TargetRecord(parsed, index);
+                if (target == nullptr || !g_EarlyPopups.Begin(MarkOf(target), MessageOf(target))) break;
 #ifdef HEADSUP_DEV
                 LogPopupEarly(Address(parsed), index, g_PopupShow);
 #endif
-                if (!g_EarlyPopups.Begin(mark)) break;
                 reinterpret_cast<PopupShowFn>(g_PopupShow)(parsed, index, kFirstSlot);
                 g_EarlyPopups.End();
             }
@@ -891,6 +904,7 @@ namespace headsup
     void CombatTextHook::NewFrame(double now)
     {
         g_PopupTies.SetNow(now);
+        g_SentActions.Clear();
         g_CombatPopups.NewFrame();
         g_CombatTarget       = nullptr;
         g_CombatDepth        = nullptr;
@@ -904,8 +918,11 @@ namespace headsup
         g_EarlyPopups.SetOn(on);
         g_PopupTies.SetSpread(on);
     }
+    void CombatTextHook::Sent(const SentAction& action) { g_SentActions.Put(action); }
+
     void CombatTextHook::SetStatuses(bool pop, std::span<const uint32_t> party)
     {
+        g_EarlyPopups.SetRestore(pop);
         g_PopupTies.SetStatuses(pop);
         g_PopupTies.SetParty(party);
     }

@@ -587,5 +587,7 @@ namespace headsup
     };
     constexpr uint32_t kActionRecord = 0x0C, kRecordTargetCount = 0x1C, kRecordTargets = 0x20, kTargetSize = 0x34,
                        kTargetEarlyMark = 0x32, kMostTargets = 0x40;
+    // The record's actor's server id (0x18C8A8 checks it), and a target record's slot 0 message, as parsed (0x9E1D1).
+    constexpr uint32_t kRecordActorId = 0x08, kTargetMessage = 0x18;
     PopupEarlySites LocatePopupEarly(const ImageSection& text, uint32_t decision);
 }
