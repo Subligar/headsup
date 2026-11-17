@@ -85,6 +85,8 @@ namespace headsup
         AmbiguousCombatText,
         NoPopupTies,
         AmbiguousPopupTies,
+        NoPopupEffects,
+        AmbiguousPopupEffects,
     };
     const char* Describe(LocateProblem problem);
 
@@ -539,13 +541,28 @@ namespace headsup
     // The three calls in a combat popup's start (0x9E090, once per message as its hit lands) that tie each popup to
     // its message, RVAs of each five-byte call and of its routine. The decision: cdecl (actor, target, message, 1,
     // uint8_t* kind), the actor and target each an index then an id, returning 0 to pop. The color: cdecl (class),
-    // called once the effect is started, with the new task in esi. The particle's build: thiscall (particle,
-    // generator), whose task is at kPopupGeneratorTask.
+    // called once the effect is started, with the new task in esi, and its class from cdecl (actor index, target
+    // index, message) just before; the start then puts the value at kPopupTaskValue in the task and the color, with
+    // no alpha, at kPopupTaskColor. The particle's build: thiscall (particle, generator), whose task is at
+    // kPopupGeneratorTask.
     struct PopupTieSites
     {
         LocateProblem problem = LocateProblem::None;
-        uint32_t decisionCall = 0, decision = 0, colorCall = 0, color = 0, particleCall = 0, particleBuild = 0;
+        uint32_t decisionCall = 0, decision = 0, colorCall = 0, color = 0, colorClass = 0, particleCall = 0, particleBuild = 0;
     };
-    constexpr uint32_t kPopupGeneratorTask = 0x64;
+    constexpr uint32_t kPopupGeneratorTask = 0x64, kPopupTaskValue = 0xA8, kPopupTaskColor = 0xA4;
     PopupTieSites LocatePopupTies(const ImageSection& text);
+
+    // The game's three popup effects, by the kind its decision writes less one: damage, recovery and Miss. Each
+    // handle is the address, in the running client as the code holds it, of a pointer to a pointer to the effect;
+    // the start, an RVA, is thiscall (effect, actor, target, 0, 0) with the actor's and target's objects (Ashita's
+    // actor pointers), returning the new task.
+    constexpr size_t kPopupEffectCount = 3;
+    struct PopupEffectSites
+    {
+        LocateProblem problem = LocateProblem::None;
+        std::array<uint32_t, kPopupEffectCount> handles{};
+        uint32_t start = 0;
+    };
+    PopupEffectSites LocatePopupEffects(const ImageSection& text);
 }

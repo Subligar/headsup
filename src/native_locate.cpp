@@ -248,13 +248,19 @@ namespace headsup
         // actor; call the decision.
         constexpr int16_t kPopupDecisionCall[] = {0x52, 0x6A, 0x01, 0x8D, 0x44, 0x24, 0x34, 0x55, 0x8D, 0x4C, 0x24, 0x40,
             0x50, 0x51, 0xE8};
-        // push the color class; call the color; and eax,0FFFFFFh; then the task's value and color go in.
-        constexpr int16_t kPopupColorCall[] = {0x50, 0xE8, -1, -1, -1, -1, 0x8B, 0x4C, 0x24, 0x48, 0x83, 0xC4, 0x10, 0x25, 0xFF,
-            0xFF, 0xFF, 0x00, 0x89, 0x8E, 0xA8, 0x00, 0x00, 0x00, 0x89, 0x86, 0xA4, 0x00, 0x00, 0x00};
+        // call the color class; push it; call the color; and eax,0FFFFFFh; then the task's value and color go in.
+        constexpr int16_t kPopupColorCall[] = {0xE8, -1, -1, -1, -1, 0x50, 0xE8, -1, -1, -1, -1, 0x8B, 0x4C, 0x24, 0x48, 0x83,
+            0xC4, 0x10, 0x25, 0xFF, 0xFF, 0xFF, 0x00, 0x89, 0x8E, 0xA8, 0x00, 0x00, 0x00, 0x89, 0x86, 0xA4, 0x00, 0x00, 0x00};
+        static_assert(kPopupColorCall[25] == kPopupTaskValue && kPopupColorCall[31] == kPopupTaskColor);
         // push 1A8h (the particle's size); call the allocator; on one, push the generator; mov ecx,eax; call the build.
         constexpr int16_t kPopupParticleCall[] = {0x68, 0xA8, 0x01, 0x00, 0x00, 0xE8, -1, -1, -1, -1, 0x83, 0xC4, 0x08, 0x85,
             0xC0, 0x0F, 0x84, -1, -1, -1, -1, 0x8B, 0x4C, 0x24, 0x10, 0x51, 0x8B, 0xC8, 0xE8};
-        constexpr uint32_t kPopupColorCallAt = 1;
+        constexpr uint32_t kPopupColorCallAt = 6;
+        // mov ecx,[handle]; test ecx,ecx; jz; mov ecx,[ecx]; push 0; push 0; push the target; push the actor; call the
+        // start; mov esi,eax: once for each of the three effects.
+        constexpr int16_t kPopupEffectStart[] = {0x8B, 0x0D, -1, -1, -1, -1, 0x85, 0xC9, 0x74, -1, 0x8B, 0x09, 0x6A, 0x00, 0x6A,
+            0x00, 0x53, 0x50, 0xE8, -1, -1, -1, -1, 0x8B, 0xF0, 0xEB};
+        constexpr uint32_t kPopupEffectHandleAt = 2, kPopupEffectStartAt = 18;
         // The 3-second update: xor eax,eax; push 3000; clear both byte counts; mov edx,[net]; mov eax,[edx+4190h], the
         // milliseconds since the last server data.
         constexpr int16_t kCounterUpdate[] = {0x33, 0xC0, 0x68, 0xB8, 0x0B, 0x00, 0x00, 0x89, 0x46, 0x0C, 0x89, 0x46,
@@ -385,6 +391,8 @@ namespace headsup
         case LocateProblem::AmbiguousCombatText: return "the game's draw of combat popups was found more than once";
         case LocateProblem::NoPopupTies: return "where the game starts a combat popup was not found";
         case LocateProblem::AmbiguousPopupTies: return "where the game starts a combat popup was found more than once";
+        case LocateProblem::NoPopupEffects: return "the game's three combat popup effects were not all found";
+        case LocateProblem::AmbiguousPopupEffects: return "the game's combat popup effects were found more than three times";
         case LocateProblem::NoConfigGet: return "the game's config values were not found";
         case LocateProblem::NoSearchAddress: return "where the game keeps the search server's address was not found";
         case LocateProblem::NoWindowMove: return "the game's window move was not found";
@@ -1134,7 +1142,21 @@ namespace headsup
             if (found.size() > 1) return PopupTieSites{LocateProblem::AmbiguousPopupTies};
             calls[i] = text.rva + found.front() + sites[i].second;
         }
+        const uint32_t classCall = calls[1] - kPopupColorCallAt;
         return PopupTieSites{LocateProblem::None, calls[0], CallTarget(calls[0], text), calls[1], CallTarget(calls[1], text),
-            calls[2], CallTarget(calls[2], text)};
+            CallTarget(classCall, text), calls[2], CallTarget(calls[2], text)};
+    }
+
+    PopupEffectSites LocatePopupEffects(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kPopupEffectStart, text);
+        if (found.size() < kPopupEffectCount) return PopupEffectSites{LocateProblem::NoPopupEffects};
+        if (found.size() > kPopupEffectCount) return PopupEffectSites{LocateProblem::AmbiguousPopupEffects};
+        PopupEffectSites sites{LocateProblem::None};
+        // In the client's order: Miss, recovery, damage.
+        for (size_t i = 0; i < kPopupEffectCount; ++i)
+            sites.handles[kPopupEffectCount - 1 - i] = ReadAt<uint32_t>(text.bytes, found[i] + kPopupEffectHandleAt);
+        sites.start = CallTarget(text.rva + found.front() + kPopupEffectStartAt, text);
+        return sites;
     }
 }

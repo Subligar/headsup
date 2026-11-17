@@ -1466,9 +1466,9 @@ TEST(a_call_popping_other_arguments_is_not_the_combat_popups)
 namespace
 {
     // A combat popup's start in the client of 2026-10-19, copied from its image: the call that decides whether it
-    // pops (0x9E21F to 0xAD950), the call for its color, just after the effect is started (0x9E30B to 0x129C70), and
-    // the call that builds its particle (0x5109F to 0x41F40).
-    constexpr uint32_t kPopupDecisionRva = 0x9E211, kPopupColorRva = 0x9E30A, kPopupParticleRva = 0x51083;
+    // pops (0x9E21F to 0xAD950), the calls for its color class and color, just after the effect is started (0x9E305
+    // to 0x9E700 and 0x9E30B to 0x129C70), and the call that builds its particle (0x5109F to 0x41F40).
+    constexpr uint32_t kPopupDecisionRva = 0x9E211, kPopupColorRva = 0x9E305, kPopupParticleRva = 0x51083;
     void PutPopupDecision(Image& image, uint32_t at)
     {
         image.Put(at, {0x52, 0x6A, 0x01, 0x8D, 0x44, 0x24, 0x34, 0x55, 0x8D, 0x4C, 0x24, 0x40, 0x50, 0x51, 0xE8, 0x2C, 0xF7,
@@ -1476,8 +1476,9 @@ namespace
     }
     void PutPopupColor(Image& image, uint32_t at)
     {
-        image.Put(at, {0x50, 0xE8, 0x60, 0xB9, 0x08, 0x00, 0x8B, 0x4C, 0x24, 0x48, 0x83, 0xC4, 0x10, 0x25, 0xFF, 0xFF, 0xFF,
-                          0x00, 0x89, 0x8E, 0xA8, 0x00, 0x00, 0x00, 0x89, 0x86, 0xA4, 0x00, 0x00, 0x00});
+        image.Put(at, {0xE8, 0xF6, 0x03, 0x00, 0x00, 0x50, 0xE8, 0x60, 0xB9, 0x08, 0x00, 0x8B, 0x4C, 0x24, 0x48, 0x83, 0xC4,
+                          0x10, 0x25, 0xFF, 0xFF, 0xFF, 0x00, 0x89, 0x8E, 0xA8, 0x00, 0x00, 0x00, 0x89, 0x86, 0xA4, 0x00, 0x00,
+                          0x00});
     }
     void PutPopupParticle(Image& image, uint32_t at)
     {
@@ -1502,6 +1503,7 @@ TEST(a_popups_three_ties_are_found_where_the_client_has_them)
     CHECK_EQ(found.decision, 0xAD950u);
     CHECK_EQ(found.colorCall, 0x9E30Bu);
     CHECK_EQ(found.color, 0x129C70u);
+    CHECK_EQ(found.colorClass, 0x9E700u);
     CHECK_EQ(found.particleCall, 0x5109Fu);
     CHECK_EQ(found.particleBuild, 0x41F40u);
 }
@@ -1525,4 +1527,47 @@ TEST(a_popup_tie_found_twice_is_ambiguous)
         put(image, 0x150000);
         CHECK(LocatePopupTies(image.Text()).problem == LocateProblem::AmbiguousPopupTies);
     }
+}
+
+namespace
+{
+    // The game's three popup effects, each started by the same routine (0x56C70) from its handle, copied from the
+    // client's image at 0x9E296 (Miss, its handle at 0x393D120), 0x9E2B1 (recovery, 0x393D11C) and 0x9E2CC (damage,
+    // 0x393D108), as the client loaded at 0x34C0000 holds them.
+    constexpr uint32_t kMissEffectRva = 0x9E296, kRecoveryEffectRva = 0x9E2B1, kDamageEffectRva = 0x9E2CC;
+    void PutPopupEffect(Image& image, uint32_t at, uint8_t handle, uint8_t skip, uint32_t start)
+    {
+        image.Put(at, {0x8B, 0x0D, handle, 0xD1, 0x93, 0x03, 0x85, 0xC9, 0x74, skip, 0x8B, 0x09, 0x6A, 0x00, 0x6A, 0x00, 0x53,
+                          0x50, 0xE8});
+        image.Put32(at + 19, start - (at + 23));
+        image.Put(at + 23, {0x8B, 0xF0, 0xEB});
+    }
+    Image PopupEffects()
+    {
+        Image image;
+        PutPopupEffect(image, kMissEffectRva, 0x20, 0x47, 0x56C70);
+        PutPopupEffect(image, kRecoveryEffectRva, 0x1C, 0x2C, 0x56C70);
+        PutPopupEffect(image, kDamageEffectRva, 0x08, 0x11, 0x56C70);
+        return image;
+    }
+}
+
+TEST(the_three_popup_effects_and_their_start_are_found_where_the_client_has_them)
+{
+    const PopupEffectSites found = LocatePopupEffects(PopupEffects().Text());
+    CHECK(found.problem == LocateProblem::None);
+    CHECK_EQ(found.handles[0], 0x393D108u); // damage, kind 1
+    CHECK_EQ(found.handles[1], 0x393D11Cu); // recovery, kind 2
+    CHECK_EQ(found.handles[2], 0x393D120u); // Miss, kind 3
+    CHECK_EQ(found.start, 0x56C70u);
+}
+
+TEST(popup_effects_found_but_twice_or_four_times_are_a_problem)
+{
+    Image two = PopupEffects();
+    two.Put(kRecoveryEffectRva, {0x90});
+    CHECK(LocatePopupEffects(two.Text()).problem == LocateProblem::NoPopupEffects);
+    Image four = PopupEffects();
+    PutPopupEffect(four, 0x150000, 0x30, 0x11, 0x56C70);
+    CHECK(LocatePopupEffects(four.Text()).problem == LocateProblem::AmbiguousPopupEffects);
 }
