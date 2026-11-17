@@ -158,12 +158,12 @@ namespace headsup
         }
     }
 
-    PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords}; }
+    PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords, settings.combatPopupLabels}; }
 
     std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
         if (text == std::string_view(&kMissGlyph, 1)) return std::string(event && on.words ? MissWord(event->message) : kMissWord);
-        const AmountLabel label = event ? LabelOf(event->message) : AmountLabel{};
+        const AmountLabel label = event && on.labels ? LabelOf(event->message) : AmountLabel{};
         return std::string(label.before) + std::string(text) + std::string(label.after);
     }
 

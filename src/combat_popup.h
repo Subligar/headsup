@@ -97,6 +97,7 @@ namespace headsup
     struct PopupSwitches
     {
         bool words = true;
+        bool labels = true;
     };
     PopupSwitches PopupSwitchesOf(const Settings& settings);
 

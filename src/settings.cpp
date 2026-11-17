@@ -52,6 +52,7 @@ namespace headsup
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
             {"combatPopups", &Settings::combatPopups},
             {"combatPopupWords", &Settings::combatPopupWords},
+            {"combatPopupLabels", &Settings::combatPopupLabels},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
             {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"helpBarShrink", &Settings::helpBarShrink},
             {"widgetBackground", &Settings::widgetBackground}};

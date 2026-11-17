@@ -126,7 +126,7 @@ PIECES = Pieces(
         'cursor-style': Setting(options=5, nameless=frozenset({4})), 'width': Setting(), 'cursor-height': Setting(),
         'outline-thickness': Setting(), 'scale': Setting(), 'float': Setting(), 'cursor-vertical-offset': Setting(),
         'color': Setting(), 'edge-color': Setting(),
-        'combat-popup-font': Setting(), 'combat-popup-size': Setting(), 'combat-popup-words': Setting(),
+        'combat-popup-font': Setting(), 'combat-popup-size': Setting(), 'combat-popup-words': Setting(), 'combat-popup-labels': Setting(),
         'aggression-colors': Setting(unnamed=True, rows=rows(
             'passive', 'aggressive', 'nm-passive', 'nm-aggressive', 'nm-placeholder', 'no-data')),
         'toughness-colors': Setting(unnamed=True, rows=rows(

@@ -193,6 +193,16 @@ TEST(an_amount_of_mp_or_tp_and_a_drain_say_what_they_are_and_hp_stays_a_number)
     CHECK_EQ(CombatPopupWords("20", std::nullopt), std::string("20"));
 }
 
+TEST(with_labels_off_an_amount_or_a_drain_is_the_games_bare_number)
+{
+    PopupSwitches off;
+    off.labels = false;
+    CHECK_EQ(CombatPopupWords("20", PopupEvent{25, 0, 0}, off), std::string("20"));
+    CHECK_EQ(CombatPopupWords("55", PopupEvent{227, 0, 0}, off), std::string("55"));
+    CHECK_EQ(CombatPopupWords("100", PopupEvent{165, 0, 0}, off), std::string("100"));
+    CHECK_EQ(CombatPopupWords(":", PopupEvent{70, 0, 0}, off), std::string("Parry"));
+}
+
 TEST(a_shown_miss_has_its_messages_word)
 {
     const CombatPopup parry = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.5f, PopupEvent{70, 0, 0});

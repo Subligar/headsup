@@ -239,6 +239,7 @@ namespace headsup
         std::string fishBarLine = "${size|fish} $feeling";
         bool combatPopups = true; // HeadsUp draws the game's damage, recovery and Miss popups in its own text
         bool combatPopupWords = true; // a miss says what happened: Evade, Parry and the like
+        bool combatPopupLabels = true; // MP, TP and drained amounts say what they are
         std::string combatPopupFont; // empty for the nameplates' default font
         int combatPopupSize         = kDefaultCombatPopupSize;
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
