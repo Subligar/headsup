@@ -2161,6 +2161,10 @@ namespace headsup
                 form.Fade(!s.combatPopups);
                 form.FontDropdown(label.c_str(), s.combatPopupFont, c.fonts, tip, Word(c, WindowWord::Default));
                 break;
+            case SettingPiece::CombatPopupWords:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupWords, tip);
+                break;
             case SettingPiece::CombatPopupSize:
                 form.Fade(!s.combatPopups);
                 form.SliderPercent(label.c_str(), s.combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, tip);

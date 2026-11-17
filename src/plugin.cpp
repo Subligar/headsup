@@ -1629,7 +1629,7 @@ private:
         const float toX = static_cast<float>(m_CombatTextHook.TargetWidth()) / m_Names.BackBufferWidth();
         const float toY = static_cast<float>(m_CombatTextHook.TargetHeight()) / m_Names.BackBufferHeight();
         const std::vector<headsup::ShownCombatPopup> shown =
-            headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize);
+            headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize, headsup::PopupSwitchesOf(m_Settings));
         const bool saved = WithSavedState([&] {
             if (FAILED(m_Device->SetRenderTarget(m_CombatTextHook.Target(), m_CombatTextHook.Depth()))) return;
             m_CombatPopups.Draw(m_Device, shown, headsup::CombatPopupFont(m_Settings), toX, toY);
@@ -1939,7 +1939,8 @@ private:
         for (const headsup::CombatPopup& popup : m_CombatTextHook.Popups())
             popups.push_back("call " + headsup::DescribeCombatPopup(popup));
         if (m_PopupsDrawn)
-            for (const headsup::ShownCombatPopup& popup : headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize))
+            for (const headsup::ShownCombatPopup& popup : headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize,
+                     headsup::PopupSwitchesOf(m_Settings)))
                 popups.push_back("drawn " + headsup::DescribeCombatPopup(popup));
         const size_t draws = m_DrawDump.Write(out, headsup::DrawDump::Sources{m_AshitaCore, m_Names, m_NameHook, m_Nameplates.CursorNames(),
                                                        m_Nameplates.LastShown(), [&](uint32_t index) { return m_GameState.PlayerStatusOf(index, m_SelfIndex); },

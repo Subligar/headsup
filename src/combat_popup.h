@@ -93,9 +93,16 @@ namespace headsup
     // The black edge around a popup's letters, per pixel of the height they are drawn at.
     constexpr float kCombatPopupEdgePerHeight = 0.1f;
 
+    // Which of HeadsUp's own touches popups get, by the card's switches; each one off gives what the game shows.
+    struct PopupSwitches
+    {
+        bool words = true;
+    };
+    PopupSwitches PopupSwitchesOf(const Settings& settings);
+
     // A number as the game wrote it; for the Miss glyph, what its message says happened (Evade, Parry, Shadow, Resist,
     // No Effect, Fail and the like), or Miss.
-    std::string_view CombatPopupWords(std::string_view text, std::optional<PopupEvent> event);
+    std::string_view CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on = {});
 
     // A popup as HeadsUp draws it, in the scene image's pixels: its words in an opaque color at an alpha out of
     // kOpaqueAlpha, the middle of their capitals on center, in a line lineHeight tall, at the game's depth.
@@ -108,7 +115,8 @@ namespace headsup
     };
     // Two popups of a frame with the same text whose centers are within half a box height are one, the later, which the
     // game draws on top. A line is as tall as its box at 100 percent: the box already shrinks with distance.
-    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent);
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
+        const PopupSwitches& on = {});
 
     // A popup's text as drawn into its texture: the image's size and halo in its own pixels, and its capitals' top and
     // bottom in rows under the halo, drawn raster pixels tall.

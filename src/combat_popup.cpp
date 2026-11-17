@@ -127,10 +127,12 @@ namespace headsup
         }
     }
 
-    std::string_view CombatPopupWords(std::string_view text, std::optional<PopupEvent> event)
+    PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords}; }
+
+    std::string_view CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
         if (text != std::string_view(&kMissGlyph, 1)) return text;
-        return event ? MissWord(event->message) : kMissWord;
+        return event && on.words ? MissWord(event->message) : kMissWord;
     }
 
     namespace
@@ -143,7 +145,7 @@ namespace headsup
         }
     }
 
-    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent)
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent, const PopupSwitches& on)
     {
         std::vector<ShownCombatPopup> shown;
         for (size_t i = 0; i < popups.size(); ++i)
@@ -153,7 +155,7 @@ namespace headsup
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            shown.push_back(ShownCombatPopup{std::string(CombatPopupWords(p.text, p.event)), ShownColor(p.color, kCombatPopupModulate),
+            shown.push_back(ShownCombatPopup{std::string(CombatPopupWords(p.text, p.event, on)), ShownColor(p.color, kCombatPopupModulate),
                 alpha, ScreenPoint{p.box.CenterX(), p.box.CenterY()}, p.box.Height() * static_cast<float>(sizePercent) / kPercent,
                 p.depth});
         }

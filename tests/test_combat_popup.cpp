@@ -166,6 +166,14 @@ TEST(a_miss_says_what_happened_by_its_message)
     CHECK(CombatPopupWords(":", std::nullopt) == "Miss");
 }
 
+TEST(with_words_off_every_miss_is_the_games_plain_miss)
+{
+    PopupSwitches off;
+    off.words = false;
+    for (const uint32_t message : {15u, 282u, 70u, 31u, 85u, 75u, 114u})
+        CHECK(CombatPopupWords(":", PopupEvent{message, 0, 0}, off) == "Miss");
+}
+
 TEST(a_number_keeps_its_figures_whatever_its_message)
 {
     CHECK(CombatPopupWords("1234", kHit) == "1234");
