@@ -261,6 +261,20 @@ namespace headsup
         constexpr int16_t kPopupEffectStart[] = {0x8B, 0x0D, -1, -1, -1, -1, 0x85, 0xC9, 0x74, -1, 0x8B, 0x09, 0x6A, 0x00, 0x6A,
             0x00, 0x53, 0x50, 0xE8, -1, -1, -1, -1, 0x8B, 0xF0, 0xEB};
         constexpr uint32_t kPopupEffectHandleAt = 2, kPopupEffectStartAt = 18;
+        // mov eax,[esp+20h] (the packet); mov ecx,edi (the action); add eax,4; push eax; call the parse; test eax,eax; jz.
+        constexpr int16_t kPopupParseCall[] = {0x8B, 0x44, 0x24, 0x20, 0x8B, 0xCF, 0x83, 0xC0, 0x04, 0x50, 0xE8, -1, -1, -1, -1,
+            0x85, 0xC0, 0x0F, 0x84};
+        constexpr uint32_t kPopupParseCallAt = 10;
+        // lea edx,[esp+34h]; lea eax,[esp+20h]; push edx; push 0 (the chat line, not the popup); push ebp; lea
+        // ecx,[esp+34h]; push eax; push ecx; call the decision.
+        constexpr int16_t kPopupLineCall[] = {0x8D, 0x54, 0x24, 0x34, 0x8D, 0x44, 0x24, 0x20, 0x52, 0x6A, 0x00, 0x55, 0x8D, 0x4C,
+            0x24, 0x34, 0x50, 0x51, 0xE8};
+        // push 0 (slot 0); push esi (the record number); push edi (the action); call the start; mov ax,[edi+8]; mov
+        // ecx,[edi+0Ch] (the record); add esp,0Ch.
+        constexpr int16_t kPopupShowNextCall[] = {0x6A, 0x00, 0x56, 0x57, 0xE8, -1, -1, -1, -1, 0x66, 0x8B, 0x47, 0x08, 0x8B, 0x4F,
+            0x0C, 0x83, 0xC4, 0x0C};
+        constexpr uint32_t kPopupShowNextCallAt = 4;
+        static_assert(kPopupShowNextCall[15] == kActionRecord);
         // The 3-second update: xor eax,eax; push 3000; clear both byte counts; mov edx,[net]; mov eax,[edx+4190h], the
         // milliseconds since the last server data.
         constexpr int16_t kCounterUpdate[] = {0x33, 0xC0, 0x68, 0xB8, 0x0B, 0x00, 0x00, 0x89, 0x46, 0x0C, 0x89, 0x46,
@@ -393,6 +407,8 @@ namespace headsup
         case LocateProblem::AmbiguousPopupTies: return "where the game starts a combat popup was found more than once";
         case LocateProblem::NoPopupEffects: return "the game's three combat popup effects were not all found";
         case LocateProblem::AmbiguousPopupEffects: return "the game's combat popup effects were found more than three times";
+        case LocateProblem::NoPopupEarly: return "where the game parses an action for its combat popups was not found";
+        case LocateProblem::AmbiguousPopupEarly: return "where the game parses an action for its combat popups was found more than once";
         case LocateProblem::NoConfigGet: return "the game's config values were not found";
         case LocateProblem::NoSearchAddress: return "where the game keeps the search server's address was not found";
         case LocateProblem::NoWindowMove: return "the game's window move was not found";
@@ -1158,5 +1174,22 @@ namespace headsup
             sites.handles[kPopupEffectCount - 1 - i] = ReadAt<uint32_t>(text.bytes, found[i] + kPopupEffectHandleAt);
         sites.start = CallTarget(text.rva + found.front() + kPopupEffectStartAt, text);
         return sites;
+    }
+
+    PopupEarlySites LocatePopupEarly(const ImageSection& text, uint32_t decision)
+    {
+        using Pattern = std::span<const int16_t>;
+        std::array<uint32_t, 3> calls{};
+        const std::array<std::pair<Pattern, uint32_t>, 3> sites = {{{kPopupParseCall, kPopupParseCallAt},
+            {kPopupLineCall, std::size(kPopupLineCall) - 1}, {kPopupShowNextCall, kPopupShowNextCallAt}}};
+        for (size_t i = 0; i < sites.size(); ++i)
+        {
+            const std::vector<uint32_t> found = Find(sites[i].first, text);
+            if (found.empty()) return PopupEarlySites{LocateProblem::NoPopupEarly};
+            if (found.size() > 1) return PopupEarlySites{LocateProblem::AmbiguousPopupEarly};
+            calls[i] = text.rva + found.front() + sites[i].second;
+        }
+        if (CallTarget(calls[1], text) != decision) return PopupEarlySites{LocateProblem::NoPopupEarly};
+        return PopupEarlySites{LocateProblem::None, calls[0], CallTarget(calls[0], text), calls[1], calls[2], CallTarget(calls[2], text)};
     }
 }

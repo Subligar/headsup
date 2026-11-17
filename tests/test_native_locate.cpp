@@ -1571,3 +1571,80 @@ TEST(popup_effects_found_but_twice_or_four_times_are_a_problem)
     PutPopupEffect(four, 0x150000, 0x30, 0x11, 0x56C70);
     CHECK(LocatePopupEffects(four.Text()).problem == LocateProblem::AmbiguousPopupEffects);
 }
+
+namespace
+{
+    // The three calls an early popup needs in the client of 2026-10-19, copied from its image: the action packet's
+    // parse (0x9E43D to 0x18CA40), the chat line's decision in a popup's start (0x9E33A to 0xAD950, the routine the
+    // popup's own decision calls) and the show of an action's next target record (0x18C84C to 0x9E090).
+    constexpr uint32_t kPopupParseRva = 0x9E433, kPopupLineRva = 0x9E328, kPopupShowNextRva = 0x18C848;
+    constexpr uint32_t kPopupDecisionRoutine = 0xAD950;
+    void PutPopupParse(Image& image, uint32_t at)
+    {
+        image.Put(at, {0x8B, 0x44, 0x24, 0x20, 0x8B, 0xCF, 0x83, 0xC0, 0x04, 0x50, 0xE8, 0xFE, 0xE5, 0x0E, 0x00, 0x85, 0xC0,
+                          0x0F, 0x84, 0x06, 0x01, 0x00, 0x00});
+    }
+    void PutPopupLine(Image& image, uint32_t at)
+    {
+        image.Put(at, {0x8D, 0x54, 0x24, 0x34, 0x8D, 0x44, 0x24, 0x20, 0x52, 0x6A, 0x00, 0x55, 0x8D, 0x4C, 0x24, 0x34, 0x50,
+                          0x51, 0xE8});
+        image.Put32(at + 19, kPopupDecisionRoutine - (at + 23));
+    }
+    void PutPopupShowNext(Image& image, uint32_t at)
+    {
+        image.Put(at, {0x6A, 0x00, 0x56, 0x57, 0xE8, 0x3F, 0x18, 0xF1, 0xFF, 0x66, 0x8B, 0x47, 0x08, 0x8B, 0x4F, 0x0C, 0x83,
+                          0xC4, 0x0C});
+    }
+    Image PopupEarly()
+    {
+        Image image;
+        PutPopupParse(image, kPopupParseRva);
+        PutPopupLine(image, kPopupLineRva);
+        PutPopupShowNext(image, kPopupShowNextRva);
+        return image;
+    }
+}
+
+TEST(the_early_popup_calls_are_found_where_the_client_has_them)
+{
+    const PopupEarlySites found = LocatePopupEarly(PopupEarly().Text(), kPopupDecisionRoutine);
+    CHECK(found.problem == LocateProblem::None);
+    CHECK_EQ(found.parseCall, 0x9E43Du);
+    CHECK_EQ(found.parse, 0x18CA40u);
+    CHECK_EQ(found.lineCall, 0x9E33Au);
+    CHECK_EQ(found.showNextCall, 0x18C84Cu);
+    CHECK_EQ(found.show, 0x9E090u);
+}
+
+TEST(the_early_popup_calls_go_together)
+{
+    for (const uint32_t missing : {kPopupParseRva, kPopupLineRva, kPopupShowNextRva})
+    {
+        Image image = PopupEarly();
+        image.Put(missing, {0x90});
+        CHECK(LocatePopupEarly(image.Text(), kPopupDecisionRoutine).problem == LocateProblem::NoPopupEarly);
+    }
+}
+
+TEST(an_early_popup_call_found_twice_is_ambiguous)
+{
+    using Put = void (*)(Image&, uint32_t);
+    for (const Put put : {Put(PutPopupParse), Put(PutPopupLine), Put(PutPopupShowNext)})
+    {
+        Image image = PopupEarly();
+        put(image, 0x150000);
+        CHECK(LocatePopupEarly(image.Text(), kPopupDecisionRoutine).problem == LocateProblem::AmbiguousPopupEarly);
+    }
+}
+
+TEST(the_chat_lines_decision_must_be_the_popups_own)
+{
+    CHECK(LocatePopupEarly(PopupEarly().Text(), kPopupDecisionRoutine + 0x10).problem == LocateProblem::NoPopupEarly);
+}
+
+TEST(the_popups_own_decision_is_not_the_chat_lines)
+{
+    Image image = PopupEarly();
+    image.Put(kPopupLineRva + 10, {0x01}); // push 1, as the popup's decision does
+    CHECK(LocatePopupEarly(image.Text(), kPopupDecisionRoutine).problem == LocateProblem::NoPopupEarly);
+}

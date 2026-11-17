@@ -87,6 +87,8 @@ namespace headsup
         AmbiguousPopupTies,
         NoPopupEffects,
         AmbiguousPopupEffects,
+        NoPopupEarly,
+        AmbiguousPopupEarly,
     };
     const char* Describe(LocateProblem problem);
 
@@ -565,4 +567,20 @@ namespace headsup
         uint32_t start = 0;
     };
     PopupEffectSites LocatePopupEffects(const ImageSection& text);
+
+    // The three calls that start each popup as soon as its action is parsed, RVAs of each five-byte call and of its
+    // routine. The parse of the action packet (0x028): thiscall (action, packet bits), returning the action or 0, its
+    // record at kActionRecord. The chat line's decision in a popup's start: the routine decision is, cdecl, with 0 for
+    // the line. The show of an action's next target record: cdecl (action, record number, slot 0), the popup's start.
+    // In the record, kRecordTargetCount (a signed word) target records of kTargetSize bytes start at the pointer at
+    // kRecordTargets; nothing of the game reads or writes the two bytes at kTargetEarlyMark in each. The game shows at
+    // most kMostTargets of them.
+    struct PopupEarlySites
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t parseCall = 0, parse = 0, lineCall = 0, showNextCall = 0, show = 0;
+    };
+    constexpr uint32_t kActionRecord = 0x0C, kRecordTargetCount = 0x1C, kRecordTargets = 0x20, kTargetSize = 0x34,
+                       kTargetEarlyMark = 0x32, kMostTargets = 0x40;
+    PopupEarlySites LocatePopupEarly(const ImageSection& text, uint32_t decision);
 }
