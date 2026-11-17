@@ -328,6 +328,7 @@ class HeadsUp final : public IPlugin
     headsup::Tracker m_Tracker;
     // UpdateTracker's, kept as members for their room.
     std::vector<headsup::ActorInput> m_Inputs;
+    headsup::PopupTestRun m_PopupTest; // the Combat Popups card's Test
     std::vector<uint32_t> m_AliveMobs; // which lose their placeholder timers
     std::vector<headsup::PetLink> m_Pets;
     std::vector<headsup::CheckCandidate> m_Checkable;
@@ -945,6 +946,7 @@ public:
         m_PopupsDrawn = false;
         m_CombatTextHook.Take(m_Settings.enabled && m_Settings.combatPopups && !m_CombatPopups.Failed());
         m_CombatTextHook.SetYou(m_SelfIndex, m_AshitaCore->GetMemoryManager()->GetEntity()->GetPetTargetIndex(m_SelfIndex));
+        PopTestSamples(Now());
         if (const std::string failure = m_CombatPopups.TakeFailure(); !failure.empty())
             Print("combat popups are off until HeadsUp reloads, and the game's are back: " + failure + ".");
         m_Outline.NewFrame();
@@ -1232,6 +1234,7 @@ public:
 #ifdef HEADSUP_DEV
             .exportable       = true,
 #endif
+            .popupTestReady   = m_CombatTextHook.CanStartPopups(),
             .settingsOf       = SettingsShownNow(),
             .partMarks        = {},
             .localZone        = LocalZoneNow(),
@@ -1255,6 +1258,7 @@ public:
         }
         if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
         if (m_RmlMenu.TakeCaseMove()) m_CaseMoving = true;
+        if (m_RmlMenu.TakePopupTest()) m_PopupTest.Start(now);
         if (m_RmlMenu.TakeCaseTest())
         {
             const headsup::Angler angler = AnglerNow();
@@ -3444,6 +3448,23 @@ private:
     {
         return headsup::DebugSources{m_AshitaCore, m_Tracker, m_NameHook, m_Names, m_Nameplates, m_GameState, m_Checks,
             m_CursorTargets, m_Player, m_Settings, m_MenuWidth, m_MenuHeight, m_Zone, Now(), kVersion};
+    }
+
+    // The Test button's samples due now, over your character while the game draws it, colored as the game would color
+    // each between you and another entity.
+    void PopTestSamples(double now)
+    {
+        IEntity* entity = m_AshitaCore->GetMemoryManager()->GetEntity();
+        while (const std::optional<headsup::PopupSample> sample = m_PopupTest.Next(now))
+        {
+            const uintptr_t actor = entity->GetActorPointer(m_SelfIndex);
+            if (actor == 0 || (entity->GetRenderFlags0(m_SelfIndex) & headsup::kDrawnRenderFlag) == 0) continue;
+            const auto otherInput = std::find_if(m_Inputs.begin(), m_Inputs.end(),
+                [&](const headsup::ActorInput& input) { return input.index != m_SelfIndex; });
+            const uint32_t other = otherInput != m_Inputs.end() ? otherInput->index : m_SelfIndex;
+            m_CombatTextHook.StartPopup(headsup::SampleEvent(*sample, m_SelfIndex, other), sample->value,
+                sample->yours ? m_SelfIndex : other, sample->yours ? other : m_SelfIndex, actor);
+        }
     }
 
     void WriteDebugReport()

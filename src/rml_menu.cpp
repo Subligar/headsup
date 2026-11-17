@@ -202,6 +202,7 @@ namespace headsup
     bool RmlMenu::TakeDebugRequest() { return std::exchange(m_State.debugRequested, false); }
     bool RmlMenu::TakeCaseMove() { return std::exchange(m_State.caseMoveRequested, false); }
     bool RmlMenu::TakeCaseTest() { return std::exchange(m_State.caseTestRequested, false); }
+    bool RmlMenu::TakePopupTest() { return std::exchange(m_State.popupTestRequested, false); }
     bool RmlMenu::TakeSetupBackup() { return std::exchange(m_State.setupBackup, false); }
 
     void RmlMenu::StartSetup(const Settings& settings, bool rerun)

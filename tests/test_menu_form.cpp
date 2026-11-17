@@ -2206,3 +2206,23 @@ TEST(only_the_skillchains_color_can_be_its_elements)
     CHECK(pickLast(PopupType::Skillchain, "combat-popup-skillchain-color") == ColorSource::Element);
     CHECK(pickLast(PopupType::Critical, "combat-popup-critical-color") == ColorSource::Game);
 }
+
+TEST(the_combat_popups_test_button_asks_the_plugin_only_while_the_card_is_on_and_the_game_can_pop)
+{
+    Window w;
+    w.state.page             = Page::Entities;
+    w.readings.popupTestReady = true;
+    const std::string card = "entities-combat-popups", test = card + "-combat-popup-test";
+    w.settings.combatPopups = false;
+    w.Pass({{test, kClickEvent, ""}});
+    CHECK(!w.state.popupTestRequested);
+    w.settings.combatPopups   = true;
+    w.readings.popupTestReady = false;
+    CHECK(ClassOn(w.Pass(), test.c_str(), kOffClass));
+    w.Pass({{test, kClickEvent, ""}});
+    CHECK(!w.state.popupTestRequested);
+    w.readings.popupTestReady = true;
+    CHECK(!ClassOn(w.Pass(), test.c_str(), kOffClass));
+    w.Pass({{test, kClickEvent, ""}});
+    CHECK(w.state.popupTestRequested);
+}

@@ -2187,6 +2187,12 @@ namespace headsup
                 form.Fade(!s.combatPopups);
                 form.Switch(label.c_str(), s.combatPopupCustomColors, tip);
                 break;
+            case SettingPiece::CombatPopupTest:
+                form.Fade(!s.combatPopups || !r.popupTestReady);
+                if (form.Button(label.c_str(), label.c_str(), kWashPill,
+                        r.popupTestReady ? tip : WordTip(c, WindowWord::CombatPopupTestNotFound)))
+                    c.state.popupTestRequested = true;
+                break;
             case SettingPiece::CombatPopupDealtColor: CombatPopupColorRow(form, label, s, PopupType::Dealt, tip); break;
             case SettingPiece::CombatPopupTakenColor: CombatPopupColorRow(form, label, s, PopupType::Taken, tip); break;
             case SettingPiece::CombatPopupRecoveryColor: CombatPopupColorRow(form, label, s, PopupType::Recovery, tip); break;
