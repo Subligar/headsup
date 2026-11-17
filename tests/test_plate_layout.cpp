@@ -781,18 +781,3 @@ TEST(a_line_of_text_is_as_tall_as_its_icons_would_be_and_spaced_the_same_with_or
     CHECK_EQ(a.lines[1].top, b.lines[1].top);
     CHECK_EQ(a.lines[0].top, a.lines[1].top - kLineGap - 16.0f);
 }
-
-TEST(a_plates_top_is_its_highest_line_timer_or_cursor_whichever_it_draws)
-{
-    const std::vector<LineInput> lines = {Text({{40.0f, 12.0f}}), Text({{60.0f, 16.0f}})};
-    const PlateLayout plain = LayoutPlate(Anchor(), lines, 0.0f, 0.0f, 0.5f, 0, 0.0f);
-    CHECK(PlateTop(plain, false, std::nullopt) == plain.lines.front().top);
-    const PlateLayout timed = LayoutPlate(Anchor(), lines, 10.0f, 14.0f, 0.5f, 2, 8.0f);
-    CHECK(timed.timersY < timed.lines.front().top);
-    CHECK(PlateTop(timed, true, std::nullopt) == timed.timersY);
-    CHECK(PlateTop(timed, true, timed.cursor.y) == timed.cursor.y);
-    CHECK(PlateTop(timed, false, std::nullopt) == timed.lines.front().top);
-    const PlateLayout bare = LayoutPlate(Anchor(), {}, 10.0f, 14.0f, 0.5f, 0, 0.0f);
-    CHECK(!PlateTop(bare, false, std::nullopt));
-    CHECK(PlateTop(bare, false, bare.cursor.y) == bare.cursor.y);
-}

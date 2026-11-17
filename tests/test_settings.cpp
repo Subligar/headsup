@@ -3414,31 +3414,54 @@ TEST(a_skillchain_takes_its_elements_color_until_picked_and_no_other_type_can)
     CHECK(LoadSettings(store).combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Element);
 }
 
-TEST(combat_popups_go_right_of_their_target_unnudged_until_placed_and_their_place_saves)
+TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_unnudged_until_placed_and_their_columns_save)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
-    CHECK(fresh.combatPopupSide == PopupSide::Right && fresh.combatPopupX == 0 && fresh.combatPopupY == 0);
+    for (int t = 0; t < kPopupTypeCount; ++t)
+    {
+        const auto type = static_cast<PopupType>(t);
+        const bool left = type == PopupType::Buff || type == PopupType::Recovery;
+        CHECK(fresh.combatPopupSides[static_cast<size_t>(t)] == (left ? PopupSide::Left : PopupSide::Right));
+    }
+    CHECK(fresh.combatPopupX == 0 && fresh.combatPopupY == 0);
     MapStore store;
-    store.values["combatPopupSide"] = "above";
-    store.values["combatPopupX"]    = "-30";
-    store.values["combatPopupY"]    = "45";
+    store.values["combatPopupColumns"] = "dealt buff | spell recovery dealt chocobo | ";
+    store.values["combatPopupX"]       = "-30";
+    store.values["combatPopupY"]       = "45";
     const Settings s = LoadSettings(store);
-    CHECK(s.combatPopupSide == PopupSide::Above && s.combatPopupX == -30 && s.combatPopupY == 45);
+    const auto side  = [](const Settings& in, PopupType type) { return in.combatPopupSides[static_cast<size_t>(type)]; };
+    CHECK(side(s, PopupType::Dealt) == PopupSide::Left && side(s, PopupType::Buff) == PopupSide::Left);
+    CHECK(side(s, PopupType::Spell) == PopupSide::Middle && side(s, PopupType::Recovery) == PopupSide::Middle);
+    CHECK(side(s, PopupType::Taken) == PopupSide::Right && side(s, PopupType::Debuff) == PopupSide::Right);
+    CHECK(s.combatPopupX == -30 && s.combatPopupY == 45);
     MapStore saved;
     SaveSettings(s, saved);
-    CHECK(saved.values["combatPopupSide"] == "above");
+    CHECK(saved.values["combatPopupColumns"] == "dealt buff | recovery spell | taken miss critical burst skillchain debuff");
     const Settings back = LoadSettings(saved);
-    CHECK(back.combatPopupSide == PopupSide::Above && back.combatPopupX == -30 && back.combatPopupY == 45);
-    store.values["combatPopupSide"] = "target";
-    CHECK(LoadSettings(store).combatPopupSide == PopupSide::Target);
-    store.values["combatPopupSide"] = "left";
-    CHECK(LoadSettings(store).combatPopupSide == PopupSide::Left);
-    store.values["combatPopupSide"] = "behind";
-    CHECK(LoadSettings(store).combatPopupSide == PopupSide::Right);
+    CHECK(back.combatPopupSides == s.combatPopupSides && back.combatPopupX == -30 && back.combatPopupY == 45);
+    SaveSettings(fresh, saved);
+    CHECK(saved.values["combatPopupColumns"] == "recovery buff |  | dealt taken miss critical burst skillchain spell debuff");
     store.values["combatPopupX"] = "999";
     store.values["combatPopupY"] = "-999";
     CHECK(LoadSettings(store).combatPopupX == 200 && LoadSettings(store).combatPopupY == -200);
+}
+
+TEST(popups_beside_their_target_start_near_its_head_until_their_start_height_is_set_and_it_saves)
+{
+    MapStore empty;
+    CHECK_EQ(LoadSettings(empty).combatPopupHeight, 90);
+    MapStore store;
+    store.values["combatPopupHeight"] = "35";
+    const Settings s = LoadSettings(store);
+    CHECK_EQ(s.combatPopupHeight, 35);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(LoadSettings(saved).combatPopupHeight, 35);
+    store.values["combatPopupHeight"] = "150";
+    CHECK_EQ(LoadSettings(store).combatPopupHeight, 100);
+    store.values["combatPopupHeight"] = "-5";
+    CHECK_EQ(LoadSettings(store).combatPopupHeight, 0);
 }
 
 TEST(status_popups_are_on_until_switched_off_and_the_switch_saves)

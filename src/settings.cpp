@@ -114,6 +114,7 @@ namespace headsup
             {"fishCaseDown", &Settings::fishCaseDown, kFishBarUnplaced, kCasePlaceWhole},
             {"fishCaseScale", &Settings::fishCaseScale, kMinCaseScale, kMaxCaseScale},
             {"combatPopupSize", &Settings::combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, kPercentStep},
+            {"combatPopupHeight", &Settings::combatPopupHeight, 0, kMaxCombatPopupHeight},
             {"combatPopupX", &Settings::combatPopupX, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
             {"combatPopupY", &Settings::combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
             {"helpBarX", &Settings::helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset},
@@ -179,6 +180,10 @@ namespace headsup
         constexpr const char* kCombatPopupColorKeys[kPopupTypeCount] = {"combatPopupDealtColor", "combatPopupTakenColor",
             "combatPopupRecoveryColor", "combatPopupMissColor", "combatPopupCriticalColor", "combatPopupBurstColor",
             "combatPopupSkillchainColor", "combatPopupSpellColor", "combatPopupBuffColor", "combatPopupDebuffColor"};
+        // By PopupType, in the combatPopupColumns key: its columns' kinds left to right, " | " between columns.
+        constexpr const char* kPopupTypeNames[kPopupTypeCount] = {"dealt", "taken", "recovery", "miss", "critical", "burst",
+            "skillchain", "spell", "buff", "debuff"};
+        constexpr const char* kCombatPopupColumnsKey = "combatPopupColumns";
 
         constexpr const char* kBadgeFontKey = "badgeFontName";
         constexpr const char* kRankDisplayKey = "rankDisplay";
@@ -351,8 +356,6 @@ namespace headsup
             "australiaEastern"};
         constexpr const char* kFishStaminaKey                   = "fishStamina";
         const char* const kFishStaminaNames[kFishStaminaCount]  = {"hide", "vanilla", "headsup"};
-        constexpr const char* kCombatPopupSideKey               = "combatPopupSide";
-        const char* const kPopupSideNames[kPopupSideCount]      = {"right", "left", "above", "target"};
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
@@ -485,6 +488,39 @@ namespace headsup
             for (int i = 0; i < count; ++i)
                 if (name == names[i]) return i;
             return fallback;
+        }
+
+        // A kind the text does not name keeps its side in sides, and one named again its first.
+        PopupSides PopupColumnsFrom(const std::string& text, PopupSides sides)
+        {
+            std::istringstream words(text);
+            std::array<bool, kPopupTypeCount> named{};
+            int column = 0;
+            for (std::string word; words >> word;)
+            {
+                if (word == std::string(1, kDesignLineBreak))
+                {
+                    column = std::min(column + 1, kPopupSideCount - 1);
+                    continue;
+                }
+                const int type = NameIndex(kPopupTypeNames, kPopupTypeCount, word, -1);
+                if (type < 0 || std::exchange(named[type], true)) continue;
+                sides[type] = static_cast<PopupSide>(column);
+            }
+            return sides;
+        }
+
+        std::string PopupColumnsText(const PopupSides& sides)
+        {
+            std::string text;
+            for (int column = 0; column < kPopupSideCount; ++column)
+            {
+                std::string words;
+                for (int t = 0; t < kPopupTypeCount; ++t)
+                    if (sides[t] == static_cast<PopupSide>(column)) words += (words.empty() ? "" : " ") + std::string(kPopupTypeNames[t]);
+                text += (column > 0 ? std::string(" ") + kDesignLineBreak + " " : "") + words;
+            }
+            return text;
         }
 
         void StoreFloat(SettingsStore& store, const std::string& key, float v)
@@ -1896,8 +1932,7 @@ namespace headsup
                 store.GetString(kHelpAnchorKey, ""), static_cast<int>(s.helpBarAnchor)));
             s.fishStamina = static_cast<FishBarShown>(NameIndex(kFishStaminaNames, kFishStaminaCount,
                 store.GetString(kFishStaminaKey, ""), static_cast<int>(s.fishStamina)));
-            s.combatPopupSide = static_cast<PopupSide>(NameIndex(kPopupSideNames, kPopupSideCount,
-                store.GetString(kCombatPopupSideKey, ""), static_cast<int>(s.combatPopupSide)));
+            s.combatPopupSides = PopupColumnsFrom(store.GetString(kCombatPopupColumnsKey, ""), s.combatPopupSides);
             std::array<std::string, kBarSectionCount> sections;
             for (int i = 0; i < kBarSectionCount; ++i)
                 sections[i] = store.GetString(kBarSectionKeys[i], "");
@@ -1994,7 +2029,7 @@ namespace headsup
         store.Set(kCustomThemeNameKey, s.customThemeName.c_str());
         store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
         store.Set(kFishStaminaKey, kFishStaminaNames[static_cast<int>(s.fishStamina)]);
-        store.Set(kCombatPopupSideKey, kPopupSideNames[static_cast<int>(s.combatPopupSide)]);
+        store.Set(kCombatPopupColumnsKey, PopupColumnsText(s.combatPopupSides).c_str());
         store.Set(kMenuFontKey, s.menuFont.c_str());
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());
         store.Set(kFishBarLineKey, s.fishBarLine.c_str());

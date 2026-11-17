@@ -1,6 +1,7 @@
 #include "combat_popup.h"
 
 #include "argb.h"
+#include "auto_check.h"
 #include "bar_content.h"
 #include "bar_widgets.h"
 #include "status_icons.h"
@@ -106,6 +107,20 @@ namespace headsup
                 return std::nullopt;
             default: return std::nullopt;
             }
+        }
+    }
+
+    namespace
+    {
+        // Plain damage between others goes where yours dealt goes on a mob and where yours taken goes on a player or pet;
+        // a popup tied to no message goes where yours dealt goes.
+        PopupSide SideOf(const std::optional<PopupEvent>& e, const PopupSides& sides)
+        {
+            const PopupType kind = !e        ? PopupType::Dealt
+                                   : e->type ? *e->type
+                                   : e->target < kFirstPlayerIndex ? PopupType::Dealt
+                                                                   : PopupType::Taken;
+            return sides[static_cast<size_t>(kind)];
         }
     }
 
@@ -289,7 +304,8 @@ namespace headsup
         for (size_t i = 0; i < kKeptTies; ++i)
         {
             const PopupEvent& e = m_Tasks.events[i];
-            if (m_Spread && m_Tasks.keys[i] != 0 && e.target == event.target && m_Now - e.started < kPopupSpreadSeconds)
+            if (m_Spread && m_Tasks.keys[i] != 0 && e.target == event.target && m_Now - e.started < kPopupSpreadSeconds &&
+                SideOf(e, m_Sides) == SideOf(event, m_Sides))
                 held[e.line] = true;
         }
         event.started = m_Now;
@@ -440,6 +456,13 @@ namespace headsup
             settings.combatPopupCustomColors, settings.combatPopupSkillchainNames,
             settings.combatPopupPlacement}; }
 
+    PopupSides PopupSidesOf(const Settings& settings)
+    {
+        PopupSides sides = settings.combatPopupSides;
+        if (!settings.combatPopupPlacement) sides.fill(PopupSide::Middle);
+        return sides;
+    }
+
     std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
         if (text == std::string_view(&kMissGlyph, 1)) return std::string(event && on.words ? MissWord(event->message) : kMissWord);
@@ -483,34 +506,28 @@ namespace headsup
 
     namespace
     {
-        // Where the game puts a popup: on its target, not nudged.
-        const PopupPlacing kGamePlace{PopupSide::Target, {}, {}};
+        // Where the game puts a popup: on its target, not nudged, which the Middle is with no body known.
+        const PopupPlacing kGamePlace = [] {
+            PopupPlacing place;
+            place.sides.fill(PopupSide::Middle);
+            return place;
+        }();
         // The share of a popup's words left of its place, by side.
         constexpr float kStartsAt = 0.0f, kCentered = 0.5f, kEndsAt = 1.0f;
 
         // Where a popup the game put at center goes, its line counted.
-        ShownCombatPopup Place(ShownCombatPopup shown, uint8_t line, std::optional<PopupBody> body, const PopupPlacing& placing)
+        ShownCombatPopup Place(ShownCombatPopup shown, uint8_t line, std::optional<PopupBody> body, PopupSide side,
+            const PopupPlacing& placing)
         {
             const float lines = static_cast<float>(line) * shown.lineHeight;
             const float clear = body && body->feet ? kPopupBodyReach * (*body->feet - body->nameBottom) : shown.lineHeight;
-            switch (placing.side)
+            if (side != PopupSide::Middle)
             {
-            case PopupSide::Right:
-                shown.center.x += clear;
-                shown.across = kStartsAt;
-                shown.center.y += lines;
-                break;
-            case PopupSide::Left:
-                shown.center.x -= clear;
-                shown.across = kEndsAt;
-                shown.center.y += lines;
-                break;
-            case PopupSide::Above:
-                if (body) shown.center.y = body->top - shown.lineHeight / 2.0f;
-                shown.center.y -= lines;
-                break;
-            case PopupSide::Target: shown.center.y += lines; break;
+                shown.center.x += side == PopupSide::Right ? clear : -clear;
+                shown.across = side == PopupSide::Right ? kStartsAt : kEndsAt;
             }
+            if (body && body->feet) shown.center.y = *body->feet + placing.height * (body->nameBottom - *body->feet);
+            shown.center.y += lines;
             shown.center.x += placing.nudge.x;
             shown.center.y += placing.nudge.y;
             return shown;
@@ -528,12 +545,14 @@ namespace headsup
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            const std::optional<PopupBody> body = p.event && placing.bodyOf ? placing.bodyOf(p.event->target) : std::nullopt;
+            const std::optional<PopupBody> body =
+                on.placement && p.event && placing.bodyOf ? placing.bodyOf(p.event->target) : std::nullopt;
+            const PopupPlacing& place           = on.placement ? placing : kGamePlace;
             const uint32_t color = on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate);
             shown.push_back(Place(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
                                       ScreenPoint{p.box.CenterX(), p.box.CenterY()},
                                       p.box.Height() * static_cast<float>(sizePercent) / kPercent, p.depth, kCentered},
-                p.event ? p.event->line : 0, body, on.placement ? placing : kGamePlace));
+                p.event ? p.event->line : 0, body, SideOf(p.event, place.sides), place));
         }
         return shown;
     }

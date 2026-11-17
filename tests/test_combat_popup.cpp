@@ -44,7 +44,13 @@ namespace
         return picks;
     }
     const std::array<ColorPick, kPopupTypeCount> kGamePicks = Picks(ColorPick{ColorSource::Game});
-    const PopupPlacing kOnTarget{PopupSide::Target, {}, {}};
+    PopupSides Each(PopupSide side)
+    {
+        PopupSides sides{};
+        sides.fill(side);
+        return sides;
+    }
+    const PopupPlacing kOnTarget{Each(PopupSide::Middle), 0.0f, {}, {}};
 }
 
 TEST(every_quad_inside_a_popups_draw_widens_its_box_and_the_last_gives_its_depth_and_color)
@@ -497,13 +503,18 @@ TEST(a_sample_stands_over_you_done_by_you_or_by_another)
 namespace
 {
     // The line a popup the game starts on target at now is moved down by, after the ones started before it.
-    uint8_t LineOf(PopupTies& ties, uint32_t target, double now, uintptr_t task)
+    uint8_t LineOf(PopupTies& ties, const PopupEvent& event, double now, uintptr_t task)
     {
         ties.SetNow(now);
-        ties.Decided(PopupEvent{1, kMob, target, kDamageKind});
+        ties.Decided(event);
         ties.Started(task);
         ties.Built(task + 1, task);
         return ties.Of(task + 1)->line;
+    }
+
+    uint8_t LineOf(PopupTies& ties, uint32_t target, double now, uintptr_t task)
+    {
+        return LineOf(ties, PopupEvent{1, kMob, target, kDamageKind}, now, task);
     }
 }
 
@@ -514,6 +525,22 @@ TEST(popups_started_together_on_one_target_each_take_the_next_free_line)
     CHECK_EQ(LineOf(ties, kYou, 10.0, 0x2000), 1);
     CHECK_EQ(LineOf(ties, kYou, 10.2, 0x3000), 2);
     CHECK_EQ(LineOf(ties, kMob, 10.2, 0x4000), 0);
+}
+
+TEST(popups_on_different_sides_of_one_target_spread_in_stacks_of_their_own)
+{
+    PopupTies ties;
+    ties.SetYou(kYou, 0);
+    PopupSides sides = Each(PopupSide::Right);
+    sides[static_cast<size_t>(PopupType::Recovery)] = PopupSide::Left;
+    ties.SetSides(sides);
+    const PopupEvent hit{1, kMob, kYou, kDamageKind}, cure{7, kYou, kYou, kRecoveryKind};
+    CHECK_EQ(LineOf(ties, hit, 10.0, 0x1000), 0);
+    CHECK_EQ(LineOf(ties, cure, 10.0, 0x2000), 0);
+    CHECK_EQ(LineOf(ties, hit, 10.1, 0x3000), 1);
+    CHECK_EQ(LineOf(ties, cure, 10.1, 0x4000), 1);
+    ties.SetSides(Each(PopupSide::Middle));
+    CHECK_EQ(LineOf(ties, cure, 10.2, 0x5000), 2);
 }
 
 TEST(a_popups_line_is_free_again_once_the_popup_on_it_is_gone)
@@ -611,53 +638,100 @@ TEST(with_show_right_away_off_popups_started_together_keep_the_games_one_place)
 
 namespace
 {
-    // A popup the game draws 54 x 81 with its middle at 127,240.5, over a body whose game name spans rows 100 to 140 and
-    // whose feet are at row 540: 400 pixels tall.
+    // A popup the game draws 54 x 81 with its middle at 127,240.5, over a body whose game name's bottom is at row 140
+    // and whose feet are at row 540: 400 pixels tall. Popups beside it start 90% of the way up from its feet, at row 180.
     constexpr PopupEvent kOnMob{1, kYou, kMob, kDamageKind, PopupType::Dealt};
-    constexpr PopupBody kMobBody{100.0f, 140.0f, 540.0f};
+    constexpr PopupBody kMobBody{140.0f, 540.0f};
+    constexpr float kHeadHeight = 0.9f, kHeadRow = 180.0f;
+
+    PopupPlacing Placing(const PopupSides& sides, std::optional<PopupBody> body, ScreenPoint nudge = {}, float height = kHeadHeight)
+    {
+        return PopupPlacing{sides, height, nudge, [body](uint32_t) { return body; }};
+    }
 
     ShownCombatPopup Placed(PopupSide side, std::optional<PopupBody> body, uint8_t line = 0, ScreenPoint nudge = {})
     {
         PopupEvent event = kOnMob;
         event.line       = line;
-        const PopupPlacing placing{side, nudge, [&](uint32_t target) { return target == kMob ? body : std::nullopt; }};
-        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks, placing)[0];
+        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks,
+            Placing(Each(side), body, nudge))[0];
     }
 }
 
 TEST(a_popup_to_the_right_starts_half_its_bodys_height_right_of_the_games_place)
 {
     const ShownCombatPopup right = Placed(PopupSide::Right, kMobBody);
-    CHECK(Near(right.center.x, 127.0f + 200.0f) && Near(right.center.y, 240.5f));
+    CHECK(Near(right.center.x, 127.0f + 200.0f) && Near(right.center.y, kHeadRow));
     CHECK_EQ(right.across, 0.0f);
     const ShownCombatPopup left = Placed(PopupSide::Left, kMobBody);
-    CHECK(Near(left.center.x, 127.0f - 200.0f) && Near(left.center.y, 240.5f));
+    CHECK(Near(left.center.x, 127.0f - 200.0f) && Near(left.center.y, kHeadRow));
     CHECK_EQ(left.across, 1.0f);
+}
+
+TEST(a_popup_beside_its_target_starts_at_its_share_of_the_body_up_from_the_feet_and_later_lines_go_down)
+{
+    const auto row = [](PopupSide side, float height, uint8_t line) {
+        PopupEvent event = kOnMob;
+        event.line       = line;
+        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks,
+            Placing(Each(side), kMobBody, {}, height))[0].center.y;
+    };
+    CHECK(Near(row(PopupSide::Right, 0.0f, 0), 540.0f));
+    CHECK(Near(row(PopupSide::Left, 1.0f, 0), 140.0f));
+    CHECK(Near(row(PopupSide::Right, 0.25f, 2), 440.0f + 2 * 81.0f));
+    CHECK(Near(Placed(PopupSide::Left, PopupBody{140.0f, std::nullopt}).center.y, 240.5f));
+}
+
+TEST(each_kind_of_popup_goes_to_the_side_picked_for_it)
+{
+    PopupSides sides = Each(PopupSide::Middle);
+    sides[static_cast<size_t>(PopupType::Dealt)]    = PopupSide::Right;
+    sides[static_cast<size_t>(PopupType::Recovery)] = PopupSide::Left;
+    const PopupEvent cure{7, kYou, kMob, kRecoveryKind, PopupType::Recovery}, miss{15, kYou, kMob, kMissKind, PopupType::Miss};
+    const std::vector<ShownCombatPopup> shown = ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, kOnMob),
+        Popup("34", 100, 200, 154, 281, 0x80404040, 0.5f, cure), Popup(":", 100, 200, 154, 281, 0x80404040, 0.5f, miss)},
+        100, kGamePicks, Placing(sides, kMobBody));
+    CHECK_EQ(shown.size(), size_t{3});
+    CHECK(Near(shown[0].center.x, 327.0f) && shown[0].across == 0.0f);
+    CHECK(Near(shown[1].center.x, -73.0f) && shown[1].across == 1.0f);
+    CHECK(Near(shown[2].center.x, 127.0f) && Near(shown[2].center.y, kHeadRow) && shown[2].across == 0.5f);
+}
+
+TEST(plain_damage_between_others_goes_where_yours_dealt_goes_on_a_mob_and_where_yours_taken_goes_on_a_player)
+{
+    PopupSides sides = Each(PopupSide::Middle);
+    sides[static_cast<size_t>(PopupType::Dealt)] = PopupSide::Right;
+    sides[static_cast<size_t>(PopupType::Taken)] = PopupSide::Left;
+    const auto across = [&](std::optional<PopupEvent> event) {
+        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks,
+            Placing(sides, kMobBody))[0].across;
+    };
+    CHECK_EQ(across(PopupEvent{1, kPartyMember, kMob, kDamageKind}), 0.0f);
+    CHECK_EQ(across(PopupEvent{1, kMob, kPartyMember, kDamageKind}), 1.0f);
+    CHECK_EQ(across(PopupEvent{1, kMob, kYourPet, kDamageKind}), 1.0f);
+    CHECK_EQ(across(std::nullopt), 0.0f);
 }
 
 TEST(a_popup_beside_a_body_whose_feet_are_not_known_clears_it_by_a_line)
 {
-    const ShownCombatPopup right = Placed(PopupSide::Right, PopupBody{100.0f, 140.0f, std::nullopt});
+    const ShownCombatPopup right = Placed(PopupSide::Right, PopupBody{140.0f, std::nullopt});
     CHECK(Near(right.center.x, 127.0f + 81.0f));
     CHECK(Near(Placed(PopupSide::Right, std::nullopt).center.x, 127.0f + 81.0f));
 }
 
-TEST(a_popup_above_sits_a_half_line_over_its_targets_name_and_later_lines_go_up)
+TEST(a_popup_in_the_middle_is_centered_on_its_target_at_the_start_height_and_later_lines_go_down)
 {
-    const ShownCombatPopup above = Placed(PopupSide::Above, kMobBody);
-    CHECK(Near(above.center.x, 127.0f) && Near(above.center.y, 100.0f - 40.5f));
-    CHECK_EQ(above.across, 0.5f);
-    CHECK(Near(Placed(PopupSide::Above, kMobBody, 2).center.y, 100.0f - 40.5f - 2 * 81.0f));
-    CHECK(Near(Placed(PopupSide::Above, std::nullopt, 1).center.y, 240.5f - 81.0f));
+    const ShownCombatPopup middle = Placed(PopupSide::Middle, kMobBody);
+    CHECK(Near(middle.center.x, 127.0f) && Near(middle.center.y, kHeadRow));
+    CHECK_EQ(middle.across, 0.5f);
+    CHECK(Near(Placed(PopupSide::Middle, kMobBody, 2).center.y, kHeadRow + 2 * 81.0f));
+    CHECK(Near(Placed(PopupSide::Middle, std::nullopt, 1).center.y, 240.5f + 81.0f));
 }
 
-TEST(a_popup_on_the_target_stays_at_the_games_place_and_a_nudge_moves_any_popup)
+TEST(a_nudge_moves_a_popup_on_from_its_place)
 {
-    const ShownCombatPopup on = Placed(PopupSide::Target, kMobBody, 1);
-    CHECK(Near(on.center.x, 127.0f) && Near(on.center.y, 240.5f + 81.0f));
-    CHECK_EQ(on.across, 0.5f);
     const ShownCombatPopup nudged = Placed(PopupSide::Right, kMobBody, 0, ScreenPoint{10.0f, -20.0f});
-    CHECK(Near(nudged.center.x, 337.0f) && Near(nudged.center.y, 220.5f));
+    CHECK(Near(nudged.center.x, 337.0f) && Near(nudged.center.y, kHeadRow - 20.0f));
 }
 
 TEST(a_popups_text_starts_or_ends_on_its_place_when_it_is_beside_its_target)
@@ -674,11 +748,20 @@ TEST(with_custom_placement_off_a_popup_stays_where_the_game_puts_it)
     off.placement = false;
     PopupEvent event = kOnMob;
     event.line       = 1;
-    const PopupPlacing placing{PopupSide::Above, ScreenPoint{10.0f, -20.0f}, [](uint32_t) { return std::optional(kMobBody); }};
+    const PopupPlacing placing = Placing(Each(PopupSide::Left), kMobBody, ScreenPoint{10.0f, -20.0f});
     const ShownCombatPopup shown =
         ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks, placing, off)[0];
     CHECK(Near(shown.center.x, 127.0f) && Near(shown.center.y, 240.5f + 81.0f));
     CHECK_EQ(shown.across, 0.5f);
+}
+
+TEST(with_custom_placement_off_every_kind_of_popup_spreads_in_the_one_stack_the_game_puts_them_in)
+{
+    Settings s;
+    s.combatPopupSides[static_cast<size_t>(PopupType::Spell)] = PopupSide::Middle;
+    CHECK(PopupSidesOf(s) == s.combatPopupSides);
+    s.combatPopupPlacement = false;
+    CHECK(PopupSidesOf(s) == Each(PopupSide::Middle));
 }
 
 namespace

@@ -918,6 +918,7 @@ namespace headsup
         g_EarlyPopups.SetOn(on);
         g_PopupTies.SetSpread(on);
     }
+    void CombatTextHook::SetSides(const PopupSides& sides) { g_PopupTies.SetSides(sides); }
     void CombatTextHook::Sent(const SentAction& action) { g_SentActions.Put(action); }
 
     void CombatTextHook::SetStatuses(bool pop, std::span<const uint32_t> party)

@@ -154,9 +154,12 @@ namespace headsup
     enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Skillchain, Spell, Buff, Debuff };
     constexpr int kPopupTypeCount = 10;
     std::vector<ColorSource> CombatPopupSources(PopupType type);
-    // Where combat popups go: beside their target's body, over it, or on it, where the game puts them.
-    enum class PopupSide : uint8_t { Right, Left, Above, Target };
-    constexpr int kPopupSideCount = 4;
+    // The column a kind of combat popup goes in: left of its target's body, centered on it, or right of it.
+    enum class PopupSide : uint8_t { Left, Middle, Right };
+    constexpr int kPopupSideCount = 3;
+    using PopupSides = std::array<PopupSide, kPopupTypeCount>; // by PopupType
+    // How high on its target's body a popup beside it starts: percent of the way from its feet to the top of its head.
+    constexpr int kMaxCombatPopupHeight = 100, kDefaultCombatPopupHeight = 90;
     constexpr int kMaxCombatPopupNudge = 200; // pixels either way
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
@@ -251,11 +254,13 @@ namespace headsup
         bool combatPopupCustomColors = true; // each kind takes its pick's color
         bool combatPopupSkillchainNames = true; // a skillchain's number comes with its name
         bool combatPopupRightAway = true; // popups start as their result arrives, not at the hit
-        bool combatPopupPlacement = true; // popups go where combatPopupSide and the nudges say
+        bool combatPopupPlacement = true; // popups go in combatPopupSides' columns, at the start height, nudged
         bool combatPopupStatuses = true; // and has the game pop each buff and debuff that lands, by name
         std::string combatPopupFont; // empty for the nameplates' default font
         int combatPopupSize         = kDefaultCombatPopupSize;
-        PopupSide combatPopupSide   = PopupSide::Right;
+        PopupSides combatPopupSides = {PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right, PopupSide::Right,
+            PopupSide::Right, PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right};
+        int combatPopupHeight = kDefaultCombatPopupHeight;
         int combatPopupX = 0, combatPopupY = 0; // pixels right and up from where the side puts them
         // By PopupType. Game is the game's own color, which tells party, alliance and others apart.
         std::array<ColorPick, kPopupTypeCount> combatPopupColors = {{{ColorSource::Game, ColorFromRgb(0xFFFFFF)},

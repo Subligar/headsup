@@ -43,6 +43,8 @@ namespace headsup
         constexpr const char* kThemeNameBox = " name";  // and the box the pencil opens
         // A designer chip's name on a line and, for a created widget, in the lists, before its widget's slot and its part.
         constexpr const char* kPartChip = "part ", *kListedPartChip = "lpart ";
+        // A combat popup kind's chip in its column, before its PopupType, and a column's end, before its PopupSide.
+        constexpr const char* kPopupKindChip = "popup kind ", *kPopupColumnEnd = "popup column end ";
         // The Status Timers designer's chip, before its widget's slot and its status.
         constexpr const char* kStatusChip = "pin ";
         constexpr const char* kSettingsSectionKey = "settings"; // a widget's settings' section, after its designer
@@ -1885,6 +1887,51 @@ namespace headsup
             form.ColorPickRow(label.c_str(), s.combatPopupColors[static_cast<size_t>(type)], CombatPopupSources(type), tip);
         }
 
+        // The combat popups' three columns, Left, Middle and Right, each kind a chip in its own: a chip dropped on a
+        // column, or on a chip in it, goes in that column.
+        void PopupColumns(Context& c)
+        {
+            Form& form  = c.form;
+            Settings& s = c.s;
+            form.Fade(!s.combatPopups || !s.combatPopupPlacement);
+            const auto columns = c.layout.OptionsOf(WindowList::PopupColumns);
+            const auto kinds   = c.layout.OptionsOf(WindowList::PopupKinds);
+            const std::string chipStart = form.Named(kPopupKindChip) + "-";
+            std::optional<std::pair<int, PopupSide>> drop; // applied after the columns are written
+            const auto dropped = [&](const std::string& target, PopupSide to) {
+                const FormEvent* event = form.Took(target, kDropEvent);
+                if (event == nullptr || form.Off() || event->value.compare(0, chipStart.size(), chipStart) != 0) return;
+                const int type = std::atoi(event->value.c_str() + chipStart.size());
+                if (type >= 0 && type < kPopupTypeCount) drop = {type, to};
+            };
+            form.Line("line trays");
+            for (int column = 0; column < kPopupSideCount; ++column)
+            {
+                const auto here = static_cast<PopupSide>(column);
+                form.Raw(std::string("<div class=\"tray ") + kWidgetTrayClass + "\"><div class=\"tray-name\">" +
+                         EscapedRml(Said(columns[static_cast<size_t>(column)].name)) + "</div>");
+                for (int type = 0; type < kPopupTypeCount; ++type)
+                {
+                    if (s.combatPopupSides[static_cast<size_t>(type)] != here) continue;
+                    const std::string id = form.Id(kPopupKindChip + std::to_string(type));
+                    form.Raw(std::string("<div class=\"btn raised wchip on ") + kTrayChipClass + " drag\" id=\"" + id + "\"" +
+                             TipAttribute(kinds[static_cast<size_t>(type)].tip) + "><div class=\"wname\">" +
+                             EscapedRml(Said(kinds[static_cast<size_t>(type)].name)) + "</div></div>");
+                    form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
+                    dropped(id, here);
+                }
+                const std::string end = form.Id(kPopupColumnEnd + std::to_string(column));
+                form.Raw("<div class=\"tray-end\" id=\"" + end + "\"></div></div>");
+                dropped(end, here);
+            }
+            form.EndLine();
+            if (drop && s.combatPopupSides[static_cast<size_t>(drop->first)] != drop->second)
+            {
+                s.combatPopupSides[static_cast<size_t>(drop->first)] = drop->second;
+                form.changed = true;
+            }
+        }
+
         // A setting, wherever the layout puts it. Each says when it shows, its card's condition included, as it may
         // be moved out of that card.
         void DrawSetting(Context& c, const LayoutSetting& e)
@@ -2196,9 +2243,10 @@ namespace headsup
                 form.Fade(!s.combatPopups);
                 form.Switch(label.c_str(), s.combatPopupPlacement, tip);
                 break;
-            case SettingPiece::CombatPopupSide:
+            case SettingPiece::CombatPopupColumns: PopupColumns(c); break;
+            case SettingPiece::CombatPopupHeight:
                 form.Fade(!s.combatPopups || !s.combatPopupPlacement);
-                OptionsDropdown(form, label, s.combatPopupSide, c.layout.OptionsOf(e), tip);
+                form.SliderPercent(label.c_str(), s.combatPopupHeight, 0, kMaxCombatPopupHeight, tip);
                 break;
             case SettingPiece::CombatPopupX:
                 form.Fade(!s.combatPopups || !s.combatPopupPlacement);

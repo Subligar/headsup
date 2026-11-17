@@ -946,6 +946,7 @@ public:
         m_ModelHook.NewFrame();
         m_CombatTextHook.NewFrame(Now());
         m_CombatTextHook.SetRightAway(m_Settings.combatPopupRightAway);
+        m_CombatTextHook.SetSides(headsup::PopupSidesOf(m_Settings));
         m_PopupsDrawn = false;
         m_CombatTextHook.Take(m_Settings.enabled && m_Settings.combatPopups && !m_CombatPopups.Failed());
         m_CombatTextHook.SetYou(m_SelfIndex, m_AshitaCore->GetMemoryManager()->GetEntity()->GetPetTargetIndex(m_SelfIndex));
@@ -1639,21 +1640,19 @@ private:
     float PopupsToX() const { return static_cast<float>(m_CombatTextHook.TargetWidth()) / m_Names.BackBufferWidth(); }
     float PopupsToY() const { return static_cast<float>(m_CombatTextHook.TargetHeight()) / m_Names.BackBufferHeight(); }
 
-    // The frame's popups as HeadsUp draws them, on the side and nudged as the settings say, beside each target's body
-    // from the game's name over it and its feet.
+    // The frame's popups as HeadsUp draws them, each on its kind's side, at the start height and nudged as the settings
+    // say, beside each target's body from the game's name over it and its feet.
     std::vector<headsup::ShownCombatPopup> ShownPopupsNow() const
     {
         const float toX = PopupsToX(), toY = PopupsToY();
-        const headsup::PopupPlacing placing{m_Settings.combatPopupSide,
+        const headsup::PopupPlacing placing{m_Settings.combatPopupSides,
+            static_cast<float>(m_Settings.combatPopupHeight) / headsup::kPercent,
             headsup::ScreenPoint{static_cast<float>(m_Settings.combatPopupX) * toX, -static_cast<float>(m_Settings.combatPopupY) * toY},
             [this, toY](uint32_t target) -> std::optional<headsup::PopupBody> {
                 const headsup::NameFrame* frame = m_NameHook.Drawn(static_cast<uint16_t>(target));
                 if (frame == nullptr) return std::nullopt;
                 const headsup::DrawnName name = headsup::NameFromFrame(*frame, m_Names.TargetScaleX(), m_Names.TargetScaleY());
-                const auto& plates = m_Nameplates.LastShown();
-                const auto plate   = std::ranges::find(plates, static_cast<uint16_t>(target), &headsup::NameplateRenderer::Shown::index);
-                const float top    = plate != plates.end() && plate->top ? *plate->top : name.box.minY;
-                headsup::PopupBody body{top * toY, name.box.maxY * toY, std::nullopt};
+                headsup::PopupBody body{name.box.maxY * toY, std::nullopt};
                 const headsup::ActorInfo* info = m_Tracker.FindIndex(static_cast<uint16_t>(target));
                 float feet                     = 0.0f;
                 if (info != nullptr && m_Names.SteadyCamera() != nullptr && headsup::RowAtHeight(*m_Names.SteadyCamera(), info->feet, 0.0f, feet))

@@ -53,7 +53,6 @@ namespace headsup
             int nameHeight;
             uint32_t nameColor;
             std::vector<ShownLine> lines; // the plate's lines, a design line's rows each
-            std::optional<float> top;     // of all it drew, cursor and timers too, in back-buffer pixels
         };
 
         void SetDevice(IDirect3DDevice8* device);

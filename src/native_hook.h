@@ -157,6 +157,7 @@ namespace headsup
         static void SetYou(uint32_t you, uint32_t pet);
         // At Present: whether popups start as soon as their action arrives and spread when started together.
         static void SetRightAway(bool on);
+        static void SetSides(const PopupSides& sides);
         // At Present: whether buffs and debuffs pop, and the server ids of you, your party and your alliance.
         static void SetStatuses(bool pop, std::span<const uint32_t> party);
         // An action packet as the server sent it, for the game's parse of it this frame.

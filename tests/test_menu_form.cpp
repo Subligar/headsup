@@ -2227,35 +2227,45 @@ TEST(the_combat_popups_test_button_asks_the_plugin_only_while_the_card_is_on_and
     CHECK(w.state.popupTestRequested);
 }
 
-TEST(the_combat_popups_place_is_picked_and_nudged_only_while_the_card_is_on)
+namespace
+{
+    const std::string kPopupCard = "entities-combat-popups";
+    std::string KindChip(PopupType type) { return kPopupCard + "-popup-kind-" + std::to_string(static_cast<int>(type)); }
+    std::string ColumnEnd(PopupSide side) { return kPopupCard + "-popup-column-end-" + std::to_string(static_cast<int>(side)); }
+}
+
+TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_nudged_only_while_the_card_is_on)
 {
     Window w;
     w.state.page            = Page::Entities;
     w.settings.combatPopups = false;
-    const std::string card = "entities-combat-popups", side = card + "-combat-popup-side", x = card + "-combat-popup-x",
-                      y = card + "-combat-popup-y";
-    w.Pass({{side, kClickEvent, ""}});
-    w.Pass({{side + "-o-2", kClickEvent, ""}, {x, kChangeEvent, "40"}});
-    CHECK(w.settings.combatPopupSide == PopupSide::Right && w.settings.combatPopupX == 0);
+    const std::string x = kPopupCard + "-combat-popup-x", y = kPopupCard + "-combat-popup-y", height = kPopupCard + "-combat-popup-height";
+    const PopupSide& spell    = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Spell)];
+    const PopupSide& recovery = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)];
+    w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}, {x, kChangeEvent, "40"}, {height, kChangeEvent, "50"}});
+    CHECK(spell == PopupSide::Right && w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
     w.settings.combatPopups = true;
-    CHECK(w.Pass({{side, kClickEvent, ""}}).popup);
-    w.Pass({{side + "-o-2", kClickEvent, ""}});
-    CHECK(w.settings.combatPopupSide == PopupSide::Above);
+    CHECK(w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}}).changed);
+    CHECK(spell == PopupSide::Middle && w.settings.combatPopupSides[static_cast<size_t>(PopupType::Dealt)] == PopupSide::Right);
+    CHECK(w.Pass({{KindChip(PopupType::Spell), kDropEvent, KindChip(PopupType::Recovery)}}).changed);
+    CHECK(recovery == PopupSide::Middle);
+    CHECK(!w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Recovery)}}).changed);
     CHECK(w.Pass({{x, kChangeEvent, "40"}}).changed);
     CHECK(w.Pass({{y, kChangeEvent, "-25"}}).changed);
-    CHECK(w.settings.combatPopupX == 40 && w.settings.combatPopupY == -25);
+    CHECK(w.Pass({{height, kChangeEvent, "50"}}).changed);
+    CHECK(w.settings.combatPopupX == 40 && w.settings.combatPopupY == -25 && w.settings.combatPopupHeight == 50);
 }
 
-TEST(with_custom_placement_off_the_combat_popups_side_and_offsets_take_no_change)
+TEST(with_custom_placement_off_the_combat_popups_columns_start_height_and_offsets_take_no_change)
 {
     Window w;
     w.state.page = Page::Entities;
-    const std::string card = "entities-combat-popups", side = card + "-combat-popup-side", x = card + "-combat-popup-x";
-    w.Pass({{card + "-combat-popup-placement", kClickEvent, ""}});
+    w.Pass({{kPopupCard + "-combat-popup-placement", kClickEvent, ""}});
     CHECK(!w.settings.combatPopupPlacement);
-    w.Pass({{side, kClickEvent, ""}});
-    w.Pass({{side + "-o-2", kClickEvent, ""}, {x, kChangeEvent, "40"}});
-    CHECK(w.settings.combatPopupSide == PopupSide::Right && w.settings.combatPopupX == 0);
+    w.Pass({{ColumnEnd(PopupSide::Right), kDropEvent, KindChip(PopupType::Recovery)}, {kPopupCard + "-combat-popup-x", kChangeEvent, "40"},
+        {kPopupCard + "-combat-popup-height", kChangeEvent, "50"}});
+    CHECK(w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)] == PopupSide::Left);
+    CHECK(w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
 }
 
 TEST(status_popups_switch_with_the_card_on_and_their_colors_are_picked_only_while_they_pop)

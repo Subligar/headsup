@@ -52,6 +52,8 @@ namespace headsup
         void SetNow(double now) { m_Now = now; }
         // At Present: whether popups started together spread over lines (Show Right Away), or all keep line 0.
         void SetSpread(bool spread) { m_Spread = spread; }
+        // At Present: the column each kind of popup goes in, PopupSidesOf's; popups in one column of a target spread apart.
+        void SetSides(const PopupSides& sides) { m_Sides = sides; }
         // At Present: the server ids of you, your party and your alliance, and whether statuses pop (Status Popups is on
         // and the game's Damage Display shows popups).
         void SetParty(std::span<const uint32_t> ids);
@@ -62,7 +64,7 @@ namespace headsup
         uint8_t Decide(const uint32_t* actor, const uint32_t* target, uint32_t message, uint32_t value, uint8_t answer,
             uint8_t& kind) const;
         // The game decided to pop one for event: the next start is its, with the event's type, and the first line no
-        // popup started on its target in the last kPopupSpreadSeconds holds.
+        // popup started on its target and side in the last kPopupSpreadSeconds holds.
         void Decided(PopupEvent event);
         void Started(uintptr_t task);
         void Built(uintptr_t particle, uintptr_t task);
@@ -83,6 +85,7 @@ namespace headsup
         uint32_t m_You = 0, m_Pet = 0;
         double m_Now  = 0.0;
         bool m_Spread = true;
+        PopupSides m_Sides{};
         std::array<uint32_t, kPartyMembers> m_Party{};
         bool m_Statuses = false;
     };
@@ -253,6 +256,9 @@ namespace headsup
         bool placement = true;
     };
     PopupSwitches PopupSwitchesOf(const Settings& settings);
+    // The column each kind of popup goes in: as the settings pick, or with Custom Placement off all in one, as all go
+    // where the game puts them.
+    PopupSides PopupSidesOf(const Settings& settings);
 
     // A number as the game wrote it, an amount of MP or TP and a drain labeled ("20 MP", "Drain 55"); for the Miss
     // glyph, what its message says happened (Evade, Parry, Shadow, Resist, No Effect, Fail and the like), or Miss.
@@ -269,30 +275,31 @@ namespace headsup
         float lineHeight = 0.0f, depth = 0.0f, across = 0.5f;
     };
 
-    // A target's body on screen, in the scene image's pixels: the rows of the top of what is drawn over its head
-    // (HeadsUp's nameplate, or the game's name where HeadsUp draws none), of the bottom of the game's name, and of its
-    // feet where the camera gives them.
+    // A target's body on screen, in the scene image's pixels: the rows of the bottom of the game's name over its head
+    // and of its feet where the camera gives them.
     struct PopupBody
     {
-        float top = 0.0f, nameBottom = 0.0f;
+        float nameBottom = 0.0f;
         std::optional<float> feet;
     };
     // A body beside which a popup goes is taken to reach this share of its height to either side of its middle.
     constexpr float kPopupBodyReach = 0.5f;
-    // Where the frame's popups go: their side, a nudge in the scene image's pixels, and each target's body by entity
-    // index, where known.
+    // Where the frame's popups go: the column of each kind, how far up its target's body from the feet (0) to the top
+    // of its head (1) they start, a nudge in the scene image's pixels, and each target's body by entity index,
+    // where known.
     struct PopupPlacing
     {
-        PopupSide side = PopupSide::Right;
+        PopupSides sides{};
+        float height = 0.0f;
         ScreenPoint nudge;
         std::function<std::optional<PopupBody>(uint32_t target)> bodyOf;
     };
     // Two popups of a frame with the same text whose centers are within half a box height are one, the later, which the
     // game draws on top. A line is as tall as its box at 100 percent: the box already shrinks with distance. A popup
-    // with a type takes its pick's color, by PopupType, at the game's alpha. To the Right or Left its words start or end
-    // past its target's body (one line past the game's place when the body's height is not known); Above they sit over
-    // what is drawn over the target's head; on the Target they stay at the game's place. Its line moves it that many
-    // lines down, or up above its target, and the nudge moves it on.
+    // with a type takes its pick's color, by PopupType, at the game's alpha. It goes in its kind's column, at the start
+    // height: Left or Right its words end or start past its target's body, in the Middle they are centered on the
+    // game's place. With the body's height not known it keeps the game's height, one line past the game's place Left
+    // or Right. Its line moves it that many lines down, and the nudge moves it on.
     std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
         const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on = {});
 

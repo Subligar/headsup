@@ -201,15 +201,6 @@ namespace headsup
         return box;
     }
 
-    std::optional<float> PlateTop(const PlateLayout& layout, bool timers, std::optional<float> cursorTop)
-    {
-        std::optional<float> top = cursorTop;
-        const auto add           = [&](float y) { top = top ? std::min(*top, y) : y; };
-        if (!layout.lines.empty()) add(BoxOf(layout).top);
-        if (timers) add(layout.timersY);
-        return top;
-    }
-
     RunShape ShapeOfRun(const ComposedLine& line, size_t item, float scale)
     {
         const auto isText    = [](const PlateItem& other) { return other.kind == ItemKind::Text; };

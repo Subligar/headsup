@@ -88,18 +88,9 @@
             {"key": "combat-popup-labels", "name": "Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."},
             {"key": "combat-popup-skillchain-names", "name": "Skillchain Names", "tip": "Puts a skillchain's name before its damage: Fusion 412. Turn this off to see the game's plain number. Default: On."},
             {"key": "combat-popup-right-away", "name": "Show Right Away", "tip": "Pops each number as soon as its result arrives, before the spell or swing lands, and spreads popups that start together so each reads. Turn this off to keep the game's timing. Default: On."},
-            {"key": "combat-popup-placement", "name": "Custom Placement", "tip": "Puts the popups on the side you pick below, moved by the offsets. Turn this off to leave them where the game puts them. Default: On."},
-            {
-              "key": "combat-popup-side",
-              "name": "Side",
-              "tip": "Where the popups go against what they happened to, clear of its body however big it is. Every popup goes there, yours and everyone else's. Default: Right.",
-              "options": [
-                {"name": "Right", "tip": "Puts the popups to the right of what they happened to."},
-                {"name": "Left", "tip": "Puts the popups to the left of what they happened to."},
-                {"name": "Above", "tip": "Puts the popups above the name of what they happened to."},
-                {"name": "On the Target", "tip": "Leaves the popups where the game puts them, over what they happened to."}
-              ]
-            },
+            {"key": "combat-popup-placement", "name": "Custom Placement", "tip": "Puts each kind of popup in its column below, left of what it happened to, centered on it or right of it, at your Start Height and moved by the offsets. Drag a kind to another column to move it there. Turn this off to leave them all where the game puts them. Default: On."},
+            {"key": "combat-popup-columns"},
+            {"key": "combat-popup-height", "name": "Start Height", "tip": "How high up what they happened to the popups start: 0% at its feet, 100% at the top of its head, so they reach its head on a Tarutaru or a Behemoth alike. Default: 90%."},
             {"key": "combat-popup-x", "name": "Horizontal Offset", "tip": "Moves the popups right by this many pixels, or left by a number below 0. Default: 0 px."},
             {"key": "combat-popup-y", "name": "Vertical Offset", "tip": "Moves the popups up by this many pixels, or down by a number below 0. Default: 0 px."},
             {
@@ -1075,6 +1066,29 @@
         {"name": "Show Outline", "tip": "Draws an outline around the entity's model."},
         {"name": "When Targeted", "tip": "Draws an outline around the entity's model, but only when the entity is your current target."},
         {"name": "Inherit", "tip": "Uses the same outline setting as determined by the mob's aggression.", "tipOnClaimRows": "Uses the same outline setting as when the mob is unclaimed."}
+      ]
+    },
+    {
+      "key": "popup-columns",
+      "options": [
+        {"name": "Left"},
+        {"name": "Middle"},
+        {"name": "Right"}
+      ]
+    },
+    {
+      "key": "popup-kinds",
+      "options": [
+        {"name": "Damage You Deal", "tip": "The damage you and your pet deal, and the damage other players deal to mobs."},
+        {"name": "Damage You Take", "tip": "The damage you and your pet take, and the damage mobs deal to other players."},
+        {"name": "Recovery", "tip": "The HP, MP and TP anyone recovers."},
+        {"name": "Miss", "tip": "A miss, evade, parry, resist and the like."},
+        {"name": "Critical Hits", "tip": "Critical hits, yours and everyone else's."},
+        {"name": "Magic Bursts", "tip": "Magic burst damage."},
+        {"name": "Skillchains", "tip": "A skillchain's name and number."},
+        {"name": "Spells", "tip": "The damage a spell does."},
+        {"name": "Buffs", "tip": "A buff's name, while Status Popups is on."},
+        {"name": "Debuffs", "tip": "A debuff's name, while Status Popups is on."}
       ]
     },
     {
