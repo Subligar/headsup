@@ -942,7 +942,7 @@ public:
 #endif
         StartHooks();
         m_ModelHook.NewFrame();
-        m_CombatTextHook.NewFrame();
+        m_CombatTextHook.NewFrame(Now());
         m_PopupsDrawn = false;
         m_CombatTextHook.Take(m_Settings.enabled && m_Settings.combatPopups && !m_CombatPopups.Failed());
         m_CombatTextHook.SetYou(m_SelfIndex, m_AshitaCore->GetMemoryManager()->GetEntity()->GetPetTargetIndex(m_SelfIndex));

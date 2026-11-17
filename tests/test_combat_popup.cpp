@@ -493,6 +493,46 @@ TEST(a_sample_stands_over_you_done_by_you_or_by_another)
     CHECK(SampleEvent(theirs, kYou, kMob) == (PopupEvent{1, kMob, kYou, kDamageKind}));
 }
 
+namespace
+{
+    // The line a popup the game starts on target at now is moved down by, after the ones started before it.
+    uint8_t LineOf(PopupTies& ties, uint32_t target, double now, uintptr_t task)
+    {
+        ties.SetNow(now);
+        ties.Decided(PopupEvent{1, kMob, target, kDamageKind});
+        ties.Started(task);
+        ties.Built(task + 1, task);
+        return ties.Of(task + 1)->line;
+    }
+}
+
+TEST(popups_started_together_on_one_target_each_take_the_next_free_line)
+{
+    PopupTies ties;
+    CHECK_EQ(LineOf(ties, kYou, 10.0, 0x1000), 0);
+    CHECK_EQ(LineOf(ties, kYou, 10.0, 0x2000), 1);
+    CHECK_EQ(LineOf(ties, kYou, 10.2, 0x3000), 2);
+    CHECK_EQ(LineOf(ties, kMob, 10.2, 0x4000), 0);
+}
+
+TEST(a_popups_line_is_free_again_once_the_popup_on_it_is_gone)
+{
+    PopupTies ties;
+    CHECK_EQ(LineOf(ties, kYou, 10.0, 0x1000), 0);
+    CHECK_EQ(LineOf(ties, kYou, 10.5, 0x2000), 1);
+    CHECK_EQ(LineOf(ties, kYou, 10.0 + kPopupSpreadSeconds, 0x3000), 0);
+    CHECK_EQ(LineOf(ties, kYou, 10.5 + kPopupSpreadSeconds, 0x4000), 1);
+}
+
+TEST(a_popup_on_a_later_line_is_drawn_that_many_lines_lower)
+{
+    PopupEvent event{1, kMob, kYou, kDamageKind, PopupType::Taken};
+    event.line = 2;
+    const ShownCombatPopup shown = ShownCombatPopups({Popup("64", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 50, kGamePicks)[0];
+    CHECK(Near(shown.center.x, 127.0f));
+    CHECK(Near(shown.center.y, 240.5f + 2 * 40.5f));
+}
+
 TEST(an_early_call_says_no_to_the_chat_line_and_asks_the_game_about_the_popup)
 {
     EarlyPopups early;

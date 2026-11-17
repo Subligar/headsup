@@ -887,8 +887,9 @@ namespace headsup
 
     void CombatTextHook::Take(bool take) { g_TakeCombatText = take && Running(); }
 
-    void CombatTextHook::NewFrame()
+    void CombatTextHook::NewFrame(double now)
     {
+        g_PopupTies.SetNow(now);
         g_CombatPopups.NewFrame();
         g_CombatTarget       = nullptr;
         g_CombatDepth        = nullptr;

@@ -150,8 +150,9 @@ namespace headsup
         bool Running() const { return m_Call.at != nullptr; }
         // Whether popups are taken from now on: never while the gate is not in.
         void Take(bool take);
-        // At Present: the last frame's popups and their image are forgotten.
-        void NewFrame();
+        // At Present: the last frame's popups and their image are forgotten, and the popups the game starts next count
+        // as started now.
+        void NewFrame(double now);
         // At Present, for the popups the game starts next: your entity index and your pet's (0 for none).
         static void SetYou(uint32_t you, uint32_t pet);
         // Whether StartPopup can start one: the ties are in and the game's popup effects were found.

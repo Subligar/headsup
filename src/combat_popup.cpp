@@ -107,9 +107,21 @@ namespace headsup
     // A task or particle the game makes again at an address it freed is a new one.
     void PopupTies::Started(uintptr_t task)
     {
-        if (m_Pending) m_Tasks.Put(task, *m_Pending);
-        else m_Tasks.Forget(task);
-        m_Pending.reset();
+        if (!m_Pending)
+        {
+            m_Tasks.Forget(task);
+            return;
+        }
+        PopupEvent event = *std::exchange(m_Pending, std::nullopt);
+        std::array<bool, kKeptTies + 1> held{}; // the kept ties hold at most kKeptTies lines
+        for (size_t i = 0; i < kKeptTies; ++i)
+        {
+            const PopupEvent& e = m_Tasks.events[i];
+            if (m_Tasks.keys[i] != 0 && e.target == event.target && m_Now - e.started < kPopupSpreadSeconds) held[e.line] = true;
+        }
+        event.started = m_Now;
+        event.line    = static_cast<uint8_t>(std::find(held.begin(), held.end(), false) - held.begin());
+        m_Tasks.Put(task, event);
     }
 
     void PopupTies::Built(uintptr_t particle, uintptr_t task)
@@ -296,10 +308,11 @@ namespace headsup
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            shown.push_back(ShownCombatPopup{CombatPopupWords(p.text, p.event, on),
-                on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate),
-                alpha, ScreenPoint{p.box.CenterX(), p.box.CenterY()}, p.box.Height() * static_cast<float>(sizePercent) / kPercent,
-                p.depth});
+            const float lineHeight = p.box.Height() * static_cast<float>(sizePercent) / kPercent;
+            const float below      = p.event ? static_cast<float>(p.event->line) * lineHeight : 0.0f;
+            const uint32_t color   = on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate);
+            shown.push_back(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
+                ScreenPoint{p.box.CenterX(), p.box.CenterY() + below}, lineHeight, p.depth});
         }
         return shown;
     }

@@ -23,8 +23,15 @@ namespace headsup
         uint32_t message = 0, actor = 0, target = 0;
         uint8_t kind = 0; // the game's: 1 damage, 2 recovery, 3 miss
         std::optional<PopupType> type = std::nullopt; // PopupTies works it out; none for plain damage between others
+        // When the game started it, and how many lines under the game's place it is drawn, so popups started together
+        // on one target each read.
+        double started = 0.0;
+        uint8_t line   = 0;
         bool operator==(const PopupEvent&) const = default;
     };
+
+    // How long a popup keeps its line: the game's lifetime of one, 22 to 23 frames at about 30 fps, and a little more.
+    constexpr double kPopupSpreadSeconds = 0.8;
 
     // Ties each popup particle to its message, from the game's three calls as it starts one: its decision to pop, the
     // effect's task it starts, and the particles it builds from that task. It keeps the last kKeptTies of each, in
@@ -39,7 +46,10 @@ namespace headsup
             m_You = you;
             m_Pet = pet;
         }
-        // The game decided to pop one for event: the next start is its, with the event's type.
+        // At Present: the time the popups the game starts next count as started at.
+        void SetNow(double now) { m_Now = now; }
+        // The game decided to pop one for event: the next start is its, with the event's type, and the first line no
+        // popup started on its target in the last kPopupSpreadSeconds holds.
         void Decided(PopupEvent event);
         void Started(uintptr_t task);
         void Built(uintptr_t particle, uintptr_t task);
@@ -58,6 +68,7 @@ namespace headsup
         std::optional<PopupEvent> m_Pending, m_Last;
         Ties m_Tasks, m_Particles;
         uint32_t m_You = 0, m_Pet = 0;
+        double m_Now = 0.0;
     };
 
     // The game's popup decision's answer that means "do not": anything but 0.
