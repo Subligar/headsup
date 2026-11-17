@@ -1880,7 +1880,7 @@ namespace headsup
 
         void CombatPopupColorRow(Form& form, const std::string& label, Settings& s, PopupType type, const char* tip)
         {
-            form.Fade(!s.combatPopups);
+            form.Fade(!s.combatPopups || !s.combatPopupCustomColors);
             form.ColorPickRow(label.c_str(), s.combatPopupColors[static_cast<size_t>(type)], CombatPopupSources(type), tip);
         }
 
@@ -2178,6 +2178,10 @@ namespace headsup
             case SettingPiece::CombatPopupSize:
                 form.Fade(!s.combatPopups);
                 form.SliderPercent(label.c_str(), s.combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, tip);
+                break;
+            case SettingPiece::CombatPopupCustomColors:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupCustomColors, tip);
                 break;
             case SettingPiece::CombatPopupDealtColor: CombatPopupColorRow(form, label, s, PopupType::Dealt, tip); break;
             case SettingPiece::CombatPopupTakenColor: CombatPopupColorRow(form, label, s, PopupType::Taken, tip); break;

@@ -2176,3 +2176,16 @@ TEST(a_combat_popup_types_color_is_picked_only_while_the_card_is_on)
     CHECK(pick.source == ColorSource::Custom);
     CHECK(w.settings.combatPopupColors[static_cast<size_t>(PopupType::Critical)].source == ColorSource::Game);
 }
+
+TEST(with_custom_colors_off_the_combat_popup_color_picks_take_no_change)
+{
+    Window w;
+    w.state.page = Page::Entities;
+    const std::string card = "entities-combat-popups", miss = card + "-combat-popup-miss-color";
+    const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Miss)];
+    w.Pass({{card + "-combat-popup-custom-colors", kClickEvent, ""}});
+    CHECK(!w.settings.combatPopupCustomColors);
+    w.Pass({{miss, kClickEvent, ""}});
+    w.Pass({{miss + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Game);
+}

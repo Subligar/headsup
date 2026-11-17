@@ -200,7 +200,8 @@ namespace headsup
         }
     }
 
-    PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords, settings.combatPopupLabels}; }
+    PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords, settings.combatPopupLabels,
+            settings.combatPopupCustomColors}; }
 
     std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
@@ -241,7 +242,8 @@ namespace headsup
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            shown.push_back(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), PickedColor(p, colors),
+            shown.push_back(ShownCombatPopup{CombatPopupWords(p.text, p.event, on),
+                on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate),
                 alpha, ScreenPoint{p.box.CenterX(), p.box.CenterY()}, p.box.Height() * static_cast<float>(sizePercent) / kPercent,
                 p.depth});
         }

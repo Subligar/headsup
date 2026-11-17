@@ -244,6 +244,7 @@ namespace headsup
         bool combatPopups = true; // HeadsUp draws the game's damage, recovery and Miss popups in its own text
         bool combatPopupWords = true; // a miss says what happened: Evade, Parry and the like
         bool combatPopupLabels = true; // MP, TP and drained amounts say what they are
+        bool combatPopupCustomColors = true; // each kind takes its pick's color
         std::string combatPopupFont; // empty for the nameplates' default font
         int combatPopupSize         = kDefaultCombatPopupSize;
         // By PopupType. Game is the game's own color, which tells party, alliance and others apart.

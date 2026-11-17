@@ -387,3 +387,14 @@ TEST(a_popup_with_no_type_keeps_the_games_color_whatever_is_picked)
     CHECK_EQ(shown(std::nullopt), 0xFF808080u);
     CHECK_EQ(shown(PopupEvent{1, kYou, kMob, kDamageKind, PopupType::Dealt}), 0xFF00FF00u);
 }
+
+TEST(with_custom_colors_off_every_popup_keeps_the_games_color)
+{
+    PopupSwitches off;
+    off.colors = false;
+    const PopupEvent critical{67, kYou, kMob, kDamageKind, PopupType::Critical};
+    std::array<ColorPick, kPopupTypeCount> picks = Picks(ColorPick{ColorSource::Custom, ColorFromRgb(0xFF0000)});
+    const CombatPopup popup = Popup("210", 0, 0, 54, 81, 0x40404040, 0.5f, critical);
+    CHECK_EQ(ShownCombatPopups({popup}, 100, picks, off)[0].color, 0xFF808080u);
+    CHECK_EQ(ShownCombatPopups({popup}, 100, picks)[0].color, 0xFFFF0000u);
+}
