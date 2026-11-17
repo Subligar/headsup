@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -51,6 +52,15 @@ namespace headsup
         void SetNow(double now) { m_Now = now; }
         // At Present: whether popups started together spread over lines (Show Right Away), or all keep line 0.
         void SetSpread(bool spread) { m_Spread = spread; }
+        // At Present: the server ids of you, your party and your alliance, and whether statuses pop (Status Popups is on
+        // and the game's Damage Display shows popups).
+        void SetParty(std::span<const uint32_t> ids);
+        void SetStatuses(bool pop) { m_Statuses = pop; }
+        // HeadsUp's answer to the game's popup decision for message with value, actor and target each an index then an
+        // id, after the game answered answer with kind: the game's, or 0 ("pop") with a status's kind where the game
+        // would pop nothing (kind 0) and you, your pet or your party did it or took it.
+        uint8_t Decide(const uint32_t* actor, const uint32_t* target, uint32_t message, uint32_t value, uint8_t answer,
+            uint8_t& kind) const;
         // The game decided to pop one for event: the next start is its, with the event's type, and the first line no
         // popup started on its target in the last kPopupSpreadSeconds holds.
         void Decided(PopupEvent event);
@@ -73,6 +83,8 @@ namespace headsup
         uint32_t m_You = 0, m_Pet = 0;
         double m_Now  = 0.0;
         bool m_Spread = true;
+        std::array<uint32_t, kPartyMembers> m_Party{};
+        bool m_Statuses = false;
     };
 
     // The game's popup decision's answer that means "do not": anything but 0.
@@ -184,6 +196,11 @@ namespace headsup
         std::optional<PopupEvent> m_Event;
         bool m_Open = false, m_Added = false;
     };
+
+    // The kind of popup HeadsUp asks the game for a message that puts a status (value) on its target: 1, damage's, for a
+    // debuff, 2, recovery's, for a buff; 0 for any other message, or a status with no name.
+    uint8_t StatusPopupKind(uint32_t message, uint32_t value);
+    bool IsStatusMessage(uint32_t message);
 
     // The game draws its Miss picture as this one glyph of its damage figures; HeadsUp writes the word.
     constexpr char kMissGlyph       = ':';

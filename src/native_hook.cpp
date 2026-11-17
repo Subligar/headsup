@@ -448,11 +448,12 @@ namespace headsup
             uint8_t* kind)
         {
             if (const std::optional<uint8_t> early = g_EarlyPopups.Answer(popup != 0)) return *early;
-            const uint8_t answer = reinterpret_cast<PopupDecisionFn>(g_PopupDecision)(actor, target, message, popup, kind);
-            if (popup == 0) return answer;
+            const uint8_t game = reinterpret_cast<PopupDecisionFn>(g_PopupDecision)(actor, target, message, popup, kind);
+            if (popup == 0) return game;
+            const uint8_t answer = g_PopupTies.Decide(actor, target, message, actor[kPopupDecisionValue], game, *kind);
             if (answer == 0) g_PopupTies.Decided(PopupEvent{message, actor[0], target[0], *kind});
 #ifdef HEADSUP_DEV
-            LogPopupDecision(message, actor, target, answer, *kind);
+            LogPopupDecision(message, actor[kPopupDecisionValue], actor, target, game, answer, *kind);
 #endif
             return answer;
         }
@@ -903,6 +904,11 @@ namespace headsup
         g_EarlyPopups.SetOn(on);
         g_PopupTies.SetSpread(on);
     }
+    void CombatTextHook::SetStatuses(bool pop, std::span<const uint32_t> party)
+    {
+        g_PopupTies.SetStatuses(pop);
+        g_PopupTies.SetParty(party);
+    }
     bool CombatTextHook::CanStartPopups() const { return Running() && m_Ties[0].at != nullptr && g_PopupEffectStart != 0; }
 
     std::string CombatTextHook::StartPopup(const PopupEvent& event, uint32_t value, uint32_t colorActor, uint32_t colorTarget,
@@ -1210,6 +1216,8 @@ namespace headsup
         m_Get = reinterpret_cast<int32_t(__cdecl*)(int32_t)>(base + found.entry);
         return "";
     }
+
+    bool WindowTypeReader::DamagePopupsShown() const { return m_Get == nullptr || m_Get(kDamageDisplayConfig) != kDamageInLogOnly; }
 
     std::optional<int> WindowTypeReader::Read() const
     {

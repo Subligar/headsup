@@ -57,6 +57,7 @@ namespace headsup
             {"combatPopupSkillchainNames", &Settings::combatPopupSkillchainNames},
             {"combatPopupRightAway", &Settings::combatPopupRightAway},
             {"combatPopupPlacement", &Settings::combatPopupPlacement},
+            {"combatPopupStatuses", &Settings::combatPopupStatuses},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
             {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"helpBarShrink", &Settings::helpBarShrink},
             {"widgetBackground", &Settings::widgetBackground}};
@@ -177,7 +178,7 @@ namespace headsup
         // By PopupType.
         constexpr const char* kCombatPopupColorKeys[kPopupTypeCount] = {"combatPopupDealtColor", "combatPopupTakenColor",
             "combatPopupRecoveryColor", "combatPopupMissColor", "combatPopupCriticalColor", "combatPopupBurstColor",
-            "combatPopupSkillchainColor", "combatPopupSpellColor"};
+            "combatPopupSkillchainColor", "combatPopupSpellColor", "combatPopupBuffColor", "combatPopupDebuffColor"};
 
         constexpr const char* kBadgeFontKey = "badgeFontName";
         constexpr const char* kRankDisplayKey = "rankDisplay";

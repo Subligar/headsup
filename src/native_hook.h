@@ -157,6 +157,8 @@ namespace headsup
         static void SetYou(uint32_t you, uint32_t pet);
         // At Present: whether popups start as soon as their action arrives and spread when started together.
         static void SetRightAway(bool on);
+        // At Present: whether buffs and debuffs pop, and the server ids of you, your party and your alliance.
+        static void SetStatuses(bool pop, std::span<const uint32_t> party);
         // Whether StartPopup can start one: the ties are in and the game's popup effects were found.
         bool CanStartPopups() const;
         // On the game's thread: starts the game's popup effect of event's kind over the character whose actor pointer
@@ -335,6 +337,8 @@ namespace headsup
         std::string Find();
         // 0 to 7; nothing before Find succeeded or when the game answers no type.
         std::optional<int> Read() const;
+        // Whether the game's Damage Display shows popups; taken as shown before Find succeeded.
+        bool DamagePopupsShown() const;
 
     private:
         int32_t(__cdecl* m_Get)(int32_t) = nullptr;

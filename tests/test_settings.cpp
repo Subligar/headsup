@@ -3440,3 +3440,16 @@ TEST(combat_popups_go_right_of_their_target_unnudged_until_placed_and_their_plac
     store.values["combatPopupY"] = "-999";
     CHECK(LoadSettings(store).combatPopupX == 200 && LoadSettings(store).combatPopupY == -200);
 }
+
+TEST(status_popups_are_on_until_switched_off_and_the_switch_saves)
+{
+    MapStore empty;
+    CHECK(LoadSettings(empty).combatPopupStatuses);
+    MapStore store;
+    store.values["combatPopupStatuses"] = "false";
+    const Settings s = LoadSettings(store);
+    CHECK(!s.combatPopupStatuses);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK(!LoadSettings(saved).combatPopupStatuses);
+}

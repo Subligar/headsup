@@ -489,6 +489,8 @@ namespace headsup
     };
     ConfigGetSite LocateConfigGet(const ImageSection& text);
     constexpr int32_t kWindowTypeConfig = 18;
+    // Key 19 is Config > Damage Display: 0 in the log only, 1 popups and the log, 2 popups only.
+    constexpr int32_t kDamageDisplayConfig = 19, kDamageInLogOnly = 0;
 
     // Where the client keeps the search server's address (4 bytes as they go on the wire) and its uint16 port, filled
     // in at login from the lobby: the two its search client's setup clears, side by side.
@@ -553,6 +555,9 @@ namespace headsup
         uint32_t decisionCall = 0, decision = 0, colorCall = 0, color = 0, colorClass = 0, particleCall = 0, particleBuild = 0;
     };
     constexpr uint32_t kPopupGeneratorTask = 0x64, kPopupTaskValue = 0xA8, kPopupTaskColor = 0xA4;
+    // The popup's start keeps the message's value in its frame four words past the actor's index and id it passes the
+    // decision (0x9E1A1 to 0x9E1CA).
+    constexpr size_t kPopupDecisionValue = 4;
     PopupTieSites LocatePopupTies(const ImageSection& text);
 
     // The game's three popup effects, by the kind its decision writes less one: damage, recovery and Miss. Each

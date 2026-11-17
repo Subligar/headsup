@@ -3,11 +3,14 @@
 #include "argb.h"
 #include "bar_content.h"
 #include "bar_widgets.h"
+#include "status_icons.h"
+#include "bar_statuses.h"
 #include "markup.h"
 #include "plate_image.h"
 #include "screen_vertex.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cstring>
 #include <utility>
@@ -31,6 +34,16 @@ namespace headsup
         if (key == 0 || known == keys.end()) return std::nullopt;
         return events[static_cast<size_t>(known - keys.begin())];
     }
+
+    namespace
+    {
+        // By the server's msg.lua ids of the messages whose value is the status put on the target: gains, receives and
+        // is, from a spell, an ability, a weapon skill, an item or an additional effect.
+        constexpr uint32_t kStatusMessages[] = {127, 160, 164, 166, 186, 230, 236, 237, 242, 243, 266, 267, 268, 271, 277, 278,
+            319, 320, 374, 375};
+    }
+
+    bool IsStatusMessage(uint32_t message) { return std::ranges::find(kStatusMessages, message) != std::end(kStatusMessages); }
 
     namespace
     {
@@ -68,6 +81,7 @@ namespace headsup
         // spell's when the popup before it, from the same actor, was a spell's.
         std::optional<PopupType> TypeOf(const PopupEvent& e, bool byYou, bool onYou, bool afterSpell)
         {
+            if (IsStatusMessage(e.message)) return e.kind == kDamage ? PopupType::Debuff : PopupType::Buff;
             if (SkillchainOf(e.message)) return PopupType::Skillchain;
             switch (e.message)
             {
@@ -93,6 +107,33 @@ namespace headsup
             default: return std::nullopt;
             }
         }
+    }
+
+    uint8_t StatusPopupKind(uint32_t message, uint32_t value)
+    {
+        const auto status = static_cast<uint16_t>(value);
+        if (!IsStatusMessage(message) || status != value || *StatusName(status) == '\0') return 0;
+        return IsDebuff(status) ? kDamage : kRecovery;
+    }
+
+    void PopupTies::SetParty(std::span<const uint32_t> ids)
+    {
+        m_Party.fill(0);
+        std::copy_n(ids.begin(), std::min(ids.size(), m_Party.size()), m_Party.begin());
+    }
+
+    uint8_t PopupTies::Decide(const uint32_t* actor, const uint32_t* target, uint32_t message, uint32_t value, uint8_t answer,
+        uint8_t& kind) const
+    {
+        if (answer == 0 || kind != 0 || !m_Statuses) return answer;
+        // Each an index then a server id.
+        const auto ours = [&](const uint32_t* who) {
+            return who[0] == m_You || (m_Pet != 0 && who[0] == m_Pet) || std::ranges::find(m_Party, who[1]) != m_Party.end();
+        };
+        const uint8_t status = StatusPopupKind(message, value);
+        if (status == 0 || !(ours(actor) || ours(target))) return answer;
+        kind = status;
+        return 0;
     }
 
     void PopupTies::Decided(PopupEvent event)
@@ -141,7 +182,8 @@ namespace headsup
         // By the server's msg_basic.h ids, each with the client's kind for it (its byte table at 0x35CAE0).
         constexpr PopupSample kTestSamples[] = {{1, 128, kDamage, true}, {1, 64, kDamage, false}, {67, 210, kDamage, true},
             {2, 356, kDamage, true}, {252, 512, kDamage, true}, {kSkillchainDamage + 6, 412, kDamage, true},
-            {7, 34, kRecovery, false}, {25, 20, kRecovery, false}, {15, 0, kMiss, false}, {32, 0, kMiss, false}};
+            {7, 34, kRecovery, false}, {25, 20, kRecovery, false}, {15, 0, kMiss, false}, {32, 0, kMiss, false},
+            {230, 40, kRecovery, true}, {236, 4, kDamage, false}}; // Protect, and Paralysis
     }
 
     std::optional<PopupSample> PopupTestRun::Next(double now)
@@ -272,6 +314,15 @@ namespace headsup
         if (text == std::string_view(&kMissGlyph, 1)) return std::string(event && on.words ? MissWord(event->message) : kMissWord);
         if (const std::optional<Skillchain> skillchain = event && on.skillchainNames ? SkillchainOf(event->message) : std::nullopt)
             return std::string(skillchain->name) + " " + std::string(text);
+        if (event && IsStatusMessage(event->message))
+        {
+            uint32_t status = 0;
+            const auto [end, failed] = std::from_chars(text.data(), text.data() + text.size(), status);
+            const char* name         = failed == std::errc{} && end == text.data() + text.size() && status <= UINT16_MAX
+                                           ? StatusName(static_cast<uint16_t>(status))
+                                           : "";
+            if (*name != '\0') return name;
+        }
         const AmountLabel label = event && on.labels ? LabelOf(event->message) : AmountLabel{};
         return std::string(label.before) + std::string(text) + std::string(label.after);
     }

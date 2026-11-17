@@ -676,3 +676,74 @@ TEST(with_custom_placement_off_a_popup_stays_where_the_game_puts_it)
     CHECK(Near(shown.center.x, 127.0f) && Near(shown.center.y, 240.5f + 81.0f));
     CHECK_EQ(shown.across, 0.5f);
 }
+
+namespace
+{
+    // Statuses by Phoenix's ids (data/phoenix_statuses.tsv): Paralysis and Slow are debuffs, Protect a buff. Messages
+    // by the server's msg.lua: 230 gains, 236 is, 237 receives.
+    constexpr uint32_t kParalysis = 4, kSlow = 13, kProtect = 40, kNoStatus = 9999;
+    constexpr uint32_t kYourId = 65001, kPartyMemberId = 65002, kStrangerId = 65003, kMobId = 17000000;
+
+    // HeadsUp's answer and the kind it leaves to the game's decision for message with value from actor to target, each
+    // an index then an id, after the game answered answer with kind.
+    std::pair<uint8_t, uint8_t> Decision(const PopupTies& ties, std::array<uint32_t, 2> actor, std::array<uint32_t, 2> target,
+        uint32_t message, uint32_t value, uint8_t answer = kPopupNo, uint8_t kind = 0)
+    {
+        const uint8_t said = ties.Decide(actor.data(), target.data(), message, value, answer, kind);
+        return {said, kind};
+    }
+
+    PopupTies StatusTies()
+    {
+        PopupTies ties;
+        ties.SetYou(kYou, kYourPet);
+        const uint32_t party[] = {kYourId, kPartyMemberId};
+        ties.SetParty(party);
+        ties.SetStatuses(true);
+        return ties;
+    }
+}
+
+TEST(a_status_message_pops_a_debuff_as_damage_and_a_buff_as_recovery)
+{
+    CHECK_EQ(StatusPopupKind(236, kParalysis), kDamageKind);
+    CHECK_EQ(StatusPopupKind(237, kSlow), kDamageKind);
+    CHECK_EQ(StatusPopupKind(230, kProtect), kRecoveryKind);
+    CHECK_EQ(StatusPopupKind(236, kNoStatus), 0);
+    CHECK_EQ(StatusPopupKind(1, kParalysis), 0);
+}
+
+TEST(a_status_the_game_would_not_pop_pops_when_you_or_your_party_are_in_it)
+{
+    const PopupTies ties = StatusTies();
+    const std::pair<uint8_t, uint8_t> pop{0, kDamageKind};
+    CHECK(Decision(ties, {kPartyMember, kPartyMemberId}, {kMob, kMobId}, 236, kParalysis) == pop);
+    CHECK(Decision(ties, {kMob, kMobId}, {kYou, kYourId}, 236, kParalysis) == pop);
+    CHECK(Decision(ties, {kYourPet, 17000001}, {kMob, kMobId}, 236, kParalysis) == pop);
+    CHECK(Decision(ties, {kYou, kYourId}, {kYou, kYourId}, 230, kProtect) == (std::pair<uint8_t, uint8_t>{0, kRecoveryKind}));
+    const std::pair<uint8_t, uint8_t> no{kPopupNo, 0};
+    CHECK(Decision(ties, {0x500, kStrangerId}, {kMob, kMobId}, 236, kParalysis) == no);
+    CHECK(Decision(ties, {kPartyMember, kPartyMemberId}, {kMob, kMobId}, 236, kNoStatus) == no);
+}
+
+TEST(the_games_own_answer_stands_for_anything_but_a_status)
+{
+    const PopupTies ties = StatusTies();
+    CHECK(Decision(ties, {kYou, kYourId}, {kMob, kMobId}, 1, 128, 0, kDamageKind) == (std::pair<uint8_t, uint8_t>{0, kDamageKind}));
+    // Damage Display set to the log only: the game says no with the kind it would have popped.
+    CHECK(Decision(ties, {kYou, kYourId}, {kMob, kMobId}, 1, 128, kPopupNo, kDamageKind) ==
+          (std::pair<uint8_t, uint8_t>{kPopupNo, kDamageKind}));
+    PopupTies off = StatusTies();
+    off.SetStatuses(false);
+    CHECK(Decision(off, {kYou, kYourId}, {kMob, kMobId}, 236, kParalysis) == (std::pair<uint8_t, uint8_t>{kPopupNo, 0}));
+}
+
+TEST(a_status_popup_says_the_statuss_name_and_is_a_buff_or_a_debuff)
+{
+    CHECK_EQ(CombatPopupWords("4", PopupEvent{236, kMob, kYou}), std::string("Paralysis"));
+    CHECK_EQ(CombatPopupWords("40", PopupEvent{230, kYou, kYou}), std::string("Protect"));
+    CHECK_EQ(CombatPopupWords("9999", PopupEvent{236, kMob, kYou}), std::string("9999"));
+    CHECK_EQ(CombatPopupWords("40", PopupEvent{1, kYou, kMob}), std::string("40"));
+    CHECK(TypeOf(PopupEvent{236, kYou, kMob, kDamageKind}) == PopupType::Debuff);
+    CHECK(TypeOf(PopupEvent{230, kMob, kMob, kRecoveryKind}) == PopupType::Buff);
+}

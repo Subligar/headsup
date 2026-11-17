@@ -133,7 +133,6 @@ namespace
     constexpr const char* kPivotDats         = "\\DATs";
     constexpr uint64_t kMaxDatBytes          = 64u << 20; // 51.DAT is 4 MB, the largest of the game files read
     constexpr uint32_t kPartyIconMembers     = 5;  // the other members of your party, whose buffs the game keeps
-    constexpr uint32_t kPartyMembers         = 18; // you, your party and the two other alliance parties
     constexpr uint32_t kEngagedStatus        = 1;  // an entity's status while it fights
     // Every container the client keeps items of, the Recycle Bin after Wardrobe 8 included.
     constexpr auto kContainers               = static_cast<uint32_t>(Ashita::FFXI::Enums::Container::Max);
@@ -947,6 +946,7 @@ public:
         m_PopupsDrawn = false;
         m_CombatTextHook.Take(m_Settings.enabled && m_Settings.combatPopups && !m_CombatPopups.Failed());
         m_CombatTextHook.SetYou(m_SelfIndex, m_AshitaCore->GetMemoryManager()->GetEntity()->GetPetTargetIndex(m_SelfIndex));
+        m_CombatTextHook.SetStatuses(m_Settings.combatPopupStatuses && m_WindowTypeReader.DamagePopupsShown(), m_PartyIds);
         PopTestSamples(Now());
         if (const std::string failure = m_CombatPopups.TakeFailure(); !failure.empty())
             Print("combat popups are off until HeadsUp reloads, and the game's are back: " + failure + ".");
@@ -3190,7 +3190,7 @@ private:
     {
         m_PartyIds.clear();
         m_PartyJobs.clear();
-        for (uint32_t member = 0; member < kPartyMembers; ++member)
+        for (uint32_t member = 0; member < headsup::kPartyMembers; ++member)
         {
             if (party->GetMemberIsActive(member) == 0) continue;
             const uint32_t serverId = party->GetMemberServerId(member);
@@ -3488,6 +3488,7 @@ private:
         {
             const uintptr_t actor = entity->GetActorPointer(m_SelfIndex);
             if (actor == 0 || (entity->GetRenderFlags0(m_SelfIndex) & headsup::kDrawnRenderFlag) == 0) continue;
+            if (!m_Settings.combatPopupStatuses && headsup::IsStatusMessage(sample->message)) continue;
             const auto otherInput = std::find_if(m_Inputs.begin(), m_Inputs.end(),
                 [&](const headsup::ActorInput& input) { return input.index != m_SelfIndex; });
             const uint32_t other = otherInput != m_Inputs.end() ? otherInput->index : m_SelfIndex;

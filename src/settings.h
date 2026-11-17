@@ -151,8 +151,8 @@ namespace headsup
     constexpr int kMinCaseScale = 50, kDefaultCaseScale = 65, kMaxCaseScale = 200;         // percent
     constexpr int kMinCombatPopupSize = 25, kDefaultCombatPopupSize = 100, kMaxCombatPopupSize = 200; // percent of the game's own size
     // What a combat popup is, each with its own color pick, in the Combat Popups card's order.
-    enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Skillchain, Spell };
-    constexpr int kPopupTypeCount = 8;
+    enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Skillchain, Spell, Buff, Debuff };
+    constexpr int kPopupTypeCount = 10;
     std::vector<ColorSource> CombatPopupSources(PopupType type);
     // Where combat popups go: beside their target's body, over it, or on it, where the game puts them.
     enum class PopupSide : uint8_t { Right, Left, Above, Target };
@@ -252,6 +252,7 @@ namespace headsup
         bool combatPopupSkillchainNames = true; // a skillchain's number comes with its name
         bool combatPopupRightAway = true; // popups start as their result arrives, not at the hit
         bool combatPopupPlacement = true; // popups go where combatPopupSide and the nudges say
+        bool combatPopupStatuses = true; // and has the game pop each buff and debuff that lands, by name
         std::string combatPopupFont; // empty for the nameplates' default font
         int combatPopupSize         = kDefaultCombatPopupSize;
         PopupSide combatPopupSide   = PopupSide::Right;
@@ -261,7 +262,8 @@ namespace headsup
             {ColorSource::Game, ColorFromRgb(0xFF6B6B)}, {ColorSource::Game, ColorFromRgb(0x7CE38B)},
             {ColorSource::Game, ColorFromRgb(0xC8C8C8)}, {ColorSource::Game, ColorFromRgb(0xFFD24A)},
             {ColorSource::Game, ColorFromRgb(0xC58CFF)}, {ColorSource::Element, ColorFromRgb(0xFFFFFF)},
-            {ColorSource::Game, ColorFromRgb(0x8FD8FF)}}};
+            {ColorSource::Game, ColorFromRgb(0x8FD8FF)}, {ColorSource::Game, ColorFromRgb(0x8FD8FF)},
+            {ColorSource::Game, ColorFromRgb(0xFF9A5A)}}};
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
         Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};
         BlueLearned blueMagicLearned = BlueLearned::Star;
