@@ -472,7 +472,7 @@ namespace headsup
         {
             g_EarlyPopups.Show(EarlyMark(action, index));
 #ifdef HEADSUP_DEV
-            LogPopupShow(Address(action), index, g_EarlyPopups.Answer(true).has_value());
+            LogPopupShow(Address(action), index, g_EarlyPopups.Answer(true).has_value(), g_PopupShow);
 #endif
             reinterpret_cast<PopupShowFn>(g_PopupShow)(action, index, slot);
             g_EarlyPopups.Shown();
@@ -490,7 +490,7 @@ namespace headsup
                 uint16_t* mark = EarlyMark(parsed, index);
                 if (mark == nullptr) break;
 #ifdef HEADSUP_DEV
-                LogPopupEarly(Address(parsed), index);
+                LogPopupEarly(Address(parsed), index, g_PopupShow);
 #endif
                 if (!g_EarlyPopups.Begin(mark)) break;
                 reinterpret_cast<PopupShowFn>(g_PopupShow)(parsed, index, kFirstSlot);
