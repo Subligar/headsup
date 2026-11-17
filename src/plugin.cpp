@@ -1645,7 +1645,10 @@ private:
                 const headsup::NameFrame* frame = m_NameHook.Drawn(static_cast<uint16_t>(target));
                 if (frame == nullptr) return std::nullopt;
                 const headsup::DrawnName name = headsup::NameFromFrame(*frame, m_Names.TargetScaleX(), m_Names.TargetScaleY());
-                headsup::PopupBody body{name.box.minY * toY, name.box.maxY * toY, std::nullopt};
+                const auto& plates = m_Nameplates.LastShown();
+                const auto plate   = std::ranges::find(plates, static_cast<uint16_t>(target), &headsup::NameplateRenderer::Shown::index);
+                const float top    = plate != plates.end() && plate->top ? *plate->top : name.box.minY;
+                headsup::PopupBody body{top * toY, name.box.maxY * toY, std::nullopt};
                 const headsup::ActorInfo* info = m_Tracker.FindIndex(static_cast<uint16_t>(target));
                 float feet                     = 0.0f;
                 if (info != nullptr && m_Names.SteadyCamera() != nullptr && headsup::RowAtHeight(*m_Names.SteadyCamera(), info->feet, 0.0f, feet))

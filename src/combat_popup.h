@@ -218,11 +218,12 @@ namespace headsup
         float lineHeight = 0.0f, depth = 0.0f, across = 0.5f;
     };
 
-    // A target's body on screen, in the scene image's pixels: the rows of the top and bottom of the game's name over its
-    // head, and of its feet where the camera gives them.
+    // A target's body on screen, in the scene image's pixels: the rows of the top of what is drawn over its head
+    // (HeadsUp's nameplate, or the game's name where HeadsUp draws none), of the bottom of the game's name, and of its
+    // feet where the camera gives them.
     struct PopupBody
     {
-        float nameTop = 0.0f, nameBottom = 0.0f;
+        float top = 0.0f, nameBottom = 0.0f;
         std::optional<float> feet;
     };
     // A body beside which a popup goes is taken to reach this share of its height to either side of its middle.
@@ -239,8 +240,8 @@ namespace headsup
     // game draws on top. A line is as tall as its box at 100 percent: the box already shrinks with distance. A popup
     // with a type takes its pick's color, by PopupType, at the game's alpha. To the Right or Left its words start or end
     // past its target's body (one line past the game's place when the body's height is not known); Above they sit over
-    // the target's name; on the Target they stay at the game's place. Its line moves it that many lines down, or up
-    // above its target, and the nudge moves it on.
+    // what is drawn over the target's head; on the Target they stay at the game's place. Its line moves it that many
+    // lines down, or up above its target, and the nudge moves it on.
     std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
         const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on = {});
 

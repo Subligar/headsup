@@ -321,7 +321,7 @@ namespace headsup
                 shown.center.y += lines;
                 break;
             case PopupSide::Above:
-                if (body) shown.center.y = body->nameTop - shown.lineHeight / 2.0f;
+                if (body) shown.center.y = body->top - shown.lineHeight / 2.0f;
                 shown.center.y -= lines;
                 break;
             case PopupSide::Target: shown.center.y += lines; break;

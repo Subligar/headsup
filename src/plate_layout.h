@@ -4,6 +4,7 @@
 #include "plate_compose.h"
 #include "plate_settings.h"
 
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -63,6 +64,9 @@ namespace headsup
     PlateLayout LayoutPlate(const ScreenBox& anchor, std::span<const LineInput> lines, float cursorWidth,
         float cursorHeight, float cursorTip, int timerCount, float timerHeight, float cursorRaise = 0.0f);
     PlateBox BoxOf(const PlateLayout& layout);
+    // The top of all a plate draws: its lines and their ornaments, your timers when it draws them and the cursor at
+    // cursorTop when it draws one; none when it draws nothing.
+    std::optional<float> PlateTop(const PlateLayout& layout, bool timers, std::optional<float> cursorTop);
 
     // An icon run in its item's box: rows of kIconsPerRow from the bottom up, rowStep apart, the lowest bottomRowTop
     // under the box's top; a partial row sits against the box's right edge when right is set, else its left.

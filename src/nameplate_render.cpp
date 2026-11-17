@@ -666,6 +666,7 @@ namespace headsup
             shownLine.height = static_cast<int>(std::lround(m_Inputs[i].textHeight > 0.0f ? textShown(line) / f.toY : iconSize));
             shownLine.icons  = drawn;
         }
+        std::optional<float> cursorTop;
         if (showCursor)
         {
             // Over everything, as the game's own arrow is: at the name's depth, the target's own model, a
@@ -686,8 +687,10 @@ namespace headsup
                 top -= cursorBox.height * kPickedCursorRise;
             }
             addCursor(p.cursor);
+            cursorTop = top;
             m_CursorNames.push_back(CursorName{info.index, gameName.box});
         }
+        shown.top = PlateTop(layout, timersReady > 0, cursorTop);
         for (int i = 0; i < timersReady; ++i)
         {
             const PlateTexture& t = p.timers[i];
@@ -746,6 +749,7 @@ namespace headsup
                     (line->bottom - line->top) * f.toY, m_SolidU, m_SolidV, s.depth, s.color, s.rank, s.alpha);
             Shown& shown = m_Shown[s.shown];
             if (shown.nameHeight > 0) shown.nameY -= p.rise;
+            if (shown.top) *shown.top -= p.rise;
             for (ShownLine& line : shown.lines)
                 line.y -= p.rise;
         }
