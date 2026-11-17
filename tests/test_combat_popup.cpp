@@ -492,3 +492,53 @@ TEST(a_sample_stands_over_you_done_by_you_or_by_another)
     CHECK(SampleEvent(yours, kYou, kMob) == (PopupEvent{1, kYou, kYou, kDamageKind}));
     CHECK(SampleEvent(theirs, kYou, kMob) == (PopupEvent{1, kMob, kYou, kDamageKind}));
 }
+
+TEST(an_early_call_says_no_to_the_chat_line_and_asks_the_game_about_the_popup)
+{
+    EarlyPopups early;
+    uint16_t mark = 0xFFFF;
+    early.Begin(&mark);
+    CHECK_EQ(mark, 0);
+    CHECK(early.Answer(false) == kPopupNo);
+    CHECK(!early.Answer(true));
+    early.End();
+    CHECK(!early.Answer(false) && !early.Answer(true));
+}
+
+TEST(a_record_popped_early_skips_the_games_popup_once_and_keeps_its_line)
+{
+    EarlyPopups early;
+    uint16_t popped = 0, missed = 0;
+    early.Begin(&popped);
+    early.Started();
+    early.End();
+    early.Begin(&missed);
+    early.End();
+    early.Started(); // a popup the game starts later, outside an early call, marks nothing
+    CHECK_EQ(missed, 0);
+    early.Show(&popped);
+    CHECK(early.Answer(true) == kPopupNo);
+    CHECK(!early.Answer(false));
+    early.Shown();
+    CHECK(!early.Answer(true));
+    early.Show(&popped);
+    CHECK(!early.Answer(true));
+    early.Shown();
+    early.Show(&missed);
+    CHECK(!early.Answer(true));
+}
+
+TEST(a_record_parsed_before_headsup_came_pops_as_the_game_pops_it)
+{
+    EarlyPopups early;
+    for (uint16_t garbage : {uint16_t{0x0002}, uint16_t{0xFFFF}, uint16_t{0x5A58}})
+    {
+        uint16_t mark = garbage;
+        early.Show(&mark);
+        CHECK(!early.Answer(true));
+        CHECK_EQ(mark, garbage);
+        early.Shown();
+    }
+    early.Show(nullptr);
+    CHECK(!early.Answer(true));
+}

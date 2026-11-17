@@ -60,6 +60,48 @@ namespace headsup
         uint32_t m_You = 0, m_Pet = 0;
     };
 
+    // The game's popup decision's answer that means "do not": anything but 0.
+    constexpr uint8_t kPopupNo = 1;
+
+    // Popups started as soon as the game has parsed their action, not when its animation reaches the hit. HeadsUp calls
+    // the game's own start for each target record's message then, and the game's later call for that record skips its
+    // popup and prints only the chat line. A record's mark is two bytes of it the game never uses: kEarlyPopped once
+    // its popup started early, so a record parsed before HeadsUp loaded pops as it always did.
+    class EarlyPopups
+    {
+    public:
+        static constexpr uint16_t kEarlyPopped = 0x5A59;
+        // Around HeadsUp's early call for one record, whose mark is cleared.
+        void Begin(uint16_t* mark)
+        {
+            *mark  = 0;
+            m_Mark = mark;
+        }
+        void End() { m_Mark = nullptr; }
+        // The game started a popup's effect: inside an early call, its record is marked.
+        void Started()
+        {
+            if (m_Mark != nullptr) *m_Mark = kEarlyPopped;
+        }
+        // Around the game's own call for a record (its mark, or none): a popup it started early is skipped, once.
+        void Show(uint16_t* mark)
+        {
+            m_Skip = mark != nullptr && *mark == kEarlyPopped;
+            if (m_Skip) *mark = 0;
+        }
+        void Shown() { m_Skip = false; }
+        // What HeadsUp answers the game's decision for the popup or for the chat line, or none to ask the game.
+        std::optional<uint8_t> Answer(bool popup) const
+        {
+            if (popup ? m_Skip : m_Mark != nullptr) return kPopupNo;
+            return std::nullopt;
+        }
+
+    private:
+        uint16_t* m_Mark = nullptr;
+        bool m_Skip      = false;
+    };
+
     // One of the Test button's samples: a message (msg_basic's ids) with its value and the game's kind for it, done by
     // you, or by another to you.
     struct PopupSample

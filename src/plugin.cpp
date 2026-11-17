@@ -1703,6 +1703,9 @@ private:
         else if (!m_CombatTextHook.TieProblem().empty())
             Note("could not tie the game's combat popups to their messages, so every miss shows Miss and every popup "
                  "the game's color: " + m_CombatTextHook.TieProblem() + ".");
+        else if (!m_CombatTextHook.EarlyProblem().empty())
+            Note("could not start the game's combat popups as soon as their actions arrive, so they wait for each hit: " +
+                 m_CombatTextHook.EarlyProblem() + ".");
         if (const std::string failure = m_ModelHook.Start(); !failure.empty())
             Note("could not hook the game's model draws, so outlines guess whose each one is: " + failure + ".");
         if (const std::string failure = m_PointerFix.Start(); !failure.empty())
