@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstdio>
 #include <array>
 #include <cstring>
 #include <utility>
@@ -1733,6 +1734,46 @@ extern "C" void HeadsUpOnBuilt(uint32_t mcd)
 #ifdef HEADSUP_DEV
 namespace headsup
 {
+    std::string CombatTextHook::TestPopup(uint32_t message, uint32_t value, uint32_t you, uint32_t yourId, uintptr_t yourActor)
+    {
+        if (!Running() || m_Ties[0].at == nullptr) return "the game's combat popup starts are not hooked";
+        ImageSection text{};
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
+        const PopupEffectSites effects = LocatePopupEffects(text);
+        if (effects.problem != LocateProblem::None) return Describe(effects.problem);
+        const PopupTieSites ties = LocatePopupTies(text);
+        if (ties.problem != LocateProblem::None) return Describe(ties.problem);
+        // As the game decides for a message you did to yourself: its chat filters and Damage Display count.
+        constexpr uint32_t kPopupNotChat = 1;
+        const uint32_t who[] = {you, yourId};
+        uint8_t kind         = 0;
+        char said[128];
+        if (PopupDecision(who, who, message, kPopupNotChat, &kind) != 0 || kind == 0 || kind > kPopupEffectCount)
+        {
+            std::snprintf(said, sizeof(said), "the game would not pop message %u on you (kind %u)", message, kind);
+            return said;
+        }
+        const auto* handle    = reinterpret_cast<const uint8_t*>(effects.handles[kind - 1]);
+        const uint8_t* holder = Readable(handle, sizeof(void*)) ? ReadAt<const uint8_t*>(handle, 0) : nullptr;
+        if (holder == nullptr || !Readable(holder, sizeof(void*))) return "the game's popup effect is not loaded";
+        using StartFn = uint8_t*(__attribute__((thiscall))*)(void* effect, uintptr_t actor, uintptr_t target, uint32_t, uint32_t);
+        using ColorClassFn = uint32_t(__cdecl*)(uint32_t actor, uint32_t target, uint32_t message);
+        using ColorFn      = uint32_t(__cdecl*)(uint32_t colorClass);
+        uint8_t* task = reinterpret_cast<StartFn>(base + effects.start)(ReadAt<void*>(holder, 0), yourActor, yourActor, 0, 0);
+        if (task == nullptr) return "the game started no effect";
+        const uint32_t colorClass = reinterpret_cast<ColorClassFn>(base + ties.colorClass)(you, you, message);
+        const uint32_t color      = reinterpret_cast<ColorFn>(base + ties.color)(colorClass) & ~kAlphaMask;
+        std::memcpy(task + kPopupTaskValue, &value, sizeof(value));
+        std::memcpy(task + kPopupTaskColor, &color, sizeof(color));
+        g_PopupTies.Started(Address(task));
+        LogPopupStart(Address(task));
+        std::snprintf(said, sizeof(said), "started message %u with %u on you: kind %u, task %08X, color %06X", message, value,
+            kind, static_cast<unsigned>(Address(task)), color);
+        return said;
+    }
+
     std::string WindowHook::OwnersReport()
     {
         if (g_WindowList == 0) return "the game's list of open windows was not found\n";

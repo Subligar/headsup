@@ -60,6 +60,7 @@
 #include "namedump.h"
 #include "pointerwatch.h"
 #include "popuplog.h"
+#include "testpopup.h"
 #include "stackdump.h"
 #include "stripdump.h"
 #include "window_file.h"
@@ -818,6 +819,8 @@ public:
         else if (args[1] == "popuplog")
             Print(headsup::StartPopupLog(args.size() > 2 ? args[2] : "", Now(), OwnFolder(kLogsFolder),
                 m_CombatTextHook.Running() && m_CombatTextHook.TieProblem().empty()));
+        else if (args[1] == "testpopup")
+            Print(headsup::TestPopup(args, m_AshitaCore->GetMemoryManager()->GetEntity(), m_SelfIndex, m_CombatTextHook));
         else if (args[1] == "mousewatch")
             Print(args.size() > 2 && args[2] == "stop" ? m_MouseWatch.Stop() : m_MouseWatch.Start(OwnFolder(kLogsFolder)));
         else if (args[1] == "pointerwatch")
@@ -845,6 +848,7 @@ public:
             Print("/hu namedump: write every call into the game's name routine during one frame to logs/headsup");
             Print("/hu stackdump: write the stack at the character draws of one frame to logs/headsup");
             Print("/hu popuplog [seconds]: log every combat popup the game decides on, starts, builds and draws for that long (30 by default) to logs/headsup");
+            Print("/hu testpopup <message> <value>: pop the game's own combat popup for that message and value over your character, as if you did it to yourself");
             Print("/hu pointerwatch [stop]: log every change in the mouse pointer and the game's own to logs/headsup until stopped");
             Print("/hu mousewatch [stop]: log every mouse message and what HeadsUp made of it to logs/headsup until stopped");
             Print("/hu stripdump: write the game's top-strip text, every level, to logs/headsup");

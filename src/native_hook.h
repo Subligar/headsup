@@ -162,6 +162,12 @@ namespace headsup
         // Why the calls that tie each popup to its message are not in, so a miss shows as Miss and every popup in the
         // game's color; empty when they are.
         const std::string& TieProblem() const { return m_TieProblem; }
+#ifdef HEADSUP_DEV
+        // /hu testpopup, at Present: asks the game's decision for message as if you did it to yourself, starts the
+        // effect it picks over your character (yourActor, Ashita's actor pointer) with value, colors it as the game
+        // does, and ties it to the message. Returns what happened.
+        std::string TestPopup(uint32_t message, uint32_t value, uint32_t you, uint32_t yourId, uintptr_t yourActor);
+#endif
 
     private:
         CodePatch m_Call;
