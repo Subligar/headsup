@@ -129,6 +129,9 @@ namespace headsup
         std::vector<CodePatch> m_Calls;
     };
 
+    // Render flags 0's bit 9, which the game tests before it starts a popup over a character (0x18C940).
+    constexpr uint32_t kDrawnRenderFlag = 0x200;
+
     // Takes the game's combat popups while asked: the call that draws a popup's text (native_locate.h) goes to a gate
     // that opens a popup, lets the game draw it and closes it. Every quad the draw sends in between is the popup's,
     // which the plugin's draw hook adds here and drops. Not taken, the gate passes the call straight on. Three more
@@ -150,6 +153,12 @@ namespace headsup
         void NewFrame();
         // At Present, for the popups the game starts next: your entity index and your pet's (0 for none).
         static void SetYou(uint32_t you, uint32_t pet);
+        // Whether StartPopup can start one: the ties are in and the game's popup effects were found.
+        bool CanStartPopups() const;
+        // On the game's thread: starts the game's popup effect of event's kind over the character whose actor pointer
+        // is over, with value, in the color the game gives message between colorActor and colorTarget (entity
+        // indexes), tied to event as if the game had decided on it. Returns why it could not, or nothing.
+        std::string StartPopup(const PopupEvent& event, uint32_t value, uint32_t colorActor, uint32_t colorTarget, uintptr_t over);
         // Inside a taken popup's draw, whose quads go to Add.
         static bool Open();
         static void Add(const void* vertices, size_t count, size_t stride);
@@ -163,9 +172,8 @@ namespace headsup
         // game's color; empty when they are.
         const std::string& TieProblem() const { return m_TieProblem; }
 #ifdef HEADSUP_DEV
-        // /hu testpopup, at Present: asks the game's decision for message as if you did it to yourself, starts the
-        // effect it picks over your character (yourActor, Ashita's actor pointer) with value, colors it as the game
-        // does, and ties it to the message. Returns what happened.
+        // /hu testpopup, at Present: asks the game's decision for message as if you did it to yourself and starts what
+        // it picks over your character (yourActor, Ashita's actor pointer) with value. Returns what happened.
         std::string TestPopup(uint32_t message, uint32_t value, uint32_t you, uint32_t yourId, uintptr_t yourActor);
 #endif
 

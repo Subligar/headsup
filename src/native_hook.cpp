@@ -429,6 +429,10 @@ namespace headsup
         using PopupDecisionFn = uint8_t(__cdecl*)(const uint32_t* actor, const uint32_t* target, uint32_t message,
             uint32_t popup, uint8_t* kind);
         using PopupParticleBuildFn = uint8_t*(__attribute__((thiscall))*)(uint8_t* particle, const uint8_t* generator);
+        // The game's three popup effects' handles and their start, and the color class routine, for popups HeadsUp
+        // starts itself; the start is 0 when they were not found.
+        std::array<uint32_t, kPopupEffectCount> g_PopupEffects{};
+        uintptr_t g_PopupEffectStart = 0, g_PopupColorClass = 0;
 
         // In place of the game's popup decision (LocatePopupTies), on its stack: nothing here may allocate, throw or
         // call Ashita, nor in PopupParticleBuild.
@@ -788,7 +792,14 @@ namespace headsup
         g_HeadsUpPopupColor  = Address(base) + ties.color;
         g_PopupParticleBuild = Address(base) + ties.particleBuild;
         m_TieProblem         = PutIn(patches);
-        if (m_TieProblem.empty()) m_Ties = patches;
+        if (!m_TieProblem.empty()) return "";
+        m_Ties = patches;
+        if (const PopupEffectSites effects = LocatePopupEffects(text); effects.problem == LocateProblem::None)
+        {
+            g_PopupEffects     = effects.handles;
+            g_PopupEffectStart = Address(base) + effects.start;
+            g_PopupColorClass  = Address(base) + ties.colorClass;
+        }
         return "";
     }
 
@@ -816,6 +827,32 @@ namespace headsup
     }
 
     void CombatTextHook::SetYou(uint32_t you, uint32_t pet) { g_PopupTies.SetYou(you, pet); }
+    bool CombatTextHook::CanStartPopups() const { return Running() && m_Ties[0].at != nullptr && g_PopupEffectStart != 0; }
+
+    std::string CombatTextHook::StartPopup(const PopupEvent& event, uint32_t value, uint32_t colorActor, uint32_t colorTarget,
+        uintptr_t over)
+    {
+        if (!CanStartPopups()) return "the game's combat popup starts were not found";
+        if (event.kind == 0 || event.kind > kPopupEffectCount) return "the game has no popup of that kind";
+        const auto* handle    = reinterpret_cast<const uint8_t*>(g_PopupEffects[event.kind - 1]);
+        const uint8_t* holder = Readable(handle, sizeof(void*)) ? ReadAt<const uint8_t*>(handle, 0) : nullptr;
+        if (holder == nullptr || !Readable(holder, sizeof(void*))) return "the game's popup effect is not loaded";
+        using StartFn = uint8_t*(__attribute__((thiscall))*)(void* effect, uintptr_t actor, uintptr_t target, uint32_t, uint32_t);
+        using ColorClassFn = uint32_t(__cdecl*)(uint32_t actor, uint32_t target, uint32_t message);
+        using ColorFn      = uint32_t(__cdecl*)(uint32_t colorClass);
+        uint8_t* task = reinterpret_cast<StartFn>(g_PopupEffectStart)(ReadAt<void*>(holder, 0), over, over, 0, 0);
+        if (task == nullptr) return "the game started no effect";
+        const uint32_t colorClass = reinterpret_cast<ColorClassFn>(g_PopupColorClass)(colorActor, colorTarget, event.message);
+        const uint32_t color      = reinterpret_cast<ColorFn>(g_HeadsUpPopupColor)(colorClass) & ~kAlphaMask;
+        std::memcpy(task + kPopupTaskValue, &value, sizeof(value));
+        std::memcpy(task + kPopupTaskColor, &color, sizeof(color));
+        g_PopupTies.Decided(event);
+        g_PopupTies.Started(Address(task));
+#ifdef HEADSUP_DEV
+        LogPopupStart(Address(task));
+#endif
+        return "";
+    }
     bool CombatTextHook::Open() { return g_CombatPopups.Open(); }
     void CombatTextHook::Add(const void* vertices, size_t count, size_t stride) { g_CombatPopups.Add(vertices, count, stride); }
     const std::vector<CombatPopup>& CombatTextHook::Popups() const { return g_CombatPopups.Popups(); }
@@ -1736,41 +1773,20 @@ namespace headsup
 {
     std::string CombatTextHook::TestPopup(uint32_t message, uint32_t value, uint32_t you, uint32_t yourId, uintptr_t yourActor)
     {
-        if (!Running() || m_Ties[0].at == nullptr) return "the game's combat popup starts are not hooked";
-        ImageSection text{};
-        std::string why;
-        uint8_t* base = GameCode(text, why);
-        if (base == nullptr) return why;
-        const PopupEffectSites effects = LocatePopupEffects(text);
-        if (effects.problem != LocateProblem::None) return Describe(effects.problem);
-        const PopupTieSites ties = LocatePopupTies(text);
-        if (ties.problem != LocateProblem::None) return Describe(ties.problem);
+        if (!CanStartPopups()) return "the game's combat popup starts were not found";
         // As the game decides for a message you did to yourself: its chat filters and Damage Display count.
         constexpr uint32_t kPopupNotChat = 1;
         const uint32_t who[] = {you, yourId};
         uint8_t kind         = 0;
         char said[128];
-        if (PopupDecision(who, who, message, kPopupNotChat, &kind) != 0 || kind == 0 || kind > kPopupEffectCount)
+        if (reinterpret_cast<PopupDecisionFn>(g_PopupDecision)(who, who, message, kPopupNotChat, &kind) != 0)
         {
             std::snprintf(said, sizeof(said), "the game would not pop message %u on you (kind %u)", message, kind);
             return said;
         }
-        const auto* handle    = reinterpret_cast<const uint8_t*>(effects.handles[kind - 1]);
-        const uint8_t* holder = Readable(handle, sizeof(void*)) ? ReadAt<const uint8_t*>(handle, 0) : nullptr;
-        if (holder == nullptr || !Readable(holder, sizeof(void*))) return "the game's popup effect is not loaded";
-        using StartFn = uint8_t*(__attribute__((thiscall))*)(void* effect, uintptr_t actor, uintptr_t target, uint32_t, uint32_t);
-        using ColorClassFn = uint32_t(__cdecl*)(uint32_t actor, uint32_t target, uint32_t message);
-        using ColorFn      = uint32_t(__cdecl*)(uint32_t colorClass);
-        uint8_t* task = reinterpret_cast<StartFn>(base + effects.start)(ReadAt<void*>(holder, 0), yourActor, yourActor, 0, 0);
-        if (task == nullptr) return "the game started no effect";
-        const uint32_t colorClass = reinterpret_cast<ColorClassFn>(base + ties.colorClass)(you, you, message);
-        const uint32_t color      = reinterpret_cast<ColorFn>(g_HeadsUpPopupColor)(colorClass) & ~kAlphaMask;
-        std::memcpy(task + kPopupTaskValue, &value, sizeof(value));
-        std::memcpy(task + kPopupTaskColor, &color, sizeof(color));
-        g_PopupTies.Started(Address(task));
-        LogPopupStart(Address(task));
-        std::snprintf(said, sizeof(said), "started message %u with %u on you: kind %u, task %08X, color %06X", message, value,
-            kind, static_cast<unsigned>(Address(task)), color);
+        if (const std::string failure = StartPopup(PopupEvent{message, you, you, kind}, value, you, you, yourActor); !failure.empty())
+            return failure;
+        std::snprintf(said, sizeof(said), "started message %u with %u on you: kind %u", message, value, kind);
         return said;
     }
 
