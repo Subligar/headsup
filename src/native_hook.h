@@ -155,6 +155,8 @@ namespace headsup
         void NewFrame(double now);
         // At Present, for the popups the game starts next: your entity index and your pet's (0 for none).
         static void SetYou(uint32_t you, uint32_t pet);
+        // At Present: whether popups start as soon as their action arrives and spread when started together.
+        static void SetRightAway(bool on);
         // Whether StartPopup can start one: the ties are in and the game's popup effects were found.
         bool CanStartPopups() const;
         // On the game's thread: starts the game's popup effect of event's kind over the character whose actor pointer

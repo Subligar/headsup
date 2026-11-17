@@ -48,6 +48,8 @@ namespace headsup
         }
         // At Present: the time the popups the game starts next count as started at.
         void SetNow(double now) { m_Now = now; }
+        // At Present: whether popups started together spread over lines (Show Right Away), or all keep line 0.
+        void SetSpread(bool spread) { m_Spread = spread; }
         // The game decided to pop one for event: the next start is its, with the event's type, and the first line no
         // popup started on its target in the last kPopupSpreadSeconds holds.
         void Decided(PopupEvent event);
@@ -68,7 +70,8 @@ namespace headsup
         std::optional<PopupEvent> m_Pending, m_Last;
         Ties m_Tasks, m_Particles;
         uint32_t m_You = 0, m_Pet = 0;
-        double m_Now = 0.0;
+        double m_Now  = 0.0;
+        bool m_Spread = true;
     };
 
     // The game's popup decision's answer that means "do not": anything but 0.
@@ -82,11 +85,15 @@ namespace headsup
     {
     public:
         static constexpr uint16_t kEarlyPopped = 0x5A59;
-        // Around HeadsUp's early call for one record, whose mark is cleared.
-        void Begin(uint16_t* mark)
+        // At Present: whether popups start early (Show Right Away).
+        void SetOn(bool on) { m_On = on; }
+        // Around HeadsUp's early call for one record, whose mark is cleared; false, and nothing to call, while off.
+        bool Begin(uint16_t* mark)
         {
+            if (!m_On) return false;
             *mark  = 0;
             m_Mark = mark;
+            return true;
         }
         void End() { m_Mark = nullptr; }
         // The game started a popup's effect: inside an early call, its record is marked.
@@ -111,6 +118,7 @@ namespace headsup
     private:
         uint16_t* m_Mark = nullptr;
         bool m_Skip      = false;
+        bool m_On        = true;
     };
 
     // One of the Test button's samples: a message (msg_basic's ids) with its value and the game's kind for it, done by

@@ -117,7 +117,8 @@ namespace headsup
         for (size_t i = 0; i < kKeptTies; ++i)
         {
             const PopupEvent& e = m_Tasks.events[i];
-            if (m_Tasks.keys[i] != 0 && e.target == event.target && m_Now - e.started < kPopupSpreadSeconds) held[e.line] = true;
+            if (m_Spread && m_Tasks.keys[i] != 0 && e.target == event.target && m_Now - e.started < kPopupSpreadSeconds)
+                held[e.line] = true;
         }
         event.started = m_Now;
         event.line    = static_cast<uint8_t>(std::find(held.begin(), held.end(), false) - held.begin());

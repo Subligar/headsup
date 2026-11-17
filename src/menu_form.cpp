@@ -2171,6 +2171,10 @@ namespace headsup
                 form.Fade(!s.combatPopups);
                 form.Switch(label.c_str(), s.combatPopupWords, tip);
                 break;
+            case SettingPiece::CombatPopupRightAway:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupRightAway, tip);
+                break;
             case SettingPiece::CombatPopupSkillchainNames:
                 form.Fade(!s.combatPopups);
                 form.Switch(label.c_str(), s.combatPopupSkillchainNames, tip);

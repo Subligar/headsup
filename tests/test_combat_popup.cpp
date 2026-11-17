@@ -582,3 +582,24 @@ TEST(a_record_parsed_before_headsup_came_pops_as_the_game_pops_it)
     early.Show(nullptr);
     CHECK(!early.Answer(true));
 }
+
+TEST(with_show_right_away_off_nothing_starts_early_and_the_chat_line_is_the_games)
+{
+    EarlyPopups early;
+    early.SetOn(false);
+    uint16_t mark = 0x1234;
+    CHECK(!early.Begin(&mark));
+    CHECK_EQ(mark, 0x1234);
+    CHECK(!early.Answer(false) && !early.Answer(true));
+    early.SetOn(true);
+    CHECK(early.Begin(&mark));
+    CHECK(early.Answer(false) == kPopupNo);
+}
+
+TEST(with_show_right_away_off_popups_started_together_keep_the_games_one_place)
+{
+    PopupTies ties;
+    ties.SetSpread(false);
+    CHECK_EQ(LineOf(ties, kYou, 10.0, 0x1000), 0);
+    CHECK_EQ(LineOf(ties, kYou, 10.0, 0x2000), 0);
+}

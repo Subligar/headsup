@@ -491,7 +491,7 @@ namespace headsup
 #ifdef HEADSUP_DEV
                 LogPopupEarly(Address(parsed), index);
 #endif
-                g_EarlyPopups.Begin(mark);
+                if (!g_EarlyPopups.Begin(mark)) break;
                 reinterpret_cast<PopupShowFn>(g_PopupShow)(parsed, index, kFirstSlot);
                 g_EarlyPopups.End();
             }
@@ -898,6 +898,11 @@ namespace headsup
     }
 
     void CombatTextHook::SetYou(uint32_t you, uint32_t pet) { g_PopupTies.SetYou(you, pet); }
+    void CombatTextHook::SetRightAway(bool on)
+    {
+        g_EarlyPopups.SetOn(on);
+        g_PopupTies.SetSpread(on);
+    }
     bool CombatTextHook::CanStartPopups() const { return Running() && m_Ties[0].at != nullptr && g_PopupEffectStart != 0; }
 
     std::string CombatTextHook::StartPopup(const PopupEvent& event, uint32_t value, uint32_t colorActor, uint32_t colorTarget,

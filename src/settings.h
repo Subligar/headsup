@@ -246,6 +246,7 @@ namespace headsup
         bool combatPopupLabels = true; // MP, TP and drained amounts say what they are
         bool combatPopupCustomColors = true; // each kind takes its pick's color
         bool combatPopupSkillchainNames = true; // a skillchain's number comes with its name
+        bool combatPopupRightAway = true; // popups start as their result arrives, not at the hit
         std::string combatPopupFont; // empty for the nameplates' default font
         int combatPopupSize         = kDefaultCombatPopupSize;
         // By PopupType. Game is the game's own color, which tells party, alliance and others apart.
