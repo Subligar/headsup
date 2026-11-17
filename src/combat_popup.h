@@ -60,6 +60,35 @@ namespace headsup
         uint32_t m_You = 0, m_Pet = 0;
     };
 
+    // One of the Test button's samples: a message (msg_basic's ids) with its value and the game's kind for it, done by
+    // you, or by another to you.
+    struct PopupSample
+    {
+        uint32_t message = 0, value = 0;
+        uint8_t kind = 0;
+        bool yours = false;
+    };
+    // What the game would decide on for sample over you; other is any other entity, or you with none.
+    PopupEvent SampleEvent(const PopupSample& sample, uint32_t you, uint32_t other);
+
+    // The Test button's run: a sample of each type, kTestGap seconds apart from its start.
+    class PopupTestRun
+    {
+    public:
+        static constexpr double kTestGap = 0.35;
+        void Start(double now)
+        {
+            m_Start = now;
+            m_Next  = 0;
+        }
+        // The next sample due by now, each once; none once the run is over.
+        std::optional<PopupSample> Next(double now);
+
+    private:
+        double m_Start = 0.0;
+        size_t m_Next  = SIZE_MAX;
+    };
+
     // One call of the game's popup draw: its text, and what the quads it sent drew. The box holds all its quads, in
     // the scene image's pixels; the depth and color are its last quad's (the color its first vertex's).
     struct CombatPopup

@@ -445,3 +445,50 @@ TEST(with_skillchain_names_off_a_skillchain_is_the_games_plain_number)
     CHECK_EQ(CombatPopupWords("412", PopupEvent{287 + 6, 0, 0}, off), std::string("412"));
     CHECK_EQ(CombatPopupWords("900", PopupEvent{767, 0, 0}, off), std::string("900"));
 }
+
+TEST(the_test_run_gives_its_samples_one_at_a_time_350_ms_apart_and_starts_over_when_started_again)
+{
+    PopupTestRun run;
+    CHECK(!run.Next(1.0));
+    run.Start(1.0);
+    const std::optional<PopupSample> first = run.Next(1.0);
+    CHECK(first.has_value());
+    CHECK(!run.Next(1.0));
+    CHECK(!run.Next(1.349));
+    const std::optional<PopupSample> second = run.Next(1.35);
+    CHECK(second && second->value != first->value);
+    run.Start(1.5);
+    const std::optional<PopupSample> again = run.Next(1.5);
+    CHECK(again && again->message == first->message && again->value == first->value);
+}
+
+TEST(the_test_run_ends_after_its_last_sample)
+{
+    PopupTestRun run;
+    run.Start(0.0);
+    size_t samples = 0;
+    while (run.Next(1000.0)) ++samples;
+    CHECK(samples > 0);
+    CHECK(!run.Next(2000.0));
+}
+
+TEST(the_test_runs_samples_have_every_type_with_a_color_pick)
+{
+    PopupTestRun run;
+    run.Start(0.0);
+    PopupTies ties;
+    ties.SetYou(kYou, 0);
+    std::array<bool, kPopupTypeCount> seen{};
+    while (const std::optional<PopupSample> sample = run.Next(1000.0))
+        if (const std::optional<PopupType> type = TypeOf(ties, SampleEvent(*sample, kYou, kMob)))
+            seen[static_cast<size_t>(*type)] = true;
+    for (int t = 0; t < kPopupTypeCount; ++t)
+        CHECK(seen[static_cast<size_t>(t)]);
+}
+
+TEST(a_sample_stands_over_you_done_by_you_or_by_another)
+{
+    const PopupSample yours{1, 128, kDamageKind, true}, theirs{1, 64, kDamageKind, false};
+    CHECK(SampleEvent(yours, kYou, kMob) == (PopupEvent{1, kYou, kYou, kDamageKind}));
+    CHECK(SampleEvent(theirs, kYou, kMob) == (PopupEvent{1, kMob, kYou, kDamageKind}));
+}

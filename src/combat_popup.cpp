@@ -52,6 +52,8 @@ namespace headsup
         constexpr uint32_t kSkillchainDamage = 287, kSkillchainHealing = 384;
         constexpr uint32_t kRadianceDamage = 767, kUmbraDamage = 768, kRadianceHealing = 769, kUmbraHealing = 770;
         constexpr uint32_t kRadiance = 15, kUmbra = 16;
+        // The game's kinds of popup, from its decision.
+        constexpr uint8_t kDamage = 1, kRecovery = 2, kMiss = 3;
 
         std::optional<Skillchain> SkillchainOf(uint32_t message)
         {
@@ -80,7 +82,6 @@ namespace headsup
                 break;
             default: break;
             }
-            constexpr uint8_t kDamage = 1, kRecovery = 2, kMiss = 3;
             switch (e.kind)
             {
             case kRecovery: return PopupType::Recovery;
@@ -115,6 +116,25 @@ namespace headsup
     {
         if (const std::optional<PopupEvent> event = m_Tasks.Of(task)) m_Particles.Put(particle, *event);
         else m_Particles.Forget(particle);
+    }
+
+    PopupEvent SampleEvent(const PopupSample& sample, uint32_t you, uint32_t other)
+    {
+        return PopupEvent{sample.message, sample.yours ? you : other, you, sample.kind};
+    }
+
+    namespace
+    {
+        // By the server's msg_basic.h ids, each with the client's kind for it (its byte table at 0x35CAE0).
+        constexpr PopupSample kTestSamples[] = {{1, 128, kDamage, true}, {1, 64, kDamage, false}, {67, 210, kDamage, true},
+            {2, 356, kDamage, true}, {252, 512, kDamage, true}, {kSkillchainDamage + 6, 412, kDamage, true},
+            {7, 34, kRecovery, false}, {25, 20, kRecovery, false}, {15, 0, kMiss, false}, {32, 0, kMiss, false}};
+    }
+
+    std::optional<PopupSample> PopupTestRun::Next(double now)
+    {
+        if (m_Next >= std::size(kTestSamples) || now < m_Start + static_cast<double>(m_Next) * kTestGap) return std::nullopt;
+        return kTestSamples[m_Next++];
     }
 
     void CombatPopupList::NewFrame()
