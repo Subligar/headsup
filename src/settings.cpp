@@ -112,6 +112,8 @@ namespace headsup
             {"fishCaseDown", &Settings::fishCaseDown, kFishBarUnplaced, kCasePlaceWhole},
             {"fishCaseScale", &Settings::fishCaseScale, kMinCaseScale, kMaxCaseScale},
             {"combatPopupSize", &Settings::combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, kPercentStep},
+            {"combatPopupX", &Settings::combatPopupX, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
+            {"combatPopupY", &Settings::combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
             {"helpBarX", &Settings::helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset},
             {"helpBarY", &Settings::helpBarY, -kMaxHelpBarOffset, kMaxHelpBarOffset}};
 
@@ -347,6 +349,8 @@ namespace headsup
             "australiaEastern"};
         constexpr const char* kFishStaminaKey                   = "fishStamina";
         const char* const kFishStaminaNames[kFishStaminaCount]  = {"hide", "vanilla", "headsup"};
+        constexpr const char* kCombatPopupSideKey               = "combatPopupSide";
+        const char* const kPopupSideNames[kPopupSideCount]      = {"right", "left", "above", "target"};
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
@@ -1890,6 +1894,8 @@ namespace headsup
                 store.GetString(kHelpAnchorKey, ""), static_cast<int>(s.helpBarAnchor)));
             s.fishStamina = static_cast<FishBarShown>(NameIndex(kFishStaminaNames, kFishStaminaCount,
                 store.GetString(kFishStaminaKey, ""), static_cast<int>(s.fishStamina)));
+            s.combatPopupSide = static_cast<PopupSide>(NameIndex(kPopupSideNames, kPopupSideCount,
+                store.GetString(kCombatPopupSideKey, ""), static_cast<int>(s.combatPopupSide)));
             std::array<std::string, kBarSectionCount> sections;
             for (int i = 0; i < kBarSectionCount; ++i)
                 sections[i] = store.GetString(kBarSectionKeys[i], "");
@@ -1986,6 +1992,7 @@ namespace headsup
         store.Set(kCustomThemeNameKey, s.customThemeName.c_str());
         store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
         store.Set(kFishStaminaKey, kFishStaminaNames[static_cast<int>(s.fishStamina)]);
+        store.Set(kCombatPopupSideKey, kPopupSideNames[static_cast<int>(s.combatPopupSide)]);
         store.Set(kMenuFontKey, s.menuFont.c_str());
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());
         store.Set(kFishBarLineKey, s.fishBarLine.c_str());

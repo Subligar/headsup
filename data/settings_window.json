@@ -89,6 +89,19 @@
             {"key": "combat-popup-skillchain-names", "name": "Skillchain Names", "tip": "Puts a skillchain's name before its damage: Fusion 412. Turn this off to see the game's plain number. Default: On."},
             {"key": "combat-popup-right-away", "name": "Show Right Away", "tip": "Pops each number as soon as its result arrives, before the spell or swing lands, and spreads popups that start together so each reads. Turn this off to keep the game's timing. Default: On."},
             {
+              "key": "combat-popup-side",
+              "name": "Side",
+              "tip": "Where the popups go against what they happened to, clear of its body however big it is. Every popup goes there, yours and everyone else's. Default: Right.",
+              "options": [
+                {"name": "Right", "tip": "Puts the popups to the right of what they happened to."},
+                {"name": "Left", "tip": "Puts the popups to the left of what they happened to."},
+                {"name": "Above", "tip": "Puts the popups above the name of what they happened to."},
+                {"name": "On the Target", "tip": "Leaves the popups where the game puts them, over what they happened to."}
+              ]
+            },
+            {"key": "combat-popup-x", "name": "Horizontal Offset", "tip": "Moves the popups right by this many pixels, or left by a number below 0. Default: 0 px."},
+            {"key": "combat-popup-y", "name": "Vertical Offset", "tip": "Moves the popups up by this many pixels, or down by a number below 0. Default: 0 px."},
+            {
               "key": "combat-popup-test",
               "name": "Test",
               "tip": "Pops a sample of each kind over your character, in your font, size and colors, even while the game's Config shows damage in the log only. Click it again to see them again.",

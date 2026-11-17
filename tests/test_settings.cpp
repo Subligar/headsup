@@ -3413,3 +3413,30 @@ TEST(a_skillchain_takes_its_elements_color_until_picked_and_no_other_type_can)
     store.values["combatPopupSkillchainColorSource"] = "element";
     CHECK(LoadSettings(store).combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Element);
 }
+
+TEST(combat_popups_go_right_of_their_target_unnudged_until_placed_and_their_place_saves)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    CHECK(fresh.combatPopupSide == PopupSide::Right && fresh.combatPopupX == 0 && fresh.combatPopupY == 0);
+    MapStore store;
+    store.values["combatPopupSide"] = "above";
+    store.values["combatPopupX"]    = "-30";
+    store.values["combatPopupY"]    = "45";
+    const Settings s = LoadSettings(store);
+    CHECK(s.combatPopupSide == PopupSide::Above && s.combatPopupX == -30 && s.combatPopupY == 45);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK(saved.values["combatPopupSide"] == "above");
+    const Settings back = LoadSettings(saved);
+    CHECK(back.combatPopupSide == PopupSide::Above && back.combatPopupX == -30 && back.combatPopupY == 45);
+    store.values["combatPopupSide"] = "target";
+    CHECK(LoadSettings(store).combatPopupSide == PopupSide::Target);
+    store.values["combatPopupSide"] = "left";
+    CHECK(LoadSettings(store).combatPopupSide == PopupSide::Left);
+    store.values["combatPopupSide"] = "behind";
+    CHECK(LoadSettings(store).combatPopupSide == PopupSide::Right);
+    store.values["combatPopupX"] = "999";
+    store.values["combatPopupY"] = "-999";
+    CHECK(LoadSettings(store).combatPopupX == 200 && LoadSettings(store).combatPopupY == -200);
+}

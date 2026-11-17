@@ -2226,3 +2226,22 @@ TEST(the_combat_popups_test_button_asks_the_plugin_only_while_the_card_is_on_and
     w.Pass({{test, kClickEvent, ""}});
     CHECK(w.state.popupTestRequested);
 }
+
+TEST(the_combat_popups_place_is_picked_and_nudged_only_while_the_card_is_on)
+{
+    Window w;
+    w.state.page            = Page::Entities;
+    w.settings.combatPopups = false;
+    const std::string card = "entities-combat-popups", side = card + "-combat-popup-side", x = card + "-combat-popup-x",
+                      y = card + "-combat-popup-y";
+    w.Pass({{side, kClickEvent, ""}});
+    w.Pass({{side + "-o-2", kClickEvent, ""}, {x, kChangeEvent, "40"}});
+    CHECK(w.settings.combatPopupSide == PopupSide::Right && w.settings.combatPopupX == 0);
+    w.settings.combatPopups = true;
+    CHECK(w.Pass({{side, kClickEvent, ""}}).popup);
+    w.Pass({{side + "-o-2", kClickEvent, ""}});
+    CHECK(w.settings.combatPopupSide == PopupSide::Above);
+    CHECK(w.Pass({{x, kChangeEvent, "40"}}).changed);
+    CHECK(w.Pass({{y, kChangeEvent, "-25"}}).changed);
+    CHECK(w.settings.combatPopupX == 40 && w.settings.combatPopupY == -25);
+}

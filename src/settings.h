@@ -154,6 +154,10 @@ namespace headsup
     enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Skillchain, Spell };
     constexpr int kPopupTypeCount = 8;
     std::vector<ColorSource> CombatPopupSources(PopupType type);
+    // Where combat popups go: beside their target's body, over it, or on it, where the game puts them.
+    enum class PopupSide : uint8_t { Right, Left, Above, Target };
+    constexpr int kPopupSideCount = 4;
+    constexpr int kMaxCombatPopupNudge = 200; // pixels either way
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
@@ -249,6 +253,8 @@ namespace headsup
         bool combatPopupRightAway = true; // popups start as their result arrives, not at the hit
         std::string combatPopupFont; // empty for the nameplates' default font
         int combatPopupSize         = kDefaultCombatPopupSize;
+        PopupSide combatPopupSide   = PopupSide::Right;
+        int combatPopupX = 0, combatPopupY = 0; // pixels right and up from where the side puts them
         // By PopupType. Game is the game's own color, which tells party, alliance and others apart.
         std::array<ColorPick, kPopupTypeCount> combatPopupColors = {{{ColorSource::Game, ColorFromRgb(0xFFFFFF)},
             {ColorSource::Game, ColorFromRgb(0xFF6B6B)}, {ColorSource::Game, ColorFromRgb(0x7CE38B)},
