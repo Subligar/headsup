@@ -85,15 +85,7 @@
             {"key": "combat-popup-font", "name": "Font", "tip": "The font the popups are drawn in. Default: your nameplates' Default Font."},
             {"key": "combat-popup-size", "name": "Size", "tip": "How big the popups are against the game's own. They still shrink with distance. Default: 100%."},
             {"key": "combat-popup-words", "name": "Words", "tip": "Shows what a miss was: Evade, Parry, Shadow, Resist and the like. Turn this off to see the game's plain Miss for all of them. Default: On."},
-            {"key": "combat-popup-labels", "name": "Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."},
-            {"key": "combat-popup-custom-colors", "name": "Custom Colors", "tip": "Colors each kind of popup with its pick below. Turn this off to see every popup in the game's own color. Default: On."},
-            {"key": "combat-popup-dealt-color", "name": "Damage You Deal", "tip": "The color of the damage you and your pet deal. Damage between other players and mobs always keeps the game's color. Default: Vanilla Color."},
-            {"key": "combat-popup-taken-color", "name": "Damage You Take", "tip": "The color of the damage you and your pet take. Default: Vanilla Color."},
-            {"key": "combat-popup-recovery-color", "name": "Recovery", "tip": "The color of HP, MP and TP anyone recovers. Default: Vanilla Color."},
-            {"key": "combat-popup-miss-color", "name": "Miss", "tip": "The color of a miss, evade, parry, resist and the like, whoever it is on. Default: Vanilla Color."},
-            {"key": "combat-popup-critical-color", "name": "Critical Hits", "tip": "The color of critical hits, yours and everyone else's. Default: Vanilla Color."},
-            {"key": "combat-popup-burst-color", "name": "Magic Bursts", "tip": "The color of magic burst damage. Default: Vanilla Color."},
-            {"key": "combat-popup-spell-color", "name": "Spells", "tip": "The color of the damage a spell does. Default: Vanilla Color."}
+            {"key": "combat-popup-labels", "name": "Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."}
           ]
         }
       ]
@@ -612,6 +604,21 @@
                 {"key": "pet", "name": "Pet"}
               ]
             }
+          ]
+        },
+        {
+          "key": "colors-combat-popups",
+          "name": "Combat Popups",
+          "description": "The colors of each kind of combat popup, while the Combat Popups card on the Nameplates & Outlines page is on.",
+          "settings": [
+            {"key": "combat-popup-custom-colors", "name": "Custom Colors", "tip": "Colors each kind of popup with its pick below. Turn this off to see every popup in the game's own color. Default: On."},
+            {"key": "combat-popup-dealt-color", "name": "Damage You Deal", "tip": "The color of the damage you and your pet deal. Damage between other players and mobs always keeps the game's color. Default: Vanilla Color."},
+            {"key": "combat-popup-taken-color", "name": "Damage You Take", "tip": "The color of the damage you and your pet take. Default: Vanilla Color."},
+            {"key": "combat-popup-recovery-color", "name": "Recovery", "tip": "The color of HP, MP and TP anyone recovers. Default: Vanilla Color."},
+            {"key": "combat-popup-miss-color", "name": "Miss", "tip": "The color of a miss, evade, parry, resist and the like, whoever it is on. Default: Vanilla Color."},
+            {"key": "combat-popup-critical-color", "name": "Critical Hits", "tip": "The color of critical hits, yours and everyone else's. Default: Vanilla Color."},
+            {"key": "combat-popup-burst-color", "name": "Magic Bursts", "tip": "The color of magic burst damage. Default: Vanilla Color."},
+            {"key": "combat-popup-spell-color", "name": "Spells", "tip": "The color of the damage a spell does. Default: Vanilla Color."}
           ]
         }
       ]

@@ -2685,6 +2685,7 @@ namespace headsup
             case CardPiece::ColorsClaimStatus:
             case CardPiece::ColorsTargeting:
             case CardPiece::ColorsEntityType:
+            case CardPiece::ColorsCombatPopups:
             case CardPiece::Visibility:
             case CardPiece::PlaceholderTimers:
             case CardPiece::MousePointer: return {false, !on};

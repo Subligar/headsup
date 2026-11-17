@@ -132,7 +132,8 @@ TEST(the_palettes_are_on_their_own_colors_page_under_the_theme_above_the_config_
           side.find("id=\"nav-theme\"") < side.find("id=\"nav-colors\"") &&
           side.find("id=\"nav-colors\"") < side.find("id=\"nav-configmenu\""));
     const char* kPalettes[] = {
-        "colors-aggression", "colors-toughness", "colors-claim-status", "colors-targeting", "colors-entity-type"};
+        "colors-aggression", "colors-toughness", "colors-claim-status", "colors-targeting", "colors-entity-type",
+        "colors-combat-popups"};
     w.state.page      = Page::Colors;
     const Form colors = w.Pass();
     for (const char* card : kPalettes)
@@ -2163,14 +2164,14 @@ TEST(the_combat_popups_card_takes_changes_only_while_switched_on)
 TEST(a_combat_popup_types_color_is_picked_only_while_the_card_is_on)
 {
     Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::Colors;
     w.settings.combatPopups = false;
-    const std::string card = "entities-combat-popups", miss = card + "-combat-popup-miss-color";
+    const std::string miss = "colors-colors-combat-popups-combat-popup-miss-color";
     const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Miss)];
     w.Pass({{miss, kClickEvent, ""}});
     w.Pass({{miss + "-o-0", kClickEvent, ""}});
     CHECK(pick.source == ColorSource::Game);
-    w.Pass({{card + "-on", kClickEvent, ""}});
+    w.settings.combatPopups = true;
     CHECK(w.Pass({{miss, kClickEvent, ""}}).popup);
     w.Pass({{miss + "-o-0", kClickEvent, ""}});
     CHECK(pick.source == ColorSource::Custom);
@@ -2180,8 +2181,8 @@ TEST(a_combat_popup_types_color_is_picked_only_while_the_card_is_on)
 TEST(with_custom_colors_off_the_combat_popup_color_picks_take_no_change)
 {
     Window w;
-    w.state.page = Page::Entities;
-    const std::string card = "entities-combat-popups", miss = card + "-combat-popup-miss-color";
+    w.state.page = Page::Colors;
+    const std::string card = "colors-colors-combat-popups", miss = card + "-combat-popup-miss-color";
     const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Miss)];
     w.Pass({{card + "-combat-popup-custom-colors", kClickEvent, ""}});
     CHECK(!w.settings.combatPopupCustomColors);

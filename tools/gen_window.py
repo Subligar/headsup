@@ -105,7 +105,7 @@ PIECES = Pieces(
     cards={
         'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(), 'combat-popups': Card(switch=True),
         'colors-aggression': Card(), 'colors-toughness': Card(), 'colors-claim-status': Card(),
-        'colors-targeting': Card(), 'colors-entity-type': Card(),
+        'colors-targeting': Card(), 'colors-entity-type': Card(), 'colors-combat-popups': Card(),
         'visibility': Card(), 'outline-design': Card(), 'nameplate-design': Card(), 'line-style': Card(),
         'ornament': Card(), 'nameplate-opacity': Card(), 'detection-icons': Card(), 'badges': Card(),
         'weaknesses': Card(), 'statuses': Card(), 'placeholder-timers': Card(),
