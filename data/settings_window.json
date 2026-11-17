@@ -109,7 +109,8 @@
               "words": [
                 {"key": "not-found", "name": "Test", "tip": "Your game's code for starting a popup was not found, so Test cannot pop one."}
               ]
-            }
+            },
+            {"key": "combat-popup-statuses", "name": "Status Popups", "tip": "Pops the name of a buff or debuff over what it lands on, when you, your pet or your party cast it or take it. The game has no popup for these. Default: On."}
           ]
         }
       ]
@@ -643,7 +644,9 @@
             {"key": "combat-popup-critical-color", "name": "Critical Hits", "tip": "The color of critical hits, yours and everyone else's. Default: Vanilla Color."},
             {"key": "combat-popup-burst-color", "name": "Magic Bursts", "tip": "The color of magic burst damage. Default: Vanilla Color."},
             {"key": "combat-popup-skillchain-color", "name": "Skillchains", "tip": "The color of a skillchain's name and number. Default: By Element."},
-            {"key": "combat-popup-spell-color", "name": "Spells", "tip": "The color of the damage a spell does. Default: Vanilla Color."}
+            {"key": "combat-popup-spell-color", "name": "Spells", "tip": "The color of the damage a spell does. Default: Vanilla Color."},
+            {"key": "combat-popup-buff-color", "name": "Buffs", "tip": "The color of a buff's name. Default: Vanilla Color."},
+            {"key": "combat-popup-debuff-color", "name": "Debuffs", "tip": "The color of a debuff's name. Default: Vanilla Color."}
           ]
         }
       ]

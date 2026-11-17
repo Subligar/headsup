@@ -1878,9 +1878,10 @@ namespace headsup
             s.cursorFile  = choice.file;
         }
 
-        void CombatPopupColorRow(Form& form, const std::string& label, Settings& s, PopupType type, const char* tip)
+        void CombatPopupColorRow(Form& form, const std::string& label, Settings& s, PopupType type, const char* tip,
+            bool shown = true)
         {
-            form.Fade(!s.combatPopups || !s.combatPopupCustomColors);
+            form.Fade(!s.combatPopups || !s.combatPopupCustomColors || !shown);
             form.ColorPickRow(label.c_str(), s.combatPopupColors[static_cast<size_t>(type)], CombatPopupSources(type), tip);
         }
 
@@ -2221,6 +2222,16 @@ namespace headsup
             case SettingPiece::CombatPopupBurstColor: CombatPopupColorRow(form, label, s, PopupType::Burst, tip); break;
             case SettingPiece::CombatPopupSkillchainColor: CombatPopupColorRow(form, label, s, PopupType::Skillchain, tip); break;
             case SettingPiece::CombatPopupSpellColor: CombatPopupColorRow(form, label, s, PopupType::Spell, tip); break;
+            case SettingPiece::CombatPopupStatuses:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupStatuses, tip);
+                break;
+            case SettingPiece::CombatPopupBuffColor:
+                CombatPopupColorRow(form, label, s, PopupType::Buff, tip, s.combatPopupStatuses);
+                break;
+            case SettingPiece::CombatPopupDebuffColor:
+                CombatPopupColorRow(form, label, s, PopupType::Debuff, tip, s.combatPopupStatuses);
+                break;
             case SettingPiece::CaseScale:
                 form.Fade(!s.fishCase);
                 form.SliderPercent(label.c_str(), s.fishCaseScale, kMinCaseScale, kMaxCaseScale, tip);

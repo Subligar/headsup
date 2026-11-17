@@ -132,7 +132,8 @@ PIECES = Pieces(
         'combat-popup-test': Setting(words={'not-found': True}), 'combat-popup-custom-colors': Setting(), 'combat-popup-dealt-color': Setting(),
         'combat-popup-taken-color': Setting(), 'combat-popup-recovery-color': Setting(), 'combat-popup-miss-color': Setting(),
         'combat-popup-critical-color': Setting(), 'combat-popup-burst-color': Setting(), 'combat-popup-skillchain-color': Setting(),
-        'combat-popup-spell-color': Setting(),
+        'combat-popup-spell-color': Setting(), 'combat-popup-statuses': Setting(), 'combat-popup-buff-color': Setting(),
+        'combat-popup-debuff-color': Setting(),
         'aggression-colors': Setting(unnamed=True, rows=rows(
             'passive', 'aggressive', 'nm-passive', 'nm-aggressive', 'nm-placeholder', 'no-data')),
         'toughness-colors': Setting(unnamed=True, rows=rows(

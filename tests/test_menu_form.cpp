@@ -2257,3 +2257,26 @@ TEST(with_custom_placement_off_the_combat_popups_side_and_offsets_take_no_change
     w.Pass({{side + "-o-2", kClickEvent, ""}, {x, kChangeEvent, "40"}});
     CHECK(w.settings.combatPopupSide == PopupSide::Right && w.settings.combatPopupX == 0);
 }
+
+TEST(status_popups_switch_with_the_card_on_and_their_colors_are_picked_only_while_they_pop)
+{
+    Window w;
+    w.state.page            = Page::Entities;
+    w.settings.combatPopups = false;
+    const std::string statuses = "entities-combat-popups-combat-popup-statuses",
+                      buff     = "colors-colors-combat-popups-combat-popup-buff-color";
+    const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Buff)];
+    w.Pass({{statuses, kClickEvent, ""}});
+    CHECK(w.settings.combatPopupStatuses);
+    w.settings.combatPopups = true;
+    w.Pass({{statuses, kClickEvent, ""}});
+    CHECK(!w.settings.combatPopupStatuses);
+    w.state.page = Page::Colors;
+    w.Pass({{buff, kClickEvent, ""}});
+    w.Pass({{buff + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Game);
+    w.settings.combatPopupStatuses = true;
+    CHECK(w.Pass({{buff, kClickEvent, ""}}).popup);
+    w.Pass({{buff + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Custom);
+}
