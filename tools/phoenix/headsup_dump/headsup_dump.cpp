@@ -39,17 +39,30 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-// charutils.cpp's /check curve and Incredibly Easy Prey rule, as the server's scripts last loaded them.
-extern std::vector<std::pair<uint16, EMobDifficulty>> ExpToDifficultyTable;
-extern std::pair<uint16, uint8> IncrediblyEasyPreyCheck;
-
 namespace
 {
+    // The /check curve and Incredibly Easy Prey rule as the scripts last gave them to LoadExpDifficultyCurves, held
+    // as charutils keeps them (its own copies are out of reach in an anonymous namespace).
+    std::vector<std::pair<uint16, EMobDifficulty>> ExpToDifficultyTable;
+    std::pair<uint16, uint8> IncrediblyEasyPreyCheck;
+    sol::protected_function g_LoadCurves;
+
+    void RecordCurves(const sol::table& curve, uint8 incrediblyEasyPreyLevel, uint16 incrediblyEasyPreyMinExp)
+    {
+        ExpToDifficultyTable.clear();
+        for (auto& [exp, difficulty] : curve)
+            ExpToDifficultyTable.emplace_back(exp.as<uint16>(), static_cast<EMobDifficulty>(difficulty.as<uint8>()));
+        std::ranges::sort(ExpToDifficultyTable, std::greater{}, &std::pair<uint16, EMobDifficulty>::first);
+        IncrediblyEasyPreyCheck = {incrediblyEasyPreyLevel, static_cast<uint8>(incrediblyEasyPreyMinExp)};
+        g_LoadCurves(curve, incrediblyEasyPreyLevel, incrediblyEasyPreyMinExp);
+    }
+
     constexpr int kSpawnTick        = 20; // time-server ticks (2.4 s) after start, once every zone has spawned its mobs
     // Two minutes for the AI to settle: past the 15 s calm after a spawn and the first form change of mobs like the
     // Ghrahs, which spawn passive and change form every minute.
@@ -624,8 +637,13 @@ class HeadsUpDumpModule : public CPPModule
         ShowInfo("headsup_dump: spawned %zu mobs to run their spawn scripts", spawned);
     }
 
+    // Runs before xi.server.onServerStart, where the era module loads live's curve; the base curve, loaded before
+    // this, is loaded again here so it is recorded too.
     void OnInit() override
     {
+        g_LoadCurves = ::lua["LoadExpDifficultyCurves"];
+        ::lua.set_function("LoadExpDifficultyCurves", &RecordCurves);
+        ::lua["xi"]["expDifficultyCurve"]["loadExpDifficultyCurve"].get<sol::protected_function>()();
     }
 
     void OnTimeServerTick() override

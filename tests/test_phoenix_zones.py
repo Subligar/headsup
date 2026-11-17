@@ -10,10 +10,12 @@ DAYS = '2104' * 2160
 SETTINGS = ("INSERT INTO `zone_settings` VALUES (100,'127.0.0.1',54230,'West_Ronfaure');\n"
             "INSERT INTO `zone_settings` VALUES (190,'127.0.0.1',54230,'King_Ranperres_Tomb');\n")
 ZONE_YAML = 'values:\n  west_ronfaure:                  100\n  king_ranperres_tomb:            190\n'
-ZONE_H = 'enum class REGION_TYPE : uint8\n{\n    RONFAURE = 0,\n    ZULKHEIM = 1,\n    UNKNOWN = 255\n};\n'
-ZONEUTILS = ('auto GetCurrentRegion(const xi::ZoneId zoneId) -> REGION_TYPE\n{\n    switch (zoneId)\n    {\n'
-             '        case xi::ZoneId::KingRanperresTomb:\n        case xi::ZoneId::WestRonfaure:\n'
-             '            return REGION_TYPE::RONFAURE;\n        default:\n            return REGION_TYPE::UNKNOWN;\n'
+REGION_YAML = ('meta:\n  cpp:\n    underlying: uint8_t\n\nvalues:\n  ronfaure:                0\n'
+               '  zulkheim:                1\n  qufim_island:           10\n  unknown:               255\n')
+ZONEUTILS = ('auto GetCurrentRegion(const xi::ZoneId zoneId) -> xi::Region\n{\n    switch (zoneId)\n    {\n'
+             '        case xi::ZoneId::KingRanperresTomb:\n            return xi::Region::Ronfaure;\n'
+             '        case xi::ZoneId::WestRonfaure:\n            return xi::Region::QufimIsland;\n'
+             '        default:\n            return xi::Region::Unknown;\n'
              '    }\n}\n')
 WEATHER = ('INSERT INTO `zone_weather` VALUES (100,0x' + DAYS + ');\n'
            'INSERT INTO `zone_weather` VALUES (190,0x' + DAYS + ');\n')
@@ -24,7 +26,7 @@ REAL = pathlib.Path.home() / '.cache' / 'headsup-phoenix' / 'server'
 
 def checkout(root: pathlib.Path, weather: str = WEATHER, zoneutils: str = ZONEUTILS) -> pathlib.Path:
     for relative, text in [('sql/zone_settings.sql', SETTINGS), ('sql/zone_weather.sql', weather),
-                           ('data/enums/zone.yaml', ZONE_YAML), ('src/map/zone.h', ZONE_H),
+                           ('data/enums/zone.yaml', ZONE_YAML), ('data/enums/region.yaml', REGION_YAML),
                            ('src/map/utils/zoneutils.cpp', zoneutils),
                            ('scripts/zones/West_Ronfaure/IDs.lua', WEST_RONFAURE_IDS)]:
         path = root / relative
@@ -52,7 +54,7 @@ class Build(unittest.TestCase):
     def test_zones_get_names_regions_and_shared_calendars(self):
         with tempfile.TemporaryDirectory() as tmp:
             rows, calendars = zones.build(checkout(pathlib.Path(tmp)))
-        self.assertEqual(rows, [(100, 'West Ronfaure', 0, 0, 7052), (190, "King Ranperre's Tomb", 0, 0, '')])
+        self.assertEqual(rows, [(100, 'West Ronfaure', 10, 0, 7052), (190, "King Ranperre's Tomb", 0, 0, '')])
         self.assertEqual(calendars, [DAYS])
 
     def test_a_region_case_naming_no_zone_is_an_error(self):
@@ -67,7 +69,7 @@ class Build(unittest.TestCase):
             root = checkout(pathlib.Path(tmp),
                             zoneutils='void Zone()\n{\n    return GetCurrentRegion(ZoneID);\n}\n' + ZONEUTILS)
             rows, _ = zones.build(root)
-        self.assertEqual([region for _, _, region, _, _ in rows], [0, 0])
+        self.assertEqual([region for _, _, region, _, _ in rows], [10, 0])
 
     def test_a_short_calendar_is_an_error(self):
         with tempfile.TemporaryDirectory() as tmp:

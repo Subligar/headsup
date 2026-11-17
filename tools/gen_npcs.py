@@ -69,6 +69,7 @@ KEY_ITEM_COLUMNS = ['id', 'name']
 # an NPC calls needs a rule, so a new one fails the check until it is named here.
 ANY = ''
 SYSTEM_RULES = {
+    'amanTrove': [(r'Coffer', 'A.M.A.N. Trove coffer'), (ANY, 'A.M.A.N. Trove')],
     'appraisal': [(ANY, 'Appraisal')],
     'armorStorage': [(ANY, 'Armor storage')],
     'assault': [(ANY, 'Assault')],
@@ -124,6 +125,7 @@ SYSTEM_RULES = {
     'transport': [(r'Timekeeper', 'Boat timekeeper'), (r'Message\(', None)],
     'treasure': [(ANY, 'Treasure chest or coffer')],
     'waypoint': [(ANY, 'Waypoint')],
+    'worldPass': [(ANY, 'Gold World Pass')],
 }
 SMALL_WORDS = {'of', 'the', 'and', 'a', 'an', 'in', 'on', 'to', 'for', 'with', 'from', 'at', 'by'}
 # phoenix_npc_acts.tsv: what each ??? did when the refresh's probe clicked and traded it on the server, one distinct
