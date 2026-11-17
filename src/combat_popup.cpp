@@ -298,8 +298,42 @@ namespace headsup
         }
     }
 
+    namespace
+    {
+        // The share of a popup's words left of its place, by side.
+        constexpr float kStartsAt = 0.0f, kCentered = 0.5f, kEndsAt = 1.0f;
+
+        // Where a popup the game put at center goes, its line counted.
+        ShownCombatPopup Place(ShownCombatPopup shown, uint8_t line, std::optional<PopupBody> body, const PopupPlacing& placing)
+        {
+            const float lines = static_cast<float>(line) * shown.lineHeight;
+            const float clear = body && body->feet ? kPopupBodyReach * (*body->feet - body->nameBottom) : shown.lineHeight;
+            switch (placing.side)
+            {
+            case PopupSide::Right:
+                shown.center.x += clear;
+                shown.across = kStartsAt;
+                shown.center.y += lines;
+                break;
+            case PopupSide::Left:
+                shown.center.x -= clear;
+                shown.across = kEndsAt;
+                shown.center.y += lines;
+                break;
+            case PopupSide::Above:
+                if (body) shown.center.y = body->nameTop - shown.lineHeight / 2.0f;
+                shown.center.y -= lines;
+                break;
+            case PopupSide::Target: shown.center.y += lines; break;
+            }
+            shown.center.x += placing.nudge.x;
+            shown.center.y += placing.nudge.y;
+            return shown;
+        }
+    }
+
     std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
-        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupSwitches& on)
+        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on)
     {
         std::vector<ShownCombatPopup> shown;
         for (size_t i = 0; i < popups.size(); ++i)
@@ -309,20 +343,22 @@ namespace headsup
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            const float lineHeight = p.box.Height() * static_cast<float>(sizePercent) / kPercent;
-            const float below      = p.event ? static_cast<float>(p.event->line) * lineHeight : 0.0f;
-            const uint32_t color   = on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate);
-            shown.push_back(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
-                ScreenPoint{p.box.CenterX(), p.box.CenterY() + below}, lineHeight, p.depth});
+            const std::optional<PopupBody> body = p.event && placing.bodyOf ? placing.bodyOf(p.event->target) : std::nullopt;
+            const uint32_t color = on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate);
+            shown.push_back(Place(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
+                                      ScreenPoint{p.box.CenterX(), p.box.CenterY()},
+                                      p.box.Height() * static_cast<float>(sizePercent) / kPercent, p.depth, kCentered},
+                p.event ? p.event->line : 0, body, placing));
         }
         return shown;
     }
 
-    SquareQuad PlaceCombatPopupText(ScreenPoint center, float lineHeight, const CombatTextSize& text, float pixelShape)
+    SquareQuad PlaceCombatPopupText(ScreenPoint center, float lineHeight, const CombatTextSize& text, float pixelShape,
+        float across)
     {
         const float fit = lineHeight / static_cast<float>(text.raster), width = text.width * fit * pixelShape;
         const float capitals = text.halo + (text.capitalTop + text.capitalBottom) / 2.0f;
-        return SquareQuad{std::round(center.x - width / 2.0f), std::round(center.y - capitals * fit), width, text.height * fit};
+        return SquareQuad{std::round(center.x - width * across), std::round(center.y - capitals * fit), width, text.height * fit};
     }
 
     int CombatPopupEdge(int raster) { return WholePixels(static_cast<float>(raster) * kCombatPopupEdgePerHeight); }

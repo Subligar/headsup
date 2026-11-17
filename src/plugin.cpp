@@ -1630,17 +1630,40 @@ private:
     // The game draws its combat popups into the scene image a few draws before it copies that image to the back buffer.
     // HeadsUp's go in at the copy, at the game's depth, after the nameplates so they sit over them; a frame with no
     // draw to the back buffer after its popups shows none.
+    // Back-buffer pixels to those of the image the game draws its popups into.
+    float PopupsToX() const { return static_cast<float>(m_CombatTextHook.TargetWidth()) / m_Names.BackBufferWidth(); }
+    float PopupsToY() const { return static_cast<float>(m_CombatTextHook.TargetHeight()) / m_Names.BackBufferHeight(); }
+
+    // The frame's popups as HeadsUp draws them, on the side and nudged as the settings say, beside each target's body
+    // from the game's name over it and its feet.
+    std::vector<headsup::ShownCombatPopup> ShownPopupsNow() const
+    {
+        const float toX = PopupsToX(), toY = PopupsToY();
+        const headsup::PopupPlacing placing{m_Settings.combatPopupSide,
+            headsup::ScreenPoint{static_cast<float>(m_Settings.combatPopupX) * toX, -static_cast<float>(m_Settings.combatPopupY) * toY},
+            [this, toY](uint32_t target) -> std::optional<headsup::PopupBody> {
+                const headsup::NameFrame* frame = m_NameHook.Drawn(static_cast<uint16_t>(target));
+                if (frame == nullptr) return std::nullopt;
+                const headsup::DrawnName name = headsup::NameFromFrame(*frame, m_Names.TargetScaleX(), m_Names.TargetScaleY());
+                headsup::PopupBody body{name.box.minY * toY, name.box.maxY * toY, std::nullopt};
+                const headsup::ActorInfo* info = m_Tracker.FindIndex(static_cast<uint16_t>(target));
+                float feet                     = 0.0f;
+                if (info != nullptr && m_Names.SteadyCamera() != nullptr && headsup::RowAtHeight(*m_Names.SteadyCamera(), info->feet, 0.0f, feet))
+                    body.feet = feet * toY;
+                return body;
+            }};
+        return headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize, m_Settings.combatPopupColors, placing,
+            headsup::PopupSwitchesOf(m_Settings));
+    }
+
     void DrawCombatPopupsBeforeSceneCopy()
     {
         if (m_PopupsDrawn || m_CombatTextHook.Popups().empty() || m_CombatTextHook.Target() == nullptr ||
             m_Names.BackBufferWidth() <= 0.0f || m_Names.BackBufferHeight() <= 0.0f || !m_Names.DrawingToBackBuffer())
             return;
         m_PopupsDrawn = true;
-        const float toX = static_cast<float>(m_CombatTextHook.TargetWidth()) / m_Names.BackBufferWidth();
-        const float toY = static_cast<float>(m_CombatTextHook.TargetHeight()) / m_Names.BackBufferHeight();
-        const std::vector<headsup::ShownCombatPopup> shown =
-            headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize, m_Settings.combatPopupColors,
-                headsup::PopupSwitchesOf(m_Settings));
+        const float toX = PopupsToX(), toY = PopupsToY();
+        const std::vector<headsup::ShownCombatPopup> shown = ShownPopupsNow();
         const bool saved = WithSavedState([&] {
             if (FAILED(m_Device->SetRenderTarget(m_CombatTextHook.Target(), m_CombatTextHook.Depth()))) return;
             m_CombatPopups.Draw(m_Device, shown, headsup::CombatPopupFont(m_Settings), toX, toY);
@@ -1953,8 +1976,7 @@ private:
         for (const headsup::CombatPopup& popup : m_CombatTextHook.Popups())
             popups.push_back("call " + headsup::DescribeCombatPopup(popup));
         if (m_PopupsDrawn)
-            for (const headsup::ShownCombatPopup& popup : headsup::ShownCombatPopups(m_CombatTextHook.Popups(),
-                     m_Settings.combatPopupSize, m_Settings.combatPopupColors, headsup::PopupSwitchesOf(m_Settings)))
+            for (const headsup::ShownCombatPopup& popup : ShownPopupsNow())
                 popups.push_back("drawn " + headsup::DescribeCombatPopup(popup));
         const size_t draws = m_DrawDump.Write(out, headsup::DrawDump::Sources{m_AshitaCore, m_Names, m_NameHook, m_Nameplates.CursorNames(),
                                                        m_Nameplates.LastShown(), [&](uint32_t index) { return m_GameState.PlayerStatusOf(index, m_SelfIndex); },

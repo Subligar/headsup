@@ -57,7 +57,7 @@ namespace headsup
             const int raster = RasterHeight(popup.lineHeight / toY, 0);
             Texture& t       = m_Textures.Use(std::tuple{font, popup.words, popup.color, raster}, m_Frame);
             if (t.texture == nullptr && !Prepare(device, t, popup.words, popup.color, font, raster)) break;
-            const SquareQuad q = PlaceCombatPopupText(popup.center, popup.lineHeight, t.size, toX / toY);
+            const SquareQuad q = PlaceCombatPopupText(popup.center, popup.lineHeight, t.size, toX / toY, popup.across);
             DrawQuad(device, GpuQuad{t.texture, q.x, q.y, q.width, q.height, 0.0f, t.u, t.v, popup.depth, WithAlpha(kWhite, popup.alpha)},
                 true);
         }

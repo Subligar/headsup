@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -207,19 +208,41 @@ namespace headsup
     std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on = {});
 
     // A popup as HeadsUp draws it, in the scene image's pixels: its words in an opaque color at an alpha out of
-    // kOpaqueAlpha, the middle of their capitals on center, in a line lineHeight tall, at the game's depth.
+    // kOpaqueAlpha, the middle of their capitals on center, across the share of their width left of center, in a line
+    // lineHeight tall, at the game's depth.
     struct ShownCombatPopup
     {
         std::string words;
         uint32_t color = 0, alpha = 0;
         ScreenPoint center;
-        float lineHeight = 0.0f, depth = 0.0f;
+        float lineHeight = 0.0f, depth = 0.0f, across = 0.5f;
+    };
+
+    // A target's body on screen, in the scene image's pixels: the rows of the top and bottom of the game's name over its
+    // head, and of its feet where the camera gives them.
+    struct PopupBody
+    {
+        float nameTop = 0.0f, nameBottom = 0.0f;
+        std::optional<float> feet;
+    };
+    // A body beside which a popup goes is taken to reach this share of its height to either side of its middle.
+    constexpr float kPopupBodyReach = 0.5f;
+    // Where the frame's popups go: their side, a nudge in the scene image's pixels, and each target's body by entity
+    // index, where known.
+    struct PopupPlacing
+    {
+        PopupSide side = PopupSide::Right;
+        ScreenPoint nudge;
+        std::function<std::optional<PopupBody>(uint32_t target)> bodyOf;
     };
     // Two popups of a frame with the same text whose centers are within half a box height are one, the later, which the
     // game draws on top. A line is as tall as its box at 100 percent: the box already shrinks with distance. A popup
-    // with a type takes its pick's color, by PopupType, at the game's alpha.
+    // with a type takes its pick's color, by PopupType, at the game's alpha. To the Right or Left its words start or end
+    // past its target's body (one line past the game's place when the body's height is not known); Above they sit over
+    // the target's name; on the Target they stay at the game's place. Its line moves it that many lines down, or up
+    // above its target, and the nudge moves it on.
     std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
-        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupSwitches& on = {});
+        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on = {});
 
     // A popup's text as drawn into its texture: the image's size and halo in its own pixels, and its capitals' top and
     // bottom in rows under the halo, drawn raster pixels tall.
@@ -228,10 +251,11 @@ namespace headsup
         float width = 0.0f, height = 0.0f, halo = 0.0f, capitalTop = 0.0f, capitalBottom = 0.0f;
         int raster = 0;
     };
-    // Its quad in the scene image, its corner on whole pixels: centered across on center, the middle of its capitals on
-    // center down, its line lineHeight tall. pixelShape is the image's pixels per screen pixel across over those down
-    // (PlaceSquarePixels' toX / toY), so the game's copy to the screen gives the letters their shape back.
-    SquareQuad PlaceCombatPopupText(ScreenPoint center, float lineHeight, const CombatTextSize& text, float pixelShape);
+    // Its quad in the scene image, its corner on whole pixels: across (a share of its width) left of center, the middle
+    // of its capitals on center down, its line lineHeight tall. pixelShape is the image's pixels per screen pixel across
+    // over those down (PlaceSquarePixels' toX / toY), so the game's copy to the screen gives the letters their shape back.
+    SquareQuad PlaceCombatPopupText(ScreenPoint center, float lineHeight, const CombatTextSize& text, float pixelShape,
+        float across);
     // How many pixels the edge reaches around letters drawn raster pixels tall.
     int CombatPopupEdge(int raster);
 
