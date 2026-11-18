@@ -125,8 +125,8 @@ TEST(the_friend_list_gives_each_friends_account_names_and_whether_they_play)
     std::vector<uint8_t> data = Data();
     const uint8_t* first      = data.data() + kBefore;
     // 0x07D3 is 2003, account 1001; 0x07D5 is 2005, account 1002. The block list's 1003 is no friend.
-    CHECK((FriendEntries(first) == std::vector<FriendEntry>{{1001, "Headsuptwo", "Headsuptwo", true},
-                                                            {1002, "Headsupthree", "", false}}));
+    CHECK((FriendEntries(first) == std::vector<FriendEntry>{{1001, "Headsuptwo", "Headsuptwo", true, 100},
+                                                            {1002, "Headsupthree", "", false, 0}}));
     CHECK_EQ(FriendName(FriendEntries(first)[0]), "Headsuptwo");
     CHECK_EQ(FriendName(FriendEntries(first)[1]), "Headsupthree"); // no character yet: the name it was added by
     // A request from a playing friend turned their byte from 01 to 03 on the test client: still playing.

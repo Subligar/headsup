@@ -30,6 +30,7 @@ namespace headsup
         uint32_t account = 0;         // the slot's number halved (2003 is account 1001)
         std::string added, character; // the name it was added by, and the character played or last played
         bool playing = false;
+        uint16_t zone = 0; // where they play, as of the game's last ask: its friend list's, every two minutes or so
         bool operator==(const FriendEntry&) const = default;
     };
     // Every filled friend slot, in slot order; none of the block list's.
