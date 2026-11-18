@@ -963,7 +963,7 @@ TEST(an_adjusted_icon_draws_moved_or_sized_in_its_own_room_in_the_bar_and_the_po
     CHECK_EQ(rml.Said(), "");
 }
 
-TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its_background_sits_in_it_as_xiuis_does)
+TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_sits_in_the_middle_of_its_backgrounds_frame)
 {
     Settings settings;
     BarLook look           = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
@@ -976,17 +976,18 @@ TEST(a_status_icon_fills_its_square_in_a_widgets_line_and_a_pop_out_and_with_its
         return std::array<float, 4>{at.x, at.y, size.x, size.y};
     };
     const auto near = [](float a, float b) { return std::fabs(a - b) < 0.05f; };
-    // XIUI's party list: the background 1.1 icons wide and 1/0.75 of that tall, a buff's 0.33 of an icon above the
-    // icon and a debuff's 0.11, 1/15 of an icon left of it. The icon fills its box as it does with no background, and
-    // the background's picture is square, its 1.1 icons wide in the middle of it, so it reaches past the box.
-    const float tall = 1.1f / 0.75f, left = 1.0f / 15.0f + (tall - 1.1f) / 2.0f;
+    // XIUI's party list: the background 1.1 icons wide and 1/0.75 of that tall. The icon fills its box as it does with
+    // no background, and the background's picture is square, so it reaches past the box. BuffIcon.png and
+    // DebuffIcon.png are 15 by 20 shields squared on 20 px two pixels from the left; a buff's frame inside is columns
+    // 1 to 13 and rows 5 to 18 under its point, a debuff's rows 1 to 14 over it: the icon's middle is the inside's.
+    const float tall = 1.1f / 0.75f, insideX = (2.0f + 7.5f) / 20.0f, buffY = 12.0f / 20.0f, debuffY = 8.0f / 20.0f;
     const auto checkIn = [&](Rml::Element* square, const Rml::ElementList& images, bool debuff) {
         const auto [x, y, w, h] = box(square);
         CHECK(images.size() == 2 && w > 0.0f && near(w, h));
         const auto back = box(images[0]), shown = box(images[1]);
         CHECK(near(shown[0], x) && near(shown[1], y) && near(shown[2], w) && near(shown[3], h));
         CHECK(near(back[2], w * tall) && near(back[3], h * tall));
-        CHECK(near(back[0], x - w * left) && near(back[1], y - h * (debuff ? 0.11f : 0.33f)));
+        CHECK(near(back[0] + back[2] * insideX, x + w / 2.0f) && near(back[1] + back[3] * (debuff ? debuffY : buffY), y + h / 2.0f));
         CHECK(images[0]->GetAttribute<Rml::String>("src", "") == IconSource(debuff ? Icon::DebuffBack : Icon::BuffBack));
     };
 

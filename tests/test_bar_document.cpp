@@ -386,6 +386,22 @@ TEST(a_popup_is_its_panel_and_each_piece_where_the_layout_put_it)
     CHECK(!Has(pills, "id=\"outer\""));
 }
 
+TEST(a_pop_out_texts_spaces_before_its_figures_are_drawn)
+{
+    // RmlUi's parser drops a text of spaces alone, which a time's leading space is when its digits are cells.
+    Settings settings;
+    PopupLayout layout;
+    layout.width = layout.height = 100.0f;
+    PopupPiece time;
+    time.kind = PopupPiece::Kind::Text, time.x = 10.0f, time.y = 10.0f, time.width = 40.0f, time.height = 18.0f;
+    time.span = Text(" 12:00");
+    layout.pieces = {time};
+    const PopupFaces faces = {PopupFace{"Marcellus SC", 24, 29, 2.0f}, PopupFace{"Barlow Condensed", 18, 22, 0.0f, 9.0f},
+        PopupFace{"Marcellus SC", 15, 18, 0.0f}, PopupFace{"Marcellus SC", 15, 18, 0.0f}};
+    const std::string rml = PopupRml(layout, LookOf(BarTheme::PhoenixGold, settings), faces);
+    CHECK(Has(rml, ";\">&nbsp;<span class=\"fig\" style=\"width:9px;\">1</span>"));
+}
+
 TEST(a_previewed_pop_outs_cards_are_drawn_in_one_box_scaled_about_the_titles_foot_and_shifted_beside_the_settings)
 {
     Settings settings;
