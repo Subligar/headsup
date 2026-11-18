@@ -443,6 +443,7 @@ class HeadsUp final : public IPlugin
     headsup::SoundWaits m_NoticeWaits;
     headsup::WaveOut m_NoticeSound; // its own, so a notice cuts off no Case's click
     double m_NoticesAt   = 0.0; // the last frame the notices were drawn, for their slide
+    headsup::NoticeKind m_NextTest = headsup::NoticeKind::Online; // what the next Test press acts out
     std::unordered_map<uint32_t, headsup::PlayerJobs> m_PartyJobs; // theirs as the party list has them, by server ID
     headsup::PlayerJobs m_OwnJobs;                                // yours as the game has them, this frame
     bool m_DebugPending = false;
@@ -1112,7 +1113,9 @@ public:
             m_SettingsChangedAt = now;
         if (m_Rml.Running() &&
             m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
-                m_Notices.Shown(now, static_cast<float>(m_Settings.friendNoticeSeconds)), KeyDown(VK_SHIFT), g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, static_cast<float>(std::max(0.0, now - m_NoticesAt)),
+                m_RmlMenu.open && m_RmlMenu.NoticePreview() ? headsup::NoticeSamples(m_Settings)
+                                                            : m_Notices.Shown(now, static_cast<float>(m_Settings.friendNoticeSeconds)),
+                KeyDown(VK_SHIFT), g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, static_cast<float>(std::max(0.0, now - m_NoticesAt)),
                 headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
                     ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
                     : std::nullopt))
@@ -1290,10 +1293,11 @@ public:
         if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
         if (m_RmlMenu.TakeCaseMove()) m_CaseMoving = true;
         if (m_RmlMenu.TakePopupTest()) m_PopupTest.Start(now);
+        // As a friend would: online, then offline at the next press.
         if (m_RmlMenu.TakeNoticeTest())
         {
-            m_Notices.Add(headsup::NoticeKind::Online, headsup::kNoticeSampleName, Now());
-            if (m_Settings.friendNoticeOnlineSound) PlayNotice(headsup::NoticeKind::Online);
+            Notify(headsup::FriendNews{m_NextTest, 0, headsup::kNoticeSampleName}, Now());
+            m_NextTest = m_NextTest == headsup::NoticeKind::Online ? headsup::NoticeKind::Offline : headsup::NoticeKind::Online;
         }
         if (const std::optional<headsup::MuteAsked> mute = m_RmlMenu.TakeMuteAsked())
         {

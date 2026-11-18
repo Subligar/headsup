@@ -2350,6 +2350,15 @@ namespace headsup
                 form.Fade(false);
                 form.Switch(label.c_str(), s.friendNoticeBar, tip);
                 break;
+            case SettingPiece::NoticePreview:
+            {
+                form.Fade(false);
+                // The window's to hold, and no setting to save.
+                const bool was = form.changed;
+                form.Switch(label.c_str(), c.state.noticePreview, tip);
+                form.changed = was;
+                break;
+            }
             case SettingPiece::NoticeTest:
                 form.Fade(false);
                 if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.noticeTestRequested = true;

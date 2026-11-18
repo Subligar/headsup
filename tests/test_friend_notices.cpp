@@ -190,3 +190,18 @@ TEST(a_read_while_your_character_is_not_known_is_skipped)
     CHECK((watch.Read(65001, {E(1001, "Two", true)}, kAfter + 1.0) ==
            std::vector<FriendNews>{{NoticeKind::Online, 1001, "Two"}}));
 }
+
+TEST(the_preview_holds_a_notice_of_each_kind_that_is_on_and_one_online_when_none_is)
+{
+    Settings s;
+    std::vector<ShownNotice> samples = NoticeSamples(s);
+    CHECK(samples.size() == 2 && samples[0].kind == NoticeKind::Online && samples[1].kind == NoticeKind::Offline);
+    CHECK(samples[0].name == kNoticeSampleName && samples[0].opacity == 1.0f && samples[0].share == 1.0f);
+    CHECK(samples[0].id != samples[1].id);
+    s.friendNoticeOnline = false;
+    samples              = NoticeSamples(s);
+    CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Offline);
+    s.friendNoticeOffline = false;
+    samples               = NoticeSamples(s);
+    CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Online); // something to see and drag
+}

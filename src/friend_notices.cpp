@@ -139,4 +139,15 @@ namespace headsup
     {
         return std::string(name) + (kind == NoticeKind::Online ? " is now online" : " went offline");
     }
+
+    std::vector<ShownNotice> NoticeSamples(const Settings& settings)
+    {
+        // Ids no stack reaches, so a sample never takes a real notice's place as it slides.
+        constexpr uint32_t kOnlineSample = UINT32_MAX, kOfflineSample = UINT32_MAX - 1;
+        std::vector<ShownNotice> samples;
+        if (settings.friendNoticeOnline || !settings.friendNoticeOffline)
+            samples.push_back({kOnlineSample, NoticeKind::Online, kNoticeSampleName});
+        if (settings.friendNoticeOffline) samples.push_back({kOfflineSample, NoticeKind::Offline, kNoticeSampleName});
+        return samples;
+    }
 }

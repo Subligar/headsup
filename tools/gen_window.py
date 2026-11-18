@@ -174,7 +174,7 @@ PIECES = Pieces(
         # User Interface
         'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(options=3), 'fishing-bar-width': Setting(), 'fishing-bar-height': Setting(), 'fishing-bar-x': Setting(), 'fishing-bar-y': Setting(), 'fishing-bar-draggable': Setting(), 'fishing-bar-font': Setting(), 'fishing-bar-text-size': Setting(), 'fishing-bar-line': Setting(), 'fish-color-by-catch': Setting(), 'fish-small-color': Setting(), 'fish-large-color': Setting(), 'fish-item-color': Setting(), 'fish-monster-color': Setting(), 'fish-line-color': Setting(), 'fish-rod-color': Setting(), 'case-scale': Setting(), 'case-background': Setting(), 'case-move': Setting(), 'case-test': Setting(),
         'notice-online': Setting(), 'notice-offline': Setting(), 'notice-seconds': Setting(), 'notice-upward': Setting(),
-        'notice-bar': Setting(), 'notice-test': Setting(), 'notice-online-sound': Setting(),
+        'notice-bar': Setting(), 'notice-preview': Setting(), 'notice-test': Setting(), 'notice-online-sound': Setting(),
         'notice-volume': Setting(),
         'mute-list': Setting(unnamed=True, words={'note': True, 'empty': True, 'muted': True, 'notify': True,
                                                   'row-tip': False}),

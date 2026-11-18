@@ -2315,6 +2315,12 @@ TEST(the_notice_cards_buttons_ask_the_plugin_once)
     const std::string card = "userinterface-notice-show";
     CHECK(!w.Pass({{card + "-notice-test", kClickEvent, ""}}).changed);
     CHECK(w.state.noticeTestRequested);
+    // Preview is the window's to hold, no setting.
+    const Settings before = w.settings;
+    CHECK(!w.Pass({{card + "-notice-preview", kClickEvent, ""}}).changed);
+    CHECK(w.state.noticePreview && KeysChanged(before, w.settings).empty());
+    w.Pass({{card + "-notice-preview", kClickEvent, ""}});
+    CHECK(!w.state.noticePreview);
 }
 
 TEST(the_muted_friends_card_lists_every_friend_and_asks_for_a_mute)

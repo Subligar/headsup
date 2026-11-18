@@ -126,7 +126,9 @@ namespace headsup
         std::optional<double> m_LastOnline;
     };
 
-    constexpr const char* kNoticeSampleName = "Friend"; // the name Test's notice shows
+    constexpr const char* kNoticeSampleName = "Friend"; // the name Preview's and Test's notices show
+    // What Preview holds on the screen: a notice of each kind that is on, or an online one when neither is.
+    std::vector<ShownNotice> NoticeSamples(const Settings& settings);
 
     uint32_t NoticeColor(NoticeKind kind);
     const char* NoticeTitle(NoticeKind kind);
