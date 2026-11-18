@@ -301,9 +301,7 @@
             {"key": "notice-online", "name": "Show Online", "tip": "Shows a notice when a friend comes online. Default: On."},
             {"key": "notice-offline", "name": "Show Offline", "tip": "Shows a notice when a friend goes offline. Default: On."},
             {"key": "notice-seconds", "name": "Duration", "tip": "How long a notice stays on screen. It fades out over the last fifth of that time. Default: 8 s."},
-            {"key": "notice-upward", "name": "Stack Upward", "tip": "Puts new notices above the older ones instead of under them, and makes the spot you drag them to the bottom of the stack. Default: Off."},
             {"key": "notice-bar", "name": "Countdown Bar", "tip": "Shows a thin bar in each notice that runs down until the notice goes. Default: On."},
-            {"key": "notice-preview", "name": "Preview", "tip": "Holds a notice of each kind on the screen while this window is open, so you can see how they look and Shift drag them where you want them. Default: Off."},
             {"key": "notice-test", "name": "Test", "tip": "Acts as if a friend came online, with the sound, and as if they went offline at the next press. It follows your settings, as a real friend would."}
           ]
         },
@@ -311,7 +309,6 @@
           "key": "notice-sound",
           "name": "Friend Notice Sound",
           "settings": [
-            {"key": "notice-online-sound", "name": "Sound on Online", "tip": "Plays a chime when a friend comes online, at most once every 10 seconds. Default: On."},
             {"key": "notice-volume", "name": "Volume", "tip": "How loud the chime is. Default: 60%."}
           ]
         },

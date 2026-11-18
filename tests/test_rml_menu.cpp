@@ -906,7 +906,7 @@ TEST(escape_gives_a_box_back_what_it_held_and_a_click_beside_a_lines_stretches_t
 TEST(every_switch_of_every_page_flips_a_setting_of_its_own_and_flips_it_back)
 {
     // Not settings: what the window itself is showing.
-    const std::vector<std::string> windowsOwn{"vanillaui-base-game-ui-all-windows", "userinterface-notice-show-notice-preview"};
+    const std::vector<std::string> windowsOwn{"vanillaui-base-game-ui-all-windows"};
     for (const LayoutPage& info : kWindowLayout.pages)
     {
         Window window;

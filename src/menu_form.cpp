@@ -2340,35 +2340,18 @@ namespace headsup
                 break;
             case SettingPiece::NoticeSeconds:
                 form.Fade(false);
-                form.SliderInt(label.c_str(), s.friendNoticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds, Seconds, tip);
-                break;
-            case SettingPiece::NoticeUpward:
-                form.Fade(false);
-                form.Switch(label.c_str(), s.friendNoticeUpward, tip);
+                form.SliderInt(label.c_str(), s.noticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds, Seconds, tip);
                 break;
             case SettingPiece::NoticeBar:
                 form.Fade(false);
-                form.Switch(label.c_str(), s.friendNoticeBar, tip);
+                form.Switch(label.c_str(), s.noticeBar, tip);
                 break;
-            case SettingPiece::NoticePreview:
-            {
-                form.Fade(false);
-                // The window's to hold, and no setting to save.
-                const bool was = form.changed;
-                form.Switch(label.c_str(), c.state.noticePreview, tip);
-                form.changed = was;
-                break;
-            }
             case SettingPiece::NoticeTest:
                 form.Fade(false);
                 if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.noticeTestRequested = true;
                 break;
-            case SettingPiece::NoticeOnlineSound:
-                form.Fade(!s.friendNoticeOnline);
-                form.Switch(label.c_str(), s.friendNoticeOnlineSound, tip);
-                break;
             case SettingPiece::NoticeVolume:
-                form.Fade(!s.friendNoticeOnline || !s.friendNoticeOnlineSound);
+                form.Fade(!s.friendNoticeOnline || s.friendNoticeOnlineSound == kNoSound);
                 form.SliderPercent(label.c_str(), s.friendNoticeVolume, 0, kMaxNoticeVolume, tip);
                 break;
             case SettingPiece::FishingBarDraggable:

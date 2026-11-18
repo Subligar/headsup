@@ -3199,34 +3199,61 @@ TEST(the_case_is_off_until_switched_on_and_keeps_its_scale_and_place)
     CHECK_EQ(LoadSettings(store).fishCaseAcross, 10000);
 }
 
-TEST(the_friend_notice_settings_load_inside_their_ranges_and_save_back)
+TEST(the_notification_settings_load_inside_their_ranges_and_save_back)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
-    CHECK(fresh.friendNoticeOnline && fresh.friendNoticeOffline && !fresh.friendNoticeUpward && fresh.friendNoticeBar);
-    CHECK(fresh.friendNoticeOnlineSound && fresh.friendNoticeSeconds == 8 && fresh.friendNoticeVolume == 60);
-    CHECK(fresh.friendNoticeAcross == kFishBarUnplaced && fresh.friendNoticeDown == kFishBarUnplaced);
+    CHECK(fresh.noticeWidth == 300 && fresh.noticeHeight == kFlexibleNoticeHeight && fresh.noticeFit == NoticeFit::Shrink);
+    CHECK(fresh.noticeRounding == kThemeRounding && fresh.noticeBar && fresh.noticeVolume == 100);
+    CHECK(fresh.noticeSeconds == 8 && fresh.noticeAnchor == HelpAnchor::Left && fresh.noticeEdge == NoticeEdge::Top);
+    CHECK(fresh.noticeAlign == HelpAnchor::Left && fresh.noticeMost == 5);
+    CHECK(fresh.noticeAcross == kFishBarUnplaced && fresh.noticeDown == kFishBarUnplaced);
+    CHECK(fresh.friendNoticeOnline && fresh.friendNoticeOffline && fresh.friendNoticeVolume == 60);
+    CHECK(fresh.friendNoticeOnlineSound == kChimeSound && fresh.friendNoticeOfflineSound == kNoSound);
+    CHECK(fresh.partyNotice && fresh.partyNoticeButtons && fresh.partyNoticeVolume == 60);
+    CHECK(fresh.partyNoticeSound == kFirstCallChoice + 14);
     MapStore store;
-    store.values["friendNoticeSeconds"] = "99";
-    store.values["friendNoticeVolume"]  = "250";
-    store.values["friendNoticeAcross"]  = "20000";
-    store.values["friendNoticeDown"]    = "-7";
-    store.values["friendNoticeOffline"] = "false";
-    store.values["friendNoticeUpward"]  = "true";
+    store.values["noticeWidth"]              = "5000";
+    store.values["noticeHeight"]             = "1";
+    store.values["noticeMost"]               = "99";
+    store.values["noticeVolume"]             = "250";
+    store.values["noticeFit"]                = "truncate";
+    store.values["noticeEdge"]               = "bottom";
+    store.values["noticeAnchor"]             = "right";
+    store.values["noticeAlign"]              = "center";
+    store.values["friendNoticeOfflineSound"] = "call21";
+    store.values["partyNoticeSound"]         = "bogus";
+    store.values["friendNoticeOnlineSound"]  = "true";
     const Settings s = LoadSettings(store);
-    CHECK_EQ(s.friendNoticeSeconds, 30);
-    CHECK_EQ(s.friendNoticeVolume, 100);
-    CHECK_EQ(s.friendNoticeAcross, 10000);
-    CHECK_EQ(s.friendNoticeDown, -1);
-    CHECK(!s.friendNoticeOffline && s.friendNoticeUpward);
-    CHECK(s.friendNoticeOnline && s.friendNoticeBar && s.friendNoticeOnlineSound); // a missing key keeps its default
-    store.values["friendNoticeSeconds"] = "0";
-    CHECK_EQ(LoadSettings(store).friendNoticeSeconds, 1);
+    CHECK_EQ(s.noticeWidth, 600);
+    CHECK_EQ(s.noticeHeight, 30);
+    CHECK_EQ(s.noticeMost, 10);
+    CHECK_EQ(s.noticeVolume, 100);
+    CHECK(s.noticeFit == NoticeFit::Truncate && s.noticeEdge == NoticeEdge::Bottom);
+    CHECK(s.noticeAnchor == HelpAnchor::Right && s.noticeAlign == HelpAnchor::Center);
+    CHECK_EQ(s.friendNoticeOfflineSound, kFirstCallChoice + 21);
+    CHECK_EQ(s.partyNoticeSound, kDefaultInviteSound); // an unknown name keeps the default
+    CHECK_EQ(s.friendNoticeOnlineSound, kChimeSound);
     MapStore saved;
     SaveSettings(s, saved);
     const Settings back = LoadSettings(saved);
-    CHECK(back.friendNoticeSeconds == 30 && back.friendNoticeVolume == 100 && back.friendNoticeAcross == 10000);
-    CHECK(back.friendNoticeDown == -1 && !back.friendNoticeOffline && back.friendNoticeUpward && back.friendNoticeOnline);
+    CHECK(back.noticeWidth == 600 && back.noticeHeight == 30 && back.noticeMost == 10 && back.noticeVolume == 100);
+    CHECK(back.noticeFit == NoticeFit::Truncate && back.noticeEdge == NoticeEdge::Bottom);
+    CHECK(back.noticeAnchor == HelpAnchor::Right && back.noticeAlign == HelpAnchor::Center);
+    CHECK(back.friendNoticeOfflineSound == kFirstCallChoice + 21 && back.partyNoticeSound == kDefaultInviteSound);
+    CHECK(back.friendNoticeOnlineSound == kChimeSound);
+}
+
+TEST(a_sound_choice_is_saved_by_a_name_that_never_moves)
+{
+    CHECK(NoticeSoundKey(0) == "none");
+    CHECK(NoticeSoundKey(1) == "chime");
+    CHECK(NoticeSoundKey(2) == "call0");
+    CHECK(NoticeSoundKey(23) == "call21");
+    for (int choice = 0; choice < kNoticeSoundCount; ++choice)
+        CHECK_EQ(NoticeSoundChoice(NoticeSoundKey(choice)), choice);
+    CHECK_EQ(NoticeSoundChoice("call22"), 0);
+    CHECK_EQ(NoticeSoundChoice(""), 0);
 }
 
 TEST(the_currency_widget_keeps_its_two_currencies)

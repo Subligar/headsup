@@ -91,9 +91,9 @@ TEST(stack_upward_puts_the_oldest_on_the_spot_and_newer_ones_above)
 {
     test::RmlSession rml;
     Settings settings;
-    settings.friendNoticeUpward = true;
-    settings.friendNoticeAcross = 2500;
-    settings.friendNoticeDown   = 5000;
+    settings.noticeEdge   = NoticeEdge::Bottom;
+    settings.noticeAcross = 2500;
+    settings.noticeDown   = 5000;
     NoticeBox box;
     box.Update(rml.context, Gold(), settings, {N(1, NoticeKind::Online, "One"), N(2, NoticeKind::Online, "Two")},
         false, kBarBottom, 0.0f, std::nullopt);
@@ -108,9 +108,9 @@ TEST(a_stack_switched_to_upward_at_the_top_of_the_screen_stays_on_it)
 {
     test::RmlSession rml;
     Settings settings;
-    settings.friendNoticeUpward = true;
-    settings.friendNoticeAcross = 2500;
-    settings.friendNoticeDown   = 0;
+    settings.noticeEdge   = NoticeEdge::Bottom;
+    settings.noticeAcross = 2500;
+    settings.noticeDown   = 0;
     NoticeBox box;
     box.Update(rml.context, Gold(), settings, {N(1, NoticeKind::Online, "One")}, false, kBarBottom, 0.0f, std::nullopt);
     rml.context->Update();
@@ -130,7 +130,7 @@ TEST(a_notice_fades_and_hides_its_bar_when_the_countdown_bar_is_off)
     CHECK(std::abs(Box(rml, 0)->GetComputedValues().opacity() - 0.25f) < 0.001f);
     const float withBar = Height(Box(rml, 0));
     CHECK(!Part(Box(rml, 0), "bar")->IsClassSet(kHiddenClass));
-    settings.friendNoticeBar = false;
+    settings.noticeBar = false;
     box.Update(rml.context, Gold(), settings, {N(1, NoticeKind::Online, "One", 0.25f)}, false, kBarBottom, 0.0f, std::nullopt);
     rml.context->Update();
     CHECK(Part(Box(rml, 0), "bar")->IsClassSet(kHiddenClass));
@@ -162,8 +162,8 @@ TEST(clicks_pass_through_a_notice_and_move_lets_you_drag_the_stack)
     }
     rml.context->ProcessMouseButtonUp(0, 0);
     CHECK(box.Update(rml.context, Gold(), settings, shown, true, kBarBottom, 0.0f, std::nullopt));
-    CHECK_EQ(settings.friendNoticeAcross, 2552); // 490 / 1920
-    CHECK_EQ(settings.friendNoticeDown, 5509);   // 595 / 1080
+    CHECK_EQ(settings.noticeAcross, 2552); // 490 / 1920
+    CHECK_EQ(settings.noticeDown, 5509);   // 595 / 1080
     CHECK(!box.Update(rml.context, Gold(), settings, shown, true, kBarBottom, 0.0f, std::nullopt));
     rml.context->Update();
     CHECK(std::abs(Left(Box(rml, 0)) - 490.0f) < 0.5f && std::abs(Top(Box(rml, 0)) - 595.0f) < 0.5f);
@@ -237,8 +237,8 @@ TEST(letting_go_of_shift_ends_the_drag_where_the_stack_is)
     }
     rml.context->ProcessMouseButtonUp(0, 0);
     box.Update(rml.context, Gold(), settings, shown, false, kBarBottom, 0.0f, std::nullopt);
-    CHECK_EQ(settings.friendNoticeAcross, SpotShare(250.0f, 1920.0f));
-    CHECK_EQ(settings.friendNoticeDown, SpotShare(325.0f, 1080.0f));
+    CHECK_EQ(settings.noticeAcross, SpotShare(250.0f, 1920.0f));
+    CHECK_EQ(settings.noticeDown, SpotShare(325.0f, 1080.0f));
     rml.context->Update();
     CHECK(std::abs(Left(Box(rml, 0)) - 250.0f) < 0.5f && std::abs(Top(Box(rml, 0)) - 325.0f) < 0.5f);
     box.Close();

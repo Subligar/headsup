@@ -2299,13 +2299,11 @@ TEST(the_friend_notifications_page_sets_its_switches_and_sliders)
     CHECK(w.Pass({{show + "-notice-offline", kClickEvent, ""}}).changed);
     CHECK(!w.settings.friendNoticeOffline && w.settings.friendNoticeOnline);
     CHECK(w.Pass({{show + "-notice-seconds", kChangeEvent, "12"}}).changed);
-    CHECK_EQ(w.settings.friendNoticeSeconds, 12);
+    CHECK_EQ(w.settings.noticeSeconds, 12);
     CHECK(w.Pass({{sound + "-notice-volume", kChangeEvent, "35"}}).changed);
     CHECK_EQ(w.settings.friendNoticeVolume, 35);
-    w.Pass({{show + "-notice-upward", kClickEvent, ""}, {show + "-notice-bar", kClickEvent, ""}});
-    CHECK(w.settings.friendNoticeUpward && !w.settings.friendNoticeBar);
-    w.Pass({{sound + "-notice-online-sound", kClickEvent, ""}});
-    CHECK(!w.settings.friendNoticeOnlineSound);
+    w.Pass({{show + "-notice-bar", kClickEvent, ""}});
+    CHECK(!w.settings.noticeBar);
 }
 
 TEST(the_notice_cards_buttons_ask_the_plugin_once)
@@ -2315,12 +2313,6 @@ TEST(the_notice_cards_buttons_ask_the_plugin_once)
     const std::string card = "userinterface-notice-show";
     CHECK(!w.Pass({{card + "-notice-test", kClickEvent, ""}}).changed);
     CHECK(w.state.noticeTestRequested);
-    // Preview is the window's to hold, no setting.
-    const Settings before = w.settings;
-    CHECK(!w.Pass({{card + "-notice-preview", kClickEvent, ""}}).changed);
-    CHECK(w.state.noticePreview && KeysChanged(before, w.settings).empty());
-    w.Pass({{card + "-notice-preview", kClickEvent, ""}});
-    CHECK(!w.state.noticePreview);
 }
 
 TEST(the_muted_friends_card_lists_every_friend_and_asks_for_a_mute)

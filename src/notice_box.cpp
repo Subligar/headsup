@@ -98,8 +98,8 @@ namespace headsup
         if (m_Dragged && !m_Dragging)
         {
             const Rml::Vector2i screen  = context->GetDimensions();
-            settings.friendNoticeAcross = SpotShare(m_Dragged->x, static_cast<float>(screen.x));
-            settings.friendNoticeDown   = SpotShare(m_Dragged->y, static_cast<float>(screen.y));
+            settings.noticeAcross = SpotShare(m_Dragged->x, static_cast<float>(screen.x));
+            settings.noticeDown   = SpotShare(m_Dragged->y, static_cast<float>(screen.y));
             m_Dragged.reset();
             moved = true;
         }
@@ -113,7 +113,7 @@ namespace headsup
                 slot < static_cast<int>(shown.size()) ? std::optional(shown[static_cast<size_t>(slot)]) : std::nullopt;
             const std::optional<ShownNotice>& was = m_Filled[static_cast<size_t>(slot)];
             box->SetClass(kHiddenClass, !notice);
-            PartOf(box, kBar)->SetClass(kHiddenClass, !settings.friendNoticeBar);
+            PartOf(box, kBar)->SetClass(kHiddenClass, !settings.noticeBar);
             if (!notice)
             {
                 changed = changed || was.has_value();
@@ -141,8 +141,8 @@ namespace headsup
                                   ->GetBox()
                                   .GetSize(Rml::BoxArea::Border)
                                   .y);
-        const std::vector<float> tops = NoticeTops(heights, 0.0f, settings.friendNoticeUpward);
-        m_Upward      = settings.friendNoticeUpward;
+        const std::vector<float> tops = NoticeTops(heights, 0.0f, settings.noticeEdge == NoticeEdge::Bottom);
+        m_Upward      = settings.noticeEdge == NoticeEdge::Bottom;
         m_FirstHeight = heights.empty() ? 0.0f : heights.front();
         std::map<uint32_t, float> at;
         for (size_t slot = 0; slot < shown.size(); ++slot)
@@ -158,8 +158,8 @@ namespace headsup
         if (!m_Dragging)
         {
             const Rml::Vector2i screen = context->GetDimensions();
-            const NoticeSpot spot = NoticeAnchor(settings.friendNoticeAcross, settings.friendNoticeDown,
-                settings.friendNoticeUpward, static_cast<float>(screen.x), static_cast<float>(screen.y), barBottom,
+            const NoticeSpot spot = NoticeAnchor(settings.noticeAcross, settings.noticeDown,
+                settings.noticeEdge == NoticeEdge::Bottom, static_cast<float>(screen.x), static_cast<float>(screen.y), barBottom,
                 m_FirstHeight);
             m_Stack->SetProperty(Rml::PropertyId::Left, Rml::Property(spot.x, Rml::Unit::PX));
             m_Stack->SetProperty(Rml::PropertyId::Top, Rml::Property(spot.y, Rml::Unit::PX));
