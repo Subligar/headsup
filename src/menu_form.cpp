@@ -130,6 +130,7 @@ namespace headsup
 
         std::string Pixels(int px) { return Formatted("%d px", px); }
         std::string Seconds(int seconds) { return Formatted("%d s", seconds); }
+        std::string Count(int n) { return std::to_string(n); }
         // A scale, as 1.5x.
         constexpr const char* kTimes = "x";
         std::string Times(double scale, int places) { return Decimal(scale, places) + kTimes; }
@@ -164,6 +165,59 @@ namespace headsup
                 [&](int i) { return Words(options[static_cast<size_t>(i)].name); }, tip, 0.0f,
                 [&](int i) { return Words(options[static_cast<size_t>(i)].tip); });
             value = static_cast<Enum>(picked);
+        }
+
+        // A notification's Sound Effect: a pick is also told, so the plugin plays it.
+        void SoundDropdown(Form& form, MenuFormState& state, const std::string& label, int& choice, NoticeKind kind,
+            std::span<const LayoutOption> sounds, const char* tip)
+        {
+            const int was = choice;
+            OptionsDropdown(form, label, choice, sounds, tip);
+            if (choice != was) state.soundPicked = kind;
+        }
+
+        // Friends Included: All, None, then every friend on the game's list by name. What is clicked is asked of
+        // the plugin, which keeps it in a file of its own: it is no setting.
+        void IncludedList(Context& c, const std::string& label, const char* tip)
+        {
+            const MenuReadings& r = c.readings;
+            MenuFormState& state  = c.state;
+            const char* all = Word(c, WindowWord::ChecksAll), *none = Word(c, WindowWord::ChecksNone);
+            std::vector<const FriendEntry*> friends;
+            if (r.friends != nullptr)
+                for (const FriendEntry& entry : *r.friends) friends.push_back(&entry);
+            // By name, then account, so a row stays put while the list changes under it.
+            std::ranges::sort(friends, [](const FriendEntry* a, const FriendEntry* b) {
+                return std::tie(FriendName(*a), a->account) < std::tie(FriendName(*b), b->account);
+            });
+            std::vector<std::string> rows = {all, none};
+            std::vector<uint32_t> accounts;
+            for (const FriendEntry* entry : friends)
+            {
+                rows.push_back(FriendName(*entry));
+                accounts.push_back(entry->account);
+            }
+            constexpr int kAllRow = 0, kNoneRow = 1, kFirstFriendRow = 2;
+            FriendsIncluded picked = state.includedAsked.value_or(r.included != nullptr ? *r.included : FriendsIncluded{});
+            c.form.CheckList(label.c_str(), rows,
+                [&](int row) {
+                    if (row == kAllRow) return AllIncluded(picked, accounts);
+                    if (row == kNoneRow) return picked.none;
+                    return Includes(picked, accounts[static_cast<size_t>(row - kFirstFriendRow)]);
+                },
+                [&] {
+                    if (picked.none) return std::string(none);
+                    if (AllIncluded(picked, accounts)) return std::string(all);
+                    std::vector<size_t> ticked;
+                    for (size_t i = 0; i < accounts.size(); ++i)
+                        if (Includes(picked, accounts[i])) ticked.push_back(i);
+                    if (ticked.size() == 1) return FriendName(*friends[ticked.front()]);
+                    return Filled(Word(c, WindowWord::ChecksPicked), kCountMark, std::to_string(ticked.size()));
+                },
+                [&](int row) {
+                    if (ToggleIncluded(picked, accounts, row)) state.includedAsked = picked;
+                },
+                tip);
         }
 
         // Whether a mob's design holds one of these tags, which the settings of a card show through.
@@ -2297,29 +2351,122 @@ namespace headsup
                 form.Fade(!s.fishCase);
                 if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.caseTestRequested = true;
                 break;
-            case SettingPiece::NoticeOnline:
+            case SettingPiece::NoticeWidth:
                 form.Fade(false);
-                form.Switch(label.c_str(), s.friendNoticeOnline, tip);
+                form.SliderInt(label.c_str(), s.noticeWidth, kFlexibleNoticeWidth, kMaxNoticeWidth,
+                    PixelsOr(Word(c, WindowWord::Flexible), kFlexibleNoticeWidth), tip);
                 break;
-            case SettingPiece::NoticeOffline:
+            case SettingPiece::NoticeHeight:
                 form.Fade(false);
-                form.Switch(label.c_str(), s.friendNoticeOffline, tip);
+                form.SliderInt(label.c_str(), s.noticeHeight, kFlexibleNoticeHeight, kMaxNoticeHeight,
+                    PixelsOr(Word(c, WindowWord::Flexible), kFlexibleNoticeHeight), tip);
                 break;
-            case SettingPiece::NoticeSeconds:
+            case SettingPiece::NoticeFit:
+            {
                 form.Fade(false);
-                form.SliderInt(label.c_str(), s.noticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds, Seconds, tip);
+                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
+                form.Segments(label.c_str(), s.noticeFit, names.data(), kNoticeFitCount, tip);
+                break;
+            }
+            case SettingPiece::NoticeRounding:
+                form.Fade(false);
+                form.SliderInt(label.c_str(), s.noticeRounding, kThemeRounding, kMaxRounding,
+                    PixelsOr(Word(c, WindowWord::Themes), kThemeRounding), tip);
                 break;
             case SettingPiece::NoticeBar:
                 form.Fade(false);
                 form.Switch(label.c_str(), s.noticeBar, tip);
                 break;
+            case SettingPiece::NoticeMasterVolume:
+                form.Fade(false);
+                form.SliderPercent(label.c_str(), s.noticeVolume, 0, kMaxNoticeVolume, tip);
+                break;
+            case SettingPiece::NoticeSeconds:
+                form.Fade(false);
+                form.SliderInt(label.c_str(), s.noticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds, Seconds, tip);
+                break;
+            case SettingPiece::NoticeAnchor:
+            case SettingPiece::NoticeEdge:
+            {
+                form.Fade(false);
+                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
+                const HelpAnchor anchor = s.noticeAnchor;
+                const NoticeEdge edge   = s.noticeEdge;
+                if (e.piece == SettingPiece::NoticeAnchor)
+                    form.Segments(label.c_str(), s.noticeAnchor, names.data(), kHelpAnchorCount, tip);
+                else form.Segments(label.c_str(), s.noticeEdge, names.data(), kNoticeEdgeCount, tip);
+                // A new anchor moves the spot to the stack's new side, so the stack stays where it is.
+                if ((s.noticeAnchor != anchor || s.noticeEdge != edge) && r.noticeBounds && r.screenWidth > 0 &&
+                    r.screenHeight > 0)
+                {
+                    const NoticeSpot spot = Reanchored(*r.noticeBounds, s.noticeAnchor, s.noticeEdge);
+                    s.noticeAcross        = SpotShare(spot.x, static_cast<float>(r.screenWidth));
+                    s.noticeDown          = SpotShare(spot.y, static_cast<float>(r.screenHeight));
+                }
+                break;
+            }
+            case SettingPiece::NoticeAlign:
+            {
+                form.Fade(false);
+                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
+                form.Segments(label.c_str(), s.noticeAlign, names.data(), kHelpAnchorCount, tip);
+                break;
+            }
+            case SettingPiece::NoticeMost:
+                form.Fade(false);
+                form.SliderInt(label.c_str(), s.noticeMost, kMinNoticeMost, kMaxNoticeMost, Count, tip);
+                break;
             case SettingPiece::NoticeTest:
                 form.Fade(false);
                 if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.noticeTestRequested = true;
                 break;
-            case SettingPiece::NoticeVolume:
-                form.Fade(!s.friendNoticeOnline || s.friendNoticeOnlineSound == kNoSound);
+            case SettingPiece::FriendNoticeOnline:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.friendNoticeOnline, tip);
+                break;
+            case SettingPiece::FriendNoticeOffline:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.friendNoticeOffline, tip);
+                break;
+            case SettingPiece::FriendNoticeOnlineSound:
+                form.Fade(!s.friendNoticeOnline);
+                SoundDropdown(form, c.state, label, s.friendNoticeOnlineSound, NoticeKind::Online,
+                    c.layout.OptionsOf(WindowList::NoticeSounds), tip);
+                break;
+            case SettingPiece::FriendNoticeOfflineSound:
+                form.Fade(!s.friendNoticeOffline);
+                SoundDropdown(form, c.state, label, s.friendNoticeOfflineSound, NoticeKind::Offline,
+                    c.layout.OptionsOf(WindowList::NoticeSounds), tip);
+                break;
+            case SettingPiece::FriendNoticeVolume:
+                form.Fade((s.friendNoticeOnlineSound == kNoSound && s.friendNoticeOfflineSound == kNoSound) ||
+                          (!s.friendNoticeOnline && !s.friendNoticeOffline));
                 form.SliderPercent(label.c_str(), s.friendNoticeVolume, 0, kMaxNoticeVolume, tip);
+                break;
+            case SettingPiece::FriendsIncluded:
+                form.Fade(!s.friendNoticeOnline && !s.friendNoticeOffline);
+                IncludedList(c, label, tip);
+                break;
+            case SettingPiece::FriendNoticeTest:
+                form.Fade(!s.friendNoticeOnline && !s.friendNoticeOffline);
+                if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.friendNoticeTestRequested = true;
+                break;
+            case SettingPiece::PartyNotice:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.partyNotice, tip);
+                break;
+            case SettingPiece::PartyNoticeButtons:
+                form.Fade(!s.partyNotice);
+                form.Switch(label.c_str(), s.partyNoticeButtons, tip);
+                break;
+            case SettingPiece::PartyNoticeSound:
+                form.Fade(!s.partyNotice);
+                SoundDropdown(form, c.state, label, s.partyNoticeSound, NoticeKind::PartyInvite,
+                    c.layout.OptionsOf(WindowList::NoticeSounds), tip);
+                break;
+            case SettingPiece::PartyNoticeVolume:
+                form.Fade(!s.partyNotice || s.partyNoticeSound == kNoSound);
+                form.SliderPercent(label.c_str(), s.partyNoticeVolume, 0, kMaxNoticeVolume, tip);
                 break;
             case SettingPiece::FishingBarDraggable:
                 form.Fade(false);
@@ -2804,8 +2951,9 @@ namespace headsup
             case CardPiece::Visibility:
             case CardPiece::PlaceholderTimers:
             case CardPiece::MousePointer: return {false, !on};
-            case CardPiece::NoticeShow:
-            case CardPiece::NoticeSound: return {false, !on};
+            case CardPiece::NoticeLook:
+            case CardPiece::NoticeFriends:
+            case CardPiece::NoticeParty: return {false, !on};
             case CardPiece::OutlineDesign: return {c.kind && !c.outlineColors, !on || !s.outlines};
             case CardPiece::Badges:
             case CardPiece::NameplateDesign:

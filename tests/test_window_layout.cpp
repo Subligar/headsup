@@ -33,7 +33,7 @@ TEST(the_entity_pages_share_one_range_of_cards)
     CHECK(kWindowLayout.PageOf(Page::Entities).firstCard != mobs.firstCard);
 }
 
-TEST(user_interface_starts_with_the_mouse_pointer_and_ends_its_tabs_with_the_games_own_ui)
+TEST(user_interface_starts_with_the_mouse_pointer_and_ends_its_tabs_with_notifications)
 {
     const auto keys = [](Page page) {
         std::vector<std::string> out;
@@ -48,7 +48,7 @@ TEST(user_interface_starts_with_the_mouse_pointer_and_ends_its_tabs_with_the_gam
     auto at           = std::ranges::find_if(pages, [](const LayoutPage& p) { return p.page == Page::UserInterface; });
     while (std::next(at) != pages.end() && std::next(at)->child)
         ++at;
-    CHECK(at->page == Page::VanillaUi);
+    CHECK(at->page == Page::Notifications);
 }
 
 TEST(every_setting_the_code_draws_is_in_one_card_of_the_layout)

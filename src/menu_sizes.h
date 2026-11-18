@@ -12,6 +12,7 @@ namespace headsup
     constexpr float kMinWindowHeight = 16.0f;
     constexpr float kWindowKeptOn    = 0.2f; // a share of each side: dragged off the screen, this much stays on
     constexpr float kGutter         = 1.0f;  // around the window's parts and between cards
+    constexpr float kScrollbar      = 0.7f;  // a scrollbar's width
     constexpr float kCardPad        = 0.9f;  // a card's content from its edges
     constexpr float kCardRadius     = 0.6f;
     constexpr float kRadius         = 0.4f;  // controls

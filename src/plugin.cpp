@@ -1272,6 +1272,7 @@ public:
             .popupTestReady   = m_CombatTextHook.CanStartPopups(),
             .friends          = &m_FriendEntries,
             .included         = &Included(),
+            .noticeBounds     = m_NoticeBox.Bounds(),
             .settingsOf       = SettingsShownNow(),
             .partMarks        = {},
             .localZone        = LocalZoneNow(),

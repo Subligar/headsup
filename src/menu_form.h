@@ -50,6 +50,7 @@ namespace headsup
         bool popupTestReady = false; // the game's code that starts a combat popup was found
         const std::vector<FriendEntry>* friends = nullptr; // the game's friend list, as last read
         const FriendsIncluded* included         = nullptr;
+        std::optional<NoticeRect> noticeBounds;         // the notifications as last drawn, which an anchor change keeps put
         // The widgets whose settings the panel's open popup shows, in its pill's order; none while it shows none.
         std::vector<PanelWidget> settingsOf;
         // The picture each part's chip in the Widget Designer shows, as the game is now.
@@ -112,7 +113,9 @@ namespace headsup
         bool debugRequested = false;
         bool caseMoveRequested = false, caseTestRequested = false; // pressed: the plugin shows the boxes, or plays one
         bool popupTestRequested = false; // the Combat Popups card's Test: the plugin starts its samples
-        bool noticeTestRequested = false; // the same for the friend notices: a friend comes online, or goes offline
+        bool noticeTestRequested       = false; // the Notifications card's Test: a kind at random
+        bool friendNoticeTestRequested = false; // Friend Notifications' Test: a friend comes online, or goes offline
+        std::optional<NoticeKind> soundPicked;  // a Sound Effect was picked: the plugin plays it
         std::optional<FriendsIncluded> includedAsked; // Friends Included as clicked, which is no setting: the plugin keeps it
         bool watchRequested = false; // the debug watch is to start, or stop
         bool exportRequested = false;
