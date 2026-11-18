@@ -91,7 +91,8 @@ namespace headsup
                 m_Stack->AddEventListener(id, this);
             m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
         }
-        // Move turned off mid-drag may never hear the button let go: the drag ends with it.
+        // Shift let go mid-drag ends the drag where the stack is, whatever the pointer does until the button goes up.
+        m_Grabbable = moving;
         if (!moving) m_Dragging = false;
         bool moved = false;
         if (m_Dragged && !m_Dragging)
@@ -168,6 +169,7 @@ namespace headsup
 
     void NoticeBox::ProcessEvent(Rml::Event& event)
     {
+        if (!m_Grabbable) return;
         const Rml::Vector2f pointer{event.GetParameter<float>("mouse_x", 0.0f), event.GetParameter<float>("mouse_y", 0.0f)};
         switch (event.GetId())
         {

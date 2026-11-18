@@ -2350,10 +2350,6 @@ namespace headsup
                 form.Fade(false);
                 form.Switch(label.c_str(), s.friendNoticeBar, tip);
                 break;
-            case SettingPiece::NoticeMove:
-                form.Fade(false);
-                if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.noticeMoveRequested = true;
-                break;
             case SettingPiece::NoticeTest:
                 form.Fade(false);
                 if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.noticeTestRequested = true;

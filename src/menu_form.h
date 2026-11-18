@@ -118,7 +118,7 @@ namespace headsup
         bool debugRequested = false;
         bool caseMoveRequested = false, caseTestRequested = false; // pressed: the plugin shows the boxes, or plays one
         bool popupTestRequested = false; // the Combat Popups card's Test: the plugin starts its samples
-        bool noticeMoveRequested = false, noticeTestRequested = false; // the same for the friend notices
+        bool noticeTestRequested = false; // the same for the friend notices: shows one
         std::optional<MuteAsked> muteAsked; // a friend's Mute switched, which is no setting: the plugin keeps mutes
         bool watchRequested = false; // the debug watch is to start, or stop
         bool exportRequested = false;

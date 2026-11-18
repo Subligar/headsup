@@ -2314,9 +2314,7 @@ TEST(the_notice_cards_buttons_ask_the_plugin_once)
     w.state.page           = Page::UserInterface;
     const std::string card = "userinterface-notice-show";
     CHECK(!w.Pass({{card + "-notice-test", kClickEvent, ""}}).changed);
-    CHECK(w.state.noticeTestRequested && !w.state.noticeMoveRequested);
-    CHECK(!w.Pass({{card + "-notice-move", kClickEvent, ""}}).changed);
-    CHECK(w.state.noticeMoveRequested);
+    CHECK(w.state.noticeTestRequested);
 }
 
 TEST(the_muted_friends_card_lists_every_friend_and_asks_for_a_mute)

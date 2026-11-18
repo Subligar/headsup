@@ -442,7 +442,6 @@ class HeadsUp final : public IPlugin
     headsup::NoticeBox m_NoticeBox;
     headsup::SoundWaits m_NoticeWaits;
     headsup::WaveOut m_NoticeSound; // its own, so a notice cuts off no Case's click
-    bool m_NoticesMoving = false;
     double m_NoticesAt   = 0.0; // the last frame the notices were drawn, for their slide
     std::unordered_map<uint32_t, headsup::PlayerJobs> m_PartyJobs; // theirs as the party list has them, by server ID
     headsup::PlayerJobs m_OwnJobs;                                // yours as the game has them, this frame
@@ -1111,11 +1110,9 @@ public:
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
-        if (!m_RmlMenu.open) m_NoticesMoving = false;
         if (m_Rml.Running() &&
             m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
-                m_NoticesMoving ? headsup::NoticeSamples(m_Settings) : m_Notices.Shown(now, static_cast<float>(m_Settings.friendNoticeSeconds)),
-                m_NoticesMoving, g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, static_cast<float>(std::max(0.0, now - m_NoticesAt)),
+                m_Notices.Shown(now, static_cast<float>(m_Settings.friendNoticeSeconds)), KeyDown(VK_SHIFT), g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, static_cast<float>(std::max(0.0, now - m_NoticesAt)),
                 headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
                     ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
                     : std::nullopt))
@@ -1293,7 +1290,6 @@ public:
         if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
         if (m_RmlMenu.TakeCaseMove()) m_CaseMoving = true;
         if (m_RmlMenu.TakePopupTest()) m_PopupTest.Start(now);
-        if (m_RmlMenu.TakeNoticeMove()) m_NoticesMoving = true;
         if (m_RmlMenu.TakeNoticeTest())
         {
             m_Notices.Add(headsup::NoticeKind::Online, headsup::kNoticeSampleName, Now());

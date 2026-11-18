@@ -212,3 +212,34 @@ TEST(a_game_theme_draws_each_notice_in_the_games_window_art)
     CHECK(Part(Box(rml, 0), "message")->GetInnerRML().find("One") != std::string::npos);
     box.Close();
 }
+
+TEST(letting_go_of_shift_ends_the_drag_where_the_stack_is)
+{
+    test::RmlSession rml;
+    Settings settings;
+    NoticeBox box;
+    const std::vector<ShownNotice> shown = {N(1, NoticeKind::Online, "One")};
+    box.Update(rml.context, Gold(), settings, shown, true, kBarBottom, 0.0f, std::nullopt);
+    rml.context->Update();
+    rml.context->ProcessMouseMove(20, 65, 0);
+    rml.context->ProcessMouseButtonDown(0, 0);
+    for (int step = 1; step <= 2; ++step)
+    {
+        rml.context->ProcessMouseMove(20 + 120 * step, 65 + 135 * step, 0); // to (260, 335): the stack at (250, 325)
+        rml.context->Update();
+    }
+    // Shift let go: the drag stops there, and the pointer moving on with the button still down takes it no further.
+    box.Update(rml.context, Gold(), settings, shown, false, kBarBottom, 0.0f, std::nullopt);
+    for (int step = 3; step <= 4; ++step)
+    {
+        rml.context->ProcessMouseMove(20 + 120 * step, 65 + 135 * step, 0);
+        rml.context->Update();
+    }
+    rml.context->ProcessMouseButtonUp(0, 0);
+    box.Update(rml.context, Gold(), settings, shown, false, kBarBottom, 0.0f, std::nullopt);
+    CHECK_EQ(settings.friendNoticeAcross, SpotShare(250.0f, 1920.0f));
+    CHECK_EQ(settings.friendNoticeDown, SpotShare(325.0f, 1080.0f));
+    rml.context->Update();
+    CHECK(std::abs(Left(Box(rml, 0)) - 250.0f) < 0.5f && std::abs(Top(Box(rml, 0)) - 325.0f) < 0.5f);
+    box.Close();
+}
