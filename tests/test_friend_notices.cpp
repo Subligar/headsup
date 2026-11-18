@@ -1,6 +1,7 @@
 #include "friend_notices.h"
 #include "test.h"
 
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -89,4 +90,85 @@ TEST(the_mute_file_holds_one_account_a_line_and_survives_a_hand_edit)
     CHECK((FriendMutesFrom("1001\n1003\n") == FriendMutes{1001, 1003}));
     CHECK((FriendMutesFrom("abc\r\n\r\n 1002 \r\n1002\n-5\n12x\n0\n99999999999\n7") == FriendMutes{7, 1002}));
     CHECK(FriendMutesFrom("").empty());
+}
+
+TEST(a_notice_is_solid_for_four_fifths_of_its_time_then_fades)
+{
+    CHECK_EQ(NoticeOpacity(0.0f, 8.0f), 1.0f);
+    CHECK_EQ(NoticeOpacity(6.4f, 8.0f), 1.0f);
+    CHECK(std::abs(NoticeOpacity(7.2f, 8.0f) - 0.5f) < 0.001f); // halfway through its last 1.6 s
+    CHECK_EQ(NoticeOpacity(8.0f, 8.0f), 0.0f);
+    CHECK_EQ(NoticeOpacity(9.0f, 8.0f), 0.0f);
+    CHECK_EQ(NoticeBarShare(2.0f, 8.0f), 0.75f);
+    CHECK_EQ(NoticeBarShare(9.0f, 8.0f), 0.0f);
+}
+
+TEST(the_stack_keeps_five_notices_oldest_first_and_drops_each_at_its_time)
+{
+    NoticeStack stack;
+    for (int n = 0; n < 6; ++n) stack.Add(NoticeKind::Online, std::string(1, static_cast<char>('A' + n)), 10.0 + n);
+    std::vector<ShownNotice> shown = stack.Shown(15.0, 8.0f);
+    CHECK_EQ(shown.size(), size_t{5});
+    CHECK_EQ(shown.front().name, "B"); // A, the oldest, was pushed out by the sixth
+    CHECK_EQ(shown.back().name, "F");
+    CHECK_EQ(shown.front().share, 0.5f); // B is 4 s into 8
+    shown = stack.Shown(20.5, 8.0f);     // B (11) and C (12) are past 8 s; D is 7.5 s in, E 6.5, F 5.5
+    CHECK_EQ(shown.size(), size_t{3});
+    CHECK(std::abs(shown[0].opacity - 0.3125f) < 0.001f); // D: 1.1 s into its 1.6 s fade
+    CHECK(std::abs(shown[1].opacity - 0.9375f) < 0.001f); // E: 0.1 s into it
+    CHECK_EQ(shown[2].opacity, 1.0f);
+    const uint32_t d = shown[0].id;
+    CHECK(shown[1].id != d && stack.Shown(20.6, 8.0f)[0].id == d);
+    // The Duration turned down to 6 s while they show: D and E are older than it and go. F, 5.6 s in, is 0.8 s
+    // into a 1.2 s fade.
+    shown = stack.Shown(20.6, 6.0f);
+    CHECK_EQ(shown.size(), size_t{1});
+    CHECK(shown[0].name == "F" && std::abs(shown[0].opacity - 0.3333f) < 0.001f);
+}
+
+TEST(notices_stack_ten_pixels_apart_down_from_the_anchor_or_up_from_it)
+{
+    const float heights[] = {50.0f, 50.0f, 60.0f};
+    CHECK((NoticeTops(heights, 200.0f, false) == std::vector<float>{200.0f, 260.0f, 320.0f}));
+    CHECK((NoticeTops(heights, 500.0f, true) == std::vector<float>{450.0f, 390.0f, 320.0f}));
+    CHECK(NoticeTops({}, 200.0f, false).empty());
+}
+
+TEST(a_notice_slides_to_its_place_and_lands_on_it)
+{
+    CHECK(std::abs(Slid(100.0f, 0.0f, 0.016f) - 87.2f) < 0.01f); // 8 a second of what is left: 12.8% of 100
+    CHECK_EQ(Slid(100.0f, 0.0f, 0.5f), 0.0f);                    // a long frame never overshoots
+    CHECK_EQ(Slid(0.4f, 0.0f, 0.016f), 0.0f);                    // within half a pixel it is there
+    CHECK_EQ(Slid(7.0f, 7.0f, 0.016f), 7.0f);
+}
+
+TEST(the_stack_starts_under_the_panel_and_a_placed_one_keeps_its_share_of_the_screen)
+{
+    NoticeSpot at = NoticeAnchor(-1, -1, false, 1920.0f, 1080.0f, 45.0f);
+    CHECK(at.x == 10.0f && at.y == 55.0f);
+    at = NoticeAnchor(-1, -1, true, 1920.0f, 1080.0f, 45.0f);
+    CHECK(at.x == 10.0f && at.y == 1070.0f);
+    at = NoticeAnchor(2500, 5000, false, 1920.0f, 1080.0f, 45.0f);
+    CHECK(at.x == 480.0f && at.y == 540.0f);
+    CHECK_EQ(SpotShare(480.0f, 1920.0f), 2500);
+    // Saved at the right edge of a wider screen: the 300 px box stays on this one.
+    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f).x, 980.0f);
+    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f).y, 720.0f);
+}
+
+TEST(an_online_sound_waits_ten_seconds_and_an_offline_has_none)
+{
+    SoundWaits waits;
+    CHECK(waits.Due(NoticeKind::Online, 100.0));
+    CHECK(!waits.Due(NoticeKind::Online, 106.0)); // a silent one does not start the wait again
+    CHECK(!waits.Due(NoticeKind::Online, 109.9) && waits.Due(NoticeKind::Online, 110.0));
+    CHECK(!waits.Due(NoticeKind::Offline, 500.0));
+}
+
+TEST(a_notice_says_who_and_what_in_its_kinds_color)
+{
+    CHECK_EQ(NoticeMessage(NoticeKind::Online, "Two"), "Two is now online");
+    CHECK_EQ(NoticeMessage(NoticeKind::Offline, "Two"), "Two went offline");
+    CHECK_EQ(std::string(NoticeTitle(NoticeKind::Online)), "Friend Online");
+    CHECK(NoticeColor(NoticeKind::Online) != NoticeColor(NoticeKind::Offline));
 }
