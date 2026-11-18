@@ -17,8 +17,14 @@ namespace headsup
         constexpr float kBoxPadAcross     = 10.0f, kBoxPadDown = 8.0f;
         constexpr float kBarGap           = 6.0f; // between the message and the countdown bar
         constexpr const char* kMovingClass = "moving";
-        constexpr const char* kOnlineClass = "online", *kOfflineClass = "offline";
+        constexpr const char* kOnlineClass = "online", *kOfflineClass = "offline", *kInviteClass = "invite";
         constexpr int kTitle = 0, kMessage = 1, kBar = 2, kBoxParts = 3;
+
+        const char* KindClass(NoticeKind kind)
+        {
+            if (IsInvite(kind)) return kInviteClass;
+            return kind == NoticeKind::Online ? kOnlineClass : kOfflineClass;
+        }
 
         std::string NoticeRml(const BarPalette& p, const std::string& titleFont, const std::string& textFont,
             float titleSize, float textSize, const std::optional<SkinFrame>& skin)
@@ -45,14 +51,14 @@ namespace headsup
             css += ".message{" + font(textFont, textSize) + "color:" + RcssColor(p.text) + ";" +
                    ShadowEffect(static_cast<int>(std::lround(textSize))) + "}";
             css += ".bar{height:" + Px(kNoticeBarHeight) + ";margin-top:" + Px(kBarGap) + ";}";
-            for (const NoticeKind kind : {NoticeKind::Online, NoticeKind::Offline})
+            for (const NoticeKind kind : {NoticeKind::Online, NoticeKind::Offline, NoticeKind::PartyInvite})
             {
-                const std::string kindClass = kind == NoticeKind::Online ? kOnlineClass : kOfflineClass;
+                const std::string kindClass = KindClass(kind);
                 const std::string color     = RcssColor(NoticeColor(kind));
                 css += "." + kindClass + " .title{color:" + color + ";}." + kindClass + " .bar{background-color:" + color + ";}";
             }
             std::string boxes;
-            for (int slot = 0; slot < kMaxNotices; ++slot)
+            for (int slot = 0; slot < kNoticeBoxes; ++slot)
                 boxes += "<div id=\"" + NoticeId(slot) + "\" class=\"box " + kHiddenClass +
                          "\">" + (skin ? kArtRml : "") +
                          "<div class=\"title\"></div><div class=\"message\"></div><div class=\"bar\"></div></div>";
@@ -85,7 +91,7 @@ namespace headsup
             if (m_Document == nullptr) return false;
             m_Look  = look;
             m_Stack = m_Document->GetElementById(kNoticeStackId);
-            m_Filled.assign(kMaxNotices, std::nullopt);
+            m_Filled.assign(kNoticeBoxes, std::nullopt);
             m_At.clear();
             for (const Rml::EventId id : {Rml::EventId::Dragstart, Rml::EventId::Drag, Rml::EventId::Dragend})
                 m_Stack->AddEventListener(id, this);
@@ -106,7 +112,7 @@ namespace headsup
         m_Stack->SetClass(kMovingClass, moving);
 
         bool changed = false;
-        for (int slot = 0; slot < kMaxNotices; ++slot)
+        for (int slot = 0; slot < kNoticeBoxes; ++slot)
         {
             Rml::Element* box = m_Document->GetElementById(NoticeId(slot));
             const std::optional<ShownNotice> notice =
@@ -122,8 +128,8 @@ namespace headsup
             }
             if (!was || was->id != notice->id || was->kind != notice->kind || was->name != notice->name)
             {
-                box->SetClass(kOnlineClass, notice->kind == NoticeKind::Online);
-                box->SetClass(kOfflineClass, notice->kind == NoticeKind::Offline);
+                for (const char* kindClass : {kOnlineClass, kOfflineClass, kInviteClass})
+                    box->SetClass(kindClass, std::string_view(kindClass) == KindClass(notice->kind));
                 PartOf(box, kTitle)->SetInnerRML(EscapedRml(NoticeTitle(notice->kind)));
                 PartOf(box, kMessage)->SetInnerRML(EscapedRml(NoticeMessage(notice->kind, notice->name)));
                 changed = true;
@@ -141,7 +147,7 @@ namespace headsup
                                   ->GetBox()
                                   .GetSize(Rml::BoxArea::Border)
                                   .y);
-        const std::vector<float> tops = NoticeTops(heights, 0.0f, settings.noticeEdge == NoticeEdge::Bottom);
+        const std::vector<float> tops = NoticeTops(heights, 0.0f, settings.noticeEdge);
         m_Upward      = settings.noticeEdge == NoticeEdge::Bottom;
         m_FirstHeight = heights.empty() ? 0.0f : heights.front();
         std::map<uint32_t, float> at;

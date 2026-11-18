@@ -1111,10 +1111,12 @@ public:
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
+        const auto noticeFrame = static_cast<float>(std::max(0.0, now - m_NoticesAt));
         if (m_Rml.Running() &&
             m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
-                m_Notices.Shown(now, static_cast<float>(m_Settings.noticeSeconds)),
-                KeyDown(VK_SHIFT), g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, static_cast<float>(std::max(0.0, now - m_NoticesAt)),
+                m_Notices.Shown(noticeFrame, false, static_cast<float>(m_Settings.noticeSeconds), m_Settings.noticeMost,
+                    m_Settings.partyNoticeButtons),
+                KeyDown(VK_SHIFT), g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, noticeFrame,
                 headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
                     ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
                     : std::nullopt))
@@ -1295,7 +1297,7 @@ public:
         // As a friend would: online, then offline at the next press.
         if (m_RmlMenu.TakeNoticeTest())
         {
-            Notify(headsup::FriendNews{m_NextTest, 0, headsup::kNoticeSampleName}, Now());
+            Notify(headsup::FriendNews{m_NextTest, 0, headsup::kFriendSampleName}, Now());
             m_NextTest = m_NextTest == headsup::NoticeKind::Online ? headsup::NoticeKind::Offline : headsup::NoticeKind::Online;
         }
         if (const std::optional<headsup::MuteAsked> mute = m_RmlMenu.TakeMuteAsked())
@@ -2560,7 +2562,7 @@ private:
     void Notify(const headsup::FriendNews& news, double now)
     {
         if (!headsup::NoticeWanted(news, m_Settings, FriendMutes())) return;
-        m_Notices.Add(news.kind, news.name, now);
+        m_Notices.Add(news.kind, news.name);
         if (news.kind == headsup::NoticeKind::Online && m_Settings.friendNoticeOnlineSound != headsup::kNoSound && m_NoticeWaits.Due(news.kind, now))
             PlayNotice(news.kind);
     }

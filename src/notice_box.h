@@ -1,7 +1,7 @@
 #pragma once
 
 #include "bar_theme.h"
-#include "friend_notices.h"
+#include "notices.h"
 #include "settings.h"
 #include "skin_frame.h"
 
@@ -16,7 +16,7 @@ namespace headsup
 {
     constexpr const char* kNoticeDocument = "notices";
     constexpr const char* kNoticeStackId  = "noticestack"; // the dragged piece, holding the boxes
-    // Box 0 to kMaxNotices - 1; its children are .title, .message and .bar.
+    // Box 0 to kNoticeBoxes - 1; its children are .title, .message and .bar.
     std::string NoticeId(int slot);
 
     // The friend notices: a document of the overlay's, its boxes stacked from the spot, which drags with Shift held.

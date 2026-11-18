@@ -185,7 +185,7 @@ TEST(the_box_is_built_again_when_the_theme_changes_and_goes_when_closed)
     CHECK(rml.context->GetDocument(kNoticeDocument) != nullptr && !Box(rml, 0)->IsClassSet(kHiddenClass));
     CHECK(!box.Update(rml.context, Gold(), settings, {}, false, kBarBottom, 0.0f, std::nullopt));
     rml.context->Update();
-    for (int n = 0; n < kMaxNotices; ++n) CHECK(Box(rml, n)->IsClassSet(kHiddenClass));
+    for (int n = 0; n < kNoticeBoxes; ++n) CHECK(Box(rml, n)->IsClassSet(kHiddenClass));
     box.Close();
     CHECK(rml.context->GetDocument(kNoticeDocument) == nullptr);
     CHECK_EQ(rml.Said(), "");
