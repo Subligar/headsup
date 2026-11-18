@@ -3134,6 +3134,7 @@ private:
         s.pickedTabs = &m_BarInput.PickedTabs();
         s.scrolled   = &m_BarInput.Scrolled();
         s.pinRefused = m_BarInput.Refused();
+        s.friends    = &m_FriendEntries;
         if (needs.conquest)
         {
             s.nation = NationNow();

@@ -1577,6 +1577,9 @@
       "key": "popup-cards",
       "options": [
         {"name": "Influence", "tip": "How much of the zone's region each nation holds, and when the tally is."},
+        {"name": "Players", "tip": "Your friends playing in the zone's region, and the zone each is in. The game updates where they are about every two minutes."},
+        {"name": "Travel", "tip": "Every airship, boat, manaclipper and barge leaving from the zone's region, and when each boards or departs."},
+        {"name": "Shop Hours", "tip": "Every guild shop in the zone's region, whether it is open and when that changes."},
         {"name": "Today", "tip": "Vana'diel's day and time, today's weather in your zone and the moon."},
         {"name": "Weather Forecast", "tip": "The weather your zone can have on the next days."},
         {"name": "By Element", "tip": "The zones that can roll each element's weather today and tomorrow."},

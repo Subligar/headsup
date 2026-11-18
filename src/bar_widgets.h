@@ -8,6 +8,7 @@
 #include "bar_party.h"
 #include "bar_statuses.h"
 #include "bar_types.h"
+#include "friend_list.h"
 #include "game_packets.h"
 #include "game_state.h"
 #include "outposts.h"
@@ -87,6 +88,7 @@ namespace headsup
         const GuildPatterns* turnIns = nullptr; // today's guild point turn-ins, once fetched
         bool turnInsFailed = false;             // the last fetch got no answer
         std::optional<CraftRanks> crafts;       // yours, once the server sent them
+        const std::vector<FriendEntry>* friends = nullptr; // the game's friend list, as last read
     };
 
     // What the panel reads of your character, which the game empties or fills partway while you change zones.
