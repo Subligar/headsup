@@ -25,6 +25,8 @@ namespace headsup
         uint16_t every;
         uint8_t count;
         Departure departures[kMostDepartures];
+        const char* leg; // how it is taken and where to, "Airship to San d'Oria"
+        uint8_t region;  // the region it leaves from
     };
     // A guild shop: open from opens to closes, Vana'diel hours, but on its holiday (0 Firesday to 7 Darksday).
     struct GuildShop
@@ -33,6 +35,7 @@ namespace headsup
         const char* shops; // its merchants: "Wahraga, Gathweeda"
         const char* zone;
         uint8_t opens, closes, holiday;
+        uint8_t region; // its zone's, kUnknownRegion on a ship
     };
     std::span<const TravelRoute> TravelRoutes();
     std::span<const GuildShop> GuildShops();

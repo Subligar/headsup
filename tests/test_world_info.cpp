@@ -25,7 +25,7 @@ namespace
 
 TEST(a_ship_is_boarding_from_its_door_opening_until_it_leaves)
 {
-    const TravelRoute airship{"Airships", "Jeuno to San d'Oria", 864, 1, {{28, 182}}};
+    const TravelRoute airship{"Airships", "Jeuno to San d'Oria", 864, 1, {{28, 182}}, "Airship to San d'Oria", kJeunoRegion};
     // 100 s into a cycle: its door opened 72 s ago and it leaves in 82.
     const Sailing aboard = NextSailing(airship, At(0, 864.0 + 100.0));
     CHECK(aboard.boarding && aboard.boardIn == 0.0 && aboard.leaveIn == 82.0);
@@ -36,7 +36,7 @@ TEST(a_ship_is_boarding_from_its_door_opening_until_it_leaves)
 
 TEST(a_route_of_two_runs_sails_with_the_sooner)
 {
-    const TravelRoute barge{"Barge", "Central to South Landing", 3456, 2, {{678, 752}, {2790, 2864}}};
+    const TravelRoute barge{"Barge", "Central to South Landing", 3456, 2, {{678, 752}, {2790, 2864}}, "Barge to South Landing", 2};
     CHECK_EQ(NextSailing(barge, At(0, 1000.0)).leaveIn, 2864.0 - 1000.0);
     CHECK_EQ(NextSailing(barge, At(0, 3000.0)).leaveIn, 3456.0 - 3000.0 + 752.0);
 }
@@ -53,7 +53,7 @@ TEST(phoenixs_selbina_ferry_leaves_at_midnight_eight_and_sixteen)
 
 TEST(a_guild_is_open_in_its_hours_but_on_its_holiday)
 {
-    const GuildShop woodworking{"Woodworking", "Chaupire", "Northern San d'Oria", 6, 21, 0}; // Firesday off
+    const GuildShop woodworking{"Woodworking", "Chaupire", "Northern San d'Oria", 6, 21, 0, kSanDoriaRegion}; // Firesday off
     // Day 9 is an Earthsday: open at 10:00 until 21:00.
     const GuildHours ten = GuildAt(woodworking, At(9, 10 * kVanaHour));
     CHECK(ten.open && !ten.holiday && ten.changeIn == 11 * kVanaHour);
