@@ -1519,6 +1519,7 @@
         {"name": "Vana'diel Weekday", "tip": "Vana'diel's day, in its element's color."},
         {"name": "Vana'diel Time", "tip": "Vana'diel's time."},
         {"name": "Moon Phase", "tip": "The moon's phase and how full it is."},
+        {"name": "Season", "tip": "Vana'diel's season: Winter in months 12 and 1, Spring in 2 to 5, Summer in 6 to 8 and Fall in 9 to 11."},
         {"name": "Aggression", "tip": "Whether a mob is aggressive or passive."},
         {"name": "Name", "tip": "Your target's name."},
         {"name": "Distance", "tip": "How far your target is, in yalms."},

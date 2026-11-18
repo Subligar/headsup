@@ -18,7 +18,7 @@ namespace headsup
     enum class WidgetPart : uint8_t
     {
         ZoneName, ZoneRegion, ZoneCrest, ZoneNation,
-        WeatherIcon, WeatherName, VanaDate, VanaDay, VanaTime, VanaMoon,
+        WeatherIcon, WeatherName, VanaDate, VanaDay, VanaTime, VanaMoon, VanaSeason,
         TargetAggro, TargetName, TargetDistance, TargetDetection, TargetLevel, TargetPlayer, TargetWeak,
         CurrencyCoin, Currency1Name, Currency2Name, Currency1Amount, Currency2Amount, Currency1Icon, Currency2Icon,
         Bag1Count, Bag2Count, Bag1Name, Bag2Name, BagIcon,

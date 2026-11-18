@@ -10,7 +10,7 @@ namespace headsup
     {
         using P = WidgetPart;
         constexpr P kZone[]   = {P::ZoneName, P::ZoneRegion, P::ZoneNation};
-        constexpr P kWeather[] = {P::WeatherName, P::VanaDate, P::VanaDay, P::VanaTime, P::VanaMoon};
+        constexpr P kWeather[] = {P::WeatherName, P::VanaDate, P::VanaDay, P::VanaTime, P::VanaMoon, P::VanaSeason};
         constexpr P kTarget[] = {P::TargetName, P::TargetDistance, P::TargetDetection, P::TargetLevel,
             P::TargetPlayer, P::TargetWeak};
         constexpr P kCurrency[] = {P::Currency1Name, P::Currency2Name, P::Currency1Amount, P::Currency2Amount,
@@ -28,7 +28,7 @@ namespace headsup
 
         // By WidgetPart.
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
-            "date", "day", "time", "moon", "aggro", "name", "distance", "detection", "level", "player", "weak",
+            "date", "day", "time", "moon", "season", "aggro", "name", "distance", "detection", "level", "player", "weak",
             "coin", "name1", "name2", "amount1", "amount2", "icon1", "icon2", "count1", "count2", "name1", "name2", "icon", "time", "server", "vana", "icon", "date", "jobs", "earned", "tonext", "percent", "bar",
             "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "pin1", "pin2",
             "pin3", "pin4", "pin5", "pin6", "ship",

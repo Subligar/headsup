@@ -1166,8 +1166,8 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     MapStore saved;
     SaveSettings(s, saved);
     CHECK_EQ(saved.values["barZoneDesign"], "nation name | -region");
-    CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | -date -day -time -moon");
-    CHECK_EQ(saved.values["barWeatherDesign"], "weather | day time -date -moon");
+    CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | -date -day -time -moon -season");
+    CHECK_EQ(saved.values["barWeatherDesign"], "weather | day time -date -moon -season");
     const Settings loaded = LoadSettings(saved);
     CHECK(loaded.Widget(BarWidget::Zone).design == s.Widget(BarWidget::Zone).design);
     CHECK(loaded.Widget(second).design == s.Widget(second).design);
