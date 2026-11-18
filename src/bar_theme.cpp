@@ -88,7 +88,7 @@ namespace headsup
         return kPalettes[std::clamp(static_cast<int>(theme), 0, kFixedThemeCount - 1)];
     }
 
-    BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio, float popupTextScale, int iconScale, float popupWidth,
+    BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio, float popupTextScale, float iconScale, float popupWidth,
         float popupHeight, float lineSeparation)
     {
         const float h = static_cast<float>(std::clamp(barHeight, kMinBarHeight, kMaxBarHeight));
@@ -96,7 +96,7 @@ namespace headsup
         const float popupText = kPopupTextPixels * popupTextScale, u = kPopupSpacingPixels / kPopupTextShare;
         const float title     = kTitleShare * h;
         const float pill      = kPillHeightShare * h;
-        const float iconShare = static_cast<float>(iconScale) / 100.0f;
+        const float iconShare = iconScale / 100.0f;
         return BarMetrics{.height = h, .title = title, .subtitle = title / fontRatio,
             .icon = iconShare * (std::round(pill) - 2.0f * kPillBorder), .iconShare = iconShare, .padding = kPaddingShare * h,
             .gap = kGapShare * h, .cap = kCapShare * h, .diamond = kDiamondShare * h, .pillHeight = pill,

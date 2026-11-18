@@ -104,6 +104,7 @@ namespace headsup
         std::optional<bool> background;
         std::string titleFont, textFont;
         std::optional<float> fontRatio, lineSeparation, popupTextScale;
+        bool uniformFont = false; // its two lines at one size, whatever the Font Size Ratio (NewWidget gives its default)
         bool wrapText = true; // Home Point: its zone's name on two lines (WidgetContent::wrap)
         bool operator==(const WidgetOptions&) const = default;
     };

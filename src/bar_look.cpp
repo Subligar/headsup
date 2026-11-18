@@ -147,11 +147,25 @@ namespace headsup
         return own.textFont.empty() ? BarTextFont(settings) : Interned(own.textFont);
     }
 
-    BarMetrics MetricsOf(const Settings& s, BarShape shape, const WidgetOptions& own)
+    BarMetrics MetricsOf(const Settings& s, BarShape shape)
     {
-        return MetricsFor(s.barHeight, shape, own.fontRatio.value_or(s.barFontRatio), own.popupTextScale.value_or(s.popupTextScale),
-            own.iconScale.value_or(s.barIconScale), s.popupWidthScale, s.popupHeightScale,
-            own.lineSeparation.value_or(s.barLineSeparation));
+        return MetricsFor(s.barHeight, shape, s.barFontRatio, s.popupTextScale, static_cast<float>(s.barIconScale),
+            s.popupWidthScale, s.popupHeightScale, s.barLineSeparation);
+    }
+
+    float FontRatioOf(const Settings& s, const WidgetOptions& own)
+    {
+        return own.uniformFont ? 1.0f : own.fontRatio.value_or(s.barFontRatio);
+    }
+
+    BarMetrics MetricsOf(const Settings& s, BarShape shape, BarWidget kind, const WidgetOptions& own)
+    {
+        constexpr float kCloserLines = 0.8f, kLargerStatusIcons = 1.45f;
+        const bool closer = kind == BarWidget::HomePoint || kind == BarWidget::StatusTimers;
+        const float icons = kind == BarWidget::StatusTimers ? kLargerStatusIcons : 1.0f;
+        return MetricsFor(s.barHeight, shape, FontRatioOf(s, own), own.popupTextScale.value_or(s.popupTextScale),
+            static_cast<float>(own.iconScale.value_or(s.barIconScale)) * icons, s.popupWidthScale, s.popupHeightScale,
+            own.lineSeparation.value_or(s.barLineSeparation) * (closer ? kCloserLines : 1.0f));
     }
 
     const char* FishBarFont(const Settings& settings)

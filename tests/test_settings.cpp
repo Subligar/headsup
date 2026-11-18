@@ -1289,6 +1289,29 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale);
 }
 
+TEST(uniform_font_size_starts_on_for_home_point_and_status_timers_alone_and_each_copy_keeps_its_own)
+{
+    const Settings fresh;
+    CHECK(fresh.Widget(BarWidget::HomePoint).uniformFont && fresh.Widget(BarWidget::StatusTimers).uniformFont);
+    CHECK(!fresh.Widget(BarWidget::Zone).uniformFont && !fresh.Widget(BarWidget::Job).uniformFont);
+    Settings s;
+    s.Widget(BarWidget::HomePoint).uniformFont = false;
+    const PanelWidget copy = *CloneWidget(s, BarWidget::Zone);
+    s.Widget(copy).uniformFont = true;
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["barHomePointUniformFontSize"], "false");
+    CHECK_EQ(saved.values["barZoneUniformFontSize_2"], "true");
+    const Settings read = LoadSettings(saved);
+    CHECK(!read.Widget(BarWidget::HomePoint).uniformFont && read.Widget(copy).uniformFont);
+    CHECK(!read.Widget(BarWidget::Zone).uniformFont && read.Widget(BarWidget::StatusTimers).uniformFont);
+    // A file from before the setting keeps each widget's default.
+    saved.values.erase("barHomePointUniformFontSize");
+    saved.values.erase("barStatusTimersUniformFontSize");
+    const Settings older = LoadSettings(saved);
+    CHECK(older.Widget(BarWidget::HomePoint).uniformFont && older.Widget(BarWidget::StatusTimers).uniformFont);
+}
+
 TEST(a_widgets_own_looks_out_of_their_range_are_held_to_it)
 {
     MapStore store;

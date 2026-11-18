@@ -237,6 +237,7 @@
                 {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of this widget's background are. Default: the Top Panel's."},
                 {"key": "primary-font", "name": "Primary Font", "tip": "The font of this widget's top line, of the widget on one line, and of its pop-out's headings. Default: the Top Panel's."},
                 {"key": "secondary-font", "name": "Secondary Font", "tip": "The font of this widget's second line, its numbers and its pop-out's text. Default: the Top Panel's."},
+                {"key": "uniform-font", "name": "Uniform Font Size", "tip": "Draws both of this widget's lines at the same size and hides its Font Size Ratio. Default is {default}."},
                 {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of this widget's primary line's text to the size of its secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Default: the Top Panel's."},
                 {"key": "line-separation", "name": "Line Separation", "tip": "The space between this widget's top and bottom line of text. Above 1, both lines shrink together if they need to, to fit the Panel Height. Default: the Top Panel's."},
                 {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of every icon in this widget. At 100% its own icon is as tall as the widget can hold, and an icon in a line of text is as tall as its letters. Default: the Top Panel's."},

@@ -75,9 +75,12 @@ namespace headsup
     // A widget's own of those, or the panel's where it set none.
     const char* WidgetTitleFont(const Settings& settings, BarShape shape, const WidgetOptions& own);
     const char* WidgetTextFont(const Settings& settings, const WidgetOptions& own);
-    // The sizes a widget is drawn at: the panel's, at its own Font Size Ratio, Icon Scale and Pop-out Text Scale where
-    // it set them. The panel's own with a widget of none.
-    BarMetrics MetricsOf(const Settings& settings, BarShape shape, const WidgetOptions& own);
+    // The sizes the panel's widgets are drawn at.
+    BarMetrics MetricsOf(const Settings& settings, BarShape shape);
+    // The sizes a widget is drawn at: the panel's, at its own Font Size Ratio (1 with Uniform Font Size), Line
+    // Separation, Icon Scale and Pop-out Text Scale where it set them, and its kind's own share of the last two.
+    BarMetrics MetricsOf(const Settings& settings, BarShape shape, BarWidget kind, const WidgetOptions& own);
+    float FontRatioOf(const Settings& settings, const WidgetOptions& own);
     // The fishing bar's line's font, or the panel's text font.
     const char* FishBarFont(const Settings& settings);
 

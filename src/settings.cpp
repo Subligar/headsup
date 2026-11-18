@@ -332,6 +332,7 @@ namespace headsup
         constexpr const char* kOwnLineSeparationSuffix = "LineSeparation";
         constexpr const char* kOwnIconScaleSuffix  = "IconScale";
         constexpr const char* kOwnPopupScaleSuffix = "PopupTextScale";
+        constexpr const char* kOwnUniformFontSuffix = "UniformFontSize";
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
         const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
         const char* const kWidgetAlignNames[kWidgetAlignCount] = {"location", "left", "center", "right"};
@@ -1506,6 +1507,7 @@ namespace headsup
                 o.fontRatio      = own(kOwnFontRatioSuffix);
                 o.lineSeparation = own(kOwnLineSeparationSuffix);
                 o.popupTextScale = own(kOwnPopupScaleSuffix);
+                o.uniformFont    = flag(widget + kOwnUniformFontSuffix, o.uniformFont);
                 const std::string background = widget + kOwnBackgroundSuffix;
                 if (!text(background.c_str()).empty()) o.background = flag(background, false);
                 o.titleFont = text((widget + kOwnTitleFontSuffix).c_str());
@@ -1629,6 +1631,7 @@ namespace headsup
                 own(kOwnFontRatioSuffix, o.fontRatio);
                 own(kOwnLineSeparationSuffix, o.lineSeparation);
                 own(kOwnPopupScaleSuffix, o.popupTextScale);
+                flag(widget + kOwnUniformFontSuffix, o.uniformFont);
                 if (o.background)
                     flag(widget + kOwnBackgroundSuffix, *o.background);
                 else
@@ -1699,6 +1702,7 @@ namespace headsup
         if (widget.kind == BarWidget::Custom) o.name = CreatedWidgetName(widget);
         o.popup      = DefaultPopupDesign(widget.kind);
         if (widget.kind == BarWidget::EarthTime) o.iconSide = IconSide::Hide;
+        o.uniformFont = widget.kind == BarWidget::HomePoint || widget.kind == BarWidget::StatusTimers;
         return o;
     }
 
