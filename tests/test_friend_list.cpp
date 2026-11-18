@@ -146,3 +146,12 @@ TEST(a_friends_name_stops_at_its_length_and_keeps_only_printable_ascii)
     CHECK_EQ(entry.added, "ABCDEFGHIJKLMNOP");
     CHECK_EQ(entry.character, "<b>");
 }
+
+TEST(a_slot_whose_number_words_carry_flags_still_numbers_the_list)
+{
+    // The live client on 2026-11-17: a friend's sixth slot held 18 28 61 c0 03 at +0x70, the number 4n and 16n with
+    // bits of something else set around them (0x2800 and 0x0001), where its neighbours held 1c 00 70 c0 01.
+    std::vector<uint8_t> data = Data();
+    Put(data, kBefore + kFriendSlotBytes * 5 + 0x70, "182861c0 03");
+    CHECK(LocateFriendList(Section(data)) == static_cast<uint32_t>(kBefore));
+}

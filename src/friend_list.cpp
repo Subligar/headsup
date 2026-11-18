@@ -13,7 +13,8 @@ namespace headsup
         // The byte holds more than playing: a request from a friend set its 0x02 beside it on the test client.
         constexpr uint8_t kPlayingBit = 0x01;
         constexpr char kFirstPrintable = ' ', kLastPrintable = '~';
-        constexpr uint16_t kNumberStep = 4, kWideStep = 16, kWideMask = 0x0FFF;
+        // Each word holds other bits beside the number: a live friend's slot held 0x2818 and 0xC061 for slot 6.
+        constexpr uint16_t kNumberStep = 4, kNumberMask = 0x03FF, kWideStep = 16, kWideMask = 0x0FF0;
         constexpr int kSlotsChecked    = 8; // as many slots' numbers in a row are no accident
         constexpr size_t kScanStep     = 4; // the slots are aligned
 
@@ -27,7 +28,7 @@ namespace headsup
 
         bool NumberedAs(const uint8_t* slotNumber, int slot)
         {
-            return ReadAt<uint16_t>(slotNumber, 0) == kNumberStep * slot &&
+            return (ReadAt<uint16_t>(slotNumber, 0) & kNumberMask) == kNumberStep * slot &&
                    (ReadAt<uint16_t>(slotNumber, sizeof(uint16_t)) & kWideMask) == kWideStep * slot;
         }
     }
