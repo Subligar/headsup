@@ -149,6 +149,18 @@ namespace headsup
     constexpr int kMinFishTextSize = 8, kDefaultFishTextSize = 15, kMaxFishTextSize = 40;    // pixels
     constexpr int kCasePlaceWhole = 10000; // a placed Case's across and down count ten-thousandths of the screen
     constexpr int kMinCaseScale = 50, kDefaultCaseScale = 65, kMaxCaseScale = 200;         // percent
+    constexpr int kMinCombatPopupSize = 25, kDefaultCombatPopupSize = 100, kMaxCombatPopupSize = 200; // percent of the game's own size
+    // What a combat popup is, each with its own color pick, in the Combat Popups card's order.
+    enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Skillchain, Spell, Buff, Debuff };
+    constexpr int kPopupTypeCount = 10;
+    std::vector<ColorSource> CombatPopupSources(PopupType type);
+    // The column a kind of combat popup goes in: left of its target's body, centered on it, or right of it.
+    enum class PopupSide : uint8_t { Left, Middle, Right };
+    constexpr int kPopupSideCount = 3;
+    using PopupSides = std::array<PopupSide, kPopupTypeCount>; // by PopupType
+    // How high on its target's body a popup beside it starts: percent of the way from its feet to the top of its head.
+    constexpr int kMaxCombatPopupHeight = 100, kDefaultCombatPopupHeight = 90;
+    constexpr int kMaxCombatPopupNudge = 200; // pixels either way
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
@@ -236,6 +248,27 @@ namespace headsup
         bool fishCaseBackground = true;                                          // the tint over the whole screen
         int fishCaseAcross = kFishBarUnplaced, fishCaseDown = kFishBarUnplaced; // its middle, in ten-thousandths of the screen
         std::string fishBarLine = "${size|fish} $feeling";
+        bool combatPopups = true; // HeadsUp draws the game's damage, recovery and Miss popups in its own text
+        bool combatPopupWords = true; // a miss says what happened: Evade, Parry and the like
+        bool combatPopupLabels = true; // MP, TP and drained amounts say what they are
+        bool combatPopupCustomColors = true; // each kind takes its pick's color
+        bool combatPopupSkillchainNames = true; // a skillchain's number comes with its name
+        bool combatPopupRightAway = true; // popups start as their result arrives, not at the hit
+        bool combatPopupPlacement = true; // popups go in combatPopupSides' columns, at the start height, nudged
+        bool combatPopupStatuses = true; // and has the game pop each buff and debuff that lands, by name
+        std::string combatPopupFont; // empty for the nameplates' default font
+        int combatPopupSize         = kDefaultCombatPopupSize;
+        PopupSides combatPopupSides = {PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right, PopupSide::Right,
+            PopupSide::Right, PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right};
+        int combatPopupHeight = kDefaultCombatPopupHeight;
+        int combatPopupX = 0, combatPopupY = 0; // pixels right and up from where the side puts them
+        // By PopupType. Game is the game's own color, which tells party, alliance and others apart.
+        std::array<ColorPick, kPopupTypeCount> combatPopupColors = {{{ColorSource::Game, ColorFromRgb(0xFFFFFF)},
+            {ColorSource::Game, ColorFromRgb(0xFF6B6B)}, {ColorSource::Game, ColorFromRgb(0x7CE38B)},
+            {ColorSource::Game, ColorFromRgb(0xC8C8C8)}, {ColorSource::Game, ColorFromRgb(0xFFD24A)},
+            {ColorSource::Game, ColorFromRgb(0xC58CFF)}, {ColorSource::Element, ColorFromRgb(0xFFFFFF)},
+            {ColorSource::Game, ColorFromRgb(0x8FD8FF)}, {ColorSource::Game, ColorFromRgb(0x8FD8FF)},
+            {ColorSource::Game, ColorFromRgb(0xFF9A5A)}}};
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
         Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};
         BlueLearned blueMagicLearned = BlueLearned::Star;

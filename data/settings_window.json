@@ -76,6 +76,33 @@
             {"key": "scale", "name": "Scale with Distance", "tip": "Automatically scales the target cursor based on distance to the player character."},
             {"key": "float", "name": "Floating Cursor", "tip": "If enabled, the target cursor will bob gently up and down."}
           ]
+        },
+        {
+          "key": "combat-popups",
+          "name": "Combat Popups",
+          "description": "Draws the game's damage, recovery and Miss popups in your own font, size and colors, in place of the game's stretched ones, and pops each one as soon as its result arrives instead of when the animation lands. They only show while the game's Config is set to display damage on the game screen. Turn this off to keep the game's. Default: On.",
+          "settings": [
+            {"key": "combat-popup-font", "name": "Font", "tip": "The font the popups are drawn in. Default: your nameplates' Default Font."},
+            {"key": "combat-popup-size", "name": "Size", "tip": "How big the popups are against the game's own. They still shrink with distance. Default: 100%."},
+            {"key": "combat-popup-words", "name": "Words", "tip": "Shows what a miss was: Evade, Parry, Shadow, Resist and the like. Turn this off to see the game's plain Miss for all of them. Default: On."},
+            {"key": "combat-popup-labels", "name": "Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."},
+            {"key": "combat-popup-skillchain-names", "name": "Skillchain Names", "tip": "Puts a skillchain's name before its damage: Fusion 412. Turn this off to see the game's plain number. Default: On."},
+            {"key": "combat-popup-right-away", "name": "Show Right Away", "tip": "Pops each number as soon as its result arrives, before the spell or swing lands, and spreads popups that start together so each reads. Turn this off to keep the game's timing. Default: On."},
+            {"key": "combat-popup-placement", "name": "Custom Placement", "tip": "Puts each kind of popup in its column below, left of what it happened to, centered on it or right of it, at your Start Height and moved by the offsets. Drag a kind to another column to move it there. Turn this off to leave them all where the game puts them. Default: On."},
+            {"key": "combat-popup-columns"},
+            {"key": "combat-popup-height", "name": "Start Height", "tip": "How high up what they happened to the popups start: 0% at its feet, 100% at the top of its head, so they reach its head on a Tarutaru or a Behemoth alike. Default: 90%."},
+            {"key": "combat-popup-x", "name": "Horizontal Offset", "tip": "Moves the popups right by this many pixels, or left by a number below 0. Default: 0 px."},
+            {"key": "combat-popup-y", "name": "Vertical Offset", "tip": "Moves the popups up by this many pixels, or down by a number below 0. Default: 0 px."},
+            {
+              "key": "combat-popup-test",
+              "name": "Test",
+              "tip": "Pops a sample of each kind over your character, in your font, size and colors, even while the game's Config shows damage in the log only. Click it again to see them again.",
+              "words": [
+                {"key": "not-found", "name": "Test", "tip": "Your game's code for starting a popup was not found, so Test cannot pop one."}
+              ]
+            },
+            {"key": "combat-popup-statuses", "name": "Status Popups", "tip": "Pops the name of a buff or debuff over what it lands on, when you, your pet or your party cast it or take it. The game has no popup for these. Default: On."}
+          ]
         }
       ]
     },
@@ -594,6 +621,24 @@
               ]
             }
           ]
+        },
+        {
+          "key": "colors-combat-popups",
+          "name": "Combat Popups",
+          "description": "The colors of each kind of combat popup, while the Combat Popups card on the Nameplates & Outlines page is on.",
+          "settings": [
+            {"key": "combat-popup-custom-colors", "name": "Custom Colors", "tip": "Colors each kind of popup with its pick below. Turn this off to see every popup in the game's own color. Default: On."},
+            {"key": "combat-popup-dealt-color", "name": "Damage You Deal", "tip": "The color of the damage you and your pet deal. Damage between other players and mobs always keeps the game's color. Default: Vanilla Color."},
+            {"key": "combat-popup-taken-color", "name": "Damage You Take", "tip": "The color of the damage you and your pet take. Default: Vanilla Color."},
+            {"key": "combat-popup-recovery-color", "name": "Recovery", "tip": "The color of HP, MP and TP anyone recovers. Default: Vanilla Color."},
+            {"key": "combat-popup-miss-color", "name": "Miss", "tip": "The color of a miss, evade, parry, resist and the like, whoever it is on. Default: Vanilla Color."},
+            {"key": "combat-popup-critical-color", "name": "Critical Hits", "tip": "The color of critical hits, yours and everyone else's. Default: Vanilla Color."},
+            {"key": "combat-popup-burst-color", "name": "Magic Bursts", "tip": "The color of magic burst damage. Default: Vanilla Color."},
+            {"key": "combat-popup-skillchain-color", "name": "Skillchains", "tip": "The color of a skillchain's name and number. Default: By Element."},
+            {"key": "combat-popup-spell-color", "name": "Spells", "tip": "The color of the damage a spell does. Default: Vanilla Color."},
+            {"key": "combat-popup-buff-color", "name": "Buffs", "tip": "The color of a buff's name. Default: Vanilla Color."},
+            {"key": "combat-popup-debuff-color", "name": "Debuffs", "tip": "The color of a debuff's name. Default: Vanilla Color."}
+          ]
         }
       ]
     },
@@ -1024,6 +1069,29 @@
       ]
     },
     {
+      "key": "popup-columns",
+      "options": [
+        {"name": "Left"},
+        {"name": "Middle"},
+        {"name": "Right"}
+      ]
+    },
+    {
+      "key": "popup-kinds",
+      "options": [
+        {"name": "Damage You Deal", "tip": "The damage you and your pet deal, and the damage other players deal to mobs."},
+        {"name": "Damage You Take", "tip": "The damage you and your pet take, and the damage mobs deal to other players."},
+        {"name": "Recovery", "tip": "The HP, MP and TP anyone recovers."},
+        {"name": "Miss", "tip": "A miss, evade, parry, resist and the like."},
+        {"name": "Critical Hits", "tip": "Critical hits, yours and everyone else's."},
+        {"name": "Magic Bursts", "tip": "Magic burst damage."},
+        {"name": "Skillchains", "tip": "A skillchain's name and number."},
+        {"name": "Spells", "tip": "The damage a spell does."},
+        {"name": "Buffs", "tip": "A buff's name, while Status Popups is on."},
+        {"name": "Debuffs", "tip": "A debuff's name, while Status Popups is on."}
+      ]
+    },
+    {
       "key": "color-source",
       "options": [
         {"name": "Custom", "tip": "Set this to be any static color of your choice."},
@@ -1032,7 +1100,8 @@
         {"name": "By Toughness", "tip": "Automatically changes the color based on how tough the mob is at your current level. (Set these colors in the 'Colors/Toughness' section.)"},
         {"name": "By Claim Status", "tip": "Automatically changes the color based on whether the enemy is claimed and by whom. (Set these colors in the 'Colors/Claim Status' section.)"},
         {"name": "By Targeting", "tip": "Automatically changes the color based on whether you are targeting the entity, locked on, sub-targeting, etc. (Set these colors in the 'Colors/Targeting' section.)"},
-        {"name": "By Entity Type", "tip": "Automatically changes the color based on the type of entity and their relation to you. (Set these colors in the 'Colors/Entity Type' section.)"}
+        {"name": "By Entity Type", "tip": "Automatically changes the color based on the type of entity and their relation to you. (Set these colors in the 'Colors/Entity Type' section.)"},
+        {"name": "By Element", "tip": "Uses the color of the skillchain's element."}
       ]
     },
     {

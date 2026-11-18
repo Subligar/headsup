@@ -46,6 +46,7 @@ namespace headsup
         const std::string* lastReport = nullptr; // the file the last report went to, empty before one
         const std::string* logFile    = nullptr; // the file notes go to, empty before one
         bool exportable = false; // a developer's build, which can write its built-in layout out as a file
+        bool popupTestReady = false; // the game's code that starts a combat popup was found
         // The widgets whose settings the panel's open popup shows, in its pill's order; none while it shows none.
         std::vector<PanelWidget> settingsOf;
         // The picture each part's chip in the Widget Designer shows, as the game is now.
@@ -107,6 +108,7 @@ namespace headsup
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool caseMoveRequested = false, caseTestRequested = false; // pressed: the plugin shows the boxes, or plays one
+        bool popupTestRequested = false; // the Combat Popups card's Test: the plugin starts its samples
         bool watchRequested = false; // the debug watch is to start, or stop
         bool exportRequested = false;
         bool cursorsRequested = false; // a list of pictures was opened: the cursors folder is to be read again

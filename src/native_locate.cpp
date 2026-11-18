@@ -237,6 +237,44 @@ namespace headsup
             0x85, 0xC9, 0xA3};
         constexpr uint32_t kFishSetupIntuition[] = {1, 23, 34};
         constexpr uint32_t kFishSetupGlobal      = 44;
+        // push 0.1f; push eax (the scale); add edi,kCombatTextOffset; push esi (the color); lea ecx,[esp+20h]; push
+        // edi; push ecx (the place); call; add esp,14h.
+        constexpr int16_t kCombatTextCall[] = {0x68, 0xCD, 0xCC, 0xCC, 0x3D, 0x50, 0x81, 0xC7, 0x98, 0x01, 0x00, 0x00,
+            0x56, 0x8D, 0x4C, 0x24, 0x20, 0x57, 0x51, 0xE8, -1, -1, -1, -1, 0x83, 0xC4, 0x14};
+        constexpr uint32_t kCombatTextCallAt = 19;
+        static_assert((kCombatTextCall[8] | kCombatTextCall[9] << 8) == kCombatTextOffset);
+        static_assert(kCombatTextCall[std::size(kCombatTextCall) - 1] == kCombatTextArgumentBytes);
+        // push the kind's address; push 1 (the popup, not the chat line); push the target; push the message; push the
+        // actor; call the decision.
+        constexpr int16_t kPopupDecisionCall[] = {0x52, 0x6A, 0x01, 0x8D, 0x44, 0x24, 0x34, 0x55, 0x8D, 0x4C, 0x24, 0x40,
+            0x50, 0x51, 0xE8};
+        // call the color class; push it; call the color; and eax,0FFFFFFh; then the task's value and color go in.
+        constexpr int16_t kPopupColorCall[] = {0xE8, -1, -1, -1, -1, 0x50, 0xE8, -1, -1, -1, -1, 0x8B, 0x4C, 0x24, 0x48, 0x83,
+            0xC4, 0x10, 0x25, 0xFF, 0xFF, 0xFF, 0x00, 0x89, 0x8E, 0xA8, 0x00, 0x00, 0x00, 0x89, 0x86, 0xA4, 0x00, 0x00, 0x00};
+        static_assert(kPopupColorCall[25] == kPopupTaskValue && kPopupColorCall[31] == kPopupTaskColor);
+        // push 1A8h (the particle's size); call the allocator; on one, push the generator; mov ecx,eax; call the build.
+        constexpr int16_t kPopupParticleCall[] = {0x68, 0xA8, 0x01, 0x00, 0x00, 0xE8, -1, -1, -1, -1, 0x83, 0xC4, 0x08, 0x85,
+            0xC0, 0x0F, 0x84, -1, -1, -1, -1, 0x8B, 0x4C, 0x24, 0x10, 0x51, 0x8B, 0xC8, 0xE8};
+        constexpr uint32_t kPopupColorCallAt = 6;
+        // mov ecx,[handle]; test ecx,ecx; jz; mov ecx,[ecx]; push 0; push 0; push the target; push the actor; call the
+        // start; mov esi,eax: once for each of the three effects.
+        constexpr int16_t kPopupEffectStart[] = {0x8B, 0x0D, -1, -1, -1, -1, 0x85, 0xC9, 0x74, -1, 0x8B, 0x09, 0x6A, 0x00, 0x6A,
+            0x00, 0x53, 0x50, 0xE8, -1, -1, -1, -1, 0x8B, 0xF0, 0xEB};
+        constexpr uint32_t kPopupEffectHandleAt = 2, kPopupEffectStartAt = 18;
+        // mov eax,[esp+20h] (the packet); mov ecx,edi (the action); add eax,4; push eax; call the parse; test eax,eax; jz.
+        constexpr int16_t kPopupParseCall[] = {0x8B, 0x44, 0x24, 0x20, 0x8B, 0xCF, 0x83, 0xC0, 0x04, 0x50, 0xE8, -1, -1, -1, -1,
+            0x85, 0xC0, 0x0F, 0x84};
+        constexpr uint32_t kPopupParseCallAt = 10;
+        // lea edx,[esp+34h]; lea eax,[esp+20h]; push edx; push 0 (the chat line, not the popup); push ebp; lea
+        // ecx,[esp+34h]; push eax; push ecx; call the decision.
+        constexpr int16_t kPopupLineCall[] = {0x8D, 0x54, 0x24, 0x34, 0x8D, 0x44, 0x24, 0x20, 0x52, 0x6A, 0x00, 0x55, 0x8D, 0x4C,
+            0x24, 0x34, 0x50, 0x51, 0xE8};
+        // push 0 (slot 0); push esi (the record number); push edi (the action); call the start; mov ax,[edi+8]; mov
+        // ecx,[edi+0Ch] (the record); add esp,0Ch.
+        constexpr int16_t kPopupShowNextCall[] = {0x6A, 0x00, 0x56, 0x57, 0xE8, -1, -1, -1, -1, 0x66, 0x8B, 0x47, 0x08, 0x8B, 0x4F,
+            0x0C, 0x83, 0xC4, 0x0C};
+        constexpr uint32_t kPopupShowNextCallAt = 4;
+        static_assert(kPopupShowNextCall[15] == kActionRecord);
         // The 3-second update: xor eax,eax; push 3000; clear both byte counts; mov edx,[net]; mov eax,[edx+4190h], the
         // milliseconds since the last server data.
         constexpr int16_t kCounterUpdate[] = {0x33, 0xC0, 0x68, 0xB8, 0x0B, 0x00, 0x00, 0x89, 0x46, 0x0C, 0x89, 0x46,
@@ -363,6 +401,14 @@ namespace headsup
         case LocateProblem::AmbiguousWeather: return "the game's weather was found more than once";
         case LocateProblem::NoFish: return "where the game keeps a hooked fish was not found";
         case LocateProblem::AmbiguousFish: return "where the game keeps a hooked fish was found more than once";
+        case LocateProblem::NoCombatText: return "the game's draw of combat popups was not found";
+        case LocateProblem::AmbiguousCombatText: return "the game's draw of combat popups was found more than once";
+        case LocateProblem::NoPopupTies: return "where the game starts a combat popup was not found";
+        case LocateProblem::AmbiguousPopupTies: return "where the game starts a combat popup was found more than once";
+        case LocateProblem::NoPopupEffects: return "the game's three combat popup effects were not all found";
+        case LocateProblem::AmbiguousPopupEffects: return "the game's combat popup effects were found more than three times";
+        case LocateProblem::NoPopupEarly: return "where the game parses an action for its combat popups was not found";
+        case LocateProblem::AmbiguousPopupEarly: return "where the game parses an action for its combat popups was found more than once";
         case LocateProblem::NoConfigGet: return "the game's config values were not found";
         case LocateProblem::NoSearchAddress: return "where the game keeps the search server's address was not found";
         case LocateProblem::NoWindowMove: return "the game's window move was not found";
@@ -1088,5 +1134,62 @@ namespace headsup
         if (found.empty()) return GlobalSite{LocateProblem::NoFish};
         if (found.size() > 1) return GlobalSite{LocateProblem::AmbiguousFish};
         return GlobalSite{LocateProblem::None, ReadAt<uint32_t>(text.bytes, found.front() + kFishSetupGlobal)};
+    }
+
+    CombatTextSite LocateCombatText(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kCombatTextCall, text);
+        if (found.empty()) return CombatTextSite{LocateProblem::NoCombatText};
+        if (found.size() > 1) return CombatTextSite{LocateProblem::AmbiguousCombatText};
+        const uint32_t call = text.rva + found.front() + kCombatTextCallAt;
+        return CombatTextSite{LocateProblem::None, call, CallTarget(call, text)};
+    }
+
+    PopupTieSites LocatePopupTies(const ImageSection& text)
+    {
+        using Pattern = std::span<const int16_t>;
+        std::array<uint32_t, 3> calls{};
+        const std::array<std::pair<Pattern, uint32_t>, 3> sites = {{{kPopupDecisionCall, std::size(kPopupDecisionCall) - 1},
+            {kPopupColorCall, kPopupColorCallAt}, {kPopupParticleCall, std::size(kPopupParticleCall) - 1}}};
+        for (size_t i = 0; i < sites.size(); ++i)
+        {
+            const std::vector<uint32_t> found = Find(sites[i].first, text);
+            if (found.empty()) return PopupTieSites{LocateProblem::NoPopupTies};
+            if (found.size() > 1) return PopupTieSites{LocateProblem::AmbiguousPopupTies};
+            calls[i] = text.rva + found.front() + sites[i].second;
+        }
+        const uint32_t classCall = calls[1] - kPopupColorCallAt;
+        return PopupTieSites{LocateProblem::None, calls[0], CallTarget(calls[0], text), calls[1], CallTarget(calls[1], text),
+            CallTarget(classCall, text), calls[2], CallTarget(calls[2], text)};
+    }
+
+    PopupEffectSites LocatePopupEffects(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kPopupEffectStart, text);
+        if (found.size() < kPopupEffectCount) return PopupEffectSites{LocateProblem::NoPopupEffects};
+        if (found.size() > kPopupEffectCount) return PopupEffectSites{LocateProblem::AmbiguousPopupEffects};
+        PopupEffectSites sites{LocateProblem::None};
+        // In the client's order: Miss, recovery, damage.
+        for (size_t i = 0; i < kPopupEffectCount; ++i)
+            sites.handles[kPopupEffectCount - 1 - i] = ReadAt<uint32_t>(text.bytes, found[i] + kPopupEffectHandleAt);
+        sites.start = CallTarget(text.rva + found.front() + kPopupEffectStartAt, text);
+        return sites;
+    }
+
+    PopupEarlySites LocatePopupEarly(const ImageSection& text, uint32_t decision)
+    {
+        using Pattern = std::span<const int16_t>;
+        std::array<uint32_t, 3> calls{};
+        const std::array<std::pair<Pattern, uint32_t>, 3> sites = {{{kPopupParseCall, kPopupParseCallAt},
+            {kPopupLineCall, std::size(kPopupLineCall) - 1}, {kPopupShowNextCall, kPopupShowNextCallAt}}};
+        for (size_t i = 0; i < sites.size(); ++i)
+        {
+            const std::vector<uint32_t> found = Find(sites[i].first, text);
+            if (found.empty()) return PopupEarlySites{LocateProblem::NoPopupEarly};
+            if (found.size() > 1) return PopupEarlySites{LocateProblem::AmbiguousPopupEarly};
+            calls[i] = text.rva + found.front() + sites[i].second;
+        }
+        if (CallTarget(calls[1], text) != decision) return PopupEarlySites{LocateProblem::NoPopupEarly};
+        return PopupEarlySites{LocateProblem::None, calls[0], CallTarget(calls[0], text), calls[1], calls[2], CallTarget(calls[2], text)};
     }
 }

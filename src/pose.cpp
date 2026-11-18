@@ -41,14 +41,6 @@ namespace headsup
             return clip;
         }
 
-        bool RowAtHeight(const Camera& camera, const WorldPoint& feet, float height, float& row)
-        {
-            const ClipYW clip = ClipAt(camera, feet, height);
-            if (clip.w <= kNearestDepth) return false;
-            row = (1.0f - clip.y / clip.w) * 0.5f * camera.screenHeight;
-            return true;
-        }
-
         bool HeightAtRow(const Camera& camera, const WorldPoint& feet, float row, float& height)
         {
             // A point's clip y and w are linear in its height above the feet, so the height solves directly.
@@ -73,6 +65,14 @@ namespace headsup
             }
             return 1.0f;
         }
+    }
+
+    bool RowAtHeight(const Camera& camera, const WorldPoint& feet, float height, float& row)
+    {
+        const ClipYW clip = ClipAt(camera, feet, height);
+        if (clip.w <= kNearestDepth) return false;
+        row = (1.0f - clip.y / clip.w) * 0.5f * camera.screenHeight;
+        return true;
     }
 
     Pose PoseFromStatus(uint32_t status)

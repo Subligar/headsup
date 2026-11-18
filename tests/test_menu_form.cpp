@@ -132,7 +132,8 @@ TEST(the_palettes_are_on_their_own_colors_page_under_the_theme_above_the_config_
           side.find("id=\"nav-theme\"") < side.find("id=\"nav-colors\"") &&
           side.find("id=\"nav-colors\"") < side.find("id=\"nav-configmenu\""));
     const char* kPalettes[] = {
-        "colors-aggression", "colors-toughness", "colors-claim-status", "colors-targeting", "colors-entity-type"};
+        "colors-aggression", "colors-toughness", "colors-claim-status", "colors-targeting", "colors-entity-type",
+        "colors-combat-popups"};
     w.state.page      = Page::Colors;
     const Form colors = w.Pass();
     for (const char* card : kPalettes)
@@ -2138,4 +2139,154 @@ TEST(a_widgets_tips_name_a_copys_own_defaults)
     // The tips themselves leave the default to the code.
     for (const LayoutRow& row : layout.RowsOf(*layout.SettingOf(SettingPiece::WidgetTabs)))
         if (!named(static_cast<WidgetTabsRow>(row.row), BarWidget::Job, 1).empty()) CHECK(Said(row.tip).find(kDefaultMark) != std::string_view::npos);
+}
+
+TEST(the_combat_popups_card_takes_changes_only_while_switched_on)
+{
+    Window w;
+    w.state.page            = Page::Entities;
+    w.settings.combatPopups = false;
+    const std::string card = "entities-combat-popups", size = card + "-combat-popup-size", font = card + "-combat-popup-font";
+    w.Pass({{size, kChangeEvent, "150"}});
+    CHECK_EQ(w.settings.combatPopupSize, kDefaultCombatPopupSize);
+    w.Pass({{card + "-on", kClickEvent, ""}});
+    CHECK(w.settings.combatPopups);
+    CHECK(w.Pass({{size, kChangeEvent, "150"}}).changed);
+    CHECK_EQ(w.settings.combatPopupSize, 150);
+    CHECK(w.Pass({{font, kClickEvent, ""}}).popup);
+    w.Pass({{font + "-o-1", kClickEvent, ""}});
+    CHECK(w.settings.combatPopupFont == "Arial");
+    w.Pass({{font, kClickEvent, ""}});
+    w.Pass({{font + "-o-0", kClickEvent, ""}});
+    CHECK(w.settings.combatPopupFont.empty());
+}
+
+TEST(a_combat_popup_types_color_is_picked_only_while_the_card_is_on)
+{
+    Window w;
+    w.state.page            = Page::Colors;
+    w.settings.combatPopups = false;
+    const std::string miss = "colors-colors-combat-popups-combat-popup-miss-color";
+    const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Miss)];
+    w.Pass({{miss, kClickEvent, ""}});
+    w.Pass({{miss + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Game);
+    w.settings.combatPopups = true;
+    CHECK(w.Pass({{miss, kClickEvent, ""}}).popup);
+    w.Pass({{miss + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Custom);
+    CHECK(w.settings.combatPopupColors[static_cast<size_t>(PopupType::Critical)].source == ColorSource::Game);
+}
+
+TEST(with_custom_colors_off_the_combat_popup_color_picks_take_no_change)
+{
+    Window w;
+    w.state.page = Page::Colors;
+    const std::string card = "colors-colors-combat-popups", miss = card + "-combat-popup-miss-color";
+    const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Miss)];
+    w.Pass({{card + "-combat-popup-custom-colors", kClickEvent, ""}});
+    CHECK(!w.settings.combatPopupCustomColors);
+    w.Pass({{miss, kClickEvent, ""}});
+    w.Pass({{miss + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Game);
+}
+
+TEST(only_the_skillchains_color_can_be_its_elements)
+{
+    Window w;
+    w.state.page = Page::Colors;
+    const std::string card = "colors-colors-combat-popups";
+    const auto pickLast    = [&](PopupType type, const std::string& key) {
+        const std::string row = card + "-" + key;
+        w.Pass({{row, kClickEvent, ""}});
+        w.Pass({{row + "-o-2", kClickEvent, ""}});
+        return w.settings.combatPopupColors[static_cast<size_t>(type)].source;
+    };
+    w.settings.combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source = ColorSource::Game;
+    CHECK(pickLast(PopupType::Skillchain, "combat-popup-skillchain-color") == ColorSource::Element);
+    CHECK(pickLast(PopupType::Critical, "combat-popup-critical-color") == ColorSource::Game);
+}
+
+TEST(the_combat_popups_test_button_asks_the_plugin_only_while_the_card_is_on_and_the_game_can_pop)
+{
+    Window w;
+    w.state.page             = Page::Entities;
+    w.readings.popupTestReady = true;
+    const std::string card = "entities-combat-popups", test = card + "-combat-popup-test";
+    w.settings.combatPopups = false;
+    w.Pass({{test, kClickEvent, ""}});
+    CHECK(!w.state.popupTestRequested);
+    w.settings.combatPopups   = true;
+    w.readings.popupTestReady = false;
+    CHECK(ClassOn(w.Pass(), test.c_str(), kOffClass));
+    w.Pass({{test, kClickEvent, ""}});
+    CHECK(!w.state.popupTestRequested);
+    w.readings.popupTestReady = true;
+    CHECK(!ClassOn(w.Pass(), test.c_str(), kOffClass));
+    w.Pass({{test, kClickEvent, ""}});
+    CHECK(w.state.popupTestRequested);
+}
+
+namespace
+{
+    const std::string kPopupCard = "entities-combat-popups";
+    std::string KindChip(PopupType type) { return kPopupCard + "-popup-kind-" + std::to_string(static_cast<int>(type)); }
+    std::string ColumnEnd(PopupSide side) { return kPopupCard + "-popup-column-end-" + std::to_string(static_cast<int>(side)); }
+}
+
+TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_nudged_only_while_the_card_is_on)
+{
+    Window w;
+    w.state.page            = Page::Entities;
+    w.settings.combatPopups = false;
+    const std::string x = kPopupCard + "-combat-popup-x", y = kPopupCard + "-combat-popup-y", height = kPopupCard + "-combat-popup-height";
+    const PopupSide& spell    = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Spell)];
+    const PopupSide& recovery = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)];
+    w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}, {x, kChangeEvent, "40"}, {height, kChangeEvent, "50"}});
+    CHECK(spell == PopupSide::Right && w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
+    w.settings.combatPopups = true;
+    CHECK(w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}}).changed);
+    CHECK(spell == PopupSide::Middle && w.settings.combatPopupSides[static_cast<size_t>(PopupType::Dealt)] == PopupSide::Right);
+    CHECK(w.Pass({{KindChip(PopupType::Spell), kDropEvent, KindChip(PopupType::Recovery)}}).changed);
+    CHECK(recovery == PopupSide::Middle);
+    CHECK(!w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Recovery)}}).changed);
+    CHECK(w.Pass({{x, kChangeEvent, "40"}}).changed);
+    CHECK(w.Pass({{y, kChangeEvent, "-25"}}).changed);
+    CHECK(w.Pass({{height, kChangeEvent, "50"}}).changed);
+    CHECK(w.settings.combatPopupX == 40 && w.settings.combatPopupY == -25 && w.settings.combatPopupHeight == 50);
+}
+
+TEST(with_custom_placement_off_the_combat_popups_columns_start_height_and_offsets_take_no_change)
+{
+    Window w;
+    w.state.page = Page::Entities;
+    w.Pass({{kPopupCard + "-combat-popup-placement", kClickEvent, ""}});
+    CHECK(!w.settings.combatPopupPlacement);
+    w.Pass({{ColumnEnd(PopupSide::Right), kDropEvent, KindChip(PopupType::Recovery)}, {kPopupCard + "-combat-popup-x", kChangeEvent, "40"},
+        {kPopupCard + "-combat-popup-height", kChangeEvent, "50"}});
+    CHECK(w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)] == PopupSide::Left);
+    CHECK(w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
+}
+
+TEST(status_popups_switch_with_the_card_on_and_their_colors_are_picked_only_while_they_pop)
+{
+    Window w;
+    w.state.page            = Page::Entities;
+    w.settings.combatPopups = false;
+    const std::string statuses = "entities-combat-popups-combat-popup-statuses",
+                      buff     = "colors-colors-combat-popups-combat-popup-buff-color";
+    const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Buff)];
+    w.Pass({{statuses, kClickEvent, ""}});
+    CHECK(w.settings.combatPopupStatuses);
+    w.settings.combatPopups = true;
+    w.Pass({{statuses, kClickEvent, ""}});
+    CHECK(!w.settings.combatPopupStatuses);
+    w.state.page = Page::Colors;
+    w.Pass({{buff, kClickEvent, ""}});
+    w.Pass({{buff + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Game);
+    w.settings.combatPopupStatuses = true;
+    CHECK(w.Pass({{buff, kClickEvent, ""}}).popup);
+    w.Pass({{buff + "-o-0", kClickEvent, ""}});
+    CHECK(pick.source == ColorSource::Custom);
 }

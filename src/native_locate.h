@@ -81,6 +81,14 @@ namespace headsup
         NoSearchAddress,
         NoFish,
         AmbiguousFish,
+        NoCombatText,
+        AmbiguousCombatText,
+        NoPopupTies,
+        AmbiguousPopupTies,
+        NoPopupEffects,
+        AmbiguousPopupEffects,
+        NoPopupEarly,
+        AmbiguousPopupEarly,
     };
     const char* Describe(LocateProblem problem);
 
@@ -481,6 +489,8 @@ namespace headsup
     };
     ConfigGetSite LocateConfigGet(const ImageSection& text);
     constexpr int32_t kWindowTypeConfig = 18;
+    // Key 19 is Config > Damage Display: 0 in the log only, 1 popups and the log, 2 popups only.
+    constexpr int32_t kDamageDisplayConfig = 19, kDamageInLogOnly = 0;
 
     // Where the client keeps the search server's address (4 bytes as they go on the wire) and its uint16 port, filled
     // in at login from the lobby: the two its search client's setup clears, side by side.
@@ -520,4 +530,64 @@ namespace headsup
     // and as its bar draws it are dwords at kFishFullStamina, kFishStamina and kFishDrawnStamina.
     GlobalSite LocateFish(const ImageSection& text);
     constexpr uint32_t kFishFullStamina = 0x00, kFishStamina = 0x04, kFishDrawnStamina = 0x08;
+
+    // The one call that draws a combat popup's text (a damage or recovery number, or ':' for the Miss picture) from
+    // its particle's draw: cdecl (place, text, ARGB color, float scale[2], 0.1f), popped by the caller. The text is
+    // the particle's own, at kCombatTextOffset. RVAs of the five-byte call and of the routine.
+    struct CombatTextSite
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t call = 0, draw = 0;
+    };
+    constexpr uint32_t kCombatTextOffset = 0x198, kCombatTextArgumentBytes = 20;
+    CombatTextSite LocateCombatText(const ImageSection& text);
+
+    // The three calls in a combat popup's start (0x9E090, once per message as its hit lands) that tie each popup to
+    // its message, RVAs of each five-byte call and of its routine. The decision: cdecl (actor, target, message, 1,
+    // uint8_t* kind), the actor and target each an index then an id, returning 0 to pop. The color: cdecl (class),
+    // called once the effect is started, with the new task in esi, and its class from cdecl (actor index, target
+    // index, message) just before; the start then puts the value at kPopupTaskValue in the task and the color, with
+    // no alpha, at kPopupTaskColor. The particle's build: thiscall (particle, generator), whose task is at
+    // kPopupGeneratorTask.
+    struct PopupTieSites
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t decisionCall = 0, decision = 0, colorCall = 0, color = 0, colorClass = 0, particleCall = 0, particleBuild = 0;
+    };
+    constexpr uint32_t kPopupGeneratorTask = 0x64, kPopupTaskValue = 0xA8, kPopupTaskColor = 0xA4;
+    // The popup's start keeps the message's value in its frame four words past the actor's index and id it passes the
+    // decision (0x9E1A1 to 0x9E1CA).
+    constexpr size_t kPopupDecisionValue = 4;
+    PopupTieSites LocatePopupTies(const ImageSection& text);
+
+    // The game's three popup effects, by the kind its decision writes less one: damage, recovery and Miss. Each
+    // handle is the address, in the running client as the code holds it, of a pointer to a pointer to the effect;
+    // the start, an RVA, is thiscall (effect, actor, target, 0, 0) with the actor's and target's objects (Ashita's
+    // actor pointers), returning the new task.
+    constexpr size_t kPopupEffectCount = 3;
+    struct PopupEffectSites
+    {
+        LocateProblem problem = LocateProblem::None;
+        std::array<uint32_t, kPopupEffectCount> handles{};
+        uint32_t start = 0;
+    };
+    PopupEffectSites LocatePopupEffects(const ImageSection& text);
+
+    // The three calls that start each popup as soon as its action is parsed, RVAs of each five-byte call and of its
+    // routine. The parse of the action packet (0x028): thiscall (action, packet bits), returning the action or 0, its
+    // record at kActionRecord. The chat line's decision in a popup's start: the routine decision is, cdecl, with 0 for
+    // the line. The show of an action's next target record: cdecl (action, record number, slot 0), the popup's start.
+    // In the record, kRecordTargetCount (a signed word) target records of kTargetSize bytes start at the pointer at
+    // kRecordTargets; nothing of the game reads or writes the two bytes at kTargetEarlyMark in each. The game shows at
+    // most kMostTargets of them.
+    struct PopupEarlySites
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t parseCall = 0, parse = 0, lineCall = 0, showNextCall = 0, show = 0;
+    };
+    constexpr uint32_t kActionRecord = 0x0C, kRecordTargetCount = 0x1C, kRecordTargets = 0x20, kTargetSize = 0x34,
+                       kTargetEarlyMark = 0x32, kMostTargets = 0x40;
+    // The record's actor's server id (0x18C8A8 checks it), and a target record's slot 0 message, as parsed (0x9E1D1).
+    constexpr uint32_t kRecordActorId = 0x08, kTargetMessage = 0x18;
+    PopupEarlySites LocatePopupEarly(const ImageSection& text, uint32_t decision);
 }

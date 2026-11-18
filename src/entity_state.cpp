@@ -128,6 +128,7 @@ namespace headsup
         case ColorSource::Claim: return ToArgb(p.claim[static_cast<int>(s.claim)]);
         case ColorSource::Target: return ToArgb(p.target[static_cast<int>(s.target)]);
         case ColorSource::Type: return ToArgb(p.type[static_cast<int>(TypeOf(s))]);
+        case ColorSource::Element: break; // a skillchain popup's alone, never offered here
         }
         return ToArgb(pick.custom);
     }

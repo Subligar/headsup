@@ -103,9 +103,9 @@ PIECES = Pieces(
            'userinterface': 'UserInterface', 'helpbar': 'HelpBar', 'fishingbar': 'FishingBar', 'vanillaui': 'VanillaUi', 'toppanel': 'TopPanel',
            'colors': 'Colors', 'configmenu': 'ConfigMenu', 'feedback': 'Feedback', 'credits': 'Credits'},
     cards={
-        'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(),
+        'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(), 'combat-popups': Card(switch=True),
         'colors-aggression': Card(), 'colors-toughness': Card(), 'colors-claim-status': Card(),
-        'colors-targeting': Card(), 'colors-entity-type': Card(),
+        'colors-targeting': Card(), 'colors-entity-type': Card(), 'colors-combat-popups': Card(),
         'visibility': Card(), 'outline-design': Card(), 'nameplate-design': Card(), 'line-style': Card(),
         'ornament': Card(), 'nameplate-opacity': Card(), 'detection-icons': Card(), 'badges': Card(),
         'weaknesses': Card(), 'statuses': Card(), 'placeholder-timers': Card(),
@@ -126,6 +126,14 @@ PIECES = Pieces(
         'cursor-style': Setting(options=5, nameless=frozenset({4})), 'width': Setting(), 'cursor-height': Setting(),
         'outline-thickness': Setting(), 'scale': Setting(), 'float': Setting(), 'cursor-vertical-offset': Setting(),
         'color': Setting(), 'edge-color': Setting(),
+        'combat-popup-font': Setting(), 'combat-popup-size': Setting(), 'combat-popup-words': Setting(), 'combat-popup-labels': Setting(),
+        'combat-popup-skillchain-names': Setting(), 'combat-popup-right-away': Setting(),
+        'combat-popup-placement': Setting(), 'combat-popup-columns': Setting(unnamed=True), 'combat-popup-height': Setting(), 'combat-popup-x': Setting(), 'combat-popup-y': Setting(),
+        'combat-popup-test': Setting(words={'not-found': True}), 'combat-popup-custom-colors': Setting(), 'combat-popup-dealt-color': Setting(),
+        'combat-popup-taken-color': Setting(), 'combat-popup-recovery-color': Setting(), 'combat-popup-miss-color': Setting(),
+        'combat-popup-critical-color': Setting(), 'combat-popup-burst-color': Setting(), 'combat-popup-skillchain-color': Setting(),
+        'combat-popup-spell-color': Setting(), 'combat-popup-statuses': Setting(), 'combat-popup-buff-color': Setting(),
+        'combat-popup-debuff-color': Setting(),
         'aggression-colors': Setting(unnamed=True, rows=rows(
             'passive', 'aggressive', 'nm-passive', 'nm-aggressive', 'nm-placeholder', 'no-data')),
         'toughness-colors': Setting(unnamed=True, rows=rows(
@@ -211,7 +219,7 @@ PIECES = Pieces(
         'your-level': Setting(words={'unknown': True, 'sitting': True}),
     },
     lists={
-        'plate-mode': List(4), 'outline-mode': List(4, extra={3: 'tipOnClaimRows'}), 'color-source': List(7),
+        'plate-mode': List(4), 'popup-columns': List(3), 'popup-kinds': List(10), 'outline-mode': List(4, extra={3: 'tipOnClaimRows'}), 'color-source': List(8),
         'show-condition': List(13), 'ornament-place': List(5), 'align': List(3), 'font-style': List(3),
         'smoothness': List(4), 'bar-theme': List(6), 'bar-sections': List(3),
         'bar-widgets': List(15), 'plate-lines': List(3), 'job-text': List(3), 'exp-bar-text': List(5), 'target-shows': List(5), 'widget-parts': List(62), 'popup-cards': List(46), 'custom-icons': List(3), 'icon-sides': List(3), 'edit-side': List(2), 'own-background': List(3), 'widget-aligns': List(4), 'status-display': List(3), 'timer-format': List(3), 'blue-learned': List(2), 'detection-icons': List(8), 'tags': List(31),

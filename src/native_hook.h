@@ -1,6 +1,7 @@
 #pragma once
 
 #include "code_patch.h"
+#include "combat_popup.h"
 #include "fish_bar.h"
 #include "friend_list.h"
 #include "name_frame.h"
@@ -126,6 +127,72 @@ namespace headsup
 
     private:
         std::vector<CodePatch> m_Calls;
+    };
+
+    // Render flags 0's bit 9, which the game tests before it starts a popup over a character (0x18C940).
+    constexpr uint32_t kDrawnRenderFlag = 0x200;
+
+    // Takes the game's combat popups while asked: the call that draws a popup's text (native_locate.h) goes to a gate
+    // that opens a popup, lets the game draw it and closes it. Every quad the draw sends in between is the popup's,
+    // which the plugin's draw hook adds here and drops. Not taken, the gate passes the call straight on. Three more
+    // calls, all in or none, tie each popup to its message (PopupTies) as the game starts it, and three after them
+    // start it as soon as its action is parsed (EarlyPopups).
+    class CombatTextHook
+    {
+    public:
+        void SetDevice(IDirect3DDevice8* device);
+        ~CombatTextHook() { Stop(); }
+        // Only at a render boundary, where the game cannot be inside a popup's draw. Returns why it could not start, or
+        // an empty string.
+        std::string Start();
+        // Puts the game's call back if it is still HeadsUp's. Returns why it could not, or an empty string.
+        std::string Stop();
+        bool Running() const { return m_Call.at != nullptr; }
+        // Whether popups are taken from now on: never while the gate is not in.
+        void Take(bool take);
+        // At Present: the last frame's popups and their image are forgotten, and the popups the game starts next count
+        // as started now.
+        void NewFrame(double now);
+        // At Present, for the popups the game starts next: your entity index and your pet's (0 for none).
+        static void SetYou(uint32_t you, uint32_t pet);
+        // At Present: whether popups start as soon as their action arrives and spread when started together.
+        static void SetRightAway(bool on);
+        static void SetSides(const PopupSides& sides);
+        // At Present: whether buffs and debuffs pop, and the server ids of you, your party and your alliance.
+        static void SetStatuses(bool pop, std::span<const uint32_t> party);
+        // An action packet as the server sent it, for the game's parse of it this frame.
+        static void Sent(const SentAction& action);
+        // Whether StartPopup can start one: the ties are in and the game's popup effects were found.
+        bool CanStartPopups() const;
+        // On the game's thread: starts the game's popup effect of event's kind over the character whose actor pointer
+        // is over, with value, in the color the game gives message between colorActor and colorTarget (entity
+        // indexes), tied to event as if the game had decided on it. Returns why it could not, or nothing.
+        std::string StartPopup(const PopupEvent& event, uint32_t value, uint32_t colorActor, uint32_t colorTarget, uintptr_t over);
+        // Inside a taken popup's draw, whose quads go to Add.
+        static bool Open();
+        static void Add(const void* vertices, size_t count, size_t stride);
+        const std::vector<CombatPopup>& Popups() const;
+        // The image and depth buffer the frame's first popup was drawn into, and the image's size; none before one.
+        IDirect3DSurface8* Target() const;
+        IDirect3DSurface8* Depth() const;
+        uint32_t TargetWidth() const;
+        uint32_t TargetHeight() const;
+        // Why the calls that tie each popup to its message are not in, so a miss shows as Miss and every popup in the
+        // game's color; empty when they are.
+        const std::string& TieProblem() const { return m_TieProblem; }
+        // Why the calls that start each popup as soon as its action arrives are not in, so popups wait for their hit;
+        // empty when they are.
+        const std::string& EarlyProblem() const { return m_EarlyProblem; }
+#ifdef HEADSUP_DEV
+        // /hu testpopup, at Present: asks the game's decision for message as if you did it to yourself and starts what
+        // it picks over your character (yourActor, Ashita's actor pointer) with value. Returns what happened.
+        std::string TestPopup(uint32_t message, uint32_t value, uint32_t you, uint32_t yourId, uintptr_t yourActor);
+#endif
+
+    private:
+        CodePatch m_Call;
+        std::array<CodePatch, 3> m_Ties{}, m_Early{};
+        std::string m_TieProblem, m_EarlyProblem;
     };
 
     // How the game's windows are placed this frame: the panel's band, and the settings for the help's mode.
@@ -273,6 +340,8 @@ namespace headsup
         std::string Find();
         // 0 to 7; nothing before Find succeeded or when the game answers no type.
         std::optional<int> Read() const;
+        // Whether the game's Damage Display shows popups; taken as shown before Find succeeded.
+        bool DamagePopupsShown() const;
 
     private:
         int32_t(__cdecl* m_Get)(int32_t) = nullptr;

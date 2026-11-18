@@ -38,6 +38,8 @@ namespace headsup
         WorldPoint eye; // where the camera is
     };
     Camera MakeCamera(const float view[16], const float projection[16], float screenHeight);
+    // The screen row of the point height yalms over feet; false behind the camera.
+    bool RowAtHeight(const Camera& camera, const WorldPoint& feet, float height, float& row);
     // Some clients draw nothing that carries the camera for long stretches, and one kept from before sits where you
     // were then: it counts for this many frames after the last draw that gave it.
     constexpr uint32_t kCameraGraceFrames = 8;

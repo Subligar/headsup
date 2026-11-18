@@ -43,6 +43,8 @@ namespace headsup
         constexpr const char* kThemeNameBox = " name";  // and the box the pencil opens
         // A designer chip's name on a line and, for a created widget, in the lists, before its widget's slot and its part.
         constexpr const char* kPartChip = "part ", *kListedPartChip = "lpart ";
+        // A combat popup kind's chip in its column, before its PopupType, and a column's end, before its PopupSide.
+        constexpr const char* kPopupKindChip = "popup kind ", *kPopupColumnEnd = "popup column end ";
         // The Status Timers designer's chip, before its widget's slot and its status.
         constexpr const char* kStatusChip = "pin ";
         constexpr const char* kSettingsSectionKey = "settings"; // a widget's settings' section, after its designer
@@ -1878,6 +1880,58 @@ namespace headsup
             s.cursorFile  = choice.file;
         }
 
+        void CombatPopupColorRow(Form& form, const std::string& label, Settings& s, PopupType type, const char* tip,
+            bool shown = true)
+        {
+            form.Fade(!s.combatPopups || !s.combatPopupCustomColors || !shown);
+            form.ColorPickRow(label.c_str(), s.combatPopupColors[static_cast<size_t>(type)], CombatPopupSources(type), tip);
+        }
+
+        // The combat popups' three columns, Left, Middle and Right, each kind a chip in its own: a chip dropped on a
+        // column, or on a chip in it, goes in that column.
+        void PopupColumns(Context& c)
+        {
+            Form& form  = c.form;
+            Settings& s = c.s;
+            form.Fade(!s.combatPopups || !s.combatPopupPlacement);
+            const auto columns = c.layout.OptionsOf(WindowList::PopupColumns);
+            const auto kinds   = c.layout.OptionsOf(WindowList::PopupKinds);
+            const std::string chipStart = form.Named(kPopupKindChip) + "-";
+            std::optional<std::pair<int, PopupSide>> drop; // applied after the columns are written
+            const auto dropped = [&](const std::string& target, PopupSide to) {
+                const FormEvent* event = form.Took(target, kDropEvent);
+                if (event == nullptr || form.Off() || event->value.compare(0, chipStart.size(), chipStart) != 0) return;
+                const int type = std::atoi(event->value.c_str() + chipStart.size());
+                if (type >= 0 && type < kPopupTypeCount) drop = {type, to};
+            };
+            form.Line("line trays");
+            for (int column = 0; column < kPopupSideCount; ++column)
+            {
+                const auto here = static_cast<PopupSide>(column);
+                form.Raw(std::string("<div class=\"tray ") + kWidgetTrayClass + "\"><div class=\"tray-name\">" +
+                         EscapedRml(Said(columns[static_cast<size_t>(column)].name)) + "</div>");
+                for (int type = 0; type < kPopupTypeCount; ++type)
+                {
+                    if (s.combatPopupSides[static_cast<size_t>(type)] != here) continue;
+                    const std::string id = form.Id(kPopupKindChip + std::to_string(type));
+                    form.Raw(std::string("<div class=\"btn raised wchip on ") + kTrayChipClass + " drag\" id=\"" + id + "\"" +
+                             TipAttribute(kinds[static_cast<size_t>(type)].tip) + "><div class=\"wname\">" +
+                             EscapedRml(Said(kinds[static_cast<size_t>(type)].name)) + "</div></div>");
+                    form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
+                    dropped(id, here);
+                }
+                const std::string end = form.Id(kPopupColumnEnd + std::to_string(column));
+                form.Raw("<div class=\"tray-end\" id=\"" + end + "\"></div></div>");
+                dropped(end, here);
+            }
+            form.EndLine();
+            if (drop && s.combatPopupSides[static_cast<size_t>(drop->first)] != drop->second)
+            {
+                s.combatPopupSides[static_cast<size_t>(drop->first)] = drop->second;
+                form.changed = true;
+            }
+        }
+
         // A setting, wherever the layout puts it. Each says when it shows, its card's condition included, as it may
         // be moved out of that card.
         void DrawSetting(Context& c, const LayoutSetting& e)
@@ -2157,6 +2211,75 @@ namespace headsup
                     PixelsOr(Word(c, WindowWord::Auto), kFishBarUnplaced), tip);
                 break;
             }
+            case SettingPiece::CombatPopupFont:
+                form.Fade(!s.combatPopups);
+                form.FontDropdown(label.c_str(), s.combatPopupFont, c.fonts, tip, Word(c, WindowWord::Default));
+                break;
+            case SettingPiece::CombatPopupWords:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupWords, tip);
+                break;
+            case SettingPiece::CombatPopupRightAway:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupRightAway, tip);
+                break;
+            case SettingPiece::CombatPopupSkillchainNames:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupSkillchainNames, tip);
+                break;
+            case SettingPiece::CombatPopupLabels:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupLabels, tip);
+                break;
+            case SettingPiece::CombatPopupSize:
+                form.Fade(!s.combatPopups);
+                form.SliderPercent(label.c_str(), s.combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, tip);
+                break;
+            case SettingPiece::CombatPopupCustomColors:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupCustomColors, tip);
+                break;
+            case SettingPiece::CombatPopupPlacement:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupPlacement, tip);
+                break;
+            case SettingPiece::CombatPopupColumns: PopupColumns(c); break;
+            case SettingPiece::CombatPopupHeight:
+                form.Fade(!s.combatPopups || !s.combatPopupPlacement);
+                form.SliderPercent(label.c_str(), s.combatPopupHeight, 0, kMaxCombatPopupHeight, tip);
+                break;
+            case SettingPiece::CombatPopupX:
+                form.Fade(!s.combatPopups || !s.combatPopupPlacement);
+                form.SliderInt(label.c_str(), s.combatPopupX, -kMaxCombatPopupNudge, kMaxCombatPopupNudge, Pixels, tip);
+                break;
+            case SettingPiece::CombatPopupY:
+                form.Fade(!s.combatPopups || !s.combatPopupPlacement);
+                form.SliderInt(label.c_str(), s.combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge, Pixels, tip);
+                break;
+            case SettingPiece::CombatPopupTest:
+                form.Fade(!s.combatPopups || !r.popupTestReady);
+                if (form.Button(label.c_str(), label.c_str(), kWashPill,
+                        r.popupTestReady ? tip : WordTip(c, WindowWord::CombatPopupTestNotFound)))
+                    c.state.popupTestRequested = true;
+                break;
+            case SettingPiece::CombatPopupDealtColor: CombatPopupColorRow(form, label, s, PopupType::Dealt, tip); break;
+            case SettingPiece::CombatPopupTakenColor: CombatPopupColorRow(form, label, s, PopupType::Taken, tip); break;
+            case SettingPiece::CombatPopupRecoveryColor: CombatPopupColorRow(form, label, s, PopupType::Recovery, tip); break;
+            case SettingPiece::CombatPopupMissColor: CombatPopupColorRow(form, label, s, PopupType::Miss, tip); break;
+            case SettingPiece::CombatPopupCriticalColor: CombatPopupColorRow(form, label, s, PopupType::Critical, tip); break;
+            case SettingPiece::CombatPopupBurstColor: CombatPopupColorRow(form, label, s, PopupType::Burst, tip); break;
+            case SettingPiece::CombatPopupSkillchainColor: CombatPopupColorRow(form, label, s, PopupType::Skillchain, tip); break;
+            case SettingPiece::CombatPopupSpellColor: CombatPopupColorRow(form, label, s, PopupType::Spell, tip); break;
+            case SettingPiece::CombatPopupStatuses:
+                form.Fade(!s.combatPopups);
+                form.Switch(label.c_str(), s.combatPopupStatuses, tip);
+                break;
+            case SettingPiece::CombatPopupBuffColor:
+                CombatPopupColorRow(form, label, s, PopupType::Buff, tip, s.combatPopupStatuses);
+                break;
+            case SettingPiece::CombatPopupDebuffColor:
+                CombatPopupColorRow(form, label, s, PopupType::Debuff, tip, s.combatPopupStatuses);
+                break;
             case SettingPiece::CaseScale:
                 form.Fade(!s.fishCase);
                 form.SliderPercent(label.c_str(), s.fishCaseScale, kMinCaseScale, kMaxCaseScale, tip);
@@ -2652,6 +2775,7 @@ namespace headsup
             case CardPiece::ColorsClaimStatus:
             case CardPiece::ColorsTargeting:
             case CardPiece::ColorsEntityType:
+            case CardPiece::ColorsCombatPopups:
             case CardPiece::Visibility:
             case CardPiece::PlaceholderTimers:
             case CardPiece::MousePointer: return {false, !on};
@@ -2673,6 +2797,7 @@ namespace headsup
             case CardPiece::DebugMode: return {false, false, &s.debugMode};
             case CardPiece::FishingAppearance: return {false, !on};
             case CardPiece::FishingCase: return {false, !on, &s.fishCase};
+            case CardPiece::CombatPopups: return {false, !on, &s.combatPopups};
             }
             return {};
         }

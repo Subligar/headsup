@@ -50,6 +50,14 @@ namespace headsup
             {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishCase", &Settings::fishCase}, {"fishCaseBackground", &Settings::fishCaseBackground},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
+            {"combatPopups", &Settings::combatPopups},
+            {"combatPopupWords", &Settings::combatPopupWords},
+            {"combatPopupLabels", &Settings::combatPopupLabels},
+            {"combatPopupCustomColors", &Settings::combatPopupCustomColors},
+            {"combatPopupSkillchainNames", &Settings::combatPopupSkillchainNames},
+            {"combatPopupRightAway", &Settings::combatPopupRightAway},
+            {"combatPopupPlacement", &Settings::combatPopupPlacement},
+            {"combatPopupStatuses", &Settings::combatPopupStatuses},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
             {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"helpBarShrink", &Settings::helpBarShrink},
             {"widgetBackground", &Settings::widgetBackground}};
@@ -105,6 +113,10 @@ namespace headsup
             {"fishCaseAcross", &Settings::fishCaseAcross, kFishBarUnplaced, kCasePlaceWhole},
             {"fishCaseDown", &Settings::fishCaseDown, kFishBarUnplaced, kCasePlaceWhole},
             {"fishCaseScale", &Settings::fishCaseScale, kMinCaseScale, kMaxCaseScale},
+            {"combatPopupSize", &Settings::combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, kPercentStep},
+            {"combatPopupHeight", &Settings::combatPopupHeight, 0, kMaxCombatPopupHeight},
+            {"combatPopupX", &Settings::combatPopupX, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
+            {"combatPopupY", &Settings::combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
             {"helpBarX", &Settings::helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset},
             {"helpBarY", &Settings::helpBarY, -kMaxHelpBarOffset, kMaxHelpBarOffset}};
 
@@ -164,6 +176,14 @@ namespace headsup
         // cursorColor, where a file from before the designer holds the target's color.
         constexpr const char* kCursorEdgePickKey = "cursorEdgeColor";
         constexpr const char* kCursorPickKey     = "cursorPick";
+        // By PopupType.
+        constexpr const char* kCombatPopupColorKeys[kPopupTypeCount] = {"combatPopupDealtColor", "combatPopupTakenColor",
+            "combatPopupRecoveryColor", "combatPopupMissColor", "combatPopupCriticalColor", "combatPopupBurstColor",
+            "combatPopupSkillchainColor", "combatPopupSpellColor", "combatPopupBuffColor", "combatPopupDebuffColor"};
+        // By PopupType, in the combatPopupColumns key: its columns' kinds left to right, " | " between columns.
+        constexpr const char* kPopupTypeNames[kPopupTypeCount] = {"dealt", "taken", "recovery", "miss", "critical", "burst",
+            "skillchain", "spell", "buff", "debuff"};
+        constexpr const char* kCombatPopupColumnsKey = "combatPopupColumns";
 
         constexpr const char* kBadgeFontKey = "badgeFontName";
         constexpr const char* kRankDisplayKey = "rankDisplay";
@@ -275,6 +295,7 @@ namespace headsup
         constexpr const char* kBlueMagicLearnedKey = "blueMagicLearned";
         constexpr const char* kBlueLearnedNames[kBlueLearnedCount] = {"star", "plain"};
         constexpr const char* kFishBarFontKey = "fishBarFont", *kFishBarLineKey = "fishBarLine";
+        constexpr const char* kCombatPopupFontKey = "combatPopupFont";
         // The Status Timers' Design held the Pinned Status #1 to #6 buttons: never read it or give it another meaning.
         constexpr const char* kDesignSuffix     = "Design";
         constexpr const char* kPinDesignSuffix  = "PinDesign"; // the Status Timers' StatusDesign, "40 253 | 33"
@@ -356,7 +377,8 @@ namespace headsup
         // A mode that is gone: its name alone, and the whole nameplate for a target. Such a row is Shown.
         constexpr const char* kExpandingName = "expanding";
         const char* const kOutlineModeNames[kOutlineModeCount]   = {"disabled", "shown", "whenTargeted", "byNature"};
-        const char* const kSourceNames[kColorSourceCount]        = {"custom", "game", "aggression", "toughness", "claim", "target", "type"};
+        const char* const kSourceNames[kColorSourceCount]        = {"custom", "game", "aggression", "toughness", "claim", "target", "type",
+            "element"};
         const char* const kAlignNames[kAlignCount]               = {"left", "center", "right"};
         const char* const kOrnamentPlaceNames[kOrnamentPlaceCount] = {"disabled", "top", "aboveMiddle", "belowMiddle", "bottom"};
         // Before it had a place over or under the plate, an ornament was a switch and one of two places between lines.
@@ -466,6 +488,39 @@ namespace headsup
             for (int i = 0; i < count; ++i)
                 if (name == names[i]) return i;
             return fallback;
+        }
+
+        // A kind the text does not name keeps its side in sides, and one named again its first.
+        PopupSides PopupColumnsFrom(const std::string& text, PopupSides sides)
+        {
+            std::istringstream words(text);
+            std::array<bool, kPopupTypeCount> named{};
+            int column = 0;
+            for (std::string word; words >> word;)
+            {
+                if (word == std::string(1, kDesignLineBreak))
+                {
+                    column = std::min(column + 1, kPopupSideCount - 1);
+                    continue;
+                }
+                const int type = NameIndex(kPopupTypeNames, kPopupTypeCount, word, -1);
+                if (type < 0 || std::exchange(named[type], true)) continue;
+                sides[type] = static_cast<PopupSide>(column);
+            }
+            return sides;
+        }
+
+        std::string PopupColumnsText(const PopupSides& sides)
+        {
+            std::string text;
+            for (int column = 0; column < kPopupSideCount; ++column)
+            {
+                std::string words;
+                for (int t = 0; t < kPopupTypeCount; ++t)
+                    if (sides[t] == static_cast<PopupSide>(column)) words += (words.empty() ? "" : " ") + std::string(kPopupTypeNames[t]);
+                text += (column > 0 ? std::string(" ") + kDesignLineBreak + " " : "") + words;
+            }
+            return text;
         }
 
         void StoreFloat(SettingsStore& store, const std::string& key, float v)
@@ -1235,6 +1290,12 @@ namespace headsup
         return !name.empty() && name.size() <= kMaxFileName && name.find_first_of(kPathCharacters) == std::string_view::npos;
     }
 
+    std::vector<ColorSource> CombatPopupSources(PopupType type)
+    {
+        if (type == PopupType::Skillchain) return {ColorSource::Custom, ColorSource::Game, ColorSource::Element};
+        return {ColorSource::Custom, ColorSource::Game};
+    }
+
     Settings Clamp(Settings s)
     {
         const Settings d;
@@ -1248,6 +1309,7 @@ namespace headsup
         if (s.badgeFontName.size() > kMaxFontName) s.badgeFontName = d.badgeFontName;
         if (s.barTitleFont.size() > kMaxFontName) s.barTitleFont = d.barTitleFont;
         if (s.barTextFont.size() > kMaxFontName) s.barTextFont = d.barTextFont;
+        if (s.combatPopupFont.size() > kMaxFontName) s.combatPopupFont = d.combatPopupFont;
         std::vector<uint8_t> keys;
         for (const uint8_t vk : s.keepPointerKeys)
         {
@@ -1274,6 +1336,8 @@ namespace headsup
             s.pointerIcon = d.pointerIcon;
         ClampPick(s.cursorColor, d.cursorColor, CursorSources());
         ClampPick(s.cursorEdgeColor, d.cursorEdgeColor, CursorSources());
+        for (int t = 0; t < kPopupTypeCount; ++t)
+            ClampPick(s.combatPopupColors[t], d.combatPopupColors[t], CombatPopupSources(static_cast<PopupType>(t)));
         if (static_cast<int>(s.barTheme) >= kBarThemeCount) s.barTheme = d.barTheme;
         if (static_cast<int>(s.customPalette.shape) >= kBarShapeCount) s.customPalette.shape = d.customPalette.shape;
         s.customPalette.border = std::clamp(s.customPalette.border, 0, kMaxStripBorder);
@@ -1795,6 +1859,8 @@ namespace headsup
                 LoadColor(store, c.key, s.*c.field);
             LoadPick(store, kCursorPickKey, s.cursorColor);
             LoadPick(store, kCursorEdgePickKey, s.cursorEdgeColor);
+            for (int t = 0; t < kPopupTypeCount; ++t)
+                LoadPick(store, kCombatPopupColorKeys[t], s.combatPopupColors[t]);
             // A file from before badges had a font of their own to name keeps the one they were set in.
             s.badgeFontName = store.GetString(kBadgeFontKey, file ? kBadgeFont : s.badgeFontName.c_str());
             s.barTitleFont  = store.GetString(kBarTitleFontKey, "");
@@ -1859,12 +1925,14 @@ namespace headsup
             });
             s.fishBarFont  = store.GetString(kFishBarFontKey, s.fishBarFont.c_str());
             s.fishBarLine  = store.GetString(kFishBarLineKey, s.fishBarLine.c_str());
+            s.combatPopupFont = store.GetString(kCombatPopupFontKey, s.combatPopupFont.c_str());
             s.blueMagicLearned = static_cast<BlueLearned>(NameIndex(kBlueLearnedNames, kBlueLearnedCount,
                 store.GetString(kBlueMagicLearnedKey, ""), static_cast<int>(s.blueMagicLearned)));
             s.helpBarAnchor = static_cast<HelpAnchor>(NameIndex(kHelpAnchorNames, kHelpAnchorCount,
                 store.GetString(kHelpAnchorKey, ""), static_cast<int>(s.helpBarAnchor)));
             s.fishStamina = static_cast<FishBarShown>(NameIndex(kFishStaminaNames, kFishStaminaCount,
                 store.GetString(kFishStaminaKey, ""), static_cast<int>(s.fishStamina)));
+            s.combatPopupSides = PopupColumnsFrom(store.GetString(kCombatPopupColumnsKey, ""), s.combatPopupSides);
             std::array<std::string, kBarSectionCount> sections;
             for (int i = 0; i < kBarSectionCount; ++i)
                 sections[i] = store.GetString(kBarSectionKeys[i], "");
@@ -1921,6 +1989,8 @@ namespace headsup
         store.Set(kRankDisplayKey, kRankDisplayNames[static_cast<int>(s.rankDisplay)]);
         SavePick(store, kCursorPickKey, s.cursorColor);
         SavePick(store, kCursorEdgePickKey, s.cursorEdgeColor);
+        for (int t = 0; t < kPopupTypeCount; ++t)
+            SavePick(store, kCombatPopupColorKeys[t], s.combatPopupColors[t]);
         store.Set(kBadgeFontKey, s.badgeFontName.c_str());
         store.Set(kBarTitleFontKey, s.barTitleFont.c_str());
         store.Set(kBarTextFontKey, s.barTextFont.c_str());
@@ -1959,9 +2029,11 @@ namespace headsup
         store.Set(kCustomThemeNameKey, s.customThemeName.c_str());
         store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
         store.Set(kFishStaminaKey, kFishStaminaNames[static_cast<int>(s.fishStamina)]);
+        store.Set(kCombatPopupColumnsKey, PopupColumnsText(s.combatPopupSides).c_str());
         store.Set(kMenuFontKey, s.menuFont.c_str());
         store.Set(kFishBarFontKey, s.fishBarFont.c_str());
         store.Set(kFishBarLineKey, s.fishBarLine.c_str());
+        store.Set(kCombatPopupFontKey, s.combatPopupFont.c_str());
         store.Set(kBlueMagicLearnedKey, kBlueLearnedNames[static_cast<int>(s.blueMagicLearned)]);
         // A copy's keys are written while it is on the panel; the first copy's always.
         for (int slot = 0; slot < kPanelSlots; ++slot)

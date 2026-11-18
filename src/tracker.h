@@ -36,6 +36,7 @@ namespace headsup
 
     constexpr int kMaxStencilRef    = 255;  // outlined mobs take stencil references 1 to this, then wrap
     constexpr uint32_t kMaxEntities = 4096; // more than the client's entity map holds
+    constexpr uint32_t kPartyMembers = 18; // you, your party and the two other alliance parties
 
     struct ActorInput
     {

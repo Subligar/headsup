@@ -3349,3 +3349,152 @@ TEST(a_created_widget_is_named_by_its_number_keeps_its_name_and_a_clone_gets_one
     const PanelWidget clone = *CloneWidget(s, second);
     CHECK_EQ(s.Widget(clone).name, std::string(kCreatedWidgetName) + " 3");
 }
+
+TEST(combat_popups_are_on_in_the_nameplates_font_at_the_games_own_size_until_changed)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    CHECK(fresh.combatPopups && fresh.combatPopupFont.empty() && fresh.combatPopupSize == 100);
+    MapStore store;
+    store.values["combatPopups"]    = "false";
+    store.values["combatPopupFont"] = "Arial";
+    store.values["combatPopupSize"] = "150";
+    const Settings s = LoadSettings(store);
+    CHECK(!s.combatPopups && s.combatPopupFont == "Arial" && s.combatPopupSize == 150);
+    MapStore saved;
+    SaveSettings(s, saved);
+    const Settings back = LoadSettings(saved);
+    CHECK(!back.combatPopups && back.combatPopupFont == "Arial" && back.combatPopupSize == 150);
+    store.values["combatPopupSize"] = "999";
+    CHECK_EQ(LoadSettings(store).combatPopupSize, 200);
+    store.values["combatPopupSize"] = "7";
+    CHECK_EQ(LoadSettings(store).combatPopupSize, 25);
+    store.values["combatPopupSize"] = "52";
+    CHECK_EQ(LoadSettings(store).combatPopupSize, 50);
+    store.values["combatPopupFont"] = "";
+    CHECK(LoadSettings(store).combatPopupFont.empty());
+    store.values["combatPopupFont"] = std::string(40, 'x');
+    CHECK(LoadSettings(store).combatPopupFont.empty());
+}
+
+TEST(each_combat_popup_type_takes_the_games_color_until_picked_and_its_pick_saves)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    for (int t = 0; t < kPopupTypeCount; ++t)
+        if (static_cast<PopupType>(t) != PopupType::Skillchain) CHECK(fresh.combatPopupColors[t].source == ColorSource::Game);
+    MapStore store;
+    store.values["combatPopupMissColorSource"] = "custom";
+    store.values["combatPopupMissColorR"]      = "1.0000";
+    store.values["combatPopupMissColorG"]      = "0.0000";
+    store.values["combatPopupMissColorB"]      = "0.0000";
+    store.values["combatPopupCriticalColorSource"] = "aggression";
+    const Settings s = LoadSettings(store);
+    const ColorPick& miss = s.combatPopupColors[static_cast<size_t>(PopupType::Miss)];
+    CHECK(miss.source == ColorSource::Custom && miss.custom == ColorFromRgb(0xFF0000));
+    CHECK(s.combatPopupColors[static_cast<size_t>(PopupType::Critical)].source == ColorSource::Game);
+    CHECK(s.combatPopupColors[static_cast<size_t>(PopupType::Dealt)].source == ColorSource::Game);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(saved.values["combatPopupMissColorSource"], "custom");
+    CHECK(LoadSettings(saved).combatPopupColors == s.combatPopupColors);
+}
+
+TEST(a_skillchain_takes_its_elements_color_until_picked_and_no_other_type_can)
+{
+    MapStore empty;
+    CHECK(LoadSettings(empty).combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Element);
+    MapStore store;
+    store.values["combatPopupSkillchainColorSource"] = "game";
+    store.values["combatPopupCriticalColorSource"]   = "element";
+    const Settings s = LoadSettings(store);
+    CHECK(s.combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Game);
+    CHECK(s.combatPopupColors[static_cast<size_t>(PopupType::Critical)].source == ColorSource::Game);
+    store.values["combatPopupSkillchainColorSource"] = "element";
+    CHECK(LoadSettings(store).combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Element);
+}
+
+TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_unnudged_until_placed_and_their_columns_save)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    for (int t = 0; t < kPopupTypeCount; ++t)
+    {
+        const auto type = static_cast<PopupType>(t);
+        const bool left = type == PopupType::Buff || type == PopupType::Recovery;
+        CHECK(fresh.combatPopupSides[static_cast<size_t>(t)] == (left ? PopupSide::Left : PopupSide::Right));
+    }
+    CHECK(fresh.combatPopupX == 0 && fresh.combatPopupY == 0);
+    MapStore store;
+    store.values["combatPopupColumns"] = "dealt buff | spell recovery dealt chocobo | ";
+    store.values["combatPopupX"]       = "-30";
+    store.values["combatPopupY"]       = "45";
+    const Settings s = LoadSettings(store);
+    const auto side  = [](const Settings& in, PopupType type) { return in.combatPopupSides[static_cast<size_t>(type)]; };
+    CHECK(side(s, PopupType::Dealt) == PopupSide::Left && side(s, PopupType::Buff) == PopupSide::Left);
+    CHECK(side(s, PopupType::Spell) == PopupSide::Middle && side(s, PopupType::Recovery) == PopupSide::Middle);
+    CHECK(side(s, PopupType::Taken) == PopupSide::Right && side(s, PopupType::Debuff) == PopupSide::Right);
+    CHECK(s.combatPopupX == -30 && s.combatPopupY == 45);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK(saved.values["combatPopupColumns"] == "dealt buff | recovery spell | taken miss critical burst skillchain debuff");
+    const Settings back = LoadSettings(saved);
+    CHECK(back.combatPopupSides == s.combatPopupSides && back.combatPopupX == -30 && back.combatPopupY == 45);
+    SaveSettings(fresh, saved);
+    CHECK(saved.values["combatPopupColumns"] == "recovery buff |  | dealt taken miss critical burst skillchain spell debuff");
+    store.values["combatPopupX"] = "999";
+    store.values["combatPopupY"] = "-999";
+    CHECK(LoadSettings(store).combatPopupX == 200 && LoadSettings(store).combatPopupY == -200);
+}
+
+TEST(popups_beside_their_target_start_near_its_head_until_their_start_height_is_set_and_it_saves)
+{
+    MapStore empty;
+    CHECK_EQ(LoadSettings(empty).combatPopupHeight, 90);
+    MapStore store;
+    store.values["combatPopupHeight"] = "35";
+    const Settings s = LoadSettings(store);
+    CHECK_EQ(s.combatPopupHeight, 35);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK_EQ(LoadSettings(saved).combatPopupHeight, 35);
+    store.values["combatPopupHeight"] = "150";
+    CHECK_EQ(LoadSettings(store).combatPopupHeight, 100);
+    store.values["combatPopupHeight"] = "-5";
+    CHECK_EQ(LoadSettings(store).combatPopupHeight, 0);
+}
+
+TEST(status_popups_are_on_until_switched_off_and_the_switch_saves)
+{
+    MapStore empty;
+    CHECK(LoadSettings(empty).combatPopupStatuses);
+    MapStore store;
+    store.values["combatPopupStatuses"] = "false";
+    const Settings s = LoadSettings(store);
+    CHECK(!s.combatPopupStatuses);
+    MapStore saved;
+    SaveSettings(s, saved);
+    CHECK(!LoadSettings(saved).combatPopupStatuses);
+}
+
+TEST(each_combat_popup_switch_is_on_until_switched_off_and_saves)
+{
+    using Switch = bool Settings::*;
+    const std::pair<const char*, Switch> switches[] = {{"combatPopupWords", &Settings::combatPopupWords},
+        {"combatPopupLabels", &Settings::combatPopupLabels}, {"combatPopupCustomColors", &Settings::combatPopupCustomColors},
+        {"combatPopupSkillchainNames", &Settings::combatPopupSkillchainNames},
+        {"combatPopupRightAway", &Settings::combatPopupRightAway}, {"combatPopupPlacement", &Settings::combatPopupPlacement}};
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    for (const auto& [key, field] : switches)
+    {
+        CHECK(fresh.*field);
+        MapStore store;
+        store.values[key] = "false";
+        const Settings s = LoadSettings(store);
+        CHECK(!(s.*field));
+        MapStore saved;
+        SaveSettings(s, saved);
+        CHECK(!(LoadSettings(saved).*field));
+    }
+}
