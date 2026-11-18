@@ -292,6 +292,44 @@
             {"key": "key", "name": "Key", "tip": "Turns screenshot mode on and off. The game sees the key too, so pick one it does not use."},
             {"key": "hide-game-windows", "name": "Hide Game Windows", "tip": "The game's own windows and chat go too."}
           ]
+        },
+        {
+          "key": "notice-show",
+          "name": "Friend Notices",
+          "description": "A notice on screen when someone on your friend list comes online or goes offline. It reads the friend list the game already keeps, so it asks the server for nothing.",
+          "settings": [
+            {"key": "notice-online", "name": "Show Online", "tip": "Shows a notice when a friend comes online. Default: On."},
+            {"key": "notice-offline", "name": "Show Offline", "tip": "Shows a notice when a friend goes offline. Default: On."},
+            {"key": "notice-seconds", "name": "Duration", "tip": "How long a notice stays on screen. It fades out over the last fifth of that time. Default: 8 s."},
+            {"key": "notice-upward", "name": "Stack Upward", "tip": "Puts new notices above the older ones instead of under them, and makes the spot you drag the bottom of the stack. Default: Off."},
+            {"key": "notice-bar", "name": "Countdown Bar", "tip": "Shows a thin bar in each notice that runs down until the notice goes. Default: On."},
+            {"key": "notice-move", "name": "Move", "tip": "Shows sample notices so you can drag them where you want them. They go away when you close this window, and the place is saved."},
+            {"key": "notice-test", "name": "Test", "tip": "Shows a notice now, with its sound. Press it again to see them stack."}
+          ]
+        },
+        {
+          "key": "notice-sound",
+          "name": "Friend Notice Sound",
+          "settings": [
+            {"key": "notice-online-sound", "name": "Sound on Online", "tip": "Plays a chime when a friend comes online, at most once every 10 seconds. Default: On."},
+            {"key": "notice-volume", "name": "Volume", "tip": "How loud the chime is. Default: 60%."}
+          ]
+        },
+        {
+          "key": "notice-mutes",
+          "name": "Muted Friends",
+          "settings": [
+            {
+              "key": "mute-list",
+              "words": [
+                {"key": "note", "name": "A muted friend gets no notice and no sound. Your mutes count for all your characters."},
+                {"key": "empty", "name": "Your friend list shows here once you are in game."},
+                {"key": "muted", "name": "Muted"},
+                {"key": "notify", "name": "Notify"},
+                {"key": "row-tip", "tip": "Set to Muted, nothing shows or plays when this friend comes online or goes offline."}
+              ]
+            }
+          ]
         }
       ]
     },

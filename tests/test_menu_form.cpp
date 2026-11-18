@@ -2290,3 +2290,54 @@ TEST(status_popups_switch_with_the_card_on_and_their_colors_are_picked_only_whil
     w.Pass({{buff + "-o-0", kClickEvent, ""}});
     CHECK(pick.source == ColorSource::Custom);
 }
+
+TEST(the_friend_notifications_page_sets_its_switches_and_sliders)
+{
+    Window w;
+    w.state.page = Page::UserInterface;
+    const std::string show = "userinterface-notice-show", sound = "userinterface-notice-sound";
+    CHECK(w.Pass({{show + "-notice-offline", kClickEvent, ""}}).changed);
+    CHECK(!w.settings.friendNoticeOffline && w.settings.friendNoticeOnline);
+    CHECK(w.Pass({{show + "-notice-seconds", kChangeEvent, "12"}}).changed);
+    CHECK_EQ(w.settings.friendNoticeSeconds, 12);
+    CHECK(w.Pass({{sound + "-notice-volume", kChangeEvent, "35"}}).changed);
+    CHECK_EQ(w.settings.friendNoticeVolume, 35);
+    w.Pass({{show + "-notice-upward", kClickEvent, ""}, {show + "-notice-bar", kClickEvent, ""}});
+    CHECK(w.settings.friendNoticeUpward && !w.settings.friendNoticeBar);
+    w.Pass({{sound + "-notice-online-sound", kClickEvent, ""}});
+    CHECK(!w.settings.friendNoticeOnlineSound);
+}
+
+TEST(the_notice_cards_buttons_ask_the_plugin_once)
+{
+    Window w;
+    w.state.page           = Page::UserInterface;
+    const std::string card = "userinterface-notice-show";
+    CHECK(!w.Pass({{card + "-notice-test", kClickEvent, ""}}).changed);
+    CHECK(w.state.noticeTestRequested && !w.state.noticeMoveRequested);
+    CHECK(!w.Pass({{card + "-notice-move", kClickEvent, ""}}).changed);
+    CHECK(w.state.noticeMoveRequested);
+}
+
+TEST(the_muted_friends_card_lists_every_friend_and_asks_for_a_mute)
+{
+    Window w;
+    w.state.page = Page::UserInterface;
+    const std::vector<FriendEntry> friends = {{1002, "Zed", "Zed", false}, {1001, "Amy", "", true}};
+    const FriendMutes mutes                = {1002};
+    w.readings.friends = &friends;
+    w.readings.mutes   = &mutes;
+    const std::string card = "userinterface-notice-mutes";
+    const Form shown       = w.Pass();
+    const std::string& rml = Block(shown, card.c_str())->rml;
+    CHECK(rml.find("Amy") != std::string::npos && rml.find("Amy") < rml.find("Zed"));
+    CHECK(!ClassOn(shown, (card + "-mute-1001").c_str(), "on") && ClassOn(shown, (card + "-mute-1002").c_str(), "on"));
+    const Settings before = w.settings;
+    CHECK(!w.Pass({{card + "-mute-1001", kClickEvent, ""}}).changed);
+    CHECK(w.state.muteAsked && w.state.muteAsked->account == 1001 && w.state.muteAsked->muted);
+    w.Pass({{card + "-mute-1002", kClickEvent, ""}});
+    CHECK(w.state.muteAsked && w.state.muteAsked->account == 1002 && !w.state.muteAsked->muted);
+    CHECK(w.settings.friendNoticeOnline == before.friendNoticeOnline && w.settings.friendNoticeVolume == before.friendNoticeVolume);
+    w.readings.friends = nullptr;
+    CHECK(Block(w.Pass(), card.c_str())->rml.find(card + "-mute-") == std::string::npos);
+}
