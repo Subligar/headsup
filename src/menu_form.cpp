@@ -347,39 +347,6 @@ namespace headsup
             form.EndLine();
         }
 
-        // Every friend on the game's list with a switch to mute them. A mute is the plugin's to keep, in a file of its
-        // own, and no setting.
-        void MuteList(Context& c)
-        {
-            Form& form = c.form;
-            form.Fade(false);
-            form.Note(Word(c, WindowWord::MuteListNote));
-            if (c.readings.friends == nullptr || c.readings.friends->empty())
-            {
-                form.Note(Word(c, WindowWord::MuteListEmpty));
-                return;
-            }
-            // By name, then account, so a row stays put while the list changes under it.
-            std::vector<const FriendEntry*> rows;
-            for (const FriendEntry& entry : *c.readings.friends) rows.push_back(&entry);
-            std::ranges::sort(rows, [](const FriendEntry* a, const FriendEntry* b) {
-                return std::tie(FriendName(*a), a->account) < std::tie(FriendName(*b), b->account);
-            });
-            for (const FriendEntry* entry : rows)
-            {
-                const std::string account = std::to_string(entry->account);
-                form.Row(Labeled(FriendName(*entry).c_str(), "friend " + account).c_str(), WordTip(c, WindowWord::MuteListRowTip));
-                const bool was = c.readings.mutes != nullptr && c.readings.mutes->contains(entry->account);
-                bool muted     = was;
-                const bool changed = form.changed;
-                form.ToggleAt(("mute " + account).c_str(), muted, Word(c, WindowWord::MuteListNotify),
-                    Word(c, WindowWord::MuteListMuted));
-                form.changed = changed;
-                if (muted != was) c.state.muteAsked = MuteAsked{entry->account, muted};
-                form.EndRow();
-            }
-        }
-
         // The game's windows HeadsUp moves out from under the help bar, and those it has seen there.
         void WindowList(Context& c)
         {
@@ -2419,7 +2386,6 @@ namespace headsup
                 break;
             case SettingPiece::WindowDefaults: WindowDefaults(c); break;
             case SettingPiece::WindowList: WindowList(c); break;
-            case SettingPiece::MuteList: MuteList(c); break;
             // Top Panel and Widgets
             case SettingPiece::Theme:
                 form.Fade(false);
@@ -2839,8 +2805,7 @@ namespace headsup
             case CardPiece::PlaceholderTimers:
             case CardPiece::MousePointer: return {false, !on};
             case CardPiece::NoticeShow:
-            case CardPiece::NoticeSound:
-            case CardPiece::NoticeMutes: return {false, !on};
+            case CardPiece::NoticeSound: return {false, !on};
             case CardPiece::OutlineDesign: return {c.kind && !c.outlineColors, !on || !s.outlines};
             case CardPiece::Badges:
             case CardPiece::NameplateDesign:

@@ -68,12 +68,13 @@ TEST(a_friend_who_came_online_while_no_read_was_taken_is_news_at_the_next_read)
     CHECK_EQ(watch.Read(65001, {E(1001, "Two", true)}, 60.0).size(), size_t{1});
 }
 
-TEST(a_notice_is_wanted_only_with_headsup_on_its_kind_on_and_the_friend_not_muted)
+TEST(a_notice_is_wanted_only_with_headsup_on_its_kind_on_and_the_friend_included)
 {
     Settings s;
     const FriendNews online{NoticeKind::Online, 1001, "Two"}, offline{NoticeKind::Offline, 1001, "Two"};
     CHECK(NoticeWanted(online, s, {}) && NoticeWanted(offline, s, {}));
-    CHECK(!NoticeWanted(online, s, {1001}) && NoticeWanted(online, s, {1002}));
+    CHECK(!NoticeWanted(online, s, FriendsIncluded{false, {1001}}) && NoticeWanted(online, s, FriendsIncluded{false, {1002}}));
+    CHECK(!NoticeWanted(online, s, FriendsIncluded{true, {}}));
     s.friendNoticeOffline = false;
     CHECK(NoticeWanted(online, s, {}) && !NoticeWanted(offline, s, {}));
     s.friendNoticeOnline = false;
@@ -83,13 +84,64 @@ TEST(a_notice_is_wanted_only_with_headsup_on_its_kind_on_and_the_friend_not_mute
     CHECK(!NoticeWanted(online, s, {}));
 }
 
-TEST(the_mute_file_holds_one_account_a_line_and_survives_a_hand_edit)
+TEST(the_included_file_holds_none_and_the_accounts_left_out_and_survives_a_hand_edit)
 {
-    CHECK_EQ(FriendMutesText({1003, 1001}), "1001\n1003\n");
-    CHECK_EQ(FriendMutesText({}), "");
-    CHECK((FriendMutesFrom("1001\n1003\n") == FriendMutes{1001, 1003}));
-    CHECK((FriendMutesFrom("abc\r\n\r\n 1002 \r\n1002\n-5\n12x\n0\n99999999999\n7") == FriendMutes{7, 1002}));
-    CHECK(FriendMutesFrom("").empty());
+    CHECK_EQ(IncludedText({true, {}}), "none\n");
+    CHECK_EQ(IncludedText({false, {1002, 1001}}), "1001\n1002\n");
+    CHECK_EQ(IncludedText({}), "");
+    CHECK((IncludedFrom(" 1002 \r\nnone\nabc\n-4\n0\n1001x\n\n1001") == FriendsIncluded{true, {1001, 1002}}));
+    CHECK((IncludedFrom("1001\n1003\n") == FriendsIncluded{false, {1001, 1003}}));
+    CHECK(IncludedFrom("") == FriendsIncluded{});
+}
+
+TEST(all_and_none_tick_and_untick_everyone)
+{
+    const std::vector<uint32_t> accounts = {1001, 1002, 1003};
+    FriendsIncluded included{false, {1002}};
+    CHECK(!AllIncluded(included, accounts));
+    CHECK(ToggleIncluded(included, accounts, 0));
+    CHECK(included == FriendsIncluded{} && AllIncluded(included, accounts));
+    CHECK(!ToggleIncluded(included, accounts, 0)); // already All
+    CHECK(ToggleIncluded(included, accounts, 1));
+    CHECK((included == FriendsIncluded{true, {}}));
+    for (const uint32_t account : {1001u, 1002u, 1003u, 9999u}) CHECK(!Includes(included, account));
+    CHECK(!AllIncluded(included, accounts));
+    CHECK(!ToggleIncluded(included, accounts, 1)); // already None
+}
+
+TEST(unticking_a_friend_clears_all_and_ticking_one_clears_none)
+{
+    const std::vector<uint32_t> accounts = {1001, 1002, 1003};
+    FriendsIncluded included;
+    CHECK(ToggleIncluded(included, accounts, 3));
+    CHECK((included == FriendsIncluded{false, {1002}}) && !AllIncluded(included, accounts));
+    CHECK(ToggleIncluded(included, accounts, 3));
+    CHECK(included == FriendsIncluded{});
+    included = {true, {}};
+    CHECK(ToggleIncluded(included, accounts, 2));
+    CHECK((included == FriendsIncluded{false, {1002, 1003}}));
+    CHECK(Includes(included, 1001) && !Includes(included, 1002));
+}
+
+TEST(a_friend_added_later_is_included_unless_none_is_picked)
+{
+    CHECK(Includes(FriendsIncluded{false, {1002}}, 1004));
+    CHECK(!Includes(FriendsIncluded{true, {}}, 1004));
+    // Every friend unticked by hand is not None: a friend added later still gets in.
+    const std::vector<uint32_t> accounts = {1001, 1002};
+    FriendsIncluded included;
+    ToggleIncluded(included, accounts, 2);
+    ToggleIncluded(included, accounts, 3);
+    CHECK(!included.none && !Includes(included, 1001) && Includes(included, 1004));
+}
+
+TEST(a_row_past_the_list_changes_nothing)
+{
+    const std::vector<uint32_t> accounts = {1001, 1002, 1003};
+    FriendsIncluded included{false, {1002}};
+    CHECK(!ToggleIncluded(included, accounts, -1));
+    CHECK(!ToggleIncluded(included, accounts, 5));
+    CHECK((included == FriendsIncluded{false, {1002}}));
 }
 
 TEST(a_read_while_your_character_is_not_known_is_skipped)

@@ -49,7 +49,7 @@ namespace headsup
         bool exportable = false; // a developer's build, which can write its built-in layout out as a file
         bool popupTestReady = false; // the game's code that starts a combat popup was found
         const std::vector<FriendEntry>* friends = nullptr; // the game's friend list, as last read
-        const FriendMutes* mutes                = nullptr;
+        const FriendsIncluded* included         = nullptr;
         // The widgets whose settings the panel's open popup shows, in its pill's order; none while it shows none.
         std::vector<PanelWidget> settingsOf;
         // The picture each part's chip in the Widget Designer shows, as the game is now.
@@ -94,12 +94,6 @@ namespace headsup
     enum class EditSide : uint8_t { Widget, Popup };
 
     // What the settings window keeps between passes that is no setting.
-    struct MuteAsked
-    {
-        uint32_t account = 0;
-        bool muted       = false;
-    };
-
     struct MenuFormState
     {
         FormState form;
@@ -119,7 +113,7 @@ namespace headsup
         bool caseMoveRequested = false, caseTestRequested = false; // pressed: the plugin shows the boxes, or plays one
         bool popupTestRequested = false; // the Combat Popups card's Test: the plugin starts its samples
         bool noticeTestRequested = false; // the same for the friend notices: a friend comes online, or goes offline
-        std::optional<MuteAsked> muteAsked; // a friend's Mute switched, which is no setting: the plugin keeps mutes
+        std::optional<FriendsIncluded> includedAsked; // Friends Included as clicked, which is no setting: the plugin keeps it
         bool watchRequested = false; // the debug watch is to start, or stop
         bool exportRequested = false;
         bool cursorsRequested = false; // a list of pictures was opened: the cursors folder is to be read again

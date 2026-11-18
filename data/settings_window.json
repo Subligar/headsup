@@ -311,22 +311,6 @@
           "settings": [
             {"key": "notice-volume", "name": "Volume", "tip": "How loud the chime is. Default: 60%."}
           ]
-        },
-        {
-          "key": "notice-mutes",
-          "name": "Muted Friends",
-          "settings": [
-            {
-              "key": "mute-list",
-              "words": [
-                {"key": "note", "name": "A muted friend gets no notice and no sound. Your mutes count for all your characters."},
-                {"key": "empty", "name": "Your friend list shows here once you are in game."},
-                {"key": "muted", "name": "Muted"},
-                {"key": "notify", "name": "Notify"},
-                {"key": "row-tip", "tip": "Set to Muted, nothing shows or plays when this friend comes online or goes offline."}
-              ]
-            }
-          ]
         }
       ]
     },

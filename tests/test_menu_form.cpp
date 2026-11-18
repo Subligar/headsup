@@ -2315,25 +2315,3 @@ TEST(the_notice_cards_buttons_ask_the_plugin_once)
     CHECK(w.state.noticeTestRequested);
 }
 
-TEST(the_muted_friends_card_lists_every_friend_and_asks_for_a_mute)
-{
-    Window w;
-    w.state.page = Page::UserInterface;
-    const std::vector<FriendEntry> friends = {{1002, "Zed", "Zed", false}, {1001, "Amy", "", true}};
-    const FriendMutes mutes                = {1002};
-    w.readings.friends = &friends;
-    w.readings.mutes   = &mutes;
-    const std::string card = "userinterface-notice-mutes";
-    const Form shown       = w.Pass();
-    const std::string& rml = Block(shown, card.c_str())->rml;
-    CHECK(rml.find("Amy") != std::string::npos && rml.find("Amy") < rml.find("Zed"));
-    CHECK(!ClassOn(shown, (card + "-mute-1001").c_str(), "on") && ClassOn(shown, (card + "-mute-1002").c_str(), "on"));
-    const Settings before = w.settings;
-    CHECK(!w.Pass({{card + "-mute-1001", kClickEvent, ""}}).changed);
-    CHECK(w.state.muteAsked && w.state.muteAsked->account == 1001 && w.state.muteAsked->muted);
-    w.Pass({{card + "-mute-1002", kClickEvent, ""}});
-    CHECK(w.state.muteAsked && w.state.muteAsked->account == 1002 && !w.state.muteAsked->muted);
-    CHECK(w.settings.friendNoticeOnline == before.friendNoticeOnline && w.settings.friendNoticeVolume == before.friendNoticeVolume);
-    w.readings.friends = nullptr;
-    CHECK(Block(w.Pass(), card.c_str())->rml.find(card + "-mute-") == std::string::npos);
-}

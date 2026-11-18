@@ -1,5 +1,6 @@
 #include "friend_notices.h"
 
+#include <algorithm>
 #include <charconv>
 
 namespace headsup
@@ -29,17 +30,17 @@ namespace headsup
 
     void FriendWatch::Forget() { m_Self.reset(); }
 
-    std::string FriendMutesText(const FriendMutes& mutes)
+    std::string IncludedText(const FriendsIncluded& included)
     {
-        std::string text;
-        for (const uint32_t account : mutes) text += std::to_string(account) + '\n';
+        std::string text = included.none ? std::string(kIncludedNoneLine) + '\n' : std::string();
+        for (const uint32_t account : included.out) text += std::to_string(account) + '\n';
         return text;
     }
 
-    FriendMutes FriendMutesFrom(std::string_view text)
+    FriendsIncluded IncludedFrom(std::string_view text)
     {
         constexpr std::string_view kBlank = " \t\r";
-        FriendMutes mutes;
+        FriendsIncluded included;
         while (!text.empty())
         {
             const size_t end      = text.find('\n');
@@ -48,16 +49,43 @@ namespace headsup
             const size_t first    = line.find_first_not_of(kBlank);
             if (first == std::string_view::npos) continue;
             line = line.substr(first, line.find_last_not_of(kBlank) - first + 1);
+            if (line == kIncludedNoneLine)
+            {
+                included.none = true;
+                continue;
+            }
             uint32_t account = 0;
             const auto [at, problem] = std::from_chars(line.data(), line.data() + line.size(), account);
-            if (problem == std::errc{} && at == line.data() + line.size() && account > 0) mutes.insert(account);
+            if (problem == std::errc{} && at == line.data() + line.size() && account > 0) included.out.insert(account);
         }
-        return mutes;
+        return included;
     }
 
-    bool NoticeWanted(const FriendNews& news, const Settings& settings, const FriendMutes& mutes)
+    bool Includes(const FriendsIncluded& included, uint32_t account) { return !included.none && !included.out.contains(account); }
+
+    bool AllIncluded(const FriendsIncluded& included, std::span<const uint32_t> accounts)
+    {
+        return std::ranges::all_of(accounts, [&](uint32_t account) { return Includes(included, account); });
+    }
+
+    bool ToggleIncluded(FriendsIncluded& included, std::span<const uint32_t> accounts, int row)
+    {
+        constexpr int kAllRow = 0, kNoneRow = 1, kFirstFriendRow = 2;
+        const FriendsIncluded was = included;
+        if (row == kAllRow) included = {};
+        else if (row == kNoneRow) included = {true, {}};
+        else if (row >= kFirstFriendRow && row - kFirstFriendRow < static_cast<int>(accounts.size()))
+        {
+            const uint32_t account = accounts[static_cast<size_t>(row - kFirstFriendRow)];
+            if (included.none) included = {false, {accounts.begin(), accounts.end()}};
+            if (!included.out.erase(account)) included.out.insert(account);
+        }
+        return included != was;
+    }
+
+    bool NoticeWanted(const FriendNews& news, const Settings& settings, const FriendsIncluded& included)
     {
         const bool kindOn = news.kind == NoticeKind::Online ? settings.friendNoticeOnline : settings.friendNoticeOffline;
-        return settings.enabled && kindOn && !mutes.contains(news.account);
+        return settings.enabled && kindOn && Includes(included, news.account);
     }
 }

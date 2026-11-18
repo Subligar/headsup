@@ -110,7 +110,7 @@ namespace
     constexpr const char* kNoteLog           = "headsup";  // the log's name in HeadsUp's logs folder, before its time
     constexpr const char* kThemesFolder      = "themes";  // and their saved top panel themes
     constexpr const char* kOutpostsFile      = "outposts.txt"; // every character's supply runs, as overseers told them
-    constexpr const char* kFriendMutesFile   = "friend_mutes.txt"; // the friends muted, for every character alike
+    constexpr const char* kIncludedFile      = "friends_excluded.txt"; // Friends Included, for every character alike
     constexpr const char* kTurnInsFile       = "guild_turnins.txt"; // today's guild point turn-ins, as Phoenix's site gave them
     constexpr const char* kTopPanelPage      = "toppanel"; // the settings window's page and card the Settings widget opens
     constexpr const char* kWidgetLayoutCard  = "layout";
@@ -435,9 +435,9 @@ class HeadsUp final : public IPlugin
     std::optional<double> m_LinkshellsReadAt;
     headsup::FriendListReader m_FriendList;
     std::vector<uint32_t> m_Friends; // the characters your friends play, by server id in ascending order
-    std::vector<headsup::FriendEntry> m_FriendEntries; // the friend list as last read, for the notices and the mutes
+    std::vector<headsup::FriendEntry> m_FriendEntries; // the friend list as last read, for the notices and Friends Included
     headsup::FriendWatch m_FriendWatch;
-    std::optional<headsup::FriendMutes> m_FriendMutes; // read from its file when first needed
+    std::optional<headsup::FriendsIncluded> m_FriendsIncluded; // read from its file when first needed
     headsup::NoticeStack m_Notices;
     headsup::NoticeBox m_NoticeBox;
     headsup::SoundWaits m_NoticeWaits;
@@ -1269,7 +1269,7 @@ public:
 #endif
             .popupTestReady   = m_CombatTextHook.CanStartPopups(),
             .friends          = &m_FriendEntries,
-            .mutes            = &FriendMutes(),
+            .included         = &Included(),
             .settingsOf       = SettingsShownNow(),
             .partMarks        = {},
             .localZone        = LocalZoneNow(),
@@ -1300,12 +1300,11 @@ public:
             Notify(headsup::FriendNews{m_NextTest, 0, headsup::kFriendSampleName}, Now());
             m_NextTest = m_NextTest == headsup::NoticeKind::Online ? headsup::NoticeKind::Offline : headsup::NoticeKind::Online;
         }
-        if (const std::optional<headsup::MuteAsked> mute = m_RmlMenu.TakeMuteAsked())
+        if (std::optional<headsup::FriendsIncluded> included = m_RmlMenu.TakeIncludedAsked())
         {
-            if (mute->muted) FriendMutes().insert(mute->account);
-            else FriendMutes().erase(mute->account);
-            if (!WriteText(ConfigPath(kFriendMutesFile), headsup::FriendMutesText(FriendMutes())))
-                Note("could not save the muted friends to " + ConfigPath(kFriendMutesFile) + ".");
+            Included() = std::move(*included);
+            if (!WriteText(ConfigPath(kIncludedFile), headsup::IncludedText(Included())))
+                Note("could not save Friends Included to " + ConfigPath(kIncludedFile) + ".");
         }
         if (m_RmlMenu.TakeCaseTest())
         {
@@ -2552,16 +2551,17 @@ private:
             m_TurnInFetch.Start(headsup::kGuildPatternsHost, headsup::kGuildPatternsPath);
     }
 
-    headsup::FriendMutes& FriendMutes()
+    headsup::FriendsIncluded& Included()
     {
-        if (!m_FriendMutes) m_FriendMutes = headsup::FriendMutesFrom(ReadText(ConfigPath(kFriendMutesFile)));
-        return *m_FriendMutes;
+        if (!m_FriendsIncluded) m_FriendsIncluded = headsup::IncludedFrom(ReadText(ConfigPath(kIncludedFile)));
+        return *m_FriendsIncluded;
     }
 
     // A friend came online or went offline: a notice, and for an online one its sound, as the settings ask.
     void Notify(const headsup::FriendNews& news, double now)
     {
-        if (!headsup::NoticeWanted(news, m_Settings, FriendMutes())) return;
+        // A Test's notice has account 0, nobody's, which Friends Included does not stop.
+        if (!headsup::NoticeWanted(news, m_Settings, news.account == 0 ? headsup::FriendsIncluded{} : Included())) return;
         m_Notices.Add(news.kind, news.name);
         if (news.kind == headsup::NoticeKind::Online && m_Settings.friendNoticeOnlineSound != headsup::kNoSound && m_NoticeWaits.Due(news.kind, now))
             PlayNotice(news.kind);
