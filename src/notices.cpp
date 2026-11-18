@@ -114,6 +114,13 @@ namespace headsup
             upward ? std::clamp(y, height, screenHeight) : std::clamp(y, 0.0f, screenHeight - height)};
     }
 
+    bool OverAny(std::span<const NoticeRect> boxes, float x, float y)
+    {
+        return std::ranges::any_of(boxes, [&](const NoticeRect& box) {
+            return x >= box.left && x < box.left + box.width && y >= box.top && y < box.top + box.height;
+        });
+    }
+
     NoticeSpot Reanchored(const NoticeRect& bounds, HelpAnchor anchor, NoticeEdge edge)
     {
         return {bounds.left + NoticeLeft(bounds.width, anchor),

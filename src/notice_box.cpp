@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace headsup
 {
@@ -19,6 +20,8 @@ namespace headsup
         constexpr const char* kOnlineClass = "online", *kOfflineClass = "offline", *kInviteClass = "invite";
         constexpr const char* kTextClass = "text", *kTitleClass = "title", *kMessageClass = "message";
         constexpr const char* kButtonsClass = "buttons", *kBarClass = "bar";
+        constexpr const char* kButtonClass = "btn", *kDeclineClass = "decline", *kAcceptClass = "accept";
+        constexpr float kButtonsGap = 6.0f, kButtonPad = 3.0f; // above the row and between its two; inside each
 
         const char* KindClass(NoticeKind kind)
         {
@@ -73,6 +76,14 @@ namespace headsup
             css += ".message{" + oneLine + font(look.textFont, look.textSize) + "color:" + RcssColor(p.text) + ";" +
                    ShadowEffect(static_cast<int>(std::lround(look.textSize))) + "}";
             css += ".buttons,.bar{flex:0 0 auto;}";
+            // Only the buttons take the pointer: pointer-events is inherited, and the body's is none.
+            css += std::string(".") + kButtonsClass + "{display:flex;flex-direction:row;margin-top:" + Px(kButtonsGap) + ";}";
+            css += std::string(".") + kButtonClass + "{flex:1 1 0px;pointer-events:auto;text-align:center;padding:" +
+                   Px(kButtonPad) + " 0px;border:1px " + RcssColor(p.tagBorder) + ";border-radius:" + Px(look.radius) +
+                   ";background-color:" + RcssColor(p.tagFill) + ";color:" + RcssColor(p.tagText) + ";" +
+                   font(look.textFont, look.textSize) + "}";
+            css += std::string(".") + kButtonClass + ":hover{background-color:" + RcssColor(p.highlight) + ";}";
+            css += std::string(".") + kDeclineClass + "{margin-right:" + Px(kButtonsGap) + ";}";
             css += ".bar{height:" + Px(kNoticeBarHeight) + ";margin-top:" + Px(kBarGap) + ";}";
             for (const NoticeKind kind : {NoticeKind::Online, NoticeKind::Offline, NoticeKind::PartyInvite})
             {
@@ -87,7 +98,9 @@ namespace headsup
                 boxes += "<div id=\"" + NoticeId(slot) + "\" class=\"box " + kHiddenClass + "\">" +
                          (look.skin ? kArtRml : "") + "<div class=\"" + kTextClass + "\"><div class=\"" + kTitleClass +
                          "\"></div><div class=\"" + kMessageClass + "\"></div></div><div class=\"" + kButtonsClass +
-                         " " + kHiddenClass + "\"></div><div class=\"" + kBarClass + "\"></div></div>";
+                         " " + kHiddenClass + "\"><div class=\"" + kButtonClass + " " + kDeclineClass + "\">" +
+                         kDeclineWord + "</div><div class=\"" + kButtonClass + " " + kAcceptClass + "\">" + kAcceptWord +
+                         "</div></div><div class=\"" + kBarClass + "\"></div></div>";
             return "<rml><head><style>" + css + "</style></head><body id=\"" + std::string(kNoticeDocument) +
                    "\"><div id=\"" + kNoticeStackId + "\">" + boxes + "</div></body></rml>";
         }
@@ -127,6 +140,7 @@ namespace headsup
             m_At.clear();
             for (const Rml::EventId id : {Rml::EventId::Dragstart, Rml::EventId::Drag, Rml::EventId::Dragend})
                 m_Stack->AddEventListener(id, this);
+            m_Document->AddEventListener(Rml::EventId::Click, this);
             m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
         }
         // Moving let go mid-drag ends the drag where the stack is, whatever the pointer does until the button goes up.
@@ -141,6 +155,7 @@ namespace headsup
             took.moved = true;
         }
         m_Stack->SetClass(kMovingClass, frame.moving);
+        took.press = std::exchange(m_Press, std::nullopt);
 
         std::vector<int> refit; // boxes whose words changed, to size and fit once laid out
         bool changed = false;
@@ -152,13 +167,15 @@ namespace headsup
             const std::optional<ShownNotice>& was = m_Filled[static_cast<size_t>(slot)];
             box->SetClass(kHiddenClass, !notice);
             Part(box, kBarClass)->SetClass(kHiddenClass, !settings.noticeBar);
+            Part(box, kButtonsClass)->SetClass(kHiddenClass, !notice || !notice->buttons);
             if (!notice)
             {
                 changed = changed || was.has_value();
                 m_Filled[static_cast<size_t>(slot)].reset();
                 continue;
             }
-            if (!was || was->id != notice->id || was->kind != notice->kind || was->name != notice->name)
+            if (!was || was->id != notice->id || was->kind != notice->kind || was->name != notice->name ||
+                was->buttons != notice->buttons)
             {
                 for (const char* kindClass : {kOnlineClass, kOfflineClass, kInviteClass})
                     box->SetClass(kindClass, std::string_view(kindClass) == KindClass(notice->kind));
@@ -243,9 +260,11 @@ namespace headsup
             m_Stack->SetProperty(Rml::PropertyId::Top, Rml::Property(spot.y, Rml::Unit::PX));
         }
         m_Bounds.reset();
+        m_Boxes.clear();
         for (const NoticeRect& box : placed)
         {
             const NoticeRect on{spot.x + box.left, spot.y + box.top, box.width, box.height};
+            m_Boxes.push_back(on);
             if (!m_Bounds)
             {
                 m_Bounds = on;
@@ -258,11 +277,22 @@ namespace headsup
             m_Bounds->width  = right - m_Bounds->left;
             m_Bounds->height = bottom - m_Bounds->top;
         }
+        took.hovered = frame.pointer && OverAny(m_Boxes, frame.pointer->x, frame.pointer->y);
         return took;
     }
 
     void NoticeBox::ProcessEvent(Rml::Event& event)
     {
+        if (event.GetId() == Rml::EventId::Click)
+        {
+            Rml::Element* button = event.GetTargetElement();
+            while (button != nullptr && !button->IsClassSet(kButtonClass)) button = button->GetParentNode();
+            if (button == nullptr) return;
+            for (int slot = 0; slot < static_cast<int>(m_Filled.size()); ++slot)
+                if (m_Filled[static_cast<size_t>(slot)] && button->GetParentNode()->GetParentNode() == m_Document->GetElementById(NoticeId(slot)))
+                    m_Press = NoticePress{m_Filled[static_cast<size_t>(slot)]->id, button->IsClassSet(kAcceptClass)};
+            return;
+        }
         if (!m_Grabbable) return;
         const Rml::Vector2f pointer{event.GetParameter<float>("mouse_x", 0.0f), event.GetParameter<float>("mouse_y", 0.0f)};
         switch (event.GetId())
@@ -293,12 +323,15 @@ namespace headsup
         if (m_Document == nullptr) return;
         for (const Rml::EventId id : {Rml::EventId::Dragstart, Rml::EventId::Drag, Rml::EventId::Dragend})
             m_Stack->RemoveEventListener(id, this);
+        m_Document->RemoveEventListener(Rml::EventId::Click, this);
         m_Document->Close();
         m_Document = nullptr;
         m_Stack    = nullptr;
         m_Filled.clear();
         m_At.clear();
         m_Bounds.reset();
+        m_Boxes.clear();
+        m_Press.reset();
         m_Dragging = false;
         m_Dragged.reset();
     }

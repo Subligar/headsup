@@ -389,3 +389,122 @@ TEST(a_right_anchored_stack_at_the_screens_edge_stays_on_it)
     CHECK(std::abs(Left(Box(rml, 0)) + Width(Box(rml, 0)) - 1920.0f) < 0.5f);
     box.Close();
 }
+
+namespace
+{
+    ShownNotice Invite(uint32_t id, const char* name, bool buttons)
+    {
+        return ShownNotice{id, NoticeKind::PartyInvite, name, 1.0f, 1.0f, buttons};
+    }
+    Rml::Vector2f Middle(Rml::Element* el)
+    {
+        return el->GetAbsoluteOffset(Rml::BoxArea::Border) + el->GetBox().GetSize(Rml::BoxArea::Border) / 2.0f;
+    }
+    // Down and up at that point: true when nothing of RmlUi's took the press.
+    bool ClickAt(test::RmlSession& rml, Rml::Vector2f at)
+    {
+        rml.context->ProcessMouseMove(static_cast<int>(at.x), static_cast<int>(at.y), 0);
+        const bool passed = rml.context->ProcessMouseButtonDown(0, 0);
+        rml.context->ProcessMouseButtonUp(0, 0);
+        return passed;
+    }
+}
+
+TEST(clicks_pass_through_a_notice_but_its_buttons_take_them)
+{
+    test::RmlSession rml;
+    Settings settings;
+    NoticeBox box;
+    const std::vector<ShownNotice> shown = {Invite(7, "Leader", true)};
+    box.Update(rml.context, Gold(), settings, shown, Frame());
+    rml.context->Update();
+    CHECK(ClickAt(rml, Middle(Part(Box(rml, 0), "title"))));
+    CHECK(!box.Update(rml.context, Gold(), settings, shown, Frame()).press);
+    rml.context->Update();
+    CHECK(!ClickAt(rml, Middle(Part(Box(rml, 0), "accept"))));
+    std::optional<NoticePress> press = box.Update(rml.context, Gold(), settings, shown, Frame()).press;
+    CHECK(press && press->id == 7 && press->accept);
+    CHECK(!box.Update(rml.context, Gold(), settings, shown, Frame()).press);
+    rml.context->Update();
+    CHECK(!ClickAt(rml, Middle(Part(Box(rml, 0), "decline"))));
+    press = box.Update(rml.context, Gold(), settings, shown, Frame()).press;
+    CHECK(press && press->id == 7 && !press->accept);
+    CHECK_EQ(rml.Said(), "");
+    box.Close();
+}
+
+TEST(an_invite_without_buttons_and_a_friends_notice_show_none)
+{
+    test::RmlSession rml;
+    Settings settings;
+    NoticeBox box;
+    box.Update(rml.context, Gold(), settings, {Invite(7, "Leader", true)}, Frame());
+    rml.context->Update();
+    const Rml::Vector2f was = Middle(Part(Box(rml, 0), "accept"));
+    box.Update(rml.context, Gold(), settings, {Invite(7, "Leader", false), N(8, NoticeKind::Online, "Pal")}, Frame());
+    rml.context->Update();
+    CHECK(Part(Box(rml, 0), "buttons")->IsClassSet(kHiddenClass));
+    CHECK(Part(Box(rml, 1), "buttons")->IsClassSet(kHiddenClass));
+    CHECK(ClickAt(rml, was));
+    CHECK(!box.Update(rml.context, Gold(), settings, {Invite(7, "Leader", false)}, Frame()).press);
+    box.Close();
+}
+
+TEST(the_pointer_over_any_notice_is_told)
+{
+    test::RmlSession rml;
+    Settings settings;
+    NoticeBox box;
+    const std::vector<ShownNotice> shown = {N(1, NoticeKind::Online, "One"), N(2, NoticeKind::Online, "Two")};
+    box.Update(rml.context, Gold(), settings, shown, Frame());
+    rml.context->Update();
+    const auto with = [&](std::optional<Rml::Vector2f> pointer) {
+        NoticeFrame frame = Frame();
+        frame.pointer     = pointer;
+        return box.Update(rml.context, Gold(), settings, shown, frame).hovered;
+    };
+    const Rml::Vector2f second = Middle(Box(rml, 1));
+    CHECK(with(second));
+    CHECK(!with(Rml::Vector2f{second.x, Top(Box(rml, 1)) - 5.0f})); // the gap
+    CHECK(!with(Rml::Vector2f{1500.0f, 900.0f}));
+    CHECK(!with(std::nullopt));
+    box.Close();
+}
+
+TEST(a_button_clicks_while_the_stack_can_be_dragged)
+{
+    test::RmlSession rml;
+    Settings settings;
+    NoticeBox box;
+    const std::vector<ShownNotice> shown = {Invite(7, "Leader", true)};
+    box.Update(rml.context, Gold(), settings, shown, Frame(true));
+    rml.context->Update();
+    CHECK(!ClickAt(rml, Middle(Part(Box(rml, 0), "accept"))));
+    const std::optional<NoticePress> press = box.Update(rml.context, Gold(), settings, shown, Frame(true)).press;
+    CHECK(press && press->id == 7 && press->accept);
+    rml.context->Update();
+    const Rml::Vector2f title = Middle(Part(Box(rml, 0), "title"));
+    rml.context->ProcessMouseMove(static_cast<int>(title.x), static_cast<int>(title.y), 0);
+    rml.context->ProcessMouseButtonDown(0, 0);
+    for (int step = 1; step <= 4; ++step)
+    {
+        rml.context->ProcessMouseMove(static_cast<int>(title.x) + 50 * step, static_cast<int>(title.y) + 25 * step, 0);
+        rml.context->Update();
+    }
+    rml.context->ProcessMouseButtonUp(0, 0);
+    CHECK(box.Update(rml.context, Gold(), settings, shown, Frame(true)).moved);
+    rml.context->Update();
+    CHECK(std::abs(Left(Box(rml, 0)) - 210.0f) < 0.5f && std::abs(Top(Box(rml, 0)) - 155.0f) < 0.5f);
+    box.Close();
+}
+
+TEST(an_inviters_name_is_text_not_markup)
+{
+    test::RmlSession rml;
+    Settings settings;
+    NoticeBox box;
+    box.Update(rml.context, Gold(), settings, {Invite(7, "<b>&", true)}, Frame());
+    rml.context->Update();
+    CHECK(Part(Box(rml, 0), "message")->GetInnerRML().find("&lt;b&gt;&amp;") != std::string::npos);
+    box.Close();
+}

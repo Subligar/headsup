@@ -75,6 +75,8 @@ namespace headsup
         Rml::Vector2f m_Grab{};                           // the pointer from the spot as the drag began
         std::optional<NoticeSpot> m_Dragged;              // where the drag left it, not yet in the settings
         std::optional<NoticeRect> m_Bounds;
+        std::vector<NoticeRect> m_Boxes;     // each shown box on the screen, for the pointer
+        std::optional<NoticePress> m_Press; // a button's click, for the next Update
         bool m_Dragging  = false;
         bool m_Grabbable = false; // as moving was last
         // As the last frame stacked, for a drag: the anchors, and the first box's size the spot keeps on the screen.

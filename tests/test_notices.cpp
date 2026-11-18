@@ -286,3 +286,14 @@ TEST(set_by_theme_takes_the_themes_window_rounding_or_its_shapes)
     CHECK_EQ(NoticeRadius(4, 12, 9.0f), 4.0f);
     CHECK_EQ(NoticeRadius(0, 12, 9.0f), 0.0f);
 }
+
+TEST(a_point_is_over_a_notice_only_inside_a_box)
+{
+    const NoticeRect boxes[] = {{10.0f, 55.0f, 300.0f, 60.0f}, {10.0f, 125.0f, 300.0f, 60.0f}};
+    CHECK(OverAny(boxes, 10.0f, 55.0f));
+    CHECK(OverAny(boxes, 309.0f, 184.0f));
+    CHECK(!OverAny(boxes, 310.0f, 60.0f));
+    CHECK(!OverAny(boxes, 100.0f, 120.0f)); // the gap
+    CHECK(!OverAny(boxes, 9.0f, 60.0f));
+    CHECK(!OverAny({}, 100.0f, 80.0f));
+}

@@ -100,6 +100,8 @@ namespace headsup
     // bottom.
     NoticeSpot NoticeAnchor(int across, int down, HelpAnchor anchor, NoticeEdge edge, float screenWidth,
         float screenHeight, float barBottom, float firstWidth, float firstHeight);
+    // Whether the point is inside any of the boxes.
+    bool OverAny(std::span<const NoticeRect> boxes, float x, float y);
     // The spot that leaves a stack drawn in bounds where it is, for these anchors.
     NoticeSpot Reanchored(const NoticeRect& bounds, HelpAnchor anchor, NoticeEdge edge);
     struct FittedText

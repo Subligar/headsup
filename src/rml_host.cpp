@@ -166,6 +166,7 @@ namespace headsup
         if (!Running()) return false;
         const int modifiers = Modifiers();
         const int px = static_cast<int>(x), py = static_cast<int>(y);
+        if (message != WM_MOUSEWHEEL) m_Pointer = Rml::Vector2f{x, y}; // a wheel's point is the screen's
         // Each returns true when the mouse is not interacting with any element.
         switch (message)
         {
