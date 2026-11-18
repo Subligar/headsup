@@ -154,6 +154,8 @@ namespace headsup
         case kInspectMessagePacket:
             m_CheckMessage = ParseInspectMessage(data, size);
             break;
+        case kInvitePacket: next.invited = ParseInvite(data, size); break;
+        case kInviteCancelPacket: next.inviteOver = true; break;
         case kInspectGeneralPacket:
             if (const auto general = ParseInspectGeneral(data, size))
             {
