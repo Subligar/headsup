@@ -147,6 +147,8 @@ namespace headsup
     constexpr int kMinFishBarWidth = 100, kMaxFishBarWidth = 1000; // pixels
     constexpr int kMinFishBarHeight = 6, kDefaultFishBarHeight = 18, kMaxFishBarHeight = 80; // pixels, its frame counted
     constexpr int kMinFishTextSize = 8, kDefaultFishTextSize = 15, kMaxFishTextSize = 40;    // pixels
+    constexpr int kMinNoticeSeconds = 1, kDefaultNoticeSeconds = 8, kMaxNoticeSeconds = 30;
+    constexpr int kDefaultNoticeVolume = 60, kMaxNoticeVolume = 100; // percent
     constexpr int kCasePlaceWhole = 10000; // a placed Case's across and down count ten-thousandths of the screen
     constexpr int kMinCaseScale = 50, kDefaultCaseScale = 65, kMaxCaseScale = 200;         // percent
     constexpr int kMinCombatPopupSize = 25, kDefaultCombatPopupSize = 100, kMaxCombatPopupSize = 200; // percent of the game's own size
@@ -270,6 +272,10 @@ namespace headsup
             {ColorSource::Game, ColorFromRgb(0x8FD8FF)}, {ColorSource::Game, ColorFromRgb(0x8FD8FF)},
             {ColorSource::Game, ColorFromRgb(0xFF9A5A)}}};
         bool friendNoticeOnline = true, friendNoticeOffline = true; // a notice when a friend comes online, goes offline
+        bool friendNoticeUpward = false, friendNoticeBar = true; // the stack grows up from its spot; the countdown bar
+        bool friendNoticeOnlineSound = true;
+        int friendNoticeSeconds = kDefaultNoticeSeconds, friendNoticeVolume = kDefaultNoticeVolume; // volume in percent
+        int friendNoticeAcross = kFishBarUnplaced, friendNoticeDown = kFishBarUnplaced; // ten-thousandths of the screen
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
         Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};
         BlueLearned blueMagicLearned = BlueLearned::Star;

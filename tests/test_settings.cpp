@@ -3199,6 +3199,36 @@ TEST(the_case_is_off_until_switched_on_and_keeps_its_scale_and_place)
     CHECK_EQ(LoadSettings(store).fishCaseAcross, 10000);
 }
 
+TEST(the_friend_notice_settings_load_inside_their_ranges_and_save_back)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    CHECK(fresh.friendNoticeOnline && fresh.friendNoticeOffline && !fresh.friendNoticeUpward && fresh.friendNoticeBar);
+    CHECK(fresh.friendNoticeOnlineSound && fresh.friendNoticeSeconds == 8 && fresh.friendNoticeVolume == 60);
+    CHECK(fresh.friendNoticeAcross == kFishBarUnplaced && fresh.friendNoticeDown == kFishBarUnplaced);
+    MapStore store;
+    store.values["friendNoticeSeconds"] = "99";
+    store.values["friendNoticeVolume"]  = "250";
+    store.values["friendNoticeAcross"]  = "20000";
+    store.values["friendNoticeDown"]    = "-7";
+    store.values["friendNoticeOffline"] = "false";
+    store.values["friendNoticeUpward"]  = "true";
+    const Settings s = LoadSettings(store);
+    CHECK_EQ(s.friendNoticeSeconds, 30);
+    CHECK_EQ(s.friendNoticeVolume, 100);
+    CHECK_EQ(s.friendNoticeAcross, 10000);
+    CHECK_EQ(s.friendNoticeDown, -1);
+    CHECK(!s.friendNoticeOffline && s.friendNoticeUpward);
+    CHECK(s.friendNoticeOnline && s.friendNoticeBar && s.friendNoticeOnlineSound); // a missing key keeps its default
+    store.values["friendNoticeSeconds"] = "0";
+    CHECK_EQ(LoadSettings(store).friendNoticeSeconds, 1);
+    MapStore saved;
+    SaveSettings(s, saved);
+    const Settings back = LoadSettings(saved);
+    CHECK(back.friendNoticeSeconds == 30 && back.friendNoticeVolume == 100 && back.friendNoticeAcross == 10000);
+    CHECK(back.friendNoticeDown == -1 && !back.friendNoticeOffline && back.friendNoticeUpward && back.friendNoticeOnline);
+}
+
 TEST(the_currency_widget_keeps_its_two_currencies)
 {
     Settings s;
