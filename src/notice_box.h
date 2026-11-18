@@ -3,6 +3,7 @@
 #include "bar_theme.h"
 #include "friend_notices.h"
 #include "settings.h"
+#include "skin_frame.h"
 
 #include <RmlUi/Core.h>
 
@@ -24,9 +25,11 @@ namespace headsup
     public:
         ~NoticeBox() override { Close(); }
         // Each frame. shown: oldest first. moving: the boxes take the pointer and drag as one. seconds: the frame's,
-        // for the slide. True when it was dragged somewhere new, which the settings then hold.
+        // for the slide. skin: the game's window art the boxes are drawn in, under a game theme. True when it was
+        // dragged somewhere new, which the settings then hold.
         bool Update(Rml::Context* context, const BarPalette& palette, Settings& settings,
-            const std::vector<ShownNotice>& shown, bool moving, float barBottom, float seconds);
+            const std::vector<ShownNotice>& shown, bool moving, float barBottom, float seconds,
+            const std::optional<SkinFrame>& skin);
         // Before the context goes.
         void Close();
 
@@ -41,6 +44,7 @@ namespace headsup
             BarPalette palette{};
             std::string titleFont, textFont;
             float titleSize = 0.0f, textSize = 0.0f;
+            std::optional<SkinFrame> skin;
             bool operator==(const Look&) const = default;
         };
         Look m_Look;

@@ -1115,7 +1115,10 @@ public:
         if (m_Rml.Running() &&
             m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 m_NoticesMoving ? headsup::NoticeSamples(m_Settings) : m_Notices.Shown(now, static_cast<float>(m_Settings.friendNoticeSeconds)),
-                m_NoticesMoving, g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, static_cast<float>(std::max(0.0, now - m_NoticesAt))))
+                m_NoticesMoving, g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, static_cast<float>(std::max(0.0, now - m_NoticesAt)),
+                headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
+                    ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
+                    : std::nullopt))
             m_SettingsChangedAt = now;
         m_NoticesAt = now;
         if (const std::optional<CaseCaught> caught = std::exchange(m_CaseCaught, std::nullopt)) StartCase(caught->item, caught->angler);

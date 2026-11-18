@@ -18,9 +18,10 @@ namespace headsup
         constexpr float kBarGap           = 6.0f; // between the message and the countdown bar
         constexpr const char* kMovingClass = "moving";
         constexpr const char* kOnlineClass = "online", *kOfflineClass = "offline";
+        constexpr int kTitle = 0, kMessage = 1, kBar = 2, kBoxParts = 3;
 
         std::string NoticeRml(const BarPalette& p, const std::string& titleFont, const std::string& textFont,
-            float titleSize, float textSize)
+            float titleSize, float textSize, const std::optional<SkinFrame>& skin)
         {
             const auto font = [](const std::string& family, float size) {
                 return "font-family:\"" + family + "\";font-size:" + Px(size) + ";";
@@ -32,9 +33,13 @@ namespace headsup
             css += std::string("#") + kNoticeStackId + "{position:absolute;width:" + Px(kNoticeWidth) + ";height:0px;}";
             css += std::string("#") + kNoticeStackId + "." + kMovingClass + "{pointer-events:auto;drag:drag;}";
             css += ".box{position:absolute;left:0px;box-sizing:border-box;width:" + Px(kNoticeWidth) + ";padding:" +
-                   Px(kBoxPadDown) + " " + Px(kBoxPadAcross) + ";border:1px " + RcssColor(p.panelBorder) +
-                   ";border-radius:" + Px(kBoxRound) + ";decorator:vertical-gradient(" + RcssColor(p.panelTop) + " " +
-                   RcssColor(p.panelBottom) + ");}";
+                   Px(kBoxPadDown) + " " + Px(kBoxPadAcross) + ";border-radius:" + Px(kBoxRound) + ";" +
+                   (skin ? SkinEdgeRules(*skin)
+                         : "border:1px " + RcssColor(p.panelBorder) + ";decorator:vertical-gradient(" +
+                               RcssColor(p.panelTop) + " " + RcssColor(p.panelBottom) + ");") +
+                   "}";
+            // The art sits behind the text, which is positioned to be drawn after it.
+            if (skin) css += ArtRules(".box", kBoxRound, SkinFillRules(*skin)) + ".title,.message,.bar{position:relative;}";
             css += ".title{white-space:nowrap;" + font(titleFont, titleSize) +
                    ShadowEffect(static_cast<int>(std::lround(titleSize))) + "}";
             css += ".message{" + font(textFont, textSize) + "color:" + RcssColor(p.text) + ";" +
@@ -49,29 +54,34 @@ namespace headsup
             std::string boxes;
             for (int slot = 0; slot < kMaxNotices; ++slot)
                 boxes += "<div id=\"" + NoticeId(slot) + "\" class=\"box " + kHiddenClass +
-                         "\"><div class=\"title\"></div><div class=\"message\"></div><div class=\"bar\"></div></div>";
+                         "\">" + (skin ? kArtRml : "") +
+                         "<div class=\"title\"></div><div class=\"message\"></div><div class=\"bar\"></div></div>";
             return "<rml><head><style>" + css + "</style></head><body id=\"" + std::string(kNoticeDocument) +
                    "\"><div id=\"" + kNoticeStackId + "\">" + boxes + "</div></body></rml>";
         }
 
-        Rml::Element* PartOf(Rml::Element* box, int index) { return box->GetChild(index); }
-        constexpr int kTitle = 0, kMessage = 1, kBar = 2;
+        // The title, message and bar, past the art when the box has it.
+        Rml::Element* PartOf(Rml::Element* box, int index)
+        {
+            return box->GetChild(box->GetNumChildren() - kBoxParts + index);
+        }
     }
 
     std::string NoticeId(int slot) { return "notice" + std::to_string(slot); }
 
     bool NoticeBox::Update(Rml::Context* context, const BarPalette& palette, Settings& settings,
-        const std::vector<ShownNotice>& shown, bool moving, float barBottom, float seconds)
+        const std::vector<ShownNotice>& shown, bool moving, float barBottom, float seconds,
+        const std::optional<SkinFrame>& skin)
     {
         if (shown.empty() && !moving && m_Document == nullptr) return false;
         const BarMetrics metrics = MetricsOf(settings, palette.shape, WidgetOptions{});
         const Look look{palette, BarTitleFont(settings, palette.shape), BarTextFont(settings), metrics.title,
-            metrics.subtitle};
+            metrics.subtitle, skin};
         if (m_Document != nullptr && !(look == m_Look)) Close();
         if (m_Document == nullptr)
         {
             m_Document = context->LoadDocumentFromMemory(
-                NoticeRml(palette, look.titleFont, look.textFont, look.titleSize, look.textSize), kNoticeDocument);
+                NoticeRml(palette, look.titleFont, look.textFont, look.titleSize, look.textSize, look.skin), kNoticeDocument);
             if (m_Document == nullptr) return false;
             m_Look  = look;
             m_Stack = m_Document->GetElementById(kNoticeStackId);
