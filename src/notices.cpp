@@ -85,17 +85,60 @@ namespace headsup
         return std::abs(target - next) <= kNoticeSlideSnap ? target : next;
     }
 
-    NoticeSpot NoticeAnchor(int across, int down, bool upward, float screenWidth, float screenHeight, float barBottom,
-        float firstHeight)
+    float NoticeLeft(float width, HelpAnchor anchor)
+    {
+        switch (anchor)
+        {
+        case HelpAnchor::Left: return 0.0f;
+        case HelpAnchor::Center: return width / 2.0f;
+        case HelpAnchor::Right: return width;
+        }
+        return 0.0f;
+    }
+
+    NoticeSpot NoticeAnchor(int across, int down, HelpAnchor anchor, NoticeEdge edge, float screenWidth,
+        float screenHeight, float barBottom, float firstWidth, float firstHeight)
     {
         const auto share = [](int value, float screen) { return static_cast<float>(value) / kCasePlaceWhole * screen; };
-        const float x = across == kFishBarUnplaced ? kNoticeStartLeft : share(across, screenWidth);
-        const float y = down != kFishBarUnplaced  ? share(down, screenHeight)
-                        : upward                  ? screenHeight - kNoticeStartGap
-                                                  : barBottom + kNoticeStartGap;
+        const bool upward = edge == NoticeEdge::Bottom;
+        const float x = across != kFishBarUnplaced         ? share(across, screenWidth)
+                        : anchor == HelpAnchor::Left   ? kNoticeStartLeft
+                        : anchor == HelpAnchor::Right  ? screenWidth - kNoticeStartLeft
+                                                       : screenWidth / 2.0f;
+        const float y = down != kFishBarUnplaced ? share(down, screenHeight)
+                        : upward                 ? screenHeight - kNoticeStartGap
+                                                 : barBottom + kNoticeStartGap;
+        const float lead   = NoticeLeft(std::min(firstWidth, screenWidth), anchor);
         const float height = std::min(firstHeight, screenHeight);
-        return {std::clamp(x, 0.0f, std::max(0.0f, screenWidth - kNoticeWidth)),
+        return {std::clamp(x, lead, std::max(lead, screenWidth - std::min(firstWidth, screenWidth) + lead)),
             upward ? std::clamp(y, height, screenHeight) : std::clamp(y, 0.0f, screenHeight - height)};
+    }
+
+    NoticeSpot Reanchored(const NoticeRect& bounds, HelpAnchor anchor, NoticeEdge edge)
+    {
+        return {bounds.left + NoticeLeft(bounds.width, anchor),
+            edge == NoticeEdge::Top ? bounds.top : bounds.top + bounds.height};
+    }
+
+    FittedText FittedSizes(float titleSize, float messageSize, float titleWide, float messageWide, float room,
+        float titleTall, float messageTall, float tallRoom)
+    {
+        const auto narrowed = [&](float size, float wide) { return room > 0.0f && wide > room ? size * room / wide : size; };
+        FittedText fit{std::max(narrowed(titleSize, titleWide), kMinNoticeText),
+            std::max(narrowed(messageSize, messageWide), kMinNoticeText)};
+        const float tall = titleTall * fit.title / titleSize + messageTall * fit.message / messageSize;
+        if (tallRoom > 0.0f && tall > tallRoom)
+        {
+            const float share = tallRoom / tall;
+            fit = {std::max(fit.title * share, kMinNoticeText), std::max(fit.message * share, kMinNoticeText)};
+        }
+        return fit;
+    }
+
+    float NoticeRadius(int setting, int themeRounding, float shapeRadius)
+    {
+        if (setting != kThemeRounding) return static_cast<float>(setting);
+        return themeRounding != kShapeRounding ? static_cast<float>(themeRounding) : shapeRadius;
     }
 
     int SpotShare(float pixels, float screen) { return static_cast<int>(std::lround(pixels / screen * kCasePlaceWhole)); }

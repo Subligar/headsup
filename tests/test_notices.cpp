@@ -207,28 +207,6 @@ TEST(a_notice_slides_to_its_place_and_lands_on_it)
     CHECK_EQ(Slid(7.0f, 7.0f, 0.016f), 7.0f);
 }
 
-TEST(the_stack_starts_under_the_panel_and_a_placed_one_keeps_its_share_of_the_screen)
-{
-    NoticeSpot at = NoticeAnchor(-1, -1, false, 1920.0f, 1080.0f, 45.0f, 60.0f);
-    CHECK(at.x == 10.0f && at.y == 55.0f);
-    at = NoticeAnchor(-1, -1, true, 1920.0f, 1080.0f, 45.0f, 60.0f);
-    CHECK(at.x == 10.0f && at.y == 1070.0f);
-    at = NoticeAnchor(2500, 5000, false, 1920.0f, 1080.0f, 45.0f, 60.0f);
-    CHECK(at.x == 480.0f && at.y == 540.0f);
-    CHECK_EQ(SpotShare(480.0f, 1920.0f), 2500);
-    // Saved at the bottom right of a wider screen: the first 300 by 60 px box stays whole on this one.
-    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f, 60.0f).x, 980.0f);
-    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f, 60.0f).y, 660.0f);
-}
-
-TEST(a_spot_placed_for_one_way_of_stacking_keeps_the_first_notice_on_the_screen_the_other_way)
-{
-    // Dragged to the bottom with Stack Upward on, then switched off: the first box sits 60 px over the bottom.
-    CHECK_EQ(NoticeAnchor(2500, 10000, false, 1920.0f, 1080.0f, 45.0f, 60.0f).y, 1020.0f);
-    // Dragged to the top with it off, then switched on: the first box hangs from 60 px down, not off the top.
-    CHECK_EQ(NoticeAnchor(2500, 0, true, 1920.0f, 1080.0f, 45.0f, 60.0f).y, 60.0f);
-}
-
 TEST(a_notice_says_who_and_what_in_its_kinds_color)
 {
     CHECK_EQ(NoticeMessage(NoticeKind::Online, "Two"), "Two is now online");
@@ -243,4 +221,68 @@ TEST(a_notice_says_who_and_what_in_its_kinds_color)
     CHECK(NoticeColor(NoticeKind::PartyInvite) == NoticeColor(NoticeKind::AllianceInvite));
     CHECK(NoticeColor(NoticeKind::PartyInvite) != NoticeColor(NoticeKind::Online));
     CHECK(IsInvite(NoticeKind::AllianceInvite) && !IsInvite(NoticeKind::Offline));
+}
+
+// A 1000 by 800 screen, the panel's bottom at 45 and a first box 300 by 60.
+TEST(the_spot_is_the_stacks_side_and_edge_by_its_anchors)
+{
+    NoticeSpot at = NoticeAnchor(-1, -1, HelpAnchor::Left, NoticeEdge::Top, 1000.0f, 800.0f, 45.0f, 300.0f, 60.0f);
+    CHECK(at.x == 10.0f && at.y == 55.0f);
+    at = NoticeAnchor(-1, -1, HelpAnchor::Center, NoticeEdge::Top, 1000.0f, 800.0f, 45.0f, 300.0f, 60.0f);
+    CHECK(at.x == 500.0f && at.y == 55.0f);
+    at = NoticeAnchor(-1, -1, HelpAnchor::Right, NoticeEdge::Bottom, 1000.0f, 800.0f, 45.0f, 300.0f, 60.0f);
+    CHECK(at.x == 990.0f && at.y == 790.0f);
+    CHECK_EQ(NoticeLeft(300.0f, HelpAnchor::Left), 0.0f);
+    CHECK_EQ(NoticeLeft(300.0f, HelpAnchor::Center), 150.0f);
+    CHECK_EQ(NoticeLeft(300.0f, HelpAnchor::Right), 300.0f);
+    at = NoticeAnchor(2500, 5000, HelpAnchor::Left, NoticeEdge::Top, 1000.0f, 800.0f, 45.0f, 300.0f, 60.0f);
+    CHECK(at.x == 250.0f && at.y == 400.0f);
+    CHECK_EQ(SpotShare(250.0f, 1000.0f), 2500);
+}
+
+TEST(a_spot_keeps_the_first_notice_whole_on_the_screen)
+{
+    const auto x = [](int across, HelpAnchor anchor) {
+        return NoticeAnchor(across, 100, anchor, NoticeEdge::Top, 1000.0f, 800.0f, 45.0f, 300.0f, 60.0f).x;
+    };
+    CHECK_EQ(x(9900, HelpAnchor::Left), 700.0f);
+    CHECK_EQ(x(9900, HelpAnchor::Center), 850.0f);
+    CHECK_EQ(x(9900, HelpAnchor::Right), 990.0f);
+    CHECK_EQ(x(0, HelpAnchor::Left), 0.0f);
+    CHECK_EQ(x(0, HelpAnchor::Center), 150.0f);
+    CHECK_EQ(x(0, HelpAnchor::Right), 300.0f);
+    CHECK_EQ(NoticeAnchor(9900, 100, HelpAnchor::Left, NoticeEdge::Top, 1000.0f, 800.0f, 45.0f, 300.0f, 60.0f).y, 8.0f);
+    CHECK_EQ(NoticeAnchor(9900, 100, HelpAnchor::Left, NoticeEdge::Bottom, 1000.0f, 800.0f, 45.0f, 300.0f, 60.0f).y, 60.0f);
+}
+
+TEST(changing_an_anchor_keeps_the_stack_where_it_is)
+{
+    const NoticeRect bounds{100.0f, 200.0f, 300.0f, 150.0f};
+    NoticeSpot at = Reanchored(bounds, HelpAnchor::Left, NoticeEdge::Top);
+    CHECK(at.x == 100.0f && at.y == 200.0f);
+    at = Reanchored(bounds, HelpAnchor::Center, NoticeEdge::Bottom);
+    CHECK(at.x == 250.0f && at.y == 350.0f);
+    at = Reanchored(bounds, HelpAnchor::Right, NoticeEdge::Top);
+    CHECK(at.x == 400.0f && at.y == 200.0f);
+}
+
+TEST(shrink_brings_each_line_down_to_the_width_then_both_to_the_height)
+{
+    FittedText fit = FittedSizes(16.0f, 13.0f, 400.0f, 200.0f, 280.0f, 20.0f, 16.0f, 0.0f);
+    CHECK(std::abs(fit.title - 11.2f) < 0.001f && fit.message == 13.0f);
+    // At those sizes the lines stand 14 and 16 tall, 30 in all: both take two thirds to fit 20.
+    fit = FittedSizes(16.0f, 13.0f, 400.0f, 200.0f, 280.0f, 20.0f, 16.0f, 20.0f);
+    CHECK(std::abs(fit.title - 7.4667f) < 0.001f && std::abs(fit.message - 8.6667f) < 0.001f);
+    fit = FittedSizes(16.0f, 13.0f, 4000.0f, 200.0f, 280.0f, 20.0f, 16.0f, 0.0f);
+    CHECK(fit.title == kMinNoticeText && fit.message == 13.0f);
+    fit = FittedSizes(16.0f, 13.0f, 400.0f, 200.0f, 0.0f, 20.0f, 16.0f, 0.0f);
+    CHECK(fit.title == 16.0f && fit.message == 13.0f);
+}
+
+TEST(set_by_theme_takes_the_themes_window_rounding_or_its_shapes)
+{
+    CHECK_EQ(NoticeRadius(-1, -1, 9.0f), 9.0f);
+    CHECK_EQ(NoticeRadius(-1, 12, 9.0f), 12.0f);
+    CHECK_EQ(NoticeRadius(4, 12, 9.0f), 4.0f);
+    CHECK_EQ(NoticeRadius(0, 12, 9.0f), 0.0f);
 }
