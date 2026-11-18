@@ -8,6 +8,7 @@ namespace headsup
 {
     std::vector<FriendNews> FriendWatch::Read(uint32_t self, const std::vector<FriendEntry>& entries, double now)
     {
+        if (self == 0) return {};
         if (m_Self != self)
         {
             m_Self       = self;
@@ -108,14 +109,17 @@ namespace headsup
         return std::abs(target - next) <= kNoticeSlideSnap ? target : next;
     }
 
-    NoticeSpot NoticeAnchor(int across, int down, bool upward, float screenWidth, float screenHeight, float barBottom)
+    NoticeSpot NoticeAnchor(int across, int down, bool upward, float screenWidth, float screenHeight, float barBottom,
+        float firstHeight)
     {
         const auto share = [](int value, float screen) { return static_cast<float>(value) / kCasePlaceWhole * screen; };
         const float x = across == kFishBarUnplaced ? kNoticeStartLeft : share(across, screenWidth);
         const float y = down != kFishBarUnplaced  ? share(down, screenHeight)
                         : upward                  ? screenHeight - kNoticeStartGap
                                                   : barBottom + kNoticeStartGap;
-        return {std::clamp(x, 0.0f, std::max(0.0f, screenWidth - kNoticeWidth)), std::clamp(y, 0.0f, screenHeight)};
+        const float height = std::min(firstHeight, screenHeight);
+        return {std::clamp(x, 0.0f, std::max(0.0f, screenWidth - kNoticeWidth)),
+            upward ? std::clamp(y, height, screenHeight) : std::clamp(y, 0.0f, screenHeight - height)};
     }
 
     int SpotShare(float pixels, float screen) { return static_cast<int>(std::lround(pixels / screen * kCasePlaceWhole)); }

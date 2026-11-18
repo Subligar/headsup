@@ -103,6 +103,22 @@ TEST(stack_upward_puts_the_oldest_on_the_spot_and_newer_ones_above)
     box.Close();
 }
 
+TEST(a_stack_switched_to_upward_at_the_top_of_the_screen_stays_on_it)
+{
+    test::RmlSession rml;
+    Settings settings;
+    settings.friendNoticeUpward = true;
+    settings.friendNoticeAcross = 2500;
+    settings.friendNoticeDown   = 0;
+    NoticeBox box;
+    box.Update(rml.context, Gold(), settings, {N(1, NoticeKind::Online, "One")}, false, kBarBottom, 0.0f);
+    rml.context->Update();
+    box.Update(rml.context, Gold(), settings, {N(1, NoticeKind::Online, "One")}, false, kBarBottom, 0.0f);
+    rml.context->Update();
+    CHECK(Top(Box(rml, 0)) >= 0.0f);
+    box.Close();
+}
+
 TEST(a_notice_fades_and_hides_its_bar_when_the_countdown_bar_is_off)
 {
     test::RmlSession rml;

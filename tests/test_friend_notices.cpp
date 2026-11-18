@@ -144,16 +144,24 @@ TEST(a_notice_slides_to_its_place_and_lands_on_it)
 
 TEST(the_stack_starts_under_the_panel_and_a_placed_one_keeps_its_share_of_the_screen)
 {
-    NoticeSpot at = NoticeAnchor(-1, -1, false, 1920.0f, 1080.0f, 45.0f);
+    NoticeSpot at = NoticeAnchor(-1, -1, false, 1920.0f, 1080.0f, 45.0f, 60.0f);
     CHECK(at.x == 10.0f && at.y == 55.0f);
-    at = NoticeAnchor(-1, -1, true, 1920.0f, 1080.0f, 45.0f);
+    at = NoticeAnchor(-1, -1, true, 1920.0f, 1080.0f, 45.0f, 60.0f);
     CHECK(at.x == 10.0f && at.y == 1070.0f);
-    at = NoticeAnchor(2500, 5000, false, 1920.0f, 1080.0f, 45.0f);
+    at = NoticeAnchor(2500, 5000, false, 1920.0f, 1080.0f, 45.0f, 60.0f);
     CHECK(at.x == 480.0f && at.y == 540.0f);
     CHECK_EQ(SpotShare(480.0f, 1920.0f), 2500);
-    // Saved at the right edge of a wider screen: the 300 px box stays on this one.
-    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f).x, 980.0f);
-    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f).y, 720.0f);
+    // Saved at the bottom right of a wider screen: the first 300 by 60 px box stays whole on this one.
+    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f, 60.0f).x, 980.0f);
+    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f, 60.0f).y, 660.0f);
+}
+
+TEST(a_spot_placed_for_one_way_of_stacking_keeps_the_first_notice_on_the_screen_the_other_way)
+{
+    // Dragged to the bottom with Stack Upward on, then switched off: the first box sits 60 px over the bottom.
+    CHECK_EQ(NoticeAnchor(2500, 10000, false, 1920.0f, 1080.0f, 45.0f, 60.0f).y, 1020.0f);
+    // Dragged to the top with it off, then switched on: the first box hangs from 60 px down, not off the top.
+    CHECK_EQ(NoticeAnchor(2500, 0, true, 1920.0f, 1080.0f, 45.0f, 60.0f).y, 60.0f);
 }
 
 TEST(an_online_sound_waits_ten_seconds_and_an_offline_has_none)
@@ -186,4 +194,14 @@ TEST(move_shows_a_sample_of_each_kind_that_is_on_and_one_online_when_none_is)
     s.friendNoticeOffline = false;
     samples               = NoticeSamples(s);
     CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Online); // something to drag
+}
+
+TEST(a_read_while_your_character_is_not_known_is_skipped)
+{
+    // The party's first member reads 0 for a moment: neither a character change nor a read.
+    FriendWatch watch;
+    watch.Read(65001, {E(1001, "Two", false)}, 0.0);
+    CHECK(watch.Read(0, {E(1001, "Two", true)}, kAfter).empty());
+    CHECK((watch.Read(65001, {E(1001, "Two", true)}, kAfter + 1.0) ==
+           std::vector<FriendNews>{{NoticeKind::Online, 1001, "Two"}}));
 }

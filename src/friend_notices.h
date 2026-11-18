@@ -38,7 +38,8 @@ namespace headsup
     {
     public:
         // self: your character's server id; now in seconds. A read for another character than the last, the first
-        // read after Forget, and every read for kSignOnQuietSeconds after either only record the list.
+        // read after Forget, and every read for kSignOnQuietSeconds after either only record the list. A self of 0
+        // (not known yet) is skipped.
         std::vector<FriendNews> Read(uint32_t self, const std::vector<FriendEntry>& entries, double now);
         // Signed off: the next read is a first read.
         void Forget();
@@ -108,9 +109,10 @@ namespace headsup
     {
         float x = 0.0f, y = 0.0f;
     };
-    // The stack's left and its top edge (bottom edge when upward), kept on the screen. Unplaced: at the left, just
-    // under the top panel, or just over the screen's bottom when upward.
-    NoticeSpot NoticeAnchor(int across, int down, bool upward, float screenWidth, float screenHeight, float barBottom);
+    // The stack's left and its top edge (bottom edge when upward), kept so the first box, firstHeight tall, is whole
+    // on the screen. Unplaced: at the left, just under the top panel, or just over the screen's bottom when upward.
+    NoticeSpot NoticeAnchor(int across, int down, bool upward, float screenWidth, float screenHeight, float barBottom,
+        float firstHeight);
     // Ten-thousandths of the screen, as the spot's two keys hold it.
     int SpotShare(float pixels, float screen);
 

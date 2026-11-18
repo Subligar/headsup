@@ -131,6 +131,8 @@ namespace headsup
                                   .GetSize(Rml::BoxArea::Border)
                                   .y);
         const std::vector<float> tops = NoticeTops(heights, 0.0f, settings.friendNoticeUpward);
+        m_Upward      = settings.friendNoticeUpward;
+        m_FirstHeight = heights.empty() ? 0.0f : heights.front();
         std::map<uint32_t, float> at;
         for (size_t slot = 0; slot < shown.size(); ++slot)
         {
@@ -146,7 +148,8 @@ namespace headsup
         {
             const Rml::Vector2i screen = context->GetDimensions();
             const NoticeSpot spot = NoticeAnchor(settings.friendNoticeAcross, settings.friendNoticeDown,
-                settings.friendNoticeUpward, static_cast<float>(screen.x), static_cast<float>(screen.y), barBottom);
+                settings.friendNoticeUpward, static_cast<float>(screen.x), static_cast<float>(screen.y), barBottom,
+                m_FirstHeight);
             m_Stack->SetProperty(Rml::PropertyId::Left, Rml::Property(spot.x, Rml::Unit::PX));
             m_Stack->SetProperty(Rml::PropertyId::Top, Rml::Property(spot.y, Rml::Unit::PX));
         }
@@ -168,7 +171,8 @@ namespace headsup
             const Rml::Vector2f corner = pointer - m_Grab;
             const float width = static_cast<float>(screen.x), height = static_cast<float>(screen.y);
             // Through the saved shares, so it lands where the settings will put it, kept on the screen.
-            m_Dragged = NoticeAnchor(SpotShare(corner.x, width), SpotShare(corner.y, height), false, width, height, 0.0f);
+            m_Dragged = NoticeAnchor(SpotShare(corner.x, width), SpotShare(corner.y, height), m_Upward, width, height,
+                0.0f, m_FirstHeight);
             m_Stack->SetProperty(Rml::PropertyId::Left, Rml::Property(m_Dragged->x, Rml::Unit::PX));
             m_Stack->SetProperty(Rml::PropertyId::Top, Rml::Property(m_Dragged->y, Rml::Unit::PX));
             break;

@@ -49,5 +49,7 @@ namespace headsup
         Rml::Vector2f m_Grab{};                           // the pointer from the spot as the drag began
         std::optional<NoticeSpot> m_Dragged;              // where the drag left it, not yet in the settings
         bool m_Dragging = false;
+        bool m_Upward   = false;   // as the last frame stacked, for a drag
+        float m_FirstHeight = 0.0f; // the first box's, which the spot keeps whole on the screen
     };
 }
