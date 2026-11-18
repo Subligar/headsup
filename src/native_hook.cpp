@@ -1390,7 +1390,7 @@ namespace headsup
             g_DrawnWindows.Add(key);
             // A window the player put somewhere goes there, and the view's shift leaves it be.
             const KeyPlace* pin = PlaceIn({g_Pins.data(), g_PinCount}, key);
-            const int shift = pin == nullptr ? ShiftFor(origin, right - left) : 0;
+            const int shift = pin == nullptr && !ShiftLeavesBe(key) ? ShiftFor(origin, right - left) : 0;
             WindowSpot at = now;
             if (const std::optional<WindowSpot> to = g_Placements.PlaceFor(mcd, key, now, right - left, bottom - top,
                     pin != nullptr ? pin->x - origin.left : 0, pin != nullptr ? pin->y - origin.top : shift,

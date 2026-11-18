@@ -281,6 +281,9 @@ namespace headsup
     std::optional<WindowKey> KeyFromShortName(std::string_view name);
     // Every window HeadsUp may move but the strip's own: the title, help and connection readout windows.
     bool MovableWindow(const WindowKey& key);
+    // The auction's item list and its Price History, which share a place: the view's shift leaves them where the game
+    // puts them, as the list picks its row again a moment after it comes back and lands a row off when it was moved.
+    bool ShiftLeavesBe(const WindowKey& key);
     // Window keys without allocating, for the game's draw loop: at most kMaxWindowKeys, each once.
     constexpr size_t kMaxWindowKeys = 128;
     class WindowKeyList

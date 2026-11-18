@@ -882,6 +882,13 @@ TEST(the_strip_windows_are_never_moved_and_the_equipment_window_has_a_name)
     CHECK(std::string(WindowLabel("equip")) == "Equipment" && WindowLabel("chmkface") == nullptr);
 }
 
+TEST(the_shift_leaves_the_auction_item_list_and_its_price_history_where_the_game_puts_them)
+{
+    CHECK(ShiftLeavesBe(*WindowKeyOf("menu    auclist ")) && ShiftLeavesBe(*WindowKeyOf("menu    auchisto")));
+    for (const char* moved : {"auc1", "auc3", "iteminfo", "equip"})
+        CHECK(!ShiftLeavesBe(*KeyFromShortName(moved)));
+}
+
 TEST(the_window_list_holds_each_key_once_and_no_more_than_it_has_room_for)
 {
     WindowKeyList list;
