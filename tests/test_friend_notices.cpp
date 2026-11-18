@@ -172,3 +172,18 @@ TEST(a_notice_says_who_and_what_in_its_kinds_color)
     CHECK_EQ(std::string(NoticeTitle(NoticeKind::Online)), "Friend Online");
     CHECK(NoticeColor(NoticeKind::Online) != NoticeColor(NoticeKind::Offline));
 }
+
+TEST(move_shows_a_sample_of_each_kind_that_is_on_and_one_online_when_none_is)
+{
+    Settings s;
+    std::vector<ShownNotice> samples = NoticeSamples(s);
+    CHECK(samples.size() == 2 && samples[0].kind == NoticeKind::Online && samples[1].kind == NoticeKind::Offline);
+    CHECK(samples[0].name == kNoticeSampleName && samples[0].opacity == 1.0f && samples[0].share == 1.0f);
+    CHECK(samples[0].id != samples[1].id);
+    s.friendNoticeOnline = false;
+    samples              = NoticeSamples(s);
+    CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Offline);
+    s.friendNoticeOffline = false;
+    samples               = NoticeSamples(s);
+    CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Online); // something to drag
+}

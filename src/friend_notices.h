@@ -124,6 +124,10 @@ namespace headsup
         std::optional<double> m_LastOnline;
     };
 
+    constexpr const char* kNoticeSampleName = "Friend"; // the name Move's and Test's notices show
+    // What Move shows to drag: a notice of each kind that is on, or an online one when neither is.
+    std::vector<ShownNotice> NoticeSamples(const Settings& settings);
+
     uint32_t NoticeColor(NoticeKind kind);
     const char* NoticeTitle(NoticeKind kind);
     std::string NoticeMessage(NoticeKind kind, std::string_view name);
