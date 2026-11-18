@@ -723,6 +723,22 @@ namespace headsup
         EndRow();
     }
 
+    void Form::CheckList(const char* label, std::span<const std::string> rows, FunctionRef<bool(int)> on,
+        FunctionRef<std::string()> summary, FunctionRef<void(int)> clicked, const char* tip)
+    {
+        Row(label, tip);
+        const std::string control = Id(label);
+        TakeChecks(control, clicked);
+        if (ListControl(control, summary(), kControlWidth))
+        {
+            std::string rml = "<div class=\"list\">";
+            for (size_t row = 0; row < rows.size(); ++row)
+                rml += CheckRow(control + kOptionIdInfix, static_cast<int>(row), rows[row].c_str(), nullptr, on(static_cast<int>(row)));
+            popup = FormPopup{control, rml + "</div>"};
+        }
+        EndRow();
+    }
+
     void Form::ChecksDropdown(const char* label, LineShow& show, std::span<const ShowCondition> conditions,
         const char* tip)
     {

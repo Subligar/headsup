@@ -297,6 +297,11 @@ namespace headsup
         // A dropdown of checks, one bit of bits each in the options' order. Closed, it says All, None, the one picked
         // or how many are.
         void BitsDropdown(const char* label, uint32_t& bits, std::span<const LayoutOption> options, const char* tip);
+        // A dropdown of checks over rows of the page's own. Closed, it shows what summary gives after this pass's
+        // clicks. on: whether a row is ticked. clicked: told of each row clicked while the list is open. It changes no
+        // setting.
+        void CheckList(const char* label, std::span<const std::string> rows, FunctionRef<bool(int)> on,
+            FunctionRef<std::string()> summary, FunctionRef<void(int)> clicked, const char* tip);
         // When a line shows, as a dropdown of checks: Always, under which every condition reads checked, then each
         // condition.
         void ChecksDropdown(const char* label, LineShow& show, std::span<const ShowCondition> conditions,
