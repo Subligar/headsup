@@ -3353,7 +3353,8 @@ private:
         {
             // The game's own friend list, read with them: a friend is told by the character the list says they play.
             const bool inZone = m_Player.level > 0 && player->GetIsZoning() == 0;
-            m_Friends         = inZone ? m_FriendList.Read() : std::vector<uint32_t>{};
+            const uint8_t* slots = inZone ? m_FriendList.Slots() : nullptr;
+            m_Friends            = slots != nullptr ? headsup::FriendCharacters(slots) : std::vector<uint32_t>{};
             m_Linkshells       = WornLinkshells();
             m_LinkshellsReadAt = now;
         }

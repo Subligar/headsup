@@ -119,3 +119,30 @@ TEST(a_friends_character_is_known_once_the_server_has_said_who_they_play)
     CHECK(IsFriend(characters, 65002) && IsFriend(characters, 1001) && IsFriend(characters, 1000000));
     CHECK(!IsFriend(characters, 65001) && !IsFriend(characters, 0) && !IsFriend({}, 65002));
 }
+
+TEST(the_friend_list_gives_each_friends_account_names_and_whether_they_play)
+{
+    std::vector<uint8_t> data = Data();
+    const uint8_t* first      = data.data() + kBefore;
+    // 0x07D3 is 2003, account 1001; 0x07D5 is 2005, account 1002. The block list's 1003 is no friend.
+    CHECK((FriendEntries(first) == std::vector<FriendEntry>{{1001, "Headsuptwo", "Headsuptwo", true},
+                                                            {1002, "Headsupthree", "", false}}));
+    CHECK_EQ(FriendName(FriendEntries(first)[0]), "Headsuptwo");
+    CHECK_EQ(FriendName(FriendEntries(first)[1]), "Headsupthree"); // no character yet: the name it was added by
+    // A request from a playing friend turned their byte from 01 to 03 on the test client: still playing.
+    data[kBefore + 0x64] = 3;
+    CHECK(FriendEntries(first)[0].playing);
+    data[kBefore + 0x64] = 0;
+    CHECK(!FriendEntries(first)[0].playing && FriendEntries(first)[0].character == "Headsuptwo");
+}
+
+TEST(a_friends_name_stops_at_its_length_and_keeps_only_printable_ascii)
+{
+    std::vector<uint8_t> data = Data();
+    // 16 letters and no NUL before the next field: the name is those 16 and no more.
+    Put(data, kBefore + 0x08, "41424344 45464748 494a4b4c 4d4e4f50");
+    Put(data, kBefore + 0x1C, "3c623e01 ff00"); // "<b>", a control byte and 0xFF, then the NUL
+    const FriendEntry entry = FriendEntries(data.data() + kBefore)[0];
+    CHECK_EQ(entry.added, "ABCDEFGHIJKLMNOP");
+    CHECK_EQ(entry.character, "<b>");
+}

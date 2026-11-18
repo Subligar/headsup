@@ -364,9 +364,9 @@ namespace headsup
     class FriendListReader
     {
     public:
-        // The characters its friends play, by server id in ascending order; none while the list is not found. It
-        // is looked for on the first reads, as the client fills it once you are signed on.
-        std::vector<uint32_t> Read();
+        // The list's first slot; null while it is not found. It is looked for on the first calls, as the client
+        // fills it once you are signed on.
+        const uint8_t* Slots();
 
     private:
         const uint8_t* m_First = nullptr;

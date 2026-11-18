@@ -9,9 +9,21 @@ namespace headsup
     namespace
     {
         constexpr size_t kSlotAccount = 0x00, kSlotCharacter = 0x30, kSlotNumber = 0x70;
+        constexpr size_t kSlotAdded = 0x08, kSlotCharacterName = 0x1C, kSlotPlaying = 0x64, kSlotNameBytes = 16;
+        // The byte holds more than playing: a request from a friend set its 0x02 beside it on the test client.
+        constexpr uint8_t kPlayingBit = 0x01;
+        constexpr char kFirstPrintable = ' ', kLastPrintable = '~';
         constexpr uint16_t kNumberStep = 4, kWideStep = 16, kWideMask = 0x0FFF;
         constexpr int kSlotsChecked    = 8; // as many slots' numbers in a row are no accident
         constexpr size_t kScanStep     = 4; // the slots are aligned
+
+        std::string SlotName(const uint8_t* at)
+        {
+            std::string name;
+            for (size_t i = 0; i < kSlotNameBytes && at[i] != 0; ++i)
+                if (const char c = static_cast<char>(at[i]); c >= kFirstPrintable && c <= kLastPrintable) name += c;
+            return name;
+        }
 
         bool NumberedAs(const uint8_t* slotNumber, int slot)
         {
@@ -55,5 +67,23 @@ namespace headsup
     bool IsFriend(std::span<const uint32_t> characters, uint32_t serverId)
     {
         return std::ranges::binary_search(characters, serverId);
+    }
+
+    std::vector<FriendEntry> FriendEntries(const uint8_t* firstSlot)
+    {
+        std::vector<FriendEntry> entries;
+        for (int slot = 0; slot < kFriendSlots; ++slot)
+        {
+            const uint8_t* at = firstSlot + kFriendSlotBytes * static_cast<size_t>(slot);
+            if (ReadAt<uint64_t>(at, kSlotAccount) == 0) continue;
+            entries.push_back(FriendEntry{ReadAt<uint32_t>(at, kSlotAccount) / 2, SlotName(at + kSlotAdded),
+                SlotName(at + kSlotCharacterName), (at[kSlotPlaying] & kPlayingBit) != 0});
+        }
+        return entries;
+    }
+
+    const std::string& FriendName(const FriendEntry& entry)
+    {
+        return entry.character.empty() ? entry.added : entry.character;
     }
 }

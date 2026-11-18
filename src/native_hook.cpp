@@ -1245,7 +1245,7 @@ namespace headsup
         return type;
     }
 
-    std::vector<uint32_t> FriendListReader::Read()
+    const uint8_t* FriendListReader::Slots()
     {
         // Each search reads the whole of the game's data: after this many the client is taken to have no such list.
         constexpr int kSearches = 20;
@@ -1257,7 +1257,7 @@ namespace headsup
             if (base != nullptr && FindSection(base, kDataSection, data))
                 if (const std::optional<uint32_t> first = LocateFriendList(data)) m_First = data.bytes + *first;
         }
-        return m_First != nullptr ? FriendCharacters(m_First) : std::vector<uint32_t>{};
+        return m_First;
     }
 
     std::optional<Weather> WeatherReader::Read() const
