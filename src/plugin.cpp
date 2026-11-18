@@ -2569,8 +2569,8 @@ private:
 
     void PlayNotice(headsup::NoticeKind kind)
     {
-        if (const std::optional<headsup::Sound> sound = headsup::SoundFromWav(headsup::NoticeWav(kind)))
-            m_NoticeSound.Play(headsup::AtVolume(sound->stereo, m_Settings.friendNoticeVolume), sound->rate);
+        if (const std::optional<headsup::Sound> sound = headsup::SoundFromWav(headsup::ChimeWav()))
+            m_NoticeSound.Play(headsup::AtVolume(sound->stereo, headsup::NoticeVolumeOf(m_Settings, kind)), sound->rate);
     }
 
     headsup::OutpostFile& Outposts()

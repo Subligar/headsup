@@ -3,6 +3,7 @@
 #include "bytes.h"
 
 #include <cstring>
+#include <string>
 
 namespace headsup
 {
@@ -17,6 +18,45 @@ namespace headsup
         constexpr int kEightBitMiddle = 128, kEightBitToSixteen = 256, kWholeVolume = 100;
 
         bool IsId(std::span<const uint8_t> bytes, size_t at, const char* id) { return std::memcmp(&bytes[at], id, 4) == 0; }
+
+        // A game sound effect's header, little endian. Its size field (0x08) is not trusted.
+        constexpr char kSeWave[] = "SeWave\0";      // eight bytes with the zero after it
+        constexpr size_t kSeWaveBytes = sizeof(kSeWave);
+        constexpr size_t kSpwHeader = 0x30, kSpwCodecAt = 0x0C, kSpwCountAt = 0x14, kSpwRateAt = 0x1C,
+                         kSpwRateAddAt = 0x20, kSpwStartAt = 0x24, kSpwChannelsAt = 0x2A;
+        constexpr uint32_t kSpwPcm16 = 1;
+        constexpr uint32_t kSpwRateMask = 0x7FFFFFFF; // the rate is two words' sum, its top bit dropped
+        constexpr uint8_t kStereo = 2;
+        constexpr const char* kCallFolder = "sound\\win\\se\\se000\\se"; // every call is in se000
+        constexpr int kSoundIdDigits = 6;
+    }
+
+    std::optional<Sound> SoundFromSpw(std::span<const uint8_t> spw)
+    {
+        if (spw.size() < kSpwHeader || std::memcmp(spw.data(), kSeWave, kSeWaveBytes) != 0 ||
+            ReadAt<uint32_t>(spw.data(), kSpwCodecAt) != kSpwPcm16)
+            return std::nullopt;
+        const uint8_t channels = spw[kSpwChannelsAt];
+        if (channels != kMono && channels != kStereo) return std::nullopt;
+        const uint64_t samples = uint64_t{ReadAt<uint32_t>(spw.data(), kSpwCountAt)} * channels;
+        const uint32_t start   = ReadAt<uint32_t>(spw.data(), kSpwStartAt);
+        if (start > spw.size() || samples * sizeof(int16_t) > spw.size() - start) return std::nullopt;
+        const uint32_t rate = (ReadAt<uint32_t>(spw.data(), kSpwRateAt) + ReadAt<uint32_t>(spw.data(), kSpwRateAddAt)) &
+                              kSpwRateMask;
+        Sound sound{{}, static_cast<int>(rate)};
+        for (size_t i = 0; i < static_cast<size_t>(samples); ++i)
+        {
+            const auto sample = ReadAt<int16_t>(spw.data(), start + i * sizeof(int16_t));
+            sound.stereo.insert(sound.stereo.end(), channels == kMono ? kStereo : kMono, sample);
+        }
+        return sound;
+    }
+
+    std::optional<std::string> NoticeSoundFile(int choice)
+    {
+        if (choice < kFirstCallChoice || choice >= kNoticeSoundCount) return std::nullopt;
+        std::string id = std::to_string(kFirstCallSound + static_cast<uint32_t>(choice - kFirstCallChoice));
+        return kCallFolder + std::string(kSoundIdDigits - id.size(), '0') + id + ".spw";
     }
 
     std::optional<Sound> SoundFromWav(std::span<const uint8_t> wav)
@@ -58,9 +98,5 @@ namespace headsup
         return scaled;
     }
 
-    std::span<const uint8_t> NoticeWav(NoticeKind kind)
-    {
-        if (kind == NoticeKind::Online) return kOnlineWav;
-        return {};
-    }
+    std::span<const uint8_t> ChimeWav() { return kOnlineWav; }
 }
