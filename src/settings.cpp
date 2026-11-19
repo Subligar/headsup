@@ -382,6 +382,8 @@ namespace headsup
         constexpr const char* kNoticeAlignKey                   = "noticeAlign";
         constexpr const char* kNoticeEdgeKey                    = "noticeEdge";
         const char* const kNoticeEdgeNames[kNoticeEdgeCount]    = {"top", "bottom"};
+        constexpr const char* kInvitePlaceKey                   = "partyNoticePlace";
+        const char* const kInvitePlaceNames[kInvitePlaceCount]  = {"auto", "top", "bottom"};
         constexpr const char* kNoticeFitKey                     = "noticeFit";
         const char* const kNoticeFitNames[kNoticeFitCount]      = {"shrink", "truncate"};
         constexpr const char* kNoticeStyleKey                   = "noticeStyle";
@@ -1438,6 +1440,7 @@ namespace headsup
         if (static_cast<int>(s.noticeAnchor) >= kHelpAnchorCount) s.noticeAnchor = d.noticeAnchor;
         if (static_cast<int>(s.noticeAlign) >= kHelpAnchorCount) s.noticeAlign = d.noticeAlign;
         if (static_cast<int>(s.noticeEdge) >= kNoticeEdgeCount) s.noticeEdge = d.noticeEdge;
+        if (static_cast<int>(s.partyNoticePlace) >= kInvitePlaceCount) s.partyNoticePlace = d.partyNoticePlace;
         if (static_cast<int>(s.noticeFit) >= kNoticeFitCount) s.noticeFit = d.noticeFit;
         if (static_cast<int>(s.noticeStyle) >= kNoticeStyleCount) s.noticeStyle = d.noticeStyle;
         for (int Settings::* field : kNoticeSoundFields)
@@ -1996,6 +1999,8 @@ namespace headsup
                 store.GetString(kNoticeAlignKey, ""), static_cast<int>(s.noticeAlign)));
             s.noticeEdge = static_cast<NoticeEdge>(NameIndex(kNoticeEdgeNames, kNoticeEdgeCount,
                 store.GetString(kNoticeEdgeKey, ""), static_cast<int>(s.noticeEdge)));
+            s.partyNoticePlace = static_cast<InvitePlace>(NameIndex(kInvitePlaceNames, kInvitePlaceCount,
+                store.GetString(kInvitePlaceKey, ""), static_cast<int>(s.partyNoticePlace)));
             s.noticeFit = static_cast<NoticeFit>(NameIndex(kNoticeFitNames, kNoticeFitCount,
                 store.GetString(kNoticeFitKey, ""), static_cast<int>(s.noticeFit)));
             s.noticeStyle = static_cast<NoticeStyle>(NameIndex(kNoticeStyleNames, kNoticeStyleCount,
@@ -2106,6 +2111,7 @@ namespace headsup
         store.Set(kNoticeAnchorKey, kHelpAnchorNames[static_cast<int>(s.noticeAnchor)]);
         store.Set(kNoticeAlignKey, kHelpAnchorNames[static_cast<int>(s.noticeAlign)]);
         store.Set(kNoticeEdgeKey, kNoticeEdgeNames[static_cast<int>(s.noticeEdge)]);
+        store.Set(kInvitePlaceKey, kInvitePlaceNames[static_cast<int>(s.partyNoticePlace)]);
         store.Set(kNoticeFitKey, kNoticeFitNames[static_cast<int>(s.noticeFit)]);
         store.Set(kNoticeStyleKey, kNoticeStyleNames[static_cast<int>(s.noticeStyle)]);
         for (size_t i = 0; i < std::size(kNoticeSoundFields); ++i)

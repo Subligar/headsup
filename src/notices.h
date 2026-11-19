@@ -133,6 +133,8 @@ namespace headsup
     // The page's test notices: one of each kind that is on (Show Online, Show Offline, Show Invites as a party
     // invite), an online one when none is; the first room of them, the room Max Notifications leaves.
     std::vector<ShownNotice> NoticeSamples(const Settings& settings, int room);
+    // Invite Position: the invites moved to the start of the stack's order or its end, the rest kept in theirs.
+    void PlaceInvites(std::vector<ShownNotice>& shown, const Settings& settings);
     // The Notifications card's Test: of the kinds that are on, in the enum's order, the one at the seed's remainder
     // by their count; nothing when none is.
     std::optional<NoticeKind> TestKind(uint32_t seed, const Settings& settings);

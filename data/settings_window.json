@@ -491,6 +491,16 @@
           "settings": [
             {"key": "party-notice", "name": "Show Invites", "tip": "Shows a notification when you are invited. Default: On."},
             {"key": "party-notice-buttons", "name": "Show Buttons", "tip": "Adds Decline and Accept buttons to the notification. They answer the invite the way /decline and /join do. Default: On."},
+            {
+              "key": "party-notice-place",
+              "name": "Invite Position",
+              "tip": "Where an invite sits among your notifications. Default: Auto.",
+              "options": [
+                {"name": "Auto", "tip": "At the top when notifications stack down from the top, at the bottom when they stack up from the bottom."},
+                {"name": "Top", "tip": "Always at the top."},
+                {"name": "Bottom", "tip": "Always at the bottom."}
+              ]
+            },
             {"key": "party-notice-sound", "name": "Sound Effect", "tip": "The sound when you are invited. Default: Call 14."},
             {"key": "party-notice-volume", "name": "Alert Volume", "tip": "How loud the invite sound is. It is multiplied by Master Volume. Default: 60%."}
           ]

@@ -178,7 +178,7 @@ PIECES = Pieces(
         'notice-edge': Setting(options=2), 'notice-align': Setting(options=3), 'notice-most': Setting(), 'notice-test': Setting(),
         'friend-notice-online': Setting(), 'friend-notice-offline': Setting(), 'friend-notice-online-sound': Setting(),
         'friend-notice-offline-sound': Setting(), 'friend-notice-volume': Setting(), 'friends-included': Setting(),
-        'party-notice': Setting(), 'party-notice-buttons': Setting(),
+        'party-notice': Setting(), 'party-notice-buttons': Setting(), 'party-notice-place': Setting(options=3),
         'party-notice-sound': Setting(), 'party-notice-volume': Setting(),
         'groups': Setting(unnamed=True, words={'note': True, 'help-on': True, 'help-off': True, 'starts-at': True,
                                                'row-tip': False}),
