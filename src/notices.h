@@ -95,11 +95,12 @@ namespace headsup
     // The spot is one point: the stack's left edge, middle or right edge by Horizontal Anchor, and its top or bottom
     // edge by Vertical Anchor. A box's left from the spot: 0, half its width or its whole width to the left.
     float NoticeLeft(float width, HelpAnchor anchor);
-    // The spot, kept so the first box (firstWidth by firstHeight) is whole on the screen. Unplaced: kNoticeStartLeft
+    // The spot, kept so the stack is whole across the screen (every box lines up on the anchor's side, so the widest,
+    // wide, bounds it) and its first box (firstHeight tall) is whole down it. Unplaced: kNoticeStartLeft
     // from the left or the right, or the screen's middle; kNoticeStartGap under the top panel, or over the screen's
     // bottom.
     NoticeSpot NoticeAnchor(int across, int down, HelpAnchor anchor, NoticeEdge edge, float screenWidth,
-        float screenHeight, float barBottom, float firstWidth, float firstHeight);
+        float screenHeight, float barBottom, float wide, float firstHeight);
     // Whether the point is inside any of the boxes.
     bool OverAny(std::span<const NoticeRect> boxes, float x, float y);
     // The spot that leaves a stack drawn in bounds where it is, for these anchors.

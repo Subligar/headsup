@@ -232,7 +232,8 @@ namespace headsup
         const std::vector<float> tops = NoticeTops(heights, 0.0f, settings.noticeEdge);
         m_Anchor      = settings.noticeAnchor;
         m_Edge        = settings.noticeEdge;
-        m_FirstWidth  = sizes.empty() ? 0.0f : sizes.front().x;
+        m_Wide        = 0.0f;
+        for (const Rml::Vector2f& size : sizes) m_Wide = std::max(m_Wide, size.x);
         m_FirstHeight = heights.empty() ? 0.0f : heights.front();
         std::map<uint32_t, float> at;
         std::vector<NoticeRect> placed;
@@ -255,7 +256,7 @@ namespace headsup
         {
             const Rml::Vector2i screen = context->GetDimensions();
             spot = NoticeAnchor(settings.noticeAcross, settings.noticeDown, m_Anchor, m_Edge, static_cast<float>(screen.x),
-                static_cast<float>(screen.y), frame.barBottom, m_FirstWidth, m_FirstHeight);
+                static_cast<float>(screen.y), frame.barBottom, m_Wide, m_FirstHeight);
             m_Stack->SetProperty(Rml::PropertyId::Left, Rml::Property(spot.x, Rml::Unit::PX));
             m_Stack->SetProperty(Rml::PropertyId::Top, Rml::Property(spot.y, Rml::Unit::PX));
         }
@@ -308,7 +309,7 @@ namespace headsup
             const float width = static_cast<float>(screen.x), height = static_cast<float>(screen.y);
             // Through the saved shares, so it lands where the settings will put it, kept on the screen.
             m_Dragged = NoticeAnchor(SpotShare(corner.x, width), SpotShare(corner.y, height), m_Anchor, m_Edge, width,
-                height, 0.0f, m_FirstWidth, m_FirstHeight);
+                height, 0.0f, m_Wide, m_FirstHeight);
             m_Stack->SetProperty(Rml::PropertyId::Left, Rml::Property(m_Dragged->x, Rml::Unit::PX));
             m_Stack->SetProperty(Rml::PropertyId::Top, Rml::Property(m_Dragged->y, Rml::Unit::PX));
             break;

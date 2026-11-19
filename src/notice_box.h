@@ -79,9 +79,10 @@ namespace headsup
         std::optional<NoticePress> m_Press; // a button's click, for the next Update
         bool m_Dragging  = false;
         bool m_Grabbable = false; // as moving was last
-        // As the last frame stacked, for a drag: the anchors, and the first box's size the spot keeps on the screen.
+        // As the last frame stacked, for a drag: the anchors, the widest box's width and the first box's height, which
+        // the spot keeps on the screen.
         HelpAnchor m_Anchor = HelpAnchor::Left;
         NoticeEdge m_Edge   = NoticeEdge::Top;
-        float m_FirstWidth = 0.0f, m_FirstHeight = 0.0f;
+        float m_Wide = 0.0f, m_FirstHeight = 0.0f;
     };
 }

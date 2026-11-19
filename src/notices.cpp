@@ -97,7 +97,7 @@ namespace headsup
     }
 
     NoticeSpot NoticeAnchor(int across, int down, HelpAnchor anchor, NoticeEdge edge, float screenWidth,
-        float screenHeight, float barBottom, float firstWidth, float firstHeight)
+        float screenHeight, float barBottom, float wide, float firstHeight)
     {
         const auto share = [](int value, float screen) { return static_cast<float>(value) / kCasePlaceWhole * screen; };
         const bool upward = edge == NoticeEdge::Bottom;
@@ -108,9 +108,9 @@ namespace headsup
         const float y = down != kFishBarUnplaced ? share(down, screenHeight)
                         : upward                 ? screenHeight - kNoticeStartGap
                                                  : barBottom + kNoticeStartGap;
-        const float lead   = NoticeLeft(std::min(firstWidth, screenWidth), anchor);
+        const float lead   = NoticeLeft(std::min(wide, screenWidth), anchor);
         const float height = std::min(firstHeight, screenHeight);
-        return {std::clamp(x, lead, std::max(lead, screenWidth - std::min(firstWidth, screenWidth) + lead)),
+        return {std::clamp(x, lead, std::max(lead, screenWidth - std::min(wide, screenWidth) + lead)),
             upward ? std::clamp(y, height, screenHeight) : std::clamp(y, 0.0f, screenHeight - height)};
     }
 

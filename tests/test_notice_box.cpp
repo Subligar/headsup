@@ -508,3 +508,23 @@ TEST(an_inviters_name_is_text_not_markup)
     CHECK(Part(Box(rml, 0), "message")->GetInnerRML().find("&lt;b&gt;&amp;") != std::string::npos);
     box.Close();
 }
+
+TEST(a_wider_box_further_down_the_stack_stays_on_the_screen_too)
+{
+    test::RmlSession rml;
+    Settings settings;
+    settings.noticeWidth  = kFlexibleNoticeWidth;
+    settings.noticeAcross = 10000;
+    const std::vector<ShownNotice> shown = {N(1, NoticeKind::Online, "Al"), N(2, NoticeKind::Online, "Bartholomew Longname")};
+    NoticeBox box;
+    box.Update(rml.context, Gold(), settings, shown, Frame());
+    rml.context->Update();
+    CHECK(Width(Box(rml, 1)) > Width(Box(rml, 0)));
+    CHECK(Left(Box(rml, 1)) + Width(Box(rml, 1)) <= 1920.5f);
+    settings.noticeAnchor = HelpAnchor::Right;
+    settings.noticeAcross = 0;
+    box.Update(rml.context, Gold(), settings, shown, Frame());
+    rml.context->Update();
+    CHECK(Left(Box(rml, 1)) >= -0.5f);
+    box.Close();
+}
