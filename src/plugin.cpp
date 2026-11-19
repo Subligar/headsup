@@ -14,6 +14,7 @@
 #include "check.h"
 #include "commands.h"
 #include "copy_state.h"
+#include "crash_log.h"
 #include "cursor_picture.h"
 #include "d3d_util.h"
 #include "debug_report.h"
@@ -647,6 +648,8 @@ public:
         UNREFERENCED_PARAMETER(id);
         const headsup::CNumbers numbers;
         m_AshitaCore = core;
+        headsup::crash::Start(OwnFolder(kLogsFolder), kVersion);
+        headsup::crash::Step("Initialize");
         g_Plugin     = this;
         g_Resources  = core->GetResourceManager();
         g_Player     = core->GetMemoryManager()->GetPlayer();
@@ -660,6 +663,7 @@ public:
         const headsup::PadBindings pad = headsup::PadBindingsFrom(padsin != nullptr ? padsin : "");
         g_MenuInbox.taken             = headsup::InputTaken(pad);
         m_MenuInput                   = headsup::MenuInput(pad);
+        headsup::crash::Step("Initialize: bundled fonts");
         size_t fonts = 0;
         for (const headsup::BundledFont* font = headsup::BundledFonts(fonts); fonts-- > 0; ++font)
         {
@@ -670,8 +674,10 @@ public:
                 handle != nullptr)
                 m_LoadedFonts.push_back(handle);
         }
+        headsup::crash::Step("Initialize: installed fonts");
         for (const headsup::MenuFont& choice : headsup::kMenuFonts)
             if (headsup::MenuFontInstalled(choice)) m_MenuFonts.emplace_back(choice.name);
+        headsup::crash::Step("Initialize: settings");
         if (ProfilesOn())
         {
             m_CharacterProfiles = headsup::ReadCharacterProfiles(ReadText(ConfigPath(headsup::kCharactersFile)));
@@ -680,12 +686,14 @@ public:
                 m_Profile = m_CharacterProfiles.last;
         }
         LoadSettings();
+        headsup::crash::Step("Initialize: cursors, themes and profiles");
         ScanCursors();
         ScanThemes();
         ScanProfiles();
 #ifdef HEADSUP_DEV
         ReadWindowFile(false);
 #endif
+        headsup::crash::Step("Initialize: input callbacks");
         g_Gui       = core->GetGuiManager();
         g_BarClicks = &m_BarClicks;
 #ifdef HEADSUP_DEV
@@ -697,12 +705,14 @@ public:
         core->GetInputManager()->GetController()->AddCallback(kName, nullptr, nullptr, OnDirectInput);
         core->GetInputManager()->GetXInput()->AddCallback(kName, nullptr, OnXInput);
         g_Rml = &m_Rml;
+        headsup::crash::Step("Initialize: done");
         return true;
     }
 
     void Release(void) override
     {
         const headsup::CNumbers numbers;
+        headsup::crash::Step("Release");
         SavePending();
         SetScreenshot(false);
         HoldGameKeys(false);
@@ -765,10 +775,12 @@ public:
         CloseNotes();
         // Ashita would keep the settings' values loaded after this, for the next load to find even with the file gone.
         m_AshitaCore->GetConfigurationManager()->Delete(kConfigAlias);
+        headsup::crash::Stop();
     }
 
     bool Direct3DInitialize(IDirect3DDevice8* device) override
     {
+        headsup::crash::Step("Direct3DInitialize");
         m_Device      = device;
         m_ReadTexture = !headsup::GetTextureLeaks();
         HookPresent(device);
@@ -780,6 +792,7 @@ public:
         m_SetupPreview.SetDevice(device);
         m_NameHook.SetDevice(device);
         m_CombatTextHook.SetDevice(device);
+        headsup::crash::Step("Direct3DInitialize: done");
         return true;
     }
 
@@ -1061,6 +1074,7 @@ public:
         UNREFERENCED_PARAMETER(window);
         UNREFERENCED_PARAMETER(dirty);
         const headsup::CNumbers numbers;
+        headsup::crash::Step("Present");
         MeasureFrame();
         RunCommands();
 #ifdef HEADSUP_DEV
@@ -1079,7 +1093,9 @@ public:
                 OnMouse(step.message, step.wParam, step.lParam, false);
         }
 #endif
+        headsup::crash::Step("Present: hooks");
         StartHooks();
+        headsup::crash::Step("Present: combat popups");
         m_ModelHook.NewFrame();
         m_CombatTextHook.NewFrame(Now());
         m_CombatTextHook.SetRightAway(m_Settings.combatPopupRightAway);
@@ -1093,6 +1109,7 @@ public:
         PopTestSamples(Now());
         if (const std::string failure = m_CombatPopups.TakeFailure(); !failure.empty())
             Print("combat popups are off until HeadsUp reloads, and the game's are back: " + failure + ".");
+        headsup::crash::Step("Present: outlines and names");
         m_Outline.NewFrame();
         m_Names.NewFrame();
         if (m_Outline.TakeStencilWarning())
@@ -1114,6 +1131,7 @@ public:
         const bool drewInScene = m_DrewInScene;
         m_DrewInScene          = false;
         const double now       = Now();
+        headsup::crash::Step("Present: tracker");
         UpdateCursorTargets();
         UpdateTracker(now);
         g_GameWindow = m_AshitaCore->GetProperties()->GetFinalFantasyHwnd();
@@ -1128,7 +1146,9 @@ public:
         }
         const bool mapShown = headsup::MapShown(m_OpenWindows);
         m_UiHidden          = m_Screenshot || m_Player.inEvent || mapShown;
+        headsup::crash::Step("Present: RmlUi");
         StartRml();
+        headsup::crash::Step("Present: top panel and windows");
         g_BarOn     = headsup::BarRuns(m_Settings, loginStatus) && m_Rml.Running();
         g_BarHidden = m_UiHidden;
         // Opening Region Info asks the server for the conquest standings; HeadsUp asks the same once per zone-in, and
@@ -1574,6 +1594,7 @@ public:
         if (!Ours()) RecordDraw(isRenderingBackBuffer ? 'E' : 'e', D3DPT_POINTLIST, 0u, nullptr, 0u, 0u, 0u);
         if (Ours() || !isRenderingBackBuffer) return;
         const headsup::CNumbers numbers;
+        headsup::crash::Step("EndScene");
         DrawLoneCursors();
         bool plates = false;
         if (!m_PlatesPlaced)
@@ -1961,10 +1982,13 @@ private:
     void StartHooks()
     {
         if (std::exchange(m_HooksTried, true)) return;
+        headsup::crash::Step("hooks: names");
         if (const std::string failure = m_NameHook.Start(); !failure.empty())
             Print("could not hook the game's names: " + failure + ".");
+        headsup::crash::Step("hooks: target arrows");
         if (const std::string failure = m_ArrowHook.Start(); !failure.empty())
             Print("could not hook the game's target arrows, so it draws its own and HeadsUp none: " + failure + ".");
+        headsup::crash::Step("hooks: combat popups");
         if (const std::string failure = m_CombatTextHook.Start(); !failure.empty())
             Print("could not hook the game's combat popups, so it draws its own: " + failure + ".");
         else if (!m_CombatTextHook.TieProblem().empty())
@@ -1973,10 +1997,13 @@ private:
         else if (!m_CombatTextHook.EarlyProblem().empty())
             Note("could not start the game's combat popups as soon as their actions arrive, so they wait for each hit: " +
                  m_CombatTextHook.EarlyProblem() + ".");
+        headsup::crash::Step("hooks: model draws");
         if (const std::string failure = m_ModelHook.Start(); !failure.empty())
             Note("could not hook the game's model draws, so outlines guess whose each one is: " + failure + ".");
+        headsup::crash::Step("hooks: mouse pointer");
         if (const std::string failure = m_PointerFix.Start(); !failure.empty())
             Note("could not fix the game's mouse pointer: " + failure + ".");
+        headsup::crash::Step("hooks: the game's font, window skins and icons");
         ReadGameFont();
         SayGameFontFailure();
         ReadWindowSkins();
@@ -2403,6 +2430,7 @@ private:
     // RmlUi's overlay (the popups and the settings window), over every ImGui window: in a scene of its own.
     void DrawOverGui()
     {
+        headsup::crash::Step("Present over ImGui");
         if (m_Device == nullptr || FAILED(m_Device->BeginScene())) return;
         if (m_Rml.Running() && !m_Screenshot && m_RmlMenu.open && m_RmlMenu.SetupShown() != nullptr) DrawSetupPreview();
         if (!m_Screenshot && (m_Case || m_Rml.Running())) WithQuadStates([&] {

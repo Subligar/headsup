@@ -2,6 +2,7 @@
 
 #include "Ashita.h"
 #include "bytes.h"
+#include "memory_query.h"
 #include "name_frame.h"
 #include "native_locate.h"
 #include "pointer_keys.h"
@@ -306,8 +307,6 @@ namespace headsup
         constexpr char kDataSection[]     = ".data";
         constexpr char kCodeNotRead[]     = "the client's code could not be read";
         constexpr char kCodeNotChanged[]  = "the client's code could not be changed";
-        constexpr DWORD kReadable = PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ |
-            PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
 
         template <typename T>
         uint32_t Address(T* at)
@@ -572,22 +571,6 @@ namespace headsup
             if (FAILED(g_Device->GetDepthStencilSurface(&depth))) depth = nullptr;
             g_SceneTarget = target;
             g_SceneDepth  = depth;
-        }
-
-        bool Readable(const uint8_t* at, size_t bytes)
-        {
-            while (bytes > 0)
-            {
-                MEMORY_BASIC_INFORMATION info{};
-                if (VirtualQuery(at, &info, sizeof(info)) != sizeof(info)) return false;
-                if (info.State != MEM_COMMIT || (info.Protect & kReadable) == 0 || (info.Protect & PAGE_GUARD) != 0)
-                    return false;
-                const auto* end   = static_cast<const uint8_t*>(info.BaseAddress) + info.RegionSize;
-                const size_t step = std::min(bytes, static_cast<size_t>(end - at));
-                at += step;
-                bytes -= step;
-            }
-            return true;
         }
 
         const uint8_t* Pointer(uint32_t address)

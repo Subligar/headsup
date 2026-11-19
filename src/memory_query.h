@@ -2,6 +2,7 @@
 
 #include "address_space.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 
@@ -14,4 +15,6 @@ namespace headsup
     std::optional<uint64_t> VirtualSizeNow();
     // VirtualQuery's answer for the region at an address, as FreeSpaceWalk asks; nothing past the 32-bit space.
     std::optional<Region> RegionAt(uint64_t at);
+    // Whether every byte from there can be read now: committed, readable and no guard page.
+    bool Readable(const void* at, size_t bytes);
 }
