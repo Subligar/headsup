@@ -20,6 +20,9 @@ namespace headsup
         constexpr const char* kOnlineClass = "online", *kOfflineClass = "offline", *kInviteClass = "invite";
         constexpr const char* kTextClass = "text", *kTitleClass = "title", *kMessageClass = "message";
         constexpr const char* kButtonsClass = "buttons", *kBarClass = "bar";
+        // The text, buttons and bar in a column. The box itself is a block: RmlUi sizes a piece placed in a flex box
+        // before the box knows its height, which left the art only the box's padding tall.
+        constexpr const char* kInnerClass = "inner";
         constexpr const char* kButtonClass = "btn", *kDeclineClass = "decline", *kAcceptClass = "accept";
         constexpr float kButtonsGap = 6.0f, kButtonPad = 3.0f; // above the row and between its two; inside each
 
@@ -54,7 +57,7 @@ namespace headsup
             // As wide as a Flexible box may be, so a box's shrink to its words is never cut short by the stack.
             css += std::string("#") + kNoticeStackId + "{position:absolute;width:" + Px(kMaxNoticeWidth) + ";height:0px;}";
             css += std::string("#") + kNoticeStackId + "." + kMovingClass + "{pointer-events:auto;drag:drag;}";
-            css += std::string(".box{position:absolute;left:0px;top:0px;box-sizing:border-box;display:flex;flex-direction:column;") +
+            css += std::string(".box{position:absolute;left:0px;top:0px;box-sizing:border-box;") +
                    // A Flexible box is laid out at its cap, then given its words' width: RmlUi lays an
                    // absolutely placed flex box as wide as the stack, not as its words.
                    "width:" + Px(static_cast<float>(look.width == kFlexibleNoticeWidth ? kMaxNoticeWidth : look.width)) + ";" +
@@ -64,9 +67,10 @@ namespace headsup
                               : "border:1px " + RcssColor(p.panelBorder) + ";decorator:vertical-gradient(" +
                                     RcssColor(p.panelTop) + " " + RcssColor(p.panelBottom) + ");") +
                    "}";
-            // The art sits behind the text, which is positioned to be drawn after it.
-            if (look.skin)
-                css += ArtRules(".box", look.radius, SkinFillRules(*look.skin)) + ".text,.buttons,.bar{position:relative;}";
+            // The art sits behind the column, which is positioned to be drawn after it.
+            if (look.skin) css += ArtRules(".box", look.radius, SkinFillRules(*look.skin));
+            css += std::string(".") + kInnerClass + "{position:relative;display:flex;flex-direction:column;" +
+                   (fixedHeight ? "height:100%;" : "") + "}";
             css += std::string(".") + kTextClass + "{flex:1 1 auto;min-height:0px;text-align:" + AlignWord(look.align) + ";" +
                    (fixedHeight ? "overflow:hidden;" : "") + "}";
             // Shrink stops at kMinNoticeText, so it is cut there too rather than run out of the box.
@@ -96,11 +100,11 @@ namespace headsup
             std::string boxes;
             for (int slot = 0; slot < kNoticeBoxes; ++slot)
                 boxes += "<div id=\"" + NoticeId(slot) + "\" class=\"box " + kHiddenClass + "\">" +
-                         (look.skin ? kArtRml : "") + "<div class=\"" + kTextClass + "\"><div class=\"" + kTitleClass +
+                         (look.skin ? kArtRml : "") + "<div class=\"" + kInnerClass + "\"><div class=\"" + kTextClass + "\"><div class=\"" + kTitleClass +
                          "\"></div><div class=\"" + kMessageClass + "\"></div></div><div class=\"" + kButtonsClass +
                          " " + kHiddenClass + "\"><div class=\"" + kButtonClass + " " + kDeclineClass + "\">" +
                          kDeclineWord + "</div><div class=\"" + kButtonClass + " " + kAcceptClass + "\">" + kAcceptWord +
-                         "</div></div><div class=\"" + kBarClass + "\"></div></div>";
+                         "</div></div><div class=\"" + kBarClass + "\"></div></div></div>";
             return "<rml><head><style>" + css + "</style></head><body id=\"" + std::string(kNoticeDocument) +
                    "\"><div id=\"" + kNoticeStackId + "\">" + boxes + "</div></body></rml>";
         }
@@ -290,7 +294,7 @@ namespace headsup
             while (button != nullptr && !button->IsClassSet(kButtonClass)) button = button->GetParentNode();
             if (button == nullptr) return;
             for (int slot = 0; slot < static_cast<int>(m_Filled.size()); ++slot)
-                if (m_Filled[static_cast<size_t>(slot)] && button->GetParentNode()->GetParentNode() == m_Document->GetElementById(NoticeId(slot)))
+                if (m_Filled[static_cast<size_t>(slot)] && m_Document->GetElementById(NoticeId(slot))->Contains(button))
                     m_Press = NoticePress{m_Filled[static_cast<size_t>(slot)]->id, button->IsClassSet(kAcceptClass)};
             return;
         }

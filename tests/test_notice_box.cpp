@@ -528,3 +528,29 @@ TEST(a_wider_box_further_down_the_stack_stays_on_the_screen_too)
     CHECK(Left(Box(rml, 1)) >= -0.5f);
     box.Close();
 }
+
+TEST(the_games_window_art_fills_each_box_to_its_foot)
+{
+    // RmlUi sizes a piece placed in a flex box before the box knows its height: the art was only its padding tall.
+    test::RmlSession rml;
+    Settings settings;
+    NoticeBox box;
+    const SkinFrame frame{2, 1.0f, 0.5f, 1.0f, 0xFF102030, 3};
+    const std::vector<ShownNotice> shown = {N(1, NoticeKind::Online, "One"),
+        ShownNotice{2, NoticeKind::PartyInvite, "Two", 1.0f, 1.0f, true}};
+    const auto fills = [&](int slot) {
+        Rml::Element* art = Part(Box(rml, slot), kArtClass);
+        return art->GetBox().GetSize(Rml::BoxArea::Border) == Box(rml, slot)->GetBox().GetSize(Rml::BoxArea::Padding);
+    };
+    box.Update(rml.context, Gold(), settings, shown, Frame(false, 0.0f, frame));
+    rml.context->Update();
+    CHECK(Height(Box(rml, 0)) > 40.0f);
+    CHECK(fills(0));
+    CHECK(fills(1));
+    settings.noticeHeight = 120;
+    box.Update(rml.context, Gold(), settings, shown, Frame(false, 0.0f, frame));
+    rml.context->Update();
+    CHECK_EQ(Height(Box(rml, 1)), 120.0f);
+    CHECK(fills(1));
+    box.Close();
+}
