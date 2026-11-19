@@ -2490,6 +2490,8 @@ TEST(a_setting_of_a_kind_that_is_off_is_not_shown)
     w.settings.partyNotice = false;
     w.Pass({{"notifications-notice-party-party-notice-buttons", kClickEvent, ""}});
     CHECK(w.settings.partyNoticeButtons);
+    w.Pass({{"notifications-notice-party-party-notice-place-s-2", kClickEvent, ""}});
+    CHECK(w.settings.partyNoticePlace == InvitePlace::Auto);
     w.settings.friendNoticeOnline = false;
     const std::string online = "notifications-notice-friends-friend-notice-online-sound";
     w.Pass({{online, kClickEvent, ""}});
@@ -2564,4 +2566,14 @@ TEST(the_style_picks_full_or_compact_and_compact_hides_width_and_height)
     CHECK(!shows(compact, "notice-width") && !shows(compact, "notice-height") && shows(compact, "notice-fit"));
     CHECK(w.Pass({{style + "0", kClickEvent, ""}}).changed);
     CHECK(w.settings.noticeStyle == NoticeStyle::Full);
+}
+
+TEST(invite_position_is_picked_from_its_three_segments)
+{
+    Window w;
+    w.state.page = Page::Notifications;
+    CHECK(w.Pass({{"notifications-notice-party-party-notice-place-s-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.partyNoticePlace == InvitePlace::Bottom);
+    CHECK(w.Pass({{"notifications-notice-party-party-notice-place-s-0", kClickEvent, ""}}).changed);
+    CHECK(w.settings.partyNoticePlace == InvitePlace::Auto);
 }

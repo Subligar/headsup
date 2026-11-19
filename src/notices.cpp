@@ -208,6 +208,13 @@ namespace headsup
         return samples;
     }
 
+    void PlaceInvites(std::vector<ShownNotice>& shown, const Settings& settings)
+    {
+        const InvitePlace place = settings.partyNoticePlace;
+        const bool first        = place == InvitePlace::Auto || (place == InvitePlace::Top) == (settings.noticeEdge == NoticeEdge::Top);
+        std::ranges::stable_partition(shown, [&](const ShownNotice& notice) { return IsInvite(notice.kind) == first; });
+    }
+
     std::optional<NoticeKind> TestKind(uint32_t seed, const Settings& settings)
     {
         std::vector<NoticeKind> on;

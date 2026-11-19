@@ -2504,6 +2504,13 @@ namespace headsup
                 form.Fade(!s.partyNotice);
                 form.Switch(label.c_str(), s.partyNoticeButtons, tip);
                 break;
+            case SettingPiece::PartyNoticePlace:
+            {
+                form.Fade(!s.partyNotice);
+                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
+                form.Segments(label.c_str(), s.partyNoticePlace, names.data(), kInvitePlaceCount, tip);
+                break;
+            }
             case SettingPiece::PartyNoticeSound:
                 form.Fade(!s.partyNotice);
                 SoundDropdown(form, c.state, label, s.partyNoticeSound, NoticeKind::PartyInvite,

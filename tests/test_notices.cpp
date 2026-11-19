@@ -328,3 +328,27 @@ TEST(a_point_is_over_a_notice_only_inside_a_box)
     CHECK(!OverAny(boxes, 9.0f, 60.0f));
     CHECK(!OverAny({}, 100.0f, 80.0f));
 }
+
+TEST(invite_position_puts_invites_at_the_anchor_or_the_top_or_the_bottom)
+{
+    const auto order = [](InvitePlace place, NoticeEdge edge) {
+        Settings settings;
+        settings.partyNoticePlace = place;
+        settings.noticeEdge       = edge;
+        std::vector<ShownNotice> shown = {ShownNotice{1, NoticeKind::PartyInvite, "A"},
+            ShownNotice{2, NoticeKind::Online, "B"}, ShownNotice{3, NoticeKind::Offline, "C"},
+            ShownNotice{4, NoticeKind::AllianceInvite, "D"}};
+        PlaceInvites(shown, settings);
+        std::vector<uint32_t> ids;
+        for (const ShownNotice& notice : shown) ids.push_back(notice.id);
+        return ids;
+    };
+    // The stack is laid out from its anchor: first is the top when it grows down, the bottom when it grows up.
+    const std::vector<uint32_t> first = {1, 4, 2, 3}, last = {2, 3, 1, 4};
+    CHECK(order(InvitePlace::Auto, NoticeEdge::Top) == first);
+    CHECK(order(InvitePlace::Auto, NoticeEdge::Bottom) == first);
+    CHECK(order(InvitePlace::Top, NoticeEdge::Top) == first);
+    CHECK(order(InvitePlace::Top, NoticeEdge::Bottom) == last);
+    CHECK(order(InvitePlace::Bottom, NoticeEdge::Top) == last);
+    CHECK(order(InvitePlace::Bottom, NoticeEdge::Bottom) == first);
+}

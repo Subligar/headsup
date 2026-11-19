@@ -1137,6 +1137,7 @@ public:
             for (headsup::ShownNotice& sample :
                 headsup::NoticeSamples(m_Settings, m_Settings.noticeMost - static_cast<int>(shown.size())))
                 shown.push_back(std::move(sample));
+        headsup::PlaceInvites(shown, m_Settings);
         if (m_Rml.Running())
         {
             const headsup::NoticeTook took = m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()),

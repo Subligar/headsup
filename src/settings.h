@@ -159,6 +159,10 @@ namespace headsup
     // The notifications' anchored edge: they stack down from Top, up from Bottom.
     enum class NoticeEdge : uint8_t { Top, Bottom };
     constexpr int kNoticeEdgeCount = 2;
+    // Invite Position: Auto puts an invite where the stack starts, the top when it grows down and the bottom when it
+    // grows up.
+    enum class InvitePlace : uint8_t { Auto, Top, Bottom };
+    constexpr int kInvitePlaceCount = 3;
     // A notification's text too long for a fixed size: drawn smaller, or cut with an ellipsis.
     enum class NoticeFit : uint8_t { Shrink, Truncate };
     constexpr int kNoticeFitCount = 2;
@@ -313,6 +317,7 @@ namespace headsup
         int friendNoticeOnlineSound = kChimeSound, friendNoticeOfflineSound = kNoSound; // NoticeSoundKey's choices
         int friendNoticeVolume = kDefaultNoticeVolume;
         bool partyNotice = true, partyNoticeButtons = true; // a notification when you are invited; its Decline and Accept
+        InvitePlace partyNoticePlace = InvitePlace::Auto;
         int partyNoticeSound = kDefaultInviteSound, partyNoticeVolume = kDefaultNoticeVolume;
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
         Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};
