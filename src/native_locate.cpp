@@ -187,6 +187,8 @@ namespace headsup
         constexpr char kHelpWindow[]         = "menu    helpwind";
         constexpr char kTitleWindow[]        = "menu    titlewin";
         constexpr char kNetstatWindow[]      = "menu    netstat "; // the space is part of its name
+        constexpr char kAuctionListWindow[]  = "menu    auclist ";
+        constexpr char kCommandsWindow[]     = "menu    menuwind";
 
         // The menu catalog's records: two dwords, the window's name, and kCatalogSlot in, its owner's slot.
         constexpr int16_t kHelpRecord[]  = {0x2B, 0x00, 0x01, 0x00, 0x35, 0x07, 0x00, 0x00, 'm', 'e', 'n', 'u', ' ', ' ',
@@ -903,6 +905,8 @@ namespace headsup
     bool TitleWindow(const WindowKey& key) { return KeyOf(key, kTitleWindow); }
 
     bool MovableWindow(const WindowKey& key) { return !FollowsHelpStrip(key); }
+
+    bool MovesWhenBuilt(const WindowKey& key) { return KeyOf(key, kAuctionListWindow) || KeyOf(key, kCommandsWindow); }
 
     std::string_view NextField(std::string_view& text, char separator)
     {

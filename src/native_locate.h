@@ -289,6 +289,10 @@ namespace headsup
     std::optional<WindowKey> KeyFromShortName(std::string_view name);
     // Every window HeadsUp may move but the strip's own: the title, help and connection readout windows.
     bool MovableWindow(const WindowKey& key);
+    // Windows the game builds again when a controller backs out to them (the auction list from Price History, the
+    // Commands menu from Party), then picks the row under the cursor's spot from the build: they move when built. Not
+    // every window can: Quests' rows stay where it was built.
+    bool MovesWhenBuilt(const WindowKey& key);
     // Window keys without allocating, for the game's draw loop: at most kMaxWindowKeys, each once.
     constexpr size_t kMaxWindowKeys = 128;
     class WindowKeyList

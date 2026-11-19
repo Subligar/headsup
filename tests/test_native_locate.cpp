@@ -882,6 +882,13 @@ TEST(the_strip_windows_are_never_moved_and_the_equipment_window_has_a_name)
     CHECK(std::string(WindowLabel("equip")) == "Equipment" && WindowLabel("chmkface") == nullptr);
 }
 
+TEST(the_auction_item_list_and_the_commands_menu_move_when_built_and_other_windows_at_their_first_draw)
+{
+    CHECK(MovesWhenBuilt(*WindowKeyOf("menu    auclist ")) && MovesWhenBuilt(*WindowKeyOf("menu    menuwind")));
+    for (const char* later : {"auchisto", "auc1", "auc3", "iteminfo", "quest00", "equip", "socialme", "prty1"})
+        CHECK(!MovesWhenBuilt(*KeyFromShortName(later)));
+}
+
 TEST(the_window_list_holds_each_key_once_and_no_more_than_it_has_room_for)
 {
     WindowKeyList list;
