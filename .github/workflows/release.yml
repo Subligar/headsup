@@ -91,7 +91,10 @@ jobs:
         if: needs.find.outputs.tag != ''
         with:
           name: headsup
-          path: build/HeadsUp.dll
+          # HeadsUp.debug reads a crash report's HeadsUp.dll+offset addresses; only the DLL is released.
+          path: |
+            build/HeadsUp.dll
+            build/HeadsUp.debug
           if-no-files-found: error
 
   release:
