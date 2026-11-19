@@ -1136,7 +1136,7 @@ public:
             const headsup::NoticeTook took = m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()),
                 m_Settings, shown,
                 headsup::NoticeFrame{KeyDown(VK_SHIFT) || noticesPage, g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, noticeFrame,
-                    m_Rml.PointerAt(),
+                    PointerOverGame() ? m_Rml.PointerAt() : std::nullopt,
                     headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
                         ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
                         : std::nullopt});
@@ -2588,6 +2588,17 @@ private:
     {
         if (!m_FriendsIncluded) m_FriendsIncluded = headsup::IncludedFrom(ReadText(ConfigPath(kIncludedFile)));
         return *m_FriendsIncluded;
+    }
+
+    // No message says the pointer left the game's window, so Windows' own pointer says whether it is still over it.
+    bool PointerOverGame() const
+    {
+        POINT screen{}, at{};
+        RECT client{};
+        if (!GetCursorPos(&screen) || WindowFromPoint(screen) != g_GameWindow || !GetClientRect(g_GameWindow, &client))
+            return false;
+        at = screen;
+        return ScreenToClient(g_GameWindow, &at) && PtInRect(&client, at);
     }
 
     // A notification, and its sound when it has one and its kind's wait is over.
