@@ -68,12 +68,13 @@ TEST(a_friend_who_came_online_while_no_read_was_taken_is_news_at_the_next_read)
     CHECK_EQ(watch.Read(65001, {E(1001, "Two", true)}, 60.0).size(), size_t{1});
 }
 
-TEST(a_notice_is_wanted_only_with_headsup_on_its_kind_on_and_the_friend_not_muted)
+TEST(a_notice_is_wanted_only_with_headsup_on_its_kind_on_and_the_friend_included)
 {
     Settings s;
     const FriendNews online{NoticeKind::Online, 1001, "Two"}, offline{NoticeKind::Offline, 1001, "Two"};
     CHECK(NoticeWanted(online, s, {}) && NoticeWanted(offline, s, {}));
-    CHECK(!NoticeWanted(online, s, {1001}) && NoticeWanted(online, s, {1002}));
+    CHECK(!NoticeWanted(online, s, FriendsIncluded{false, {1001}}) && NoticeWanted(online, s, FriendsIncluded{false, {1002}}));
+    CHECK(!NoticeWanted(online, s, FriendsIncluded{true, {}}));
     s.friendNoticeOffline = false;
     CHECK(NoticeWanted(online, s, {}) && !NoticeWanted(offline, s, {}));
     s.friendNoticeOnline = false;
@@ -83,102 +84,64 @@ TEST(a_notice_is_wanted_only_with_headsup_on_its_kind_on_and_the_friend_not_mute
     CHECK(!NoticeWanted(online, s, {}));
 }
 
-TEST(the_mute_file_holds_one_account_a_line_and_survives_a_hand_edit)
+TEST(the_included_file_holds_none_and_the_accounts_left_out_and_survives_a_hand_edit)
 {
-    CHECK_EQ(FriendMutesText({1003, 1001}), "1001\n1003\n");
-    CHECK_EQ(FriendMutesText({}), "");
-    CHECK((FriendMutesFrom("1001\n1003\n") == FriendMutes{1001, 1003}));
-    CHECK((FriendMutesFrom("abc\r\n\r\n 1002 \r\n1002\n-5\n12x\n0\n99999999999\n7") == FriendMutes{7, 1002}));
-    CHECK(FriendMutesFrom("").empty());
+    CHECK_EQ(IncludedText({true, {}}), "none\n");
+    CHECK_EQ(IncludedText({false, {1002, 1001}}), "1001\n1002\n");
+    CHECK_EQ(IncludedText({}), "");
+    CHECK((IncludedFrom(" 1002 \r\nnone\nabc\n-4\n0\n1001x\n\n1001") == FriendsIncluded{true, {1001, 1002}}));
+    CHECK((IncludedFrom("1001\n1003\n") == FriendsIncluded{false, {1001, 1003}}));
+    CHECK(IncludedFrom("") == FriendsIncluded{});
 }
 
-TEST(a_notice_is_solid_for_four_fifths_of_its_time_then_fades)
+TEST(all_and_none_tick_and_untick_everyone)
 {
-    CHECK_EQ(NoticeOpacity(0.0f, 8.0f), 1.0f);
-    CHECK_EQ(NoticeOpacity(6.4f, 8.0f), 1.0f);
-    CHECK(std::abs(NoticeOpacity(7.2f, 8.0f) - 0.5f) < 0.001f); // halfway through its last 1.6 s
-    CHECK_EQ(NoticeOpacity(8.0f, 8.0f), 0.0f);
-    CHECK_EQ(NoticeOpacity(9.0f, 8.0f), 0.0f);
-    CHECK_EQ(NoticeBarShare(2.0f, 8.0f), 0.75f);
-    CHECK_EQ(NoticeBarShare(9.0f, 8.0f), 0.0f);
+    const std::vector<uint32_t> accounts = {1001, 1002, 1003};
+    FriendsIncluded included{false, {1002}};
+    CHECK(!AllIncluded(included, accounts));
+    CHECK(ToggleIncluded(included, accounts, 0));
+    CHECK(included == FriendsIncluded{} && AllIncluded(included, accounts));
+    CHECK(!ToggleIncluded(included, accounts, 0)); // already All
+    CHECK(ToggleIncluded(included, accounts, 1));
+    CHECK((included == FriendsIncluded{true, {}}));
+    for (const uint32_t account : {1001u, 1002u, 1003u, 9999u}) CHECK(!Includes(included, account));
+    CHECK(!AllIncluded(included, accounts));
+    CHECK(!ToggleIncluded(included, accounts, 1)); // already None
 }
 
-TEST(the_stack_keeps_five_notices_oldest_first_and_drops_each_at_its_time)
+TEST(unticking_a_friend_clears_all_and_ticking_one_clears_none)
 {
-    NoticeStack stack;
-    for (int n = 0; n < 6; ++n) stack.Add(NoticeKind::Online, std::string(1, static_cast<char>('A' + n)), 10.0 + n);
-    std::vector<ShownNotice> shown = stack.Shown(15.0, 8.0f);
-    CHECK_EQ(shown.size(), size_t{5});
-    CHECK_EQ(shown.front().name, "B"); // A, the oldest, was pushed out by the sixth
-    CHECK_EQ(shown.back().name, "F");
-    CHECK_EQ(shown.front().share, 0.5f); // B is 4 s into 8
-    shown = stack.Shown(20.5, 8.0f);     // B (11) and C (12) are past 8 s; D is 7.5 s in, E 6.5, F 5.5
-    CHECK_EQ(shown.size(), size_t{3});
-    CHECK(std::abs(shown[0].opacity - 0.3125f) < 0.001f); // D: 1.1 s into its 1.6 s fade
-    CHECK(std::abs(shown[1].opacity - 0.9375f) < 0.001f); // E: 0.1 s into it
-    CHECK_EQ(shown[2].opacity, 1.0f);
-    const uint32_t d = shown[0].id;
-    CHECK(shown[1].id != d && stack.Shown(20.6, 8.0f)[0].id == d);
-    // The Duration turned down to 6 s while they show: D and E are older than it and go. F, 5.6 s in, is 0.8 s
-    // into a 1.2 s fade.
-    shown = stack.Shown(20.6, 6.0f);
-    CHECK_EQ(shown.size(), size_t{1});
-    CHECK(shown[0].name == "F" && std::abs(shown[0].opacity - 0.3333f) < 0.001f);
+    const std::vector<uint32_t> accounts = {1001, 1002, 1003};
+    FriendsIncluded included;
+    CHECK(ToggleIncluded(included, accounts, 3));
+    CHECK((included == FriendsIncluded{false, {1002}}) && !AllIncluded(included, accounts));
+    CHECK(ToggleIncluded(included, accounts, 3));
+    CHECK(included == FriendsIncluded{});
+    included = {true, {}};
+    CHECK(ToggleIncluded(included, accounts, 2));
+    CHECK((included == FriendsIncluded{false, {1002, 1003}}));
+    CHECK(Includes(included, 1001) && !Includes(included, 1002));
 }
 
-TEST(notices_stack_ten_pixels_apart_down_from_the_anchor_or_up_from_it)
+TEST(a_friend_added_later_is_included_unless_none_is_picked)
 {
-    const float heights[] = {50.0f, 50.0f, 60.0f};
-    CHECK((NoticeTops(heights, 200.0f, false) == std::vector<float>{200.0f, 260.0f, 320.0f}));
-    CHECK((NoticeTops(heights, 500.0f, true) == std::vector<float>{450.0f, 390.0f, 320.0f}));
-    CHECK(NoticeTops({}, 200.0f, false).empty());
+    CHECK(Includes(FriendsIncluded{false, {1002}}, 1004));
+    CHECK(!Includes(FriendsIncluded{true, {}}, 1004));
+    // Every friend unticked by hand is not None: a friend added later still gets in.
+    const std::vector<uint32_t> accounts = {1001, 1002};
+    FriendsIncluded included;
+    ToggleIncluded(included, accounts, 2);
+    ToggleIncluded(included, accounts, 3);
+    CHECK(!included.none && !Includes(included, 1001) && Includes(included, 1004));
 }
 
-TEST(a_notice_slides_to_its_place_and_lands_on_it)
+TEST(a_row_past_the_list_changes_nothing)
 {
-    CHECK(std::abs(Slid(100.0f, 0.0f, 0.016f) - 87.2f) < 0.01f); // 8 a second of what is left: 12.8% of 100
-    CHECK_EQ(Slid(100.0f, 0.0f, 0.5f), 0.0f);                    // a long frame never overshoots
-    CHECK_EQ(Slid(0.4f, 0.0f, 0.016f), 0.0f);                    // within half a pixel it is there
-    CHECK_EQ(Slid(7.0f, 7.0f, 0.016f), 7.0f);
-}
-
-TEST(the_stack_starts_under_the_panel_and_a_placed_one_keeps_its_share_of_the_screen)
-{
-    NoticeSpot at = NoticeAnchor(-1, -1, false, 1920.0f, 1080.0f, 45.0f, 60.0f);
-    CHECK(at.x == 10.0f && at.y == 55.0f);
-    at = NoticeAnchor(-1, -1, true, 1920.0f, 1080.0f, 45.0f, 60.0f);
-    CHECK(at.x == 10.0f && at.y == 1070.0f);
-    at = NoticeAnchor(2500, 5000, false, 1920.0f, 1080.0f, 45.0f, 60.0f);
-    CHECK(at.x == 480.0f && at.y == 540.0f);
-    CHECK_EQ(SpotShare(480.0f, 1920.0f), 2500);
-    // Saved at the bottom right of a wider screen: the first 300 by 60 px box stays whole on this one.
-    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f, 60.0f).x, 980.0f);
-    CHECK_EQ(NoticeAnchor(10000, 10000, false, 1280.0f, 720.0f, 45.0f, 60.0f).y, 660.0f);
-}
-
-TEST(a_spot_placed_for_one_way_of_stacking_keeps_the_first_notice_on_the_screen_the_other_way)
-{
-    // Dragged to the bottom with Stack Upward on, then switched off: the first box sits 60 px over the bottom.
-    CHECK_EQ(NoticeAnchor(2500, 10000, false, 1920.0f, 1080.0f, 45.0f, 60.0f).y, 1020.0f);
-    // Dragged to the top with it off, then switched on: the first box hangs from 60 px down, not off the top.
-    CHECK_EQ(NoticeAnchor(2500, 0, true, 1920.0f, 1080.0f, 45.0f, 60.0f).y, 60.0f);
-}
-
-TEST(an_online_sound_waits_ten_seconds_and_an_offline_has_none)
-{
-    SoundWaits waits;
-    CHECK(waits.Due(NoticeKind::Online, 100.0));
-    CHECK(!waits.Due(NoticeKind::Online, 106.0)); // a silent one does not start the wait again
-    CHECK(!waits.Due(NoticeKind::Online, 109.9) && waits.Due(NoticeKind::Online, 110.0));
-    CHECK(!waits.Due(NoticeKind::Offline, 500.0));
-}
-
-TEST(a_notice_says_who_and_what_in_its_kinds_color)
-{
-    CHECK_EQ(NoticeMessage(NoticeKind::Online, "Two"), "Two is now online");
-    CHECK_EQ(NoticeMessage(NoticeKind::Offline, "Two"), "Two went offline");
-    CHECK_EQ(std::string(NoticeTitle(NoticeKind::Online)), "Friend Online");
-    CHECK(NoticeColor(NoticeKind::Online) != NoticeColor(NoticeKind::Offline));
+    const std::vector<uint32_t> accounts = {1001, 1002, 1003};
+    FriendsIncluded included{false, {1002}};
+    CHECK(!ToggleIncluded(included, accounts, -1));
+    CHECK(!ToggleIncluded(included, accounts, 5));
+    CHECK((included == FriendsIncluded{false, {1002}}));
 }
 
 TEST(a_read_while_your_character_is_not_known_is_skipped)
@@ -189,19 +152,4 @@ TEST(a_read_while_your_character_is_not_known_is_skipped)
     CHECK(watch.Read(0, {E(1001, "Two", true)}, kAfter).empty());
     CHECK((watch.Read(65001, {E(1001, "Two", true)}, kAfter + 1.0) ==
            std::vector<FriendNews>{{NoticeKind::Online, 1001, "Two"}}));
-}
-
-TEST(the_preview_holds_a_notice_of_each_kind_that_is_on_and_one_online_when_none_is)
-{
-    Settings s;
-    std::vector<ShownNotice> samples = NoticeSamples(s);
-    CHECK(samples.size() == 2 && samples[0].kind == NoticeKind::Online && samples[1].kind == NoticeKind::Offline);
-    CHECK(samples[0].name == kNoticeSampleName && samples[0].opacity == 1.0f && samples[0].share == 1.0f);
-    CHECK(samples[0].id != samples[1].id);
-    s.friendNoticeOnline = false;
-    samples              = NoticeSamples(s);
-    CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Offline);
-    s.friendNoticeOffline = false;
-    samples               = NoticeSamples(s);
-    CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Online); // something to see and drag
 }

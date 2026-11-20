@@ -395,11 +395,17 @@ TEST(text_in_a_box_stands_in_its_middle_by_its_fonts_capitals)
     }
 }
 
-TEST(every_page_fits_the_sidebar_of_a_window_at_its_first_size)
+TEST(every_page_of_the_sidebar_can_be_scrolled_to_at_the_windows_first_size)
 {
     Window window;
     Rml::Element* sidebar = window.Find(kMenuSidebarId);
-    CHECK(sidebar->GetScrollHeight() <= sidebar->GetClientHeight());
+    sidebar->SetScrollTop(sidebar->GetScrollHeight());
+    window.Frames(2);
+    const auto bottom = [](Rml::Element* element) {
+        return element->GetAbsoluteOffset(Rml::BoxArea::Border).y + element->GetBox().GetSize(Rml::BoxArea::Border).y;
+    };
+    const std::string last = std::string("nav-") + kWindowLayout.pages.back().key;
+    CHECK(bottom(window.Find(last)) <= sidebar->GetAbsoluteOffset(Rml::BoxArea::Padding).y + sidebar->GetClientHeight() + 0.5f);
 }
 
 TEST(a_pages_name_stays_on_one_line_under_the_pointer_and_its_highlight_goes_on_past_it)
@@ -906,7 +912,7 @@ TEST(escape_gives_a_box_back_what_it_held_and_a_click_beside_a_lines_stretches_t
 TEST(every_switch_of_every_page_flips_a_setting_of_its_own_and_flips_it_back)
 {
     // Not settings: what the window itself is showing.
-    const std::vector<std::string> windowsOwn{"vanillaui-base-game-ui-all-windows", "userinterface-notice-show-notice-preview"};
+    const std::vector<std::string> windowsOwn{"vanillaui-base-game-ui-all-windows"};
     for (const LayoutPage& info : kWindowLayout.pages)
     {
         Window window;
@@ -1011,6 +1017,7 @@ TEST(every_dropdown_slider_row_of_choices_and_number_of_every_page_and_tab_sets_
             {
                 reset(tab);
                 if (!window.Shows(id)) continue; // a setting of something that is off on a new install
+                if (id == "notifications-notice-friends-friends-included") continue; // the plugin's to keep: no setting
                 window.Click(id);
                 std::string other;
                 for (int option = 0; window.Find(id + "-o-" + std::to_string(option)) != nullptr && other.empty(); ++option)

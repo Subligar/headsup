@@ -204,7 +204,10 @@ namespace headsup
     bool RmlMenu::TakeCaseTest() { return std::exchange(m_State.caseTestRequested, false); }
     bool RmlMenu::TakePopupTest() { return std::exchange(m_State.popupTestRequested, false); }
     bool RmlMenu::TakeNoticeTest() { return std::exchange(m_State.noticeTestRequested, false); }
-    std::optional<MuteAsked> RmlMenu::TakeMuteAsked() { return std::exchange(m_State.muteAsked, std::nullopt); }
+    bool RmlMenu::NoticesPageOpen() const { return open && !InSetup() && m_State.page == Page::Notifications; }
+    bool RmlMenu::TakeFriendNoticeTest() { return std::exchange(m_State.friendNoticeTestRequested, false); }
+    std::optional<NoticeKind> RmlMenu::TakeSoundPicked() { return std::exchange(m_State.soundPicked, std::nullopt); }
+    std::optional<FriendsIncluded> RmlMenu::TakeIncludedAsked() { return std::exchange(m_State.includedAsked, std::nullopt); }
     bool RmlMenu::TakeSetupBackup() { return std::exchange(m_State.setupBackup, false); }
 
     void RmlMenu::StartSetup(const Settings& settings, bool rerun)
@@ -592,6 +595,19 @@ namespace headsup
         }
     }
 
+    // RmlUi takes a scrollbar's width out of the list's content, which would cut the longest page name: while the
+    // list scrolls, it is that much wider.
+    void RmlMenu::FitSidebar()
+    {
+        const bool scrolls = m_Sidebar->GetScrollHeight() > m_Sidebar->GetClientHeight();
+        const bool widened = m_Sidebar->GetLocalProperty(Rml::PropertyId::Width) != nullptr;
+        if (scrolls == widened) return;
+        if (!scrolls) m_Sidebar->RemoveProperty(Rml::PropertyId::Width);
+        else
+            SetPx(m_Sidebar, Rml::PropertyId::Width,
+                m_Sidebar->GetBox().GetSize(Rml::BoxArea::Border).x + std::round(kScrollbar * m_FontPixels));
+    }
+
     // As a filter, the window is drawn whole into a layer that is laid over the game at this opacity, so its parts do
     // not show through each other; at full opacity it needs no layer.
     void RmlMenu::ApplyOpacity()
@@ -853,6 +869,7 @@ namespace headsup
         if (pixels != m_FontPixels)
         {
             m_FontPixels = pixels;
+            m_Sidebar->RemoveProperty(Rml::PropertyId::Width); // the names' width changes with the size: fitted again
             // What the pointer is on, a size arrow just clicked, stays under it as the window grows or shrinks, as
             // far as the screen lets the window move: the next click lands on the same arrow.
             Rml::Element* held = m_Visible ? host.context->GetHoverElement() : nullptr;
@@ -937,6 +954,7 @@ namespace headsup
         else if (Rml::ElementFormControlInput* input = AsInput(Find(typingIn)); input != nullptr && input != host.context->GetFocusElement())
             FocusAt(input, caret);
         FitRuns();
+        FitSidebar();
         if (form.scrollToTop) m_ScrollTo = 0.0f;
         if (m_ScrollTo)
         {

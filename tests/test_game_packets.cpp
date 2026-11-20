@@ -275,3 +275,47 @@ TEST(a_catch_message_names_who_caught_what)
     CHECK_EQ(message->item, 4401);
     CHECK(!ParseCatchMessage(caught, 0x13).has_value());
 }
+
+namespace
+{
+    // Phoenix's s2c 0x0DC as the server builds it (0x0dc_group_solicit_req.h): the header, UniqueNo, ActIndex,
+    // AnonFlag, Kind, the name in 16 bytes, RaceNo and two zeros.
+    std::vector<uint8_t> Invite(uint8_t kind, const std::string& name)
+    {
+        std::vector<uint8_t> p = {0xDC, 0x10, 0x00, 0x00, 0xEA, 0xFD, 0x00, 0x00, 0x01, 0x04, 0x00, kind};
+        std::vector<uint8_t> field(16, 0);
+        std::copy_n(name.begin(), std::min<size_t>(name.size(), 16), field.begin());
+        p.insert(p.end(), field.begin(), field.end());
+        p.insert(p.end(), {0x00, 0x00, 0x00, 0x00});
+        return p;
+    }
+}
+
+TEST(an_invite_names_its_inviter_and_tells_a_party_from_an_alliance)
+{
+    std::vector<uint8_t> p = Invite(0, "Headsuptwo");
+    CHECK_EQ(p.size(), size_t{32});
+    CHECK(ParseInvite(p.data(), 32) == (PartyInvite{"Headsuptwo", false}));
+    p = Invite(5, "Headsuptwo");
+    CHECK(ParseInvite(p.data(), 32) == (PartyInvite{"Headsuptwo", true}));
+    p = Invite(3, "Headsuptwo");
+    CHECK(ParseInvite(p.data(), 32) == (PartyInvite{"Headsuptwo", false}));
+}
+
+TEST(an_inviters_name_stops_at_sixteen_bytes_or_the_first_zero)
+{
+    std::vector<uint8_t> p = Invite(0, std::string(16, 'A'));
+    p[0x1C] = p[0x1D] = 0x42; // RaceNo right after the name
+    CHECK_EQ(ParseInvite(p.data(), 32)->name, std::string(16, 'A'));
+    p = Invite(0, std::string("Al\0xyz", 6));
+    CHECK_EQ(ParseInvite(p.data(), 32)->name, "Al");
+    p = Invite(0, "");
+    CHECK(!ParseInvite(p.data(), 32));
+}
+
+TEST(an_invite_packet_cut_short_is_no_invite)
+{
+    const std::vector<uint8_t> p = Invite(0, "Headsuptwo");
+    CHECK(!ParseInvite(p.data(), 27));
+    CHECK(!ParseInvite(nullptr, 32));
+}

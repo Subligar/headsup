@@ -192,6 +192,17 @@ namespace headsup
         return InspectMessage{std::string(name, strnlen(name, kNameBytes)), ReadAt<uint32_t>(data, kInspectTitle)};
     }
 
+    std::optional<PartyInvite> ParseInvite(const uint8_t* data, uint32_t size)
+    {
+        constexpr size_t kKindAt = 0x0B, kNameAt = 0x0C;
+        constexpr uint8_t kAllianceKind = 5; // PartyKind::Alliance
+        if (data == nullptr || size < kNameAt + kNameBytes) return std::nullopt;
+        const auto* name = reinterpret_cast<const char*>(data + kNameAt);
+        PartyInvite invite{std::string(name, strnlen(name, kNameBytes)), data[kKindAt] == kAllianceKind};
+        if (invite.name.empty()) return std::nullopt;
+        return invite;
+    }
+
     std::string WornLinkshellName(uint32_t itemFlags, const uint8_t* extra, size_t extraBytes)
     {
         if (extra == nullptr || itemFlags != kWornLinkshellFlags || extraBytes < kItemLinkshell + kItemLinkshellBytes) return {};

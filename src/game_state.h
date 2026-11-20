@@ -27,6 +27,8 @@ namespace headsup
         std::optional<uint32_t> mobDied;   // the server ID of a mob that died within 50 yalms
         std::optional<GuardEvent> guardEvent; // a conquest overseer's, for the supply runs
         std::optional<uint16_t> caught;       // the item you just landed, when it reached your bag
+        std::optional<PartyInvite> invited;   // you were invited to a party or an alliance
+        bool inviteOver = false;              // the server called the invite off
     };
 
     // A player's /check as the server answered it: the message, then the general part, kept until the next check of

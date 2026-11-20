@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -916,4 +917,41 @@ TEST(a_faint_dropdown_of_checks_takes_no_click_left_open)
     pass({{"p-c-show", kClickEvent, ""}}, false);
     const Form checksFaint = pass({{"p-c-show-o-1", kClickEvent, ""}}, true);
     CHECK(!checksFaint.changed && show.when == 0 && !show.always);
+}
+
+TEST(a_check_list_tells_the_rows_clicked_and_ticks_what_the_page_says)
+{
+    const std::vector<std::string> rows = {"All", "None", "Amy"};
+    std::set<int> ticked;
+    std::vector<int> told;
+    FormState state;
+    const auto pass = [&](const std::vector<FormEvent>& events, bool faded = false) {
+        Form form(events, state);
+        form.pageKey = "p";
+        form.BeginCard("C");
+        form.Fade(faded);
+        form.CheckList("Who", rows, [&](int row) { return ticked.contains(row); },
+            [&] { return std::to_string(ticked.size()); },
+            [&](int row) {
+                told.push_back(row);
+                if (row >= 0 && row < static_cast<int>(rows.size()) && !ticked.erase(row)) ticked.insert(row);
+            },
+            nullptr);
+        form.EndCard();
+        return form;
+    };
+    CHECK_EQ(TextOf(pass({}), "p-c-who-val"), "0");
+    const Form open = pass({{"p-c-who", kClickEvent, ""}});
+    CHECK(open.popup && Has(open.popup->rml, "Amy") && Has(open.popup->rml, "None"));
+    size_t rowsShown = 0;
+    for (size_t at = open.popup->rml.find("opt chk"); at != std::string::npos; at = open.popup->rml.find("opt chk", at + 1))
+        ++rowsShown;
+    CHECK_EQ(rowsShown, size_t{3});
+    const Form one = pass({{"p-c-who-o-2", kClickEvent, ""}});
+    CHECK((ticked == std::set<int>{2}) && ClassOn(one, "p-c-who-o-2", "on") && !ClassOn(one, "p-c-who-o-1", "on"));
+    CHECK(TextOf(one, "p-c-who-val") == "1" && !one.changed && one.popup);
+    pass({{"p-c-who-o-7", kClickEvent, ""}});
+    CHECK((told == std::vector<int>{2, 7}) && (ticked == std::set<int>{2}));
+    pass({{"p-c-who-o-0", kClickEvent, ""}}, true);
+    CHECK((told == std::vector<int>{2, 7}) && (ticked == std::set<int>{2}));
 }

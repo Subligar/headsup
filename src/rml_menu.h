@@ -59,8 +59,11 @@ namespace headsup
         bool TakeCaseTest();
         bool TakePopupTest();
         bool TakeNoticeTest();
-        bool NoticePreview() const { return m_State.noticePreview; }
-        std::optional<MuteAsked> TakeMuteAsked();
+        std::optional<FriendsIncluded> TakeIncludedAsked();
+        bool TakeFriendNoticeTest();
+        std::optional<NoticeKind> TakeSoundPicked();
+        // The Notifications page is open: its test notifications show and drag without Shift.
+        bool NoticesPageOpen() const;
         // Opens the window on Setup, from the settings as they are: the first time, or again (rerun), which warns.
         void StartSetup(const Settings& settings, bool rerun);
         bool InSetup() const { return m_State.setup.has_value(); }
@@ -120,6 +123,7 @@ namespace headsup
         Form Pass(std::vector<FormEvent> events, const MenuHost& host, Settings& settings, const MenuReadings& readings,
             const std::vector<std::string>& fonts, bool window = true);
         void FitRuns();
+        void FitSidebar();
         // The window's pages when window, and the settings over the panel's popup, for these widgets at this size.
         void ApplyBlocks(const std::vector<FormBlock>& blocks, const std::vector<PanelWidget>& of, int pixels, bool window = true);
         // Shows the settings' block over the panel's popup at settingsAt, or hides them without one. True when its

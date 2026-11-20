@@ -49,9 +49,9 @@ namespace headsup
 
             {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishCase", &Settings::fishCase}, {"fishCaseBackground", &Settings::fishCaseBackground},
+            {"noticeBar", &Settings::noticeBar},
             {"friendNoticeOnline", &Settings::friendNoticeOnline}, {"friendNoticeOffline", &Settings::friendNoticeOffline},
-            {"friendNoticeUpward", &Settings::friendNoticeUpward}, {"friendNoticeBar", &Settings::friendNoticeBar},
-            {"friendNoticeOnlineSound", &Settings::friendNoticeOnlineSound},
+            {"partyNotice", &Settings::partyNotice}, {"partyNoticeButtons", &Settings::partyNoticeButtons},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
             {"combatPopups", &Settings::combatPopups},
             {"combatPopupWords", &Settings::combatPopupWords},
@@ -120,10 +120,16 @@ namespace headsup
             {"combatPopupHeight", &Settings::combatPopupHeight, 0, kMaxCombatPopupHeight},
             {"combatPopupX", &Settings::combatPopupX, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
             {"combatPopupY", &Settings::combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
-            {"friendNoticeSeconds", &Settings::friendNoticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds},
+            {"noticeWidth", &Settings::noticeWidth, kFlexibleNoticeWidth, kMaxNoticeWidth},
+            {"noticeHeight", &Settings::noticeHeight, kFlexibleNoticeHeight, kMaxNoticeHeight},
+            {"noticeRounding", &Settings::noticeRounding, kThemeRounding, kMaxRounding},
+            {"noticeVolume", &Settings::noticeVolume, 0, kMaxNoticeVolume, kPercentStep},
+            {"noticeSeconds", &Settings::noticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds},
+            {"noticeMost", &Settings::noticeMost, kMinNoticeMost, kMaxNoticeMost},
+            {"noticeAcross", &Settings::noticeAcross, kFishBarUnplaced, kCasePlaceWhole},
+            {"noticeDown", &Settings::noticeDown, kFishBarUnplaced, kCasePlaceWhole},
             {"friendNoticeVolume", &Settings::friendNoticeVolume, 0, kMaxNoticeVolume, kPercentStep},
-            {"friendNoticeAcross", &Settings::friendNoticeAcross, kFishBarUnplaced, kCasePlaceWhole},
-            {"friendNoticeDown", &Settings::friendNoticeDown, kFishBarUnplaced, kCasePlaceWhole},
+            {"partyNoticeVolume", &Settings::partyNoticeVolume, 0, kMaxNoticeVolume, kPercentStep},
             {"helpBarX", &Settings::helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset},
             {"helpBarY", &Settings::helpBarY, -kMaxHelpBarOffset, kMaxHelpBarOffset}};
 
@@ -365,6 +371,18 @@ namespace headsup
         const char* const kFishStaminaNames[kFishStaminaCount]  = {"hide", "vanilla", "headsup"};
         constexpr const char* kHelpAnchorKey                    = "helpBarAnchor";
         const char* const kHelpAnchorNames[kHelpAnchorCount]    = {"left", "center", "right"};
+        constexpr const char* kNoticeAnchorKey                  = "noticeAnchor";
+        constexpr const char* kNoticeAlignKey                   = "noticeAlign";
+        constexpr const char* kNoticeEdgeKey                    = "noticeEdge";
+        const char* const kNoticeEdgeNames[kNoticeEdgeCount]    = {"top", "bottom"};
+        constexpr const char* kNoticeFitKey                     = "noticeFit";
+        const char* const kNoticeFitNames[kNoticeFitCount]      = {"shrink", "truncate"};
+        constexpr const char* kNoSoundKey = "none", *kChimeSoundKey = "chime", *kCallSoundPrefix = "call";
+        // Each notification's sound pick, saved by NoticeSoundKey.
+        constexpr int Settings::* kNoticeSoundFields[] = {&Settings::friendNoticeOnlineSound,
+            &Settings::friendNoticeOfflineSound, &Settings::partyNoticeSound};
+        constexpr const char* kNoticeSoundKeys[] = {"friendNoticeOnlineSound", "friendNoticeOfflineSound", "partyNoticeSound"};
+        static_assert(std::size(kNoticeSoundFields) == std::size(kNoticeSoundKeys));
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
             "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barCustom"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
@@ -1288,6 +1306,20 @@ namespace headsup
         }
     }
 
+    std::string NoticeSoundKey(int choice)
+    {
+        if (choice == kChimeSound) return kChimeSoundKey;
+        if (choice < kFirstCallChoice || choice >= kNoticeSoundCount) return kNoSoundKey;
+        return kCallSoundPrefix + std::to_string(choice - kFirstCallChoice);
+    }
+
+    int NoticeSoundChoice(std::string_view key)
+    {
+        for (int choice = 0; choice < kNoticeSoundCount; ++choice)
+            if (NoticeSoundKey(choice) == key) return choice;
+        return kNoSound;
+    }
+
     int DefaultCursorWidth() { return NaturalCursorWidth(kDefaultCursorStyle, kDefaultCursorHeight); }
 
     const char* CursorStyleName(CursorStyle style) { return kCursorStyleNames[static_cast<int>(style)]; }
@@ -1394,6 +1426,12 @@ namespace headsup
         }
         if (MenuFontNamed(s.menuFont) == nullptr) s.menuFont = d.menuFont;
         if (static_cast<int>(s.helpBarAnchor) >= kHelpAnchorCount) s.helpBarAnchor = d.helpBarAnchor;
+        if (static_cast<int>(s.noticeAnchor) >= kHelpAnchorCount) s.noticeAnchor = d.noticeAnchor;
+        if (static_cast<int>(s.noticeAlign) >= kHelpAnchorCount) s.noticeAlign = d.noticeAlign;
+        if (static_cast<int>(s.noticeEdge) >= kNoticeEdgeCount) s.noticeEdge = d.noticeEdge;
+        if (static_cast<int>(s.noticeFit) >= kNoticeFitCount) s.noticeFit = d.noticeFit;
+        for (int Settings::* field : kNoticeSoundFields)
+            if (s.*field < 0 || s.*field >= kNoticeSoundCount) s.*field = d.*field;
         ClampDesigner(s, d);
         for (StatusBadgeRule& status : s.statusBadges)
         {
@@ -1937,6 +1975,19 @@ namespace headsup
                 store.GetString(kBlueMagicLearnedKey, ""), static_cast<int>(s.blueMagicLearned)));
             s.helpBarAnchor = static_cast<HelpAnchor>(NameIndex(kHelpAnchorNames, kHelpAnchorCount,
                 store.GetString(kHelpAnchorKey, ""), static_cast<int>(s.helpBarAnchor)));
+            s.noticeAnchor = static_cast<HelpAnchor>(NameIndex(kHelpAnchorNames, kHelpAnchorCount,
+                store.GetString(kNoticeAnchorKey, ""), static_cast<int>(s.noticeAnchor)));
+            s.noticeAlign = static_cast<HelpAnchor>(NameIndex(kHelpAnchorNames, kHelpAnchorCount,
+                store.GetString(kNoticeAlignKey, ""), static_cast<int>(s.noticeAlign)));
+            s.noticeEdge = static_cast<NoticeEdge>(NameIndex(kNoticeEdgeNames, kNoticeEdgeCount,
+                store.GetString(kNoticeEdgeKey, ""), static_cast<int>(s.noticeEdge)));
+            s.noticeFit = static_cast<NoticeFit>(NameIndex(kNoticeFitNames, kNoticeFitCount,
+                store.GetString(kNoticeFitKey, ""), static_cast<int>(s.noticeFit)));
+            for (size_t i = 0; i < std::size(kNoticeSoundFields); ++i)
+            {
+                const std::string key = store.GetString(kNoticeSoundKeys[i], "");
+                if (const int choice = NoticeSoundChoice(key); NoticeSoundKey(choice) == key) s.*kNoticeSoundFields[i] = choice;
+            }
             s.fishStamina = static_cast<FishBarShown>(NameIndex(kFishStaminaNames, kFishStaminaCount,
                 store.GetString(kFishStaminaKey, ""), static_cast<int>(s.fishStamina)));
             s.combatPopupSides = PopupColumnsFrom(store.GetString(kCombatPopupColumnsKey, ""), s.combatPopupSides);
@@ -2035,6 +2086,12 @@ namespace headsup
         StoreBool(store, kCustomThemeKey + std::string(kStatusBackSuffix), s.customPalette.statusBack);
         store.Set(kCustomThemeNameKey, s.customThemeName.c_str());
         store.Set(kHelpAnchorKey, kHelpAnchorNames[static_cast<int>(s.helpBarAnchor)]);
+        store.Set(kNoticeAnchorKey, kHelpAnchorNames[static_cast<int>(s.noticeAnchor)]);
+        store.Set(kNoticeAlignKey, kHelpAnchorNames[static_cast<int>(s.noticeAlign)]);
+        store.Set(kNoticeEdgeKey, kNoticeEdgeNames[static_cast<int>(s.noticeEdge)]);
+        store.Set(kNoticeFitKey, kNoticeFitNames[static_cast<int>(s.noticeFit)]);
+        for (size_t i = 0; i < std::size(kNoticeSoundFields); ++i)
+            store.Set(kNoticeSoundKeys[i], NoticeSoundKey(s.*kNoticeSoundFields[i]).c_str());
         store.Set(kFishStaminaKey, kFishStaminaNames[static_cast<int>(s.fishStamina)]);
         store.Set(kCombatPopupColumnsKey, PopupColumnsText(s.combatPopupSides).c_str());
         store.Set(kMenuFontKey, s.menuFont.c_str());

@@ -292,44 +292,6 @@
             {"key": "key", "name": "Key", "tip": "Turns screenshot mode on and off. The game sees the key too, so pick one it does not use."},
             {"key": "hide-game-windows", "name": "Hide Game Windows", "tip": "The game's own windows and chat go too."}
           ]
-        },
-        {
-          "key": "notice-show",
-          "name": "Friend Notices",
-          "description": "A notice on screen when someone on your friend list comes online or goes offline. It reads the friend list the game already keeps, so it asks the server for nothing. Hold Shift and drag a notice to move them; the place is saved.",
-          "settings": [
-            {"key": "notice-online", "name": "Show Online", "tip": "Shows a notice when a friend comes online. Default: On."},
-            {"key": "notice-offline", "name": "Show Offline", "tip": "Shows a notice when a friend goes offline. Default: On."},
-            {"key": "notice-seconds", "name": "Duration", "tip": "How long a notice stays on screen. It fades out over the last fifth of that time. Default: 8 s."},
-            {"key": "notice-upward", "name": "Stack Upward", "tip": "Puts new notices above the older ones instead of under them, and makes the spot you drag them to the bottom of the stack. Default: Off."},
-            {"key": "notice-bar", "name": "Countdown Bar", "tip": "Shows a thin bar in each notice that runs down until the notice goes. Default: On."},
-            {"key": "notice-preview", "name": "Preview", "tip": "Holds a notice of each kind on the screen while this window is open, so you can see how they look and Shift drag them where you want them. Default: Off."},
-            {"key": "notice-test", "name": "Test", "tip": "Acts as if a friend came online, with the sound, and as if they went offline at the next press. It follows your settings, as a real friend would."}
-          ]
-        },
-        {
-          "key": "notice-sound",
-          "name": "Friend Notice Sound",
-          "settings": [
-            {"key": "notice-online-sound", "name": "Sound on Online", "tip": "Plays a chime when a friend comes online, at most once every 10 seconds. Default: On."},
-            {"key": "notice-volume", "name": "Volume", "tip": "How loud the chime is. Default: 60%."}
-          ]
-        },
-        {
-          "key": "notice-mutes",
-          "name": "Muted Friends",
-          "settings": [
-            {
-              "key": "mute-list",
-              "words": [
-                {"key": "note", "name": "A muted friend gets no notice and no sound. Your mutes count for all your characters."},
-                {"key": "empty", "name": "Your friend list shows here once you are in game."},
-                {"key": "muted", "name": "Muted"},
-                {"key": "notify", "name": "Notify"},
-                {"key": "row-tip", "tip": "Set to Muted, nothing shows or plays when this friend comes online or goes offline."}
-              ]
-            }
-          ]
         }
       ]
     },
@@ -464,6 +426,91 @@
                 {"key": "row-tip", "tip": "Its shift down from where the game puts its windows, up when below zero."}
               ]
             }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "notifications",
+      "name": "Notifications",
+      "child": true,
+      "cards": [
+        {
+          "key": "notice-look",
+          "name": "Notifications",
+          "description": "How every notification looks and acts. While this page is open, a test notification of each kind stays on screen, and you can drag one to move them all. On any other page, hold Shift and drag.",
+          "settings": [
+            {"key": "notice-width", "name": "Width", "tip": "How wide each notification is. Flexible makes each one as wide as its text. Default: 300 px."},
+            {"key": "notice-height", "name": "Height", "tip": "How tall each notification is. Flexible makes each one as tall as its text. Default: Flexible."},
+            {
+              "key": "notice-fit",
+              "name": "Text Fitting",
+              "tip": "What happens to text that does not fit in a notification. Default: Shrink.",
+              "options": [
+                {"name": "Shrink", "tip": "Makes the text smaller until it fits."},
+                {"name": "Truncate", "tip": "Cuts the text off and ends it with an ellipsis."}
+              ]
+            },
+            {"key": "notice-rounding", "name": "Corner Rounding", "tip": "How round the corners are. Set by Theme uses your theme's Window Rounding. Default: Set by Theme."},
+            {"key": "notice-bar", "name": "Countdown Bar", "tip": "Shows a thin bar in each notification that runs down until the notification goes. Default: On."},
+            {"key": "notice-master-volume", "name": "Master Volume", "tip": "How loud every notification's sound is. Each kind's Alert Volume is multiplied by this. Default: 100%."},
+            {"key": "notice-seconds", "name": "Duration", "tip": "How long a notification stays on screen before it fades out. Put the pointer over any notification to keep them all on screen. Default: 8 s."},
+            {
+              "key": "notice-anchor",
+              "name": "Horizontal Anchor",
+              "tip": "Which side of the notifications stays put when their width changes. It does not move them or their text. Default: Left.",
+              "options": [
+                {"name": "Left", "tip": "Their left edges line up."},
+                {"name": "Center", "tip": "Their middles line up."},
+                {"name": "Right", "tip": "Their right edges line up."}
+              ]
+            },
+            {
+              "key": "notice-edge",
+              "name": "Vertical Anchor",
+              "tip": "Which way the notifications stack. It does not move them. Default: Top.",
+              "options": [
+                {"name": "Top", "tip": "New notifications go under the older ones."},
+                {"name": "Bottom", "tip": "New notifications go above the older ones."}
+              ]
+            },
+            {
+              "key": "notice-align",
+              "name": "Text Alignment",
+              "tip": "Where the text sits inside a notification. Default: Left.",
+              "options": [
+                {"name": "Left", "tip": "Text on the left."},
+                {"name": "Center", "tip": "Text in the middle."},
+                {"name": "Right", "tip": "Text on the right."}
+              ]
+            },
+            {"key": "notice-most", "name": "Max Notifications", "tip": "How many notifications show at once. One more pushes the oldest out. A party invite is not counted. Default: 5."},
+            {"key": "notice-test", "name": "Test", "tip": "Shows a test notification, picked at random from the kinds that are on, with its sound."}
+          ]
+        },
+        {
+          "key": "notice-friends",
+          "name": "Friend Notifications",
+          "description": "A notification when someone on your friend list comes online or goes offline. It reads the friend list the game already keeps, so it asks the server for nothing.",
+          "settings": [
+            {"key": "friend-notice-online", "name": "Show Online", "tip": "Shows a notification when a friend comes online. Default: On."},
+            {"key": "friend-notice-offline", "name": "Show Offline", "tip": "Shows a notification when a friend goes offline. Default: On."},
+            {"key": "friend-notice-online-sound", "name": "Online Sound Effect", "tip": "The sound when a friend comes online, at most once every 10 seconds. Default: Chime."},
+            {"key": "friend-notice-offline-sound", "name": "Offline Sound Effect", "tip": "The sound when a friend goes offline, at most once every 10 seconds. Default: None."},
+            {"key": "friend-notice-volume", "name": "Alert Volume", "tip": "How loud the friend sounds are. It is multiplied by Master Volume. Default: 60%."},
+            {"key": "friends-included", "name": "Friends Included", "tip": "Which friends you get notifications for. All also covers friends you add later. Your picks count for all your characters. Default: All."},
+            {"key": "friend-notice-test", "name": "Test", "tip": "Acts as if a friend came online, with its sound, and as if they went offline at the next press."}
+          ]
+        },
+        {
+          "key": "notice-party",
+          "name": "Party Notifications",
+          "description": "A notification when someone invites you to a party or an alliance. It stays for 90 seconds, or until you answer the invite.",
+          "settings": [
+            {"key": "party-notice", "name": "Show Invites", "tip": "Shows a notification when you are invited. Default: On."},
+            {"key": "party-notice-buttons", "name": "Show Buttons", "tip": "Adds Decline and Accept buttons to the notification. They answer the invite the way /decline and /join do. Default: On."},
+            {"key": "party-notice-sound", "name": "Sound Effect", "tip": "The sound when you are invited. Default: Call 14."},
+            {"key": "party-notice-volume", "name": "Alert Volume", "tip": "How loud the invite sound is. It is multiplied by Master Volume. Default: 60%."}
           ]
         }
       ]
@@ -1631,6 +1678,35 @@
         {"name": "Center"},
         {"name": "Right"}
       ]
+    },
+    {
+      "key": "notice-sounds",
+      "options": [
+        {"name": "None", "tip": "No sound."},
+        {"name": "Chime", "tip": "The chime of the FFXIFriendList addon."},
+        {"name": "Call 0", "tip": "The game's <call0> sound."},
+        {"name": "Call 1", "tip": "The game's <call1> sound."},
+        {"name": "Call 2", "tip": "The game's <call2> sound."},
+        {"name": "Call 3", "tip": "The game's <call3> sound."},
+        {"name": "Call 4", "tip": "The game's <call4> sound."},
+        {"name": "Call 5", "tip": "The game's <call5> sound."},
+        {"name": "Call 6", "tip": "The game's <call6> sound."},
+        {"name": "Call 7", "tip": "The game's <call7> sound."},
+        {"name": "Call 8", "tip": "The game's <call8> sound."},
+        {"name": "Call 9", "tip": "The game's <call9> sound."},
+        {"name": "Call 10", "tip": "The game's <call10> sound."},
+        {"name": "Call 11", "tip": "The game's <call11> sound."},
+        {"name": "Call 12", "tip": "The game's <call12> sound."},
+        {"name": "Call 13", "tip": "The game's <call13> sound."},
+        {"name": "Call 14", "tip": "The game's <call14> sound."},
+        {"name": "Call 15", "tip": "The game's <call15> sound."},
+        {"name": "Call 16", "tip": "The game's <call16> sound."},
+        {"name": "Call 17", "tip": "The game's <call17> sound."},
+        {"name": "Call 18", "tip": "The game's <call18> sound."},
+        {"name": "Call 19", "tip": "The game's <call19> sound."},
+        {"name": "Call 20", "tip": "The game's <call20> sound."},
+        {"name": "Call 21", "tip": "The game's <call21> sound."}
+      ]
     }
   ],
   "words": [
@@ -1649,6 +1725,7 @@
     {"key": "checks-picked", "name": "{count} Picked"},
     {"key": "local", "name": "Automatic"},
     {"key": "themes", "name": "Set by Theme"},
+    {"key": "flexible", "name": "Flexible"},
     {"key": "custom-color", "name": "Custom"},
     {"key": "default", "name": "Default"},
     {"key": "auto", "name": "Auto"},

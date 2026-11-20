@@ -40,6 +40,9 @@ namespace headsup
     constexpr uint16_t kTalkNumPacket        = 0x036; // server to client: a message from the zone's dialog
     constexpr uint16_t kTalkNumWorkPacket    = 0x02A; // server to client: one with numbers in it
     constexpr uint16_t kCatchPacket          = 0x027; // server to client: a numbered message with an item and a count
+    constexpr uint16_t kInvitePacket         = 0x0DC; // server to client: you are invited to a party or an alliance
+    constexpr uint16_t kInviteCancelPacket   = 0x0DE; // server to client: the invite is off (Phoenix never sends it)
+    constexpr uint16_t kInviteAnswerPacket   = 0x074; // client to server: /join or /decline
 
     // Offsets count Ashita's 4-byte header. Phoenix's s2c 0x00A: WeatherNumber at 0x68.
     std::optional<Weather> ParseZoneInWeather(const uint8_t* data, uint32_t size);
@@ -47,6 +50,16 @@ namespace headsup
     std::optional<uint32_t> ParseZoneInPlayer(const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x00A: the zone's number (ZoneNo) at 0x30.
     std::optional<uint16_t> ParseZoneInZone(const uint8_t* data, uint32_t size);
+    struct PartyInvite
+    {
+        std::string name; // the inviter's
+        bool alliance = false;
+        bool operator==(const PartyInvite&) const = default;
+    };
+    // Phoenix's s2c 0x0DC: Kind at 0x0B (5 an alliance, anything else a party, as the client reads it) and sName at
+    // 0x0C, 16 bytes with no zero after a name that long. The ids at 0x04 and 0x08 are your own when the inviter is
+    // on your map server, so nothing reads them.
+    std::optional<PartyInvite> ParseInvite(const uint8_t* data, uint32_t size);
     // Phoenix's s2c 0x01D: State at 0x04 is 1 (AllLoaded) once every bag is sent, which it sends last at a zone-in.
     bool ParseAllBagsSent(const uint8_t* data, uint32_t size);
     // A kTalkNumPacket's or kTalkNumWorkPacket's message number in the zone's dialog and whose it is (UniqueNo, at

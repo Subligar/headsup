@@ -49,6 +49,8 @@ namespace headsup
         // A mouse message in back-buffer pixels, to the overlay: true when an element of it is under the pointer or
         // being dragged, so neither the game nor the bar gets the message.
         bool Mouse(uint32_t message, float x, float y, int wheelDelta);
+        // Where the last mouse message put the pointer, in the overlay's pixels; none before the first.
+        std::optional<Rml::Vector2f> PointerAt() const { return m_Pointer; }
         // Whether the overlay's element under the pointer is in a document loaded from that source.
         bool HoverIn(const char* source) const;
         // A key to the overlay, typed into its focused text field as well: true when a text field has the focus,
@@ -68,6 +70,7 @@ namespace headsup
         void RefuseLayers() { m_Render.RefuseLayers(); }
 
     private:
+        std::optional<Rml::Vector2f> m_Pointer;
         void Render(Rml::Context* context);
         void Type(uint32_t virtualKey);
         bool Press(int button, int modifiers);

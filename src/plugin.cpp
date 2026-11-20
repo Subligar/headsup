@@ -95,6 +95,7 @@ namespace
     constexpr const char* kName              = "HeadsUp"; // as Ashita lists it and the chat names it
     constexpr const char* kCaseRefused = "The case opening can't be drawn: Direct3D refused one of its pictures. Reload HeadsUp to try again.";
     constexpr double kSeedsPerSecond   = 1000.0; // a Case's seed is the time in milliseconds
+    constexpr const char* kJoinCommand = "/join", *kDeclineCommand = "/decline"; // the game's answers to an invite
     // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
     constexpr const char* kVersion           = "0.5.5";
     // Before the addon host (LinuxXI's -1000 is seen to be), so an addon that skips blocked packets misses Auto-Check's.
@@ -110,7 +111,7 @@ namespace
     constexpr const char* kNoteLog           = "headsup";  // the log's name in HeadsUp's logs folder, before its time
     constexpr const char* kThemesFolder      = "themes";  // and their saved top panel themes
     constexpr const char* kOutpostsFile      = "outposts.txt"; // every character's supply runs, as overseers told them
-    constexpr const char* kFriendMutesFile   = "friend_mutes.txt"; // the friends muted, for every character alike
+    constexpr const char* kIncludedFile      = "friends_excluded.txt"; // Friends Included, for every character alike
     constexpr const char* kTurnInsFile       = "guild_turnins.txt"; // today's guild point turn-ins, as Phoenix's site gave them
     constexpr const char* kTopPanelPage      = "toppanel"; // the settings window's page and card the Settings widget opens
     constexpr const char* kWidgetLayoutCard  = "layout";
@@ -435,15 +436,17 @@ class HeadsUp final : public IPlugin
     std::optional<double> m_LinkshellsReadAt;
     headsup::FriendListReader m_FriendList;
     std::vector<uint32_t> m_Friends; // the characters your friends play, by server id in ascending order
-    std::vector<headsup::FriendEntry> m_FriendEntries; // the friend list as last read, for the notices and the mutes
+    std::vector<headsup::FriendEntry> m_FriendEntries; // the friend list as last read, for the notices and Friends Included
     headsup::FriendWatch m_FriendWatch;
-    std::optional<headsup::FriendMutes> m_FriendMutes; // read from its file when first needed
+    std::optional<headsup::FriendsIncluded> m_FriendsIncluded; // read from its file when first needed
     headsup::NoticeStack m_Notices;
     headsup::NoticeBox m_NoticeBox;
     headsup::SoundWaits m_NoticeWaits;
     headsup::WaveOut m_NoticeSound; // its own, so a notice cuts off no Case's click
     double m_NoticesAt   = 0.0; // the last frame the notices were drawn, for their slide
     headsup::NoticeKind m_NextTest = headsup::NoticeKind::Online; // what the next Test press acts out
+    bool m_NoticeHeld = false; // the pointer was over a notification at the last frame, which holds their clocks
+    std::map<int, std::optional<headsup::Sound>> m_NoticeSounds; // by sound choice, read the first time one plays
     std::unordered_map<uint32_t, headsup::PlayerJobs> m_PartyJobs; // theirs as the party list has them, by server ID
     headsup::PlayerJobs m_OwnJobs;                                // yours as the game has them, this frame
     bool m_DebugPending = false;
@@ -911,6 +914,11 @@ public:
             m_CaseCaught.reset();
             m_CaseSound.Stop();
         }
+        if (next.invited && m_Settings.enabled && m_Settings.partyNotice)
+            Notify(next.invited->alliance ? headsup::NoticeKind::AllianceInvite : headsup::NoticeKind::PartyInvite,
+                next.invited->name, false, Now());
+        // The server keeps an invite until you answer it or leave the zone, and says nothing of either.
+        if (next.inviteOver || next.zonedIn) m_Notices.EndInvite();
         if (next.caught) m_CaseCaught = CaseCaught{*next.caught, AnglerNow()};
         if (next.check) OnCheckReply(*next.check);
         if (next.guardEvent) HeardOverseer(*next.guardEvent);
@@ -928,6 +936,7 @@ public:
         UNREFERENCED_PARAMETER(dataChunk);
         if (const std::optional<uint32_t> target = headsup::PlayersCheck(id, data, size, injected, blocked))
             m_AutoCheck.PlayerAsked(*target, Now());
+        if (id == headsup::kInviteAnswerPacket) m_Notices.EndInvite(); // answered, from the notification or the game
         return false;
     }
 
@@ -998,7 +1007,11 @@ public:
         const uint8_t loginStatus = m_AshitaCore->GetMemoryManager()->GetPlayer()->GetLoginStatus();
         // A popup left open at logout would come back with the next character.
         if (loginStatus != headsup::kLoginInGame) m_BarInput.Reset();
-        if (loginStatus != headsup::kLoginInGame) m_FriendWatch.Forget();
+        if (loginStatus != headsup::kLoginInGame)
+        {
+            m_FriendWatch.Forget();
+            m_Notices.EndInvite();
+        }
         const bool mapShown = headsup::MapShown(m_OpenWindows);
         m_UiHidden          = m_Screenshot || m_Player.inEvent || mapShown;
         StartRml();
@@ -1111,15 +1124,28 @@ public:
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
             m_SettingsChangedAt = now;
-        if (m_Rml.Running() &&
-            m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
-                m_RmlMenu.open && m_RmlMenu.NoticePreview() ? headsup::NoticeSamples(m_Settings)
-                                                            : m_Notices.Shown(now, static_cast<float>(m_Settings.friendNoticeSeconds)),
-                KeyDown(VK_SHIFT), g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, static_cast<float>(std::max(0.0, now - m_NoticesAt)),
-                headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
-                    ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
-                    : std::nullopt))
-            m_SettingsChangedAt = now;
+        const auto noticeFrame = static_cast<float>(std::max(0.0, now - m_NoticesAt));
+        // The Notifications page shows a test notification of each kind, which drag without Shift.
+        const bool noticesPage = m_RmlMenu.NoticesPageOpen();
+        std::vector<headsup::ShownNotice> shown = m_Notices.Shown(noticeFrame, m_NoticeHeld,
+            static_cast<float>(m_Settings.noticeSeconds), m_Settings.noticeMost, m_Settings.partyNoticeButtons);
+        if (noticesPage)
+            for (headsup::ShownNotice& sample : headsup::NoticeSamples(m_Settings)) shown.push_back(std::move(sample));
+        if (m_Rml.Running())
+        {
+            const headsup::NoticeTook took = m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()),
+                m_Settings, shown,
+                headsup::NoticeFrame{KeyDown(VK_SHIFT) || noticesPage, g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, noticeFrame,
+                    PointerOverGame() ? m_Rml.PointerAt() : std::nullopt,
+                    headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
+                        ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
+                        : std::nullopt});
+            if (took.moved) m_SettingsChangedAt = now;
+            m_NoticeHeld = took.hovered;
+            if (took.press && m_Notices.Close(took.press->id))
+                m_AshitaCore->GetChatManager()->QueueCommand(static_cast<int32_t>(Ashita::CommandMode::Typed),
+                    took.press->accept ? kJoinCommand : kDeclineCommand);
+        }
         m_NoticesAt = now;
         if (const std::optional<CaseCaught> caught = std::exchange(m_CaseCaught, std::nullopt)) StartCase(caught->item, caught->angler);
         if (m_Case && (now - m_Case->started >= m_Case->length || !m_Settings.enabled || !m_Settings.fishCase)) m_Case.reset();
@@ -1268,7 +1294,8 @@ public:
 #endif
             .popupTestReady   = m_CombatTextHook.CanStartPopups(),
             .friends          = &m_FriendEntries,
-            .mutes            = &FriendMutes(),
+            .included         = &Included(),
+            .noticeBounds     = m_NoticeBox.Bounds(),
             .settingsOf       = SettingsShownNow(),
             .partMarks        = {},
             .localZone        = LocalZoneNow(),
@@ -1295,16 +1322,22 @@ public:
         if (m_RmlMenu.TakePopupTest()) m_PopupTest.Start(now);
         // As a friend would: online, then offline at the next press.
         if (m_RmlMenu.TakeNoticeTest())
+            if (const std::optional<headsup::NoticeKind> kind =
+                    headsup::TestKind(static_cast<uint32_t>(Now() * kSeedsPerSecond), m_Settings))
+                Notify(*kind, headsup::IsInvite(*kind) ? headsup::kInviteSampleName : headsup::kFriendSampleName, true, Now());
+        if (m_RmlMenu.TakeFriendNoticeTest())
         {
-            Notify(headsup::FriendNews{m_NextTest, 0, headsup::kNoticeSampleName}, Now());
+            // A friend of no account, whom Friends Included does not stop.
+            const headsup::FriendNews test{m_NextTest, 0, headsup::kFriendSampleName};
+            if (headsup::NoticeWanted(test, m_Settings, {})) Notify(test.kind, test.name, true, Now());
             m_NextTest = m_NextTest == headsup::NoticeKind::Online ? headsup::NoticeKind::Offline : headsup::NoticeKind::Online;
         }
-        if (const std::optional<headsup::MuteAsked> mute = m_RmlMenu.TakeMuteAsked())
+        if (const std::optional<headsup::NoticeKind> picked = m_RmlMenu.TakeSoundPicked()) PlayNotice(*picked);
+        if (std::optional<headsup::FriendsIncluded> included = m_RmlMenu.TakeIncludedAsked())
         {
-            if (mute->muted) FriendMutes().insert(mute->account);
-            else FriendMutes().erase(mute->account);
-            if (!WriteText(ConfigPath(kFriendMutesFile), headsup::FriendMutesText(FriendMutes())))
-                Note("could not save the muted friends to " + ConfigPath(kFriendMutesFile) + ".");
+            Included() = std::move(*included);
+            if (!WriteText(ConfigPath(kIncludedFile), headsup::IncludedText(Included())))
+                Note("could not save Friends Included to " + ConfigPath(kIncludedFile) + ".");
         }
         if (m_RmlMenu.TakeCaseTest())
         {
@@ -2551,25 +2584,48 @@ private:
             m_TurnInFetch.Start(headsup::kGuildPatternsHost, headsup::kGuildPatternsPath);
     }
 
-    headsup::FriendMutes& FriendMutes()
+    headsup::FriendsIncluded& Included()
     {
-        if (!m_FriendMutes) m_FriendMutes = headsup::FriendMutesFrom(ReadText(ConfigPath(kFriendMutesFile)));
-        return *m_FriendMutes;
+        if (!m_FriendsIncluded) m_FriendsIncluded = headsup::IncludedFrom(ReadText(ConfigPath(kIncludedFile)));
+        return *m_FriendsIncluded;
     }
 
-    // A friend came online or went offline: a notice, and for an online one its sound, as the settings ask.
-    void Notify(const headsup::FriendNews& news, double now)
+    // No message says the pointer left the game's window, so Windows' own pointer says whether it is still over it.
+    bool PointerOverGame() const
     {
-        if (!headsup::NoticeWanted(news, m_Settings, FriendMutes())) return;
-        m_Notices.Add(news.kind, news.name, now);
-        if (news.kind == headsup::NoticeKind::Online && m_Settings.friendNoticeOnlineSound && m_NoticeWaits.Due(news.kind, now))
-            PlayNotice(news.kind);
+        POINT screen{}, at{};
+        RECT client{};
+        if (!GetCursorPos(&screen) || WindowFromPoint(screen) != g_GameWindow || !GetClientRect(g_GameWindow, &client))
+            return false;
+        at = screen;
+        return ScreenToClient(g_GameWindow, &at) && PtInRect(&client, at);
+    }
+
+    // A notification, and its sound when it has one and its kind's wait is over.
+    void Notify(headsup::NoticeKind kind, std::string name, bool test, double now)
+    {
+        m_Notices.Add(kind, std::move(name), test);
+        if (headsup::NoticeSoundOf(m_Settings, kind) != headsup::kNoSound && m_NoticeWaits.Due(kind, now)) PlayNotice(kind);
     }
 
     void PlayNotice(headsup::NoticeKind kind)
     {
-        if (const std::optional<headsup::Sound> sound = headsup::SoundFromWav(headsup::NoticeWav(kind)))
-            m_NoticeSound.Play(headsup::AtVolume(sound->stereo, m_Settings.friendNoticeVolume), sound->rate);
+        const int choice = headsup::NoticeSoundOf(m_Settings, kind);
+        if (choice == headsup::kNoSound) return;
+        auto [at, fresh] = m_NoticeSounds.try_emplace(choice);
+        if (fresh)
+        {
+            if (choice == headsup::kChimeSound) at->second = headsup::SoundFromWav(headsup::ChimeWav());
+            else if (const std::optional<std::string> file = headsup::NoticeSoundFile(choice))
+            {
+                std::string failure;
+                if (const std::optional<std::vector<uint8_t>> bytes = GameFileBytes(*file, failure))
+                    at->second = headsup::SoundFromSpw(*bytes);
+                if (!at->second)
+                    Note("the sound " + *file + " could not be played" + (failure.empty() ? "" : " (" + failure + ")") + ".");
+            }
+        }
+        if (at->second) m_NoticeSound.Play(headsup::AtVolume(at->second->stereo, headsup::NoticeVolumeOf(m_Settings, kind)), at->second->rate);
     }
 
     headsup::OutpostFile& Outposts()
@@ -3420,7 +3476,7 @@ private:
             {
                 m_FriendEntries = headsup::FriendEntries(slots);
                 for (const headsup::FriendNews& news : m_FriendWatch.Read(party->GetMemberServerId(0), m_FriendEntries, now))
-                    Notify(news, now);
+                    if (headsup::NoticeWanted(news, m_Settings, Included())) Notify(news.kind, news.name, false, now);
             }
             m_Linkshells       = WornLinkshells();
             m_LinkshellsReadAt = now;

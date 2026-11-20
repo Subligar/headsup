@@ -675,3 +675,16 @@ TEST(only_your_own_catch_that_reaches_the_bag_is_a_catch)
     CHECK(!Feed(game, caught(kYou, kValkurm + 0x27)).caught);
     CHECK(Feed(game, caught(kYou, 6578 + 0x27)).caught == kMoatCarp);
 }
+
+TEST(an_invite_and_its_cancel_are_handed_on)
+{
+    GameState state;
+    Packet invite = Blank(kInvitePacket, 32);
+    std::memcpy(invite.bytes.data() + 0x0C, "Headsuptwo", 10);
+    PacketFollowUp next = Feed(state, invite);
+    CHECK(next.invited == (PartyInvite{"Headsuptwo", false}) && !next.inviteOver);
+    next = Feed(state, Blank(kInviteCancelPacket, 8));
+    CHECK(next.inviteOver && !next.invited);
+    next = Feed(state, Blank(kWeatherPacket, 0x10));
+    CHECK(!next.inviteOver && !next.invited);
+}

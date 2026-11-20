@@ -2291,57 +2291,108 @@ TEST(status_popups_switch_with_the_card_on_and_their_colors_are_picked_only_whil
     CHECK(pick.source == ColorSource::Custom);
 }
 
-TEST(the_friend_notifications_page_sets_its_switches_and_sliders)
+TEST(the_notifications_page_sets_the_look_of_every_notification)
 {
     Window w;
-    w.state.page = Page::UserInterface;
-    const std::string show = "userinterface-notice-show", sound = "userinterface-notice-sound";
-    CHECK(w.Pass({{show + "-notice-offline", kClickEvent, ""}}).changed);
-    CHECK(!w.settings.friendNoticeOffline && w.settings.friendNoticeOnline);
-    CHECK(w.Pass({{show + "-notice-seconds", kChangeEvent, "12"}}).changed);
-    CHECK_EQ(w.settings.friendNoticeSeconds, 12);
-    CHECK(w.Pass({{sound + "-notice-volume", kChangeEvent, "35"}}).changed);
-    CHECK_EQ(w.settings.friendNoticeVolume, 35);
-    w.Pass({{show + "-notice-upward", kClickEvent, ""}, {show + "-notice-bar", kClickEvent, ""}});
-    CHECK(w.settings.friendNoticeUpward && !w.settings.friendNoticeBar);
-    w.Pass({{sound + "-notice-online-sound", kClickEvent, ""}});
-    CHECK(!w.settings.friendNoticeOnlineSound);
+    w.state.page           = Page::Notifications;
+    const std::string look = "notifications-notice-look";
+    CHECK(w.Pass({{look + "-notice-width", kChangeEvent, "100"}}).changed);
+    CHECK_EQ(w.settings.noticeWidth, kFlexibleNoticeWidth);
+    CHECK(w.Pass({{look + "-notice-most", kChangeEvent, "3"}}).changed);
+    CHECK_EQ(w.settings.noticeMost, 3);
+    CHECK(w.Pass({{look + "-notice-master-volume", kChangeEvent, "40"}}).changed);
+    CHECK_EQ(w.settings.noticeVolume, 40);
+    CHECK(w.Pass({{look + "-notice-fit-s-1", kClickEvent, ""}}).changed);
+    CHECK(w.settings.noticeFit == NoticeFit::Truncate);
+    CHECK(w.Pass({{look + "-notice-align-s-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.noticeAlign == HelpAnchor::Right);
+    CHECK(w.Pass({{look + "-notice-bar", kClickEvent, ""}}).changed);
+    CHECK(!w.settings.noticeBar);
 }
 
-TEST(the_notice_cards_buttons_ask_the_plugin_once)
+TEST(changing_an_anchor_moves_the_spot_and_not_the_stack)
 {
     Window w;
-    w.state.page           = Page::UserInterface;
-    const std::string card = "userinterface-notice-show";
-    CHECK(!w.Pass({{card + "-notice-test", kClickEvent, ""}}).changed);
-    CHECK(w.state.noticeTestRequested);
-    // Preview is the window's to hold, no setting.
-    const Settings before = w.settings;
-    CHECK(!w.Pass({{card + "-notice-preview", kClickEvent, ""}}).changed);
-    CHECK(w.state.noticePreview && KeysChanged(before, w.settings).empty());
-    w.Pass({{card + "-notice-preview", kClickEvent, ""}});
-    CHECK(!w.state.noticePreview);
+    w.state.page              = Page::Notifications;
+    w.readings.noticeBounds   = NoticeRect{100.0f, 200.0f, 300.0f, 150.0f};
+    w.readings.screenWidth    = 1000;
+    w.readings.screenHeight   = 800;
+    const std::string look    = "notifications-notice-look";
+    CHECK(w.Pass({{look + "-notice-anchor-s-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.noticeAnchor == HelpAnchor::Right);
+    CHECK(w.settings.noticeAcross == 4000 && w.settings.noticeDown == 2500); // (400, 200) of 1000 by 800
+    CHECK(w.Pass({{look + "-notice-edge-s-1", kClickEvent, ""}}).changed);
+    CHECK(w.settings.noticeEdge == NoticeEdge::Bottom);
+    CHECK(w.settings.noticeAcross == 4000 && w.settings.noticeDown == 4375); // its bottom edge, 350
+    Window unseen;
+    unseen.state.page = Page::Notifications;
+    unseen.Pass({{look + "-notice-anchor-s-2", kClickEvent, ""}});
+    CHECK(unseen.settings.noticeAnchor == HelpAnchor::Right && unseen.settings.noticeAcross == kFishBarUnplaced);
 }
 
-TEST(the_muted_friends_card_lists_every_friend_and_asks_for_a_mute)
+TEST(each_kind_picks_its_sound_from_the_list)
 {
     Window w;
-    w.state.page = Page::UserInterface;
+    w.state.page = Page::Notifications;
+    const std::string offline = "notifications-notice-friends-friend-notice-offline-sound";
+    w.Pass({{offline, kClickEvent, ""}});
+    CHECK(w.Pass({{offline + "-o-2", kClickEvent, ""}}).changed);
+    CHECK_EQ(w.settings.friendNoticeOfflineSound, kFirstCallChoice);
+    CHECK(w.state.soundPicked == NoticeKind::Offline);
+    w.state.soundPicked.reset();
+    w.Pass();
+    CHECK(!w.state.soundPicked); // once a pick
+    const std::string party = "notifications-notice-party-party-notice-sound";
+    w.Pass({{party, kClickEvent, ""}});
+    w.Pass({{party + "-o-0", kClickEvent, ""}});
+    CHECK_EQ(w.settings.partyNoticeSound, kNoSound);
+    CHECK(w.state.soundPicked == NoticeKind::PartyInvite);
+}
+
+TEST(friends_included_asks_the_plugin_for_the_new_pick)
+{
+    Window w;
+    w.state.page = Page::Notifications;
     const std::vector<FriendEntry> friends = {{1002, "Zed", "Zed", false}, {1001, "Amy", "", true}};
-    const FriendMutes mutes                = {1002};
-    w.readings.friends = &friends;
-    w.readings.mutes   = &mutes;
-    const std::string card = "userinterface-notice-mutes";
-    const Form shown       = w.Pass();
-    const std::string& rml = Block(shown, card.c_str())->rml;
-    CHECK(rml.find("Amy") != std::string::npos && rml.find("Amy") < rml.find("Zed"));
-    CHECK(!ClassOn(shown, (card + "-mute-1001").c_str(), "on") && ClassOn(shown, (card + "-mute-1002").c_str(), "on"));
-    const Settings before = w.settings;
-    CHECK(!w.Pass({{card + "-mute-1001", kClickEvent, ""}}).changed);
-    CHECK(w.state.muteAsked && w.state.muteAsked->account == 1001 && w.state.muteAsked->muted);
-    w.Pass({{card + "-mute-1002", kClickEvent, ""}});
-    CHECK(w.state.muteAsked && w.state.muteAsked->account == 1002 && !w.state.muteAsked->muted);
-    CHECK(w.settings.friendNoticeOnline == before.friendNoticeOnline && w.settings.friendNoticeVolume == before.friendNoticeVolume);
+    FriendsIncluded included;
+    w.readings.friends     = &friends;
+    w.readings.included    = &included;
+    const std::string list = "notifications-notice-friends-friends-included";
+    w.Pass({{list, kClickEvent, ""}});
+    CHECK(!w.Pass({{list + "-o-1", kClickEvent, ""}}).changed);
+    CHECK((w.state.includedAsked == FriendsIncluded{true, {}}));
+    w.state.includedAsked.reset();
+    included = {true, {}};
+    w.Pass({{list + "-o-2", kClickEvent, ""}}); // Amy, first by name
+    CHECK((w.state.includedAsked == FriendsIncluded{false, {1002}}));
+    w.state.includedAsked.reset();
     w.readings.friends = nullptr;
-    CHECK(Block(w.Pass(), card.c_str())->rml.find(card + "-mute-") == std::string::npos);
+    const Form none    = w.Pass({{list + "-o-2", kClickEvent, ""}});
+    CHECK(!w.state.includedAsked && none.popup && none.popup->rml.find(list + "-o-2") == std::string::npos);
 }
+
+TEST(the_two_test_buttons_ask_the_plugin_once_each)
+{
+    Window w;
+    w.state.page = Page::Notifications;
+    CHECK(!w.Pass({{"notifications-notice-look-notice-test", kClickEvent, ""}}).changed);
+    CHECK(w.state.noticeTestRequested && !w.state.friendNoticeTestRequested);
+    w.state.noticeTestRequested = false;
+    CHECK(!w.Pass({{"notifications-notice-friends-friend-notice-test", kClickEvent, ""}}).changed);
+    CHECK(w.state.friendNoticeTestRequested && !w.state.noticeTestRequested);
+}
+
+TEST(a_setting_of_a_kind_that_is_off_is_not_shown)
+{
+    Window w;
+    w.state.page         = Page::Notifications;
+    w.settings.partyNotice = false;
+    w.Pass({{"notifications-notice-party-party-notice-buttons", kClickEvent, ""}});
+    CHECK(w.settings.partyNoticeButtons);
+    w.settings.friendNoticeOnline = false;
+    const std::string online = "notifications-notice-friends-friend-notice-online-sound";
+    w.Pass({{online, kClickEvent, ""}});
+    w.Pass({{online + "-o-5", kClickEvent, ""}});
+    CHECK_EQ(w.settings.friendNoticeOnlineSound, kChimeSound);
+}
+
