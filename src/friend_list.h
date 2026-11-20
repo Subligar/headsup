@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace headsup
@@ -23,4 +24,16 @@ namespace headsup
     // a player in view for a friend.
     std::vector<uint32_t> FriendCharacters(const uint8_t* firstSlot);
     bool IsFriend(std::span<const uint32_t> characters, uint32_t serverId);
+
+    struct FriendEntry
+    {
+        uint32_t account = 0;         // the slot's number halved (2003 is account 1001)
+        std::string added, character; // the name it was added by, and the character played or last played
+        bool playing = false;
+        bool operator==(const FriendEntry&) const = default;
+    };
+    // Every filled friend slot, in slot order; none of the block list's.
+    std::vector<FriendEntry> FriendEntries(const uint8_t* firstSlot);
+    // The character when the slot has one, else the name it was added by.
+    const std::string& FriendName(const FriendEntry& entry);
 }

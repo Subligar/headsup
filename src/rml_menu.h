@@ -58,6 +58,9 @@ namespace headsup
         bool TakeCaseMove();
         bool TakeCaseTest();
         bool TakePopupTest();
+        bool TakeNoticeTest();
+        bool NoticePreview() const { return m_State.noticePreview; }
+        std::optional<MuteAsked> TakeMuteAsked();
         // Opens the window on Setup, from the settings as they are: the first time, or again (rerun), which warns.
         void StartSetup(const Settings& settings, bool rerun);
         bool InSetup() const { return m_State.setup.has_value(); }

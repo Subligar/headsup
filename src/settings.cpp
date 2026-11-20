@@ -49,6 +49,9 @@ namespace headsup
 
             {"fishBarDraggable", &Settings::fishBarDraggable},
             {"fishCase", &Settings::fishCase}, {"fishCaseBackground", &Settings::fishCaseBackground},
+            {"friendNoticeOnline", &Settings::friendNoticeOnline}, {"friendNoticeOffline", &Settings::friendNoticeOffline},
+            {"friendNoticeUpward", &Settings::friendNoticeUpward}, {"friendNoticeBar", &Settings::friendNoticeBar},
+            {"friendNoticeOnlineSound", &Settings::friendNoticeOnlineSound},
             {"fishColorByCatch", &Settings::fishColorByCatch}, {"blueMagic", &Settings::blueMagic},
             {"combatPopups", &Settings::combatPopups},
             {"combatPopupWords", &Settings::combatPopupWords},
@@ -117,6 +120,10 @@ namespace headsup
             {"combatPopupHeight", &Settings::combatPopupHeight, 0, kMaxCombatPopupHeight},
             {"combatPopupX", &Settings::combatPopupX, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
             {"combatPopupY", &Settings::combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
+            {"friendNoticeSeconds", &Settings::friendNoticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds},
+            {"friendNoticeVolume", &Settings::friendNoticeVolume, 0, kMaxNoticeVolume, kPercentStep},
+            {"friendNoticeAcross", &Settings::friendNoticeAcross, kFishBarUnplaced, kCasePlaceWhole},
+            {"friendNoticeDown", &Settings::friendNoticeDown, kFishBarUnplaced, kCasePlaceWhole},
             {"helpBarX", &Settings::helpBarX, -kMaxHelpBarOffset, kMaxHelpBarOffset},
             {"helpBarY", &Settings::helpBarY, -kMaxHelpBarOffset, kMaxHelpBarOffset}};
 

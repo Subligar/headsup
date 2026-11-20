@@ -129,6 +129,7 @@ namespace headsup
         }
 
         std::string Pixels(int px) { return Formatted("%d px", px); }
+        std::string Seconds(int seconds) { return Formatted("%d s", seconds); }
         // A scale, as 1.5x.
         constexpr const char* kTimes = "x";
         std::string Times(double scale, int places) { return Decimal(scale, places) + kTimes; }
@@ -344,6 +345,39 @@ namespace headsup
                 form.changed = true;
             }
             form.EndLine();
+        }
+
+        // Every friend on the game's list with a switch to mute them. A mute is the plugin's to keep, in a file of its
+        // own, and no setting.
+        void MuteList(Context& c)
+        {
+            Form& form = c.form;
+            form.Fade(false);
+            form.Note(Word(c, WindowWord::MuteListNote));
+            if (c.readings.friends == nullptr || c.readings.friends->empty())
+            {
+                form.Note(Word(c, WindowWord::MuteListEmpty));
+                return;
+            }
+            // By name, then account, so a row stays put while the list changes under it.
+            std::vector<const FriendEntry*> rows;
+            for (const FriendEntry& entry : *c.readings.friends) rows.push_back(&entry);
+            std::ranges::sort(rows, [](const FriendEntry* a, const FriendEntry* b) {
+                return std::tie(FriendName(*a), a->account) < std::tie(FriendName(*b), b->account);
+            });
+            for (const FriendEntry* entry : rows)
+            {
+                const std::string account = std::to_string(entry->account);
+                form.Row(Labeled(FriendName(*entry).c_str(), "friend " + account).c_str(), WordTip(c, WindowWord::MuteListRowTip));
+                const bool was = c.readings.mutes != nullptr && c.readings.mutes->contains(entry->account);
+                bool muted     = was;
+                const bool changed = form.changed;
+                form.ToggleAt(("mute " + account).c_str(), muted, Word(c, WindowWord::MuteListNotify),
+                    Word(c, WindowWord::MuteListMuted));
+                form.changed = changed;
+                if (muted != was) c.state.muteAsked = MuteAsked{entry->account, muted};
+                form.EndRow();
+            }
         }
 
         // The game's windows HeadsUp moves out from under the help bar, and those it has seen there.
@@ -2296,6 +2330,47 @@ namespace headsup
                 form.Fade(!s.fishCase);
                 if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.caseTestRequested = true;
                 break;
+            case SettingPiece::NoticeOnline:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.friendNoticeOnline, tip);
+                break;
+            case SettingPiece::NoticeOffline:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.friendNoticeOffline, tip);
+                break;
+            case SettingPiece::NoticeSeconds:
+                form.Fade(false);
+                form.SliderInt(label.c_str(), s.friendNoticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds, Seconds, tip);
+                break;
+            case SettingPiece::NoticeUpward:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.friendNoticeUpward, tip);
+                break;
+            case SettingPiece::NoticeBar:
+                form.Fade(false);
+                form.Switch(label.c_str(), s.friendNoticeBar, tip);
+                break;
+            case SettingPiece::NoticePreview:
+            {
+                form.Fade(false);
+                // The window's to hold, and no setting to save.
+                const bool was = form.changed;
+                form.Switch(label.c_str(), c.state.noticePreview, tip);
+                form.changed = was;
+                break;
+            }
+            case SettingPiece::NoticeTest:
+                form.Fade(false);
+                if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.noticeTestRequested = true;
+                break;
+            case SettingPiece::NoticeOnlineSound:
+                form.Fade(!s.friendNoticeOnline);
+                form.Switch(label.c_str(), s.friendNoticeOnlineSound, tip);
+                break;
+            case SettingPiece::NoticeVolume:
+                form.Fade(!s.friendNoticeOnline || !s.friendNoticeOnlineSound);
+                form.SliderPercent(label.c_str(), s.friendNoticeVolume, 0, kMaxNoticeVolume, tip);
+                break;
             case SettingPiece::FishingBarDraggable:
                 form.Fade(false);
                 form.Switch(label.c_str(), s.fishBarDraggable, tip);
@@ -2361,6 +2436,7 @@ namespace headsup
                 break;
             case SettingPiece::WindowDefaults: WindowDefaults(c); break;
             case SettingPiece::WindowList: WindowList(c); break;
+            case SettingPiece::MuteList: MuteList(c); break;
             // Top Panel and Widgets
             case SettingPiece::Theme:
                 form.Fade(false);
@@ -2779,6 +2855,9 @@ namespace headsup
             case CardPiece::Visibility:
             case CardPiece::PlaceholderTimers:
             case CardPiece::MousePointer: return {false, !on};
+            case CardPiece::NoticeShow:
+            case CardPiece::NoticeSound:
+            case CardPiece::NoticeMutes: return {false, !on};
             case CardPiece::OutlineDesign: return {c.kind && !c.outlineColors, !on || !s.outlines};
             case CardPiece::Badges:
             case CardPiece::NameplateDesign:
