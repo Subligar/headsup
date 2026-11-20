@@ -97,7 +97,7 @@ namespace
     constexpr double kSeedsPerSecond   = 1000.0; // a Case's seed is the time in milliseconds
     constexpr const char* kJoinCommand = "/join", *kDeclineCommand = "/decline"; // the game's answers to an invite
     // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
-    constexpr const char* kVersion           = "0.5.8";
+    constexpr const char* kVersion           = "0.5.9";
     // Before the addon host (LinuxXI's -1000 is seen to be), so an addon that skips blocked packets misses Auto-Check's.
     constexpr int32_t kPriority              = -1000;
     constexpr const char* kConfigAlias       = "headsup";
