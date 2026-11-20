@@ -137,6 +137,13 @@ namespace headsup
         return settings.barTextFont.empty() ? kDetailFont : Interned(settings.barTextFont);
     }
 
+    PanelFonts PanelFontsOf(const Settings& settings, BarShape shape, const std::function<bool(const std::string&)>& loads)
+    {
+        const char* title = BarTitleFont(settings, shape);
+        const char* text  = BarTextFont(settings);
+        return PanelFonts{loads(title) ? title : TitleFont(shape), loads(text) ? text : kDetailFont};
+    }
+
     const char* WidgetTitleFont(const Settings& settings, BarShape shape, const WidgetOptions& own)
     {
         return own.titleFont.empty() ? BarTitleFont(settings, shape) : Interned(own.titleFont);

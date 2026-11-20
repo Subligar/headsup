@@ -10,7 +10,9 @@
 #include "window_skin.h"
 
 #include <cstdint>
+#include <functional>
 #include <optional>
+#include <string>
 
 namespace headsup
 {
@@ -72,6 +74,14 @@ namespace headsup
     // caches that keep it by reference.
     const char* BarTitleFont(const Settings& settings, BarShape shape);
     const char* BarTextFont(const Settings& settings);
+    struct PanelFonts
+    {
+        const char* title = kDetailFont;
+        const char* text  = kDetailFont;
+    };
+    // The bar's fonts where RmlUi can read them (loads, which loads one if it can), the theme's where it cannot: a
+    // player's Windows font, Bahnschrift a new install's, is not under Wine.
+    PanelFonts PanelFontsOf(const Settings& settings, BarShape shape, const std::function<bool(const std::string&)>& loads);
     // A widget's own of those, or the panel's where it set none.
     const char* WidgetTitleFont(const Settings& settings, BarShape shape, const WidgetOptions& own);
     const char* WidgetTextFont(const Settings& settings, const WidgetOptions& own);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bar_look.h"
 #include "bar_theme.h"
 #include "notices.h"
 #include "settings.h"
@@ -25,6 +26,7 @@ namespace headsup
         float barBottom = 0.0f, seconds = 0.0f;
         std::optional<Rml::Vector2f> pointer; // in the overlay's pixels; none while it is not known
         std::optional<SkinFrame> skin;        // the game's window art the boxes are drawn in, under a game theme
+        PanelFonts fonts;                     // PanelFontsOf's
     };
     struct NoticePress
     {
