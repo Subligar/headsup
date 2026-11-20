@@ -89,8 +89,11 @@ namespace headsup
     constexpr float kPictureGap    = 6.0f;  // before a game picture there
     // The side of an icon in a line of letters size pixels tall, at an Icon Scale's share.
     float LineIconSide(float size, float iconShare);
-    // The room a span's mark takes before its text in a face.
-    float MarkWidth(const Span& span, const TextFace& face);
+    // A game picture keeps kPictureGap from what is before it, but one alone at the end of its line is the mark of the
+    // text before it (a currency's crest after its amount) and keeps an icon's gap, as the coin does.
+    bool PictureSpaced(const Span& span, bool last);
+    // The room a span's mark takes before its text in a face; last: the span ends its line.
+    float MarkWidth(const Span& span, const TextFace& face, bool last);
     // What a widget's title and detail line can hold, for how far their ink reaches: capitals, figures (taller
     // than the capitals in Marcellus, and some descend), a "[S]" zone's brackets, the bags' slash, descenders
     // (Marcellus's Q and J too) and commas; the detail line's ascenders, descenders and comma. Popup text holds

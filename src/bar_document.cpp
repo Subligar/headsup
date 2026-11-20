@@ -110,12 +110,12 @@ namespace headsup
                    AdjustRules(AdjustOf(back)) + "\"/>" + icon;
         }
 
-        // A span's mark, before its text.
-        std::string Picture(const Span& span, const BarLook& look)
+        // A span's mark, before its text; last: the span ends its line.
+        std::string Picture(const Span& span, const BarLook& look, bool last)
         {
             if (span.picture != GamePicture::None)
-                return "<img class=\"line-icon pic\" src=\"" + GamePictureSource(span.picture) + "\"" +
-                       AdjustStyle(AdjustOf(span.picture)) + "/>";
+                return std::string("<img class=\"line-icon") + (PictureSpaced(span, last) ? " pic" : "") + "\" src=\"" +
+                       GamePictureSource(span.picture) + "\"" + AdjustStyle(AdjustOf(span.picture)) + "/>";
             if (span.icon || span.coin)
             {
                 const Icon icon = span.coin ? Icon::Gil : *span.icon;
@@ -177,8 +177,8 @@ namespace headsup
                 else if (spaces)
                     carried += span.text;
                 else
-                    runs.push_back(Run{Picture(span, look), std::exchange(carried, {}) + span.text, look.BarColor(span),
-                        Ticks(span) ? &span : nullptr});
+                    runs.push_back(Run{Picture(span, look, &span == &spans.back()), std::exchange(carried, {}) + span.text,
+                        look.BarColor(span), Ticks(span) ? &span : nullptr});
             }
             std::string rml;
             for (const Run& run : runs)
@@ -207,7 +207,7 @@ namespace headsup
             std::string rml;
             for (size_t i = 0; i < spans.size() && i < columns.size(); ++i)
                 rml += "<span class=\"cell\" style=\"width:" + Px(columns[i] + (i + 1 < spans.size() ? look.metrics.gap : 0.0f)) +
-                       ";color:" + RcssColor(look.BarColor(spans[i])) + ";\">" + Picture(spans[i], look) + EscapedRml(spans[i].text) + "</span>";
+                       ";color:" + RcssColor(look.BarColor(spans[i])) + ";\">" + Picture(spans[i], look, true) + EscapedRml(spans[i].text) + "</span>";
             return rml;
         }
 

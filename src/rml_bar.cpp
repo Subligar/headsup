@@ -107,7 +107,7 @@ namespace headsup
     {
         float width = 0.0f;
         for (const Span& s : spans)
-            width += MarkWidth(s, face) + (s.room.empty() ? Width(host, s.text, face) : s.box);
+            width += MarkWidth(s, face, &s == &spans.back()) + (s.room.empty() ? Width(host, s.text, face) : s.box);
         return width;
     }
 
