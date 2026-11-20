@@ -673,11 +673,9 @@ namespace headsup
         }
         const BarPalette& p = PaletteFor(settings, skin);
         const BarMetrics m  = MetricsOf(settings, p.shape);
-        // The player's fonts where RmlUi can read them, the theme's where it cannot.
-        const char* titleFont = BarTitleFont(settings, p.shape);
-        if (!host.EnsureFont(titleFont)) titleFont = TitleFont(p.shape);
-        const char* detailFont = BarTextFont(settings);
-        if (!host.EnsureFont(detailFont)) detailFont = kDetailFont;
+        const PanelFonts fonts = PanelFontsOf(settings, p.shape, [&](const std::string& font) { return host.EnsureFont(font); });
+        const char* titleFont  = fonts.title;
+        const char* detailFont = fonts.text;
         const Rows& rows =
             RowsFor(host, m, p.shape, settings.barFontRatio, settings.helpBarTextSize, titleFont, detailFont);
         BarLook look{p, settings, m, PillRow(m), rows.lines, titleFont, p.shape == BarShape::Ornate, detailFont,

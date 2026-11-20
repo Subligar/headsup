@@ -1139,7 +1139,9 @@ public:
                     PointerOverGame() ? m_Rml.PointerAt() : std::nullopt,
                     headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
                         ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
-                        : std::nullopt});
+                        : std::nullopt,
+                    headsup::PanelFontsOf(m_Settings, headsup::PaletteFor(m_Settings, SkinNow()).shape,
+                        [&](const std::string& font) { return m_Rml.EnsureFont(font); })});
             if (took.moved) m_SettingsChangedAt = now;
             m_NoticeHeld = took.hovered;
             if (took.press && m_Notices.Close(took.press->id))

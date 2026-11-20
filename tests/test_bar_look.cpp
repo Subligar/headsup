@@ -414,3 +414,19 @@ TEST(the_fishing_bars_font_is_its_own_or_the_panels_text_font)
     settings.fishBarFont = "Verdana";
     CHECK(std::string(FishBarFont(settings)) == "Verdana");
 }
+
+TEST(the_panels_fonts_are_the_players_where_they_load_and_the_themes_where_they_do_not)
+{
+    Settings s;
+    s.barTitleFont = "Bahnschrift";
+    s.barTextFont  = "Tahoma";
+    const BarShape shape = PaletteOf(BarTheme::PhoenixGold).shape;
+    const PanelFonts all = PanelFontsOf(s, shape, [](const std::string&) { return true; });
+    CHECK_EQ(std::string(all.title), "Bahnschrift");
+    CHECK_EQ(std::string(all.text), "Tahoma");
+    const PanelFonts noTitle = PanelFontsOf(s, shape, [](const std::string& font) { return font != "Bahnschrift"; });
+    CHECK_EQ(std::string(noTitle.title), TitleFont(shape));
+    CHECK_EQ(std::string(noTitle.text), "Tahoma");
+    const PanelFonts none = PanelFontsOf(s, shape, [](const std::string&) { return false; });
+    CHECK_EQ(std::string(none.text), kDetailFont);
+}

@@ -1,4 +1,5 @@
 #include "bar_look.h"
+#include "fonts.h"
 #include "bar_document.h"
 #include "notice_box.h"
 #include "skin_frame.h"
@@ -7,6 +8,7 @@
 
 #include <RmlUi/Core.h>
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -35,10 +37,31 @@ namespace
     constexpr float kBarBottom = 45.0f;
     const BarPalette& Gold() { return PaletteOf(BarTheme::PhoenixGold); }
     float Width(Rml::Element* el) { return el->GetBox().GetSize(Rml::BoxArea::Border).x; }
-    NoticeFrame Frame(bool moving = false, float seconds = 0.0f, std::optional<SkinFrame> skin = std::nullopt)
+    // The panel's fonts as the plugin picks them, from what this session loaded: the bundled fonts alone.
+    PanelFonts Fonts(const Settings& settings)
     {
-        return NoticeFrame{moving, kBarBottom, seconds, std::nullopt, skin};
+        const std::vector<std::string> bundled = BundledFamilies();
+        return PanelFontsOf(settings, Gold().shape,
+            [&](const std::string& font) { return std::ranges::find(bundled, font) != bundled.end(); });
     }
+    NoticeFrame Frame(bool moving = false, float seconds = 0.0f, std::optional<SkinFrame> skin = std::nullopt,
+        const Settings& settings = Settings{})
+    {
+        return NoticeFrame{moving, kBarBottom, seconds, std::nullopt, skin, Fonts(settings)};
+    }
+}
+
+TEST(a_notice_is_drawn_in_the_themes_fonts_when_the_panels_cannot_be_loaded)
+{
+    // Bahnschrift, a new install's panel font, comes with Windows and not with Wine; this session has it neither.
+    test::RmlSession rml;
+    Settings settings;
+    settings.barTitleFont = settings.barTextFont = "Bahnschrift";
+    NoticeBox box;
+    box.Update(rml.context, Gold(), settings, {N(1, NoticeKind::PartyInvite, "Two")}, Frame(false, 0.0f, std::nullopt, settings));
+    rml.context->Update();
+    CHECK_EQ(rml.Said(), "");
+    box.Close();
 }
 
 TEST(a_notice_shows_its_friend_in_a_box_300_wide_under_the_panel)
