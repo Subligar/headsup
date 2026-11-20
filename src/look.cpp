@@ -1,6 +1,5 @@
 #include "look.h"
 
-#include "game_font.h"
 
 namespace headsup
 {
@@ -12,9 +11,7 @@ namespace headsup
 
     std::string CombatPopupFont(const Settings& settings)
     {
-        if (!settings.combatPopupFont.empty()) return settings.combatPopupFont;
-        // GDI sets the popups, and it has no game font.
-        return GameFontVariantOf(settings.defaultFont) ? kDefaultFont : settings.defaultFont;
+        return settings.combatPopupFont.empty() ? settings.defaultFont : settings.combatPopupFont;
     }
 
     uint32_t BadgeColor(BadgeKind kind, const Settings& settings)

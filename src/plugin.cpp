@@ -1970,6 +1970,7 @@ private:
         }
         m_GameFontFailure.clear();
         m_SetupPreview.Plates().SetGameFont(font.value);
+        m_CombatPopups.SetGameFont(font.value);
         m_Nameplates.SetGameFont(std::move(font.value));
     }
 

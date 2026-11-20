@@ -2270,7 +2270,7 @@ namespace headsup
             }
             case SettingPiece::CombatPopupFont:
                 form.Fade(!s.combatPopups);
-                form.FontDropdown(label.c_str(), s.combatPopupFont, c.fonts, tip, Word(c, WindowWord::Default));
+                form.FontDropdown(label.c_str(), s.combatPopupFont, c.plateFonts, tip, Word(c, WindowWord::Default));
                 break;
             case SettingPiece::CombatPopupWords:
                 form.Fade(!s.combatPopups);
