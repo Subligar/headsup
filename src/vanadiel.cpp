@@ -17,6 +17,13 @@ namespace headsup
         constexpr Element kWeekdayElements[kVanaDaysPerWeek] = {Element::Fire, Element::Earth, Element::Water,
             Element::Wind, Element::Ice, Element::Lightning, Element::Light, Element::Dark};
 
+        using S = Season;
+        // By month, 1 to 12.
+        constexpr Season kSeasons[kMonthsPerYear] = {S::Winter, S::Spring, S::Spring, S::Spring, S::Spring, S::Summer,
+            S::Summer, S::Summer, S::Fall, S::Fall, S::Fall, S::Winter};
+        constexpr int kSeasonCount = static_cast<int>(Season::Fall) + 1;
+        constexpr const char* kSeasonNames[kSeasonCount] = {"Winter", "Spring", "Summer", "Fall"};
+
         int64_t VanaMs(int64_t unixMs) { return std::max<int64_t>(0, unixMs - kVanaEpochUnixMs) * kVanaSpeed; }
 
         void MoonOn(uint32_t day, int& percent, MoonDirection& direction)
@@ -84,6 +91,23 @@ namespace headsup
             if (std::strcmp(MoonPhaseName(percent, direction), name) != 0)
                 return SecondsToNextDay(unixMs) + (ahead - 1) * kEarthSecondsPerVanaDay;
         }
+        return 0.0;
+    }
+
+    Season SeasonOf(int month) { return kSeasons[std::clamp(month, 1, kMonthsPerYear) - 1]; }
+
+    const char* SeasonName(Season season) { return kSeasonNames[static_cast<int>(season)]; }
+
+    Season NextSeason(Season season) { return static_cast<Season>((static_cast<int>(season) + 1) % kSeasonCount); }
+
+    double SecondsToNextSeason(int64_t unixMs)
+    {
+        const VanaTime now   = VanaAt(unixMs);
+        const Season season  = SeasonOf(now.month);
+        const uint32_t start = now.day - static_cast<uint32_t>(now.dayOfMonth - 1); // this month's first day
+        for (int month = 1; month <= kMonthsPerYear; ++month)
+            if (SeasonOf((now.month - 1 + month) % kMonthsPerYear + 1) != season)
+                return SecondsToDay(unixMs, start + static_cast<uint32_t>(month * kDaysPerMonth));
         return 0.0;
     }
 

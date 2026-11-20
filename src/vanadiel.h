@@ -22,6 +22,14 @@ namespace headsup
         Waxing,
     };
 
+    enum class Season : uint8_t
+    {
+        Winter,
+        Spring,
+        Summer,
+        Fall,
+    };
+
     struct VanaTime
     {
         uint32_t day = 0; // days since the epoch, as Phoenix's count_days has them
@@ -40,6 +48,12 @@ namespace headsup
     double SecondsToNextDay(int64_t unixMs);
     // Earth seconds until the moon's phase name next changes.
     double SecondsToNextPhase(int64_t unixMs);
+    // The game names no season: each month's is the one whose curve in Phoenix's fishing (fishingutils.h) is strongest.
+    Season SeasonOf(int month);
+    const char* SeasonName(Season season);
+    Season NextSeason(Season season);
+    // Earth seconds until the next season starts.
+    double SecondsToNextSeason(int64_t unixMs);
     // Earth seconds until the Vana'diel day starts, less than 0 once it has.
     double SecondsToDay(int64_t unixMs, uint32_t day);
     // The first day after this one when the moon is full (100%), or new (0%).

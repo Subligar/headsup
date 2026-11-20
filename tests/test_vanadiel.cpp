@@ -1,6 +1,7 @@
 #include "test.h"
 #include "vanadiel.h"
 
+#include <cmath>
 #include <string>
 
 using namespace headsup;
@@ -87,4 +88,39 @@ TEST(earth_seconds_to_the_next_day_and_the_next_phase)
     // 09:00 leaves 15 Vana'diel hours (2160 s); the 64% waxing gibbous turns full eleven days later, at 90%.
     CHECK_EQ(SecondsToNextDay(1791417600000LL), 2160.0);
     CHECK_EQ(SecondsToNextPhase(1791417600000LL), 2160.0 + 10 * kDaySeconds);
+}
+
+TEST(each_month_has_the_season_whose_fishing_curve_is_strongest)
+{
+    // Phoenix's fishingutils.h month curves, 0.5 cos(a x + b) + 0.5 for month x from 0: pattern 9 is Spring, 3 Summer,
+    // 7 Fall and 10 Winter (the facts).
+    struct Curve
+    {
+        Season season;
+        double a, b;
+    };
+    constexpr Curve kCurves[] = {{Season::Spring, 0.49, -1.25}, {Season::Summer, 0.50, 3.05},
+        {Season::Fall, 0.49, 1.63}, {Season::Winter, 0.50, 0.53}};
+    const auto strength = [](const Curve& c, int month) { return std::cos(c.a * (month - 1) + c.b); };
+    for (int month = 1; month <= 12; ++month)
+    {
+        const Curve* best = &kCurves[0];
+        for (const Curve& c : kCurves)
+            if (strength(c, month) > strength(*best, month)) best = &c;
+        CHECK(SeasonOf(month) == best->season);
+    }
+    CHECK(std::string(SeasonName(Season::Winter)) == "Winter" && std::string(SeasonName(Season::Fall)) == "Fall");
+}
+
+TEST(the_next_season_starts_on_the_first_day_of_its_month)
+{
+    // 1514/03/20 09:00 is Spring (months 2 to 5): 15 hours of today and 70 days to 06/01, Summer.
+    CHECK(SeasonOf(VanaAt(1791417600000LL).month) == Season::Spring);
+    CHECK_EQ(SecondsToNextSeason(1791417600000LL), 70 * kDaySeconds + 15 * kDaySeconds / 24);
+    CHECK(NextSeason(Season::Spring) == Season::Summer);
+    // Winter holds months 12 and 1, across the new year: from 12/01 00:00 Spring is 60 days away.
+    const int64_t december = kVanaEpochUnixMs + 330 * kDayMs;
+    CHECK(VanaAt(december).month == 12 && SeasonOf(12) == Season::Winter);
+    CHECK_EQ(SecondsToNextSeason(december), 60 * kDaySeconds);
+    CHECK(NextSeason(Season::Fall) == Season::Winter && NextSeason(Season::Winter) == Season::Spring);
 }

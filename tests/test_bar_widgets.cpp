@@ -586,6 +586,8 @@ TEST(the_forecast_shows_vanadiels_date_day_time_and_moon_as_its_design_sets)
     CHECK(w.title[1].text == "  09:00" && w.title[1].tone == Tone::Normal && !w.title[1].room.empty());
     o.design = DesignFrom(BarWidget::Weather, "day time | date moon");
     CHECK(shown().subtitle == (std::vector<Span>{{"1514/03/20", Tone::Dim}, {"  Waxing Gibbous 64%", Tone::Dim}}));
+    o.design = DesignFrom(BarWidget::Weather, "season | time");
+    CHECK(shown().title == (std::vector<Span>{{"Spring", Tone::Normal}}));
     o.design = DesignFrom(BarWidget::Weather, "moon | time");
     CHECK(shown().title == (std::vector<Span>{{"Waxing Gibbous 64%", Tone::Normal}}));
     CHECK(Joined(shown().subtitle) == "09:00" && shown().subtitle.front().tone == Tone::Dim);
@@ -597,8 +599,9 @@ TEST(the_forecast_shows_vanadiels_date_day_time_and_moon_as_its_design_sets)
     for (const PopupRow& row : today->rows)
         for (const PopupCell& cell : row.cells)
             all += Joined(cell.text) + "|";
-    CHECK(all == "Darksday 09:00 (Next Day in 36:00)|Waxing Gibbous, 64% (Next Phase in 10:12:00)|");
-    CHECK(today->rows[0].cells[0].text.back().tone == Tone::Dim && today->rows[1].cells[0].text.back().tone == Tone::Dim);
+    CHECK(all == "Darksday 09:00 (Next Day in 36:00)|Waxing Gibbous, 64% (Next Phase in 10:12:00)|Spring (Summer in 67:48:00)|");
+    CHECK(today->rows[0].cells[0].text.back().tone == Tone::Dim && today->rows[1].cells[0].text.back().tone == Tone::Dim &&
+          today->rows[2].cells[0].text.back().tone == Tone::Dim);
 }
 
 TEST(the_zone_widget_names_the_zone_and_its_region)
@@ -775,7 +778,7 @@ TEST(the_forecast_pop_out_has_the_weather_for_a_title_today_beside_the_next_four
     CHECK(weathers[2].icon == std::optional<Icon>(Icon::WeatherDustStorm));
     CHECK(Joined(today->rows[2].cells[0].text).starts_with(Joined(ListOf(Text(MoonPhaseName(VanaAt(state.unixMs).moonPercent,
         VanaAt(state.unixMs).moonDirection))))));
-    CHECK(today->rows.size() == 3);
+    CHECK(today->rows.size() == 4);
     // Each day from tomorrow, its chances, and no notes.
     CHECK(forecast->rows[0].kind == RowKind::Grid && forecast->rows[0].columns == 4);
     const std::vector<PopupCell>& cells = forecast->rows[0].cells;

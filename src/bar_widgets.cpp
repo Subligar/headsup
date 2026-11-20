@@ -1501,13 +1501,14 @@ namespace headsup
             }
             case BarWidget::Weather:
             {
-                // The weather now, or the day's likeliest before it is known; Vana'diel's date, day, time and moon.
+                // The weather now, or the day's likeliest before it is known; Vana'diel's date, day, time, moon and season.
                 const VanaTime t = VanaAt(state.unixMs);
                 const std::optional<WeatherOdds> today = OddsOn(state, t.day);
                 std::vector<PartContent> parts{{WidgetPart::WeatherIcon, {}}, {WidgetPart::WeatherName, {}},
                     {WidgetPart::VanaDate, ListOf(Text(VanaDate(t)))}, {WidgetPart::VanaDay, ListOf(WeekdayText(t))},
                     {WidgetPart::VanaTime, ListOf(HourMinuteSpan(t.hour, t.minute))},
-                    {WidgetPart::VanaMoon, ListOf(Text(MoonText(t) + " " + std::to_string(t.moonPercent) + "%"))}};
+                    {WidgetPart::VanaMoon, ListOf(Text(MoonText(t) + " " + std::to_string(t.moonPercent) + "%"))},
+                    {WidgetPart::VanaSeason, ListOf(Text(SeasonName(SeasonOf(t.month))))}};
                 if (state.weather || today)
                 {
                     const Weather now = state.weather ? *state.weather : today->normal;
@@ -2160,7 +2161,7 @@ namespace headsup
                 popup.title = ListOf(Text(title));
                 popup.icon  = iconOf(now);
             }
-            // Today, by Vana'diel's date: the day and time, the zone's weathers today, then the moon, each with what is next.
+            // Today, by Vana'diel's date: the day and time, the zone's weathers today, then the moon and the season, each with what is next.
             PopupSection day = Section(CardKind::WeatherToday, "Today (" + VanaDate(t) + ")", ListOf(Line(Cell(ListOf(WeekdayText(t),
                 Text(" " + HourMinute(t.hour, t.minute)),
                 Text(" (Next Day in " + Countdown(SecondsToNextDay(state.unixMs)) + ")", Tone::Dim))))));
@@ -2174,6 +2175,9 @@ namespace headsup
             if (!weathers.cells.empty()) day.rows.push_back(std::move(weathers));
             day.rows.push_back(Line(Cell(ListOf(Text(MoonText(t) + ", " + std::to_string(t.moonPercent) + "%"),
                 Text(" (Next Phase in " + Countdown(SecondsToNextPhase(state.unixMs)) + ")", Tone::Dim)))));
+            const Season season = SeasonOf(t.month);
+            day.rows.push_back(Line(Cell(ListOf(Text(SeasonName(season)), Text(" (" + std::string(SeasonName(NextSeason(season))) +
+                " in " + Countdown(SecondsToNextSeason(state.unixMs)) + ")", Tone::Dim)))));
             // The days after it, beside it: each day and its chances, likeliest first.
             PopupRow grid = Grid(kForecastColumns, (kForecastDays - 1) * kForecastColumns);
             for (int d = 1; d < kForecastDays; ++d)
