@@ -26,6 +26,7 @@ namespace headsup
         // What was refused, once.
         std::string TakeFailure();
         void Release();
+        void SetGameFont(std::optional<GameFontFace> face) { m_Text.SetGameFont(std::move(face)); }
 
     private:
         struct Texture

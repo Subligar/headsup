@@ -2772,7 +2772,7 @@ TEST(a_font_name_of_31_characters_is_kept_and_one_of_32_refused)
     CHECK(refused.barTitleFont == d.barTitleFont && refused.barTextFont == d.barTextFont);
 }
 
-TEST(the_game_font_is_in_use_when_the_default_a_line_or_the_badges_name_it)
+TEST(the_game_font_is_in_use_when_the_default_a_line_the_badges_or_the_combat_popups_name_it)
 {
     Settings s;
     CHECK(!UsesGameFont(s));
@@ -2783,6 +2783,9 @@ TEST(the_game_font_is_in_use_when_the_default_a_line_or_the_badges_name_it)
     CHECK(UsesGameFont(s));
     s = Settings{};
     s.badgeFontName = kGameFontNarrowName;
+    CHECK(UsesGameFont(s));
+    s = Settings{};
+    s.combatPopupFont = kGameFontNarrowName;
     CHECK(UsesGameFont(s));
     s = Settings{};
     s.barTitleFont = kGameFontName; // the top panel never draws it

@@ -39,8 +39,7 @@ TEST(combat_popups_take_the_nameplates_font_until_given_their_own)
     CHECK_EQ(CombatPopupFont(s), "Cinzel");
     s.combatPopupFont = "Tahoma";
     CHECK_EQ(CombatPopupFont(s), "Tahoma");
-    // The game's own font is not one GDI can set them in.
     s.combatPopupFont = "";
     s.defaultFont     = kGameFontName;
-    CHECK_EQ(CombatPopupFont(s), kDefaultFont);
+    CHECK_EQ(CombatPopupFont(s), kGameFontName);
 }

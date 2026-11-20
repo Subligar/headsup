@@ -1202,7 +1202,7 @@ namespace headsup
     bool UsesGameFont(const Settings& s)
     {
         const auto game = [](const std::string& font) { return GameFontVariantOf(font).has_value(); };
-        return game(s.defaultFont) || game(s.badgeFontName) || std::ranges::any_of(s.kinds, [&](const KindSettings& k) {
+        return game(s.defaultFont) || game(s.badgeFontName) || game(s.combatPopupFont) || std::ranges::any_of(s.kinds, [&](const KindSettings& k) {
             return std::ranges::any_of(k.lines, [&](const LineDesign& line) { return game(line.font); });
         });
     }
