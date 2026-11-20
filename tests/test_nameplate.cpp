@@ -573,3 +573,19 @@ TEST(a_cursor_is_kept_inside_the_screen)
     CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, 100.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 100.0f);
     CHECK_EQ(KeepOnScreen(ScreenPoint{100.0f, 1430.0f}, 20.0f, 32.0f, 2560.0f, 1440.0f, 61.0f).y, 1408.0f);
 }
+
+TEST(your_timers_go_where_your_name_would_be_by_why_the_game_draws_none)
+{
+    Settings s;
+    s.phTimersInvisible  = true;
+    s.phTimersNameHidden = false;
+    PlayerState player;
+    CHECK(!TimersWithoutName(s, player)); // your name hidden
+    player.invisible = true;
+    CHECK(TimersWithoutName(s, player));
+    s.phTimersInvisible  = false;
+    s.phTimersNameHidden = true;
+    CHECK(!TimersWithoutName(s, player));
+    player.invisible = false;
+    CHECK(TimersWithoutName(s, player));
+}

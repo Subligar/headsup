@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 namespace headsup
 {
@@ -40,6 +41,14 @@ namespace headsup
     Camera MakeCamera(const float view[16], const float projection[16], float screenHeight);
     // The screen row of the point height yalms over feet; false behind the camera.
     bool RowAtHeight(const Camera& camera, const WorldPoint& feet, float height, float& row);
+    // How high over feet the point drawn at this row is; false behind the camera or seen end on.
+    bool HeightAtRow(const Camera& camera, const WorldPoint& feet, float row, float& height);
+    struct ScreenSpot
+    {
+        float x, y, depth;
+    };
+    // Where the point height yalms over feet is drawn on a screen this wide; none behind the camera.
+    std::optional<ScreenSpot> SpotAtHeight(const Camera& camera, const WorldPoint& feet, float height, float screenWidth);
     // Some clients draw nothing that carries the camera for long stretches, and one kept from before sits where you
     // were then: it counts for this many frames after the last draw that gave it.
     constexpr uint32_t kCameraGraceFrames = 8;

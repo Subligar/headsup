@@ -78,6 +78,7 @@ namespace headsup
     // high bits two per slot in bitMask), are known as soon as HeadsUp loads. Both hold kStatusIconSlots.
     constexpr int kStatusIconSlots = 32;
     bool LevelSyncInBuffs(const int16_t* buffs);
+    bool InvisibleInBuffs(const int16_t* buffs);
     bool LevelSyncInPartyIcons(const uint8_t* icons, uint64_t bitMask);
 
     // Away, mentor, new adventurer, GM and link-dead are only in the packets; memory is current for the rest.

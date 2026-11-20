@@ -52,6 +52,8 @@ hideTooWeak=true
 hideWhileEngaged=true
 markPlaceholders=false
 phTimers=true
+phTimersInvisible=false
+phTimersNameHidden=false
 scaleWithDistance=false
 scaleCursor=true
 fontBold=true
@@ -324,6 +326,7 @@ helpBarY=8.0000
         Settings s;
         s.enabled           = false;
         s.phTimers          = true;
+        s.phTimersInvisible = s.phTimersNameHidden = false;
         s.scaleWithDistance = false;
         s.opacity.notTargeted = 40; // untargetedOpacity
         s.scaleCursor       = true; // apart from the names': a dropped key would take theirs

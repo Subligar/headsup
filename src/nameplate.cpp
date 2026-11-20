@@ -60,6 +60,31 @@ namespace headsup
         return placed;
     }
 
+    std::optional<NameMemory> RememberName(const DrawnName& name, const Camera& camera, const WorldPoint& feet)
+    {
+        float height = 0.0f;
+        if (!HeightAtRow(camera, feet, name.box.maxY, height)) return std::nullopt;
+        return NameMemory{height, name.box.Height() / NameSizeAtDepth(name.depth), name.color};
+    }
+
+    std::optional<DrawnName> StandInName(const NameMemory& memory, const Camera& camera, const WorldPoint& feet,
+        float screenWidth)
+    {
+        const std::optional<ScreenSpot> spot = SpotAtHeight(camera, feet, memory.height, screenWidth);
+        if (!spot) return std::nullopt;
+        DrawnName name;
+        name.box.Add(spot->x, spot->y - memory.fullLetters * NameSizeAtDepth(spot->depth));
+        name.box.Add(spot->x, spot->y);
+        name.depth = spot->depth;
+        name.color = memory.color;
+        return name;
+    }
+
+    bool TimersWithoutName(const Settings& settings, const PlayerState& player)
+    {
+        return player.invisible ? settings.phTimersInvisible : settings.phTimersNameHidden;
+    }
+
     bool CursorShown(uint16_t index, const Settings& settings, const PlayerState& player, const CursorTargets& targets)
     {
         return settings.cursorStyle != CursorStyle::Vanilla && !targets.gameArrowsShown && !HiddenInEvent(settings, player) &&

@@ -58,6 +58,7 @@ namespace headsup
         constexpr uint32_t kGmLevelMask = 0x7;
 
         constexpr int kLevelSyncEffect   = 269; // the status effect's ID, which its icon shares
+        constexpr int kInvisibleEffect   = 69;
         constexpr int kIconHighBits      = 2;   // per slot in a party member's icon mask, each worth 256
         constexpr uint64_t kIconHighMask = 0x3;
         constexpr int kIconLowBits       = 8;
@@ -142,6 +143,11 @@ namespace headsup
     bool LevelSyncInBuffs(const int16_t* buffs)
     {
         return buffs != nullptr && std::find(buffs, buffs + kStatusIconSlots, kLevelSyncEffect) != buffs + kStatusIconSlots;
+    }
+
+    bool InvisibleInBuffs(const int16_t* buffs)
+    {
+        return buffs != nullptr && std::find(buffs, buffs + kStatusIconSlots, kInvisibleEffect) != buffs + kStatusIconSlots;
     }
 
     bool LevelSyncInPartyIcons(const uint8_t* icons, uint64_t bitMask)

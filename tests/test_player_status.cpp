@@ -246,6 +246,18 @@ TEST(your_level_sync_comes_from_your_buffs)
     CHECK(!LevelSyncInBuffs(nullptr));
 }
 
+TEST(you_are_invisible_while_your_buffs_hold_invisible)
+{
+    int16_t buffs[kStatusIconSlots];
+    for (int16_t& b : buffs)
+        b = -1;
+    buffs[2] = 71; // Sneak
+    CHECK(!InvisibleInBuffs(buffs));
+    buffs[5] = 69; // Invisible, as Phoenix's spell_list.sql names it
+    CHECK(InvisibleInBuffs(buffs));
+    CHECK(!InvisibleInBuffs(nullptr));
+}
+
 namespace
 {
     // A party member's status icons as Phoenix's StatusEffectContainer::UpdateStatusIcons packs them for 0x076: each
