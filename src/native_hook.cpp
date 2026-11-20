@@ -1607,11 +1607,12 @@ namespace headsup
 
         // A window just built whose owner copies its place in the layout that runs right after the build goes where
         // it was noted to go now, before that layout: the owner may work spots of its own out of the copy once
-        // (delivery's Sender panel, its labels at owner +0x14 and +0x1C), which a later move would leave behind.
+        // (delivery's Sender panel, its labels at owner +0x14 and +0x1C), which a later move would leave behind. So
+        // does one the game picks a row in from where it was built (MovesWhenBuilt).
         void MoveBuilt(uint32_t mcd, const WindowKey& key)
         {
             const uint32_t owner = ReadAt<uint32_t>(reinterpret_cast<const uint8_t*>(mcd + kMcdOwner), 0);
-            if (owner == 0 || !PlaceCopyAt(owner)) return;
+            if (owner == 0 || (!MovesWhenBuilt(key) && !PlaceCopyAt(owner))) return;
             auto* rect = reinterpret_cast<int16_t*>(mcd + kMcdRect);
             const WindowSpot now{rect[0], rect[1]};
             const WindowSpot to = g_Placements.CourseOf(mcd, key, now).to;
@@ -1854,7 +1855,7 @@ extern "C" void HeadsUpOnGameMove(uint32_t mcd, uint32_t* frame)
 
 // On the game's stack, right after it built a window from its catalog: nothing here may allocate, throw or call
 // Ashita. Where it goes is noted now; it moves at its first draw, once its owner has laid out what it draws, unless
-// its owner lays out from a copy of its place (MoveBuilt).
+// its owner lays out from a copy of its place or the game picks a row in it from there (MoveBuilt).
 extern "C" void HeadsUpOnBuilt(uint32_t mcd)
 {
     using namespace headsup;
@@ -1865,9 +1866,9 @@ extern "C" void HeadsUpOnBuilt(uint32_t mcd)
     PlanFrame(false, &built);
     const int width = built.right - built.left, height = built.bottom - built.top;
     const WindowSpot at{built.left, built.top};
-    if (PlaceIn({g_Pins.data(), g_PinCount}, built.key) == nullptr)
-        g_Placements.Moved(mcd, built.key, at, width, height, 0, ShiftFor(at, width), g_Placing->band.screenRight,
-            g_Placing->band.screenBottom);
+    const KeyPlace* pin = PlaceIn({g_Pins.data(), g_PinCount}, built.key);
+    g_Placements.Moved(mcd, built.key, at, width, height, pin != nullptr ? pin->x - at.left : 0,
+        pin != nullptr ? pin->y - at.top : ShiftFor(at, width), g_Placing->band.screenRight, g_Placing->band.screenBottom);
     MoveBuilt(mcd, built.key);
 }
 
