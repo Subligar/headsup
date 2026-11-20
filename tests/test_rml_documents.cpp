@@ -168,6 +168,42 @@ TEST(a_widgets_content_sits_in_the_middle_of_a_wider_box_with_its_lines_against_
     }
 }
 
+TEST(a_currencys_amounts_line_up_on_the_right_when_one_ends_in_the_coin_and_the_other_in_your_nations_crest)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    BarLook look      = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    look.lines.detail = look.lines.title; // Uniform Font Size
+    test::RmlSession rml;
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    Rml::Element* widget = bar->GetElementById(WidgetId(BarWidget::Currency));
+    widget->SetClass(kHiddenClass, false);
+    widget->SetClass(SectionClass(BarSection::Right), true);
+    widget->SetProperty(Rml::PropertyId::Width, Rml::Property(200.0f, Rml::Unit::PX));
+    const std::vector<PartContent> parts{{WidgetPart::Currency1Amount, {Text("17,553")}},
+        {WidgetPart::Currency1Icon, {CurrencyMark(kGilCurrency, Nation::Windurst)}},
+        {WidgetPart::Currency2Amount, {Text("3,046")}},
+        {WidgetPart::Currency2Icon, {CurrencyMark(kYourConquestCurrency, Nation::Windurst)}}};
+    WidgetContent c = ComposeContent(DesignFrom(BarWidget::Currency, "amount1 icon1 | amount2 icon2"), parts, WidgetContent{});
+    c.shown = true;
+    CHECK(c.subtitle.back().picture == GamePicture::WindurstCrest);
+    Steady(c, look);
+    widget->SetInnerRML(WidgetRml(c, look, {}));
+    rml.context->Update();
+    Rml::ElementList amounts;
+    widget->GetElementsByClassName(amounts, "steady");
+    CHECK(amounts.size() == 2);
+    const auto rightOf = [](Rml::Element* e) { return LeftOf(e) + e->GetBox().GetSize(Rml::BoxArea::Border).x; };
+    CHECK(std::fabs(rightOf(amounts[0]) - rightOf(amounts[1])) <= 0.5f);
+    // Measured as it is drawn; a crest before more of its line keeps the picture's gap.
+    const TextFace face = look.DetailFace();
+    CHECK_EQ(MarkWidth(c.subtitle.back(), face, true), MarkWidth(c.title.back(), face, true));
+    CHECK_EQ(MarkWidth(c.subtitle.back(), face, false), kPictureGap + LineIconSide(face.size, face.iconShare));
+    CHECK_EQ(rml.Said(), "");
+}
+
 TEST(a_widgets_line_draws_a_span_of_spaces_alone_as_wide_as_it_is_measured)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
@@ -1107,8 +1143,8 @@ TEST(icon_scale_sizes_the_icons_in_a_widgets_lines_on_each_lines_middle_as_the_b
             boxes[i] = Drawn{marks[i]->GetAbsoluteOffset(Rml::BoxArea::Border).y, size.y, size.x};
         }
         // The bar makes room for each as it is drawn.
-        CHECK_EQ(MarkWidth(top, widgetLook.TitleFace(c)), kLineIconGap + boxes[0].width);
-        CHECK_EQ(MarkWidth(under, widgetLook.DetailFace()), kLineIconGap + boxes[1].width);
+        CHECK_EQ(MarkWidth(top, widgetLook.TitleFace(c), false), kLineIconGap + boxes[0].width);
+        CHECK_EQ(MarkWidth(under, widgetLook.DetailFace(), false), kLineIconGap + boxes[1].width);
         bar->Close();
         return boxes;
     };

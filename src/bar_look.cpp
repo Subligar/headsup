@@ -219,11 +219,13 @@ namespace headsup
 
     float LineIconSide(float size, float iconShare) { return std::round(size * iconShare); }
 
-    float MarkWidth(const Span& span, const TextFace& face)
+    bool PictureSpaced(const Span& span, bool last) { return span.picture != GamePicture::None && !(last && span.text.empty()); }
+
+    float MarkWidth(const Span& span, const TextFace& face, bool last)
     {
         const float side = LineIconSide(face.size, face.iconShare);
-        return span.picture != GamePicture::None ? kPictureGap + side
-               : span.icon || span.coin || span.item != 0 || span.status ? kLineIconGap + side
+        return PictureSpaced(span, last) ? kPictureGap + side
+               : span.picture != GamePicture::None || span.icon || span.coin || span.item != 0 || span.status ? kLineIconGap + side
                : span.bar                        ? static_cast<float>(span.bar->width)
                                                  : 0.0f;
     }
