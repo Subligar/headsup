@@ -117,7 +117,7 @@ namespace headsup
     constexpr float kPopupTextPixels = 14.0f, kPopupTitlePixels = 18.0f, kPopupHeadingPixels = 16.0f, kPopupSpacingPixels = 12.0f;
     constexpr float kPillBorder      = 1.0f;                           // a pill's or frame's
     BarMetrics MetricsFor(int barHeight, BarShape shape, float fontRatio = kDefaultFontRatio,
-        float popupTextScale = kDefaultPopupScale, int iconScale = kDefaultIconScale, float popupWidth = kDefaultPopupScale,
+        float popupTextScale = kDefaultPopupScale, float iconScale = kDefaultIconScale, float popupWidth = kDefaultPopupScale,
         float popupHeight = kDefaultPopupScale, float lineSeparation = kDefaultLineSeparation);
 
     // Ornate titles are Marcellus SC; everything else is the bundled Barlow Condensed.

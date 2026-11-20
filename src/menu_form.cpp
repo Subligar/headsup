@@ -1338,8 +1338,10 @@ namespace headsup
                     form.FontDropdown(label.c_str(), primary ? o.titleFont : o.textFont, c.fonts, row.tip, panel.c_str());
                     break;
                 }
+                case WidgetTabsRow::UniformFont: form.Switch(label.c_str(), o.uniformFont, ownDefault().c_str()); break;
                 case WidgetTabsRow::FontRatio:
                 {
+                    if (o.uniformFont) break;
                     // By the Top Panel's slider's positions, set only when moved, so a ratio between them is kept.
                     std::optional<int> at = o.fontRatio ? std::optional<int>(FontRatioPosition(*o.fontRatio)) : std::nullopt;
                     const std::optional<int> before = at;
@@ -3207,6 +3209,7 @@ namespace headsup
         case WidgetTabsRow::ShowZoneId: return onOff(o.zoneId);
         case WidgetTabsRow::MemText: return onOff(o.memText);
         case WidgetTabsRow::WrapText: return onOff(o.wrapText);
+        case WidgetTabsRow::UniformFont: return onOff(o.uniformFont);
         case WidgetTabsRow::StatusDisplay: return option(WindowList::StatusDisplay, o.statusDisplay);
         case WidgetTabsRow::TimerFormat: return option(WindowList::TimerFormat, o.timerFormat);
         case WidgetTabsRow::CustomIcons: return option(WindowList::CustomIcons, o.weatherIcons);

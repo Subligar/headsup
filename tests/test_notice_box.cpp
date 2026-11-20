@@ -296,7 +296,7 @@ TEST(truncate_keeps_the_text_size_and_shrink_fits_the_line)
     Settings settings;
     settings.noticeWidth = 200;
     settings.noticeFit   = NoticeFit::Truncate;
-    const float lookSize = MetricsOf(settings, Gold().shape, WidgetOptions{}).subtitle;
+    const float lookSize = MetricsOf(settings, Gold().shape).subtitle;
     const std::vector<ShownNotice> shown = {N(1, NoticeKind::Online, std::string(30, 'n').c_str())};
     NoticeBox box;
     box.Update(rml.context, Gold(), settings, shown, Frame());

@@ -170,7 +170,7 @@ namespace headsup
     // Each card a widget's pop-out can show: the Pop-out Designer puts any of them in any widget's pop-out.
     enum class CardKind : uint8_t
     {
-        ZoneInfluence,
+        ZoneInfluence, ZonePlayers, ZoneTravel, ZoneShops,
         WeatherToday, WeatherForecast, WeatherByElement,
         TargetOverview, TargetDamage, TargetElements, TargetStatuses, TargetImmune, TargetStats, TargetMoves, TargetSpells,
         TargetSpawn, TargetDrops, TargetSteal, TargetDespoil, TargetShop, TargetClick, TargetTrade, TargetPops,

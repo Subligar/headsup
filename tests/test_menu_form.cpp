@@ -1650,6 +1650,21 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
         CHECK(Has(rml, id(key, "weather").c_str()));
 }
 
+TEST(uniform_font_size_hides_the_widgets_font_size_ratio)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone};
+    w.readings.settingsOf = {zone};
+    const std::string row = "toppanel-widgets-uniform-font-zone";
+    w.Pass({{"toppanel-widgets-own-looks-zone-fold", kClickEvent, ""}});
+    CHECK(Has(Block(w.Pass(), "toppanel-widgets")->rml, "toppanel-widgets-font-ratio-zone"));
+    w.Pass({{row, kClickEvent, ""}});
+    CHECK(w.settings.Widget(zone).uniformFont);
+    CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "toppanel-widgets-font-ratio-zone"));
+    w.Pass({{row, kClickEvent, ""}});
+    CHECK(!w.settings.Widget(zone).uniformFont);
+}
+
 TEST(a_widgets_settings_are_its_designers_section_then_the_rest_then_its_overrides)
 {
     Window w;

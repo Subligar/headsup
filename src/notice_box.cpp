@@ -125,7 +125,7 @@ namespace headsup
     {
         NoticeTook took;
         if (shown.empty() && !frame.moving && m_Document == nullptr) return took;
-        const BarMetrics metrics = MetricsOf(settings, palette.shape, WidgetOptions{});
+        const BarMetrics metrics = MetricsOf(settings, palette.shape);
         const Look look{palette, BarTitleFont(settings, palette.shape), BarTextFont(settings), metrics.title,
             metrics.subtitle, frame.skin, settings.noticeWidth, settings.noticeHeight, settings.noticeFit,
             settings.noticeAlign, NoticeRadius(settings.noticeRounding, OwnPalette(settings).windowRounding, metrics.panelRadius)};

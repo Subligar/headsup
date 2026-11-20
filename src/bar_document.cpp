@@ -25,11 +25,14 @@ namespace headsup
                                    kItemKind = "item", kStatusKind = "status";
         // A separator's, by DashMark.
         constexpr std::string_view kSeparatorKinds[kDashMarkCount] = {"dash", "dot", "square", "diamond", "blank"};
-        // XIUI's party list draws a status's background 1.1 icons wide and 0.75 as wide as tall, from 0.3 of its width
-        // above the icon for a buff and 0.1 for a debuff, the icon 0.1 / 1.5 of an icon in from its left. Here the icon
-        // fills its mark's box as it does with no background, and the background's square picture reaches past it.
-        constexpr float kBackWide = 1.1f, kBackAspect = 0.75f, kBuffDrop = 0.3f, kDebuffDrop = 0.1f, kBackInset = 0.1f / 1.5f;
+        // XIUI's party list draws a status's background 1.1 icons wide and 0.75 as wide as tall. Here the icon fills its
+        // mark's box as it does with no background, and the background's square picture reaches past it, the icon's
+        // middle on its frame's inside: BuffIcon.png and DebuffIcon.png are 15 by 20 shields squared on 20 px, their
+        // inside columns 1 to 13 and rows 5 to 18 under a buff's point, rows 1 to 14 over a debuff's.
+        constexpr float kBackWide = 1.1f, kBackAspect = 0.75f;
         constexpr float kBackedIcon = kBackAspect / kBackWide; // the icon's side, of the background's square
+        constexpr float kBackPixels = 20.0f, kBackInsideX = (2.0f + 7.5f) / kBackPixels;
+        constexpr float kBuffInsideY = 12.0f / kBackPixels, kDebuffInsideY = 8.0f / kBackPixels;
         // RmlUi blurs a glow by a Gaussian of this share of its width; the bar's shadow is a CSS blur radius, twice
         // its Gaussian's.
         constexpr float kGlowSigmaPerWidth = 0.4f;
@@ -101,10 +104,10 @@ namespace headsup
                                      AdjustRules(AdjustOf(mark)) + "\"/>";
             if (!mark.back) return icon;
             const Icon back   = IsDebuff(mark.id) ? Icon::DebuffBack : Icon::BuffBack;
-            const float drop  = (IsDebuff(mark.id) ? kDebuffDrop : kBuffDrop) * kBackWide * kBackedIcon;
-            const float inset = (1.0f - kBackAspect) / 2.0f + kBackInset * kBackedIcon;
+            const float insideY = IsDebuff(mark.id) ? kDebuffInsideY : kBuffInsideY;
             return "<img class=\"p\" src=\"" + IconSource(back) + "\" style=\"" +
-                   at(-inset / kBackedIcon, -drop / kBackedIcon, 1.0f / kBackedIcon) + AdjustRules(AdjustOf(back)) + "\"/>" + icon;
+                   at(0.5f - kBackInsideX / kBackedIcon, 0.5f - insideY / kBackedIcon, 1.0f / kBackedIcon) +
+                   AdjustRules(AdjustOf(back)) + "\"/>" + icon;
         }
 
         // A span's mark, before its text.
@@ -139,13 +142,18 @@ namespace headsup
             return {};
         }
 
-        // Each digit of text in a cell that wide, the rest as it is.
+        // Each digit of text in a cell that wide, the rest as it is. RmlUi's parser drops a text of spaces alone, as
+        // the spaces before a time's first digit would be, but keeps a non-breaking one.
         std::string Figures(std::string_view text, float digit)
         {
             std::string rml;
             for (const std::string_view piece : FigurePieces(text))
-                rml += IsDigit(piece.front()) ? "<span class=\"fig\" style=\"width:" + Px(digit) + ";\">" + std::string(piece) + "</span>"
-                                              : EscapedRml(piece);
+                if (IsDigit(piece.front()))
+                    rml += "<span class=\"fig\" style=\"width:" + Px(digit) + ";\">" + std::string(piece) + "</span>";
+                else if (piece.find_first_not_of(' ') == std::string_view::npos)
+                    for (size_t i = 0; i < piece.size(); ++i) rml += "&nbsp;";
+                else
+                    rml += EscapedRml(piece);
             return rml;
         }
 

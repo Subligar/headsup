@@ -1272,6 +1272,34 @@ namespace headsup
             return conquest;
         }
 
+        // A route's row of a Travel grid: the route, whether its ship boards or departs next against how long until it does.
+        constexpr int kTravelColumns = 3;
+        void AddSailing(PopupRow& grid, const TravelRoute& route, const char* label, int64_t unixMs)
+        {
+            const Sailing next = NextSailing(route, unixMs);
+            PopupCell stage    = Cell(Text(next.boarding ? "Departing in" : "Boarding in", Tone::Dim));
+            stage.align        = Align::Right;
+            PopupCell time     = Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn)));
+            time.align         = Align::Center;
+            grid.cells.push_back(Cell(Text(label)));
+            grid.cells.push_back(std::move(stage));
+            grid.cells.push_back(std::move(time));
+        }
+
+        // A guild shop's row of an hours grid: open or closed against when that changes, then where.
+        void AddShopHours(PopupRow& grid, const GuildShop& shop, int64_t unixMs, std::vector<Span> where)
+        {
+            const GuildHours hours = GuildAt(shop, unixMs);
+            PopupCell now = Cell(Text(hours.open ? "Open" : hours.holiday ? "Holiday" : "Closed", hours.open ? Tone::Normal : Tone::Dim));
+            now.align = Align::Right;
+            PopupCell change = Cell(Text((hours.open ? "closes in " : "opens in ") + Countdown(hours.changeIn)));
+            change.align = Align::Center;
+            grid.cells.push_back(std::move(now));
+            grid.cells.push_back(std::move(change));
+            grid.cells.push_back(Cell(std::move(where)));
+        }
+        Span ShopPlace(const GuildShop& shop) { return Text(std::string(shop.shops) + ", " + shop.zone, Tone::Dim); }
+
         // The Conquest card, Travel and the Calendar in a column beside it, and Guilds under them all.
         PopupContent WorldPopup(const BarState& state)
         {
@@ -1284,21 +1312,10 @@ namespace headsup
                 const std::span<const TravelRoute> routes = TravelRoutes();
                 for (size_t first = 0, last = 0; first < routes.size(); first = last)
                 {
-                    // The route, whether its ship boards or departs next against how long until it does.
-                    constexpr int kColumns = 3;
                     PopupTab kind{Text(routes[first].group), {}};
-                    PopupRow grid{RowKind::Grid, kColumns, {}};
+                    PopupRow grid{RowKind::Grid, kTravelColumns, {}};
                     for (last = first; last < routes.size() && std::string_view(routes[last].group) == routes[first].group; ++last)
-                    {
-                        const Sailing next = NextSailing(routes[last], state.unixMs);
-                        PopupCell stage    = Cell(Text(next.boarding ? "Departing in" : "Boarding in", Tone::Dim));
-                        stage.align        = Align::Right;
-                        PopupCell time     = Cell(Text(Countdown(next.boarding ? next.leaveIn : next.boardIn)));
-                        time.align         = Align::Center;
-                        grid.cells.push_back(Cell(Text(routes[last].name)));
-                        grid.cells.push_back(std::move(stage));
-                        grid.cells.push_back(std::move(time));
-                    }
+                        AddSailing(grid, routes[last], routes[last].name, state.unixMs);
                     grid.nested   = true;
                     grid.trailing = true;
                     kind.rows.push_back(std::move(grid));
@@ -1341,17 +1358,7 @@ namespace headsup
                     PopupRow grid = Grid(kWorldGuildColumns, (last - first) * kWorldGuildColumns);
                     grid.nested   = true;
                     for (size_t i = first; i < last; ++i)
-                    {
-                        const GuildHours hours = GuildAt(shops[i], state.unixMs);
-                        PopupCell now = Cell(Text(hours.open ? "Open" : hours.holiday ? "Holiday" : "Closed",
-                            hours.open ? Tone::Normal : Tone::Dim));
-                        now.align = Align::Right;
-                        PopupCell change = Cell(Text((hours.open ? "closes in " : "opens in ") + Countdown(hours.changeIn)));
-                        change.align = Align::Center;
-                        grid.cells.push_back(std::move(now));
-                        grid.cells.push_back(std::move(change));
-                        grid.cells.push_back(Cell(Text(std::string(shops[i].shops) + ", " + shops[i].zone, Tone::Dim)));
-                    }
+                        AddShopHours(grid, shops[i], state.unixMs, ListOf(ShopPlace(shops[i])));
                     ScrollsBy(grid, state, guilds.heading + "/" + shops[first].guild);
                     guild.rows.push_back(std::move(grid));
                     if (const std::optional<int> craft = CraftGuildNamed(shops[first].guild))
@@ -2081,6 +2088,56 @@ namespace headsup
                 }
                 influence.rows.push_back(Labeled("Tally in", Text(SpanText(SecondsToTally(state.unixMs)))));
                 popup.sections.push_back(std::move(influence));
+            }
+            // A ship is in no region, nor is every ship's shop.
+            if (zone == nullptr || zone->region == kUnknownRegion) break;
+            const auto inRegion = [&](uint16_t id) {
+                const ZoneRecord* there = KnownZone(id);
+                return there != nullptr && there->region == zone->region;
+            };
+            if (state.friends != nullptr)
+            {
+                // Friends playing in the region, by name, each with their zone as the game's list last had it.
+                std::vector<const FriendEntry*> here;
+                for (const FriendEntry& f : *state.friends)
+                    if (f.playing && inRegion(f.zone)) here.push_back(&f);
+                std::ranges::sort(here, {}, [](const FriendEntry* f) { return FriendName(*f); });
+                if (!here.empty())
+                {
+                    constexpr int kFriendColumns = 2;
+                    PopupSection players = Section(CardKind::ZonePlayers, "Players");
+                    PopupRow grid        = Grid(kFriendColumns, here.size() * kFriendColumns);
+                    for (const FriendEntry* f : here)
+                    {
+                        grid.cells.push_back(Cell(Text(FriendName(*f))));
+                        grid.cells.push_back(Cell(Text(ZoneTitle(f->zone), Tone::Dim)));
+                    }
+                    ScrollsBy(grid, state, "Zone/Players");
+                    players.rows.push_back(std::move(grid));
+                    popup.sections.push_back(std::move(players));
+                }
+            }
+            PopupRow sailings{RowKind::Grid, kTravelColumns, {}};
+            for (const TravelRoute& route : TravelRoutes())
+                if (route.region == zone->region) AddSailing(sailings, route, route.leg, state.unixMs);
+            if (!sailings.cells.empty())
+            {
+                PopupSection travel = Section(CardKind::ZoneTravel, "Travel");
+                sailings.trailing   = true;
+                ScrollsBy(sailings, state, "Zone/Travel");
+                travel.rows.push_back(std::move(sailings));
+                popup.sections.push_back(std::move(travel));
+            }
+            PopupRow hours = Grid(kWorldGuildColumns, 0);
+            for (const GuildShop& shop : GuildShops())
+                if (shop.region == zone->region)
+                    AddShopHours(hours, shop, state.unixMs, ListOf(Text(shop.guild), Text(kDot, Tone::Dim), ShopPlace(shop)));
+            if (!hours.cells.empty())
+            {
+                PopupSection shops = Section(CardKind::ZoneShops, "Shop Hours");
+                ScrollsBy(hours, state, "Zone/Shop Hours");
+                shops.rows.push_back(std::move(hours));
+                popup.sections.push_back(std::move(shops));
             }
             break;
         }

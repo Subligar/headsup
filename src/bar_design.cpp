@@ -56,7 +56,8 @@ namespace headsup
             const char* file;
         };
         // By CardKind.
-        constexpr CardEntry kCards[kCardKindCount] = {{W::Zone, "zone.influence"}, {W::Weather, "weather.today"},
+        constexpr CardEntry kCards[kCardKindCount] = {{W::Zone, "zone.influence"}, {W::Zone, "zone.players"},
+            {W::Zone, "zone.travel"}, {W::Zone, "zone.shops"}, {W::Weather, "weather.today"},
             {W::Weather, "weather.forecast"}, {W::Weather, "weather.byElement"}, {W::Target, "target.overview"},
             {W::Target, "target.damage"}, {W::Target, "target.elements"}, {W::Target, "target.statuses"},
             {W::Target, "target.immune"}, {W::Target, "target.stats"}, {W::Target, "target.moves"},
@@ -76,7 +77,7 @@ namespace headsup
             {W::World, "world.guilds"}};
 
         // By BarWidget: each pop-out's cards as it laid them out before it had a design.
-        constexpr const char* kPopupDefaults[kBarWidgetCount] = {"zone.influence",
+        constexpr const char* kPopupDefaults[kBarWidgetCount] = {"zone.influence zone.players | zone.travel | zone.shops",
             "weather.today weather.forecast | weather.byElement",
             "target.overview | target.damage target.elements | target.statuses target.immune | target.stats target.spawn"
             " | target.moves target.spells | target.drops target.steal target.despoil | target.shop target.trade"

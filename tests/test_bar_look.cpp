@@ -167,7 +167,7 @@ TEST(a_widgets_own_sizes_and_fonts_take_the_place_of_the_top_panels_where_it_set
     s.barTitleFont = "Georgia";
     s.barLineSeparation = 0.7f;
     WidgetOptions own;
-    const BarMetrics panel = MetricsOf(s, BarShape::Pills, own);
+    const BarMetrics panel = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
     CHECK(panel == MetricsFor(s.barHeight, BarShape::Pills, s.barFontRatio, s.popupTextScale, s.barIconScale,
                        s.popupWidthScale, s.popupHeightScale, s.barLineSeparation));
     CHECK(Near(panel.lineSeparation, 0.7f));
@@ -179,12 +179,45 @@ TEST(a_widgets_own_sizes_and_fonts_take_the_place_of_the_top_panels_where_it_set
     own.lineSeparation = 1.6f;
     own.titleFont      = "Verdana";
     own.textFont       = "Arial";
-    const BarMetrics m = MetricsOf(s, BarShape::Pills, own);
+    const BarMetrics m = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
     CHECK(Near(m.title, panel.title) && Near(m.subtitle, m.title / 2.0f) && Near(m.icon, panel.icon / 2.0f));
     CHECK(Near(m.popupText, 1.5f * kPopupTextPixels) && Near(m.popupWidth, panel.popupWidth) && Near(m.lineSeparation, 1.6f));
     CHECK(std::string(WidgetTitleFont(s, BarShape::Pills, own)) == "Verdana");
     CHECK(std::string(WidgetTextFont(s, own)) == "Arial");
     CHECK(WidgetTextFont(s, own) == WidgetTextFont(s, own)); // one pointer per name, as the panel's
+}
+
+TEST(uniform_font_size_puts_both_lines_at_one_size_whatever_the_ratio)
+{
+    Settings s;
+    s.barFontRatio = 1.6f;
+    WidgetOptions own;
+    own.fontRatio = 0.5f;
+    const BarMetrics apart = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
+    CHECK(Near(apart.subtitle, apart.title * 2.0f));
+    own.uniformFont = true;
+    const BarMetrics uniform = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
+    CHECK(Near(uniform.subtitle, uniform.title) && Near(uniform.title, apart.title));
+}
+
+TEST(home_point_and_status_timers_set_their_lines_closer_and_the_timers_draw_their_icons_larger)
+{
+    Settings s;
+    s.barLineSeparation = 1.5f;
+    s.barIconScale      = 60;
+    const WidgetOptions own;
+    const BarMetrics zone = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
+    CHECK(Near(zone.lineSeparation, 1.5f) && Near(zone.iconShare, 0.6f));
+    const BarMetrics home = MetricsOf(s, BarShape::Pills, BarWidget::HomePoint, own);
+    CHECK(Near(home.lineSeparation, 1.2f) && Near(home.iconShare, 0.6f));
+    const BarMetrics timers = MetricsOf(s, BarShape::Pills, BarWidget::StatusTimers, own);
+    CHECK(Near(timers.lineSeparation, 1.2f) && Near(timers.iconShare, 0.87f) && Near(timers.icon, zone.icon * 1.45f));
+    // On a widget's own value too.
+    WidgetOptions closer;
+    closer.lineSeparation = 2.0f;
+    closer.iconScale      = 100;
+    const BarMetrics mine = MetricsOf(s, BarShape::Pills, BarWidget::StatusTimers, closer);
+    CHECK(Near(mine.lineSeparation, 1.6f) && Near(mine.iconShare, 1.45f));
 }
 
 TEST(a_widget_of_figures_draws_its_title_in_the_detail_font_in_every_theme)

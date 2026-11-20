@@ -1095,7 +1095,7 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     const PopupContent dunes = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(dunes.title == ListOf(Text("Valkurm Dunes"), Text(" (Zone #103)", Tone::Dim)));
     // Its region by name alone, dim, right under the title rather than in a card.
-    CHECK(dunes.subtitle == ListOf(Text("Zulkheim", Tone::Dim)) && dunes.sections.empty());
+    CHECK(dunes.subtitle == ListOf(Text("Zulkheim", Tone::Dim)) && !Section(dunes, "Influence"));
     RegionOwners owners{};
     owners[1]    = Nation::Bastok;
     state.owners = owners; // who holds it is on the bar, and in the popup only beside its share
@@ -1103,7 +1103,7 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     state.zone = 230; // Southern San d'Oria: a city region, outside the conquest
     const PopupContent city = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(Joined(city.title) == "Southern San d'Oria (Zone #230)");
-    CHECK(Joined(city.subtitle) == "San d'Oria" && city.sections.empty());
+    CHECK(Joined(city.subtitle) == "San d'Oria" && !Section(city, "Influence"));
     state.zone = 999; // past the data: its number is its title already, and it has no region
     const PopupContent unknown = BarPopupContent(BarWidget::Zone, state, settings);
     CHECK(Joined(unknown.title) == "Zone 999" && unknown.subtitle.empty() && unknown.sections.empty());
@@ -1112,6 +1112,108 @@ TEST(the_zone_popup_has_the_zones_number_beside_its_name_over_its_region)
     state.zone = 103;
     CHECK(BarPopupContent(BarWidget::Zone, state, settings).title == ListOf(Text("Valkurm Dunes")));
     CHECK(Settings{}.Widget(BarWidget::Zone).zoneId);
+}
+
+namespace
+{
+    // A card's grid, each of its rows' cells joined, a row a line.
+    std::vector<std::string> GridLines(const PopupSection& section)
+    {
+        std::vector<std::string> lines;
+        for (const PopupRow& row : section.rows)
+            for (size_t i = 0; row.kind == RowKind::Grid && i < row.cells.size(); i += static_cast<size_t>(row.columns))
+            {
+                std::string line;
+                for (size_t c = i; c < i + static_cast<size_t>(row.columns); ++c)
+                    line += (c == i ? "" : "|") + Joined(row.cells[c].text);
+                lines.push_back(line);
+            }
+        return lines;
+    }
+    std::vector<std::string> FirstColumn(const PopupSection& section)
+    {
+        std::vector<std::string> first;
+        for (const std::string& line : GridLines(section))
+            first.push_back(line.substr(0, line.find('|')));
+        return first;
+    }
+    std::vector<std::string> LastColumn(const PopupSection& section)
+    {
+        std::vector<std::string> last;
+        for (const std::string& line : GridLines(section))
+            last.push_back(line.substr(line.rfind('|') + 1));
+        return last;
+    }
+}
+
+TEST(the_zone_popups_travel_is_every_route_leaving_its_region_by_how_it_is_taken_and_where_to)
+{
+    // From data/phoenix_travel.tsv and data/phoenix_zones.tsv by hand.
+    Settings settings;
+    BarState state;
+    state.zone = 245; // Lower Jeuno: Jeuno's airships leave from Port Jeuno, in its region
+    const PopupContent jeuno = BarPopupContent(BarWidget::Zone, state, settings);
+    const PopupSection* travel = Section(jeuno, "Travel");
+    CHECK(travel != nullptr && travel->tabs.empty());
+    CHECK((FirstColumn(*travel) ==
+           std::vector<std::string>{"Airship to Bastok", "Airship to Kazham", "Airship to San d'Oria", "Airship to Windurst"}));
+    // Each zone's card, the pop-out kept while it is read.
+    const auto card = [&](uint16_t zone, const char* heading) {
+        state.zone = zone;
+        const PopupContent popup = BarPopupContent(BarWidget::Zone, state, settings);
+        const PopupSection* found = Section(popup, heading);
+        return found != nullptr ? std::optional<PopupSection>(*found) : std::nullopt;
+    };
+    // Carpenters' Landing: the barge between its landings, two to Central Landing by their names.
+    CHECK((FirstColumn(*card(2, "Travel")) ==
+           std::vector<std::string>{"Barge to South Landing", "Barge: North to Central Landing", "Barge: South to Central Landing",
+               "Barge to North Landing"}));
+    // Bibiki Bay: Kolshushu's, so Mhaura's boats, then the manaclipper both ways and its tour.
+    CHECK((FirstColumn(*card(4, "Travel")) == std::vector<std::string>{"Boat to Selbina", "Boat to Whitegate",
+               "Manaclipper to Purgonorgo Isle", "Manaclipper tour", "Manaclipper to Bibiki Bay"}));
+    CHECK(!card(100, "Travel")); // West Ronfaure: no route leaves Ronfaure
+    state.zone = 220; // a ship is in no region, nor are the others
+    CHECK(BarPopupContent(BarWidget::Zone, state, settings).sections.empty());
+}
+
+TEST(the_zone_popups_shop_hours_are_every_guild_shop_in_its_region_with_its_guild)
+{
+    Settings settings;
+    BarState state;
+    state.zone   = 236;           // Port Bastok, Bastok's region with the Mines, the Markets and the Metalworks
+    state.unixMs = 1791527400000;
+    const PopupContent bastok = BarPopupContent(BarWidget::Zone, state, settings);
+    const PopupSection* shops = Section(bastok, "Shop Hours");
+    CHECK(shops != nullptr && shops->tabs.empty());
+    CHECK((LastColumn(*shops) == std::vector<std::string>{"Alchemy" + std::string(kDot) + "Maymunah, Bastok Mines",
+               "Goldsmithing" + std::string(kDot) + "Visala, Bastok Markets", "Smithing" + std::string(kDot) + "Amulya, Metalworks",
+               "Tenshodo" + std::string(kDot) + "Jabbar, Port Bastok", "Tenshodo" + std::string(kDot) + "Silver Owl, Port Bastok",
+               "Linkshell" + std::string(kDot) + "Ilita, Port Bastok"}));
+    // Each open or closed against when that changes, as World Info's Guilds have it.
+    const GuildShop& maymunah = *std::ranges::find(GuildShops(), std::string_view("Maymunah"), [](const GuildShop& g) { return std::string_view(g.shops); });
+    const GuildHours hours = GuildAt(maymunah, state.unixMs);
+    CHECK(GridLines(*shops).front().starts_with(std::string(hours.open ? "Open" : hours.holiday ? "Holiday" : "Closed") + "|"));
+    state.zone = 245; // Lower Jeuno: no guild shop in Jeuno
+    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Shop Hours"));
+}
+
+TEST(the_zone_popups_players_are_your_friends_playing_in_its_region)
+{
+    Settings settings;
+    BarState state;
+    state.zone = 246; // Port Jeuno
+    std::vector<FriendEntry> friends{{1001, "Zed", "Zed", true, 245}, {1002, "Bee", "Bee", true, 236},
+        {1003, "Cee", "Cee", false, 246}, {1004, "Dee", "Dee", true, 0}, {1005, "Abe", "Abe", true, 246}};
+    state.friends = &friends;
+    const PopupContent jeuno    = BarPopupContent(BarWidget::Zone, state, settings);
+    const PopupSection* players = Section(jeuno, "Players");
+    CHECK(players != nullptr);
+    // Playing in Jeuno's zones, by name, each with the zone they are in: not Bee in Bastok, Cee offline or Dee unknown.
+    CHECK((GridLines(*players) == std::vector<std::string>{"Abe|Port Jeuno", "Zed|Lower Jeuno"}));
+    friends = {friends[1], friends[2]};
+    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Players"));
+    state.friends = nullptr;
+    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Players"));
 }
 
 TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
@@ -3235,11 +3337,12 @@ TEST(two_linked_copies_of_a_widget_show_its_title_and_cards_once)
     Settings settings;
     BarState state;
     state.zone = 103;
+    const PopupContent zone = PanelPopupContent(BarWidget::Zone, state, settings);
+    CHECK(!zone.sections.empty()); // Zulkheim's boat and Selbina's shops
     const PanelWidget second{BarWidget::Zone, 1};
     settings.barSections[0].push_back(second);
     settings.Widget(second).on               = true;
     settings.Widget(BarWidget::Zone).combine = second;
-    const PopupContent zone   = BarPopupContent(BarWidget::Zone, state, settings);
     const PopupContent linked = PanelPopupContent(BarWidget::Zone, state, settings);
     CHECK(linked.title == zone.title && linked.sections == zone.sections);
     CHECK(Content(second, state, settings).shown); // on the panel, beside the first

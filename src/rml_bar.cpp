@@ -218,17 +218,15 @@ namespace headsup
         for (int slot = 0; slot < kPanelSlots; ++slot)
         {
             const WidgetOptions& o = s.widgets[static_cast<size_t>(slot)];
-            if (o.titleFont.empty() && o.textFont.empty() && !o.fontRatio && !o.lineSeparation && !o.iconScale &&
-                !o.popupTextScale)
-                continue;
+            const BarMetrics m     = MetricsOf(s, shape, WidgetInSlot(slot).kind, o);
+            if (o.titleFont.empty() && o.textFont.empty() && m == look.metrics) continue;
             // Its own fonts where RmlUi can read them, the bar's where it cannot.
             const char* titleFont = WidgetTitleFont(s, shape, o);
             if (!host.EnsureFont(titleFont)) titleFont = look.titleFont;
             const char* detailFont = WidgetTextFont(s, o);
             if (!host.EnsureFont(detailFont)) detailFont = look.detailFont;
-            const BarMetrics m = MetricsOf(s, shape, o);
             // Copied out at once: the next widget's rows can move them.
-            const Rows& rows = OwnRowsFor(host, m, shape, o.fontRatio.value_or(s.barFontRatio), titleFont, detailFont);
+            const Rows& rows = OwnRowsFor(host, m, shape, FontRatioOf(s, o), titleFont, detailFont);
             widgets.text[static_cast<size_t>(slot)] = WidgetText{WidgetInSlot(slot), titleFont, detailFont, m, rows.lines, rows.place};
         }
     }
@@ -674,7 +672,7 @@ namespace headsup
             return;
         }
         const BarPalette& p = PaletteFor(settings, skin);
-        const BarMetrics m  = MetricsOf(settings, p.shape, WidgetOptions{});
+        const BarMetrics m  = MetricsOf(settings, p.shape);
         // The player's fonts where RmlUi can read them, the theme's where it cannot.
         const char* titleFont = BarTitleFont(settings, p.shape);
         if (!host.EnsureFont(titleFont)) titleFont = TitleFont(p.shape);

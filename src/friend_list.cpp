@@ -10,6 +10,7 @@ namespace headsup
     {
         constexpr size_t kSlotAccount = 0x00, kSlotCharacter = 0x30, kSlotNumber = 0x70;
         constexpr size_t kSlotAdded = 0x08, kSlotCharacterName = 0x1C, kSlotPlaying = 0x64, kSlotNameBytes = 16;
+        constexpr size_t kSlotZone = 0x40;
         // The byte holds more than playing: a request from a friend set its 0x02 beside it on the test client.
         constexpr uint8_t kPlayingBit = 0x01;
         constexpr char kFirstPrintable = ' ', kLastPrintable = '~';
@@ -78,7 +79,8 @@ namespace headsup
             const uint8_t* at = firstSlot + kFriendSlotBytes * static_cast<size_t>(slot);
             if (ReadAt<uint64_t>(at, kSlotAccount) == 0) continue;
             entries.push_back(FriendEntry{ReadAt<uint32_t>(at, kSlotAccount) / 2, SlotName(at + kSlotAdded),
-                SlotName(at + kSlotCharacterName), (at[kSlotPlaying] & kPlayingBit) != 0});
+                SlotName(at + kSlotCharacterName), (at[kSlotPlaying] & kPlayingBit) != 0,
+                ReadAt<uint16_t>(at, kSlotZone)});
         }
         return entries;
     }
