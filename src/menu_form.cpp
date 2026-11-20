@@ -2223,6 +2223,14 @@ namespace headsup
                 form.Fade(!on);
                 form.Switch(label.c_str(), s.phTimers, tip);
                 break;
+            case SettingPiece::ShowWhileInvisible:
+                form.Fade(!on || !s.phTimers);
+                form.Switch(label.c_str(), s.phTimersInvisible, tip);
+                break;
+            case SettingPiece::ShowWithNameHidden:
+                form.Fade(!on || !s.phTimers);
+                form.Switch(label.c_str(), s.phTimersNameHidden, tip);
+                break;
             case SettingPiece::TimerSize:
                 form.Fade(!on || !s.phTimers);
                 form.SliderPercent(label.c_str(), s.timerPercent, kMinSizePercent, kMaxSizePercent, tip);

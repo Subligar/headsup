@@ -3580,6 +3580,7 @@ private:
         // and one begun at zone-in.
         m_Player.inEvent = headsup::IsEventStatus(entity->GetStatusServer(m_SelfIndex));
         m_Player.inCombat = headsup::PlayerInCombat(m_Inputs);
+        m_Player.invisible = headsup::InvisibleInBuffs(player->GetBuffs());
         m_Tracker.Update(m_Inputs, m_Player, m_Settings, m_CursorTargets);
         UpdateLookups(m_Inputs, now);
         if (headsup::MayAutoCheck(autoChecks, player->GetIsZoning() != 0, m_Player.inEvent, m_Player.level))

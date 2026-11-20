@@ -318,6 +318,8 @@ namespace headsup
         int screenshotKey        = 0;    // the virtual-key code that turns screenshot mode on and off, 0 for none
         bool screenshotHidesGame = true; // screenshot mode takes the game's own windows and chat too
         bool phTimers          = false; // above your name, a respawn timer for each placeholder or NM that dies near you
+        bool phTimersInvisible = true;  // and while you are invisible, where the game draws no name for you
+        bool phTimersNameHidden = true; // and while the game's settings hide your name
         bool scaleWithDistance = true;  // sizes follow how far a name's owner is from you
         bool scaleCursor       = false; // the target cursor's size follows the distance too, apart from the names
         std::vector<uint8_t> keepPointerKeys; // keys that set off a command without hiding the game's pointer

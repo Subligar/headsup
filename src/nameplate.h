@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game_cursor.h"
+#include "name_frame.h"
 #include "pose.h"
 #include "screen_box.h"
 #include "settings.h"
@@ -18,6 +19,19 @@ namespace headsup
 
     // A posed player's name comes down to their head.
     ScreenBox PlaceName(const ScreenBox& name, const Camera* camera, const WorldPoint& feet, Pose pose);
+
+    // Your name as the game last drew it: yalms over your feet, its letters' height at full size and its color.
+    struct NameMemory
+    {
+        float height, fullLetters;
+        uint32_t color;
+    };
+    std::optional<NameMemory> RememberName(const DrawnName& name, const Camera& camera, const WorldPoint& feet);
+    // Where the game would draw your name while it draws none (you are invisible, or hid it); none behind the camera.
+    std::optional<DrawnName> StandInName(const NameMemory& memory, const Camera& camera, const WorldPoint& feet,
+        float screenWidth);
+    // Whether your respawn timers show where your name would be while the game draws none for you.
+    bool TimersWithoutName(const Settings& settings, const PlayerState& player);
 
     // Whether HeadsUp draws a cursor for this entity: your target or the one you are picking, with the cursor on, the
     // game's own arrows hooked away and nothing hidden for a conversation.

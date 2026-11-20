@@ -419,27 +419,33 @@ namespace headsup
         const CursorTargets& targets = f.targets;
         const PlateScene& scene      = f.scene;
 
-        const std::optional<DrawnName> drawn = scene.nameOf(info.index, info.index == targets.subTarget);
+        const bool self                = info.index == f.selfIndex;
+        std::optional<DrawnName> drawn = scene.nameOf(info.index, info.index == targets.subTarget);
+        if (self && drawn && scene.camera != nullptr)
+            if (const std::optional<NameMemory> seen = RememberName(*drawn, *scene.camera, info.feet)) m_OwnName = seen;
+        // Your timers alone, where your name would be, while the game draws none for you.
+        const bool timersOnly = self && !drawn && m_OwnName && scene.camera != nullptr && !f.selfTimers.empty() &&
+                                TimersWithoutName(settings, f.tracker.Player());
+        if (timersOnly) drawn = StandInName(*m_OwnName, *scene.camera, info.feet, scene.width);
         if (!drawn) return true;
         const DrawnName& gameName = *drawn;
         // Checked where our name goes: a seated player's head can be in view with the game's name above the screen.
         ScreenBox anchor = PlaceName(gameName.box, scene.camera, info.feet, info.pose);
         if (!NameOnScreen(anchor, scene.width, scene.height)) return true;
         // The game drawing the name this frame is all a plate's lines wait for.
-        ComposedPlate composed = ComposePlate(info, f.tracker.Player(), settings, gameName.color);
+        ComposedPlate composed = timersOnly ? ComposedPlate{} : ComposePlate(info, f.tracker.Player(), settings, gameName.color);
         if (m_Icons.Failed()) DropIcons(composed);
         const TargetState target = TargetStateOf(info.index, targets);
-        const bool showCursor    = CursorShown(info.index, settings, f.tracker.Player(), targets);
+        const bool showCursor    = !timersOnly && CursorShown(info.index, settings, f.tracker.Player(), targets);
         const TargetState under  = showCursor ? TargetUnderPick(info.index, targets) : TargetState::None;
         const bool timersHere =
-            info.index == f.selfIndex && !f.selfTimers.empty() && !HiddenInEvent(settings, f.tracker.Player());
+            self && !f.selfTimers.empty() && !HiddenInEvent(settings, f.tracker.Player());
         if (composed.lines.empty() && !showCursor && !timersHere) return true;
         Plate& p = m_Plates[info.index];
         const int rank       = PlateRank(info.index, targets);
         const uint32_t alpha = PlateAlpha(settings.opacity, rank, targets.target != 0, info.distance);
         p.frame              = m_Frame;
 
-        const bool self = info.index == f.selfIndex;
         // Yours, and any plate while the camera or you are not known, is sized by its name's distance.
         const float sized = f.cameraBack && !self
                                 ? ScaleAtDistance(*f.cameraBack + Distance(info.feet, f.you->feet), f.minScale, f.maxScale)

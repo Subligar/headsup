@@ -1,5 +1,6 @@
 #include "pose.h"
 #include "boxes.h"
+#include "name_frame.h"
 #include "nameplate.h"
 #include "test.h"
 
@@ -33,6 +34,27 @@ namespace
                 clip[j] += view[k] * kProjection[k * 4 + j];
         return (1.0f - clip[1] / clip[3]) * 0.5f * kScreenHeight;
     }
+
+    // The depth Direct3D gives the same point.
+    float DepthAt(const WorldPoint& feet, float height)
+    {
+        const float point[4] = {feet.x, feet.y - height, feet.z, 1.0f};
+        float view[4] = {}, clip[4] = {};
+        for (int j = 0; j < 4; ++j)
+            for (int k = 0; k < 4; ++k)
+                view[j] += point[k] * kView[k * 4 + j];
+        for (int j = 0; j < 4; ++j)
+            for (int k = 0; k < 4; ++k)
+                clip[j] += view[k] * kProjection[k * 4 + j];
+        return clip[2] / clip[3];
+    }
+
+    // Shio in the capture: the game drew their name's letters here, 2.92 yalms over their feet.
+    const WorldPoint kShioFeet  = FromEntityPosition(61.957f, -97.996f, -0.917f);
+    constexpr float kShioHeight = 2.9226f;
+    const ScreenBox kShioLetters = test::Box(1945.6f, -102.1f, 2221.6f, -51.4f);
+    constexpr float kScreenWidth = 2560.0f;
+    constexpr float kColumns     = 3.0f; // the game centers a name a little off the point over the feet
 
     // The height over the feet at this row, by halving: a higher point is a smaller row.
     float HeightAt(const WorldPoint& feet, float row)
@@ -171,4 +193,41 @@ TEST(status_4_is_the_games_event_status_and_nothing_else_is)
     CHECK(!IsEventStatus(5));
     CHECK(!IsEventStatus(33));
     CHECK(!IsEventStatus(47));
+}
+
+TEST(a_point_over_the_feet_lands_where_the_game_drew_the_name_there)
+{
+    const std::optional<ScreenSpot> spot = SpotAtHeight(TownCamera(), kShioFeet, kShioHeight, kScreenWidth);
+    CHECK(spot.has_value());
+    CHECK(test::Near(spot->x, kShioLetters.CenterX(), kColumns) && Near(spot->y, kShioLetters.maxY));
+    CHECK(test::Near(spot->depth, DepthAt(kShioFeet, kShioHeight), 1e-5f));
+    CHECK(!SpotAtHeight(TownCamera(), FromEntityPosition(40.0f, -80.0f, 0.0f), kShioHeight, kScreenWidth));
+}
+
+TEST(the_height_of_a_row_over_the_feet_is_found_from_the_camera)
+{
+    float height = 0.0f;
+    CHECK(HeightAtRow(TownCamera(), kShioFeet, kShioLetters.maxY, height) && test::Near(height, kShioHeight, 0.01f));
+}
+
+TEST(your_name_stands_in_where_the_game_would_draw_it_when_it_draws_none)
+{
+    const Camera camera  = TownCamera();
+    const DrawnName name{kShioLetters, DepthAt(kShioFeet, kShioHeight), 0xFFFFFFFF};
+    const std::optional<NameMemory> memory = RememberName(name, camera, kShioFeet);
+    CHECK(memory.has_value());
+    // Where it was drawn: the same letters, color and depth.
+    const std::optional<DrawnName> same = StandInName(*memory, camera, kShioFeet, kScreenWidth);
+    CHECK(same.has_value());
+    CHECK(Near(same->box.maxY, kShioLetters.maxY) && Near(same->box.Height(), kShioLetters.Height()));
+    CHECK(test::Near(same->box.CenterX(), kShioLetters.CenterX(), kColumns) && same->color == name.color);
+    // Walked away: the same height over the feet, its letters the game's size at the new depth.
+    const WorldPoint away = FromEntityPosition(61.957f + 20.0f, -97.996f - 20.0f, -0.917f);
+    const std::optional<DrawnName> far = StandInName(*memory, camera, away, kScreenWidth);
+    CHECK(far.has_value());
+    const float depth = DepthAt(away, kShioHeight);
+    CHECK(Near(far->box.maxY, RowAt(away, kShioHeight)) && test::Near(far->depth, depth, 1e-5f));
+    CHECK(Near(far->box.Height(), kShioLetters.Height() / NameSizeAtDepth(name.depth) * NameSizeAtDepth(depth)));
+    CHECK(far->box.Height() < kShioLetters.Height());
+    CHECK(!StandInName(*memory, camera, FromEntityPosition(40.0f, -80.0f, 0.0f), kScreenWidth));
 }

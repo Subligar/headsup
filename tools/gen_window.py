@@ -170,7 +170,7 @@ PIECES = Pieces(
         'status-table': Setting(unnamed=True, rows=rows(
             'paralyze', 'bind', 'silence', 'slow', 'poison', 'light-sleep', 'dark-sleep', 'blind', 'stun', 'gravity'),
             words={'weak': True, 'resist': True}),
-        'respawn-timers': Setting(), 'timer-size': Setting(), 'up-time': Setting(),
+        'respawn-timers': Setting(), 'show-while-invisible': Setting(), 'show-with-name-hidden': Setting(), 'timer-size': Setting(), 'up-time': Setting(),
         # User Interface
         'key': Setting(), 'hide-game-windows': Setting(), 'fishing-bar': Setting(options=3), 'fishing-bar-width': Setting(), 'fishing-bar-height': Setting(), 'fishing-bar-x': Setting(), 'fishing-bar-y': Setting(), 'fishing-bar-draggable': Setting(), 'fishing-bar-font': Setting(), 'fishing-bar-text-size': Setting(), 'fishing-bar-line': Setting(), 'fish-color-by-catch': Setting(), 'fish-small-color': Setting(), 'fish-large-color': Setting(), 'fish-item-color': Setting(), 'fish-monster-color': Setting(), 'fish-line-color': Setting(), 'fish-rod-color': Setting(), 'case-scale': Setting(), 'case-background': Setting(), 'case-move': Setting(), 'case-test': Setting(),
         'notice-width': Setting(), 'notice-height': Setting(), 'notice-fit': Setting(options=2), 'notice-rounding': Setting(),

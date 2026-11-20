@@ -224,6 +224,7 @@ namespace headsup
         std::vector<const PlateTexture*> m_IconBadges;
         std::vector<uint8_t> m_LeftOut;
         uint32_t m_Frame           = 0;
+        std::optional<NameMemory> m_OwnName; // for your timers while the game draws no name for you
         double m_RedrawMs          = 0.0; // spent this frame
         bool m_NamesFailed         = false;
         std::string m_NameFailure;

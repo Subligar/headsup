@@ -1164,6 +1164,23 @@ TEST(a_card_kept_to_some_kinds_shows_on_their_pages_alone)
     CHECK(Block(w.Pass(), "self-placeholder-timers") == nullptr);
 }
 
+TEST(the_timers_hidden_name_switches_change_only_while_respawn_timers_are_on)
+{
+    Window w;
+    w.state.page      = Page::Self;
+    w.settings.phTimers = false;
+    const std::string card = "self-placeholder-timers", invisible = card + "-show-while-invisible",
+                      hidden = card + "-show-with-name-hidden";
+    w.Pass({{invisible, kClickEvent, ""}, {hidden, kClickEvent, ""}});
+    CHECK(w.settings.phTimersInvisible && w.settings.phTimersNameHidden);
+    w.Pass({{card + "-respawn-timers", kClickEvent, ""}});
+    CHECK(w.settings.phTimers);
+    CHECK(w.Pass({{invisible, kClickEvent, ""}}).changed);
+    CHECK(!w.settings.phTimersInvisible && w.settings.phTimersNameHidden);
+    CHECK(w.Pass({{hidden, kClickEvent, ""}}).changed);
+    CHECK(!w.settings.phTimersNameHidden);
+}
+
 namespace
 {
     // The text the window gives a control this pass.
