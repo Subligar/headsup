@@ -492,6 +492,7 @@ class HeadsUp final : public IPlugin
     bool m_NoteFileRefused = false; // could not be made; tried again when Logging is turned on again
     std::optional<DWORD> m_QuadStates; // the bar's (RecordQuadStates), freed at unload
     bool m_QuadStatesTried = false;
+    bool m_ReadTexture     = true; // GetTexture can be called on this device without keeping the texture
     IDirect3DDevice8* m_Device = nullptr;
     headsup::SetupPreview m_SetupPreview;
     // The game's tables of where its files are and of players' models, read when Setup's preview first wants a model.
@@ -696,7 +697,8 @@ public:
 
     bool Direct3DInitialize(IDirect3DDevice8* device) override
     {
-        m_Device = device;
+        m_Device      = device;
+        m_ReadTexture = !headsup::GetTextureLeaks();
         HookPresent(device);
         HookReset(device);
         m_Outline.SetDevice(device);
@@ -1565,11 +1567,14 @@ private:
     }
 
     // Draws, then restore() puts back the game's states. The states the scene copy draws with are set again every time:
-    // a layer under Direct3D 8 can report a binding it no longer has. Texture 0 comes back only through restore's
-    // state block: a Direct3D 9 layer's GetTexture keeps the texture alive for good.
+    // a layer under Direct3D 8 can report a binding it no longer has, and on Windows the copy then drew its gray vertex
+    // color over the whole screen without texture 0. Under atom0s's proxy texture 0 comes back only through restore's
+    // state block, as its GetTexture keeps the texture alive for good.
     template <typename Draw, typename Restore>
     void DrawThenRestore(Draw draw, Restore restore)
     {
+        IDirect3DBaseTexture8* texture = nullptr;
+        if (m_ReadTexture) m_Device->GetTexture(0, &texture);
         const headsup::CopyState before = headsup::ReadCopyState(m_Device);
         m_Drawing = true;
         draw();
@@ -1578,6 +1583,9 @@ private:
         if (const std::string lost = headsup::StatesNotRestored(before, headsup::ReadCopyState(m_Device)); !lost.empty())
             Note("Direct3D did not put back the game's " + lost + " after HeadsUp drew; HeadsUp puts them back itself.");
         headsup::RestoreCopyState(m_Device, before);
+        if (!m_ReadTexture) return;
+        m_Device->SetTexture(0, texture);
+        if (texture != nullptr) texture->Release();
     }
 
     // Every state Direct3D keeps, saved around draw. False when Direct3D could not save them, and nothing was drawn.

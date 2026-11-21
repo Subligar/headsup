@@ -11,6 +11,8 @@ namespace headsup
 {
     bool IsDeclarationHandle(DWORD vertexShader);
     bool BoundFvf(IDirect3DDevice8* device, DWORD& fvf);
+    // atom0s's Direct3D 9 proxy, whose GetTexture never lets go of the reference it takes.
+    bool GetTextureLeaks();
 
     CopyState ReadCopyState(IDirect3DDevice8* device);
     void RestoreCopyState(IDirect3DDevice8* device, const CopyState& state);
