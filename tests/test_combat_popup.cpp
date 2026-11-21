@@ -50,7 +50,7 @@ namespace
         sides.fill(side);
         return sides;
     }
-    const PopupPlacing kOnTarget{Each(PopupSide::Middle), 0.0f, {}, {}};
+    const PopupPlacing kOnTarget{Each(PopupSide::Middle), 0.0f, 0.0f, 0.0f, {}};
 }
 
 TEST(every_quad_inside_a_popups_draw_widens_its_box_and_the_last_gives_its_depth_and_color)
@@ -164,6 +164,20 @@ TEST(a_popups_color_shows_twice_as_bright_and_its_alpha_twice_as_strong_up_to_op
     const std::vector<ShownCombatPopup> half = ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0x40404040, 0.5f)}, 100, kGamePicks, kOnTarget);
     CHECK(half.size() == 1 && half[0].color == 0xFF808080u && half[0].alpha == 0x80u);
     CHECK_EQ(ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0xFF404040, 0.5f)}, 100, kGamePicks, kOnTarget)[0].alpha, 0xFFu);
+}
+
+TEST(a_faster_fade_takes_a_popup_further_toward_clear_at_every_step_of_the_games_fade)
+{
+    // The game's alpha 0x40, shown as 128 of 255: its fade speed is the power of its share of opaque.
+    const auto alpha = [](uint32_t color, int fade) {
+        return ShownCombatPopups({Popup("7", 0, 0, 54, 81, color, 0.5f)}, 100, kGamePicks, kOnTarget, {}, fade)[0].alpha;
+    };
+    CHECK_EQ(alpha(0x40404040, kDefaultCombatPopupFade), 128u);
+    CHECK_EQ(alpha(0x40404040, 200), 64u);  // 255 * (128 / 255)^2
+    CHECK_EQ(alpha(0x40404040, 50), 181u);  // 255 * (128 / 255)^0.5
+    CHECK_EQ(alpha(0x08404040, 200), 1u);   // 16 of 255, squared
+    CHECK_EQ(alpha(0xFF404040, 200), 0xFFu); // opaque stays opaque
+    CHECK_EQ(alpha(0x00404040, 50), 0u);     // and clear clear
 }
 
 TEST(a_miss_says_what_happened_by_its_message)
@@ -644,17 +658,18 @@ namespace
     constexpr PopupBody kMobBody{140.0f, 540.0f};
     constexpr float kHeadHeight = 0.9f, kHeadRow = 180.0f;
 
-    PopupPlacing Placing(const PopupSides& sides, std::optional<PopupBody> body, ScreenPoint nudge = {}, float height = kHeadHeight)
+    PopupPlacing Placing(const PopupSides& sides, std::optional<PopupBody> body, float spread = 0.0f, float nudge = 0.0f,
+        float height = kHeadHeight)
     {
-        return PopupPlacing{sides, height, nudge, [body](uint32_t) { return body; }};
+        return PopupPlacing{sides, height, spread, nudge, [body](uint32_t) { return body; }};
     }
 
-    ShownCombatPopup Placed(PopupSide side, std::optional<PopupBody> body, uint8_t line = 0, ScreenPoint nudge = {})
+    ShownCombatPopup Placed(PopupSide side, std::optional<PopupBody> body, uint8_t line = 0, float spread = 0.0f, float nudge = 0.0f)
     {
         PopupEvent event = kOnMob;
         event.line       = line;
         return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks,
-            Placing(Each(side), body, nudge))[0];
+            Placing(Each(side), body, spread, nudge))[0];
     }
 }
 
@@ -674,7 +689,7 @@ TEST(a_popup_beside_its_target_starts_at_its_share_of_the_body_up_from_the_feet_
         PopupEvent event = kOnMob;
         event.line       = line;
         return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks,
-            Placing(Each(side), kMobBody, {}, height))[0].center.y;
+            Placing(Each(side), kMobBody, 0.0f, 0.0f, height))[0].center.y;
     };
     CHECK(Near(row(PopupSide::Right, 0.0f, 0), 540.0f));
     CHECK(Near(row(PopupSide::Left, 1.0f, 0), 140.0f));
@@ -728,10 +743,26 @@ TEST(a_popup_in_the_middle_is_centered_on_its_target_at_the_start_height_and_lat
     CHECK(Near(Placed(PopupSide::Middle, std::nullopt, 1).center.y, 240.5f + 81.0f));
 }
 
-TEST(a_nudge_moves_a_popup_on_from_its_place)
+TEST(the_spread_moves_the_side_columns_out_from_the_body_and_leaves_the_middle)
 {
-    const ShownCombatPopup nudged = Placed(PopupSide::Right, kMobBody, 0, ScreenPoint{10.0f, -20.0f});
-    CHECK(Near(nudged.center.x, 337.0f) && Near(nudged.center.y, kHeadRow - 20.0f));
+    CHECK(Near(Placed(PopupSide::Right, kMobBody, 0, 20.0f).center.x, 127.0f + 200.0f + 20.0f));
+    CHECK(Near(Placed(PopupSide::Left, kMobBody, 0, 20.0f).center.x, 127.0f - 200.0f - 20.0f));
+    CHECK(Near(Placed(PopupSide::Right, std::nullopt, 0, 20.0f).center.x, 127.0f + 81.0f + 20.0f));
+    CHECK(Near(Placed(PopupSide::Middle, kMobBody, 0, 20.0f).center.x, 127.0f));
+}
+
+TEST(a_nudge_moves_a_popup_up_or_down_from_its_place)
+{
+    const ShownCombatPopup nudged = Placed(PopupSide::Right, kMobBody, 0, 0.0f, -20.0f);
+    CHECK(Near(nudged.center.x, 327.0f) && Near(nudged.center.y, kHeadRow - 20.0f));
+}
+
+TEST(a_popups_outline_is_a_tenth_of_its_height_at_its_default_thickness_and_never_under_a_pixel)
+{
+    CHECK_EQ(CombatPopupEdge(40, kDefaultCombatPopupOutline), 4);
+    CHECK_EQ(CombatPopupEdge(40, 200), 8);
+    CHECK_EQ(CombatPopupEdge(40, 50), 2);
+    CHECK_EQ(CombatPopupEdge(8, 25), 1);
 }
 
 TEST(a_popups_text_starts_or_ends_on_its_place_when_it_is_beside_its_target)
@@ -740,28 +771,6 @@ TEST(a_popups_text_starts_or_ends_on_its_place_when_it_is_beside_its_target)
     const ScreenPoint center{100.4f, 200.6f};
     CHECK(PlaceCombatPopupText(center, 48.0f, text, 1.0f, 0.0f) == (SquareQuad{100.0f, 171.0f, 80.0f, 60.0f}));
     CHECK(PlaceCombatPopupText(center, 48.0f, text, 2.0f, 1.0f) == (SquareQuad{-60.0f, 171.0f, 160.0f, 60.0f}));
-}
-
-TEST(with_custom_placement_off_a_popup_stays_where_the_game_puts_it)
-{
-    PopupSwitches off;
-    off.placement = false;
-    PopupEvent event = kOnMob;
-    event.line       = 1;
-    const PopupPlacing placing = Placing(Each(PopupSide::Left), kMobBody, ScreenPoint{10.0f, -20.0f});
-    const ShownCombatPopup shown =
-        ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks, placing, off)[0];
-    CHECK(Near(shown.center.x, 127.0f) && Near(shown.center.y, 240.5f + 81.0f));
-    CHECK_EQ(shown.across, 0.5f);
-}
-
-TEST(with_custom_placement_off_every_kind_of_popup_spreads_in_the_one_stack_the_game_puts_them_in)
-{
-    Settings s;
-    s.combatPopupSides[static_cast<size_t>(PopupType::Spell)] = PopupSide::Middle;
-    CHECK(PopupSidesOf(s) == s.combatPopupSides);
-    s.combatPopupPlacement = false;
-    CHECK(PopupSidesOf(s) == Each(PopupSide::Middle));
 }
 
 namespace

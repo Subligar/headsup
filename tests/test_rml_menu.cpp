@@ -340,6 +340,12 @@ namespace
             m_Readings.exportable = true;
             Frames(2);
         }
+        // The game's code for starting a popup was found, as the plugin says once its hooks are in.
+        void PopupsReady()
+        {
+            m_Readings.popupTestReady = true;
+            Frames(2);
+        }
         // The window takes this layout from its next frame on, as after a reload of the layout's file.
         void Laid(const WindowLayout& layout)
         {
@@ -2664,4 +2670,26 @@ TEST(the_top_panels_switch_is_on_its_pages_title_line_and_turns_the_panel_off_an
     // Another page's title has none.
     window.Page("theme");
     CHECK(!window.Shows("toppanel-on"));
+}
+
+TEST(the_damage_numbers_test_button_sits_before_their_switch_on_the_titles_line_as_wide_as_it)
+{
+    Window window;
+    window.PopupsReady();
+    window.Page("damagenumbers");
+    const std::string testId = std::string(kPageSwitchBlock) + "-test";
+    Rml::Element* title = window.Find(kMenuPageTitleId);
+    Rml::Element* test  = window.Find(testId);
+    Rml::Element* on    = window.Find("damagenumbers-on");
+    CHECK(test != nullptr && on != nullptr && window.Shows(testId) && window.Shows("damagenumbers-on"));
+    const auto left   = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).x; };
+    const auto width  = [](Rml::Element* e) { return e->GetBox().GetSize(Rml::BoxArea::Border).x; };
+    const auto middle = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).y + e->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f; };
+    CHECK(left(test) > left(title) + width(title) && left(test) + width(test) <= left(on));
+    CHECK(std::abs(width(test) - width(on)) < 0.5f);
+    CHECK(std::abs(middle(test) - middle(title)) < 2.0f && std::abs(middle(on) - middle(title)) < 2.0f);
+    CHECK(window.Click("damagenumbers-on") && !window.settings.combatPopups);
+    CHECK(window.Click("damagenumbers-on") && window.settings.combatPopups);
+    window.Click(testId); // it changes no setting
+    CHECK(window.menu.TakePopupTest());
 }

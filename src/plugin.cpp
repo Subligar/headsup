@@ -331,7 +331,7 @@ class HeadsUp final : public IPlugin
     headsup::Tracker m_Tracker;
     // UpdateTracker's, kept as members for their room.
     std::vector<headsup::ActorInput> m_Inputs;
-    headsup::PopupTestRun m_PopupTest; // the Combat Popups card's Test
+    headsup::PopupTestRun m_PopupTest; // the Damage Numbers page's Test
     std::vector<uint32_t> m_AliveMobs; // which lose their placeholder timers
     std::vector<headsup::PetLink> m_Pets;
     std::vector<headsup::CheckCandidate> m_Checkable;
@@ -973,7 +973,7 @@ public:
         m_ModelHook.NewFrame();
         m_CombatTextHook.NewFrame(Now());
         m_CombatTextHook.SetRightAway(m_Settings.combatPopupRightAway);
-        m_CombatTextHook.SetSides(headsup::PopupSidesOf(m_Settings));
+        m_CombatTextHook.SetSides(m_Settings.combatPopupSides);
         m_PopupsDrawn = false;
         m_CombatTextHook.Take(m_Settings.enabled && m_Settings.combatPopups && !m_CombatPopups.Failed());
         m_CombatTextHook.SetYou(m_SelfIndex, m_AshitaCore->GetMemoryManager()->GetEntity()->GetPetTargetIndex(m_SelfIndex));
@@ -1725,8 +1725,8 @@ private:
     {
         const float toX = PopupsToX(), toY = PopupsToY();
         const headsup::PopupPlacing placing{m_Settings.combatPopupSides,
-            static_cast<float>(m_Settings.combatPopupHeight) / headsup::kPercent,
-            headsup::ScreenPoint{static_cast<float>(m_Settings.combatPopupX) * toX, -static_cast<float>(m_Settings.combatPopupY) * toY},
+            static_cast<float>(m_Settings.combatPopupHeight) / headsup::kPercent, static_cast<float>(m_Settings.combatPopupSpread) * toX,
+            -static_cast<float>(m_Settings.combatPopupY) * toY,
             [this, toY](uint32_t target) -> std::optional<headsup::PopupBody> {
                 const headsup::NameFrame* frame = m_NameHook.Drawn(static_cast<uint16_t>(target));
                 if (frame == nullptr) return std::nullopt;
@@ -1739,7 +1739,7 @@ private:
                 return body;
             }};
         return headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize, m_Settings.combatPopupColors, placing,
-            headsup::PopupSwitchesOf(m_Settings));
+            headsup::PopupSwitchesOf(m_Settings), m_Settings.combatPopupFade);
     }
 
     void DrawCombatPopupsBeforeSceneCopy()
@@ -1752,7 +1752,8 @@ private:
         const std::vector<headsup::ShownCombatPopup> shown = ShownPopupsNow();
         const bool saved = WithSavedState([&] {
             if (FAILED(m_Device->SetRenderTarget(m_CombatTextHook.Target(), m_CombatTextHook.Depth()))) return;
-            m_CombatPopups.Draw(m_Device, shown, headsup::CombatPopupFont(m_Settings), toX, toY);
+            m_CombatPopups.Draw(m_Device, shown, headsup::CombatPopupFont(m_Settings), m_Settings.combatPopupOutline,
+                headsup::ToArgb(m_Settings.combatPopupOutlineColor), toX, toY);
         });
         if (!saved) NotDrawn("combat popups are");
     }

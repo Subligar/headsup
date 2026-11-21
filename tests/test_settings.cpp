@@ -3511,7 +3511,7 @@ TEST(a_skillchain_takes_its_elements_color_until_picked_and_no_other_type_can)
     CHECK(LoadSettings(store).combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Element);
 }
 
-TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_unnudged_until_placed_and_their_columns_save)
+TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_spread_and_unnudged_until_placed_and_their_columns_save)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
@@ -3521,27 +3521,51 @@ TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_unnudged_un
         const bool left = type == PopupType::Buff || type == PopupType::Recovery;
         CHECK(fresh.combatPopupSides[static_cast<size_t>(t)] == (left ? PopupSide::Left : PopupSide::Right));
     }
-    CHECK(fresh.combatPopupX == 0 && fresh.combatPopupY == 0);
+    CHECK(fresh.combatPopupSpread == 20 && fresh.combatPopupY == 0);
     MapStore store;
     store.values["combatPopupColumns"] = "dealt buff | spell recovery dealt chocobo | ";
-    store.values["combatPopupX"]       = "-30";
+    store.values["combatPopupSpread"]  = "35";
     store.values["combatPopupY"]       = "45";
     const Settings s = LoadSettings(store);
     const auto side  = [](const Settings& in, PopupType type) { return in.combatPopupSides[static_cast<size_t>(type)]; };
     CHECK(side(s, PopupType::Dealt) == PopupSide::Left && side(s, PopupType::Buff) == PopupSide::Left);
     CHECK(side(s, PopupType::Spell) == PopupSide::Middle && side(s, PopupType::Recovery) == PopupSide::Middle);
     CHECK(side(s, PopupType::Taken) == PopupSide::Right && side(s, PopupType::Debuff) == PopupSide::Right);
-    CHECK(s.combatPopupX == -30 && s.combatPopupY == 45);
+    CHECK(s.combatPopupSpread == 35 && s.combatPopupY == 45);
     MapStore saved;
     SaveSettings(s, saved);
     CHECK(saved.values["combatPopupColumns"] == "dealt buff | recovery spell | taken miss critical burst skillchain debuff");
     const Settings back = LoadSettings(saved);
-    CHECK(back.combatPopupSides == s.combatPopupSides && back.combatPopupX == -30 && back.combatPopupY == 45);
+    CHECK(back.combatPopupSides == s.combatPopupSides && back.combatPopupSpread == 35 && back.combatPopupY == 45);
     SaveSettings(fresh, saved);
     CHECK(saved.values["combatPopupColumns"] == "recovery buff |  | dealt taken miss critical burst skillchain spell debuff");
-    store.values["combatPopupX"] = "999";
-    store.values["combatPopupY"] = "-999";
-    CHECK(LoadSettings(store).combatPopupX == 200 && LoadSettings(store).combatPopupY == -200);
+    store.values["combatPopupSpread"] = "999";
+    store.values["combatPopupY"]      = "-999";
+    CHECK(LoadSettings(store).combatPopupSpread == 50 && LoadSettings(store).combatPopupY == -200);
+    store.values["combatPopupSpread"] = "-5";
+    CHECK_EQ(LoadSettings(store).combatPopupSpread, 0);
+}
+
+TEST(the_combat_popups_outline_and_fade_are_headsups_and_the_games_until_set_and_they_save)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    CHECK(fresh.combatPopupOutline == 100 && fresh.combatPopupFade == 100 && ToArgb(fresh.combatPopupOutlineColor) == 0xFF000000u);
+    MapStore store;
+    store.values["combatPopupOutline"]       = "150";
+    store.values["combatPopupFade"]          = "52";
+    store.values["combatPopupOutlineColorR"] = "1.0000";
+    store.values["combatPopupOutlineColorG"] = "0.0000";
+    store.values["combatPopupOutlineColorB"] = "0.0000";
+    const Settings s = LoadSettings(store);
+    CHECK(s.combatPopupOutline == 150 && s.combatPopupFade == 50 && ToArgb(s.combatPopupOutlineColor) == 0xFFFF0000u);
+    MapStore saved;
+    SaveSettings(s, saved);
+    const Settings back = LoadSettings(saved);
+    CHECK(back.combatPopupOutline == 150 && back.combatPopupFade == 50 && back.combatPopupOutlineColor == s.combatPopupOutlineColor);
+    store.values["combatPopupOutline"] = "999";
+    store.values["combatPopupFade"]    = "1";
+    CHECK(LoadSettings(store).combatPopupOutline == 300 && LoadSettings(store).combatPopupFade == 50);
 }
 
 TEST(popups_beside_their_target_start_near_its_head_until_their_start_height_is_set_and_it_saves)
@@ -3580,7 +3604,7 @@ TEST(each_combat_popup_switch_is_on_until_switched_off_and_saves)
     const std::pair<const char*, Switch> switches[] = {{"combatPopupWords", &Settings::combatPopupWords},
         {"combatPopupLabels", &Settings::combatPopupLabels}, {"combatPopupCustomColors", &Settings::combatPopupCustomColors},
         {"combatPopupSkillchainNames", &Settings::combatPopupSkillchainNames},
-        {"combatPopupRightAway", &Settings::combatPopupRightAway}, {"combatPopupPlacement", &Settings::combatPopupPlacement}};
+        {"combatPopupRightAway", &Settings::combatPopupRightAway}};
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
     for (const auto& [key, field] : switches)

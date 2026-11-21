@@ -112,7 +112,7 @@ namespace headsup
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool caseMoveRequested = false, caseTestRequested = false; // pressed: the plugin shows the boxes, or plays one
-        bool popupTestRequested = false; // the Combat Popups card's Test: the plugin starts its samples
+        bool popupTestRequested = false; // the Damage Numbers page's Test: the plugin starts its samples
         bool noticeTestRequested       = false; // the Notifications card's Test: a kind at random
         bool friendNoticeTestRequested = false; // Friend Notifications' Test: a friend comes online, or goes offline
         std::optional<NoticeKind> soundPicked;  // a Sound Effect was picked: the plugin plays it
