@@ -127,6 +127,15 @@ namespace headsup
     constexpr int kCountedIcons = 7;
     // Whether a kind's nameplates can show those icons, so that its page sets their limit and its file keeps it.
     constexpr bool HasStatusIcons(PlateKind kind) { return kind == PlateKind::Players || kind == PlateKind::Self; }
+    // Whether a kind's nameplates can show buffs and debuffs ($buffs, $debuffs), so that its page has their card.
+    constexpr bool HasPlateStatuses(PlateKind kind)
+    {
+        return kind == PlateKind::Mobs || kind == PlateKind::Players || kind == PlateKind::Self;
+    }
+    // The statuses each such page stars for a new install (Phoenix's ids): Protect, Shell, Sleep, Paralysis,
+    // Petrification, Blindness.
+    constexpr uint16_t kProtectStatus = 40, kShellStatus = 41, kSleepStatus = 2, kParalysisStatus = 4,
+                       kPetrificationStatus = 7, kBlindnessStatus = 5;
 
     // The tags a template is built from.
     constexpr const char* kTagDetect       = "$detect";
@@ -213,6 +222,12 @@ namespace headsup
         LineDesign lines[kPlateLines];
         OrnamentSettings ornament;
         int maxIcons = kCountedIcons; // the status icons a nameplate draws at most, GM's aside
+        // The statuses $buffs and $debuffs draw, by name (one id of each); their background; on players only for
+        // your party (read only for Players).
+        std::vector<uint16_t> shownStatuses{kProtectStatus, kShellStatus, kSleepStatus, kParalysisStatus,
+            kPetrificationStatus, kBlindnessStatus};
+        bool statusBack      = false;
+        bool statusPartyOnly = true;
         bool operator==(const KindSettings&) const = default;
     };
     std::array<KindSettings, kPlateKindCount> DefaultKinds();

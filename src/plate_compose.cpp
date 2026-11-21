@@ -1,11 +1,13 @@
 #include "plate_compose.h"
 
 #include "bar_job.h"
+#include "bar_statuses.h"
 #include "entity_state.h"
 #include "icons.h"
 #include "labels.h"
 #include "look.h"
 #include "plate_template.h"
+#include "status_icons.h"
 #include "titles.h"
 
 #include <algorithm>
@@ -137,11 +139,37 @@ namespace headsup
                     info.mob ? MagicTargetOf(*info.mob, info.checked ? info.checked->level : 0) : std::nullopt}};
         }
 
+        bool IsStatusTag(Tag tag) { return tag == Tag::Buffs || tag == Tag::Debuffs; }
+
+        // The entity's statuses on the tag's side whose name is starred, one for each name, in the entity's order.
+        std::vector<IconDraw> StatusIcons(Tag tag, const ActorInfo& info, const Settings& s)
+        {
+            std::vector<IconDraw> out;
+            const PlateKind kind = PlateKindOf(info.state);
+            if (!HasPlateStatuses(kind)) return out;
+            const KindSettings& design = s.Kind(kind);
+            const auto starred = [&](std::string_view name) {
+                return std::ranges::any_of(design.shownStatuses, [&](uint16_t id) { return name == StatusName(id); });
+            };
+            const auto drawn = [&](std::string_view name) {
+                return std::ranges::any_of(out, [&](const IconDraw& d) { return name == StatusName(*d.status); });
+            };
+            for (int i = 0; i < info.statuses.count; ++i)
+            {
+                const uint16_t id = info.statuses.ids[static_cast<size_t>(i)];
+                const std::string_view name = StatusName(id);
+                if (IsDebuff(id) != (tag == Tag::Debuffs) || name.empty() || !starred(name) || drawn(name)) continue;
+                out.push_back(IconDraw{.status = id, .back = design.statusBack});
+            }
+            return out;
+        }
+
         std::vector<IconDraw> TagIcons(Tag tag, const ActorInfo& info, const PlayerState& player, const Settings& s,
             std::optional<MobBadges>& badges)
         {
             std::vector<IconDraw> out;
             const TagEntry& entry = EntryOf(tag);
+            if (IsStatusTag(tag)) return StatusIcons(tag, info, s);
             if (tag == Tag::Detect)
             {
                 if (!IsMob(info)) return out;
@@ -366,7 +394,7 @@ namespace headsup
                     }
                     const bool counted = IsCountedIcon(tag);
                     if (counted && statusIcons >= kind.maxIcons) continue;
-                    if (forced == Tag::LinkDead && tag != Tag::LinkDead && EntryOf(tag).icon) continue;
+                    if (forced == Tag::LinkDead && tag != Tag::LinkDead && (EntryOf(tag).icon || IsStatusTag(tag))) continue;
                     std::vector<IconDraw> icons = TagIcons(tag, info, player, s, badges);
                     drawn                       = !icons.empty();
                     if (drawn && counted) ++statusIcons;

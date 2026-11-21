@@ -767,3 +767,29 @@ TEST(a_mob_that_is_someones_pet_is_outlined_by_the_pets_row_alone)
     CHECK(t.Find(0x2000)->outline);
     CHECK_EQ(t.Find(0x2000)->argb, ToArgb(Color{{0.7f, 0.6f, 0.5f}}));
 }
+
+// John (2026-11-19): "If enabled, the status effects are only shown on party members, not on all players."
+TEST(only_party_members_keeps_statuses_off_strangers_but_not_off_you_your_party_or_mobs)
+{
+    StatusList paralyzed;
+    paralyzed.Add(4);
+    ActorInput stranger = Player(0x1000);
+    ActorInput member   = Player(0x2000);
+    member.index        = 1053;
+    member.party        = true;
+    ActorInput you      = Player(0x3000);
+    you.index           = 1054;
+    you.self            = true;
+    ActorInput mob      = BountyHunter(0x4000);
+    for (ActorInput* input : {&stranger, &member, &you, &mob})
+        input->statuses = paralyzed;
+    Settings s;
+    CHECK(s.Kind(PlateKind::Players).statusPartyOnly); // on for a new install
+    Tracker t;
+    t.Update({stranger, member, you, mob}, kLevel20, s, CursorTargets{});
+    CHECK_EQ(t.Find(0x1000)->statuses.count, 0);
+    CHECK(t.Find(0x2000)->statuses == paralyzed && t.Find(0x3000)->statuses == paralyzed && t.Find(0x4000)->statuses == paralyzed);
+    s.Kind(PlateKind::Players).statusPartyOnly = false;
+    t.Update({stranger, member, you, mob}, kLevel20, s, CursorTargets{});
+    CHECK(t.Find(0x1000)->statuses == paralyzed);
+}

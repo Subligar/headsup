@@ -72,6 +72,9 @@ namespace headsup
         uint32_t m_Frame = 0;
     };
 
+    // The game's own icon for a status, which only the plugin can read; nothing when it has none.
+    using GameStatusIcon = std::optional<Image> (*)(uint16_t id);
+
     // An icon's texture, the icon in its top-left corner.
     struct IconTexture
     {
@@ -86,6 +89,8 @@ namespace headsup
         // Null once Direct3D could not make one. An icon painted in a color (the linkshell's pearl) has a texture of its
         // own for each color.
         const IconTexture* For(IDirect3DDevice8* device, Icon icon, std::optional<uint32_t> paint);
+        // A status's icon in a theme's status icons: its pack's, else the game's from game, else the unknown status's.
+        const IconTexture* ForStatus(IDirect3DDevice8* device, int pack, uint16_t id, GameStatusIcon game);
         bool Failed() const { return m_Failed; }
         // The pearl drawn for the linkshell in place of the built-in one, at its size (GameLitPearl's), its painted
         // textures let go.
@@ -97,6 +102,7 @@ namespace headsup
     private:
         std::array<IconTexture, kIconCount> m_Textures{};
         std::map<std::pair<Icon, uint32_t>, IconTexture> m_Painted; // by icon and color, alpha left out
+        std::map<std::pair<int, uint16_t>, IconTexture> m_Statuses; // by pack and status
         std::vector<unsigned char> m_Pearl;                          // or empty for the built-in
         bool m_Failed = false;
         std::string m_Failure;
