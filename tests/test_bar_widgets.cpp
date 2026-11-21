@@ -1200,7 +1200,7 @@ TEST(the_zone_popups_shop_hours_are_every_guild_shop_in_its_region_with_its_guil
     CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Shop Hours"));
 }
 
-TEST(the_zone_popups_players_are_your_friends_playing_in_its_region)
+TEST(the_zone_popups_nearby_friends_are_your_friends_playing_in_its_region)
 {
     Settings settings;
     BarState state;
@@ -1209,14 +1209,14 @@ TEST(the_zone_popups_players_are_your_friends_playing_in_its_region)
         {1003, "Cee", "Cee", false, 246}, {1004, "Dee", "Dee", true, 0}, {1005, "Abe", "Abe", true, 246}};
     state.friends = &friends;
     const PopupContent jeuno    = BarPopupContent(BarWidget::Zone, state, settings);
-    const PopupSection* players = Section(jeuno, "Players");
-    CHECK(players != nullptr);
+    const PopupSection* players = Section(jeuno, "Nearby Friends");
+    CHECK(players != nullptr && players->card == std::optional(CardKind::ZoneFriends));
     // Playing in Jeuno's zones, by name, each with the zone they are in: not Bee in Bastok, Cee offline or Dee unknown.
     CHECK((GridLines(*players) == std::vector<std::string>{"Abe|Port Jeuno", "Zed|Lower Jeuno"}));
     friends = {friends[1], friends[2]};
-    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Players"));
+    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Nearby Friends"));
     state.friends = nullptr;
-    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Players"));
+    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Nearby Friends"));
 }
 
 TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
