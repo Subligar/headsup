@@ -2532,3 +2532,14 @@ TEST(each_widget_that_makes_headsup_send_packets_warns_of_it_on_its_chip)
     CHECK(chipSays(BarWidget::Zone, WindowWord::SendsConquest));
     CHECK(!chipSays(BarWidget::Zone, WindowWord::SendsTurnIns) && !chipSays(BarWidget::Zone, WindowWord::SendsWorldConquest));
 }
+
+TEST(friend_notifications_style_picks_full_or_compact)
+{
+    Window w;
+    w.state.page             = Page::Notifications;
+    const std::string style  = "notifications-notice-friends-friend-notice-style-s-";
+    CHECK(w.Pass({{style + "1", kClickEvent, ""}}).changed);
+    CHECK(w.settings.friendNoticeStyle == FriendNoticeStyle::Compact);
+    CHECK(w.Pass({{style + "0", kClickEvent, ""}}).changed);
+    CHECK(w.settings.friendNoticeStyle == FriendNoticeStyle::Full);
+}

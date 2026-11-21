@@ -468,6 +468,15 @@
           "settings": [
             {"key": "friend-notice-online", "name": "Show Online", "tip": "Shows a notification when a friend comes online. Default: On."},
             {"key": "friend-notice-offline", "name": "Show Offline", "tip": "Shows a notification when a friend goes offline. Default: On."},
+            {
+              "key": "friend-notice-style",
+              "name": "Style",
+              "tip": "How a friend's notification looks. Party and alliance invites always show in full, with their buttons. Default: Full.",
+              "options": [
+                {"name": "Full", "tip": "Friend Online or Friend Offline over a line saying who came online or went offline."},
+                {"name": "Compact", "tip": "Just a dot and your friend's name: green when they come online, gray when they go offline. Each is as small as its name, whatever Width and Height are set to."}
+              ]
+            },
             {"key": "friend-notice-online-sound", "name": "Online Sound Effect", "tip": "The sound when a friend comes online, at most once every 10 seconds. Default: Chime."},
             {"key": "friend-notice-offline-sound", "name": "Offline Sound Effect", "tip": "The sound when a friend goes offline, at most once every 10 seconds. Default: None."},
             {"key": "friend-notice-volume", "name": "Alert Volume", "tip": "How loud the friend sounds are. It is multiplied by Master Volume. Default: 60%."},

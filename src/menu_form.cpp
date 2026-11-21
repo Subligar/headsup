@@ -2470,6 +2470,13 @@ namespace headsup
                 form.Fade(false);
                 form.Switch(label.c_str(), s.friendNoticeOffline, tip);
                 break;
+            case SettingPiece::FriendNoticeStyle:
+            {
+                form.Fade(!s.friendNoticeOnline && !s.friendNoticeOffline);
+                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
+                form.Segments(label.c_str(), s.friendNoticeStyle, names.data(), kFriendNoticeStyleCount, tip);
+                break;
+            }
             case SettingPiece::FriendNoticeOnlineSound:
                 form.Fade(!s.friendNoticeOnline);
                 SoundDropdown(form, c.state, label, s.friendNoticeOnlineSound, NoticeKind::Online,
