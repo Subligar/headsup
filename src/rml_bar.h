@@ -49,7 +49,7 @@ namespace headsup
         {
             float height   = 0.0f;
             BarShape shape = BarShape::Ornate;
-            float fontRatio = kDefaultFontRatio, lineSeparation = kDefaultLineSeparation;
+            float title = 0.0f, fontRatio = kDefaultFontRatio, lineSeparation = kDefaultLineSeparation;
             const char* titleFont  = nullptr; // interned by BarTitleFont and BarTextFont: one pointer per name
             const char* detailFont = nullptr;
             int helpText = kAutoBarTextSize;

@@ -200,6 +200,24 @@ TEST(uniform_font_size_puts_both_lines_at_one_size_whatever_the_ratio)
     CHECK(Near(uniform.subtitle, uniform.title) && Near(uniform.title, apart.title));
 }
 
+TEST(a_widgets_font_size_sets_its_main_line_and_the_ratio_sizes_its_second_against_it)
+{
+    Settings s;
+    s.barHeight    = 40;
+    s.barFontRatio = 1.6f;
+    WidgetOptions own;
+    // Unchanged is the size the panel's height gives: 40% of 40 px.
+    CHECK(Near(MetricsOf(s, BarShape::Pills, BarWidget::Zone, own).title, 16.0f));
+    own.fontSize = 12;
+    const BarMetrics sized = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
+    CHECK(Near(sized.title, 12.0f) && Near(sized.subtitle, 12.0f / 1.6f));
+    own.fontRatio = 0.5f;
+    CHECK(Near(MetricsOf(s, BarShape::Pills, BarWidget::Zone, own).subtitle, 24.0f));
+    own.uniformFont = true;
+    const BarMetrics uniform = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
+    CHECK(Near(uniform.title, 12.0f) && Near(uniform.subtitle, 12.0f));
+}
+
 TEST(home_point_and_status_timers_set_their_lines_closer_and_the_timers_draw_their_icons_larger)
 {
     Settings s;

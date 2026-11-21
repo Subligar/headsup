@@ -171,6 +171,8 @@ namespace headsup
     // kFontRatioStepBelow under it and kFontRatioStepAbove over it.
     constexpr float kMinFontRatio = 0.2f, kMaxFontRatio = 2.0f, kDefaultFontRatio = 1.2f;
     constexpr int kFontRatioSteps = 20; // a side
+    // A widget's own Font Size, pixels: about the sizes the panel's least and greatest heights give.
+    constexpr int kMinWidgetFontSize = 8, kMaxWidgetFontSize = 26;
     constexpr float kFontRatioStepBelow = (1.0f - kMinFontRatio) / kFontRatioSteps;
     constexpr float kFontRatioStepAbove = (kMaxFontRatio - 1.0f) / kFontRatioSteps;
     // Its slider's positions, 0 to 2 * kFontRatioSteps: the ratio at one, and the nearest to a ratio.
