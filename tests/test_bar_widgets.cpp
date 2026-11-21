@@ -1,4 +1,5 @@
 #include "bar_widgets.h"
+#include "argb.h"
 #include "bar_server_time.h"
 #include "ph_timers.h"
 #include "labels.h"
@@ -3840,4 +3841,30 @@ TEST(the_home_point_widget_is_its_icon_and_the_name_of_your_home_points_zone_wit
     const PanelWidget made       = *CreateWidget(settings);
     settings.Widget(made).design = DesignFrom(BarWidget::Custom, "homePoint.name |");
     CHECK_EQ(Joined(Content(made, state, settings).title), "Southern San d'Oria");
+}
+
+TEST(the_placeholder_timers_widget_shows_your_timers_on_two_lines_and_takes_no_room_without_any)
+{
+    Settings settings;
+    BarState state;
+    const PanelWidget timers{BarWidget::PhTimers};
+    CHECK(!Content(timers, state, settings).shown); // off on a new install
+    settings.Widget(timers).on = true;
+    WidgetContent w = Content(timers, state, settings);
+    CHECK(w.shown && w.idle && !w.hasPopup);
+    CHECK(!TakesRoom(w, timers, std::nullopt) && TakesRoom(w, timers, timers)); // only while its settings show
+    // The nameplate's lines, soonest first: the first, third and so on on top, the others under them.
+    state.phTimers = {{"Leaping Lizzy (123) UP", true}, {"Valkurm Emperor (456) 4:56", false},
+        {"Bloodtear Baldurf (789) 1:02:03", false}};
+    w = Content(timers, state, settings);
+    CHECK(!w.idle);
+    CHECK_EQ(Joined(w.title), "Leaping Lizzy (123) UP  Bloodtear Baldurf (789) 1:02:03");
+    CHECK_EQ(Joined(w.subtitle), "Valkurm Emperor (456) 4:56");
+    // One that is up in the placeholder color, as over your name.
+    CHECK(w.title[0].argb == ToArgb(settings.palette.aggression[static_cast<int>(Nature::Placeholder)]));
+    CHECK(w.title[1].argb == 0 && w.subtitle[0].argb == 0);
+    CHECK(BarPopupContent(timers, state, settings).sections.empty());
+    state.phTimers.resize(1);
+    CHECK(Content(timers, state, settings).subtitle.empty());
+    CHECK(HasCopies(BarWidget::PhTimers) && Combines(BarWidget::PhTimers) && Aligns(BarWidget::PhTimers));
 }

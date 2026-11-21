@@ -19,13 +19,13 @@ namespace
     }
 }
 
-TEST(every_widget_but_game_help_and_settings_has_parts_and_a_default_design_holding_each_once)
+TEST(every_widget_but_game_help_settings_and_placeholder_timers_has_parts_and_a_default_design_holding_each_once)
 {
     for (int k = 0; k < kBarWidgetCount; ++k)
     {
         const auto kind = static_cast<BarWidget>(k);
         std::vector<WidgetPart> held = PartsIn(DefaultDesign(kind)), parts(PartsOf(kind).begin(), PartsOf(kind).end());
-        CHECK_EQ(parts.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings);
+        CHECK_EQ(parts.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings || kind == BarWidget::PhTimers);
         if (kind == BarWidget::Custom) continue; // it holds only the parts placed in it
         std::ranges::sort(held);
         std::ranges::sort(parts);
@@ -219,6 +219,7 @@ TEST(every_pop_out_card_is_one_widgets_and_saves_by_a_name_of_its_own)
         const auto kind = static_cast<BarWidget>(k);
         const std::vector<CardKind> cards = CardsOf(kind);
         CHECK_EQ(cards.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings || kind == BarWidget::HomePoint ||
+                                    kind == BarWidget::PhTimers ||
                                     kind == BarWidget::Custom);
         for (const CardKind card : cards)
             CHECK(WidgetOfCard(card) == kind);
