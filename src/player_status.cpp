@@ -59,6 +59,7 @@ namespace headsup
 
         constexpr int kLevelSyncEffect   = 269; // the status effect's ID, which its icon shares
         constexpr int kInvisibleEffect   = 69;
+        constexpr int kNoStatus          = 255; // an empty slot: Phoenix's StatusEffect::None
         constexpr int kIconHighBits      = 2;   // per slot in a party member's icon mask, each worth 256
         constexpr uint64_t kIconHighMask = 0x3;
         constexpr int kIconLowBits       = 8;
@@ -140,26 +141,35 @@ namespace headsup
             cap != 0 ? std::min(cap, data[kSyncLevel]) : data[kSyncLevel]};
     }
 
-    bool LevelSyncInBuffs(const int16_t* buffs)
-    {
-        return buffs != nullptr && std::find(buffs, buffs + kStatusIconSlots, kLevelSyncEffect) != buffs + kStatusIconSlots;
-    }
+    bool StatusList::Has(uint16_t id) const { return std::find(ids.begin(), ids.begin() + count, id) != ids.begin() + count; }
 
-    bool InvisibleInBuffs(const int16_t* buffs)
+    StatusList PartyIcons(const uint8_t* icons, uint64_t bitMask)
     {
-        return buffs != nullptr && std::find(buffs, buffs + kStatusIconSlots, kInvisibleEffect) != buffs + kStatusIconSlots;
-    }
-
-    bool LevelSyncInPartyIcons(const uint8_t* icons, uint64_t bitMask)
-    {
-        if (icons == nullptr) return false;
+        StatusList list;
+        if (icons == nullptr) return list;
         for (int slot = 0; slot < kStatusIconSlots; ++slot)
         {
             const auto high = static_cast<int>(bitMask >> (slot * kIconHighBits) & kIconHighMask);
-            if ((high << kIconLowBits | icons[slot]) == kLevelSyncEffect) return true;
+            const auto id   = static_cast<uint16_t>(high << kIconLowBits | icons[slot]);
+            if (id != kNoStatus) list.Add(id);
         }
-        return false;
+        return list;
     }
+
+    StatusList BuffIcons(const int16_t* buffs)
+    {
+        StatusList list;
+        if (buffs == nullptr) return list;
+        for (int slot = 0; slot < kStatusIconSlots; ++slot)
+            if (buffs[slot] >= 0 && buffs[slot] != kNoStatus) list.Add(static_cast<uint16_t>(buffs[slot]));
+        return list;
+    }
+
+    bool LevelSyncInBuffs(const int16_t* buffs) { return BuffIcons(buffs).Has(kLevelSyncEffect); }
+
+    bool InvisibleInBuffs(const int16_t* buffs) { return BuffIcons(buffs).Has(kInvisibleEffect); }
+
+    bool LevelSyncInPartyIcons(const uint8_t* icons, uint64_t bitMask) { return PartyIcons(icons, bitMask).Has(kLevelSyncEffect); }
 
     PlayerStatus StatusFromRender(uint32_t flags1, uint32_t flags2, uint32_t linkshellBgr)
     {
