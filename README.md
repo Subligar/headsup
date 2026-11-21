@@ -68,6 +68,7 @@ Hover a widget for its popup, and click to keep it open.
 | Status Timers | The time left on each status you pin | Your favorite statuses and every other one, with a star and a pin for each |
 | World Info | The next ship, weather, guild hours, RSE, moon or the regions each nation holds | Ships, the calendar, guild hours, today's guild turn-ins and each nation's regions |
 | Home Point | The zone your home point is in | None |
+| Placeholder Timers | The respawn timers of the NMs and placeholders that died near you | None |
 | Target | Your target's name, level, con and distance | A mob's stats, weaknesses, spells, drops and spawn; an NPC's shop, trades and quests |
 | Currency | Your gil or a currency | Your favorite currencies and every other one, by amount or by name |
 | Bags | Your inventory space | Every bag |

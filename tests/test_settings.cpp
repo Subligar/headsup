@@ -264,6 +264,7 @@ barStatusTimers=true
 barWorld=true
 barSettings=true
 barHomePoint=true
+barPhTimers=true
 barZoneLine2=true
 barZoneIcons=true
 barWeatherLine2=true
@@ -304,7 +305,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather job party statusTimers world homePoint
+barLeft=zone weather job party statusTimers world homePoint phTimers
 barCenter=
 barRight=target gil bags performance earthTime settings
 hideHelpBar=true
@@ -1043,7 +1044,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint"}; // in BarWidget's order, but a created widget's
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers"}; // in BarWidget's order, but a created widget's
     static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
     for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {
@@ -1298,7 +1299,8 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
 TEST(uniform_font_size_starts_on_for_home_point_and_status_timers_alone_and_each_copy_keeps_its_own)
 {
     const Settings fresh;
-    CHECK(fresh.Widget(BarWidget::HomePoint).uniformFont && fresh.Widget(BarWidget::StatusTimers).uniformFont);
+    CHECK(fresh.Widget(BarWidget::HomePoint).uniformFont && fresh.Widget(BarWidget::StatusTimers).uniformFont &&
+          fresh.Widget(BarWidget::PhTimers).uniformFont);
     CHECK(!fresh.Widget(BarWidget::Zone).uniformFont && !fresh.Widget(BarWidget::Job).uniformFont);
     Settings s;
     s.Widget(BarWidget::HomePoint).uniformFont = false;

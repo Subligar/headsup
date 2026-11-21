@@ -38,7 +38,7 @@ namespace headsup
         constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation", "weather | day time -date -moon",
             "name distance -detection | level player -weak", "amount1 | icon2 amount2 -name1 -name2 -icon1", "count1 | name1", "time | -server -vana -date", "", "-fps sent received percent -memory messages |",
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
-            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "name |"};
+            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "", "name |"};
 
         constexpr char kOffMark = '-', kSpace = ' ', kWidgetMark = '.', kUnderMark = '/';
 
@@ -87,7 +87,7 @@ namespace headsup
             "performance.connection performance.session | performance.memory performance.processor"
             " | performance.playOnline performance.linuxxi performance.lua",
             "job.exp", "party.members", "statusTimers.favorites | statusTimers.buffs | statusTimers.debuffs",
-            "world.conquest world.travel/world.calendar | world.guilds", "", "", ""};
+            "world.conquest world.travel/world.calendar | world.guilds", "", "", "", ""};
         constexpr const char* kNoCards = "none"; // a pop-out design with no card, which "" would not be
 
         bool Holds(std::span<const WidgetPart> parts, WidgetPart part) { return std::ranges::find(parts, part) != parts.end(); }
@@ -271,7 +271,8 @@ namespace headsup
         case BarWidget::Bags: return kBags;
         case BarWidget::EarthTime: return kClock;
         case BarWidget::GameHelp:
-        case BarWidget::Settings: return {};
+        case BarWidget::Settings:
+        case BarWidget::PhTimers: return {};
         case BarWidget::Custom:
         {
             // Its Name, then each widget's icon and parts, in the widgets' order.

@@ -12,6 +12,7 @@
 #include "game_packets.h"
 #include "game_state.h"
 #include "outposts.h"
+#include "ph_timers.h"
 #include "icons.h"
 #include "settings.h"
 #include "strip_text.h"
@@ -53,6 +54,7 @@ namespace headsup
         int earthYear = 0, earthMonth = 0, earthDay = 0, earthHour = 0, earthMinute = 0, earthSecond = 0; // local
         uint16_t zone = 0; // 0 while unknown
         uint16_t homePoint = 0; // the zone your home point is in; 0 while unknown
+        std::vector<TimerLine> phTimers; // PhTimers::Lines, while Respawn Timer is on
         const ActorInfo* target = nullptr;
         std::optional<float> targetDistance;   // yalms, with the target
         // The game's name for an item ID, for a mob's drops; nullptr, or an empty name, when it has none.
@@ -108,7 +110,7 @@ namespace headsup
     void HoldWhileLoading(BarState& state, CharacterReadings& held, bool loaded);
 
     // The parts of BarState that the shown widgets and the open popup read, for the plugin to gather only those; it
-    // always copies the weather, the owners, the shares and your home point.
+    // always copies the weather, the owners, the shares, your home point and your respawn timers.
     struct BarNeeds
     {
         bool unixTime   = false; // unixMs
