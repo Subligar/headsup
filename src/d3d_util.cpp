@@ -3,6 +3,7 @@
 #include "native_hook.h" // kGameModule
 
 #include <algorithm>
+#include <string_view>
 
 namespace headsup
 {
@@ -10,6 +11,8 @@ namespace headsup
     {
         constexpr DWORD kWineDeclarationHandles = 0xF0000000; // Wine numbers declaration handles from here
         constexpr uintptr_t kStackScanBytes     = 0x1000;     // the game's draw call chain fits well inside this
+        constexpr const char* kDirect3DModule   = "d3d8.dll";
+        constexpr std::wstring_view kLeakingProxyName = L"Direct3D8 to Direct3D9 Proxy"; // its version info's ProductName
 
         struct CodeRange
         {
@@ -34,6 +37,17 @@ namespace headsup
                 }
             return {};
         }
+    }
+
+    bool GetTextureLeaks()
+    {
+        const HMODULE module = GetModuleHandleA(kDirect3DModule);
+        const HRSRC info     = module != nullptr ? FindResourceA(module, MAKEINTRESOURCEA(VS_VERSION_INFO), RT_VERSION) : nullptr;
+        const HGLOBAL loaded = info != nullptr ? LoadResource(module, info) : nullptr;
+        const auto* data     = loaded != nullptr ? static_cast<const wchar_t*>(LockResource(loaded)) : nullptr;
+        if (data == nullptr) return false;
+        const std::wstring_view block(data, SizeofResource(module, info) / sizeof(wchar_t));
+        return block.find(kLeakingProxyName) != std::wstring_view::npos;
     }
 
     bool IsDeclarationHandle(DWORD vertexShader)
