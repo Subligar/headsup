@@ -107,6 +107,21 @@ namespace headsup
         }
     }
 
+    bool StarredByName(const std::vector<uint16_t>& starred, uint16_t id)
+    {
+        const std::string_view name = StatusName(id);
+        return std::ranges::any_of(starred, [&](uint16_t star) { return name == StatusName(star); });
+    }
+
+    std::vector<uint16_t> StarredFirst(const std::vector<uint16_t>& starred, bool debuffs)
+    {
+        std::vector<uint16_t> ids;
+        for (const bool first : {true, false})
+            for (const auto& [name, id] : ByName())
+                if (IsDebuff(id) == debuffs && StarredByName(starred, id) == first) ids.push_back(id);
+        return ids;
+    }
+
     std::optional<double> StatusSecondsLeft(uint32_t raw, int64_t unixMs)
     {
         if (raw == kNoExpiry) return std::nullopt;

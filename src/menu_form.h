@@ -8,6 +8,7 @@
 #include "setup.h"
 #include "window_skin.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -146,12 +147,26 @@ namespace headsup
         FeedbackDraft feedback;
         FeedbackStatus feedbackStatus = FeedbackStatus::None;
         bool feedbackRequested = false; // Send Feedback was pressed with the form filled: the plugin is to send it, once
+        // The Buffs & Debuffs card's buffs and debuffs, starred first as the page they were made for opened, so a star
+        // clicked moves nothing until it opens again; and their rows' markup, made again only when what it shows
+        // changes, as some 600 rows cost a frame a millisecond or more.
+        struct StatusLists
+        {
+            std::optional<PlateKind> kind;
+            std::array<std::vector<uint16_t>, 2> order;
+            std::array<std::string, 2> rows;
+            std::vector<uint16_t> rowsShown;
+            bool rowsBack = false;
+            int rowsPack  = 0;
+            std::string rowsIds; // the stars' ids' start
+        } statusLists;
 
         // What a page was in the middle of is dropped when it is left, by another page or by the window closing: a
         // row waiting for a key would take one pressed for the game, and a reset asked once would wait armed.
         void Leave()
         {
             form.popup.clear();
+            statusLists = {};
             confirmReset   = false;
             keyCapture     = {};
             shotKeyCapture = {};
