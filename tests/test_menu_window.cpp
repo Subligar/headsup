@@ -75,7 +75,30 @@ namespace
             rml.context->Update();
             return Element(window, id)->IsVisible(true);
         }
+        // Updates as time passes, until every control has eased into its look, and draws it.
+        void Settle()
+        {
+            for (int step = 0; step < 3; ++step)
+            {
+                rml.context->Update();
+                rml.complaints.seconds += 1.0;
+            }
+            rml.context->Render();
+        }
     };
+
+    bool SameColor(Rml::Colourb color, uint32_t argb)
+    {
+        return color.red == (argb >> 16 & 0xFF) && color.green == (argb >> 8 & 0xFF) && color.blue == (argb & 0xFF) && color.alpha == argb >> 24;
+    }
+
+    // Whether the element is drawn larger than its box: the box's corner lands inside it.
+    bool DrawnLarger(Rml::Element* element)
+    {
+        const Rml::Vector2f at = element->GetAbsoluteOffset(Rml::BoxArea::Border), size = element->GetBox().GetSize(Rml::BoxArea::Border);
+        Rml::Vector2f corner = at + size;
+        return element->Project(corner) && corner.x < at.x + size.x - 0.5f && corner.y < at.y + size.y - 0.1f;
+    }
 
     // Whether an entry lies inside its list's view, as far as the list's padding.
     bool InView(Rml::Element* entry, Rml::Element* list)
@@ -329,19 +352,12 @@ TEST(a_new_look_restyles_the_open_windows_and_keeps_where_they_are)
         if (theme == MenuTheme::GameWindow) look.skin = SkinFrame{0, 1.0f, 0.5f, 1.0f, 0xFF808080u};
         w.windows.Update(w.rml.context, look);
         // The controls ease from one look to the other: the update that sees the new look starts it, the next ends it.
-        for (int step = 0; step < 3; ++step)
-        {
-            w.rml.context->Update();
-            w.rml.complaints.seconds += 1.0;
-        }
+        w.Settle();
         CHECK(w.windows.DocumentOf("bag") == before);
         CHECK_EQ(w.windows.TabShown("bag"), size_t{1});
         const std::string selected = w.windows.Selected();
         CHECK_EQ(selected, std::string("key-a"));
-        const Rml::Colourb edge = w.Element("bag", selected)->GetComputedValues().border_top_color();
-        // The selection's edge is the look's text color.
-        const uint32_t text = kAuroraMenuColors.text;
-        CHECK(edge.red == (text >> 16 & 0xFF) && edge.green == (text >> 8 & 0xFF) && edge.blue == (text & 0xFF) && edge.alpha == text >> 24);
+        CHECK(SameColor(w.Element("bag", selected)->GetComputedValues().background_color(), kAuroraMenuColors.accentSoft));
         CHECK_EQ(w.rml.Said(), "");
     }
 }
@@ -358,4 +374,29 @@ TEST(the_selection_follows_the_pointer_only_as_it_moves)
         w.rml.context->Update();
     CHECK(w.Element("bag", "items")->GetScrollTop() > 0.0f);
     CHECK_EQ(w.windows.Selected(), std::string("items-8"));
+}
+
+TEST(the_selection_lights_its_background_bolds_its_text_and_grows_a_little_without_moving_it)
+{
+    Windows w;
+    w.windows.Open(Bag());
+    w.Settle();
+    for (const std::string& id : {std::string("use"), std::string("items-3"), std::string(kGameTabId) + "1", std::string(kMenuCloseId)})
+    {
+        Rml::Element* element    = w.Element("bag", id);
+        const Rml::Vector2f text = element->GetAbsoluteOffset(Rml::BoxArea::Content);
+        const Rml::Colourb edge  = element->GetComputedValues().border_top_color();
+        CHECK(!element->GetComputedValues().has_font_effect() && !DrawnLarger(element));
+        w.PointAt("bag", id);
+        w.Settle();
+        CHECK_EQ(w.windows.Selected(), id);
+        const Rml::Style::ComputedValues& look = element->GetComputedValues();
+        CHECK(SameColor(look.background_color(), kLook.colors.accentSoft));
+        CHECK(look.has_font_effect());
+        CHECK(DrawnLarger(element));
+        // Its text stays where it was, and it has no outline.
+        CHECK(element->GetAbsoluteOffset(Rml::BoxArea::Content) == text);
+        CHECK(look.border_top_color() == edge);
+    }
+    CHECK_EQ(w.rml.Said(), "");
 }
