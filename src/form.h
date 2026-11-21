@@ -214,9 +214,9 @@ namespace headsup
         // and set when it was clicked.
         bool BeginCard(const char* title, bool* enabled = nullptr, const char* about = nullptr, bool* reset = nullptr,
             bool differs = false);
-        // What the page's title says the whole page is for, on or off: a switch of this id beside it; none for a
-        // page with none.
-        void PageSwitch(const std::string& id, bool* enabled);
+        // What the page's title says the whole page is for, on or off: a switch of this id, in the kPageSwitchBlock
+        // begun beside the title.
+        void PageSwitch(const std::string& id, bool& enabled);
         // A block with the id a card of that title would have and no title or card of its own; EndCard ends it.
         void BeginBare(const char* title);
         void EndCard();
@@ -249,6 +249,8 @@ namespace headsup
         // shown: the value as text, as it is after this pass.
         void SliderInt(const char* label, int& value, int lo, int hi, FunctionRef<std::string(int)> shown, const char* tip);
         void SliderPercent(const char* label, int& value, int lo, int hi, const char* tip);
+        // A slider in percent with a swatch beside it, on one row.
+        void SliderPercentSwatch(const char* label, int& value, int lo, int hi, Color& color, const char* tip);
         // A number stepped one at a time by the arrows either side of it, for one whose change moves the window under
         // the pointer, as a slider's would.
         void Stepper(const char* label, int& value, int lo, int hi, const char* format, const char* tip);
@@ -426,6 +428,7 @@ namespace headsup
         void TakeWhole(const std::string& slider, int& value, int lo, int hi, int step = 1);
         void Slider(const std::string& slider, const char* label, float value, float lo, float hi, float step,
             const std::string& shown, const char* tip);
+        void SliderAt(const std::string& slider, float value, float lo, float hi, float step, const std::string& shown);
         // A toggle, and its id: a row's is wide, one among other controls compact.
         // With words, the toggle says its state in its middle.
         std::string Check(const char* id, bool& on, const char* tip, const char* classes = kCompactCheck,

@@ -180,6 +180,9 @@ namespace headsup
     // How high on its target's body a popup beside it starts: percent of the way from its feet to the top of its head.
     constexpr int kMaxCombatPopupHeight = 100, kDefaultCombatPopupHeight = 90;
     constexpr int kMaxCombatPopupNudge = 200; // pixels either way
+    constexpr int kMaxCombatPopupSpread = 50, kDefaultCombatPopupSpread = 20; // pixels between a side column and the body
+    constexpr int kMinCombatPopupOutline = 25, kDefaultCombatPopupOutline = 100, kMaxCombatPopupOutline = 300; // percent
+    constexpr int kMinCombatPopupFade = 50, kDefaultCombatPopupFade = 100, kMaxCombatPopupFade = 200; // percent of the game's
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
@@ -273,14 +276,16 @@ namespace headsup
         bool combatPopupCustomColors = true; // each kind takes its pick's color
         bool combatPopupSkillchainNames = true; // a skillchain's number comes with its name
         bool combatPopupRightAway = true; // popups start as their result arrives, not at the hit
-        bool combatPopupPlacement = true; // popups go in combatPopupSides' columns, at the start height, nudged
         bool combatPopupStatuses = true; // and has the game pop each buff and debuff that lands, by name
         std::string combatPopupFont; // empty for the nameplates' default font
         int combatPopupSize         = kDefaultCombatPopupSize;
         PopupSides combatPopupSides = {PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right, PopupSide::Right,
             PopupSide::Right, PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right};
         int combatPopupHeight = kDefaultCombatPopupHeight;
-        int combatPopupX = 0, combatPopupY = 0; // pixels right and up from where the side puts them
+        int combatPopupSpread = kDefaultCombatPopupSpread;
+        int combatPopupY      = 0; // pixels up from where the side puts them
+        int combatPopupOutline = kDefaultCombatPopupOutline, combatPopupFade = kDefaultCombatPopupFade;
+        Color combatPopupOutlineColor = ColorFromRgb(0x000000);
         // By PopupType. Game is the game's own color, which tells party, alliance and others apart.
         std::array<ColorPick, kPopupTypeCount> combatPopupColors = {{{ColorSource::Game, ColorFromRgb(0xFFFFFF)},
             {ColorSource::Game, ColorFromRgb(0xFF6B6B)}, {ColorSource::Game, ColorFromRgb(0x7CE38B)},

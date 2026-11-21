@@ -453,15 +453,7 @@ namespace headsup
     }
 
     PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords, settings.combatPopupLabels,
-            settings.combatPopupCustomColors, settings.combatPopupSkillchainNames,
-            settings.combatPopupPlacement}; }
-
-    PopupSides PopupSidesOf(const Settings& settings)
-    {
-        PopupSides sides = settings.combatPopupSides;
-        if (!settings.combatPopupPlacement) sides.fill(PopupSide::Middle);
-        return sides;
-    }
+            settings.combatPopupCustomColors, settings.combatPopupSkillchainNames}; }
 
     std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
@@ -506,12 +498,6 @@ namespace headsup
 
     namespace
     {
-        // Where the game puts a popup: on its target, not nudged, which the Middle is with no body known.
-        const PopupPlacing kGamePlace = [] {
-            PopupPlacing place;
-            place.sides.fill(PopupSide::Middle);
-            return place;
-        }();
         // The share of a popup's words left of its place, by side.
         constexpr float kStartsAt = 0.0f, kCentered = 0.5f, kEndsAt = 1.0f;
 
@@ -520,22 +506,22 @@ namespace headsup
             const PopupPlacing& placing)
         {
             const float lines = static_cast<float>(line) * shown.lineHeight;
-            const float clear = body && body->feet ? kPopupBodyReach * (*body->feet - body->nameBottom) : shown.lineHeight;
+            const float clear =
+                (body && body->feet ? kPopupBodyReach * (*body->feet - body->nameBottom) : shown.lineHeight) + placing.spread;
             if (side != PopupSide::Middle)
             {
                 shown.center.x += side == PopupSide::Right ? clear : -clear;
                 shown.across = side == PopupSide::Right ? kStartsAt : kEndsAt;
             }
             if (body && body->feet) shown.center.y = *body->feet + placing.height * (body->nameBottom - *body->feet);
-            shown.center.y += lines;
-            shown.center.x += placing.nudge.x;
-            shown.center.y += placing.nudge.y;
+            shown.center.y += lines + placing.nudge;
             return shown;
         }
     }
 
     std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
-        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on)
+        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on,
+        int fadePercent)
     {
         std::vector<ShownCombatPopup> shown;
         for (size_t i = 0; i < popups.size(); ++i)
@@ -544,15 +530,15 @@ namespace headsup
             if (std::any_of(popups.begin() + static_cast<std::ptrdiff_t>(i) + 1, popups.end(),
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
-            const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            const std::optional<PopupBody> body =
-                on.placement && p.event && placing.bodyOf ? placing.bodyOf(p.event->target) : std::nullopt;
-            const PopupPlacing& place           = on.placement ? placing : kGamePlace;
+            const uint32_t game = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
+            const float faded   = std::pow(static_cast<float>(game) / kOpaqueAlpha, static_cast<float>(fadePercent) / kPercent);
+            const auto alpha    = static_cast<uint32_t>(std::lround(faded * kOpaqueAlpha));
+            const std::optional<PopupBody> body = p.event && placing.bodyOf ? placing.bodyOf(p.event->target) : std::nullopt;
             const uint32_t color = on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate);
             shown.push_back(Place(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
                                       ScreenPoint{p.box.CenterX(), p.box.CenterY()},
                                       p.box.Height() * static_cast<float>(sizePercent) / kPercent, p.depth, kCentered},
-                p.event ? p.event->line : 0, body, SideOf(p.event, place.sides), place));
+                p.event ? p.event->line : 0, body, SideOf(p.event, placing.sides), placing));
         }
         return shown;
     }
@@ -565,7 +551,10 @@ namespace headsup
         return SquareQuad{std::round(center.x - width * across), std::round(center.y - capitals * fit), width, text.height * fit};
     }
 
-    int CombatPopupEdge(int raster) { return WholePixels(static_cast<float>(raster) * kCombatPopupEdgePerHeight); }
+    int CombatPopupEdge(int raster, int thicknessPercent)
+    {
+        return WholePixels(static_cast<float>(raster) * kCombatPopupEdgePerHeight * static_cast<float>(thicknessPercent) / kPercent);
+    }
 
     std::string DescribeCombatPopup(const CombatPopup& popup)
     {

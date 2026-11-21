@@ -60,7 +60,6 @@ namespace headsup
             {"combatPopupCustomColors", &Settings::combatPopupCustomColors},
             {"combatPopupSkillchainNames", &Settings::combatPopupSkillchainNames},
             {"combatPopupRightAway", &Settings::combatPopupRightAway},
-            {"combatPopupPlacement", &Settings::combatPopupPlacement},
             {"combatPopupStatuses", &Settings::combatPopupStatuses},
             {"moveGameHelp", &Settings::moveGameHelp}, {"helpBarBackground", &Settings::helpBarBackground},
             {"helpBarFullWidth", &Settings::helpBarFullWidth}, {"helpBarShrink", &Settings::helpBarShrink},
@@ -119,7 +118,9 @@ namespace headsup
             {"fishCaseScale", &Settings::fishCaseScale, kMinCaseScale, kMaxCaseScale},
             {"combatPopupSize", &Settings::combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, kPercentStep},
             {"combatPopupHeight", &Settings::combatPopupHeight, 0, kMaxCombatPopupHeight},
-            {"combatPopupX", &Settings::combatPopupX, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
+            {"combatPopupSpread", &Settings::combatPopupSpread, 0, kMaxCombatPopupSpread},
+            {"combatPopupOutline", &Settings::combatPopupOutline, kMinCombatPopupOutline, kMaxCombatPopupOutline, kPercentStep},
+            {"combatPopupFade", &Settings::combatPopupFade, kMinCombatPopupFade, kMaxCombatPopupFade, kPercentStep},
             {"combatPopupY", &Settings::combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
             {"noticeWidth", &Settings::noticeWidth, kFlexibleNoticeWidth, kMaxNoticeWidth},
             {"noticeHeight", &Settings::noticeHeight, kFlexibleNoticeHeight, kMaxNoticeHeight},
@@ -185,7 +186,8 @@ namespace headsup
             {"immuneBadgeColor", &Settings::immuneBadgeColor}, {"fishSmallColor", &Settings::fishSmallColor},
             {"fishLargeColor", &Settings::fishLargeColor}, {"fishItemColor", &Settings::fishItemColor},
             {"fishMonsterColor", &Settings::fishMonsterColor}, {"fishLineColor", &Settings::fishLineColor},
-            {"fishRodColor", &Settings::fishRodColor}, {"blueMagicColor", &Settings::blueMagicColor}};
+            {"fishRodColor", &Settings::fishRodColor}, {"blueMagicColor", &Settings::blueMagicColor},
+            {"combatPopupOutlineColor", &Settings::combatPopupOutlineColor}};
         // The edge's custom color is under the keys the edge's one color had. The cursor's own cannot be under
         // cursorColor, where a file from before the designer holds the target's color.
         constexpr const char* kCursorEdgePickKey = "cursorEdgeColor";
