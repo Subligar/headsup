@@ -30,6 +30,7 @@ namespace headsup
         FishingBar,
         VanillaUi,
         Notifications,
+        TargetCursor,
         Credits,
     };
     constexpr int kPageCount = static_cast<int>(Page::Credits) + 1;

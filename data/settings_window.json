@@ -51,33 +51,6 @@
           ]
         },
         {
-          "key": "target-cursor",
-          "name": "Target Cursor",
-          "description": "Appearance settings for the cursor that appears above the target entity.",
-          "settings": [
-            {
-              "key": "cursor-style",
-              "name": "Cursor Style",
-              "tip": "What icon should be used for the target cursor? You can place custom images in the config/cursors folder and they will appear in the drop-down menu as options.",
-              "options": [
-                {"name": "Vanilla", "tip": "Uses the vanilla target cursor. WARNING: May be invisible or flicker if the vanilla target frame is hidden by any addons."},
-                {"name": "Vanilla-like", "tip": "Uses a simple triangle target cursor, which looks similar to the vanilla target cursor."},
-                {"name": "Phoenix Feather", "tip": "Uses a phoenix feather icon as the target cursor."},
-                {"name": "Chocobo", "tip": "Uses the PlayOnline chocobo mouse pointer as the target cursor."},
-                {"tip": "Uses a custom icon as the target cursor."}
-              ]
-            },
-            {"key": "width", "name": "Width"},
-            {"key": "cursor-height", "name": "Height"},
-            {"key": "outline-thickness", "name": "Outline Thickness", "tip": "The thickness of the target cursor's outline."},
-            {"key": "cursor-vertical-offset", "name": "Vertical Offset", "tip": "Offsets the target cursor upward by this many pixels."},
-            {"key": "color", "name": "Color", "tip": "Determines the color of the target cursor."},
-            {"key": "edge-color", "name": "Outline Color", "tip": "Determines the color of the target cursor's outline."},
-            {"key": "scale", "name": "Scale with Distance", "tip": "Automatically scales the target cursor based on distance to the player character."},
-            {"key": "float", "name": "Floating Cursor", "tip": "If enabled, the target cursor will bob gently up and down."}
-          ]
-        },
-        {
           "key": "combat-popups",
           "name": "Combat Popups",
           "description": "Draws the game's damage, recovery and Miss popups in your own font, size and colors, in place of the game's stretched ones, and pops each one as soon as its result arrives instead of when the animation lands. They only show while the game's Config is set to display damage on the game screen. Turn this off to keep the game's. Default: On.",
@@ -292,6 +265,40 @@
           "settings": [
             {"key": "key", "name": "Key", "tip": "Turns screenshot mode on and off. The game sees the key too, so pick one it does not use."},
             {"key": "hide-game-windows", "name": "Hide Game Windows", "tip": "The game's own windows and chat go too."}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "targetcursor",
+      "name": "Target Cursor",
+      "child": true,
+      "cards": [
+        {
+          "key": "target-cursor",
+          "name": "Target Cursor",
+          "description": "Appearance settings for the cursor that appears above the target entity.",
+          "settings": [
+            {
+              "key": "cursor-style",
+              "name": "Cursor Style",
+              "tip": "What icon should be used for the target cursor? You can place custom images in the config/cursors folder and they will appear in the drop-down menu as options.",
+              "options": [
+                {"name": "Vanilla", "tip": "Uses the vanilla target cursor. WARNING: May be invisible or flicker if the vanilla target frame is hidden by any addons."},
+                {"name": "Vanilla-like", "tip": "Uses a simple triangle target cursor, which looks similar to the vanilla target cursor."},
+                {"name": "Phoenix Feather", "tip": "Uses a phoenix feather icon as the target cursor."},
+                {"name": "Chocobo", "tip": "Uses the PlayOnline chocobo mouse pointer as the target cursor."},
+                {"tip": "Uses a custom icon as the target cursor."}
+              ]
+            },
+            {"key": "width", "name": "Width"},
+            {"key": "cursor-height", "name": "Height"},
+            {"key": "outline-thickness", "name": "Outline Thickness", "tip": "The thickness of the target cursor's outline."},
+            {"key": "cursor-vertical-offset", "name": "Vertical Offset", "tip": "Offsets the target cursor upward by this many pixels."},
+            {"key": "color", "name": "Color", "tip": "Determines the color of the target cursor."},
+            {"key": "edge-color", "name": "Outline Color", "tip": "Determines the color of the target cursor's outline."},
+            {"key": "scale", "name": "Scale with Distance", "tip": "Automatically scales the target cursor based on distance to the player character."},
+            {"key": "float", "name": "Floating Cursor", "tip": "If enabled, the target cursor will bob gently up and down."}
           ]
         }
       ]
