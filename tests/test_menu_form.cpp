@@ -80,7 +80,7 @@ TEST(the_window_is_its_sidebar_and_the_open_pages_cards)
     CHECK(Has(form.blocks.front().rml, "<div class=\"nav\" id=\"nav-entities\">") &&
           Has(form.blocks.front().rml, "<div class=\"nav child\" id=\"nav-mobs\">"));
     CHECK(ClassOn(form, "nav-entities", "picked") && !ClassOn(form, "nav-mobs", "picked"));
-    CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-target-cursor") != nullptr);
+    CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-outline-style") != nullptr);
 }
 
 TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
@@ -767,29 +767,30 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
 TEST(the_cursor_style_list_has_headsups_styles_then_the_folders_files)
 {
     Window w;
+    w.state.page = Page::TargetCursor;
     const std::vector<std::string> files{"Gold Arrow", "sword"};
     w.readings.cursorFiles = &files;
-    const char* list = "entities-target-cursor-cursor-style";
+    const char* list = "targetcursor-target-cursor-cursor-style";
     const Form open  = w.Pass({{list, kClickEvent, ""}});
     CHECK(open.popup && w.state.cursorsRequested); // opening it asks for the folder to be read again
     // Each of HeadsUp's own styles, then each file of the folder: six rows, the last the second file.
-    CHECK(Has(open.popup->rml, "entities-target-cursor-cursor-style-o-5") && !Has(open.popup->rml, "entities-target-cursor-cursor-style-o-6"));
+    CHECK(Has(open.popup->rml, "targetcursor-target-cursor-cursor-style-o-5") && !Has(open.popup->rml, "targetcursor-target-cursor-cursor-style-o-6"));
     CHECK(Has(open.popup->rml, ">Gold Arrow<") && Has(open.popup->rml, ">sword<"));
-    CHECK(ClassOn(open, "entities-target-cursor-cursor-style-o-2", "picked")); // the feather, a new install's
+    CHECK(ClassOn(open, "targetcursor-target-cursor-cursor-style-o-2", "picked")); // the feather, a new install's
     w.state.cursorsRequested = false;
     w.Pass();
     CHECK(!w.state.cursorsRequested); // once, when it opens: not every pass it stays open
     // A file is the File style with its name; HeadsUp's own styles have no file.
-    CHECK(w.Pass({{"entities-target-cursor-cursor-style-o-5", kClickEvent, ""}}).changed);
+    CHECK(w.Pass({{"targetcursor-target-cursor-cursor-style-o-5", kClickEvent, ""}}).changed);
     CHECK(w.settings.cursorStyle == CursorStyle::File && w.settings.cursorFile == "sword");
     w.Pass({{list, kClickEvent, ""}});
-    w.Pass({{"entities-target-cursor-cursor-style-o-3", kClickEvent, ""}});
+    w.Pass({{"targetcursor-target-cursor-cursor-style-o-3", kClickEvent, ""}});
     CHECK(w.settings.cursorStyle == CursorStyle::Chocobo);
     // A file the folder no longer has stays chosen, and listed, until another is picked.
     w.settings.cursorStyle = CursorStyle::File;
     w.settings.cursorFile  = "gone";
     const Form kept = w.Pass({{list, kClickEvent, ""}});
-    CHECK(Has(kept.popup->rml, ">gone<") && ClassOn(kept, "entities-target-cursor-cursor-style-o-6", "picked"));
+    CHECK(Has(kept.popup->rml, ">gone<") && ClassOn(kept, "targetcursor-target-cursor-cursor-style-o-6", "picked"));
     CHECK(w.settings.cursorStyle == CursorStyle::File && w.settings.cursorFile == "gone");
 }
 
@@ -826,7 +827,8 @@ TEST(a_style_picked_comes_at_its_own_width_for_the_height_set)
     // The feather is slender, the triangle wide and a picture square: a style picked would otherwise be squeezed
     // into the width of the one before.
     Window w;
-    const char* list = "entities-target-cursor-cursor-style";
+    w.state.page = Page::TargetCursor;
+    const char* list = "targetcursor-target-cursor-cursor-style";
     w.settings.cursorHeight = 40;
     w.settings.cursorWidth  = 11;
     const auto pick = [&](int option) {
@@ -849,19 +851,20 @@ TEST(a_style_picked_comes_at_its_own_width_for_the_height_set)
 TEST(the_games_own_cursor_has_no_settings_and_a_picture_no_color)
 {
     Window w;
+    w.state.page = Page::TargetCursor;
     const auto hidden = [&](const Form& form, const char* row) { return ClassOn(form, row, "off"); };
     const Form feather = w.Pass();
-    CHECK(!hidden(feather, "entities-target-cursor-width-label-row") && !hidden(feather, "entities-target-cursor-color-label-row"));
+    CHECK(!hidden(feather, "targetcursor-target-cursor-width-label-row") && !hidden(feather, "targetcursor-target-cursor-color-label-row"));
     w.settings.cursorStyle = CursorStyle::Chocobo;
     const Form chocobo = w.Pass();
-    CHECK(!hidden(chocobo, "entities-target-cursor-width-label-row") && !hidden(chocobo, "entities-target-cursor-edge-color-label-row"));
-    CHECK(hidden(chocobo, "entities-target-cursor-color-label-row")); // it keeps its own colors
+    CHECK(!hidden(chocobo, "targetcursor-target-cursor-width-label-row") && !hidden(chocobo, "targetcursor-target-cursor-edge-color-label-row"));
+    CHECK(hidden(chocobo, "targetcursor-target-cursor-color-label-row")); // it keeps its own colors
     w.settings.cursorStyle = CursorStyle::Vanilla;
     const Form vanilla = w.Pass();
-    for (const char* row : {"entities-target-cursor-width-label-row", "entities-target-cursor-float-label-row",
-             "entities-target-cursor-color-label-row", "entities-target-cursor-edge-color-label-row"})
+    for (const char* row : {"targetcursor-target-cursor-width-label-row", "targetcursor-target-cursor-float-label-row",
+             "targetcursor-target-cursor-color-label-row", "targetcursor-target-cursor-edge-color-label-row"})
         CHECK(hidden(vanilla, row));
-    CHECK(!hidden(vanilla, "entities-target-cursor-cursor-style-label-row")); // the list stays, to pick another
+    CHECK(!hidden(vanilla, "targetcursor-target-cursor-cursor-style-label-row")); // the list stays, to pick another
 }
 
 TEST(one_nameplate_opacity_card_sits_under_nameplates_on_the_entities_page)
