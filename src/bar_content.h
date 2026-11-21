@@ -146,6 +146,7 @@ namespace headsup
         int columns  = 0; // Grid
         std::vector<PopupCell> cells;
         bool nested = false; // set in a socket with the nested rows beside it, as a tab's rows are
+        bool beside = false; // starts a column right of the card's rows before it, at their top
         bool header = false; // Grid: its first line heads its columns, and each group of them set side by side
         bool spread = false; // Grid: a right-aligned column at the card's right edge, a centered middle one right of middle
         bool trailing = false; // Grid: its columns after the first against the card's right edge, as they are to each other

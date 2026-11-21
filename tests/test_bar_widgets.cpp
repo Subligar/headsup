@@ -3211,9 +3211,10 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
         const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(3);
         return guilds.tabs[guilds.tab].rows;
     };
-    // The shops in one socket under their title, the turn-ins under a line of their own in another.
+    // The shops in one socket under their title, the turn-ins beside them under a line of their own in another.
     std::vector<PopupRow> rows = fishing();
     CHECK(rows.size() == 4 && !rows[0].nested && rows[1].nested && !rows[2].nested && rows[3].nested);
+    CHECK(!rows[0].beside && !rows[1].beside && rows[2].beside && !rows[3].beside);
     CHECK_EQ(Lines(PopupSection{"", {rows[2]}}).front(), "Today's Turn-Ins");
     // Not fetched yet, it says so.
     CHECK_EQ(Lines(PopupSection{"", {rows[3]}}).front(), "They come from phoenix-xi.com");
