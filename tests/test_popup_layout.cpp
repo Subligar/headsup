@@ -1574,3 +1574,104 @@ TEST(a_cards_rows_start_a_few_pixels_further_under_its_heading_than_they_are_apa
     const PopupPiece &card = *Of(shut, PopupPiece::Kind::Card).front(), &heading = *Find(shut, "Elements");
     CHECK(Near(card.y + card.height - heading.y - heading.height, heading.y - card.y));
 }
+
+namespace
+{
+    // A guild's tab as World Info builds it: its shops' hours in a socket under a title, then today's turn-ins, a
+    // header and a line a rank, in another under theirs; set beside the shops, or under them as they were before.
+    PopupTab GuildTab(const char* name, size_t shops, bool beside)
+    {
+        PopupTab tab{Text(name), {LineOf("Shop Hours", Tone::Heading)}};
+        PopupRow hours = Grid(3, 0);
+        hours.nested   = true;
+        for (size_t i = 0; i < shops; ++i)
+            for (const char* cell : {"Open", "closes in 2:00", "A shop, Somewhere"})
+                hours.cells.push_back(Word(cell));
+        tab.rows.push_back(hours);
+        PopupRow title = LineOf("Today's Turn-Ins", Tone::Heading);
+        title.beside   = beside;
+        tab.rows.push_back(title);
+        PopupRow ranks = Grid(6, 0);
+        ranks.nested = ranks.header = true;
+        for (size_t i = 0; i < 9 * 6; ++i)
+            ranks.cells.push_back(Word("Item"));
+        tab.rows.push_back(ranks);
+        return tab;
+    }
+
+    PopupContent Guilds(size_t picked, bool beside)
+    {
+        PopupContent c;
+        c.title = {{"World Info", Tone::Normal}};
+        PopupSection guilds{"Guilds", {}};
+        guilds.tabs = {GuildTab("Smithing", 4, beside), GuildTab("Fishing", 10, beside)};
+        guilds.tab  = picked;
+        c.sections.push_back(guilds);
+        return c;
+    }
+}
+
+// Cards lp4D8Mo6 and pbbTK5NK: picking Fishing made Guilds vanish until a relog. Its 10 shops over its turn-ins ran the
+// pop-out past the screen's bottom, and the cut drops a card that does not fit whole, its tabs too.
+TEST(a_guilds_turn_ins_sit_beside_its_shops_so_fishing_is_no_taller_than_a_guild_that_fit_before)
+{
+    const BarMetrics m  = MetricsFor(36, BarShape::Pills);
+    constexpr size_t kSmithing = 0, kFishing = 1;
+    const auto cardHeight = [](const PopupLayout& l) { return Of(l, PopupPiece::Kind::Card).front()->height; };
+    const PopupLayout fishing = LayoutPopup(Guilds(kFishing, true), m, false, Fake);
+    CHECK(AllInside(fishing, m));
+    // By hand, from the layout's sizes: a text line 14 px (Fake), a socket's rows 0.35 popupText in from its top and
+    // bottom, rows a rowGap apart. A title and a socket of n lines take 14 + rowGap + 2 socketPad + 14 n + (n - 1)
+    // rowGap, and a rowGap under it.
+    const float line = 14.0f, gap = m.rowGap, socketPad = std::round(m.popupText * 0.35f);
+    const auto titled = [&](float lines) { return line + gap + 2.0f * socketPad + lines * line + (lines - 1.0f) * gap + gap; };
+    // Stacked, Fishing was its 10 shops' and its 9 turn-in lines'; beside them, its shops' alone, the taller column.
+    const PopupLayout stacked = LayoutPopup(Guilds(kFishing, false), m, false, Fake);
+    CHECK(Near(cardHeight(stacked) - cardHeight(fishing), titled(9.0f)));
+    // Smithing's 4 shops over its turn-ins fit: Fishing beside is shorter by 6 lines and a title less 4 lines.
+    const PopupLayout smithingBefore = LayoutPopup(Guilds(kSmithing, false), m, false, Fake);
+    CHECK(Near(cardHeight(smithingBefore) - cardHeight(fishing), titled(4.0f) + titled(9.0f) - titled(10.0f)));
+    CHECK(cardHeight(fishing) < cardHeight(smithingBefore));
+    // On a screen Smithing's pop-out just fit, Fishing's keeps its card and its tabs.
+    PopupLayout cut = fishing;
+    CutPopup(cut, smithingBefore.height, m.popupPadding);
+    CHECK(Find(cut, "Guilds") != nullptr && Of(cut, PopupPiece::Kind::Tab).size() == 2);
+    PopupLayout cutBefore = stacked;
+    CutPopup(cutBefore, smithingBefore.height, m.popupPadding);
+    CHECK(Find(cutBefore, "Guilds") == nullptr); // as it was
+    // The two sockets side by side from one top to one bottom, a card's gap apart, the turn-ins' to the card's right
+    // padding; each title over its own.
+    const std::vector<const PopupPiece*> sockets = Of(fishing, PopupPiece::Kind::Socket);
+    const PopupPiece& card = *Of(fishing, PopupPiece::Kind::Card).front();
+    CHECK_EQ(sockets.size(), 2u);
+    const PopupPiece &shops = *sockets[0], &turnIns = *sockets[1];
+    CHECK(Near(shops.y, turnIns.y) && Near(shops.height, turnIns.height));
+    CHECK(Near(turnIns.x - (shops.x + shops.width), std::round(m.popupText * 0.45f)));
+    CHECK(Near(shops.x - card.x, card.x + card.width - (turnIns.x + turnIns.width)));
+    CHECK(Near(Find(fishing, "Shop Hours")->x, shops.x) && Near(Find(fishing, "Today's Turn-Ins")->x, turnIns.x));
+    CHECK(Near(Find(fishing, "Shop Hours")->y, Find(fishing, "Today's Turn-Ins")->y));
+    // The shops' socket as wide as its rows and their inset; nothing of the shops past it.
+    const PopupPiece& place = *Find(fishing, "A shop, Somewhere");
+    CHECK(place.x + place.width <= shops.x + shops.width - std::round(m.popupText * 0.9f) + 0.01f);
+}
+
+TEST(a_column_beside_another_scrolls_in_its_own_socket)
+{
+    // 12 shops, past the 10 lines a socket shows: the shops' scroll and its bar are their socket's, not the card's.
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    PopupContent c;
+    c.title = {{"World Info", Tone::Normal}};
+    PopupSection guilds{"Guilds", {}};
+    guilds.tabs = {GuildTab("Fishing", 12, true)};
+    guilds.tabs[0].rows[1].scroll = "Guilds/Fishing";
+    c.sections.push_back(guilds);
+    const PopupLayout l = LayoutPopup(c, m, false, Fake);
+    CHECK(AllInside(l, m));
+    const PopupPiece& shops = *Of(l, PopupPiece::Kind::Socket).front();
+    const PopupPiece& track = *Of(l, PopupPiece::Kind::ScrollTrack).front();
+    CHECK_EQ(l.scrolls.size(), 1u);
+    const PopupScroll& scroll = l.scrolls.front();
+    CHECK(Near(scroll.x, shops.x) && Near(scroll.width, shops.width) && scroll.most == 2);
+    CHECK(Near(scroll.grip.x + scroll.grip.width, shops.x + shops.width));
+    CHECK(track.x > shops.x + shops.width - scroll.grip.width - 0.01f && track.x + track.width < shops.x + shops.width);
+}

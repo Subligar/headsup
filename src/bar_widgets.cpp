@@ -1055,12 +1055,13 @@ namespace headsup
             return ranks;
         }
 
-        // A craft guild's turn-ins today, from Phoenix's site, under a line of their own: the item each rank from Novice
-        // to Expert is asked for today and its high quality, each with its picture and its points, and the most a day,
-        // your rank starred and lit; until the site answers, a line saying so.
+        // A craft guild's turn-ins today, from Phoenix's site, under a line of their own beside the shops: the item each
+        // rank from Novice to Expert is asked for today and its high quality, each with its picture and its points, and
+        // the most a day, your rank starred and lit; until the site answers, a line saying so.
         std::vector<PopupRow> TurnIns(const BarState& state, int craft, const std::string& guild)
         {
             std::vector<PopupRow> rows = ListOf(LineOf("Today's Turn-Ins", Tone::Heading));
+            rows.front().beside = true;
             if (state.turnIns == nullptr)
             {
                 PopupRow waiting = LineOf(state.turnInsFailed ? "phoenix-xi.com did not answer; trying again soon"
