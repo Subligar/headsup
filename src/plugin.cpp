@@ -1366,7 +1366,8 @@ public:
     }
 
     // HeadsUp's game windows: the input Ashita handed over since the last frame, then what their buttons asked for. A
-    // cog opens the settings window over them, and a window dragged is saved where it was let go.
+    // cog opens the settings window over them, or closes it when it is open, and a window dragged is saved where it was
+    // let go.
     void UpdateGameWindows(double now)
     {
         std::vector<headsup::MenuEvent> events;
@@ -1399,7 +1400,9 @@ public:
         for (const std::string& press : presses)
             headsup::TestMenuPressed(m_GameWindows, press);
 #endif
-        if (const auto page = m_GameWindows.TakeSettingsAsked(); page && !m_RmlMenu.OpenPage(page->first, page->second))
+        if (const auto page = m_GameWindows.TakeSettingsAsked(); page && m_RmlMenu.open)
+            m_RmlMenu.open = false;
+        else if (page && !m_RmlMenu.OpenPage(page->first, page->second))
             Print("a game window's cog has no settings page: " + page->first + ".");
         for (headsup::WindowPlace& moved : m_GameWindows.TakeMoved())
         {
