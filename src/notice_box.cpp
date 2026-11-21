@@ -20,6 +20,9 @@ namespace headsup
         constexpr const char* kOnlineClass = "online", *kOfflineClass = "offline", *kInviteClass = "invite";
         constexpr const char* kTextClass = "text", *kTitleClass = "title", *kMessageClass = "message";
         constexpr const char* kButtonsClass = "buttons", *kBarClass = "bar";
+        constexpr const char* kDotClass = "dot"; // a compact friend notice's, before the name
+        constexpr const char* kCompactClass = "compact"; // its box: as small as its dot and name, whatever Width and Height say
+        constexpr float kDotEm = 0.6f, kDotGapEm = 0.4f; // its size, and the room after it, in the message's font
         // The text, buttons and bar in a column. The box itself is a block: RmlUi sizes a piece placed in a flex box
         // before the box knows its height, which left the art only the box's padding tall.
         constexpr const char* kInnerClass = "inner";
@@ -79,6 +82,8 @@ namespace headsup
                    ShadowEffect(static_cast<int>(std::lround(look.titleSize))) + "}";
             css += ".message{" + oneLine + font(look.textFont, look.textSize) + "color:" + RcssColor(p.text) + ";" +
                    ShadowEffect(static_cast<int>(std::lround(look.textSize))) + "}";
+            css += std::string(".") + kDotClass + "{display:inline-block;vertical-align:middle;width:" + Em(kDotEm) + ";height:" +
+                   Em(kDotEm) + ";border-radius:" + Em(kDotEm / 2.0f) + ";margin-right:" + Em(kDotGapEm) + ";}";
             css += ".buttons,.bar{flex:0 0 auto;}";
             // Only the buttons take the pointer: pointer-events is inherited, and the body's is none.
             css += std::string(".") + kButtonsClass + "{display:flex;flex-direction:row;margin-top:" + Px(kButtonsGap) + ";}";
@@ -93,8 +98,10 @@ namespace headsup
             {
                 const std::string kindClass = KindClass(kind);
                 const std::string color     = RcssColor(NoticeColor(kind));
-                css += "." + kindClass + " .title{color:" + color + ";}." + kindClass + " .bar{background-color:" + color + ";}";
+                css += "." + kindClass + " .title{color:" + color + ";}." + kindClass + " .bar,." + kindClass + " ." + kDotClass +
+                       "{background-color:" + color + ";}";
             }
+            css += std::string(".box.") + kCompactClass + "{height:auto;}." + kCompactClass + " ." + kInnerClass + "{height:auto;}";
             // Last, so it wins over the box's own display.
             css += std::string(".") + kHiddenClass + "{display:none;}";
             std::string boxes;
@@ -132,7 +139,12 @@ namespace headsup
         const BarMetrics metrics = MetricsOf(settings, palette.shape);
         const Look look{palette, frame.fonts.title, frame.fonts.text, metrics.title,
             metrics.subtitle, frame.skin, settings.noticeWidth, settings.noticeHeight, settings.noticeFit,
-            settings.noticeAlign, NoticeRadius(settings.noticeRounding, OwnPalette(settings).windowRounding, metrics.panelRadius)};
+            settings.noticeAlign, NoticeRadius(settings.noticeRounding, OwnPalette(settings).windowRounding, metrics.panelRadius),
+            settings.friendNoticeStyle};
+        // A compact friend notice is its dot and name alone; an invite is always whole, for its buttons.
+        const auto compact = [&](const ShownNotice& n) { return look.style == FriendNoticeStyle::Compact && !IsInvite(n.kind); };
+        const auto titleOf = [&](const ShownNotice& n) { return compact(n) ? std::string() : std::string(NoticeTitle(n.kind)); };
+        const auto messageOf = [&](const ShownNotice& n) { return compact(n) ? n.name : NoticeMessage(n.kind, n.name); };
         if (m_Document != nullptr && !(look == m_Look)) Close();
         if (m_Document == nullptr)
         {
@@ -184,8 +196,13 @@ namespace headsup
                 for (const char* kindClass : {kOnlineClass, kOfflineClass, kInviteClass})
                     box->SetClass(kindClass, std::string_view(kindClass) == KindClass(notice->kind));
                 for (const char* line : {kTitleClass, kMessageClass}) Part(box, line)->RemoveProperty(Rml::PropertyId::FontSize);
-                Part(box, kTitleClass)->SetInnerRML(EscapedRml(NoticeTitle(notice->kind)));
-                Part(box, kMessageClass)->SetInnerRML(EscapedRml(NoticeMessage(notice->kind, notice->name)));
+                box->SetClass(kCompactClass, compact(*notice));
+                box->RemoveProperty(Rml::PropertyId::Width); // a compact or Flexible one's before it
+                Part(box, kTitleClass)->SetClass(kHiddenClass, compact(*notice));
+                Part(box, kTitleClass)->SetInnerRML(EscapedRml(titleOf(*notice)));
+                Part(box, kMessageClass)->SetInnerRML(
+                    (compact(*notice) ? std::string("<span class=\"") + kDotClass + "\"></span>" : std::string()) +
+                    EscapedRml(messageOf(*notice)));
                 refit.push_back(slot);
                 changed = true;
             }
@@ -201,12 +218,13 @@ namespace headsup
             Rml::Element* title   = Part(box, kTitleClass);
             Rml::Element* message = Part(box, kMessageClass);
             const ShownNotice& notice = shown[static_cast<size_t>(slot)];
-            const std::string titleText = NoticeTitle(notice.kind), messageText = NoticeMessage(notice.kind, notice.name);
-            const auto titleWide   = static_cast<float>(Rml::ElementUtilities::GetStringWidth(title, titleText));
-            const auto messageWide = static_cast<float>(Rml::ElementUtilities::GetStringWidth(message, messageText));
+            const auto titleWide = static_cast<float>(Rml::ElementUtilities::GetStringWidth(title, titleOf(notice)));
+            const auto messageWide =
+                static_cast<float>(Rml::ElementUtilities::GetStringWidth(message, messageOf(notice))) +
+                (compact(notice) ? Size(Part(message, kDotClass), Rml::BoxArea::Margin).x : 0.0f);
             float room = Size(box, Rml::BoxArea::Content).x;
             bool capped = true;
-            if (look.width == kFlexibleNoticeWidth)
+            if (look.width == kFlexibleNoticeWidth || compact(notice))
             {
                 const float edges = Size(box).x - room; // padding and border
                 const float wide  = std::min(static_cast<float>(kMaxNoticeWidth), edges + std::ceil(std::max(titleWide, messageWide)));
@@ -217,7 +235,7 @@ namespace headsup
             if (look.fit != NoticeFit::Shrink) continue;
             const FittedText fit = FittedSizes(look.titleSize, look.textSize, titleWide, messageWide, capped ? room : 0.0f,
                 Size(title).y, Size(message).y,
-                look.height != kFlexibleNoticeHeight ? Size(Part(box, kTextClass), Rml::BoxArea::Content).y : 0.0f);
+                look.height != kFlexibleNoticeHeight && !compact(notice) ? Size(Part(box, kTextClass), Rml::BoxArea::Content).y : 0.0f);
             // Whole pixels, down: the font is drawn at a whole size, and rounding up could be wider than the room.
             if (fit.title < look.titleSize)
                 title->SetProperty(Rml::PropertyId::FontSize, Rml::Property(std::floor(fit.title), Rml::Unit::PX));
