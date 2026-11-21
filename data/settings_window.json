@@ -1581,6 +1581,7 @@
         {"name": "Messages", "tip": "PlayOnline's mail and messenger icons while something waits, with how many."},
         {"name": "Party Size", "tip": "How many are in your party, or Solo."},
         {"name": "HP and MP", "tip": "The lowest HP and MP in your party."},
+        {"name": "Party Icon", "tip": "A person's picture."},
         {"name": "Pinned Status #1", "tip": "The status pinned first in the pop-out, with its time left. Its pin turns it on and off."},
         {"name": "Pinned Status #2", "tip": "The status pinned second in the pop-out, with its time left. Its pin turns it on and off."},
         {"name": "Pinned Status #3", "tip": "The status pinned third in the pop-out, with its time left. Its pin turns it on and off."},

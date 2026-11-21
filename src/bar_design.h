@@ -25,7 +25,7 @@ namespace headsup
         ClockTime, ClockServer, ClockVana, ClockIcon, ClockDate,
         JobJobs, JobEarned, JobToNext, JobPercent, JobBar,
         PerfFps, PerfSent, PerfReceived, PerfPercent, PerfMemory, PerfMessages,
-        PartyCount, PartyHealth,
+        PartyCount, PartyHealth, PartyIcon,
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,
         WorldShip, WorldGuild, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
         HomePointName, HomePointIcon,
