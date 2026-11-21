@@ -1259,7 +1259,8 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     Settings s;
     const WidgetOptions fresh;
     CHECK(!fresh.spacing && !fresh.padding && !fresh.background && fresh.titleFont.empty() && fresh.textFont.empty() &&
-          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale && !fresh.lineSeparation);
+          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale && !fresh.lineSeparation &&
+          !fresh.fontSize);
     WidgetOptions& zone = s.Widget(BarWidget::Zone);
     zone.spacing        = 12;
     zone.padding        = 0;
@@ -1271,6 +1272,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     zone.rounding       = 0;
     zone.popupTextScale = 1.4f;
     zone.lineSeparation = 1.5f;
+    zone.fontSize       = 14;
     const PanelWidget copy = *CloneWidget(s, BarWidget::Zone);
     CHECK(s.Widget(copy).spacing == 12 && s.Widget(copy).textFont == "Verdana" && s.Widget(copy).popupTextScale == 1.4f);
     s.Widget(copy).iconScale  = 75;
@@ -1281,6 +1283,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     CHECK_EQ(saved.values["barZoneShowBackground"], "false");
     CHECK_EQ(saved.values["barZonePrimaryFont"], "Arial");
     CHECK_EQ(saved.values["barZoneLineSeparation"], "1.5000");
+    CHECK_EQ(saved.values["barZoneFontSize"], "14.0000");
     CHECK_EQ(saved.values["barZoneIconScale_2"], "75.0000");
     CHECK_EQ(saved.values["barZoneShowBackground_2"], "true");
     CHECK(saved.values.contains("barWeatherWidgetSpacing") && saved.values["barWeatherWidgetSpacing"].empty());
@@ -1289,7 +1292,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     const Settings read = LoadSettings(saved);
     CHECK(read.Widget(BarWidget::Zone) == s.Widget(BarWidget::Zone) && read.Widget(copy) == s.Widget(copy));
     const WidgetOptions& weather = read.Widget(BarWidget::Weather);
-    CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale);
+    CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale && !weather.fontSize);
 }
 
 TEST(uniform_font_size_starts_on_for_home_point_and_status_timers_alone_and_each_copy_keeps_its_own)
@@ -1326,11 +1329,14 @@ TEST(a_widgets_own_looks_out_of_their_range_are_held_to_it)
     store.values["barZoneFontRatio"]      = "9";
     store.values["barZonePopupTextScale"] = "0.01";
     store.values["barZoneLineSeparation"] = "9";
+    store.values["barZoneFontSize"]       = "200";
+    store.values["barWeatherFontSize"]    = "1";
     store.values["barZonePrimaryFont"]    = std::string(kMaxFontName + 1, 'a');
     const WidgetOptions zone = LoadSettings(store).Widget(BarWidget::Zone);
     CHECK(zone.spacing == kMaxWidgetSpacing && zone.padding == 0 && zone.iconScale == 45);
     CHECK(zone.rounding == 0 && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
-    CHECK(zone.lineSeparation == kMaxLineSeparation && zone.titleFont.empty());
+    CHECK(zone.lineSeparation == kMaxLineSeparation && zone.titleFont.empty() && zone.fontSize == kMaxWidgetFontSize);
+    CHECK(LoadSettings(store).Widget(BarWidget::Weather).fontSize == kMinWidgetFontSize);
 }
 
 TEST(separators_out_of_their_bits_are_held_to_them)

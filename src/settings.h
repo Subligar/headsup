@@ -102,6 +102,7 @@ namespace headsup
         // Its pill's spacing, background, rounding and pop-out are the pill's first widget's.
         std::optional<int> spacing, padding, rounding; // pixels
         std::optional<int> iconScale;                  // percent, as barIconScale
+        std::optional<int> fontSize;                   // pixels, its top line's most, as MetricsFor's title
         std::optional<bool> background;
         std::string titleFont, textFont;
         std::optional<float> fontRatio, lineSeparation, popupTextScale;

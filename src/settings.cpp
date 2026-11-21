@@ -338,6 +338,7 @@ namespace headsup
         constexpr const char* kOwnIconScaleSuffix  = "IconScale";
         constexpr const char* kOwnPopupScaleSuffix = "PopupTextScale";
         constexpr const char* kOwnUniformFontSuffix = "UniformFontSize";
+        constexpr const char* kOwnFontSizeSuffix   = "FontSize";
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
         const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
         const char* const kWidgetAlignNames[kWidgetAlignCount] = {"location", "left", "center", "right"};
@@ -1422,6 +1423,7 @@ namespace headsup
             if (w.rounding) w.rounding = std::clamp(*w.rounding, 0, kMaxRounding);
             if (w.iconScale) w.iconScale = std::clamp(Stepped(*w.iconScale, kPercentStep), kMinIconScale, kMaxIconScale);
             if (w.fontRatio) w.fontRatio = std::clamp(*w.fontRatio, kMinFontRatio, kMaxFontRatio);
+            if (w.fontSize) w.fontSize = std::clamp(*w.fontSize, kMinWidgetFontSize, kMaxWidgetFontSize);
             if (w.lineSeparation) w.lineSeparation = std::clamp(*w.lineSeparation, kMinLineSeparation, kMaxLineSeparation);
             if (w.popupTextScale) w.popupTextScale = std::clamp(*w.popupTextScale, kMinPopupScale, kMaxPopupScale);
             for (std::string* font : {&w.titleFont, &w.textFont})
@@ -1516,6 +1518,7 @@ namespace headsup
                 o.padding        = whole(kOwnPaddingSuffix);
                 o.rounding       = whole(kOwnRoundingSuffix);
                 o.iconScale      = whole(kOwnIconScaleSuffix);
+                o.fontSize       = whole(kOwnFontSizeSuffix);
                 o.fontRatio      = own(kOwnFontRatioSuffix);
                 o.lineSeparation = own(kOwnLineSeparationSuffix);
                 o.popupTextScale = own(kOwnPopupScaleSuffix);
@@ -1641,6 +1644,7 @@ namespace headsup
                 own(kOwnPaddingSuffix, o.padding);
                 own(kOwnRoundingSuffix, o.rounding);
                 own(kOwnIconScaleSuffix, o.iconScale);
+                own(kOwnFontSizeSuffix, o.fontSize);
                 own(kOwnFontRatioSuffix, o.fontRatio);
                 own(kOwnLineSeparationSuffix, o.lineSeparation);
                 own(kOwnPopupScaleSuffix, o.popupTextScale);

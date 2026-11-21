@@ -170,9 +170,15 @@ namespace headsup
         constexpr float kCloserLines = 0.8f, kLargerStatusIcons = 1.45f;
         const bool closer = kind == BarWidget::HomePoint || kind == BarWidget::StatusTimers;
         const float icons = kind == BarWidget::StatusTimers ? kLargerStatusIcons : 1.0f;
-        return MetricsFor(s.barHeight, shape, FontRatioOf(s, own), own.popupTextScale.value_or(s.popupTextScale),
+        BarMetrics m = MetricsFor(s.barHeight, shape, FontRatioOf(s, own), own.popupTextScale.value_or(s.popupTextScale),
             static_cast<float>(own.iconScale.value_or(s.barIconScale)) * icons, s.popupWidthScale, s.popupHeightScale,
             own.lineSeparation.value_or(s.barLineSeparation) * (closer ? kCloserLines : 1.0f));
+        if (own.fontSize)
+        {
+            m.title    = static_cast<float>(*own.fontSize);
+            m.subtitle = m.title / FontRatioOf(s, own);
+        }
+        return m;
     }
 
     const char* FishBarFont(const Settings& settings)
