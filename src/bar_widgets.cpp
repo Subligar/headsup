@@ -2111,14 +2111,14 @@ namespace headsup
                 if (!here.empty())
                 {
                     constexpr int kFriendColumns = 2;
-                    PopupSection players = Section(CardKind::ZonePlayers, "Players");
+                    PopupSection players = Section(CardKind::ZoneFriends, "Nearby Friends");
                     PopupRow grid        = Grid(kFriendColumns, here.size() * kFriendColumns);
                     for (const FriendEntry* f : here)
                     {
                         grid.cells.push_back(Cell(Text(FriendName(*f))));
                         grid.cells.push_back(Cell(Text(ZoneTitle(f->zone), Tone::Dim)));
                     }
-                    ScrollsBy(grid, state, "Zone/Players");
+                    ScrollsBy(grid, state, "Zone/Friends");
                     players.rows.push_back(std::move(grid));
                     popup.sections.push_back(std::move(players));
                 }
