@@ -242,6 +242,14 @@ namespace
         return headsup::ResourcePicture(found->Bitmap, std::min<size_t>(found->ImageSize, sizeof(found->Bitmap)));
     }
 
+    // A status's icon, from the game's own resources.
+    std::optional<headsup::Image> GameStatusIcon(uint16_t id)
+    {
+        const IStatusIcon* icon = g_Resources != nullptr ? g_Resources->GetStatusIconById(id) : nullptr;
+        if (icon == nullptr) return std::nullopt;
+        return headsup::ResourcePicture(icon->Bitmap, std::min<size_t>(icon->ImageSize, sizeof(icon->Bitmap)));
+    }
+
     const char* SpellName(uint16_t spell)
     {
         const ISpell* found = g_Resources != nullptr ? g_Resources->GetSpellById(spell) : nullptr;
@@ -711,6 +719,7 @@ public:
         m_Outline.SetDevice(device);
         m_Names.SetDevice(device);
         m_Nameplates.SetDevice(device);
+        m_Nameplates.SetGameStatusIcon(GameStatusIcon);
         m_SetupPreview.SetDevice(device);
         m_NameHook.SetDevice(device);
         m_CombatTextHook.SetDevice(device);
@@ -2549,12 +2558,7 @@ private:
                 if (std::optional<headsup::Image> piece = headsup::SkinImage(m_WindowSkins, name)) return piece;
                 if (std::optional<headsup::Image> picture = headsup::GamePictureImage(m_PlayOnlineIcons, m_NationCrests, name)) return picture;
                 if (const std::optional<uint16_t> item = headsup::ItemOfSource(name)) return ItemPicture(*item);
-                if (std::optional<headsup::Image> status = headsup::StatusImage(name, [](uint16_t id) {
-                        const IStatusIcon* icon = g_Resources != nullptr ? g_Resources->GetStatusIconById(id) : nullptr;
-                        if (icon == nullptr) return std::optional<headsup::Image>{};
-                        return headsup::ResourcePicture(icon->Bitmap, std::min<size_t>(icon->ImageSize, sizeof(icon->Bitmap)));
-                    }))
-                    return status;
+                if (std::optional<headsup::Image> status = headsup::StatusImage(name, GameStatusIcon)) return status;
                 return headsup::HostImage(name);
             });
         if (!started) Print("RmlUi did not start: the top panel and the settings window are off until HeadsUp reloads.");

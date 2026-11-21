@@ -20,7 +20,7 @@ namespace headsup
     {
         Name, Level, Con, Id, ServerId, Ph, Detect, Weak, Resist, Status, Immune, Gm, Mentor, New, Sync, Away, Linkshell,
         Bazaar, Seeking, Job, Owner, Title, JobLevel, SubLevel, Fish, FishSize, Feeling, LineSnap, RodBreak, LinkDead, Distance,
-        Break
+        Buffs, Debuffs, Break
     };
     constexpr int kTagCount = static_cast<int>(Tag::Break) + 1;
     constexpr char kTagMark = '$';
