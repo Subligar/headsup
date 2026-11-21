@@ -40,8 +40,8 @@ namespace headsup
     // kMenuCloseId.
     constexpr const char* kGameCogId    = "cog";
     constexpr const char* kGameTabId    = "tab-";
-    constexpr const char* kGameNavClass = "nav";      // what the selection can be on
-    constexpr const char* kGameSelClass = "selected"; // where it is
+    constexpr const char* kGameNavClass = "selectable"; // what the selection can be on
+    constexpr const char* kGameSelClass = "selected";   // where it is
     // Under the settings window, which a window's cog opens over it.
     constexpr int kGameWindowZ = kMenuWindowZ - 1;
 
