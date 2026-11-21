@@ -1304,6 +1304,19 @@ TEST(a_window_set_to_hide_goes_on_the_hidden_list_and_shows_no_place_until_kept_
     CHECK(w.settings.hiddenWindows.empty() && place(w.Pass()));
 }
 
+// Nothing places the compass: it is drawn by its own routine, not as a window in the game's list.
+TEST(the_compass_can_be_hidden_and_has_no_place_to_type)
+{
+    Window w;
+    w.state.page      = Page::VanillaUi;
+    const auto has = [](const Form& form, const char* id) { return At(Block(form, "vanillaui-base-game-ui"), id) != std::string::npos; };
+    const Form first = w.Pass();
+    CHECK(has(first, "vanillaui-base-game-ui-keep-compass") && !has(first, "vanillaui-base-game-ui-x-compass"));
+    CHECK(has(first, "vanillaui-base-game-ui-x-statcom"));
+    w.Pass({{"vanillaui-base-game-ui-keep-compass", kClickEvent, ""}});
+    CHECK((w.settings.hiddenWindows == std::vector<std::string>{"compass"}));
+}
+
 TEST(an_edit_of_a_built_in_theme_makes_a_custom_copy_of_it_named_after_it)
 {
     Window w;
