@@ -135,6 +135,7 @@ namespace
     constexpr const char* kRegistry          = "ffxi.registry";
     constexpr const char* kMenuWidth         = "0037";
     constexpr const char* kMenuHeight        = "0038";
+    constexpr const char* kPadButtons        = "padsin000"; // the pad button the player set for each of the game's actions
     // XIPivot, which puts its overlays' DAT files in place of the game's, and where it keeps its config and overlays.
     constexpr const char* kPivotModule       = "pivot.dll";
     constexpr const char* kPivotConfig       = "config\\pivot\\pivot.ini";
@@ -655,6 +656,10 @@ public:
         m_Store.config                = config;
         m_MenuWidth                   = config->GetFloat(kBootConfig, kRegistry, kMenuWidth, 0.0f);
         m_MenuHeight                  = config->GetFloat(kBootConfig, kRegistry, kMenuHeight, 0.0f);
+        const char* padsin            = config->GetString(kBootConfig, kRegistry, kPadButtons);
+        const headsup::PadBindings pad = headsup::PadBindingsFrom(padsin != nullptr ? padsin : "");
+        g_MenuInbox.taken             = headsup::InputTaken(pad);
+        m_MenuInput                   = headsup::MenuInput(pad);
         size_t fonts = 0;
         for (const headsup::BundledFont* font = headsup::BundledFonts(fonts); fonts-- > 0; ++font)
         {
