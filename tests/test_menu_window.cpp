@@ -6,6 +6,7 @@
 
 #include <RmlUi/Core.h>
 
+#include <cmath>
 #include <optional>
 #include <string>
 #include <utility>
@@ -42,7 +43,7 @@ namespace
         test::RmlSession rml; // first, so the windows go before RmlUi does
         GameWindows windows;
 
-        Windows() { windows.Update(rml.context, kLook); }
+        Windows() { windows.Update(rml.context, kLook, {}); }
 
         Rml::Element* Element(const std::string& window, const std::string& id)
         {
@@ -52,12 +53,14 @@ namespace
             CHECK(element != nullptr);
             return element;
         }
-        void PointAt(const std::string& window, const std::string& id)
+        Rml::Vector2i PointAt(const std::string& window, const std::string& id)
         {
             rml.context->Update();
             Rml::Element* element = Element(window, id);
             const Rml::Vector2f middle = element->GetAbsoluteOffset(Rml::BoxArea::Border) + element->GetBox().GetSize(Rml::BoxArea::Border) / 2.0f;
-            rml.context->ProcessMouseMove(static_cast<int>(middle.x), static_cast<int>(middle.y), 0);
+            const Rml::Vector2i at{static_cast<int>(middle.x), static_cast<int>(middle.y)};
+            rml.context->ProcessMouseMove(at.x, at.y, 0);
+            return at;
         }
         void Click(const std::string& window, const std::string& id, int button = kLeftButton)
         {
@@ -74,6 +77,21 @@ namespace
         {
             rml.context->Update();
             return Element(window, id)->IsVisible(true);
+        }
+        // Takes an element by its middle and lets it go moved by this many pixels.
+        void Drag(const std::string& window, const std::string& id, int byX, int byY)
+        {
+            const Rml::Vector2i from = PointAt(window, id);
+            rml.context->ProcessMouseButtonDown(kLeftButton, 0);
+            rml.context->ProcessMouseMove(from.x + byX / 2, from.y + byY / 2, 0);
+            rml.context->ProcessMouseMove(from.x + byX, from.y + byY, 0);
+            rml.context->ProcessMouseButtonUp(kLeftButton, 0);
+            rml.context->Update();
+        }
+        Rml::Vector2f Corner(const std::string& window)
+        {
+            rml.context->Update();
+            return windows.DocumentOf(window)->GetAbsoluteOffset(Rml::BoxArea::Border);
         }
         // Updates as time passes, until every control has eased into its look, and draws it.
         void Settle()
@@ -130,7 +148,7 @@ TEST(a_window_cannot_open_before_it_has_a_context_or_under_a_parent_not_open)
     test::RmlSession rml;
     GameWindows windows;
     CHECK(!windows.Open(Bag()));
-    windows.Update(rml.context, kLook);
+    windows.Update(rml.context, kLook, {});
     CHECK(!windows.Open(Sure("sure"), "bag"));
     CHECK(!windows.AnyOpen());
 }
@@ -350,7 +368,7 @@ TEST(a_new_look_restyles_the_open_windows_and_keeps_where_they_are)
         look.theme    = theme;
         look.colors   = kAuroraMenuColors;
         if (theme == MenuTheme::GameWindow) look.skin = SkinFrame{0, 1.0f, 0.5f, 1.0f, 0xFF808080u};
-        w.windows.Update(w.rml.context, look);
+        w.windows.Update(w.rml.context, look, {});
         // The controls ease from one look to the other: the update that sees the new look starts it, the next ends it.
         w.Settle();
         CHECK(w.windows.DocumentOf("bag") == before);
@@ -448,4 +466,45 @@ TEST(an_entry_the_pointer_chose_is_not_kept_lit_when_it_leaves_the_list)
     w.PointAt("bag", "use");
     w.Settle();
     CHECK(SameColor(w.Element("bag", "items-3")->GetComputedValues().background_color(), kLook.colors.control));
+}
+
+TEST(a_window_dragged_by_its_title_tells_where_it_was_let_go_and_opens_there_next_time)
+{
+    Windows w;
+    w.windows.Open(Bag());
+    const Rml::Vector2f from = w.Corner("bag");
+    w.Drag("bag", "title", 40, -30);
+    const Rml::Vector2f to = w.Corner("bag");
+    CHECK(to == from + Rml::Vector2f(40.0f, -30.0f));
+    const std::vector<WindowPlace> moved = w.windows.TakeMoved();
+    CHECK((moved == std::vector<WindowPlace>{{"bag", static_cast<int>(to.x), static_cast<int>(to.y)}}));
+    CHECK(w.windows.TakeMoved().empty());
+    // Pressing a button is no move.
+    w.Click("bag", "sort");
+    CHECK(w.windows.TakeMoved().empty());
+    w.windows.Close("bag");
+    w.windows.Update(w.rml.context, kLook, moved);
+    CHECK(w.windows.Open(Bag()));
+    CHECK(w.Corner("bag") == to);
+    // One never moved opens in the screen's middle.
+    w.windows.Open(Sure("other"));
+    const Rml::Vector2f size   = w.windows.DocumentOf("other")->GetBox().GetSize(Rml::BoxArea::Border);
+    const Rml::Vector2i screen = w.rml.context->GetDimensions();
+    CHECK(w.Corner("other") == Rml::Vector2f(std::round((static_cast<float>(screen.x) - size.x) / 2.0f),
+                                    std::round((static_cast<float>(screen.y) - size.y) / 2.0f)));
+}
+
+TEST(a_window_left_past_a_smaller_screens_edge_opens_with_a_fifth_of_it_on)
+{
+    Windows w;
+    const Rml::Vector2i screen = w.rml.context->GetDimensions();
+    w.windows.Update(w.rml.context, kLook, {{"bag", screen.x * 3, screen.y * 3}, {"other", -screen.x * 3, -50}});
+    w.windows.Open(Bag());
+    w.windows.Open(Sure("other"));
+    const Rml::Vector2f bag = w.windows.DocumentOf("bag")->GetBox().GetSize(Rml::BoxArea::Border);
+    const Rml::Vector2f other = w.windows.DocumentOf("other")->GetBox().GetSize(Rml::BoxArea::Border);
+    CHECK(w.Corner("bag") == Rml::Vector2f(static_cast<float>(screen.x) - std::round(bag.x / 5.0f),
+                                  static_cast<float>(screen.y) - std::round(bag.y / 5.0f)));
+    // And never above the top.
+    CHECK(w.Corner("other") == Rml::Vector2f(std::round(other.x / 5.0f) - other.x, 0.0f));
 }

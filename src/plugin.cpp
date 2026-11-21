@@ -1362,7 +1362,7 @@ public:
     }
 
     // HeadsUp's game windows: the input Ashita handed over since the last frame, then what their buttons asked for. A
-    // cog opens the settings window over them.
+    // cog opens the settings window over them, and a window dragged is saved where it was let go.
     void UpdateGameWindows(double now)
     {
         std::vector<headsup::MenuEvent> events;
@@ -1375,7 +1375,8 @@ public:
 #ifdef HEADSUP_DEV
         asked = std::exchange(m_TestMenuAsked, false);
 #endif
-        if (m_GameWindows.AnyOpen() || asked) m_GameWindows.Update(m_Rml.Overlay(), headsup::MenuLookFor(MenuHostNow(), m_Settings));
+        if (m_GameWindows.AnyOpen() || asked)
+            m_GameWindows.Update(m_Rml.Overlay(), headsup::MenuLookFor(MenuHostNow(), m_Settings), m_Settings.menuPlaces);
 #ifdef HEADSUP_DEV
         if (asked) headsup::ToggleTestMenu(m_GameWindows);
 #endif
@@ -1396,6 +1397,12 @@ public:
 #endif
         if (const auto page = m_GameWindows.TakeSettingsAsked(); page && !m_RmlMenu.OpenPage(page->first, page->second))
             Print("a game window's cog has no settings page: " + page->first + ".");
+        for (headsup::WindowPlace& moved : m_GameWindows.TakeMoved())
+        {
+            std::erase_if(m_Settings.menuPlaces, [&](const headsup::WindowPlace& place) { return place.name == moved.name; });
+            m_Settings.menuPlaces.push_back(std::move(moved));
+            m_SettingsChangedAt = now;
+        }
         const bool open = m_GameWindows.AnyOpen();
         if (!open) m_MenuInput.Reset();
         const std::lock_guard hold(g_MenuInbox.lock);

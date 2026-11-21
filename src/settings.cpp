@@ -261,6 +261,11 @@ namespace headsup
         }
         constexpr const char* kPinnedWindowsKey = "pinnedWindows"; // "equip:100,200 statcom:0,40"
         constexpr const char* kHiddenWindowsKey = "hiddenWindows"; // "statcom inventor"
+        constexpr const char* kMenuPlacesKey    = "menuPlaces";    // "testmenu:-40,300"
+        std::vector<WindowPlace> MenuPlacesFrom(std::string_view text)
+        {
+            return PlacesFrom(text, [](std::string_view name) { return !name.empty(); }, -kMaxMenuSide, kMaxMenuSide);
+        }
         constexpr const char* kShiftVanillaUiKey = "shiftVanillaUi";
         // By HelpMode.
         constexpr const char* kPlacedUnderKeys[kHelpModes] = {"placedUnderHelpOff", "placedUnderHelpOn"};
@@ -1385,6 +1390,7 @@ namespace headsup
         s.keepPointerKeys = std::move(keys);
         s.screenshotKey   = BindableKey(s.screenshotKey);
         s.pinnedWindows   = WindowPlacesFrom(WindowPlaceText(s.pinnedWindows));
+        s.menuPlaces      = MenuPlacesFrom(WindowPlaceText(s.menuPlaces));
         for (size_t m = 0; m < kHelpModes; ++m)
         {
             s.placedUnder[m] = std::clamp(s.placedUnder[m], 0, kMaxWindowOffset);
@@ -2050,6 +2056,7 @@ namespace headsup
                     LoadWidget(store, w, s.widgets[slot]);
             s.pinnedWindows = WindowPlacesFrom(store.GetString(kPinnedWindowsKey, ""));
             s.hiddenWindows = HiddenWindowsFrom(store.GetString(kHiddenWindowsKey, ""));
+            s.menuPlaces    = MenuPlacesFrom(store.GetString(kMenuPlacesKey, ""));
             s.shiftVanillaUi = HeldSwitch(store, kShiftVanillaUiKey).value_or(s.shiftVanillaUi);
             for (size_t m = 0; m < kHelpModes; ++m)
             {
@@ -2159,6 +2166,7 @@ namespace headsup
             store.Set(kBarSectionKeys[i], PlacementNames(s.barSections[i]).c_str());
         store.Set(kPinnedWindowsKey, WindowPlaceText(s.pinnedWindows).c_str());
         store.Set(kHiddenWindowsKey, HiddenWindowsText(s.hiddenWindows).c_str());
+        store.Set(kMenuPlacesKey, WindowPlaceText(s.menuPlaces).c_str());
         StoreBool(store, kShiftVanillaUiKey, s.shiftVanillaUi);
         for (size_t m = 0; m < kHelpModes; ++m)
         {
