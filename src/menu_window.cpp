@@ -25,6 +25,7 @@ namespace headsup
         constexpr const char* kTabAttribute = "tab";
         constexpr const char* kTabClass     = "tab";
         constexpr const char* kListClass    = "list";
+        constexpr const char* kKeptClass    = "kept"; // a list's entry the keys chose, lit while the selection is elsewhere
         constexpr int kRightButton          = 1; // RmlUi's
         // In ems of the window's text.
         constexpr float kWidth       = 34.0f;
@@ -78,6 +79,7 @@ namespace headsup
             css += std::string("#") + kBodyId + " ." + kGameNavClass + "." + kGameSelClass + "{background-color:" + RcssColor(c.accentSoft) +
                    ";color:" + RcssColor(c.text) + ";font-effect:outline(" + Px(static_cast<float>(kBoldEdge)) + " " + RcssColor(c.text) +
                    ");transform:scale(" + RcssNumber(kSelectedGrowth) + ");}";
+            css += std::string("#") + kBodyId + " ." + kKeptClass + "{background-color:" + RcssColor(c.accentSoft) + ";}";
             return css;
         }
 
@@ -242,6 +244,9 @@ namespace headsup
         return true;
     }
 
+    // Out of line: GCC warns of the optional's string read uninitialized where this is inlined.
+    std::optional<std::pair<std::string, std::string>> GameWindows::TakeSettingsAsked() { return std::exchange(m_SettingsAsked, std::nullopt); }
+
     bool GameWindows::IsOpen(const std::string& id) const { return Find(id) != nullptr; }
 
     void GameWindows::SetText(const std::string& window, const std::string& id, const std::string& text)
@@ -273,15 +278,24 @@ namespace headsup
         return at != m_Open.end() ? &*at : nullptr;
     }
 
-    void GameWindows::Select(Window& window, Rml::Element* element, bool scroll)
+    void GameWindows::Select(Window& window, Rml::Element* element, bool byKeys)
     {
+        Rml::Element* list = ListOf(element);
         if (window.selected != element)
         {
-            if (window.selected != nullptr) window.selected->SetClass(kGameSelClass, false);
+            if (Rml::Element* was = window.selected)
+            {
+                was->SetClass(kGameSelClass, false);
+                if (window.byKeys && ListOf(was) != nullptr && ListOf(was) != list) was->SetClass(kKeptClass, true);
+            }
+            if (list != nullptr)
+                for (int i = 0; i < list->GetNumChildren(); ++i)
+                    list->GetChild(i)->SetClass(kKeptClass, false);
             window.selected = element;
             element->SetClass(kGameSelClass, true);
         }
-        if (Rml::Element* list = scroll ? ListOf(element) : nullptr) ScrollToShow(list, element);
+        window.byKeys = byKeys;
+        if (byKeys && list != nullptr) ScrollToShow(list, element);
     }
 
     void GameWindows::Activate(Window& window, Rml::Element* element)

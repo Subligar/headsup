@@ -400,3 +400,52 @@ TEST(the_selection_lights_its_background_bolds_its_text_and_grows_a_little_witho
     }
     CHECK_EQ(w.rml.Said(), "");
 }
+
+namespace
+{
+    // An entry left lit in its list: its background as the selection's, its text neither bold nor grown.
+    bool KeptLit(Rml::Element* entry)
+    {
+        const Rml::Style::ComputedValues& look = entry->GetComputedValues();
+        return SameColor(look.background_color(), kLook.colors.accentSoft) && !look.has_font_effect() && !DrawnLarger(entry);
+    }
+}
+
+TEST(an_entry_the_keys_chose_stays_lit_when_the_selection_leaves_its_list_until_another_entry_is_chosen)
+{
+    Windows w;
+    w.windows.Open(Bag());
+    w.Acts(MenuAction::Down, 2);
+    w.Acts(MenuAction::Right);
+    CHECK_EQ(w.windows.Selected(), std::string("drop"));
+    w.Settle();
+    Rml::Element* kept = w.Element("bag", "items-2");
+    CHECK(KeptLit(kept));
+    CHECK(!KeptLit(w.Element("bag", "items-1")));
+    // Among the buttons it stays lit.
+    w.Acts(MenuAction::Up);
+    w.Settle();
+    CHECK(KeptLit(kept));
+    // Back in the list on another entry, it is let go.
+    w.Acts(MenuAction::Left);
+    CHECK_EQ(w.windows.Selected(), std::string("items-1"));
+    w.Settle();
+    CHECK(SameColor(kept->GetComputedValues().background_color(), kLook.colors.control));
+    // So it is when the pointer chooses another entry.
+    w.Acts(MenuAction::Down);
+    w.Acts(MenuAction::Right);
+    w.PointAt("bag", "items-4");
+    w.Settle();
+    CHECK(SameColor(kept->GetComputedValues().background_color(), kLook.colors.control));
+    CHECK_EQ(w.rml.Said(), "");
+}
+
+TEST(an_entry_the_pointer_chose_is_not_kept_lit_when_it_leaves_the_list)
+{
+    Windows w;
+    w.windows.Open(Bag());
+    w.PointAt("bag", "items-3");
+    w.PointAt("bag", "use");
+    w.Settle();
+    CHECK(SameColor(w.Element("bag", "items-3")->GetComputedValues().background_color(), kLook.colors.control));
+}
