@@ -71,7 +71,7 @@ namespace headsup
         // Once each: the elements pressed by a click or Confirm, by id, but for the tabs, close buttons and cogs; and
         // the settings page and card a cog asked for.
         std::vector<std::string> TakePressed() { return std::exchange(m_Pressed, {}); }
-        std::optional<std::pair<std::string, std::string>> TakeSettingsAsked() { return std::exchange(m_SettingsAsked, std::nullopt); }
+        std::optional<std::pair<std::string, std::string>> TakeSettingsAsked();
         // The newest window's selected element, by id; empty with none open.
         std::string Selected() const;
         size_t TabShown(const std::string& id) const;
@@ -84,11 +84,12 @@ namespace headsup
             Rml::ElementDocument* document = nullptr;
             size_t tabs = 0, tab = 0;
             Rml::Element* selected = nullptr;
+            bool byKeys            = false; // the selection was made by the keys or the pad, not the pointer
         };
         void ProcessEvent(Rml::Event& event) override;
         const Window* Find(const std::string& id) const;
         void Restyle(const Window& window) const;
-        void Select(Window& window, Rml::Element* element, bool scroll);
+        void Select(Window& window, Rml::Element* element, bool byKeys);
         void Activate(Window& window, Rml::Element* element);
         void ShowTab(Window& window, size_t tab, bool selectContent);
         void Move(Window& window, MenuAction move);
