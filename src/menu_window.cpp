@@ -1,5 +1,6 @@
 #include "menu_window.h"
 
+#include "argb.h"
 #include "bar_document.h"
 #include "form.h"
 #include "markup.h"
@@ -37,10 +38,22 @@ namespace headsup
         constexpr float kEntryPad    = 0.6f;  // an entry's text from its sides
         constexpr float kCogShare    = 0.7f;  // the cog's picture, of its button
         constexpr float kListEdge    = 1.0f;  // pixels
-        // The selection: drawn this much larger, its text made bold by an edge of its own color, as each font is
+        // The selection: drawn this much larger, its text made bold by a faint edge of its own color, as each font is
         // loaded in one weight.
-        constexpr float kSelectedGrowth = 1.05f;
+        constexpr float kSelectedGrowth = 1.04f;
         constexpr int kBoldEdge         = 1; // pixels
+        constexpr uint32_t kBoldShade   = 0x80;
+
+        // The selection's ground: the soft accent laid over a control's own, which the soft accent alone would darken.
+        uint32_t LitGround(const MenuColors& c)
+        {
+            const float share = static_cast<float>(Channel(c.accentSoft, kAlphaShift)) / static_cast<float>(kOpaqueAlpha);
+            const auto mixed  = [&](int shift) {
+                const auto under = static_cast<float>(Channel(c.control, shift)), over = static_cast<float>(Channel(c.accentSoft, shift));
+                return static_cast<uint8_t>(std::lround(under + (over - under) * share));
+            };
+            return Opaque(mixed(kRedShift), mixed(kGreenShift), mixed(kBlueShift));
+        }
 
         std::string CogFor(const MenuLook& look)
         {
@@ -76,10 +89,11 @@ namespace headsup
             css += ".entry:hover{background-color:" + RcssColor(c.hover) + ";}";
             css += ".text{color:" + RcssColor(c.label) + ";}";
             css += std::string("#") + kFootId + "{margin-top:" + Em(kGutter) + ";color:" + RcssColor(c.muted) + ";}";
-            css += std::string("#") + kBodyId + " ." + kGameNavClass + "." + kGameSelClass + "{background-color:" + RcssColor(c.accentSoft) +
-                   ";color:" + RcssColor(c.text) + ";font-effect:outline(" + Px(static_cast<float>(kBoldEdge)) + " " + RcssColor(c.text) +
-                   ");transform:scale(" + RcssNumber(kSelectedGrowth) + ");}";
-            css += std::string("#") + kBodyId + " ." + kKeptClass + "{background-color:" + RcssColor(c.accentSoft) + ";}";
+            const std::string lit = RcssColor(LitGround(c));
+            css += std::string("#") + kBodyId + " ." + kGameNavClass + "." + kGameSelClass + "{background-color:" + lit + ";color:" +
+                   RcssColor(c.text) + ";font-effect:outline(" + Px(static_cast<float>(kBoldEdge)) + " " +
+                   RcssColor(WithAlpha(c.text, kBoldShade)) + ");transform:scale(" + RcssNumber(kSelectedGrowth) + ");}";
+            css += std::string("#") + kBodyId + " ." + kKeptClass + "{background-color:" + lit + ";}";
             return css;
         }
 
