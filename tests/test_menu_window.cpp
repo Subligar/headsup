@@ -123,6 +123,14 @@ namespace
         return element->Project(corner) && corner.x < at.x + size.x - 0.1f && corner.y < at.y + size.y - 0.1f;
     }
 
+    // What lights a selectable element and is drawn larger behind its text.
+    Rml::Element* GroundOf(Rml::Element* element)
+    {
+        Rml::Element* ground = element->QuerySelector(std::string(".") + kGameGroundClass);
+        CHECK(ground != nullptr);
+        return ground;
+    }
+
     // Whether an entry lies inside its list's view, as far as the list's padding.
     bool InView(Rml::Element* entry, Rml::Element* list)
     {
@@ -387,7 +395,7 @@ TEST(a_new_look_restyles_the_open_windows_and_keeps_where_they_are)
         CHECK_EQ(w.windows.TabShown("bag"), size_t{1});
         const std::string selected = w.windows.Selected();
         CHECK_EQ(selected, std::string("key-a"));
-        CHECK(SameColor(w.Element("bag", selected)->GetComputedValues().background_color(), kAuroraLit));
+        CHECK(SameColor(GroundOf(w.Element("bag", selected))->GetComputedValues().background_color(), kAuroraLit));
         CHECK_EQ(w.rml.Said(), "");
     }
 }
@@ -465,7 +473,7 @@ TEST(after_the_keys_choose_the_pointer_lights_nothing_until_it_moves)
     CHECK_EQ(w.windows.Selected(), std::string("items-2"));
 }
 
-TEST(the_selection_lights_its_background_bolds_its_text_and_grows_a_little_without_moving_it)
+TEST(the_selection_lights_and_grows_its_ground_and_bolds_its_text_without_moving_or_scaling_it)
 {
     Windows w;
     w.windows.Open(Bag());
@@ -473,19 +481,18 @@ TEST(the_selection_lights_its_background_bolds_its_text_and_grows_a_little_witho
     for (const std::string& id : {std::string("use"), std::string("items-3"), std::string(kGameTabId) + "1", std::string(kMenuCloseId)})
     {
         Rml::Element* element    = w.Element("bag", id);
+        Rml::Element* ground     = GroundOf(element);
         const Rml::Vector2f text = element->GetAbsoluteOffset(Rml::BoxArea::Content);
-        const Rml::Colourb edge  = element->GetComputedValues().border_top_color();
-        CHECK(!element->GetComputedValues().has_font_effect() && !DrawnLarger(element));
+        CHECK(!element->GetComputedValues().has_font_effect() && !DrawnLarger(ground));
         w.PointAt("bag", id);
         w.Settle();
         CHECK_EQ(w.windows.Selected(), id);
-        const Rml::Style::ComputedValues& look = element->GetComputedValues();
-        CHECK(SameColor(look.background_color(), kPhoenixLit));
-        CHECK(look.has_font_effect());
-        CHECK(DrawnLarger(element));
-        // Its text stays where it was, and it has no outline.
+        CHECK(SameColor(ground->GetComputedValues().background_color(), kPhoenixLit));
+        CHECK(DrawnLarger(ground));
+        CHECK(element->GetComputedValues().has_font_effect());
+        // Its text stays where it was, at its own size: a text drawn larger is blurred.
         CHECK(element->GetAbsoluteOffset(Rml::BoxArea::Content) == text);
-        CHECK(look.border_top_color() == edge);
+        CHECK(!DrawnLarger(element));
     }
     CHECK_EQ(w.rml.Said(), "");
 }
