@@ -15,6 +15,7 @@ namespace headsup
     {
         constexpr float kRunInset     = 0.3f;  // how much shorter a line box's stretches and chips are than the box
         constexpr float kSpacing      = 0.45f; // between rows
+        constexpr float kSendsPad     = 0.35f; // either side of the "!" of a warning that a setting sends packets
         // Setup's picture, 16:9 like its target: short enough that its first step fits the window's own size.
         constexpr float kPreviewTall  = 14.0f;
         constexpr float kParagraphTall = 9.0f; // a box of several lines
@@ -204,6 +205,9 @@ namespace headsup
         css += ".row{display:flex;flex-direction:row;align-items:center;justify-content:space-between;"
                "min-height:" + frame + ";margin-bottom:" + Em(kSpacing) + ";}";
         css += ".label{flex:1 1 0px;min-width:0px;overflow:hidden;white-space:nowrap;" + raised + "color:" + color(c.label) + ";}";
+        css += std::string(".") + kSendsPacketsClass + "{display:inline-block;margin-left:" + Em(kControlGap) + ";padding:0px " +
+               Em(kSendsPad) + ";border-radius:" + Em(kSendsPad * 2.0f) + ";background-color:" + color(kErrorColor) + ";color:" +
+               color(c.card) + ";}";
         css += ".ctl{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:flex-end;flex:0 0 auto;}";
         css += ".ctl > *{margin-left:" + Em(kControlGap) + ";}";
         css += ".line{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;margin-bottom:" + Em(kSpacing) + ";}";

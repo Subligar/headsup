@@ -119,6 +119,11 @@ namespace headsup
     }
     std::string TipAttribute(const char* tip) { return TipAttribute(std::string_view(tip != nullptr ? tip : "")); }
 
+    std::string SendsPacketsMark(std::string_view tip)
+    {
+        return std::string("<span class=\"") + kSendsPacketsClass + "\"" + TipAttribute(tip) + ">!</span>";
+    }
+
     std::string Form::Id(std::string_view name)
     {
         std::string id = Named(name);
@@ -227,7 +232,8 @@ namespace headsup
         const std::string id = Id(std::string(label) + " label");
         const std::string row = id + "-row";
         Out() += std::string("<div class=\"row") + (m_Indent ? " indent" : "") + "\" id=\"" + row + "\"><div class=\"label\" id=\"" +
-                 id + "\"" + TipAttribute(tip) + ">" + EscapedRml(LabelText(label)) + "</div><div class=\"ctl\">";
+                 id + "\"" + TipAttribute(tip) + ">" + EscapedRml(LabelText(label)) +
+                 (m_Sends.empty() ? std::string() : SendsPacketsMark(std::exchange(m_Sends, {}))) + "</div><div class=\"ctl\">";
         Set(row, FormValueKind::Class, kOffClass, {}, m_Off);
     }
 
