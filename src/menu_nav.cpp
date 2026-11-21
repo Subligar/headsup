@@ -1,6 +1,7 @@
 #include "menu_nav.h"
 
 #include <array>
+#include <charconv>
 #include <cmath>
 
 namespace headsup
@@ -42,19 +43,26 @@ namespace headsup
         constexpr uint32_t kKeyLeft = 0x25, kKeyUp = 0x26, kKeyRight = 0x27, kKeyDown = 0x28, kKeyEnter = 0x0D, kKeyEscape = 0x1B;
         // Ashita's XInput numbers: a button is its bit's place in XINPUT_GAMEPAD's wButtons, then the triggers (16, 17)
         // and the sticks' axes.
-        constexpr uint32_t kPadUp = 0, kPadDown = 1, kPadLeft = 2, kPadRight = 3, kPadLeftBumper = 8, kPadRightBumper = 9,
-                           kPadA = 12, kPadB = 13;
-        // The game's own confirm and cancel buttons are the player's to set (padsin000): these are what XInput pads name them.
-        constexpr uint32_t kPadConfirm = kPadA, kPadCancel = kPadB;
+        constexpr uint32_t kPadUp = 0, kPadDown = 1, kPadLeft = 2, kPadRight = 3, kPadStart = 4, kPadBack = 5, kPadLeftThumb = 6,
+                           kPadRightThumb = 7, kPadLeftBumper = 8, kPadRightBumper = 9, kPadX = 14, kPadY = 15, kPadLeftTrigger = 16,
+                           kPadRightTrigger = 17;
+        // A trigger counts as pressed past this (XINPUT_GAMEPAD_TRIGGER_THRESHOLD).
+        constexpr int32_t kTriggerPress = 30;
+        // padsin000's slots for Cancel and Confirm; a slot of -1 is unset. On an XInput pad the game numbers the buttons
+        // its own way (B, X, Y, A, the d-pad right, left, up and down, LB, LT, L3, RB, RT, R3, Start, Back): these are
+        // Ashita's numbers for them.
+        constexpr size_t kCancelSlot = 5, kConfirmSlot = 7;
+        constexpr std::array kGamePadButtons{kPadB, kPadX, kPadY, kPadA, kPadRight, kPadLeft, kPadUp, kPadDown, kPadLeftBumper,
+            kPadLeftTrigger, kPadLeftThumb, kPadRightBumper, kPadRightTrigger, kPadRightThumb, kPadStart, kPadBack};
+        constexpr uint32_t kDirectButtons = 32; // DIJOYSTATE's
         // DirectInput's DIJOYSTATE: the first hat's offset, in hundredths of a degree from up, its low word all ones when
         // centred; the buttons' offsets from the first's, each down with its top bit.
         constexpr uint32_t kHatOffset = 32, kFirstButton = 48;
         constexpr uint32_t kHatCentred = 0xFFFF;
         constexpr int32_t kHatQuarter  = 9000;
         constexpr int32_t kButtonDown = 0x80;
-        // DirectInput numbers a pad's buttons its own way: these are an Xbox pad's (A, B, the bumpers), until a player's
-        // pad says otherwise.
-        constexpr uint32_t kDirectConfirm = 0, kDirectCancel = 1, kDirectTabLeft = 4, kDirectTabRight = 5;
+        // DirectInput numbers a pad's buttons its own way: these are an Xbox pad's bumpers.
+        constexpr uint32_t kDirectTabLeft = 4, kDirectTabRight = 5;
         constexpr std::array kHatMoves{MenuAction::Up, MenuAction::Right, MenuAction::Down, MenuAction::Left};
 
         MenuAction KeyAction(uint32_t vk)
@@ -71,32 +79,56 @@ namespace headsup
             }
         }
 
-        MenuAction PadAction(uint32_t button)
+        // The player's Confirm and Cancel come first: they may be set on a button the windows use otherwise.
+        MenuAction PadAction(uint32_t button, const PadBindings& pad)
         {
+            if (button == pad.confirm) return MenuAction::Confirm;
+            if (button == pad.cancel) return MenuAction::Cancel;
             switch (button)
             {
             case kPadUp: return MenuAction::Up;
             case kPadDown: return MenuAction::Down;
             case kPadLeft: return MenuAction::Left;
             case kPadRight: return MenuAction::Right;
-            case kPadConfirm: return MenuAction::Confirm;
-            case kPadCancel: return MenuAction::Cancel;
             case kPadLeftBumper: return MenuAction::TabLeft;
             case kPadRightBumper: return MenuAction::TabRight;
             default: return MenuAction::None;
             }
         }
 
-        MenuAction DirectButtonAction(uint32_t offset)
+        bool PadDown(const MenuEvent& event)
         {
-            switch (offset - kFirstButton)
+            const bool trigger = event.code == kPadLeftTrigger || event.code == kPadRightTrigger;
+            return trigger ? event.value > kTriggerPress : event.value != 0;
+        }
+
+        MenuAction DirectButtonAction(uint32_t offset, const PadBindings& pad)
+        {
+            const uint32_t button = offset - kFirstButton;
+            if (button == pad.directConfirm) return MenuAction::Confirm;
+            if (button == pad.directCancel) return MenuAction::Cancel;
+            switch (button)
             {
-            case kDirectConfirm: return MenuAction::Confirm;
-            case kDirectCancel: return MenuAction::Cancel;
             case kDirectTabLeft: return MenuAction::TabLeft;
             case kDirectTabRight: return MenuAction::TabRight;
             default: return MenuAction::None;
             }
+        }
+
+        // A slot's number: -1 for unset, none when it cannot be read.
+        std::optional<int> Slot(std::string_view list, size_t slot)
+        {
+            for (size_t i = 0; i < slot; ++i)
+            {
+                const size_t comma = list.find(',');
+                if (comma == std::string_view::npos) return std::nullopt;
+                list.remove_prefix(comma + 1);
+            }
+            list = list.substr(0, list.find(','));
+            int value = 0;
+            const auto [end, error] = std::from_chars(list.data(), list.data() + list.size(), value);
+            if (error != std::errc{} || end != list.data() + list.size()) return std::nullopt;
+            return value;
         }
 
         bool HatCentred(int32_t data) { return (static_cast<uint32_t>(data) & kHatCentred) == kHatCentred; }
@@ -110,6 +142,30 @@ namespace headsup
         }
 
         bool Moves(MenuAction action) { return action >= MenuAction::Up && action <= MenuAction::Right; }
+
+        // Whether the windows act on this input: whether it holds its key or button down.
+        struct MenuControl
+        {
+            bool down = false;
+        };
+
+        std::optional<MenuControl> ControlOf(const MenuEvent& event, const PadBindings& pad)
+        {
+            switch (event.source)
+            {
+            case InputSource::Keyboard:
+                if (KeyAction(event.code) == MenuAction::None) return std::nullopt;
+                return MenuControl{event.value != 0};
+            case InputSource::XInput:
+                if (PadAction(event.code, pad) == MenuAction::None) return std::nullopt;
+                return MenuControl{PadDown(event)};
+            case InputSource::DirectInput:
+                if (event.code == kHatOffset) return MenuControl{!HatCentred(event.value)};
+                if (event.code < kFirstButton || DirectButtonAction(event.code, pad) == MenuAction::None) return std::nullopt;
+                return MenuControl{(event.value & kButtonDown) != 0};
+            }
+            return std::nullopt;
+        }
 
         constexpr std::array kActionNames{"None", "Up", "Down", "Left", "Right", "Confirm", "Cancel", "TabLeft", "TabRight"};
         constexpr std::array kSourceNames{"Key", "XInput", "DirectInput"};
@@ -139,27 +195,33 @@ namespace headsup
         return best;
     }
 
-    std::optional<MenuControl> ControlOf(const MenuEvent& event)
+    PadBindings PadBindingsFrom(std::string_view padsin)
     {
-        switch (event.source)
+        PadBindings pad;
+        const auto xinput = [](int value) -> std::optional<uint32_t> {
+            if (value < 0 || static_cast<size_t>(value) >= kGamePadButtons.size()) return std::nullopt;
+            return kGamePadButtons[static_cast<size_t>(value)];
+        };
+        const auto direct = [](int value) -> std::optional<uint32_t> {
+            if (value < 0 || static_cast<uint32_t>(value) >= kDirectButtons) return std::nullopt;
+            return static_cast<uint32_t>(value);
+        };
+        if (const std::optional<int> confirm = Slot(padsin, kConfirmSlot))
         {
-        case InputSource::Keyboard:
-            if (KeyAction(event.code) == MenuAction::None) return std::nullopt;
-            return MenuControl{event.value != 0};
-        case InputSource::XInput:
-            if (PadAction(event.code) == MenuAction::None) return std::nullopt;
-            return MenuControl{event.value != 0};
-        case InputSource::DirectInput:
-            if (event.code == kHatOffset) return MenuControl{!HatCentred(event.value)};
-            if (event.code < kFirstButton || DirectButtonAction(event.code) == MenuAction::None) return std::nullopt;
-            return MenuControl{(event.value & kButtonDown) != 0};
+            pad.confirm       = xinput(*confirm);
+            pad.directConfirm = direct(*confirm);
         }
-        return std::nullopt;
+        if (const std::optional<int> cancel = Slot(padsin, kCancelSlot))
+        {
+            pad.cancel       = xinput(*cancel);
+            pad.directCancel = direct(*cancel);
+        }
+        return pad;
     }
 
     bool InputTaken::Keep(const MenuEvent& event, bool open)
     {
-        const std::optional<MenuControl> control = ControlOf(event);
+        const std::optional<MenuControl> control = ControlOf(event, m_Pad);
         if (!control) return false;
         const auto key = std::pair(event.source, event.code);
         const auto at  = m_Down.find(key);
@@ -189,16 +251,26 @@ namespace headsup
         case InputSource::Keyboard: return event.value != 0 ? KeyAction(event.code) : MenuAction::None;
         case InputSource::XInput:
         {
-            const MenuAction action = PadAction(event.code);
-            if (!Moves(action)) return event.value != 0 ? action : MenuAction::None;
-            if (event.value != 0) return Change(m_Pad, action, now);
+            const MenuAction action = PadAction(event.code, m_Bindings);
+            const bool down         = PadDown(event);
+            if (action == MenuAction::None) return MenuAction::None;
+            if (!Moves(action))
+            {
+                const bool pressed = down && !m_Held.contains(event.code);
+                if (down)
+                    m_Held.insert(event.code);
+                else
+                    m_Held.erase(event.code);
+                return pressed ? action : MenuAction::None;
+            }
+            if (down) return Change(m_Pad, action, now);
             if (m_Pad.move == action) Change(m_Pad, MenuAction::None, now);
             return MenuAction::None;
         }
         case InputSource::DirectInput:
             if (event.code == kHatOffset) return Change(m_Pad, HatMove(event.value), now);
             if (event.code < kFirstButton || (event.value & kButtonDown) == 0) return MenuAction::None;
-            return DirectButtonAction(event.code);
+            return DirectButtonAction(event.code, m_Bindings);
         }
         return MenuAction::None;
     }
@@ -210,7 +282,11 @@ namespace headsup
         return m_Pad.move;
     }
 
-    void MenuInput::Reset() { *this = MenuInput{}; }
+    void MenuInput::Reset()
+    {
+        m_Pad = {};
+        m_Held.clear();
+    }
 
     std::string MenuEventText(const MenuEvent& event)
     {
