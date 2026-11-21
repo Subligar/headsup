@@ -406,6 +406,39 @@ TEST(the_selection_follows_the_pointer_only_as_it_moves)
     CHECK_EQ(w.windows.Selected(), std::string("items-8"));
 }
 
+namespace
+{
+    struct Span
+    {
+        float left, right;
+    };
+    Span Across(Rml::Element* element)
+    {
+        const float left = element->GetAbsoluteOffset(Rml::BoxArea::Border).x;
+        return {left, left + element->GetBox().GetSize(Rml::BoxArea::Border).x};
+    }
+}
+
+TEST(a_tabs_parts_stand_side_by_side_in_the_windows_middle)
+{
+    Windows w;
+    w.windows.Open(Bag());
+    const float gap = kControlGap * static_cast<float>(kLook.fontPixels);
+    const auto check = [&](const std::string& first, const std::string& last) {
+        w.rml.context->Update();
+        Rml::ElementDocument* document = w.windows.DocumentOf("bag");
+        const float from = document->GetAbsoluteOffset(Rml::BoxArea::Content).x;
+        const float to   = from + document->GetBox().GetSize(Rml::BoxArea::Content).x;
+        const Span a = Across(w.Element("bag", first)), b = Across(w.Element("bag", last));
+        CHECK(b.left - a.right <= gap + 0.5f);
+        CHECK(std::abs((a.left - from) - (to - b.right)) <= 1.0f);
+    };
+    // The list and its column of buttons, then a row of two.
+    check("items", "use");
+    w.Acts(MenuAction::TabRight);
+    check("key-a", "key-b");
+}
+
 TEST(a_windows_title_is_smaller_than_the_settings_windows_but_larger_than_its_text)
 {
     Windows w;
