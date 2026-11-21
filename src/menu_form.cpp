@@ -1462,15 +1462,15 @@ namespace headsup
             if (boxed) c.form.Raw("</div>");
         }
 
-        // What HeadsUp asks the server for while a widget shows, for the warning on its chip.
-        std::optional<WindowWord> SendsFor(BarWidget kind)
+        // What HeadsUp asks the server for while a widget shows, for the warning on its chip; empty for nothing.
+        std::string SendsFor(const Context& c, BarWidget kind)
         {
             switch (kind)
             {
-            case BarWidget::Zone:
-            case BarWidget::World: return WindowWord::SendsConquest;
-            case BarWidget::Currency: return WindowWord::SendsCurrencies;
-            default: return std::nullopt;
+            case BarWidget::Zone: return Sends(c, WindowWord::SendsConquest);
+            case BarWidget::World: return Sends(c, WindowWord::SendsConquest) + " " + Words(WordTip(c, WindowWord::SendsTurnIns));
+            case BarWidget::Currency: return Sends(c, WindowWord::SendsCurrencies);
+            default: return {};
             }
         }
 
@@ -1529,9 +1529,9 @@ namespace headsup
                     // Floated right, so the first is the rightmost.
                     if (HasCopies(held[i].kind) && action(kChipClone, Icon::Clone, WindowWord::WidgetTabsClone)) clone = held[i];
                     if (!IsFirstCopy(held[i]) && action(kChipRemove, Icon::Delete, WindowWord::WidgetTabsRemoveCopy)) remove = held[i];
-                    const std::optional<WindowWord> sends = SendsFor(held[i].kind);
+                    const std::string sends = SendsFor(c, held[i].kind);
                     form.Raw("</div><div class=\"wname\">" + EscapedRml(CopyName(c, held[i])) +
-                             (sends ? SendsPacketsMark(Sends(c, *sends)) : std::string()) + "</div></div>");
+                             (sends.empty() ? std::string() : SendsPacketsMark(sends)) + "</div></div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
                     if (!form.Off() && was && s.widgets[w].on && held[i].kind != BarWidget::Settings && form.Clicked(id))
                         c.state.settingsAsked = held[i];

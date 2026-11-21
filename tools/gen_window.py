@@ -249,7 +249,7 @@ PIECES = Pieces(
            'setup-choice-outlines': True, 'setup-choice-outline-thickness': True, 'setup-choice-cursor': True,
            'setup-choice-players': True, 'setup-choice-self': True, 'setup-choice-player-icons': True, 'setup-choice-npcs': True, 'setup-choice-pets': True,
            'setup-choice-panel': True, 'setup-choice-pointer': True,
-           'sends-packets': True, 'sends-auto-check': False, 'sends-look-up-players': False, 'sends-conquest': False,
+           'sends-packets': True, 'sends-auto-check': False, 'sends-look-up-players': False, 'sends-conquest': False, 'sends-turn-ins': False,
            'sends-currencies': False},
 )
 
