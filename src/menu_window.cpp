@@ -17,6 +17,7 @@ namespace headsup
     namespace
     {
         constexpr const char* kSource       = "game window";
+        constexpr const char* kBodyId       = "game-window"; // whose rules outweigh the settings window's own on an id
         constexpr const char* kPaneId       = "pane-";
         constexpr const char* kHeadId       = "game-head";
         constexpr const char* kFootId       = "game-foot";
@@ -34,7 +35,11 @@ namespace headsup
         constexpr float kEntryGap    = 0.25f; // around a list's entries
         constexpr float kEntryPad    = 0.6f;  // an entry's text from its sides
         constexpr float kCogShare    = 0.7f;  // the cog's picture, of its button
-        constexpr float kEdge        = 1.0f;  // pixels: every selectable element's edge, which the selection lights
+        constexpr float kListEdge    = 1.0f;  // pixels
+        // The selection: drawn this much larger, its text made bold by an edge of its own color, as each font is
+        // loaded in one weight.
+        constexpr float kSelectedGrowth = 1.05f;
+        constexpr int kBoldEdge         = 1; // pixels
 
         std::string CogFor(const MenuLook& look)
         {
@@ -45,13 +50,11 @@ namespace headsup
         {
             const MenuColors& c    = look.colors;
             const auto pixels      = static_cast<float>(look.fontPixels);
-            const std::string edge = Px(kEdge) + " transparent;";
             const std::string close = std::string("#") + kMenuCloseId, cog = std::string("#") + kGameCogId;
             std::string css = MenuStyle(look);
             css += "body{width:" + Em(kWidth) + ";height:auto;min-width:0px;min-height:0px;padding:" + Em(kGutter) + ";font-size:" +
                    Px(pixels) + ";z-index:" + std::to_string(kGameWindowZ) + ";}";
             css += std::string("#") + kHeadId + "{height:" + Em(kHeadHeight) + ";}";
-            css += close + "," + cog + "{box-sizing:border-box;border:" + edge + "}";
             css += cog + "{position:absolute;right:" + Em(kGutter + kFrame + kControlGap) + ";top:" + Em(kGutter) + ";width:" +
                    Em(kFrame) + ";height:" + Em(kFrame) + ";border-radius:" + Em(kFrame / 2.0f) + ";background-color:" +
                    RcssColor(c.control) + ";}";
@@ -59,31 +62,30 @@ namespace headsup
             const float picture = kCogShare * kFrame;
             css += cog + " img{position:absolute;left:50%;top:50%;width:" + Em(picture) + ";height:" + Em(picture) + ";margin-left:" +
                    Em(-picture / 2.0f) + ";margin-top:" + Em(-picture / 2.0f) + ";}";
-            css += ".tab.nav{box-sizing:border-box;border:" + edge + "}";
             css += ".row{display:flex;flex-direction:row;align-items:flex-start;}.row > *{margin-right:" + Em(kControlGap) + ";}";
             css += ".column{display:flex;flex-direction:column;}.column > *{margin-bottom:" + Em(kControlGap) + ";}";
             // As tall as its rows and the gap above each, the last entry's own gap under it.
-            const float listTall = (kEntryGap + static_cast<float>(kListRows) * (kEntryHeight + kEntryGap)) * pixels + 2.0f * kEdge;
+            const float listTall = (kEntryGap + static_cast<float>(kListRows) * (kEntryHeight + kEntryGap)) * pixels + 2.0f * kListEdge;
             css += std::string(".") + kListClass + "{box-sizing:border-box;width:" + Em(kListWidth) + ";height:" + Px(listTall) +
                    ";overflow-y:auto;padding:" + Em(kEntryGap) + " " + Em(kEntryGap) + " 0px " + Em(kEntryGap) + ";background-color:" +
-                   RcssColor(c.inset) + ";border:" + Px(kEdge) + " " + RcssColor(c.border) + ";border-radius:" + Em(kRadius) + ";}";
+                   RcssColor(c.inset) + ";border:" + Px(kListEdge) + " " + RcssColor(c.border) + ";border-radius:" + Em(kRadius) + ";}";
             css += ".entry{box-sizing:border-box;height:" + Em(kEntryHeight) + ";margin-bottom:" + Em(kEntryGap) + ";padding:0px " +
-                   Em(kEntryPad) + ";line-height:" + Px(kEntryHeight * pixels - 2.0f * kEdge) + ";white-space:nowrap;border:" + edge +
-                   "border-radius:" + Em(kRadius) + ";background-color:" + RcssColor(c.control) + ";}";
+                   Em(kEntryPad) + ";line-height:" + Em(kEntryHeight) + ";white-space:nowrap;border-radius:" + Em(kRadius) +
+                   ";background-color:" + RcssColor(c.control) + ";}";
             css += ".entry:hover{background-color:" + RcssColor(c.hover) + ";}";
             css += ".text{color:" + RcssColor(c.label) + ";}";
             css += std::string("#") + kFootId + "{margin-top:" + Em(kGutter) + ";color:" + RcssColor(c.muted) + ";}";
-            // Last, over every control's own edge.
-            css += std::string(".") + kGameNavClass + "." + kGameSelClass + "{border-color:" + RcssColor(c.text) + ";}";
-            css += std::string(".entry.") + kGameSelClass + "{background-color:" + RcssColor(c.accentSoft) + ";}";
+            css += std::string("#") + kBodyId + " ." + kGameNavClass + "." + kGameSelClass + "{background-color:" + RcssColor(c.accentSoft) +
+                   ";color:" + RcssColor(c.text) + ";font-effect:outline(" + Px(static_cast<float>(kBoldEdge)) + " " + RcssColor(c.text) +
+                   ");transform:scale(" + RcssNumber(kSelectedGrowth) + ");}";
             return css;
         }
 
         std::string WindowRml(const GameWindowSpec& spec, const MenuLook& look)
         {
             const std::string nav = std::string(" class=\"") + kGameNavClass + "\"";
-            std::string rml = "<rml><head><style>" + GameWindowStyle(look) + "</style></head><body><div id=\"" + kMenuArtId + "\">" +
-                              kArtRml + "</div><div id=\"" + kHeadId + "\"><div id=\"title\">" + EscapedRml(spec.title) + "</div></div>";
+            std::string rml = "<rml><head><style>" + GameWindowStyle(look) + "</style></head><body id=\"" + kBodyId + "\"><div id=\"" +
+                              kMenuArtId + "\">" + kArtRml + "</div><div id=\"" + kHeadId + "\"><div id=\"title\">" + EscapedRml(spec.title) + "</div></div>";
             rml += std::string("<div id=\"") + kGameCogId + "\"" + nav + "><img id=\"" + kCogPicture + "\" src=\"" + CogFor(look) + "\"/></div>";
             rml += std::string("<div id=\"") + kMenuCloseId + "\"" + nav + "><div class=\"cross\"></div><div class=\"cross back\"></div></div>";
             if (spec.tabs.size() > 1)
