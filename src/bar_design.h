@@ -29,6 +29,7 @@ namespace headsup
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,
         WorldShip, WorldGuild, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
         HomePointName, HomePointIcon,
+        DpsYou, DpsParty,
         CustomName, // a created widget's Name
     };
     constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::CustomName) + 1;
@@ -52,8 +53,8 @@ namespace headsup
 
     // None for the game's help; for a created widget every part of every widget, icons too, and its own Name.
     std::span<const WidgetPart> PartsOf(BarWidget kind);
-    // A widget whose parts its Widget Designer arranges and its settings file keeps: Home Point's name is always on,
-    // so it has none.
+    // A widget whose parts its Widget Designer arranges and its settings file keeps: Home Point's name and the DPS
+    // widget's two lines are always on, so they have none.
     bool HasDesigner(BarWidget kind);
     // The widget whose part it is: its icon's too, and the created widget's for its Name.
     BarWidget WidgetOfPart(WidgetPart part);

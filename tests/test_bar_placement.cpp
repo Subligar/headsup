@@ -196,6 +196,7 @@ TEST(a_combined_widget_names_its_partner_as_the_settings_file_does)
     CHECK(PanelWidgetNamed("world:3") == std::optional<PanelWidget>(PanelWidget{BarWidget::World, 2}));
     CHECK(PanelWidgetNamed("homePoint") == std::optional<PanelWidget>(BarWidget::HomePoint));
     CHECK(PanelWidgetNamed("phTimers") == std::optional<PanelWidget>(BarWidget::PhTimers));
+    CHECK(PanelWidgetNamed("dps") == std::optional<PanelWidget>(BarWidget::Dps));
     CHECK(!PanelWidgetNamed("") && !PanelWidgetNamed("target:2") && !PanelWidgetNamed("nothing"));
 }
 

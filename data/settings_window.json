@@ -143,6 +143,8 @@
                 {"key": "alignment", "name": "Alignment", "tip": "Puts the widget's content against the left or right of its pill, or in its middle. Set by Location lines it up with the side of the panel it is on. Default is {default}."},
                 {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is {default}."},
                 {"key": "wrap-text", "name": "Wrap Text", "tip": "Puts the zone's name on two lines, broken where it keeps the widget narrowest. Off, it stays on one line. Default is {default}."},
+                {"key": "average-over", "name": "Average Over", "tip": "How many seconds of damage the widget adds up. Your DPS is the damage dealt in that time divided by those seconds, so it drops to 0 that long after the last hit. Default is {default}."},
+                {"key": "include-pets", "name": "Include Pets", "tip": "Counts each pet's damage as its owner's. Default is {default}."},
                 {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
                 {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is {default}."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
@@ -1326,6 +1328,7 @@
         {"name": "Settings", "tip": "Just the settings cog. Click it to open these settings on the Top Panel page, at Widget Layout."},
         {"name": "Home Point", "tip": "The zone your home point is in."},
         {"name": "Placeholder Timers", "tip": "The respawn timers of the NMs and placeholders that died near you, the same ones shown over your name, even when the game draws no name for you. It runs them by itself, so Respawn Timer, under NM Placeholder Timers, only decides whether they also show over your name. Shows nothing while no timer runs."},
+        {"name": "DPS", "tip": "Your damage per second, with your party's total under it. Hover for each member's."},
         {"name": "Custom Widget", "tip": "A widget you made. It can show any widget's buttons on the panel and any widget's sections in its pop-out."}
       ]
     },
@@ -1520,7 +1523,7 @@
       "options": [
         {"name": "Where You Are", "tip": "The zone, its weather, your home point and what is around you."},
         {"name": "Time", "tip": "Your computer's time."},
-        {"name": "You", "tip": "Your job, experience, gil, inventory, party and target."},
+        {"name": "You", "tip": "Your job, experience, gil, inventory, party, target and damage."},
         {"name": "System", "tip": "Your frame rate, connection, memory and the game's help line."}
       ]
     },
@@ -1621,6 +1624,8 @@
         {"name": "Beastmen", "tip": "The beastmen's crest and how many regions they hold."},
         {"name": "Home Point Name", "tip": "The zone your home point is in."},
         {"name": "Home Point Icon", "tip": "A house with a map pin."},
+        {"name": "Your DPS", "tip": "Your damage per second."},
+        {"name": "Party DPS", "tip": "Your party's damage per second, all of you added up. Shows nothing while you are not in a party."},
         {"name": "Widget Name", "tip": "This widget's name, as its Name setting has it."}
       ]
     },
@@ -1675,7 +1680,8 @@
         {"name": "Conquest", "tip": "The regions each nation holds, and your supply runs."},
         {"name": "Travel", "tip": "When each boat and airship leaves or arrives."},
         {"name": "Calendar", "tip": "The RSE and the next full and new moons."},
-        {"name": "Guilds", "tip": "Each guild's shop hours and today's turn-ins."}
+        {"name": "Guilds", "tip": "Each guild's shop hours and today's turn-ins."},
+        {"name": "Members", "tip": "Each party member's damage per second, highest first."}
       ]
     },
     {
