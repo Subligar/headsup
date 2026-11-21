@@ -176,7 +176,7 @@ PIECES = Pieces(
         'notice-width': Setting(), 'notice-height': Setting(), 'notice-fit': Setting(options=2), 'notice-rounding': Setting(),
         'notice-bar': Setting(), 'notice-master-volume': Setting(), 'notice-seconds': Setting(), 'notice-anchor': Setting(options=3),
         'notice-edge': Setting(options=2), 'notice-align': Setting(options=3), 'notice-most': Setting(), 'notice-test': Setting(),
-        'friend-notice-online': Setting(), 'friend-notice-offline': Setting(), 'friend-notice-online-sound': Setting(),
+        'friend-notice-online': Setting(), 'friend-notice-offline': Setting(), 'friend-notice-style': Setting(options=2), 'friend-notice-online-sound': Setting(),
         'friend-notice-offline-sound': Setting(), 'friend-notice-volume': Setting(), 'friends-included': Setting(),
         'friend-notice-test': Setting(), 'party-notice': Setting(), 'party-notice-buttons': Setting(),
         'party-notice-sound': Setting(), 'party-notice-volume': Setting(),

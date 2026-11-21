@@ -577,3 +577,43 @@ TEST(the_games_window_art_fills_each_box_to_its_foot)
     CHECK(fills(1));
     box.Close();
 }
+
+// "Let friend notifications be as small as the friend's name and an online icon."
+TEST(a_compact_friend_notice_is_its_dot_and_name_and_an_invite_stays_full)
+{
+    test::RmlSession rml;
+    Settings settings;
+    settings.noticeHeight = 80;
+    NoticeBox box;
+    const std::vector<ShownNotice> shown = {N(1, NoticeKind::Online, "Bartholomew"), N(2, NoticeKind::Offline, "Bartholomew"),
+        N(3, NoticeKind::PartyInvite, "Bartholomew")};
+    settings.friendNoticeStyle = FriendNoticeStyle::Compact;
+    box.Update(rml.context, Gold(), settings, shown, Frame());
+    rml.context->Update();
+    for (int n = 0; n < 2; ++n)
+    {
+        Rml::Element* friendBox = Box(rml, n);
+        CHECK(Part(friendBox, "title")->IsClassSet(kHiddenClass));
+        Rml::Element* message = Part(friendBox, "message");
+        CHECK_EQ(message->GetInnerRML().substr(message->GetInnerRML().rfind('>') + 1), std::string("Bartholomew"));
+        // The dot is in the kind's own color, and the box holds it and the name whole, whatever Width and Height say.
+        Rml::Element* dot = Part(friendBox, "dot");
+        CHECK(dot != nullptr && dot->GetBox().GetSize().x > 0.0f);
+        const Rml::Colourb fill = dot->GetComputedValues().background_color();
+        const uint32_t want     = NoticeColor(shown[static_cast<size_t>(n)].kind);
+        CHECK(fill.red == ((want >> 16) & 0xFF) && fill.green == ((want >> 8) & 0xFF) && fill.blue == (want & 0xFF));
+        const float right = dot->GetAbsoluteOffset().x + Rml::ElementUtilities::GetStringWidth(message, "Bartholomew") +
+                            dot->GetBox().GetSize(Rml::BoxArea::Margin).x;
+        CHECK(right <= Left(friendBox) + Width(friendBox));
+        CHECK(Width(friendBox) < 300.0f && Height(friendBox) < 80.0f);
+    }
+    // An invite has its buttons, and keeps its heading, its words and its size.
+    CHECK(!Part(Box(rml, 2), "title")->IsClassSet(kHiddenClass) && Part(Box(rml, 2), "dot") == nullptr);
+    CHECK(Width(Box(rml, 2)) == 300.0f && Height(Box(rml, 2)) == 80.0f);
+    // And so does one that takes a compact one's box.
+    box.Update(rml.context, Gold(), settings, {shown[2]}, Frame());
+    rml.context->Update();
+    CHECK(Width(Box(rml, 0)) == 300.0f && Height(Box(rml, 0)) == 80.0f);
+    CHECK_EQ(rml.Said(), "");
+    box.Close();
+}

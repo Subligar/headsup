@@ -69,6 +69,7 @@ namespace headsup
             NoticeFit fit    = NoticeFit::Shrink;
             HelpAnchor align = HelpAnchor::Left;
             float radius     = 0.0f;
+            FriendNoticeStyle style = FriendNoticeStyle::Full;
             bool operator==(const Look&) const = default;
         };
         Look m_Look;
