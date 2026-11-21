@@ -620,6 +620,43 @@ TEST(the_zone_widget_names_the_zone_and_its_region)
     CHECK(Joined(w.title) == "-" && !w.hasPopup);
 }
 
+TEST(the_zone_widget_shows_the_games_map_square_only_where_the_zone_has_a_map)
+{
+    Settings settings;
+    BarState state;
+    state.zone      = 246;
+    state.mapSquare = "(H-8)";
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name coordinates | region");
+    WidgetContent w = Content(BarWidget::Zone, state, settings);
+    CHECK(w.title.back().text.ends_with("(H-8)") && w.title.back().tone == Tone::Dim && !w.title.back().room.empty());
+    const std::string name = Joined(w.title).substr(0, Joined(w.title).size() - w.title.back().text.size());
+    // The game's "(?-?)" where the zone has no map, and nothing while zoning: the name alone.
+    for (const char* none : {"", "(?-?)"})
+    {
+        state.mapSquare = none;
+        CHECK_EQ(Joined(Content(BarWidget::Zone, state, settings).title), name);
+    }
+    state.mapSquare = "(H-8)";
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name -coordinates | region");
+    CHECK_EQ(Joined(Content(BarWidget::Zone, state, settings).title), name);
+}
+
+TEST(the_map_square_is_read_only_while_a_shown_widget_shows_it)
+{
+    Settings settings;
+    CHECK(!NeedsOf(settings, {}).mapSquare);
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name coordinates | region");
+    CHECK(NeedsOf(settings, {}).mapSquare);
+    settings.Widget(BarWidget::Zone).on = false;
+    CHECK(!NeedsOf(settings, {}).mapSquare);
+    settings.Widget(BarWidget::Zone).design = DefaultDesign(BarWidget::Zone);
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name zone.coordinates |");
+    CHECK(NeedsOf(settings, {}).mapSquare);
+    settings.Widget(made).on = false;
+    CHECK(!NeedsOf(settings, {}).mapSquare);
+}
+
 TEST(gil_bags_and_earth_time)
 {
     Settings settings;

@@ -1292,6 +1292,29 @@ TEST(the_config_getter_is_the_first_place_its_bytes_are)
     CHECK(found.problem == LocateProblem::None && found.entry == kGetter);
 }
 
+TEST(the_pos_text_routine_is_found_by_its_call_of_the_floor_routine_with_the_zone_map_global)
+{
+    // From the client (RVA 0x1F7600): its prologue, and at +0x86 the loads of x, height and y, ecx from the zone map
+    // global (0x22101F24 in that dump) and the call of the floor routine.
+    constexpr uint32_t kEntry = 0x1F7600, kCall = kEntry + 0x86;
+    const auto putCall = [](Image& image, uint32_t at) {
+        image.Put(at, {0x8B, 0x74, 0x24, 0x14, 0x8B, 0x44, 0x24, 0x10, 0x8B, 0x7C, 0x24, 0x0C, 0x8B, 0x0D, 0x24, 0x1F,
+                          0x10, 0x22, 0x56, 0x50, 0x57, 0xE8, 0x30, 0x9B, 0xF8, 0xFF});
+    };
+    Image image;
+    CHECK(LocatePosText(image.Text()).problem == LocateProblem::NoPosText);
+    image.Put(kEntry, {0xA1, 0x98, 0xFD, 0xFA, 0x21, 0x83, 0xEC, 0x14, 0x85, 0xC0, 0x0F, 0x84, 0x15, 0x01, 0x00, 0x00});
+    putCall(image, kCall);
+    const PosTextSite found = LocatePosText(image.Text());
+    CHECK(found.problem == LocateProblem::None && found.entry == kEntry && found.zoneMap == 0x22101F24u);
+    // The next routine starts with the same load but a smaller frame (RVA 0x1F7730): not the one.
+    Image other = image;
+    other.Put(kEntry + 5, {0x83, 0xEC, 0x10});
+    CHECK(LocatePosText(other.Text()).problem == LocateProblem::PosTextChanged);
+    putCall(image, kEntry + 0x1000);
+    CHECK(LocatePosText(image.Text()).problem == LocateProblem::AmbiguousPosText);
+}
+
 TEST(the_search_servers_address_is_where_the_search_clients_setup_clears_it)
 {
     // From the client (RVA 0xE1470): xor ebx,ebx; push edi; mov [address],ebx; mov [port],bx; call.

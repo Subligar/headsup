@@ -53,6 +53,7 @@ namespace headsup
         int64_t unixMs = 0; // Earth time, UTC, for the Vana'diel clock
         int earthYear = 0, earthMonth = 0, earthDay = 0, earthHour = 0, earthMinute = 0, earthSecond = 0; // local
         uint16_t zone = 0; // 0 while unknown
+        std::string mapSquare; // the game's <pos> text; empty while it has none
         uint16_t homePoint = 0; // the zone your home point is in; 0 while unknown
         std::vector<TimerLine> phTimers; // PhTimers::Lines, while PhTimersRun
         const ActorInfo* target = nullptr;
@@ -116,6 +117,7 @@ namespace headsup
         bool unixTime   = false; // unixMs
         bool localTime  = false; // the earth date and time
         bool zone       = false;
+        bool mapSquare  = false;
         bool target     = false; // with its placeholder's countdown and a player's check
         bool gil        = false;
         bool strip      = false; // the game's top-strip text

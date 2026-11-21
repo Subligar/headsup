@@ -9,7 +9,7 @@ namespace headsup
     namespace
     {
         using P = WidgetPart;
-        constexpr P kZone[]   = {P::ZoneName, P::ZoneRegion, P::ZoneNation};
+        constexpr P kZone[]   = {P::ZoneName, P::ZoneRegion, P::ZoneNation, P::ZoneCoordinates};
         constexpr P kWeather[] = {P::WeatherName, P::VanaDate, P::VanaDay, P::VanaTime, P::VanaMoon, P::VanaSeason};
         constexpr P kTarget[] = {P::TargetName, P::TargetDistance, P::TargetDetection, P::TargetLevel,
             P::TargetPlayer, P::TargetWeak};
@@ -27,7 +27,7 @@ namespace headsup
         constexpr P kHomePoint[] = {P::HomePointName};
 
         // By WidgetPart.
-        constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
+        constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "coordinates", "icon", "weather",
             "date", "day", "time", "moon", "season", "aggro", "name", "distance", "detection", "level", "player", "weak",
             "coin", "name1", "name2", "amount1", "amount2", "icon1", "icon2", "count1", "count2", "name1", "name2", "icon", "time", "server", "vana", "icon", "date", "jobs", "earned", "tonext", "percent", "bar",
             "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "icon", "pin1", "pin2",
@@ -35,7 +35,7 @@ namespace headsup
             "guild", "sandoria", "bastok", "windurst", "beastmen", "name", "icon", "name"};
 
         // As each widget showed before it had a design.
-        constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation", "weather | day time -date -moon",
+        constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation -coordinates", "weather | day time -date -moon",
             "name distance -detection | level player -weak", "amount1 | icon2 amount2 -name1 -name2 -icon1", "count1 | name1", "time | -server -vana -date", "", "-fps sent received percent -memory messages |",
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
             "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "", "name |"};

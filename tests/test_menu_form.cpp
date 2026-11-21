@@ -1796,15 +1796,15 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK(!Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str())); // its Icon setting has it
     // A drop at a line's end moves the part there; on a chip, before it.
     w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::ZoneNation)}});
-    CHECK_EQ(design(), "name nation | region");
+    CHECK_EQ(design(), "name nation | region -coordinates");
     w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, chip(WidgetPart::ZoneNation)}});
-    CHECK_EQ(design(), "nation name | region");
+    CHECK_EQ(design(), "nation name | region -coordinates");
     // Off one by one until one is left: the last stays on, and the designer says why under its lines.
     w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneRegion)});
-    CHECK_EQ(design(), "-nation name | -region");
+    CHECK_EQ(design(), "-nation name | -region -coordinates");
     CHECK(!Has(rml(w.Pass()), "class=\"error\""));
     const Form refused = w.Pass({toggle(WidgetPart::ZoneName)});
-    CHECK_EQ(design(), "-nation name | -region");
+    CHECK_EQ(design(), "-nation name | -region -coordinates");
     CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
     bool shownOn = false; // the toggle's last word on its look
     for (const FormValue& v : refused.values)
@@ -1812,12 +1812,12 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK(shownOn);
     // The next toggle or move takes the message away.
     CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "class=\"error\""));
-    CHECK_EQ(design(), "-nation name | region");
+    CHECK_EQ(design(), "-nation name | region -coordinates");
     // Another widget's chip dropped here moves nothing.
     const std::string weather = "toppanel-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
                                 std::to_string(static_cast<int>(WidgetPart::WeatherName));
     w.Pass({{base + "end-1", kDropEvent, weather}});
-    CHECK_EQ(design(), "-nation name | region");
+    CHECK_EQ(design(), "-nation name | region -coordinates");
 }
 
 TEST(a_created_widgets_designer_lists_the_picked_widgets_unplaced_buttons_and_puts_takes_and_names_them)

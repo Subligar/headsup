@@ -56,6 +56,9 @@ namespace headsup
         constexpr int kZoneRollColumns     = 3; // a zone, and its chance of the element today and tomorrow
         constexpr int kTurnInColumns       = 6; // a rank, its item and its points, its high quality's, and the most a day
         constexpr uint16_t kGilItem  = 0xFFFF;
+        constexpr const char* kNoMapSquare = "(?-?)"; // the game's <pos> in a zone without a map
+        // The widest map squares: a room's digits count as the widest digit already, so only the letter is left.
+        constexpr const char* kWidestMapSquares[] = {"(M-15)", "(W-15)"};
 
         Span Percent(int percent)
         {
@@ -1496,6 +1499,12 @@ namespace headsup
                 }
                 else if (const GamePicture crest = HomeCrest(zone); crest != GamePicture::None)
                     parts.push_back({WidgetPart::ZoneCrest, ListOf(Mark(crest))});
+                if (!state.mapSquare.empty() && state.mapSquare != kNoMapSquare)
+                {
+                    Span square = Text(state.mapSquare, Tone::Dim);
+                    square.room = {std::begin(kWidestMapSquares), std::end(kWidestMapSquares)};
+                    parts.push_back({WidgetPart::ZoneCoordinates, ListOf(std::move(square))});
+                }
                 base.hasPopup = state.zone != 0;
                 return parts;
             }
@@ -1875,6 +1884,9 @@ namespace headsup
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
         needs.localTime  = localClock;
         needs.zone       = either(BarWidget::Zone) || either(BarWidget::Weather);
+        EachShownCopy(settings, BarWidget::Zone, [&](const WidgetOptions& o) {
+            needs.mapSquare = needs.mapSquare || PartOn(o.design, WidgetPart::ZoneCoordinates);
+        });
         needs.target     = either(BarWidget::Target);
         needs.gil        = either(BarWidget::Currency);
         needs.strip      = shown(BarWidget::GameHelp);

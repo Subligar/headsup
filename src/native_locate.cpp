@@ -225,6 +225,12 @@ namespace headsup
         // mov ecx,[config]; test ecx,ecx; jz; mov eax,[esp+4]; push eax; call get; ret; or eax,-1; ret.
         constexpr int16_t kConfigGet[] = {0x8B, 0x0D, -1, -1, -1, -1, 0x85, 0xC9, 0x74, -1, 0x8B, 0x44, 0x24, 0x04, 0x50,
             0xE8, -1, -1, -1, -1, 0xC3, 0x83, 0xC8, 0xFF, 0xC3};
+        // mov esi,[esp+14]; mov eax,[esp+10]; mov edi,[esp+C]; mov ecx,[zoneMap]; push esi; push eax; push edi; call floor.
+        constexpr int16_t kPosTextCall[] = {0x8B, 0x74, 0x24, 0x14, 0x8B, 0x44, 0x24, 0x10, 0x8B, 0x7C, 0x24, 0x0C, 0x8B,
+            0x0D, -1, -1, -1, -1, 0x56, 0x50, 0x57, 0xE8};
+        constexpr uint32_t kPosTextGlobal = 0x0E, kPosTextCallAt = 0x86;
+        // mov eax,[zone]; sub esp,14h; test eax,eax; jz.
+        constexpr int16_t kPosTextEntry[] = {0xA1, -1, -1, -1, -1, 0x83, 0xEC, 0x14, 0x85, 0xC0, 0x0F, 0x84};
         constexpr size_t kCounterLoads        = 2;
         constexpr int16_t kMailGet[]          = {0xA1, -1, -1, -1, -1, 0x85, 0xC0, 0x74, 0x05, 0x66, 0x8B, 0x40, 0x0E, 0xC3};
         constexpr int16_t kMessagesGet[]      = {0xA1, -1, -1, -1, -1, 0x85, 0xC0, 0x74, 0x06, 0x66, 0x8B, 0x40, 0x0A, 0xEB, 0x02,
@@ -412,6 +418,9 @@ namespace headsup
         case LocateProblem::NoPopupEarly: return "where the game parses an action for its combat popups was not found";
         case LocateProblem::AmbiguousPopupEarly: return "where the game parses an action for its combat popups was found more than once";
         case LocateProblem::NoConfigGet: return "the game's config values were not found";
+        case LocateProblem::NoPosText: return "the game's <pos> routine was not found";
+        case LocateProblem::AmbiguousPosText: return "the game's <pos> routine was found more than once";
+        case LocateProblem::PosTextChanged: return "the game's <pos> routine does not start as it did";
         case LocateProblem::NoSearchAddress: return "where the game keeps the search server's address was not found";
         case LocateProblem::NoWindowMove: return "the game's window move was not found";
         case LocateProblem::AmbiguousWindowMove: return "the game's window move was found more than once";
@@ -628,6 +637,18 @@ namespace headsup
         const std::vector<uint32_t> found = Find(kConfigGet, text);
         if (found.empty()) return ConfigGetSite{LocateProblem::NoConfigGet};
         return ConfigGetSite{LocateProblem::None, text.rva + found.front()};
+    }
+
+    PosTextSite LocatePosText(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kPosTextCall, text);
+        if (found.empty()) return PosTextSite{LocateProblem::NoPosText};
+        if (found.size() > 1) return PosTextSite{LocateProblem::AmbiguousPosText};
+        const uint32_t entry = found.front() - kPosTextCallAt;
+        if (found.front() < kPosTextCallAt ||
+            Find(kPosTextEntry, ImageSection{0, text.bytes + entry, static_cast<uint32_t>(std::size(kPosTextEntry))}).empty())
+            return PosTextSite{LocateProblem::PosTextChanged};
+        return PosTextSite{LocateProblem::None, text.rva + entry, ReadAt<uint32_t>(text.bytes, found.front() + kPosTextGlobal)};
     }
 
     SearchAddressSite LocateSearchAddress(const ImageSection& text)

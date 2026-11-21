@@ -376,6 +376,8 @@ class HeadsUp final : public IPlugin
     bool m_SearchAddressTried = false;            // it scans the client's code, so once
     uint32_t m_SearchNonce    = 0;
     bool m_WeatherTried = false; // it scans the client's code, so once
+    headsup::MapSquareReader m_MapSquare;
+    bool m_MapSquareTried = false; // it scans the client's code, so once
     headsup::NetStatsReader m_NetStats;
     bool m_NetStatsTried = false; // it scans the client's code, so once
     std::optional<headsup::NetCounters> m_Counters; // the last read, kept between samples
@@ -3177,6 +3179,13 @@ private:
             s.crafts        = m_GameState.Crafts();
         }
         if (needs.zone) s.zone = m_Zone;
+        if (needs.mapSquare && m_Zone != 0 && PlayerLoaded())
+        {
+            if (!std::exchange(m_MapSquareTried, true))
+                if (const std::string failure = m_MapSquare.Find(); !failure.empty())
+                    Note("the Zone widget shows no coordinates: " + failure + ".");
+            s.mapSquare = m_MapSquare.Read();
+        }
         if (needs.frames) s.frames = m_FrameStats.Report();
         if (needs.job)
         {

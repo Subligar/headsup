@@ -1186,7 +1186,7 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     s.Widget(second).design  = DesignFrom(BarWidget::Weather, "weather | -date -day -time -moon");
     MapStore saved;
     SaveSettings(s, saved);
-    CHECK_EQ(saved.values["barZoneDesign"], "nation name | -region");
+    CHECK_EQ(saved.values["barZoneDesign"], "nation name | -region -coordinates");
     CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | -date -day -time -moon -season");
     CHECK_EQ(saved.values["barWeatherDesign"], "weather | day time -date -moon -season");
     const Settings loaded = LoadSettings(saved);
@@ -1196,7 +1196,7 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     CHECK(!saved.values.contains("barGameHelpDesign"));
     // A design a hand broke is made whole: every part once.
     saved.values["barZoneDesign"] = "name name";
-    CHECK_EQ(DesignText(BarWidget::Zone, LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
+    CHECK_EQ(DesignText(BarWidget::Zone, LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation -coordinates");
 }
 
 TEST(a_created_widgets_pop_out_design_saves_under_its_own_key_and_clones_with_it_and_a_built_ins_is_always_its_own)
