@@ -410,6 +410,7 @@ class HeadsUp final : public IPlugin
     bool m_CaseMoving = false, m_CaseRefused = false;
     bool m_PlayOnlineTried = false; // it scans the client's code, so once
     std::optional<headsup::PlayOnlineCounts> m_PlayOnlineCounts; // read with the counters
+    headsup::Party m_PartySeen; // the party as last read, for the members' max HP and MP
     headsup::ConnectionMeter m_Connection;
     headsup::WebGet m_TurnInFetch;                 // Phoenix's site, for today's guild point turn-ins
     headsup::WebGet m_FeedbackPost;                // the Feedback page's, to the team's feedback service
@@ -3209,17 +3210,32 @@ private:
         }
         if (needs.party)
         {
-            IParty* party = m_AshitaCore->GetMemoryManager()->GetParty();
+            IParty* party   = m_AshitaCore->GetMemoryManager()->GetParty();
+            IPlayer* player = m_AshitaCore->GetMemoryManager()->GetPlayer();
             for (uint32_t m = 0; m < static_cast<uint32_t>(headsup::kPartySize); ++m)
             {
                 if (party->GetMemberIsActive(m) == 0) continue;
                 const char* name    = party->GetMemberName(m);
                 const uint16_t zone = party->GetMemberZone(m);
-                s.party[m] = headsup::PartyMember{name != nullptr ? name : "", party->GetMemberMainJob(m),
+                headsup::PartyMember member{name != nullptr ? name : "", party->GetMemberMainJob(m),
                     party->GetMemberMainJobLevel(m), party->GetMemberSubJob(m), party->GetMemberSubJobLevel(m),
                     party->GetMemberHP(m), party->GetMemberMP(m), party->GetMemberTP(m), party->GetMemberHPPercent(m),
                     party->GetMemberMPPercent(m), zone, zone == m_Zone};
+                if (m == 0)
+                {
+                    member.hpMax = player->GetHPMax();
+                    member.mpMax = player->GetMPMax();
+                }
+                else
+                {
+                    const std::optional<headsup::PartyMember>& was = m_PartySeen[m];
+                    const bool same = was && was->name == member.name;
+                    member.hpMax = headsup::PoolMax(member.hp, member.hpPercent, same ? was->hpMax : 0);
+                    member.mpMax = headsup::PoolMax(member.mp, member.mpPercent, same ? was->mpMax : 0);
+                }
+                s.party[m] = std::move(member);
             }
+            m_PartySeen = s.party;
         }
         if (needs.memory) GatherMemory(now, s, needs.cpu);
         if (needs.linuxxi) s.linuxxi = LinuxXINow(now);

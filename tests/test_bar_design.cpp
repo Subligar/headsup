@@ -42,6 +42,8 @@ TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
     CHECK(IconPartOf(BarWidget::Bags) == std::optional(WidgetPart::BagIcon));
     CHECK(IconPartOf(BarWidget::EarthTime) == std::optional(WidgetPart::ClockIcon));
     CHECK(IconPartOf(BarWidget::HomePoint) == std::optional(WidgetPart::HomePointIcon));
+    CHECK(IconPartOf(BarWidget::Party) == std::optional(WidgetPart::PartyIcon));
+    CHECK_EQ(DesignText(BarWidget::Party, DefaultDesign(BarWidget::Party)), "count | health");
     CHECK(WidgetOfPart(WidgetPart::HomePointIcon) == BarWidget::HomePoint);
     CHECK_EQ(DesignText(BarWidget::HomePoint, DefaultDesign(BarWidget::HomePoint)), "name |");
     CHECK(!IconPartOf(BarWidget::Performance) && !IconPartOf(BarWidget::GameHelp));

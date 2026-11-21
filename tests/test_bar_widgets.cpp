@@ -1064,6 +1064,14 @@ TEST(a_widgets_icon_shows_on_the_side_its_setting_picks_or_not_at_all_and_the_cl
     CHECK(Content(BarWidget::Bags, state, settings).icons == std::vector<Icon>{Icon::Bag});
     bags.iconSide = IconSide::Hide;
     CHECK(Content(BarWidget::Bags, state, settings).icons.empty());
+    // The party's person, solo too.
+    WidgetOptions& party = settings.Widget(BarWidget::Party);
+    party.on = true;
+    CHECK(Content(BarWidget::Party, state, settings).icons == std::vector<Icon>{Icon::Person});
+    party.iconSide = IconSide::Right;
+    CHECK(Content(BarWidget::Party, state, settings).iconsRight);
+    party.iconSide = IconSide::Hide;
+    CHECK(Content(BarWidget::Party, state, settings).icons.empty());
     // And the clock's.
     WidgetOptions& clock = settings.Widget(BarWidget::EarthTime);
     clock.on = true;
@@ -1316,8 +1324,8 @@ namespace
     Party FourMembers()
     {
         Party p{};
-        p[0] = PartyMember{"Tanyrus", 1, 75, 13, 37, 1800, 0, 1200, 90, 0, 103, true};
-        p[1] = PartyMember{"Healer", 3, 75, 4, 37, 520, 180, 0, 42, 18, 103, true};
+        p[0] = PartyMember{"Tanyrus", 1, 75, 13, 37, 1800, 0, 1200, 90, 0, 103, true, 2000, 0};
+        p[1] = PartyMember{"Healer", 3, 75, 4, 37, 520, 180, 0, 42, 18, 103, true, 1238, 1000};
         p[2] = PartyMember{"Redmage", 5, 75, 3, 37, 1000, 600, 300, 100, 60, 103, true};
         p[3] = PartyMember{"Away", 4, 75, 3, 37, 100, 50, 0, 10, 5, 50, false};
         return p;
@@ -1809,18 +1817,21 @@ TEST(the_party_popup_lists_each_member_here_and_gives_one_elsewhere_a_row_of_its
     CHECK(Joined(p.title) == "Party" && p.sections[0].rows.size() == 2);
     const PopupRow& grid = p.sections[0].rows[0];
     CHECK(grid.kind == RowKind::Grid && grid.columns == 5 && grid.cells.size() == 20); // a heading row, then three
+    CHECK(CellText(grid.cells[0]) == "Name" && CellText(grid.cells[1]) == "Job & Level");
     CHECK(CellText(grid.cells[2]) == "HP" && CellText(grid.cells[4]) == "TP");
     CHECK(CellText(grid.cells[5]) == "Tanyrus" && CellText(grid.cells[6]) == "WAR 75 / NIN 37");
+    CHECK(CellText(grid.cells[7]) == "1,800/2,000");
     CHECK(grid.cells[8].text == ListOf(Text("-", Tone::Dim)));          // a warrior has no MP
     CHECK(grid.cells[9].text == ListOf(Colored("1,200", kReadyColor))); // TP enough for a weapon skill
-    CHECK(grid.cells[12].text == ListOf(Colored("520", kWarningColor))); // the healer's HP at 42%
-    CHECK(grid.cells[13].text == ListOf(Colored("180", kAlarmColor)));   // and MP at 18%
-    CHECK(CellText(grid.cells[15]) == "Redmage");
-    // The member elsewhere: their name and zone on one row, after the grid, their stale figures left out.
+    CHECK(grid.cells[12].text == ListOf(Colored("520/1,238", kWarningColor))); // the healer's HP at 42%
+    CHECK(grid.cells[13].text == ListOf(Colored("180/1,000", kAlarmColor)));   // and MP at 18%
+    CHECK(CellText(grid.cells[15]) == "Redmage" && CellText(grid.cells[17]) == "1,000"); // no max known yet
+    // The member elsewhere: their name, and their zone against the card's right edge, after the grid, their stale
+    // figures left out.
     const PopupRow& away = p.sections[0].rows[1];
-    CHECK(away.kind == RowKind::Line && away.cells.size() == 2);
+    CHECK(away.kind == RowKind::Pair && away.cells.size() == 2);
     CHECK(away.cells[0].text == ListOf(Text("Away")) &&
-          away.cells[1].text == ListOf(Text("In Aht Urhgan Whitegate", Tone::Dim)));
+          away.cells[1].text == ListOf(Text("Aht Urhgan Whitegate", Tone::Dim)));
 }
 
 TEST(a_member_zoning_or_in_another_zone_never_counts_toward_the_lowest_figures)
