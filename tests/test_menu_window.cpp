@@ -1,6 +1,7 @@
 #include "menu_window.h"
 #include "fonts.h"
 #include "markup.h"
+#include "menu_sizes.h"
 #include "rml_session.h"
 #include "test.h"
 
@@ -403,6 +404,16 @@ TEST(the_selection_follows_the_pointer_only_as_it_moves)
         w.rml.context->Update();
     CHECK(w.Element("bag", "items")->GetScrollTop() > 0.0f);
     CHECK_EQ(w.windows.Selected(), std::string("items-8"));
+}
+
+TEST(a_windows_title_is_smaller_than_the_settings_windows_but_larger_than_its_text)
+{
+    Windows w;
+    w.windows.Open(Bag());
+    w.rml.context->Update();
+    const float title = w.Element("bag", "title")->GetComputedValues().font_size();
+    CHECK(title < kTitleScale * static_cast<float>(kLook.fontPixels));
+    CHECK(title > static_cast<float>(kLook.fontPixels));
 }
 
 TEST(after_the_keys_choose_the_pointer_lights_nothing_until_it_moves)

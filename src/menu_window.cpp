@@ -22,6 +22,7 @@ namespace headsup
         constexpr const char* kPaneId       = "pane-";
         constexpr const char* kHeadId       = "game-head";
         constexpr const char* kFootId       = "game-foot";
+        constexpr const char* kTitleId      = "title"; // the settings window's, whose look it takes
         constexpr const char* kCogPicture   = "cog-picture";
         constexpr const char* kTabAttribute = "tab";
         constexpr const char* kTabClass     = "tab";
@@ -31,6 +32,7 @@ namespace headsup
         // In ems of the window's text.
         constexpr float kWidth       = 34.0f;
         constexpr float kHeadHeight  = 2.4f; // the title's row, with the cog and the close button in its corner
+        constexpr float kTitleSize   = 1.3f; // smaller than the settings window's
         constexpr float kListWidth   = 14.0f;
         constexpr int kListRows      = 6; // entries a list shows before it scrolls
         constexpr float kEntryHeight = 1.8f;
@@ -69,6 +71,7 @@ namespace headsup
             css += "body{width:" + Em(kWidth) + ";height:auto;min-width:0px;min-height:0px;padding:" + Em(kGutter) + ";font-size:" +
                    Px(pixels) + ";z-index:" + std::to_string(kGameWindowZ) + ";}";
             css += std::string("#") + kHeadId + "{height:" + Em(kHeadHeight) + ";}";
+            css += std::string("#") + kTitleId + "{font-size:" + Em(kTitleSize) + ";}";
             css += cog + "{position:absolute;right:" + Em(kGutter + kFrame + kControlGap) + ";top:" + Em(kGutter) + ";width:" +
                    Em(kFrame) + ";height:" + Em(kFrame) + ";border-radius:" + Em(kFrame / 2.0f) + ";background-color:" +
                    RcssColor(c.control) + ";}";
@@ -102,7 +105,7 @@ namespace headsup
             const std::string nav = std::string(" class=\"") + kGameNavClass + "\"";
             std::string rml = "<rml><head><style>" + GameWindowStyle(look) + "</style></head><body id=\"" + kBodyId + "\"><div id=\"" +
                               kMenuArtId + "\">" + kArtRml + "</div><handle id=\"" + kHeadId + "\" " + MoveHandleAttributes() +
-                              "><div id=\"title\">" + EscapedRml(spec.title) + "</div></handle>";
+                              "><div id=\"" + kTitleId + "\">" + EscapedRml(spec.title) + "</div></handle>";
             rml += std::string("<div id=\"") + kGameCogId + "\"" + nav + "><img id=\"" + kCogPicture + "\" src=\"" + CogFor(look) + "\"/></div>";
             rml += std::string("<div id=\"") + kMenuCloseId + "\"" + nav + "><div class=\"cross\"></div><div class=\"cross back\"></div></div>";
             if (spec.tabs.size() > 1)
