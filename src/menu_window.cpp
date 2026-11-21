@@ -44,11 +44,10 @@ namespace headsup
         constexpr float kEntryPad    = 0.6f;  // an entry's text from its sides
         constexpr float kCogShare    = 0.7f;  // the cog's picture, of its button
         constexpr float kListEdge    = 1.0f;  // pixels
-        // The selection: drawn this much larger, its text made bold by a faint edge of its own color, as each font is
-        // loaded in one weight.
+        // The selection: its ground drawn this much larger, its text made bold by a copy of itself a pixel to the right,
+        // as each font is loaded in one weight. Text drawn larger or edged by half a pixel is blurred.
         constexpr float kSelectedGrowth = 1.04f;
-        constexpr int kBoldEdge         = 1; // pixels
-        constexpr uint32_t kBoldShade   = 0x80;
+        constexpr int kBoldShift        = 1; // pixels
 
         // The selection's ground: the soft accent laid over a control's own, which the soft accent alone would darken.
         uint32_t LitGround(const MenuColors& c)
@@ -60,6 +59,8 @@ namespace headsup
             };
             return Opaque(mixed(kRedShift), mixed(kGreenShift), mixed(kBlueShift));
         }
+
+        std::string GroundRml() { return std::string("<div class=\"") + kGameGroundClass + "\"></div>"; }
 
         std::string CogFor(const MenuLook& look)
         {
@@ -99,10 +100,17 @@ namespace headsup
             css += ".entry:hover{background-color:" + RcssColor(c.hover) + ";}";
             css += ".text{color:" + RcssColor(c.label) + ";}";
             css += std::string("#") + kFootId + "{margin-top:" + Em(kGutter) + ";color:" + RcssColor(c.muted) + ";}";
-            const std::string lit = RcssColor(LitGround(c));
-            css += std::string("#") + kBodyId + " ." + kGameNavClass + "." + kGameSelClass + "{background-color:" + lit + ";color:" +
-                   RcssColor(c.text) + ";font-effect:outline(" + Px(static_cast<float>(kBoldEdge)) + " " +
-                   RcssColor(WithAlpha(c.text, kBoldShade)) + ");transform:scale(" + RcssNumber(kSelectedGrowth) + ");}";
+            // Each selectable element stands over its ground, which takes its shape.
+            const std::string ground = std::string(" > .") + kGameGroundClass;
+            css += std::string(".") + kGameNavClass + "{position:relative;z-index:0;}";
+            css += std::string(".") + kGameGroundClass + "{position:absolute;left:0px;top:0px;width:100%;height:100%;z-index:-1;pointer-events:none;}";
+            css += ".btn" + ground + "," + cog + ground + "," + close + ground + "{border-radius:" + Em(kFrame / 2.0f) + ";}";
+            css += ".entry" + ground + "{border-radius:" + Em(kRadius) + ";}";
+            css += std::string(".") + kTabClass + ground + "{border-radius:" + Em(kRadius) + " " + Em(kRadius) + " 0px 0px;}";
+            const std::string lit = RcssColor(LitGround(c)), selected = std::string("#") + kBodyId + " ." + kGameNavClass + "." + kGameSelClass;
+            css += selected + "{background-color:transparent;border-color:transparent;color:" + RcssColor(c.text) + ";font-effect:shadow(" +
+                   Px(static_cast<float>(kBoldShift)) + " 0px " + RcssColor(c.text) + ");}";
+            css += selected + ground + "{background-color:" + lit + ";transform:scale(" + RcssNumber(kSelectedGrowth) + ");}";
             css += std::string("#") + kBodyId + " ." + kKeptClass + "{background-color:" + lit + ";}";
             return css;
         }
@@ -113,14 +121,16 @@ namespace headsup
             std::string rml = "<rml><head><style>" + GameWindowStyle(look) + "</style></head><body id=\"" + kBodyId + "\"><div id=\"" +
                               kMenuArtId + "\">" + kArtRml + "</div><handle id=\"" + kHeadId + "\" " + MoveHandleAttributes() +
                               "><div id=\"" + kTitleId + "\">" + EscapedRml(spec.title) + "</div></handle>";
-            rml += std::string("<div id=\"") + kGameCogId + "\"" + nav + "><img id=\"" + kCogPicture + "\" src=\"" + CogFor(look) + "\"/></div>";
-            rml += std::string("<div id=\"") + kMenuCloseId + "\"" + nav + "><div class=\"cross\"></div><div class=\"cross back\"></div></div>";
+            rml += std::string("<div id=\"") + kGameCogId + "\"" + nav + ">" + GroundRml() + "<img id=\"" + kCogPicture + "\" src=\"" +
+                   CogFor(look) + "\"/></div>";
+            rml += std::string("<div id=\"") + kMenuCloseId + "\"" + nav + ">" + GroundRml() +
+                   "<div class=\"cross\"></div><div class=\"cross back\"></div></div>";
             if (spec.tabs.size() > 1)
             {
                 rml += "<div class=\"tab-row\">";
                 for (size_t i = 0; i < spec.tabs.size(); ++i)
                     rml += std::string("<div class=\"") + kTabClass + " " + kGameNavClass + "\" id=\"" + kGameTabId + std::to_string(i) +
-                           "\" " + kTabAttribute + "=\"" + std::to_string(i) + "\">" + EscapedRml(spec.tabs[i].name) + "</div>";
+                           "\" " + kTabAttribute + "=\"" + std::to_string(i) + "\">" + GroundRml() + EscapedRml(spec.tabs[i].name) + "</div>";
                 rml += "</div><div class=\"tab-rule\"></div>";
             }
             for (size_t i = 0; i < spec.tabs.size(); ++i)
@@ -164,14 +174,15 @@ namespace headsup
 
     std::string GameButtonRml(const std::string& id, const std::string& label)
     {
-        return std::string("<div class=\"") + kRaisedPill + " " + kGameNavClass + "\" id=\"" + id + "\">" + EscapedRml(label) + "</div>";
+        return std::string("<div class=\"") + kRaisedPill + " " + kGameNavClass + "\" id=\"" + id + "\">" + GroundRml() + EscapedRml(label) +
+               "</div>";
     }
 
     std::string GameListRml(const std::string& id, const std::vector<std::string>& entries)
     {
         std::string rml = std::string("<div class=\"") + kListClass + "\" id=\"" + id + "\">";
         for (size_t i = 0; i < entries.size(); ++i)
-            rml += std::string("<div class=\"entry ") + kGameNavClass + "\" id=\"" + id + "-" + std::to_string(i) + "\">" +
+            rml += std::string("<div class=\"entry ") + kGameNavClass + "\" id=\"" + id + "-" + std::to_string(i) + "\">" + GroundRml() +
                    EscapedRml(entries[i]) + "</div>";
         return rml + "</div>";
     }
