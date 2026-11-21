@@ -176,22 +176,15 @@ TEST(the_last_dpad_direction_pressed_is_the_one_held)
     CHECK(input.Due(5.0) == MenuAction::None);
 }
 
-TEST(the_left_stick_moves_past_its_dead_zone_and_repeats_like_the_dpad)
+TEST(the_left_stick_moves_nothing_and_is_left_to_the_game)
 {
     MenuInput input;
-    CHECK(input.Feed(Pad(19, kStickDeadZone), 0.0) == MenuAction::None);
+    CHECK(input.Feed(Pad(19, 32767), 0.0) == MenuAction::None);
+    CHECK(input.Feed(Pad(18, -32768), 0.1) == MenuAction::None);
     CHECK(input.Due(10.0) == MenuAction::None);
-    // Up is positive; past the dead zone it moves, once, however much further it goes.
-    CHECK(input.Feed(Pad(19, kStickDeadZone + 1), 10.0) == MenuAction::Up);
-    CHECK(input.Feed(Pad(19, 32767), 10.1) == MenuAction::None);
-    CHECK(input.Due(10.0 + kPadRepeatDelay) == MenuAction::Up);
-    // Pushed more across than up, it goes across.
-    CHECK(input.Feed(Pad(18, -32768), 11.0) == MenuAction::Left);
-    CHECK(input.Feed(Pad(19, 0), 11.1) == MenuAction::None);
-    CHECK(input.Feed(Pad(18, 0), 11.2) == MenuAction::None);
-    CHECK(input.Due(20.0) == MenuAction::None);
-    CHECK(input.Feed(Pad(19, -20000), 21.0) == MenuAction::Down);
-    CHECK(input.Feed(Pad(18, 20000), 21.0) == MenuAction::None); // as far across as down: still down
+    InputTaken taken;
+    CHECK(!taken.Keep(Pad(18, 32767), true));
+    CHECK(!taken.Keep(Pad(19, 0), true));
 }
 
 TEST(a_directinput_hat_moves_by_its_angle_and_a_diagonal_stops_it)
@@ -227,11 +220,9 @@ TEST(reset_lets_go_of_every_hold)
 {
     MenuInput input;
     CHECK(input.Feed(Pad(2, 1), 0.0) == MenuAction::Left);
-    CHECK(input.Feed(Pad(19, 32767), 0.0) == MenuAction::Up);
+    CHECK(input.Feed(Hat(0), 0.0) == MenuAction::Up);
     input.Reset();
     CHECK(input.Due(10.0) == MenuAction::None);
-    // The stick is back in its middle as far as the windows know.
-    CHECK(input.Feed(Pad(18, 0), 10.0) == MenuAction::None);
 }
 
 TEST(a_release_is_kept_from_the_game_only_when_its_press_was)
@@ -252,7 +243,7 @@ TEST(a_release_is_kept_from_the_game_only_when_its_press_was)
     CHECK(!taken.Keep(Hat(0), false));
 }
 
-TEST(only_what_the_windows_use_is_kept_and_the_stick_while_one_is_open)
+TEST(only_what_the_windows_use_is_kept)
 {
     InputTaken taken;
     CHECK(!taken.Keep(Key('A'), true));
@@ -260,9 +251,6 @@ TEST(only_what_the_windows_use_is_kept_and_the_stick_while_one_is_open)
     CHECK(!taken.Keep(Pad(16, 255), true));
     CHECK(!taken.Keep(DirectButton(2, true), true));
     CHECK(!taken.Keep({InputSource::DirectInput, 0, 100}, true)); // a DirectInput stick is left to the game
-    CHECK(taken.Keep(Pad(18, 100), true));
-    CHECK(taken.Keep(Pad(19, 0), true));
-    CHECK(!taken.Keep(Pad(19, 32767), false));
     CHECK(taken.Keep(DirectButton(5, true), true));
 }
 
