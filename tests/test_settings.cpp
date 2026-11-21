@@ -265,6 +265,7 @@ barWorld=true
 barSettings=true
 barHomePoint=true
 barPhTimers=true
+barDps=true
 barZoneLine2=true
 barZoneIcons=true
 barWeatherLine2=true
@@ -305,7 +306,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather job party statusTimers world homePoint phTimers
+barLeft=zone weather job party statusTimers world homePoint phTimers dps
 barCenter=
 barRight=target gil bags performance earthTime settings
 hideHelpBar=true
@@ -1061,7 +1062,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers"}; // in BarWidget's order, but a created widget's
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers", "barDps"}; // in BarWidget's order, but a created widget's
     static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
     for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {
@@ -3096,6 +3097,26 @@ TEST(the_home_point_widgets_wrap_text_starts_on_and_is_kept)
     CHECK(!store.values.contains("barHomePointDesign"));
     store.values["barHomePointDesign"] = "-name |";
     CHECK(LoadSettings(store).Widget(BarWidget::HomePoint).design == DefaultDesign(BarWidget::HomePoint));
+}
+
+TEST(the_dps_widgets_average_over_and_include_pets_are_each_copys_own_and_kept)
+{
+    Settings s;
+    const PanelWidget first{BarWidget::Dps}, copy = *CloneWidget(s, BarWidget::Dps);
+    CHECK(s.Widget(first).dpsSeconds == kDefaultDpsSeconds && s.Widget(first).dpsPets);
+    s.Widget(first).dpsSeconds = 25;
+    s.Widget(copy).dpsPets     = false;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(read.Widget(first).dpsSeconds == 25 && read.Widget(first).dpsPets);
+    CHECK(read.Widget(copy).dpsSeconds == kDefaultDpsSeconds && !read.Widget(copy).dpsPets);
+    store.values["dpsSeconds"] = "0";
+    CHECK_EQ(LoadSettings(store).Widget(first).dpsSeconds, kMinDpsSeconds);
+    store.values["dpsSeconds"] = "999";
+    CHECK_EQ(LoadSettings(store).Widget(first).dpsSeconds, kMaxDpsSeconds);
+    // No Widget Designer: both lines stay on.
+    CHECK(!HasDesigner(BarWidget::Dps) && !store.values.contains("barDpsDesign"));
 }
 
 TEST(lock_cursor_to_window_starts_off_and_is_kept)

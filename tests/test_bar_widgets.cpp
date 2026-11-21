@@ -1344,9 +1344,15 @@ namespace
     struct FullState
     {
         ActorInfo target = Goblin();
+        DamageMeter damage;
         BarState state;
         FullState()
         {
+            damage.SetFighters({{1, 0, "You"}, {2, 0, "Bo"}});
+            damage.Add(100.0, 1, 300);
+            damage.Add(101.0, 2, 120);
+            state.damage    = &damage;
+            state.damageNow = 105.0;
             // East Ronfaure's Carrion Worm, one of Bigmouth Billy's placeholders: its popup counts down.
             target.mob      = MobById(17191194);
             target.serverId = 17191194;
@@ -1430,6 +1436,11 @@ namespace
         if (needs.memory) s.memory = full.memory;
         if (needs.cpu) s.cpuPercent = full.cpuPercent;
         if (needs.linuxxi) s.linuxxi = full.linuxxi;
+        if (needs.dps)
+        {
+            s.damage    = full.damage;
+            s.damageNow = full.damageNow;
+        }
         return s;
     }
 
@@ -1440,7 +1451,7 @@ namespace
         for (bool BarNeeds::*part :
             {&BarNeeds::unixTime, &BarNeeds::localTime, &BarNeeds::zone, &BarNeeds::target, &BarNeeds::gil,
             &BarNeeds::strip, &BarNeeds::frames, &BarNeeds::job, &BarNeeds::connection,
-            &BarNeeds::party, &BarNeeds::statuses, &BarNeeds::memory, &BarNeeds::cpu, &BarNeeds::linuxxi})
+            &BarNeeds::party, &BarNeeds::statuses, &BarNeeds::memory, &BarNeeds::cpu, &BarNeeds::linuxxi, &BarNeeds::dps})
             if (needs.*part)
             {
                 less.push_back(needs);
@@ -3788,4 +3799,32 @@ TEST(the_placeholder_timers_widget_shows_your_timers_on_two_lines_and_takes_no_r
     state.phTimers.resize(1);
     CHECK(Content(timers, state, settings).subtitle.empty());
     CHECK(HasCopies(BarWidget::PhTimers) && Combines(BarWidget::PhTimers) && Aligns(BarWidget::PhTimers));
+}
+
+TEST(the_dps_widget_shows_your_dps_over_your_partys_with_each_member_in_its_pop_out)
+{
+    Settings settings;
+    DamageMeter damage;
+    damage.SetFighters({{1, 11, "You"}, {2, 0, "Bo"}});
+    damage.Add(0.0, 1, 100);
+    damage.Add(5.0, 11, 300); // your pet
+    damage.Add(6.0, 2, 200);
+    BarState state;
+    state.damage    = &damage;
+    state.damageNow = 9.0;
+    const PanelWidget dps{BarWidget::Dps};
+    CHECK(!Content(dps, state, settings).shown); // off on a new install
+    settings.Widget(dps).on = true;
+    WidgetContent w = Content(dps, state, settings);
+    CHECK_EQ(Joined(w.title), "40 DPS");
+    CHECK_EQ(Joined(w.subtitle), "Party 60");
+    CHECK(w.hasPopup && w.figures);
+    CHECK(Lines(BarPopupContent(dps, state, settings).sections.at(0)) == std::vector<std::string>{"You40Bo20"});
+    // Each copy by its own seconds and pets.
+    settings.Widget(dps).dpsSeconds = 5;
+    settings.Widget(dps).dpsPets    = false;
+    w = Content(dps, state, settings);
+    CHECK_EQ(Joined(w.title), "0 DPS");
+    CHECK_EQ(Joined(w.subtitle), "Party 40");
+    CHECK(HasCopies(BarWidget::Dps) && Combines(BarWidget::Dps) && Aligns(BarWidget::Dps));
 }

@@ -2097,6 +2097,24 @@ TEST(the_home_point_widgets_settings_have_no_designer_and_a_wrap_text_switch)
     CHECK(!w.settings.Widget(home).wrapText);
 }
 
+TEST(the_dps_widgets_settings_have_no_designer_and_set_its_seconds_and_pets)
+{
+    Window w;
+    const PanelWidget dps{BarWidget::Dps}, zone{BarWidget::Zone};
+    w.settings.Widget(dps).on = w.settings.Widget(zone).on = true;
+    const auto rows = [&](PanelWidget widget) {
+        w.readings.settingsOf = {widget};
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    const std::string other = rows(zone);
+    CHECK(!Has(other, "average-over") && !Has(other, "include-pets"));
+    const std::string shown = rows(dps);
+    CHECK(!Has(shown, "class=\"design\"") && Has(shown, "average-over") && Has(shown, "include-pets"));
+    w.Pass({{"toppanel-widgets-include-pets-dps", kClickEvent, ""}, {"toppanel-widgets-average-over-dps", kChangeEvent, "25"}});
+    CHECK(!w.settings.Widget(dps).dpsPets && w.settings.Widget(dps).dpsSeconds == 25);
+}
+
 TEST(show_mem_text_shows_with_the_performance_widgets_memory_button_and_switches_its_label)
 {
     Window w;

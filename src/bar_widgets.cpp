@@ -1477,6 +1477,11 @@ namespace headsup
             return parts;
         }
 
+        std::vector<DpsRow> DpsRowsOf(const BarState& state, const WidgetOptions& o)
+        {
+            return state.damage != nullptr ? state.damage->Rows(state.damageNow, o.dpsSeconds, o.dpsPets) : std::vector<DpsRow>{};
+        }
+
         // What each part of a widget shows now, base taking whether it shows at all, its popup and its figures.
         std::vector<PartContent> PartsNow(PanelWidget widget, const BarState& state, const Settings& settings,
             WidgetContent& base)
@@ -1584,6 +1589,7 @@ namespace headsup
             case BarWidget::World: return WorldParts(state, o, base);
             case BarWidget::Settings: base.cog = true; return {};
             case BarWidget::PhTimers: return {};
+            case BarWidget::Dps: return DpsParts(DpsRowsOf(state, o), state.damage != nullptr && state.damage->InParty(), base);
             case BarWidget::HomePoint:
                 base.wrap = o.wrapText;
                 return {{WidgetPart::HomePointIcon, ListOf(Mark(Icon::HomePoint))},
@@ -1902,6 +1908,7 @@ namespace headsup
         needs.job        = either(BarWidget::Job);
         needs.connection = (perf & kConnectionParts) != 0 || perfPopup;
         needs.party      = either(BarWidget::Party);
+        needs.dps        = either(BarWidget::Dps);
         needs.statuses   = (shown(BarWidget::StatusTimers) && !settings.statusPins.empty()) || opened(BarWidget::StatusTimers);
         needs.memory     = (perf & PerfBit(PerfPart::Memory)) != 0 || perfPopup;
         needs.cpu        = perfPopup;
@@ -2286,6 +2293,7 @@ namespace headsup
             return WorldPopup(state);
         case BarWidget::Settings:
         case BarWidget::PhTimers: break;
+        case BarWidget::Dps: return DpsPopup(DpsRowsOf(state, o));
         case BarWidget::HomePoint:
             popup.title = ListOf(Text("Home Point")); // its settings pop-out's
             break;

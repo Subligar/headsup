@@ -2,6 +2,7 @@
 
 #include "argb.h"
 #include "bar_design.h"
+#include "bar_dps.h"
 #include "bar_placement.h"
 #include "bar_server_time.h"
 #include "bar_statuses.h"
@@ -107,6 +108,8 @@ namespace headsup
         std::optional<float> fontRatio, lineSeparation, popupTextScale;
         bool uniformFont = false; // its two lines at one size, whatever the Font Size Ratio (NewWidget gives its default)
         bool wrapText = true; // Home Point: its zone's name on two lines (WidgetContent::wrap)
+        int dpsSeconds = kDefaultDpsSeconds; // DPS: the seconds its damage is averaged over
+        bool dpsPets   = true;               // and whether pets' damage counts
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.

@@ -948,6 +948,12 @@ namespace
             if (!extras) return Put(0, 1).Put(0, 1);
             return Put(1, 1).Put(0, 6).Put(0, 4).Put(5, 17).Put(163, 10).Put(1, 1).Put(0, 6).Put(0, 4).Put(9, 14).Put(374, 10);
         }
+        // With an additional effect of its own, as a skillchain arrives, and no spikes.
+        ActionPacket& Added(uint32_t value, uint32_t message, uint32_t addedValue, uint32_t addedMessage)
+        {
+            Put(0, 3).Put(0, 2).Put(0, 12).Put(0, 5).Put(0, 2).Put(0, 3).Put(value, 17).Put(message, 10).Put(0, 31);
+            return Put(1, 1).Put(0, 6).Put(0, 4).Put(addedValue, 17).Put(addedMessage, 10).Put(0, 1);
+        }
         uint32_t Size() const { return (bit + 7) / 8; }
     };
 }
@@ -959,6 +965,8 @@ TEST(a_sent_action_has_a_message_for_each_result_of_a_lone_target)
     const std::optional<SentAction> sent = ParseSentAction(p.bytes.data(), p.Size());
     CHECK(sent && sent->actor == 65001 && sent->records == 3);
     CHECK(sent->messages[0] == 230 && sent->messages[1] == 1 && sent->messages[2] == 15);
+    // The additional effect's 5 (163) and the hit's 12 (1); not the status, the spikes or the miss.
+    CHECK_EQ(sent->damage, 17u);
 }
 
 TEST(a_sent_action_on_several_targets_has_each_ones_first_message)
@@ -967,6 +975,63 @@ TEST(a_sent_action_on_several_targets_has_each_ones_first_message)
     p.Head(65001, 2).Target(17000000, 2).Result(4, 236, true).Result(1, 1).Target(17000001, 1).Result(13, 237);
     const std::optional<SentAction> sent = ParseSentAction(p.bytes.data(), p.Size());
     CHECK(sent && sent->records == 2 && sent->messages[0] == 236 && sent->messages[1] == 237);
+    // The first target's second result counts too, though no record keeps its message.
+    CHECK_EQ(sent->damage, 6u);
+}
+
+TEST(a_sent_actions_damage_has_a_skillchains_but_not_what_it_heals)
+{
+    ActionPacket fusion; // 287 + 6
+    fusion.Head(65001, 1).Target(17000000, 1).Added(350, 185, 120, 293);
+    std::optional<SentAction> sent = ParseSentAction(fusion.bytes.data(), fusion.Size());
+    CHECK(sent && sent->damage == 470);
+    ActionPacket healing; // 384 + 6
+    healing.Head(65001, 1).Target(17000000, 1).Added(350, 185, 120, 390);
+    sent = ParseSentAction(healing.bytes.data(), healing.Size());
+    CHECK(sent && sent->damage == 350);
+}
+
+TEST(a_sent_actions_damage_leaves_out_counters_and_drains_of_mp)
+{
+    ActionPacket p;
+    p.Head(65001, 2).Target(17000000, 1).Result(30, 33).Target(17000001, 1).Result(25, 225);
+    const std::optional<SentAction> sent = ParseSentAction(p.bytes.data(), p.Size());
+    CHECK(sent && sent->damage == 0);
+}
+
+// Action packets the local test server sent the Headsup character (65001) fighting a Land Crab (17186819), as
+// Linkpearl recorded them from Ashita's header on. The chat log read "2 hit", "Stone", "48 Stone" and the crab's
+// "5 critical hit".
+TEST(a_sent_actions_damage_is_what_the_chat_log_said_of_real_packets)
+{
+    struct Real
+    {
+        std::vector<uint8_t> bytes;
+        uint32_t actor, damage;
+    };
+    const Real packets[] = {
+        {{0x28, 0x12, 0xCE, 0x00, 0x23, 0xE9, 0xFD, 0x00, 0x00, 0x01, 0x44, 0x18, 0xDD, 0x1A, 0x0C, 0x00,
+          0x00, 0x00, 0xC0, 0x00, 0x90, 0x41, 0x40, 0x20, 0x00, 0x00, 0x41, 0x00, 0x40, 0x00, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x00},
+            65001, 2},
+        {{0x28, 0x12, 0xF3, 0x00, 0x23, 0xE9, 0xFD, 0x00, 0x00, 0x01, 0xE0, 0x58, 0x98, 0xD8, 0x1A, 0x00,
+          0x00, 0x00, 0xC0, 0x00, 0x90, 0x41, 0x40, 0x00, 0x00, 0x00, 0xE0, 0x13, 0xC0, 0x51, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x00},
+            65001, 0}, // the cast's start
+        {{0x28, 0x12, 0xF7, 0x00, 0x23, 0xE9, 0xFD, 0x00, 0x00, 0x01, 0xD0, 0x27, 0x00, 0x00, 0x80, 0x01,
+          0x00, 0x00, 0xC0, 0x00, 0x90, 0x41, 0x40, 0x80, 0x4F, 0x00, 0x00, 0x06, 0x80, 0x00, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x00},
+            65001, 48},
+        {{0x28, 0x12, 0xFD, 0x00, 0x23, 0x03, 0x40, 0x06, 0x01, 0x01, 0x44, 0x18, 0xDD, 0x1A, 0x0C, 0x00,
+          0x00, 0x00, 0x40, 0x7A, 0x3F, 0x00, 0x40, 0x20, 0x00, 0x10, 0xA1, 0x00, 0xC0, 0x10, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x00},
+            17186819, 5},
+    };
+    for (const Real& real : packets)
+    {
+        const std::optional<SentAction> sent = ParseSentAction(real.bytes.data(), static_cast<uint32_t>(real.bytes.size()));
+        CHECK(sent && sent->actor == real.actor && sent->damage == real.damage);
+    }
 }
 
 TEST(a_sent_action_cut_short_is_none)

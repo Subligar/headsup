@@ -336,6 +336,7 @@ class HeadsUp final : public IPlugin
     std::vector<headsup::PetLink> m_Pets;
     std::vector<headsup::CheckCandidate> m_Checkable;
     headsup::PhTimers m_PhTimers;
+    headsup::DamageMeter m_DamageMeter;
     headsup::Activity m_Activity; // whether you have moved or turned lately, which a placeholder's timer asks
     std::optional<headsup::OutpostFile> m_Outposts; // read from its file when first needed
     std::vector<headsup::TimerLine> m_TimerLines;
@@ -907,7 +908,11 @@ public:
         if (!injected) m_Connection.Received(Now()); // an addon's injected packet never came from the server
         // data is the packet as the server sent it, before any addon blanked a message in what the game gets.
         if (id == headsup::kActionPacket)
-            if (const std::optional<headsup::SentAction> sent = headsup::ParseSentAction(data, size)) m_CombatTextHook.Sent(*sent);
+            if (const std::optional<headsup::SentAction> sent = headsup::ParseSentAction(data, size))
+            {
+                m_CombatTextHook.Sent(*sent);
+                if (!injected) m_DamageMeter.Add(Now(), sent->actor, sent->damage);
+            }
         const headsup::PacketFollowUp next = m_GameState.Received(id, data, size);
         if (next.zonedIn)
         {
@@ -3242,6 +3247,23 @@ private:
             }
             m_PartySeen = s.party;
         }
+        std::vector<headsup::Fighter> fighters;
+        if (needs.dps)
+        {
+            IParty* party   = m_AshitaCore->GetMemoryManager()->GetParty();
+            IEntity* entity = m_AshitaCore->GetMemoryManager()->GetEntity();
+            for (uint32_t m = 0; m < static_cast<uint32_t>(headsup::kPartySize); ++m)
+            {
+                if (party->GetMemberIsActive(m) == 0) continue;
+                const char* name     = party->GetMemberName(m);
+                const uint32_t index = party->GetMemberTargetIndex(m);
+                const uint32_t pet   = index != 0 ? entity->GetPetTargetIndex(index) : 0;
+                fighters.push_back({party->GetMemberServerId(m), pet != 0 ? entity->GetServerId(pet) : 0, name != nullptr ? name : ""});
+            }
+            s.damage    = &m_DamageMeter;
+            s.damageNow = now;
+        }
+        m_DamageMeter.SetFighters(std::move(fighters));
         if (needs.memory) GatherMemory(now, s, needs.cpu);
         if (needs.linuxxi) s.linuxxi = LinuxXINow(now);
         if (needs.statuses)
