@@ -1,5 +1,6 @@
 #include "menu_state.h"
 #include "settings.h"
+#include "layout_edit.h"
 #include "test.h"
 
 #include <algorithm>
@@ -266,3 +267,27 @@ TEST(the_clocks_zone_dropdown_lists_automatic_with_the_computers_zone_first_and_
     }
 }
 
+
+TEST(vanilla_ui_is_the_last_page_under_user_interface_wherever_the_file_puts_it)
+{
+    const auto check = [](const WindowLayout& layout) {
+        const std::vector<const LayoutPage*> pages = SidebarPages(layout);
+        CHECK_EQ(pages.size(), layout.pages.size());
+        for (const LayoutPage& page : layout.pages)
+            CHECK_EQ(std::ranges::count(pages, &page), 1);
+        auto at = std::ranges::find(pages, Page::UserInterface, &LayoutPage::page);
+        CHECK(at != pages.end());
+        while (std::next(at) != pages.end() && (*std::next(at))->child) ++at;
+        CHECK((*at)->page == Page::VanillaUi);
+    };
+    check(kWindowLayout);
+    for (const size_t place : {size_t{0}, kWindowLayout.pages.size()})
+    {
+        test::EditedLayout edited;
+        edited.MovePage("vanillaui", place);
+        check(edited.Layout());
+    }
+    test::EditedLayout added; // a page put under User Interface after Vanilla UI
+    added.MovePage("notifications", static_cast<size_t>(std::ranges::find(kWindowLayout.pages, Page::VanillaUi, &LayoutPage::page) - kWindowLayout.pages.begin()) + 1);
+    check(added.Layout());
+}

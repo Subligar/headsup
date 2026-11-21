@@ -237,8 +237,9 @@ namespace headsup
             Form& form = c.form;
             form.BeginBlock(kSidebarBlock);
             const bool kindPages = KindPagesShown(c.s);
-            for (const LayoutPage& page : c.layout.pages)
+            for (const LayoutPage* shown : SidebarPages(c.layout))
             {
+                const LayoutPage& page = *shown;
                 if (!kindPages && KindOfPage(page.page)) continue;
                 const std::string id = kNavStart + std::string(page.key);
                 if (form.Clicked(id) && c.state.page != page.page)
