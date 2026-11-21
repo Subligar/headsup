@@ -33,6 +33,8 @@ namespace headsup
     // A tip as an element's attribute, with its space before it; none for no tip.
     std::string TipAttribute(std::string_view tip);
     std::string TipAttribute(const char* tip);
+    // The warning mark after a label, its tip what HeadsUp sends the server for it.
+    std::string SendsPacketsMark(std::string_view tip);
 
     // Something the player did to a control since the last pass, by the control's id.
     struct FormEvent
@@ -86,6 +88,7 @@ namespace headsup
     constexpr const char* kRunClass     = "run";     // a stretch of text in it
     constexpr const char* kTypingClass  = "typing";  // on a box while one of its stretches has the keyboard
     constexpr const char* kArrowRoomClass = "arrow-room"; // as wide as an arrow's button, with nothing in it
+    constexpr const char* kSendsPacketsClass = "sends"; // the mark after a label whose setting makes HeadsUp send packets
     // While a tag is held over a line box: what it would add, faint; a chip it would take the place of; and the line's
     // own tag held, which would leave its place.
     constexpr const char* kGhostClass    = "ghost";
@@ -205,6 +208,8 @@ namespace headsup
         int CardsShown() const { return m_CardsShown; }
         // The rows that follow stand in from the left: they belong to the row above them.
         void Indent(bool in) { m_Indent = in; }
+        // The next row's label ends in SendsPacketsMark(tip).
+        void SendsPackets(std::string tip) { m_Sends = std::move(tip); }
 
         // Any element by id, to write markup into with Raw: the sidebar.
         void BeginBlock(const char* id);
@@ -442,6 +447,7 @@ namespace headsup
         FormState& m_State;
         bool m_Off       = false;
         bool m_Indent    = false;
+        std::string m_Sends;
         int m_CardsShown = 0;
         size_t m_CardOff = 0;         // the card's own off value, in values
         bool m_CardSwitched = false;  // whether the card has a switch in its title

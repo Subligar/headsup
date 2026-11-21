@@ -2486,3 +2486,42 @@ TEST(a_setting_of_a_kind_that_is_off_is_not_shown)
     CHECK_EQ(w.settings.friendNoticeOnlineSound, kChimeSound);
 }
 
+
+namespace
+{
+    // Whether the element of this id holds a warning that HeadsUp sends packets, with a tip, before its next end.
+    bool WarnsOfPackets(const FormBlock* block, const std::string& id, const char* inside)
+    {
+        const size_t at = At(block, id);
+        if (at == std::string::npos) return false;
+        const size_t from = block->rml.find(inside, at), end = block->rml.find("</div>", from);
+        const size_t mark = block->rml.find(std::string("class=\"") + kSendsPacketsClass + "\"", from);
+        return from != std::string::npos && mark < end && block->rml.find(std::string(kMenuTipAttribute) + "=\"", mark) < end;
+    }
+}
+
+// "Put a warning next to every setting that makes HeadsUp ask the server for something, or makes it send a packet
+// more often than a normal player would."
+TEST(each_setting_that_makes_headsup_send_packets_warns_of_it_on_its_label)
+{
+    Window w;
+    w.state.page          = Page::Entities;
+    const FormBlock* card = Block(w.Pass(), "entities-nameplates");
+    CHECK(WarnsOfPackets(card, "entities-nameplates-auto-check-label", ">"));
+    CHECK(WarnsOfPackets(card, "entities-nameplates-look-up-players-label", ">"));
+    CHECK(!WarnsOfPackets(card, "entities-nameplates-stack-names-label", ">"));
+}
+
+// Conquest standings and currencies are asked for while their widgets show, so the warning goes on their chips.
+TEST(each_widget_that_makes_headsup_send_packets_warns_of_it_on_its_chip)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    for (const BarWidget kind : {BarWidget::Zone, BarWidget::World, BarWidget::Currency, BarWidget::Bags})
+        if (!Placed(w.settings.barSections, PanelWidget{kind})) w.settings.barSections[0].push_back(PanelWidget{kind});
+    const FormBlock* layout = Block(w.Pass(), "toppanel-layout");
+    const auto chip         = [](BarWidget kind) { return "toppanel-layout-chip-" + std::to_string(SlotOf(PanelWidget{kind})); };
+    for (const BarWidget kind : {BarWidget::Zone, BarWidget::World, BarWidget::Currency})
+        CHECK(WarnsOfPackets(layout, chip(kind), "class=\"wname\""));
+    CHECK(!WarnsOfPackets(layout, chip(BarWidget::Bags), "class=\"wname\""));
+}
