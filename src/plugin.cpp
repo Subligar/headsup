@@ -1564,23 +1564,20 @@ private:
 #endif
     }
 
-    // Draws, then restore(texture 0 as it was) puts back the game's states. On Windows the game's scene copy came back
-    // without its texture and drew its gray vertex color over the whole screen, so the states it draws with are set
-    // again every time: a layer under Direct3D 8 can report a binding it no longer has.
+    // Draws, then restore() puts back the game's states. The states the scene copy draws with are set again every time:
+    // a layer under Direct3D 8 can report a binding it no longer has. Texture 0 comes back only through restore's
+    // state block: a Direct3D 9 layer's GetTexture keeps the texture alive for good.
     template <typename Draw, typename Restore>
     void DrawThenRestore(Draw draw, Restore restore)
     {
-        IDirect3DBaseTexture8* texture = nullptr;
-        m_Device->GetTexture(0, &texture);
         const headsup::CopyState before = headsup::ReadCopyState(m_Device);
         m_Drawing = true;
         draw();
         m_Drawing = false;
-        restore(texture);
+        restore();
         if (const std::string lost = headsup::StatesNotRestored(before, headsup::ReadCopyState(m_Device)); !lost.empty())
             Note("Direct3D did not put back the game's " + lost + " after HeadsUp drew; HeadsUp puts them back itself.");
-        headsup::RestoreCopyState(m_Device, before, texture);
-        if (texture != nullptr) texture->Release();
+        headsup::RestoreCopyState(m_Device, before);
     }
 
     // Every state Direct3D keeps, saved around draw. False when Direct3D could not save them, and nothing was drawn.
@@ -1593,7 +1590,7 @@ private:
         IDirect3DSurface8* depth  = nullptr;
         m_Device->GetRenderTarget(&target);
         m_Device->GetDepthStencilSurface(&depth);
-        DrawThenRestore(draw, [&](IDirect3DBaseTexture8*) {
+        DrawThenRestore(draw, [&] {
             m_Device->SetRenderTarget(target, depth);
             m_Device->ApplyStateBlock(saved); // after SetRenderTarget, which resets the viewport
             m_Device->DeleteStateBlock(saved);
@@ -1616,9 +1613,8 @@ private:
         IDirect3DVertexBuffer8* stream = nullptr;
         UINT stride                    = 0;
         m_Device->GetStreamSource(0, &stream, &stride);
-        DrawThenRestore(draw, [&](IDirect3DBaseTexture8* texture) {
+        DrawThenRestore(draw, [&] {
             m_Device->ApplyStateBlock(*m_QuadStates);
-            m_Device->SetTexture(0, texture);
             m_Device->SetStreamSource(0, stream, stride);
         });
         if (stream != nullptr) stream->Release();
