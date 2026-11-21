@@ -17,6 +17,8 @@ FONTS = [
     ('Marcellus SC', 'MarcellusSC', 'MarcellusSC-Regular.ttf'),
     ('Cinzel', 'Cinzel', 'Cinzel-Regular.ttf'),
     ('Cormorant SC', 'CormorantSC', 'CormorantSC-SemiBold.ttf'),
+    ('Atkinson Hyperlegible', 'AtkinsonHyperlegible', 'AtkinsonHyperlegible-Regular.ttf'),
+    ('Atkinson Hyperlegible Next', 'AtkinsonHyperlegibleNext', 'AtkinsonHyperlegibleNext-Regular.ttf'),
     ('Barlow Condensed', 'BarlowCondensed', 'BarlowCondensed-Bold.ttf'),
 ]
 
