@@ -205,15 +205,75 @@ TEST(a_directinput_hat_moves_by_its_angle_and_a_diagonal_stops_it)
     CHECK(input.Due(20.0) == MenuAction::None);
 }
 
-TEST(directinput_buttons_follow_an_xbox_pads_order)
+TEST(directinput_buttons_follow_the_games_own_defaults_until_the_player_sets_them)
 {
+    // The game's config tool sets DirectInput's Confirm to button 1 and Cancel to 2 (padsin000's slots 7 and 5).
     MenuInput input;
-    CHECK(input.Feed(DirectButton(0, true), 0.0) == MenuAction::Confirm);
-    CHECK(input.Feed(DirectButton(0, false), 0.0) == MenuAction::None);
-    CHECK(input.Feed(DirectButton(1, true), 0.0) == MenuAction::Cancel);
+    CHECK(input.Feed(DirectButton(1, true), 0.0) == MenuAction::Confirm);
+    CHECK(input.Feed(DirectButton(1, false), 0.0) == MenuAction::None);
+    CHECK(input.Feed(DirectButton(2, true), 0.0) == MenuAction::Cancel);
     CHECK(input.Feed(DirectButton(4, true), 0.0) == MenuAction::TabLeft);
     CHECK(input.Feed(DirectButton(5, true), 0.0) == MenuAction::TabRight);
-    CHECK(input.Feed(DirectButton(2, true), 0.0) == MenuAction::None);
+    CHECK(input.Feed(DirectButton(0, true), 0.0) == MenuAction::None);
+}
+
+namespace
+{
+    // padsin000 as the launcher writes it for an XInput pad: slot 5 (Cancel) the game's 0, its B; slot 7 (Confirm) 3,
+    // its A. The game numbers XInput's buttons B 0, X 1, Y 2, A 3, LB 8, LT 9, RB 11, RT 12.
+    constexpr const char* kXInputPadsin = "8,9,13,12,10,0,1,3,2,15,-1,-1,14,-33,-33,32,32,-36,-36,35,35,6,7,5,4,11,-1,-1,-1,-1,-1,-1";
+    // The same with Confirm and Cancel swapped.
+    constexpr const char* kSwappedPadsin = "8,9,13,12,10,3,1,0,2,15,-1,-1,14,-33,-33,32,32,-36,-36,35,35,6,7,5,4,11,-1,-1,-1,-1,-1,-1";
+}
+
+TEST(the_pads_confirm_and_cancel_are_the_buttons_the_player_set_for_the_game)
+{
+    MenuInput as(PadBindingsFrom(kXInputPadsin));
+    CHECK(as.Feed(Pad(12, 1), 0.0) == MenuAction::Confirm);
+    CHECK(as.Feed(Pad(13, 1), 0.0) == MenuAction::Cancel);
+    MenuInput swapped(PadBindingsFrom(kSwappedPadsin));
+    CHECK(swapped.Feed(Pad(13, 1), 0.0) == MenuAction::Confirm);
+    CHECK(swapped.Feed(Pad(12, 1), 0.0) == MenuAction::Cancel);
+    InputTaken taken(PadBindingsFrom(kSwappedPadsin));
+    CHECK(taken.Keep(Pad(13, 1), true));
+    CHECK(taken.Keep(Pad(12, 1), true));
+    // A DirectInput pad's numbers are its buttons' own.
+    MenuInput direct(PadBindingsFrom(kSwappedPadsin));
+    CHECK(direct.Feed(DirectButton(0, true), 0.0) == MenuAction::Confirm);
+    CHECK(direct.Feed(DirectButton(3, true), 0.0) == MenuAction::Cancel);
+}
+
+TEST(a_trigger_set_as_confirm_confirms_once_each_pull)
+{
+    // Confirm on RT (the game's 12), Ashita's 17, which gives how far it is pulled.
+    MenuInput input(PadBindingsFrom("8,9,13,12,10,0,1,12,2,15"));
+    CHECK(input.Feed(Pad(17, 10), 0.0) == MenuAction::None);
+    CHECK(input.Feed(Pad(17, 120), 0.0) == MenuAction::Confirm);
+    CHECK(input.Feed(Pad(17, 255), 0.0) == MenuAction::None);
+    CHECK(input.Feed(Pad(17, 0), 0.0) == MenuAction::None);
+    CHECK(input.Feed(Pad(17, 200), 0.0) == MenuAction::Confirm);
+    InputTaken taken(PadBindingsFrom("8,9,13,12,10,0,1,12,2,15"));
+    CHECK(!taken.Keep(Pad(17, 10), true));
+    CHECK(taken.Keep(Pad(17, 120), true));
+}
+
+TEST(a_confirm_or_cancel_left_unset_is_no_button)
+{
+    MenuInput input(PadBindingsFrom("8,9,13,12,10,-1,1,-1,2,15"));
+    CHECK(input.Feed(Pad(12, 1), 0.0) == MenuAction::None);
+    CHECK(input.Feed(Pad(13, 1), 0.0) == MenuAction::None);
+    CHECK(!InputTaken(PadBindingsFrom("8,9,13,12,10,-1,1,-1,2,15")).Keep(Pad(12, 1), true));
+}
+
+TEST(a_padsin_that_cannot_be_read_leaves_the_games_defaults)
+{
+    for (const char* padsin : {"", "8,9,13", "8,9,13,12,10,x,1,y"})
+    {
+        MenuInput input(PadBindingsFrom(padsin));
+        CHECK(input.Feed(Pad(12, 1), 0.0) == MenuAction::Confirm);
+        CHECK(input.Feed(Pad(13, 1), 0.0) == MenuAction::Cancel);
+        CHECK(input.Feed(DirectButton(1, true), 0.0) == MenuAction::Confirm);
+    }
 }
 
 TEST(reset_lets_go_of_every_hold)
@@ -249,7 +309,7 @@ TEST(only_what_the_windows_use_is_kept)
     CHECK(!taken.Keep(Key('A'), true));
     CHECK(!taken.Keep(Pad(14, 1), true));
     CHECK(!taken.Keep(Pad(16, 255), true));
-    CHECK(!taken.Keep(DirectButton(2, true), true));
+    CHECK(!taken.Keep(DirectButton(3, true), true));
     CHECK(!taken.Keep({InputSource::DirectInput, 0, 100}, true)); // a DirectInput stick is left to the game
     CHECK(taken.Keep(DirectButton(5, true), true));
 }

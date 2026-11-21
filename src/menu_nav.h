@@ -5,7 +5,9 @@
 #include <map>
 #include <optional>
 #include <span>
+#include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace headsup
@@ -62,22 +64,32 @@ namespace headsup
     constexpr double kPadRepeatDelay    = 0.4;
     constexpr double kPadRepeatInterval = 0.1;
 
-    // Whether the windows act on this input (some keys, the d-pad, A, B and the bumpers; never a stick): whether it
-    // holds its key or button down.
-    struct MenuControl
-    {
-        bool down = false;
-    };
-    std::optional<MenuControl> ControlOf(const MenuEvent& event);
+    // Ashita's numbers for XInput's A and B, and the DirectInput buttons the game's config tool sets for Confirm and
+    // Cancel by default.
+    constexpr uint32_t kPadA = 12, kPadB = 13, kDirectConfirm = 1, kDirectCancel = 2;
 
-    // What the windows keep from the game while one is open: a key's or button's press, and its release only when its
+    // The pad buttons the player set for the game's Confirm and Cancel: an XInput button by Ashita's number for it, a
+    // DirectInput button by its index; none for one left unset. By default the game's own (A and B; buttons 1 and 2).
+    struct PadBindings
+    {
+        std::optional<uint32_t> confirm = kPadA, cancel = kPadB;
+        std::optional<uint32_t> directConfirm = kDirectConfirm, directCancel = kDirectCancel;
+    };
+    // From padsin000, the game's pad settings in its registry key: a comma list of the button set for each of its
+    // actions. A slot that cannot be read keeps its default.
+    PadBindings PadBindingsFrom(std::string_view padsin);
+
+    // What the windows keep from the game while one is open (some keys, the d-pad, the pad's Confirm and Cancel and the
+    // bumpers; never a stick): a key's or button's press, and its release only when its
     // press was kept, so the game never misses the release of a press it saw.
     class InputTaken
     {
     public:
+        explicit InputTaken(const PadBindings& pad = {}) : m_Pad(pad) {}
         bool Keep(const MenuEvent& event, bool open);
 
     private:
+        PadBindings m_Pad;
         std::map<std::pair<InputSource, uint32_t>, bool> m_Down; // the keys and buttons down: whether their press was kept
     };
 
@@ -85,6 +97,7 @@ namespace headsup
     class MenuInput
     {
     public:
+        explicit MenuInput(const PadBindings& pad = {}) : m_Bindings(pad) {}
         MenuAction Feed(const MenuEvent& event, double now);
         // A held move due again by now; None when none is.
         MenuAction Due(double now);
@@ -100,7 +113,9 @@ namespace headsup
         // The move a hold makes as it changes to this one: none when it stays the same or is let go.
         static MenuAction Change(Hold& hold, MenuAction move, double now);
 
+        PadBindings m_Bindings;
         Hold m_Pad;
+        std::set<uint32_t> m_Held; // XInput's buttons and triggers down, as a trigger tells how far it is pulled each change
     };
 
     // An input as Ashita gave it and an action by name, for a developer to read.
