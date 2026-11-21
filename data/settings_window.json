@@ -1392,6 +1392,8 @@
         {"name": "Rod Break", "tip": "Shows Rod Break when your rod could break. The game warns of this only with a terrible feeling."},
         {"name": "Disconnecting", "tip": "Shows the game's red circle (R0) while a player is losing their connection. While it shows, it is the only icon on their nameplate, and it shows even if no line has this tag."},
         {"name": "Distance", "tip": "How far the entity is from you in yalms, as the Target widget shows it: (12.3). To show it only on your target, set its line's Line Visibility to Targeted."},
+        {"name": "Buffs", "tip": "Shows an icon for each buff the entity has that is starred in the Buffs & Debuffs card. Yours and your party's are always right. For other players and mobs, HeadsUp only knows what it saw land, so a buff can still show for a while after it ends."},
+        {"name": "Debuffs", "tip": "Shows an icon for each debuff the entity has that is starred in the Buffs & Debuffs card. Yours and your party's are always right. For other players and mobs, HeadsUp only knows what it saw land, so a debuff can still show for a while after it ends."},
         {"name": "Line Break", "tip": "Puts what follows on a row of its own under the rest of the line, in the line's own style. Press Enter in a line to make one."}
       ]
     },

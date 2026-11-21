@@ -60,6 +60,25 @@ namespace headsup
         }
     }
 
+    namespace
+    {
+        // XIUI's party list draws a status's background 1.1 icons wide and 0.75 as wide as tall. Here the icon fills its
+        // mark's box as it does with no background, and the background's square picture reaches past it, the icon's
+        // middle on its frame's inside: BuffIcon.png and DebuffIcon.png are 15 by 20 shields squared on 20 px, their
+        // inside columns 1 to 13 and rows 5 to 18 under a buff's point, rows 1 to 14 over a debuff's.
+        constexpr float kBackWide = 1.1f, kBackAspect = 0.75f;
+        constexpr float kBackedIcon = kBackAspect / kBackWide; // the icon's side, of the background's square
+        constexpr float kBackPixels = 20.0f, kBackInsideX = (2.0f + 7.5f) / kBackPixels;
+        constexpr float kBuffInsideY = 12.0f / kBackPixels, kDebuffInsideY = 8.0f / kBackPixels;
+    }
+
+    StatusBack StatusBackBox(uint16_t id)
+    {
+        const bool debuff = IsDebuff(id);
+        return StatusBack{debuff ? Icon::DebuffBack : Icon::BuffBack, 0.5f - kBackInsideX / kBackedIcon,
+            0.5f - (debuff ? kDebuffInsideY : kBuffInsideY) / kBackedIcon, 1.0f / kBackedIcon};
+    }
+
     std::string StatusIconsName(int pack)
     {
         return pack >= 0 && pack < kStatusPackCount ? std::string(kStatusPackNames[pack]) : kVanillaStatusName;

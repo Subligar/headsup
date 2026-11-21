@@ -650,10 +650,20 @@ namespace headsup
                 for (size_t k = 0; k < item.icons.size(); ++k)
                 {
                     const IconDraw& draw    = item.icons[k];
-                    const IconTexture* icon = m_Icons.For(m_Device, draw.icon, draw.paint);
+                    const IconTexture* icon = draw.status ? m_Icons.ForStatus(m_Device, OwnPalette(settings).statusIcons,
+                                                                *draw.status, m_GameStatusIcon)
+                                                          : m_Icons.For(m_Device, draw.icon, draw.paint);
                     if (icon == nullptr) break;
                     const ScreenPoint in = IconInRun(run, item, k);
                     const ScreenPoint spot{at.x + in.x, at.y + in.y};
+                    if (draw.status && draw.back)
+                    {
+                        const StatusBack back = StatusBackBox(*draw.status);
+                        if (const IconTexture* picture = m_Icons.For(m_Device, back.icon, std::nullopt))
+                            f.AddQuad(m_Quads, picture->texture, spot.x + back.left * run.iconSize * f.toX,
+                                spot.y + back.top * run.iconSize * f.toY, back.side * run.iconSize * f.toX,
+                                back.side * run.iconSize * f.toY, picture->u, picture->v, depth, kWhite, rank, alpha);
+                    }
                     f.AddQuad(m_Quads, icon->texture, spot.x, spot.y, run.iconSize * f.toX, run.iconSize * f.toY, icon->u, icon->v, depth,
                         kWhite, rank, alpha);
                     ++drawn;

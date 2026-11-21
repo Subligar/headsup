@@ -4,6 +4,7 @@
 
 #include "game_glyphs.h"
 #include "settings.h"
+#include "status_icons.h"
 #include "utf16.h"
 
 #include <algorithm>
@@ -214,6 +215,30 @@ namespace headsup
         return &t;
     }
 
+    const IconTexture* IconTextures::ForStatus(IDirect3DDevice8* device, int pack, uint16_t id, GameStatusIcon game)
+    {
+        IconTexture& t = m_Statuses[{pack, id}];
+        if (t.texture != nullptr) return &t;
+        if (m_Failed) return nullptr;
+        std::optional<Image> image = PackIcon(pack, id);
+        if (!image && game != nullptr) image = game(id);
+        const IconBitmap unknown = IconImage(Icon::UnknownStatus);
+        const void* bgra = image ? static_cast<const void*>(image->argb.data()) : unknown.bgra;
+        const int width  = image ? image->width : static_cast<int>(unknown.width);
+        const int height = image ? image->height : static_cast<int>(unknown.height);
+        t.texture = CreateTexture(device, bgra, width, height, t.u, t.v);
+        if (t.texture == nullptr)
+        {
+            m_Failed  = true;
+            m_Failure = "Direct3D could not make a " + std::to_string(width) + "x" + std::to_string(height) +
+                        " status icon texture";
+            return nullptr;
+        }
+        t.width  = static_cast<float>(width);
+        t.height = static_cast<float>(height);
+        return &t;
+    }
+
     void IconTextures::SetPearl(std::vector<unsigned char> bgra)
     {
         ReleaseTexture(m_Textures[static_cast<size_t>(Icon::Linkshell)].texture);
@@ -239,6 +264,9 @@ namespace headsup
         for (auto& [key, t] : m_Painted)
             ReleaseTexture(t.texture);
         m_Painted.clear();
+        for (auto& [key, t] : m_Statuses)
+            ReleaseTexture(t.texture);
+        m_Statuses.clear();
     }
 
     void SetQuadStates(IDirect3DDevice8* device, bool depthTest)

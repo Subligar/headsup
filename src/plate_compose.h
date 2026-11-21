@@ -20,6 +20,8 @@ namespace headsup
         std::optional<uint32_t> paint{}; // the color the icon is painted in, the linkshell's; none as it is drawn
         std::string badge{};
         uint32_t badgeColor = 0;
+        std::optional<uint16_t> status{}; // a status's icon in the theme's status icons, in place of icon
+        bool back = false;                // with the status's background behind it
         bool operator==(const IconDraw&) const = default;
     };
     inline bool HasBadge(const IconDraw& icon) { return !icon.badge.empty(); }

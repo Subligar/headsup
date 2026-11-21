@@ -83,7 +83,9 @@ namespace headsup
             info.status = a.status;
             info.jobs   = a.jobs;
             info.title  = a.title;
-            info.statuses = a.statuses;
+            // A stranger's are left out while Players' Only Party Members is on.
+            if (a.kind != EntityKind::Player || a.self || a.party || !settings.Kind(PlateKind::Players).statusPartyOnly)
+                info.statuses = a.statuses;
             EntityState& st = info.state;
             st.kind      = a.kind;
             st.self      = a.self;

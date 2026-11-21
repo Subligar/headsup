@@ -78,6 +78,7 @@ namespace headsup
         void SetCoveredTop(float pixels) { m_CoveredTop = pixels; }
         // Whether a cursor is kept whole on screen, as the world's are; a picture's go out of it with their plates.
         void SetCursorsKeptOnScreen(bool kept) { m_KeepCursors = kept; }
+        void SetGameStatusIcon(GameStatusIcon game) { m_GameStatusIcon = game; }
         // The picture a cursor of the File style draws, or none for a file that could not be read.
         void SetCursorFile(std::optional<Image> picture);
         // The game's own font, for the text set in it; every plate is drawn again with it.
@@ -205,6 +206,7 @@ namespace headsup
         std::unordered_map<uint16_t, Plate> m_Plates;
         FrameCache<BadgeKey, PlateTexture> m_Badges;
         IconTextures m_Icons;
+        GameStatusIcon m_GameStatusIcon = nullptr;
         // A white pixel, stretched and tinted into the lines from risen plates to where they stood; none once Direct3D
         // refused it, and then no lines.
         IDirect3DTexture8* m_Solid = nullptr;
