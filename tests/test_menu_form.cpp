@@ -1661,6 +1661,10 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     CHECK(own.fontRatio && std::fabs(*own.fontRatio - 1.0f) < 0.001f);
     w.Pass({{id("font-ratio"), kChangeEvent, "-1"}});
     CHECK(!own.fontRatio);
+    w.Pass({{id("font-size"), kChangeEvent, std::to_string(kMinWidgetFontSize + 4)}});
+    CHECK(own.fontSize == kMinWidgetFontSize + 4);
+    w.Pass({{id("font-size"), kChangeEvent, std::to_string(kMinWidgetFontSize - 1)}}); // the step under the least
+    CHECK(!own.fontSize);
     w.Pass({{id("line-separation"), kChangeEvent, "15"}}); // fifteen tenths over 0.5x
     CHECK(own.lineSeparation && std::fabs(*own.lineSeparation - 2.0f) < 0.001f);
     w.Pass({{id("line-separation"), kChangeEvent, "-1"}});
@@ -1676,7 +1680,7 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
     for (const char* key : {"widget-spacing", "show-background", "corner-rounding", "popup-text-scale"})
         CHECK(Has(rml, id(key).c_str()) && !Has(rml, id(key, "weather").c_str()));
-    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "line-separation", "icon-scale"})
+    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-size", "font-ratio", "line-separation", "icon-scale"})
         CHECK(Has(rml, id(key, "weather").c_str()));
 }
 
@@ -1693,6 +1697,31 @@ TEST(uniform_font_size_hides_the_widgets_font_size_ratio)
     CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "toppanel-widgets-font-ratio-zone"));
     w.Pass({{row, kClickEvent, ""}});
     CHECK(!w.settings.Widget(zone).uniformFont);
+}
+
+TEST(a_widget_on_one_line_has_no_font_size_ratio_or_uniform_font_size)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone}, home{BarWidget::HomePoint};
+    w.settings.Widget(home).on          = true;
+    w.settings.Widget(home).uniformFont = false;
+    for (const char* widget : {"zone", "homepoint"})
+    {
+        w.readings.settingsOf = {std::string(widget) == "zone" ? zone : home};
+        w.Pass({{std::string("toppanel-widgets-own-looks-") + widget + "-fold", kClickEvent, ""}});
+    }
+    const auto shows = [&](const char* key, const char* widget) {
+        w.readings.settingsOf = {std::string(widget) == "zone" ? zone : home};
+        return Has(Block(w.Pass(), "toppanel-widgets")->rml, (std::string("toppanel-widgets-") + key + "-" + widget).c_str());
+    };
+    CHECK(shows("font-ratio", "zone") && shows("uniform-font", "zone") && shows("font-size", "zone"));
+    CHECK(shows("font-ratio", "homepoint") && shows("uniform-font", "homepoint"));
+    // Every part of Zone's second line off, and Home Point not wrapping its name.
+    for (DesignChip& chip : w.settings.Widget(zone).design.lines[1])
+        chip.on = false;
+    w.settings.Widget(home).wrapText = false;
+    CHECK(!shows("font-ratio", "zone") && !shows("uniform-font", "zone") && shows("font-size", "zone"));
+    CHECK(!shows("font-ratio", "homepoint") && !shows("uniform-font", "homepoint") && shows("font-size", "homepoint"));
 }
 
 TEST(a_widgets_settings_are_its_designers_section_then_the_rest_then_its_overrides)

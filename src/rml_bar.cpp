@@ -168,7 +168,7 @@ namespace headsup
     const RmlBar::Rows& RmlBar::RowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, float fontRatio, int helpText,
         const char* titleFont, const char* detailFont)
     {
-        return m_Rows.Get(LinesKey{m.height, shape, fontRatio, m.lineSeparation, titleFont, detailFont, helpText},
+        return m_Rows.Get(LinesKey{m.height, shape, m.title, fontRatio, m.lineSeparation, titleFont, detailFont, helpText},
             [&](const LinesKey&) { return MakeRows(host, m, titleFont, detailFont, helpText); });
     }
 
@@ -200,7 +200,7 @@ namespace headsup
     const RmlBar::Rows& RmlBar::OwnRowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, float fontRatio,
         const char* titleFont, const char* detailFont)
     {
-        const LinesKey key{m.height, shape, fontRatio, m.lineSeparation, titleFont, detailFont};
+        const LinesKey key{m.height, shape, m.title, fontRatio, m.lineSeparation, titleFont, detailFont};
         for (const auto& [known, rows] : m_OwnRows)
             if (known == key) return rows;
         for (auto& [known, rows] : m_OwnRowsBefore)
