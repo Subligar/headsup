@@ -78,6 +78,9 @@ namespace headsup
         NoWeather,
         AmbiguousWeather,
         NoConfigGet,
+        NoPosText,
+        AmbiguousPosText,
+        PosTextChanged,
         NoSearchAddress,
         NoFish,
         AmbiguousFish,
@@ -495,6 +498,16 @@ namespace headsup
     constexpr int32_t kWindowTypeConfig = 18;
     // Key 19 is Config > Damage Display: 0 in the log only, 1 popups and the log, 2 popups only.
     constexpr int32_t kDamageDisplayConfig = 19, kDamageInLogOnly = 0;
+
+    // The routine behind <pos> (const char* __cdecl (uint8_t checked), pass 0): "(H-8)", "(?-?)" without a map, or null
+    // with no zone or actor. It calls the floor routine on [zoneMap] without checking it for null.
+    struct PosTextSite
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t entry        = 0; // RVA
+        uint32_t zoneMap      = 0; // the zone map global's address, as the code holds it
+    };
+    PosTextSite LocatePosText(const ImageSection& text);
 
     // Where the client keeps the search server's address (4 bytes as they go on the wire) and its uint16 port, filled
     // in at login from the lobby: the two its search client's setup clears, side by side.

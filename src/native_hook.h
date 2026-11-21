@@ -347,6 +347,20 @@ namespace headsup
         int32_t(__cdecl* m_Get)(int32_t) = nullptr;
     };
 
+    // The map square you stand in, by the client's own <pos> routine (LocatePosText), found once.
+    class MapSquareReader
+    {
+    public:
+        // "" when found, else why not.
+        std::string Find();
+        // "(H-8)", or "(?-?)" where the zone has no map; "" before Find succeeded or while the zone's map is not loaded.
+        std::string Read() const;
+
+    private:
+        const char*(__cdecl* m_PosText)(uint8_t) = nullptr;
+        uint32_t m_ZoneMap = 0;
+    };
+
     // The zone's weather as the client keeps it, found once.
     class WeatherReader
     {
