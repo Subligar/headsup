@@ -1467,9 +1467,8 @@ namespace headsup
             if (state.targetDistance && std::isfinite(*state.targetDistance))
             {
                 constexpr float kFarthest = 99.9f; // the farthest a target's distance reads
-                const auto said = [](float yalms) { return "(" + Decimal(yalms, 1) + ")"; };
-                Span far = Text(said(*state.targetDistance), Tone::Dim);
-                far.room = {said(kFarthest)};
+                Span far = Text(DistanceText(*state.targetDistance), Tone::Dim);
+                far.room = {DistanceText(kFarthest)};
                 parts.push_back({WidgetPart::TargetDistance, ListOf(std::move(far))});
             }
             return parts;

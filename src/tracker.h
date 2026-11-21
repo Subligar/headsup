@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <span>
 #include <unordered_map>
 #include <unordered_set>
@@ -138,4 +139,6 @@ namespace headsup
     // Yalms from Ashita's squared entity distance. A NaN stays NaN, so no distance limit passes it; a negative value
     // becomes 0.
     float DistanceFromSquared(float squared);
+    // How far, as the Target widget and the nameplates' $distance say it: "(12.3)"; nothing for a distance not known.
+    std::string DistanceText(float yalms);
 }

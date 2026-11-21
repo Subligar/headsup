@@ -69,6 +69,8 @@ namespace headsup
                 return info.name;
             case Tag::Owner:
                 return info.ownerName;
+            case Tag::Distance:
+                return DistanceText(info.distance);
             case Tag::Level:
                 if (IsMob(info)) return LevelText(info.mob, checked);
                 if (IsPlayer(info) && info.jobs && info.jobs->mainLevel != 0) return std::to_string(info.jobs->mainLevel);
