@@ -77,6 +77,21 @@ namespace headsup
     // Your buffs, and a party member's status icons as packet 0x076 packs them (each icon's low byte in its slot, its
     // high bits two per slot in bitMask), are known as soon as HeadsUp loads. Both hold kStatusIconSlots.
     constexpr int kStatusIconSlots = 32;
+    // Statuses in the order the game keeps them, in fixed room so no frame allocates.
+    struct StatusList
+    {
+        std::array<uint16_t, kStatusIconSlots> ids{};
+        uint8_t count = 0;
+        void Add(uint16_t id)
+        {
+            if (count < kStatusIconSlots) ids[count++] = id;
+        }
+        bool Has(uint16_t id) const;
+        bool operator==(const StatusList&) const = default;
+    };
+    // Each array may be null, which holds none.
+    StatusList PartyIcons(const uint8_t* icons, uint64_t bitMask);
+    StatusList BuffIcons(const int16_t* buffs);
     bool LevelSyncInBuffs(const int16_t* buffs);
     bool InvisibleInBuffs(const int16_t* buffs);
     bool LevelSyncInPartyIcons(const uint8_t* icons, uint64_t bitMask);

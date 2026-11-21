@@ -67,6 +67,7 @@ namespace headsup
         std::optional<PlayerJobs> jobs = std::nullopt;
         const char* ownerName          = "";
         uint32_t title                 = 0; // a player's, 0 while unknown
+        StatusList statuses{};              // a player's or mob's
     };
 
     struct ActorInfo
@@ -93,6 +94,7 @@ namespace headsup
         std::optional<PlayerJobs> jobs{};
         char ownerName[32] = {};
         uint32_t title     = 0; // a player's, 0 while unknown
+        StatusList statuses{};
     };
 
     // Whether a mob's claim (IEntity's ClaimStatus: the claimer's whole server ID, and 0 once the claim has ended) is
