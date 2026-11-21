@@ -83,6 +83,7 @@ namespace headsup
             info.status = a.status;
             info.jobs   = a.jobs;
             info.title  = a.title;
+            info.statuses = a.statuses;
             EntityState& st = info.state;
             st.kind      = a.kind;
             st.self      = a.self;
