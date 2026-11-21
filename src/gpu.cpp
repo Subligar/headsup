@@ -280,6 +280,7 @@ namespace headsup
         DWORD block = 0;
         if (FAILED(device->BeginStateBlock())) return std::nullopt;
         SetQuadStates(device, true);
+        device->SetTexture(0, nullptr); // only so the block captures and puts back texture 0
         if (FAILED(device->EndStateBlock(&block))) return std::nullopt;
         return block;
     }

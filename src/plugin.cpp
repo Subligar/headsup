@@ -1566,15 +1566,13 @@ private:
 #endif
     }
 
-    // Draws, then restore() puts back the game's states. The states the scene copy draws with are set again every time:
-    // a layer under Direct3D 8 can report a binding it no longer has, and on Windows the copy then drew its gray vertex
-    // color over the whole screen without texture 0. Under atom0s's proxy texture 0 comes back only through restore's
-    // state block, as its GetTexture keeps the texture alive for good.
+    // Draws, then restore() puts back the game's states, and texture 0 by hand: without it the scene copy drew gray on
+    // Windows. Under atom0s's proxy only the state blocks bring it back, as its GetTexture keeps the texture for good.
     template <typename Draw, typename Restore>
     void DrawThenRestore(Draw draw, Restore restore)
     {
         IDirect3DBaseTexture8* texture = nullptr;
-        if (m_ReadTexture) m_Device->GetTexture(0, &texture);
+        const bool read                = m_ReadTexture && SUCCEEDED(m_Device->GetTexture(0, &texture));
         const headsup::CopyState before = headsup::ReadCopyState(m_Device);
         m_Drawing = true;
         draw();
@@ -1583,7 +1581,7 @@ private:
         if (const std::string lost = headsup::StatesNotRestored(before, headsup::ReadCopyState(m_Device)); !lost.empty())
             Note("Direct3D did not put back the game's " + lost + " after HeadsUp drew; HeadsUp puts them back itself.");
         headsup::RestoreCopyState(m_Device, before);
-        if (!m_ReadTexture) return;
+        if (!read) return;
         m_Device->SetTexture(0, texture);
         if (texture != nullptr) texture->Release();
     }
