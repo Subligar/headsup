@@ -184,8 +184,9 @@ namespace headsup
         PartyMembers,
         StatusFavorites, StatusBuffs, StatusDebuffs,
         WorldConquest, WorldTravel, WorldCalendar, WorldGuilds,
+        DpsMembers,
     };
-    constexpr int kCardKindCount = static_cast<int>(CardKind::WorldGuilds) + 1;
+    constexpr int kCardKindCount = static_cast<int>(CardKind::DpsMembers) + 1;
 
     struct PopupSection
     {

@@ -361,6 +361,7 @@ namespace headsup
         constexpr const char* kSupplyFlagsKey = "supplyFlags";
         constexpr const char* kMemTextKey   = "memText";
         constexpr const char* kHomePointWrapKey = "homePointWrap";
+        constexpr const char* kDpsSecondsKey = "dpsSeconds", *kDpsPetsKey = "dpsPets";
         constexpr const char* kStatusDisplayKey = "statusDisplay";
         const char* const kStatusDisplayNames[kStatusDisplayCount] = {"name", "icon", "both"};
         constexpr const char* kTimerFormatKey = "statusTimerFormat";
@@ -397,7 +398,7 @@ namespace headsup
         constexpr const char* kNoticeSoundKeys[] = {"friendNoticeOnlineSound", "friendNoticeOfflineSound", "partyNoticeSound"};
         static_assert(std::size(kNoticeSoundFields) == std::size(kNoticeSoundKeys));
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers", "barCustom"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers", "barDps", "barCustom"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1416,6 +1417,7 @@ namespace headsup
             w.linkPadding  = std::clamp(w.linkPadding, 0, kMaxWidgetSpacing);
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
             w.expBarHeight = std::clamp(w.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight);
+            w.dpsSeconds   = std::clamp(w.dpsSeconds, kMinDpsSeconds, kMaxDpsSeconds);
             w.targetDetection &= kAllDetection;
             if (w.worldRoute < 0 || w.worldRoute >= static_cast<int>(TravelRoutes().size())) w.worldRoute = fresh.worldRoute;
             if (w.worldGuild < 0 || w.worldGuild >= static_cast<int>(GuildShops().size())) w.worldGuild = fresh.worldGuild;
@@ -1567,6 +1569,10 @@ namespace headsup
             case BarWidget::HomePoint:
                 o.wrapText = flag(kHomePointWrapKey, o.wrapText);
                 break;
+            case BarWidget::Dps:
+                o.dpsSeconds = number(kDpsSecondsKey, o.dpsSeconds);
+                o.dpsPets    = flag(kDpsPetsKey, o.dpsPets);
+                break;
             case BarWidget::StatusTimers:
                 o.statusDisplay = static_cast<StatusDisplay>(NameIndex(kStatusDisplayNames, kStatusDisplayCount,
                     text(kStatusDisplayKey), static_cast<int>(o.statusDisplay)));
@@ -1682,6 +1688,10 @@ namespace headsup
                 break;
             case BarWidget::HomePoint:
                 flag(kHomePointWrapKey, o.wrapText);
+                break;
+            case BarWidget::Dps:
+                StoreFloat(store, CopyKey(kDpsSecondsKey, w), static_cast<float>(o.dpsSeconds));
+                flag(kDpsPetsKey, o.dpsPets);
                 break;
             case BarWidget::StatusTimers:
                 text(kStatusDisplayKey, kStatusDisplayNames[static_cast<int>(o.statusDisplay)]);

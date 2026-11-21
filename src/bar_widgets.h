@@ -5,6 +5,7 @@
 #include "bar_fps.h"
 #include "bar_job.h"
 #include "bar_memory.h"
+#include "bar_dps.h"
 #include "bar_party.h"
 #include "bar_statuses.h"
 #include "bar_types.h"
@@ -92,6 +93,8 @@ namespace headsup
         bool turnInsFailed = false;             // the last fetch got no answer
         std::optional<CraftRanks> crafts;       // yours, once the server sent them
         const std::vector<FriendEntry>* friends = nullptr; // the game's friend list, as last read
+        const DamageMeter* damage = nullptr; // your party's, with the plugin's clock at its last Add
+        double damageNow = 0.0;
     };
 
     // What the panel reads of your character, which the game empties or fills partway while you change zones.
@@ -130,6 +133,7 @@ namespace headsup
         bool cpu        = false;
         bool linuxxi    = false;
         bool conquest   = false; // your nation and supply runs, for World Info's conquest and Currency's points
+        bool dps        = false; // the party's fighters, for the meter
         int containers = 0; // bags from 0 up to this
     };
     BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing); // showing: the popups shown

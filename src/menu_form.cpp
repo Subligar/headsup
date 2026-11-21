@@ -1228,6 +1228,13 @@ namespace headsup
                 case WidgetTabsRow::WrapText:
                     if (kind == BarWidget::HomePoint) form.Switch(label.c_str(), o.wrapText, ownDefault().c_str());
                     break;
+                case WidgetTabsRow::AverageOver:
+                    if (kind == BarWidget::Dps)
+                        form.SliderInt(label.c_str(), o.dpsSeconds, kMinDpsSeconds, kMaxDpsSeconds, Seconds, ownDefault().c_str());
+                    break;
+                case WidgetTabsRow::IncludePets:
+                    if (kind == BarWidget::Dps) form.Switch(label.c_str(), o.dpsPets, ownDefault().c_str());
+                    break;
                 case WidgetTabsRow::Icon:
                     // Named after its widget's icon, as the Widget Designer's button for it was; the row's own name
                     // for a widget with no designer.
@@ -3288,6 +3295,8 @@ namespace headsup
         case WidgetTabsRow::MemText: return onOff(o.memText);
         case WidgetTabsRow::SyncedLevel: return onOff(o.syncedLevel);
         case WidgetTabsRow::WrapText: return onOff(o.wrapText);
+        case WidgetTabsRow::AverageOver: return Seconds(o.dpsSeconds);
+        case WidgetTabsRow::IncludePets: return onOff(o.dpsPets);
         case WidgetTabsRow::UniformFont: return onOff(o.uniformFont);
         case WidgetTabsRow::StatusDisplay: return option(WindowList::StatusDisplay, o.statusDisplay);
         case WidgetTabsRow::TimerFormat: return option(WindowList::TimerFormat, o.timerFormat);

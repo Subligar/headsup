@@ -26,6 +26,7 @@ namespace headsup
         constexpr P kWorld[]  = {P::WorldShip, P::WorldGuild, P::WorldSanDoria, P::WorldBastok,
             P::WorldWindurst, P::WorldBeastmen};
         constexpr P kHomePoint[] = {P::HomePointName};
+        constexpr P kDps[]       = {P::DpsYou, P::DpsParty};
 
         // By WidgetPart.
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "coordinates", "icon", "weather",
@@ -33,13 +34,13 @@ namespace headsup
             "coin", "name1", "name2", "amount1", "amount2", "icon1", "icon2", "count1", "count2", "name1", "name2", "icon", "time", "server", "vana", "icon", "date", "jobs", "earned", "tonext", "percent", "bar",
             "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "icon", "pin1", "pin2",
             "pin3", "pin4", "pin5", "pin6", "ship",
-            "guild", "sandoria", "bastok", "windurst", "beastmen", "name", "icon", "name"};
+            "guild", "sandoria", "bastok", "windurst", "beastmen", "name", "icon", "you", "party", "name"};
 
         // As each widget showed before it had a design.
         constexpr const char* kDefaults[kBarWidgetCount] = {"name coordinates | region nation", "weather | day time -date -moon",
             "name distance -detection | level player -weak", "amount1 | icon2 amount2 -name1 -name2 -icon1", "count1 | name1", "time | -server -vana -date", "", "-fps sent received percent -memory messages |",
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
-            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "", "name |"};
+            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "", "you | party", "name |"};
 
         constexpr char kOffMark = '-', kSpace = ' ', kWidgetMark = '.', kUnderMark = '/';
 
@@ -75,7 +76,7 @@ namespace headsup
             {W::Party, "party.members"}, {W::StatusTimers, "statusTimers.favorites"},
             {W::StatusTimers, "statusTimers.buffs"}, {W::StatusTimers, "statusTimers.debuffs"},
             {W::World, "world.conquest"}, {W::World, "world.travel"}, {W::World, "world.calendar"},
-            {W::World, "world.guilds"}};
+            {W::World, "world.guilds"}, {W::Dps, "dps.members"}};
 
         // By BarWidget: each pop-out's cards as it laid them out before it had a design.
         constexpr const char* kPopupDefaults[kBarWidgetCount] = {"zone.influence zone.players | zone.travel | zone.shops",
@@ -88,7 +89,7 @@ namespace headsup
             "performance.connection performance.session | performance.memory performance.processor"
             " | performance.playOnline performance.linuxxi performance.lua",
             "job.exp", "party.members", "statusTimers.favorites | statusTimers.buffs | statusTimers.debuffs",
-            "world.conquest world.travel/world.calendar | world.guilds", "", "", "", ""};
+            "world.conquest world.travel/world.calendar | world.guilds", "", "", "", "dps.members", ""};
         constexpr const char* kNoCards = "none"; // a pop-out design with no card, which "" would not be
 
         bool Holds(std::span<const WidgetPart> parts, WidgetPart part) { return std::ranges::find(parts, part) != parts.end(); }
@@ -295,11 +296,12 @@ namespace headsup
         case BarWidget::StatusTimers: return kStatus;
         case BarWidget::World: return kWorld;
         case BarWidget::HomePoint: return kHomePoint;
+        case BarWidget::Dps: return kDps;
         }
         return {};
     }
 
-    bool HasDesigner(BarWidget kind) { return !PartsOf(kind).empty() && kind != BarWidget::HomePoint; }
+    bool HasDesigner(BarWidget kind) { return !PartsOf(kind).empty() && kind != BarWidget::HomePoint && kind != BarWidget::Dps; }
 
     BarWidget WidgetOfPart(WidgetPart part)
     {

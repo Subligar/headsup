@@ -48,6 +48,16 @@ namespace headsup
 
     namespace
     {
+        // By the server's msg_basic.h and msg.lua ids of the messages whose value is damage the actor dealt: a result's
+        // own, and an additional effect's (a skillchain's too, SkillchainDamage). Spikes and counters are the target's
+        // damage to the actor, so they are left out.
+        constexpr uint32_t kDamageMessages[] = {1, 2, 67, 77, 110, 157, 185, 187, 197, 227, 252, 264, 274, 281, 317, 352,
+            353, 379, 522, 576, 577, 747};
+        constexpr uint32_t kAddedDamageMessages[] = {161, 163, 229};
+    }
+
+    namespace
+    {
         struct Skillchain
         {
             std::string_view name;
@@ -76,6 +86,12 @@ namespace headsup
             if (message == kRadianceDamage || message == kRadianceHealing) return kSkillchains[kRadiance - 1];
             if (message == kUmbraDamage || message == kUmbraHealing) return kSkillchains[kUmbra - 1];
             return std::nullopt;
+        }
+
+        bool SkillchainDamage(uint32_t message)
+        {
+            return (message > kSkillchainDamage && message <= kSkillchainDamage + kSkillchainCount) ||
+                   message == kRadianceDamage || message == kUmbraDamage;
         }
 
         // By the server's msg_basic.h ids; the first that fits wins. 264, damage to an area spell's next target, is the
@@ -138,9 +154,9 @@ namespace headsup
         constexpr uint32_t kActorBits = 32, kTargetsBits = 6, kResultsSumBits = 4, kCommandBits = 4, kArgumentBits = 32,
                            kInfoBits = 32, kTargetIdBits = 32, kResultsBits = 4;
         // A result: miss, kind, animation, info, distortion and knockback, then value, message and modifier; an
-        // additional effect's 37 bits and spikes' 34 after a bit each that says they are there.
+        // additional effect's 10 bits, value and message, and spikes' 34 bits, after a bit each that says they are there.
         constexpr uint32_t kResultLeadBits = 3 + 2 + 12 + 5 + 2 + 3, kValueBits = 17, kMessageBits = 10, kModifierBits = 31,
-                           kAddedBits = 6 + 4 + 17 + 10, kSpikesBits = 6 + 4 + 14 + 10;
+                           kAddedLeadBits = 6 + 4, kSpikesBits = 6 + 4 + 14 + 10;
 
         class BitReader
         {
@@ -179,14 +195,24 @@ namespace headsup
             if (!results) return std::nullopt;
             for (uint32_t r = 0; r < *results; ++r)
             {
-                bits.Skip(kResultLeadBits + kValueBits);
-                const std::optional<uint32_t> message = bits.Read(kMessageBits);
+                bits.Skip(kResultLeadBits);
+                const std::optional<uint32_t> value = bits.Read(kValueBits), message = bits.Read(kMessageBits);
                 bits.Skip(kModifierBits);
                 const std::optional<uint32_t> added = bits.Read(1);
-                if (added && *added) bits.Skip(kAddedBits);
+                std::optional<uint32_t> addedValue = 0, addedMessage = 0;
+                if (added && *added)
+                {
+                    bits.Skip(kAddedLeadBits);
+                    addedValue   = bits.Read(kValueBits);
+                    addedMessage = bits.Read(kMessageBits);
+                }
                 const std::optional<uint32_t> spikes = bits.Read(1);
                 if (spikes && *spikes) bits.Skip(kSpikesBits);
-                if (!message || !spikes) return std::nullopt;
+                if (!value || !message || !addedValue || !addedMessage || !spikes) return std::nullopt;
+                if (std::ranges::find(kDamageMessages, *message) != std::end(kDamageMessages)) sent.damage += *value;
+                if (std::ranges::find(kAddedDamageMessages, *addedMessage) != std::end(kAddedDamageMessages) ||
+                    SkillchainDamage(*addedMessage))
+                    sent.damage += *addedValue;
                 const bool kept = lone ? r < kMostLoneResults : r == 0;
                 if (kept && sent.records < kMostSentRecords) sent.messages[sent.records++] = static_cast<uint16_t>(*message);
             }
