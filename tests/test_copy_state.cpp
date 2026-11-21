@@ -12,7 +12,6 @@ namespace
     CopyState SceneCopy()
     {
         CopyState state;
-        state.texture        = 0x18CE3640;
         state.colorOp        = 4; // D3DTOP_MODULATE
         state.colorArg1      = 2; // D3DTA_TEXTURE
         state.colorArg2      = 0; // D3DTA_DIFFUSE
@@ -29,14 +28,6 @@ namespace
 TEST(nothing_is_reported_when_every_state_came_back)
 {
     CHECK_EQ(StatesNotRestored(SceneCopy(), SceneCopy()), "");
-}
-
-TEST(a_texture_left_unbound_is_reported)
-{
-    // HeadsUp unbinds its own textures when it is done; the copy then draws its gray vertex color over the screen.
-    CopyState after = SceneCopy();
-    after.texture   = 0;
-    CHECK_EQ(StatesNotRestored(SceneCopy(), after), "texture 0");
 }
 
 TEST(every_state_that_did_not_come_back_is_named)

@@ -46,19 +46,10 @@ namespace headsup
         return SUCCEEDED(device->GetVertexShader(&fvf)) && !IsDeclarationHandle(fvf);
     }
 
-    uintptr_t BoundTexture(IDirect3DDevice8* device)
-    {
-        IDirect3DBaseTexture8* bound = nullptr;
-        if (FAILED(device->GetTexture(0, &bound)) || bound == nullptr) return 0;
-        bound->Release();
-        return reinterpret_cast<uintptr_t>(bound);
-    }
-
     CopyState ReadCopyState(IDirect3DDevice8* device)
     {
         CopyState state;
-        state.texture = BoundTexture(device);
-        DWORD value   = 0;
+        DWORD value = 0;
         auto stage    = [&](D3DTEXTURESTAGESTATETYPE type) { return SUCCEEDED(device->GetTextureStageState(0, type, &value)) ? value : 0; };
         auto render   = [&](D3DRENDERSTATETYPE type) { return SUCCEEDED(device->GetRenderState(type, &value)) ? value : 0; };
         state.colorOp   = stage(D3DTSS_COLOROP);
@@ -81,9 +72,8 @@ namespace headsup
         return state;
     }
 
-    void RestoreCopyState(IDirect3DDevice8* device, const CopyState& state, IDirect3DBaseTexture8* texture)
+    void RestoreCopyState(IDirect3DDevice8* device, const CopyState& state)
     {
-        device->SetTexture(0, texture);
         device->SetTextureStageState(0, D3DTSS_COLOROP, state.colorOp);
         device->SetTextureStageState(0, D3DTSS_COLORARG1, state.colorArg1);
         device->SetTextureStageState(0, D3DTSS_COLORARG2, state.colorArg2);

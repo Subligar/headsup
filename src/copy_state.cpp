@@ -30,7 +30,6 @@ namespace headsup
             if (!lost.empty()) lost += ", ";
             lost += name;
         };
-        check(before.texture == after.texture, "texture 0");
         check(before.colorOp == after.colorOp, "color op");
         check(before.colorArg1 == after.colorArg1, "color argument 1");
         check(before.colorArg2 == after.colorArg2, "color argument 2");

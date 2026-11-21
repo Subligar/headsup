@@ -414,13 +414,14 @@ namespace headsup
         uint32_t g_DrawnFrame[kMaxEntities] = {};
         uint32_t g_Frame                    = 1;
         NameStats g_Stats;
-        IDirect3DSurface8* g_SceneTarget    = nullptr; // identities only: the game owns them
+        // Held until the next frame: a Direct3D 9 layer frees its wrapper of the game's surface once the game moves on.
+        IDirect3DSurface8* g_SceneTarget    = nullptr;
         IDirect3DSurface8* g_SceneDepth     = nullptr;
 
         // Written at Present and read by OnCombatText and the plugin's draw hook, all on the render thread.
         bool g_TakeCombatText = false;
         CombatPopupList g_CombatPopups;
-        IDirect3DSurface8* g_CombatTarget = nullptr; // identities only, as the names'
+        IDirect3DSurface8* g_CombatTarget = nullptr; // held, as the names'
         IDirect3DSurface8* g_CombatDepth  = nullptr;
         uint32_t g_CombatTargetWidth = 0, g_CombatTargetHeight = 0;
         // Written by the tie gates, on the game's thread, and read at the popup's draw.
@@ -428,6 +429,13 @@ namespace headsup
         EarlyPopups g_EarlyPopups;
         SentActions g_SentActions;
         uintptr_t g_PopupDecision = 0, g_PopupParticleBuild = 0, g_PopupParse = 0, g_PopupShow = 0;
+
+        void LetGo(IDirect3DSurface8*& surface)
+        {
+            if (surface != nullptr) surface->Release();
+            surface = nullptr;
+        }
+
         using PopupParseFn = uint8_t*(__attribute__((thiscall))*)(uint8_t* action, const uint8_t* bits);
         using PopupShowFn  = void(__cdecl*)(uint8_t* action, uint32_t index, uint32_t slot);
         uint32_t TargetRecords(const uint8_t* record)
@@ -533,15 +541,16 @@ namespace headsup
             if (FAILED(g_Device->GetRenderTarget(&target)) || target == nullptr) return;
             if (FAILED(g_Device->GetDepthStencilSurface(&depth))) depth = nullptr;
             D3DSURFACE_DESC desc{};
-            if (SUCCEEDED(target->GetDesc(&desc)))
+            g_CombatTarget = target;
+            g_CombatDepth  = depth;
+            if (FAILED(target->GetDesc(&desc)))
             {
-                g_CombatTarget       = target;
-                g_CombatDepth        = depth;
-                g_CombatTargetWidth  = desc.Width;
-                g_CombatTargetHeight = desc.Height;
+                LetGo(g_CombatTarget);
+                LetGo(g_CombatDepth);
+                return;
             }
-            target->Release();
-            if (depth != nullptr) depth->Release();
+            g_CombatTargetWidth  = desc.Width;
+            g_CombatTargetHeight = desc.Height;
         }
 
         const NameOwner* FindOwner(uint32_t actor)
@@ -561,8 +570,6 @@ namespace headsup
             if (FAILED(g_Device->GetDepthStencilSurface(&depth))) depth = nullptr;
             g_SceneTarget = target;
             g_SceneDepth  = depth;
-            target->Release();
-            if (depth != nullptr) depth->Release();
         }
 
         bool Readable(const uint8_t* at, size_t bytes)
@@ -679,9 +686,9 @@ namespace headsup
     void NameHook::NewFrame(std::vector<NameOwner> owners)
     {
         ++g_Frame;
-        g_Stats       = {};
-        g_SceneTarget = nullptr;
-        g_SceneDepth  = nullptr;
+        g_Stats = {};
+        LetGo(g_SceneTarget);
+        LetGo(g_SceneDepth);
         std::sort(owners.begin(), owners.end(), [](const NameOwner& a, const NameOwner& b) { return a.actor < b.actor; });
         g_Owners    = std::move(owners);
         g_HideNames = false;
@@ -738,6 +745,8 @@ namespace headsup
 
     std::string NameHook::Stop()
     {
+        LetGo(g_SceneTarget);
+        LetGo(g_SceneDepth);
         if (!Running()) return "";
         const std::vector<CodePatch> patches = std::exchange(m_Patches, {});
         g_Owners.clear(); // the gate then resumes the routine for every name
@@ -889,6 +898,8 @@ namespace headsup
     {
         g_TakeCombatText = false; // a gate left in memory passes every popup on
         g_CombatPopups.End();
+        LetGo(g_CombatTarget);
+        LetGo(g_CombatDepth);
         if (!Running()) return "";
         const std::array<CodePatch, 3> early = std::exchange(m_Early, {});
         const std::string earlyBack = early[0].at != nullptr ? TakeOut(early, "the game's early combat popups") : "";
@@ -906,8 +917,8 @@ namespace headsup
         g_PopupTies.SetNow(now);
         g_SentActions.Clear();
         g_CombatPopups.NewFrame();
-        g_CombatTarget       = nullptr;
-        g_CombatDepth        = nullptr;
+        LetGo(g_CombatTarget);
+        LetGo(g_CombatDepth);
         g_CombatTargetWidth  = 0;
         g_CombatTargetHeight = 0;
     }
