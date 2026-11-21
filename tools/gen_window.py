@@ -248,7 +248,9 @@ PIECES = Pieces(
            'setup-choice-theme': True, 'setup-choice-nameplates': True, 'setup-choice-mob-plates': True, 'setup-choice-mob-design': True,
            'setup-choice-outlines': True, 'setup-choice-outline-thickness': True, 'setup-choice-cursor': True,
            'setup-choice-players': True, 'setup-choice-self': True, 'setup-choice-player-icons': True, 'setup-choice-npcs': True, 'setup-choice-pets': True,
-           'setup-choice-panel': True, 'setup-choice-pointer': True},
+           'setup-choice-panel': True, 'setup-choice-pointer': True,
+           'sends-packets': True, 'sends-auto-check': False, 'sends-look-up-players': False, 'sends-conquest': False,
+           'sends-currencies': False},
 )
 
 

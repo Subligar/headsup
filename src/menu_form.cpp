@@ -114,6 +114,8 @@ namespace headsup
         }
         const char* Word(const Context& c, WindowWord word) { return c.layout.WordOf(word).name; }
         const char* WordTip(const Context& c, WindowWord word) { return c.layout.WordOf(word).tip; }
+        // A warning that HeadsUp sends the server packets, and what for.
+        std::string Sends(const Context& c, WindowWord what) { return Words(Word(c, WindowWord::SendsPackets)) + ": " + Words(WordTip(c, what)); }
         std::string_view FileName(std::string_view path) { return path.substr(path.find_last_of("\\/") + 1); }
 
         // A cutoff as its dropdown shows it: the rank, which no chance stands for without a mob, or Off past the end.
@@ -1460,6 +1462,18 @@ namespace headsup
             if (boxed) c.form.Raw("</div>");
         }
 
+        // What HeadsUp asks the server for while a widget shows, for the warning on its chip.
+        std::optional<WindowWord> SendsFor(BarWidget kind)
+        {
+            switch (kind)
+            {
+            case BarWidget::Zone:
+            case BarWidget::World: return WindowWord::SendsConquest;
+            case BarWidget::Currency: return WindowWord::SendsCurrencies;
+            default: return std::nullopt;
+            }
+        }
+
         // Left, Center and Right as trays sunk into the card, each holding its widgets as raised chips in bar order:
         // a chip drags to another place or tray, and a click on one that is on opens its popup on the panel on its
         // settings, or closes it when it shows them already. Its toggle turns it on and off, the button at its right
@@ -1515,7 +1529,9 @@ namespace headsup
                     // Floated right, so the first is the rightmost.
                     if (HasCopies(held[i].kind) && action(kChipClone, Icon::Clone, WindowWord::WidgetTabsClone)) clone = held[i];
                     if (!IsFirstCopy(held[i]) && action(kChipRemove, Icon::Delete, WindowWord::WidgetTabsRemoveCopy)) remove = held[i];
-                    form.Raw("</div><div class=\"wname\">" + EscapedRml(CopyName(c, held[i])) + "</div></div>");
+                    const std::optional<WindowWord> sends = SendsFor(held[i].kind);
+                    form.Raw("</div><div class=\"wname\">" + EscapedRml(CopyName(c, held[i])) +
+                             (sends ? SendsPacketsMark(Sends(c, *sends)) : std::string()) + "</div></div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
                     if (!form.Off() && was && s.widgets[w].on && held[i].kind != BarWidget::Settings && form.Clicked(id))
                         c.state.settingsAsked = held[i];
@@ -2026,10 +2042,12 @@ namespace headsup
                 break;
             case SettingPiece::AutoCheck:
                 form.Fade(!plates);
+                form.SendsPackets(Sends(c, WindowWord::SendsAutoCheck));
                 form.Switch(label.c_str(), s.autoCheck, tip);
                 break;
             case SettingPiece::LookUpPlayers:
                 form.Fade(!plates);
+                form.SendsPackets(Sends(c, WindowWord::SendsLookUpPlayers));
                 form.Switch(label.c_str(), s.lookUpPlayers, tip);
                 break;
             case SettingPiece::ScaleWithDistance:
