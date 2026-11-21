@@ -454,6 +454,11 @@ namespace headsup
                     form.EndRow();
                     continue;
                 }
+                if (const auto key = KeyFromShortName(window); key && CompassWindow(*key))
+                {
+                    form.EndRow();
+                    continue;
+                }
                 // The player's place for it, else where it stands now, muted: typing either number puts it there.
                 const auto pin = std::ranges::find(s.pinnedWindows, window, &WindowPlace::name);
                 const bool pinned = pin != s.pinnedWindows.end();

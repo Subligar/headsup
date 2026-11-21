@@ -261,7 +261,9 @@ namespace headsup
         CodePatch m_CountCall; // an item list's count's ask for it, when it was found
         CodePatch m_MoveStart; // MCD::MoveTo's start, so a window the game moves goes where HeadsUp would put it
         CodePatch m_BuildCall; // the catalog's window build, so where a new window goes is known before it draws
+        CodePatch m_Compass;   // the compass routine's answer while the Compass row hides it
         std::string m_MoveProblem;
+        void PutCompassBack();
     };
 
     // Puts right the game's guess of its window's client area (native_locate.h's PointerMapping): each guess's

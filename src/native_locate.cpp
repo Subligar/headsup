@@ -101,6 +101,12 @@ namespace headsup
             0x8B, 0x4A, 0x08, 0xE8, -1, -1, -1, -1, 0x8B, 0x4C, 0x24, 0x0A, 0x8B, 0x54, 0x24, 0x04, 0x8D, 0x44, 0x24, 0x10,
             0x68, 0x80, 0x80, 0x80, 0x80, 0x83, 0xC1, 0x03};
         constexpr uint32_t kScanLabelCall = 17;
+        // The routine that says whether the zone shows the compass, from its zone test to its `mov al,1; ret`. The
+        // answer is a wildcard: another tool (HUDBeGone) may already have written 0 there.
+        constexpr int16_t kCompassShown[] = {0x33, 0xC0, 0x66, 0x8B, 0x81, -1, -1, -1, -1, 0x48, 0x3D, 0xE3, 0x00, 0x00,
+            0x00, 0x77, 0x12, 0x33, 0xC9, 0x8A, 0x88, -1, -1, -1, -1, 0xFF, 0x24, 0x8D, -1, -1, -1, -1, 0x32, 0xC0, 0xC3,
+            0xB0, -1, 0xC3};
+        constexpr uint32_t kCompassShownAnswer = 0x24;
         constexpr int16_t kStripCount[] = {0xA1, -1, -1, -1, -1, 0x83, 0xEC, 0x2C, 0x53, 0x33, 0xDB, 0x56, 0x3B, 0xC3, 0x57,
             0x0F, 0x84, -1, -1, -1, -1, 0x39, 0x58, 0x08, 0x0F, 0x84, -1, -1, -1, -1, 0x8D, 0x4C, 0x24, 0x0C, 0x66, 0x89,
             0x5C, 0x24, 0x0C, 0x66, 0x89, 0x5C, 0x24, 0x0E, 0x66, 0x89, 0x5C, 0x24, 0x10, 0x66, 0x89, 0x5C, 0x24, 0x12, 0x51,
@@ -189,6 +195,7 @@ namespace headsup
         constexpr char kNetstatWindow[]      = "menu    netstat "; // the space is part of its name
         constexpr char kAuctionListWindow[]  = "menu    auclist ";
         constexpr char kCommandsWindow[]     = "menu    menuwind";
+        constexpr char kCompassWindow[]      = "menu    compass "; // the space is part of its name
 
         // The menu catalog's records: two dwords, the window's name, and kCatalogSlot in, its owner's slot.
         constexpr int16_t kHelpRecord[]  = {0x2B, 0x00, 0x01, 0x00, 0x35, 0x07, 0x00, 0x00, 'm', 'e', 'n', 'u', ' ', ' ',
@@ -884,6 +891,13 @@ namespace headsup
         return TitleRectSite{LocateProblem::None, call};
     }
 
+    std::optional<uint32_t> LocateCompassShown(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kCompassShown, text);
+        if (found.size() != 1) return std::nullopt;
+        return text.rva + found.front() + kCompassShownAnswer;
+    }
+
     std::optional<WindowKey> WindowKeyOf(const char* name)
     {
         if (name == nullptr || std::memcmp(name, kMenuPrefix, kMenuPrefixLength) != 0) return std::nullopt;
@@ -924,6 +938,8 @@ namespace headsup
     bool FollowsHelpStrip(const WindowKey& key) { return HelpStripWindow(key) || KeyOf(key, kNetstatWindow); }
 
     bool TitleWindow(const WindowKey& key) { return KeyOf(key, kTitleWindow); }
+
+    bool CompassWindow(const WindowKey& key) { return KeyOf(key, kCompassWindow); }
 
     bool MovableWindow(const WindowKey& key) { return !FollowsHelpStrip(key); }
 
