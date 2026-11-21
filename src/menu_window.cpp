@@ -48,6 +48,8 @@ namespace headsup
         // as each font is loaded in one weight. Text drawn larger or edged by half a pixel is blurred.
         constexpr float kSelectedGrowth = 1.04f;
         constexpr int kBoldShift        = 1; // pixels
+        // Either side of a list's entries, the room a grown one takes.
+        constexpr float kEntryRoom = kListWidth * (kSelectedGrowth - 1.0f) / 2.0f;
 
         // The selection's ground: the soft accent laid over a control's own, which the soft accent alone would darken.
         uint32_t LitGround(const MenuColors& c)
@@ -91,8 +93,9 @@ namespace headsup
             css += std::string(".") + kColumnClass + "{display:flex;flex-direction:column;gap:" + Em(kControlGap) + ";}";
             // As tall as its rows and the gap above each, the last entry's own gap under it.
             const float listTall = (kEntryGap + static_cast<float>(kListRows) * (kEntryHeight + kEntryGap)) * pixels + 2.0f * kListEdge;
-            css += std::string(".") + kListClass + "{box-sizing:border-box;width:" + Em(kListWidth) + ";height:" + Px(listTall) +
-                   ";overflow-y:auto;padding:" + Em(kEntryGap) + " " + Em(kEntryGap) + " 0px " + Em(kEntryGap) + ";background-color:" +
+            const std::string side = Em(kEntryGap + kEntryRoom);
+            css += std::string(".") + kListClass + "{box-sizing:border-box;width:" + Em(kListWidth + 2.0f * kEntryRoom) + ";height:" +
+                   Px(listTall) + ";overflow-y:auto;padding:" + Em(kEntryGap) + " " + side + " 0px " + side + ";background-color:" +
                    RcssColor(c.inset) + ";border:" + Px(kListEdge) + " " + RcssColor(c.border) + ";border-radius:" + Em(kRadius) + ";}";
             css += ".entry{box-sizing:border-box;height:" + Em(kEntryHeight) + ";margin-bottom:" + Em(kEntryGap) + ";padding:0px " +
                    Em(kEntryPad) + ";line-height:" + Em(kEntryHeight) + ";white-space:nowrap;border-radius:" + Em(kRadius) +

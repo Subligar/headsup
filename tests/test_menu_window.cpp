@@ -497,6 +497,28 @@ TEST(the_selection_lights_and_grows_its_ground_and_bolds_its_text_without_moving
     CHECK_EQ(w.rml.Said(), "");
 }
 
+TEST(a_lists_entry_drawn_larger_stays_inside_its_list)
+{
+    Windows w;
+    w.windows.Open(Bag());
+    w.Settle();
+    Rml::Element* list = w.Element("bag", "items");
+    const float left   = list->GetAbsoluteOffset(Rml::BoxArea::Padding).x;
+    const float right  = left + list->GetClientWidth();
+    for (const std::string& id : {std::string("items-0"), std::string("items-1")})
+    {
+        w.PointAt("bag", id);
+        w.Settle();
+        Rml::Element* ground = GroundOf(w.Element("bag", id));
+        const Rml::Vector2f at = ground->GetAbsoluteOffset(Rml::BoxArea::Border), size = ground->GetBox().GetSize(Rml::BoxArea::Border);
+        // The list's sides, as the grown ground's own points: past its edges when the ground is drawn inside them.
+        const float middle = at.y + size.y / 2.0f;
+        Rml::Vector2f from{left, middle}, to{right, middle};
+        CHECK(ground->Project(from) && ground->Project(to));
+        CHECK(from.x <= at.x && to.x >= at.x + size.x);
+    }
+}
+
 namespace
 {
     // An entry left lit in its list: its background as the selection's, its text neither bold nor grown.
