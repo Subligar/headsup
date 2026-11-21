@@ -1,9 +1,7 @@
 #include "menu_nav.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstdlib>
 
 namespace headsup
 {
@@ -45,7 +43,7 @@ namespace headsup
         // Ashita's XInput numbers: a button is its bit's place in XINPUT_GAMEPAD's wButtons, then the triggers (16, 17)
         // and the sticks' axes.
         constexpr uint32_t kPadUp = 0, kPadDown = 1, kPadLeft = 2, kPadRight = 3, kPadLeftBumper = 8, kPadRightBumper = 9,
-                           kPadA = 12, kPadB = 13, kStickAcross = 18, kStickUp = 19;
+                           kPadA = 12, kPadB = 13;
         // The game's own confirm and cancel buttons are the player's to set (padsin000): these are what XInput pads name them.
         constexpr uint32_t kPadConfirm = kPadA, kPadCancel = kPadB;
         // DirectInput's DIJOYSTATE: the first hat's offset, in hundredths of a degree from up, its low word all ones when
@@ -111,13 +109,6 @@ namespace headsup
             return quarter < kHatMoves.size() ? kHatMoves[quarter] : MenuAction::None;
         }
 
-        MenuAction StickMove(int32_t across, int32_t up)
-        {
-            if (std::max(std::abs(across), std::abs(up)) <= kStickDeadZone) return MenuAction::None;
-            if (std::abs(across) > std::abs(up)) return across < 0 ? MenuAction::Left : MenuAction::Right;
-            return up < 0 ? MenuAction::Down : MenuAction::Up;
-        }
-
         bool Moves(MenuAction action) { return action >= MenuAction::Up && action <= MenuAction::Right; }
 
         constexpr std::array kActionNames{"None", "Up", "Down", "Left", "Right", "Confirm", "Cancel", "TabLeft", "TabRight"};
@@ -154,15 +145,14 @@ namespace headsup
         {
         case InputSource::Keyboard:
             if (KeyAction(event.code) == MenuAction::None) return std::nullopt;
-            return MenuControl{event.value != 0, false};
+            return MenuControl{event.value != 0};
         case InputSource::XInput:
-            if (event.code == kStickAcross || event.code == kStickUp) return MenuControl{false, true};
             if (PadAction(event.code) == MenuAction::None) return std::nullopt;
-            return MenuControl{event.value != 0, false};
+            return MenuControl{event.value != 0};
         case InputSource::DirectInput:
-            if (event.code == kHatOffset) return MenuControl{!HatCentred(event.value), false};
+            if (event.code == kHatOffset) return MenuControl{!HatCentred(event.value)};
             if (event.code < kFirstButton || DirectButtonAction(event.code) == MenuAction::None) return std::nullopt;
-            return MenuControl{(event.value & kButtonDown) != 0, false};
+            return MenuControl{(event.value & kButtonDown) != 0};
         }
         return std::nullopt;
     }
@@ -171,7 +161,6 @@ namespace headsup
     {
         const std::optional<MenuControl> control = ControlOf(event);
         if (!control) return false;
-        if (control->axis) return open;
         const auto key = std::pair(event.source, event.code);
         const auto at  = m_Down.find(key);
         if (!control->down)
@@ -200,11 +189,6 @@ namespace headsup
         case InputSource::Keyboard: return event.value != 0 ? KeyAction(event.code) : MenuAction::None;
         case InputSource::XInput:
         {
-            if (event.code == kStickAcross || event.code == kStickUp)
-            {
-                (event.code == kStickAcross ? m_StickX : m_StickY) = event.value;
-                return Change(m_Stick, StickMove(m_StickX, m_StickY), now);
-            }
             const MenuAction action = PadAction(event.code);
             if (!Moves(action)) return event.value != 0 ? action : MenuAction::None;
             if (event.value != 0) return Change(m_Pad, action, now);
@@ -221,13 +205,9 @@ namespace headsup
 
     MenuAction MenuInput::Due(double now)
     {
-        for (Hold* hold : {&m_Pad, &m_Stick})
-            if (hold->move != MenuAction::None && now >= hold->next)
-            {
-                hold->next = now + kPadRepeatInterval;
-                return hold->move;
-            }
-        return MenuAction::None;
+        if (m_Pad.move == MenuAction::None || now < m_Pad.next) return MenuAction::None;
+        m_Pad.next = now + kPadRepeatInterval;
+        return m_Pad.move;
     }
 
     void MenuInput::Reset() { *this = MenuInput{}; }
