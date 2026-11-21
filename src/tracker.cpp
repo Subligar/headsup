@@ -1,5 +1,7 @@
 #include "tracker.h"
 
+#include "markup.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -158,6 +160,8 @@ namespace headsup
             if (*p >= codeBegin && *p < codeEnd) return FindOwner(p + 1, end, tracker);
         return FindOwner(begin, end, tracker);
     }
+
+    std::string DistanceText(float yalms) { return std::isfinite(yalms) ? "(" + Decimal(yalms, 1) + ")" : std::string(); }
 
     float DistanceFromSquared(float squared)
     {

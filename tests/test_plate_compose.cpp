@@ -5,6 +5,7 @@
 #include <optional>
 #include <algorithm>
 #include <cstdint>
+#include <cmath>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -1254,4 +1255,24 @@ TEST(a_gm_has_a_plate_whatever_their_row_is_set_to)
         CHECK(HookActionFor(other, s, kPlayer, false, false) != HookAction::Replace);
     }
     CHECK(HookActionFor(staff, s, kPlayer, true, false) == HookAction::Hide); // screenshot mode still hides every name
+}
+
+// "Add a distance tag to the nameplate designer, so you can place the distance to the target on a nameplate like any
+// other tag." It reads as the Target widget's Show Distance does, and the line's conditions still pick its plates.
+TEST(the_distance_tag_shows_how_far_each_entity_is_as_the_target_widget_says_it)
+{
+    Settings s;
+    s.Kind(PlateKind::Mobs).lines[2].text = "$name $distance";
+    ActorInfo mob = AggressiveMob();
+    mob.distance  = 12.34f;
+    CHECK_EQ(Rendered(Compose(mob, s).lines[2]), "Young Quadav (12.3)");
+    CHECK_EQ(DistanceText(mob.distance), "(12.3)"); // the Target widget's, its test says
+    mob.distance = std::nanf("");
+    CHECK_EQ(DistanceText(mob.distance), "");
+    mob.distance = 12.34f;
+    // With Targeted alone, it is on your target's plate only.
+    s.Kind(PlateKind::Mobs).lines[2].show = LineShow{false, ConditionBit(ShowCondition::Targeted)};
+    CHECK_EQ(Compose(mob, s).lines.size(), size_t{2});
+    mob.state.target = TargetState::Targeted;
+    CHECK_EQ(Rendered(Compose(mob, s).lines[2]), "Young Quadav (12.3)");
 }
