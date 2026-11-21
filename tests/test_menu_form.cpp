@@ -749,7 +749,7 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
         return ids;
     };
     Window w;
-    CHECK(shown(w.Pass()).size() > 3u);
+    CHECK(shown(w.Pass()).size() > 1u);
     w.settings.enabled = false;
     const std::vector<std::string> off = shown(w.Pass());
     CHECK_EQ(off.size(), size_t{1}); // the one card that says HeadsUp is off
@@ -762,6 +762,16 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
     w.state.page       = Page::TopPanel;
     CHECK_EQ(shown(w.Pass()).size(), size_t{1});
     CHECK(shown(w.Pass()) != off);
+    // With the damage numbers off, theirs says so, and not that the top panel is.
+    const std::string panelNote = Block(w.Pass(), shown(w.Pass())[0].c_str())->rml;
+    w.settings.combatPopups = false;
+    w.state.page            = Page::DamageNumbers;
+    const std::vector<std::string> numbers = shown(w.Pass());
+    CHECK_EQ(numbers.size(), size_t{2}); // the page's description, then the one card
+    std::string numbersNote = Block(w.Pass(), numbers.back().c_str())->rml;
+    for (size_t at; (at = numbersNote.find("damagenumbers")) != std::string::npos;)
+        numbersNote.replace(at, std::string("damagenumbers").size(), "toppanel"); // the same ids, so only the note differs
+    CHECK(numbersNote != panelNote);
 }
 
 TEST(the_cursor_style_list_has_headsups_styles_then_the_folders_files)
@@ -2193,15 +2203,15 @@ TEST(a_widgets_tips_name_a_copys_own_defaults)
         if (!named(static_cast<WidgetTabsRow>(row.row), BarWidget::Job, 1).empty()) CHECK(Said(row.tip).find(kDefaultMark) != std::string_view::npos);
 }
 
-TEST(the_combat_popups_card_takes_changes_only_while_switched_on)
+TEST(the_damage_numbers_page_takes_changes_only_while_its_titles_switch_is_on)
 {
     Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::DamageNumbers;
     w.settings.combatPopups = false;
-    const std::string card = "entities-combat-popups", size = card + "-combat-popup-size", font = card + "-combat-popup-font";
+    const std::string card = "damagenumbers-damage-appearance", size = card + "-combat-popup-size", font = card + "-combat-popup-font";
     w.Pass({{size, kChangeEvent, "150"}});
     CHECK_EQ(w.settings.combatPopupSize, kDefaultCombatPopupSize);
-    w.Pass({{card + "-on", kClickEvent, ""}});
+    w.Pass({{"damagenumbers-on", kClickEvent, ""}});
     CHECK(w.settings.combatPopups);
     CHECK(w.Pass({{size, kChangeEvent, "150"}}).changed);
     CHECK_EQ(w.settings.combatPopupSize, 150);
@@ -2263,12 +2273,47 @@ TEST(only_the_skillchains_color_can_be_its_elements)
     CHECK(pickLast(PopupType::Critical, "combat-popup-critical-color") == ColorSource::Game);
 }
 
-TEST(the_combat_popups_test_button_asks_the_plugin_only_while_the_card_is_on_and_the_game_can_pop)
+TEST(the_damage_numbers_outline_takes_its_thickness_and_color_on_one_row_and_the_fade_its_speed)
 {
     Window w;
-    w.state.page             = Page::Entities;
+    w.state.page = Page::DamageNumbers;
+    const std::string card = "damagenumbers-damage-appearance", outline = card + "-combat-popup-outline";
+    const Form form = w.Pass();
+    const FormBlock* block = Block(form, card.c_str());
+    CHECK(block != nullptr);
+    // The swatch is on the slider's row, before the next row starts.
+    const std::string& rml = block->rml;
+    const size_t row = rml.find("id=\"" + outline + "-label-row\""), swatch = rml.find("id=\"" + outline + "-swatch\"");
+    CHECK(row != std::string::npos && swatch != std::string::npos && swatch > row && rml.find("class=\"row", row + 1) > swatch);
+    CHECK(w.Pass({{outline, kChangeEvent, "150"}}).changed);
+    CHECK_EQ(w.settings.combatPopupOutline, 150);
+    CHECK(w.Pass({{outline + "-swatch", kClickEvent, ""}}).popup);
+    CHECK(w.Pass({{outline + "-swatch-p-r", kChangeEvent, "255"}}).changed);
+    CHECK_EQ(ToArgb(w.settings.combatPopupOutlineColor), 0xFFFF0000u);
+    CHECK(w.Pass({{card + "-combat-popup-fade", kChangeEvent, "150"}}).changed);
+    CHECK_EQ(w.settings.combatPopupFade, 150);
+}
+
+TEST(popup_timing_is_vanilla_or_instant_and_instant_starts_them_early)
+{
+    Window w;
+    w.state.page = Page::DamageNumbers;
+    const std::string timing = "damagenumbers-damage-appearance-combat-popup-timing";
+    CHECK(w.settings.combatPopupRightAway);
+    CHECK(w.Pass({{timing, kClickEvent, ""}}).popup);
+    w.Pass({{timing + "-o-0", kClickEvent, ""}});
+    CHECK(!w.settings.combatPopupRightAway);
+    w.Pass({{timing, kClickEvent, ""}});
+    w.Pass({{timing + "-o-1", kClickEvent, ""}});
+    CHECK(w.settings.combatPopupRightAway);
+}
+
+TEST(the_damage_numbers_test_button_asks_the_plugin_only_while_they_are_on_and_the_game_can_pop)
+{
+    Window w;
+    w.state.page             = Page::DamageNumbers;
     w.readings.popupTestReady = true;
-    const std::string card = "entities-combat-popups", test = card + "-combat-popup-test";
+    const std::string test = std::string(kPageSwitchBlock) + "-test";
     w.settings.combatPopups = false;
     w.Pass({{test, kClickEvent, ""}});
     CHECK(!w.state.popupTestRequested);
@@ -2285,21 +2330,21 @@ TEST(the_combat_popups_test_button_asks_the_plugin_only_while_the_card_is_on_and
 
 namespace
 {
-    const std::string kPopupCard = "entities-combat-popups";
+    const std::string kPopupCard = "damagenumbers-damage-placement";
     std::string KindChip(PopupType type) { return kPopupCard + "-popup-kind-" + std::to_string(static_cast<int>(type)); }
     std::string ColumnEnd(PopupSide side) { return kPopupCard + "-popup-column-end-" + std::to_string(static_cast<int>(side)); }
 }
 
-TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_nudged_only_while_the_card_is_on)
+TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_spread_and_nudged_only_while_they_are_on)
 {
     Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::DamageNumbers;
     w.settings.combatPopups = false;
-    const std::string x = kPopupCard + "-combat-popup-x", y = kPopupCard + "-combat-popup-y", height = kPopupCard + "-combat-popup-height";
+    const std::string x = kPopupCard + "-combat-popup-spread", y = kPopupCard + "-combat-popup-y", height = kPopupCard + "-combat-popup-height";
     const PopupSide& spell    = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Spell)];
     const PopupSide& recovery = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)];
     w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}, {x, kChangeEvent, "40"}, {height, kChangeEvent, "50"}});
-    CHECK(spell == PopupSide::Right && w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
+    CHECK(spell == PopupSide::Right && w.settings.combatPopupSpread == kDefaultCombatPopupSpread && w.settings.combatPopupHeight == 90);
     w.settings.combatPopups = true;
     CHECK(w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}}).changed);
     CHECK(spell == PopupSide::Middle && w.settings.combatPopupSides[static_cast<size_t>(PopupType::Dealt)] == PopupSide::Right);
@@ -2309,27 +2354,15 @@ TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_nudged_only_
     CHECK(w.Pass({{x, kChangeEvent, "40"}}).changed);
     CHECK(w.Pass({{y, kChangeEvent, "-25"}}).changed);
     CHECK(w.Pass({{height, kChangeEvent, "50"}}).changed);
-    CHECK(w.settings.combatPopupX == 40 && w.settings.combatPopupY == -25 && w.settings.combatPopupHeight == 50);
+    CHECK(w.settings.combatPopupSpread == 40 && w.settings.combatPopupY == -25 && w.settings.combatPopupHeight == 50);
 }
 
-TEST(with_custom_placement_off_the_combat_popups_columns_start_height_and_offsets_take_no_change)
+TEST(status_popups_switch_with_damage_numbers_on_and_their_colors_are_picked_only_while_they_pop)
 {
     Window w;
-    w.state.page = Page::Entities;
-    w.Pass({{kPopupCard + "-combat-popup-placement", kClickEvent, ""}});
-    CHECK(!w.settings.combatPopupPlacement);
-    w.Pass({{ColumnEnd(PopupSide::Right), kDropEvent, KindChip(PopupType::Recovery)}, {kPopupCard + "-combat-popup-x", kChangeEvent, "40"},
-        {kPopupCard + "-combat-popup-height", kChangeEvent, "50"}});
-    CHECK(w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)] == PopupSide::Left);
-    CHECK(w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
-}
-
-TEST(status_popups_switch_with_the_card_on_and_their_colors_are_picked_only_while_they_pop)
-{
-    Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::DamageNumbers;
     w.settings.combatPopups = false;
-    const std::string statuses = "entities-combat-popups-combat-popup-statuses",
+    const std::string statuses = "damagenumbers-damage-appearance-combat-popup-statuses",
                       buff     = "colors-colors-combat-popups-combat-popup-buff-color";
     const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Buff)];
     w.Pass({{statuses, kClickEvent, ""}});

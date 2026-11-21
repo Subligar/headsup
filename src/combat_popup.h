@@ -50,12 +50,12 @@ namespace headsup
         }
         // At Present: the time the popups the game starts next count as started at.
         void SetNow(double now) { m_Now = now; }
-        // At Present: whether popups started together spread over lines (Show Right Away), or all keep line 0.
+        // At Present: whether popups started together spread over lines (Popup Timing is Instant), or all keep line 0.
         void SetSpread(bool spread) { m_Spread = spread; }
-        // At Present: the column each kind of popup goes in, PopupSidesOf's; popups in one column of a target spread apart.
+        // At Present: the column each kind of popup goes in; popups in one column of a target spread apart.
         void SetSides(const PopupSides& sides) { m_Sides = sides; }
-        // At Present: the server ids of you, your party and your alliance, and whether statuses pop (Status Popups is on
-        // and the game's Damage Display shows popups).
+        // At Present: the server ids of you, your party and your alliance, and whether statuses pop (Show Status Effects
+        // is on and the game's Damage Display shows popups).
         void SetParty(std::span<const uint32_t> ids);
         void SetStatuses(bool pop) { m_Statuses = pop; }
         // HeadsUp's answer to the game's popup decision for message with value, actor and target each an index then an
@@ -135,8 +135,8 @@ namespace headsup
     {
     public:
         static constexpr uint16_t kEarlyPopped = 0x5A59, kRestored = 0xA400, kRestoredMessage = 0x03FF;
-        // At Present: whether popups start early (Show Right Away), and whether blanked statuses come back (Status
-        // Popups is on and statuses pop).
+        // At Present: whether popups start early (Popup Timing is Instant), and whether blanked statuses come back (Show
+        // Status Effects is on and statuses pop).
         void SetOn(bool on) { m_On = on; }
         void SetRestore(bool restore) { m_Restore = restore; }
         // Once the game has parsed a record: its mark, kRestored with sent where the record's message is blanked and
@@ -253,12 +253,8 @@ namespace headsup
         bool labels = true;
         bool colors = true;
         bool skillchainNames = true;
-        bool placement = true;
     };
     PopupSwitches PopupSwitchesOf(const Settings& settings);
-    // The column each kind of popup goes in: as the settings pick, or with Custom Placement off all in one, as all go
-    // where the game puts them.
-    PopupSides PopupSidesOf(const Settings& settings);
 
     // A number as the game wrote it, an amount of MP or TP and a drain labeled ("20 MP", "Drain 55"); for the Miss
     // glyph, what its message says happened (Evade, Parry, Shadow, Resist, No Effect, Fail and the like), or Miss.
@@ -285,23 +281,25 @@ namespace headsup
     // A body beside which a popup goes is taken to reach this share of its height to either side of its middle.
     constexpr float kPopupBodyReach = 0.5f;
     // Where the frame's popups go: the column of each kind, how far up its target's body from the feet (0) to the top
-    // of its head (1) they start, a nudge in the scene image's pixels, and each target's body by entity index,
-    // where known.
+    // of its head (1) they start, the spread between the body and the side columns and a nudge down, both in the scene
+    // image's pixels, and each target's body by entity index, where known.
     struct PopupPlacing
     {
         PopupSides sides{};
         float height = 0.0f;
-        ScreenPoint nudge;
+        float spread = 0.0f, nudge = 0.0f;
         std::function<std::optional<PopupBody>(uint32_t target)> bodyOf;
     };
     // Two popups of a frame with the same text whose centers are within half a box height are one, the later, which the
     // game draws on top. A line is as tall as its box at 100 percent: the box already shrinks with distance. A popup
     // with a type takes its pick's color, by PopupType, at the game's alpha. It goes in its kind's column, at the start
-    // height: Left or Right its words end or start past its target's body, in the Middle they are centered on the
-    // game's place. With the body's height not known it keeps the game's height, one line past the game's place Left
-    // or Right. Its line moves it that many lines down, and the nudge moves it on.
+    // height: Left or Right its words end or start the spread past its target's body, in the Middle they are centered
+    // on the game's place. With the body's height not known it keeps the game's height, one line and the spread past
+    // the game's place Left or Right. Its line moves it that many lines down, and the nudge moves it on. Its alpha is
+    // the game's share of opaque to the power of fadePercent over 100, so a faster fade is further along at each step.
     std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
-        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on = {});
+        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on = {},
+        int fadePercent = kDefaultCombatPopupFade);
 
     // A popup's text as drawn into its texture: the image's size and halo in its own pixels, and its capitals' top and
     // bottom in rows under the halo, drawn raster pixels tall.
@@ -315,8 +313,8 @@ namespace headsup
     // over those down (PlaceSquarePixels' toX / toY), so the game's copy to the screen gives the letters their shape back.
     SquareQuad PlaceCombatPopupText(ScreenPoint center, float lineHeight, const CombatTextSize& text, float pixelShape,
         float across);
-    // How many pixels the edge reaches around letters drawn raster pixels tall.
-    int CombatPopupEdge(int raster);
+    // How many pixels the edge reaches around letters drawn raster pixels tall, at a thickness in percent.
+    int CombatPopupEdge(int raster, int thicknessPercent);
 
     // One line each for the draw dump: what the game's call drew, and what HeadsUp drew.
     std::string DescribeCombatPopup(const CombatPopup& popup);

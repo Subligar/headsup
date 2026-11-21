@@ -49,33 +49,6 @@
             {"key": "outline-fade-in", "name": "Fade In", "tip": "If enabled, outlines will become more transparent the further you get from the entity."},
             {"key": "stencil-note", "name": "Outlines are unavailable: the depth buffer has no stencil bits."}
           ]
-        },
-        {
-          "key": "combat-popups",
-          "name": "Combat Popups",
-          "description": "Draws the game's damage, recovery and Miss popups in your own font, size and colors, in place of the game's stretched ones, and pops each one as soon as its result arrives instead of when the animation lands. They only show while the game's Config is set to display damage on the game screen. Turn this off to keep the game's. Default: On.",
-          "settings": [
-            {"key": "combat-popup-font", "name": "Font", "tip": "The font the popups are drawn in. Default: your nameplates' Default Font."},
-            {"key": "combat-popup-size", "name": "Size", "tip": "How big the popups are against the game's own. They still shrink with distance. Default: 100%."},
-            {"key": "combat-popup-words", "name": "Words", "tip": "Shows what a miss was: Evade, Parry, Shadow, Resist and the like. Turn this off to see the game's plain Miss for all of them. Default: On."},
-            {"key": "combat-popup-labels", "name": "Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."},
-            {"key": "combat-popup-skillchain-names", "name": "Skillchain Names", "tip": "Puts a skillchain's name before its damage: Fusion 412. Turn this off to see the game's plain number. Default: On."},
-            {"key": "combat-popup-right-away", "name": "Show Right Away", "tip": "Pops each number as soon as its result arrives, before the spell or swing lands, and spreads popups that start together so each reads. Turn this off to keep the game's timing. Default: On."},
-            {"key": "combat-popup-placement", "name": "Custom Placement", "tip": "Puts each kind of popup in its column below, left of what it happened to, centered on it or right of it, at your Start Height and moved by the offsets. Drag a kind to another column to move it there. Turn this off to leave them all where the game puts them. Default: On."},
-            {"key": "combat-popup-columns"},
-            {"key": "combat-popup-height", "name": "Start Height", "tip": "How high up what they happened to the popups start: 0% at its feet, 100% at the top of its head, so they reach its head on a Tarutaru or a Behemoth alike. Default: 90%."},
-            {"key": "combat-popup-x", "name": "Horizontal Offset", "tip": "Moves the popups right by this many pixels, or left by a number below 0. Default: 0 px."},
-            {"key": "combat-popup-y", "name": "Vertical Offset", "tip": "Moves the popups up by this many pixels, or down by a number below 0. Default: 0 px."},
-            {
-              "key": "combat-popup-test",
-              "name": "Test",
-              "tip": "Pops a sample of each kind over your character, in your font, size and colors, even while the game's Config shows damage in the log only. Click it again to see them again.",
-              "words": [
-                {"key": "not-found", "name": "Test", "tip": "Your game's code for starting a popup was not found, so Test cannot pop one."}
-              ]
-            },
-            {"key": "combat-popup-statuses", "name": "Status Popups", "tip": "Pops the name of a buff or debuff over what it lands on, when you, your pet or your party cast it or take it. The game has no popup for these. Default: On."}
-          ]
         }
       ]
     },
@@ -300,6 +273,48 @@
             {"key": "edge-color", "name": "Outline Color", "tip": "Determines the color of the target cursor's outline."},
             {"key": "scale", "name": "Scale with Distance", "tip": "Automatically scales the target cursor based on distance to the player character."},
             {"key": "float", "name": "Floating Cursor", "tip": "If enabled, the target cursor will bob gently up and down."}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "damagenumbers",
+      "name": "Damage Numbers",
+      "child": true,
+      "description": "Improves the appearance of combat text that appears on-screen, and allows you to customize it.",
+      "cards": [
+        {
+          "key": "damage-appearance",
+          "name": "Appearance",
+          "settings": [
+            {"key": "combat-popup-font", "name": "Font", "tip": "The font the numbers are drawn in. Default: your nameplates' Default Font."},
+            {"key": "combat-popup-size", "name": "Text Size", "tip": "How big the numbers are against the game's own. They still shrink with distance. Default: 100%."},
+            {"key": "combat-popup-words", "name": "Detailed Miss", "tip": "Shows what a miss was: Evade, Parry, Shadow, Resist and the like. Turn this off to see the game's plain Miss for all of them. Default: On."},
+            {"key": "combat-popup-labels", "name": "Show Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."},
+            {"key": "combat-popup-skillchain-names", "name": "Show Skillchain Names", "tip": "Puts a skillchain's name before its damage: Fusion 412. Turn this off to see the game's plain number. Default: On."},
+            {"key": "combat-popup-statuses", "name": "Show Status Effects", "tip": "Pops the name of a buff or debuff over what it lands on, when you, your pet or your party cast it or take it. The game has no popup for these. Default: On."},
+            {"key": "combat-popup-outline", "name": "Outline", "tip": "How thick the edge around the text is, and its color. Default: 100%, black."},
+            {"key": "combat-popup-fade", "name": "Fade Speed", "tip": "How quickly the numbers fade away. At 100% they fade as the game's do, at 200% twice as quickly, and at 50% they stay clear for longer. They still go when the game's would. Default: 100%."},
+            {
+              "key": "combat-popup-timing",
+              "name": "Popup Timing",
+              "tip": "When each number pops. Default: Instant.",
+              "options": [
+                {"name": "Vanilla", "tip": "Pops each number when the spell or swing lands, as the game does."},
+                {"name": "Instant", "tip": "Pops each number as soon as its result arrives, before the spell or swing lands, and spreads numbers that start together so each one reads."}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "damage-placement",
+          "name": "Placement",
+          "description": "Each kind of number goes in its column: left of what it happened to, centered on it, or right of it. Drag a kind to another column to move it there.",
+          "settings": [
+            {"key": "combat-popup-columns"},
+            {"key": "combat-popup-height", "name": "Initial Height", "tip": "How high up what they happened to the numbers start: 0% at its feet, 100% at the top of its head, so they reach its head on a Tarutaru or a Behemoth alike. Default: 90%."},
+            {"key": "combat-popup-spread", "name": "Spread", "tip": "How far the Left and Right columns sit out from what they happened to, past its body. Default: 20 px."},
+            {"key": "combat-popup-y", "name": "Vertical Offset", "tip": "Moves the numbers up by this many pixels, or down by a number below 0. Default: 0 px."}
           ]
         }
       ]
@@ -719,7 +734,7 @@
         {
           "key": "colors-combat-popups",
           "name": "Combat Popups",
-          "description": "The colors of each kind of combat popup, while the Combat Popups card on the Nameplates & Outlines page is on.",
+          "description": "The colors of each kind of combat popup, while Damage Numbers is on.",
           "settings": [
             {"key": "combat-popup-custom-colors", "name": "Custom Colors", "tip": "Colors each kind of popup with its pick below. Turn this off to see every popup in the game's own color. Default: On."},
             {"key": "combat-popup-dealt-color", "name": "Damage You Deal", "tip": "The color of the damage you and your pet deal. Damage between other players and mobs always keeps the game's color. Default: Vanilla Color."},
@@ -1183,8 +1198,8 @@
         {"name": "Magic Bursts", "tip": "Magic burst damage."},
         {"name": "Skillchains", "tip": "A skillchain's name and number."},
         {"name": "Spells", "tip": "The damage a spell does."},
-        {"name": "Buffs", "tip": "A buff's name, while Status Popups is on."},
-        {"name": "Debuffs", "tip": "A debuff's name, while Status Popups is on."}
+        {"name": "Buffs", "tip": "A buff's name, while Show Status Effects is on."},
+        {"name": "Debuffs", "tip": "A debuff's name, while Show Status Effects is on."}
       ]
     },
     {
@@ -1731,6 +1746,7 @@
     {"key": "switch-on", "name": "On"},
     {"key": "switched-off-top-panel", "name": "These settings are the top panel's, which is off: the Top Panel page switches it on."},
     {"key": "switched-off-headsup", "name": "HeadsUp is off: the HeadsUp Config page switches it on."},
+    {"key": "switched-off-damage-numbers", "name": "HeadsUp's damage numbers are off, so the game draws its own: the switch beside this page's title turns them on."},
     {"key": "key-add", "name": "+ Add Key"},
     {"key": "key-waiting", "name": "Press a Key..."},
     {"key": "always", "name": "Always", "tip": "This line is always visible as long as the nameplate as a whole is visible."},
@@ -1756,6 +1772,8 @@
     {"key": "or", "name": "or"},
     {"key": "reload", "name": "Reload", "tip": "Reads settings_window.json from config/headsup again and builds this window from it, or from the built-in one when there is none."},
     {"key": "export", "name": "Export", "tip": "Writes the built-in settings_window.json to config/headsup, where it can be edited and read with Reload."},
+    {"key": "combat-popup-test", "name": "Test", "tip": "Pops a sample of each kind over your character, in your font, size and colors, even while the game's Config shows damage in the log only. Click it again to see them again."},
+    {"key": "combat-popup-test-not-found", "tip": "Your game's code for starting a popup was not found, so Test cannot pop one."},
     {"key": "setup-title", "name": "HeadsUp Setup"},
     {"key": "setup-step", "name": "Step {count} of {total}"},
     {"key": "setup-start", "name": "Start", "tip": "Starts Setup."},

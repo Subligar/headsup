@@ -20,16 +20,15 @@ namespace headsup
     }
 
     bool CombatPopupRender::Prepare(IDirect3DDevice8* device, Texture& t, const std::string& words, uint32_t color,
-        const std::string& font, int raster)
+        const std::string& font, int raster, int edge, uint32_t outlineColor)
     {
-        const int edge = CombatPopupEdge(raster);
         Coverage coverage;
         if (!m_Text.Rasterize(words.c_str(), font.c_str(), raster, 0, 0, edge, coverage))
         {
             Fail("GDI could not draw text in " + font + " at " + std::to_string(raster) + " px");
             return false;
         }
-        const Image image = Outlined(coverage, edge, color, kBlack);
+        const Image image = Outlined(coverage, edge, color, outlineColor);
         t.texture         = CreateTexture(device, image.argb.data(), image.width, image.height, t.u, t.v);
         if (t.texture == nullptr)
         {
@@ -43,7 +42,7 @@ namespace headsup
     }
 
     void CombatPopupRender::Draw(IDirect3DDevice8* device, const std::vector<ShownCombatPopup>& popups, const std::string& font,
-        float toX, float toY)
+        int outlinePercent, uint32_t outlineColor, float toX, float toY)
     {
         ++m_Frame;
         for (Texture& idle : m_Textures.TakeIdle(m_Frame, kIdleFrames))
@@ -54,9 +53,9 @@ namespace headsup
         for (const ShownCombatPopup& popup : popups)
         {
             // Drawn at the height it shows on the screen, which the scene image is toY times.
-            const int raster = RasterHeight(popup.lineHeight / toY, 0);
-            Texture& t       = m_Textures.Use(std::tuple{font, popup.words, popup.color, raster}, m_Frame);
-            if (t.texture == nullptr && !Prepare(device, t, popup.words, popup.color, font, raster)) break;
+            const int raster = RasterHeight(popup.lineHeight / toY, 0), edge = CombatPopupEdge(raster, outlinePercent);
+            Texture& t       = m_Textures.Use(std::tuple{font, popup.words, popup.color, raster, edge, outlineColor}, m_Frame);
+            if (t.texture == nullptr && !Prepare(device, t, popup.words, popup.color, font, raster, edge, outlineColor)) break;
             const SquareQuad q = PlaceCombatPopupText(popup.center, popup.lineHeight, t.size, toX / toY, popup.across);
             DrawQuad(device, GpuQuad{t.texture, q.x, q.y, q.width, q.height, 0.0f, t.u, t.v, popup.depth, WithAlpha(kWhite, popup.alpha)},
                 true);

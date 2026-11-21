@@ -163,7 +163,9 @@ namespace headsup
                Em(kPageTitleScale) + ";color:" + color(c.heading) + ";}";
         // A page's own switch on its title's line, just after it.
         css += "#page-head{display:flex;flex-direction:row;align-items:center;}";
-        css += std::string("#") + kPageSwitchBlock + "{margin-left:" + Em(kCardPad) + ";}";
+        css += std::string("#") + kPageSwitchBlock + "{display:flex;flex-direction:row;align-items:center;margin-left:" + Em(kCardPad) + ";}";
+        // A page's button before its switch, as wide as the switch.
+        css += std::string("#") + kPageSwitchBlock + " .btn{width:" + Em(kCardToggleWidth) + ";padding:0px;margin-right:" + Em(kControlGap) + ";}";
         css += std::string("#") + kMenuPageId + "{position:absolute;left:0px;right:0px;top:" + Em(kPageTop) + ";bottom:0px;overflow-y:auto;}";
         css += "scrollbarvertical{width:" + Em(kScrollbar) + ";}";
         css += "scrollbarvertical sliderbar{width:" + Em(kScrollbar) + ";min-height:2em;border-radius:" +
@@ -280,6 +282,7 @@ namespace headsup
         // A swatch beside them. Their box is a flex one: as a block, RmlUi sized it to their least width, and the swatch
         // went over Custom.
         css += ".swatched{display:flex;}.swatched .segs{min-width:" + Em(kControlWidth - kFrame - kControlGap) + ";}";
+        css += ".swatched .slider,.swatched input.range{width:" + Em(kControlWidth - kFrame - kControlGap) + ";}";
         css += ".seg:first-child{margin-left:0px;}";
         css += ".seg:hover{background-color:" + color(c.hover) + ";}";
         css += ".seg.picked{background-color:" + color(c.accent) + ";}";

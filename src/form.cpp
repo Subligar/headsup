@@ -193,11 +193,7 @@ namespace headsup
         Set(id, FormValueKind::Class, "on", {}, enabled);
     }
 
-    void Form::PageSwitch(const std::string& id, bool* enabled)
-    {
-        BeginBlock(kPageSwitchBlock);
-        if (enabled != nullptr) OnSwitch(id, kPageCheck, *enabled);
-    }
+    void Form::PageSwitch(const std::string& id, bool& enabled) { OnSwitch(id, kPageCheck, enabled); }
 
     void Form::BeginBare(const char* title)
     {
@@ -306,13 +302,18 @@ namespace headsup
         const std::string& shown, const char* tip)
     {
         Row(label, tip);
+        SliderAt(slider, value, lo, hi, step, shown);
+        EndRow();
+    }
+
+    void Form::SliderAt(const std::string& slider, float value, float lo, float hi, float step, const std::string& shown)
+    {
         Out() += "<div class=\"slider\" id=\"" + slider + "-box\"><input type=\"range\" id=\"" + slider + "\" min=\"" +
                  RcssNumber(lo) + "\" max=\"" + RcssNumber(hi) + "\" step=\"" + RcssNumber(step) +
                  "\"/><div class=\"val\" id=\"" + slider + "-val\"></div></div>";
         Set(slider, FormValueKind::Value, {}, RcssNumber(value));
         Set(slider + "-val", FormValueKind::Text, {}, shown);
         Set(slider + "-box", FormValueKind::Class, kOffClass, {}, m_Off);
-        EndRow();
     }
 
     bool Form::Opened(std::string_view name) const
@@ -345,6 +346,19 @@ namespace headsup
         TakeWhole(slider, value, lo, hi, kPercentStep);
         Slider(slider, label, static_cast<float>(value), static_cast<float>(lo), static_cast<float>(hi),
             static_cast<float>(kPercentStep), Formatted("%d%%", value), tip);
+    }
+
+    void Form::SliderPercentSwatch(const char* label, int& value, int lo, int hi, Color& color, const char* tip)
+    {
+        const std::string slider = Id(label);
+        TakeWhole(slider, value, lo, hi, kPercentStep);
+        Row(label, tip);
+        Out() += "<div class=\"swatched\">";
+        SliderAt(slider, static_cast<float>(value), static_cast<float>(lo), static_cast<float>(hi), static_cast<float>(kPercentStep),
+            Formatted("%d%%", value));
+        Out() += "</div>";
+        SwatchAt((std::string(label) + " swatch").c_str(), color);
+        EndRow();
     }
 
     void Form::Stepper(const char* label, int& value, int lo, int hi, const char* format, const char* tip)

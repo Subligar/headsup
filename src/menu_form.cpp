@@ -1954,7 +1954,7 @@ namespace headsup
         {
             Form& form  = c.form;
             Settings& s = c.s;
-            form.Fade(!s.combatPopups || !s.combatPopupPlacement);
+            form.Fade(!s.combatPopups);
             const auto columns = c.layout.OptionsOf(WindowList::PopupColumns);
             const auto kinds   = c.layout.OptionsOf(WindowList::PopupKinds);
             const std::string chipStart = form.Named(kPopupKindChip) + "-";
@@ -2288,9 +2288,18 @@ namespace headsup
                 form.Fade(!s.combatPopups);
                 form.Switch(label.c_str(), s.combatPopupWords, tip);
                 break;
-            case SettingPiece::CombatPopupRightAway:
+            case SettingPiece::CombatPopupTiming:
                 form.Fade(!s.combatPopups);
-                form.Switch(label.c_str(), s.combatPopupRightAway, tip);
+                OptionsDropdown(form, label, s.combatPopupRightAway, c.layout.OptionsOf(e), tip); // Vanilla is false, Instant true
+                break;
+            case SettingPiece::CombatPopupOutline:
+                form.Fade(!s.combatPopups);
+                form.SliderPercentSwatch(label.c_str(), s.combatPopupOutline, kMinCombatPopupOutline, kMaxCombatPopupOutline,
+                    s.combatPopupOutlineColor, tip);
+                break;
+            case SettingPiece::CombatPopupFade:
+                form.Fade(!s.combatPopups);
+                form.SliderPercent(label.c_str(), s.combatPopupFade, kMinCombatPopupFade, kMaxCombatPopupFade, tip);
                 break;
             case SettingPiece::CombatPopupSkillchainNames:
                 form.Fade(!s.combatPopups);
@@ -2308,28 +2317,18 @@ namespace headsup
                 form.Fade(!s.combatPopups);
                 form.Switch(label.c_str(), s.combatPopupCustomColors, tip);
                 break;
-            case SettingPiece::CombatPopupPlacement:
-                form.Fade(!s.combatPopups);
-                form.Switch(label.c_str(), s.combatPopupPlacement, tip);
-                break;
             case SettingPiece::CombatPopupColumns: PopupColumns(c); break;
             case SettingPiece::CombatPopupHeight:
-                form.Fade(!s.combatPopups || !s.combatPopupPlacement);
+                form.Fade(!s.combatPopups);
                 form.SliderPercent(label.c_str(), s.combatPopupHeight, 0, kMaxCombatPopupHeight, tip);
                 break;
-            case SettingPiece::CombatPopupX:
-                form.Fade(!s.combatPopups || !s.combatPopupPlacement);
-                form.SliderInt(label.c_str(), s.combatPopupX, -kMaxCombatPopupNudge, kMaxCombatPopupNudge, Pixels, tip);
+            case SettingPiece::CombatPopupSpread:
+                form.Fade(!s.combatPopups);
+                form.SliderInt(label.c_str(), s.combatPopupSpread, 0, kMaxCombatPopupSpread, Pixels, tip);
                 break;
             case SettingPiece::CombatPopupY:
-                form.Fade(!s.combatPopups || !s.combatPopupPlacement);
+                form.Fade(!s.combatPopups);
                 form.SliderInt(label.c_str(), s.combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge, Pixels, tip);
-                break;
-            case SettingPiece::CombatPopupTest:
-                form.Fade(!s.combatPopups || !r.popupTestReady);
-                if (form.Button(label.c_str(), label.c_str(), kWashPill,
-                        r.popupTestReady ? tip : WordTip(c, WindowWord::CombatPopupTestNotFound)))
-                    c.state.popupTestRequested = true;
                 break;
             case SettingPiece::CombatPopupDealtColor: CombatPopupColorRow(form, label, s, PopupType::Dealt, tip); break;
             case SettingPiece::CombatPopupTakenColor: CombatPopupColorRow(form, label, s, PopupType::Taken, tip); break;
@@ -2956,6 +2955,8 @@ namespace headsup
             case CardPiece::Nameplates: return {false, !on, &s.nameplates};
             case CardPiece::OutlineStyle: return {false, !on, &s.outlines};
             case CardPiece::TargetCursor:
+            case CardPiece::DamageAppearance:
+            case CardPiece::DamagePlacement:
             case CardPiece::ColorsAggression:
             case CardPiece::ColorsToughness:
             case CardPiece::ColorsClaimStatus:
@@ -2986,7 +2987,6 @@ namespace headsup
             case CardPiece::DebugMode: return {false, false, &s.debugMode};
             case CardPiece::FishingAppearance: return {false, !on};
             case CardPiece::FishingCase: return {false, !on, &s.fishCase};
-            case CardPiece::CombatPopups: return {false, !on, &s.combatPopups};
             }
             return {};
         }
@@ -3263,11 +3263,23 @@ namespace headsup
         const std::vector<std::string>& fonts, const std::vector<std::string>& menuFonts, const WindowLayout& layout)
     {
         form.layout = &layout;
-        // The top panel's switch is its page's, beside the title: it turns the whole panel on and off.
+        // The top panel's and the damage numbers' switches are their pages', beside the title: each turns the whole
+        // of it on and off. Test, before the damage numbers' switch, pops a sample of each kind.
         const auto pageSwitch = [&] {
             form.Fade(!s.enabled);
-            form.PageSwitch(std::string(layout.PageOf(Page::TopPanel).key) + "-on",
-                !state.setup && state.page == Page::TopPanel ? &s.showBar : nullptr);
+            form.BeginBlock(kPageSwitchBlock);
+            const std::string id = std::string(layout.PageOf(state.page).key) + "-on";
+            if (!state.setup && state.page == Page::TopPanel) form.PageSwitch(id, s.showBar);
+            if (!state.setup && state.page == Page::DamageNumbers)
+            {
+                const LayoutWord& test = layout.WordOf(WindowWord::CombatPopupTest);
+                form.Fade(!s.enabled || !s.combatPopups || !readings.popupTestReady);
+                if (form.Button(test.name, test.name, kWashPill,
+                        readings.popupTestReady ? test.tip : layout.WordOf(WindowWord::CombatPopupTestNotFound).tip))
+                    state.popupTestRequested = true;
+                form.Fade(!s.enabled);
+                form.PageSwitch(id, s.combatPopups);
+            }
             form.Fade(false);
         };
         if (state.setup)
@@ -3340,7 +3352,10 @@ namespace headsup
         // A page whose every card is switched off says what switches them on.
         if (form.CardsShown() == 0 && page.cardCount > 0 && form.BeginCard(Labeled(Word(c, WindowWord::SwitchedOff), "switched-off").c_str()))
         {
-            form.Note(Word(c, s.enabled ? WindowWord::SwitchedOffTopPanel : WindowWord::SwitchedOffHeadsup));
+            const WindowWord off = !s.enabled                         ? WindowWord::SwitchedOffHeadsup
+                                   : state.page == Page::DamageNumbers ? WindowWord::SwitchedOffDamageNumbers
+                                                                       : WindowWord::SwitchedOffTopPanel;
+            form.Note(Word(c, off));
             form.EndCard();
         }
         s = Clamp(std::move(s));
