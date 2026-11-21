@@ -319,7 +319,10 @@ namespace headsup
             element->SetClass(kGameSelClass, true);
         }
         window.byKeys = byKeys;
-        if (byKeys && list != nullptr) ScrollToShow(list, element);
+        if (!byKeys) return;
+        // The pointer lets go of what it is over, which would look selected too, until it moves.
+        m_Context->ProcessMouseLeave();
+        if (list != nullptr) ScrollToShow(list, element);
     }
 
     void GameWindows::Activate(Window& window, Rml::Element* element)

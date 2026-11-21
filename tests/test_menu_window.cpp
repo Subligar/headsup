@@ -405,6 +405,22 @@ TEST(the_selection_follows_the_pointer_only_as_it_moves)
     CHECK_EQ(w.windows.Selected(), std::string("items-8"));
 }
 
+TEST(after_the_keys_choose_the_pointer_lights_nothing_until_it_moves)
+{
+    Windows w;
+    w.windows.Open(Bag());
+    const Rml::Vector2i at = w.PointAt("bag", "items-2");
+    w.Acts(MenuAction::Down);
+    w.Settle();
+    CHECK_EQ(w.windows.Selected(), std::string("items-3"));
+    Rml::Element* under = w.Element("bag", "items-2");
+    CHECK(!under->IsPseudoClassSet("hover"));
+    CHECK(SameColor(under->GetComputedValues().background_color(), kLook.colors.control));
+    // Moved, it selects what it is over again.
+    w.rml.context->ProcessMouseMove(at.x + 1, at.y, 0);
+    CHECK_EQ(w.windows.Selected(), std::string("items-2"));
+}
+
 TEST(the_selection_lights_its_background_bolds_its_text_and_grows_a_little_without_moving_it)
 {
     Windows w;
