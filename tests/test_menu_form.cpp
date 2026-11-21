@@ -1,6 +1,8 @@
 #include "game_font.h"
 #include "layout_edit.h"
 #include "menu_form.h"
+#include "bar_document.h"
+#include "bar_statuses.h"
 #include "settings.h"
 #include "test.h"
 
@@ -2641,4 +2643,102 @@ TEST(invite_position_is_picked_from_its_three_segments)
     CHECK(w.settings.partyNoticePlace == InvitePlace::Bottom);
     CHECK(w.Pass({{"notifications-notice-party-party-notice-place-s-0", kClickEvent, ""}}).changed);
     CHECK(w.settings.partyNoticePlace == InvitePlace::Auto);
+}
+
+namespace
+{
+    constexpr uint16_t kCurseStatus = 9, kCurseIIStatus = 20; // a debuff nobody stars by default, and its name's second id
+    const char* kPlayersStatuses = "players-plate-statuses";
+    std::string StarOf(uint16_t id) { return std::string(kPlayersStatuses) + "-star-" + std::to_string(id); }
+}
+
+// John (2026-11-19): a "Buffs & Debuffs" section "only visible if either button is used".
+TEST(the_buffs_and_debuffs_card_shows_once_a_line_uses_either_tag)
+{
+    Window w;
+    w.state.page = Page::Players;
+    CHECK(Block(w.Pass(), kPlayersStatuses) == nullptr);
+    w.settings.Kind(PlateKind::Players).lines[0].text = "$debuffs";
+    CHECK(Block(w.Pass(), kPlayersStatuses) != nullptr);
+    w.settings.Kind(PlateKind::Players).lines[0].text = "${sync|buffs}";
+    CHECK(Block(w.Pass(), kPlayersStatuses) != nullptr);
+    for (const Page page : {Page::Npcs, Page::Pets})
+    {
+        w.state.page = page;
+        for (PlateKind kind : {PlateKind::Npcs, PlateKind::Pets})
+            w.settings.Kind(kind).lines[0].text = "$buffs $debuffs";
+        const Form form = w.Pass();
+        CHECK(std::ranges::none_of(form.blocks, [](const FormBlock& b) { return b.id.ends_with("plate-statuses"); }));
+    }
+}
+
+TEST(a_click_on_a_star_stars_that_kinds_status_and_a_second_takes_it_off)
+{
+    Window w;
+    w.state.page = Page::Players;
+    w.settings.Kind(PlateKind::Players).lines[0].text = "$debuffs";
+    const std::vector<uint16_t> self = w.settings.Kind(PlateKind::Self).shownStatuses;
+    const Form form = w.Pass();
+    CHECK(At(Block(form, kPlayersStatuses), StarOf(kCurseStatus)) != std::string::npos);
+    CHECK(w.Pass({{StarOf(kCurseStatus), kClickEvent, ""}}).changed);
+    CHECK(StarredByName(w.settings.Kind(PlateKind::Players).shownStatuses, kCurseStatus));
+    CHECK(w.settings.Kind(PlateKind::Self).shownStatuses == self);
+    w.settings.Kind(PlateKind::Players).shownStatuses.push_back(kCurseIIStatus); // the same name twice, by hand
+    CHECK(w.Pass({{StarOf(kCurseStatus), kClickEvent, ""}}).changed);
+    CHECK(!StarredByName(w.settings.Kind(PlateKind::Players).shownStatuses, kCurseStatus));
+}
+
+// "Only do this when loading in though so that they're not moving with every click."
+TEST(a_starred_status_moves_up_only_when_the_page_opens_again)
+{
+    Window w;
+    w.state.page = Page::Players;
+    w.settings.Kind(PlateKind::Players).lines[0].text = "$debuffs";
+    const auto place = [&](const Form& form) { return At(Block(form, kPlayersStatuses), StarOf(kCurseStatus)); };
+    const Form first    = w.Pass();
+    const size_t before = place(first);
+    const size_t sleep  = At(Block(first, kPlayersStatuses), StarOf(2)); // starred by default, so near the top
+    CHECK(sleep < before);
+    w.Pass({{StarOf(kCurseStatus), kClickEvent, ""}});
+    CHECK(place(w.Pass()) > sleep);
+    w.Pass({{"nav-self", kClickEvent, ""}});
+    w.Pass({{"nav-players", kClickEvent, ""}});
+    const Form reopened = w.Pass();
+    CHECK(place(reopened) < At(Block(reopened, kPlayersStatuses), StarOf(4))); // before Paralysis, by name
+}
+
+TEST(only_party_members_is_on_the_players_page_alone)
+{
+    Window w;
+    for (PlateKind kind : {PlateKind::Players, PlateKind::Self, PlateKind::Mobs})
+        w.settings.Kind(kind).lines[0].text = "$buffs";
+    w.state.page = Page::Players;
+    const std::string partyOnly = "players-plate-statuses-status-party-only";
+    const Form players          = w.Pass();
+    CHECK(At(Block(players, kPlayersStatuses), partyOnly) != std::string::npos);
+    const bool changed = w.Pass({{partyOnly, kClickEvent, ""}}).changed;
+    CHECK(changed && !w.settings.Kind(PlateKind::Players).statusPartyOnly);
+    for (const Page page : {Page::Self, Page::Mobs})
+    {
+        w.state.page = page;
+        const Form form = w.Pass();
+        const auto card = std::ranges::find_if(form.blocks, [](const FormBlock& b) { return b.id.ends_with("plate-statuses"); });
+        CHECK(card != form.blocks.end() && card->rml.find("status-party-only") == std::string::npos);
+    }
+}
+
+TEST(the_status_rows_show_a_star_clicked_and_the_background_switched_at_once)
+{
+    Window w;
+    w.state.page = Page::Players;
+    w.settings.Kind(PlateKind::Players).lines[0].text = "$debuffs";
+    const std::string star = "class=\"sstar dim\" id=\"" + StarOf(kCurseStatus) + "\"";
+    const auto rows        = [&] { return Block(w.Pass(), kPlayersStatuses)->rml; };
+    CHECK(Has(rows(), star.c_str()));
+    w.Pass({{StarOf(kCurseStatus), kClickEvent, ""}});
+    CHECK(!Has(rows(), star.c_str()) && Has(rows(), ("class=\"sstar\" id=\"" + StarOf(kCurseStatus) + "\"").c_str()));
+    const std::string back = IconSource(Icon::DebuffBack);
+    CHECK(!Has(rows(), back.c_str()));
+    w.settings.Kind(PlateKind::Players).statusBack = true;
+    CHECK(Has(rows(), back.c_str()));
 }

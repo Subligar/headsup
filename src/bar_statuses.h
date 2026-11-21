@@ -29,6 +29,12 @@ namespace headsup
     // A status's name; "" for an id Phoenix lacks.
     const char* StatusName(uint16_t id);
 
+    // Whether a status's name is the name of one of the starred.
+    bool StarredByName(const std::vector<uint16_t>& starred, uint16_t id);
+    // Every buff, or every debuff, once by name with its name's first id: the starred names first, then the rest,
+    // each part by name.
+    std::vector<uint16_t> StarredFirst(const std::vector<uint16_t>& starred, bool debuffs);
+
     // A status you have, and its seconds left: nothing for one that never runs out or whose timer could not be read.
     struct ActiveStatus
     {
