@@ -166,7 +166,12 @@ namespace headsup
         if (!Running()) return false;
         const int modifiers = Modifiers();
         const int px = static_cast<int>(x), py = static_cast<int>(y);
+        const std::optional<Rml::Vector2f> was = m_Pointer;
         if (message != WM_MOUSEWHEEL) m_Pointer = Rml::Vector2f{x, y}; // a wheel's point is the screen's
+        // A pointer the game windows' keys took away (ProcessMouseLeave) comes back as it moves, clicks or scrolls.
+        if (message == WM_MOUSEMOVE && m_Pointer == was) return m_Overlay->IsMouseInteracting();
+        if (message != WM_MOUSEMOVE && m_Pointer)
+            m_Overlay->ProcessMouseMove(static_cast<int>(m_Pointer->x), static_cast<int>(m_Pointer->y), modifiers);
         // Each returns true when the mouse is not interacting with any element.
         switch (message)
         {
