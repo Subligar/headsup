@@ -1,5 +1,6 @@
 #include "bar_theme.h"
 #include "fonts.h"
+#include "menu_fonts.h"
 #include "rml_session.h"
 #include "settings.h"
 #include "test.h"
@@ -8,10 +9,11 @@
 
 using namespace headsup;
 
-TEST(the_bundled_fonts_are_montserrat_for_nameplates_then_marcellus_cinzel_cormorant_and_barlow_for_badges)
+TEST(the_bundled_fonts_are_montserrat_for_nameplates_then_marcellus_cinzel_cormorant_atkinson_and_barlow_for_badges)
 {
     const std::vector<std::string> families = BundledFamilies();
-    CHECK(families == std::vector<std::string>({"Montserrat SemiBold", "Marcellus SC", "Cinzel", "Cormorant SC", "Barlow Condensed"}));
+    CHECK(families == std::vector<std::string>({"Montserrat SemiBold", "Marcellus SC", "Cinzel", "Cormorant SC", "Atkinson Hyperlegible",
+        "Atkinson Hyperlegible Next", "Barlow Condensed"}));
     size_t count             = 0;
     const BundledFont* fonts = BundledFonts(count);
     CHECK_EQ(count, families.size());
@@ -19,6 +21,16 @@ TEST(the_bundled_fonts_are_montserrat_for_nameplates_then_marcellus_cinzel_cormo
         CHECK(fonts[i].data != nullptr && fonts[i].bytes > 0);
     CHECK(std::string(kDefaultFont) == families[0]);
     CHECK(std::string(kBadgeFont) == families.back());
+}
+
+TEST(the_settings_window_can_be_set_in_both_atkinson_fonts_and_every_font_it_bundles_is_loaded)
+{
+    // A window font with no Windows file is drawn from the bundled bytes, found by its family.
+    const std::vector<std::string> families = BundledFamilies();
+    for (const MenuFont& font : kMenuFonts)
+        if (font.file == nullptr) CHECK(std::ranges::find(families, font.name) != families.end());
+    for (const char* family : {kAtkinsonHyperlegible, kAtkinsonHyperlegibleNext})
+        CHECK(MenuFontNamed(family) != nullptr && MenuFontNamed(family)->file == nullptr);
 }
 
 TEST(the_bar_asks_gdi_only_for_bundled_families)

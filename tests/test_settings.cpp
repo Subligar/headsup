@@ -536,8 +536,8 @@ TEST(the_font_list_puts_the_bundled_fonts_first_then_the_installed_ones_sorted_o
 {
     // GDI lists a family once per character set, vertical variants with an @, and a bundled font may be installed too.
     const std::vector<std::string> choices = FontChoices({"Verdana", "arial", "Arial", "@Meiryo", "", "Cinzel"}, "Verdana");
-    const std::vector<std::string> expected{"Montserrat SemiBold", "Marcellus SC", "Cinzel", "Cormorant SC", "Barlow Condensed",
-        "arial", "Verdana"};
+    const std::vector<std::string> expected{"Montserrat SemiBold", "Marcellus SC", "Cinzel", "Cormorant SC",
+        "Atkinson Hyperlegible", "Atkinson Hyperlegible Next", "Barlow Condensed", "arial", "Verdana"};
     CHECK(choices == expected);
 }
 
@@ -2799,7 +2799,7 @@ TEST(the_nameplate_fonts_are_the_games_two_then_the_font_list_which_never_holds_
 {
     const std::vector<std::string> choices = NameplateFontChoices(FontChoices({"Arial", "game font"}, kGameFontNarrowName));
     const std::vector<std::string> expected{kGameFontName, kGameFontNarrowName, "Montserrat SemiBold", "Marcellus SC", "Cinzel",
-        "Cormorant SC", "Barlow Condensed", "Arial"};
+        "Cormorant SC", "Atkinson Hyperlegible", "Atkinson Hyperlegible Next", "Barlow Condensed", "Arial"};
     CHECK(choices == expected);
 }
 

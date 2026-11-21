@@ -29,6 +29,8 @@ namespace headsup
         {"Marcellus SC", nullptr, 1.05f},
         {"Cinzel", nullptr, 1.0f},
         {"Cormorant SC", nullptr, 1.1f},
+        {"Atkinson Hyperlegible", nullptr, 1.0f},
+        {"Atkinson Hyperlegible Next", nullptr, 1.0f},
     };
     inline constexpr const char* kDefaultMenuFont = "Segoe UI";
 

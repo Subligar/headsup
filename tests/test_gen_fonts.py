@@ -16,12 +16,17 @@ class Generate(unittest.TestCase):
         self.assertIn('const unsigned char kFontMarcellusSC[] = {', text)
         self.assertIn('const unsigned char kFontCinzel[] = {', text)
         self.assertIn('const unsigned char kFontCormorantSC[] = {', text)
+        self.assertIn('const unsigned char kFontAtkinsonHyperlegible[] = {', text)
+        self.assertIn('const unsigned char kFontAtkinsonHyperlegibleNext[] = {', text)
         self.assertIn('const unsigned char kFontBarlowCondensed[] = {', text)
         table = text[text.index('const BundledFont kBundledFonts[]'):]
         self.assertLess(table.index('{kMontserratSemiBold, kFontMontserratSemiBold, '), table.index('{kMarcellusSC, '))
         self.assertLess(table.index('{kMarcellusSC, kFontMarcellusSC, '), table.index('{kCinzel, kFontCinzel, '))
         self.assertLess(table.index('{kCinzel, '), table.index('{kCormorantSC, kFontCormorantSC, '))
-        self.assertLess(table.index('{kCormorantSC, '), table.index('{kBarlowCondensed, kFontBarlowCondensed, '))
+        self.assertLess(table.index('{kCormorantSC, '), table.index('{kAtkinsonHyperlegible, kFontAtkinsonHyperlegible, '))
+        self.assertLess(table.index('{kAtkinsonHyperlegible, '),
+                        table.index('{kAtkinsonHyperlegibleNext, kFontAtkinsonHyperlegibleNext, '))
+        self.assertLess(table.index('{kAtkinsonHyperlegibleNext, '), table.index('{kBarlowCondensed, kFontBarlowCondensed, '))
 
     def test_each_family_is_named_once_for_the_code_that_asks_gdi_for_it(self):
         families = gen_fonts.generate_families()
@@ -30,6 +35,8 @@ class Generate(unittest.TestCase):
         self.assertIn('    constexpr const char* kMarcellusSC = "Marcellus SC";\n', families)
         self.assertIn('    constexpr const char* kCinzel = "Cinzel";\n', families)
         self.assertIn('    constexpr const char* kCormorantSC = "Cormorant SC";\n', families)
+        self.assertIn('    constexpr const char* kAtkinsonHyperlegible = "Atkinson Hyperlegible";\n', families)
+        self.assertIn('    constexpr const char* kAtkinsonHyperlegibleNext = "Atkinson Hyperlegible Next";\n', families)
         self.assertIn('    constexpr const char* kBarlowCondensed = "Barlow Condensed";\n', families)
         self.assertNotIn('"Marcellus SC"', gen_fonts.generate(self.fonts))
 

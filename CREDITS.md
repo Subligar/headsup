@@ -14,8 +14,9 @@ HeadsUp is free software under the GNU General Public License, version 3 or late
   the game's own files.
 - **Ashita SDK:** AshitaXI/Ashita-v4beta at commit 4171c74 (LGPL-3.0), with the DirectX 8 SDK headers it ships,
   fetched into `third_party/ashita-sdk` by `tools/ashita-sdk/fetch.sh` when HeadsUp is built.
-- **Fonts:** Montserrat, Marcellus SC, Cinzel, Cormorant SC and Barlow Condensed, bundled in `third_party/fonts` under
-  the SIL Open Font License 1.1 (their notices ship beside them).
+- **Fonts:** Montserrat, Marcellus SC, Cinzel, Cormorant SC, Atkinson Hyperlegible, Atkinson Hyperlegible Next and
+  Barlow Condensed, bundled in `third_party/fonts` under the SIL Open Font License 1.1 (their notices ship beside
+  them).
 - **Status icons:** the HD, Tetsouou and XIView packs in `resources/icons/status` and the buff and debuff
   backgrounds (`BuffIcon.png`, `DebuffIcon.png`) are XIUI 1.8.4's (tirem/xiui, MIT License, see
   `third_party/xiui-icons/LICENSE`); its Tetsouou pack credits Tesouou on FFXIAH HD. Which statuses are debuffs
