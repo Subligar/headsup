@@ -20,6 +20,10 @@ namespace headsup
         constexpr const char* kSource       = "game window";
         constexpr const char* kBodyId       = "game-window"; // whose rules outweigh the settings window's own on an id
         constexpr const char* kPaneId       = "pane-";
+        // Classes of their own: the settings window's row and column spread their parts apart.
+        constexpr const char* kPaneClass    = "game-pane";
+        constexpr const char* kRowClass     = "game-row";
+        constexpr const char* kColumnClass  = "game-column";
         constexpr const char* kHeadId       = "game-head";
         constexpr const char* kFootId       = "game-foot";
         constexpr const char* kTitleId      = "title"; // the settings window's, whose look it takes
@@ -79,8 +83,11 @@ namespace headsup
             const float picture = kCogShare * kFrame;
             css += cog + " img{position:absolute;left:50%;top:50%;width:" + Em(picture) + ";height:" + Em(picture) + ";margin-left:" +
                    Em(-picture / 2.0f) + ";margin-top:" + Em(-picture / 2.0f) + ";}";
-            css += ".row{display:flex;flex-direction:row;align-items:flex-start;}.row > *{margin-right:" + Em(kControlGap) + ";}";
-            css += ".column{display:flex;flex-direction:column;}.column > *{margin-bottom:" + Em(kControlGap) + ";}";
+            // A tab's parts stand together in the middle.
+            css += std::string(".") + kPaneClass + "{display:flex;flex-direction:column;align-items:center;}";
+            css += std::string(".") + kPaneClass + "." + kHiddenClass + "{display:none;}";
+            css += std::string(".") + kRowClass + "{display:flex;flex-direction:row;align-items:flex-start;gap:" + Em(kControlGap) + ";}";
+            css += std::string(".") + kColumnClass + "{display:flex;flex-direction:column;gap:" + Em(kControlGap) + ";}";
             // As tall as its rows and the gap above each, the last entry's own gap under it.
             const float listTall = (kEntryGap + static_cast<float>(kListRows) * (kEntryHeight + kEntryGap)) * pixels + 2.0f * kListEdge;
             css += std::string(".") + kListClass + "{box-sizing:border-box;width:" + Em(kListWidth) + ";height:" + Px(listTall) +
@@ -117,7 +124,7 @@ namespace headsup
                 rml += "</div><div class=\"tab-rule\"></div>";
             }
             for (size_t i = 0; i < spec.tabs.size(); ++i)
-                rml += "<div id=\"" + std::string(kPaneId) + std::to_string(i) + "\">" + spec.tabs[i].rml + "</div>";
+                rml += std::string("<div class=\"") + kPaneClass + "\" id=\"" + kPaneId + std::to_string(i) + "\">" + spec.tabs[i].rml + "</div>";
             if (!spec.footer.empty()) rml += std::string("<div id=\"") + kFootId + "\">" + spec.footer + "</div>";
             return rml + "</body></rml>";
         }
@@ -169,8 +176,8 @@ namespace headsup
         return rml + "</div>";
     }
 
-    std::string GameRowRml(const std::string& rml) { return "<div class=\"row\">" + rml + "</div>"; }
-    std::string GameColumnRml(const std::string& rml) { return "<div class=\"column\">" + rml + "</div>"; }
+    std::string GameRowRml(const std::string& rml) { return std::string("<div class=\"") + kRowClass + "\">" + rml + "</div>"; }
+    std::string GameColumnRml(const std::string& rml) { return std::string("<div class=\"") + kColumnClass + "\">" + rml + "</div>"; }
     std::string GameTextRml(const std::string& text, const std::string& id)
     {
         return "<div class=\"text\"" + (id.empty() ? std::string() : " id=\"" + id + "\"") + ">" + EscapedRml(text) + "</div>";
@@ -360,7 +367,12 @@ namespace headsup
     void GameWindows::Move(Window& window, MenuAction move)
     {
         window.document->UpdateDocument();
-        const std::vector<Rml::Element*> elements = Selectable(window.document);
+        std::vector<Rml::Element*> elements = Selectable(window.document);
+        // Left and right keep to the tab's own parts: past its edge is the title bar's cog, which they stand apart from.
+        Rml::Element* pane = window.document->GetElementById(kPaneId + std::to_string(window.tab));
+        if ((move == MenuAction::Left || move == MenuAction::Right) && pane != nullptr)
+            if (std::vector<Rml::Element*> inside = Selectable(pane); std::find(inside.begin(), inside.end(), window.selected) != inside.end())
+                elements = std::move(inside);
         std::vector<Rml::Element*> lists;
         std::vector<NavBox> boxes;
         size_t current = elements.size();
