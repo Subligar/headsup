@@ -30,7 +30,7 @@ namespace headsup
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "coordinates", "icon", "weather",
             "date", "day", "time", "moon", "season", "aggro", "name", "distance", "detection", "level", "player", "weak",
             "coin", "name1", "name2", "amount1", "amount2", "icon1", "icon2", "count1", "count2", "name1", "name2", "icon", "time", "server", "vana", "icon", "date", "jobs", "earned", "tonext", "percent", "bar",
-            "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "pin1", "pin2",
+            "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "icon", "pin1", "pin2",
             "pin3", "pin4", "pin5", "pin6", "ship",
             "guild", "sandoria", "bastok", "windurst", "beastmen", "name", "icon", "name"};
 
@@ -255,6 +255,7 @@ namespace headsup
         case BarWidget::Bags: return P::BagIcon;
         case BarWidget::EarthTime: return P::ClockIcon;
         case BarWidget::HomePoint: return P::HomePointIcon;
+        case BarWidget::Party: return P::PartyIcon;
         default: return std::nullopt;
         }
     }
@@ -514,6 +515,7 @@ namespace headsup
         case WidgetPart::BagIcon: return PartMark{Icon::Bag};
         case WidgetPart::ClockIcon: return PartMark{Icon::Clock};
         case WidgetPart::HomePointIcon: return PartMark{Icon::HomePoint};
+        case WidgetPart::PartyIcon: return PartMark{Icon::Person};
         case WidgetPart::ZoneCrest:
         case WidgetPart::WorldSanDoria: return PartMark{std::nullopt, GamePicture::SanDoriaCrest};
         case WidgetPart::WorldBastok: return PartMark{std::nullopt, GamePicture::BastokCrest};

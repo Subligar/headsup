@@ -1563,7 +1563,12 @@ namespace headsup
             case BarWidget::GameHelp: return {};
             case BarWidget::Performance: return PerformanceParts(state, o, base);
             case BarWidget::Job: return JobParts(state.job, o, base);
-            case BarWidget::Party: return PartyParts(state.party, base);
+            case BarWidget::Party:
+            {
+                std::vector<PartContent> parts = PartyParts(state.party, base);
+                parts.push_back({WidgetPart::PartyIcon, ListOf(Mark(Icon::Person))});
+                return parts;
+            }
             case BarWidget::StatusTimers:
                 base.hasPopup = true;
             {
