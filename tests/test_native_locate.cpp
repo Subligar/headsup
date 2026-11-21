@@ -805,6 +805,33 @@ namespace
     }
 }
 
+TEST(the_compass_routines_answer_is_found_once_whatever_it_says_now)
+{
+    // From the client (RVA 0xAD7D9): the zone test, the jump table by zone, "no" (xor al,al; ret) and "yes"
+    // (mov al,1; ret), whose 1 is 36 bytes in.
+    constexpr uint32_t kRoutine = 0xAD7D9, kAnswer = kRoutine + 36;
+    const auto put = [](Image& image, uint32_t at) {
+        image.Put(at, {0x33, 0xC0, 0x66, 0x8B, 0x81, 0x7C, 0x0D, 0x04, 0x00, 0x48, 0x3D, 0xE3, 0x00, 0x00, 0x00, 0x77,
+                          0x12, 0x33, 0xC9, 0x8A, 0x88, 0x08, 0xD8, 0xA0, 0x02, 0xFF, 0x24, 0x8D, 0x00, 0xD8, 0xA0, 0x02,
+                          0x32, 0xC0, 0xC3, 0xB0, 0x01, 0xC3});
+    };
+    CHECK(!LocateCompassShown(Image{}.Text()));
+    Image image;
+    put(image, kRoutine);
+    CHECK_EQ(*LocateCompassShown(image.Text()), kAnswer);
+    // HUDBeGone writes 0 there to hide the compass: still the same place.
+    image.Put(kAnswer, {0x00});
+    CHECK_EQ(*LocateCompassShown(image.Text()), kAnswer);
+    put(image, 0x100000);
+    CHECK(!LocateCompassShown(image.Text()));
+}
+
+TEST(the_compass_is_a_window_the_player_can_hide)
+{
+    CHECK(CompassWindow(*KeyFromShortName("compass")) && !CompassWindow(*KeyFromShortName("equip")));
+    CHECK((HiddenWindowsFrom("compass") == std::vector<std::string>{"compass"}));
+}
+
 TEST(wide_scans_grid_label_takes_the_title_windows_place_from_one_call_to_get_rect)
 {
     Image image;

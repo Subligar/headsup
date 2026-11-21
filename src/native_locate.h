@@ -348,6 +348,11 @@ namespace headsup
     bool FollowsHelpStrip(const WindowKey& key);
     // The title alone.
     bool TitleWindow(const WindowKey& key);
+    // The compass: no window of the game's list, so it can be hidden (LocateCompassShown) and nothing places it.
+    bool CompassWindow(const WindowKey& key);
+    // The RVA of the byte that is the answer of the routine saying whether the zone shows the compass (1, or 0 to
+    // hide it, as HUDBeGone writes); none unless found exactly once.
+    std::optional<uint32_t> LocateCompassShown(const ImageSection& text);
     struct WindowSpot
     {
         int left = 0, top = 0;
