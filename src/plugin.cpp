@@ -3135,6 +3135,7 @@ private:
         s.owners   = m_GameState.Owners();
         s.shares   = m_GameState.Shares();
         s.homePoint  = m_AshitaCore->GetMemoryManager()->GetPlayer()->GetHomepoint();
+        s.phTimers   = m_TimerLines;
         s.pickedTabs = &m_BarInput.PickedTabs();
         s.scrolled   = &m_BarInput.Scrolled();
         s.pinRefused = m_BarInput.Refused();

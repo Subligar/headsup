@@ -168,7 +168,7 @@ namespace headsup
     BarMetrics MetricsOf(const Settings& s, BarShape shape, BarWidget kind, const WidgetOptions& own)
     {
         constexpr float kCloserLines = 0.8f, kLargerStatusIcons = 1.45f;
-        const bool closer = kind == BarWidget::HomePoint || kind == BarWidget::StatusTimers;
+        const bool closer = kind == BarWidget::HomePoint || kind == BarWidget::StatusTimers || kind == BarWidget::PhTimers;
         const float icons = kind == BarWidget::StatusTimers ? kLargerStatusIcons : 1.0f;
         BarMetrics m = MetricsFor(s.barHeight, shape, FontRatioOf(s, own), own.popupTextScale.value_or(s.popupTextScale),
             static_cast<float>(own.iconScale.value_or(s.barIconScale)) * icons, s.popupWidthScale, s.popupHeightScale,

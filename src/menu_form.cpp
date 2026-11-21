@@ -1033,6 +1033,7 @@ namespace headsup
             // Font Size Ratio and Uniform Font Size size a second line, which a widget on one line does not have.
             const bool twoLines = [&] {
                 if (kind == BarWidget::HomePoint) return o.wrapText;
+                if (kind == BarWidget::PhTimers) return true;
                 if (kind == BarWidget::StatusTimers)
                     return std::ranges::none_of(PinnedLines(o.pinDesign, s.statusPins), &std::vector<uint16_t>::empty);
                 return std::ranges::all_of(o.design.lines, [](const std::vector<DesignChip>& line) {

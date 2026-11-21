@@ -395,7 +395,7 @@ namespace headsup
         constexpr const char* kNoticeSoundKeys[] = {"friendNoticeOnlineSound", "friendNoticeOfflineSound", "partyNoticeSound"};
         static_assert(std::size(kNoticeSoundFields) == std::size(kNoticeSoundKeys));
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barCustom"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers", "barCustom"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1719,7 +1719,7 @@ namespace headsup
         if (widget.kind == BarWidget::Custom) o.name = CreatedWidgetName(widget);
         o.popup      = DefaultPopupDesign(widget.kind);
         if (widget.kind == BarWidget::EarthTime) o.iconSide = IconSide::Hide;
-        o.uniformFont = widget.kind == BarWidget::HomePoint || widget.kind == BarWidget::StatusTimers;
+        o.uniformFont = widget.kind == BarWidget::HomePoint || widget.kind == BarWidget::StatusTimers || widget.kind == BarWidget::PhTimers;
         return o;
     }
 
