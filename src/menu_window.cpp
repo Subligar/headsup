@@ -87,7 +87,8 @@ namespace headsup
         {
             const std::string nav = std::string(" class=\"") + kGameNavClass + "\"";
             std::string rml = "<rml><head><style>" + GameWindowStyle(look) + "</style></head><body id=\"" + kBodyId + "\"><div id=\"" +
-                              kMenuArtId + "\">" + kArtRml + "</div><div id=\"" + kHeadId + "\"><div id=\"title\">" + EscapedRml(spec.title) + "</div></div>";
+                              kMenuArtId + "\">" + kArtRml + "</div><handle id=\"" + kHeadId + "\" " + MoveHandleAttributes() +
+                              "><div id=\"title\">" + EscapedRml(spec.title) + "</div></handle>";
             rml += std::string("<div id=\"") + kGameCogId + "\"" + nav + "><img id=\"" + kCogPicture + "\" src=\"" + CogFor(look) + "\"/></div>";
             rml += std::string("<div id=\"") + kMenuCloseId + "\"" + nav + "><div class=\"cross\"></div><div class=\"cross back\"></div></div>";
             if (spec.tabs.size() > 1)
@@ -105,7 +106,7 @@ namespace headsup
         }
 
         // A move of the pointer, not a mouseover: one comes each update an element scrolls or opens under a pointer at rest.
-        constexpr std::array kListened{Rml::EventId::Click, Rml::EventId::Mousemove, Rml::EventId::Mousedown};
+        constexpr std::array kListened{Rml::EventId::Click, Rml::EventId::Mousemove, Rml::EventId::Mousedown, Rml::EventId::Dragend};
 
         Rml::Element* ListOf(Rml::Element* element)
         {
@@ -158,11 +159,12 @@ namespace headsup
         return "<div class=\"text\"" + (id.empty() ? std::string() : " id=\"" + id + "\"") + ">" + EscapedRml(text) + "</div>";
     }
 
-    void GameWindows::Update(Rml::Context* context, const MenuLook& look)
+    void GameWindows::Update(Rml::Context* context, const MenuLook& look, const std::vector<WindowPlace>& places)
     {
         // Another context: the one the windows were in is gone, and they with it.
         if (context != m_Context) m_Open.clear();
         m_Context = context;
+        m_Places  = places;
         if (m_Look == look) return;
         m_Look = look;
         for (const Window& window : m_Open)
@@ -184,13 +186,21 @@ namespace headsup
             document->AddEventListener(id, this);
         document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
         document->PullToFront();
-        document->UpdateDocument();
+        m_Open.push_back({spec.id, parent, spec.settingsPage, spec.settingsCard, document, spec.tabs.size()});
+        // Measured as it shows its first tab alone.
+        ShowTab(m_Open.back(), 0, true);
         const Rml::Vector2f size   = document->GetBox().GetSize(Rml::BoxArea::Border);
         const Rml::Vector2i screen = m_Context->GetDimensions();
-        document->SetProperty(Rml::PropertyId::Left, Rml::Property(std::round((static_cast<float>(screen.x) - size.x) / 2.0f), Rml::Unit::PX));
-        document->SetProperty(Rml::PropertyId::Top, Rml::Property(std::round((static_cast<float>(screen.y) - size.y) / 2.0f), Rml::Unit::PX));
-        m_Open.push_back({spec.id, parent, spec.settingsPage, spec.settingsCard, document, spec.tabs.size()});
-        ShowTab(m_Open.back(), 0, true);
+        Rml::Vector2f at{std::round((static_cast<float>(screen.x) - size.x) / 2.0f), std::round((static_cast<float>(screen.y) - size.y) / 2.0f)};
+        const auto place = std::find_if(m_Places.begin(), m_Places.end(), [&](const WindowPlace& p) { return p.name == spec.id; });
+        if (place != m_Places.end())
+        {
+            const auto [x, y] = KeptOnScreen(place->x, place->y, static_cast<int>(std::lround(size.x)), static_cast<int>(std::lround(size.y)),
+                screen.x, screen.y);
+            at = {static_cast<float>(x), static_cast<float>(y)};
+        }
+        document->SetProperty(Rml::PropertyId::Left, Rml::Property(at.x, Rml::Unit::PX));
+        document->SetProperty(Rml::PropertyId::Top, Rml::Property(at.y, Rml::Unit::PX));
         return true;
     }
 
@@ -365,6 +375,14 @@ namespace headsup
         const Rml::ElementDocument* document = target != nullptr ? target->GetOwnerDocument() : nullptr;
         const auto window = std::find_if(m_Open.begin(), m_Open.end(), [&](const Window& w) { return w.document == document; });
         if (window == m_Open.end()) return;
+        if (event.GetId() == Rml::EventId::Dragend)
+        {
+            // The handle has moved it, but it is laid out there only on the next update.
+            window->document->UpdateDocument();
+            const Rml::Vector2f at = window->document->GetAbsoluteOffset(Rml::BoxArea::Border);
+            m_Moved.push_back({window->id, static_cast<int>(std::lround(at.x)), static_cast<int>(std::lround(at.y))});
+            return;
+        }
         // The game's own cancel, over any of them.
         if (event.GetId() == Rml::EventId::Mousedown)
         {

@@ -952,6 +952,18 @@ TEST(the_window_placement_saves_and_loads_back_its_switches_places_and_each_mode
     CHECK_EQ(read.placedUnder[static_cast<int>(HelpMode::Off)], kMaxWindowOffset);
 }
 
+TEST(the_game_menus_places_save_and_load_back_and_a_broken_or_repeated_one_goes)
+{
+    Settings s;
+    s.menuPlaces = {WindowPlace{"testmenu", -40, 300}, WindowPlace{"testmenu-confirm", 900, 20}};
+    MapStore file;
+    SaveSettings(s, file);
+    CHECK_EQ(file.values["menuPlaces"], std::string("testmenu:-40,300 testmenu-confirm:900,20"));
+    CHECK(LoadSettings(file) == s);
+    file.values["menuPlaces"] = "bag:1,2 bag:3,4 :5,6 sort:7 keys:x,1";
+    CHECK((LoadSettings(file).menuPlaces == std::vector<WindowPlace>{{"bag", 1, 2}}));
+}
+
 TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_phoenix_gold)
 {
     Settings s;

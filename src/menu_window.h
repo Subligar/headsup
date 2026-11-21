@@ -2,6 +2,7 @@
 
 #include "menu_document.h"
 #include "menu_nav.h"
+#include "native_locate.h"
 
 #include <RmlUi/Core.h>
 
@@ -52,11 +53,12 @@ namespace headsup
     {
     public:
         ~GameWindows() override { Close(); }
-        // Each frame, before anything opens or acts: the context they are in and the look they take.
-        void Update(Rml::Context* context, const MenuLook& look);
-        // Opens a window on its left-most tab, in the screen's middle; with a parent, as its sub-window, which closes
-        // with it and keeps the mouse from it. False before the first Update, for an id open already or a parent that
-        // is not.
+        // Each frame, before anything opens or acts: the context they are in, the look they take, and where the player
+        // left each by its id, which it opens at.
+        void Update(Rml::Context* context, const MenuLook& look, const std::vector<WindowPlace>& places);
+        // Opens a window on its left-most tab, where the player left it or in the screen's middle; with a parent, as its
+        // sub-window, which closes with it and keeps the mouse from it. False before the first Update, for an id open
+        // already or a parent that is not.
         bool Open(const GameWindowSpec& spec, const std::string& parent = {});
         // A window and its sub-windows.
         void Close(const std::string& id);
@@ -72,6 +74,8 @@ namespace headsup
         // the settings page and card a cog asked for.
         std::vector<std::string> TakePressed() { return std::exchange(m_Pressed, {}); }
         std::optional<std::pair<std::string, std::string>> TakeSettingsAsked();
+        // Once each: the windows dragged by their titles and let go, by id, at their top-left corners in pixels.
+        std::vector<WindowPlace> TakeMoved() { return std::exchange(m_Moved, {}); }
         // The newest window's selected element, by id; empty with none open.
         std::string Selected() const;
         size_t TabShown(const std::string& id) const;
@@ -98,6 +102,7 @@ namespace headsup
         Rml::Context* m_Context = nullptr;
         std::optional<MenuLook> m_Look;
         std::vector<std::string> m_Pressed;
+        std::vector<WindowPlace> m_Places, m_Moved;
         std::optional<std::pair<std::string, std::string>> m_SettingsAsked;
     };
 }

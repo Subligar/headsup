@@ -322,8 +322,11 @@ namespace headsup
     constexpr int kMaxWindowOffset = 2000;
     // The text up to the first separator, which is taken off text with it.
     std::string_view NextField(std::string_view& text, char separator);
-    // The places the player puts windows at, from the settings file's "equip:100,200 statcom:0,40": a name no window
-    // could have, a strip window, a repeat and any past kMaxWindowKeys go; places are held to 0 to kMaxWindowOffset.
+    // Places from a settings file's "equip:100,200 statcom:0,40": a name named refuses, a repeat and any past
+    // kMaxWindowKeys go; x and y are held to low to high.
+    std::vector<WindowPlace> PlacesFrom(std::string_view text, bool (*named)(std::string_view name), int low, int high);
+    // The places the player puts the game's windows at: a name no window could have and a strip window go too; places
+    // are held to 0 to kMaxWindowOffset.
     std::vector<WindowPlace> WindowPlacesFrom(std::string_view text);
     std::string WindowPlaceText(const std::vector<WindowPlace>& places);
     // The windows the player hides, by short name, from the settings file's "statcom inventor": a name no window

@@ -518,12 +518,25 @@ namespace headsup
                "\" class=\"hidden\"></div></body></rml>";
     }
 
+    std::string MoveHandleAttributes()
+    {
+        const std::string offScreen = std::to_string(static_cast<int>(std::lround(-(1.0f - kWindowKeptOn) * 100.0f))) + "%";
+        return "move_target=\"#document\" edge_margin=\"0px " + offScreen + " " + offScreen + " " + offScreen + "\"";
+    }
+
+    std::pair<int, int> KeptOnScreen(int x, int y, int width, int height, int screenWidth, int screenHeight)
+    {
+        const auto kept = [](int at, int side, int screenSide) {
+            const int on = static_cast<int>(std::lround(static_cast<float>(side) * kWindowKeptOn));
+            return std::clamp(at, on - side, std::max(on - side, screenSide - on));
+        };
+        return {kept(x, width, screenWidth), std::clamp(kept(y, height, screenHeight), 0, std::max(0, screenHeight))};
+    }
+
     std::string MenuDocument(const MenuLook& look)
     {
-        // The title's handle lets the window off the screen but for kWindowKeptOn of it, and never off the top.
-        const std::string offScreen = std::to_string(static_cast<int>(std::lround(-(1.0f - kWindowKeptOn) * 100.0f))) + "%";
         return "<rml><head><style>" + MenuStyle(look) + "</style></head><body><div id=\"" + kMenuArtId + "\">" + kArtRml + "</div>"
-               "<handle id=\"head\" move_target=\"#document\" edge_margin=\"0px " + offScreen + " " + offScreen + " " + offScreen + "\"><div id=\"title\">HeadsUp</div><div id=\"" +
+               "<handle id=\"head\" " + MoveHandleAttributes() + "><div id=\"title\">HeadsUp</div><div id=\"" +
                kMenuVersionId + "\"></div></handle><div id=\"head-line\"></div>" +
                (look.developer ? std::string("<div id=\"tools\"><div class=\"") + kRaisedPill + "\" id=\"" + kMenuReloadId +
                                      "\"></div></div>"

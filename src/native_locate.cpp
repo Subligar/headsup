@@ -953,7 +953,7 @@ namespace headsup
         return field;
     }
 
-    std::vector<WindowPlace> WindowPlacesFrom(std::string_view text)
+    std::vector<WindowPlace> PlacesFrom(std::string_view text, bool (*named)(std::string_view name), int low, int high)
     {
         std::vector<WindowPlace> places;
         while (!text.empty() && places.size() < kMaxWindowKeys)
@@ -962,18 +962,25 @@ namespace headsup
             const size_t colon = entry.find(':'), comma = entry.find(',', colon == std::string_view::npos ? 0 : colon);
             if (colon == std::string_view::npos || comma == std::string_view::npos) continue;
             const std::string_view name = entry.substr(0, colon);
-            const std::optional<WindowKey> key = KeyFromShortName(name);
             int x = 0, y = 0;
             const auto number = [](std::string_view digits, int& out) {
                 const auto [end, problem] = std::from_chars(digits.data(), digits.data() + digits.size(), out);
                 return problem == std::errc{} && end == digits.data() + digits.size();
             };
-            if (!key || !MovableWindow(*key) || !number(entry.substr(colon + 1, comma - colon - 1), x) ||
-                !number(entry.substr(comma + 1), y) || std::ranges::any_of(places, [&](const WindowPlace& p) { return p.name == name; }))
+            if (!named(name) || !number(entry.substr(colon + 1, comma - colon - 1), x) || !number(entry.substr(comma + 1), y) ||
+                std::ranges::any_of(places, [&](const WindowPlace& p) { return p.name == name; }))
                 continue;
-            places.push_back(WindowPlace{std::string(name), std::clamp(x, 0, kMaxWindowOffset), std::clamp(y, 0, kMaxWindowOffset)});
+            places.push_back(WindowPlace{std::string(name), std::clamp(x, low, high), std::clamp(y, low, high)});
         }
         return places;
+    }
+
+    std::vector<WindowPlace> WindowPlacesFrom(std::string_view text)
+    {
+        return PlacesFrom(text, [](std::string_view name) {
+            const std::optional<WindowKey> key = KeyFromShortName(name);
+            return key && MovableWindow(*key);
+        }, 0, kMaxWindowOffset);
     }
 
     std::string WindowPlaceText(const std::vector<WindowPlace>& places)
