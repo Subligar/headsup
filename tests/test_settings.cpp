@@ -3657,3 +3657,59 @@ TEST(each_combat_popup_switch_is_on_until_switched_off_and_saves)
         CHECK(!(LoadSettings(saved).*field));
     }
 }
+
+// John (2026-11-19): each page's Buffs & Debuffs, Show Status Background and, on Players, Only Party Members.
+TEST(each_kinds_starred_statuses_and_their_switches_are_kept_and_only_its_kinds_write_them)
+{
+    Settings s;
+    for (const PlateKind kind : {PlateKind::Mobs, PlateKind::Players, PlateKind::Self})
+        CHECK((s.Kind(kind).shownStatuses == std::vector<uint16_t>{40, 41, 2, 4, 7, 5})); // Protect to Blindness
+    s.Kind(PlateKind::Mobs).shownStatuses    = {4, 134};
+    s.Kind(PlateKind::Players).shownStatuses = {40};
+    s.Kind(PlateKind::Self).shownStatuses    = {41, 2};
+    s.Kind(PlateKind::Self).statusBack       = true;
+    s.Kind(PlateKind::Players).statusPartyOnly = false;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK(store.values["mobsShownStatuses"] == "4 134" && store.values["selfShownStatuses"] == "41 2");
+    CHECK(!store.values.contains("npcsShownStatuses") && !store.values.contains("petsStatusBackground"));
+    CHECK(!store.values.contains("mobsStatusPartyOnly") && !store.values.contains("selfStatusPartyOnly"));
+    const Settings read = LoadSettings(store);
+    for (const PlateKind kind : {PlateKind::Mobs, PlateKind::Players, PlateKind::Self})
+    {
+        CHECK(read.Kind(kind).shownStatuses == s.Kind(kind).shownStatuses);
+        CHECK_EQ(read.Kind(kind).statusBack, s.Kind(kind).statusBack);
+    }
+    CHECK(!read.Kind(PlateKind::Players).statusPartyOnly);
+    store.values["mobsShownStatuses"] = "40 x 65000 40";
+    CHECK((LoadSettings(store).Kind(PlateKind::Mobs).shownStatuses == std::vector<uint16_t>{40}));
+}
+
+// An emptied list must not come back as the six a file without the key gets, even through a reader that takes an
+// empty value for none, as Windows' profile reader can for a line with nothing after its "=".
+TEST(an_emptied_starred_list_stays_empty_through_the_settings_file)
+{
+    Settings s;
+    s.Kind(PlateKind::Players).shownStatuses.clear();
+    MapStore saved;
+    ChangedKeys changed(saved);
+    SaveSettings(s, changed);
+    std::vector<KeyText> values;
+    for (const auto& [key, text] : saved.values)
+        values.push_back({key, text});
+    class IniStore final : public SettingsStore
+    {
+    public:
+        std::string file;
+        std::string GetString(const char* key, const char* fallback) override
+        {
+            const std::optional<std::string> value = IniValue(file, "settings", key);
+            return value && !value->empty() ? *value : fallback;
+        }
+        void Set(const char*, const char*) override {}
+    } file;
+    file.file = WithIniValues("", "settings", values);
+    const Settings read = LoadSettings(file);
+    CHECK(read.Kind(PlateKind::Players).shownStatuses.empty());
+    CHECK_EQ(read.Kind(PlateKind::Self).shownStatuses.size(), size_t{6});
+}

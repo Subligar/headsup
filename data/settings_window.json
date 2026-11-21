@@ -1010,6 +1010,23 @@
         ]
       },
       {
+        "key": "plate-statuses",
+        "name": "Buffs & Debuffs",
+        "description": "Pick which buffs and debuffs the Buffs and Debuffs tags show on this nameplate. Click a status's star to show it. Starred statuses move to the top of their list the next time you open this page.\n\nYours and your party's statuses are always right. For other players and mobs, HeadsUp only knows what it saw land, so a status can still show for a while after it ends.",
+        "kinds": ["mobs", "players", "self"],
+        "settings": [
+          {"key": "plate-status-background", "name": "Show Status Background", "tip": "Shows the buff or debuff background behind each status icon, on the nameplate and in the lists below. Off by default."},
+          {"key": "status-party-only", "name": "Only Party Members", "tip": "Shows statuses only on members of your party or alliance, not on every player. On by default.", "kinds": ["players"]},
+          {
+            "key": "shown-statuses",
+            "words": [
+              {"key": "buffs", "name": "Buffs"},
+              {"key": "debuffs", "name": "Debuffs"}
+            ]
+          }
+        ]
+      },
+      {
         "key": "line-style",
         "name": "Line Style",
         "description": "These are settings to change the appearance of each line individually.",

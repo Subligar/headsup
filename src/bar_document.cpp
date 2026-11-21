@@ -83,23 +83,24 @@ namespace headsup
             if (error != std::errc() || end != text.data() + text.size()) return std::nullopt;
             return value;
         }
+    }
 
-        // A status's icon filling a square box of side at x, y in unit, each moved and sized by its own icon
-        // adjustment. With Show Status Background its background is drawn under it, larger than the box.
-        std::string StatusPictures(const StatusMark& mark, float x, float y, float side, const char* unit)
-        {
-            const auto at = [&](float left, float top, float size) {
-                return "left:" + RcssNumber(x + left * side) + unit + ";top:" + RcssNumber(y + top * side) + unit +
-                       ";width:" + RcssNumber(size * side) + unit + ";height:" + RcssNumber(size * side) + unit + ";";
-            };
-            const std::string icon = "<img class=\"p\" src=\"" + StatusSource(mark) + "\" style=\"" + at(0.0f, 0.0f, 1.0f) +
-                                     AdjustRules(AdjustOf(mark)) + "\"/>";
-            if (!mark.back) return icon;
-            const StatusBack back = StatusBackBox(mark.id);
-            return "<img class=\"p\" src=\"" + IconSource(back.icon) + "\" style=\"" + at(back.left, back.top, back.side) +
-                   AdjustRules(AdjustOf(back.icon)) + "\"/>" + icon;
-        }
+    std::string StatusPictures(const StatusMark& mark, float x, float y, float side, const char* unit)
+    {
+        const auto at = [&](float left, float top, float size) {
+            return "left:" + RcssNumber(x + left * side) + unit + ";top:" + RcssNumber(y + top * side) + unit +
+                   ";width:" + RcssNumber(size * side) + unit + ";height:" + RcssNumber(size * side) + unit + ";";
+        };
+        const std::string icon = "<img class=\"p\" src=\"" + StatusSource(mark) + "\" style=\"" + at(0.0f, 0.0f, 1.0f) +
+                                 AdjustRules(AdjustOf(mark)) + "\"/>";
+        if (!mark.back) return icon;
+        const StatusBack back = StatusBackBox(mark.id);
+        return "<img class=\"p\" src=\"" + IconSource(back.icon) + "\" style=\"" + at(back.left, back.top, back.side) +
+               AdjustRules(AdjustOf(back.icon)) + "\"/>" + icon;
+    }
 
+    namespace
+    {
         // A span's mark, before its text; last: the span ends its line.
         std::string Picture(const Span& span, const BarLook& look, bool last)
         {

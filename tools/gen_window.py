@@ -106,7 +106,7 @@ PIECES = Pieces(
         'nameplates': Card(switch=True), 'outline-style': Card(switch=True), 'target-cursor': Card(), 'damage-appearance': Card(), 'damage-placement': Card(),
         'colors-aggression': Card(), 'colors-toughness': Card(), 'colors-claim-status': Card(),
         'colors-targeting': Card(), 'colors-entity-type': Card(), 'colors-combat-popups': Card(),
-        'visibility': Card(), 'outline-design': Card(), 'nameplate-design': Card(), 'line-style': Card(),
+        'visibility': Card(), 'outline-design': Card(), 'nameplate-design': Card(), 'plate-statuses': Card(), 'line-style': Card(),
         'ornament': Card(), 'nameplate-opacity': Card(), 'detection-icons': Card(), 'badges': Card(),
         'weaknesses': Card(), 'statuses': Card(), 'placeholder-timers': Card(),
         'screenshot-mode': Card(), 'window-groups': Card(), 'fishing-appearance': Card(), 'fishing-case': Card(switch=True), 'notice-look': Card(), 'notice-friends': Card(), 'notice-party': Card(), 'base-game-ui': Card(),
@@ -151,6 +151,8 @@ PIECES = Pieces(
         'design': Setting(entity=True, unnamed=True, words={'move-up': False, 'move-down': False}),
         'max-icons-shown': Setting(entity=True, kinds=('players', 'self'), words={'all': True}),
         'unused-tags': Setting(entity=True, unnamed=True),
+        'plate-status-background': Setting(entity=True), 'status-party-only': Setting(entity=True, kinds=('players',)),
+        'shown-statuses': Setting(entity=True, unnamed=True, words={'buffs': True, 'debuffs': True}),
         'line-styles': Setting(entity=True, unnamed=True, rows=rows(
             'sync-line-style', 'line-visibility', 'alignment', 'font', 'font-style', 'text-size', 'icon-size', 'padding',
             'horizontal-offset', 'text-color', 'shadow-strength', 'shadow-color', 'glow-strength', 'glow-size',

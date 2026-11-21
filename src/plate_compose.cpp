@@ -148,9 +148,6 @@ namespace headsup
             const PlateKind kind = PlateKindOf(info.state);
             if (!HasPlateStatuses(kind)) return out;
             const KindSettings& design = s.Kind(kind);
-            const auto starred = [&](std::string_view name) {
-                return std::ranges::any_of(design.shownStatuses, [&](uint16_t id) { return name == StatusName(id); });
-            };
             const auto drawn = [&](std::string_view name) {
                 return std::ranges::any_of(out, [&](const IconDraw& d) { return name == StatusName(*d.status); });
             };
@@ -158,7 +155,8 @@ namespace headsup
             {
                 const uint16_t id = info.statuses.ids[static_cast<size_t>(i)];
                 const std::string_view name = StatusName(id);
-                if (IsDebuff(id) != (tag == Tag::Debuffs) || name.empty() || !starred(name) || drawn(name)) continue;
+                if (IsDebuff(id) != (tag == Tag::Debuffs) || name.empty() || !StarredByName(design.shownStatuses, id) || drawn(name))
+                    continue;
                 out.push_back(IconDraw{.status = id, .back = design.statusBack});
             }
             return out;
