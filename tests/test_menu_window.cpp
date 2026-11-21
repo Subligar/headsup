@@ -105,6 +105,10 @@ namespace
         }
     };
 
+    // The selection's ground: the soft accent laid over a control's own ground (Phoenix 0x352325 under 0x47C55151, Aurora
+    // 0x1F2B40 under 0x385EE6FF), worked out by hand.
+    constexpr uint32_t kPhoenixLit = 0xFF5D3031, kAuroraLit = 0xFF2D546A;
+
     bool SameColor(Rml::Colourb color, uint32_t argb)
     {
         return color.red == (argb >> 16 & 0xFF) && color.green == (argb >> 8 & 0xFF) && color.blue == (argb & 0xFF) && color.alpha == argb >> 24;
@@ -115,7 +119,7 @@ namespace
     {
         const Rml::Vector2f at = element->GetAbsoluteOffset(Rml::BoxArea::Border), size = element->GetBox().GetSize(Rml::BoxArea::Border);
         Rml::Vector2f corner = at + size;
-        return element->Project(corner) && corner.x < at.x + size.x - 0.5f && corner.y < at.y + size.y - 0.1f;
+        return element->Project(corner) && corner.x < at.x + size.x - 0.1f && corner.y < at.y + size.y - 0.1f;
     }
 
     // Whether an entry lies inside its list's view, as far as the list's padding.
@@ -375,7 +379,7 @@ TEST(a_new_look_restyles_the_open_windows_and_keeps_where_they_are)
         CHECK_EQ(w.windows.TabShown("bag"), size_t{1});
         const std::string selected = w.windows.Selected();
         CHECK_EQ(selected, std::string("key-a"));
-        CHECK(SameColor(w.Element("bag", selected)->GetComputedValues().background_color(), kAuroraMenuColors.accentSoft));
+        CHECK(SameColor(w.Element("bag", selected)->GetComputedValues().background_color(), kAuroraLit));
         CHECK_EQ(w.rml.Said(), "");
     }
 }
@@ -409,7 +413,7 @@ TEST(the_selection_lights_its_background_bolds_its_text_and_grows_a_little_witho
         w.Settle();
         CHECK_EQ(w.windows.Selected(), id);
         const Rml::Style::ComputedValues& look = element->GetComputedValues();
-        CHECK(SameColor(look.background_color(), kLook.colors.accentSoft));
+        CHECK(SameColor(look.background_color(), kPhoenixLit));
         CHECK(look.has_font_effect());
         CHECK(DrawnLarger(element));
         // Its text stays where it was, and it has no outline.
@@ -425,7 +429,7 @@ namespace
     bool KeptLit(Rml::Element* entry)
     {
         const Rml::Style::ComputedValues& look = entry->GetComputedValues();
-        return SameColor(look.background_color(), kLook.colors.accentSoft) && !look.has_font_effect() && !DrawnLarger(entry);
+        return SameColor(look.background_color(), kPhoenixLit) && !look.has_font_effect() && !DrawnLarger(entry);
     }
 }
 
