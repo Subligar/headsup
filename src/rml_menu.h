@@ -61,7 +61,6 @@ namespace headsup
         bool DamageNumbersPageOpen() const;
         bool TakeNoticeTest();
         std::optional<FriendsIncluded> TakeIncludedAsked();
-        bool TakeFriendNoticeTest();
         std::optional<NoticeKind> TakeSoundPicked();
         // The Notifications page is open: its test notifications show and drag without Shift.
         bool NoticesPageOpen() const;

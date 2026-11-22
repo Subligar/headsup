@@ -205,7 +205,6 @@ namespace headsup
     bool RmlMenu::DamageNumbersPageOpen() const { return open && !InSetup() && m_State.page == Page::DamageNumbers; }
     bool RmlMenu::TakeNoticeTest() { return std::exchange(m_State.noticeTestRequested, false); }
     bool RmlMenu::NoticesPageOpen() const { return open && !InSetup() && m_State.page == Page::Notifications; }
-    bool RmlMenu::TakeFriendNoticeTest() { return std::exchange(m_State.friendNoticeTestRequested, false); }
     std::optional<NoticeKind> RmlMenu::TakeSoundPicked() { return std::exchange(m_State.soundPicked, std::nullopt); }
     std::optional<FriendsIncluded> RmlMenu::TakeIncludedAsked() { return std::exchange(m_State.includedAsked, std::nullopt); }
     bool RmlMenu::TakeSetupBackup() { return std::exchange(m_State.setupBackup, false); }

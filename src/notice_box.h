@@ -17,7 +17,7 @@ namespace headsup
 {
     constexpr const char* kNoticeDocument = "notices";
     constexpr const char* kNoticeStackId  = "noticestack"; // the dragged piece, holding the boxes
-    // Box 0 to kNoticeBoxes - 1; its parts are found by class: .text (.title, .message), .buttons and .bar.
+    // Box 0 to kNoticeBoxes - 1; its parts are found by class: .text (.title, .message), .buttons and .track (.bar).
     std::string NoticeId(int slot);
 
     struct NoticeFrame
@@ -69,7 +69,7 @@ namespace headsup
             NoticeFit fit    = NoticeFit::Shrink;
             HelpAnchor align = HelpAnchor::Left;
             float radius     = 0.0f;
-            FriendNoticeStyle style = FriendNoticeStyle::Full;
+            NoticeStyle style = NoticeStyle::Full;
             bool operator==(const Look&) const = default;
         };
         Look m_Look;

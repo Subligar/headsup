@@ -413,6 +413,15 @@
           "name": "Notifications",
           "description": "How every notification looks and acts. While this page is open, a test notification of each kind stays on screen, and you can drag one to move them all. On any other page, hold Shift and drag.",
           "settings": [
+            {
+              "key": "notice-style",
+              "name": "Style",
+              "tip": "How each notification looks. Default: Full.",
+              "options": [
+                {"name": "Full", "tip": "A heading over a line of text. A friend's says who logged in or out, and an invite's who invited you, with Decline and Accept buttons."},
+                {"name": "Compact", "tip": "Just a dot and the name: green when a friend logs in, gray when they log out, blue for an invite, with its Decline and Accept icons under the name. Each is as small as its name, so Width and Height are hidden."}
+              ]
+            },
             {"key": "notice-width", "name": "Width", "tip": "How wide each notification is. Flexible makes each one as wide as its text. Default: 300 px."},
             {"key": "notice-height", "name": "Height", "tip": "How tall each notification is. Flexible makes each one as tall as its text. Default: Flexible."},
             {
@@ -427,7 +436,8 @@
             {"key": "notice-rounding", "name": "Corner Rounding", "tip": "How round the corners are. Set by Theme uses your theme's Window Rounding. Default: Set by Theme."},
             {"key": "notice-bar", "name": "Countdown Bar", "tip": "Shows a thin bar in each notification that runs down until the notification goes. Default: On."},
             {"key": "notice-master-volume", "name": "Master Volume", "tip": "How loud every notification's sound is. Each kind's Alert Volume is multiplied by this. Default: 100%."},
-            {"key": "notice-seconds", "name": "Duration", "tip": "How long a notification stays on screen before it fades out. Put the pointer over any notification to keep them all on screen. Default: 8 s."},
+            {"key": "notice-seconds", "name": "Duration", "tip": "How long a friend's notification stays on screen before it fades out. Put the pointer over any notification to keep the friends' ones on screen. A party or alliance invite always stays for the 90 seconds you have to answer it, and the pointer does not stop it. Default: 8 s."},
+            {"key": "notice-fade", "name": "Fade Speed", "tip": "How long a notification takes to fade out once its time is up. At 0 s it goes at once. Default: 3 s."},
             {
               "key": "notice-anchor",
               "name": "Horizontal Anchor",
@@ -450,14 +460,14 @@
             {
               "key": "notice-align",
               "name": "Text Alignment",
-              "tip": "Where the text sits inside a notification. Default: Left.",
+              "tip": "Where the text sits inside a notification. Default: Center.",
               "options": [
                 {"name": "Left", "tip": "Text on the left."},
                 {"name": "Center", "tip": "Text in the middle."},
                 {"name": "Right", "tip": "Text on the right."}
               ]
             },
-            {"key": "notice-most", "name": "Max Notifications", "tip": "How many notifications show at once. One more pushes the oldest out. A party invite is not counted. Default: 5."},
+            {"key": "notice-most", "name": "Max Notifications", "tip": "How many notifications show at once, counting party invites and the test notifications on this page. One more pushes the oldest friend's notification out. Default: 6."},
             {"key": "notice-test", "name": "Test", "tip": "Shows a test notification, picked at random from the kinds that are on, with its sound."}
           ]
         },
@@ -468,20 +478,10 @@
           "settings": [
             {"key": "friend-notice-online", "name": "Show Online", "tip": "Shows a notification when a friend comes online. Default: On."},
             {"key": "friend-notice-offline", "name": "Show Offline", "tip": "Shows a notification when a friend goes offline. Default: On."},
-            {
-              "key": "friend-notice-style",
-              "name": "Style",
-              "tip": "How a friend's notification looks. Party and alliance invites always show in full, with their buttons. Default: Full.",
-              "options": [
-                {"name": "Full", "tip": "Friend Online or Friend Offline over a line saying who came online or went offline."},
-                {"name": "Compact", "tip": "Just a dot and your friend's name: green when they come online, gray when they go offline. Each is as small as its name, whatever Width and Height are set to."}
-              ]
-            },
             {"key": "friend-notice-online-sound", "name": "Online Sound Effect", "tip": "The sound when a friend comes online, at most once every 10 seconds. Default: Chime."},
             {"key": "friend-notice-offline-sound", "name": "Offline Sound Effect", "tip": "The sound when a friend goes offline, at most once every 10 seconds. Default: None."},
             {"key": "friend-notice-volume", "name": "Alert Volume", "tip": "How loud the friend sounds are. It is multiplied by Master Volume. Default: 60%."},
-            {"key": "friends-included", "name": "Friends Included", "tip": "Which friends you get notifications for. All also covers friends you add later. Your picks count for all your characters. Default: All."},
-            {"key": "friend-notice-test", "name": "Test", "tip": "Acts as if a friend came online, with its sound, and as if they went offline at the next press."}
+            {"key": "friends-included", "name": "Friends Included", "tip": "Which friends you get notifications for. All also covers friends you add later. Your picks count for all your characters. Default: All."}
           ]
         },
         {

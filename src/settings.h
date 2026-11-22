@@ -154,16 +154,17 @@ namespace headsup
     constexpr int kDefaultNoticeVolume = 60, kMaxNoticeVolume = 100, kDefaultMasterVolume = 100; // percent
     constexpr int kFlexibleNoticeWidth = 100, kDefaultNoticeWidth = 300, kMaxNoticeWidth = 600; // pixels; the lowest is Flexible
     constexpr int kFlexibleNoticeHeight = 30, kMaxNoticeHeight = 200;                            // pixels; the lowest is Flexible
-    constexpr int kMinNoticeMost = 1, kDefaultNoticeMost = 5, kMaxNoticeMost = 10;
+    constexpr int kMinNoticeMost = 1, kDefaultNoticeMost = 6, kMaxNoticeMost = 10;
+    constexpr int kMinNoticeFade = 0, kDefaultNoticeFade = 3, kMaxNoticeFade = 10; // seconds; 0 vanishes at once
     // The notifications' anchored edge: they stack down from Top, up from Bottom.
     enum class NoticeEdge : uint8_t { Top, Bottom };
     constexpr int kNoticeEdgeCount = 2;
     // A notification's text too long for a fixed size: drawn smaller, or cut with an ellipsis.
     enum class NoticeFit : uint8_t { Shrink, Truncate };
     constexpr int kNoticeFitCount = 2;
-    // A friend's notification: its heading over a line of words, or its online dot and name alone.
-    enum class FriendNoticeStyle : uint8_t { Full, Compact };
-    constexpr int kFriendNoticeStyleCount = 2;
+    // A notification: its heading over a line of words, or its kind's dot and the name alone.
+    enum class NoticeStyle : uint8_t { Full, Compact };
+    constexpr int kNoticeStyleCount = 2;
     // The sounds a notification can play, in the settings list's order: None, the chime, then <call0> to <call21>.
     constexpr int kCallSounds = 22, kNoSound = 0, kChimeSound = 1, kFirstCallChoice = 2;
     constexpr int kNoticeSoundCount   = kFirstCallChoice + kCallSounds;
@@ -301,19 +302,20 @@ namespace headsup
             {ColorSource::Game, ColorFromRgb(0xC58CFF)}, {ColorSource::Element, ColorFromRgb(0xFFFFFF)},
             {ColorSource::Game, ColorFromRgb(0x8FD8FF)}, {ColorSource::Game, ColorFromRgb(0x8FD8FF)},
             {ColorSource::Game, ColorFromRgb(0xFF9A5A)}}};
+        NoticeStyle noticeStyle = NoticeStyle::Full;
         int noticeWidth = kDefaultNoticeWidth, noticeHeight = kFlexibleNoticeHeight; // pixels
         NoticeFit noticeFit = NoticeFit::Shrink;
         int noticeRounding  = kThemeRounding;
         bool noticeBar      = true; // the countdown bar
         int noticeVolume = kDefaultMasterVolume, noticeSeconds = kDefaultNoticeSeconds; // every kind's volume is times this
-        HelpAnchor noticeAnchor = HelpAnchor::Left, noticeAlign = HelpAnchor::Left;    // the stack's spot across; its text
+        int noticeFade = kDefaultNoticeFade;
+        HelpAnchor noticeAnchor = HelpAnchor::Left, noticeAlign = HelpAnchor::Center;  // the stack's spot across; its text
         NoticeEdge noticeEdge = NoticeEdge::Top;
         int noticeMost = kDefaultNoticeMost;
         int noticeAcross = kFishBarUnplaced, noticeDown = kFishBarUnplaced; // ten-thousandths of the screen
         bool friendNoticeOnline = true, friendNoticeOffline = true; // a notification when a friend comes online, goes offline
         int friendNoticeOnlineSound = kChimeSound, friendNoticeOfflineSound = kNoSound; // NoticeSoundKey's choices
         int friendNoticeVolume = kDefaultNoticeVolume;
-        FriendNoticeStyle friendNoticeStyle = FriendNoticeStyle::Full;
         bool partyNotice = true, partyNoticeButtons = true; // a notification when you are invited; its Decline and Accept
         int partyNoticeSound = kDefaultInviteSound, partyNoticeVolume = kDefaultNoticeVolume;
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor

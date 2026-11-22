@@ -126,6 +126,7 @@ namespace headsup
             {"noticeRounding", &Settings::noticeRounding, kThemeRounding, kMaxRounding},
             {"noticeVolume", &Settings::noticeVolume, 0, kMaxNoticeVolume, kPercentStep},
             {"noticeSeconds", &Settings::noticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds},
+            {"noticeFade", &Settings::noticeFade, kMinNoticeFade, kMaxNoticeFade},
             {"noticeMost", &Settings::noticeMost, kMinNoticeMost, kMaxNoticeMost},
             {"noticeAcross", &Settings::noticeAcross, kFishBarUnplaced, kCasePlaceWhole},
             {"noticeDown", &Settings::noticeDown, kFishBarUnplaced, kCasePlaceWhole},
@@ -383,8 +384,8 @@ namespace headsup
         const char* const kNoticeEdgeNames[kNoticeEdgeCount]    = {"top", "bottom"};
         constexpr const char* kNoticeFitKey                     = "noticeFit";
         const char* const kNoticeFitNames[kNoticeFitCount]      = {"shrink", "truncate"};
-        constexpr const char* kFriendNoticeStyleKey             = "friendNoticeStyle";
-        const char* const kFriendNoticeStyleNames[kFriendNoticeStyleCount] = {"full", "compact"};
+        constexpr const char* kNoticeStyleKey                   = "noticeStyle";
+        const char* const kNoticeStyleNames[kNoticeStyleCount]  = {"full", "compact"};
         constexpr const char* kNoSoundKey = "none", *kChimeSoundKey = "chime", *kCallSoundPrefix = "call";
         // Each notification's sound pick, saved by NoticeSoundKey.
         constexpr int Settings::* kNoticeSoundFields[] = {&Settings::friendNoticeOnlineSound,
@@ -1438,7 +1439,7 @@ namespace headsup
         if (static_cast<int>(s.noticeAlign) >= kHelpAnchorCount) s.noticeAlign = d.noticeAlign;
         if (static_cast<int>(s.noticeEdge) >= kNoticeEdgeCount) s.noticeEdge = d.noticeEdge;
         if (static_cast<int>(s.noticeFit) >= kNoticeFitCount) s.noticeFit = d.noticeFit;
-        if (static_cast<int>(s.friendNoticeStyle) >= kFriendNoticeStyleCount) s.friendNoticeStyle = d.friendNoticeStyle;
+        if (static_cast<int>(s.noticeStyle) >= kNoticeStyleCount) s.noticeStyle = d.noticeStyle;
         for (int Settings::* field : kNoticeSoundFields)
             if (s.*field < 0 || s.*field >= kNoticeSoundCount) s.*field = d.*field;
         ClampDesigner(s, d);
@@ -1997,8 +1998,8 @@ namespace headsup
                 store.GetString(kNoticeEdgeKey, ""), static_cast<int>(s.noticeEdge)));
             s.noticeFit = static_cast<NoticeFit>(NameIndex(kNoticeFitNames, kNoticeFitCount,
                 store.GetString(kNoticeFitKey, ""), static_cast<int>(s.noticeFit)));
-            s.friendNoticeStyle = static_cast<FriendNoticeStyle>(NameIndex(kFriendNoticeStyleNames, kFriendNoticeStyleCount,
-                store.GetString(kFriendNoticeStyleKey, ""), static_cast<int>(s.friendNoticeStyle)));
+            s.noticeStyle = static_cast<NoticeStyle>(NameIndex(kNoticeStyleNames, kNoticeStyleCount,
+                store.GetString(kNoticeStyleKey, ""), static_cast<int>(s.noticeStyle)));
             for (size_t i = 0; i < std::size(kNoticeSoundFields); ++i)
             {
                 const std::string key = store.GetString(kNoticeSoundKeys[i], "");
@@ -2106,7 +2107,7 @@ namespace headsup
         store.Set(kNoticeAlignKey, kHelpAnchorNames[static_cast<int>(s.noticeAlign)]);
         store.Set(kNoticeEdgeKey, kNoticeEdgeNames[static_cast<int>(s.noticeEdge)]);
         store.Set(kNoticeFitKey, kNoticeFitNames[static_cast<int>(s.noticeFit)]);
-        store.Set(kFriendNoticeStyleKey, kFriendNoticeStyleNames[static_cast<int>(s.friendNoticeStyle)]);
+        store.Set(kNoticeStyleKey, kNoticeStyleNames[static_cast<int>(s.noticeStyle)]);
         for (size_t i = 0; i < std::size(kNoticeSoundFields); ++i)
             store.Set(kNoticeSoundKeys[i], NoticeSoundKey(s.*kNoticeSoundFields[i]).c_str());
         store.Set(kFishStaminaKey, kFishStaminaNames[static_cast<int>(s.fishStamina)]);

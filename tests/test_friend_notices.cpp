@@ -30,6 +30,20 @@ TEST(a_friend_whose_playing_flag_flips_is_news_and_nothing_else_is)
     CHECK(watch.Read(65001, {E(1001, "Alt", true), E(1002, "Three", true), E(1003, "Four", true)}, kAfter + 4.0).empty());
 }
 
+// The list keeps the name you added a friend by (+0x08) and the character they play (+0x1C).
+TEST(a_friend_on_an_alt_is_news_with_the_name_you_added_them_by)
+{
+    FriendWatch watch;
+    const auto entry = [](const char* added, const char* character, bool playing) {
+        return FriendEntry{1001, added, character, playing};
+    };
+    watch.Read(65001, {entry("Two", "Two", false)}, 0.0);
+    CHECK((watch.Read(65001, {entry("Two", "Twoalt", true)}, kAfter) ==
+           std::vector<FriendNews>{{NoticeKind::Online, 1001, "Twoalt", "Two"}}));
+    CHECK((watch.Read(65001, {entry("two", "Two", false)}, kAfter + 1.0) ==
+           std::vector<FriendNews>{{NoticeKind::Offline, 1001, "Two", ""}})); // the same name, typed in lower case
+}
+
 TEST(a_friend_is_followed_by_account_whatever_slot_they_are_in)
 {
     FriendWatch watch;
