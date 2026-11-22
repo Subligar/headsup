@@ -761,6 +761,23 @@ TEST(nameplates_need_the_master_switch_and_a_part)
     }
 }
 
+TEST(the_respawn_timers_run_for_the_nameplate_or_the_widget_either_alone)
+{
+    Settings none;
+    none.phTimers = false;
+    CHECK(!PhTimersRun(none));
+    Settings plate = none;
+    plate.phTimers = true;
+    CHECK(PhTimersRun(plate));
+    Settings widget = none;
+    widget.Widget(PanelWidget{BarWidget::PhTimers}).on = true;
+    CHECK(PhTimersRun(widget));
+    widget.showBar = false;
+    CHECK(!PhTimersRun(widget));
+    plate.enabled = false;
+    CHECK(!PhTimersRun(plate));
+}
+
 TEST(a_color_from_hex_draws_as_the_same_hex)
 {
     // Phoenix's red and a color whose bytes all differ: 0.77 would have drawn C4, not C5.

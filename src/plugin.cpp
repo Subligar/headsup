@@ -926,7 +926,7 @@ public:
         if (next.caught) m_CaseCaught = CaseCaught{*next.caught, AnglerNow()};
         if (next.check) OnCheckReply(*next.check);
         if (next.guardEvent) HeardOverseer(*next.guardEvent);
-        if (next.mobDied && m_Settings.phTimers)
+        if (next.mobDied && headsup::PhTimersRun(m_Settings))
             if (const auto mob = headsup::SightingOf(headsup::MobById(*next.mobDied))) m_PhTimers.Died(Now(), *mob);
         return next.answer && m_AutoCheck.TakeAnswer(*next.answer, Now());
     }
@@ -1449,7 +1449,8 @@ public:
         DrawNameplatesBeforeSceneCopy();
         DrawCombatPopupsBeforeSceneCopy();
         const bool outlines = m_Settings.enabled && m_Tracker.OutlinedCount() > 0;
-        const bool bodies   = headsup::NameplatesOn(m_Settings) && !m_Tracker.Actors().empty(); // labels wait for a drawn body
+        // Labels wait for a drawn body, and a timer is earned by one on screen.
+        const bool bodies = (headsup::NameplatesOn(m_Settings) || headsup::PhTimersRun(m_Settings)) && !m_Tracker.Actors().empty();
         if (!outlines && !bodies) return false;
         const headsup::ActorInfo* owner = m_Outline.CharacterMeshOwner(m_Tracker,
             m_ModelHook.Running() ? std::optional<uintptr_t>(m_ModelHook.Drawing()) : std::nullopt);
@@ -1680,7 +1681,8 @@ private:
                 if (frame == nullptr) return std::nullopt;
                 return headsup::NameFromFrame(*frame, m_Names.TargetScaleX(), m_Names.TargetScaleY(), picked);
             }};
-        m_Nameplates.Update(m_Tracker, scene, m_Settings, toX, toY, m_CursorTargets, Now(), m_SelfIndex, m_TimerLines);
+        m_Nameplates.Update(m_Tracker, scene, m_Settings, toX, toY, m_CursorTargets, Now(), m_SelfIndex,
+            m_Settings.phTimers ? m_TimerLines : std::vector<headsup::TimerLine>{});
         m_Nameplates.Draw(depthTest);
         m_PlatesPlaced = true;
     }
@@ -3627,7 +3629,7 @@ private:
                 CharacterIn(name);
         }
         m_TimerLines.clear();
-        if (m_Settings.phTimers) m_TimerLines = m_PhTimers.Lines(m_Zone, now);
+        if (headsup::PhTimersRun(m_Settings)) m_TimerLines = m_PhTimers.Lines(m_Zone, now);
     }
 
     headsup::DebugSources DebugSourcesNow() const
