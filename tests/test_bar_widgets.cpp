@@ -2945,7 +2945,7 @@ TEST(the_bags_popup_always_lists_storage_and_never_the_temporary_items)
         CHECK(BagChoices()[static_cast<size_t>(choice)] != 3);
 }
 
-TEST(world_infos_conquest_card_flags_your_nations_supply_runs_red_until_made_and_green_after)
+TEST(world_infos_conquest_card_says_your_nations_supply_runs_are_available_with_a_red_flag_or_complete_with_a_green_one)
 {
     Settings settings;
     settings.Widget(BarWidget::World).on = true;
@@ -2954,12 +2954,12 @@ TEST(world_infos_conquest_card_flags_your_nations_supply_runs_red_until_made_and
     owners[3] = owners[4] = Nation::Bastok; // Gustaberg and Derfland
     state.owners = owners;
     state.nation = Nation::Bastok;
-    // A grid of each region and its supply run under their heads, two cells a line.
+    // A grid of each region and its supply run under their heads, three cells a line: the run's word and its flag.
     const auto lines = [](const PopupSection& card) {
         const PopupRow& grid = card.tabs.at(card.tab).rows.at(0);
         std::vector<std::vector<PopupCell>> out;
-        for (size_t i = grid.header ? 2 : 0; i + 2 <= grid.cells.size(); i += 2)
-            out.emplace_back(grid.cells.begin() + static_cast<std::ptrdiff_t>(i), grid.cells.begin() + static_cast<std::ptrdiff_t>(i) + 2);
+        for (size_t i = grid.header ? 3 : 0; i + 3 <= grid.cells.size(); i += 3)
+            out.emplace_back(grid.cells.begin() + static_cast<std::ptrdiff_t>(i), grid.cells.begin() + static_cast<std::ptrdiff_t>(i) + 3);
         return std::pair{grid, out};
     };
     // Before an overseer has told: neither run is known, so neither has a flag, and one line says how to learn them.
@@ -2967,12 +2967,13 @@ TEST(world_infos_conquest_card_flags_your_nations_supply_runs_red_until_made_and
     state.outposts = &runs;
     const PopupSection before = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
     const auto [unknownGrid, unknown] = lines(before);
-    CHECK(unknownGrid.kind == RowKind::Grid && unknownGrid.columns == 2 && unknownGrid.header && unknown.size() == 2);
+    CHECK(unknownGrid.kind == RowKind::Grid && unknownGrid.columns == 3 && unknownGrid.header && unknown.size() == 2);
     CHECK(CellText(unknownGrid.cells[0]) == "Region" && CellText(unknownGrid.cells[1]) == "Supply Run");
-    CHECK(CellText(unknown[0][0]) == "Gustaberg" && unknown[0][1].text.empty() && !unknown[0][1].icon);
+    CHECK(CellText(unknown[0][0]) == "Gustaberg" && unknown[0][1].text.empty() && !unknown[0][2].icon);
     const std::vector<PopupRow>& beforeRows = before.tabs.at(before.tab).rows;
     CHECK(beforeRows.size() == 2 && Lines(PopupSection{"", {beforeRows[1]}})[0].find("overseer") != std::string::npos);
-    // Told by Bastok's overseer that Gustaberg's was run: Gustaberg's flag is green and Derfland's red, with no words.
+    // Told by Bastok's overseer that Gustaberg's was run: Gustaberg's is Complete, dim, with a green flag, and
+    // Derfland's Available with a red one.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
     const PopupContent popup = BarPopupContent(BarWidget::World, state, settings);
     const PopupSection told  = ConquestCard(popup);
@@ -2982,8 +2983,10 @@ TEST(world_infos_conquest_card_flags_your_nations_supply_runs_red_until_made_and
         return flag.icon == Icon::Flag && flag.tint && flag.tint->tone == Tone::Own && flag.text.empty() &&
                Channel(flag.tint->argb, more) > 2 * Channel(flag.tint->argb, less);
     };
-    CHECK(CellText(known[0][0]) == "Gustaberg" && tinted(known[0][1], kGreenShift, kRedShift));
-    CHECK(CellText(known[1][0]) == "Derfland" && tinted(known[1][1], kRedShift, kGreenShift));
+    CHECK(CellText(known[0][0]) == "Gustaberg" && known[0][1].text == ListOf(Text("Complete", Tone::Dim)));
+    CHECK(tinted(known[0][2], kGreenShift, kRedShift));
+    CHECK(CellText(known[1][0]) == "Derfland" && known[1][1].text == ListOf(Text("Available")));
+    CHECK(tinted(known[1][2], kRedShift, kGreenShift));
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
@@ -2994,17 +2997,17 @@ TEST(world_infos_conquest_card_flags_your_nations_supply_runs_red_until_made_and
     const auto named  = [&](const char* text) { return piece([&](const PopupPiece& p) { return p.span.text == text; }); };
     const auto isFlag = [](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Flag; };
     const auto green = piece(isFlag), name = named("Derfland"), ran = named("Gustaberg"), head = named("Supply Run");
+    const auto said = named("Available"), done = named("Complete");
     const auto socket = piece([](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Socket; });
     CHECK(green != l.pieces.end() && name != l.pieces.end() && ran != l.pieces.end() && head != l.pieces.end() &&
           socket != l.pieces.end());
     const auto red = std::find_if(std::next(green), l.pieces.end(), isFlag); // Derfland's, after Gustaberg's
-    CHECK(red != l.pieces.end());
-    // Each flag sits in the middle of the Supply Run column, on its region's line; the column ends as far in from
-    // the tab's right as the names start from its left.
-    const auto middle = [](auto p) { return p->x + p->width / 2.0f; };
-    CHECK(std::fabs(middle(red) - middle(head)) < 0.5f && std::fabs(middle(green) - middle(head)) < 0.5f);
-    CHECK(head->x > name->x + name->width);
-    CHECK(std::fabs((socket->x + socket->width) - (head->x + head->width) - (name->x - socket->x)) < 0.5f);
+    CHECK(red != l.pieces.end() && said != l.pieces.end() && done != l.pieces.end());
+    // The run's words line up under its head after the names, and each flag comes after them, ending as far in
+    // from the tab's right as the names start from its left.
+    CHECK(head->x > name->x + name->width && said->x == head->x && done->x == head->x);
+    CHECK(red->x >= said->x + said->width && green->x == red->x);
+    CHECK(std::fabs((socket->x + socket->width) - (red->x + red->width) - (name->x - socket->x)) < 0.5f);
     CHECK(std::fabs((red->y + red->height / 2.0f) - (name->y + name->height / 2.0f)) < name->height / 2.0f);
     CHECK_EQ(ran->x, name->x);
     // Another nation's regions are not yours to run supplies to.
@@ -3031,10 +3034,10 @@ TEST(world_infos_conquest_card_says_tulia_and_movalpolos_have_no_outpost_and_giv
         return card.tabs.at(card.tab).rows;
     };
     const auto noOutpost = [](const std::vector<PopupRow>& r) {
-        bool all = r.size() == 1 && r[0].header && r[0].cells.size() == 6;
+        bool all = r.size() == 1 && r[0].header && r[0].cells.size() == 9;
         for (size_t line = 1; all && line < 3; ++line)
-            all = r[0].cells[line * 2 + 1].text == ListOf(Text("(No Outpost)", Tone::Dim)) && !r[0].cells[line * 2 + 1].icon;
-        return all && CellText(r[0].cells[2]) == "Tu'Lia" && CellText(r[0].cells[4]) == "Movalpolos";
+            all = r[0].cells[line * 3 + 1].text == ListOf(Text("(No Outpost)", Tone::Dim)) && !r[0].cells[line * 3 + 2].icon;
+        return all && CellText(r[0].cells[3]) == "Tu'Lia" && CellText(r[0].cells[6]) == "Movalpolos";
     };
     // Before any overseer has told, neither asks you to go and ask one.
     CHECK(noOutpost(rows()));

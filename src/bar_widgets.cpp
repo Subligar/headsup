@@ -1204,7 +1204,7 @@ namespace headsup
             return popup;
         }
 
-        constexpr int kSupplyColumns = 2; // a region's name, then its supply run's flag
+        constexpr int kSupplyColumns = 3; // a region's name, its supply run, and its flag
         constexpr uint32_t kSupplyNeededColor = 0xFFE35F5F, kSupplyDoneColor = kBarGreen;
 
         // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
@@ -1238,25 +1238,25 @@ namespace headsup
                     PopupRow grid = Grid(kSupplyColumns, (regions.size() + 1) * kSupplyColumns);
                     grid.header   = true;
                     grid.trailing = true;
-                    grid.cells.push_back(Cell(Text("Region", Tone::Dim)));
-                    PopupCell head = Cell(Text("Supply Run", Tone::Dim));
-                    head.align     = Align::Center;
-                    grid.cells.push_back(std::move(head));
+                    for (const char* heading : {"Region", "Supply Run"})
+                        grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
+                    grid.cells.emplace_back();
                     for (const uint8_t r : regions)
                     {
                         const bool runs               = HasSupplyRun(r);
                         const std::optional<bool> ran = runs ? state.outposts->Ran(nation, r) : std::nullopt;
                         unknown                       = unknown || (runs && !ran);
                         grid.cells.push_back(Cell(Text(std::string(RegionName(r)))));
-                        PopupCell run;
-                        run.align = Align::Center;
+                        PopupCell run, flag;
                         if (!runs) run.text = ListOf(Text("(No Outpost)", Tone::Dim));
                         if (ran)
                         {
-                            run.icon = Icon::Flag;
-                            run.tint = Colored("", *ran ? kSupplyDoneColor : kSupplyNeededColor);
+                            run.text  = ListOf(*ran ? Text("Complete", Tone::Dim) : Text("Available"));
+                            flag.icon = Icon::Flag;
+                            flag.tint = Colored("", *ran ? kSupplyDoneColor : kSupplyNeededColor);
                         }
                         grid.cells.push_back(std::move(run));
+                        grid.cells.push_back(std::move(flag));
                     }
                     held.rows.push_back(std::move(grid));
                 }
