@@ -489,6 +489,28 @@ TEST(each_job_widget_texts_alignment_shows_while_its_button_is_on)
     CHECK(o.percentAlign == Align::Right && o.jobInfoAlign == Align::Left && o.expBarTextAlign == Align::Center);
 }
 
+TEST(use_synced_level_shows_while_job_text_does_and_switches_the_copys_levels)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on = true;
+    w.readings.settingsOf     = {job};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext bar");
+    CHECK(!Has(rows(), "synced-level"));
+    w.settings.Widget(job).expBarText = ExpText::Jobs;
+    CHECK(Has(rows(), "synced-level"));
+    w.settings.Widget(job).expBarText.reset();
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs | tonext bar");
+    CHECK(Has(rows(), "synced-level"));
+    CHECK(!w.settings.Widget(job).syncedLevel);
+    w.Pass({{"toppanel-widgets-synced-level-job", kClickEvent, ""}});
+    CHECK(w.settings.Widget(job).syncedLevel);
+}
+
 TEST(the_exp_bars_colors_are_the_themes_until_one_is_picked)
 {
     Window w;
@@ -2233,6 +2255,7 @@ TEST(a_widgets_tips_name_a_copys_own_defaults)
     CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 0), layout.WordOf(WindowWord::SwitchOff).name);
     CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 1), layout.WordOf(WindowWord::SwitchOn).name);
     CHECK_EQ(named(WidgetTabsRow::MemText, BarWidget::Performance, 1), layout.WordOf(WindowWord::SwitchOff).name);
+    CHECK_EQ(named(WidgetTabsRow::SyncedLevel, BarWidget::Job, 1), layout.WordOf(WindowWord::SwitchOff).name);
     CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 0), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Icon)));
     CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 1), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Both)));
     // A date format is named as the list shows it, by the day.

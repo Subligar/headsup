@@ -1303,6 +1303,9 @@ namespace headsup
                         o.jobText = static_cast<JobText>(text);
                     }
                     break;
+                case WidgetTabsRow::SyncedLevel:
+                    if (jobs || (bar && o.expBarText == ExpText::Jobs)) form.Switch(label.c_str(), o.syncedLevel, ownDefault().c_str());
+                    break;
                 case WidgetTabsRow::BarTextAlign: alignRow(WidgetPart::JobBar, o.expBarTextAlign); break;
                 case WidgetTabsRow::JobTextAlign: alignRow(WidgetPart::JobJobs, o.jobInfoAlign); break;
                 case WidgetTabsRow::EarnedAlign: alignRow(WidgetPart::JobEarned, o.earnedAlign); break;
@@ -3283,6 +3286,7 @@ namespace headsup
         case WidgetTabsRow::ShowZoneId: return onOff(o.zoneId);
         case WidgetTabsRow::SupplyFlags: return onOff(o.supplyFlags);
         case WidgetTabsRow::MemText: return onOff(o.memText);
+        case WidgetTabsRow::SyncedLevel: return onOff(o.syncedLevel);
         case WidgetTabsRow::WrapText: return onOff(o.wrapText);
         case WidgetTabsRow::UniformFont: return onOff(o.uniformFont);
         case WidgetTabsRow::StatusDisplay: return option(WindowList::StatusDisplay, o.statusDisplay);

@@ -3131,6 +3131,18 @@ TEST(the_performance_widgets_show_mem_text_starts_off_and_is_kept)
     CHECK(LoadSettings(store).Widget(BarWidget::Performance).memText);
 }
 
+TEST(the_job_widgets_use_synced_level_starts_off_and_is_kept_by_each_copy)
+{
+    Settings s;
+    const PanelWidget second = *CloneWidget(s, BarWidget::Job);
+    CHECK(!s.Widget(BarWidget::Job).syncedLevel && !s.Widget(second).syncedLevel);
+    s.Widget(second).syncedLevel = true;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings loaded = LoadSettings(store);
+    CHECK(!loaded.Widget(BarWidget::Job).syncedLevel && loaded.Widget(second).syncedLevel);
+}
+
 TEST(the_status_timers_display_starts_with_name_and_icon_and_is_kept_by_each_copy)
 {
     Settings s;
