@@ -1245,11 +1245,15 @@ namespace headsup
                         const bool runs               = HasSupplyRun(r);
                         const std::optional<bool> ran = runs ? state.outposts->Ran(nation, r) : std::nullopt;
                         unknown                       = unknown || (runs && !ran);
-                        grid.cells.push_back(Cell(Text(std::string(RegionName(r)))));
+                        PopupCell name = Cell(Text(std::string(RegionName(r))));
+                        if (!runs) name.text.push_back(Text(" (No Outpost)", Tone::Dim));
+                        grid.cells.push_back(std::move(name));
                         if (!runs)
                             grid.cells.emplace_back();
                         else
-                            grid.cells.push_back(Cell(!ran ? Text("-", Tone::Dim) : *ran ? Text("Complete", Tone::Dim) : Text("Available")));
+                            grid.cells.push_back(Cell(!ran ? Text("-", Tone::Dim)
+                                                      : *ran ? Text("Supply run completed", Tone::Dim)
+                                                             : Text("Supply run available")));
                         PopupCell flag;
                         if (ran == false)
                         {

@@ -2972,15 +2972,15 @@ TEST(world_infos_conquest_card_says_which_of_your_nations_supply_runs_are_availa
     CHECK(CellText(unknown[0][0]) == "Gustaberg" && unknown[0][1].text == ListOf(Text("-", Tone::Dim)) && !unknown[0][2].icon);
     const std::vector<PopupRow>& beforeRows = before.tabs.at(before.tab).rows;
     CHECK(beforeRows.size() == 2 && Lines(PopupSection{"", {beforeRows[1]}})[0].find("overseer") != std::string::npos);
-    // Told by Bastok's overseer that Gustaberg's was run: Gustaberg's is Complete, dim, and Derfland's Available
+    // Told by Bastok's overseer that Gustaberg's was run: Gustaberg's is completed, dim, and Derfland's available
     // with a gray flag after it.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
     const PopupContent popup = BarPopupContent(BarWidget::World, state, settings);
     const PopupSection told  = ConquestCard(popup);
     const auto [grid, known] = lines(told);
     CHECK(told.tabs.at(told.tab).rows.size() == 1 && known.size() == 2);
-    CHECK(known[0][1].text == ListOf(Text("Complete", Tone::Dim)) && !known[0][2].icon);
-    CHECK(CellText(known[1][0]) == "Derfland" && known[1][1].text == ListOf(Text("Available")));
+    CHECK(known[0][1].text == ListOf(Text("Supply run completed", Tone::Dim)) && !known[0][2].icon);
+    CHECK(CellText(known[1][0]) == "Derfland" && known[1][1].text == ListOf(Text("Supply run available")));
     CHECK(known[1][2].icon == Icon::Flag && known[1][2].tint && known[1][2].tint->tone == Tone::Dim && known[1][2].text.empty());
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
@@ -2990,7 +2990,7 @@ TEST(world_infos_conquest_card_says_which_of_your_nations_supply_runs_are_availa
     const PopupLayout l = LayoutPopup(popup, m, false, measure, 1000.0f);
     const auto piece = [&](auto is) { return std::ranges::find_if(l.pieces, is); };
     const auto named = [&](const char* text) { return piece([&](const PopupPiece& p) { return p.span.text == text; }); };
-    const auto name = named("Derfland"), said = named("Available"), done = named("Complete"), head = named("Supply Run");
+    const auto name = named("Derfland"), said = named("Supply run available"), done = named("Supply run completed"), head = named("Supply Run");
     const auto flag = piece([](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Flag; });
     const auto ran  = named("Gustaberg");
     CHECK(name != l.pieces.end() && said != l.pieces.end() && flag != l.pieces.end() && ran != l.pieces.end());
@@ -3012,7 +3012,7 @@ TEST(world_infos_conquest_card_says_which_of_your_nations_supply_runs_are_availa
     CHECK((Lines(PopupSection{"", all.tabs[1].rows}) == std::vector<std::string>{"Ronfaure"}));
 }
 
-TEST(world_infos_conquest_card_leaves_tulia_and_movalpolos_supply_run_blank_as_neither_has_one)
+TEST(world_infos_conquest_card_says_tulia_and_movalpolos_have_no_outpost_and_leaves_their_supply_run_blank)
 {
     Settings settings;
     settings.Widget(BarWidget::World).on = true;
@@ -3030,12 +3030,14 @@ TEST(world_infos_conquest_card_leaves_tulia_and_movalpolos_supply_run_blank_as_n
     // Before any overseer has told, neither asks you to go and ask one.
     const std::vector<PopupRow> before = rows();
     CHECK(before.size() == 1 && before[0].header && before[0].cells.size() == 9);
+    CHECK(before[0].cells[3].text == ListOf(Text("Tu'Lia"), Text(" (No Outpost)", Tone::Dim)));
+    CHECK(CellText(before[0].cells[6]) == "Movalpolos (No Outpost)");
     for (size_t line = 1; line < 3; ++line)
         CHECK(before[0].cells[line * 3 + 1].text.empty() && !before[0].cells[line * 3 + 2].icon);
-    // Told by Bastok's overseer that no run was made: still neither is Available.
+    // Told by Bastok's overseer that no run was made: still neither is available.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 0, 0, 0, 0}}, 20);
     const std::vector<PopupRow> told = rows();
-    CHECK(CellText(told[0].cells[3]) == "Tu'Lia" && CellText(told[0].cells[6]) == "Movalpolos");
+    CHECK(CellText(told[0].cells[3]) == "Tu'Lia (No Outpost)" && CellText(told[0].cells[6]) == "Movalpolos (No Outpost)");
     for (size_t line = 1; line < 3; ++line)
         CHECK(told[0].cells[line * 3 + 1].text.empty() && !told[0].cells[line * 3 + 2].icon);
 }
