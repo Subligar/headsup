@@ -54,7 +54,7 @@ namespace headsup
         int earthYear = 0, earthMonth = 0, earthDay = 0, earthHour = 0, earthMinute = 0, earthSecond = 0; // local
         uint16_t zone = 0; // 0 while unknown
         uint16_t homePoint = 0; // the zone your home point is in; 0 while unknown
-        std::vector<TimerLine> phTimers; // PhTimers::Lines, while Respawn Timer is on
+        std::vector<TimerLine> phTimers; // PhTimers::Lines, while PhTimersRun
         const ActorInfo* target = nullptr;
         std::optional<float> targetDistance;   // yalms, with the target
         // The game's name for an item ID, for a mob's drops; nullptr, or an empty name, when it has none.

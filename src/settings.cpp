@@ -1742,6 +1742,11 @@ namespace headsup
         return false;
     }
 
+    bool PhTimersRun(const Settings& s)
+    {
+        return s.enabled && (s.phTimers || (BarOn(s) && AnyCopyShown(s, BarWidget::PhTimers)));
+    }
+
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget)
     {
         const std::optional<PanelWidget> added = AddCopy(s.barSections, widget.kind);
