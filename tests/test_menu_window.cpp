@@ -219,12 +219,18 @@ TEST(left_and_right_go_between_a_list_and_the_buttons_nearest_up_and_down)
 {
     // Entries 1.8 em tall a quarter em apart, buttons 1.6 em tall half an em apart, both from the same top: entry 0's
     // middle is nearest Use's, entry 1's Sort's, and entry 2's and every one after Drop's.
+    // The pointer passing over an entry leaves none kept, so Left goes to the nearest.
     Windows w;
     w.windows.Open(Bag());
+    const auto keepNone = [&](const std::string& button) {
+        w.PointAt("bag", "items-4");
+        w.PointAt("bag", button);
+    };
     w.Acts(MenuAction::Right);
     CHECK_EQ(w.windows.Selected(), std::string("use"));
     w.Acts(MenuAction::Down);
     CHECK_EQ(w.windows.Selected(), std::string("sort"));
+    keepNone("sort");
     w.Acts(MenuAction::Left);
     CHECK_EQ(w.windows.Selected(), std::string("items-1"));
     w.Acts(MenuAction::Right);
@@ -233,6 +239,7 @@ TEST(left_and_right_go_between_a_list_and_the_buttons_nearest_up_and_down)
     w.Acts(MenuAction::Down, 2);
     w.Acts(MenuAction::Right);
     CHECK_EQ(w.windows.Selected(), std::string("drop"));
+    keepNone("drop");
     w.Acts(MenuAction::Left);
     CHECK_EQ(w.windows.Selected(), std::string("items-2"));
     // Nothing is right of the buttons.
@@ -448,17 +455,36 @@ TEST(an_entry_the_keys_chose_stays_lit_when_the_selection_leaves_its_list_until_
     w.Acts(MenuAction::Up);
     w.Settle();
     CHECK(KeptLit(kept));
-    // Back in the list on another entry, it is let go.
+    // Another entry chosen by the keys lets it go.
     w.Acts(MenuAction::Left);
-    CHECK_EQ(w.windows.Selected(), std::string("items-1"));
+    w.Acts(MenuAction::Down);
     w.Settle();
     CHECK(SameColor(kept->GetComputedValues().background_color(), kLook.colors.control));
-    // So it is when the pointer chooses another entry.
-    w.Acts(MenuAction::Down);
+    // So does one the pointer chooses.
     w.Acts(MenuAction::Right);
     w.PointAt("bag", "items-4");
     w.Settle();
-    CHECK(SameColor(kept->GetComputedValues().background_color(), kLook.colors.control));
+    CHECK(SameColor(w.Element("bag", "items-3")->GetComputedValues().background_color(), kLook.colors.control));
+    CHECK_EQ(w.rml.Said(), "");
+}
+
+TEST(the_keys_come_back_into_a_list_on_its_kept_entry)
+{
+    // From Sort the nearest entry is items-1; the kept one is items-2.
+    Windows w;
+    w.windows.Open(Bag());
+    w.Acts(MenuAction::Down, 2);
+    w.Acts(MenuAction::Right);
+    w.Acts(MenuAction::Up);
+    CHECK_EQ(w.windows.Selected(), std::string("sort"));
+    w.Acts(MenuAction::Left);
+    CHECK_EQ(w.windows.Selected(), std::string("items-2"));
+    // With none kept, the nearest.
+    w.PointAt("bag", "items-5");
+    w.PointAt("bag", "use");
+    w.Acts(MenuAction::Down);
+    w.Acts(MenuAction::Left);
+    CHECK_EQ(w.windows.Selected(), std::string("items-1"));
     CHECK_EQ(w.rml.Said(), "");
 }
 

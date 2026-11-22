@@ -380,7 +380,12 @@ namespace headsup
             if (!elements.empty()) Select(window, elements.front(), true);
             return;
         }
-        if (const std::optional<size_t> next = NextFocus(boxes, current, move)) Select(window, elements[*next], true);
+        const std::optional<size_t> next = NextFocus(boxes, current, move);
+        if (!next) return;
+        Rml::Element* to   = elements[*next];
+        Rml::Element* list = ListOf(to);
+        Rml::Element* kept = list != nullptr && list != ListOf(window.selected) ? list->QuerySelector(std::string(".") + kKeptClass) : nullptr;
+        Select(window, kept != nullptr ? kept : to, true);
     }
 
     void GameWindows::ProcessEvent(Rml::Event& event)
