@@ -1204,7 +1204,8 @@ namespace headsup
             return popup;
         }
 
-        constexpr int kSupplyColumns = 3; // a region's name, its supply run, and a flag while that is available
+        constexpr int kSupplyColumns = 3; // a region's name, its supply run, and its flag
+        constexpr uint32_t kSupplyNeededColor = 0xFFE35F5F, kSupplyDoneColor = kBarGreen;
 
         // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
         // opens. Your nation's say which outposts you have run supplies to, as far as overseers told.
@@ -1255,10 +1256,10 @@ namespace headsup
                                                       : *ran ? Text("Supply run completed", Tone::Dim)
                                                              : Text("Supply run available")));
                         PopupCell flag;
-                        if (ran == false)
+                        if (ran)
                         {
                             flag.icon = Icon::Flag;
-                            flag.tint = Text("", Tone::Dim);
+                            flag.tint = Colored("", *ran ? kSupplyDoneColor : kSupplyNeededColor);
                         }
                         grid.cells.push_back(std::move(flag));
                     }

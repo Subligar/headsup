@@ -2972,16 +2972,21 @@ TEST(world_infos_conquest_card_says_which_of_your_nations_supply_runs_are_availa
     CHECK(CellText(unknown[0][0]) == "Gustaberg" && unknown[0][1].text == ListOf(Text("-", Tone::Dim)) && !unknown[0][2].icon);
     const std::vector<PopupRow>& beforeRows = before.tabs.at(before.tab).rows;
     CHECK(beforeRows.size() == 2 && Lines(PopupSection{"", {beforeRows[1]}})[0].find("overseer") != std::string::npos);
-    // Told by Bastok's overseer that Gustaberg's was run: Gustaberg's is completed, dim, and Derfland's available
-    // with a gray flag after it.
+    // Told by Bastok's overseer that Gustaberg's was run: Gustaberg's is completed, dim, with a green flag, and
+    // Derfland's available with a red one.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
     const PopupContent popup = BarPopupContent(BarWidget::World, state, settings);
     const PopupSection told  = ConquestCard(popup);
     const auto [grid, known] = lines(told);
     CHECK(told.tabs.at(told.tab).rows.size() == 1 && known.size() == 2);
-    CHECK(known[0][1].text == ListOf(Text("Supply run completed", Tone::Dim)) && !known[0][2].icon);
+    CHECK(known[0][1].text == ListOf(Text("Supply run completed", Tone::Dim)));
+    const auto tinted = [](const PopupCell& flag, int more, int less) {
+        return flag.icon == Icon::Flag && flag.tint && flag.tint->tone == Tone::Own && flag.text.empty() &&
+               Channel(flag.tint->argb, more) > 2 * Channel(flag.tint->argb, less);
+    };
+    CHECK(tinted(known[0][2], kGreenShift, kRedShift));
     CHECK(CellText(known[1][0]) == "Derfland" && known[1][1].text == ListOf(Text("Supply run available")));
-    CHECK(known[1][2].icon == Icon::Flag && known[1][2].tint && known[1][2].tint->tone == Tone::Dim && known[1][2].text.empty());
+    CHECK(tinted(known[1][2], kRedShift, kGreenShift));
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
@@ -2991,7 +2996,8 @@ TEST(world_infos_conquest_card_says_which_of_your_nations_supply_runs_are_availa
     const auto piece = [&](auto is) { return std::ranges::find_if(l.pieces, is); };
     const auto named = [&](const char* text) { return piece([&](const PopupPiece& p) { return p.span.text == text; }); };
     const auto name = named("Derfland"), said = named("Supply run available"), done = named("Supply run completed"), head = named("Supply Run");
-    const auto flag = piece([](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Flag; });
+    const auto isFlag = [](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Flag; };
+    const auto flag   = std::find_if(std::next(piece(isFlag)), l.pieces.end(), isFlag); // Derfland's, after Gustaberg's
     const auto ran  = named("Gustaberg");
     CHECK(name != l.pieces.end() && said != l.pieces.end() && flag != l.pieces.end() && ran != l.pieces.end());
     CHECK(done != l.pieces.end() && head != l.pieces.end());
