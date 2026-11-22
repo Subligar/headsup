@@ -55,17 +55,24 @@ namespace
     const std::vector<uint8_t> kShellWearsOff = {0x29, 0x0E, 0x2C, 0x01, 0xE9, 0xFD, 0x00, 0x00, 0xE9, 0xFD, 0x00,
         0x00, 0x29, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x04, 0xCE, 0x00, 0x00, 0x00};
 
-    std::vector<StatusChange> Gained(uint32_t entity, uint16_t status) { return {StatusChange{entity, status, true}}; }
+    // Phoenix's longest for each spell with nothing added: Paralyze's randomInt(30, 120), Protect's and Sleep's tables.
+    constexpr uint16_t kParalyzeSeconds = 120, kProtectSeconds = 1800, kSleepSeconds = 60, kSleepgaSeconds = 60;
+    constexpr uint32_t kSleepgaSpell = 273;
+
+    std::vector<StatusChange> Gained(uint32_t entity, uint16_t status, uint16_t seconds = 0)
+    {
+        return {StatusChange{entity, status, true, seconds}};
+    }
 }
 
 TEST(a_real_enfeeble_or_buff_puts_its_status_on_its_target)
 {
     const std::optional<ActionStatuses> paralyze = Action(kParalyzeCast);
     CHECK(paralyze && paralyze->actor == kYou && paralyze->finished);
-    CHECK(paralyze->changes == Gained(kCrab, kParalysis));
-    CHECK(Action(kProtectCast)->changes == Gained(kYou, kProtect));
-    CHECK(Action(kSleepCast)->changes == Gained(kCrab, kSleep));
-    const std::optional<ActionStatuses> guard = Action(kScissorGuard); // a mob skill on itself
+    CHECK(paralyze->changes == Gained(kCrab, kParalysis, kParalyzeSeconds));
+    CHECK(Action(kProtectCast)->changes == Gained(kYou, kProtect, kProtectSeconds));
+    CHECK(Action(kSleepCast)->changes == Gained(kCrab, kSleep, kSleepSeconds));
+    const std::optional<ActionStatuses> guard = Action(kScissorGuard); // a mob skill on itself, no spell's time
     CHECK(guard && guard->actor == kCrab && guard->finished);
     CHECK(guard->changes == Gained(kCrab, kDefenseBoost));
 }
@@ -92,8 +99,9 @@ TEST(a_real_wear_off_takes_the_status_off_whom_it_names)
 TEST(an_area_spell_puts_its_status_on_each_target)
 {
     ActionPacket p;
-    p.Head(kYou, 2).Target(kCrab, 1).Result(kSleep, 236).Target(kCrab + 1, 1).Result(kSleep, 237);
-    CHECK((Action(p)->changes == std::vector<StatusChange>{{kCrab, kSleep, true}, {kCrab + 1, kSleep, true}}));
+    p.Head(kYou, 2, 4, kSleepgaSpell).Target(kCrab, 1).Result(kSleep, 236).Target(kCrab + 1, 1).Result(kSleep, 237);
+    CHECK((Action(p)->changes ==
+           std::vector<StatusChange>{{kCrab, kSleep, true, kSleepgaSeconds}, {kCrab + 1, kSleep, true, kSleepgaSeconds}}));
 }
 
 TEST(an_additional_effect_or_spikes_status_goes_where_its_message_says)
@@ -184,6 +192,18 @@ TEST(a_tracked_status_ends_at_its_kinds_cap_and_a_new_gain_restarts_it)
     CHECK_EQ(track.Statuses(kCrab, kTrackedBuffSeconds).count, 0);
     track.Apply({kCrab, kParalysis, true}, 100.0);
     CHECK_EQ(track.Statuses(kCrab, kTrackedDebuffSeconds + 50.0).count, 2); // with Protect
+}
+
+TEST(a_status_ends_when_its_spell_does_and_one_of_no_known_time_at_its_kinds_cap)
+{
+    StatusTrack track;
+    track.Apply({kCrab, kParalysis, true, kParalyzeSeconds}, 0.0);
+    track.Apply({kCrab, kSleep, true}, 0.0);
+    CHECK_EQ(track.Statuses(kCrab, kParalyzeSeconds - 1.0).count, 2);
+    const StatusList later = track.Statuses(kCrab, kParalyzeSeconds);
+    CHECK_EQ(later.count, 1);
+    CHECK_EQ(later.ids[0], kSleep);
+    CHECK_EQ(track.Statuses(kCrab, kTrackedDebuffSeconds).count, 0);
 }
 
 TEST(a_status_with_no_name_is_not_tracked)
