@@ -76,7 +76,7 @@ namespace headsup
             const std::string close = std::string("#") + kMenuCloseId, cog = std::string("#") + kGameCogId;
             std::string css = MenuStyle(look);
             css += "body{width:" + Em(kWidth) + ";height:auto;min-width:0px;min-height:0px;padding:" + Em(kGutter) + ";font-size:" +
-                   Px(pixels) + ";z-index:" + std::to_string(kGameWindowZ) + ";}";
+                   Px(pixels) + ";}";
             css += std::string("#") + kHeadId + "{height:" + Em(kHeadHeight) + ";}";
             css += std::string("#") + kTitleId + "{font-size:" + Em(kTitleSize) + ";}";
             css += cog + "{position:absolute;right:" + Em(kGutter + kFrame + kControlGap) + ";top:" + Em(kGutter) + ";width:" +
@@ -437,6 +437,9 @@ namespace headsup
         // The game's own cancel, over any of them.
         if (event.GetId() == Rml::EventId::Mousedown)
         {
+            // Over the settings window, as one so a sub-window stays over its parent.
+            for (const Window& open : m_Open)
+                open.document->PullToFront();
             if (event.GetParameter<int>("button", 0) == kRightButton) Act(MenuAction::Cancel);
             return;
         }
