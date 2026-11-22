@@ -3048,6 +3048,17 @@ TEST(the_job_widgets_text_alignments_and_bar_colors_are_kept_and_its_colors_star
     CHECK(read.percentAlign == Align::Left && !read.expBarFill);
 }
 
+TEST(the_world_info_widgets_supply_run_flags_are_on_and_kept_off)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::World).supplyFlags);
+    s.Widget(BarWidget::World).supplyFlags = false;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["supplyFlags"], "false");
+    CHECK(!LoadSettings(store).Widget(BarWidget::World).supplyFlags);
+}
+
 TEST(the_zone_widgets_show_zone_id_in_header_is_kept)
 {
     Settings s;

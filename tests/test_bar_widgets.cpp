@@ -3056,6 +3056,28 @@ TEST(world_infos_conquest_card_says_tulia_and_movalpolos_are_unavailable_with_a_
     CHECK(noOutpost(rows()));
 }
 
+TEST(world_infos_conquest_card_leaves_the_supply_run_flags_out_with_supply_run_flags_off)
+{
+    Settings settings;
+    settings.Widget(BarWidget::World).on          = true;
+    settings.Widget(BarWidget::World).supplyFlags = false;
+    BarState state;
+    RegionOwners owners{};
+    owners[3] = owners[4] = Nation::Bastok; // Gustaberg and Derfland
+    owners[16]            = Nation::Bastok; // Tu'Lia
+    state.owners = owners;
+    state.nation = Nation::Bastok;
+    OutpostRuns runs;
+    state.outposts = &runs;
+    runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
+    const PopupSection card = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
+    const PopupRow& grid    = card.tabs.at(card.tab).rows.at(0);
+    // Two cells a line, the region and its run's word, and no flag anywhere.
+    CHECK(grid.columns == 2 && grid.cells.size() == 8);
+    CHECK(std::ranges::none_of(grid.cells, [](const PopupCell& cell) { return cell.icon.has_value(); }));
+    CHECK(CellText(grid.cells[3]) == "Complete" && CellText(grid.cells[5]) == "Available" && CellText(grid.cells[7]) == "Unavailable");
+}
+
 TEST(world_infos_conquest_card_has_your_nation_first_picked_anew_each_time_and_its_tabs_two_by_two)
 {
     Settings settings;

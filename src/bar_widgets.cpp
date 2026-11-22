@@ -1204,12 +1204,11 @@ namespace headsup
             return popup;
         }
 
-        constexpr int kSupplyColumns = 3; // a region's name, its supply run, and its flag
         constexpr uint32_t kSupplyToDoColor = 0xFFF2D45C, kSupplyDoneColor = kBarGreen, kSupplyUnavailableColor = 0xFFE35F5F;
 
         // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
         // opens. Your nation's say which outposts you have run supplies to, as far as overseers told.
-        PopupSection ConquestSection(const BarState& state)
+        PopupSection ConquestSection(const BarState& state, bool flags)
         {
             PopupSection conquest =
                 Section(CardKind::WorldConquest, "Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")");
@@ -1235,12 +1234,13 @@ namespace headsup
                     if ((*state.owners)[region] == nation) regions.push_back(static_cast<uint8_t>(region));
                 if (yours && !regions.empty())
                 {
-                    PopupRow grid = Grid(kSupplyColumns, (regions.size() + 1) * kSupplyColumns);
+                    const int columns = flags ? 3 : 2; // a region's name, its supply run, and its flag
+                    PopupRow grid     = Grid(columns, (regions.size() + 1) * static_cast<size_t>(columns));
                     grid.header   = true;
                     grid.trailing = true;
                     for (const char* heading : {"Region", "Supply Run"})
                         grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
-                    grid.cells.emplace_back();
+                    if (flags) grid.cells.emplace_back();
                     for (const uint8_t r : regions)
                     {
                         const bool runs               = HasSupplyRun(r);
@@ -1255,7 +1255,7 @@ namespace headsup
                             flag.tint = Colored("", !runs ? kSupplyUnavailableColor : *ran ? kSupplyDoneColor : kSupplyToDoColor);
                         }
                         grid.cells.push_back(std::move(run));
-                        grid.cells.push_back(std::move(flag));
+                        if (flags) grid.cells.push_back(std::move(flag));
                     }
                     held.rows.push_back(std::move(grid));
                 }
@@ -1303,11 +1303,11 @@ namespace headsup
         Span ShopPlace(const GuildShop& shop) { return Text(std::string(shop.shops) + ", " + shop.zone, Tone::Dim); }
 
         // The Conquest card, Travel and the Calendar in a column beside it, and Guilds under them all.
-        PopupContent WorldPopup(const BarState& state)
+        PopupContent WorldPopup(const BarState& state, const WidgetOptions& o)
         {
             PopupContent popup;
             popup.title = ListOf(Text("World Info"));
-            popup.sections.push_back(ConquestSection(state));
+            popup.sections.push_back(ConquestSection(state, o.supplyFlags));
             {
                 // A tab for each kind of ship, its routes together in the data.
                 PopupSection travel = Section(CardKind::WorldTravel, "Travel");
@@ -2252,7 +2252,7 @@ namespace headsup
             return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins, OwnPalette(settings),
                 ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
-            return WorldPopup(state);
+            return WorldPopup(state, o);
         case BarWidget::Settings: break;
         case BarWidget::HomePoint:
             popup.title = ListOf(Text("Home Point")); // its settings pop-out's

@@ -209,6 +209,7 @@
                 {"key": "custom-icons", "name": "Use Custom Icons", "tip": "When the widget and its pop-out show HeadsUp's own weather pictures in place of the game's element icons. Default is {default}."},
                 {"key": "ship", "name": "Tracked Ship", "tip": "The boat or airship whose next sailing the Ship button shows."},
                 {"key": "guild", "name": "Tracked Guild", "tip": "The guild shop whose hours the Guild button shows."},
+                {"key": "supply-flags", "name": "Supply Run Flags", "tip": "Puts a flag after each of your nation's regions in the pop-out's Conquest card: yellow while its supply run is available, green once it's complete and red where there is none. Off, the words alone. Default is {default}."},
                 {"key": "bag-1", "name": "Bag 1", "tip": "The bag the widget's Bag 1 buttons show. Hover the widget for every bag. Default is {default}."},
                 {"key": "bag-2", "name": "Bag 2", "tip": "The bag the widget's Bag 2 buttons show. Default is {default}."},
                 {"key": "local-timezone", "name": "Local Timezone", "tip": "The zone of the Local Time button. Automatic is your computer's. Another zone goes before the time, as in PDT 21:07. Default is Automatic."},

@@ -92,6 +92,7 @@ namespace headsup
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
         int worldRoute       = 0;                    // World Info: its Tracked Ship, by TravelRoutes
         int worldGuild       = 0;                    // its Tracked Guild, by GuildShops
+        bool supplyFlags     = true;                 // and a flag after each supply run in its Conquest card
         std::optional<PanelWidget> combine;          // shown right after it in its pill, with one popup (Combine)
         int linkPadding = 0; // pixels between it and the widget it combines with
         IconSide iconSide = IconSide::Left; // its icon's, for a widget with one (IconPartOf)

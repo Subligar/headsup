@@ -2042,6 +2042,23 @@ TEST(the_home_point_widgets_settings_have_no_designer_and_a_wrap_text_switch)
     CHECK(!w.settings.Widget(home).wrapText);
 }
 
+TEST(supply_run_flags_shows_only_for_the_world_info_widget_and_switches_its_flags)
+{
+    Window w;
+    const PanelWidget world{BarWidget::World}, zone{BarWidget::Zone};
+    w.settings.Widget(world).on = w.settings.Widget(zone).on = true;
+    const auto rows = [&](PanelWidget widget) {
+        w.readings.settingsOf = {widget};
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    CHECK(!Has(rows(zone), "supply-flags"));
+    CHECK(Has(rows(world), "supply-flags"));
+    CHECK(w.settings.Widget(world).supplyFlags);
+    w.Pass({{"toppanel-widgets-supply-flags-world", kClickEvent, ""}});
+    CHECK(!w.settings.Widget(world).supplyFlags);
+}
+
 TEST(show_mem_text_shows_with_the_performance_widgets_memory_button_and_switches_its_label)
 {
     Window w;

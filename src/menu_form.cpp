@@ -1203,6 +1203,9 @@ namespace headsup
                 case WidgetTabsRow::ShowZoneId:
                     if (kind == BarWidget::Zone) form.Switch(label.c_str(), o.zoneId, ownDefault().c_str());
                     break;
+                case WidgetTabsRow::SupplyFlags:
+                    if (kind == BarWidget::World) form.Switch(label.c_str(), o.supplyFlags, ownDefault().c_str());
+                    break;
                 case WidgetTabsRow::WrapText:
                     if (kind == BarWidget::HomePoint) form.Switch(label.c_str(), o.wrapText, ownDefault().c_str());
                     break;
@@ -3215,6 +3218,7 @@ namespace headsup
         case WidgetTabsRow::Alignment: return option(WindowList::WidgetAligns, o.align);
         case WidgetTabsRow::LinkedPadding: return Pixels(o.linkPadding);
         case WidgetTabsRow::ShowZoneId: return onOff(o.zoneId);
+        case WidgetTabsRow::SupplyFlags: return onOff(o.supplyFlags);
         case WidgetTabsRow::MemText: return onOff(o.memText);
         case WidgetTabsRow::WrapText: return onOff(o.wrapText);
         case WidgetTabsRow::UniformFont: return onOff(o.uniformFont);
