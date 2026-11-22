@@ -326,6 +326,37 @@ TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_desi
     CHECK(w.state.editSide == EditSide::Widget);
 }
 
+TEST(a_created_widget_shows_the_settings_of_the_widgets_it_borrows_from_and_they_set_those_widgets)
+{
+    Window w;
+    const PanelWidget made = *CreateWidget(w.settings), world{BarWidget::World};
+    w.readings.settingsOf  = {made};
+    const auto rml   = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
+    const auto shown = [&](const Form& f, const char* id) { return Has(rml(f), (std::string("id=\"") + id + "\"").c_str()); };
+    const char* flags = "toppanel-widgets-supply-flags-custom";
+    const char* ship  = "toppanel-widgets-ship-custom";
+    // Nothing of World Info's yet: none of its settings.
+    CHECK(!shown(w.Pass(), flags) && !shown(w.Pass(), ship));
+    // World Info's Conquest card in its pop-out: Supply Run Flags, with its other settings, and a switch there sets
+    // World Info's own, which the card shows by.
+    w.settings.Widget(made).popup = PopupDesignFrom(BarWidget::Custom, "world.conquest");
+    const Form card = w.Pass();
+    CHECK(shown(card, flags) && !shown(card, ship));
+    CHECK(w.settings.Widget(world).supplyFlags);
+    w.Pass({{flags, kClickEvent, ""}});
+    CHECK(!w.settings.Widget(world).supplyFlags && w.settings.Widget(made).supplyFlags);
+    // Its Ship button on a line: Tracked Ship too, as World Info's own shows while its button is.
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | world.ship");
+    CHECK(shown(w.Pass(), ship));
+    // What is about the created widget itself stays its own: Zone's crest borrows no Show Zone ID in Header, as its
+    // pop-out's title is its own, and no second Alignment or Show Icon.
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | zone.crest world.ship");
+    const std::string zone = rml(w.Pass());
+    CHECK(!Has(zone, "toppanel-widgets-show-zone-id-custom"));
+    const std::string alignment = "id=\"toppanel-widgets-alignment-custom\"";
+    CHECK(zone.find(alignment) != std::string::npos && zone.find(alignment) == zone.rfind(alignment));
+}
+
 TEST(a_created_widgets_pop_out_designer_is_its_sections_title_then_its_rows_with_no_note_between)
 {
     Window w;
