@@ -7,13 +7,17 @@ namespace headsup
 {
     bool IsInvite(NoticeKind kind) { return kind == NoticeKind::PartyInvite || kind == NoticeKind::AllianceInvite; }
 
-    float NoticeOpacity(float age, float life) { return std::clamp(1.0f - (age - life) / kNoticeFadeSeconds, 0.0f, 1.0f); }
+    float NoticeOpacity(float age, float life, float fade)
+    {
+        if (fade <= 0.0f) return age < life ? 1.0f : 0.0f;
+        return std::clamp(1.0f - (age - life) / fade, 0.0f, 1.0f);
+    }
 
     float NoticeBarShare(float age, float life) { return std::clamp(1.0f - age / life, 0.0f, 1.0f); }
 
-    uint32_t NoticeStack::Add(NoticeKind kind, std::string name, bool test)
+    uint32_t NoticeStack::Add(NoticeKind kind, std::string name, bool test, std::string aka)
     {
-        Notice notice{m_NextId++, kind, std::move(name)};
+        Notice notice{m_NextId++, kind, std::move(name), std::move(aka)};
         if (IsInvite(kind)) (test ? m_TestInvite : m_Invite) = std::move(notice);
         else
         {
@@ -23,31 +27,31 @@ namespace headsup
         return m_NextId - 1;
     }
 
-    std::vector<ShownNotice> NoticeStack::Shown(float seconds, bool held, float life, int most, bool buttons)
+    std::vector<ShownNotice> NoticeStack::Shown(float seconds, bool held, float life, float fade, int most, bool buttons)
     {
-        const auto over = [](const Notice& notice, float lasts) { return notice.age >= lasts + kNoticeFadeSeconds; };
-        if (m_Invite)
+        const auto over = [&](const Notice& notice, float lasts) { return notice.age >= lasts + fade; };
+        // The server's clock runs on, held or not, and a test invite shows what a real one does.
+        for (std::optional<Notice>* invite : {&m_Invite, &m_TestInvite})
         {
-            m_Invite->age += seconds; // the server's clock runs on, held or not
-            if (over(*m_Invite, kInviteSeconds)) m_Invite.reset();
+            if (!*invite) continue;
+            (*invite)->age += seconds;
+            if (over(**invite, kInviteSeconds)) invite->reset();
         }
-        if (m_TestInvite)
-        {
-            if (!held) m_TestInvite->age += seconds;
-            if (over(*m_TestInvite, life)) m_TestInvite.reset();
-        }
+        int room = most - (m_Invite ? 1 : 0);
+        if (room < 1) m_TestInvite.reset();
+        room -= m_TestInvite ? 1 : 0;
         for (Notice& notice : m_Notices)
             if (!held) notice.age += seconds;
         std::erase_if(m_Notices, [&](const Notice& notice) { return over(notice, life); });
-        while (m_Notices.size() > static_cast<size_t>(std::max(most, 0))) m_Notices.pop_front();
+        while (m_Notices.size() > static_cast<size_t>(std::max(room, 0))) m_Notices.pop_front();
 
         std::vector<ShownNotice> shown;
         const auto show = [&](const Notice& notice, float lasts) {
-            shown.push_back({notice.id, notice.kind, notice.name, NoticeOpacity(notice.age, lasts),
-                NoticeBarShare(notice.age, lasts), buttons && IsInvite(notice.kind)});
+            shown.push_back({notice.id, notice.kind, notice.name, NoticeOpacity(notice.age, lasts, fade),
+                NoticeBarShare(notice.age, lasts), buttons && IsInvite(notice.kind), notice.aka});
         };
         if (m_Invite) show(*m_Invite, kInviteSeconds);
-        if (m_TestInvite) show(*m_TestInvite, life);
+        if (m_TestInvite) show(*m_TestInvite, kInviteSeconds);
         for (const Notice& notice : m_Notices) show(notice, life);
         return shown;
     }
@@ -165,31 +169,31 @@ namespace headsup
         return kind == NoticeKind::Online ? kOnlineColor : kOfflineColor;
     }
 
-    const char* NoticeTitle(NoticeKind kind)
+    std::string NoticeTitle(NoticeKind kind, std::string_view name)
     {
         switch (kind)
         {
-        case NoticeKind::Online: return "Friend Online";
-        case NoticeKind::Offline: return "Friend Offline";
+        case NoticeKind::Online: return std::string(name) + " logged in";
+        case NoticeKind::Offline: return std::string(name) + " logged out";
         case NoticeKind::PartyInvite: return "Party Invite";
         case NoticeKind::AllianceInvite: return "Alliance Invite";
         }
         return "";
     }
 
-    std::string NoticeMessage(NoticeKind kind, std::string_view name)
+    std::string NoticeMessage(NoticeKind kind, std::string_view name, std::string_view aka)
     {
         switch (kind)
         {
-        case NoticeKind::Online: return std::string(name) + " is now online";
-        case NoticeKind::Offline: return std::string(name) + " went offline";
+        case NoticeKind::Online:
+        case NoticeKind::Offline: return aka.empty() ? std::string() : "Also known as " + std::string(aka);
         case NoticeKind::PartyInvite: return std::string(name) + " invited you to a party";
         case NoticeKind::AllianceInvite: return std::string(name) + " invited you to an alliance";
         }
         return std::string(name);
     }
 
-    std::vector<ShownNotice> NoticeSamples(const Settings& settings)
+    std::vector<ShownNotice> NoticeSamples(const Settings& settings, int room)
     {
         // Ids no stack reaches, so a sample never takes a real notice's place as it slides.
         constexpr uint32_t kOnlineSample = UINT32_MAX, kOfflineSample = UINT32_MAX - 1, kInviteSample = UINT32_MAX - 2;
@@ -200,6 +204,7 @@ namespace headsup
         if (settings.partyNotice)
             samples.push_back({kInviteSample, NoticeKind::PartyInvite, kInviteSampleName, 1.0f, 1.0f,
                 settings.partyNoticeButtons});
+        samples.resize(std::min(samples.size(), static_cast<size_t>(std::max(room, 0))));
         return samples;
     }
 

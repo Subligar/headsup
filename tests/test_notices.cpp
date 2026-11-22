@@ -9,6 +9,8 @@ using namespace headsup;
 
 namespace
 {
+    constexpr float kFade = 0.5f; // Fade Speed, in seconds
+
     std::vector<std::string> Names(const std::vector<ShownNotice>& shown)
     {
         std::vector<std::string> names;
@@ -24,35 +26,49 @@ namespace
     }
 }
 
-TEST(a_notice_is_solid_until_its_time_is_up_then_fades_for_half_a_second)
+TEST(a_notice_is_solid_until_its_time_is_up_then_fades_for_the_fade_speed)
 {
-    CHECK_EQ(NoticeOpacity(7.9f, 8.0f), 1.0f);
-    CHECK_EQ(NoticeOpacity(8.0f, 8.0f), 1.0f);
-    CHECK(std::abs(NoticeOpacity(8.25f, 8.0f) - 0.5f) < 0.001f);
-    CHECK_EQ(NoticeOpacity(8.5f, 8.0f), 0.0f);
-    CHECK_EQ(NoticeOpacity(20.0f, 8.0f), 0.0f);
+    CHECK_EQ(NoticeOpacity(7.9f, 8.0f, 3.0f), 1.0f);
+    CHECK_EQ(NoticeOpacity(8.0f, 8.0f, 3.0f), 1.0f);
+    CHECK(std::abs(NoticeOpacity(9.5f, 8.0f, 3.0f) - 0.5f) < 0.001f);
+    CHECK_EQ(NoticeOpacity(11.0f, 8.0f, 3.0f), 0.0f);
+    CHECK(std::abs(NoticeOpacity(8.25f, 8.0f, 0.5f) - 0.5f) < 0.001f);
+    CHECK_EQ(NoticeOpacity(20.0f, 8.0f, 3.0f), 0.0f);
     CHECK_EQ(NoticeBarShare(8.0f, 8.0f), 0.0f);
     CHECK_EQ(NoticeBarShare(2.0f, 8.0f), 0.75f);
+}
+
+TEST(with_no_fade_a_notice_vanishes_the_moment_its_time_is_up)
+{
+    CHECK_EQ(NoticeOpacity(7.99f, 8.0f, 0.0f), 1.0f);
+    CHECK_EQ(NoticeOpacity(8.0f, 8.0f, 0.0f), 0.0f);
+    NoticeStack stack;
+    stack.Add(NoticeKind::Online, "A");
+    CHECK(stack.Shown(7.9f, false, 8.0f, 0.0f, 5, true).size() == 1);
+    CHECK(stack.Shown(0.1f, false, 8.0f, 0.0f, 5, true).empty());
 }
 
 TEST(a_notice_goes_half_a_second_after_its_time)
 {
     NoticeStack stack;
     stack.Add(NoticeKind::Online, "A");
-    std::vector<ShownNotice> shown = stack.Shown(8.4f, false, 8.0f, 5, true);
+    std::vector<ShownNotice> shown = stack.Shown(8.4f, false, 8.0f, kFade, 5, true);
     CHECK(shown.size() == 1 && shown[0].share == 0.0f && shown[0].opacity > 0.0f);
-    CHECK(stack.Shown(0.2f, false, 8.0f, 5, true).empty());
+    CHECK(stack.Shown(0.2f, false, 8.0f, kFade, 5, true).empty());
 }
 
-TEST(the_pointer_over_a_notice_holds_every_clock_but_an_invites)
+// An invite's clock is the server's limit, so the pointer holds only the friends' notices; a test invite acts the same.
+TEST(the_pointer_over_a_notice_holds_the_friends_clocks_and_never_an_invites)
 {
     NoticeStack stack;
     stack.Add(NoticeKind::Online, "A");
     stack.Add(NoticeKind::PartyInvite, "B");
-    const std::vector<ShownNotice> shown = stack.Shown(9.0f, true, 8.0f, 5, true);
-    CHECK((Names(shown) == std::vector<std::string>{"B", "A"}));
-    CHECK_EQ(shown[1].share, 1.0f);
+    stack.Add(NoticeKind::PartyInvite, kInviteSampleName, true);
+    const std::vector<ShownNotice> shown = stack.Shown(9.0f, true, 8.0f, kFade, 5, true);
+    CHECK((Names(shown) == std::vector<std::string>{"B", kInviteSampleName, "A"}));
+    CHECK_EQ(shown[2].share, 1.0f);
     CHECK(std::abs(shown[0].share - 0.9f) < 0.001f); // 9 s of its 90
+    CHECK(std::abs(shown[1].share - 0.9f) < 0.001f);
 }
 
 TEST(an_invite_keeps_the_first_place_and_is_never_pushed_out)
@@ -61,12 +77,12 @@ TEST(an_invite_keeps_the_first_place_and_is_never_pushed_out)
     stack.Add(NoticeKind::Online, "A");
     stack.Add(NoticeKind::PartyInvite, "L");
     for (const char* name : {"B", "C", "D", "E", "F"}) stack.Add(NoticeKind::Online, name);
-    std::vector<ShownNotice> shown = stack.Shown(0.0f, false, 8.0f, 5, true);
-    CHECK((Names(shown) == std::vector<std::string>{"L", "B", "C", "D", "E", "F"}));
-    CHECK(shown[0].buttons && !shown[1].buttons && !shown[5].buttons);
-    shown = stack.Shown(0.0f, false, 8.0f, 2, true);
-    CHECK((Names(shown) == std::vector<std::string>{"L", "E", "F"}));
-    CHECK(!stack.Shown(0.0f, false, 8.0f, 2, false)[0].buttons);
+    std::vector<ShownNotice> shown = stack.Shown(0.0f, false, 8.0f, kFade, 5, true);
+    CHECK((Names(shown) == std::vector<std::string>{"L", "C", "D", "E", "F"})); // the invite counts in the 5
+    CHECK(shown[0].buttons && !shown[1].buttons && !shown[4].buttons);
+    shown = stack.Shown(0.0f, false, 8.0f, kFade, 2, true);
+    CHECK((Names(shown) == std::vector<std::string>{"L", "F"}));
+    CHECK(!stack.Shown(0.0f, false, 8.0f, kFade, 2, false)[0].buttons);
 }
 
 TEST(a_new_invite_takes_the_place_of_the_one_held_of_its_sort)
@@ -74,10 +90,10 @@ TEST(a_new_invite_takes_the_place_of_the_one_held_of_its_sort)
     NoticeStack stack;
     stack.Add(NoticeKind::PartyInvite, "First");
     stack.Add(NoticeKind::AllianceInvite, "Second");
-    std::vector<ShownNotice> shown = stack.Shown(0.0f, false, 8.0f, 5, true);
+    std::vector<ShownNotice> shown = stack.Shown(0.0f, false, 8.0f, kFade, 5, true);
     CHECK(shown.size() == 1 && shown[0].name == "Second" && shown[0].kind == NoticeKind::AllianceInvite);
     stack.Add(NoticeKind::PartyInvite, kInviteSampleName, true);
-    shown = stack.Shown(0.0f, false, 8.0f, 5, true);
+    shown = stack.Shown(0.0f, false, 8.0f, kFade, 5, true);
     CHECK((Names(shown) == std::vector<std::string>{"Second", kInviteSampleName}));
 }
 
@@ -91,38 +107,49 @@ TEST(closing_tells_a_real_invite_from_a_test_and_a_friend)
     CHECK(!stack.Close(test));
     CHECK(!stack.Close(friend_));
     CHECK(!stack.Close(friend_ + 100));
-    CHECK((Names(stack.Shown(0.0f, false, 8.0f, 5, true)) == std::vector<std::string>{"Leader"}));
+    CHECK((Names(stack.Shown(0.0f, false, 8.0f, kFade, 5, true)) == std::vector<std::string>{"Leader"}));
     CHECK(stack.Close(real));
     CHECK(!stack.Close(real));
-    CHECK(stack.Shown(0.0f, false, 8.0f, 5, true).empty());
+    CHECK(stack.Shown(0.0f, false, 8.0f, kFade, 5, true).empty());
     stack.Add(NoticeKind::PartyInvite, "Leader");
     stack.Add(NoticeKind::PartyInvite, kInviteSampleName, true);
     stack.EndInvite();
-    CHECK((Names(stack.Shown(0.0f, false, 8.0f, 5, true)) == std::vector<std::string>{kInviteSampleName}));
+    CHECK((Names(stack.Shown(0.0f, false, 8.0f, kFade, 5, true)) == std::vector<std::string>{kInviteSampleName}));
 }
 
-TEST(a_real_invite_stays_ninety_seconds_and_a_test_one_the_duration)
+TEST(every_invite_stays_ninety_seconds_whatever_the_duration)
 {
     NoticeStack stack;
     stack.Add(NoticeKind::PartyInvite, "Leader");
     stack.Add(NoticeKind::PartyInvite, kInviteSampleName, true);
-    const std::vector<ShownNotice> shown = stack.Shown(8.6f, false, 8.0f, 5, true);
-    CHECK(shown.size() == 1 && shown[0].name == "Leader");
-    CHECK(std::abs(shown[0].share - (1.0f - 8.6f / 90.0f)) < 0.001f);
-    CHECK(stack.Shown(81.0f, false, 8.0f, 5, true).size() == 1); // 89.6 s in
-    CHECK(stack.Shown(1.0f, false, 8.0f, 5, true).empty());      // 90.6 s: its fade is over
+    std::vector<ShownNotice> shown = stack.Shown(8.6f, false, 8.0f, kFade, 5, true);
+    CHECK((Names(shown) == std::vector<std::string>{"Leader", kInviteSampleName}));
+    CHECK(std::abs(shown[1].share - (1.0f - 8.6f / 90.0f)) < 0.001f);
+    CHECK(stack.Shown(81.0f, false, 8.0f, kFade, 5, true).size() == 2); // 89.6 s in
+    CHECK(stack.Shown(1.0f, false, 8.0f, kFade, 5, true).empty());      // 90.6 s: their fade is over
+}
+
+TEST(max_notifications_of_one_leaves_a_real_invite_alone)
+{
+    NoticeStack stack;
+    stack.Add(NoticeKind::Online, "A");
+    stack.Add(NoticeKind::PartyInvite, kInviteSampleName, true);
+    stack.Add(NoticeKind::PartyInvite, "Leader");
+    CHECK((Names(stack.Shown(0.0f, false, 8.0f, kFade, 1, true)) == std::vector<std::string>{"Leader"}));
+    stack.Add(NoticeKind::PartyInvite, kInviteSampleName, true);
+    CHECK((Names(stack.Shown(0.0f, false, 8.0f, kFade, 2, true)) == std::vector<std::string>{"Leader", kInviteSampleName}));
 }
 
 TEST(the_duration_shortened_drops_the_notices_older_than_it)
 {
     NoticeStack stack;
     stack.Add(NoticeKind::Online, "A");
-    std::vector<ShownNotice> shown = stack.Shown(5.0f, false, 8.0f, 5, true);
+    std::vector<ShownNotice> shown = stack.Shown(5.0f, false, 8.0f, kFade, 5, true);
     CHECK(shown.size() == 1 && Within(shown));
-    shown = stack.Shown(0.0f, false, 3.0f, 5, true);
+    shown = stack.Shown(0.0f, false, 3.0f, kFade, 5, true);
     CHECK(shown.empty());
     stack.Add(NoticeKind::Online, "B");
-    shown = stack.Shown(3.2f, false, 3.0f, 5, true); // into its fade
+    shown = stack.Shown(3.2f, false, 3.0f, kFade, 5, true); // into its fade
     CHECK(shown.size() == 1 && Within(shown));
 }
 
@@ -172,7 +199,7 @@ TEST(a_notice_plays_its_kinds_sound_at_master_times_alert)
 TEST(the_samples_are_a_test_notice_of_each_kind_that_is_on)
 {
     Settings s;
-    std::vector<ShownNotice> samples = NoticeSamples(s);
+    std::vector<ShownNotice> samples = NoticeSamples(s, kMaxNoticeMost);
     CHECK(samples.size() == 3);
     CHECK(samples[0].kind == NoticeKind::Online && samples[1].kind == NoticeKind::Offline);
     CHECK(samples[2].kind == NoticeKind::PartyInvite);
@@ -180,14 +207,17 @@ TEST(the_samples_are_a_test_notice_of_each_kind_that_is_on)
     CHECK(samples[2].name == kInviteSampleName && samples[2].buttons && !samples[0].buttons);
     CHECK(samples[0].opacity == 1.0f && samples[0].share == 1.0f);
     CHECK(samples[0].id != samples[1].id && samples[1].id != samples[2].id);
+    // Max Notifications counts them, after the real ones.
+    CHECK((NoticeSamples(s, 2).size() == 2 && NoticeSamples(s, 2)[1].kind == NoticeKind::Offline));
+    CHECK(NoticeSamples(s, 0).empty());
     s.partyNoticeButtons = false;
-    CHECK(!NoticeSamples(s)[2].buttons);
+    CHECK(!NoticeSamples(s, kMaxNoticeMost)[2].buttons);
     s.friendNoticeOnline = false;
     s.partyNotice        = false;
-    samples              = NoticeSamples(s);
+    samples              = NoticeSamples(s, kMaxNoticeMost);
     CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Offline);
     s.friendNoticeOffline = false;
-    samples               = NoticeSamples(s);
+    samples               = NoticeSamples(s, kMaxNoticeMost);
     CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Online); // something to see and drag
 }
 
@@ -209,14 +239,15 @@ TEST(a_notice_slides_to_its_place_and_lands_on_it)
 
 TEST(a_notice_says_who_and_what_in_its_kinds_color)
 {
-    CHECK_EQ(NoticeMessage(NoticeKind::Online, "Two"), "Two is now online");
-    CHECK_EQ(NoticeMessage(NoticeKind::Offline, "Two"), "Two went offline");
-    CHECK_EQ(NoticeMessage(NoticeKind::PartyInvite, "Lead"), "Lead invited you to a party");
-    CHECK_EQ(NoticeMessage(NoticeKind::AllianceInvite, "Lead"), "Lead invited you to an alliance");
-    CHECK_EQ(std::string(NoticeTitle(NoticeKind::Online)), "Friend Online");
-    CHECK_EQ(std::string(NoticeTitle(NoticeKind::Offline)), "Friend Offline");
-    CHECK_EQ(std::string(NoticeTitle(NoticeKind::PartyInvite)), "Party Invite");
-    CHECK_EQ(std::string(NoticeTitle(NoticeKind::AllianceInvite)), "Alliance Invite");
+    // A friend's second line is only for an alt: the name they are on your friend list by.
+    CHECK_EQ(NoticeTitle(NoticeKind::Online, "Two"), "Two logged in");
+    CHECK_EQ(NoticeTitle(NoticeKind::Offline, "Two"), "Two logged out");
+    CHECK_EQ(NoticeMessage(NoticeKind::Online, "Two", ""), "");
+    CHECK_EQ(NoticeMessage(NoticeKind::Offline, "Alt", "Two"), "Also known as Two");
+    CHECK_EQ(NoticeMessage(NoticeKind::PartyInvite, "Lead", ""), "Lead invited you to a party");
+    CHECK_EQ(NoticeMessage(NoticeKind::AllianceInvite, "Lead", ""), "Lead invited you to an alliance");
+    CHECK_EQ(NoticeTitle(NoticeKind::PartyInvite, "Lead"), "Party Invite");
+    CHECK_EQ(NoticeTitle(NoticeKind::AllianceInvite, "Lead"), "Alliance Invite");
     CHECK(NoticeColor(NoticeKind::Online) != NoticeColor(NoticeKind::Offline));
     CHECK(NoticeColor(NoticeKind::PartyInvite) == NoticeColor(NoticeKind::AllianceInvite));
     CHECK(NoticeColor(NoticeKind::PartyInvite) != NoticeColor(NoticeKind::Online));

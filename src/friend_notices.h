@@ -20,6 +20,7 @@ namespace headsup
         NoticeKind kind = NoticeKind::Online;
         uint32_t account = 0;
         std::string name;
+        std::string aka{}; // the name you added them by, when they play another character
         bool operator==(const FriendNews&) const = default;
     };
 

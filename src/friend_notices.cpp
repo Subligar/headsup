@@ -1,6 +1,7 @@
 #include "friend_notices.h"
 
 #include <algorithm>
+#include <cctype>
 #include <charconv>
 
 namespace headsup
@@ -22,7 +23,12 @@ namespace headsup
             playing[entry.account] = entry.playing;
             const auto before      = m_Playing.find(entry.account);
             if (quiet || before == m_Playing.end() || before->second == entry.playing) continue;
-            news.push_back({entry.playing ? NoticeKind::Online : NoticeKind::Offline, entry.account, FriendName(entry)});
+            const bool alt = !entry.character.empty() &&
+                             !std::ranges::equal(entry.character, entry.added, [](char a, char b) {
+                                 return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+                             });
+            news.push_back({entry.playing ? NoticeKind::Online : NoticeKind::Offline, entry.account, FriendName(entry),
+                alt ? entry.added : std::string()});
         }
         m_Playing = std::move(playing);
         return news;

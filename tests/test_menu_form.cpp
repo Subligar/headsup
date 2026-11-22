@@ -2410,6 +2410,8 @@ TEST(the_notifications_page_sets_the_look_of_every_notification)
     CHECK(w.settings.noticeAlign == HelpAnchor::Right);
     CHECK(w.Pass({{look + "-notice-bar", kClickEvent, ""}}).changed);
     CHECK(!w.settings.noticeBar);
+    CHECK(w.Pass({{look + "-notice-fade", kChangeEvent, "0"}}).changed);
+    CHECK_EQ(w.settings.noticeFade, 0);
 }
 
 TEST(changing_an_anchor_moves_the_spot_and_not_the_stack)
@@ -2473,15 +2475,12 @@ TEST(friends_included_asks_the_plugin_for_the_new_pick)
     CHECK(!w.state.includedAsked && none.popup && none.popup->rml.find(list + "-o-2") == std::string::npos);
 }
 
-TEST(the_two_test_buttons_ask_the_plugin_once_each)
+TEST(the_test_button_asks_the_plugin)
 {
     Window w;
     w.state.page = Page::Notifications;
     CHECK(!w.Pass({{"notifications-notice-look-notice-test", kClickEvent, ""}}).changed);
-    CHECK(w.state.noticeTestRequested && !w.state.friendNoticeTestRequested);
-    w.state.noticeTestRequested = false;
-    CHECK(!w.Pass({{"notifications-notice-friends-friend-notice-test", kClickEvent, ""}}).changed);
-    CHECK(w.state.friendNoticeTestRequested && !w.state.noticeTestRequested);
+    CHECK(w.state.noticeTestRequested);
 }
 
 TEST(a_setting_of_a_kind_that_is_off_is_not_shown)
@@ -2548,13 +2547,21 @@ TEST(each_widget_that_makes_headsup_send_packets_warns_of_it_on_its_chip)
     CHECK(!chipSays(BarWidget::Zone, WindowWord::SendsTurnIns));
 }
 
-TEST(friend_notifications_style_picks_full_or_compact)
+TEST(the_style_picks_full_or_compact_and_compact_hides_width_and_height)
 {
     Window w;
-    w.state.page             = Page::Notifications;
-    const std::string style  = "notifications-notice-friends-friend-notice-style-s-";
+    w.state.page            = Page::Notifications;
+    const std::string look  = "notifications-notice-look";
+    const std::string style = look + "-notice-style-s-";
+    const auto shows = [&](const Form& form, const std::string& id) {
+        return Has(Block(form, look.c_str())->rml, ("id=\"" + look + "-" + id + "\"").c_str());
+    };
+    const Form full = w.Pass();
+    CHECK(shows(full, "notice-width") && shows(full, "notice-height"));
     CHECK(w.Pass({{style + "1", kClickEvent, ""}}).changed);
-    CHECK(w.settings.friendNoticeStyle == FriendNoticeStyle::Compact);
+    CHECK(w.settings.noticeStyle == NoticeStyle::Compact);
+    const Form compact = w.Pass();
+    CHECK(!shows(compact, "notice-width") && !shows(compact, "notice-height") && shows(compact, "notice-fit"));
     CHECK(w.Pass({{style + "0", kClickEvent, ""}}).changed);
-    CHECK(w.settings.friendNoticeStyle == FriendNoticeStyle::Full);
+    CHECK(w.settings.noticeStyle == NoticeStyle::Full);
 }

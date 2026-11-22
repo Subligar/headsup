@@ -3246,15 +3246,16 @@ TEST(the_notification_settings_load_inside_their_ranges_and_save_back)
     CHECK(fresh.noticeWidth == 300 && fresh.noticeHeight == kFlexibleNoticeHeight && fresh.noticeFit == NoticeFit::Shrink);
     CHECK(fresh.noticeRounding == kThemeRounding && fresh.noticeBar && fresh.noticeVolume == 100);
     CHECK(fresh.noticeSeconds == 8 && fresh.noticeAnchor == HelpAnchor::Left && fresh.noticeEdge == NoticeEdge::Top);
-    CHECK(fresh.noticeAlign == HelpAnchor::Left && fresh.noticeMost == 5);
+    CHECK(fresh.noticeAlign == HelpAnchor::Center && fresh.noticeMost == 6 && fresh.noticeFade == 3);
     CHECK(fresh.noticeAcross == kFishBarUnplaced && fresh.noticeDown == kFishBarUnplaced);
     CHECK(fresh.friendNoticeOnline && fresh.friendNoticeOffline && fresh.friendNoticeVolume == 60);
     CHECK(fresh.friendNoticeOnlineSound == kChimeSound && fresh.friendNoticeOfflineSound == kNoSound);
     CHECK(fresh.partyNotice && fresh.partyNoticeButtons && fresh.partyNoticeVolume == 60);
     CHECK(fresh.partyNoticeSound == kFirstCallChoice + 14);
-    CHECK(fresh.friendNoticeStyle == FriendNoticeStyle::Full);
+    CHECK(fresh.noticeStyle == NoticeStyle::Full);
     MapStore store;
-    store.values["friendNoticeStyle"]        = "compact";
+    store.values["noticeStyle"]              = "compact";
+    store.values["noticeFade"]               = "99";
     store.values["noticeWidth"]              = "5000";
     store.values["noticeHeight"]             = "1";
     store.values["noticeMost"]               = "99";
@@ -3262,7 +3263,7 @@ TEST(the_notification_settings_load_inside_their_ranges_and_save_back)
     store.values["noticeFit"]                = "truncate";
     store.values["noticeEdge"]               = "bottom";
     store.values["noticeAnchor"]             = "right";
-    store.values["noticeAlign"]              = "center";
+    store.values["noticeAlign"]              = "left";
     store.values["friendNoticeOfflineSound"] = "call21";
     store.values["partyNoticeSound"]         = "bogus";
     store.values["friendNoticeOnlineSound"]  = "true";
@@ -3272,19 +3273,20 @@ TEST(the_notification_settings_load_inside_their_ranges_and_save_back)
     CHECK_EQ(s.noticeMost, 10);
     CHECK_EQ(s.noticeVolume, 100);
     CHECK(s.noticeFit == NoticeFit::Truncate && s.noticeEdge == NoticeEdge::Bottom);
-    CHECK(s.noticeAnchor == HelpAnchor::Right && s.noticeAlign == HelpAnchor::Center);
+    CHECK(s.noticeAnchor == HelpAnchor::Right && s.noticeAlign == HelpAnchor::Left);
+    CHECK_EQ(s.noticeFade, kMaxNoticeFade);
     CHECK_EQ(s.friendNoticeOfflineSound, kFirstCallChoice + 21);
     CHECK_EQ(s.partyNoticeSound, kDefaultInviteSound); // an unknown name keeps the default
     CHECK_EQ(s.friendNoticeOnlineSound, kChimeSound);
-    CHECK(s.friendNoticeStyle == FriendNoticeStyle::Compact);
+    CHECK(s.noticeStyle == NoticeStyle::Compact);
     MapStore saved;
     SaveSettings(s, saved);
     const Settings back = LoadSettings(saved);
     CHECK(back.noticeWidth == 600 && back.noticeHeight == 30 && back.noticeMost == 10 && back.noticeVolume == 100);
     CHECK(back.noticeFit == NoticeFit::Truncate && back.noticeEdge == NoticeEdge::Bottom);
-    CHECK(back.noticeAnchor == HelpAnchor::Right && back.noticeAlign == HelpAnchor::Center);
+    CHECK(back.noticeAnchor == HelpAnchor::Right && back.noticeAlign == HelpAnchor::Left && back.noticeFade == kMaxNoticeFade);
     CHECK(back.friendNoticeOfflineSound == kFirstCallChoice + 21 && back.partyNoticeSound == kDefaultInviteSound);
-    CHECK(back.friendNoticeOnlineSound == kChimeSound && back.friendNoticeStyle == FriendNoticeStyle::Compact);
+    CHECK(back.friendNoticeOnlineSound == kChimeSound && back.noticeStyle == NoticeStyle::Compact);
 }
 
 TEST(a_sound_choice_is_saved_by_a_name_that_never_moves)

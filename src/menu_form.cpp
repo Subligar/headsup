@@ -2387,12 +2387,21 @@ namespace headsup
                 form.Fade(!s.fishCase);
                 if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.caseTestRequested = true;
                 break;
+            case SettingPiece::NoticeStyle:
+            {
+                form.Fade(false);
+                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
+                form.Segments(label.c_str(), s.noticeStyle, names.data(), kNoticeStyleCount, tip);
+                break;
+            }
             case SettingPiece::NoticeWidth:
+                if (s.noticeStyle == NoticeStyle::Compact) break; // a compact notice is as small as its name
                 form.Fade(false);
                 form.SliderInt(label.c_str(), s.noticeWidth, kFlexibleNoticeWidth, kMaxNoticeWidth,
                     PixelsOr(Word(c, WindowWord::Flexible), kFlexibleNoticeWidth), tip);
                 break;
             case SettingPiece::NoticeHeight:
+                if (s.noticeStyle == NoticeStyle::Compact) break;
                 form.Fade(false);
                 form.SliderInt(label.c_str(), s.noticeHeight, kFlexibleNoticeHeight, kMaxNoticeHeight,
                     PixelsOr(Word(c, WindowWord::Flexible), kFlexibleNoticeHeight), tip);
@@ -2420,6 +2429,10 @@ namespace headsup
             case SettingPiece::NoticeSeconds:
                 form.Fade(false);
                 form.SliderInt(label.c_str(), s.noticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds, Seconds, tip);
+                break;
+            case SettingPiece::NoticeFade:
+                form.Fade(false);
+                form.SliderInt(label.c_str(), s.noticeFade, kMinNoticeFade, kMaxNoticeFade, Seconds, tip);
                 break;
             case SettingPiece::NoticeAnchor:
             case SettingPiece::NoticeEdge:
@@ -2464,13 +2477,6 @@ namespace headsup
                 form.Fade(false);
                 form.Switch(label.c_str(), s.friendNoticeOffline, tip);
                 break;
-            case SettingPiece::FriendNoticeStyle:
-            {
-                form.Fade(!s.friendNoticeOnline && !s.friendNoticeOffline);
-                const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(e));
-                form.Segments(label.c_str(), s.friendNoticeStyle, names.data(), kFriendNoticeStyleCount, tip);
-                break;
-            }
             case SettingPiece::FriendNoticeOnlineSound:
                 form.Fade(!s.friendNoticeOnline);
                 SoundDropdown(form, c.state, label, s.friendNoticeOnlineSound, NoticeKind::Online,
@@ -2489,10 +2495,6 @@ namespace headsup
             case SettingPiece::FriendsIncluded:
                 form.Fade(!s.friendNoticeOnline && !s.friendNoticeOffline);
                 IncludedList(c, label, tip);
-                break;
-            case SettingPiece::FriendNoticeTest:
-                form.Fade(!s.friendNoticeOnline && !s.friendNoticeOffline);
-                if (form.Button(label.c_str(), label.c_str(), kWashPill, tip)) c.state.friendNoticeTestRequested = true;
                 break;
             case SettingPiece::PartyNotice:
                 form.Fade(false);
