@@ -339,6 +339,9 @@ TEST(a_sub_window_takes_the_keys_and_keeps_the_mouse_from_its_parent)
     CHECK_EQ(w.windows.TabShown("bag"), size_t{0});
     CHECK_EQ(w.windows.Selected(), std::string("sure-yes"));
     CHECK(!w.Element("bag", tab)->IsClassSet(kGameSelClass));
+    // The click brought the parent no higher than its sub-window.
+    w.PointAt("sure", "sure-no");
+    CHECK(w.rml.context->GetHoverElement() == w.Element("sure", "sure-no"));
     w.Acts(MenuAction::Right);
     w.Acts(MenuAction::Confirm);
     CHECK(w.windows.TakePressed() == std::vector<std::string>{"sure-no"});

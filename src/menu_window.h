@@ -44,8 +44,6 @@ namespace headsup
     constexpr const char* kGameNavClass = "selectable"; // what the selection can be on
     constexpr const char* kGameSelClass = "selected";   // where it is
     constexpr const char* kGameGroundClass = "ground";  // inside each: what lights it, drawn larger behind its text
-    // Under the settings window, which a window's cog opens over it.
-    constexpr int kGameWindowZ = kMenuWindowZ - 1;
 
     // HeadsUp's game windows in the overlay, in the settings window's look, the newest over the rest. The keys and the
     // pad act on the newest; the mouse on any but one that has a sub-window open. Each has one element selected, which
