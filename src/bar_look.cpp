@@ -209,8 +209,10 @@ namespace headsup
     float BarLook::Leading(const WidgetContent& content) const
     {
         const size_t icons = content.icons.size() + (content.picture != GamePicture::None ? 1 : 0);
+        // An empty widget keeps an icon's room, as the cog alone, so its box shows at any padding.
+        const bool empty = icons == 0 && content.title.empty() && content.subtitle.empty();
         return static_cast<float>(icons) * (metrics.icon + metrics.gap) +
-               (content.cog ? metrics.icon : 0.0f); // alone, with no text to keep a gap from
+               (content.cog || empty ? metrics.icon : 0.0f); // alone, with no text to keep a gap from
     }
 
     std::optional<BoxStyle> BarLook::BoxOf(BarWidget widget, bool lit, bool backed) const

@@ -591,7 +591,6 @@ namespace headsup
         if (Shown().empty())
         {
             m_Scrolled.clear();
-            m_Refused = false;
             for (const std::string& card : std::exchange(m_Fleeting, {}))
                 m_Tabs.erase(card);
         }

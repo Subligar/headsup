@@ -168,6 +168,39 @@ TEST(a_widgets_content_sits_in_the_middle_of_a_wider_box_with_its_lines_against_
     }
 }
 
+// The card "Allow empty widgets": an empty widget draws as its box alone, as tall as one with text, with nothing in it.
+TEST(an_empty_widget_draws_its_box_alone_as_tall_as_a_widget_with_text)
+{
+    const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},
+        BarLinePlace{17, 13.0f, 1.0f}, BarLinePlace{14, 23.0f, 3.0f}, {}, {}};
+    Settings settings;
+    test::RmlSession rml;
+    const BarLook look        = LookOf(PaletteOf(BarTheme::UmbraDark), settings);
+    Rml::ElementDocument* bar = rml.context->LoadDocumentFromMemory(BarDocument(look, place), "bar");
+    bar->Show();
+    WidgetContent text;
+    text.shown = true;
+    text.title = {Text("20 / 30")};
+    WidgetContent empty;
+    empty.shown = true;
+    const auto show = [&](BarWidget kind, const WidgetContent& c) {
+        Rml::Element* e = bar->GetElementById(WidgetId(kind));
+        e->SetClass(kHiddenClass, false);
+        e->SetProperty(Rml::PropertyId::Width, Rml::Property(look.Leading(c) + 2.0f * settings.barWidgetPadding, Rml::Unit::PX));
+        e->SetInnerRML(WidgetRml(c, look, {}));
+        return e;
+    };
+    Rml::Element* bags = show(BarWidget::Bags, text);
+    Rml::Element* zone = show(BarWidget::Zone, empty);
+    rml.context->Update();
+    rml.context->Render();
+    Rml::ElementList icons;
+    zone->GetElementsByClassName(icons, "icon");
+    CHECK(Words(zone).empty() && icons.empty());
+    CHECK(std::fabs(zone->GetBox().GetSize(Rml::BoxArea::Border).y - bags->GetBox().GetSize(Rml::BoxArea::Border).y) < 0.01f);
+    CHECK_EQ(rml.Said(), "");
+}
+
 TEST(a_currencys_amounts_line_up_on_the_right_when_one_ends_in_the_coin_and_the_other_in_your_nations_crest)
 {
     const BarTextPlace place{BarLinePlace{16, 9.0f, 2.0f}, BarLinePlace{17, 8.0f, 1.0f}, BarLinePlace{16, 14.0f, 2.0f},

@@ -1818,7 +1818,7 @@ TEST(an_override_left_unchanged_shows_the_top_panels_value_as_it_is_now)
     CHECK_EQ(shown("widget-spacing"), "3 px");
 }
 
-TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
+TEST(the_widget_designer_moves_and_toggles_its_parts_down_to_none_on)
 {
     Window w;
     const PanelWidget zone{BarWidget::Zone};
@@ -1836,19 +1836,13 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK_EQ(design(), "name nation | region -coordinates");
     w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, chip(WidgetPart::ZoneNation)}});
     CHECK_EQ(design(), "nation name | region -coordinates");
-    // Off one by one until one is left: the last stays on, and the designer says why under its lines.
+    // Off one by one, the last too (the card "Allow empty widgets"), and on again.
     w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneRegion)});
     CHECK_EQ(design(), "-nation name | -region -coordinates");
-    CHECK(!Has(rml(w.Pass()), "class=\"error\""));
-    const Form refused = w.Pass({toggle(WidgetPart::ZoneName)});
-    CHECK_EQ(design(), "-nation name | -region -coordinates");
-    CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
-    bool shownOn = false; // the toggle's last word on its look
-    for (const FormValue& v : refused.values)
-        if (v.id == chip(WidgetPart::ZoneName) + "-on" && v.kind == FormValueKind::Class && v.name == "on") shownOn = v.on;
-    CHECK(shownOn);
-    // The next toggle or move takes the message away.
-    CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "class=\"error\""));
+    const Form empty = w.Pass({toggle(WidgetPart::ZoneName)});
+    CHECK(empty.changed && !AnyPartOn(w.settings.Widget(zone).design));
+    CHECK(!Has(rml(empty), "class=\"error\"") && !Has(rml(w.Pass()), "class=\"error\""));
+    w.Pass({toggle(WidgetPart::ZoneName), toggle(WidgetPart::ZoneRegion)});
     CHECK_EQ(design(), "-nation name | region -coordinates");
     // Another widget's chip dropped here moves nothing.
     const std::string weather = "toppanel-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
@@ -1888,18 +1882,18 @@ TEST(a_created_widgets_designer_lists_the_picked_widgets_unplaced_buttons_and_pu
     const Form placed = w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, listed(WidgetPart::Bag1Count)}});
     CHECK_EQ(design(), "name | bags.count1 zone.name");
     CHECK(!shown(placed, listed(WidgetPart::ZoneName)) && Has(rml(placed), "Name (Zone)</div>"));
-    // Let go off the lines, a button goes back to the lists; the last one on stays, and the designer says why.
+    // Let go off the lines, a button goes back to the lists, the last one on too.
     w.Pass({{chip(WidgetPart::ZoneName), kDragEndEvent, ""}});
     CHECK_EQ(design(), "name | bags.count1");
     CHECK(shown(w.Pass(), listed(WidgetPart::ZoneName)));
     w.Pass({{chip(WidgetPart::Bag1Count) + "-on", kClickEvent, ""}});
     CHECK_EQ(design(), "name | -bags.count1");
-    const Form refused = w.Pass({{chip(WidgetPart::CustomName), kDragEndEvent, ""}});
-    CHECK_EQ(design(), "name | -bags.count1");
-    CHECK(Has(rml(refused), "class=\"error\""));
+    const Form empty = w.Pass({{chip(WidgetPart::CustomName), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "| -bags.count1");
+    CHECK(empty.changed && !Has(rml(empty), "class=\"error\""));
     // A drop ends the drag too: the button moves once and stays.
     w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::Bag1Count)}, {chip(WidgetPart::Bag1Count), kDragEndEvent, ""}});
-    CHECK_EQ(design(), "name -bags.count1 |");
+    CHECK_EQ(design(), "-bags.count1 |");
     // A Pinned Status button has no switch here either: the pins turn it on.
     w.Pass({{base + "end-1", kDropEvent, listed(WidgetPart::StatusPin1)}});
     CHECK(!Has(rml(w.Pass()), (chip(WidgetPart::StatusPin1) + "-on").c_str()));

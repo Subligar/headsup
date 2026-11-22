@@ -1475,17 +1475,7 @@ namespace headsup
             status.resistRank = std::clamp(status.resistRank, kMinResistRank, kNoResistRank);
         }
         // A linked widget sits just after its own in the layout too, as the panel draws it.
-        const PanelGroups panel = Panel(s);
-        s.barSections           = panel.placement;
-        // A pill needs a part on among its widgets that are on, a widget alone one of its own: a created widget
-        // emptied in a pill that no longer shows anything else gets its Name back.
-        for (int slot = 0; slot < kPanelSlots; ++slot)
-        {
-            if (PillShowsOther(s, panel, WidgetInSlot(slot))) continue;
-            WidgetDesign& design = s.widgets[slot].design;
-            if (WidgetInSlot(slot).kind == BarWidget::Custom && design == WidgetDesign{}) design = DefaultDesign(BarWidget::Custom);
-            TurnOnFirst(design);
-        }
+        s.barSections = Panel(s).placement;
         return s;
     }
 
@@ -2127,7 +2117,7 @@ namespace headsup
         store.Set(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str());
         store.Set(kCollapsedKey, SpaceApart(s.collapsedSections).c_str());
         store.Set(kStatusFavoritesKey, SpaceApart(s.statusFavorites).c_str());
-        store.Set(kStatusPinsKey, SpaceApart(s.statusPins).c_str());
+        store.Set(kStatusPinsKey, s.statusPins.empty() ? kNoStatuses : SpaceApart(s.statusPins).c_str());
         for (int i = 0; i < kStatusRankCount; ++i)
         {
             const std::string base = kStatusKeys[i];

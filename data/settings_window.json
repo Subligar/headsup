@@ -199,7 +199,6 @@
                 {"key": "remove-copy", "name": "Remove This Copy", "tip": "Takes this copy off the panel. Its settings go with it."},
                 {"key": "combine-none", "name": "None"},
                 {"key": "link-disabled", "name": "(disabled)"},
-                {"key": "design-last-on", "name": "At least one button must be enabled."},
                 {"key": "design-status-timers", "name": "Use the lines below to change how info is organized in the widget."},
                 {"key": "add-from", "name": "Add From", "tip": "The widget whose buttons or sections are listed under this, for you to drag into the lines or rows above. It starts on Zone."},
                 {"key": "popup-row-full", "name": "A row can hold at most 3 sections."},

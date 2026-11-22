@@ -791,7 +791,6 @@ namespace headsup
             std::optional<Move> move; // applied after the lines are written, as the trays' drop is
             std::optional<Put> put;   // a listed chip dropped on a line
             std::optional<WidgetPart> taken; // a line's chip let go
-            bool toggled = false, refused = false;
             const auto dropped = [&](const std::string& target, int toLine, size_t at) {
                 const FormEvent* event = form.Took(target, kDropEvent);
                 if (event == nullptr) return;
@@ -831,19 +830,7 @@ namespace headsup
                     const auto pin = static_cast<size_t>(chip.part) - static_cast<size_t>(WidgetPart::StatusPin1);
                     const bool pinned = IsPinnedStatus(chip.part);
                     if (pinned) chip.on = pin < c.s.statusPins.size();
-                    bool on = chip.on;
-                    if (!pinned) form.CheckAt((name + kChipToggle).c_str(), on);
-                    if (on != chip.on)
-                    {
-                        toggled = true;
-                        if (on)
-                            chip.on = true;
-                        else if (!TurnOff(d, chip.part, PillShowsOther(c.s, Panel(c.s), widget)))
-                        {
-                            refused = true;
-                            form.Set(form.Named(name + kChipToggle), FormValueKind::Class, "on", {}, true);
-                        }
-                    }
+                    if (!pinned) form.CheckAt((name + kChipToggle).c_str(), chip.on);
                     std::string text(Said(names[part].name));
                     if (created && WidgetOfPart(chip.part) != BarWidget::Custom) text += " (" + widgetName(WidgetOfPart(chip.part)) + ")";
                     form.Raw(picture(part) + EscapedRml(text) + "</div>");
@@ -863,16 +850,9 @@ namespace headsup
                 changed = MovePart(d, move->line, move->index, move->toLine, move->at);
             else if (put)
                 changed = PutPart(d, put->part, put->line, put->at);
-            else if (taken && !(changed = TakePart(d, *taken, PillShowsOther(c.s, Panel(c.s), widget))))
-                refused = true;
+            else if (taken)
+                changed = TakePart(d, *taken);
             if (changed) form.changed = true;
-            if (refused)
-                c.state.partRefused = widget;
-            else if ((toggled || changed) && c.state.partRefused == widget)
-                c.state.partRefused.reset();
-            if (c.state.partRefused == widget)
-                form.Raw(std::string("<div class=\"error\">") + EscapedRml(Said(Word(c, WindowWord::WidgetTabsDesignLastOn))) +
-                         "</div>");
             if (!created) return;
             std::vector<BarWidget> from;
             for (const WidgetPart part : PartsOf(BarWidget::Custom))

@@ -1636,7 +1636,8 @@ namespace headsup
                     for (const uint16_t id : pinned[line])
                         AddPart(lines[line], PinnedStatus(state.statuses, id, o.statusDisplay, o.timerFormat, OwnPalette(settings)));
                 if (lines[0].empty()) std::swap(lines[0], lines[1]);
-                base.title    = lines[0].empty() ? ListOf(Text("Status Timers", Tone::Dim)) : std::move(lines[0]);
+                base.idle     = lines[0].empty() && PillShowsOther(settings, Panel(settings), widget);
+                base.title    = std::move(lines[0]);
                 base.subtitle = std::move(lines[1]);
                 return base;
             }
@@ -1676,9 +1677,14 @@ namespace headsup
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
             {
-                // Linked with every part off, or Performance with no messages waiting, it takes no room.
-                w.idle  = !AnyPartOn(design) || widget.kind == BarWidget::Performance;
-                w.title = ListOf(Text("-"));
+                // With every part off it is an empty box, but in a pill another of its widgets shows; Performance with
+                // no messages waiting takes no room.
+                if (!AnyPartOn(design)) w.idle = PillShowsOther(settings, Panel(settings), widget);
+                else
+                {
+                    w.idle  = widget.kind == BarWidget::Performance;
+                    w.title = ListOf(Text("-"));
+                }
             }
             return w;
         }
@@ -1768,7 +1774,6 @@ namespace headsup
             };
             std::vector<uint16_t>& list = kind == kStatusPinPress ? settings.statusPins : settings.statusFavorites;
             const auto at = std::ranges::find(list, status);
-            if (at != list.end() && settings.statusPins == std::vector<uint16_t>{status}) return PressResult::Refused;
             place();
             if (at != list.end())
             {
@@ -2289,7 +2294,7 @@ namespace headsup
             return PartyPopup(state.party);
         case BarWidget::StatusTimers:
             return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins, OwnPalette(settings),
-                ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
+                ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey));
         case BarWidget::World:
             return WorldPopup(state, o);
         case BarWidget::Settings:

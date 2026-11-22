@@ -208,7 +208,7 @@ PIECES = Pieces(
         'widget-tabs': Setting(unnamed=True, rows=rows(
             'name', 'edit', 'design', 'popup-design', 'icon', 'alignment', 'show-zone-id', 'wrap-text', 'average-over', 'include-pets', 'combine', 'linked-padding', 'visibility', 'detection-icons', 'blue-magic', 'blue-magic-color', 'blue-magic-learned', 'currency-1', 'currency-2', 'bag-1', 'bag-2', 'custom-icons', 'ship', 'guild', 'supply-flags', 'local-timezone', 'secondary-timezone', '24-hour',
             'seconds', 'date-format', 'job-text', 'job-text-align', 'synced-level', 'earned-align', 'tnl-align', 'percent-align', 'bar-width', 'bar-height', 'bar-back', 'bar-color', 'bar-text', 'bar-text-align', 'mem-text', 'status-display', 'timer-format',
-            'own-looks', 'widget-spacing', 'widget-padding', 'show-background', 'corner-rounding', 'primary-font', 'secondary-font', 'font-size', 'uniform-font', 'font-ratio', 'line-separation', 'icon-scale', 'popup-text-scale'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-last-on': True, 'design-status-timers': True, 'add-from': True, 'settings': True, 'unchanged': True,
+            'own-looks', 'widget-spacing', 'widget-padding', 'show-background', 'corner-rounding', 'primary-font', 'secondary-font', 'font-size', 'uniform-font', 'font-ratio', 'line-separation', 'icon-scale', 'popup-text-scale'), words={'clone': True, 'remove-copy': True, 'combine-none': True, 'link-disabled': True, 'design-status-timers': True, 'add-from': True, 'settings': True, 'unchanged': True,
                                     'popup-row-full': True, 'popup-new-row': True}),
         'trays': Setting(unnamed=True),
         'create-widget': Setting(words={'all-made': True}),
