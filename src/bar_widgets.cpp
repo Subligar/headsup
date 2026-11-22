@@ -1205,7 +1205,7 @@ namespace headsup
         }
 
         constexpr int kSupplyColumns = 3; // a region's name, its supply run, and its flag
-        constexpr uint32_t kSupplyNeededColor = 0xFFE35F5F, kSupplyDoneColor = kBarGreen;
+        constexpr uint32_t kSupplyToDoColor = 0xFFF2D45C, kSupplyDoneColor = kBarGreen, kSupplyUnavailableColor = 0xFFE35F5F;
 
         // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
         // opens. Your nation's say which outposts you have run supplies to, as far as overseers told.
@@ -1248,12 +1248,11 @@ namespace headsup
                         unknown                       = unknown || (runs && !ran);
                         grid.cells.push_back(Cell(Text(std::string(RegionName(r)))));
                         PopupCell run, flag;
-                        if (!runs) run.text = ListOf(Text("(No Outpost)", Tone::Dim));
-                        if (ran)
+                        if (!runs || ran)
                         {
-                            run.text  = ListOf(*ran ? Text("Complete", Tone::Dim) : Text("Available"));
+                            run.text  = ListOf(!runs ? Text("Unavailable", Tone::Dim) : *ran ? Text("Complete", Tone::Dim) : Text("Available"));
                             flag.icon = Icon::Flag;
-                            flag.tint = Colored("", *ran ? kSupplyDoneColor : kSupplyNeededColor);
+                            flag.tint = Colored("", !runs ? kSupplyUnavailableColor : *ran ? kSupplyDoneColor : kSupplyToDoColor);
                         }
                         grid.cells.push_back(std::move(run));
                         grid.cells.push_back(std::move(flag));

@@ -2945,7 +2945,20 @@ TEST(the_bags_popup_always_lists_storage_and_never_the_temporary_items)
         CHECK(BagChoices()[static_cast<size_t>(choice)] != 3);
 }
 
-TEST(world_infos_conquest_card_says_your_nations_supply_runs_are_available_with_a_red_flag_or_complete_with_a_green_one)
+namespace
+{
+    // A flag drawn in a color whose channels at more are each over twice those at less.
+    bool FlagTinted(const PopupCell& flag, std::initializer_list<int> more, std::initializer_list<int> less)
+    {
+        if (flag.icon != Icon::Flag || !flag.tint || flag.tint->tone != Tone::Own || !flag.text.empty()) return false;
+        for (const int high : more)
+            for (const int low : less)
+                if (Channel(flag.tint->argb, high) <= 2 * Channel(flag.tint->argb, low)) return false;
+        return true;
+    }
+}
+
+TEST(world_infos_conquest_card_says_your_nations_supply_runs_are_available_with_a_yellow_flag_or_complete_with_a_green_one)
 {
     Settings settings;
     settings.Widget(BarWidget::World).on = true;
@@ -2973,20 +2986,16 @@ TEST(world_infos_conquest_card_says_your_nations_supply_runs_are_available_with_
     const std::vector<PopupRow>& beforeRows = before.tabs.at(before.tab).rows;
     CHECK(beforeRows.size() == 2 && Lines(PopupSection{"", {beforeRows[1]}})[0].find("overseer") != std::string::npos);
     // Told by Bastok's overseer that Gustaberg's was run: Gustaberg's is Complete, dim, with a green flag, and
-    // Derfland's Available with a red one.
+    // Derfland's Available with a yellow one.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
     const PopupContent popup = BarPopupContent(BarWidget::World, state, settings);
     const PopupSection told  = ConquestCard(popup);
     const auto [grid, known] = lines(told);
     CHECK(told.tabs.at(told.tab).rows.size() == 1 && known.size() == 2);
-    const auto tinted = [](const PopupCell& flag, int more, int less) {
-        return flag.icon == Icon::Flag && flag.tint && flag.tint->tone == Tone::Own && flag.text.empty() &&
-               Channel(flag.tint->argb, more) > 2 * Channel(flag.tint->argb, less);
-    };
     CHECK(CellText(known[0][0]) == "Gustaberg" && known[0][1].text == ListOf(Text("Complete", Tone::Dim)));
-    CHECK(tinted(known[0][2], kGreenShift, kRedShift));
+    CHECK(FlagTinted(known[0][2], {kGreenShift}, {kRedShift, kBlueShift}));
     CHECK(CellText(known[1][0]) == "Derfland" && known[1][1].text == ListOf(Text("Available")));
-    CHECK(tinted(known[1][2], kRedShift, kGreenShift));
+    CHECK(FlagTinted(known[1][2], {kRedShift, kGreenShift}, {kBlueShift}));
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
@@ -3018,7 +3027,7 @@ TEST(world_infos_conquest_card_says_your_nations_supply_runs_are_available_with_
     CHECK((Lines(PopupSection{"", all.tabs[1].rows}) == std::vector<std::string>{"Ronfaure"}));
 }
 
-TEST(world_infos_conquest_card_says_tulia_and_movalpolos_have_no_outpost_and_gives_them_no_flag)
+TEST(world_infos_conquest_card_says_tulia_and_movalpolos_are_unavailable_with_a_red_flag)
 {
     Settings settings;
     settings.Widget(BarWidget::World).on = true;
@@ -3036,12 +3045,13 @@ TEST(world_infos_conquest_card_says_tulia_and_movalpolos_have_no_outpost_and_giv
     const auto noOutpost = [](const std::vector<PopupRow>& r) {
         bool all = r.size() == 1 && r[0].header && r[0].cells.size() == 9;
         for (size_t line = 1; all && line < 3; ++line)
-            all = r[0].cells[line * 3 + 1].text == ListOf(Text("(No Outpost)", Tone::Dim)) && !r[0].cells[line * 3 + 2].icon;
+            all = r[0].cells[line * 3 + 1].text == ListOf(Text("Unavailable", Tone::Dim)) &&
+                  FlagTinted(r[0].cells[line * 3 + 2], {kRedShift}, {kGreenShift, kBlueShift});
         return all && CellText(r[0].cells[3]) == "Tu'Lia" && CellText(r[0].cells[6]) == "Movalpolos";
     };
     // Before any overseer has told, neither asks you to go and ask one.
     CHECK(noOutpost(rows()));
-    // Told by Bastok's overseer that no run was made: still neither gets a flag.
+    // Told by Bastok's overseer that no run was made: still neither is Available.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 0, 0, 0, 0}}, 20);
     CHECK(noOutpost(rows()));
 }
