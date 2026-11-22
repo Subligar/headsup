@@ -3012,6 +3012,34 @@ TEST(world_infos_conquest_card_says_which_of_your_nations_supply_runs_are_availa
     CHECK((Lines(PopupSection{"", all.tabs[1].rows}) == std::vector<std::string>{"Ronfaure"}));
 }
 
+TEST(world_infos_conquest_card_leaves_tulia_and_movalpolos_supply_run_blank_as_neither_has_one)
+{
+    Settings settings;
+    settings.Widget(BarWidget::World).on = true;
+    BarState state;
+    RegionOwners owners{};
+    owners[16] = owners[17] = Nation::Bastok; // Tu'Lia and Movalpolos: no overseer takes supplies there
+    state.owners = owners;
+    state.nation = Nation::Bastok;
+    OutpostRuns runs;
+    state.outposts = &runs;
+    const auto rows = [&] {
+        const PopupSection card = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
+        return card.tabs.at(card.tab).rows;
+    };
+    // Before any overseer has told, neither asks you to go and ask one.
+    const std::vector<PopupRow> before = rows();
+    CHECK(before.size() == 1 && before[0].header && before[0].cells.size() == 9);
+    for (size_t line = 1; line < 3; ++line)
+        CHECK(before[0].cells[line * 3 + 1].text.empty() && !before[0].cells[line * 3 + 2].icon);
+    // Told by Bastok's overseer that no run was made: still neither is Available.
+    runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 0, 0, 0, 0}}, 20);
+    const std::vector<PopupRow> told = rows();
+    CHECK(CellText(told[0].cells[3]) == "Tu'Lia" && CellText(told[0].cells[6]) == "Movalpolos");
+    for (size_t line = 1; line < 3; ++line)
+        CHECK(told[0].cells[line * 3 + 1].text.empty() && !told[0].cells[line * 3 + 2].icon);
+}
+
 TEST(world_infos_conquest_card_has_your_nation_first_picked_anew_each_time_and_its_tabs_two_by_two)
 {
     Settings settings;

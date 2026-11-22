@@ -24,6 +24,9 @@ namespace headsup
     // Phoenix's s2c 0x034: the eight numbers at 0x08, the event at 0x2C. Nothing for any other event.
     std::optional<GuardEvent> ParseGuardEvent(const uint8_t* data, uint32_t size);
 
+    // Whether an overseer takes supplies in this region: Tu'Lia and Movalpolos have no run (conquest.lua).
+    bool HasSupplyRun(uint8_t region);
+
     // Which outposts' supply runs a character has done, for each nation, as far as overseers have told: the server
     // keeps them, and tells them only in an overseer's event. In a nation's city an overseer's fifth number is all of
     // its nation's runs, a bit for each region from bit 5; at an outpost, a delivery's numbers say that one was run.

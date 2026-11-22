@@ -1242,10 +1242,14 @@ namespace headsup
                     grid.cells.emplace_back();
                     for (const uint8_t r : regions)
                     {
-                        const std::optional<bool> ran = state.outposts->Ran(nation, r);
-                        unknown                       = unknown || !ran;
+                        const bool runs               = HasSupplyRun(r);
+                        const std::optional<bool> ran = runs ? state.outposts->Ran(nation, r) : std::nullopt;
+                        unknown                       = unknown || (runs && !ran);
                         grid.cells.push_back(Cell(Text(std::string(RegionName(r)))));
-                        grid.cells.push_back(Cell(!ran ? Text("-", Tone::Dim) : *ran ? Text("Complete", Tone::Dim) : Text("Available")));
+                        if (!runs)
+                            grid.cells.emplace_back();
+                        else
+                            grid.cells.push_back(Cell(!ran ? Text("-", Tone::Dim) : *ran ? Text("Complete", Tone::Dim) : Text("Available")));
                         PopupCell flag;
                         if (ran == false)
                         {
