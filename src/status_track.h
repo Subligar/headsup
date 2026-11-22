@@ -10,12 +10,14 @@
 
 namespace headsup
 {
-    // A status an entity (by server id) gained or lost, as a packet said.
+    // A status an entity (by server id) gained or lost, as a packet said, and how long a gain lasts at most when it
+    // came from a spell Phoenix's duration tables know (0 when not).
     struct StatusChange
     {
-        uint32_t entity = 0;
-        uint16_t status = 0;
-        bool gained     = false;
+        uint32_t entity  = 0;
+        uint16_t status  = 0;
+        bool gained      = false;
+        uint16_t seconds = 0;
         bool operator==(const StatusChange&) const = default;
     };
 
@@ -31,21 +33,21 @@ namespace headsup
     // A 0x029 that says a status began or ended: "is", "gains", "is no longer", "wears off".
     std::optional<StatusChange> ParseStatusMessage(const uint8_t* data, uint32_t size);
 
-    // shortcut: one cap per kind since no packet tells a bystander an end; per-status durations if icons linger
+    // For a status of no known duration (a job ability's, a weapon skill's, a TP move's, an item's, an added effect's).
     constexpr double kTrackedDebuffSeconds = 180.0, kTrackedBuffSeconds = 1800.0;
 
     // The statuses of entities HeadsUp has no list of (alliance members, strangers, mobs), from what the packets
     // said. Phoenix tells a wear-off only to the one who wore it and its caster: every other status ends when the
-    // entity acts (those that stop all action), dies, leaves or reaches its kind's cap.
+    // entity acts (those that stop all action), dies, leaves, or its time or else its kind's cap runs out.
     class StatusTrack
     {
     public:
-        // A gain again restarts its cap; a status Phoenix has no name for is not kept.
+        // A gain again restarts its time; a status Phoenix has no name for is not kept.
         void Apply(const StatusChange& change, double now);
         void Acted(uint32_t actor);
         // Every entity not in living loses all it had.
         void Keep(std::span<const uint32_t> living);
-        // In the order gained, those not past their cap.
+        // In the order gained, those not past their time.
         StatusList Statuses(uint32_t entity, double now) const;
 
     private:

@@ -21,20 +21,37 @@ namespace headsup
         constexpr uint16_t kIsMessage = 203, kNoLongerMessage = 204, kGainsMessage = 205, kWearsOffMessage = 206;
         // Phoenix's ActionCategory starts: a cast, a weapon skill's or an ability's readying, an item's use, a ranged
         // aim. A start or an interrupt can come from an entity just as a sleep lands on it.
-        constexpr uint32_t kNoCategory = 0;
+        constexpr uint32_t kNoCategory = 0, kSpellCategory = 4;
         constexpr uint32_t kStartCategories[] = {7, 8, 9, 10, 12};
         // Statuses that stop all action, so one who acts has none of them: Sleep, Sleep II, Lullaby, Petrification,
         // Stun, Terror.
         constexpr uint16_t kStillStatuses[] = {2, 19, 193, 7, 10, 28};
 
+        struct SpellDuration
+        {
+            uint16_t spell, seconds;
+        };
+        constexpr SpellDuration kSpellDurations[] = {
+#include "generated/spell_durations.inc"
+        };
+
         bool IsLossMessage(uint32_t message) { return std::ranges::find(kLossMessages, message) != std::end(kLossMessages); }
 
+        uint16_t SpellSeconds(uint32_t category, uint32_t spell)
+        {
+            if (category != kSpellCategory) return 0;
+            const auto* it = std::ranges::lower_bound(kSpellDurations, spell, {}, &SpellDuration::spell);
+            return it != std::end(kSpellDurations) && it->spell == spell ? it->seconds : 0;
+        }
+
         // A result part's value and message as a change, when they name a status.
-        void PutChange(std::vector<StatusChange>& changes, uint32_t target, uint32_t actor, uint32_t value, uint32_t message)
+        void PutChange(std::vector<StatusChange>& changes, uint32_t target, uint32_t actor, uint32_t value, uint32_t message,
+                       uint16_t seconds)
         {
             const auto status = static_cast<uint16_t>(value);
             if (IsStatusMessage(message))
-                changes.push_back({message == kSelfBuffMessage || message == kSpikesStatusMessage ? actor : target, status, true});
+                changes.push_back(
+                    {message == kSelfBuffMessage || message == kSpikesStatusMessage ? actor : target, status, true, seconds});
             else if (IsLossMessage(message))
                 changes.push_back({target, status, false});
         }
@@ -46,9 +63,10 @@ namespace headsup
         BitReader bits(data, size);
         const std::optional<uint32_t> actor = bits.Read(kActorBits), targets = bits.Read(kTargetsBits);
         bits.Skip(kResultsSumBits);
-        const std::optional<uint32_t> category = bits.Read(kCommandBits);
-        if (!actor || !targets || !category) return std::nullopt;
-        bits.Skip(kArgumentBits + kInfoBits);
+        const std::optional<uint32_t> category = bits.Read(kCommandBits), argument = bits.Read(kArgumentBits);
+        if (!actor || !targets || !category || !argument) return std::nullopt;
+        bits.Skip(kInfoBits);
+        const uint16_t seconds = SpellSeconds(*category, *argument);
         const bool started = std::ranges::find(kStartCategories, *category) != std::end(kStartCategories);
         ActionStatuses action{*actor, *category != kNoCategory && !started, {}};
         for (uint32_t t = 0; t < *targets; ++t)
@@ -78,9 +96,9 @@ namespace headsup
                 }
                 if (!value || !message || !addedValue || !addedMessage || !spikes || !spikesValue || !spikesMessage)
                     return std::nullopt;
-                PutChange(action.changes, *target, *actor, *value, *message);
-                PutChange(action.changes, *target, *actor, *addedValue, *addedMessage);
-                PutChange(action.changes, *target, *actor, *spikesValue, *spikesMessage);
+                PutChange(action.changes, *target, *actor, *value, *message, seconds);
+                PutChange(action.changes, *target, *actor, *addedValue, *addedMessage, seconds);
+                PutChange(action.changes, *target, *actor, *spikesValue, *spikesMessage, seconds);
             }
         }
         return action;
@@ -100,8 +118,8 @@ namespace headsup
         if (*StatusName(change.status) == '\0') return;
         std::vector<Held>& held = m_Held[change.entity];
         std::erase_if(held, [&](const Held& h) { return h.status == change.status; });
-        if (change.gained)
-            held.push_back({change.status, now + (IsDebuff(change.status) ? kTrackedDebuffSeconds : kTrackedBuffSeconds)});
+        const double cap = IsDebuff(change.status) ? kTrackedDebuffSeconds : kTrackedBuffSeconds;
+        if (change.gained) held.push_back({change.status, now + (change.seconds > 0 ? change.seconds : cap)});
         if (held.empty()) m_Held.erase(change.entity);
     }
 
