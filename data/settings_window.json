@@ -1325,7 +1325,7 @@
         {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."},
         {"name": "Settings", "tip": "Just the settings cog. Click it to open these settings on the Top Panel page, at Widget Layout."},
         {"name": "Home Point", "tip": "The zone your home point is in."},
-        {"name": "Placeholder Timers", "tip": "The respawn timers of the NMs and placeholders that died near you, the same ones shown over your name, even when the game draws no name for you. Needs Respawn Timer on, under NM Placeholder Timers. Shows nothing while no timer runs."},
+        {"name": "Placeholder Timers", "tip": "The respawn timers of the NMs and placeholders that died near you, the same ones shown over your name, even when the game draws no name for you. It runs them by itself, so Respawn Timer, under NM Placeholder Timers, only decides whether they also show over your name. Shows nothing while no timer runs."},
         {"name": "Custom Widget", "tip": "A widget you made. It can show any widget's buttons on the panel and any widget's sections in its pop-out."}
       ]
     },

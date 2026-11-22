@@ -2280,7 +2280,7 @@ namespace headsup
                 form.SliderPercent(label.c_str(), s.timerPercent, kMinSizePercent, kMaxSizePercent, tip);
                 break;
             case SettingPiece::UpTime:
-                form.Fade(!on || !s.phTimers);
+                form.Fade(!PhTimersRun(s));
                 form.SliderInt(label.c_str(), s.phUpMinutes, 0, kMaxUpMinutes, [](int minutes) { return Formatted("%d min", minutes); }, tip);
                 break;
             // User Interface

@@ -405,6 +405,8 @@ namespace headsup
     // A copy is on the panel and switched on; AnyCopyShown asks whether any copy of a widget is.
     bool Shows(const Settings& s, PanelWidget widget);
     bool AnyCopyShown(const Settings& s, BarWidget widget);
+    // The NM and placeholder respawn timers count deaths and make their lines, for your name or the widget.
+    bool PhTimersRun(const Settings& s);
     // Another copy of a widget, after the last of its copies, shown and with that copy's settings but its Combine;
     // none when it has no more. Taking a copy off forgets its settings.
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);
