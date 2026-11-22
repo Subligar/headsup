@@ -1234,28 +1234,28 @@ namespace headsup
                     if ((*state.owners)[region] == nation) regions.push_back(static_cast<uint8_t>(region));
                 if (yours && !regions.empty())
                 {
-                    const int columns = flags ? 3 : 2; // a region's name, its supply run, and its flag
-                    PopupRow grid     = Grid(columns, (regions.size() + 1) * static_cast<size_t>(columns));
+                    PopupRow grid = Grid(2, (regions.size() + 1) * 2); // a region's name, and its supply run's flag and word
                     grid.header   = true;
                     grid.trailing = true;
                     for (const char* heading : {"Region", "Supply Run"})
                         grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
-                    if (flags) grid.cells.emplace_back();
                     for (const uint8_t r : regions)
                     {
                         const bool runs               = HasSupplyRun(r);
                         const std::optional<bool> ran = runs ? state.outposts->Ran(nation, r) : std::nullopt;
                         unknown                       = unknown || (runs && !ran);
                         grid.cells.push_back(Cell(Text(std::string(RegionName(r)))));
-                        PopupCell run, flag;
+                        PopupCell run;
                         if (!runs || ran)
                         {
-                            run.text  = ListOf(!runs ? Text("Unavailable", Tone::Dim) : *ran ? Text("Complete", Tone::Dim) : Text("Available"));
-                            flag.icon = Icon::Flag;
-                            flag.tint = Colored("", !runs ? kSupplyUnavailableColor : *ran ? kSupplyDoneColor : kSupplyToDoColor);
+                            run.text = ListOf(!runs ? Text("Unavailable", Tone::Dim) : *ran ? Text("Complete", Tone::Dim) : Text("Available"));
+                            if (flags)
+                            {
+                                run.icon = Icon::Flag;
+                                run.tint = Colored("", !runs ? kSupplyUnavailableColor : *ran ? kSupplyDoneColor : kSupplyToDoColor);
+                            }
                         }
                         grid.cells.push_back(std::move(run));
-                        if (flags) grid.cells.push_back(std::move(flag));
                     }
                     held.rows.push_back(std::move(grid));
                 }
