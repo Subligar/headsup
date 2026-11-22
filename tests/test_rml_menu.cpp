@@ -7,6 +7,7 @@
 #include "game_font.h"
 #include "layout_edit.h"
 #include "menu_state.h"
+#include "menu_window.h"
 #include "plate_template.h"
 #include "rml_session.h"
 #include "test.h"
@@ -99,11 +100,15 @@ namespace
             }
             return changed;
         }
-        // In the window, or the settings over the panel's popup.
+        // In the window, or the settings over the panel's popup: they share ids, and the window is the lower.
         Rml::Element* Find(const std::string& id)
         {
+            std::vector<Rml::ElementDocument*> documents;
             for (int i = 0; i < m_Host.context->GetNumDocuments(); ++i)
-                if (Rml::Element* found = m_Host.context->GetDocument(i)->GetElementById(id)) return found;
+                documents.push_back(m_Host.context->GetDocument(i));
+            std::ranges::stable_sort(documents, {}, [](Rml::ElementDocument* d) { return d->GetComputedValues().z_index().value; });
+            for (Rml::ElementDocument* document : documents)
+                if (Rml::Element* found = document->GetElementById(id)) return found;
             return nullptr;
         }
         bool Shows(const std::string& id)
@@ -171,6 +176,7 @@ namespace
             return box->GetValue();
         }
         Rml::Element* Focused() { return m_Host.context->GetFocusElement(); }
+        Rml::Context* Context() { return m_Host.context; }
 
         // Presses the left button on one control and lets it go on another, or that far from the first.
         bool Drag(const std::string& from, const std::string& onto) { return Drag(from, Center(onto) - Center(from)); }
@@ -258,7 +264,7 @@ namespace
             Rml::Element* page = Find(kMenuPageId);
             const float seenTo = std::min(static_cast<float>(test::RmlSession::kHeight),
                 page->GetAbsoluteOffset(Rml::BoxArea::Border).y + page->GetBox().GetSize(Rml::BoxArea::Border).y);
-            std::vector<Rml::Element*> left{m_Host.context->GetDocument(0)};
+            std::vector<Rml::Element*> left{page->GetOwnerDocument()};
             while (!left.empty())
             {
                 Rml::Element* element = left.back();
@@ -2692,4 +2698,40 @@ TEST(the_damage_numbers_test_button_sits_before_their_switch_on_the_titles_line_
     CHECK(window.Click("damagenumbers-on") && window.settings.combatPopups);
     window.Click(testId); // it changes no setting
     CHECK(window.menu.TakePopupTest());
+}
+
+TEST(the_settings_window_or_a_game_window_comes_to_the_front_as_it_is_clicked_or_opened)
+{
+    Window window;
+    Rml::ElementDocument* settings = window.Find(kMenuCloseId)->GetOwnerDocument();
+    const Rml::Vector2f corner = settings->GetAbsoluteOffset(Rml::BoxArea::Border);
+    const Rml::Vector2f size   = settings->GetBox().GetSize(Rml::BoxArea::Border);
+    // A game window over the settings window's right edge.
+    constexpr float kOverlap = 100.0f;
+    const MenuLook look{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
+    GameWindows games;
+    games.Update(window.Context(), look,
+        {{"pack", static_cast<int>(corner.x + size.x - kOverlap), static_cast<int>(corner.y + kOverlap)}});
+    CHECK(games.Open({"pack", "Pack", {{"", GameButtonRml("pack-use", "Use")}}, "", "", ""}));
+    window.Frames();
+    Rml::ElementDocument* game = window.Find("pack-use")->GetOwnerDocument();
+    const float y = game->GetAbsoluteOffset(Rml::BoxArea::Border).y + game->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f;
+    const Rml::Vector2f both{corner.x + size.x - kOverlap / 2.0f, y}, settingsAlone{corner.x + kOverlap, y},
+        gameAlone{corner.x + size.x + kOverlap / 4.0f, y};
+    const auto onTop = [&] {
+        window.PointerTo(both);
+        return window.Context()->GetHoverElement()->GetOwnerDocument() == settings;
+    };
+    CHECK(!onTop());
+    window.ClickAt(settingsAlone);
+    CHECK(onTop());
+    window.ClickAt(gameAlone);
+    CHECK(!onTop());
+    // Opened again, the settings window comes over it.
+    window.menu.open = false;
+    window.Frames(2);
+    window.menu.open = true;
+    window.Frames(2);
+    CHECK(onTop());
+    CHECK_EQ(window.Said(), "");
 }

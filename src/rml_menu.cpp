@@ -339,6 +339,7 @@ namespace headsup
             for (const Rml::EventId id : {Rml::EventId::Focus, Rml::EventId::Blur, Rml::EventId::Keydown})
                 document->AddEventListener(id, this, true);
         }
+        m_Document->AddEventListener(Rml::EventId::Mousedown, this, true);
         return m_Sidebar != nullptr && m_Page != nullptr && m_PageTitle != nullptr && m_PageSwitch != nullptr && m_Popup != nullptr && m_Tip != nullptr &&
                m_ViewBody != nullptr && m_ViewPopup != nullptr && m_ViewTip != nullptr;
     }
@@ -666,6 +667,7 @@ namespace headsup
         const std::string id = named != nullptr ? named->GetId() : std::string();
         switch (event.GetId())
         {
+        case Rml::EventId::Mousedown: m_Document->PullToFront(); break;
         case Rml::EventId::Click:
             if (id == kMenuCloseId) m_Closed = true;
             m_Reload |= id == kMenuReloadId;
@@ -899,6 +901,7 @@ namespace headsup
         if (!m_Visible)
         {
             m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::Auto);
+            m_Document->PullToFront();
             // RmlUi applies an animation once its clock has passed the start, so the frame that sets one draws the
             // window whole: hidden that frame, it comes in already fading.
             m_Document->SetClass("open", true);
