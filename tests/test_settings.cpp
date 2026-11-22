@@ -1162,21 +1162,21 @@ TEST(the_clocks_date_format_is_saved_by_name_and_an_unknown_name_keeps_the_defau
     CHECK(LoadSettings(saved).Widget(BarWidget::EarthTime).dateFormat == DateFormat::MonthDayYear);
 }
 
-TEST(a_created_widget_emptied_in_a_pill_that_shows_another_widget_saves_and_loads_empty)
+// The card "Allow empty widgets": a widget alone on the panel may have nothing on, and keeps it so.
+TEST(an_emptied_widget_stays_empty_through_clamp_and_the_settings_file)
 {
     Settings s;
     const PanelWidget made = *CreateWidget(s);
-    s.Widget(made).combine = PanelWidget{BarWidget::Zone};
     s.Widget(made).design  = WidgetDesign{};
-    CHECK(Clamp(s).Widget(made).design == WidgetDesign{});
+    const WidgetDesign bags          = DesignFrom(BarWidget::Bags, "-count1 | -name1");
+    s.Widget(BarWidget::Bags).design = bags;
+    CHECK(Clamp(s).Widget(made).design == WidgetDesign{} && Clamp(s).Widget(BarWidget::Bags).design == bags);
     MapStore saved;
     SaveSettings(s, saved);
     CHECK_EQ(saved.values["barCustomDesign"], "|");
-    const WidgetDesign loaded = LoadSettings(saved).Widget(made).design;
-    CHECK(loaded.lines[0].empty() && loaded.lines[1].empty());
-    // Once its pill shows nothing else, it gets its Name back rather than vanish from the panel.
-    s.Widget(BarWidget::Zone).on = false;
-    CHECK(Clamp(s).Widget(made).design == DefaultDesign(BarWidget::Custom));
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(made).design.lines[0].empty() && loaded.Widget(made).design.lines[1].empty());
+    CHECK(loaded.Widget(BarWidget::Bags).design == bags);
 }
 
 TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
@@ -2935,30 +2935,6 @@ TEST(a_combined_widget_is_kept_by_its_partners_name_and_loses_a_partner_taken_of
     CHECK(s.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Party));
 }
 
-// The card "Allow disabling widget text when linked": a pill needs one part on among its widgets, a widget alone one
-// of its own.
-TEST(a_linked_widget_keeps_every_part_off_while_its_pill_has_one_on_and_gets_one_back_alone)
-{
-    Settings s;
-    s.Widget(BarWidget::Zone).on = s.Widget(BarWidget::Weather).on = true;
-    const WidgetDesign off = DesignFrom(BarWidget::Zone, "-name -region -nation |");
-    s.Widget(BarWidget::Zone).design  = off;
-    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Weather};
-    s = Clamp(std::move(s));
-    CHECK(s.Widget(BarWidget::Zone).design == off);
-    // Both all off: the pill's first widget gets its first part back.
-    s.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "-weather -date -day -time -moon |");
-    s = Clamp(std::move(s));
-    CHECK(PartOn(s.Widget(BarWidget::Zone).design, WidgetPart::ZoneName));
-    CHECK(s.Widget(BarWidget::Weather).design == DesignFrom(BarWidget::Weather, "-weather -date -day -time -moon |"));
-    // Unlinked, each needs its own.
-    s.Widget(BarWidget::Zone).design = off;
-    s.Widget(BarWidget::Zone).combine.reset();
-    s = Clamp(std::move(s));
-    CHECK(PartOn(s.Widget(BarWidget::Zone).design, WidgetPart::ZoneName));
-    CHECK(std::ranges::any_of(PartsOf(BarWidget::Weather), [&](WidgetPart p) { return PartOn(s.Widget(BarWidget::Weather).design, p); }));
-}
-
 TEST(a_widget_combines_with_any_placed_widget_but_the_target_settings_itself_and_ones_taken)
 {
     Settings s;
@@ -3728,6 +3704,7 @@ TEST(an_emptied_starred_list_stays_empty_through_the_settings_file)
 {
     Settings s;
     s.Kind(PlateKind::Players).shownStatuses.clear();
+    s.statusPins.clear(); // Status Timers emptied: a file without the key pins Signet
     MapStore saved;
     ChangedKeys changed(saved);
     SaveSettings(s, changed);
@@ -3747,6 +3724,6 @@ TEST(an_emptied_starred_list_stays_empty_through_the_settings_file)
     } file;
     file.file = WithIniValues("", "settings", values);
     const Settings read = LoadSettings(file);
-    CHECK(read.Kind(PlateKind::Players).shownStatuses.empty());
+    CHECK(read.Kind(PlateKind::Players).shownStatuses.empty() && read.statusPins.empty());
     CHECK_EQ(read.Kind(PlateKind::Self).shownStatuses.size(), size_t{6});
 }

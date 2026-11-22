@@ -59,9 +59,7 @@ namespace headsup
         TimerFormat format, const BarPalette& theme);
     // Your favorites, each with its pin and star, over every other buff in a scrolling list and every other debuff in
     // another, each scrolled its many lines: those you have first, the rest by name, one line a name, each name with
-    // its icon in the theme's status icons, in one column. refused: the last pin was kept, which it says under its
-    // title.
+    // its icon in the theme's status icons, in one column.
     PopupContent StatusTimersPopup(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& favorites,
-        const std::vector<uint16_t>& pins, const BarPalette& theme, size_t buffsScrolled, size_t debuffsScrolled,
-        bool refused = false);
+        const std::vector<uint16_t>& pins, const BarPalette& theme, size_t buffsScrolled, size_t debuffsScrolled);
 }

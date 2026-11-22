@@ -102,8 +102,6 @@ namespace headsup
         // A widget whose settings the panel's popup is to show, or stop showing when it shows them: a chip clicked in
         // the Layout, a clone made, a copy removed. Once, for the plugin.
         std::optional<PanelWidget> settingsAsked;
-        // A widget whose designer was asked to switch off its last part: it says why under its lines.
-        std::optional<PanelWidget> partRefused;
         // A widget whose Pop-out Designer was asked to put a card in a full row: it says why under its rows.
         std::optional<PanelWidget> popupRefused;
         EditSide editSide = EditSide::Widget; // one pick for every created widget's settings

@@ -88,7 +88,6 @@ namespace headsup
         LinuxXIState linuxxi;
         const std::map<std::string, std::string>* pickedTabs = nullptr; // the tab the player picked in a card, by its heading
         const std::map<std::string, size_t>* scrolled        = nullptr; // lines a part of a popup is scrolled past, by its key
-        bool pinRefused = false; // Status Timers kept its last pin since its popup opened
         const GuildPatterns* turnIns = nullptr; // today's guild point turn-ins, once fetched
         bool turnInsFailed = false;             // the last fetch got no answer
         std::optional<CraftRanks> crafts;       // yours, once the server sent them
@@ -139,8 +138,8 @@ namespace headsup
     BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing); // showing: the popups shown
     // Does to the settings what a press on a popup's pressable cell told (PopupCell::press): a currency's or a
     // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
-    // off. The last pin stays, by its pin or its star: Refused.
-    enum class PressResult : uint8_t { None, Changed, Refused };
+    // off.
+    enum class PressResult : uint8_t { None, Changed };
     // A weather's icons as Use Custom Icons picks them: HeadsUp's own picture, or the game's element icon, twice for a
     // double weather; none for a weather that has none of the kind picked.
     std::vector<Icon> WeatherIcons(Weather weather, CustomIcons use);

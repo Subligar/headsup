@@ -111,7 +111,8 @@ TEST(a_widgets_text_starts_after_its_icons_and_coin_each_with_a_gap)
     WidgetContent weather;
     weather.icons = {Icon::Lightning, Icon::Lightning};
     CHECK(Near(look.Leading(weather), 2.0f * (0.85f * 34.0f + 7.65f))); // icons 85% of the pill's 34 px inside, gaps 0.17 H
-    CHECK(Near(look.Leading(WidgetContent{}), 0.0f));
+    // An empty widget keeps one icon's room, as the Settings widget's cog alone, so it still draws a box.
+    CHECK(Near(look.Leading(WidgetContent{}), 0.85f * 34.0f));
     // Gil's picture has an icon's room, as every icon.
     WidgetContent gil;
     gil.icons = {Icon::Gil};

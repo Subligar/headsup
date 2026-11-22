@@ -1722,14 +1722,22 @@ TEST(the_performance_widget_hides_while_messages_alone_are_on_and_none_wait)
     CHECK(TakesRoom(mail, performance, std::nullopt) && !mail.title.empty());
 }
 
-// The card "Allow disabling widget text when linked": a widget linked into a pill may have every part off.
-TEST(a_widget_with_every_part_off_hides_and_one_with_a_part_on_and_nothing_to_say_shows_a_dash)
+// The card "Allow empty widgets": "If empty, a widget should still be visible in the top panel but its contents
+// should be empty." Linked into a pill another of whose widgets shows, it takes no room (the card "Allow disabling
+// widget text when linked").
+TEST(a_widget_with_every_part_off_shows_empty_unless_its_pill_shows_another_and_one_with_nothing_to_say_shows_a_dash)
 {
     Settings settings;
     settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "-name -region -nation |");
     BarState state;
-    CHECK(!TakesRoom(Content(BarWidget::Zone, state, settings), BarWidget::Zone, std::nullopt));
-    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), BarWidget::Zone, PanelWidget{BarWidget::Zone}));
+    const WidgetContent empty = Content(BarWidget::Zone, state, settings);
+    CHECK(TakesRoom(empty, BarWidget::Zone, std::nullopt) && empty.title.empty() && empty.subtitle.empty());
+    const PanelWidget pill{BarWidget::EarthTime};
+    settings.Widget(BarWidget::Zone).combine = pill;
+    CHECK(!TakesRoom(Content(BarWidget::Zone, state, settings), pill, std::nullopt));
+    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), pill, pill)); // while its settings show
+    settings.Widget(BarWidget::EarthTime).on = false;
+    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), pill, std::nullopt));
     settings.Widget(BarWidget::Bags).design = DesignFrom(BarWidget::Bags, "count1 |");
     CHECK(Joined(Content(BarWidget::Bags, state, settings).title) == "-");
     CHECK(TakesRoom(Content(BarWidget::Bags, state, settings), BarWidget::Bags, std::nullopt));
@@ -1995,14 +2003,11 @@ TEST(a_statuss_star_and_pin_add_it_and_take_it_off_and_its_star_takes_its_pin_to
     CHECK((s.statusPins == std::vector<uint16_t>{kSignetEffect, 40}));
     CHECK(press(kStatusPinPress, kSignetEffect) == PressResult::Changed);
     CHECK((s.statusPins == std::vector<uint16_t>{40}));
-    // The last pin stays, by its pin or by its star, which would take it off too.
-    CHECK(press(kStatusPinPress, 40) == PressResult::Refused);
-    CHECK(press(kStatusFavoritePress, 40) == PressResult::Refused);
-    CHECK((s.statusPins == std::vector<uint16_t>{40}) && s.statusFavorites.size() == 3);
-    CHECK(press(kStatusPinPress, kSignetEffect) == PressResult::Changed);
+    // The last pin comes off as any other, by its pin or by its star.
+    CHECK(press(kStatusPinPress, 40) == PressResult::Changed && s.statusPins.empty());
+    CHECK(press(kStatusPinPress, 40) == PressResult::Changed);
     CHECK(press(kStatusFavoritePress, 40) == PressResult::Changed);
-    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) &&
-          (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
+    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) && s.statusPins.empty());
     for (const char* bad : {"status favorite ", "status favorite 4x", "status pin 65000", "status pin 99999999"})
         CHECK(ApplyPopupPress(s, bad, Nation::None) == PressResult::None);
 }
@@ -2062,9 +2067,10 @@ TEST(the_status_timers_widget_shows_each_pinned_status_where_its_design_puts_it)
     settings.Widget(BarWidget::StatusTimers).timerFormat = TimerFormat::Short;
     w = Content(BarWidget::StatusTimers, state, settings);
     CHECK(Joined(w.title) == "Haste 1.5m" && Joined(w.subtitle) == "Protect 30m");
-    // None pinned: its name, dim.
+    // None pinned: an empty box.
     settings.statusPins.clear();
-    CHECK(Content(BarWidget::StatusTimers, state, settings).title == ListOf(Text("Status Timers", Tone::Dim)));
+    w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(w.title.empty() && w.subtitle.empty() && TakesRoom(w, BarWidget::StatusTimers, std::nullopt));
 }
 
 TEST(a_created_widget_borrows_the_pinned_statuses_by_the_order_they_were_pinned)

@@ -196,9 +196,6 @@ namespace headsup
         std::optional<std::pair<PanelWidget, BarRect>> TakeMoved() { return std::exchange(m_Moved, std::nullopt); }
         // How many lines each part of the popups has been scrolled, by its key: back to the top once none shows.
         const std::map<std::string, size_t>& Scrolled() const { return m_Scrolled; }
-        // A press in a popup was refused, which it says until none shows.
-        void Refuse(bool refused = true) { m_Refused = refused; }
-        bool Refused() const { return m_Refused; }
         void Move(float x, float y);
         // The pointer is off the game: over an Ashita window or out of the client area, where no move reports it.
         void Leave();
@@ -273,7 +270,6 @@ namespace headsup
         };
         std::optional<Drag> m_Drag;
         std::map<std::string, size_t> m_Scrolled;
-        bool m_Refused = false;
         float m_X = kAway, m_Y = kAway;
         std::optional<PanelWidget> m_Under;  // the widget under the pointer
         std::optional<PanelWidget> m_Hover;  // the popup hovering keeps open

@@ -107,14 +107,13 @@ TEST(a_part_moves_within_and_across_lines)
     CHECK_EQ(DesignText(BarWidget::Zone, d), "name | nation coordinates region");
 }
 
-TEST(the_last_part_on_turns_off_only_when_the_widgets_pill_shows_another)
+// The card "Allow empty widgets": the last part on turns off as any other.
+TEST(the_last_part_on_turns_off_and_leaves_the_widget_empty)
 {
     WidgetDesign d = DesignFrom(BarWidget::Bags, "count1 | -name1");
-    CHECK(!TurnOff(d, WidgetPart::Bag1Count, false));
-    CHECK(PartOn(d, WidgetPart::Bag1Count));
-    CHECK(TurnOff(d, WidgetPart::Bag1Count, true) && !PartOn(d, WidgetPart::Bag1Count));
-    d = DefaultDesign(BarWidget::Bags);
-    CHECK(TurnOff(d, WidgetPart::Bag1Name, false) && !PartOn(d, WidgetPart::Bag1Name));
+    CHECK(TurnOff(d, WidgetPart::Bag1Count) && !AnyPartOn(d));
+    CHECK(!TurnOff(d, WidgetPart::Bag1Count)); // off already
+    CHECK_EQ(DesignText(BarWidget::Bags, d), "-count1 | -name1 -count2 -name2");
 }
 
 namespace
@@ -367,7 +366,7 @@ TEST(a_created_widgets_saved_design_of_no_part_is_empty_and_only_a_missing_one_i
     CHECK(DesignFrom(BarWidget::Zone, "|") == DefaultDesign(BarWidget::Zone)); // a built-in keeps its rule
 }
 
-TEST(a_part_put_into_a_line_is_on_and_one_taken_out_goes_unless_it_is_the_last_on)
+TEST(a_part_put_into_a_line_is_on_and_one_taken_out_goes_even_the_last_on)
 {
     WidgetDesign d = DefaultDesign(BarWidget::Custom); // name |
     CHECK(PutPart(d, WidgetPart::ZoneName, 1, 0));
@@ -377,12 +376,11 @@ TEST(a_part_put_into_a_line_is_on_and_one_taken_out_goes_unless_it_is_the_last_o
     CHECK(PutPart(d, WidgetPart::Bag1Count, 0, 99)); // past the end, at the end
     CHECK_EQ(DesignText(BarWidget::Custom, d), "performance.fps name bags.count1 | zone.name");
     CHECK(HoldsPart(d, WidgetPart::ZoneName) && !HoldsPart(d, WidgetPart::WorldShip));
-    CHECK(TakePart(d, WidgetPart::PerfFps, false) && TakePart(d, WidgetPart::ZoneName, false));
-    CHECK(!TakePart(d, WidgetPart::ZoneName, false)); // not there
-    CHECK(TurnOff(d, WidgetPart::Bag1Count, false));
-    CHECK(TakePart(d, WidgetPart::Bag1Count, false)); // off, it goes whatever is left
-    CHECK(!TakePart(d, WidgetPart::CustomName, false)); // the last on stays
-    CHECK(TakePart(d, WidgetPart::CustomName, true) && PartsIn(d).empty()); // unless another of its pill shows
+    CHECK(TakePart(d, WidgetPart::PerfFps) && TakePart(d, WidgetPart::ZoneName));
+    CHECK(!TakePart(d, WidgetPart::ZoneName)); // not there
+    CHECK(TurnOff(d, WidgetPart::Bag1Count));
+    CHECK(TakePart(d, WidgetPart::Bag1Count)); // off, it goes too
+    CHECK(TakePart(d, WidgetPart::CustomName) && PartsIn(d).empty()); // and the last on
 }
 
 TEST(each_new_pin_goes_to_the_end_of_the_line_with_fewer_pins_the_first_on_a_tie)

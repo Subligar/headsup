@@ -187,11 +187,6 @@ TEST(the_popup_lists_your_favorites_with_pins_over_every_buff_then_every_debuff_
     CHECK(buffs.cells[1].status && buffs.cells[1].status->id == 33 && debuffs.cells[1].status->id == 134);
     // No favorites: a line saying how to keep one.
     CHECK(StatusTimersPopup(active, {}, {}, theme, 0, 0).sections[0].rows[0].kind == RowKind::Line);
-    // A refused unpin says why just under the title, in the error red.
-    const PopupContent refused = StatusTimersPopup(active, {kSignetEffect}, {kSignetEffect}, theme, 0, 0, true);
-    CHECK(Joined(refused.subtitle) == "Must have at least one status pinned." && refused.subtitle[0].tone == Tone::Own &&
-          refused.subtitle[0].argb == kErrorColor);
-    CHECK(refused.sections[0].rows[0].kind == RowKind::Grid);
 }
 
 TEST(the_popups_status_icons_are_the_themes_with_its_background_setting)
