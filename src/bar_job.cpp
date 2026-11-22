@@ -93,6 +93,11 @@ namespace headsup
         return text;
     }
 
+    uint8_t SubLevelUnder(uint8_t mainLevel, uint8_t subLevel)
+    {
+        return std::min(subLevel, static_cast<uint8_t>(std::max(1, mainLevel / 2)));
+    }
+
     uint32_t Gained(const JobSample& before, const JobSample& after)
     {
         if (before.mainJob != after.mainJob) return 0;
@@ -143,14 +148,20 @@ namespace headsup
     {
         if (!job) return {};
         const JobSample& s = job->sample;
-        std::vector<PartContent> parts{{WidgetPart::JobJobs, ListOf(Text(JobsAs(s, o.jobText))), o.jobInfoAlign},
+        JobSample said     = s;
+        if (o.syncedLevel)
+        {
+            said.mainLevel = s.syncedMainLevel;
+            said.subLevel  = s.syncedSubLevel;
+        }
+        std::vector<PartContent> parts{{WidgetPart::JobJobs, ListOf(Text(JobsAs(said, o.jobText))), o.jobInfoAlign},
             {WidgetPart::JobEarned, ListOf(Text(ExpSaid(s, ExpText::Earned))), o.earnedAlign},
             {WidgetPart::JobToNext, ListOf(Text(ExpSaid(s, ExpText::ToNext))), o.toNextAlign},
             {WidgetPart::JobPercent, ListOf(Text(ExpSaid(s, ExpText::Percent))), o.percentAlign}, {WidgetPart::JobBar, {}}};
         if (const std::optional<float> done = ExpDone(s))
         {
             Span bar = Text("");
-            bar.bar  = InlineBar{*done, o.expBarWidth, o.expBarHeight, o.expBarText ? ExpSaid(s, *o.expBarText, o.jobText) : "",
+            bar.bar  = InlineBar{*done, o.expBarWidth, o.expBarHeight, o.expBarText ? ExpSaid(*o.expBarText == ExpText::Jobs ? said : s, *o.expBarText, o.jobText) : "",
                  o.expBarTextAlign, o.expBarBack, o.expBarFill};
             parts.back().spans.push_back(bar);
         }

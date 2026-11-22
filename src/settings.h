@@ -86,6 +86,7 @@ namespace headsup
         Align expBarTextAlign = Align::Center;       // where on the bar it says it
         std::optional<uint32_t> expBarBack, expBarFill; // its EXP Bar's colors (ARGB); none for the theme's
         JobText jobText      = JobText::MainSub;     // how its Job Info says the jobs
+        bool syncedLevel     = false;                // and at the levels Level Sync holds you to, not your jobs' own
         // Where on its line each of its texts goes, against the widget's other lines.
         Align jobInfoAlign = Align::Left, earnedAlign = Align::Left, toNextAlign = Align::Left, percentAlign = Align::Left;
         uint32_t targetDetection = kDefaultDetection; // Target: the senses its Detection part shows, by DetectionBit

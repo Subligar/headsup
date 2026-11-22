@@ -3185,12 +3185,20 @@ private:
         if (needs.job)
         {
             IPlayer* player = m_AshitaCore->GetMemoryManager()->GetPlayer();
-            const headsup::JobSample sample{player->GetMainJob(), player->GetMainJobLevel(), player->GetSubJob(),
-                player->GetSubJobLevel(), player->GetExpCurrent(), player->GetExpNeeded(), player->GetLimitPoints(),
-                player->GetMeritPoints(), player->GetMeritPointsMax(), player->GetIsLimitModeEnabled()};
+            IParty* party   = m_AshitaCore->GetMemoryManager()->GetParty();
+            const uint8_t mainLevel = player->GetJobLevel(player->GetMainJob());
+            // When the sync target levels up, Phoenix sends the party's 0x0DD but no 0x061 until the next EXP, so
+            // while synced your party slot has the level first (none while you are anonymous).
+            const bool fromParty = headsup::LevelSyncInBuffs(player->GetBuffs()) && party->GetMemberMainJobLevel(0) != 0;
+            const headsup::JobSample sample{player->GetMainJob(), mainLevel, player->GetSubJob(),
+                headsup::SubLevelUnder(mainLevel, player->GetJobLevel(player->GetSubJob())),
+                fromParty ? party->GetMemberMainJobLevel(0) : player->GetMainJobLevel(),
+                fromParty ? party->GetMemberSubJobLevel(0) : player->GetSubJobLevel(), player->GetExpCurrent(),
+                player->GetExpNeeded(), player->GetLimitPoints(), player->GetMeritPoints(), player->GetMeritPointsMax(),
+                player->GetIsLimitModeEnabled()};
             if (sample.mainJob != 0)
             {
-                m_Exp.Update(now, sample, m_AshitaCore->GetMemoryManager()->GetParty()->GetMemberServerId(0));
+                m_Exp.Update(now, sample, party->GetMemberServerId(0));
                 s.job = headsup::JobReport{sample, m_Exp.PerHour(now)};
             }
             else

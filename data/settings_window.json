@@ -177,6 +177,7 @@
                 {"key": "percent-align", "name": "EXP Percentage Alignment", "tip": "Puts the EXP Percentage text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
                 {"key": "job-text", "name": "Job Text", "tip": "How Job Info and the EXP Bar's Job Text write your jobs and levels. Default is {default}."},
                 {"key": "job-text-align", "name": "Job Text Alignment", "tip": "Puts the Job Info text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
+                {"key": "synced-level", "name": "Use Synced Level", "tip": "Shows the levels Level Sync or a level cap holds you to in Job Info and the EXP Bar's Job Text. Off, your jobs' own levels. Default is {default}."},
                 {"key": "own-looks", "name": "Appearance Overrides"},
                 {"key": "widget-spacing", "name": "Widget Spacing", "tip": "The space between this widget and the widgets beside it. The gap between two widgets is the average of their spacings. Default: the Top Panel's."},
                 {"key": "widget-padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default: the Top Panel's."},

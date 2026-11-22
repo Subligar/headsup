@@ -365,6 +365,7 @@ namespace headsup
         constexpr const char* kTimerFormatKey = "statusTimerFormat";
         const char* const kTimerFormatNames[kTimerFormatCount] = {"full", "simple", "short"};
         constexpr const char* kJobTextKey   = "jobText";
+        constexpr const char* kSyncedLevelKey = "jobSyncedLevel";
         const char* const kJobTextNames[kJobTextCount] = {"mainSub", "main", "levelFirst"};
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
@@ -1590,6 +1591,7 @@ namespace headsup
             case BarWidget::Job:
             {
                 o.jobText  = static_cast<JobText>(NameIndex(kJobTextNames, kJobTextCount, text(kJobTextKey), static_cast<int>(o.jobText)));
+                o.syncedLevel  = flag(kSyncedLevelKey, o.syncedLevel);
                 o.expBarWidth  = number(kExpBarWidthKey, o.expBarWidth);
                 o.expBarHeight = number(kExpBarHeightKey, o.expBarHeight);
                 if (const std::string barText = text(kExpBarTextKey); barText == kNoExpBarText)
@@ -1693,6 +1695,7 @@ namespace headsup
                 break;
             case BarWidget::Job:
                 text(kJobTextKey, kJobTextNames[static_cast<int>(o.jobText)]);
+                flag(kSyncedLevelKey, o.syncedLevel);
                 StoreFloat(store, CopyKey(kExpBarWidthKey, w), static_cast<float>(o.expBarWidth));
                 StoreFloat(store, CopyKey(kExpBarHeightKey, w), static_cast<float>(o.expBarHeight));
                 text(kExpBarTextKey, o.expBarText ? kExpTextNames[static_cast<int>(*o.expBarText)] : kNoExpBarText);
