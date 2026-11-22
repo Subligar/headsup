@@ -17,10 +17,10 @@ namespace test
                 if (value >> i & 1) bytes[bit / 8] |= static_cast<uint8_t>(1 << bit % 8);
             return *this;
         }
-        // A spell's end (category 4) unless another category is given.
-        ActionPacket& Head(uint32_t actor, uint32_t targets, uint32_t category = 4)
+        // A spell's end (category 4), Protect's (43), unless another category or argument is given.
+        ActionPacket& Head(uint32_t actor, uint32_t targets, uint32_t category = 4, uint32_t argument = 43)
         {
-            return Put(actor, 32).Put(targets, 6).Put(0, 4).Put(category, 4).Put(43, 32).Put(0, 32);
+            return Put(actor, 32).Put(targets, 6).Put(0, 4).Put(category, 4).Put(argument, 32).Put(0, 32);
         }
         ActionPacket& Target(uint32_t id, uint32_t results) { return Put(id, 32).Put(results, 4); }
         // Miss, kind, animation, info, distortion and knockback; the value and message; the modifier; with an additional
