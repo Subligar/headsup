@@ -1204,10 +1204,10 @@ namespace headsup
             return popup;
         }
 
-        constexpr int kSupplyColumns = 3; // a region's name, then "Supply run available" and its flag
+        constexpr int kSupplyColumns = 3; // a region's name, its supply run, and a flag while that is available
 
         // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
-        // opens. Your nation's say which outposts you have not run supplies to, as far as overseers told.
+        // opens. Your nation's say which outposts you have run supplies to, as far as overseers told.
         PopupSection ConquestSection(const BarState& state)
         {
             PopupSection conquest =
@@ -1229,38 +1229,36 @@ namespace headsup
                 bool unknown     = false;
                 PopupTab held{Colored(NationName(nation), NationColor(nation)), {}};
                 held.picture = NationCrest(nation);
-                std::vector<std::pair<uint8_t, std::optional<bool>>> regions; // each held, and whether you ran supplies there
+                std::vector<uint8_t> regions;
                 for (int region = 0; region < kConquestRegionCount; ++region)
-                    if ((*state.owners)[region] == nation)
-                    {
-                        const auto r = static_cast<uint8_t>(region);
-                        regions.emplace_back(r, yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true));
-                        unknown = unknown || !regions.back().second;
-                    }
-                // While one has a supply run to make, every region is a line of a grid whose words and gray flag
-                // stand against the card's right, so they line up.
-                const bool runs = std::ranges::any_of(regions, [](const auto& region) { return region.second == false; });
-                for (const auto& [r, ran] : regions)
+                    if ((*state.owners)[region] == nation) regions.push_back(static_cast<uint8_t>(region));
+                if (yours && !regions.empty())
                 {
-                    if (!runs)
+                    PopupRow grid = Grid(kSupplyColumns, (regions.size() + 1) * kSupplyColumns);
+                    grid.header   = true;
+                    grid.trailing = true;
+                    for (const char* heading : {"Region", "Supply Run"})
+                        grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
+                    grid.cells.emplace_back();
+                    for (const uint8_t r : regions)
                     {
-                        held.rows.push_back(LineOf(std::string(RegionName(r))));
-                        continue;
-                    }
-                    PopupRow row{RowKind::Grid, kSupplyColumns, {Cell(Text(std::string(RegionName(r))))}};
-                    row.trailing = true;
-                    if (ran == false)
-                    {
-                        PopupCell said = Cell(Text("Supply run available"));
-                        said.align     = Align::Right;
+                        const std::optional<bool> ran = state.outposts->Ran(nation, r);
+                        unknown                       = unknown || !ran;
+                        grid.cells.push_back(Cell(Text(std::string(RegionName(r)))));
+                        grid.cells.push_back(Cell(!ran ? Text("-", Tone::Dim) : *ran ? Text("Complete", Tone::Dim) : Text("Available")));
                         PopupCell flag;
-                        flag.icon = Icon::Flag;
-                        flag.tint = Text("", Tone::Dim);
-                        row.cells.push_back(std::move(said));
-                        row.cells.push_back(std::move(flag));
+                        if (ran == false)
+                        {
+                            flag.icon = Icon::Flag;
+                            flag.tint = Text("", Tone::Dim);
+                        }
+                        grid.cells.push_back(std::move(flag));
                     }
-                    held.rows.push_back(std::move(row));
+                    held.rows.push_back(std::move(grid));
                 }
+                else
+                    for (const uint8_t r : regions)
+                        held.rows.push_back(LineOf(std::string(RegionName(r))));
                 if (held.rows.empty()) held.rows.push_back(LineOf("None", Tone::Dim));
                 if (unknown)
                     held.rows.push_back(LineOf("Talk to a conquest overseer in your nation's city to see your supply runs.", Tone::Dim));
