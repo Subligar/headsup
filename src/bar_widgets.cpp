@@ -1204,7 +1204,7 @@ namespace headsup
             return popup;
         }
 
-        constexpr int kSupplyColumns = 3; // a region's name, its supply run, and its flag
+        constexpr int kSupplyColumns = 2; // a region's name, then its supply run's flag
         constexpr uint32_t kSupplyNeededColor = 0xFFE35F5F, kSupplyDoneColor = kBarGreen;
 
         // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
@@ -1238,30 +1238,25 @@ namespace headsup
                     PopupRow grid = Grid(kSupplyColumns, (regions.size() + 1) * kSupplyColumns);
                     grid.header   = true;
                     grid.trailing = true;
-                    for (const char* heading : {"Region", "Supply Run"})
-                        grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
-                    grid.cells.emplace_back();
+                    grid.cells.push_back(Cell(Text("Region", Tone::Dim)));
+                    PopupCell head = Cell(Text("Supply Run", Tone::Dim));
+                    head.align     = Align::Center;
+                    grid.cells.push_back(std::move(head));
                     for (const uint8_t r : regions)
                     {
                         const bool runs               = HasSupplyRun(r);
                         const std::optional<bool> ran = runs ? state.outposts->Ran(nation, r) : std::nullopt;
                         unknown                       = unknown || (runs && !ran);
-                        PopupCell name = Cell(Text(std::string(RegionName(r))));
-                        if (!runs) name.text.push_back(Text(" (No Outpost)", Tone::Dim));
-                        grid.cells.push_back(std::move(name));
-                        if (!runs)
-                            grid.cells.emplace_back();
-                        else
-                            grid.cells.push_back(Cell(!ran ? Text("-", Tone::Dim)
-                                                      : *ran ? Text("Supply run completed", Tone::Dim)
-                                                             : Text("Supply run available")));
-                        PopupCell flag;
+                        grid.cells.push_back(Cell(Text(std::string(RegionName(r)))));
+                        PopupCell run;
+                        run.align = Align::Center;
+                        if (!runs) run.text = ListOf(Text("(No Outpost)", Tone::Dim));
                         if (ran)
                         {
-                            flag.icon = Icon::Flag;
-                            flag.tint = Colored("", *ran ? kSupplyDoneColor : kSupplyNeededColor);
+                            run.icon = Icon::Flag;
+                            run.tint = Colored("", *ran ? kSupplyDoneColor : kSupplyNeededColor);
                         }
-                        grid.cells.push_back(std::move(flag));
+                        grid.cells.push_back(std::move(run));
                     }
                     held.rows.push_back(std::move(grid));
                 }
