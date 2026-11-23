@@ -1655,6 +1655,30 @@ TEST(a_guilds_turn_ins_sit_beside_its_shops_so_fishing_is_no_taller_than_a_guild
     CHECK(place.x + place.width <= shops.x + shops.width - std::round(m.popupText * 0.9f) + 0.01f);
 }
 
+TEST(a_pop_out_wider_than_the_screen_shrinks_to_fit_and_one_that_fits_keeps_its_size)
+{
+    const BarMetrics m = MetricsFor(36, BarShape::Pills);
+    const PopupContent c = Guilds(1, true);
+    // Fake's sizes at 14 px text, in proportion at any other.
+    const auto layOut = [&](const BarMetrics& at) {
+        const float k = at.popupText / 14.0f;
+        return LayoutPopup(c, at, false, [k](const Span& s, PopupFont f) {
+            const TextSize t = Fake(s, f);
+            return TextSize{t.width * k, t.height * k, t.inkTop * k, t.inkBottom * k};
+        });
+    };
+    const PopupLayout whole = layOut(m);
+    const FittedPopup fits  = FitPopupAcross(m, whole.width, layOut);
+    CHECK(fits.metrics == m && Near(fits.layout.width, whole.width) && Near(fits.layout.height, whole.height));
+    // At 0.7 of its width, its 14 px text goes to the whole pixels under 14 times 0.7, its spacing with it.
+    const float across       = whole.width * 0.7f;
+    const FittedPopup shrunk = FitPopupAcross(m, across, layOut);
+    CHECK(shrunk.layout.width <= across);
+    CHECK(Near(shrunk.metrics.popupText, 9.0f));
+    CHECK(Near(shrunk.metrics.popupPadding, m.popupPadding * 9.0f / 14.0f));
+    CHECK(Near(Find(shrunk.layout, "Shop Hours")->height, Find(whole, "Shop Hours")->height * 9.0f / 14.0f));
+}
+
 TEST(a_column_beside_another_scrolls_in_its_own_socket)
 {
     // 12 shops, past the 10 lines a socket shows: the shops' scroll and its bar are their socket's, not the card's.

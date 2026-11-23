@@ -957,4 +957,24 @@ namespace headsup
         std::erase_if(layout.scrolls, [&](const PopupScroll& scroll) { return !kept[scroll.line]; });
         layout.height = bottom + padding;
     }
+
+    FittedPopup FitPopupAcross(const BarMetrics& metrics, float across, FunctionRef<PopupLayout(const BarMetrics&)> layOut)
+    {
+        FittedPopup fit{layOut(metrics), metrics};
+        const float least = kMinPopupScale * kPopupTextPixels;
+        while (fit.layout.width > across && fit.metrics.popupText > least)
+        {
+            // Down to whole pixels, so each try is smaller than the last.
+            const float pixels = std::max(least, std::floor(fit.metrics.popupText * across / fit.layout.width));
+            const float by     = pixels / metrics.popupText;
+            fit.metrics        = metrics;
+            fit.metrics.popupText    = pixels;
+            fit.metrics.popupTitle   *= by;
+            fit.metrics.heading      *= by;
+            fit.metrics.popupPadding *= by;
+            fit.metrics.rowGap       *= by;
+            fit.layout               = layOut(fit.metrics);
+        }
+        return fit;
+    }
 }

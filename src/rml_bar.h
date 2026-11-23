@@ -11,6 +11,7 @@
 #include "settings.h"
 
 #include <array>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -112,7 +113,7 @@ namespace headsup
             bool operator==(const HelpBarKey&) const = default;
         };
         // A popup's layout follows its content, its pin, the bar's height and its text size, which pick its sizes,
-        // and the room below the bar, which cuts it.
+        // the room below the bar, which cuts it, and the room across the screen, which shrinks it.
         struct HelpBarFit
         {
             HelpBarText text;
@@ -127,6 +128,7 @@ namespace headsup
             float room      = 0.0f;
             float least     = 0.0f;
             std::optional<SettingsRoom> settings;
+            float across = 0.0f;
             bool operator==(const PopupKey&) const = default;
         };
         // A font's line as GDI draws it, which the popups are laid out by (its height, and its ink's top and bottom
@@ -213,15 +215,16 @@ namespace headsup
             std::array<Rml::Element*, kPopupLayers> elements{}; // in each of m_PopupDocuments, made as needed
             bool marked = false; // its markup is the layout's
             std::optional<float> left, top, width, height;
-            Memo<PopupKey, PopupLayout> layout;
+            Memo<PopupKey, FittedPopup> layout;
             // The widest it has been since it opened, which it keeps as its text changes with the time; its content's,
             // its settings' (settings) or its preview's beside them (preview), apart.
             bool shown = false, settings = false;
             SettingsPreview preview = SettingsPreview::None;
             float widest = 0.0f;
             std::optional<float> keptX; // where across it opened under its widget, which it keeps while open
-            // Each popup font's widths of the texts it measured, its figures at the font's widest digit.
-            std::array<std::unordered_map<std::string, float>, kPopupFontCount> widths;
+            // At each text size it was laid out at, each popup font's widths of the texts it measured, its figures at
+            // the font's widest digit.
+            std::map<float, std::array<std::unordered_map<std::string, float>, kPopupFontCount>> widths;
         };
         std::array<Popup, kPanelSlots> m_Popups;
         std::vector<FaceLine> m_FaceLines;
