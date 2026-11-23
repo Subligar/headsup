@@ -3705,6 +3705,7 @@ TEST(an_emptied_starred_list_stays_empty_through_the_settings_file)
     Settings s;
     s.Kind(PlateKind::Players).shownStatuses.clear();
     s.statusPins.clear(); // Status Timers emptied: a file without the key pins Signet
+    s.statusFavorites.clear(); // and has Signet and Sanction as favorites
     MapStore saved;
     ChangedKeys changed(saved);
     SaveSettings(s, changed);
@@ -3724,6 +3725,6 @@ TEST(an_emptied_starred_list_stays_empty_through_the_settings_file)
     } file;
     file.file = WithIniValues("", "settings", values);
     const Settings read = LoadSettings(file);
-    CHECK(read.Kind(PlateKind::Players).shownStatuses.empty() && read.statusPins.empty());
+    CHECK(read.Kind(PlateKind::Players).shownStatuses.empty() && read.statusPins.empty() && read.statusFavorites.empty());
     CHECK_EQ(read.Kind(PlateKind::Self).shownStatuses.size(), size_t{6});
 }

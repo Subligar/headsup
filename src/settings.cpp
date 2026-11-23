@@ -2117,7 +2117,7 @@ namespace headsup
         store.Set(kKeepPointerKey, keys.c_str());
         store.Set(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str());
         store.Set(kCollapsedKey, SpaceApart(s.collapsedSections).c_str());
-        store.Set(kStatusFavoritesKey, SpaceApart(s.statusFavorites).c_str());
+        store.Set(kStatusFavoritesKey, s.statusFavorites.empty() ? kNoStatuses : SpaceApart(s.statusFavorites).c_str());
         store.Set(kStatusPinsKey, s.statusPins.empty() ? kNoStatuses : SpaceApart(s.statusPins).c_str());
         for (int i = 0; i < kStatusRankCount; ++i)
         {
