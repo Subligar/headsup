@@ -597,7 +597,7 @@ TEST(a_compact_notice_is_its_dot_and_name_whatever_width_and_height_say)
     for (int n = 0; n < 3; ++n)
     {
         Rml::Element* compact = Box(rml, n);
-        CHECK(Part(compact, "title")->IsClassSet(kHiddenClass));
+        CHECK(!Part(compact, "title")->IsVisible());
         Rml::Element* message = Part(compact, "message");
         CHECK_EQ(message->GetInnerRML().substr(message->GetInnerRML().rfind('>') + 1), std::string("Bartholomew"));
         // The dot is in the kind's own color (an invite's blue), and the box holds it and the name whole.

@@ -23,7 +23,6 @@ namespace headsup
         constexpr const char* kTrackClass = "track"; // behind the bar, its whole length
         constexpr uint8_t kTrackAlpha     = 0x40;    // of the kind's color
         constexpr const char* kDotClass = "dot"; // a compact notice's, before the name
-        constexpr const char* kCompactClass = "compact"; // its box: as small as its dot and name, whatever Width and Height say
         constexpr float kDotEm = 0.6f, kDotGapEm = 0.4f; // its size, and the room after it, in the message's font
         constexpr float kButtonIconEm = 1.4f;            // a compact invite's Decline and Accept icons, in the message's font
         // The text, buttons and bar in a column. The box itself is a block: RmlUi sizes a piece placed in a flex box
@@ -113,7 +112,9 @@ namespace headsup
                 css += std::string(".") + kButtonsClass + "{justify-content:" + FlexAlignWord(look.align) + ";}." + kButtonClass +
                        "{flex:0 0 auto;width:" + Em(kButtonIconEm) + ";height:" + Em(kButtonIconEm) +
                        ";padding:0px;border-width:0px;border-radius:" + Em(kButtonIconEm / 2.0f) +
-                       ";background-color:transparent;}." + kButtonClass + " img{display:block;width:100%;height:100%;}";
+                       ";background-color:transparent;}." + kButtonClass + " img{display:block;width:100%;height:100%;}" +
+                       // The box as small as its dot and name, whatever Width and Height say.
+                       ".box{height:auto;}." + kInnerClass + "{height:auto;}." + kTitleClass + "{display:none;}";
             css += std::string(".") + kTrackClass + "{height:" + Px(kNoticeBarHeight) + ";margin-top:" + Px(kBarGap) + ";}";
             css += ".bar{height:100%;}";
             for (const NoticeKind kind : {NoticeKind::Online, NoticeKind::Offline, NoticeKind::PartyInvite})
@@ -122,9 +123,8 @@ namespace headsup
                 const std::string color     = RcssColor(NoticeColor(kind));
                 css += "." + kindClass + " .title{color:" + color + ";}." + kindClass + " .bar,." + kindClass + " ." + kDotClass +
                        "{background-color:" + color + ";}." + kindClass + " ." + kTrackClass + "{background-color:" +
-                       RcssColor((NoticeColor(kind) & 0x00FFFFFFu) | static_cast<uint32_t>(kTrackAlpha) << 24) + ";}";
+                       RcssColor(WithAlpha(NoticeColor(kind), kTrackAlpha)) + ";}";
             }
-            css += std::string(".box.") + kCompactClass + "{height:auto;}." + kCompactClass + " ." + kInnerClass + "{height:auto;}";
             // Last, so it wins over the box's own display.
             css += std::string(".") + kHiddenClass + "{display:none;}";
             const auto face = [&](const char* word, Icon icon) {
@@ -223,9 +223,7 @@ namespace headsup
                 for (const char* kindClass : {kOnlineClass, kOfflineClass, kInviteClass})
                     box->SetClass(kindClass, std::string_view(kindClass) == KindClass(notice->kind));
                 for (const char* line : {kTitleClass, kMessageClass}) Part(box, line)->RemoveProperty(Rml::PropertyId::FontSize);
-                box->SetClass(kCompactClass, compact);
                 box->RemoveProperty(Rml::PropertyId::Width); // a compact or Flexible one's before it
-                Part(box, kTitleClass)->SetClass(kHiddenClass, compact);
                 Part(box, kTitleClass)->SetInnerRML(EscapedRml(titleOf(*notice)));
                 Part(box, kMessageClass)->SetClass(kHiddenClass, messageOf(*notice).empty());
                 Part(box, kMessageClass)->SetInnerRML(
