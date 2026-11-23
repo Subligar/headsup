@@ -244,25 +244,33 @@ namespace headsup
         return move;
     }
 
+    MenuAction MenuInput::Once(std::set<uint32_t>& held, uint32_t code, bool down, MenuAction action)
+    {
+        const bool pressed = down && !held.contains(code);
+        if (down)
+            held.insert(code);
+        else
+            held.erase(code);
+        return pressed ? action : MenuAction::None;
+    }
+
     MenuAction MenuInput::Feed(const MenuEvent& event, double now)
     {
         switch (event.source)
         {
-        case InputSource::Keyboard: return event.value != 0 ? KeyAction(event.code) : MenuAction::None;
+        case InputSource::Keyboard:
+        {
+            // Windows repeats a held key's press: an arrow moves again each time, but Confirm and Cancel act once.
+            const MenuAction action = KeyAction(event.code);
+            if (action == MenuAction::None || Moves(action)) return event.value != 0 ? action : MenuAction::None;
+            return Once(m_Keys, event.code, event.value != 0, action);
+        }
         case InputSource::XInput:
         {
             const MenuAction action = PadAction(event.code, m_Bindings);
             const bool down         = PadDown(event);
             if (action == MenuAction::None) return MenuAction::None;
-            if (!Moves(action))
-            {
-                const bool pressed = down && !m_Held.contains(event.code);
-                if (down)
-                    m_Held.insert(event.code);
-                else
-                    m_Held.erase(event.code);
-                return pressed ? action : MenuAction::None;
-            }
+            if (!Moves(action)) return Once(m_Held, event.code, down, action);
             if (down) return Change(m_Pad, action, now);
             if (m_Pad.move == action) Change(m_Pad, MenuAction::None, now);
             return MenuAction::None;
@@ -286,6 +294,7 @@ namespace headsup
     {
         m_Pad = {};
         m_Held.clear();
+        m_Keys.clear();
     }
 
     std::string MenuEventText(const MenuEvent& event)

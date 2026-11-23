@@ -112,10 +112,13 @@ namespace headsup
         };
         // The move a hold makes as it changes to this one: none when it stays the same or is let go.
         static MenuAction Change(Hold& hold, MenuAction move, double now);
+        // The action on a press of a code not held already, and none on its repeats or release.
+        static MenuAction Once(std::set<uint32_t>& held, uint32_t code, bool down, MenuAction action);
 
         PadBindings m_Bindings;
         Hold m_Pad;
         std::set<uint32_t> m_Held; // XInput's buttons and triggers down, as a trigger tells how far it is pulled each change
+        std::set<uint32_t> m_Keys; // Enter and Escape down
     };
 
     // An input as Ashita gave it and an action by name, for a developer to read.

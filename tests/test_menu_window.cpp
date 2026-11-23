@@ -318,6 +318,30 @@ TEST(cancel_closes_a_sub_window_first_then_its_parent)
     CHECK(!w.windows.Act(MenuAction::Down));
 }
 
+TEST(a_held_enter_or_escape_acts_once_however_often_windows_repeats_it)
+{
+    constexpr uint32_t kEnter = 0x0D, kEscape = 0x1B; // Windows' virtual keys
+    Windows w;
+    MenuInput input;
+    const auto key = [&](uint32_t vk, bool down) { w.windows.Act(input.Feed({InputSource::Keyboard, vk, down ? 1 : 0}, 0.0)); };
+    w.windows.Open(Bag());
+    w.PointAt("bag", "drop");
+    key(kEnter, true);
+    CHECK(w.windows.TakePressed() == std::vector<std::string>{"drop"});
+    CHECK(w.windows.Open(Sure("sure"), "bag"));
+    key(kEnter, true);
+    CHECK(w.windows.TakePressed().empty() && w.windows.IsOpen("sure"));
+    key(kEnter, false);
+    key(kEnter, true);
+    CHECK(w.windows.TakePressed() == std::vector<std::string>{"sure-yes"});
+    key(kEscape, true);
+    key(kEscape, true);
+    CHECK(!w.windows.IsOpen("sure") && w.windows.IsOpen("bag"));
+    key(kEscape, false);
+    key(kEscape, true);
+    CHECK(!w.windows.AnyOpen());
+}
+
 TEST(two_windows_close_the_later_first)
 {
     Windows w;
