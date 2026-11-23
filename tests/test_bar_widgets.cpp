@@ -3814,6 +3814,9 @@ TEST(a_created_widgets_parts_have_their_widgets_data_gathered_while_it_shows)
     CHECK(needs("name | performance.fps").frames && !needs("name | -performance.fps").frames);
     CHECK(needs("gil.amount1 |").gil && WidgetShown(settings, BarWidget::Currency) && !AnyCopyShown(settings, BarWidget::Currency));
     CHECK(needs("statusTimers.pin1 |").statuses && needs("earthTime.date |").localTime);
+    // A Pinned Status button shows by the pins, so its switch, which the Widget Designer wrote while none was
+    // pinned, does not stop your statuses being read.
+    CHECK(needs("name | -statusTimers.pin1").statuses);
     settings.Widget(BarWidget::Bags).secondBag = kMogSatchel;
     CHECK_EQ(needs("bags.count2 |").containers, kMogSatchel + 1);
     settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | world.windurst");

@@ -1388,7 +1388,7 @@ namespace headsup
         bool HoldsPartOn(const WidgetOptions& created, BarWidget widget)
         {
             return std::ranges::any_of(created.design.lines, [&](const std::vector<DesignChip>& line) {
-                return std::ranges::any_of(line, [&](const DesignChip& chip) { return chip.on && WidgetOfPart(chip.part) == widget; });
+                return std::ranges::any_of(line, [&](const DesignChip& chip) { return ChipOn(chip) && WidgetOfPart(chip.part) == widget; });
             });
         }
 
@@ -1668,7 +1668,7 @@ namespace headsup
             WidgetDesign design = o.design;
             for (std::vector<DesignChip>& line : design.lines)
                 for (DesignChip& chip : line)
-                    chip.on = chip.on || IsPinnedStatus(chip.part);
+                    chip.on = ChipOn(chip);
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
             {

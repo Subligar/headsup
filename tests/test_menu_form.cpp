@@ -361,6 +361,10 @@ TEST(a_created_widget_shows_the_settings_of_the_widgets_it_borrows_from_and_they
     CHECK(shown(w.Pass(), barWidth));
     w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | job.jobs -job.bar");
     CHECK(!shown(w.Pass(), barWidth));
+    // A Pinned Status button borrows Status Timers' Display with nothing pinned, as it shows once a status is.
+    w.settings.statusPins.clear();
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | statusTimers.pin1");
+    CHECK(shown(w.Pass(), "toppanel-widgets-status-display-custom"));
 }
 
 TEST(a_created_widgets_pop_out_designer_is_its_sections_title_then_its_rows_with_no_note_between)

@@ -1074,7 +1074,7 @@ namespace headsup
             };
             for (const std::vector<DesignChip>& line : created.design.lines)
                 for (const DesignChip& chip : line)
-                    if (chip.on) add(WidgetOfPart(chip.part));
+                    if (ChipOn(chip)) add(WidgetOfPart(chip.part));
             for (const std::vector<CardKind>& row : created.popup.rows)
                 for (const CardKind card : row)
                     add(WidgetOfCard(card));

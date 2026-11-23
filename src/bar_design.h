@@ -42,6 +42,8 @@ namespace headsup
         bool on = true;
         bool operator==(const DesignChip&) const = default;
     };
+    // Whether a chip shows when there is something for it: a Pinned Status button's switch only mirrors the pins.
+    constexpr bool ChipOn(const DesignChip& chip) { return chip.on || IsPinnedStatus(chip.part); }
     constexpr int kDesignLines = 2;
     constexpr char kDesignLineBreak = '|'; // between a design's lines, and a pop-out's rows, in the settings file
     // A widget's two lines, each its parts in order, shown or not. Every part of its widget is on one line once.
