@@ -55,6 +55,7 @@ namespace headsup
         constexpr int kWorldGuildColumns   = 3; // a shop open or closed, when that changes, and who and where
         constexpr int kZoneRollColumns     = 3; // a zone, and its chance of the element today and tomorrow
         constexpr int kTurnInColumns       = 6; // a rank, its item and its points, its high quality's, and the most a day
+        constexpr int kSupplyColumns       = 2; // a region's name, and its supply run's flag and word
         constexpr uint16_t kGilItem  = 0xFFFF;
         constexpr const char* kNoMapSquare = "(?-?)"; // the game's <pos> in a zone without a map
         // The widest map squares: a room's digits count as the widest digit already, so only the letter is left.
@@ -1237,7 +1238,7 @@ namespace headsup
                     if ((*state.owners)[region] == nation) regions.push_back(static_cast<uint8_t>(region));
                 if (yours && !regions.empty())
                 {
-                    PopupRow grid = Grid(2, (regions.size() + 1) * 2); // a region's name, and its supply run's flag and word
+                    PopupRow grid = Grid(kSupplyColumns, (regions.size() + 1) * kSupplyColumns);
                     grid.header   = true;
                     grid.trailing = true;
                     for (const char* heading : {"Region", "Supply Run"})

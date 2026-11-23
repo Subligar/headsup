@@ -1578,7 +1578,7 @@ TEST(a_cards_rows_start_a_few_pixels_further_under_its_heading_than_they_are_apa
 namespace
 {
     // A guild's tab as World Info builds it: its shops' hours in a socket under a title, then today's turn-ins, a
-    // header and a line a rank, in another under theirs; set beside the shops, or under them as they were before.
+    // header and a line a rank, in another under theirs; set beside the shops, or under them.
     PopupTab GuildTab(const char* name, size_t shops, bool beside)
     {
         PopupTab tab{Text(name), {LineOf("Shop Hours", Tone::Heading)}};
@@ -1611,8 +1611,8 @@ namespace
     }
 }
 
-// Cards lp4D8Mo6 and pbbTK5NK: picking Fishing made Guilds vanish until a relog. Its 10 shops over its turn-ins ran the
-// pop-out past the screen's bottom, and the cut drops a card that does not fit whole, its tabs too.
+// Stacked, Fishing's 10 shops over its turn-ins run past a screen Smithing fits, and the cut drops a card that does not
+// fit whole, its tabs too.
 TEST(a_guilds_turn_ins_sit_beside_its_shops_so_fishing_is_no_taller_than_a_guild_that_fit_before)
 {
     const BarMetrics m  = MetricsFor(36, BarShape::Pills);
@@ -1625,7 +1625,7 @@ TEST(a_guilds_turn_ins_sit_beside_its_shops_so_fishing_is_no_taller_than_a_guild
     // rowGap, and a rowGap under it.
     const float line = 14.0f, gap = m.rowGap, socketPad = std::round(m.popupText * 0.35f);
     const auto titled = [&](float lines) { return line + gap + 2.0f * socketPad + lines * line + (lines - 1.0f) * gap + gap; };
-    // Stacked, Fishing was its 10 shops' and its 9 turn-in lines'; beside them, its shops' alone, the taller column.
+    // Stacked, Fishing is its 10 shops' and its 9 turn-in lines'; beside them, its shops' alone, the taller column.
     const PopupLayout stacked = LayoutPopup(Guilds(kFishing, false), m, false, Fake);
     CHECK(Near(cardHeight(stacked) - cardHeight(fishing), titled(9.0f)));
     // Smithing's 4 shops over its turn-ins fit: Fishing beside is shorter by 6 lines and a title less 4 lines.
@@ -1638,7 +1638,7 @@ TEST(a_guilds_turn_ins_sit_beside_its_shops_so_fishing_is_no_taller_than_a_guild
     CHECK(Find(cut, "Guilds") != nullptr && Of(cut, PopupPiece::Kind::Tab).size() == 2);
     PopupLayout cutBefore = stacked;
     CutPopup(cutBefore, smithingBefore.height, m.popupPadding);
-    CHECK(Find(cutBefore, "Guilds") == nullptr); // as it was
+    CHECK(Find(cutBefore, "Guilds") == nullptr);
     // The two sockets side by side from one top to one bottom, a card's gap apart, the turn-ins' to the card's right
     // padding; each title over its own.
     const std::vector<const PopupPiece*> sockets = Of(fishing, PopupPiece::Kind::Socket);
