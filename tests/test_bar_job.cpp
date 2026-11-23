@@ -56,14 +56,14 @@ TEST(exp_gained_counts_within_a_level_and_across_a_level_up)
     CHECK_EQ(Gained(Sample(30, 7400, 7600), Sample(31, 150, 8000)), 350u); // 200 to finish 30, then 150 into 31
 }
 
-TEST(nothing_counts_for_a_death_a_job_change_or_a_level_lost_or_synced)
+TEST(nothing_counts_for_a_death_a_job_change_a_level_lost_or_two_levels_at_once)
 {
     CHECK_EQ(Gained(Sample(30, 1300, 7600), Sample(30, 1000, 7600)), 0u);
     JobSample whm = Sample(30, 1300, 7600);
     whm.mainJob   = kWhm;
     CHECK_EQ(Gained(Sample(30, 1000, 7600), whm), 0u);
     CHECK_EQ(Gained(Sample(31, 100, 8000), Sample(30, 7500, 7600)), 0u);
-    CHECK_EQ(Gained(Sample(30, 1000, 7600), Sample(32, 100, 8400)), 0u); // a sync lifted, not EXP
+    CHECK_EQ(Gained(Sample(30, 1000, 7600), Sample(32, 100, 8400)), 0u);
 }
 
 // The level comes from 0x01B and the EXP from 0x061, which the server sends last on a level-up or a level lost, at

@@ -1313,7 +1313,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale && !weather.fontSize);
 }
 
-TEST(uniform_font_size_starts_on_for_home_point_and_status_timers_alone_and_each_copy_keeps_its_own)
+TEST(uniform_font_size_starts_on_for_home_point_status_and_placeholder_timers_and_each_copy_keeps_its_own)
 {
     const Settings fresh;
     CHECK(fresh.Widget(BarWidget::HomePoint).uniformFont && fresh.Widget(BarWidget::StatusTimers).uniformFont &&
