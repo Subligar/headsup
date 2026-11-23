@@ -4,6 +4,7 @@
 #include "bar_statuses.h"
 #include "check.h"
 #include "combat_popup.h"
+#include "plate_settings.h"
 #include "status_icons.h"
 
 #include <algorithm>
@@ -23,9 +24,10 @@ namespace headsup
         // aim. A start or an interrupt can come from an entity just as a sleep lands on it.
         constexpr uint32_t kNoCategory = 0, kSpellCategory = 4;
         constexpr uint32_t kStartCategories[] = {7, 8, 9, 10, 12};
-        // Statuses that stop all action, so one who acts has none of them: Sleep, Sleep II, Lullaby, Petrification,
-        // Stun, Terror.
-        constexpr uint16_t kStillStatuses[] = {2, 19, 193, 7, 10, 28};
+        // Statuses that stop all action, so one who acts has none of them.
+        constexpr uint16_t kSleepIIStatus = 19, kLullabyStatus = 193, kStunStatus = 10, kTerrorStatus = 28;
+        constexpr uint16_t kStillStatuses[] = {
+            kSleepStatus, kSleepIIStatus, kLullabyStatus, kPetrificationStatus, kStunStatus, kTerrorStatus};
 
         struct SpellDuration
         {
