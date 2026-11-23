@@ -355,6 +355,12 @@ TEST(a_created_widget_shows_the_settings_of_the_widgets_it_borrows_from_and_they
     CHECK(!Has(zone, "toppanel-widgets-show-zone-id-custom"));
     const std::string alignment = "id=\"toppanel-widgets-alignment-custom\"";
     CHECK(zone.find(alignment) != std::string::npos && zone.find(alignment) == zone.rfind(alignment));
+    // Job & EXP's Bar Width shows by the EXP Bar on the created widget's own lines.
+    const char* barWidth = "toppanel-widgets-bar-width-custom";
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | job.jobs job.bar");
+    CHECK(shown(w.Pass(), barWidth));
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | job.jobs -job.bar");
+    CHECK(!shown(w.Pass(), barWidth));
 }
 
 TEST(a_created_widgets_pop_out_designer_is_its_sections_title_then_its_rows_with_no_note_between)
