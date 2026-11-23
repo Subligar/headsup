@@ -150,41 +150,19 @@ namespace headsup
 
     std::optional<SentAction> ParseSentAction(const uint8_t* data, uint32_t size)
     {
-        BitReader bits(data, size);
+        const std::optional<ParsedAction> parsed = ParseAction(data, size);
+        if (!parsed) return std::nullopt;
         SentAction sent;
-        const std::optional<uint32_t> actor = bits.Read(kActorBits), targets = bits.Read(kTargetsBits);
-        if (!actor || !targets) return std::nullopt;
-        sent.actor = *actor;
-        bits.Skip(kResultsSumBits + kCommandBits + kArgumentBits + kInfoBits);
-        const bool lone = *targets == 1;
-        for (uint32_t t = 0; t < *targets; ++t)
+        sent.actor      = parsed->actor;
+        const bool lone = parsed->targets == 1;
+        for (const ParsedResult& r : parsed->results)
         {
-            bits.Skip(kTargetIdBits);
-            const std::optional<uint32_t> results = bits.Read(kResultsBits);
-            if (!results) return std::nullopt;
-            for (uint32_t r = 0; r < *results; ++r)
-            {
-                bits.Skip(kResultLeadBits);
-                const std::optional<uint32_t> value = bits.Read(kValueBits), message = bits.Read(kMessageBits);
-                bits.Skip(kModifierBits);
-                const std::optional<uint32_t> added = bits.Read(1);
-                std::optional<uint32_t> addedValue = 0, addedMessage = 0;
-                if (added && *added)
-                {
-                    bits.Skip(kAddedLeadBits);
-                    addedValue   = bits.Read(kValueBits);
-                    addedMessage = bits.Read(kMessageBits);
-                }
-                const std::optional<uint32_t> spikes = bits.Read(1);
-                if (spikes && *spikes) bits.Skip(kSpikesBits);
-                if (!value || !message || !addedValue || !addedMessage || !spikes) return std::nullopt;
-                if (std::ranges::find(kDamageMessages, *message) != std::end(kDamageMessages)) sent.damage += *value;
-                if (std::ranges::find(kAddedDamageMessages, *addedMessage) != std::end(kAddedDamageMessages) ||
-                    SkillchainDamage(*addedMessage))
-                    sent.damage += *addedValue;
-                const bool kept = lone ? r < kMostLoneResults : r == 0;
-                if (kept && sent.records < kMostSentRecords) sent.messages[sent.records++] = static_cast<uint16_t>(*message);
-            }
+            if (std::ranges::find(kDamageMessages, r.message) != std::end(kDamageMessages)) sent.damage += r.value;
+            if (std::ranges::find(kAddedDamageMessages, r.addedMessage) != std::end(kAddedDamageMessages) ||
+                SkillchainDamage(r.addedMessage))
+                sent.damage += r.addedValue;
+            const bool kept = lone ? r.index < kMostLoneResults : r.index == 0;
+            if (kept && sent.records < kMostSentRecords) sent.messages[sent.records++] = static_cast<uint16_t>(r.message);
         }
         return sent;
     }

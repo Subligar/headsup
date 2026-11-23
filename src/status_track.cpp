@@ -61,47 +61,16 @@ namespace headsup
 
     std::optional<ActionStatuses> ParseActionStatuses(const uint8_t* data, uint32_t size)
     {
-        if (data == nullptr) return std::nullopt;
-        BitReader bits(data, size);
-        const std::optional<uint32_t> actor = bits.Read(kActorBits), targets = bits.Read(kTargetsBits);
-        bits.Skip(kResultsSumBits);
-        const std::optional<uint32_t> category = bits.Read(kCommandBits), argument = bits.Read(kArgumentBits);
-        if (!actor || !targets || !category || !argument) return std::nullopt;
-        bits.Skip(kInfoBits);
-        const uint16_t seconds = SpellSeconds(*category, *argument);
-        const bool started = std::ranges::find(kStartCategories, *category) != std::end(kStartCategories);
-        ActionStatuses action{*actor, *category != kNoCategory && !started, {}};
-        for (uint32_t t = 0; t < *targets; ++t)
+        const std::optional<ParsedAction> parsed = ParseAction(data, size);
+        if (!parsed) return std::nullopt;
+        const uint16_t seconds = SpellSeconds(parsed->category, parsed->argument);
+        const bool started = std::ranges::find(kStartCategories, parsed->category) != std::end(kStartCategories);
+        ActionStatuses action{parsed->actor, parsed->category != kNoCategory && !started, {}};
+        for (const ParsedResult& r : parsed->results)
         {
-            const std::optional<uint32_t> target = bits.Read(kTargetIdBits), results = bits.Read(kResultsBits);
-            if (!target || !results) return std::nullopt;
-            for (uint32_t r = 0; r < *results; ++r)
-            {
-                bits.Skip(kResultLeadBits);
-                const std::optional<uint32_t> value = bits.Read(kValueBits), message = bits.Read(kMessageBits);
-                bits.Skip(kModifierBits);
-                const std::optional<uint32_t> added = bits.Read(1);
-                std::optional<uint32_t> addedValue = 0, addedMessage = 0;
-                if (added && *added)
-                {
-                    bits.Skip(kAddedLeadBits);
-                    addedValue   = bits.Read(kValueBits);
-                    addedMessage = bits.Read(kMessageBits);
-                }
-                const std::optional<uint32_t> spikes = bits.Read(1);
-                std::optional<uint32_t> spikesValue = 0, spikesMessage = 0;
-                if (spikes && *spikes)
-                {
-                    bits.Skip(kSpikesLeadBits);
-                    spikesValue   = bits.Read(kSpikesValueBits);
-                    spikesMessage = bits.Read(kMessageBits);
-                }
-                if (!value || !message || !addedValue || !addedMessage || !spikes || !spikesValue || !spikesMessage)
-                    return std::nullopt;
-                PutChange(action.changes, *target, *actor, *value, *message, seconds);
-                PutChange(action.changes, *target, *actor, *addedValue, *addedMessage, seconds);
-                PutChange(action.changes, *target, *actor, *spikesValue, *spikesMessage, seconds);
-            }
+            PutChange(action.changes, r.target, parsed->actor, r.value, r.message, seconds);
+            PutChange(action.changes, r.target, parsed->actor, r.addedValue, r.addedMessage, seconds);
+            PutChange(action.changes, r.target, parsed->actor, r.spikesValue, r.spikesMessage, seconds);
         }
         return action;
     }
