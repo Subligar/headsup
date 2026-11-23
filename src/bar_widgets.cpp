@@ -1747,7 +1747,7 @@ namespace headsup
         return std::nullopt;
     }
 
-    PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
+    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
     {
         // A status's star or pin; a status taken off the favorites leaves the panel too, as only they have pins.
         for (const std::string_view kind : {kStatusFavoritePress, kStatusPinPress})
@@ -1757,7 +1757,7 @@ namespace headsup
             char* end           = nullptr;
             const unsigned long id = std::strtoul(number.c_str(), &end, 10);
             if (number.empty() || *end != '\0' || id > UINT16_MAX || *StatusName(static_cast<uint16_t>(id)) == '\0')
-                return PressResult::None;
+                return false;
             const auto status = static_cast<uint16_t>(id);
             // Every pin keeps the place it shows at in each copy, before and after the change.
             const auto place = [&] {
@@ -1775,30 +1775,30 @@ namespace headsup
             else
                 list.push_back(status);
             place();
-            return PressResult::Changed;
+            return true;
         }
         if (press.starts_with(kPopupResetPress))
         {
             const std::string number(press.substr(std::string_view(kPopupResetPress).size()));
             char* end = nullptr;
             const long slot = std::strtol(number.c_str(), &end, 10);
-            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return PressResult::None;
+            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return false;
             settings.widgets[static_cast<size_t>(slot)].popupSpot.reset();
-            return PressResult::Changed;
+            return true;
         }
         if (press.starts_with(kCollapsePress))
         {
             const std::string key(press.substr(std::string_view(kCollapsePress).size()));
-            if (key.empty() || key.find(' ') != std::string::npos) return PressResult::None;
+            if (key.empty() || key.find(' ') != std::string::npos) return false;
             if (const auto at = std::ranges::find(settings.collapsedSections, key); at != settings.collapsedSections.end())
                 settings.collapsedSections.erase(at);
             else
                 settings.collapsedSections.push_back(key);
-            return PressResult::Changed;
+            return true;
         }
-        if (!press.starts_with(kFavoritePress)) return PressResult::None;
+        if (!press.starts_with(kFavoritePress)) return false;
         const std::string key(press.substr(std::string_view(kFavoritePress).size()));
-        if (!CurrencyOfKey(key)) return PressResult::None;
+        if (!CurrencyOfKey(key)) return false;
         // Your nation's points by their own key once it is known, so its star takes them off.
         std::vector<std::string> favorites;
         for (const std::string& held : settings.currencyFavorites)
@@ -1812,7 +1812,7 @@ namespace headsup
         else
             favorites.push_back(key);
         settings.currencyFavorites = std::move(favorites);
-        return PressResult::Changed;
+        return true;
     }
 
     bool WidgetShown(const Settings& settings, BarWidget widget)

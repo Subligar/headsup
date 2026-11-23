@@ -1161,11 +1161,8 @@ public:
                                             ? std::optional(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)])
                                             : std::nullopt);
             }
-            else switch (headsup::ApplyPopupPress(m_Settings, press, NationNow()))
-            {
-            case headsup::PressResult::Changed: m_SettingsChangedAt = now; break;
-            case headsup::PressResult::None: break;
-            }
+            else if (headsup::ApplyPopupPress(m_Settings, press, NationNow()))
+                m_SettingsChangedAt = now;
         if (const bool fishing = m_Settings.enabled && m_Settings.fishStamina == headsup::FishBarShown::HeadsUp; m_Rml.Running() &&
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))

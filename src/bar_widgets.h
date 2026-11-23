@@ -136,10 +136,6 @@ namespace headsup
         int containers = 0; // bags from 0 up to this
     };
     BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing); // showing: the popups shown
-    // Does to the settings what a press on a popup's pressable cell told (PopupCell::press): a currency's or a
-    // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
-    // off.
-    enum class PressResult : uint8_t { None, Changed };
     // A weather's icons as Use Custom Icons picks them: HeadsUp's own picture, or the game's element icon, twice for a
     // double weather; none for a weather that has none of the kind picked.
     std::vector<Icon> WeatherIcons(Weather weather, CustomIcons use);
@@ -153,7 +149,10 @@ namespace headsup
     // Clones the widget a press names or takes its copy off: the widget whose settings show next, the clone or the
     // first copy (a created widget itself, gone, so they close); nothing for any other press, or when nothing changed.
     std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press);
-    PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
+    // Does to the settings what a press on a popup's pressable cell told (PopupCell::press): a currency's or a
+    // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
+    // off. Whether it changed the settings.
+    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
     // Whether a copy of widget shows, or a created widget showing one of its parts.
     bool WidgetShown(const Settings& settings, BarWidget widget);
     // Whether the conquest standings show: the Zone widget, a World Info showing a nation, or a popup in showing with

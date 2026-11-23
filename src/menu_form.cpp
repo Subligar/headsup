@@ -764,8 +764,7 @@ namespace headsup
         }
 
         // A widget's parts as chips on its two lines, each with a toggle and its icon where it has one: a chip drags
-        // within its line or to the other, before the chip it is dropped on or to the end. The last part on cannot be
-        // switched off; trying says so under the lines until the next toggle or move. A created widget's lines take
+        // within its line or to the other, before the chip it is dropped on or to the end. A created widget's lines take
         // any widget's parts from the list under them of the widget picked, and a chip let go off the lines goes back.
         void Designer(Context& c, PanelWidget widget)
         {
