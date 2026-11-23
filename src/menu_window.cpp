@@ -5,6 +5,7 @@
 #include "form.h"
 #include "markup.h"
 #include "menu_sizes.h"
+#include "rml_pure.h"
 
 #include <RmlUi/Core/Factory.h>
 #include <RmlUi/Core/StyleSheetContainer.h>
@@ -31,8 +32,9 @@ namespace headsup
         constexpr const char* kTabAttribute = "tab";
         constexpr const char* kTabClass     = "tab";
         constexpr const char* kListClass    = "list";
+        constexpr const char* kEntryClass   = "entry";
+        constexpr const char* kTextClass    = "text";
         constexpr const char* kKeptClass    = "kept"; // a list's entry the keys chose, lit while the selection is elsewhere
-        constexpr int kRightButton          = 1; // RmlUi's
         // In ems of the window's text.
         constexpr float kWidth       = 34.0f;
         constexpr float kHeadHeight  = 2.4f; // the title's row, with the cog and the close button in its corner
@@ -97,18 +99,18 @@ namespace headsup
             css += std::string(".") + kListClass + "{box-sizing:border-box;width:" + Em(kListWidth + 2.0f * kEntryRoom) + ";height:" +
                    Px(listTall) + ";overflow-y:auto;padding:" + Em(kEntryGap) + " " + side + " 0px " + side + ";background-color:" +
                    RcssColor(c.inset) + ";border:" + Px(kListEdge) + " " + RcssColor(c.border) + ";border-radius:" + Em(kRadius) + ";}";
-            css += ".entry{box-sizing:border-box;height:" + Em(kEntryHeight) + ";margin-bottom:" + Em(kEntryGap) + ";padding:0px " +
+            css += std::string(".") + kEntryClass + "{box-sizing:border-box;height:" + Em(kEntryHeight) + ";margin-bottom:" + Em(kEntryGap) + ";padding:0px " +
                    Em(kEntryPad) + ";line-height:" + Em(kEntryHeight) + ";white-space:nowrap;border-radius:" + Em(kRadius) +
                    ";background-color:" + RcssColor(c.control) + ";}";
-            css += ".entry:hover{background-color:" + RcssColor(c.hover) + ";}";
-            css += ".text{color:" + RcssColor(c.label) + ";}";
+            css += std::string(".") + kEntryClass + ":hover{background-color:" + RcssColor(c.hover) + ";}";
+            css += std::string(".") + kTextClass + "{color:" + RcssColor(c.label) + ";}";
             css += std::string("#") + kFootId + "{margin-top:" + Em(kGutter) + ";color:" + RcssColor(c.muted) + ";}";
             // Each selectable element stands over its ground, which takes its shape.
             const std::string ground = std::string(" > .") + kGameGroundClass;
             css += std::string(".") + kGameNavClass + "{position:relative;z-index:0;}";
             css += std::string(".") + kGameGroundClass + "{position:absolute;left:0px;top:0px;width:100%;height:100%;z-index:-1;pointer-events:none;}";
             css += ".btn" + ground + "," + cog + ground + "," + close + ground + "{border-radius:" + Em(kFrame / 2.0f) + ";}";
-            css += ".entry" + ground + "{border-radius:" + Em(kRadius) + ";}";
+            css += std::string(".") + kEntryClass + ground + "{border-radius:" + Em(kRadius) + ";}";
             css += std::string(".") + kTabClass + ground + "{border-radius:" + Em(kRadius) + " " + Em(kRadius) + " 0px 0px;}";
             const std::string lit = RcssColor(LitGround(c)), selected = std::string("#") + kBodyId + " ." + kGameNavClass + "." + kGameSelClass;
             css += selected + "{background-color:transparent;border-color:transparent;color:" + RcssColor(c.text) + ";font-effect:shadow(" +
@@ -185,7 +187,7 @@ namespace headsup
     {
         std::string rml = std::string("<div class=\"") + kListClass + "\" id=\"" + id + "\">";
         for (size_t i = 0; i < entries.size(); ++i)
-            rml += std::string("<div class=\"entry ") + kGameNavClass + "\" id=\"" + id + "-" + std::to_string(i) + "\">" + GroundRml() +
+            rml += std::string("<div class=\"") + kEntryClass + " " + kGameNavClass + "\" id=\"" + id + "-" + std::to_string(i) + "\">" + GroundRml() +
                    EscapedRml(entries[i]) + "</div>";
         return rml + "</div>";
     }
@@ -194,7 +196,7 @@ namespace headsup
     std::string GameColumnRml(const std::string& rml) { return std::string("<div class=\"") + kColumnClass + "\">" + rml + "</div>"; }
     std::string GameTextRml(const std::string& text, const std::string& id)
     {
-        return "<div class=\"text\"" + (id.empty() ? std::string() : " id=\"" + id + "\"") + ">" + EscapedRml(text) + "</div>";
+        return std::string("<div class=\"") + kTextClass + "\"" + (id.empty() ? std::string() : " id=\"" + id + "\"") + ">" + EscapedRml(text) + "</div>";
     }
 
     void GameWindows::Update(Rml::Context* context, const MenuLook& look, const std::vector<WindowPlace>& places)
@@ -444,7 +446,7 @@ namespace headsup
         if (event.GetId() == Rml::EventId::Mousedown)
         {
             PullToFront();
-            if (event.GetParameter<int>("button", 0) == kRightButton) Act(MenuAction::Cancel);
+            if (event.GetParameter<int>("button", 0) == kRmlRightButton) Act(MenuAction::Cancel);
             return;
         }
         if (std::any_of(m_Open.begin(), m_Open.end(), [&](const Window& w) { return w.parent == window->id; })) return;

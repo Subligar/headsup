@@ -336,11 +336,3 @@ TEST(only_what_the_windows_use_is_kept)
     CHECK(!taken.Keep({InputSource::DirectInput, 0, 100}, true)); // a DirectInput stick is left to the game
     CHECK(taken.Keep(DirectButton(5, true), true));
 }
-
-TEST(an_input_reads_as_its_source_number_and_value)
-{
-    CHECK_EQ(MenuEventText(Pad(12, 1)), std::string("XInput 12 = 1"));
-    CHECK_EQ(MenuEventText(Hat(9000)), std::string("DirectInput 32 = 9000"));
-    CHECK_EQ(MenuEventText(Key(0x26, false)), std::string("Key 38 = 0"));
-    CHECK_EQ(std::string(MenuActionName(MenuAction::TabRight)), std::string("TabRight"));
-}

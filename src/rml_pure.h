@@ -15,6 +15,8 @@
 
 namespace headsup
 {
+    constexpr int kRmlLeftButton = 0, kRmlRightButton = 1, kRmlMiddleButton = 2; // as RmlUi numbers the mouse's buttons
+
     // RmlUi's vertex (pixel coordinates, premultiplied RGBA bytes, the image's texture coordinates) as Direct3D 8
     // draws it: moved by a translation, at the pixel centers Direct3D samples, its texture coordinates scaled to the
     // image's share (shareU, shareV) of the padded texture it is in.

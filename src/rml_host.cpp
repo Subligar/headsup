@@ -15,7 +15,6 @@ namespace headsup
     {
         constexpr const char* kBarContext     = "bar";
         constexpr const char* kOverlayContext = "overlay";
-        constexpr int kLeftButton = 0, kRightButton = 1, kMiddleButton = 2; // as RmlUi numbers them
         constexpr int kKeyToggledBit      = 0x0001;                          // GetKeyState: a lock is on
         constexpr int kTypedAtMost        = 4;                               // UTF-16 units one key can type
         constexpr wchar_t kFirstPrintable = L' ';
@@ -176,12 +175,12 @@ namespace headsup
         switch (message)
         {
         case WM_MOUSEMOVE: return !m_Overlay->ProcessMouseMove(px, py, modifiers);
-        case WM_LBUTTONDOWN: return Press(kLeftButton, modifiers);
-        case WM_LBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kLeftButton, modifiers);
-        case WM_RBUTTONDOWN: return Press(kRightButton, modifiers);
-        case WM_RBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kRightButton, modifiers);
-        case WM_MBUTTONDOWN: return Press(kMiddleButton, modifiers);
-        case WM_MBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kMiddleButton, modifiers);
+        case WM_LBUTTONDOWN: return Press(kRmlLeftButton, modifiers);
+        case WM_LBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kRmlLeftButton, modifiers);
+        case WM_RBUTTONDOWN: return Press(kRmlRightButton, modifiers);
+        case WM_RBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kRmlRightButton, modifiers);
+        case WM_MBUTTONDOWN: return Press(kRmlMiddleButton, modifiers);
+        case WM_MBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kRmlMiddleButton, modifiers);
         case WM_MOUSEWHEEL: return !m_Overlay->ProcessMouseWheel(WheelNotches(wheelDelta), modifiers);
         default: return false;
         }
