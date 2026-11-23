@@ -96,6 +96,8 @@ namespace headsup
         void Activate(Window& window, Rml::Element* element);
         void ShowTab(Window& window, size_t tab, bool selectContent);
         void Move(Window& window, MenuAction move);
+        // Over the settings window, as one so a sub-window stays over its parent.
+        void PullToFront() const;
 
         std::vector<Window> m_Open; // oldest first
         Rml::Context* m_Context = nullptr;

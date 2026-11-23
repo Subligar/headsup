@@ -2781,3 +2781,22 @@ TEST(the_settings_window_or_a_game_window_comes_to_the_front_as_it_is_clicked_or
     CHECK(onTop());
     CHECK_EQ(window.Said(), "");
 }
+
+TEST(a_sub_window_opened_while_the_settings_window_is_in_front_brings_its_parent_over_it_too)
+{
+    Window window;
+    Rml::ElementDocument* settings = window.Find(kMenuCloseId)->GetOwnerDocument();
+    const MenuLook look{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
+    GameWindows games;
+    games.Update(window.Context(), look, {});
+    CHECK(games.Open({"pack", "Pack", {{"", GameButtonRml("pack-use", "Use")}}, "", "", ""}));
+    settings->PullToFront();
+    CHECK(games.Open({"sure", "Sure?", {{"", GameButtonRml("sure-yes", "Yes")}}, "", "", ""}, "pack"));
+    const auto place = [&](const Rml::ElementDocument* document) {
+        for (int i = 0; i < window.Context()->GetNumDocuments(); ++i)
+            if (window.Context()->GetDocument(i) == document) return i;
+        return -1;
+    };
+    CHECK(place(settings) < place(games.DocumentOf("pack")));
+    CHECK(place(games.DocumentOf("pack")) < place(games.DocumentOf("sure")));
+}

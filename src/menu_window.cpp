@@ -223,8 +223,8 @@ namespace headsup
         for (const Rml::EventId id : kListened)
             document->AddEventListener(id, this);
         document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
-        document->PullToFront();
         m_Open.push_back({spec.id, parent, spec.settingsPage, spec.settingsCard, document, spec.tabs.size()});
+        PullToFront();
         // Measured as it shows its first tab alone.
         ShowTab(m_Open.back(), 0, true);
         const Rml::Vector2f size   = document->GetBox().GetSize(Rml::BoxArea::Border);
@@ -420,6 +420,12 @@ namespace headsup
         Select(window, kept != nullptr ? kept : to, true);
     }
 
+    void GameWindows::PullToFront() const
+    {
+        for (const Window& open : m_Open)
+            open.document->PullToFront();
+    }
+
     void GameWindows::ProcessEvent(Rml::Event& event)
     {
         Rml::Element* target                 = event.GetTargetElement();
@@ -437,9 +443,7 @@ namespace headsup
         // The game's own cancel, over any of them.
         if (event.GetId() == Rml::EventId::Mousedown)
         {
-            // Over the settings window, as one so a sub-window stays over its parent.
-            for (const Window& open : m_Open)
-                open.document->PullToFront();
+            PullToFront();
             if (event.GetParameter<int>("button", 0) == kRightButton) Act(MenuAction::Cancel);
             return;
         }
