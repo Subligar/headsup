@@ -1754,12 +1754,6 @@ namespace headsup
         return widgets;
     }
 
-    bool PillShowsOther(const Settings& s, const PanelGroups& panel, PanelWidget widget)
-    {
-        return std::ranges::any_of(Members(panel, panel.group[SlotOf(widget)]),
-            [&](PanelWidget w) { return w != widget && s.Widget(w).on && AnyPartOn(s.Widget(w).design); });
-    }
-
     bool Shows(const Settings& s, PanelWidget widget)
     {
         return s.Widget(widget).on && (IsFirstCopy(widget) || Placed(s.barSections, widget));

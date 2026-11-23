@@ -1631,7 +1631,6 @@ namespace headsup
                     for (const uint16_t id : pinned[line])
                         AddPart(lines[line], PinnedStatus(state.statuses, id, o.statusDisplay, o.timerFormat, OwnPalette(settings)));
                 if (lines[0].empty()) std::swap(lines[0], lines[1]);
-                base.idle     = lines[0].empty() && PillShowsOther(settings, Panel(settings), widget);
                 base.title    = std::move(lines[0]);
                 base.subtitle = std::move(lines[1]);
                 return base;
@@ -1672,10 +1671,8 @@ namespace headsup
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
             {
-                // With every part off it is an empty box, but in a pill another of its widgets shows; Performance with
-                // no messages waiting takes no room.
-                if (!AnyPartOn(design)) w.idle = PillShowsOther(settings, Panel(settings), widget);
-                else
+                // With every part off it is an empty box; Performance with no messages waiting takes no room.
+                if (AnyPartOn(design))
                 {
                     w.idle  = widget.kind == BarWidget::Performance;
                     w.title = ListOf(Text("-"));

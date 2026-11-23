@@ -1723,21 +1723,24 @@ TEST(the_performance_widget_hides_while_messages_alone_are_on_and_none_wait)
 }
 
 // The card "Allow empty widgets": "If empty, a widget should still be visible in the top panel but its contents
-// should be empty." Linked into a pill another of whose widgets shows, it takes no room (the card "Allow disabling
-// widget text when linked").
-TEST(a_widget_with_every_part_off_shows_empty_unless_its_pill_shows_another_and_one_with_nothing_to_say_shows_a_dash)
+// should be empty." The user, of one linked into a pill: "Always a box."
+TEST(a_widget_with_every_part_off_shows_an_empty_box_in_a_pill_too_and_one_with_nothing_to_say_shows_a_dash)
 {
     Settings settings;
     settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "-name -region -nation |");
     BarState state;
     const WidgetContent empty = Content(BarWidget::Zone, state, settings);
     CHECK(TakesRoom(empty, BarWidget::Zone, std::nullopt) && empty.title.empty() && empty.subtitle.empty());
-    const PanelWidget pill{BarWidget::EarthTime};
-    settings.Widget(BarWidget::Zone).combine = pill;
-    CHECK(!TakesRoom(Content(BarWidget::Zone, state, settings), pill, std::nullopt));
-    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), pill, pill)); // while its settings show
-    settings.Widget(BarWidget::EarthTime).on = false;
-    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), pill, std::nullopt));
+    const PanelWidget clock{BarWidget::EarthTime};
+    settings.Widget(BarWidget::Zone).combine = clock;
+    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), clock, std::nullopt));
+    // Linked into Performance with Messages alone on and none waiting, it is the pill's one box.
+    const PanelWidget performance{BarWidget::Performance};
+    settings.Widget(BarWidget::Zone).combine = performance;
+    settings.Widget(performance).design      = DesignFrom(BarWidget::Performance, "messages |");
+    state.connection                         = SteadyLink();
+    CHECK(!TakesRoom(Content(performance, state, settings), performance, std::nullopt));
+    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), performance, std::nullopt));
     settings.Widget(BarWidget::Bags).design = DesignFrom(BarWidget::Bags, "count1 |");
     CHECK(Joined(Content(BarWidget::Bags, state, settings).title) == "-");
     CHECK(TakesRoom(Content(BarWidget::Bags, state, settings), BarWidget::Bags, std::nullopt));
@@ -2071,6 +2074,9 @@ TEST(the_status_timers_widget_shows_each_pinned_status_where_its_design_puts_it)
     settings.statusPins.clear();
     w = Content(BarWidget::StatusTimers, state, settings);
     CHECK(w.title.empty() && w.subtitle.empty() && TakesRoom(w, BarWidget::StatusTimers, std::nullopt));
+    // In a pill too.
+    settings.Widget(BarWidget::StatusTimers).combine = PanelWidget{BarWidget::EarthTime};
+    CHECK(TakesRoom(Content(BarWidget::StatusTimers, state, settings), BarWidget::EarthTime, std::nullopt));
 }
 
 TEST(a_created_widget_borrows_the_pinned_statuses_by_the_order_they_were_pinned)
