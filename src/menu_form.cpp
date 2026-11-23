@@ -3086,6 +3086,7 @@ namespace headsup
                     const LayoutOption& named = widgets[static_cast<size_t>(widget)];
                     bool shown = AnyCopyShown(c.s, widget);
                     const bool was = shown;
+                    if (std::string sends = SendsFor(c, widget); !sends.empty()) c.form.SendsPackets(std::move(sends));
                     c.form.Switch(Labeled(named.name, "setup-widget-" + std::to_string(static_cast<int>(widget))).c_str(), shown, named.tip);
                     if (shown == was) continue;
                     SetWidgetShown(c.s, widget, shown);

@@ -2218,6 +2218,21 @@ TEST(a_setup_step_shows_its_presets_parts_only_under_advanced)
     CHECK(AnyCopyShown(window.settings, BarWidget::Party));
 }
 
+// Setup's switches for the widgets that make HeadsUp ask the server for something warn of it, as their chips do.
+TEST(setups_widget_switches_warn_of_the_packets_their_widgets_send)
+{
+    SetupWindow window(false);
+    window.Click("setup-buttons-start");
+    window.Click("nav-setup-top-panel");
+    window.Click("setup-top-panel-advanced");
+    const auto label = [](BarWidget w) { return "setup-top-panel-setup-widget-" + std::to_string(static_cast<int>(w)) + "-label"; };
+    for (const BarWidget w : {BarWidget::Zone, BarWidget::World, BarWidget::Currency})
+        CHECK(!FirstOfClass(window, label(w), kSendsPacketsClass)->GetAttribute<Rml::String>(kMenuTipAttribute, "").empty());
+    Rml::ElementList marks;
+    window.Find(label(BarWidget::Party))->GetElementsByClassName(marks, kSendsPacketsClass);
+    CHECK(marks.empty());
+}
+
 TEST(skipping_setup_puts_back_its_defaults_closes_the_window_and_counts_it_done)
 {
     SetupWindow window(false);
