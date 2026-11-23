@@ -107,8 +107,10 @@ namespace headsup
             const uint32_t points = Rise(LimitTotal(before), LimitTotal(after));
             return (points < kLimitPointsPerMerit ? points : 0) + Rise(before.exp, after.exp);
         }
-        if (after.mainLevel == before.mainLevel) return Rise(before.exp, after.exp);
-        if (after.mainLevel == before.mainLevel + 1 && before.expNeeded >= before.exp)
+        // The level is 0x01B's and can come a server tick before 0x061's EXP, so a level-up is told by the EXP needed,
+        // which rises with every level.
+        if (after.expNeeded == before.expNeeded) return Rise(before.exp, after.exp);
+        if (after.expNeeded > before.expNeeded && after.mainLevel <= before.mainLevel + 1 && before.expNeeded >= before.exp)
             return before.expNeeded - before.exp + after.exp;
         return 0;
     }

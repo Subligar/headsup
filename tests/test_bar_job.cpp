@@ -66,6 +66,19 @@ TEST(nothing_counts_for_a_death_a_job_change_or_a_level_lost_or_synced)
     CHECK_EQ(Gained(Sample(30, 1000, 7600), Sample(32, 100, 8400)), 0u); // a sync lifted, not EXP
 }
 
+// The level comes from 0x01B and the EXP from 0x061, which the server sends last on a level-up or a level lost, at
+// times a tick later. Levels 30, 31, 74 and 75 need 5,700, 5,800, 40,000 and 42,000 EXP (Phoenix's exp_base).
+TEST(a_level_that_arrives_before_its_exp_counts_only_the_exp_earned)
+{
+    CHECK_EQ(Gained(Sample(30, 5600, 5700), Sample(31, 5600, 5700)) + Gained(Sample(31, 5600, 5700), Sample(31, 100, 5800)),
+        200u);
+    CHECK_EQ(Gained(Sample(74, 39900, 40000), Sample(75, 39900, 40000)) +
+                 Gained(Sample(75, 39900, 40000), Sample(75, 100, 42000)),
+        0u); // limit points take over at the cap, so the 200 is not seen
+    CHECK_EQ(Gained(Sample(31, 100, 5800), Sample(30, 100, 5800)) + Gained(Sample(30, 100, 5800), Sample(30, 5300, 5700)),
+        0u); // a death that takes a level
+}
+
 TEST(at_the_cap_limit_points_count_and_a_merit_is_ten_thousand_of_them)
 {
     CHECK_EQ(Gained(AtCap(3, 9800), AtCap(4, 200)), 400u);
@@ -139,8 +152,7 @@ TEST(a_merit_arriving_after_its_limit_points_wrapped_is_not_a_gain)
 
 TEST(reaching_the_cap_counts_the_last_levels_exp)
 {
-    JobSample cap = Sample(kLevelCap, 100, 0);
-    CHECK_EQ(Gained(Sample(74, 5000, 7600), cap), 2700u);
+    CHECK_EQ(Gained(Sample(74, 37400, 40000), Sample(kLevelCap, 100, 42000)), 2700u);
 }
 
 TEST(the_cap_counts_limit_points_with_limit_mode_off)
