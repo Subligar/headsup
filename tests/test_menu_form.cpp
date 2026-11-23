@@ -2537,7 +2537,8 @@ TEST(each_widget_that_makes_headsup_send_packets_warns_of_it_on_its_chip)
     for (const BarWidget kind : {BarWidget::Zone, BarWidget::World, BarWidget::Currency})
         CHECK(WarnsOfPackets(layout, chip(kind), "class=\"wname\""));
     CHECK(!WarnsOfPackets(layout, chip(BarWidget::Bags), "class=\"wname\""));
-    // World Info also fetches the guilds' turn-ins from Phoenix's website; the Zone widget does not.
+    // World Info asks for the standings on its own, Zone widget or not, and also fetches the guilds' turn-ins from
+    // Phoenix's website; the Zone widget does neither of World Info's.
     const auto chipSays = [&](BarWidget kind, WindowWord word)
     {
         const size_t at = At(layout, chip(kind)), name = layout->rml.find("class=\"wname\"", at);
@@ -2545,6 +2546,7 @@ TEST(each_widget_that_makes_headsup_send_packets_warns_of_it_on_its_chip)
                std::string::npos;
     };
     CHECK(chipSays(BarWidget::World, WindowWord::SendsTurnIns));
-    CHECK(chipSays(BarWidget::World, WindowWord::SendsConquest));
-    CHECK(!chipSays(BarWidget::Zone, WindowWord::SendsTurnIns));
+    CHECK(chipSays(BarWidget::World, WindowWord::SendsWorldConquest) && !chipSays(BarWidget::World, WindowWord::SendsConquest));
+    CHECK(chipSays(BarWidget::Zone, WindowWord::SendsConquest));
+    CHECK(!chipSays(BarWidget::Zone, WindowWord::SendsTurnIns) && !chipSays(BarWidget::Zone, WindowWord::SendsWorldConquest));
 }

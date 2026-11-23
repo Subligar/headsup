@@ -1476,7 +1476,7 @@ namespace headsup
             switch (kind)
             {
             case BarWidget::Zone: return Sends(c, WindowWord::SendsConquest);
-            case BarWidget::World: return Sends(c, WindowWord::SendsConquest) + " " + Words(WordTip(c, WindowWord::SendsTurnIns));
+            case BarWidget::World: return Sends(c, WindowWord::SendsWorldConquest) + " " + Words(WordTip(c, WindowWord::SendsTurnIns));
             case BarWidget::Currency: return Sends(c, WindowWord::SendsCurrencies);
             default: return {};
             }
