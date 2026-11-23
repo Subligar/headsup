@@ -4,6 +4,7 @@
 #include "zones.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 
 namespace headsup
@@ -29,8 +30,13 @@ namespace headsup
 
         std::string Percent(uint8_t percent) { return std::to_string(percent) + "%"; }
 
-        // As the server works it out: floored, but at least 1 while above 0.
-        uint32_t PercentOf(uint32_t now, uint32_t max) { return now == 0 ? 0 : std::max(1u, now * kFullPercent / max); }
+        // As the server works it out, in floats: floored, but at least 1 while above 0. 530 of 1000 is 52 in floats.
+        uint32_t PercentOf(uint32_t now, uint32_t max)
+        {
+            if (now == 0) return 0;
+            const float percent = static_cast<float>(now) / static_cast<float>(max) * static_cast<float>(kFullPercent);
+            return std::max(1u, static_cast<uint32_t>(std::floor(percent)));
+        }
 
         // "1,200/1,500", or the figure alone while its max is not known.
         std::string OutOf(uint32_t now, uint32_t max) { return max == 0 ? Grouped(now) : Grouped(now) + "/" + Grouped(max); }

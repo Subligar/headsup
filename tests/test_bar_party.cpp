@@ -23,8 +23,8 @@ TEST(a_member_uses_mp_from_the_main_job_or_a_leveled_subjob)
     CHECK(UsesMp(blm));
 }
 
-// The server sends a member's HP and MP with their percent, floor(100 * now / max) but at least 1 while above 0, and
-// never their max.
+// The server sends a member's HP and MP with their percent, floor(100 * now / max) in floats but at least 1 while above
+// 0, and never their max.
 TEST(a_members_max_is_their_figure_at_full_and_otherwise_kept_while_it_still_fits_the_percent)
 {
     CHECK_EQ(PoolMax(1500, 100, 0), 1500u);
@@ -32,6 +32,7 @@ TEST(a_members_max_is_their_figure_at_full_and_otherwise_kept_while_it_still_fit
     CHECK_EQ(PoolMax(750, 50, 1500), 1500u);
     CHECK_EQ(PoolMax(749, 49, 1500), 1500u);
     CHECK_EQ(PoolMax(5, 1, 1500), 1500u);      // floor(0.33) is 0, raised to 1
+    CHECK_EQ(PoolMax(530, 52, 1000), 1000u);   // 530 / 1000 is 0.53 in a float, and that times 100 is 52.999996
     CHECK_EQ(PoolMax(0, 0, 1500), 1500u);      // dead
     // Not seen at full, or the kept max no longer fits: the largest max the percent allows.
     CHECK_EQ(PoolMax(750, 50, 0), 1500u);
