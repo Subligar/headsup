@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace headsup
 {
@@ -213,6 +214,15 @@ namespace headsup
         const InvitePlace place = settings.partyNoticePlace;
         const bool first        = place == InvitePlace::Auto || (place == InvitePlace::Top) == (settings.noticeEdge == NoticeEdge::Top);
         std::ranges::stable_partition(shown, [&](const ShownNotice& notice) { return IsInvite(notice.kind) == first; });
+    }
+
+    std::vector<ShownNotice> NoticesToShow(std::vector<ShownNotice> shown, const Settings& settings, bool page)
+    {
+        if (page)
+            for (ShownNotice& sample : NoticeSamples(settings, settings.noticeMost - static_cast<int>(shown.size())))
+                shown.push_back(std::move(sample));
+        PlaceInvites(shown, settings);
+        return shown;
     }
 
     std::optional<NoticeKind> TestKind(uint32_t seed, const Settings& settings)

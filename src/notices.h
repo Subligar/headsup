@@ -135,6 +135,9 @@ namespace headsup
     std::vector<ShownNotice> NoticeSamples(const Settings& settings, int room);
     // Invite Position: the invites moved to the start of the stack's order or its end, the rest kept in theirs.
     void PlaceInvites(std::vector<ShownNotice>& shown, const Settings& settings);
+    // The frame's notices: the stack's shown, then on the Notifications page (page) the samples in the room Max
+    // Notifications leaves, the invites among them all put by Invite Position.
+    std::vector<ShownNotice> NoticesToShow(std::vector<ShownNotice> shown, const Settings& settings, bool page);
     // The Notifications card's Test: of the kinds that are on, in the enum's order, the one at the seed's remainder
     // by their count; nothing when none is.
     std::optional<NoticeKind> TestKind(uint32_t seed, const Settings& settings);

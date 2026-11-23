@@ -221,6 +221,22 @@ TEST(the_samples_are_a_test_notice_of_each_kind_that_is_on)
     CHECK(samples.size() == 1 && samples[0].kind == NoticeKind::Online); // something to see and drag
 }
 
+TEST(the_page_s_sample_invite_goes_where_invite_position_puts_it)
+{
+    Settings s;
+    s.partyNoticePlace = InvitePlace::Top;
+    s.noticeEdge       = NoticeEdge::Top;
+    NoticeStack stack;
+    stack.Add(NoticeKind::Online, "Friend");
+    const std::vector<ShownNotice> real = stack.Shown(0.0f, false, 8.0f, kFade, kMaxNoticeMost, true);
+    CHECK((Names(NoticesToShow(real, s, true)) ==
+           std::vector<std::string>{kInviteSampleName, "Friend", kFriendSampleName, kFriendSampleName}));
+    // The samples get the room the real ones leave.
+    s.noticeMost = 2;
+    CHECK((Names(NoticesToShow(real, s, true)) == std::vector<std::string>{"Friend", kFriendSampleName}));
+    CHECK((Names(NoticesToShow(real, s, false)) == std::vector<std::string>{"Friend"}));
+}
+
 TEST(notices_stack_ten_pixels_apart_down_from_the_anchor_or_up_from_it)
 {
     const float heights[] = {50.0f, 50.0f, 60.0f};
