@@ -1212,6 +1212,8 @@ public:
                 Print("could not hide or move the game's windows: " + failure + ".");
             if (const std::string failure = m_WindowHook.TakeMoveProblem(); !failure.empty())
                 Note("the game's windows stay under the help bar: " + failure + ".");
+            if (const std::string failure = m_WindowHook.TakeCompassProblem(); !failure.empty())
+                Note("the Compass row cannot hide the compass: " + failure + ".");
         }
         m_WindowHook.Hide(hidden);
         m_WindowHook.HideFishBar(fishBarHidden);

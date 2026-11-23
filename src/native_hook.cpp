@@ -1003,6 +1003,7 @@ namespace headsup
         if (const std::string failure = PutIn({&call, 1}); !failure.empty()) return failure;
         m_Call = call;
         if (const std::optional<uint32_t> at = LocateCompassShown(text)) g_CompassShown = base + *at;
+        else m_CompassProblem = "the game's compass routine was not found";
         // Without the move the windows stay where the game puts them; hiding works either way.
         const WindowMoveSite move = LocateWindowMove(text);
         g_WindowMoveTo            = move.problem == LocateProblem::None ? Address(base) + move.moveTo : 0;

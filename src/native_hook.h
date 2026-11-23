@@ -254,6 +254,8 @@ namespace headsup
 #endif
         // Why windows cannot be moved, once, after a Start that could not find the game's move.
         std::string TakeMoveProblem() { return std::exchange(m_MoveProblem, std::string()); }
+        // Why the Compass row cannot hide the compass, once, after a Start that could not find its routine.
+        std::string TakeCompassProblem() { return std::exchange(m_CompassProblem, std::string()); }
 
     private:
         CodePatch m_Call;
@@ -262,7 +264,7 @@ namespace headsup
         CodePatch m_MoveStart; // MCD::MoveTo's start, so a window the game moves goes where HeadsUp would put it
         CodePatch m_BuildCall; // the catalog's window build, so where a new window goes is known before it draws
         CodePatch m_Compass;   // the compass routine's answer while the Compass row hides it
-        std::string m_MoveProblem;
+        std::string m_MoveProblem, m_CompassProblem;
         void PutCompassBack();
     };
 

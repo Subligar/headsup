@@ -1651,7 +1651,7 @@ TEST(a_widgets_icon_stands_on_the_middle_of_its_lone_lines_figures_as_a_clock_ti
 // 0.2 em padding over a font's own line (Segoe UI's is 1.33 em) pushed its descenders past the bottom.
 TEST(a_text_box_holds_its_fonts_descenders_in_every_bundled_window_font)
 {
-    for (const char* font : {kBarlowCondensed, kMarcellusSC, "Cinzel", "Cormorant SC", "Atkinson Hyperlegible", "Atkinson Hyperlegible Next"})
+    for (const char* font : {kBarlowCondensed, kMarcellusSC, kCinzel, kCormorantSC, kAtkinsonHyperlegible, kAtkinsonHyperlegibleNext})
         for (const int pixels : {12, 16, 18, 24})
         {
             test::RmlSession rml;
