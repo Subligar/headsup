@@ -1,6 +1,6 @@
 -- Write data/phoenix_spell_durations.tsv: how long each spell's status lasts on Phoenix, from the map server's own
--- duration functions with Phoenix's module overrides applied, for a caster with no gear, merits, job abilities or
--- skill. A random duration is taken at its longest. Only spells whose script calls the shared enfeebling, enhancing,
+-- duration functions with Phoenix's module overrides applied, for a caster at the skill cap with no gear, merits or
+-- job abilities. A random duration is taken at its longest. Only spells whose script calls the shared enfeebling, enhancing,
 -- song or ninjutsu routine are written; the rest have their own code.
 --
 -- Usage: luajit durations.lua SERVER_DIR LIVE_SETTINGS OUT_DIR (LuaJIT, as the server: the overrides need setfenv)
@@ -40,12 +40,33 @@ require('modules/module_utils')
 math.randomInt = function(low, high) return high end
 math.randomFloat = function(low, high) return high end
 
--- Anyone at all: every number 0, every question no, and a level no spell is above.
+-- Each skill's cap: the most any job has at the level cap, from the server's skill ranks and caps.
+local skillCaps = {}
+do
+    local section, ranks, caps = nil, {}, {}
+    for line in io.lines(server .. '/data/skills.yaml') do
+        section = line:match('^  (%a+):%s*$') or section
+        local key, body = line:match('^    ([%w_]+):%s*{(.*)}')
+        if key and section == 'ranks' then ranks[key] = body end
+        if key and section == 'caps' then caps[tonumber(key)] = body end
+    end
+    local cap = caps[xi.settings.main.MAX_LEVEL] or error('skills.yaml has no caps at the level cap')
+    for name, skill in pairs(xi.skill) do
+        local most = 0
+        for rank in (ranks[name:lower()] or ''):gmatch('%a+:%s*([%w_]+)') do
+            most = math.max(most, tonumber(cap:match('%f[%w_]' .. rank .. ':%s*(%d+)')))
+        end
+        skillCaps[skill] = most
+    end
+end
+
+-- Anyone at all: every number 0 but skills at their cap, every question no, and a level no spell is above.
 local kLevel = 99
 local function nobody(id)
     return setmetatable({}, { __index = function(_, method)
         if method == 'getID' then return function() return id end end
         if method == 'getMainLvl' then return function() return kLevel end end
+        if method == 'getSkillLevel' then return function(_, skill) return skillCaps[skill] or 0 end end
         if method:match('^has') or method:match('^is') then return function() return false end end
         if method == 'getStatusEffect' then return function() return nil end end
         return function() return 0 end

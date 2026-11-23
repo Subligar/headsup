@@ -212,3 +212,28 @@ TEST(a_status_with_no_name_is_not_tracked)
     track.Apply({kCrab, 999, true}, 0.0);
     CHECK_EQ(track.Statuses(kCrab, 0.0).count, 0);
 }
+
+TEST(a_bar_spell_lasts_its_time_at_the_skill_cap_unless_it_wears_off_first)
+{
+    // Phoenix's Barfire lasts 150 + (enhancing skill - 180) x 0.8: 210 at a Red Mage's cap of 256 (B+ at level 75).
+    constexpr uint32_t kAlly = 65002, kBarfireSpell = 60, kGainsEffect = 230;
+    constexpr uint16_t kBarfire = 100, kBarfireSeconds = 210;
+    ActionPacket p;
+    p.Head(kYou, 1, 4, kBarfireSpell).Target(kAlly, 1).Result(kBarfire, kGainsEffect);
+    const std::vector<StatusChange> changes = Action(p)->changes;
+    CHECK_EQ(changes.size(), 1u);
+    StatusTrack track;
+    track.Apply(changes[0], 0.0);
+    CHECK_EQ(track.Statuses(kAlly, kBarfireSeconds - 1.0).count, 1);
+    CHECK_EQ(track.Statuses(kAlly, kBarfireSeconds).count, 0);
+
+    track.Apply(changes[0], 0.0);
+    std::vector<uint8_t> wornOff = kShellWearsOff; // as the server sends you, its caster, the ally's Barfire ending
+    for (int i = 0; i < 4; ++i)
+    {
+        wornOff[0x08 + i] = static_cast<uint8_t>(kAlly >> 8 * i);
+        wornOff[0x0C + i] = static_cast<uint8_t>(kBarfire >> 8 * i);
+    }
+    track.Apply(*Message(wornOff), 10.0);
+    CHECK_EQ(track.Statuses(kAlly, 10.0).count, 0);
+}
