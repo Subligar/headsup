@@ -1984,6 +1984,42 @@ TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
     CHECK_EQ(window.Said(), "");
 }
 
+namespace
+{
+    // The first element of this class inside the control, scrolled into view.
+    Rml::Element* FirstOfClass(Window& window, const std::string& id, const char* className)
+    {
+        window.Center(id);
+        Rml::ElementList found;
+        window.Find(id)->GetElementsByClassName(found, className);
+        if (found.empty()) throw test::Failure{id + " holds no " + className};
+        return found[0];
+    }
+}
+
+// The warning on a chip shows its own tip under the pointer, not the chip's, and the chip still drags from it.
+TEST(the_sends_packets_mark_on_a_widgets_chip_shows_its_tip_and_drags_the_chip)
+{
+    Window window;
+    window.Page("toppanel");
+    const std::vector<PanelWidget> left = window.settings.barSections[static_cast<int>(BarSection::Left)];
+    CHECK(left[0] == PanelWidget{BarWidget::Zone});
+    const std::string zone = "toppanel-layout-chip-" + std::to_string(SlotOf(left[0]));
+    const std::string next = "toppanel-layout-chip-" + std::to_string(SlotOf(left[1]));
+    window.Center(next);
+    Rml::Element* sends    = FirstOfClass(window, zone, kSendsPacketsClass);
+    const Rml::Vector2f mark = sends->GetAbsoluteOffset(Rml::BoxArea::Border) + sends->GetBox().GetSize(Rml::BoxArea::Border) / 2.0f;
+    window.PointerTo(mark);
+    CHECK(window.Shows(kMenuTipId));
+    CHECK_EQ(window.TextOf(kMenuTipId), EscapedRml(sends->GetAttribute<Rml::String>(kMenuTipAttribute, "")));
+    // Dropped on the bottom half of the widget after it, it goes below that one.
+    Rml::Element* after       = window.Find(next);
+    const Rml::Vector2f size  = after->GetBox().GetSize(Rml::BoxArea::Border);
+    const Rml::Vector2f below = after->GetAbsoluteOffset(Rml::BoxArea::Border) + Rml::Vector2f(size.x / 2.0f, size.y * 0.75f);
+    CHECK(window.DragFrom(mark, below - mark));
+    CHECK(window.settings.barSections[static_cast<int>(BarSection::Left)][1] == PanelWidget{BarWidget::Zone});
+}
+
 TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_second_click_takes_them_away)
 {
     Window window;

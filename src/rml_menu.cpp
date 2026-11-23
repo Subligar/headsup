@@ -515,6 +515,15 @@ namespace headsup
     void RmlMenu::ShowTip(Rml::Element* under, float x, float y)
     {
         Rml::ElementDocument* document = under != nullptr ? under->GetOwnerDocument() : nullptr;
+        // A tray chip's lines take no pointer, so the chip gets every press: pointer-events on its SENDS PACKETS mark lost
+        // the chip's click on a press at the mark's edge. The mark's tip is found by where the pointer is instead.
+        if (under != nullptr && under->IsClassSet(kTrayChipClass))
+        {
+            Rml::ElementList marks;
+            under->GetElementsByClassName(marks, kSendsPacketsClass);
+            for (Rml::Element* mark : marks)
+                if (mark->IsPointWithinElement(Rml::Vector2f(x, y))) under = mark;
+        }
         while (under != nullptr && !under->HasAttribute(kMenuTipAttribute))
             under = under->GetParentNode();
         const std::string text = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipAttribute, "") : std::string();
