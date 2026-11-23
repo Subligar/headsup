@@ -303,6 +303,29 @@ TEST(a_release_is_kept_from_the_game_only_when_its_press_was)
     CHECK(!taken.Keep(Hat(0), false));
 }
 
+TEST(a_key_let_go_while_its_release_went_elsewhere_is_forgotten_and_takes_nothing_with_no_window_open)
+{
+    InputTaken taken;
+    CHECK(taken.Keep(Key(0x1B), true));
+    CHECK(!taken.HoldsKeys([](uint32_t) { return false; }));
+    CHECK(!taken.Keep(Key(0x1B), false));
+}
+
+TEST(the_keyboard_stays_held_from_the_game_while_a_key_kept_from_it_is_down)
+{
+    InputTaken taken;
+    const auto allDown = [](uint32_t) { return true; };
+    // Escape closed the last window as it went down: the game would read it held.
+    CHECK(taken.Keep(Key(0x1B), true));
+    CHECK(taken.HoldsKeys(allDown));
+    CHECK(taken.Keep(Key(0x1B, false), false));
+    CHECK(!taken.HoldsKeys(allDown));
+    // A key the game saw go down, or a pad's button, holds nothing.
+    CHECK(!taken.Keep(Key(0x0D), false));
+    CHECK(taken.Keep(Pad(12, 1), true));
+    CHECK(!taken.HoldsKeys(allDown));
+}
+
 TEST(only_what_the_windows_use_is_kept)
 {
     InputTaken taken;

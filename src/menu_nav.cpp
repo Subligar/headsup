@@ -1,5 +1,6 @@
 #include "menu_nav.h"
 
+#include <algorithm>
 #include <array>
 #include <charconv>
 #include <cmath>
@@ -235,6 +236,13 @@ namespace headsup
         if (at != m_Down.end()) return at->second;
         m_Down.emplace(key, open);
         return open;
+    }
+
+    bool InputTaken::HoldsKeys(const std::function<bool(uint32_t)>& keyDown)
+    {
+        const auto key = [](const auto& down) { return down.first.first == InputSource::Keyboard; };
+        std::erase_if(m_Down, [&](const auto& down) { return key(down) && !keyDown(down.first.second); });
+        return std::any_of(m_Down.begin(), m_Down.end(), [&](const auto& down) { return key(down) && down.second; });
     }
 
     MenuAction MenuInput::Change(Hold& hold, MenuAction move, double now)

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <optional>
 #include <span>
@@ -87,6 +88,9 @@ namespace headsup
     public:
         explicit InputTaken(const PadBindings& pad = {}) : m_Pad(pad) {}
         bool Keep(const MenuEvent& event, bool open);
+        // Forgets the keys let go whose release never came here, by whether each is down now (keyDown, by its virtual
+        // key); true while a key whose press was kept is still down, as the game reads the keyboard past the callback.
+        bool HoldsKeys(const std::function<bool(uint32_t)>& keyDown);
 
     private:
         PadBindings m_Pad;

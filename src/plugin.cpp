@@ -331,6 +331,12 @@ namespace
             if (open) events.push_back(event);
             return taken.Keep(event, open);
         }
+
+        bool HoldsKeys()
+        {
+            const std::lock_guard hold(lock);
+            return taken.HoldsKeys([](uint32_t key) { return KeyDown(static_cast<uint8_t>(key)); });
+        }
     };
     MenuInbox g_MenuInbox;
 
@@ -1281,7 +1287,8 @@ public:
         if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
         UpdatePointer();
         LockCursor(m_Settings.enabled && m_Settings.lockCursor);
-        HoldGameKeys(m_Rml.HoldsKeys() || m_GameWindows.AnyOpen());
+        // The inbox first: it forgets the keys let go unseen each frame, with a window open or not.
+        HoldGameKeys(g_MenuInbox.HoldsKeys() || m_Rml.HoldsKeys() || m_GameWindows.AnyOpen());
         m_NameHook.NewFrame(NameOwners());
         DrawPanel();
     }
