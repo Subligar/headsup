@@ -302,7 +302,9 @@ namespace headsup
         // actor and are not compared: xirml puts its jump over them.
         constexpr uint8_t kEntityWrapperPass[] = {0x8B, 0x44, 0x24, 0x14, 0x8B, 0x4C, 0x24, 0x10, 0x8B, 0x54, 0x24, 0x0C,
             0x50, 0x8B, 0x44, 0x24, 0x0C, 0x51, 0x8B, 0x4C, 0x24, 0x0C, 0x52, 0x50, 0x51};
-        constexpr uint32_t kEntityWrapperPassAt = 0x0A;
+        // The name method's pushes, mov ecx,esi and its call into the wrapper. Found by these bytes, as Signet points the
+        // call at its own gate before HeadsUp starts.
+        constexpr uint8_t kEntityNameCallLead[] = {0x50, 0x8D, 0x54, 0x24, 0x1C, 0x51, 0x52, 0x8B, 0xCE, kCallOpcode};
 
         bool Matches(const ImageSection& section, uint32_t offset, const uint8_t* bytes, uint32_t count)
         {
@@ -393,6 +395,7 @@ namespace headsup
         case LocateProblem::NoEntityCaller: return "the call that draws entities' names was not found";
         case LocateProblem::EntityWrapperChanged: return "the call that draws entities' names is not laid out as HeadsUp expects";
         case LocateProblem::NoEntityWrapperCalls: return "nothing was found to call the game's entity name draw";
+        case LocateProblem::AmbiguousEntityWrapperCalls: return "the call to the game's entity name draw was found more than once";
         case LocateProblem::NoModelDraws: return "the calls that draw characters' models were not found";
         case LocateProblem::ModelDrawsDiffer: return "the calls that draw characters' models go to different routines";
         case LocateProblem::NoArrowDraws: return "the target window's arrow draws were not found";
@@ -505,10 +508,14 @@ namespace headsup
             result.problem = LocateProblem::EntityWrapperChanged;
             return result;
         }
-        result.wrapper = pass - kEntityWrapperPassAt;
-        for (const uint32_t returnRva : ReturnsFromCallsTo(result.wrapper, text))
-            result.wrapperCalls.push_back(returnRva - kBranchLength);
-        if (result.wrapperCalls.empty()) result.problem = LocateProblem::NoEntityWrapperCalls;
+        const std::vector<uint32_t> calls = CallsAfter(kEntityNameCallLead, sizeof(kEntityNameCallLead), text);
+        if (calls.size() != 1)
+        {
+            result.problem = calls.empty() ? LocateProblem::NoEntityWrapperCalls : LocateProblem::AmbiguousEntityWrapperCalls;
+            return result;
+        }
+        result.wrapperCall = calls.front();
+        result.entityDraw  = CallTarget(result.wrapperCall, text);
         return result;
     }
 
