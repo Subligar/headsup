@@ -115,7 +115,7 @@ namespace headsup
         const char* Word(const Context& c, WindowWord word) { return c.layout.WordOf(word).name; }
         const char* WordTip(const Context& c, WindowWord word) { return c.layout.WordOf(word).tip; }
         // A warning that HeadsUp sends the server packets, and what for.
-        std::string Sends(const Context& c, WindowWord what) { return Words(Word(c, WindowWord::SendsPackets)) + ": " + Words(WordTip(c, what)); }
+        std::string Sends(const Context& c, WindowWord what) { return Words(WordTip(c, what)); }
         std::string_view FileName(std::string_view path) { return path.substr(path.find_last_of("\\/") + 1); }
 
         // A cutoff as its dropdown shows it: the rank, which no chance stands for without a mob, or Off past the end.
@@ -1539,7 +1539,7 @@ namespace headsup
                     if (!IsFirstCopy(held[i]) && action(kChipRemove, Icon::Delete, WindowWord::WidgetTabsRemoveCopy)) remove = held[i];
                     const std::string sends = SendsFor(c, held[i].kind);
                     form.Raw("</div><div class=\"wname\">" + EscapedRml(CopyName(c, held[i])) +
-                             (sends.empty() ? std::string() : SendsPacketsMark(sends)) + "</div></div>");
+                             (sends.empty() ? std::string() : SendsPacketsMark(Words(Word(c, WindowWord::SendsPackets)), sends)) + "</div></div>");
                     form.Set(id, FormValueKind::Class, kOffClass, {}, form.Off());
                     if (!form.Off() && was && s.widgets[w].on && held[i].kind != BarWidget::Settings && form.Clicked(id))
                         c.state.settingsAsked = held[i];

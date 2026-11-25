@@ -34,7 +34,7 @@ namespace headsup
     std::string TipAttribute(std::string_view tip);
     std::string TipAttribute(const char* tip);
     // The warning mark after a label, its tip what HeadsUp sends the server for it.
-    std::string SendsPacketsMark(std::string_view tip);
+    std::string SendsPacketsMark(std::string_view title, std::string_view tip);
 
     // Something the player did to a control since the last pass, by the control's id.
     struct FormEvent

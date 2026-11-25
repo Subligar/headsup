@@ -2011,7 +2011,14 @@ TEST(the_sends_packets_mark_on_a_widgets_chip_shows_its_tip_and_drags_the_chip)
     const Rml::Vector2f mark = sends->GetAbsoluteOffset(Rml::BoxArea::Border) + sends->GetBox().GetSize(Rml::BoxArea::Border) / 2.0f;
     window.PointerTo(mark);
     CHECK(window.Shows(kMenuTipId));
-    CHECK_EQ(window.TextOf(kMenuTipId), EscapedRml(sends->GetAttribute<Rml::String>(kMenuTipAttribute, "")));
+    // Its title at the top, after a mark of its own, then what it sends.
+    Rml::Element* title = window.Find(kMenuTipId)->GetFirstChild();
+    const std::string titled = sends->GetAttribute<Rml::String>(kMenuTipTitleAttribute, "");
+    CHECK(!titled.empty() && title != nullptr && title->IsClassSet(kTipTitleClass));
+    CHECK(title->GetFirstChild() != nullptr && title->GetFirstChild()->IsClassSet(kSendsPacketsClass));
+    CHECK(title->GetInnerRML().ends_with(EscapedRml(titled)));
+    CHECK(window.TextOf(kMenuTipId).ends_with(EscapedRml(sends->GetAttribute<Rml::String>(kMenuTipAttribute, ""))));
+    CHECK(!sends->GetAttribute<Rml::String>(kMenuTipAttribute, "").starts_with(titled));
     // Dropped on the bottom half of the widget after it, it goes below that one.
     Rml::Element* after       = window.Find(next);
     const Rml::Vector2f size  = after->GetBox().GetSize(Rml::BoxArea::Border);

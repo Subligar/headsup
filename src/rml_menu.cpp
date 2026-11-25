@@ -526,15 +526,17 @@ namespace headsup
         }
         while (under != nullptr && !under->HasAttribute(kMenuTipAttribute))
             under = under->GetParentNode();
-        const std::string text = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipAttribute, "") : std::string();
+        const std::string text  = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipAttribute, "") : std::string();
+        const std::string title = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipTitleAttribute, "") : std::string();
         Rml::Element* tip = document == m_View ? m_ViewTip : m_Tip;
         m_Tip->SetClass(kHiddenClass, text.empty() || tip != m_Tip);
         m_ViewTip->SetClass(kHiddenClass, text.empty() || tip != m_ViewTip);
         if (text.empty()) return;
-        if (text != m_TipShown || tip != m_TipIn)
+        if (title + text != m_TipShown || tip != m_TipIn)
         {
-            tip->SetInnerRML(EscapedRml(text));
-            m_TipShown = text;
+            tip->SetInnerRML((title.empty() ? std::string() : std::string("<div class=\"") + kTipTitleClass + "\"><span class=\"" +
+                                 kSendsPacketsClass + "\">!</span>" + EscapedRml(title) + "</div>") + EscapedRml(text));
+            m_TipShown = title + text;
             m_TipIn    = tip;
         }
         // From the pointer toward the document's middle: there it has room whichever edge the pointer is near, and it
