@@ -447,7 +447,6 @@ class HeadsUp final : public IPlugin
     headsup::SoundWaits m_NoticeWaits;
     headsup::WaveOut m_NoticeSound; // its own, so a notice cuts off no Case's click
     double m_NoticesAt   = 0.0; // the last frame the notices were drawn, for their slide
-    headsup::NoticeKind m_NextTest = headsup::NoticeKind::Online; // what the next Test press acts out
     bool m_NoticeHeld = false; // the pointer was over a notification at the last frame, which holds their clocks
     std::map<int, std::optional<headsup::Sound>> m_NoticeSounds; // by sound choice, read the first time one plays
     std::unordered_map<uint32_t, headsup::PlayerJobs> m_PartyJobs; // theirs as the party list has them, by server ID
@@ -1133,10 +1132,9 @@ public:
         const auto noticeFrame = static_cast<float>(std::max(0.0, now - m_NoticesAt));
         // The Notifications page shows a test notification of each kind, which drag without Shift.
         const bool noticesPage = m_RmlMenu.NoticesPageOpen();
-        std::vector<headsup::ShownNotice> shown = m_Notices.Shown(noticeFrame, m_NoticeHeld,
-            static_cast<float>(m_Settings.noticeSeconds), m_Settings.noticeMost, m_Settings.partyNoticeButtons);
-        if (noticesPage)
-            for (headsup::ShownNotice& sample : headsup::NoticeSamples(m_Settings)) shown.push_back(std::move(sample));
+        const std::vector<headsup::ShownNotice> shown = headsup::NoticesToShow(m_Notices.Shown(noticeFrame, m_NoticeHeld,
+            static_cast<float>(m_Settings.noticeSeconds), m_Settings.noticeFade, m_Settings.noticeMost,
+            m_Settings.partyNoticeButtons), m_Settings, noticesPage);
         if (m_Rml.Running())
         {
             const headsup::NoticeTook took = m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()),
@@ -1331,18 +1329,10 @@ public:
         if (m_RmlMenu.DamageNumbersPageOpen() && m_Settings.enabled && m_Settings.combatPopups &&
             m_CombatTextHook.CanStartPopups() && m_PopupTest.Over(now))
             m_PopupTest.Start(now);
-        // As a friend would: online, then offline at the next press.
         if (m_RmlMenu.TakeNoticeTest())
             if (const std::optional<headsup::NoticeKind> kind =
                     headsup::TestKind(static_cast<uint32_t>(Now() * kSeedsPerSecond), m_Settings))
                 Notify(*kind, headsup::IsInvite(*kind) ? headsup::kInviteSampleName : headsup::kFriendSampleName, true, Now());
-        if (m_RmlMenu.TakeFriendNoticeTest())
-        {
-            // A friend of no account, whom Friends Included does not stop.
-            const headsup::FriendNews test{m_NextTest, 0, headsup::kFriendSampleName};
-            if (headsup::NoticeWanted(test, m_Settings, {})) Notify(test.kind, test.name, true, Now());
-            m_NextTest = m_NextTest == headsup::NoticeKind::Online ? headsup::NoticeKind::Offline : headsup::NoticeKind::Online;
-        }
         if (const std::optional<headsup::NoticeKind> picked = m_RmlMenu.TakeSoundPicked()) PlayNotice(*picked);
         if (std::optional<headsup::FriendsIncluded> included = m_RmlMenu.TakeIncludedAsked())
         {
@@ -2618,9 +2608,9 @@ private:
     }
 
     // A notification, and its sound when it has one and its kind's wait is over.
-    void Notify(headsup::NoticeKind kind, std::string name, bool test, double now)
+    void Notify(headsup::NoticeKind kind, std::string name, bool test, double now, std::string aka = {})
     {
-        m_Notices.Add(kind, std::move(name), test);
+        m_Notices.Add(kind, std::move(name), test, std::move(aka));
         if (headsup::NoticeSoundOf(m_Settings, kind) != headsup::kNoSound && m_NoticeWaits.Due(kind, now)) PlayNotice(kind);
     }
 
@@ -3500,7 +3490,7 @@ private:
             {
                 m_FriendEntries = headsup::FriendEntries(slots);
                 for (const headsup::FriendNews& news : m_FriendWatch.Read(party->GetMemberServerId(0), m_FriendEntries, now))
-                    if (headsup::NoticeWanted(news, m_Settings, Included())) Notify(news.kind, news.name, false, now);
+                    if (headsup::NoticeWanted(news, m_Settings, Included())) Notify(news.kind, news.name, false, now, news.aka);
             }
             m_Linkshells       = WornLinkshells();
             m_LinkshellsReadAt = now;

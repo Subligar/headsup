@@ -112,7 +112,6 @@ namespace headsup
         bool debugRequested = false;
         bool caseMoveRequested = false, caseTestRequested = false; // pressed: the plugin shows the boxes, or plays one
         bool noticeTestRequested       = false; // the Notifications card's Test: a kind at random
-        bool friendNoticeTestRequested = false; // Friend Notifications' Test: a friend comes online, or goes offline
         std::optional<NoticeKind> soundPicked;  // a Sound Effect was picked: the plugin plays it
         std::optional<FriendsIncluded> includedAsked; // Friends Included as clicked, which is no setting: the plugin keeps it
         bool watchRequested = false; // the debug watch is to start, or stop

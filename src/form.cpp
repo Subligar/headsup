@@ -395,7 +395,8 @@ namespace headsup
             names[std::clamp(value, 0, count - 1)], tip);
     }
 
-    void Form::SliderFloat(const char* label, float& value, float lo, float hi, int places, const char* unit, const char* tip)
+    void Form::SliderFloat(const char* label, float& value, float lo, float hi, int places, const char* unit, const char* tip,
+        std::optional<float> step)
     {
         const std::string slider = Id(label);
         if (const FormEvent* moved = Took(slider, kChangeEvent); moved != nullptr && !m_Off)
@@ -407,7 +408,8 @@ namespace headsup
                 changed = true;
             }
         }
-        Slider(slider, label, value, lo, hi, std::pow(10.0f, static_cast<float>(-places)), Decimal(value, places) + unit, tip);
+        Slider(slider, label, value, lo, hi, step.value_or(std::pow(10.0f, static_cast<float>(-places))), Decimal(value, places) + unit,
+            tip);
     }
 
     void Form::TogglePopup(const std::string& control)

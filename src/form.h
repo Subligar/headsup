@@ -260,8 +260,9 @@ namespace headsup
         // A number stepped one at a time by the arrows either side of it, for one whose change moves the window under
         // the pointer, as a slider's would.
         void Stepper(const char* label, int& value, int lo, int hi, const char* format, const char* tip);
-        // It steps by the last of the places it shows, its unit after them.
-        void SliderFloat(const char* label, float& value, float lo, float hi, int places, const char* unit, const char* tip);
+        // It steps by step, or with none by the last of the places it shows, its unit after them.
+        void SliderFloat(const char* label, float& value, float lo, float hi, int places, const char* unit, const char* tip,
+            std::optional<float> step = std::nullopt);
         // A slider over a few named steps, the first being 0: it shows the name of the one it is on.
         void SliderNamed(const char* label, int& value, const char* const* names, int count, const char* tip);
         // A dropdown of the whole numbers from first to last, either way round, each shown as text gives it.
