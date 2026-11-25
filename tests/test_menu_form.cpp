@@ -80,7 +80,7 @@ TEST(the_window_is_its_sidebar_and_the_open_pages_cards)
     CHECK(Has(form.blocks.front().rml, "<div class=\"nav\" id=\"nav-entities\">") &&
           Has(form.blocks.front().rml, "<div class=\"nav child\" id=\"nav-mobs\">"));
     CHECK(ClassOn(form, "nav-entities", "picked") && !ClassOn(form, "nav-mobs", "picked"));
-    CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-target-cursor") != nullptr);
+    CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-outline-style") != nullptr);
 }
 
 TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
@@ -749,7 +749,7 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
         return ids;
     };
     Window w;
-    CHECK(shown(w.Pass()).size() > 3u);
+    CHECK(shown(w.Pass()).size() > 1u);
     w.settings.enabled = false;
     const std::vector<std::string> off = shown(w.Pass());
     CHECK_EQ(off.size(), size_t{1}); // the one card that says HeadsUp is off
@@ -762,34 +762,45 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
     w.state.page       = Page::TopPanel;
     CHECK_EQ(shown(w.Pass()).size(), size_t{1});
     CHECK(shown(w.Pass()) != off);
+    // With the damage numbers off, theirs says so, and not that the top panel is.
+    const std::string panelNote = Block(w.Pass(), shown(w.Pass())[0].c_str())->rml;
+    w.settings.combatPopups = false;
+    w.state.page            = Page::DamageNumbers;
+    const std::vector<std::string> numbers = shown(w.Pass());
+    CHECK_EQ(numbers.size(), size_t{2}); // the page's description, then the one card
+    std::string numbersNote = Block(w.Pass(), numbers.back().c_str())->rml;
+    for (size_t at; (at = numbersNote.find("damagenumbers")) != std::string::npos;)
+        numbersNote.replace(at, std::string("damagenumbers").size(), "toppanel"); // the same ids, so only the note differs
+    CHECK(numbersNote != panelNote);
 }
 
 TEST(the_cursor_style_list_has_headsups_styles_then_the_folders_files)
 {
     Window w;
+    w.state.page = Page::TargetCursor;
     const std::vector<std::string> files{"Gold Arrow", "sword"};
     w.readings.cursorFiles = &files;
-    const char* list = "entities-target-cursor-cursor-style";
+    const char* list = "targetcursor-target-cursor-cursor-style";
     const Form open  = w.Pass({{list, kClickEvent, ""}});
     CHECK(open.popup && w.state.cursorsRequested); // opening it asks for the folder to be read again
     // Each of HeadsUp's own styles, then each file of the folder: six rows, the last the second file.
-    CHECK(Has(open.popup->rml, "entities-target-cursor-cursor-style-o-5") && !Has(open.popup->rml, "entities-target-cursor-cursor-style-o-6"));
+    CHECK(Has(open.popup->rml, "targetcursor-target-cursor-cursor-style-o-5") && !Has(open.popup->rml, "targetcursor-target-cursor-cursor-style-o-6"));
     CHECK(Has(open.popup->rml, ">Gold Arrow<") && Has(open.popup->rml, ">sword<"));
-    CHECK(ClassOn(open, "entities-target-cursor-cursor-style-o-2", "picked")); // the feather, a new install's
+    CHECK(ClassOn(open, "targetcursor-target-cursor-cursor-style-o-2", "picked")); // the feather, a new install's
     w.state.cursorsRequested = false;
     w.Pass();
     CHECK(!w.state.cursorsRequested); // once, when it opens: not every pass it stays open
     // A file is the File style with its name; HeadsUp's own styles have no file.
-    CHECK(w.Pass({{"entities-target-cursor-cursor-style-o-5", kClickEvent, ""}}).changed);
+    CHECK(w.Pass({{"targetcursor-target-cursor-cursor-style-o-5", kClickEvent, ""}}).changed);
     CHECK(w.settings.cursorStyle == CursorStyle::File && w.settings.cursorFile == "sword");
     w.Pass({{list, kClickEvent, ""}});
-    w.Pass({{"entities-target-cursor-cursor-style-o-3", kClickEvent, ""}});
+    w.Pass({{"targetcursor-target-cursor-cursor-style-o-3", kClickEvent, ""}});
     CHECK(w.settings.cursorStyle == CursorStyle::Chocobo);
     // A file the folder no longer has stays chosen, and listed, until another is picked.
     w.settings.cursorStyle = CursorStyle::File;
     w.settings.cursorFile  = "gone";
     const Form kept = w.Pass({{list, kClickEvent, ""}});
-    CHECK(Has(kept.popup->rml, ">gone<") && ClassOn(kept, "entities-target-cursor-cursor-style-o-6", "picked"));
+    CHECK(Has(kept.popup->rml, ">gone<") && ClassOn(kept, "targetcursor-target-cursor-cursor-style-o-6", "picked"));
     CHECK(w.settings.cursorStyle == CursorStyle::File && w.settings.cursorFile == "gone");
 }
 
@@ -826,7 +837,8 @@ TEST(a_style_picked_comes_at_its_own_width_for_the_height_set)
     // The feather is slender, the triangle wide and a picture square: a style picked would otherwise be squeezed
     // into the width of the one before.
     Window w;
-    const char* list = "entities-target-cursor-cursor-style";
+    w.state.page = Page::TargetCursor;
+    const char* list = "targetcursor-target-cursor-cursor-style";
     w.settings.cursorHeight = 40;
     w.settings.cursorWidth  = 11;
     const auto pick = [&](int option) {
@@ -849,19 +861,20 @@ TEST(a_style_picked_comes_at_its_own_width_for_the_height_set)
 TEST(the_games_own_cursor_has_no_settings_and_a_picture_no_color)
 {
     Window w;
+    w.state.page = Page::TargetCursor;
     const auto hidden = [&](const Form& form, const char* row) { return ClassOn(form, row, "off"); };
     const Form feather = w.Pass();
-    CHECK(!hidden(feather, "entities-target-cursor-width-label-row") && !hidden(feather, "entities-target-cursor-color-label-row"));
+    CHECK(!hidden(feather, "targetcursor-target-cursor-width-label-row") && !hidden(feather, "targetcursor-target-cursor-color-label-row"));
     w.settings.cursorStyle = CursorStyle::Chocobo;
     const Form chocobo = w.Pass();
-    CHECK(!hidden(chocobo, "entities-target-cursor-width-label-row") && !hidden(chocobo, "entities-target-cursor-edge-color-label-row"));
-    CHECK(hidden(chocobo, "entities-target-cursor-color-label-row")); // it keeps its own colors
+    CHECK(!hidden(chocobo, "targetcursor-target-cursor-width-label-row") && !hidden(chocobo, "targetcursor-target-cursor-edge-color-label-row"));
+    CHECK(hidden(chocobo, "targetcursor-target-cursor-color-label-row")); // it keeps its own colors
     w.settings.cursorStyle = CursorStyle::Vanilla;
     const Form vanilla = w.Pass();
-    for (const char* row : {"entities-target-cursor-width-label-row", "entities-target-cursor-float-label-row",
-             "entities-target-cursor-color-label-row", "entities-target-cursor-edge-color-label-row"})
+    for (const char* row : {"targetcursor-target-cursor-width-label-row", "targetcursor-target-cursor-float-label-row",
+             "targetcursor-target-cursor-color-label-row", "targetcursor-target-cursor-edge-color-label-row"})
         CHECK(hidden(vanilla, row));
-    CHECK(!hidden(vanilla, "entities-target-cursor-cursor-style-label-row")); // the list stays, to pick another
+    CHECK(!hidden(vanilla, "targetcursor-target-cursor-cursor-style-label-row")); // the list stays, to pick another
 }
 
 TEST(one_nameplate_opacity_card_sits_under_nameplates_on_the_entities_page)
@@ -1289,6 +1302,19 @@ TEST(a_window_set_to_hide_goes_on_the_hidden_list_and_shows_no_place_until_kept_
     CHECK(!ClassOn(hidden, keep, "on") && !place(hidden));
     w.Pass({{keep, kClickEvent, ""}});
     CHECK(w.settings.hiddenWindows.empty() && place(w.Pass()));
+}
+
+// Nothing places the compass: it is drawn by its own routine, not as a window in the game's list.
+TEST(the_compass_can_be_hidden_and_has_no_place_to_type)
+{
+    Window w;
+    w.state.page      = Page::VanillaUi;
+    const auto has = [](const Form& form, const char* id) { return At(Block(form, "vanillaui-base-game-ui"), id) != std::string::npos; };
+    const Form first = w.Pass();
+    CHECK(has(first, "vanillaui-base-game-ui-keep-compass") && !has(first, "vanillaui-base-game-ui-x-compass"));
+    CHECK(has(first, "vanillaui-base-game-ui-x-statcom"));
+    w.Pass({{"vanillaui-base-game-ui-keep-compass", kClickEvent, ""}});
+    CHECK((w.settings.hiddenWindows == std::vector<std::string>{"compass"}));
 }
 
 TEST(an_edit_of_a_built_in_theme_makes_a_custom_copy_of_it_named_after_it)
@@ -2191,18 +2217,18 @@ TEST(a_widgets_tips_name_a_copys_own_defaults)
         if (!named(static_cast<WidgetTabsRow>(row.row), BarWidget::Job, 1).empty()) CHECK(Said(row.tip).find(kDefaultMark) != std::string_view::npos);
 }
 
-TEST(the_combat_popups_card_takes_changes_only_while_switched_on)
+TEST(the_damage_numbers_page_takes_changes_only_while_its_titles_switch_is_on)
 {
     Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::DamageNumbers;
     w.settings.combatPopups = false;
-    const std::string card = "entities-combat-popups", size = card + "-combat-popup-size", font = card + "-combat-popup-font";
+    const std::string card = "damagenumbers-damage-appearance", size = card + "-combat-popup-size", font = card + "-combat-popup-font";
     w.Pass({{size, kChangeEvent, "150"}});
     CHECK_EQ(w.settings.combatPopupSize, kDefaultCombatPopupSize);
-    w.Pass({{card + "-on", kClickEvent, ""}});
+    w.Pass({{"damagenumbers-on", kClickEvent, ""}});
     CHECK(w.settings.combatPopups);
-    CHECK(w.Pass({{size, kChangeEvent, "150"}}).changed);
-    CHECK_EQ(w.settings.combatPopupSize, 150);
+    CHECK(w.Pass({{size, kChangeEvent, "60"}}).changed);
+    CHECK_EQ(w.settings.combatPopupSize, 60);
     CHECK(w.Pass({{font, kClickEvent, ""}}).popup);
     // Default, then the game's two fonts, then the installed ones.
     w.Pass({{font + "-o-2", kClickEvent, ""}});
@@ -2261,43 +2287,60 @@ TEST(only_the_skillchains_color_can_be_its_elements)
     CHECK(pickLast(PopupType::Critical, "combat-popup-critical-color") == ColorSource::Game);
 }
 
-TEST(the_combat_popups_test_button_asks_the_plugin_only_while_the_card_is_on_and_the_game_can_pop)
+TEST(the_damage_numbers_outline_takes_its_thickness_and_color_on_one_row_and_the_duration_and_fade_their_seconds)
 {
     Window w;
-    w.state.page             = Page::Entities;
-    w.readings.popupTestReady = true;
-    const std::string card = "entities-combat-popups", test = card + "-combat-popup-test";
-    w.settings.combatPopups = false;
-    w.Pass({{test, kClickEvent, ""}});
-    CHECK(!w.state.popupTestRequested);
-    w.settings.combatPopups   = true;
-    w.readings.popupTestReady = false;
-    CHECK(ClassOn(w.Pass(), test.c_str(), kOffClass));
-    w.Pass({{test, kClickEvent, ""}});
-    CHECK(!w.state.popupTestRequested);
-    w.readings.popupTestReady = true;
-    CHECK(!ClassOn(w.Pass(), test.c_str(), kOffClass));
-    w.Pass({{test, kClickEvent, ""}});
-    CHECK(w.state.popupTestRequested);
+    w.state.page = Page::DamageNumbers;
+    const std::string card = "damagenumbers-damage-appearance", outline = card + "-combat-popup-outline";
+    const Form form = w.Pass();
+    const FormBlock* block = Block(form, card.c_str());
+    CHECK(block != nullptr);
+    // The swatch is on the slider's row, before the next row starts.
+    const std::string& rml = block->rml;
+    const size_t row = rml.find("id=\"" + outline + "-label-row\""), swatch = rml.find("id=\"" + outline + "-swatch\"");
+    CHECK(row != std::string::npos && swatch != std::string::npos && swatch > row && rml.find("class=\"row", row + 1) > swatch);
+    CHECK(w.Pass({{outline, kChangeEvent, "5"}}).changed);
+    CHECK_EQ(w.settings.combatPopupOutline, 5);
+    CHECK(w.Pass({{outline + "-swatch", kClickEvent, ""}}).popup);
+    CHECK(w.Pass({{outline + "-swatch-p-r", kChangeEvent, "255"}}).changed);
+    CHECK_EQ(ToArgb(w.settings.combatPopupOutlineColor), 0xFFFF0000u);
+    CHECK(w.Pass({{card + "-combat-popup-fade", kChangeEvent, "1.3"}}).changed);
+    CHECK_EQ(w.settings.combatPopupFade, 1.3f);
+    CHECK(w.Pass({{card + "-combat-popup-duration", kChangeEvent, "2.5"}}).changed);
+    CHECK_EQ(w.settings.combatPopupDuration, 2.5f);
+}
+
+TEST(popup_timing_is_vanilla_or_instant_and_instant_starts_them_early)
+{
+    Window w;
+    w.state.page = Page::DamageNumbers;
+    const std::string timing = "damagenumbers-damage-appearance-combat-popup-timing";
+    CHECK(w.settings.combatPopupRightAway);
+    CHECK(w.Pass({{timing, kClickEvent, ""}}).popup);
+    w.Pass({{timing + "-o-0", kClickEvent, ""}});
+    CHECK(!w.settings.combatPopupRightAway);
+    w.Pass({{timing, kClickEvent, ""}});
+    w.Pass({{timing + "-o-1", kClickEvent, ""}});
+    CHECK(w.settings.combatPopupRightAway);
 }
 
 namespace
 {
-    const std::string kPopupCard = "entities-combat-popups";
+    const std::string kPopupCard = "damagenumbers-damage-placement";
     std::string KindChip(PopupType type) { return kPopupCard + "-popup-kind-" + std::to_string(static_cast<int>(type)); }
     std::string ColumnEnd(PopupSide side) { return kPopupCard + "-popup-column-end-" + std::to_string(static_cast<int>(side)); }
 }
 
-TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_nudged_only_while_the_card_is_on)
+TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_spread_and_nudged_only_while_they_are_on)
 {
     Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::DamageNumbers;
     w.settings.combatPopups = false;
-    const std::string x = kPopupCard + "-combat-popup-x", y = kPopupCard + "-combat-popup-y", height = kPopupCard + "-combat-popup-height";
+    const std::string x = kPopupCard + "-combat-popup-spread", y = kPopupCard + "-combat-popup-y", height = kPopupCard + "-combat-popup-height";
     const PopupSide& spell    = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Spell)];
     const PopupSide& recovery = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)];
     w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}, {x, kChangeEvent, "40"}, {height, kChangeEvent, "50"}});
-    CHECK(spell == PopupSide::Right && w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
+    CHECK(spell == PopupSide::Right && w.settings.combatPopupSpread == kDefaultCombatPopupSpread && w.settings.combatPopupHeight == 90);
     w.settings.combatPopups = true;
     CHECK(w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}}).changed);
     CHECK(spell == PopupSide::Middle && w.settings.combatPopupSides[static_cast<size_t>(PopupType::Dealt)] == PopupSide::Right);
@@ -2307,27 +2350,15 @@ TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_nudged_only_
     CHECK(w.Pass({{x, kChangeEvent, "40"}}).changed);
     CHECK(w.Pass({{y, kChangeEvent, "-25"}}).changed);
     CHECK(w.Pass({{height, kChangeEvent, "50"}}).changed);
-    CHECK(w.settings.combatPopupX == 40 && w.settings.combatPopupY == -25 && w.settings.combatPopupHeight == 50);
+    CHECK(w.settings.combatPopupSpread == 40 && w.settings.combatPopupY == -25 && w.settings.combatPopupHeight == 50);
 }
 
-TEST(with_custom_placement_off_the_combat_popups_columns_start_height_and_offsets_take_no_change)
+TEST(status_popups_switch_with_damage_numbers_on_and_their_colors_are_picked_only_while_they_pop)
 {
     Window w;
-    w.state.page = Page::Entities;
-    w.Pass({{kPopupCard + "-combat-popup-placement", kClickEvent, ""}});
-    CHECK(!w.settings.combatPopupPlacement);
-    w.Pass({{ColumnEnd(PopupSide::Right), kDropEvent, KindChip(PopupType::Recovery)}, {kPopupCard + "-combat-popup-x", kChangeEvent, "40"},
-        {kPopupCard + "-combat-popup-height", kChangeEvent, "50"}});
-    CHECK(w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)] == PopupSide::Left);
-    CHECK(w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
-}
-
-TEST(status_popups_switch_with_the_card_on_and_their_colors_are_picked_only_while_they_pop)
-{
-    Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::DamageNumbers;
     w.settings.combatPopups = false;
-    const std::string statuses = "entities-combat-popups-combat-popup-statuses",
+    const std::string statuses = "damagenumbers-damage-appearance-combat-popup-statuses",
                       buff     = "colors-colors-combat-popups-combat-popup-buff-color";
     const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Buff)];
     w.Pass({{statuses, kClickEvent, ""}});
@@ -2450,3 +2481,54 @@ TEST(a_setting_of_a_kind_that_is_off_is_not_shown)
     CHECK_EQ(w.settings.friendNoticeOnlineSound, kChimeSound);
 }
 
+
+namespace
+{
+    // Whether the element of this id holds a warning that HeadsUp sends packets, with a tip, before its next end.
+    bool WarnsOfPackets(const FormBlock* block, const std::string& id, const char* inside)
+    {
+        const size_t at = At(block, id);
+        if (at == std::string::npos) return false;
+        const size_t from = block->rml.find(inside, at), end = block->rml.find("</div>", from);
+        const size_t mark = block->rml.find(std::string("class=\"") + kSendsPacketsClass + "\"", from);
+        return from != std::string::npos && mark < end && block->rml.find(std::string(kMenuTipAttribute) + "=\"", mark) < end;
+    }
+}
+
+// "Put a warning next to every setting that makes HeadsUp ask the server for something, or makes it send a packet
+// more often than a normal player would."
+TEST(each_setting_that_makes_headsup_send_packets_warns_of_it_on_its_label)
+{
+    Window w;
+    w.state.page          = Page::Entities;
+    const FormBlock* card = Block(w.Pass(), "entities-nameplates");
+    CHECK(WarnsOfPackets(card, "entities-nameplates-auto-check-label", ">"));
+    CHECK(WarnsOfPackets(card, "entities-nameplates-look-up-players-label", ">"));
+    CHECK(!WarnsOfPackets(card, "entities-nameplates-stack-names-label", ">"));
+}
+
+// Conquest standings and currencies are asked for while their widgets show, so the warning goes on their chips.
+TEST(each_widget_that_makes_headsup_send_packets_warns_of_it_on_its_chip)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    for (const BarWidget kind : {BarWidget::Zone, BarWidget::World, BarWidget::Currency, BarWidget::Bags})
+        if (!Placed(w.settings.barSections, PanelWidget{kind})) w.settings.barSections[0].push_back(PanelWidget{kind});
+    const FormBlock* layout = Block(w.Pass(), "toppanel-layout");
+    const auto chip         = [](BarWidget kind) { return "toppanel-layout-chip-" + std::to_string(SlotOf(PanelWidget{kind})); };
+    for (const BarWidget kind : {BarWidget::Zone, BarWidget::World, BarWidget::Currency})
+        CHECK(WarnsOfPackets(layout, chip(kind), "class=\"wname\""));
+    CHECK(!WarnsOfPackets(layout, chip(BarWidget::Bags), "class=\"wname\""));
+    // World Info asks for the standings on its own, Zone widget or not, and also fetches the guilds' turn-ins from
+    // Phoenix's website; the Zone widget does neither of World Info's.
+    const auto chipSays = [&](BarWidget kind, WindowWord word)
+    {
+        const size_t at = At(layout, chip(kind)), name = layout->rml.find("class=\"wname\"", at);
+        return layout->rml.substr(name, layout->rml.find("</div>", name) - name).find(EscapedRml(Said(w.layout.WordOf(word).tip))) !=
+               std::string::npos;
+    };
+    CHECK(chipSays(BarWidget::World, WindowWord::SendsTurnIns));
+    CHECK(chipSays(BarWidget::World, WindowWord::SendsWorldConquest) && !chipSays(BarWidget::World, WindowWord::SendsConquest));
+    CHECK(chipSays(BarWidget::Zone, WindowWord::SendsConquest));
+    CHECK(!chipSays(BarWidget::Zone, WindowWord::SendsTurnIns) && !chipSays(BarWidget::Zone, WindowWord::SendsWorldConquest));
+}

@@ -536,8 +536,8 @@ TEST(the_font_list_puts_the_bundled_fonts_first_then_the_installed_ones_sorted_o
 {
     // GDI lists a family once per character set, vertical variants with an @, and a bundled font may be installed too.
     const std::vector<std::string> choices = FontChoices({"Verdana", "arial", "Arial", "@Meiryo", "", "Cinzel"}, "Verdana");
-    const std::vector<std::string> expected{"Montserrat SemiBold", "Marcellus SC", "Cinzel", "Cormorant SC", "Barlow Condensed",
-        "arial", "Verdana"};
+    const std::vector<std::string> expected{"Montserrat SemiBold", "Marcellus SC", "Cinzel", "Cormorant SC",
+        "Atkinson Hyperlegible", "Atkinson Hyperlegible Next", "Barlow Condensed", "arial", "Verdana"};
     CHECK(choices == expected);
 }
 
@@ -2799,7 +2799,7 @@ TEST(the_nameplate_fonts_are_the_games_two_then_the_font_list_which_never_holds_
 {
     const std::vector<std::string> choices = NameplateFontChoices(FontChoices({"Arial", "game font"}, kGameFontNarrowName));
     const std::vector<std::string> expected{kGameFontName, kGameFontNarrowName, "Montserrat SemiBold", "Marcellus SC", "Cinzel",
-        "Cormorant SC", "Barlow Condensed", "Arial"};
+        "Cormorant SC", "Atkinson Hyperlegible", "Atkinson Hyperlegible Next", "Barlow Condensed", "Arial"};
     CHECK(choices == expected);
 }
 
@@ -3447,27 +3447,26 @@ TEST(a_created_widget_is_named_by_its_number_keeps_its_name_and_a_clone_gets_one
     CHECK_EQ(s.Widget(clone).name, std::string(kCreatedWidgetName) + " 3");
 }
 
-TEST(combat_popups_are_on_in_the_nameplates_font_at_the_games_own_size_until_changed)
+TEST(combat_popups_are_on_in_their_default_font_at_43_pixels_until_changed)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
-    CHECK(fresh.combatPopups && fresh.combatPopupFont.empty() && fresh.combatPopupSize == 100);
+    CHECK(fresh.combatPopups && fresh.combatPopupFont.empty() && fresh.combatPopupSize == 43);
     MapStore store;
-    store.values["combatPopups"]    = "false";
-    store.values["combatPopupFont"] = "Arial";
-    store.values["combatPopupSize"] = "150";
+    store.values["combatPopups"]        = "false";
+    store.values["combatPopupFont"]     = "Arial";
+    store.values["combatPopupTextSize"] = "60";
+    store.values["combatPopupSize"]     = "150"; // the old percent is no longer read
     const Settings s = LoadSettings(store);
-    CHECK(!s.combatPopups && s.combatPopupFont == "Arial" && s.combatPopupSize == 150);
+    CHECK(!s.combatPopups && s.combatPopupFont == "Arial" && s.combatPopupSize == 60);
     MapStore saved;
     SaveSettings(s, saved);
     const Settings back = LoadSettings(saved);
-    CHECK(!back.combatPopups && back.combatPopupFont == "Arial" && back.combatPopupSize == 150);
-    store.values["combatPopupSize"] = "999";
-    CHECK_EQ(LoadSettings(store).combatPopupSize, 200);
-    store.values["combatPopupSize"] = "7";
-    CHECK_EQ(LoadSettings(store).combatPopupSize, 25);
-    store.values["combatPopupSize"] = "52";
-    CHECK_EQ(LoadSettings(store).combatPopupSize, 50);
+    CHECK(!back.combatPopups && back.combatPopupFont == "Arial" && back.combatPopupSize == 60);
+    store.values["combatPopupTextSize"] = "999";
+    CHECK_EQ(LoadSettings(store).combatPopupSize, 120);
+    store.values["combatPopupTextSize"] = "7";
+    CHECK_EQ(LoadSettings(store).combatPopupSize, 10);
     store.values["combatPopupFont"] = "";
     CHECK(LoadSettings(store).combatPopupFont.empty());
     store.values["combatPopupFont"] = std::string(40, 'x');
@@ -3511,7 +3510,7 @@ TEST(a_skillchain_takes_its_elements_color_until_picked_and_no_other_type_can)
     CHECK(LoadSettings(store).combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Element);
 }
 
-TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_unnudged_until_placed_and_their_columns_save)
+TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_spread_and_unnudged_until_placed_and_their_columns_save)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
@@ -3521,27 +3520,57 @@ TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_unnudged_un
         const bool left = type == PopupType::Buff || type == PopupType::Recovery;
         CHECK(fresh.combatPopupSides[static_cast<size_t>(t)] == (left ? PopupSide::Left : PopupSide::Right));
     }
-    CHECK(fresh.combatPopupX == 0 && fresh.combatPopupY == 0);
+    CHECK(fresh.combatPopupSpread == 0 && fresh.combatPopupY == 0);
     MapStore store;
     store.values["combatPopupColumns"] = "dealt buff | spell recovery dealt chocobo | ";
-    store.values["combatPopupX"]       = "-30";
+    store.values["combatPopupSpread"]  = "35";
     store.values["combatPopupY"]       = "45";
     const Settings s = LoadSettings(store);
     const auto side  = [](const Settings& in, PopupType type) { return in.combatPopupSides[static_cast<size_t>(type)]; };
     CHECK(side(s, PopupType::Dealt) == PopupSide::Left && side(s, PopupType::Buff) == PopupSide::Left);
     CHECK(side(s, PopupType::Spell) == PopupSide::Middle && side(s, PopupType::Recovery) == PopupSide::Middle);
     CHECK(side(s, PopupType::Taken) == PopupSide::Right && side(s, PopupType::Debuff) == PopupSide::Right);
-    CHECK(s.combatPopupX == -30 && s.combatPopupY == 45);
+    CHECK(s.combatPopupSpread == 35 && s.combatPopupY == 45);
     MapStore saved;
     SaveSettings(s, saved);
     CHECK(saved.values["combatPopupColumns"] == "dealt buff | recovery spell | taken miss critical burst skillchain debuff");
     const Settings back = LoadSettings(saved);
-    CHECK(back.combatPopupSides == s.combatPopupSides && back.combatPopupX == -30 && back.combatPopupY == 45);
+    CHECK(back.combatPopupSides == s.combatPopupSides && back.combatPopupSpread == 35 && back.combatPopupY == 45);
     SaveSettings(fresh, saved);
     CHECK(saved.values["combatPopupColumns"] == "recovery buff |  | dealt taken miss critical burst skillchain spell debuff");
-    store.values["combatPopupX"] = "999";
-    store.values["combatPopupY"] = "-999";
-    CHECK(LoadSettings(store).combatPopupX == 200 && LoadSettings(store).combatPopupY == -200);
+    store.values["combatPopupSpread"] = "999";
+    store.values["combatPopupY"]      = "-999";
+    CHECK(LoadSettings(store).combatPopupSpread == 50 && LoadSettings(store).combatPopupY == -200);
+    store.values["combatPopupSpread"] = "-5";
+    CHECK_EQ(LoadSettings(store).combatPopupSpread, 0);
+}
+
+TEST(the_combat_popups_outline_duration_and_fade_are_pixels_and_seconds_and_they_save)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    CHECK(fresh.combatPopupOutline == 3 && fresh.combatPopupDuration == 0.4f && fresh.combatPopupFade == 0.4f &&
+          ToArgb(fresh.combatPopupOutlineColor) == 0xFF000000u);
+    MapStore store;
+    store.values["combatPopupOutline"]       = "5";
+    store.values["combatPopupDuration"]      = "2.5";
+    store.values["combatPopupFade"]          = "1.2";
+    store.values["combatPopupOutlineColorR"] = "1.0000";
+    store.values["combatPopupOutlineColorG"] = "0.0000";
+    store.values["combatPopupOutlineColorB"] = "0.0000";
+    const Settings s = LoadSettings(store);
+    CHECK(s.combatPopupOutline == 5 && s.combatPopupDuration == 2.5f && s.combatPopupFade == 1.2f &&
+          ToArgb(s.combatPopupOutlineColor) == 0xFFFF0000u);
+    MapStore saved;
+    SaveSettings(s, saved);
+    const Settings back = LoadSettings(saved);
+    CHECK(back.combatPopupOutline == 5 && back.combatPopupDuration == 2.5f && back.combatPopupFade == 1.2f &&
+          back.combatPopupOutlineColor == s.combatPopupOutlineColor);
+    store.values["combatPopupOutline"]  = "999";
+    store.values["combatPopupDuration"] = "0";
+    store.values["combatPopupFade"]     = "99";
+    const Settings clamped = LoadSettings(store);
+    CHECK(clamped.combatPopupOutline == 10 && clamped.combatPopupDuration == 0.1f && clamped.combatPopupFade == 3.0f);
 }
 
 TEST(popups_beside_their_target_start_near_its_head_until_their_start_height_is_set_and_it_saves)
@@ -3580,7 +3609,7 @@ TEST(each_combat_popup_switch_is_on_until_switched_off_and_saves)
     const std::pair<const char*, Switch> switches[] = {{"combatPopupWords", &Settings::combatPopupWords},
         {"combatPopupLabels", &Settings::combatPopupLabels}, {"combatPopupCustomColors", &Settings::combatPopupCustomColors},
         {"combatPopupSkillchainNames", &Settings::combatPopupSkillchainNames},
-        {"combatPopupRightAway", &Settings::combatPopupRightAway}, {"combatPopupPlacement", &Settings::combatPopupPlacement}};
+        {"combatPopupRightAway", &Settings::combatPopupRightAway}};
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
     for (const auto& [key, field] : switches)

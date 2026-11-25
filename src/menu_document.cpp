@@ -15,6 +15,9 @@ namespace headsup
     {
         constexpr float kRunInset     = 0.3f;  // how much shorter a line box's stretches and chips are than the box
         constexpr float kSpacing      = 0.45f; // between rows
+        // The "!" of a warning that a setting sends packets: its size against the label's, and its circle's against its own.
+        constexpr float kSendsScale   = 0.85f;
+        constexpr float kSendsCircle  = 1.35f;
         // Setup's picture, 16:9 like its target: short enough that its first step fits the window's own size.
         constexpr float kPreviewTall  = 14.0f;
         constexpr float kParagraphTall = 9.0f; // a box of several lines
@@ -163,7 +166,9 @@ namespace headsup
                Em(kPageTitleScale) + ";color:" + color(c.heading) + ";}";
         // A page's own switch on its title's line, just after it.
         css += "#page-head{display:flex;flex-direction:row;align-items:center;}";
-        css += std::string("#") + kPageSwitchBlock + "{margin-left:" + Em(kCardPad) + ";}";
+        css += std::string("#") + kPageSwitchBlock + "{display:flex;flex-direction:row;align-items:center;margin-left:" + Em(kCardPad) + ";}";
+        // A page's button before its switch, as wide as the switch.
+        css += std::string("#") + kPageSwitchBlock + " .btn{width:" + Em(kCardToggleWidth) + ";padding:0px;margin-right:" + Em(kControlGap) + ";}";
         css += std::string("#") + kMenuPageId + "{position:absolute;left:0px;right:0px;top:" + Em(kPageTop) + ";bottom:0px;overflow-y:auto;}";
         css += "scrollbarvertical{width:" + Em(kScrollbar) + ";}";
         css += "scrollbarvertical sliderbar{width:" + Em(kScrollbar) + ";min-height:2em;border-radius:" +
@@ -202,6 +207,13 @@ namespace headsup
         css += ".row{display:flex;flex-direction:row;align-items:center;justify-content:space-between;"
                "min-height:" + frame + ";margin-bottom:" + Em(kSpacing) + ";}";
         css += ".label{flex:1 1 0px;min-width:0px;overflow:hidden;white-space:nowrap;" + raised + "color:" + color(c.label) + ";}";
+        css += std::string(".") + kSendsPacketsClass + "{display:inline-block;margin-left:" + Em(kControlGap / kSendsScale) +
+               ";font-size:" + Em(kSendsScale) + ";width:" + Em(kSendsCircle) + ";height:" + Em(kSendsCircle) + ";line-height:" +
+               Em(kSendsCircle) + ";text-align:center;border-radius:" + Em(kSendsCircle / 2.0f) + ";background-color:" +
+               color(kErrorColor) + ";color:" + color(c.card) + ";font-effect:shadow(1px 0px " + color(c.card) + ");}";
+        css += std::string(".") + kTipTitleClass + "{margin-bottom:0.3em;font-effect:shadow(1px 0px " + color(c.text) + ");}";
+        css += std::string(".") + kTipTitleClass + " ." + kSendsPacketsClass + "{margin-left:0px;margin-right:" +
+               Em(kControlGap / kSendsScale) + ";}";
         css += ".ctl{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:flex-end;flex:0 0 auto;}";
         css += ".ctl > *{margin-left:" + Em(kControlGap) + ";}";
         css += ".line{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;margin-bottom:" + Em(kSpacing) + ";}";
@@ -280,6 +292,7 @@ namespace headsup
         // A swatch beside them. Their box is a flex one: as a block, RmlUi sized it to their least width, and the swatch
         // went over Custom.
         css += ".swatched{display:flex;}.swatched .segs{min-width:" + Em(kControlWidth - kFrame - kControlGap) + ";}";
+        css += ".swatched .slider,.swatched input.range{width:" + Em(kControlWidth - kFrame - kControlGap) + ";}";
         css += ".seg:first-child{margin-left:0px;}";
         css += ".seg:hover{background-color:" + color(c.hover) + ";}";
         css += ".seg.picked{background-color:" + color(c.accent) + ";}";

@@ -202,7 +202,7 @@ namespace headsup
     bool RmlMenu::TakeDebugRequest() { return std::exchange(m_State.debugRequested, false); }
     bool RmlMenu::TakeCaseMove() { return std::exchange(m_State.caseMoveRequested, false); }
     bool RmlMenu::TakeCaseTest() { return std::exchange(m_State.caseTestRequested, false); }
-    bool RmlMenu::TakePopupTest() { return std::exchange(m_State.popupTestRequested, false); }
+    bool RmlMenu::DamageNumbersPageOpen() const { return open && !InSetup() && m_State.page == Page::DamageNumbers; }
     bool RmlMenu::TakeNoticeTest() { return std::exchange(m_State.noticeTestRequested, false); }
     bool RmlMenu::NoticesPageOpen() const { return open && !InSetup() && m_State.page == Page::Notifications; }
     bool RmlMenu::TakeFriendNoticeTest() { return std::exchange(m_State.friendNoticeTestRequested, false); }
@@ -515,17 +515,28 @@ namespace headsup
     void RmlMenu::ShowTip(Rml::Element* under, float x, float y)
     {
         Rml::ElementDocument* document = under != nullptr ? under->GetOwnerDocument() : nullptr;
+        // A tray chip's lines take no pointer, so the chip gets every press: pointer-events on its SENDS PACKETS mark lost
+        // the chip's click on a press at the mark's edge. The mark's tip is found by where the pointer is instead.
+        if (under != nullptr && under->IsClassSet(kTrayChipClass))
+        {
+            Rml::ElementList marks;
+            under->GetElementsByClassName(marks, kSendsPacketsClass);
+            for (Rml::Element* mark : marks)
+                if (mark->IsPointWithinElement(Rml::Vector2f(x, y))) under = mark;
+        }
         while (under != nullptr && !under->HasAttribute(kMenuTipAttribute))
             under = under->GetParentNode();
-        const std::string text = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipAttribute, "") : std::string();
+        const std::string text  = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipAttribute, "") : std::string();
+        const std::string title = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipTitleAttribute, "") : std::string();
         Rml::Element* tip = document == m_View ? m_ViewTip : m_Tip;
         m_Tip->SetClass(kHiddenClass, text.empty() || tip != m_Tip);
         m_ViewTip->SetClass(kHiddenClass, text.empty() || tip != m_ViewTip);
         if (text.empty()) return;
-        if (text != m_TipShown || tip != m_TipIn)
+        if (title + text != m_TipShown || tip != m_TipIn)
         {
-            tip->SetInnerRML(EscapedRml(text));
-            m_TipShown = text;
+            tip->SetInnerRML((title.empty() ? std::string() : std::string("<div class=\"") + kTipTitleClass + "\"><span class=\"" +
+                                 kSendsPacketsClass + "\">!</span>" + EscapedRml(title) + "</div>") + EscapedRml(text));
+            m_TipShown = title + text;
             m_TipIn    = tip;
         }
         // From the pointer toward the document's middle: there it has room whichever edge the pointer is near, and it

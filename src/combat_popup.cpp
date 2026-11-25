@@ -304,7 +304,7 @@ namespace headsup
         for (size_t i = 0; i < kKeptTies; ++i)
         {
             const PopupEvent& e = m_Tasks.events[i];
-            if (m_Spread && m_Tasks.keys[i] != 0 && e.target == event.target && m_Now - e.started < kPopupSpreadSeconds &&
+            if (m_Spread && m_Tasks.keys[i] != 0 && e.target == event.target && m_Now - e.started < m_Life &&
                 SideOf(e, m_Sides) == SideOf(event, m_Sides))
                 held[e.line] = true;
         }
@@ -332,6 +332,8 @@ namespace headsup
             {7, 34, kRecovery, false}, {25, 20, kRecovery, false}, {15, 0, kMiss, false}, {32, 0, kMiss, false},
             {230, 40, kRecovery, true}, {236, 4, kDamage, false}}; // Protect, and Paralysis
     }
+
+    bool PopupTestRun::Over(double now) const { return now >= m_Start + static_cast<double>(std::size(kTestSamples)) * kTestGap; }
 
     std::optional<PopupSample> PopupTestRun::Next(double now)
     {
@@ -453,15 +455,7 @@ namespace headsup
     }
 
     PopupSwitches PopupSwitchesOf(const Settings& settings) { return PopupSwitches{settings.combatPopupWords, settings.combatPopupLabels,
-            settings.combatPopupCustomColors, settings.combatPopupSkillchainNames,
-            settings.combatPopupPlacement}; }
-
-    PopupSides PopupSidesOf(const Settings& settings)
-    {
-        PopupSides sides = settings.combatPopupSides;
-        if (!settings.combatPopupPlacement) sides.fill(PopupSide::Middle);
-        return sides;
-    }
+            settings.combatPopupCustomColors, settings.combatPopupSkillchainNames}; }
 
     std::string CombatPopupWords(std::string_view text, std::optional<PopupEvent> event, const PopupSwitches& on)
     {
@@ -506,12 +500,6 @@ namespace headsup
 
     namespace
     {
-        // Where the game puts a popup: on its target, not nudged, which the Middle is with no body known.
-        const PopupPlacing kGamePlace = [] {
-            PopupPlacing place;
-            place.sides.fill(PopupSide::Middle);
-            return place;
-        }();
         // The share of a popup's words left of its place, by side.
         constexpr float kStartsAt = 0.0f, kCentered = 0.5f, kEndsAt = 1.0f;
 
@@ -520,21 +508,20 @@ namespace headsup
             const PopupPlacing& placing)
         {
             const float lines = static_cast<float>(line) * shown.lineHeight;
-            const float clear = body && body->feet ? kPopupBodyReach * (*body->feet - body->nameBottom) : shown.lineHeight;
+            const float clear =
+                (body && body->feet ? kPopupBodyReach * (*body->feet - body->nameBottom) : shown.lineHeight) + placing.spread;
             if (side != PopupSide::Middle)
             {
                 shown.center.x += side == PopupSide::Right ? clear : -clear;
                 shown.across = side == PopupSide::Right ? kStartsAt : kEndsAt;
             }
             if (body && body->feet) shown.center.y = *body->feet + placing.height * (body->nameBottom - *body->feet);
-            shown.center.y += lines;
-            shown.center.x += placing.nudge.x;
-            shown.center.y += placing.nudge.y;
+            shown.center.y += lines + placing.nudge;
             return shown;
         }
     }
 
-    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, float scale,
         const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on)
     {
         std::vector<ShownCombatPopup> shown;
@@ -545,14 +532,13 @@ namespace headsup
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            const std::optional<PopupBody> body =
-                on.placement && p.event && placing.bodyOf ? placing.bodyOf(p.event->target) : std::nullopt;
-            const PopupPlacing& place           = on.placement ? placing : kGamePlace;
+            const std::optional<PopupBody> body = p.event && placing.bodyOf ? placing.bodyOf(p.event->target) : std::nullopt;
             const uint32_t color = on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate);
+            const PopupSide side = SideOf(p.event, placing.sides);
             shown.push_back(Place(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
-                                      ScreenPoint{p.box.CenterX(), p.box.CenterY()},
-                                      p.box.Height() * static_cast<float>(sizePercent) / kPercent, p.depth, kCentered},
-                p.event ? p.event->line : 0, body, SideOf(p.event, place.sides), place));
+                                      ScreenPoint{p.box.CenterX(), p.box.CenterY()}, p.box.Height() * scale, p.depth,
+                                      kCentered, p.event ? p.event->target : 0, side},
+                p.event ? p.event->line : 0, body, side, placing));
         }
         return shown;
     }
@@ -565,7 +551,59 @@ namespace headsup
         return SquareQuad{std::round(center.x - width * across), std::round(center.y - capitals * fit), width, text.height * fit};
     }
 
-    int CombatPopupEdge(int raster) { return WholePixels(static_cast<float>(raster) * kCombatPopupEdgePerHeight); }
+    std::vector<SquareQuad> PopupColumnBacks(const std::vector<ShownCombatPopup>& shown, const std::vector<SquareQuad>& quads,
+        float pad)
+    {
+        std::vector<std::pair<std::pair<uint32_t, PopupSide>, ScreenBox>> columns;
+        for (size_t i = 0; i < shown.size() && i < quads.size(); ++i)
+        {
+            const std::pair key{shown[i].target, shown[i].side};
+            const SquareQuad& q = quads[i];
+            auto column = std::ranges::find(columns, key, &decltype(columns)::value_type::first);
+            if (column == columns.end()) column = columns.insert(columns.end(), {key, ScreenBox{}});
+            column->second.Add(q.x, q.y);
+            column->second.Add(q.x + q.width, q.y + q.height);
+        }
+        std::vector<SquareQuad> backs;
+        for (const auto& [key, box] : columns)
+            backs.push_back(SquareQuad{box.minX - pad, box.minY - pad, box.Width() + 2.0f * pad, box.Height() + 2.0f * pad});
+        return backs;
+    }
+
+    float CombatPopupScale(int textSize, float screenHeight)
+    {
+        return static_cast<float>(textSize) / (kCloseCombatPopupShare * screenHeight);
+    }
+
+    const std::vector<CombatPopup>& HeldPopups::Update(const std::vector<CombatPopup>& drawn, double now, double duration,
+        double fade)
+    {
+        for (const CombatPopup& p : drawn)
+        {
+            const auto same = std::ranges::find_if(m_Held, [&](const Held& h) {
+                return h.seen == m_Last && h.popup.particle == p.particle && std::string_view(h.popup.text) == p.text;
+            });
+            if (same == m_Held.end()) m_Held.push_back(Held{p, now, now});
+            else
+            {
+                same->popup = p;
+                same->seen  = now;
+            }
+        }
+        m_Last = now;
+        std::erase_if(m_Held, [&](const Held& h) { return now - h.first >= duration + fade; });
+        m_Shown.clear();
+        for (const Held& h : m_Held)
+        {
+            const double past  = now - h.first - duration;
+            const double whole = past <= 0.0 ? 1.0 : 1.0 - past / fade;
+            // Half strength, as the game passes it.
+            const auto alpha = static_cast<uint32_t>(std::lround(whole * kOpaqueAlpha / kCombatPopupModulate));
+            m_Shown.push_back(h.popup);
+            m_Shown.back().color = (h.popup.color & ~(kOpaqueAlpha << kAlphaShift)) | (alpha << kAlphaShift);
+        }
+        return m_Shown;
+    }
 
     std::string DescribeCombatPopup(const CombatPopup& popup)
     {

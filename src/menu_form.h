@@ -47,7 +47,6 @@ namespace headsup
         const std::string* lastReport = nullptr; // the file the last report went to, empty before one
         const std::string* logFile    = nullptr; // the file notes go to, empty before one
         bool exportable = false; // a developer's build, which can write its built-in layout out as a file
-        bool popupTestReady = false; // the game's code that starts a combat popup was found
         const std::vector<FriendEntry>* friends = nullptr; // the game's friend list, as last read
         const FriendsIncluded* included         = nullptr;
         std::optional<NoticeRect> noticeBounds;         // the notifications as last drawn, which an anchor change keeps put
@@ -112,7 +111,6 @@ namespace headsup
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool caseMoveRequested = false, caseTestRequested = false; // pressed: the plugin shows the boxes, or plays one
-        bool popupTestRequested = false; // the Combat Popups card's Test: the plugin starts its samples
         bool noticeTestRequested       = false; // the Notifications card's Test: a kind at random
         bool friendNoticeTestRequested = false; // Friend Notifications' Test: a friend comes online, or goes offline
         std::optional<NoticeKind> soundPicked;  // a Sound Effect was picked: the plugin plays it

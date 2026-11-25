@@ -33,6 +33,8 @@ namespace headsup
     // A tip as an element's attribute, with its space before it; none for no tip.
     std::string TipAttribute(std::string_view tip);
     std::string TipAttribute(const char* tip);
+    // The warning mark after a label, its tip what HeadsUp sends the server for it.
+    std::string SendsPacketsMark(std::string_view title, std::string_view tip);
 
     // Something the player did to a control since the last pass, by the control's id.
     struct FormEvent
@@ -86,6 +88,7 @@ namespace headsup
     constexpr const char* kRunClass     = "run";     // a stretch of text in it
     constexpr const char* kTypingClass  = "typing";  // on a box while one of its stretches has the keyboard
     constexpr const char* kArrowRoomClass = "arrow-room"; // as wide as an arrow's button, with nothing in it
+    constexpr const char* kSendsPacketsClass = "sends"; // the mark after a label whose setting makes HeadsUp send packets
     // While a tag is held over a line box: what it would add, faint; a chip it would take the place of; and the line's
     // own tag held, which would leave its place.
     constexpr const char* kGhostClass    = "ghost";
@@ -205,6 +208,8 @@ namespace headsup
         int CardsShown() const { return m_CardsShown; }
         // The rows that follow stand in from the left: they belong to the row above them.
         void Indent(bool in) { m_Indent = in; }
+        // The next row's label ends in SendsPacketsMark(tip).
+        void SendsPackets(std::string tip) { m_Sends = std::move(tip); }
 
         // Any element by id, to write markup into with Raw: the sidebar.
         void BeginBlock(const char* id);
@@ -214,9 +219,9 @@ namespace headsup
         // and set when it was clicked.
         bool BeginCard(const char* title, bool* enabled = nullptr, const char* about = nullptr, bool* reset = nullptr,
             bool differs = false);
-        // What the page's title says the whole page is for, on or off: a switch of this id beside it; none for a
-        // page with none.
-        void PageSwitch(const std::string& id, bool* enabled);
+        // What the page's title says the whole page is for, on or off: a switch of this id, in the kPageSwitchBlock
+        // begun beside the title.
+        void PageSwitch(const std::string& id, bool& enabled);
         // A block with the id a card of that title would have and no title or card of its own; EndCard ends it.
         void BeginBare(const char* title);
         void EndCard();
@@ -249,6 +254,9 @@ namespace headsup
         // shown: the value as text, as it is after this pass.
         void SliderInt(const char* label, int& value, int lo, int hi, FunctionRef<std::string(int)> shown, const char* tip);
         void SliderPercent(const char* label, int& value, int lo, int hi, const char* tip);
+        // A slider with a swatch beside it, on one row.
+        void SliderSwatch(const char* label, int& value, int lo, int hi, FunctionRef<std::string(int)> shown, Color& color,
+            const char* tip);
         // A number stepped one at a time by the arrows either side of it, for one whose change moves the window under
         // the pointer, as a slider's would.
         void Stepper(const char* label, int& value, int lo, int hi, const char* format, const char* tip);
@@ -426,6 +434,7 @@ namespace headsup
         void TakeWhole(const std::string& slider, int& value, int lo, int hi, int step = 1);
         void Slider(const std::string& slider, const char* label, float value, float lo, float hi, float step,
             const std::string& shown, const char* tip);
+        void SliderAt(const std::string& slider, float value, float lo, float hi, float step, const std::string& shown);
         // A toggle, and its id: a row's is wide, one among other controls compact.
         // With words, the toggle says its state in its middle.
         std::string Check(const char* id, bool& on, const char* tip, const char* classes = kCompactCheck,
@@ -439,6 +448,7 @@ namespace headsup
         FormState& m_State;
         bool m_Off       = false;
         bool m_Indent    = false;
+        std::string m_Sends;
         int m_CardsShown = 0;
         size_t m_CardOff = 0;         // the card's own off value, in values
         bool m_CardSwitched = false;  // whether the card has a switch in its title

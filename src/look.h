@@ -22,7 +22,7 @@ namespace headsup
     // Badges' numbers, which sit on their icons.
     LineStyle BadgeLineStyle(const Settings& settings);
 
-    // The popups' font: their own, or the nameplates' default font.
+    // The popups' font: their own, or Marcellus SC.
     std::string CombatPopupFont(const Settings& settings);
 
     // The color a badge's text takes: weaknesses, resistances, status ranks and immunities each have their own.

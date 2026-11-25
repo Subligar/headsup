@@ -57,7 +57,8 @@ namespace headsup
         bool TakeDebugRequest();
         bool TakeCaseMove();
         bool TakeCaseTest();
-        bool TakePopupTest();
+        // The plugin pops a sample of each kind over you, again and again, while this is so.
+        bool DamageNumbersPageOpen() const;
         bool TakeNoticeTest();
         std::optional<FriendsIncluded> TakeIncludedAsked();
         bool TakeFriendNoticeTest();

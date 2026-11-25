@@ -25,6 +25,8 @@ namespace headsup
     std::optional<PlateKind> KindOfPage(Page page);
     // The pages of the kinds have nothing to set while neither nameplates nor outlines are on.
     bool KindPagesShown(const Settings& s);
+    // The sidebar's pages in the file's order, but Vanilla UI always the last of the pages under User Interface.
+    std::vector<const LayoutPage*> SidebarPages(const WindowLayout& layout);
 
 
     // A label with each word capitalized after a space or a hyphen ("Sub-Target"), but for the small words inside it

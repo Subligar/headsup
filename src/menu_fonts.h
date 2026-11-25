@@ -1,5 +1,7 @@
 #pragma once
 
+#include "generated/font_families.h"
+
 #include <string_view>
 
 namespace headsup
@@ -25,10 +27,12 @@ namespace headsup
         {"Georgia", "georgia.ttf", 1.0f},
         {"Constantia", "constan.ttf", 1.05f},
         {"Arial", "arial.ttf", 1.0f},
-        {"Barlow Condensed", nullptr, 1.15f},
-        {"Marcellus SC", nullptr, 1.05f},
-        {"Cinzel", nullptr, 1.0f},
-        {"Cormorant SC", nullptr, 1.1f},
+        {kBarlowCondensed, nullptr, 1.15f},
+        {kMarcellusSC, nullptr, 1.05f},
+        {kCinzel, nullptr, 1.0f},
+        {kCormorantSC, nullptr, 1.1f},
+        {kAtkinsonHyperlegible, nullptr, 1.0f},
+        {kAtkinsonHyperlegibleNext, nullptr, 1.0f},
     };
     inline constexpr const char* kDefaultMenuFont = "Segoe UI";
 

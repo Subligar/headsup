@@ -32,14 +32,11 @@ TEST(badges_are_bold_in_their_own_font_with_a_crisp_black_edge)
     CHECK_EQ(BadgeLineStyle(Settings{}).font, Settings{}.defaultFont); // a new install's
 }
 
-TEST(combat_popups_take_the_nameplates_font_until_given_their_own)
+TEST(combat_popups_are_in_marcellus_sc_whatever_the_nameplates_font_until_given_their_own)
 {
     Settings s;
     s.defaultFont = "Cinzel";
-    CHECK_EQ(CombatPopupFont(s), "Cinzel");
+    CHECK_EQ(CombatPopupFont(s), "Marcellus SC");
     s.combatPopupFont = "Tahoma";
     CHECK_EQ(CombatPopupFont(s), "Tahoma");
-    s.combatPopupFont = "";
-    s.defaultFont     = kGameFontName;
-    CHECK_EQ(CombatPopupFont(s), kGameFontName);
 }

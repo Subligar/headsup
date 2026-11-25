@@ -335,6 +335,8 @@ namespace headsup
         bool g_FishBarHidden = false, g_KeepInside = false;
         WindowRect g_KeptWindow{};
         WindowKeyList g_HiddenKeys; // the windows the player hides
+        uint8_t* g_CompassShown = nullptr; // LocateCompassShown's answer byte, while the window hook runs
+        constexpr uint8_t kCompassHidden = 0;
         // The rectangles of those that drew, in menu pixels: this frame's as they come, and the last whole frame's.
         std::array<WindowRect, kMaxWindowKeys> g_HiddenRects{}, g_ShownHiddenRects{};
         size_t g_HiddenRectCount = 0, g_ShownHiddenRectCount = 0;
@@ -912,11 +914,16 @@ namespace headsup
 
     void CombatTextHook::Take(bool take) { g_TakeCombatText = take && Running(); }
 
-    void CombatTextHook::NewFrame(double now)
+    void CombatTextHook::NewFrame(double now, bool keepImage)
     {
         g_PopupTies.SetNow(now);
         g_SentActions.Clear();
         g_CombatPopups.NewFrame();
+        if (!keepImage) ForgetImage();
+    }
+
+    void CombatTextHook::ForgetImage()
+    {
         LetGo(g_CombatTarget);
         LetGo(g_CombatDepth);
         g_CombatTargetWidth  = 0;
@@ -929,6 +936,7 @@ namespace headsup
         g_EarlyPopups.SetOn(on);
         g_PopupTies.SetSpread(on);
     }
+    void CombatTextHook::SetLife(double seconds) { g_PopupTies.SetLife(seconds); }
     void CombatTextHook::SetSides(const PopupSides& sides) { g_PopupTies.SetSides(sides); }
     void CombatTextHook::Sent(const SentAction& action) { g_SentActions.Put(action); }
 
@@ -1000,6 +1008,8 @@ namespace headsup
         g_HeadsUpWindowDraw = Address(base) + found.draw;
         if (const std::string failure = PutIn({&call, 1}); !failure.empty()) return failure;
         m_Call = call;
+        if (const std::optional<uint32_t> at = LocateCompassShown(text)) g_CompassShown = base + *at;
+        else m_CompassProblem = "the game's compass routine was not found";
         // Without the move the windows stay where the game puts them; hiding works either way.
         const WindowMoveSite move = LocateWindowMove(text);
         g_WindowMoveTo            = move.problem == LocateProblem::None ? Address(base) + move.moveTo : 0;
@@ -1064,6 +1074,8 @@ namespace headsup
         g_PlannedFrame = 0;
         g_PlannedKeys.Clear();
         g_WindowsBand  = 0;
+        PutCompassBack();
+        g_CompassShown = nullptr;
         const auto takeOut = [](CodePatch& member, const char* what) {
             const CodePatch patch = std::exchange(member, {});
             return patch.at == nullptr ? std::string() : TakeOut({&patch, 1}, what);
@@ -1083,8 +1095,27 @@ namespace headsup
     void WindowHook::HideWindows(const std::vector<std::string>& names)
     {
         g_HiddenKeys.Clear();
+        bool compass = false;
         for (const std::string& name : names)
-            if (const std::optional<WindowKey> key = KeyFromShortName(name)) g_HiddenKeys.Add(*key);
+            if (const std::optional<WindowKey> key = KeyFromShortName(name))
+            {
+                g_HiddenKeys.Add(*key);
+                compass = compass || CompassWindow(*key);
+            }
+        if (!compass) PutCompassBack();
+        else if (m_Compass.at == nullptr && g_CompassShown != nullptr)
+        {
+            CodePatch answer{.at = g_CompassShown, .bytes = 1};
+            answer.ours[0] = kCompassHidden;
+            if (PutIn({&answer, 1}).empty()) m_Compass = answer;
+        }
+    }
+
+    // Restore, not TakeOut: nothing jumps into HeadsUp from this byte, so another tool's byte over it is left alone.
+    void WindowHook::PutCompassBack()
+    {
+        const CodePatch patch = std::exchange(m_Compass, {});
+        if (patch.at != nullptr) Restore({&patch, 1}, WriteCode);
     }
 
     bool WindowHook::Silent() { return g_SilentDraw; }

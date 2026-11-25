@@ -150,9 +150,13 @@ namespace headsup
         bool Running() const { return m_Call.at != nullptr; }
         // Whether popups are taken from now on: never while the gate is not in.
         void Take(bool take);
-        // At Present: the last frame's popups and their image are forgotten, and the popups the game starts next count
-        // as started now.
-        void NewFrame(double now);
+        // At Present: the last frame's popups are forgotten, and their image unless HeadsUp still draws popups into it,
+        // and the popups the game starts next count as started now.
+        void NewFrame(double now, bool keepImage);
+        // Before the device's Reset, which a kept image would make fail.
+        static void ForgetImage();
+        // At Present: how long HeadsUp shows a popup, which its line is kept for.
+        static void SetLife(double seconds);
         // At Present, for the popups the game starts next: your entity index and your pet's (0 for none).
         static void SetYou(uint32_t you, uint32_t pet);
         // At Present: whether popups start as soon as their action arrives and spread when started together.
@@ -254,6 +258,8 @@ namespace headsup
 #endif
         // Why windows cannot be moved, once, after a Start that could not find the game's move.
         std::string TakeMoveProblem() { return std::exchange(m_MoveProblem, std::string()); }
+        // Why the Compass row cannot hide the compass, once, after a Start that could not find its routine.
+        std::string TakeCompassProblem() { return std::exchange(m_CompassProblem, std::string()); }
 
     private:
         CodePatch m_Call;
@@ -261,7 +267,9 @@ namespace headsup
         CodePatch m_CountCall; // an item list's count's ask for it, when it was found
         CodePatch m_MoveStart; // MCD::MoveTo's start, so a window the game moves goes where HeadsUp would put it
         CodePatch m_BuildCall; // the catalog's window build, so where a new window goes is known before it draws
-        std::string m_MoveProblem;
+        CodePatch m_Compass;   // the compass routine's answer while the Compass row hides it
+        std::string m_MoveProblem, m_CompassProblem;
+        void PutCompassBack();
     };
 
     // Puts right the game's guess of its window's client area (native_locate.h's PointerMapping): each guess's
