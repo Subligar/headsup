@@ -1744,6 +1744,7 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     Window w;
     const PanelWidget zone{BarWidget::Zone};
     w.readings.settingsOf  = {zone};
+    w.settings.Widget(zone).design = DesignFrom(BarWidget::Zone, "name | region nation -coordinates");
     const std::string base = "toppanel-widgets-part-" + std::to_string(SlotOf(zone)) + "-";
     const auto chip        = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
     const auto toggle      = [&](WidgetPart part) { return FormEvent{chip(part) + "-on", kClickEvent, ""}; };

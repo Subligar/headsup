@@ -14,16 +14,15 @@ namespace headsup
 
     Span Text(std::string text, Tone tone) { return Span{std::move(text), tone, 0}; }
 
-    void AddPart(std::vector<Span>& line, std::vector<Span> part)
+    void AddPart(std::vector<Span>& line, std::vector<Span> part, std::string_view gap)
     {
         if (part.empty()) return;
-        constexpr const char* kPartGap = "  ";
         if (!line.empty())
         {
             if (!HasMark(part.front()))
-                part.front().text = kPartGap + part.front().text;
+                part.front().text = std::string(gap) + part.front().text;
             else
-                line.push_back(Text(kPartGap));
+                line.push_back(Text(std::string(gap)));
         }
         for (Span& span : part)
             line.push_back(std::move(span));

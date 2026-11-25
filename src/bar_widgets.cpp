@@ -58,8 +58,6 @@ namespace headsup
         constexpr int kSupplyColumns       = 2; // a region's name, and its supply run's flag and word
         constexpr uint16_t kGilItem  = 0xFFFF;
         constexpr const char* kNoMapSquare = "(?-?)"; // the game's <pos> in a zone without a map
-        // The widest map squares: a room's digits count as the widest digit already, so only the letter is left.
-        constexpr const char* kWidestMapSquares[] = {"(M-15)", "(W-15)"};
 
         Span Percent(int percent)
         {
@@ -1503,11 +1501,7 @@ namespace headsup
                 else if (const GamePicture crest = HomeCrest(zone); crest != GamePicture::None)
                     parts.push_back({WidgetPart::ZoneCrest, ListOf(Mark(crest))});
                 if (!state.mapSquare.empty() && state.mapSquare != kNoMapSquare)
-                {
-                    Span square = Text(state.mapSquare, Tone::Dim);
-                    square.room = {std::begin(kWidestMapSquares), std::end(kWidestMapSquares)};
-                    parts.push_back({WidgetPart::ZoneCoordinates, ListOf(std::move(square))});
-                }
+                    parts.push_back({WidgetPart::ZoneCoordinates, ListOf(Text(state.mapSquare, Tone::Dim))});
                 base.hasPopup = state.zone != 0;
                 return parts;
             }

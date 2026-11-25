@@ -265,8 +265,9 @@ namespace headsup
         return items;
     }
 
-    // A part added to a line of parts, two spaces after the one before.
-    void AddPart(std::vector<Span>& line, std::vector<Span> part);
+    inline constexpr std::string_view kPartGap = "  ";
+    // A part added to a line of parts, gap after the one before.
+    void AddPart(std::vector<Span>& line, std::vector<Span> part, std::string_view gap = kPartGap);
     Span Text(std::string text, Tone tone = Tone::Normal);
     Span Colored(std::string text, uint32_t argb);
     PopupCell Cell(std::vector<Span> text, std::optional<Icon> icon = std::nullopt);

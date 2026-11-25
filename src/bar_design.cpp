@@ -9,6 +9,7 @@ namespace headsup
     namespace
     {
         using P = WidgetPart;
+        constexpr std::string_view kCoordinatesGap = " ";
         constexpr P kZone[]   = {P::ZoneName, P::ZoneRegion, P::ZoneNation, P::ZoneCoordinates};
         constexpr P kWeather[] = {P::WeatherName, P::VanaDate, P::VanaDay, P::VanaTime, P::VanaMoon, P::VanaSeason};
         constexpr P kTarget[] = {P::TargetName, P::TargetDistance, P::TargetDetection, P::TargetLevel,
@@ -35,7 +36,7 @@ namespace headsup
             "guild", "sandoria", "bastok", "windurst", "beastmen", "name", "icon", "name"};
 
         // As each widget showed before it had a design.
-        constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation -coordinates", "weather | day time -date -moon",
+        constexpr const char* kDefaults[kBarWidgetCount] = {"name coordinates | region nation", "weather | day time -date -moon",
             "name distance -detection | level player -weak", "amount1 | icon2 amount2 -name1 -name2 -icon1", "count1 | name1", "time | -server -vana -date", "", "-fps sent received percent -memory messages |",
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
             "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "name |"};
@@ -487,7 +488,7 @@ namespace headsup
             for (size_t i = 0; i < parts.size(); ++i)
             {
                 const size_t at = spans.size();
-                AddPart(spans, std::move(parts[i].spans));
+                AddPart(spans, std::move(parts[i].spans), parts[i].part == WidgetPart::ZoneCoordinates ? kCoordinatesGap : kPartGap);
                 if (parts[i].align && (i == 0 || parts[i - 1].align != parts[i].align)) spans[at].align = parts[i].align;
             }
         }

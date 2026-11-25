@@ -627,8 +627,12 @@ TEST(the_zone_widget_shows_the_games_map_square_only_where_the_zone_has_a_map)
     state.mapSquare = "(H-8)";
     settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name coordinates | region");
     WidgetContent w = Content(BarWidget::Zone, state, settings);
-    CHECK(w.title.back().text.ends_with("(H-8)") && w.title.back().tone == Tone::Dim && !w.title.back().room.empty());
+    // One space after the name, and no room kept for a wider square, which would pad it on the left.
+    CHECK(w.title.back().text == " (H-8)" && w.title.back().tone == Tone::Dim && w.title.back().room.empty());
     const std::string name = Joined(w.title).substr(0, Joined(w.title).size() - w.title.back().text.size());
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "coordinates name | region");
+    CHECK(Joined(Content(BarWidget::Zone, state, settings).title).starts_with("(H-8)  "));
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name coordinates | region");
     // The game's "(?-?)" where the zone has no map, and nothing while zoning: the name alone.
     for (const char* none : {"", "(?-?)"})
     {
@@ -643,12 +647,13 @@ TEST(the_zone_widget_shows_the_games_map_square_only_where_the_zone_has_a_map)
 TEST(the_map_square_is_read_only_while_a_shown_widget_shows_it)
 {
     Settings settings;
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name -coordinates | region");
     CHECK(!NeedsOf(settings, {}).mapSquare);
     settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name coordinates | region");
     CHECK(NeedsOf(settings, {}).mapSquare);
     settings.Widget(BarWidget::Zone).on = false;
     CHECK(!NeedsOf(settings, {}).mapSquare);
-    settings.Widget(BarWidget::Zone).design = DefaultDesign(BarWidget::Zone);
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name -coordinates | region");
     const PanelWidget made = *CreateWidget(settings);
     settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name zone.coordinates |");
     CHECK(NeedsOf(settings, {}).mapSquare);
