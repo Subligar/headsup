@@ -24,7 +24,7 @@ namespace headsup
         constexpr uint8_t kTrackAlpha     = 0x40;    // of the kind's color
         constexpr const char* kDotClass = "dot"; // a compact notice's, before the name
         constexpr float kDotEm = 0.6f, kDotGapEm = 0.4f; // its size, and the room after it, in the message's font
-        constexpr float kButtonIconEm = 1.4f;            // a compact invite's Decline and Accept icons, in the message's font
+        constexpr float kButtonIconEm = 1.4f;            // an invite's Decline and Accept icons, in the message's font
         // The text, buttons and bar in a column. The box itself is a block: RmlUi sizes a piece placed in a flex box
         // before the box knows its height, which left the art only the box's padding tall.
         constexpr const char* kInnerClass = "inner";
@@ -106,13 +106,15 @@ namespace headsup
                    font(look.textFont, look.textSize) + "}";
             css += std::string(".") + kButtonClass + ":hover{background-color:" + RcssColor(p.highlight) + ";}";
             css += std::string(".") + kDeclineClass + "{margin-right:" + Px(kButtonsGap) + ";}";
+            css += std::string(".") + kButtonClass + " img{display:inline-block;vertical-align:middle;width:" + Em(kButtonIconEm) +
+                   ";height:" + Em(kButtonIconEm) + ";margin-right:" + Em(kDotGapEm) + ";}";
             const bool compact = look.style == NoticeStyle::Compact;
             // Compact: the buttons are their icons alone, lined up as the text is.
             if (compact)
                 css += std::string(".") + kButtonsClass + "{justify-content:" + FlexAlignWord(look.align) + ";}." + kButtonClass +
                        "{flex:0 0 auto;width:" + Em(kButtonIconEm) + ";height:" + Em(kButtonIconEm) +
                        ";padding:0px;border-width:0px;border-radius:" + Em(kButtonIconEm / 2.0f) +
-                       ";background-color:transparent;}." + kButtonClass + " img{display:block;width:100%;height:100%;}" +
+                       ";background-color:transparent;}." + kButtonClass + " img{display:block;width:100%;height:100%;margin-right:0px;}" +
                        // The box as small as its dot and name, whatever Width and Height say.
                        ".box{height:auto;}." + kInnerClass + "{height:auto;}." + kTitleClass + "{display:none;}";
             css += std::string(".") + kTrackClass + "{height:" + Px(kNoticeBarHeight) + ";margin-top:" + Px(kBarGap) + ";}";
@@ -128,17 +130,17 @@ namespace headsup
             // Last, so it wins over the box's own display.
             css += std::string(".") + kHiddenClass + "{display:none;}";
             const auto face = [&](const char* word, Icon icon) {
-                return compact ? "<img src=\"" + IconSource(icon) + "\"/>" : std::string(word);
+                return "<img src=\"" + IconSource(icon) + "\"/>" + (compact ? std::string() : std::string(word));
             };
             std::string boxes;
             for (int slot = 0; slot < kNoticeBoxes; ++slot)
                 boxes += "<div id=\"" + NoticeId(slot) + "\" class=\"box " + kHiddenClass + "\">" +
                          (look.skin ? kArtRml : "") + "<div class=\"" + kInnerClass + "\"><div class=\"" + kTextClass + "\"><div class=\"" + kTitleClass +
-                         "\"></div><div class=\"" + kMessageClass + "\"></div></div><div class=\"" + kButtonsClass +
-                         " " + kHiddenClass + "\"><div class=\"" + kButtonClass + " " + kDeclineClass + "\">" +
-                         face(kDeclineWord, Icon::Decline) + "</div><div class=\"" + kButtonClass + " " + kAcceptClass + "\">" +
-                         face(kAcceptWord, Icon::Accept) + "</div></div><div class=\"" + kTrackClass + "\"><div class=\"" +
-                         kBarClass + "\"></div></div></div></div>";
+                         "\"></div><div class=\"" + kMessageClass + "\"></div></div><div class=\"" + kTrackClass +
+                         "\"><div class=\"" + kBarClass + "\"></div></div><div class=\"" + kButtonsClass + " " + kHiddenClass +
+                         "\"><div class=\"" + kButtonClass + " " + kDeclineClass + "\">" + face(kDeclineWord, Icon::Decline) +
+                         "</div><div class=\"" + kButtonClass + " " + kAcceptClass + "\">" + face(kAcceptWord, Icon::Accept) +
+                         "</div></div></div></div>";
             return "<rml><head><style>" + css + "</style></head><body id=\"" + std::string(kNoticeDocument) +
                    "\"><div id=\"" + kNoticeStackId + "\">" + boxes + "</div></body></rml>";
         }

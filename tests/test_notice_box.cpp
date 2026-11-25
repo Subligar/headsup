@@ -456,6 +456,15 @@ TEST(clicks_pass_through_a_notice_but_its_buttons_take_them)
     CHECK(!ClickAt(rml, Middle(Part(Box(rml, 0), "decline"))));
     press = box.Update(rml.context, Gold(), settings, shown, Frame()).press;
     CHECK(press && press->id == 7 && !press->accept);
+    // Each full button has its icon before its word, under the countdown bar.
+    for (const char* button : {"decline", "accept"})
+    {
+        Rml::ElementList pictures;
+        Part(Box(rml, 0), button)->GetElementsByTagName(pictures, "img");
+        CHECK(pictures.size() == 1 && Width(pictures[0]) > 0.0f);
+        CHECK(Top(Part(Box(rml, 0), button)) >= Top(Part(Box(rml, 0), "track")) + Height(Part(Box(rml, 0), "track")) - 0.5f);
+    }
+    CHECK(Part(Box(rml, 0), "accept")->GetInnerRML().ends_with(kAcceptWord));
     CHECK_EQ(rml.Said(), "");
     box.Close();
 }
@@ -611,14 +620,14 @@ TEST(a_compact_notice_is_its_dot_and_name_whatever_width_and_height_say)
         CHECK(right <= Left(compact) + Width(compact) + 0.5f);
         CHECK(Width(compact) < 300.0f && Height(compact) < 80.0f);
     }
-    // The invite's buttons are its two icons, under the name and over the bar, and they still answer it.
+    // The invite's buttons are its two icons, under the bar under the name, and they still answer it.
     Rml::Element* invite = Box(rml, 2);
     Rml::Element* accept = Part(invite, "accept");
     Rml::ElementList pictures;
     invite->GetElementsByTagName(pictures, "img");
     CHECK(pictures.size() == 2);
-    CHECK(Top(Part(invite, "buttons")) >= Top(Part(invite, "message")) + Height(Part(invite, "message")) - 0.5f);
-    CHECK(Top(Part(invite, "track")) >= Top(accept) + Height(accept) - 0.5f);
+    CHECK(Top(Part(invite, "track")) >= Top(Part(invite, "message")) + Height(Part(invite, "message")) - 0.5f);
+    CHECK(Top(accept) >= Top(Part(invite, "track")) + Height(Part(invite, "track")) - 0.5f);
     CHECK(Width(accept) > 0.0f && Height(accept) < 40.0f && Width(accept) < 40.0f);
     CHECK(!ClickAt(rml, Middle(accept)));
     const std::optional<NoticePress> press = box.Update(rml.context, Gold(), settings, shown, Frame()).press;
