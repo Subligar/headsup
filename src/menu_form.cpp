@@ -2438,7 +2438,7 @@ namespace headsup
                 break;
             case SettingPiece::NoticeFade:
                 form.Fade(false);
-                form.SliderInt(label.c_str(), s.noticeFade, kMinNoticeFade, kMaxNoticeFade, Seconds, tip);
+                form.SliderFloat(label.c_str(), s.noticeFade, kMinNoticeFade, kMaxNoticeFade, 1, kSecondsUnit, tip, kNoticeFadeStep);
                 break;
             case SettingPiece::NoticeAnchor:
             case SettingPiece::NoticeEdge:

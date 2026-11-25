@@ -155,7 +155,8 @@ namespace headsup
     constexpr int kFlexibleNoticeWidth = 100, kDefaultNoticeWidth = 300, kMaxNoticeWidth = 600; // pixels; the lowest is Flexible
     constexpr int kFlexibleNoticeHeight = 30, kMaxNoticeHeight = 200;                            // pixels; the lowest is Flexible
     constexpr int kMinNoticeMost = 1, kDefaultNoticeMost = 6, kMaxNoticeMost = 10;
-    constexpr int kMinNoticeFade = 0, kDefaultNoticeFade = 3, kMaxNoticeFade = 10; // seconds; 0 vanishes at once
+    // Seconds, in steps of kNoticeFadeStep; 0 vanishes at once.
+    constexpr float kMinNoticeFade = 0.0f, kDefaultNoticeFade = 1.4f, kMaxNoticeFade = 10.0f, kNoticeFadeStep = 0.2f;
     // The notifications' anchored edge: they stack down from Top, up from Bottom.
     enum class NoticeEdge : uint8_t { Top, Bottom };
     constexpr int kNoticeEdgeCount = 2;
@@ -312,7 +313,7 @@ namespace headsup
         int noticeRounding  = kThemeRounding;
         bool noticeBar      = true; // the countdown bar
         int noticeVolume = kDefaultMasterVolume, noticeSeconds = kDefaultNoticeSeconds; // every kind's volume is times this
-        int noticeFade = kDefaultNoticeFade;
+        float noticeFade = kDefaultNoticeFade;
         HelpAnchor noticeAnchor = HelpAnchor::Left, noticeAlign = HelpAnchor::Center;  // the stack's spot across; its text
         NoticeEdge noticeEdge = NoticeEdge::Top;
         int noticeMost = kDefaultNoticeMost;

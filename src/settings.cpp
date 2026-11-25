@@ -126,7 +126,6 @@ namespace headsup
             {"noticeRounding", &Settings::noticeRounding, kThemeRounding, kMaxRounding},
             {"noticeVolume", &Settings::noticeVolume, 0, kMaxNoticeVolume, kPercentStep},
             {"noticeSeconds", &Settings::noticeSeconds, kMinNoticeSeconds, kMaxNoticeSeconds},
-            {"noticeFade", &Settings::noticeFade, kMinNoticeFade, kMaxNoticeFade},
             {"noticeMost", &Settings::noticeMost, kMinNoticeMost, kMaxNoticeMost},
             {"noticeAcross", &Settings::noticeAcross, kFishBarUnplaced, kCasePlaceWhole},
             {"noticeDown", &Settings::noticeDown, kFishBarUnplaced, kCasePlaceWhole},
@@ -176,7 +175,8 @@ namespace headsup
             {"popupWidthScale", &Settings::popupWidthScale, kMinPopupBoxScale, kMaxPopupScale},
             {"popupHeightScale", &Settings::popupHeightScale, kMinPopupBoxScale, kMaxPopupScale},
             {"combatPopupDuration", &Settings::combatPopupDuration, kMinCombatPopupDuration, kMaxCombatPopupDuration},
-            {"combatPopupFade", &Settings::combatPopupFade, kMinCombatPopupFade, kMaxCombatPopupFade}};
+            {"combatPopupFade", &Settings::combatPopupFade, kMinCombatPopupFade, kMaxCombatPopupFade},
+            {"noticeFade", &Settings::noticeFade, kMinNoticeFade, kMaxNoticeFade}};
 
         struct ColorKey
         {

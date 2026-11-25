@@ -2394,7 +2394,17 @@ TEST(the_notifications_page_sets_the_look_of_every_notification)
     CHECK(w.Pass({{look + "-notice-bar", kClickEvent, ""}}).changed);
     CHECK(!w.settings.noticeBar);
     CHECK(w.Pass({{look + "-notice-fade", kChangeEvent, "0"}}).changed);
-    CHECK_EQ(w.settings.noticeFade, 0);
+    CHECK_EQ(w.settings.noticeFade, 0.0f);
+    // Fade Speed steps by 0.2 s.
+    const Form form = w.Pass({{look + "-notice-fade", kChangeEvent, "1.4"}});
+    CHECK(form.changed && w.settings.noticeFade == 1.4f);
+    const std::string& rml = Block(form, look.c_str())->rml;
+    const size_t fade      = rml.find("id=\"" + look + "-notice-fade\"");
+    CHECK(fade != std::string::npos && rml.compare(rml.find("step=\"", fade), 10, "step=\"0.2\"") == 0);
+    // Duration is the friends' own: an invite always stays its 90 seconds.
+    CHECK(!Has(rml, "notice-seconds"));
+    CHECK(w.Pass({{"notifications-notice-friends-notice-seconds", kChangeEvent, "12"}}).changed);
+    CHECK_EQ(w.settings.noticeSeconds, 12);
 }
 
 TEST(changing_an_anchor_moves_the_spot_and_not_the_stack)

@@ -3246,7 +3246,7 @@ TEST(the_notification_settings_load_inside_their_ranges_and_save_back)
     CHECK(fresh.noticeWidth == 300 && fresh.noticeHeight == kFlexibleNoticeHeight && fresh.noticeFit == NoticeFit::Shrink);
     CHECK(fresh.noticeRounding == kThemeRounding && fresh.noticeBar && fresh.noticeVolume == 100);
     CHECK(fresh.noticeSeconds == 8 && fresh.noticeAnchor == HelpAnchor::Left && fresh.noticeEdge == NoticeEdge::Top);
-    CHECK(fresh.noticeAlign == HelpAnchor::Center && fresh.noticeMost == 6 && fresh.noticeFade == 3);
+    CHECK(fresh.noticeAlign == HelpAnchor::Center && fresh.noticeMost == 6 && fresh.noticeFade == 1.4f);
     CHECK(fresh.noticeAcross == kFishBarUnplaced && fresh.noticeDown == kFishBarUnplaced);
     CHECK(fresh.friendNoticeOnline && fresh.friendNoticeOffline && fresh.friendNoticeVolume == 60);
     CHECK(fresh.friendNoticeOnlineSound == kChimeSound && fresh.friendNoticeOfflineSound == kNoSound);

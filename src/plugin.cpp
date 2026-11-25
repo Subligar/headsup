@@ -1133,7 +1133,7 @@ public:
         // The Notifications page shows a test notification of each kind, which drag without Shift.
         const bool noticesPage = m_RmlMenu.NoticesPageOpen();
         const std::vector<headsup::ShownNotice> shown = headsup::NoticesToShow(m_Notices.Shown(noticeFrame, m_NoticeHeld,
-            static_cast<float>(m_Settings.noticeSeconds), static_cast<float>(m_Settings.noticeFade), m_Settings.noticeMost,
+            static_cast<float>(m_Settings.noticeSeconds), m_Settings.noticeFade, m_Settings.noticeMost,
             m_Settings.partyNoticeButtons), m_Settings, noticesPage);
         if (m_Rml.Running())
         {
