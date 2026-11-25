@@ -166,12 +166,14 @@ namespace headsup
     // Ashita's ImGui backend (Ashita.dll) hands ImGui the mouse in the game window's client pixels, which ImGui lays
     // out in the viewport's: its poll after ScreenToClient, its WM_MOUSEMOVE and its WM_MOUSELEAVE each call
     // ImGuiIO::AddMousePosEvent with the io in ecx, x in xmm1 and y in xmm2. RVAs of every five-byte call to it, found
-    // through the poll's.
+    // through the poll's. A button press also updates ImGui's hovered window at once from the raw client point, an
+    // ImVec2 on the stack whose address is in ecx: the RVAs of that call and of the update. Found both or neither.
     struct ImGuiMouseCalls
     {
         LocateProblem problem = LocateProblem::None;
         std::vector<uint32_t> calls;
         uint32_t addMousePos = 0;
+        uint32_t hoverCall = 0, hoverUpdate = 0;
     };
     ImGuiMouseCalls LocateImGuiMouseCalls(const ImageSection& text);
 

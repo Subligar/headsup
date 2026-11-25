@@ -74,6 +74,11 @@ namespace headsup
         constexpr int16_t kImGuiPoll[] = {0xFF, 0x15, -1, -1, -1, -1, 0x85, 0xC0, 0x74, -1, 0x66, 0x0F, 0x6E, 0x55, -1, 0x66, 0x0F,
             0x6E, 0x4D, -1, 0x8B, 0x4D, -1, 0x0F, 0x5B, 0xD2, 0x0F, 0x5B, 0xC9, 0xE8};
         constexpr uint32_t kImGuiPollCall = 29;
+        // The press's point: movd xmm0,[ebp-x]; lea ecx,[ebp-p]; cvtdq2ps xmm0,xmm0; movss [ebp-p],xmm0; and the same for
+        // y into [ebp-p+4]; then the hover update, 29 bytes in.
+        constexpr int16_t kImGuiPressHover[] = {0x66, 0x0F, 0x6E, 0x45, -1, 0x8D, 0x4D, -1, 0x0F, 0x5B, 0xC0, 0xF3, 0x0F, 0x11,
+            0x45, -1, 0x66, 0x0F, 0x6E, 0x45, -1, 0x0F, 0x5B, 0xC0, 0xF3, 0x0F, 0x11, 0x45, -1, 0xE8};
+        constexpr uint32_t kImGuiHoverCall = 29;
 
         // The draw loop: mov ecx,esi; call the window draw; mov eax,[esp+0Ch]; test eax,eax; jnz next; inc bl;
         // cmp bl,9; jl the next layer.
@@ -587,10 +592,14 @@ namespace headsup
 
     ImGuiMouseCalls LocateImGuiMouseCalls(const ImageSection& text)
     {
-        const std::vector<uint32_t> found = Find(kImGuiPoll, text);
-        if (found.empty() || text.size - found.front() < kImGuiPollCall + kBranchLength) return ImGuiMouseCalls{LocateProblem::NoImGuiMouse, {}, 0};
-        if (found.size() > 1) return ImGuiMouseCalls{LocateProblem::AmbiguousImGuiMouse, {}, 0};
+        const std::vector<uint32_t> found = Find(kImGuiPoll, text), hover = Find(kImGuiPressHover, text);
+        const auto fits = [&](uint32_t at, uint32_t call) { return text.size - at >= call + kBranchLength; };
+        if (found.empty() || hover.empty() || !fits(found.front(), kImGuiPollCall) || !fits(hover.front(), kImGuiHoverCall))
+            return ImGuiMouseCalls{LocateProblem::NoImGuiMouse, {}, 0, 0, 0};
+        if (found.size() > 1 || hover.size() > 1) return ImGuiMouseCalls{LocateProblem::AmbiguousImGuiMouse, {}, 0, 0, 0};
         ImGuiMouseCalls result;
+        result.hoverCall   = text.rva + hover.front() + kImGuiHoverCall;
+        result.hoverUpdate = CallTarget(result.hoverCall, text);
         result.addMousePos = CallTarget(text.rva + found.front() + kImGuiPollCall, text);
         for (uint32_t at = 0; at + kBranchLength <= text.size; ++at)
             if (text.bytes[at] == kCallOpcode && CallTarget(text.rva + at, text) == result.addMousePos)
