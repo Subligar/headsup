@@ -1175,10 +1175,14 @@ public:
                 g_MenuScaleX = m_MenuWidth / static_cast<float>(client.right);
                 g_MenuScaleY = m_MenuHeight / static_cast<float>(client.bottom);
             }
-            if (g_BarOn)
+            // RmlUi's windows read the mouse through this scale too, with the panel off and before you are in game.
+            if (m_Names.BackBufferWidth() > 0.0f && m_Names.BackBufferHeight() > 0.0f)
             {
                 g_BarScaleX = m_Names.BackBufferWidth() / static_cast<float>(client.right);
                 g_BarScaleY = m_Names.BackBufferHeight() / static_cast<float>(client.bottom);
+            }
+            if (g_BarOn)
+            {
                 // No message says the pointer left the client area, and in windowed modes the game never moves Windows'.
                 // A Windows tester's borderless window got no mouse moves in its top 18 px while no game menu was open,
                 // so a move of Windows' pointer that no message gave counts as one. Linkpearl's moves are messages alone.
