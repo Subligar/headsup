@@ -58,6 +58,7 @@ ICONS = [(name, f'third_party/mobdb-icons/{name}.png', '') for name in
     ('Gil', 'third_party/xiui-icons/gil.png', "gil's coins"),
     ('LinkDead', 'resources/icons/link_dead.png', "a player timing out, the game's red circle (R0)"),
     ('HomePoint', 'resources/icons/home_point.png', "the Home Point widget's house"),
+    ('Person', 'resources/icons/person.png', "the Party widget's person"),
     ('Accept', 'resources/icons/accept.png', "a compact invite's Accept"),
     ('Decline', 'resources/icons/decline.png', "a compact invite's Decline"),
 ]

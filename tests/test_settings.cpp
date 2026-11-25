@@ -264,6 +264,7 @@ barStatusTimers=true
 barWorld=true
 barSettings=true
 barHomePoint=true
+barPhTimers=true
 barZoneLine2=true
 barZoneIcons=true
 barWeatherLine2=true
@@ -304,7 +305,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather job party statusTimers world homePoint
+barLeft=zone weather job party statusTimers world homePoint phTimers
 barCenter=
 barRight=target gil bags performance earthTime settings
 hideHelpBar=true
@@ -760,6 +761,23 @@ TEST(nameplates_need_the_master_switch_and_a_part)
     }
 }
 
+TEST(the_respawn_timers_run_for_the_nameplate_or_the_widget_either_alone)
+{
+    Settings none;
+    none.phTimers = false;
+    CHECK(!PhTimersRun(none));
+    Settings plate = none;
+    plate.phTimers = true;
+    CHECK(PhTimersRun(plate));
+    Settings widget = none;
+    widget.Widget(PanelWidget{BarWidget::PhTimers}).on = true;
+    CHECK(PhTimersRun(widget));
+    widget.showBar = false;
+    CHECK(!PhTimersRun(widget));
+    plate.enabled = false;
+    CHECK(!PhTimersRun(plate));
+}
+
 TEST(a_color_from_hex_draws_as_the_same_hex)
 {
     // Phoenix's red and a color whose bytes all differ: 0.77 would have drawn C4, not C5.
@@ -1043,7 +1061,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint"}; // in BarWidget's order, but a created widget's
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers"}; // in BarWidget's order, but a created widget's
     static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
     for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {
@@ -1259,7 +1277,8 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     Settings s;
     const WidgetOptions fresh;
     CHECK(!fresh.spacing && !fresh.padding && !fresh.background && fresh.titleFont.empty() && fresh.textFont.empty() &&
-          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale && !fresh.lineSeparation);
+          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale && !fresh.lineSeparation &&
+          !fresh.fontSize);
     WidgetOptions& zone = s.Widget(BarWidget::Zone);
     zone.spacing        = 12;
     zone.padding        = 0;
@@ -1271,6 +1290,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     zone.rounding       = 0;
     zone.popupTextScale = 1.4f;
     zone.lineSeparation = 1.5f;
+    zone.fontSize       = 14;
     const PanelWidget copy = *CloneWidget(s, BarWidget::Zone);
     CHECK(s.Widget(copy).spacing == 12 && s.Widget(copy).textFont == "Verdana" && s.Widget(copy).popupTextScale == 1.4f);
     s.Widget(copy).iconScale  = 75;
@@ -1281,6 +1301,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     CHECK_EQ(saved.values["barZoneShowBackground"], "false");
     CHECK_EQ(saved.values["barZonePrimaryFont"], "Arial");
     CHECK_EQ(saved.values["barZoneLineSeparation"], "1.5000");
+    CHECK_EQ(saved.values["barZoneFontSize"], "14.0000");
     CHECK_EQ(saved.values["barZoneIconScale_2"], "75.0000");
     CHECK_EQ(saved.values["barZoneShowBackground_2"], "true");
     CHECK(saved.values.contains("barWeatherWidgetSpacing") && saved.values["barWeatherWidgetSpacing"].empty());
@@ -1289,13 +1310,14 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     const Settings read = LoadSettings(saved);
     CHECK(read.Widget(BarWidget::Zone) == s.Widget(BarWidget::Zone) && read.Widget(copy) == s.Widget(copy));
     const WidgetOptions& weather = read.Widget(BarWidget::Weather);
-    CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale);
+    CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale && !weather.fontSize);
 }
 
-TEST(uniform_font_size_starts_on_for_home_point_and_status_timers_alone_and_each_copy_keeps_its_own)
+TEST(uniform_font_size_starts_on_for_home_point_status_and_placeholder_timers_and_each_copy_keeps_its_own)
 {
     const Settings fresh;
-    CHECK(fresh.Widget(BarWidget::HomePoint).uniformFont && fresh.Widget(BarWidget::StatusTimers).uniformFont);
+    CHECK(fresh.Widget(BarWidget::HomePoint).uniformFont && fresh.Widget(BarWidget::StatusTimers).uniformFont &&
+          fresh.Widget(BarWidget::PhTimers).uniformFont);
     CHECK(!fresh.Widget(BarWidget::Zone).uniformFont && !fresh.Widget(BarWidget::Job).uniformFont);
     Settings s;
     s.Widget(BarWidget::HomePoint).uniformFont = false;
@@ -1326,11 +1348,14 @@ TEST(a_widgets_own_looks_out_of_their_range_are_held_to_it)
     store.values["barZoneFontRatio"]      = "9";
     store.values["barZonePopupTextScale"] = "0.01";
     store.values["barZoneLineSeparation"] = "9";
+    store.values["barZoneFontSize"]       = "200";
+    store.values["barWeatherFontSize"]    = "1";
     store.values["barZonePrimaryFont"]    = std::string(kMaxFontName + 1, 'a');
     const WidgetOptions zone = LoadSettings(store).Widget(BarWidget::Zone);
     CHECK(zone.spacing == kMaxWidgetSpacing && zone.padding == 0 && zone.iconScale == 45);
     CHECK(zone.rounding == 0 && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
-    CHECK(zone.lineSeparation == kMaxLineSeparation && zone.titleFont.empty());
+    CHECK(zone.lineSeparation == kMaxLineSeparation && zone.titleFont.empty() && zone.fontSize == kMaxWidgetFontSize);
+    CHECK(LoadSettings(store).Widget(BarWidget::Weather).fontSize == kMinWidgetFontSize);
 }
 
 TEST(separators_out_of_their_bits_are_held_to_them)
@@ -3104,6 +3129,18 @@ TEST(the_performance_widgets_show_mem_text_starts_off_and_is_kept)
     SaveSettings(s, store);
     CHECK_EQ(store.values["memText"], "true");
     CHECK(LoadSettings(store).Widget(BarWidget::Performance).memText);
+}
+
+TEST(the_job_widgets_use_synced_level_starts_off_and_is_kept_by_each_copy)
+{
+    Settings s;
+    const PanelWidget second = *CloneWidget(s, BarWidget::Job);
+    CHECK(!s.Widget(BarWidget::Job).syncedLevel && !s.Widget(second).syncedLevel);
+    s.Widget(second).syncedLevel = true;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings loaded = LoadSettings(store);
+    CHECK(!loaded.Widget(BarWidget::Job).syncedLevel && loaded.Widget(second).syncedLevel);
 }
 
 TEST(the_status_timers_display_starts_with_name_and_icon_and_is_kept_by_each_copy)

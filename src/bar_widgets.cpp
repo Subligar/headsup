@@ -1558,7 +1558,12 @@ namespace headsup
             case BarWidget::GameHelp: return {};
             case BarWidget::Performance: return PerformanceParts(state, o, base);
             case BarWidget::Job: return JobParts(state.job, o, base);
-            case BarWidget::Party: return PartyParts(state.party, base);
+            case BarWidget::Party:
+            {
+                std::vector<PartContent> parts = PartyParts(state.party, base);
+                parts.push_back({WidgetPart::PartyIcon, ListOf(Mark(Icon::Person))});
+                return parts;
+            }
             case BarWidget::StatusTimers:
                 base.hasPopup = true;
             {
@@ -1575,6 +1580,7 @@ namespace headsup
             }
             case BarWidget::World: return WorldParts(state, o, base);
             case BarWidget::Settings: base.cog = true; return {};
+            case BarWidget::PhTimers: return {};
             case BarWidget::HomePoint:
                 base.wrap = o.wrapText;
                 return {{WidgetPart::HomePointIcon, ListOf(Mark(Icon::HomePoint))},
@@ -1621,6 +1627,21 @@ namespace headsup
                         AddPart(lines[line], PinnedStatus(state.statuses, id, o.statusDisplay, o.timerFormat, OwnPalette(settings)));
                 if (lines[0].empty()) std::swap(lines[0], lines[1]);
                 base.title    = lines[0].empty() ? ListOf(Text("Status Timers", Tone::Dim)) : std::move(lines[0]);
+                base.subtitle = std::move(lines[1]);
+                return base;
+            }
+            if (widget.kind == BarWidget::PhTimers)
+            {
+                // The first, third and so on on top, as the Status Timers' pins are.
+                std::array<std::vector<Span>, kDesignLines> lines;
+                const uint32_t upColor = ToArgb(settings.palette.aggression[static_cast<int>(Nature::Placeholder)]);
+                for (size_t i = 0; i < state.phTimers.size(); ++i)
+                {
+                    const TimerLine& timer = state.phTimers[i];
+                    AddPart(lines[i % kDesignLines], ListOf(timer.up ? Colored(timer.text, upColor) : Text(timer.text)));
+                }
+                base.idle     = lines[0].empty();
+                base.title    = base.idle ? ListOf(Text("-")) : std::move(lines[0]);
                 base.subtitle = std::move(lines[1]);
                 return base;
             }
@@ -2260,7 +2281,8 @@ namespace headsup
                 ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
             return WorldPopup(state, o);
-        case BarWidget::Settings: break;
+        case BarWidget::Settings:
+        case BarWidget::PhTimers: break;
         case BarWidget::HomePoint:
             popup.title = ListOf(Text("Home Point")); // its settings pop-out's
             break;

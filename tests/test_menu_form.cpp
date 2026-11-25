@@ -489,6 +489,28 @@ TEST(each_job_widget_texts_alignment_shows_while_its_button_is_on)
     CHECK(o.percentAlign == Align::Right && o.jobInfoAlign == Align::Left && o.expBarTextAlign == Align::Center);
 }
 
+TEST(use_synced_level_shows_while_job_text_does_and_switches_the_copys_levels)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on = true;
+    w.readings.settingsOf     = {job};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext bar");
+    CHECK(!Has(rows(), "synced-level"));
+    w.settings.Widget(job).expBarText = ExpText::Jobs;
+    CHECK(Has(rows(), "synced-level"));
+    w.settings.Widget(job).expBarText.reset();
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs | tonext bar");
+    CHECK(Has(rows(), "synced-level"));
+    CHECK(!w.settings.Widget(job).syncedLevel);
+    w.Pass({{"toppanel-widgets-synced-level-job", kClickEvent, ""}});
+    CHECK(w.settings.Widget(job).syncedLevel);
+}
+
 TEST(the_exp_bars_colors_are_the_themes_until_one_is_picked)
 {
     Window w;
@@ -1674,6 +1696,10 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     CHECK(own.fontRatio && std::fabs(*own.fontRatio - 1.0f) < 0.001f);
     w.Pass({{id("font-ratio"), kChangeEvent, "-1"}});
     CHECK(!own.fontRatio);
+    w.Pass({{id("font-size"), kChangeEvent, std::to_string(kMinWidgetFontSize + 4)}});
+    CHECK(own.fontSize == kMinWidgetFontSize + 4);
+    w.Pass({{id("font-size"), kChangeEvent, std::to_string(kMinWidgetFontSize - 1)}}); // the step under the least
+    CHECK(!own.fontSize);
     w.Pass({{id("line-separation"), kChangeEvent, "15"}}); // fifteen tenths over 0.5x
     CHECK(own.lineSeparation && std::fabs(*own.lineSeparation - 2.0f) < 0.001f);
     w.Pass({{id("line-separation"), kChangeEvent, "-1"}});
@@ -1689,7 +1715,7 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
     for (const char* key : {"widget-spacing", "show-background", "corner-rounding", "popup-text-scale"})
         CHECK(Has(rml, id(key).c_str()) && !Has(rml, id(key, "weather").c_str()));
-    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "line-separation", "icon-scale"})
+    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-size", "font-ratio", "line-separation", "icon-scale"})
         CHECK(Has(rml, id(key, "weather").c_str()));
 }
 
@@ -1706,6 +1732,31 @@ TEST(uniform_font_size_hides_the_widgets_font_size_ratio)
     CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "toppanel-widgets-font-ratio-zone"));
     w.Pass({{row, kClickEvent, ""}});
     CHECK(!w.settings.Widget(zone).uniformFont);
+}
+
+TEST(a_widget_on_one_line_has_no_font_size_ratio_or_uniform_font_size)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone}, home{BarWidget::HomePoint};
+    w.settings.Widget(home).on          = true;
+    w.settings.Widget(home).uniformFont = false;
+    for (const char* widget : {"zone", "homepoint"})
+    {
+        w.readings.settingsOf = {std::string(widget) == "zone" ? zone : home};
+        w.Pass({{std::string("toppanel-widgets-own-looks-") + widget + "-fold", kClickEvent, ""}});
+    }
+    const auto shows = [&](const char* key, const char* widget) {
+        w.readings.settingsOf = {std::string(widget) == "zone" ? zone : home};
+        return Has(Block(w.Pass(), "toppanel-widgets")->rml, (std::string("toppanel-widgets-") + key + "-" + widget).c_str());
+    };
+    CHECK(shows("font-ratio", "zone") && shows("uniform-font", "zone") && shows("font-size", "zone"));
+    CHECK(shows("font-ratio", "homepoint") && shows("uniform-font", "homepoint"));
+    // Every part of Zone's second line off, and Home Point not wrapping its name.
+    for (DesignChip& chip : w.settings.Widget(zone).design.lines[1])
+        chip.on = false;
+    w.settings.Widget(home).wrapText = false;
+    CHECK(!shows("font-ratio", "zone") && !shows("uniform-font", "zone") && shows("font-size", "zone"));
+    CHECK(!shows("font-ratio", "homepoint") && !shows("uniform-font", "homepoint") && shows("font-size", "homepoint"));
 }
 
 TEST(a_widgets_settings_are_its_designers_section_then_the_rest_then_its_overrides)
@@ -2204,6 +2255,7 @@ TEST(a_widgets_tips_name_a_copys_own_defaults)
     CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 0), layout.WordOf(WindowWord::SwitchOff).name);
     CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 1), layout.WordOf(WindowWord::SwitchOn).name);
     CHECK_EQ(named(WidgetTabsRow::MemText, BarWidget::Performance, 1), layout.WordOf(WindowWord::SwitchOff).name);
+    CHECK_EQ(named(WidgetTabsRow::SyncedLevel, BarWidget::Job, 1), layout.WordOf(WindowWord::SwitchOff).name);
     CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 0), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Icon)));
     CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 1), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Both)));
     // A date format is named as the list shows it, by the day.

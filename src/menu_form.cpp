@@ -1031,6 +1031,16 @@ namespace headsup
             const bool off = !BarOn(s) || !o.on;
             // Its pill's spacing, background, rounding and pop-out are its first widget's, set there alone.
             const bool pillLooks = HasOwnLooks(kind) && Panel(s).group[SlotOf(widget)] == widget;
+            // Font Size Ratio and Uniform Font Size size a second line, which a widget on one line does not have.
+            const bool twoLines = [&] {
+                if (kind == BarWidget::HomePoint) return o.wrapText;
+                if (kind == BarWidget::PhTimers) return true;
+                if (kind == BarWidget::StatusTimers)
+                    return std::ranges::none_of(PinnedLines(o.pinDesign, s.statusPins), &std::vector<uint16_t>::empty);
+                return std::ranges::all_of(o.design.lines, [](const std::vector<DesignChip>& line) {
+                    return std::ranges::any_of(line, &DesignChip::on);
+                });
+            }();
             // An override at the Top Panel's step, with what the Top Panel has now.
             const auto unchanged = [&](const std::string& panel) {
                 return Words(Word(c, WindowWord::WidgetTabsUnchanged)) + " (" + panel + ")";
@@ -1293,6 +1303,9 @@ namespace headsup
                         o.jobText = static_cast<JobText>(text);
                     }
                     break;
+                case WidgetTabsRow::SyncedLevel:
+                    if (jobs || (bar && o.expBarText == ExpText::Jobs)) form.Switch(label.c_str(), o.syncedLevel, ownDefault().c_str());
+                    break;
                 case WidgetTabsRow::BarTextAlign: alignRow(WidgetPart::JobBar, o.expBarTextAlign); break;
                 case WidgetTabsRow::JobTextAlign: alignRow(WidgetPart::JobJobs, o.jobInfoAlign); break;
                 case WidgetTabsRow::EarnedAlign: alignRow(WidgetPart::JobEarned, o.earnedAlign); break;
@@ -1350,10 +1363,16 @@ namespace headsup
                     form.FontDropdown(label.c_str(), primary ? o.titleFont : o.textFont, c.fonts, row.tip, panel.c_str());
                     break;
                 }
-                case WidgetTabsRow::UniformFont: form.Switch(label.c_str(), o.uniformFont, ownDefault().c_str()); break;
+                case WidgetTabsRow::FontSize:
+                    ownSlider(o.fontSize, kMinWidgetFontSize, kMaxWidgetFontSize, Pixels,
+                        Pixels(static_cast<int>(std::lround(MetricsOf(s, ShownPalette(c).shape).title))));
+                    break;
+                case WidgetTabsRow::UniformFont:
+                    if (twoLines) form.Switch(label.c_str(), o.uniformFont, ownDefault().c_str());
+                    break;
                 case WidgetTabsRow::FontRatio:
                 {
-                    if (o.uniformFont) break;
+                    if (o.uniformFont || !twoLines) break;
                     // By the Top Panel's slider's positions, set only when moved, so a ratio between them is kept.
                     std::optional<int> at = o.fontRatio ? std::optional<int>(FontRatioPosition(*o.fontRatio)) : std::nullopt;
                     const std::optional<int> before = at;
@@ -2264,7 +2283,7 @@ namespace headsup
                 form.SliderPercent(label.c_str(), s.timerPercent, kMinSizePercent, kMaxSizePercent, tip);
                 break;
             case SettingPiece::UpTime:
-                form.Fade(!on || !s.phTimers);
+                form.Fade(!PhTimersRun(s));
                 form.SliderInt(label.c_str(), s.phUpMinutes, 0, kMaxUpMinutes, [](int minutes) { return Formatted("%d min", minutes); }, tip);
                 break;
             // User Interface
@@ -3267,6 +3286,7 @@ namespace headsup
         case WidgetTabsRow::ShowZoneId: return onOff(o.zoneId);
         case WidgetTabsRow::SupplyFlags: return onOff(o.supplyFlags);
         case WidgetTabsRow::MemText: return onOff(o.memText);
+        case WidgetTabsRow::SyncedLevel: return onOff(o.syncedLevel);
         case WidgetTabsRow::WrapText: return onOff(o.wrapText);
         case WidgetTabsRow::UniformFont: return onOff(o.uniformFont);
         case WidgetTabsRow::StatusDisplay: return option(WindowList::StatusDisplay, o.statusDisplay);

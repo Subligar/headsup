@@ -23,6 +23,7 @@ namespace headsup
         uint8_t hpPercent = 0, mpPercent = 0;
         uint16_t zone = 0;
         bool here     = true; // in your zone; the game's figures for a member elsewhere are stale
+        uint32_t hpMax = 0, mpMax = 0; // 0 when not known
         bool operator==(const PartyMember&) const = default;
     };
     using Party = std::array<std::optional<PartyMember>, kPartySize>; // by party slot, you first
@@ -32,6 +33,9 @@ namespace headsup
     // From the main job, or a subjob with levels.
     bool UsesMp(const PartyMember& member);
 
+    // The game sends another member's HP and MP with their percent, never their max: the figure at full, else known while
+    // it still reads as percent, else the largest max the percent allows; 0 when that is no clue either.
+    uint32_t PoolMax(uint32_t now, uint8_t percent, uint32_t known);
     // "Party 3" or "Solo", and the lowest HP and MP of the members here; base takes its popup in a party.
     std::vector<PartContent> PartyParts(const Party& party, WidgetContent& base);
     PopupContent PartyPopup(const Party& party);

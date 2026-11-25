@@ -99,14 +99,16 @@ namespace headsup
         // From a zone-in until the server has sent every bag, the last of what it sends you then: your jobs, gil, bags
         // and nation in the game's memory are empty or partway filled meanwhile.
         bool Loading() const { return m_Loading; }
-        const CurrencyValues& Currencies() const { return m_Currencies; }
+        // Your currencies, your nation's conquest points and Imperial Standing as the newest of their packets and the
+        // conquest packet say.
+        CurrencyValues Currencies(Nation yours) const;
         // Your craft ranks, from the last skills packet; none before one, or since another character zoned in.
         const std::optional<CraftRanks>& Crafts() const { return m_Crafts; }
-        // Whether HeadsUp should ask for the currencies (kCurrencies1Request and _2) now: as the conquest standings
-        // are, once after loading and once per zone-in, and again every kPopupRefresh while refresh (their popup
-        // is open). open: the bar runs with the Gil widget on and the game is not zoning.
-        bool CurrencyRequestDue(double now, bool open, bool refresh) const;
+        // Whether HeadsUp should ask for the currencies (kCurrencies1Request and _2) now: once after loading and once
+        // after each login. open: the bar runs with the Gil widget on and the game is not zoning.
+        bool CurrencyRequestDue(double now, bool open) const;
         void CurrencyRequested(double now);
+        void LoggedIn() { m_CurrenciesOwed = true; }
 
     private:
         std::unordered_map<uint16_t, PlayerStatus> m_PlayerStatus; // other players, by target index
@@ -124,6 +126,7 @@ namespace headsup
         bool m_ConquestOwed = true;           // loading counts as a zone-in
         std::optional<double> m_ConquestAsked;
         CurrencyValues m_Currencies{}; // kept across zoning, not across characters
+        std::optional<uint32_t> m_YourPoints; // your nation's conquest points, from a conquest packet newer than the currencies
         std::optional<CraftRanks> m_Crafts;
         bool m_CurrenciesOwed = true;
         bool m_Loading        = false; // loaded mid-game, a zone-in long past

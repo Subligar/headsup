@@ -338,6 +338,7 @@ namespace headsup
         constexpr const char* kOwnIconScaleSuffix  = "IconScale";
         constexpr const char* kOwnPopupScaleSuffix = "PopupTextScale";
         constexpr const char* kOwnUniformFontSuffix = "UniformFontSize";
+        constexpr const char* kOwnFontSizeSuffix   = "FontSize";
         constexpr const char* kSpotLeft = "left", *kSpotRight = "right", *kSpotTop = "top", *kSpotBottom = "bottom";
         const char* const kIconSideNames[kIconSideCount] = {"hide", "left", "right"};
         const char* const kWidgetAlignNames[kWidgetAlignCount] = {"location", "left", "center", "right"};
@@ -365,6 +366,7 @@ namespace headsup
         constexpr const char* kTimerFormatKey = "statusTimerFormat";
         const char* const kTimerFormatNames[kTimerFormatCount] = {"full", "simple", "short"};
         constexpr const char* kJobTextKey   = "jobText";
+        constexpr const char* kSyncedLevelKey = "jobSyncedLevel";
         const char* const kJobTextNames[kJobTextCount] = {"mainSub", "main", "levelFirst"};
         constexpr const char* kClock24Key   = "clock24";
         constexpr const char* kClockSecondsKey = "clockSeconds";
@@ -395,7 +397,7 @@ namespace headsup
         constexpr const char* kNoticeSoundKeys[] = {"friendNoticeOnlineSound", "friendNoticeOfflineSound", "partyNoticeSound"};
         static_assert(std::size(kNoticeSoundFields) == std::size(kNoticeSoundKeys));
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barCustom"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers", "barCustom"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -1422,6 +1424,7 @@ namespace headsup
             if (w.rounding) w.rounding = std::clamp(*w.rounding, 0, kMaxRounding);
             if (w.iconScale) w.iconScale = std::clamp(Stepped(*w.iconScale, kPercentStep), kMinIconScale, kMaxIconScale);
             if (w.fontRatio) w.fontRatio = std::clamp(*w.fontRatio, kMinFontRatio, kMaxFontRatio);
+            if (w.fontSize) w.fontSize = std::clamp(*w.fontSize, kMinWidgetFontSize, kMaxWidgetFontSize);
             if (w.lineSeparation) w.lineSeparation = std::clamp(*w.lineSeparation, kMinLineSeparation, kMaxLineSeparation);
             if (w.popupTextScale) w.popupTextScale = std::clamp(*w.popupTextScale, kMinPopupScale, kMaxPopupScale);
             for (std::string* font : {&w.titleFont, &w.textFont})
@@ -1516,6 +1519,7 @@ namespace headsup
                 o.padding        = whole(kOwnPaddingSuffix);
                 o.rounding       = whole(kOwnRoundingSuffix);
                 o.iconScale      = whole(kOwnIconScaleSuffix);
+                o.fontSize       = whole(kOwnFontSizeSuffix);
                 o.fontRatio      = own(kOwnFontRatioSuffix);
                 o.lineSeparation = own(kOwnLineSeparationSuffix);
                 o.popupTextScale = own(kOwnPopupScaleSuffix);
@@ -1588,6 +1592,7 @@ namespace headsup
             case BarWidget::Job:
             {
                 o.jobText  = static_cast<JobText>(NameIndex(kJobTextNames, kJobTextCount, text(kJobTextKey), static_cast<int>(o.jobText)));
+                o.syncedLevel  = flag(kSyncedLevelKey, o.syncedLevel);
                 o.expBarWidth  = number(kExpBarWidthKey, o.expBarWidth);
                 o.expBarHeight = number(kExpBarHeightKey, o.expBarHeight);
                 if (const std::string barText = text(kExpBarTextKey); barText == kNoExpBarText)
@@ -1641,6 +1646,7 @@ namespace headsup
                 own(kOwnPaddingSuffix, o.padding);
                 own(kOwnRoundingSuffix, o.rounding);
                 own(kOwnIconScaleSuffix, o.iconScale);
+                own(kOwnFontSizeSuffix, o.fontSize);
                 own(kOwnFontRatioSuffix, o.fontRatio);
                 own(kOwnLineSeparationSuffix, o.lineSeparation);
                 own(kOwnPopupScaleSuffix, o.popupTextScale);
@@ -1690,6 +1696,7 @@ namespace headsup
                 break;
             case BarWidget::Job:
                 text(kJobTextKey, kJobTextNames[static_cast<int>(o.jobText)]);
+                flag(kSyncedLevelKey, o.syncedLevel);
                 StoreFloat(store, CopyKey(kExpBarWidthKey, w), static_cast<float>(o.expBarWidth));
                 StoreFloat(store, CopyKey(kExpBarHeightKey, w), static_cast<float>(o.expBarHeight));
                 text(kExpBarTextKey, o.expBarText ? kExpTextNames[static_cast<int>(*o.expBarText)] : kNoExpBarText);
@@ -1716,7 +1723,7 @@ namespace headsup
         if (widget.kind == BarWidget::Custom) o.name = CreatedWidgetName(widget);
         o.popup      = DefaultPopupDesign(widget.kind);
         if (widget.kind == BarWidget::EarthTime) o.iconSide = IconSide::Hide;
-        o.uniformFont = widget.kind == BarWidget::HomePoint || widget.kind == BarWidget::StatusTimers;
+        o.uniformFont = widget.kind == BarWidget::HomePoint || widget.kind == BarWidget::StatusTimers || widget.kind == BarWidget::PhTimers;
         return o;
     }
 
@@ -1744,6 +1751,11 @@ namespace headsup
         for (int copy = 0; copy < CopiesOf(widget); ++copy)
             if (Shows(s, PanelWidget{widget, copy})) return true;
         return false;
+    }
+
+    bool PhTimersRun(const Settings& s)
+    {
+        return s.enabled && (s.phTimers || (BarOn(s) && AnyCopyShown(s, BarWidget::PhTimers)));
     }
 
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget)

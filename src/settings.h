@@ -86,6 +86,7 @@ namespace headsup
         Align expBarTextAlign = Align::Center;       // where on the bar it says it
         std::optional<uint32_t> expBarBack, expBarFill; // its EXP Bar's colors (ARGB); none for the theme's
         JobText jobText      = JobText::MainSub;     // how its Job Info says the jobs
+        bool syncedLevel     = false;                // and at the levels Level Sync holds you to, not your jobs' own
         // Where on its line each of its texts goes, against the widget's other lines.
         Align jobInfoAlign = Align::Left, earnedAlign = Align::Left, toNextAlign = Align::Left, percentAlign = Align::Left;
         uint32_t targetDetection = kDefaultDetection; // Target: the senses its Detection part shows, by DetectionBit
@@ -102,6 +103,7 @@ namespace headsup
         // Its pill's spacing, background, rounding and pop-out are the pill's first widget's.
         std::optional<int> spacing, padding, rounding; // pixels
         std::optional<int> iconScale;                  // percent, as barIconScale
+        std::optional<int> fontSize;                   // pixels, its top line's most, as MetricsFor's title
         std::optional<bool> background;
         std::string titleFont, textFont;
         std::optional<float> fontRatio, lineSeparation, popupTextScale;
@@ -404,6 +406,8 @@ namespace headsup
     // A copy is on the panel and switched on; AnyCopyShown asks whether any copy of a widget is.
     bool Shows(const Settings& s, PanelWidget widget);
     bool AnyCopyShown(const Settings& s, BarWidget widget);
+    // The NM and placeholder respawn timers count deaths and make their lines, for your name or the widget.
+    bool PhTimersRun(const Settings& s);
     // Another copy of a widget, after the last of its copies, shown and with that copy's settings but its Combine;
     // none when it has no more. Taking a copy off forgets its settings.
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);

@@ -410,6 +410,7 @@ class HeadsUp final : public IPlugin
     bool m_CaseMoving = false, m_CaseRefused = false;
     bool m_PlayOnlineTried = false; // it scans the client's code, so once
     std::optional<headsup::PlayOnlineCounts> m_PlayOnlineCounts; // read with the counters
+    headsup::Party m_PartySeen; // the party as last read, for the members' max HP and MP
     headsup::ConnectionMeter m_Connection;
     headsup::WebGet m_TurnInFetch;                 // Phoenix's site, for today's guild point turn-ins
     headsup::WebGet m_FeedbackPost;                // the Feedback page's, to the team's feedback service
@@ -926,7 +927,7 @@ public:
         if (next.caught) m_CaseCaught = CaseCaught{*next.caught, AnglerNow()};
         if (next.check) OnCheckReply(*next.check);
         if (next.guardEvent) HeardOverseer(*next.guardEvent);
-        if (next.mobDied && m_Settings.phTimers)
+        if (next.mobDied && headsup::PhTimersRun(m_Settings))
             if (const auto mob = headsup::SightingOf(headsup::MobById(*next.mobDied))) m_PhTimers.Died(Now(), *mob);
         return next.answer && m_AutoCheck.TakeAnswer(*next.answer, Now());
     }
@@ -1016,6 +1017,7 @@ public:
         {
             m_FriendWatch.Forget();
             m_Notices.EndInvite();
+            m_GameState.LoggedIn(); // the currencies are asked for again once in the game
         }
         const bool mapShown = headsup::MapShown(m_OpenWindows);
         m_UiHidden          = m_Screenshot || m_Player.inEvent || mapShown;
@@ -1036,12 +1038,11 @@ public:
                 static_cast<uint32_t>(request.size()), request.data());
             m_GameState.ConquestRequested(now);
         }
-        // Opening the Currencies menu asks for them; HeadsUp asks the same, as for the conquest standings.
-        const bool gilOpen = opened(headsup::BarWidget::Currency);
+        // Opening the Currencies menu asks for them; HeadsUp asks the same once after a login, and the conquest packet
+        // keeps your conquest points and Imperial Standing current.
         if (m_GameState.CurrencyRequestDue(now,
-                g_BarOn && (headsup::WidgetShown(m_Settings, headsup::BarWidget::Currency) || gilOpen) &&
-                    m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
-                gilOpen))
+                g_BarOn && (headsup::WidgetShown(m_Settings, headsup::BarWidget::Currency) || opened(headsup::BarWidget::Currency)) &&
+                    m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0))
         {
             auto first = headsup::kCurrencies1RequestBytes, second = headsup::kCurrencies2RequestBytes;
             m_AshitaCore->GetPacketManager()->AddOutgoingPacket(headsup::kCurrencies1Request,
@@ -1448,7 +1449,8 @@ public:
         DrawNameplatesBeforeSceneCopy();
         DrawCombatPopupsBeforeSceneCopy();
         const bool outlines = m_Settings.enabled && m_Tracker.OutlinedCount() > 0;
-        const bool bodies   = headsup::NameplatesOn(m_Settings) && !m_Tracker.Actors().empty(); // labels wait for a drawn body
+        // Labels wait for a drawn body, and a timer is earned by one on screen.
+        const bool bodies = (headsup::NameplatesOn(m_Settings) || headsup::PhTimersRun(m_Settings)) && !m_Tracker.Actors().empty();
         if (!outlines && !bodies) return false;
         const headsup::ActorInfo* owner = m_Outline.CharacterMeshOwner(m_Tracker,
             m_ModelHook.Running() ? std::optional<uintptr_t>(m_ModelHook.Drawing()) : std::nullopt);
@@ -1679,7 +1681,8 @@ private:
                 if (frame == nullptr) return std::nullopt;
                 return headsup::NameFromFrame(*frame, m_Names.TargetScaleX(), m_Names.TargetScaleY(), picked);
             }};
-        m_Nameplates.Update(m_Tracker, scene, m_Settings, toX, toY, m_CursorTargets, Now(), m_SelfIndex, m_TimerLines);
+        m_Nameplates.Update(m_Tracker, scene, m_Settings, toX, toY, m_CursorTargets, Now(), m_SelfIndex,
+            m_Settings.phTimers ? m_TimerLines : std::vector<headsup::TimerLine>{});
         m_Nameplates.Draw(depthTest);
         m_PlatesPlaced = true;
     }
@@ -3137,6 +3140,7 @@ private:
         s.owners   = m_GameState.Owners();
         s.shares   = m_GameState.Shares();
         s.homePoint  = m_AshitaCore->GetMemoryManager()->GetPlayer()->GetHomepoint();
+        s.phTimers   = m_TimerLines;
         s.pickedTabs = &m_BarInput.PickedTabs();
         s.scrolled   = &m_BarInput.Scrolled();
         s.pinRefused = m_BarInput.Refused();
@@ -3184,12 +3188,20 @@ private:
         if (needs.job)
         {
             IPlayer* player = m_AshitaCore->GetMemoryManager()->GetPlayer();
-            const headsup::JobSample sample{player->GetMainJob(), player->GetMainJobLevel(), player->GetSubJob(),
-                player->GetSubJobLevel(), player->GetExpCurrent(), player->GetExpNeeded(), player->GetLimitPoints(),
-                player->GetMeritPoints(), player->GetMeritPointsMax(), player->GetIsLimitModeEnabled()};
+            IParty* party   = m_AshitaCore->GetMemoryManager()->GetParty();
+            const uint8_t mainLevel = player->GetJobLevel(player->GetMainJob());
+            // When the sync target levels up, Phoenix sends the party's 0x0DD but no 0x061 until the next EXP, so
+            // while synced your party slot has the level first (none while you are anonymous).
+            const bool fromParty = headsup::LevelSyncInBuffs(player->GetBuffs()) && party->GetMemberMainJobLevel(0) != 0;
+            const headsup::JobSample sample{player->GetMainJob(), mainLevel, player->GetSubJob(),
+                headsup::SubLevelUnder(mainLevel, player->GetJobLevel(player->GetSubJob())),
+                fromParty ? party->GetMemberMainJobLevel(0) : player->GetMainJobLevel(),
+                fromParty ? party->GetMemberSubJobLevel(0) : player->GetSubJobLevel(), player->GetExpCurrent(),
+                player->GetExpNeeded(), player->GetLimitPoints(), player->GetMeritPoints(), player->GetMeritPointsMax(),
+                player->GetIsLimitModeEnabled()};
             if (sample.mainJob != 0)
             {
-                m_Exp.Update(now, sample, m_AshitaCore->GetMemoryManager()->GetParty()->GetMemberServerId(0));
+                m_Exp.Update(now, sample, party->GetMemberServerId(0));
                 s.job = headsup::JobReport{sample, m_Exp.PerHour(now)};
             }
             else
@@ -3209,17 +3221,32 @@ private:
         }
         if (needs.party)
         {
-            IParty* party = m_AshitaCore->GetMemoryManager()->GetParty();
+            IParty* party   = m_AshitaCore->GetMemoryManager()->GetParty();
+            IPlayer* player = m_AshitaCore->GetMemoryManager()->GetPlayer();
             for (uint32_t m = 0; m < static_cast<uint32_t>(headsup::kPartySize); ++m)
             {
                 if (party->GetMemberIsActive(m) == 0) continue;
                 const char* name    = party->GetMemberName(m);
                 const uint16_t zone = party->GetMemberZone(m);
-                s.party[m] = headsup::PartyMember{name != nullptr ? name : "", party->GetMemberMainJob(m),
+                headsup::PartyMember member{name != nullptr ? name : "", party->GetMemberMainJob(m),
                     party->GetMemberMainJobLevel(m), party->GetMemberSubJob(m), party->GetMemberSubJobLevel(m),
                     party->GetMemberHP(m), party->GetMemberMP(m), party->GetMemberTP(m), party->GetMemberHPPercent(m),
                     party->GetMemberMPPercent(m), zone, zone == m_Zone};
+                if (m == 0)
+                {
+                    member.hpMax = player->GetHPMax();
+                    member.mpMax = player->GetMPMax();
+                }
+                else
+                {
+                    const std::optional<headsup::PartyMember>& was = m_PartySeen[m];
+                    const bool same = was && was->name == member.name;
+                    member.hpMax = headsup::PoolMax(member.hp, member.hpPercent, same ? was->hpMax : 0);
+                    member.mpMax = headsup::PoolMax(member.mp, member.mpPercent, same ? was->mpMax : 0);
+                }
+                s.party[m] = std::move(member);
             }
+            m_PartySeen = s.party;
         }
         if (needs.memory) GatherMemory(now, s, needs.cpu);
         if (needs.linuxxi) s.linuxxi = LinuxXINow(now);
@@ -3257,8 +3284,8 @@ private:
         }
         if (needs.gil)
         {
-            s.currencies = m_GameState.Currencies();
             s.nation     = NationNow(); // whose conquest points are yours
+            s.currencies = m_GameState.Currencies(NationNow());
         }
         if (!needs.gil && needs.containers == 0) return s;
         const Ashita::FFXI::item_t* gil =
@@ -3613,7 +3640,7 @@ private:
                 CharacterIn(name);
         }
         m_TimerLines.clear();
-        if (m_Settings.phTimers) m_TimerLines = m_PhTimers.Lines(m_Zone, now);
+        if (headsup::PhTimersRun(m_Settings)) m_TimerLines = m_PhTimers.Lines(m_Zone, now);
     }
 
     headsup::DebugSources DebugSourcesNow() const

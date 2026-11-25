@@ -31,7 +31,7 @@ namespace headsup
         constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "coordinates", "icon", "weather",
             "date", "day", "time", "moon", "season", "aggro", "name", "distance", "detection", "level", "player", "weak",
             "coin", "name1", "name2", "amount1", "amount2", "icon1", "icon2", "count1", "count2", "name1", "name2", "icon", "time", "server", "vana", "icon", "date", "jobs", "earned", "tonext", "percent", "bar",
-            "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "pin1", "pin2",
+            "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "icon", "pin1", "pin2",
             "pin3", "pin4", "pin5", "pin6", "ship",
             "guild", "sandoria", "bastok", "windurst", "beastmen", "name", "icon", "name"};
 
@@ -39,7 +39,7 @@ namespace headsup
         constexpr const char* kDefaults[kBarWidgetCount] = {"name coordinates | region nation", "weather | day time -date -moon",
             "name distance -detection | level player -weak", "amount1 | icon2 amount2 -name1 -name2 -icon1", "count1 | name1", "time | -server -vana -date", "", "-fps sent received percent -memory messages |",
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
-            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "name |"};
+            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "", "name |"};
 
         constexpr char kOffMark = '-', kSpace = ' ', kWidgetMark = '.', kUnderMark = '/';
 
@@ -88,7 +88,7 @@ namespace headsup
             "performance.connection performance.session | performance.memory performance.processor"
             " | performance.playOnline performance.linuxxi performance.lua",
             "job.exp", "party.members", "statusTimers.favorites | statusTimers.buffs | statusTimers.debuffs",
-            "world.conquest world.travel/world.calendar | world.guilds", "", "", ""};
+            "world.conquest world.travel/world.calendar | world.guilds", "", "", "", ""};
         constexpr const char* kNoCards = "none"; // a pop-out design with no card, which "" would not be
 
         bool Holds(std::span<const WidgetPart> parts, WidgetPart part) { return std::ranges::find(parts, part) != parts.end(); }
@@ -256,6 +256,7 @@ namespace headsup
         case BarWidget::Bags: return P::BagIcon;
         case BarWidget::EarthTime: return P::ClockIcon;
         case BarWidget::HomePoint: return P::HomePointIcon;
+        case BarWidget::Party: return P::PartyIcon;
         default: return std::nullopt;
         }
     }
@@ -271,7 +272,8 @@ namespace headsup
         case BarWidget::Bags: return kBags;
         case BarWidget::EarthTime: return kClock;
         case BarWidget::GameHelp:
-        case BarWidget::Settings: return {};
+        case BarWidget::Settings:
+        case BarWidget::PhTimers: return {};
         case BarWidget::Custom:
         {
             // Its Name, then each widget's icon and parts, in the widgets' order.
@@ -515,6 +517,7 @@ namespace headsup
         case WidgetPart::BagIcon: return PartMark{Icon::Bag};
         case WidgetPart::ClockIcon: return PartMark{Icon::Clock};
         case WidgetPart::HomePointIcon: return PartMark{Icon::HomePoint};
+        case WidgetPart::PartyIcon: return PartMark{Icon::Person};
         case WidgetPart::ZoneCrest:
         case WidgetPart::WorldSanDoria: return PartMark{std::nullopt, GamePicture::SanDoriaCrest};
         case WidgetPart::WorldBastok: return PartMark{std::nullopt, GamePicture::BastokCrest};
