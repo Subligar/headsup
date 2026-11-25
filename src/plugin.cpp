@@ -313,7 +313,10 @@ namespace
     BOOL __stdcall OnMouse(uint32_t message, WPARAM wParam, LPARAM lParam, bool blocked)
     {
         const headsup::CNumbers numbers;
-        return g_GamePresses.Keep(message, blocked || KeepMouse(message, wParam, lParam, blocked)) ? TRUE : FALSE;
+        const POINT at{static_cast<int16_t>(LOWORD(lParam)), static_cast<int16_t>(HIWORD(lParam))};
+        RECT client{};
+        const bool inClient = g_GameWindow != nullptr && GetClientRect(g_GameWindow, &client) && PtInRect(&client, at);
+        return g_GamePresses.Keep(message, blocked || KeepMouse(message, wParam, lParam, blocked), inClient) ? TRUE : FALSE;
     }
 
     // The game windows' input as Ashita's callbacks hand it over, kept until Present acts on it.
