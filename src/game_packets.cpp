@@ -19,6 +19,7 @@ namespace headsup
         constexpr uint16_t kTalkNameBit = 0x8000;
         constexpr uint32_t kFirstOwner = 0x1D, kRegionStride = 4;
         constexpr uint32_t kSanDoriaShare = 0x86, kBastokShare = 0x87, kWindurstShare = 0x88, kBeastmenShare = 0x94;
+        constexpr uint32_t kOwnConquestPoints = 0x90, kImperialStanding = 0xB0;
         constexpr unsigned kWholePercent = 100;
         const char* const kNationNames[] = {"", "San d'Oria", "Bastok", "Windurst", "Beastmen"};
         constexpr uint32_t kNationColors[] = {0xFF8D8D8D, 0xFFE05A5A, 0xFF5B8DEF, kBarGreen, 0xFFB38AD8};
@@ -108,6 +109,12 @@ namespace headsup
             owners[r] = owner <= static_cast<uint8_t>(Nation::Beastmen) ? static_cast<Nation>(owner) : Nation::None;
         }
         return owners;
+    }
+
+    std::optional<ConquestCurrencies> ParseConquestCurrencies(const uint8_t* data, uint32_t size)
+    {
+        if (data == nullptr || size < kImperialStanding + sizeof(uint32_t)) return std::nullopt;
+        return ConquestCurrencies{ReadAt<uint32_t>(data, kOwnConquestPoints), ReadAt<uint32_t>(data, kImperialStanding)};
     }
 
     std::optional<RegionShares> ParseRegionShares(const uint8_t* data, uint32_t size)

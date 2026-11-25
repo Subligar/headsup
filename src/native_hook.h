@@ -25,6 +25,7 @@ struct IDirect3DSurface8;
 namespace headsup
 {
     constexpr const char* kGameModule = "FFXiMain.dll";
+    constexpr const char* kAshitaModule = "Ashita.dll";
     // The folder a loaded module was loaded from, without its last separator; empty when it is not loaded.
     std::string ModuleFolder(const char* module);
 
@@ -150,9 +151,13 @@ namespace headsup
         bool Running() const { return m_Call.at != nullptr; }
         // Whether popups are taken from now on: never while the gate is not in.
         void Take(bool take);
-        // At Present: the last frame's popups and their image are forgotten, and the popups the game starts next count
-        // as started now.
-        void NewFrame(double now);
+        // At Present: the last frame's popups are forgotten, and their image unless HeadsUp still draws popups into it,
+        // and the popups the game starts next count as started now.
+        void NewFrame(double now, bool keepImage);
+        // Before the device's Reset, which a kept image would make fail.
+        static void ForgetImage();
+        // At Present: how long HeadsUp shows a popup, which its line is kept for.
+        static void SetLife(double seconds);
         // At Present, for the popups the game starts next: your entity index and your pet's (0 for none).
         static void SetYou(uint32_t you, uint32_t pet);
         // At Present: whether popups start as soon as their action arrives and spread when started together.
@@ -254,6 +259,8 @@ namespace headsup
 #endif
         // Why windows cannot be moved, once, after a Start that could not find the game's move.
         std::string TakeMoveProblem() { return std::exchange(m_MoveProblem, std::string()); }
+        // Why the Compass row cannot hide the compass, once, after a Start that could not find its routine.
+        std::string TakeCompassProblem() { return std::exchange(m_CompassProblem, std::string()); }
 
     private:
         CodePatch m_Call;
@@ -261,13 +268,16 @@ namespace headsup
         CodePatch m_CountCall; // an item list's count's ask for it, when it was found
         CodePatch m_MoveStart; // MCD::MoveTo's start, so a window the game moves goes where HeadsUp would put it
         CodePatch m_BuildCall; // the catalog's window build, so where a new window goes is known before it draws
-        std::string m_MoveProblem;
+        CodePatch m_Compass;   // the compass routine's answer while the Compass row hides it
+        std::string m_MoveProblem, m_CompassProblem;
+        void PutCompassBack();
     };
 
     // Puts right the game's guess of its window's client area (native_locate.h's PointerMapping): each guess's
     // GetWindowRect call and GetSystemMetrics load go to HeadsUp, which answers with the client area and no borders
     // while the fix is on, and as Windows would while it is off. It also brings back the pointer the game hid for
-    // typing when the mouse moves over an Ashita window, which keeps those moves from the game.
+    // typing when the mouse moves over an Ashita window, which keeps those moves from the game. And it scales the mouse Ashita hands ImGui from
+    // client pixels to ImGui's (ImGuiMouseCalls), which differ once the window is resized away from the game's size.
     class PointerFix
     {
     public:
@@ -283,9 +293,14 @@ namespace headsup
         // Keys that set off a game command without hiding its pointer (native_locate.h's KeyHide); none keeps the game's
         // behavior.
         void KeepPointerFor(const std::vector<uint8_t>& keys);
+        // Each frame: ImGui's display size and the game window's client size.
+        void ImGuiSize(float width, float height, int clientWidth, int clientHeight);
+        // Why Ashita's ImGui mouse was not fixed though Ashita.dll is loaded, or empty.
+        const std::string& ImGuiProblem() const { return m_ImGuiProblem; }
 
     private:
         std::vector<CodePatch> m_Patches;
+        std::string m_ImGuiProblem;
     };
 
 #ifdef HEADSUP_DEV
@@ -345,6 +360,20 @@ namespace headsup
 
     private:
         int32_t(__cdecl* m_Get)(int32_t) = nullptr;
+    };
+
+    // The map square you stand in, by the client's own <pos> routine (LocatePosText), found once.
+    class MapSquareReader
+    {
+    public:
+        // "" when found, else why not.
+        std::string Find();
+        // "(H-8)", or "(?-?)" where the zone has no map; "" before Find succeeded or while the zone's map is not loaded.
+        std::string Read() const;
+
+    private:
+        const char*(__cdecl* m_PosText)(uint8_t) = nullptr;
+        uint32_t m_ZoneMap = 0;
     };
 
     // The zone's weather as the client keeps it, found once.

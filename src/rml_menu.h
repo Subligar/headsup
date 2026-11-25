@@ -32,6 +32,9 @@ namespace headsup
         std::optional<GameSkinLook> skin = std::nullopt; // the game's window art of the Window Type in use, once it is read
     };
 
+    // The settings window's look as the settings and the host have it now, which HeadsUp's game windows share.
+    MenuLook MenuLookFor(const MenuHost& host, const Settings& settings);
+
     // The /headsup settings window as an RmlUi document in the host's overlay. While it is open, each frame runs
     // the pages against the kit (menu_form, form) with what the player did since the last frame, replaces the
     // cards whose markup changed and sets the values that did.
@@ -57,10 +60,10 @@ namespace headsup
         bool TakeDebugRequest();
         bool TakeCaseMove();
         bool TakeCaseTest();
-        bool TakePopupTest();
+        // The plugin pops a sample of each kind over you, again and again, while this is so.
+        bool DamageNumbersPageOpen() const;
         bool TakeNoticeTest();
         std::optional<FriendsIncluded> TakeIncludedAsked();
-        bool TakeFriendNoticeTest();
         std::optional<NoticeKind> TakeSoundPicked();
         // The Notifications page is open: its test notifications show and drag without Shift.
         bool NoticesPageOpen() const;

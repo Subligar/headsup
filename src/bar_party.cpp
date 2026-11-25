@@ -4,6 +4,7 @@
 #include "zones.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 
 namespace headsup
@@ -14,7 +15,7 @@ namespace headsup
         constexpr bool kHasMp[] = {false, false, false, true, true, true, false, true, true, false, false, false,
             false, false, false, true, true, false, false, false, true, true, true};
         constexpr int kColumns        = 5;
-        constexpr uint8_t kLowPercent = 50, kCriticalPercent = 25;
+        constexpr uint8_t kLowPercent = 50, kCriticalPercent = 25, kFullPercent = 100;
 
         // A figure in its percent's color: red under 25 %, amber under 50 %.
         Span Level(std::string text, uint8_t percent)
@@ -29,6 +30,17 @@ namespace headsup
 
         std::string Percent(uint8_t percent) { return std::to_string(percent) + "%"; }
 
+        // As the server works it out, in floats: floored, but at least 1 while above 0. 530 of 1000 is 52 in floats.
+        uint32_t PercentOf(uint32_t now, uint32_t max)
+        {
+            if (now == 0) return 0;
+            const float percent = static_cast<float>(now) / static_cast<float>(max) * static_cast<float>(kFullPercent);
+            return std::max(1u, static_cast<uint32_t>(std::floor(percent)));
+        }
+
+        // "1,200/1,500", or the figure alone while its max is not known.
+        std::string OutOf(uint32_t now, uint32_t max) { return max == 0 ? Grouped(now) : Grouped(now) + "/" + Grouped(max); }
+
         int Members(const Party& party)
         {
             return static_cast<int>(
@@ -39,6 +51,13 @@ namespace headsup
     bool JobHasMp(uint8_t job) { return job < std::size(kHasMp) && kHasMp[job]; }
 
     bool UsesMp(const PartyMember& m) { return JobHasMp(m.mainJob) || (m.subLevel > 0 && JobHasMp(m.subJob)); }
+
+    uint32_t PoolMax(uint32_t now, uint8_t percent, uint32_t known)
+    {
+        if (percent >= kFullPercent) return now;
+        if (known >= now && known > 0 && PercentOf(now, known) == percent) return known;
+        return percent == 0 ? 0 : now * kFullPercent / percent;
+    }
 
     std::vector<PartContent> PartyParts(const Party& party, WidgetContent& base)
     {
@@ -70,9 +89,7 @@ namespace headsup
         PopupContent popup;
         popup.title   = ListOf(Text("Party"));
         PopupRow grid = Grid(kColumns, kColumns * (kPartySize + 1));
-        grid.cells.emplace_back();
-        grid.cells.emplace_back();
-        for (const char* heading : {"HP", "MP", "TP"})
+        for (const char* heading : {"Name", "Job & Level", "HP", "MP", "TP"})
             grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
         std::vector<PopupRow> away; // a member elsewhere: one row of name and zone, after the grid
         for (const std::optional<PartyMember>& m : party)
@@ -81,12 +98,8 @@ namespace headsup
             if (!m->here)
             {
                 // Zone 0: changing zones, or their data has not arrived.
-                const std::string where = m->zone == 0          ? "Zoning"
-                                          : KnownZone(m->zone) ? "In " + ZoneTitle(m->zone)
-                                                               : ZoneTitle(m->zone);
-                PopupRow row{RowKind::Line, 0, {}};
-                row.cells = ListOf(Cell(Text(m->name)), Cell(Text(where, Tone::Dim)));
-                away.push_back(std::move(row));
+                const std::string where = m->zone == 0 ? "Zoning" : ZoneTitle(m->zone);
+                away.push_back(PopupRow{RowKind::Pair, 0, ListOf(Cell(Text(m->name)), Cell(Text(where, Tone::Dim)))});
                 continue;
             }
             grid.cells.push_back(Cell(Text(m->name)));
@@ -97,8 +110,8 @@ namespace headsup
                 continue;
             }
             grid.cells.push_back(Cell(Text(JobsText(m->mainJob, m->mainLevel, m->subJob, m->subLevel), Tone::Dim)));
-            grid.cells.push_back(Cell(Level(Grouped(m->hp), m->hpPercent)));
-            grid.cells.push_back(Cell(UsesMp(*m) ? Level(Grouped(m->mp), m->mpPercent) : Text("-", Tone::Dim)));
+            grid.cells.push_back(Cell(Level(OutOf(m->hp, m->hpMax), m->hpPercent)));
+            grid.cells.push_back(Cell(UsesMp(*m) ? Level(OutOf(m->mp, m->mpMax), m->mpPercent) : Text("-", Tone::Dim)));
             grid.cells.push_back(
                 Cell(m->tp >= kWeaponSkillTp ? Colored(Grouped(m->tp), kReadyColor) : Text(Grouped(m->tp))));
         }

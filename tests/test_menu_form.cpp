@@ -1,6 +1,8 @@
 #include "game_font.h"
 #include "layout_edit.h"
 #include "menu_form.h"
+#include "bar_document.h"
+#include "bar_statuses.h"
 #include "settings.h"
 #include "test.h"
 
@@ -80,7 +82,7 @@ TEST(the_window_is_its_sidebar_and_the_open_pages_cards)
     CHECK(Has(form.blocks.front().rml, "<div class=\"nav\" id=\"nav-entities\">") &&
           Has(form.blocks.front().rml, "<div class=\"nav child\" id=\"nav-mobs\">"));
     CHECK(ClassOn(form, "nav-entities", "picked") && !ClassOn(form, "nav-mobs", "picked"));
-    CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-target-cursor") != nullptr);
+    CHECK(Block(form, "entities-nameplates") != nullptr && Block(form, "entities-outline-style") != nullptr);
 }
 
 TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
@@ -324,6 +326,47 @@ TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_desi
     CHECK(w.state.editSide == EditSide::Widget);
 }
 
+TEST(a_created_widget_shows_the_settings_of_the_widgets_it_borrows_from_and_they_set_those_widgets)
+{
+    Window w;
+    const PanelWidget made = *CreateWidget(w.settings), world{BarWidget::World};
+    w.readings.settingsOf  = {made};
+    const auto rml   = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
+    const auto shown = [&](const Form& f, const char* id) { return Has(rml(f), (std::string("id=\"") + id + "\"").c_str()); };
+    const char* flags = "toppanel-widgets-supply-flags-custom";
+    const char* ship  = "toppanel-widgets-ship-custom";
+    // Nothing of World Info's yet: none of its settings.
+    CHECK(!shown(w.Pass(), flags) && !shown(w.Pass(), ship));
+    // World Info's Conquest card in its pop-out: Supply Run Flags, with its other settings, and a switch there sets
+    // World Info's own, which the card shows by.
+    w.settings.Widget(made).popup = PopupDesignFrom(BarWidget::Custom, "world.conquest");
+    const Form card = w.Pass();
+    CHECK(shown(card, flags) && !shown(card, ship));
+    CHECK(w.settings.Widget(world).supplyFlags);
+    w.Pass({{flags, kClickEvent, ""}});
+    CHECK(!w.settings.Widget(world).supplyFlags && w.settings.Widget(made).supplyFlags);
+    // Its Ship button on a line: Tracked Ship too, as World Info's own shows while its button is.
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | world.ship");
+    CHECK(shown(w.Pass(), ship));
+    // What is about the created widget itself stays its own: Zone's crest borrows no Show Zone ID in Header, as its
+    // pop-out's title is its own, and no second Alignment or Show Icon.
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | zone.crest world.ship");
+    const std::string zone = rml(w.Pass());
+    CHECK(!Has(zone, "toppanel-widgets-show-zone-id-custom"));
+    const std::string alignment = "id=\"toppanel-widgets-alignment-custom\"";
+    CHECK(zone.find(alignment) != std::string::npos && zone.find(alignment) == zone.rfind(alignment));
+    // Job & EXP's Bar Width shows by the EXP Bar on the created widget's own lines.
+    const char* barWidth = "toppanel-widgets-bar-width-custom";
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | job.jobs job.bar");
+    CHECK(shown(w.Pass(), barWidth));
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | job.jobs -job.bar");
+    CHECK(!shown(w.Pass(), barWidth));
+    // A Pinned Status button borrows Status Timers' Display with nothing pinned, as it shows once a status is.
+    w.settings.statusPins.clear();
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | statusTimers.pin1");
+    CHECK(shown(w.Pass(), "toppanel-widgets-status-display-custom"));
+}
+
 TEST(a_created_widgets_pop_out_designer_is_its_sections_title_then_its_rows_with_no_note_between)
 {
     Window w;
@@ -487,6 +530,28 @@ TEST(each_job_widget_texts_alignment_shows_while_its_button_is_on)
     w.Pass({{"toppanel-widgets-percent-align-job-s-2", kClickEvent, ""}});
     const WidgetOptions& o = w.settings.Widget(job);
     CHECK(o.percentAlign == Align::Right && o.jobInfoAlign == Align::Left && o.expBarTextAlign == Align::Center);
+}
+
+TEST(use_synced_level_shows_while_job_text_does_and_switches_the_copys_levels)
+{
+    Window w;
+    const PanelWidget job{BarWidget::Job};
+    w.settings.Widget(job).on = true;
+    w.readings.settingsOf     = {job};
+    const auto rows = [&] {
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "-jobs | tonext bar");
+    CHECK(!Has(rows(), "synced-level"));
+    w.settings.Widget(job).expBarText = ExpText::Jobs;
+    CHECK(Has(rows(), "synced-level"));
+    w.settings.Widget(job).expBarText.reset();
+    w.settings.Widget(job).design = DesignFrom(BarWidget::Job, "jobs | tonext bar");
+    CHECK(Has(rows(), "synced-level"));
+    CHECK(!w.settings.Widget(job).syncedLevel);
+    w.Pass({{"toppanel-widgets-synced-level-job", kClickEvent, ""}});
+    CHECK(w.settings.Widget(job).syncedLevel);
 }
 
 TEST(the_exp_bars_colors_are_the_themes_until_one_is_picked)
@@ -749,7 +814,7 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
         return ids;
     };
     Window w;
-    CHECK(shown(w.Pass()).size() > 3u);
+    CHECK(shown(w.Pass()).size() > 1u);
     w.settings.enabled = false;
     const std::vector<std::string> off = shown(w.Pass());
     CHECK_EQ(off.size(), size_t{1}); // the one card that says HeadsUp is off
@@ -762,34 +827,45 @@ TEST(a_page_whose_cards_are_all_switched_off_says_what_switches_them_on)
     w.state.page       = Page::TopPanel;
     CHECK_EQ(shown(w.Pass()).size(), size_t{1});
     CHECK(shown(w.Pass()) != off);
+    // With the damage numbers off, theirs says so, and not that the top panel is.
+    const std::string panelNote = Block(w.Pass(), shown(w.Pass())[0].c_str())->rml;
+    w.settings.combatPopups = false;
+    w.state.page            = Page::DamageNumbers;
+    const std::vector<std::string> numbers = shown(w.Pass());
+    CHECK_EQ(numbers.size(), size_t{2}); // the page's description, then the one card
+    std::string numbersNote = Block(w.Pass(), numbers.back().c_str())->rml;
+    for (size_t at; (at = numbersNote.find("damagenumbers")) != std::string::npos;)
+        numbersNote.replace(at, std::string("damagenumbers").size(), "toppanel"); // the same ids, so only the note differs
+    CHECK(numbersNote != panelNote);
 }
 
 TEST(the_cursor_style_list_has_headsups_styles_then_the_folders_files)
 {
     Window w;
+    w.state.page = Page::TargetCursor;
     const std::vector<std::string> files{"Gold Arrow", "sword"};
     w.readings.cursorFiles = &files;
-    const char* list = "entities-target-cursor-cursor-style";
+    const char* list = "targetcursor-target-cursor-cursor-style";
     const Form open  = w.Pass({{list, kClickEvent, ""}});
     CHECK(open.popup && w.state.cursorsRequested); // opening it asks for the folder to be read again
     // Each of HeadsUp's own styles, then each file of the folder: six rows, the last the second file.
-    CHECK(Has(open.popup->rml, "entities-target-cursor-cursor-style-o-5") && !Has(open.popup->rml, "entities-target-cursor-cursor-style-o-6"));
+    CHECK(Has(open.popup->rml, "targetcursor-target-cursor-cursor-style-o-5") && !Has(open.popup->rml, "targetcursor-target-cursor-cursor-style-o-6"));
     CHECK(Has(open.popup->rml, ">Gold Arrow<") && Has(open.popup->rml, ">sword<"));
-    CHECK(ClassOn(open, "entities-target-cursor-cursor-style-o-2", "picked")); // the feather, a new install's
+    CHECK(ClassOn(open, "targetcursor-target-cursor-cursor-style-o-2", "picked")); // the feather, a new install's
     w.state.cursorsRequested = false;
     w.Pass();
     CHECK(!w.state.cursorsRequested); // once, when it opens: not every pass it stays open
     // A file is the File style with its name; HeadsUp's own styles have no file.
-    CHECK(w.Pass({{"entities-target-cursor-cursor-style-o-5", kClickEvent, ""}}).changed);
+    CHECK(w.Pass({{"targetcursor-target-cursor-cursor-style-o-5", kClickEvent, ""}}).changed);
     CHECK(w.settings.cursorStyle == CursorStyle::File && w.settings.cursorFile == "sword");
     w.Pass({{list, kClickEvent, ""}});
-    w.Pass({{"entities-target-cursor-cursor-style-o-3", kClickEvent, ""}});
+    w.Pass({{"targetcursor-target-cursor-cursor-style-o-3", kClickEvent, ""}});
     CHECK(w.settings.cursorStyle == CursorStyle::Chocobo);
     // A file the folder no longer has stays chosen, and listed, until another is picked.
     w.settings.cursorStyle = CursorStyle::File;
     w.settings.cursorFile  = "gone";
     const Form kept = w.Pass({{list, kClickEvent, ""}});
-    CHECK(Has(kept.popup->rml, ">gone<") && ClassOn(kept, "entities-target-cursor-cursor-style-o-6", "picked"));
+    CHECK(Has(kept.popup->rml, ">gone<") && ClassOn(kept, "targetcursor-target-cursor-cursor-style-o-6", "picked"));
     CHECK(w.settings.cursorStyle == CursorStyle::File && w.settings.cursorFile == "gone");
 }
 
@@ -826,7 +902,8 @@ TEST(a_style_picked_comes_at_its_own_width_for_the_height_set)
     // The feather is slender, the triangle wide and a picture square: a style picked would otherwise be squeezed
     // into the width of the one before.
     Window w;
-    const char* list = "entities-target-cursor-cursor-style";
+    w.state.page = Page::TargetCursor;
+    const char* list = "targetcursor-target-cursor-cursor-style";
     w.settings.cursorHeight = 40;
     w.settings.cursorWidth  = 11;
     const auto pick = [&](int option) {
@@ -849,19 +926,20 @@ TEST(a_style_picked_comes_at_its_own_width_for_the_height_set)
 TEST(the_games_own_cursor_has_no_settings_and_a_picture_no_color)
 {
     Window w;
+    w.state.page = Page::TargetCursor;
     const auto hidden = [&](const Form& form, const char* row) { return ClassOn(form, row, "off"); };
     const Form feather = w.Pass();
-    CHECK(!hidden(feather, "entities-target-cursor-width-label-row") && !hidden(feather, "entities-target-cursor-color-label-row"));
+    CHECK(!hidden(feather, "targetcursor-target-cursor-width-label-row") && !hidden(feather, "targetcursor-target-cursor-color-label-row"));
     w.settings.cursorStyle = CursorStyle::Chocobo;
     const Form chocobo = w.Pass();
-    CHECK(!hidden(chocobo, "entities-target-cursor-width-label-row") && !hidden(chocobo, "entities-target-cursor-edge-color-label-row"));
-    CHECK(hidden(chocobo, "entities-target-cursor-color-label-row")); // it keeps its own colors
+    CHECK(!hidden(chocobo, "targetcursor-target-cursor-width-label-row") && !hidden(chocobo, "targetcursor-target-cursor-edge-color-label-row"));
+    CHECK(hidden(chocobo, "targetcursor-target-cursor-color-label-row")); // it keeps its own colors
     w.settings.cursorStyle = CursorStyle::Vanilla;
     const Form vanilla = w.Pass();
-    for (const char* row : {"entities-target-cursor-width-label-row", "entities-target-cursor-float-label-row",
-             "entities-target-cursor-color-label-row", "entities-target-cursor-edge-color-label-row"})
+    for (const char* row : {"targetcursor-target-cursor-width-label-row", "targetcursor-target-cursor-float-label-row",
+             "targetcursor-target-cursor-color-label-row", "targetcursor-target-cursor-edge-color-label-row"})
         CHECK(hidden(vanilla, row));
-    CHECK(!hidden(vanilla, "entities-target-cursor-cursor-style-label-row")); // the list stays, to pick another
+    CHECK(!hidden(vanilla, "targetcursor-target-cursor-cursor-style-label-row")); // the list stays, to pick another
 }
 
 TEST(one_nameplate_opacity_card_sits_under_nameplates_on_the_entities_page)
@@ -1291,6 +1369,19 @@ TEST(a_window_set_to_hide_goes_on_the_hidden_list_and_shows_no_place_until_kept_
     CHECK(w.settings.hiddenWindows.empty() && place(w.Pass()));
 }
 
+// Nothing places the compass: it is drawn by its own routine, not as a window in the game's list.
+TEST(the_compass_can_be_hidden_and_has_no_place_to_type)
+{
+    Window w;
+    w.state.page      = Page::VanillaUi;
+    const auto has = [](const Form& form, const char* id) { return At(Block(form, "vanillaui-base-game-ui"), id) != std::string::npos; };
+    const Form first = w.Pass();
+    CHECK(has(first, "vanillaui-base-game-ui-keep-compass") && !has(first, "vanillaui-base-game-ui-x-compass"));
+    CHECK(has(first, "vanillaui-base-game-ui-x-statcom"));
+    w.Pass({{"vanillaui-base-game-ui-keep-compass", kClickEvent, ""}});
+    CHECK((w.settings.hiddenWindows == std::vector<std::string>{"compass"}));
+}
+
 TEST(an_edit_of_a_built_in_theme_makes_a_custom_copy_of_it_named_after_it)
 {
     Window w;
@@ -1648,6 +1739,10 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     CHECK(own.fontRatio && std::fabs(*own.fontRatio - 1.0f) < 0.001f);
     w.Pass({{id("font-ratio"), kChangeEvent, "-1"}});
     CHECK(!own.fontRatio);
+    w.Pass({{id("font-size"), kChangeEvent, std::to_string(kMinWidgetFontSize + 4)}});
+    CHECK(own.fontSize == kMinWidgetFontSize + 4);
+    w.Pass({{id("font-size"), kChangeEvent, std::to_string(kMinWidgetFontSize - 1)}}); // the step under the least
+    CHECK(!own.fontSize);
     w.Pass({{id("line-separation"), kChangeEvent, "15"}}); // fifteen tenths over 0.5x
     CHECK(own.lineSeparation && std::fabs(*own.lineSeparation - 2.0f) < 0.001f);
     w.Pass({{id("line-separation"), kChangeEvent, "-1"}});
@@ -1663,7 +1758,7 @@ TEST(a_widgets_own_top_panel_looks_start_at_the_top_panels_step_and_set_its_own)
     const std::string rml = Block(w.Pass(), "toppanel-widgets")->rml;
     for (const char* key : {"widget-spacing", "show-background", "corner-rounding", "popup-text-scale"})
         CHECK(Has(rml, id(key).c_str()) && !Has(rml, id(key, "weather").c_str()));
-    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-ratio", "line-separation", "icon-scale"})
+    for (const char* key : {"widget-padding", "primary-font", "secondary-font", "font-size", "font-ratio", "line-separation", "icon-scale"})
         CHECK(Has(rml, id(key, "weather").c_str()));
 }
 
@@ -1680,6 +1775,31 @@ TEST(uniform_font_size_hides_the_widgets_font_size_ratio)
     CHECK(!Has(Block(w.Pass(), "toppanel-widgets")->rml, "toppanel-widgets-font-ratio-zone"));
     w.Pass({{row, kClickEvent, ""}});
     CHECK(!w.settings.Widget(zone).uniformFont);
+}
+
+TEST(a_widget_on_one_line_has_no_font_size_ratio_or_uniform_font_size)
+{
+    Window w;
+    const PanelWidget zone{BarWidget::Zone}, home{BarWidget::HomePoint};
+    w.settings.Widget(home).on          = true;
+    w.settings.Widget(home).uniformFont = false;
+    for (const char* widget : {"zone", "homepoint"})
+    {
+        w.readings.settingsOf = {std::string(widget) == "zone" ? zone : home};
+        w.Pass({{std::string("toppanel-widgets-own-looks-") + widget + "-fold", kClickEvent, ""}});
+    }
+    const auto shows = [&](const char* key, const char* widget) {
+        w.readings.settingsOf = {std::string(widget) == "zone" ? zone : home};
+        return Has(Block(w.Pass(), "toppanel-widgets")->rml, (std::string("toppanel-widgets-") + key + "-" + widget).c_str());
+    };
+    CHECK(shows("font-ratio", "zone") && shows("uniform-font", "zone") && shows("font-size", "zone"));
+    CHECK(shows("font-ratio", "homepoint") && shows("uniform-font", "homepoint"));
+    // Every part of Zone's second line off, and Home Point not wrapping its name.
+    for (DesignChip& chip : w.settings.Widget(zone).design.lines[1])
+        chip.on = false;
+    w.settings.Widget(home).wrapText = false;
+    CHECK(!shows("font-ratio", "zone") && !shows("uniform-font", "zone") && shows("font-size", "zone"));
+    CHECK(!shows("font-ratio", "homepoint") && !shows("uniform-font", "homepoint") && shows("font-size", "homepoint"));
 }
 
 TEST(a_widgets_settings_are_its_designers_section_then_the_rest_then_its_overrides)
@@ -1739,11 +1859,12 @@ TEST(an_override_left_unchanged_shows_the_top_panels_value_as_it_is_now)
     CHECK_EQ(shown("widget-spacing"), "3 px");
 }
 
-TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
+TEST(the_widget_designer_moves_and_toggles_its_parts_down_to_none_on)
 {
     Window w;
     const PanelWidget zone{BarWidget::Zone};
     w.readings.settingsOf  = {zone};
+    w.settings.Widget(zone).design = DesignFrom(BarWidget::Zone, "name | region nation -coordinates");
     const std::string base = "toppanel-widgets-part-" + std::to_string(SlotOf(zone)) + "-";
     const auto chip        = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
     const auto toggle      = [&](WidgetPart part) { return FormEvent{chip(part) + "-on", kClickEvent, ""}; };
@@ -1754,28 +1875,22 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK(!Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str())); // its Icon setting has it
     // A drop at a line's end moves the part there; on a chip, before it.
     w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::ZoneNation)}});
-    CHECK_EQ(design(), "name nation | region");
+    CHECK_EQ(design(), "name nation | region -coordinates");
     w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, chip(WidgetPart::ZoneNation)}});
-    CHECK_EQ(design(), "nation name | region");
-    // Off one by one until one is left: the last stays on, and the designer says why under its lines.
+    CHECK_EQ(design(), "nation name | region -coordinates");
+    // Off one by one, the last too (the card "Allow empty widgets"), and on again.
     w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneRegion)});
-    CHECK_EQ(design(), "-nation name | -region");
-    CHECK(!Has(rml(w.Pass()), "class=\"error\""));
-    const Form refused = w.Pass({toggle(WidgetPart::ZoneName)});
-    CHECK_EQ(design(), "-nation name | -region");
-    CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
-    bool shownOn = false; // the toggle's last word on its look
-    for (const FormValue& v : refused.values)
-        if (v.id == chip(WidgetPart::ZoneName) + "-on" && v.kind == FormValueKind::Class && v.name == "on") shownOn = v.on;
-    CHECK(shownOn);
-    // The next toggle or move takes the message away.
-    CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "class=\"error\""));
-    CHECK_EQ(design(), "-nation name | region");
+    CHECK_EQ(design(), "-nation name | -region -coordinates");
+    const Form empty = w.Pass({toggle(WidgetPart::ZoneName)});
+    CHECK(empty.changed && !AnyPartOn(w.settings.Widget(zone).design));
+    CHECK(!Has(rml(empty), "class=\"error\"") && !Has(rml(w.Pass()), "class=\"error\""));
+    w.Pass({toggle(WidgetPart::ZoneName), toggle(WidgetPart::ZoneRegion)});
+    CHECK_EQ(design(), "-nation name | region -coordinates");
     // Another widget's chip dropped here moves nothing.
     const std::string weather = "toppanel-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
                                 std::to_string(static_cast<int>(WidgetPart::WeatherName));
     w.Pass({{base + "end-1", kDropEvent, weather}});
-    CHECK_EQ(design(), "-nation name | region");
+    CHECK_EQ(design(), "-nation name | region -coordinates");
 }
 
 TEST(a_created_widgets_designer_lists_the_picked_widgets_unplaced_buttons_and_puts_takes_and_names_them)
@@ -1809,18 +1924,18 @@ TEST(a_created_widgets_designer_lists_the_picked_widgets_unplaced_buttons_and_pu
     const Form placed = w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, listed(WidgetPart::Bag1Count)}});
     CHECK_EQ(design(), "name | bags.count1 zone.name");
     CHECK(!shown(placed, listed(WidgetPart::ZoneName)) && Has(rml(placed), "Name (Zone)</div>"));
-    // Let go off the lines, a button goes back to the lists; the last one on stays, and the designer says why.
+    // Let go off the lines, a button goes back to the lists, the last one on too.
     w.Pass({{chip(WidgetPart::ZoneName), kDragEndEvent, ""}});
     CHECK_EQ(design(), "name | bags.count1");
     CHECK(shown(w.Pass(), listed(WidgetPart::ZoneName)));
     w.Pass({{chip(WidgetPart::Bag1Count) + "-on", kClickEvent, ""}});
     CHECK_EQ(design(), "name | -bags.count1");
-    const Form refused = w.Pass({{chip(WidgetPart::CustomName), kDragEndEvent, ""}});
-    CHECK_EQ(design(), "name | -bags.count1");
-    CHECK(Has(rml(refused), "class=\"error\""));
+    const Form empty = w.Pass({{chip(WidgetPart::CustomName), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "| -bags.count1");
+    CHECK(empty.changed && !Has(rml(empty), "class=\"error\""));
     // A drop ends the drag too: the button moves once and stays.
     w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::Bag1Count)}, {chip(WidgetPart::Bag1Count), kDragEndEvent, ""}});
-    CHECK_EQ(design(), "name -bags.count1 |");
+    CHECK_EQ(design(), "-bags.count1 |");
     // A Pinned Status button has no switch here either: the pins turn it on.
     w.Pass({{base + "end-1", kDropEvent, listed(WidgetPart::StatusPin1)}});
     CHECK(!Has(rml(w.Pass()), (chip(WidgetPart::StatusPin1) + "-on").c_str()));
@@ -2042,6 +2157,41 @@ TEST(the_home_point_widgets_settings_have_no_designer_and_a_wrap_text_switch)
     CHECK(!w.settings.Widget(home).wrapText);
 }
 
+TEST(supply_run_flags_shows_only_for_the_world_info_widget_and_switches_its_flags)
+{
+    Window w;
+    const PanelWidget world{BarWidget::World}, zone{BarWidget::Zone};
+    w.settings.Widget(world).on = w.settings.Widget(zone).on = true;
+    const auto rows = [&](PanelWidget widget) {
+        w.readings.settingsOf = {widget};
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    CHECK(!Has(rows(zone), "supply-flags"));
+    CHECK(Has(rows(world), "supply-flags"));
+    CHECK(w.settings.Widget(world).supplyFlags);
+    w.Pass({{"toppanel-widgets-supply-flags-world", kClickEvent, ""}});
+    CHECK(!w.settings.Widget(world).supplyFlags);
+}
+
+TEST(the_dps_widgets_settings_have_no_designer_and_set_its_seconds_and_pets)
+{
+    Window w;
+    const PanelWidget dps{BarWidget::Dps}, zone{BarWidget::Zone};
+    w.settings.Widget(dps).on = w.settings.Widget(zone).on = true;
+    const auto rows = [&](PanelWidget widget) {
+        w.readings.settingsOf = {widget};
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    const std::string other = rows(zone);
+    CHECK(!Has(other, "average-over") && !Has(other, "include-pets"));
+    const std::string shown = rows(dps);
+    CHECK(!Has(shown, "class=\"design\"") && Has(shown, "average-over") && Has(shown, "include-pets"));
+    w.Pass({{"toppanel-widgets-include-pets-dps", kClickEvent, ""}, {"toppanel-widgets-average-over-dps", kChangeEvent, "25"}});
+    CHECK(!w.settings.Widget(dps).dpsPets && w.settings.Widget(dps).dpsSeconds == 25);
+}
+
 TEST(show_mem_text_shows_with_the_performance_widgets_memory_button_and_switches_its_label)
 {
     Window w;
@@ -2160,6 +2310,7 @@ TEST(a_widgets_tips_name_a_copys_own_defaults)
     CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 0), layout.WordOf(WindowWord::SwitchOff).name);
     CHECK_EQ(named(WidgetTabsRow::ShowZoneId, BarWidget::Zone, 1), layout.WordOf(WindowWord::SwitchOn).name);
     CHECK_EQ(named(WidgetTabsRow::MemText, BarWidget::Performance, 1), layout.WordOf(WindowWord::SwitchOff).name);
+    CHECK_EQ(named(WidgetTabsRow::SyncedLevel, BarWidget::Job, 1), layout.WordOf(WindowWord::SwitchOff).name);
     CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 0), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Icon)));
     CHECK_EQ(named(WidgetTabsRow::StatusDisplay, BarWidget::StatusTimers, 1), option(WindowList::StatusDisplay, static_cast<size_t>(StatusDisplay::Both)));
     // A date format is named as the list shows it, by the day.
@@ -2173,18 +2324,18 @@ TEST(a_widgets_tips_name_a_copys_own_defaults)
         if (!named(static_cast<WidgetTabsRow>(row.row), BarWidget::Job, 1).empty()) CHECK(Said(row.tip).find(kDefaultMark) != std::string_view::npos);
 }
 
-TEST(the_combat_popups_card_takes_changes_only_while_switched_on)
+TEST(the_damage_numbers_page_takes_changes_only_while_its_titles_switch_is_on)
 {
     Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::DamageNumbers;
     w.settings.combatPopups = false;
-    const std::string card = "entities-combat-popups", size = card + "-combat-popup-size", font = card + "-combat-popup-font";
+    const std::string card = "damagenumbers-damage-appearance", size = card + "-combat-popup-size", font = card + "-combat-popup-font";
     w.Pass({{size, kChangeEvent, "150"}});
     CHECK_EQ(w.settings.combatPopupSize, kDefaultCombatPopupSize);
-    w.Pass({{card + "-on", kClickEvent, ""}});
+    w.Pass({{"damagenumbers-on", kClickEvent, ""}});
     CHECK(w.settings.combatPopups);
-    CHECK(w.Pass({{size, kChangeEvent, "150"}}).changed);
-    CHECK_EQ(w.settings.combatPopupSize, 150);
+    CHECK(w.Pass({{size, kChangeEvent, "60"}}).changed);
+    CHECK_EQ(w.settings.combatPopupSize, 60);
     CHECK(w.Pass({{font, kClickEvent, ""}}).popup);
     // Default, then the game's two fonts, then the installed ones.
     w.Pass({{font + "-o-2", kClickEvent, ""}});
@@ -2243,43 +2394,60 @@ TEST(only_the_skillchains_color_can_be_its_elements)
     CHECK(pickLast(PopupType::Critical, "combat-popup-critical-color") == ColorSource::Game);
 }
 
-TEST(the_combat_popups_test_button_asks_the_plugin_only_while_the_card_is_on_and_the_game_can_pop)
+TEST(the_damage_numbers_outline_takes_its_thickness_and_color_on_one_row_and_the_duration_and_fade_their_seconds)
 {
     Window w;
-    w.state.page             = Page::Entities;
-    w.readings.popupTestReady = true;
-    const std::string card = "entities-combat-popups", test = card + "-combat-popup-test";
-    w.settings.combatPopups = false;
-    w.Pass({{test, kClickEvent, ""}});
-    CHECK(!w.state.popupTestRequested);
-    w.settings.combatPopups   = true;
-    w.readings.popupTestReady = false;
-    CHECK(ClassOn(w.Pass(), test.c_str(), kOffClass));
-    w.Pass({{test, kClickEvent, ""}});
-    CHECK(!w.state.popupTestRequested);
-    w.readings.popupTestReady = true;
-    CHECK(!ClassOn(w.Pass(), test.c_str(), kOffClass));
-    w.Pass({{test, kClickEvent, ""}});
-    CHECK(w.state.popupTestRequested);
+    w.state.page = Page::DamageNumbers;
+    const std::string card = "damagenumbers-damage-appearance", outline = card + "-combat-popup-outline";
+    const Form form = w.Pass();
+    const FormBlock* block = Block(form, card.c_str());
+    CHECK(block != nullptr);
+    // The swatch is on the slider's row, before the next row starts.
+    const std::string& rml = block->rml;
+    const size_t row = rml.find("id=\"" + outline + "-label-row\""), swatch = rml.find("id=\"" + outline + "-swatch\"");
+    CHECK(row != std::string::npos && swatch != std::string::npos && swatch > row && rml.find("class=\"row", row + 1) > swatch);
+    CHECK(w.Pass({{outline, kChangeEvent, "5"}}).changed);
+    CHECK_EQ(w.settings.combatPopupOutline, 5);
+    CHECK(w.Pass({{outline + "-swatch", kClickEvent, ""}}).popup);
+    CHECK(w.Pass({{outline + "-swatch-p-r", kChangeEvent, "255"}}).changed);
+    CHECK_EQ(ToArgb(w.settings.combatPopupOutlineColor), 0xFFFF0000u);
+    CHECK(w.Pass({{card + "-combat-popup-fade", kChangeEvent, "1.3"}}).changed);
+    CHECK_EQ(w.settings.combatPopupFade, 1.3f);
+    CHECK(w.Pass({{card + "-combat-popup-duration", kChangeEvent, "2.5"}}).changed);
+    CHECK_EQ(w.settings.combatPopupDuration, 2.5f);
+}
+
+TEST(popup_timing_is_vanilla_or_instant_and_instant_starts_them_early)
+{
+    Window w;
+    w.state.page = Page::DamageNumbers;
+    const std::string timing = "damagenumbers-damage-appearance-combat-popup-timing";
+    CHECK(w.settings.combatPopupRightAway);
+    CHECK(w.Pass({{timing, kClickEvent, ""}}).popup);
+    w.Pass({{timing + "-o-0", kClickEvent, ""}});
+    CHECK(!w.settings.combatPopupRightAway);
+    w.Pass({{timing, kClickEvent, ""}});
+    w.Pass({{timing + "-o-1", kClickEvent, ""}});
+    CHECK(w.settings.combatPopupRightAway);
 }
 
 namespace
 {
-    const std::string kPopupCard = "entities-combat-popups";
+    const std::string kPopupCard = "damagenumbers-damage-placement";
     std::string KindChip(PopupType type) { return kPopupCard + "-popup-kind-" + std::to_string(static_cast<int>(type)); }
     std::string ColumnEnd(PopupSide side) { return kPopupCard + "-popup-column-end-" + std::to_string(static_cast<int>(side)); }
 }
 
-TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_nudged_only_while_the_card_is_on)
+TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_spread_and_nudged_only_while_they_are_on)
 {
     Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::DamageNumbers;
     w.settings.combatPopups = false;
-    const std::string x = kPopupCard + "-combat-popup-x", y = kPopupCard + "-combat-popup-y", height = kPopupCard + "-combat-popup-height";
+    const std::string x = kPopupCard + "-combat-popup-spread", y = kPopupCard + "-combat-popup-y", height = kPopupCard + "-combat-popup-height";
     const PopupSide& spell    = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Spell)];
     const PopupSide& recovery = w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)];
     w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}, {x, kChangeEvent, "40"}, {height, kChangeEvent, "50"}});
-    CHECK(spell == PopupSide::Right && w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
+    CHECK(spell == PopupSide::Right && w.settings.combatPopupSpread == kDefaultCombatPopupSpread && w.settings.combatPopupHeight == 90);
     w.settings.combatPopups = true;
     CHECK(w.Pass({{ColumnEnd(PopupSide::Middle), kDropEvent, KindChip(PopupType::Spell)}}).changed);
     CHECK(spell == PopupSide::Middle && w.settings.combatPopupSides[static_cast<size_t>(PopupType::Dealt)] == PopupSide::Right);
@@ -2289,27 +2457,15 @@ TEST(a_combat_popup_kind_dragged_to_a_column_goes_there_and_all_are_nudged_only_
     CHECK(w.Pass({{x, kChangeEvent, "40"}}).changed);
     CHECK(w.Pass({{y, kChangeEvent, "-25"}}).changed);
     CHECK(w.Pass({{height, kChangeEvent, "50"}}).changed);
-    CHECK(w.settings.combatPopupX == 40 && w.settings.combatPopupY == -25 && w.settings.combatPopupHeight == 50);
+    CHECK(w.settings.combatPopupSpread == 40 && w.settings.combatPopupY == -25 && w.settings.combatPopupHeight == 50);
 }
 
-TEST(with_custom_placement_off_the_combat_popups_columns_start_height_and_offsets_take_no_change)
+TEST(status_popups_switch_with_damage_numbers_on_and_their_colors_are_picked_only_while_they_pop)
 {
     Window w;
-    w.state.page = Page::Entities;
-    w.Pass({{kPopupCard + "-combat-popup-placement", kClickEvent, ""}});
-    CHECK(!w.settings.combatPopupPlacement);
-    w.Pass({{ColumnEnd(PopupSide::Right), kDropEvent, KindChip(PopupType::Recovery)}, {kPopupCard + "-combat-popup-x", kChangeEvent, "40"},
-        {kPopupCard + "-combat-popup-height", kChangeEvent, "50"}});
-    CHECK(w.settings.combatPopupSides[static_cast<size_t>(PopupType::Recovery)] == PopupSide::Left);
-    CHECK(w.settings.combatPopupX == 0 && w.settings.combatPopupHeight == 90);
-}
-
-TEST(status_popups_switch_with_the_card_on_and_their_colors_are_picked_only_while_they_pop)
-{
-    Window w;
-    w.state.page            = Page::Entities;
+    w.state.page            = Page::DamageNumbers;
     w.settings.combatPopups = false;
-    const std::string statuses = "entities-combat-popups-combat-popup-statuses",
+    const std::string statuses = "damagenumbers-damage-appearance-combat-popup-statuses",
                       buff     = "colors-colors-combat-popups-combat-popup-buff-color";
     const ColorPick& pick  = w.settings.combatPopupColors[static_cast<size_t>(PopupType::Buff)];
     w.Pass({{statuses, kClickEvent, ""}});
@@ -2344,6 +2500,18 @@ TEST(the_notifications_page_sets_the_look_of_every_notification)
     CHECK(w.settings.noticeAlign == HelpAnchor::Right);
     CHECK(w.Pass({{look + "-notice-bar", kClickEvent, ""}}).changed);
     CHECK(!w.settings.noticeBar);
+    CHECK(w.Pass({{look + "-notice-fade", kChangeEvent, "0"}}).changed);
+    CHECK_EQ(w.settings.noticeFade, 0.0f);
+    // Fade Speed steps by 0.2 s.
+    const Form form = w.Pass({{look + "-notice-fade", kChangeEvent, "1.4"}});
+    CHECK(form.changed && w.settings.noticeFade == 1.4f);
+    const std::string& rml = Block(form, look.c_str())->rml;
+    const size_t fade      = rml.find("id=\"" + look + "-notice-fade\"");
+    CHECK(fade != std::string::npos && rml.compare(rml.find("step=\"", fade), 10, "step=\"0.2\"") == 0);
+    // Duration is the friends' own: an invite always stays its 90 seconds.
+    CHECK(!Has(rml, "notice-seconds"));
+    CHECK(w.Pass({{"notifications-notice-friends-notice-seconds", kChangeEvent, "12"}}).changed);
+    CHECK_EQ(w.settings.noticeSeconds, 12);
 }
 
 TEST(changing_an_anchor_moves_the_spot_and_not_the_stack)
@@ -2407,15 +2575,12 @@ TEST(friends_included_asks_the_plugin_for_the_new_pick)
     CHECK(!w.state.includedAsked && none.popup && none.popup->rml.find(list + "-o-2") == std::string::npos);
 }
 
-TEST(the_two_test_buttons_ask_the_plugin_once_each)
+TEST(the_test_button_asks_the_plugin)
 {
     Window w;
     w.state.page = Page::Notifications;
     CHECK(!w.Pass({{"notifications-notice-look-notice-test", kClickEvent, ""}}).changed);
-    CHECK(w.state.noticeTestRequested && !w.state.friendNoticeTestRequested);
-    w.state.noticeTestRequested = false;
-    CHECK(!w.Pass({{"notifications-notice-friends-friend-notice-test", kClickEvent, ""}}).changed);
-    CHECK(w.state.friendNoticeTestRequested && !w.state.noticeTestRequested);
+    CHECK(w.state.noticeTestRequested);
 }
 
 TEST(a_setting_of_a_kind_that_is_off_is_not_shown)
@@ -2425,6 +2590,8 @@ TEST(a_setting_of_a_kind_that_is_off_is_not_shown)
     w.settings.partyNotice = false;
     w.Pass({{"notifications-notice-party-party-notice-buttons", kClickEvent, ""}});
     CHECK(w.settings.partyNoticeButtons);
+    w.Pass({{"notifications-notice-party-party-notice-place-s-2", kClickEvent, ""}});
+    CHECK(w.settings.partyNoticePlace == InvitePlace::Auto);
     w.settings.friendNoticeOnline = false;
     const std::string online = "notifications-notice-friends-friend-notice-online-sound";
     w.Pass({{online, kClickEvent, ""}});
@@ -2432,3 +2599,181 @@ TEST(a_setting_of_a_kind_that_is_off_is_not_shown)
     CHECK_EQ(w.settings.friendNoticeOnlineSound, kChimeSound);
 }
 
+
+namespace
+{
+    // Whether the element of this id holds a warning that HeadsUp sends packets, with a tip, before its next end.
+    bool WarnsOfPackets(const FormBlock* block, const std::string& id, const char* inside)
+    {
+        const size_t at = At(block, id);
+        if (at == std::string::npos) return false;
+        const size_t from = block->rml.find(inside, at), end = block->rml.find("</div>", from);
+        const size_t mark = block->rml.find(std::string("class=\"") + kSendsPacketsClass + "\"", from);
+        return from != std::string::npos && mark < end && block->rml.find(std::string(kMenuTipAttribute) + "=\"", mark) < end;
+    }
+}
+
+// "Put a warning next to every setting that makes HeadsUp ask the server for something, or makes it send a packet
+// more often than a normal player would."
+TEST(each_setting_that_makes_headsup_send_packets_warns_of_it_on_its_label)
+{
+    Window w;
+    w.state.page          = Page::Entities;
+    const FormBlock* card = Block(w.Pass(), "entities-nameplates");
+    CHECK(WarnsOfPackets(card, "entities-nameplates-auto-check-label", ">"));
+    CHECK(WarnsOfPackets(card, "entities-nameplates-look-up-players-label", ">"));
+    CHECK(!WarnsOfPackets(card, "entities-nameplates-stack-names-label", ">"));
+}
+
+// Conquest standings and currencies are asked for while their widgets show, so the warning goes on their chips.
+TEST(each_widget_that_makes_headsup_send_packets_warns_of_it_on_its_chip)
+{
+    Window w;
+    w.state.page = Page::TopPanel;
+    for (const BarWidget kind : {BarWidget::Zone, BarWidget::World, BarWidget::Currency, BarWidget::Bags})
+        if (!Placed(w.settings.barSections, PanelWidget{kind})) w.settings.barSections[0].push_back(PanelWidget{kind});
+    const FormBlock* layout = Block(w.Pass(), "toppanel-layout");
+    const auto chip         = [](BarWidget kind) { return "toppanel-layout-chip-" + std::to_string(SlotOf(PanelWidget{kind})); };
+    for (const BarWidget kind : {BarWidget::Zone, BarWidget::World, BarWidget::Currency})
+        CHECK(WarnsOfPackets(layout, chip(kind), "class=\"wname\""));
+    CHECK(!WarnsOfPackets(layout, chip(BarWidget::Bags), "class=\"wname\""));
+    // World Info asks for the standings on its own, Zone widget or not, and also fetches the guilds' turn-ins from
+    // Phoenix's website; the Zone widget does neither of World Info's.
+    const auto chipSays = [&](BarWidget kind, WindowWord word)
+    {
+        const size_t at = At(layout, chip(kind)), name = layout->rml.find("class=\"wname\"", at);
+        return layout->rml.substr(name, layout->rml.find("</div>", name) - name).find(EscapedRml(Said(w.layout.WordOf(word).tip))) !=
+               std::string::npos;
+    };
+    CHECK(chipSays(BarWidget::World, WindowWord::SendsTurnIns));
+    CHECK(chipSays(BarWidget::World, WindowWord::SendsWorldConquest) && !chipSays(BarWidget::World, WindowWord::SendsConquest));
+    CHECK(chipSays(BarWidget::Zone, WindowWord::SendsConquest));
+    CHECK(!chipSays(BarWidget::Zone, WindowWord::SendsTurnIns) && !chipSays(BarWidget::Zone, WindowWord::SendsWorldConquest));
+}
+
+TEST(the_style_picks_full_or_compact_and_compact_hides_width_and_height)
+{
+    Window w;
+    w.state.page            = Page::Notifications;
+    const std::string look  = "notifications-notice-look";
+    const std::string style = look + "-notice-style-s-";
+    const auto shows = [&](const Form& form, const std::string& id) {
+        return Has(Block(form, look.c_str())->rml, ("id=\"" + look + "-" + id + "\"").c_str());
+    };
+    const Form full = w.Pass();
+    CHECK(shows(full, "notice-width") && shows(full, "notice-height"));
+    CHECK(w.Pass({{style + "1", kClickEvent, ""}}).changed);
+    CHECK(w.settings.noticeStyle == NoticeStyle::Compact);
+    const Form compact = w.Pass();
+    CHECK(!shows(compact, "notice-width") && !shows(compact, "notice-height") && shows(compact, "notice-fit"));
+    CHECK(w.Pass({{style + "0", kClickEvent, ""}}).changed);
+    CHECK(w.settings.noticeStyle == NoticeStyle::Full);
+}
+
+TEST(invite_position_is_picked_from_its_three_segments)
+{
+    Window w;
+    w.state.page = Page::Notifications;
+    CHECK(w.Pass({{"notifications-notice-party-party-notice-place-s-2", kClickEvent, ""}}).changed);
+    CHECK(w.settings.partyNoticePlace == InvitePlace::Bottom);
+    CHECK(w.Pass({{"notifications-notice-party-party-notice-place-s-0", kClickEvent, ""}}).changed);
+    CHECK(w.settings.partyNoticePlace == InvitePlace::Auto);
+}
+
+namespace
+{
+    constexpr uint16_t kCurseStatus = 9, kCurseIIStatus = 20; // a debuff nobody stars by default, and its name's second id
+    const char* kPlayersStatuses = "players-plate-statuses";
+    std::string StarOf(uint16_t id) { return std::string(kPlayersStatuses) + "-star-" + std::to_string(id); }
+}
+
+// John (2026-11-19): a "Buffs & Debuffs" section "only visible if either button is used".
+TEST(the_buffs_and_debuffs_card_shows_once_a_line_uses_either_tag)
+{
+    Window w;
+    w.state.page = Page::Players;
+    CHECK(Block(w.Pass(), kPlayersStatuses) == nullptr);
+    w.settings.Kind(PlateKind::Players).lines[0].text = "$debuffs";
+    CHECK(Block(w.Pass(), kPlayersStatuses) != nullptr);
+    w.settings.Kind(PlateKind::Players).lines[0].text = "${sync|buffs}";
+    CHECK(Block(w.Pass(), kPlayersStatuses) != nullptr);
+    for (const Page page : {Page::Npcs, Page::Pets})
+    {
+        w.state.page = page;
+        for (PlateKind kind : {PlateKind::Npcs, PlateKind::Pets})
+            w.settings.Kind(kind).lines[0].text = "$buffs $debuffs";
+        const Form form = w.Pass();
+        CHECK(std::ranges::none_of(form.blocks, [](const FormBlock& b) { return b.id.ends_with("plate-statuses"); }));
+    }
+}
+
+TEST(a_click_on_a_star_stars_that_kinds_status_and_a_second_takes_it_off)
+{
+    Window w;
+    w.state.page = Page::Players;
+    w.settings.Kind(PlateKind::Players).lines[0].text = "$debuffs";
+    const std::vector<uint16_t> self = w.settings.Kind(PlateKind::Self).shownStatuses;
+    const Form form = w.Pass();
+    CHECK(At(Block(form, kPlayersStatuses), StarOf(kCurseStatus)) != std::string::npos);
+    CHECK(w.Pass({{StarOf(kCurseStatus), kClickEvent, ""}}).changed);
+    CHECK(StarredByName(w.settings.Kind(PlateKind::Players).shownStatuses, kCurseStatus));
+    CHECK(w.settings.Kind(PlateKind::Self).shownStatuses == self);
+    w.settings.Kind(PlateKind::Players).shownStatuses.push_back(kCurseIIStatus); // the same name twice, by hand
+    CHECK(w.Pass({{StarOf(kCurseStatus), kClickEvent, ""}}).changed);
+    CHECK(!StarredByName(w.settings.Kind(PlateKind::Players).shownStatuses, kCurseStatus));
+}
+
+// "Only do this when loading in though so that they're not moving with every click."
+TEST(a_starred_status_moves_up_only_when_the_page_opens_again)
+{
+    Window w;
+    w.state.page = Page::Players;
+    w.settings.Kind(PlateKind::Players).lines[0].text = "$debuffs";
+    const auto place = [&](const Form& form) { return At(Block(form, kPlayersStatuses), StarOf(kCurseStatus)); };
+    const Form first    = w.Pass();
+    const size_t before = place(first);
+    const size_t sleep  = At(Block(first, kPlayersStatuses), StarOf(2)); // starred by default, so near the top
+    CHECK(sleep < before);
+    w.Pass({{StarOf(kCurseStatus), kClickEvent, ""}});
+    CHECK(place(w.Pass()) > sleep);
+    w.Pass({{"nav-self", kClickEvent, ""}});
+    w.Pass({{"nav-players", kClickEvent, ""}});
+    const Form reopened = w.Pass();
+    CHECK(place(reopened) < At(Block(reopened, kPlayersStatuses), StarOf(4))); // before Paralysis, by name
+}
+
+TEST(only_party_members_is_on_the_players_page_alone)
+{
+    Window w;
+    for (PlateKind kind : {PlateKind::Players, PlateKind::Self, PlateKind::Mobs})
+        w.settings.Kind(kind).lines[0].text = "$buffs";
+    w.state.page = Page::Players;
+    const std::string partyOnly = "players-plate-statuses-status-party-only";
+    const Form players          = w.Pass();
+    CHECK(At(Block(players, kPlayersStatuses), partyOnly) != std::string::npos);
+    const bool changed = w.Pass({{partyOnly, kClickEvent, ""}}).changed;
+    CHECK(changed && !w.settings.Kind(PlateKind::Players).statusPartyOnly);
+    for (const Page page : {Page::Self, Page::Mobs})
+    {
+        w.state.page = page;
+        const Form form = w.Pass();
+        const auto card = std::ranges::find_if(form.blocks, [](const FormBlock& b) { return b.id.ends_with("plate-statuses"); });
+        CHECK(card != form.blocks.end() && card->rml.find("status-party-only") == std::string::npos);
+    }
+}
+
+TEST(the_status_rows_show_a_star_clicked_and_the_background_switched_at_once)
+{
+    Window w;
+    w.state.page = Page::Players;
+    w.settings.Kind(PlateKind::Players).lines[0].text = "$debuffs";
+    const std::string star = "class=\"sstar dim\" id=\"" + StarOf(kCurseStatus) + "\"";
+    const auto rows        = [&] { return Block(w.Pass(), kPlayersStatuses)->rml; };
+    CHECK(Has(rows(), star.c_str()));
+    w.Pass({{StarOf(kCurseStatus), kClickEvent, ""}});
+    CHECK(!Has(rows(), star.c_str()) && Has(rows(), ("class=\"sstar\" id=\"" + StarOf(kCurseStatus) + "\"").c_str()));
+    const std::string back = IconSource(Icon::DebuffBack);
+    CHECK(!Has(rows(), back.c_str()));
+    w.settings.Kind(PlateKind::Players).statusBack = true;
+    CHECK(Has(rows(), back.c_str()));
+}

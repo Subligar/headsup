@@ -15,6 +15,9 @@ namespace headsup
     {
         constexpr float kRunInset     = 0.3f;  // how much shorter a line box's stretches and chips are than the box
         constexpr float kSpacing      = 0.45f; // between rows
+        // The "!" of a warning that a setting sends packets: its size against the label's, and its circle's against its own.
+        constexpr float kSendsScale   = 0.85f;
+        constexpr float kSendsCircle  = 1.35f;
         // Setup's picture, 16:9 like its target: short enough that its first step fits the window's own size.
         constexpr float kPreviewTall  = 14.0f;
         constexpr float kParagraphTall = 9.0f; // a box of several lines
@@ -22,6 +25,8 @@ namespace headsup
         constexpr float kPadX         = 0.6f;  // a control's text from its sides
         constexpr float kHeadHeight   = 2.05f; // the window's title row
         constexpr float kPopupTall    = 18.0f; // the most of a dropdown's list shown before it scrolls
+        constexpr float kStatusRow = 1.6f, kStatusIcon = 1.2f, kStatusGap = 0.4f; // a Buffs & Debuffs row, its icons
+        constexpr float kDimStar   = 0.45f; // an unstarred status's star
         constexpr float kNavHeight    = 1.75f; // each page in the sidebar
         constexpr float kNavGap       = 0.2f;  // between two pages of the sidebar
         constexpr float kNavSlide     = 0.35f; // how far a page's name moves under the pointer
@@ -163,7 +168,9 @@ namespace headsup
                Em(kPageTitleScale) + ";color:" + color(c.heading) + ";}";
         // A page's own switch on its title's line, just after it.
         css += "#page-head{display:flex;flex-direction:row;align-items:center;}";
-        css += std::string("#") + kPageSwitchBlock + "{margin-left:" + Em(kCardPad) + ";}";
+        css += std::string("#") + kPageSwitchBlock + "{display:flex;flex-direction:row;align-items:center;margin-left:" + Em(kCardPad) + ";}";
+        // A page's button before its switch, as wide as the switch.
+        css += std::string("#") + kPageSwitchBlock + " .btn{width:" + Em(kCardToggleWidth) + ";padding:0px;margin-right:" + Em(kControlGap) + ";}";
         css += std::string("#") + kMenuPageId + "{position:absolute;left:0px;right:0px;top:" + Em(kPageTop) + ";bottom:0px;overflow-y:auto;}";
         css += "scrollbarvertical{width:" + Em(kScrollbar) + ";}";
         css += "scrollbarvertical sliderbar{width:" + Em(kScrollbar) + ";min-height:2em;border-radius:" +
@@ -202,6 +209,13 @@ namespace headsup
         css += ".row{display:flex;flex-direction:row;align-items:center;justify-content:space-between;"
                "min-height:" + frame + ";margin-bottom:" + Em(kSpacing) + ";}";
         css += ".label{flex:1 1 0px;min-width:0px;overflow:hidden;white-space:nowrap;" + raised + "color:" + color(c.label) + ";}";
+        css += std::string(".") + kSendsPacketsClass + "{display:inline-block;margin-left:" + Em(kControlGap / kSendsScale) +
+               ";font-size:" + Em(kSendsScale) + ";width:" + Em(kSendsCircle) + ";height:" + Em(kSendsCircle) + ";line-height:" +
+               Em(kSendsCircle) + ";text-align:center;border-radius:" + Em(kSendsCircle / 2.0f) + ";background-color:" +
+               color(kErrorColor) + ";color:" + color(c.card) + ";font-effect:shadow(1px 0px " + color(c.card) + ");}";
+        css += std::string(".") + kTipTitleClass + "{margin-bottom:0.3em;font-effect:shadow(1px 0px " + color(c.text) + ");}";
+        css += std::string(".") + kTipTitleClass + " ." + kSendsPacketsClass + "{margin-left:0px;margin-right:" +
+               Em(kControlGap / kSendsScale) + ";}";
         css += ".ctl{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:flex-end;flex:0 0 auto;}";
         css += ".ctl > *{margin-left:" + Em(kControlGap) + ";}";
         css += ".line{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;margin-bottom:" + Em(kSpacing) + ";}";
@@ -280,6 +294,7 @@ namespace headsup
         // A swatch beside them. Their box is a flex one: as a block, RmlUi sized it to their least width, and the swatch
         // went over Custom.
         css += ".swatched{display:flex;}.swatched .segs{min-width:" + Em(kControlWidth - kFrame - kControlGap) + ";}";
+        css += ".swatched .slider,.swatched input.range{width:" + Em(kControlWidth - kFrame - kControlGap) + ";}";
         css += ".seg:first-child{margin-left:0px;}";
         css += ".seg:hover{background-color:" + color(c.hover) + ";}";
         css += ".seg.picked{background-color:" + color(c.accent) + ";}";
@@ -348,6 +363,14 @@ namespace headsup
         css += std::string("#") + kMenuPopupId + ".open{animation:0.16s cubic-out drop-in;}";
         css += "@keyframes drop-in{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0px);}}";
         css += ".list{max-height:" + Em(kPopupTall) + ";overflow-y:auto;}";
+        // A Buffs & Debuffs row: its star, its status's icon with any background placed in the icon's box, its name.
+        css += ".srow{display:flex;flex-direction:row;align-items:center;height:" + Em(kStatusRow) + ";}";
+        css += ".sstar{flex:0 0 auto;width:" + Em(kStatusIcon) + ";height:" + Em(kStatusIcon) + ";}";
+        css += ".sstar img{width:100%;height:100%;}";
+        css += ".sstar.dim{opacity:" + RcssNumber(kDimStar) + ";}";
+        css += ".smark{position:relative;flex:0 0 auto;width:" + Em(kStatusIcon) + ";height:" + Em(kStatusIcon) + ";margin:0px " +
+               Em(kStatusGap) + ";}";
+        css += ".smark .p{position:absolute;}";
         css += ".opt{height:" + frame + ";" + framed + "padding:0px " + Em(kPadX) + ";border-radius:" + radius +
                ";white-space:nowrap;}";
         css += ".opt:hover,.opt.picked{background-color:" + color(c.accentSoft) + ";}";
@@ -501,12 +524,25 @@ namespace headsup
                "\" class=\"hidden\"></div></body></rml>";
     }
 
+    std::string MoveHandleAttributes()
+    {
+        const std::string offScreen = std::to_string(static_cast<int>(std::lround(-(1.0f - kWindowKeptOn) * 100.0f))) + "%";
+        return "move_target=\"#document\" edge_margin=\"0px " + offScreen + " " + offScreen + " " + offScreen + "\"";
+    }
+
+    std::pair<int, int> KeptOnScreen(int x, int y, int width, int height, int screenWidth, int screenHeight)
+    {
+        const auto kept = [](int at, int side, int screenSide) {
+            const int on = static_cast<int>(std::lround(static_cast<float>(side) * kWindowKeptOn));
+            return std::clamp(at, on - side, std::max(on - side, screenSide - on));
+        };
+        return {kept(x, width, screenWidth), std::clamp(kept(y, height, screenHeight), 0, std::max(0, screenHeight))};
+    }
+
     std::string MenuDocument(const MenuLook& look)
     {
-        // The title's handle lets the window off the screen but for kWindowKeptOn of it, and never off the top.
-        const std::string offScreen = std::to_string(static_cast<int>(std::lround(-(1.0f - kWindowKeptOn) * 100.0f))) + "%";
         return "<rml><head><style>" + MenuStyle(look) + "</style></head><body><div id=\"" + kMenuArtId + "\">" + kArtRml + "</div>"
-               "<handle id=\"head\" move_target=\"#document\" edge_margin=\"0px " + offScreen + " " + offScreen + " " + offScreen + "\"><div id=\"title\">HeadsUp</div><div id=\"" +
+               "<handle id=\"head\" " + MoveHandleAttributes() + "><div id=\"title\">HeadsUp</div><div id=\"" +
                kMenuVersionId + "\"></div></handle><div id=\"head-line\"></div>" +
                (look.developer ? std::string("<div id=\"tools\"><div class=\"") + kRaisedPill + "\" id=\"" + kMenuReloadId +
                                      "\"></div></div>"

@@ -15,6 +15,17 @@ namespace headsup
 
     bool KindPagesShown(const Settings& s) { return s.nameplates || s.outlines; }
 
+    std::vector<const LayoutPage*> SidebarPages(const WindowLayout& layout)
+    {
+        std::vector<const LayoutPage*> pages;
+        for (const LayoutPage& page : layout.pages)
+            if (page.page != Page::VanillaUi) pages.push_back(&page);
+        auto at = std::next(std::ranges::find(pages, Page::UserInterface, &LayoutPage::page));
+        while (at != pages.end() && (*at)->child) ++at;
+        pages.insert(at, &layout.PageOf(Page::VanillaUi));
+        return pages;
+    }
+
     std::optional<PlateKind> KindOfPage(Page page)
     {
         switch (page)

@@ -9,7 +9,8 @@ namespace headsup
     namespace
     {
         using P = WidgetPart;
-        constexpr P kZone[]   = {P::ZoneName, P::ZoneRegion, P::ZoneNation};
+        constexpr std::string_view kCoordinatesGap = " ";
+        constexpr P kZone[]   = {P::ZoneName, P::ZoneRegion, P::ZoneNation, P::ZoneCoordinates};
         constexpr P kWeather[] = {P::WeatherName, P::VanaDate, P::VanaDay, P::VanaTime, P::VanaMoon, P::VanaSeason};
         constexpr P kTarget[] = {P::TargetName, P::TargetDistance, P::TargetDetection, P::TargetLevel,
             P::TargetPlayer, P::TargetWeak};
@@ -25,20 +26,21 @@ namespace headsup
         constexpr P kWorld[]  = {P::WorldShip, P::WorldGuild, P::WorldSanDoria, P::WorldBastok,
             P::WorldWindurst, P::WorldBeastmen};
         constexpr P kHomePoint[] = {P::HomePointName};
+        constexpr P kDps[]       = {P::DpsYou, P::DpsParty};
 
         // By WidgetPart.
-        constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "icon", "weather",
+        constexpr const char* kFileNames[kWidgetPartCount] = {"name", "region", "crest", "nation", "coordinates", "icon", "weather",
             "date", "day", "time", "moon", "season", "aggro", "name", "distance", "detection", "level", "player", "weak",
             "coin", "name1", "name2", "amount1", "amount2", "icon1", "icon2", "count1", "count2", "name1", "name2", "icon", "time", "server", "vana", "icon", "date", "jobs", "earned", "tonext", "percent", "bar",
-            "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "pin1", "pin2",
+            "fps", "sent", "received", "percent", "memory", "messages", "count", "health", "icon", "pin1", "pin2",
             "pin3", "pin4", "pin5", "pin6", "ship",
-            "guild", "sandoria", "bastok", "windurst", "beastmen", "name", "icon", "name"};
+            "guild", "sandoria", "bastok", "windurst", "beastmen", "name", "icon", "you", "party", "name"};
 
         // As each widget showed before it had a design.
-        constexpr const char* kDefaults[kBarWidgetCount] = {"name | region nation", "weather | day time -date -moon",
+        constexpr const char* kDefaults[kBarWidgetCount] = {"name coordinates | region nation", "weather | day time -date -moon",
             "name distance -detection | level player -weak", "amount1 | icon2 amount2 -name1 -name2 -icon1", "count1 | name1", "time | -server -vana -date", "", "-fps sent received percent -memory messages |",
             "jobs | tonext bar -earned -percent", "count | health", "pin1 pin3 pin5 | pin2 pin4 pin6",
-            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "name |"};
+            "ship | -guild -sandoria -bastok -windurst -beastmen", "", "name |", "", "you | party", "name |"};
 
         constexpr char kOffMark = '-', kSpace = ' ', kWidgetMark = '.', kUnderMark = '/';
 
@@ -74,7 +76,7 @@ namespace headsup
             {W::Party, "party.members"}, {W::StatusTimers, "statusTimers.favorites"},
             {W::StatusTimers, "statusTimers.buffs"}, {W::StatusTimers, "statusTimers.debuffs"},
             {W::World, "world.conquest"}, {W::World, "world.travel"}, {W::World, "world.calendar"},
-            {W::World, "world.guilds"}};
+            {W::World, "world.guilds"}, {W::Dps, "dps.members"}};
 
         // By BarWidget: each pop-out's cards as it laid them out before it had a design.
         constexpr const char* kPopupDefaults[kBarWidgetCount] = {"zone.influence zone.players | zone.travel | zone.shops",
@@ -87,7 +89,7 @@ namespace headsup
             "performance.connection performance.session | performance.memory performance.processor"
             " | performance.playOnline performance.linuxxi performance.lua",
             "job.exp", "party.members", "statusTimers.favorites | statusTimers.buffs | statusTimers.debuffs",
-            "world.conquest world.travel/world.calendar | world.guilds", "", "", ""};
+            "world.conquest world.travel/world.calendar | world.guilds", "", "", "", "dps.members", ""};
         constexpr const char* kNoCards = "none"; // a pop-out design with no card, which "" would not be
 
         bool Holds(std::span<const WidgetPart> parts, WidgetPart part) { return std::ranges::find(parts, part) != parts.end(); }
@@ -255,6 +257,7 @@ namespace headsup
         case BarWidget::Bags: return P::BagIcon;
         case BarWidget::EarthTime: return P::ClockIcon;
         case BarWidget::HomePoint: return P::HomePointIcon;
+        case BarWidget::Party: return P::PartyIcon;
         default: return std::nullopt;
         }
     }
@@ -270,7 +273,8 @@ namespace headsup
         case BarWidget::Bags: return kBags;
         case BarWidget::EarthTime: return kClock;
         case BarWidget::GameHelp:
-        case BarWidget::Settings: return {};
+        case BarWidget::Settings:
+        case BarWidget::PhTimers: return {};
         case BarWidget::Custom:
         {
             // Its Name, then each widget's icon and parts, in the widgets' order.
@@ -292,11 +296,12 @@ namespace headsup
         case BarWidget::StatusTimers: return kStatus;
         case BarWidget::World: return kWorld;
         case BarWidget::HomePoint: return kHomePoint;
+        case BarWidget::Dps: return kDps;
         }
         return {};
     }
 
-    bool HasDesigner(BarWidget kind) { return !PartsOf(kind).empty() && kind != BarWidget::HomePoint; }
+    bool HasDesigner(BarWidget kind) { return !PartsOf(kind).empty() && kind != BarWidget::HomePoint && kind != BarWidget::Dps; }
 
     BarWidget WidgetOfPart(WidgetPart part)
     {
@@ -328,7 +333,7 @@ namespace headsup
     WidgetDesign DesignFrom(BarWidget kind, std::string_view text)
     {
         // A design of none of the parts the widget has now, such as one saved before its parts changed, is no design;
-        // a created widget's is empty, as its pill may show another widget's parts (Clamp gives a lone one its Name).
+        // a created widget's may be empty.
         const WidgetDesign parsed = Parsed(kind, text);
         if (kind == BarWidget::Custom) return text.empty() ? DefaultDesign(kind) : Whole(kind, parsed);
         const bool none = std::ranges::all_of(parsed.lines, [](const auto& line) { return line.empty(); });
@@ -364,27 +369,15 @@ namespace headsup
         return std::ranges::any_of(design.lines, [&](const auto& line) { return std::ranges::find(line, part, &DesignChip::part) != line.end(); });
     }
 
-    bool TakePart(WidgetDesign& design, WidgetPart part, bool pillShows)
+    bool TakePart(WidgetDesign& design, WidgetPart part)
     {
         for (auto& line : design.lines)
             if (const auto chip = std::ranges::find(line, part, &DesignChip::part); chip != line.end())
             {
-                if (chip->on && !TurnOff(design, part, pillShows)) return false;
                 line.erase(chip);
                 return true;
             }
         return false;
-    }
-
-    void TurnOnFirst(WidgetDesign& design)
-    {
-        if (AnyPartOn(design)) return;
-        for (auto& line : design.lines)
-            if (!line.empty())
-            {
-                line.front().on = true;
-                return;
-            }
     }
 
     bool AnyPartOn(const WidgetDesign& design)
@@ -487,7 +480,7 @@ namespace headsup
             for (size_t i = 0; i < parts.size(); ++i)
             {
                 const size_t at = spans.size();
-                AddPart(spans, std::move(parts[i].spans));
+                AddPart(spans, std::move(parts[i].spans), parts[i].part == WidgetPart::ZoneCoordinates ? kCoordinatesGap : kPartGap);
                 if (parts[i].align && (i == 0 || parts[i - 1].align != parts[i].align)) spans[at].align = parts[i].align;
             }
         }
@@ -514,6 +507,7 @@ namespace headsup
         case WidgetPart::BagIcon: return PartMark{Icon::Bag};
         case WidgetPart::ClockIcon: return PartMark{Icon::Clock};
         case WidgetPart::HomePointIcon: return PartMark{Icon::HomePoint};
+        case WidgetPart::PartyIcon: return PartMark{Icon::Person};
         case WidgetPart::ZoneCrest:
         case WidgetPart::WorldSanDoria: return PartMark{std::nullopt, GamePicture::SanDoriaCrest};
         case WidgetPart::WorldBastok: return PartMark{std::nullopt, GamePicture::BastokCrest};
@@ -539,18 +533,15 @@ namespace headsup
         return widest;
     }
 
-    bool TurnOff(WidgetDesign& design, WidgetPart part, bool pillShows)
+    bool TurnOff(WidgetDesign& design, WidgetPart part)
     {
-        DesignChip* found = nullptr;
-        int on            = 0;
         for (auto& line : design.lines)
             for (DesignChip& chip : line)
-            {
-                on += chip.on ? 1 : 0;
-                if (chip.part == part) found = &chip;
-            }
-        if (found == nullptr || !found->on || (on <= 1 && !pillShows)) return false;
-        found->on = false;
-        return true;
+                if (chip.part == part && chip.on)
+                {
+                    chip.on = false;
+                    return true;
+                }
+        return false;
     }
 }

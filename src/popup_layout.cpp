@@ -22,7 +22,7 @@ namespace headsup
         constexpr float kTagPadX     = 0.6f, kTagPadY = 0.4f, kTagGap = 0.3f; // from a tag's ink to its frame
         constexpr float kCardPad     = 0.55f; // a card's contents from its edges
         constexpr float kHeadingGap  = 0.2f;  // more under a card's heading than between its rows
-        constexpr float kCardGap     = 0.45f; // between cards, and between the columns of them
+        constexpr float kCardGap     = 0.45f; // between cards, the columns of them, and a card's columns of rows
         constexpr float kMinWidth    = 12.0f; // popupText, so a short popup is not a sliver
         constexpr float kPinChip     = 1.4f;  // the round pin chip's side, in popup text sizes
         constexpr float kMarkShare   = 0.7f;  // the pin or cog, of its chip's height
@@ -102,7 +102,13 @@ namespace headsup
                 float fromRight = 0.0f;    // above 0: its left edge from the card's right, once its width is known
             };
             std::vector<Press> presses; // pressable cells
-            std::vector<size_t> sockets; // pieces to widen to the card's inside once its width is known
+            struct Sunk
+            {
+                size_t piece;
+                float width  = 0.0f;  // a column's but the last; 0 to widen to the card's right padding once known
+                bool reaches = false; // the last of its column, reaching down as far as the card does
+            };
+            std::vector<Sunk> sockets;
             struct Anchor
             {
                 size_t piece;
@@ -116,6 +122,8 @@ namespace headsup
                 size_t most;              // lines it scrolls
                 float trackY, track, thumb; // its scrollbar
                 float grip;               // the right padding's width, the scrollbar in it
+                float left;               // its socket's, from the card's left
+                float width = 0.0f;       // a column's but the last; 0 to the card's right padding
             };
             std::vector<Scroll> scrolls;
             bool card     = false;
@@ -279,12 +287,12 @@ namespace headsup
                 PopupPiece& ground = b.pieces[socket->piece];
                 ground.height      = y - metrics.rowGap + socketPad - ground.y;
                 y                  = ground.y + ground.height + metrics.rowGap;
-                b.sockets.push_back(socket->piece);
+                b.sockets.push_back(Block::Sunk{socket->piece});
                 if (socket->shown < socket->lines)
                 {
                     const PopupPiece& track = b.pieces[socket->bar], &thumb = b.pieces[socket->bar + 1];
                     b.scrolls.push_back(Block::Scroll{socket->key, ground.y, ground.height, socket->lines - socket->shown,
-                        track.y, track.height, thumb.height, inset});
+                        track.y, track.height, thumb.height, inset, ground.x});
                 }
                 socket.reset();
             };
@@ -294,9 +302,46 @@ namespace headsup
                 const size_t line = socket->at++;
                 return line >= socket->from && line < socket->from + socket->shown;
             };
+            // The rows' columns: a row beside those before it starts one right of them, at the rows' top. Each but the
+            // last ends at its widest row, so what would go to the card's right edge goes to its own.
+            struct Column
+            {
+                float left = 0.0f, width = 0.0f; // from the card's padding
+                size_t values = 0, anchors = 0, sockets = 0, scrolls = 0; // the first of its own in each
+            };
+            Column current{0.0f, 0.0f, b.values.size(), b.anchors.size(), b.sockets.size(), b.scrolls.size()};
+            const float rowsTop = y;
+            float rowsFoot      = y; // the tallest column's end
+            std::vector<std::pair<size_t, float>> columnEnds; // each column's last socket, and where the column ends
+            const auto closeColumn = [&](bool last) {
+                closeSocket();
+                rowsFoot = std::max(rowsFoot, y);
+                if (b.sockets.size() > current.sockets)
+                {
+                    b.sockets.back().reaches = true;
+                    columnEnds.emplace_back(b.sockets.size() - 1, y);
+                }
+                if (last) return;
+                const float left = b.pad + current.left, right = left + current.width;
+                for (size_t v = current.values; v < b.values.size(); ++v)
+                    for (size_t i = b.values[v].first; i < b.values[v].last; ++i)
+                        b.pieces[i].x += (b.values[v].middle ? (left + right) / 2.0f : right - b.values[v].inset) - b.values[v].right;
+                b.values.resize(current.values);
+                for (size_t a = current.anchors; a < b.anchors.size(); ++a)
+                    b.pieces[b.anchors[a].piece].x = right + b.pad - b.anchors[a].fromRight;
+                b.anchors.resize(current.anchors);
+                for (size_t s = current.sockets; s < b.sockets.size(); ++s)
+                    b.sockets[s].width = current.width;
+                for (size_t s = current.scrolls; s < b.scrolls.size(); ++s)
+                    b.scrolls[s].width = current.width;
+                current = Column{current.left + current.width + std::round(unit * kCardGap), 0.0f, b.values.size(),
+                    b.anchors.size(), b.sockets.size(), b.scrolls.size()};
+                y = rowsTop;
+            };
             for (size_t r = 0; r < rows.size(); ++r)
             {
                 const PopupRow& row = rows[r];
+                if (row.beside) closeColumn(false);
                 if (!row.nested) closeSocket();
                 if (row.cells.empty()) continue;
                 const bool grid = row.kind == RowKind::Grid && row.columns > 0;
@@ -340,7 +385,8 @@ namespace headsup
                     for (size_t c = 0; c < columns.size(); ++c)
                         rowWidth += columns[c] + (c + 1 < columns.size() ? gaps[c] : 0.0f);
                 }
-                contentWidth = std::max(contentWidth, rowWidth);
+                current.width = std::max(current.width, rowWidth);
+                contentWidth = std::max(contentWidth, current.left + rowWidth);
                 if (row.nested && !socket)
                 {
                     socket = Socket{b.pieces.size(), row.scroll};
@@ -348,7 +394,7 @@ namespace headsup
                         socket->lines += linesOf(rows[n]);
                     socket->shown = std::min(socket->lines, kSocketLines);
                     socket->from  = std::min(row.scrolled, socket->lines - socket->shown);
-                    b.pieces.push_back(PopupPiece{PopupPiece::Kind::Socket, b.pad, y, 0.0f, 0.0f, {}});
+                    b.pieces.push_back(PopupPiece{PopupPiece::Kind::Socket, b.pad + current.left, y, 0.0f, 0.0f, {}});
                     y += socketPad;
                     socket->top = y;
                 }
@@ -364,7 +410,7 @@ namespace headsup
                         }
                     return std::nullopt;
                 };
-                float lineHeight = 0.0f, x = b.pad + indent;
+                float lineHeight = 0.0f, x = b.pad + current.left + indent;
                 // A trailing grid's columns end here, before they go to the card's right.
                 float rowRight = x;
                 for (size_t c = 0; grid && c < columns.size(); ++c)
@@ -377,7 +423,7 @@ namespace headsup
                     {
                         if (shown) y += lineHeight + metrics.rowGap;
                         lineHeight = 0.0f;
-                        x          = b.pad + indent;
+                        x          = b.pad + current.left + indent;
                         shown      = showLine(row, false);
                         drop       = centered(i);
                     }
@@ -470,7 +516,11 @@ namespace headsup
                 }
                 if (shown) y += lineHeight + metrics.rowGap;
             }
-            closeSocket();
+            closeColumn(true);
+            // Every column as tall as the tallest, its last socket down to their foot.
+            y = rowsFoot;
+            for (const auto& [sunk, end] : columnEnds)
+                b.pieces[b.sockets[sunk].piece].height += y - end;
             b.width   = contentWidth + 2.0f * b.pad;
             b.height  = std::max(y - metrics.rowGap, b.pad) + b.pad;
             b.natural = b.height;
@@ -484,11 +534,13 @@ namespace headsup
             for (const Block::Value& v : b.values)
                 for (size_t i = v.first; i < v.last; ++i)
                     b.pieces[i].x += (v.middle ? width / 2.0f : width - b.pad - v.inset) - v.right;
-            for (const size_t socket : b.sockets)
-                b.pieces[socket].width = width - 2.0f * b.pad;
-            // Its last socket, a tab's list, reaches down as far as the card does.
-            if (!b.sockets.empty() && b.natural > 0.0f && b.height > b.natural)
-                b.pieces[b.sockets.back()].height += b.height - b.natural;
+            for (const Block::Sunk& socket : b.sockets)
+            {
+                PopupPiece& ground = b.pieces[socket.piece];
+                ground.width       = socket.width > 0.0f ? socket.width : width - b.pad - ground.x;
+                // A column's last socket, a tab's list, reaches down as far as the card does.
+                if (socket.reaches && b.natural > 0.0f && b.height > b.natural) ground.height += b.height - b.natural;
+            }
             for (const Block::Anchor& anchor : b.anchors)
                 b.pieces[anchor.piece].x = width - anchor.fromRight;
             // Each tab as wide as its share of the card's inside, its name in its middle; a short row in the middle.
@@ -522,9 +574,12 @@ namespace headsup
                 l.chips.push_back(PopupTabChip{{}, x + press.x, y + press.y, press.width, press.height, line,
                     std::move(press.tells), true});
             for (Block::Scroll& scroll : b.scrolls)
-                l.scrolls.push_back(PopupScroll{std::move(scroll.key), x + b.pad, y + scroll.y, width - 2.0f * b.pad,
-                    scroll.height, line, scroll.most,
-                    BarRect{x + width - b.pad - scroll.grip, y + scroll.trackY, scroll.grip, scroll.track}, scroll.thumb});
+            {
+                const float across = scroll.width > 0.0f ? scroll.width : width - b.pad - scroll.left;
+                l.scrolls.push_back(PopupScroll{std::move(scroll.key), x + scroll.left, y + scroll.y, across, scroll.height,
+                    line, scroll.most, BarRect{x + scroll.left + across - scroll.grip, y + scroll.trackY, scroll.grip, scroll.track},
+                    scroll.thumb});
+            }
             l.lines.push_back(PopupLine{y + b.height});
         }
         // A card as LayoutSection lays it out, as wide as with its widest tab picked, so its chips wrap the same
@@ -901,5 +956,25 @@ namespace headsup
         std::erase_if(layout.chips, [&](const PopupTabChip& chip) { return !kept[chip.line]; });
         std::erase_if(layout.scrolls, [&](const PopupScroll& scroll) { return !kept[scroll.line]; });
         layout.height = bottom + padding;
+    }
+
+    FittedPopup FitPopupAcross(const BarMetrics& metrics, float across, FunctionRef<PopupLayout(const BarMetrics&)> layOut)
+    {
+        FittedPopup fit{layOut(metrics), metrics};
+        const float least = kMinPopupScale * kPopupTextPixels;
+        while (fit.layout.width > across && fit.metrics.popupText > least)
+        {
+            // Down to whole pixels, so each try is smaller than the last.
+            const float pixels = std::max(least, std::floor(fit.metrics.popupText * across / fit.layout.width));
+            const float by     = pixels / metrics.popupText;
+            fit.metrics        = metrics;
+            fit.metrics.popupText    = pixels;
+            fit.metrics.popupTitle   *= by;
+            fit.metrics.heading      *= by;
+            fit.metrics.popupPadding *= by;
+            fit.metrics.rowGap       *= by;
+            fit.layout               = layOut(fit.metrics);
+        }
+        return fit;
     }
 }

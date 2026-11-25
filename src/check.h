@@ -31,6 +31,15 @@ namespace headsup
     };
     std::optional<CheckAnswer> ParseCheckAnswer(const uint8_t* data, uint32_t size);
 
+    // Any incoming 0x029: whom it is about, its first number (a status, a level) and its message.
+    struct BasicMessage
+    {
+        uint32_t target = 0;
+        uint32_t param  = 0;
+        uint16_t message = 0;
+    };
+    std::optional<BasicMessage> ParseBasicMessage(const uint8_t* data, uint32_t size);
+
     // A mob's death as the server tells everyone within 50 yalms of it, a second after: "defeats", or "falls to the
     // ground" with no attacker (CMobEntity::Die).
     constexpr uint16_t kDefeatsMessage = 6, kFallsMessage = 20;

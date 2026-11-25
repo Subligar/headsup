@@ -19,13 +19,13 @@ namespace
     }
 }
 
-TEST(every_widget_but_game_help_and_settings_has_parts_and_a_default_design_holding_each_once)
+TEST(every_widget_but_game_help_settings_and_placeholder_timers_has_parts_and_a_default_design_holding_each_once)
 {
     for (int k = 0; k < kBarWidgetCount; ++k)
     {
         const auto kind = static_cast<BarWidget>(k);
         std::vector<WidgetPart> held = PartsIn(DefaultDesign(kind)), parts(PartsOf(kind).begin(), PartsOf(kind).end());
-        CHECK_EQ(parts.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings);
+        CHECK_EQ(parts.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings || kind == BarWidget::PhTimers);
         if (kind == BarWidget::Custom) continue; // it holds only the parts placed in it
         std::ranges::sort(held);
         std::ranges::sort(parts);
@@ -42,9 +42,12 @@ TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
     CHECK(IconPartOf(BarWidget::Bags) == std::optional(WidgetPart::BagIcon));
     CHECK(IconPartOf(BarWidget::EarthTime) == std::optional(WidgetPart::ClockIcon));
     CHECK(IconPartOf(BarWidget::HomePoint) == std::optional(WidgetPart::HomePointIcon));
+    CHECK(IconPartOf(BarWidget::Party) == std::optional(WidgetPart::PartyIcon));
+    CHECK_EQ(DesignText(BarWidget::Party, DefaultDesign(BarWidget::Party)), "count | health");
     CHECK(WidgetOfPart(WidgetPart::HomePointIcon) == BarWidget::HomePoint);
     CHECK_EQ(DesignText(BarWidget::HomePoint, DefaultDesign(BarWidget::HomePoint)), "name |");
-    CHECK(!IconPartOf(BarWidget::Performance) && !IconPartOf(BarWidget::GameHelp));
+    CHECK_EQ(DesignText(BarWidget::Dps, DefaultDesign(BarWidget::Dps)), "you | party");
+    CHECK(!IconPartOf(BarWidget::Performance) && !IconPartOf(BarWidget::GameHelp) && !IconPartOf(BarWidget::Dps));
     for (int k = 0; k < kBarWidgetCount; ++k)
     {
         const auto kind = static_cast<BarWidget>(k);
@@ -54,7 +57,7 @@ TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
 
 TEST(a_design_saves_as_text_and_loads_back)
 {
-    CHECK_EQ(DesignText(BarWidget::Zone, DefaultDesign(BarWidget::Zone)), "name | region nation");
+    CHECK_EQ(DesignText(BarWidget::Zone, DefaultDesign(BarWidget::Zone)), "name coordinates | region nation");
     CHECK_EQ(DesignText(BarWidget::EarthTime, DefaultDesign(BarWidget::EarthTime)), "time | -server -vana -date");
     const char* const job = "-jobs tonext bar | -earned -percent";
     CHECK_EQ(DesignText(BarWidget::Job, DesignFrom(BarWidget::Job, job)), job);
@@ -67,11 +70,23 @@ TEST(a_design_saves_as_text_and_loads_back)
     CHECK(DesignFrom(BarWidget::Weather, "") == DefaultDesign(BarWidget::Weather));
 }
 
+TEST(the_zone_widgets_coordinates_are_on_right_after_its_name)
+{
+    const WidgetDesign d = DefaultDesign(BarWidget::Zone);
+    CHECK((d.lines[0] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneCoordinates, true}}));
+    const WidgetDesign on = DesignFrom(BarWidget::Zone, "name coordinates | region");
+    CHECK((on.lines[0] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneCoordinates, true}}));
+    CHECK_EQ(DesignText(BarWidget::Zone, on), "name coordinates | region -nation");
+    // A design saved before it existed comes back whole, with it off.
+    CHECK(!PartOn(DesignFrom(BarWidget::Zone, "name | region nation"), WidgetPart::ZoneCoordinates));
+    CHECK(HoldsPart(DesignFrom(BarWidget::Zone, "name | region nation"), WidgetPart::ZoneCoordinates));
+}
+
 TEST(a_design_from_text_keeps_each_part_once_and_adds_the_missing_off)
 {
     const WidgetDesign d = DesignFrom(BarWidget::Zone, "nation nation nonsense amount crest | name");
     CHECK((d.lines[0] == std::vector<DesignChip>{{WidgetPart::ZoneNation, true}}));
-    CHECK((d.lines[1] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneRegion, false}}));
+    CHECK((d.lines[1] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneRegion, false}, {WidgetPart::ZoneCoordinates, false}}));
     // All off stays so: Clamp keeps one on where the widget's pill needs it.
     const WidgetDesign off = DesignFrom(BarWidget::Zone, "-name -region -nation |");
     CHECK(!PartOn(off, WidgetPart::ZoneName) && !PartOn(off, WidgetPart::ZoneRegion) && !PartOn(off, WidgetPart::ZoneNation));
@@ -79,27 +94,26 @@ TEST(a_design_from_text_keeps_each_part_once_and_adds_the_missing_off)
 
 TEST(a_part_moves_within_and_across_lines)
 {
-    WidgetDesign d = DefaultDesign(BarWidget::Zone); // name | region nation
+    WidgetDesign d = DesignFrom(BarWidget::Zone, "name | region nation coordinates");
     CHECK(MovePart(d, 1, 1, 0, 0)); // the nation before the name
-    CHECK_EQ(DesignText(BarWidget::Zone, d), "nation name | region");
-    CHECK(MovePart(d, 0, 0, 1, 1)); // and back to the end of line 2
-    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | region nation");
-    CHECK(MovePart(d, 1, 0, 1, 2)); // the region to the end of its own line
-    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | nation region");
+    CHECK_EQ(DesignText(BarWidget::Zone, d), "nation name | region coordinates");
+    CHECK(MovePart(d, 0, 0, 1, 1)); // and back after the region
+    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | region nation coordinates");
+    CHECK(MovePart(d, 1, 0, 1, 3)); // the region to the end of its own line
+    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | nation coordinates region");
     CHECK(!MovePart(d, 1, 0, 1, 0)); // onto its own place
     CHECK(!MovePart(d, 1, 0, 1, 1)); // or just after itself
     CHECK(!MovePart(d, 0, 5, 1, 0)); // a part that is not there
-    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | nation region");
+    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | nation coordinates region");
 }
 
-TEST(the_last_part_on_turns_off_only_when_the_widgets_pill_shows_another)
+// The card "Allow empty widgets": the last part on turns off as any other.
+TEST(the_last_part_on_turns_off_and_leaves_the_widget_empty)
 {
     WidgetDesign d = DesignFrom(BarWidget::Bags, "count1 | -name1");
-    CHECK(!TurnOff(d, WidgetPart::Bag1Count, false));
-    CHECK(PartOn(d, WidgetPart::Bag1Count));
-    CHECK(TurnOff(d, WidgetPart::Bag1Count, true) && !PartOn(d, WidgetPart::Bag1Count));
-    d = DefaultDesign(BarWidget::Bags);
-    CHECK(TurnOff(d, WidgetPart::Bag1Name, false) && !PartOn(d, WidgetPart::Bag1Name));
+    CHECK(TurnOff(d, WidgetPart::Bag1Count) && !AnyPartOn(d));
+    CHECK(!TurnOff(d, WidgetPart::Bag1Count)); // off already
+    CHECK_EQ(DesignText(BarWidget::Bags, d), "-count1 | -name1 -count2 -name2");
 }
 
 namespace
@@ -205,12 +219,15 @@ TEST(every_pop_out_card_is_one_widgets_and_saves_by_a_name_of_its_own)
         const auto kind = static_cast<BarWidget>(k);
         const std::vector<CardKind> cards = CardsOf(kind);
         CHECK_EQ(cards.empty(), kind == BarWidget::GameHelp || kind == BarWidget::Settings || kind == BarWidget::HomePoint ||
+                                    kind == BarWidget::PhTimers ||
                                     kind == BarWidget::Custom);
         for (const CardKind card : cards)
             CHECK(WidgetOfCard(card) == kind);
         listed += cards.size();
     }
     CHECK_EQ(listed, static_cast<size_t>(kCardKindCount));
+    CHECK(CardsOf(BarWidget::Dps) == std::vector<CardKind>{CardKind::DpsMembers});
+    CHECK(DefaultPopupDesign(BarWidget::Dps).rows == std::vector<std::vector<CardKind>>{{CardKind::DpsMembers}});
     for (int c = 0; c < kCardKindCount; ++c)
         names.emplace_back(CardFileName(static_cast<CardKind>(c)));
     std::ranges::sort(names);
@@ -337,7 +354,7 @@ TEST(a_created_widgets_design_names_each_part_with_its_widget_and_keeps_only_the
     CHECK_EQ(DesignText(BarWidget::Custom, DesignFrom(BarWidget::Custom, "name amount1 zone.name | zone.name")), "name zone.name |");
     CHECK(DesignFrom(BarWidget::Custom, "") == DefaultDesign(BarWidget::Custom));
     // A built-in widget's own parts keep their plain names.
-    CHECK_EQ(DesignText(BarWidget::Zone, DefaultDesign(BarWidget::Zone)), "name | region nation");
+    CHECK_EQ(DesignText(BarWidget::Zone, DefaultDesign(BarWidget::Zone)), "name coordinates | region nation");
     CHECK(DesignFrom(BarWidget::Zone, "zone.name | region nation") != DefaultDesign(BarWidget::Zone));
 }
 
@@ -349,7 +366,7 @@ TEST(a_created_widgets_saved_design_of_no_part_is_empty_and_only_a_missing_one_i
     CHECK(DesignFrom(BarWidget::Zone, "|") == DefaultDesign(BarWidget::Zone)); // a built-in keeps its rule
 }
 
-TEST(a_part_put_into_a_line_is_on_and_one_taken_out_goes_unless_it_is_the_last_on)
+TEST(a_part_put_into_a_line_is_on_and_one_taken_out_goes_even_the_last_on)
 {
     WidgetDesign d = DefaultDesign(BarWidget::Custom); // name |
     CHECK(PutPart(d, WidgetPart::ZoneName, 1, 0));
@@ -359,12 +376,11 @@ TEST(a_part_put_into_a_line_is_on_and_one_taken_out_goes_unless_it_is_the_last_o
     CHECK(PutPart(d, WidgetPart::Bag1Count, 0, 99)); // past the end, at the end
     CHECK_EQ(DesignText(BarWidget::Custom, d), "performance.fps name bags.count1 | zone.name");
     CHECK(HoldsPart(d, WidgetPart::ZoneName) && !HoldsPart(d, WidgetPart::WorldShip));
-    CHECK(TakePart(d, WidgetPart::PerfFps, false) && TakePart(d, WidgetPart::ZoneName, false));
-    CHECK(!TakePart(d, WidgetPart::ZoneName, false)); // not there
-    CHECK(TurnOff(d, WidgetPart::Bag1Count, false));
-    CHECK(TakePart(d, WidgetPart::Bag1Count, false)); // off, it goes whatever is left
-    CHECK(!TakePart(d, WidgetPart::CustomName, false)); // the last on stays
-    CHECK(TakePart(d, WidgetPart::CustomName, true) && PartsIn(d).empty()); // unless another of its pill shows
+    CHECK(TakePart(d, WidgetPart::PerfFps) && TakePart(d, WidgetPart::ZoneName));
+    CHECK(!TakePart(d, WidgetPart::ZoneName)); // not there
+    CHECK(TurnOff(d, WidgetPart::Bag1Count));
+    CHECK(TakePart(d, WidgetPart::Bag1Count)); // off, it goes too
+    CHECK(TakePart(d, WidgetPart::CustomName) && PartsIn(d).empty()); // and the last on
 }
 
 TEST(each_new_pin_goes_to_the_end_of_the_line_with_fewer_pins_the_first_on_a_tie)

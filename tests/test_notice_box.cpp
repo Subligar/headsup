@@ -75,10 +75,14 @@ TEST(a_notice_shows_its_friend_in_a_box_300_wide_under_the_panel)
     CHECK_EQ(first->GetBox().GetSize(Rml::BoxArea::Border).x, 300.0f);
     CHECK_EQ(Left(first), 10.0f);
     CHECK_EQ(Top(first), 55.0f);
-    // The name is text, not markup.
-    CHECK(Part(first, "message")->GetInnerRML().find("Two&lt;b&gt;&amp;") != std::string::npos);
-    const float inside = Part(first, "bar")->GetParentNode()->GetBox().GetSize(Rml::BoxArea::Content).x;
-    CHECK(std::abs(Part(first, "bar")->GetBox().GetSize(Rml::BoxArea::Border).x - inside / 2.0f) < 1.0f);
+    // The name is text, not markup, and a friend on the character you added has no second line.
+    CHECK(Part(first, "title")->GetInnerRML().find("Two&lt;b&gt;&amp;") != std::string::npos);
+    CHECK(Part(first, "message")->IsClassSet(kHiddenClass));
+    // Half the time left: the bar is half its track, which shows its whole length.
+    const float inside = Part(first, "inner")->GetBox().GetSize(Rml::BoxArea::Content).x;
+    CHECK(std::abs(Width(Part(first, "track")) - inside) < 1.0f);
+    CHECK(std::abs(Width(Part(first, "bar")) - inside / 2.0f) < 1.0f);
+    CHECK(Part(first, "track")->GetComputedValues().background_color().alpha > 0);
     CHECK(Box(rml, 1)->IsClassSet(kHiddenClass));
     const Rml::Colourb title = Part(first, "title")->GetComputedValues().color();
     CHECK(title.red == ((kOnlineColor >> 16) & 0xFF) && title.green == ((kOnlineColor >> 8) & 0xFF) &&
@@ -102,7 +106,7 @@ TEST(notices_stack_ten_pixels_apart_and_slide_up_when_one_goes)
     box.Update(rml.context, Gold(), settings, {N(2, NoticeKind::Offline, "Two"), N(3, NoticeKind::Online, "Three")},
         Frame(false, 0.016f));
     rml.context->Update();
-    CHECK(Part(Box(rml, 0), "message")->GetInnerRML().find("Two") != std::string::npos);
+    CHECK(Part(Box(rml, 0), "title")->GetInnerRML().find("Two") != std::string::npos);
     CHECK(Top(Box(rml, 0)) < twoWas && Top(Box(rml, 0)) > 55.0f);
     CHECK(Box(rml, 2)->IsClassSet(kHiddenClass));
     box.Update(rml.context, Gold(), settings, {N(2, NoticeKind::Offline, "Two"), N(3, NoticeKind::Online, "Three")},
@@ -155,11 +159,11 @@ TEST(a_notice_fades_and_hides_its_bar_when_the_countdown_bar_is_off)
     rml.context->Update();
     CHECK(std::abs(Box(rml, 0)->GetComputedValues().opacity() - 0.25f) < 0.001f);
     const float withBar = Height(Box(rml, 0));
-    CHECK(!Part(Box(rml, 0), "bar")->IsClassSet(kHiddenClass));
+    CHECK(!Part(Box(rml, 0), "track")->IsClassSet(kHiddenClass));
     settings.noticeBar = false;
     box.Update(rml.context, Gold(), settings, {N(1, NoticeKind::Online, "One", 0.25f)}, Frame());
     rml.context->Update();
-    CHECK(Part(Box(rml, 0), "bar")->IsClassSet(kHiddenClass));
+    CHECK(Part(Box(rml, 0), "track")->IsClassSet(kHiddenClass));
     CHECK(Height(Box(rml, 0)) < withBar && Height(Box(rml, 0)) >= withBar - kNoticeBarHeight - 10.0f);
     CHECK_EQ(rml.Said(), "");
     box.Close();
@@ -234,7 +238,7 @@ TEST(a_game_theme_draws_each_notice_in_the_games_window_art)
     CHECK(art != nullptr);
     CHECK_EQ(art->GetBox().GetSize(Rml::BoxArea::Border).x, Box(rml, 0)->GetBox().GetSize(Rml::BoxArea::Padding).x);
     CHECK_EQ(Box(rml, 0)->GetBox().GetEdge(Rml::BoxArea::Border, Rml::BoxEdge::Left), 3.0f);
-    CHECK(Part(Box(rml, 0), "message")->GetInnerRML().find("One") != std::string::npos);
+    CHECK(Part(Box(rml, 0), "title")->GetInnerRML().find("One") != std::string::npos);
     box.Close();
 }
 
@@ -320,7 +324,7 @@ TEST(truncate_keeps_the_text_size_and_shrink_fits_the_line)
     settings.noticeWidth = 200;
     settings.noticeFit   = NoticeFit::Truncate;
     const float lookSize = MetricsOf(settings, Gold().shape).subtitle;
-    const std::vector<ShownNotice> shown = {N(1, NoticeKind::Online, std::string(30, 'n').c_str())};
+    const std::vector<ShownNotice> shown = {N(1, NoticeKind::PartyInvite, std::string(20, 'n').c_str())};
     NoticeBox box;
     box.Update(rml.context, Gold(), settings, shown, Frame());
     rml.context->Update();
@@ -333,11 +337,11 @@ TEST(truncate_keeps_the_text_size_and_shrink_fits_the_line)
     rml.context->Update();
     message = Part(Box(rml, 0), "message");
     CHECK(message->GetComputedValues().font_size() < lookSize);
-    const std::string text = NoticeMessage(NoticeKind::Online, std::string(30, 'n'));
+    const std::string text = NoticeMessage(NoticeKind::PartyInvite, std::string(20, 'n'), "");
     CHECK(static_cast<float>(Rml::ElementUtilities::GetStringWidth(message, text)) <=
           Box(rml, 0)->GetBox().GetSize(Rml::BoxArea::Content).x + 0.5f);
     // Too long to fit at the smallest size: it stays there and is cut at the box's edge.
-    box.Update(rml.context, Gold(), settings, {N(2, NoticeKind::Online, std::string(90, 'n').c_str())}, Frame());
+    box.Update(rml.context, Gold(), settings, {N(2, NoticeKind::PartyInvite, std::string(90, 'n').c_str())}, Frame());
     rml.context->Update();
     message = Part(Box(rml, 0), "message");
     CHECK_EQ(message->GetComputedValues().font_size(), kMinNoticeText);
@@ -452,6 +456,15 @@ TEST(clicks_pass_through_a_notice_but_its_buttons_take_them)
     CHECK(!ClickAt(rml, Middle(Part(Box(rml, 0), "decline"))));
     press = box.Update(rml.context, Gold(), settings, shown, Frame()).press;
     CHECK(press && press->id == 7 && !press->accept);
+    // Each full button has its icon before its word, under the countdown bar.
+    for (const char* button : {"decline", "accept"})
+    {
+        Rml::ElementList pictures;
+        Part(Box(rml, 0), button)->GetElementsByTagName(pictures, "img");
+        CHECK(pictures.size() == 1 && Width(pictures[0]) > 0.0f);
+        CHECK(Top(Part(Box(rml, 0), button)) >= Top(Part(Box(rml, 0), "track")) + Height(Part(Box(rml, 0), "track")) - 0.5f);
+    }
+    CHECK(Part(Box(rml, 0), "accept")->GetInnerRML().ends_with(kAcceptWord));
     CHECK_EQ(rml.Said(), "");
     box.Close();
 }
@@ -575,5 +588,74 @@ TEST(the_games_window_art_fills_each_box_to_its_foot)
     rml.context->Update();
     CHECK_EQ(Height(Box(rml, 1)), 120.0f);
     CHECK(fills(1));
+    box.Close();
+}
+
+// "Let friend notifications be as small as the friend's name and an online icon."
+TEST(a_compact_notice_is_its_dot_and_name_whatever_width_and_height_say)
+{
+    test::RmlSession rml;
+    Settings settings;
+    settings.noticeHeight = 80;
+    NoticeBox box;
+    const std::vector<ShownNotice> shown = {N(1, NoticeKind::Online, "Bartholomew"), N(2, NoticeKind::Offline, "Bartholomew"),
+        ShownNotice{3, NoticeKind::PartyInvite, "Bartholomew", 1.0f, 1.0f, true}};
+    settings.noticeStyle = NoticeStyle::Compact;
+    box.Update(rml.context, Gold(), settings, shown, Frame());
+    rml.context->Update();
+    for (int n = 0; n < 3; ++n)
+    {
+        Rml::Element* compact = Box(rml, n);
+        CHECK(!Part(compact, "title")->IsVisible());
+        Rml::Element* message = Part(compact, "message");
+        CHECK_EQ(message->GetInnerRML().substr(message->GetInnerRML().rfind('>') + 1), std::string("Bartholomew"));
+        // The dot is in the kind's own color (an invite's blue), and the box holds it and the name whole.
+        Rml::Element* dot = Part(compact, "dot");
+        CHECK(dot != nullptr && dot->GetBox().GetSize().x > 0.0f);
+        const Rml::Colourb fill = dot->GetComputedValues().background_color();
+        const uint32_t want     = NoticeColor(shown[static_cast<size_t>(n)].kind);
+        CHECK(fill.red == ((want >> 16) & 0xFF) && fill.green == ((want >> 8) & 0xFF) && fill.blue == (want & 0xFF));
+        const float right = dot->GetAbsoluteOffset().x + Rml::ElementUtilities::GetStringWidth(message, "Bartholomew") +
+                            dot->GetBox().GetSize(Rml::BoxArea::Margin).x;
+        CHECK(right <= Left(compact) + Width(compact) + 0.5f);
+        CHECK(Width(compact) < 300.0f && Height(compact) < 80.0f);
+    }
+    // The invite's buttons are its two icons, under the bar under the name, and they still answer it.
+    Rml::Element* invite = Box(rml, 2);
+    Rml::Element* accept = Part(invite, "accept");
+    Rml::ElementList pictures;
+    invite->GetElementsByTagName(pictures, "img");
+    CHECK(pictures.size() == 2);
+    CHECK(Top(Part(invite, "track")) >= Top(Part(invite, "message")) + Height(Part(invite, "message")) - 0.5f);
+    CHECK(Top(accept) >= Top(Part(invite, "track")) + Height(Part(invite, "track")) - 0.5f);
+    CHECK(Width(accept) > 0.0f && Height(accept) < 40.0f && Width(accept) < 40.0f);
+    CHECK(!ClickAt(rml, Middle(accept)));
+    const std::optional<NoticePress> press = box.Update(rml.context, Gold(), settings, shown, Frame()).press;
+    CHECK(press && press->id == 3 && press->accept);
+    // A name shorter than the two icons: the box is as wide as they are.
+    box.Update(rml.context, Gold(), settings, {ShownNotice{4, NoticeKind::PartyInvite, "I", 1.0f, 1.0f, true}}, Frame());
+    rml.context->Update();
+    Rml::Element* decline = Part(Box(rml, 0), "decline");
+    accept                = Part(Box(rml, 0), "accept");
+    const float inside = Box(rml, 0)->GetAbsoluteOffset(Rml::BoxArea::Content).x;
+    CHECK(Left(decline) >= inside - 0.5f);
+    CHECK(Left(accept) + Width(accept) <= inside + Box(rml, 0)->GetBox().GetSize(Rml::BoxArea::Content).x + 0.5f);
+    CHECK_EQ(rml.Said(), "");
+    box.Close();
+}
+
+TEST(a_friend_on_an_alt_says_the_name_you_added_them_by_under_their_own)
+{
+    test::RmlSession rml;
+    Settings settings;
+    NoticeBox box;
+    ShownNotice alt = N(1, NoticeKind::Online, "Twoalt");
+    alt.aka         = "Two";
+    box.Update(rml.context, Gold(), settings, {alt}, Frame());
+    rml.context->Update();
+    CHECK(Part(Box(rml, 0), "title")->GetInnerRML().find("Twoalt") != std::string::npos);
+    Rml::Element* message = Part(Box(rml, 0), "message");
+    CHECK(!message->IsClassSet(kHiddenClass) && message->GetInnerRML().find("Two") != std::string::npos);
+    CHECK(Height(message) > 0.0f);
     box.Close();
 }

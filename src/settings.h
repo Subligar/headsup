@@ -2,6 +2,7 @@
 
 #include "argb.h"
 #include "bar_design.h"
+#include "bar_dps.h"
 #include "bar_placement.h"
 #include "bar_server_time.h"
 #include "bar_statuses.h"
@@ -86,12 +87,14 @@ namespace headsup
         Align expBarTextAlign = Align::Center;       // where on the bar it says it
         std::optional<uint32_t> expBarBack, expBarFill; // its EXP Bar's colors (ARGB); none for the theme's
         JobText jobText      = JobText::MainSub;     // how its Job Info says the jobs
+        bool syncedLevel     = false;                // and at the levels Level Sync holds you to, not your jobs' own
         // Where on its line each of its texts goes, against the widget's other lines.
         Align jobInfoAlign = Align::Left, earnedAlign = Align::Left, toNextAlign = Align::Left, percentAlign = Align::Left;
         uint32_t targetDetection = kDefaultDetection; // Target: the senses its Detection part shows, by DetectionBit
         uint8_t targetShows  = kAllTargetShows; // the targets it shows for, by TargetShowBit
         int worldRoute       = 0;                    // World Info: its Tracked Ship, by TravelRoutes
         int worldGuild       = 0;                    // its Tracked Guild, by GuildShops
+        bool supplyFlags     = true;                 // and a flag before each supply run in its Conquest card
         std::optional<PanelWidget> combine;          // shown right after it in its pill, with one popup (Combine)
         int linkPadding = 0; // pixels between it and the widget it combines with
         IconSide iconSide = IconSide::Left; // its icon's, for a widget with one (IconPartOf)
@@ -101,11 +104,14 @@ namespace headsup
         // Its pill's spacing, background, rounding and pop-out are the pill's first widget's.
         std::optional<int> spacing, padding, rounding; // pixels
         std::optional<int> iconScale;                  // percent, as barIconScale
+        std::optional<int> fontSize;                   // pixels, its top line's most, as MetricsFor's title
         std::optional<bool> background;
         std::string titleFont, textFont;
         std::optional<float> fontRatio, lineSeparation, popupTextScale;
         bool uniformFont = false; // its two lines at one size, whatever the Font Size Ratio (NewWidget gives its default)
         bool wrapText = true; // Home Point: its zone's name on two lines (WidgetContent::wrap)
+        int dpsSeconds = kDefaultDpsSeconds; // DPS: the seconds its damage is averaged over
+        bool dpsPets   = true;               // and whether pets' damage counts
         bool operator==(const WidgetOptions&) const = default;
     };
     // A copy as a new one is: shown, and the first copies as kBarWidgetDefaults has them.
@@ -153,13 +159,22 @@ namespace headsup
     constexpr int kDefaultNoticeVolume = 60, kMaxNoticeVolume = 100, kDefaultMasterVolume = 100; // percent
     constexpr int kFlexibleNoticeWidth = 100, kDefaultNoticeWidth = 300, kMaxNoticeWidth = 600; // pixels; the lowest is Flexible
     constexpr int kFlexibleNoticeHeight = 30, kMaxNoticeHeight = 200;                            // pixels; the lowest is Flexible
-    constexpr int kMinNoticeMost = 1, kDefaultNoticeMost = 5, kMaxNoticeMost = 10;
+    constexpr int kMinNoticeMost = 1, kDefaultNoticeMost = 6, kMaxNoticeMost = 10;
+    // Seconds, in steps of kNoticeFadeStep; 0 vanishes at once.
+    constexpr float kMinNoticeFade = 0.0f, kDefaultNoticeFade = 1.4f, kMaxNoticeFade = 10.0f, kNoticeFadeStep = 0.2f;
     // The notifications' anchored edge: they stack down from Top, up from Bottom.
     enum class NoticeEdge : uint8_t { Top, Bottom };
     constexpr int kNoticeEdgeCount = 2;
+    // Invite Position: Auto puts an invite where the stack starts, the top when it grows down and the bottom when it
+    // grows up.
+    enum class InvitePlace : uint8_t { Auto, Top, Bottom };
+    constexpr int kInvitePlaceCount = 3;
     // A notification's text too long for a fixed size: drawn smaller, or cut with an ellipsis.
     enum class NoticeFit : uint8_t { Shrink, Truncate };
     constexpr int kNoticeFitCount = 2;
+    // A notification: its heading over a line of words, or its kind's dot and the name alone.
+    enum class NoticeStyle : uint8_t { Full, Compact };
+    constexpr int kNoticeStyleCount = 2;
     // The sounds a notification can play, in the settings list's order: None, the chime, then <call0> to <call21>.
     constexpr int kCallSounds = 22, kNoSound = 0, kChimeSound = 1, kFirstCallChoice = 2;
     constexpr int kNoticeSoundCount   = kFirstCallChoice + kCallSounds;
@@ -168,7 +183,8 @@ namespace headsup
     int NoticeSoundChoice(std::string_view key); // kNoSound for a key that is none of them
     constexpr int kCasePlaceWhole = 10000; // a placed Case's across and down count ten-thousandths of the screen
     constexpr int kMinCaseScale = 50, kDefaultCaseScale = 65, kMaxCaseScale = 200;         // percent
-    constexpr int kMinCombatPopupSize = 25, kDefaultCombatPopupSize = 100, kMaxCombatPopupSize = 200; // percent of the game's own size
+    // Pixels tall where the game's number is close up, smaller farther off as the game's: the default is 80% of the game's.
+    constexpr int kMinCombatPopupSize = 10, kDefaultCombatPopupSize = 43, kMaxCombatPopupSize = 120;
     // What a combat popup is, each with its own color pick, in the Combat Popups card's order.
     enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Skillchain, Spell, Buff, Debuff };
     constexpr int kPopupTypeCount = 10;
@@ -180,6 +196,11 @@ namespace headsup
     // How high on its target's body a popup beside it starts: percent of the way from its feet to the top of its head.
     constexpr int kMaxCombatPopupHeight = 100, kDefaultCombatPopupHeight = 90;
     constexpr int kMaxCombatPopupNudge = 200; // pixels either way
+    constexpr int kMaxCombatPopupSpread = 50, kDefaultCombatPopupSpread = 0; // pixels between a side column and the body
+    constexpr int kMinCombatPopupOutline = 1, kDefaultCombatPopupOutline = 3, kMaxCombatPopupOutline = 10; // pixels
+    // Seconds: how long a popup shows whole, then how long it takes to fade to clear.
+    constexpr float kMinCombatPopupDuration = 0.1f, kDefaultCombatPopupDuration = 0.4f, kMaxCombatPopupDuration = 5.0f;
+    constexpr float kMinCombatPopupFade = 0.1f, kDefaultCombatPopupFade = 0.4f, kMaxCombatPopupFade = 3.0f;
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
@@ -255,6 +276,8 @@ namespace headsup
         // Where the player left the settings window, in pixels; no width for one never moved, which opens in the
         // screen's middle.
         int menuX = 0, menuY = 0, menuWidth = 0, menuHeight = 0;
+        // Where the player left each of HeadsUp's game windows, by id, in pixels; one not here opens in the middle.
+        std::vector<WindowPlace> menuPlaces;
         FishBarShown fishStamina = FishBarShown::HeadsUp;
         int fishBarWidth = 300;
         int fishBarX = kFishBarUnplaced, fishBarY = kFishBarUnplaced;
@@ -273,14 +296,17 @@ namespace headsup
         bool combatPopupCustomColors = true; // each kind takes its pick's color
         bool combatPopupSkillchainNames = true; // a skillchain's number comes with its name
         bool combatPopupRightAway = true; // popups start as their result arrives, not at the hit
-        bool combatPopupPlacement = true; // popups go in combatPopupSides' columns, at the start height, nudged
         bool combatPopupStatuses = true; // and has the game pop each buff and debuff that lands, by name
-        std::string combatPopupFont; // empty for the nameplates' default font
+        std::string combatPopupFont; // empty for Marcellus SC
         int combatPopupSize         = kDefaultCombatPopupSize;
         PopupSides combatPopupSides = {PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right, PopupSide::Right,
             PopupSide::Right, PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right};
         int combatPopupHeight = kDefaultCombatPopupHeight;
-        int combatPopupX = 0, combatPopupY = 0; // pixels right and up from where the side puts them
+        int combatPopupSpread = kDefaultCombatPopupSpread;
+        int combatPopupY      = 0; // pixels up from where the side puts them
+        int combatPopupOutline = kDefaultCombatPopupOutline;
+        float combatPopupDuration = kDefaultCombatPopupDuration, combatPopupFade = kDefaultCombatPopupFade;
+        Color combatPopupOutlineColor = ColorFromRgb(0x000000);
         // By PopupType. Game is the game's own color, which tells party, alliance and others apart.
         std::array<ColorPick, kPopupTypeCount> combatPopupColors = {{{ColorSource::Game, ColorFromRgb(0xFFFFFF)},
             {ColorSource::Game, ColorFromRgb(0xFF6B6B)}, {ColorSource::Game, ColorFromRgb(0x7CE38B)},
@@ -288,12 +314,14 @@ namespace headsup
             {ColorSource::Game, ColorFromRgb(0xC58CFF)}, {ColorSource::Element, ColorFromRgb(0xFFFFFF)},
             {ColorSource::Game, ColorFromRgb(0x8FD8FF)}, {ColorSource::Game, ColorFromRgb(0x8FD8FF)},
             {ColorSource::Game, ColorFromRgb(0xFF9A5A)}}};
+        NoticeStyle noticeStyle = NoticeStyle::Full;
         int noticeWidth = kDefaultNoticeWidth, noticeHeight = kFlexibleNoticeHeight; // pixels
         NoticeFit noticeFit = NoticeFit::Shrink;
         int noticeRounding  = kThemeRounding;
         bool noticeBar      = true; // the countdown bar
         int noticeVolume = kDefaultMasterVolume, noticeSeconds = kDefaultNoticeSeconds; // every kind's volume is times this
-        HelpAnchor noticeAnchor = HelpAnchor::Left, noticeAlign = HelpAnchor::Left;    // the stack's spot across; its text
+        float noticeFade = kDefaultNoticeFade;
+        HelpAnchor noticeAnchor = HelpAnchor::Left, noticeAlign = HelpAnchor::Center;  // the stack's spot across; its text
         NoticeEdge noticeEdge = NoticeEdge::Top;
         int noticeMost = kDefaultNoticeMost;
         int noticeAcross = kFishBarUnplaced, noticeDown = kFishBarUnplaced; // ten-thousandths of the screen
@@ -301,6 +329,7 @@ namespace headsup
         int friendNoticeOnlineSound = kChimeSound, friendNoticeOfflineSound = kNoSound; // NoticeSoundKey's choices
         int friendNoticeVolume = kDefaultNoticeVolume;
         bool partyNotice = true, partyNoticeButtons = true; // a notification when you are invited; its Decline and Accept
+        InvitePlace partyNoticePlace = InvitePlace::Auto;
         int partyNoticeSound = kDefaultInviteSound, partyNoticeVolume = kDefaultNoticeVolume;
         bool blueMagic = true; // the Target popup's TP moves a blue mage can learn, in blueMagicColor
         Color blueMagicColor = {{0.40f, 0.65f, 1.00f}};
@@ -382,6 +411,8 @@ namespace headsup
     // A copy is on the panel and switched on; AnyCopyShown asks whether any copy of a widget is.
     bool Shows(const Settings& s, PanelWidget widget);
     bool AnyCopyShown(const Settings& s, BarWidget widget);
+    // The NM and placeholder respawn timers count deaths and make their lines, for your name or the widget.
+    bool PhTimersRun(const Settings& s);
     // Another copy of a widget, after the last of its copies, shown and with that copy's settings but its Combine;
     // none when it has no more. Taking a copy off forgets its settings.
     std::optional<PanelWidget> CloneWidget(Settings& s, PanelWidget widget);
@@ -392,8 +423,6 @@ namespace headsup
     void RemoveWidgetCopy(Settings& s, PanelWidget widget);
     // The panel as it is drawn, each widget's combine pulling its partner after it.
     PanelGroups Panel(const Settings& s);
-    // Whether another widget of widget's pill in panel is on with a part on, so widget may have none.
-    bool PillShowsOther(const Settings& s, const PanelGroups& panel, PanelWidget widget);
     // The widgets whose settings a pill's popup shows: those of its widgets that are on, or its first alone.
     std::vector<PanelWidget> PillSettings(const Settings& s, PanelWidget head);
     // What a widget can be combined with, in the panel's order: every placed widget that combines, but itself, one

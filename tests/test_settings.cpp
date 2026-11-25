@@ -264,6 +264,8 @@ barStatusTimers=true
 barWorld=true
 barSettings=true
 barHomePoint=true
+barPhTimers=true
+barDps=true
 barZoneLine2=true
 barZoneIcons=true
 barWeatherLine2=true
@@ -304,7 +306,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather job party statusTimers world homePoint
+barLeft=zone weather job party statusTimers world homePoint phTimers dps
 barCenter=
 barRight=target gil bags performance earthTime settings
 hideHelpBar=true
@@ -536,8 +538,8 @@ TEST(the_font_list_puts_the_bundled_fonts_first_then_the_installed_ones_sorted_o
 {
     // GDI lists a family once per character set, vertical variants with an @, and a bundled font may be installed too.
     const std::vector<std::string> choices = FontChoices({"Verdana", "arial", "Arial", "@Meiryo", "", "Cinzel"}, "Verdana");
-    const std::vector<std::string> expected{"Montserrat SemiBold", "Marcellus SC", "Cinzel", "Cormorant SC", "Barlow Condensed",
-        "arial", "Verdana"};
+    const std::vector<std::string> expected{"Montserrat SemiBold", "Marcellus SC", "Cinzel", "Cormorant SC",
+        "Atkinson Hyperlegible", "Atkinson Hyperlegible Next", "Barlow Condensed", "arial", "Verdana"};
     CHECK(choices == expected);
 }
 
@@ -760,6 +762,23 @@ TEST(nameplates_need_the_master_switch_and_a_part)
     }
 }
 
+TEST(the_respawn_timers_run_for_the_nameplate_or_the_widget_either_alone)
+{
+    Settings none;
+    none.phTimers = false;
+    CHECK(!PhTimersRun(none));
+    Settings plate = none;
+    plate.phTimers = true;
+    CHECK(PhTimersRun(plate));
+    Settings widget = none;
+    widget.Widget(PanelWidget{BarWidget::PhTimers}).on = true;
+    CHECK(PhTimersRun(widget));
+    widget.showBar = false;
+    CHECK(!PhTimersRun(widget));
+    plate.enabled = false;
+    CHECK(!PhTimersRun(plate));
+}
+
 TEST(a_color_from_hex_draws_as_the_same_hex)
 {
     // Phoenix's red and a color whose bytes all differ: 0.77 would have drawn C4, not C5.
@@ -933,6 +952,18 @@ TEST(the_window_placement_saves_and_loads_back_its_switches_places_and_each_mode
     CHECK_EQ(read.placedUnder[static_cast<int>(HelpMode::Off)], kMaxWindowOffset);
 }
 
+TEST(the_game_menus_places_save_and_load_back_and_a_broken_or_repeated_one_goes)
+{
+    Settings s;
+    s.menuPlaces = {WindowPlace{"testmenu", -40, 300}, WindowPlace{"testmenu-confirm", 900, 20}};
+    MapStore file;
+    SaveSettings(s, file);
+    CHECK_EQ(file.values["menuPlaces"], std::string("testmenu:-40,300 testmenu-confirm:900,20"));
+    CHECK(LoadSettings(file) == s);
+    file.values["menuPlaces"] = "bag:1,2 bag:3,4 :5,6 sort:7 keys:x,1";
+    CHECK((LoadSettings(file).menuPlaces == std::vector<WindowPlace>{{"bag", 1, 2}}));
+}
+
 TEST(the_custom_theme_saves_and_loads_back_every_part_and_a_file_without_it_has_phoenix_gold)
 {
     Settings s;
@@ -1043,7 +1074,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint"}; // in BarWidget's order, but a created widget's
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers", "barDps"}; // in BarWidget's order, but a created widget's
     static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
     for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {
@@ -1143,21 +1174,21 @@ TEST(the_clocks_date_format_is_saved_by_name_and_an_unknown_name_keeps_the_defau
     CHECK(LoadSettings(saved).Widget(BarWidget::EarthTime).dateFormat == DateFormat::MonthDayYear);
 }
 
-TEST(a_created_widget_emptied_in_a_pill_that_shows_another_widget_saves_and_loads_empty)
+// The card "Allow empty widgets": a widget alone on the panel may have nothing on, and keeps it so.
+TEST(an_emptied_widget_stays_empty_through_clamp_and_the_settings_file)
 {
     Settings s;
     const PanelWidget made = *CreateWidget(s);
-    s.Widget(made).combine = PanelWidget{BarWidget::Zone};
     s.Widget(made).design  = WidgetDesign{};
-    CHECK(Clamp(s).Widget(made).design == WidgetDesign{});
+    const WidgetDesign bags          = DesignFrom(BarWidget::Bags, "-count1 | -name1");
+    s.Widget(BarWidget::Bags).design = bags;
+    CHECK(Clamp(s).Widget(made).design == WidgetDesign{} && Clamp(s).Widget(BarWidget::Bags).design == bags);
     MapStore saved;
     SaveSettings(s, saved);
     CHECK_EQ(saved.values["barCustomDesign"], "|");
-    const WidgetDesign loaded = LoadSettings(saved).Widget(made).design;
-    CHECK(loaded.lines[0].empty() && loaded.lines[1].empty());
-    // Once its pill shows nothing else, it gets its Name back rather than vanish from the panel.
-    s.Widget(BarWidget::Zone).on = false;
-    CHECK(Clamp(s).Widget(made).design == DefaultDesign(BarWidget::Custom));
+    const Settings loaded = LoadSettings(saved);
+    CHECK(loaded.Widget(made).design.lines[0].empty() && loaded.Widget(made).design.lines[1].empty());
+    CHECK(loaded.Widget(BarWidget::Bags).design == bags);
 }
 
 TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
@@ -1168,7 +1199,7 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     s.Widget(second).design  = DesignFrom(BarWidget::Weather, "weather | -date -day -time -moon");
     MapStore saved;
     SaveSettings(s, saved);
-    CHECK_EQ(saved.values["barZoneDesign"], "nation name | -region");
+    CHECK_EQ(saved.values["barZoneDesign"], "nation name | -region -coordinates");
     CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | -date -day -time -moon -season");
     CHECK_EQ(saved.values["barWeatherDesign"], "weather | day time -date -moon -season");
     const Settings loaded = LoadSettings(saved);
@@ -1178,7 +1209,7 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     CHECK(!saved.values.contains("barGameHelpDesign"));
     // A design a hand broke is made whole: every part once.
     saved.values["barZoneDesign"] = "name name";
-    CHECK_EQ(DesignText(BarWidget::Zone, LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
+    CHECK_EQ(DesignText(BarWidget::Zone, LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation -coordinates");
 }
 
 TEST(a_created_widgets_pop_out_design_saves_under_its_own_key_and_clones_with_it_and_a_built_ins_is_always_its_own)
@@ -1259,7 +1290,8 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     Settings s;
     const WidgetOptions fresh;
     CHECK(!fresh.spacing && !fresh.padding && !fresh.background && fresh.titleFont.empty() && fresh.textFont.empty() &&
-          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale && !fresh.lineSeparation);
+          !fresh.fontRatio && !fresh.iconScale && !fresh.rounding && !fresh.popupTextScale && !fresh.lineSeparation &&
+          !fresh.fontSize);
     WidgetOptions& zone = s.Widget(BarWidget::Zone);
     zone.spacing        = 12;
     zone.padding        = 0;
@@ -1271,6 +1303,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     zone.rounding       = 0;
     zone.popupTextScale = 1.4f;
     zone.lineSeparation = 1.5f;
+    zone.fontSize       = 14;
     const PanelWidget copy = *CloneWidget(s, BarWidget::Zone);
     CHECK(s.Widget(copy).spacing == 12 && s.Widget(copy).textFont == "Verdana" && s.Widget(copy).popupTextScale == 1.4f);
     s.Widget(copy).iconScale  = 75;
@@ -1281,6 +1314,7 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     CHECK_EQ(saved.values["barZoneShowBackground"], "false");
     CHECK_EQ(saved.values["barZonePrimaryFont"], "Arial");
     CHECK_EQ(saved.values["barZoneLineSeparation"], "1.5000");
+    CHECK_EQ(saved.values["barZoneFontSize"], "14.0000");
     CHECK_EQ(saved.values["barZoneIconScale_2"], "75.0000");
     CHECK_EQ(saved.values["barZoneShowBackground_2"], "true");
     CHECK(saved.values.contains("barWeatherWidgetSpacing") && saved.values["barWeatherWidgetSpacing"].empty());
@@ -1289,13 +1323,14 @@ TEST(each_widgets_own_top_panel_looks_start_as_the_top_panels_and_each_copy_keep
     const Settings read = LoadSettings(saved);
     CHECK(read.Widget(BarWidget::Zone) == s.Widget(BarWidget::Zone) && read.Widget(copy) == s.Widget(copy));
     const WidgetOptions& weather = read.Widget(BarWidget::Weather);
-    CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale);
+    CHECK(!weather.spacing && !weather.background && weather.titleFont.empty() && !weather.popupTextScale && !weather.fontSize);
 }
 
-TEST(uniform_font_size_starts_on_for_home_point_and_status_timers_alone_and_each_copy_keeps_its_own)
+TEST(uniform_font_size_starts_on_for_home_point_status_and_placeholder_timers_and_each_copy_keeps_its_own)
 {
     const Settings fresh;
-    CHECK(fresh.Widget(BarWidget::HomePoint).uniformFont && fresh.Widget(BarWidget::StatusTimers).uniformFont);
+    CHECK(fresh.Widget(BarWidget::HomePoint).uniformFont && fresh.Widget(BarWidget::StatusTimers).uniformFont &&
+          fresh.Widget(BarWidget::PhTimers).uniformFont);
     CHECK(!fresh.Widget(BarWidget::Zone).uniformFont && !fresh.Widget(BarWidget::Job).uniformFont);
     Settings s;
     s.Widget(BarWidget::HomePoint).uniformFont = false;
@@ -1326,11 +1361,14 @@ TEST(a_widgets_own_looks_out_of_their_range_are_held_to_it)
     store.values["barZoneFontRatio"]      = "9";
     store.values["barZonePopupTextScale"] = "0.01";
     store.values["barZoneLineSeparation"] = "9";
+    store.values["barZoneFontSize"]       = "200";
+    store.values["barWeatherFontSize"]    = "1";
     store.values["barZonePrimaryFont"]    = std::string(kMaxFontName + 1, 'a');
     const WidgetOptions zone = LoadSettings(store).Widget(BarWidget::Zone);
     CHECK(zone.spacing == kMaxWidgetSpacing && zone.padding == 0 && zone.iconScale == 45);
     CHECK(zone.rounding == 0 && zone.fontRatio == kMaxFontRatio && zone.popupTextScale == kMinPopupScale);
-    CHECK(zone.lineSeparation == kMaxLineSeparation && zone.titleFont.empty());
+    CHECK(zone.lineSeparation == kMaxLineSeparation && zone.titleFont.empty() && zone.fontSize == kMaxWidgetFontSize);
+    CHECK(LoadSettings(store).Widget(BarWidget::Weather).fontSize == kMinWidgetFontSize);
 }
 
 TEST(separators_out_of_their_bits_are_held_to_them)
@@ -2799,7 +2837,7 @@ TEST(the_nameplate_fonts_are_the_games_two_then_the_font_list_which_never_holds_
 {
     const std::vector<std::string> choices = NameplateFontChoices(FontChoices({"Arial", "game font"}, kGameFontNarrowName));
     const std::vector<std::string> expected{kGameFontName, kGameFontNarrowName, "Montserrat SemiBold", "Marcellus SC", "Cinzel",
-        "Cormorant SC", "Barlow Condensed", "Arial"};
+        "Cormorant SC", "Atkinson Hyperlegible", "Atkinson Hyperlegible Next", "Barlow Condensed", "Arial"};
     CHECK(choices == expected);
 }
 
@@ -2907,30 +2945,6 @@ TEST(a_combined_widget_is_kept_by_its_partners_name_and_loses_a_partner_taken_of
     RemoveWidgetCopy(s, *copy);
     CHECK(!s.Widget(BarWidget::Weather).combine);
     CHECK(s.Widget(BarWidget::Zone).combine == std::optional<PanelWidget>(BarWidget::Party));
-}
-
-// The card "Allow disabling widget text when linked": a pill needs one part on among its widgets, a widget alone one
-// of its own.
-TEST(a_linked_widget_keeps_every_part_off_while_its_pill_has_one_on_and_gets_one_back_alone)
-{
-    Settings s;
-    s.Widget(BarWidget::Zone).on = s.Widget(BarWidget::Weather).on = true;
-    const WidgetDesign off = DesignFrom(BarWidget::Zone, "-name -region -nation |");
-    s.Widget(BarWidget::Zone).design  = off;
-    s.Widget(BarWidget::Zone).combine = PanelWidget{BarWidget::Weather};
-    s = Clamp(std::move(s));
-    CHECK(s.Widget(BarWidget::Zone).design == off);
-    // Both all off: the pill's first widget gets its first part back.
-    s.Widget(BarWidget::Weather).design = DesignFrom(BarWidget::Weather, "-weather -date -day -time -moon |");
-    s = Clamp(std::move(s));
-    CHECK(PartOn(s.Widget(BarWidget::Zone).design, WidgetPart::ZoneName));
-    CHECK(s.Widget(BarWidget::Weather).design == DesignFrom(BarWidget::Weather, "-weather -date -day -time -moon |"));
-    // Unlinked, each needs its own.
-    s.Widget(BarWidget::Zone).design = off;
-    s.Widget(BarWidget::Zone).combine.reset();
-    s = Clamp(std::move(s));
-    CHECK(PartOn(s.Widget(BarWidget::Zone).design, WidgetPart::ZoneName));
-    CHECK(std::ranges::any_of(PartsOf(BarWidget::Weather), [&](WidgetPart p) { return PartOn(s.Widget(BarWidget::Weather).design, p); }));
 }
 
 TEST(a_widget_combines_with_any_placed_widget_but_the_target_settings_itself_and_ones_taken)
@@ -3048,6 +3062,17 @@ TEST(the_job_widgets_text_alignments_and_bar_colors_are_kept_and_its_colors_star
     CHECK(read.percentAlign == Align::Left && !read.expBarFill);
 }
 
+TEST(the_world_info_widgets_supply_run_flags_are_on_and_kept_off)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::World).supplyFlags);
+    s.Widget(BarWidget::World).supplyFlags = false;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["supplyFlags"], "false");
+    CHECK(!LoadSettings(store).Widget(BarWidget::World).supplyFlags);
+}
+
 TEST(the_zone_widgets_show_zone_id_in_header_is_kept)
 {
     Settings s;
@@ -3073,6 +3098,26 @@ TEST(the_home_point_widgets_wrap_text_starts_on_and_is_kept)
     CHECK(LoadSettings(store).Widget(BarWidget::HomePoint).design == DefaultDesign(BarWidget::HomePoint));
 }
 
+TEST(the_dps_widgets_average_over_and_include_pets_are_each_copys_own_and_kept)
+{
+    Settings s;
+    const PanelWidget first{BarWidget::Dps}, copy = *CloneWidget(s, BarWidget::Dps);
+    CHECK(s.Widget(first).dpsSeconds == kDefaultDpsSeconds && s.Widget(first).dpsPets);
+    s.Widget(first).dpsSeconds = 25;
+    s.Widget(copy).dpsPets     = false;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(read.Widget(first).dpsSeconds == 25 && read.Widget(first).dpsPets);
+    CHECK(read.Widget(copy).dpsSeconds == kDefaultDpsSeconds && !read.Widget(copy).dpsPets);
+    store.values["dpsSeconds"] = "0";
+    CHECK_EQ(LoadSettings(store).Widget(first).dpsSeconds, kMinDpsSeconds);
+    store.values["dpsSeconds"] = "999";
+    CHECK_EQ(LoadSettings(store).Widget(first).dpsSeconds, kMaxDpsSeconds);
+    // No Widget Designer: both lines stay on.
+    CHECK(!HasDesigner(BarWidget::Dps) && !store.values.contains("barDpsDesign"));
+}
+
 TEST(lock_cursor_to_window_starts_off_and_is_kept)
 {
     Settings s;
@@ -3093,6 +3138,18 @@ TEST(the_performance_widgets_show_mem_text_starts_off_and_is_kept)
     SaveSettings(s, store);
     CHECK_EQ(store.values["memText"], "true");
     CHECK(LoadSettings(store).Widget(BarWidget::Performance).memText);
+}
+
+TEST(the_job_widgets_use_synced_level_starts_off_and_is_kept_by_each_copy)
+{
+    Settings s;
+    const PanelWidget second = *CloneWidget(s, BarWidget::Job);
+    CHECK(!s.Widget(BarWidget::Job).syncedLevel && !s.Widget(second).syncedLevel);
+    s.Widget(second).syncedLevel = true;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings loaded = LoadSettings(store);
+    CHECK(!loaded.Widget(BarWidget::Job).syncedLevel && loaded.Widget(second).syncedLevel);
 }
 
 TEST(the_status_timers_display_starts_with_name_and_icon_and_is_kept_by_each_copy)
@@ -3235,21 +3292,26 @@ TEST(the_notification_settings_load_inside_their_ranges_and_save_back)
     CHECK(fresh.noticeWidth == 300 && fresh.noticeHeight == kFlexibleNoticeHeight && fresh.noticeFit == NoticeFit::Shrink);
     CHECK(fresh.noticeRounding == kThemeRounding && fresh.noticeBar && fresh.noticeVolume == 100);
     CHECK(fresh.noticeSeconds == 8 && fresh.noticeAnchor == HelpAnchor::Left && fresh.noticeEdge == NoticeEdge::Top);
-    CHECK(fresh.noticeAlign == HelpAnchor::Left && fresh.noticeMost == 5);
+    CHECK(fresh.noticeAlign == HelpAnchor::Center && fresh.noticeMost == 6 && fresh.noticeFade == 1.4f);
     CHECK(fresh.noticeAcross == kFishBarUnplaced && fresh.noticeDown == kFishBarUnplaced);
     CHECK(fresh.friendNoticeOnline && fresh.friendNoticeOffline && fresh.friendNoticeVolume == 60);
     CHECK(fresh.friendNoticeOnlineSound == kChimeSound && fresh.friendNoticeOfflineSound == kNoSound);
     CHECK(fresh.partyNotice && fresh.partyNoticeButtons && fresh.partyNoticeVolume == 60);
+    CHECK(fresh.partyNoticePlace == InvitePlace::Auto);
     CHECK(fresh.partyNoticeSound == kFirstCallChoice + 14);
+    CHECK(fresh.noticeStyle == NoticeStyle::Full);
     MapStore store;
+    store.values["noticeStyle"]              = "compact";
+    store.values["noticeFade"]               = "99";
     store.values["noticeWidth"]              = "5000";
     store.values["noticeHeight"]             = "1";
     store.values["noticeMost"]               = "99";
     store.values["noticeVolume"]             = "250";
     store.values["noticeFit"]                = "truncate";
     store.values["noticeEdge"]               = "bottom";
+    store.values["partyNoticePlace"]         = "top";
     store.values["noticeAnchor"]             = "right";
-    store.values["noticeAlign"]              = "center";
+    store.values["noticeAlign"]              = "left";
     store.values["friendNoticeOfflineSound"] = "call21";
     store.values["partyNoticeSound"]         = "bogus";
     store.values["friendNoticeOnlineSound"]  = "true";
@@ -3259,18 +3321,25 @@ TEST(the_notification_settings_load_inside_their_ranges_and_save_back)
     CHECK_EQ(s.noticeMost, 10);
     CHECK_EQ(s.noticeVolume, 100);
     CHECK(s.noticeFit == NoticeFit::Truncate && s.noticeEdge == NoticeEdge::Bottom);
-    CHECK(s.noticeAnchor == HelpAnchor::Right && s.noticeAlign == HelpAnchor::Center);
+    CHECK(s.partyNoticePlace == InvitePlace::Top);
+    CHECK(s.noticeAnchor == HelpAnchor::Right && s.noticeAlign == HelpAnchor::Left);
+    CHECK_EQ(s.noticeFade, kMaxNoticeFade);
     CHECK_EQ(s.friendNoticeOfflineSound, kFirstCallChoice + 21);
     CHECK_EQ(s.partyNoticeSound, kDefaultInviteSound); // an unknown name keeps the default
     CHECK_EQ(s.friendNoticeOnlineSound, kChimeSound);
+    CHECK(s.noticeStyle == NoticeStyle::Compact);
     MapStore saved;
     SaveSettings(s, saved);
     const Settings back = LoadSettings(saved);
     CHECK(back.noticeWidth == 600 && back.noticeHeight == 30 && back.noticeMost == 10 && back.noticeVolume == 100);
     CHECK(back.noticeFit == NoticeFit::Truncate && back.noticeEdge == NoticeEdge::Bottom);
-    CHECK(back.noticeAnchor == HelpAnchor::Right && back.noticeAlign == HelpAnchor::Center);
+    CHECK(back.partyNoticePlace == InvitePlace::Top);
+    MapStore bogus;
+    bogus.values["partyNoticePlace"] = "middle";
+    CHECK(LoadSettings(bogus).partyNoticePlace == InvitePlace::Auto);
+    CHECK(back.noticeAnchor == HelpAnchor::Right && back.noticeAlign == HelpAnchor::Left && back.noticeFade == kMaxNoticeFade);
     CHECK(back.friendNoticeOfflineSound == kFirstCallChoice + 21 && back.partyNoticeSound == kDefaultInviteSound);
-    CHECK(back.friendNoticeOnlineSound == kChimeSound);
+    CHECK(back.friendNoticeOnlineSound == kChimeSound && back.noticeStyle == NoticeStyle::Compact);
 }
 
 TEST(a_sound_choice_is_saved_by_a_name_that_never_moves)
@@ -3311,7 +3380,7 @@ TEST(the_currency_favorites_are_kept_in_order_and_an_unknown_or_repeated_one_is_
     CHECK((LoadSettings(store).currencyFavorites == std::vector<std::string>{"sparks", "gil"}));
     store.values["currencyFavorites"] = "nothing sparks cp_nation sparks";
     CHECK((LoadSettings(store).currencyFavorites == std::vector<std::string>{"sparks", kYourConquestPoints}));
-    store.values["currencyFavorites"] = "";
+    store.values["currencyFavorites"] = "none";
     CHECK(LoadSettings(store).currencyFavorites.empty()); // every star taken off
 }
 
@@ -3436,27 +3505,26 @@ TEST(a_created_widget_is_named_by_its_number_keeps_its_name_and_a_clone_gets_one
     CHECK_EQ(s.Widget(clone).name, std::string(kCreatedWidgetName) + " 3");
 }
 
-TEST(combat_popups_are_on_in_the_nameplates_font_at_the_games_own_size_until_changed)
+TEST(combat_popups_are_on_in_their_default_font_at_43_pixels_until_changed)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
-    CHECK(fresh.combatPopups && fresh.combatPopupFont.empty() && fresh.combatPopupSize == 100);
+    CHECK(fresh.combatPopups && fresh.combatPopupFont.empty() && fresh.combatPopupSize == 43);
     MapStore store;
-    store.values["combatPopups"]    = "false";
-    store.values["combatPopupFont"] = "Arial";
-    store.values["combatPopupSize"] = "150";
+    store.values["combatPopups"]        = "false";
+    store.values["combatPopupFont"]     = "Arial";
+    store.values["combatPopupTextSize"] = "60";
+    store.values["combatPopupSize"]     = "150"; // the old percent is no longer read
     const Settings s = LoadSettings(store);
-    CHECK(!s.combatPopups && s.combatPopupFont == "Arial" && s.combatPopupSize == 150);
+    CHECK(!s.combatPopups && s.combatPopupFont == "Arial" && s.combatPopupSize == 60);
     MapStore saved;
     SaveSettings(s, saved);
     const Settings back = LoadSettings(saved);
-    CHECK(!back.combatPopups && back.combatPopupFont == "Arial" && back.combatPopupSize == 150);
-    store.values["combatPopupSize"] = "999";
-    CHECK_EQ(LoadSettings(store).combatPopupSize, 200);
-    store.values["combatPopupSize"] = "7";
-    CHECK_EQ(LoadSettings(store).combatPopupSize, 25);
-    store.values["combatPopupSize"] = "52";
-    CHECK_EQ(LoadSettings(store).combatPopupSize, 50);
+    CHECK(!back.combatPopups && back.combatPopupFont == "Arial" && back.combatPopupSize == 60);
+    store.values["combatPopupTextSize"] = "999";
+    CHECK_EQ(LoadSettings(store).combatPopupSize, 120);
+    store.values["combatPopupTextSize"] = "7";
+    CHECK_EQ(LoadSettings(store).combatPopupSize, 10);
     store.values["combatPopupFont"] = "";
     CHECK(LoadSettings(store).combatPopupFont.empty());
     store.values["combatPopupFont"] = std::string(40, 'x');
@@ -3500,7 +3568,7 @@ TEST(a_skillchain_takes_its_elements_color_until_picked_and_no_other_type_can)
     CHECK(LoadSettings(store).combatPopupColors[static_cast<size_t>(PopupType::Skillchain)].source == ColorSource::Element);
 }
 
-TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_unnudged_until_placed_and_their_columns_save)
+TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_spread_and_unnudged_until_placed_and_their_columns_save)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
@@ -3510,27 +3578,57 @@ TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_unnudged_un
         const bool left = type == PopupType::Buff || type == PopupType::Recovery;
         CHECK(fresh.combatPopupSides[static_cast<size_t>(t)] == (left ? PopupSide::Left : PopupSide::Right));
     }
-    CHECK(fresh.combatPopupX == 0 && fresh.combatPopupY == 0);
+    CHECK(fresh.combatPopupSpread == 0 && fresh.combatPopupY == 0);
     MapStore store;
     store.values["combatPopupColumns"] = "dealt buff | spell recovery dealt chocobo | ";
-    store.values["combatPopupX"]       = "-30";
+    store.values["combatPopupSpread"]  = "35";
     store.values["combatPopupY"]       = "45";
     const Settings s = LoadSettings(store);
     const auto side  = [](const Settings& in, PopupType type) { return in.combatPopupSides[static_cast<size_t>(type)]; };
     CHECK(side(s, PopupType::Dealt) == PopupSide::Left && side(s, PopupType::Buff) == PopupSide::Left);
     CHECK(side(s, PopupType::Spell) == PopupSide::Middle && side(s, PopupType::Recovery) == PopupSide::Middle);
     CHECK(side(s, PopupType::Taken) == PopupSide::Right && side(s, PopupType::Debuff) == PopupSide::Right);
-    CHECK(s.combatPopupX == -30 && s.combatPopupY == 45);
+    CHECK(s.combatPopupSpread == 35 && s.combatPopupY == 45);
     MapStore saved;
     SaveSettings(s, saved);
     CHECK(saved.values["combatPopupColumns"] == "dealt buff | recovery spell | taken miss critical burst skillchain debuff");
     const Settings back = LoadSettings(saved);
-    CHECK(back.combatPopupSides == s.combatPopupSides && back.combatPopupX == -30 && back.combatPopupY == 45);
+    CHECK(back.combatPopupSides == s.combatPopupSides && back.combatPopupSpread == 35 && back.combatPopupY == 45);
     SaveSettings(fresh, saved);
     CHECK(saved.values["combatPopupColumns"] == "recovery buff |  | dealt taken miss critical burst skillchain spell debuff");
-    store.values["combatPopupX"] = "999";
-    store.values["combatPopupY"] = "-999";
-    CHECK(LoadSettings(store).combatPopupX == 200 && LoadSettings(store).combatPopupY == -200);
+    store.values["combatPopupSpread"] = "999";
+    store.values["combatPopupY"]      = "-999";
+    CHECK(LoadSettings(store).combatPopupSpread == 50 && LoadSettings(store).combatPopupY == -200);
+    store.values["combatPopupSpread"] = "-5";
+    CHECK_EQ(LoadSettings(store).combatPopupSpread, 0);
+}
+
+TEST(the_combat_popups_outline_duration_and_fade_are_pixels_and_seconds_and_they_save)
+{
+    MapStore empty;
+    const Settings fresh = LoadSettings(empty);
+    CHECK(fresh.combatPopupOutline == 3 && fresh.combatPopupDuration == 0.4f && fresh.combatPopupFade == 0.4f &&
+          ToArgb(fresh.combatPopupOutlineColor) == 0xFF000000u);
+    MapStore store;
+    store.values["combatPopupOutline"]       = "5";
+    store.values["combatPopupDuration"]      = "2.5";
+    store.values["combatPopupFade"]          = "1.2";
+    store.values["combatPopupOutlineColorR"] = "1.0000";
+    store.values["combatPopupOutlineColorG"] = "0.0000";
+    store.values["combatPopupOutlineColorB"] = "0.0000";
+    const Settings s = LoadSettings(store);
+    CHECK(s.combatPopupOutline == 5 && s.combatPopupDuration == 2.5f && s.combatPopupFade == 1.2f &&
+          ToArgb(s.combatPopupOutlineColor) == 0xFFFF0000u);
+    MapStore saved;
+    SaveSettings(s, saved);
+    const Settings back = LoadSettings(saved);
+    CHECK(back.combatPopupOutline == 5 && back.combatPopupDuration == 2.5f && back.combatPopupFade == 1.2f &&
+          back.combatPopupOutlineColor == s.combatPopupOutlineColor);
+    store.values["combatPopupOutline"]  = "999";
+    store.values["combatPopupDuration"] = "0";
+    store.values["combatPopupFade"]     = "99";
+    const Settings clamped = LoadSettings(store);
+    CHECK(clamped.combatPopupOutline == 10 && clamped.combatPopupDuration == 0.1f && clamped.combatPopupFade == 3.0f);
 }
 
 TEST(popups_beside_their_target_start_near_its_head_until_their_start_height_is_set_and_it_saves)
@@ -3569,7 +3667,7 @@ TEST(each_combat_popup_switch_is_on_until_switched_off_and_saves)
     const std::pair<const char*, Switch> switches[] = {{"combatPopupWords", &Settings::combatPopupWords},
         {"combatPopupLabels", &Settings::combatPopupLabels}, {"combatPopupCustomColors", &Settings::combatPopupCustomColors},
         {"combatPopupSkillchainNames", &Settings::combatPopupSkillchainNames},
-        {"combatPopupRightAway", &Settings::combatPopupRightAway}, {"combatPopupPlacement", &Settings::combatPopupPlacement}};
+        {"combatPopupRightAway", &Settings::combatPopupRightAway}};
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
     for (const auto& [key, field] : switches)
@@ -3583,4 +3681,64 @@ TEST(each_combat_popup_switch_is_on_until_switched_off_and_saves)
         SaveSettings(s, saved);
         CHECK(!(LoadSettings(saved).*field));
     }
+}
+
+// John (2026-11-19): each page's Buffs & Debuffs, Show Status Background and, on Players, Only Party Members.
+TEST(each_kinds_starred_statuses_and_their_switches_are_kept_and_only_its_kinds_write_them)
+{
+    Settings s;
+    for (const PlateKind kind : {PlateKind::Mobs, PlateKind::Players, PlateKind::Self})
+        CHECK((s.Kind(kind).shownStatuses == std::vector<uint16_t>{40, 41, 2, 4, 7, 5})); // Protect to Blindness
+    s.Kind(PlateKind::Mobs).shownStatuses    = {4, 134};
+    s.Kind(PlateKind::Players).shownStatuses = {40};
+    s.Kind(PlateKind::Self).shownStatuses    = {41, 2};
+    s.Kind(PlateKind::Self).statusBack       = true;
+    s.Kind(PlateKind::Players).statusPartyOnly = false;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK(store.values["mobsShownStatuses"] == "4 134" && store.values["selfShownStatuses"] == "41 2");
+    CHECK(!store.values.contains("npcsShownStatuses") && !store.values.contains("petsStatusBackground"));
+    CHECK(!store.values.contains("mobsStatusPartyOnly") && !store.values.contains("selfStatusPartyOnly"));
+    const Settings read = LoadSettings(store);
+    for (const PlateKind kind : {PlateKind::Mobs, PlateKind::Players, PlateKind::Self})
+    {
+        CHECK(read.Kind(kind).shownStatuses == s.Kind(kind).shownStatuses);
+        CHECK_EQ(read.Kind(kind).statusBack, s.Kind(kind).statusBack);
+    }
+    CHECK(!read.Kind(PlateKind::Players).statusPartyOnly);
+    store.values["mobsShownStatuses"] = "40 x 65000 40";
+    CHECK((LoadSettings(store).Kind(PlateKind::Mobs).shownStatuses == std::vector<uint16_t>{40}));
+}
+
+// An emptied list must not come back as the six a file without the key gets, even through a reader that takes an
+// empty value for none, as Windows' profile reader can for a line with nothing after its "=".
+TEST(an_emptied_starred_list_stays_empty_through_the_settings_file)
+{
+    Settings s;
+    s.Kind(PlateKind::Players).shownStatuses.clear();
+    s.statusPins.clear(); // Status Timers emptied: a file without the key pins Signet
+    s.statusFavorites.clear(); // and has Signet and Sanction as favorites
+    s.currencyFavorites.clear(); // and gil and your conquest points
+    MapStore saved;
+    ChangedKeys changed(saved);
+    SaveSettings(s, changed);
+    std::vector<KeyText> values;
+    for (const auto& [key, text] : saved.values)
+        values.push_back({key, text});
+    class IniStore final : public SettingsStore
+    {
+    public:
+        std::string file;
+        std::string GetString(const char* key, const char* fallback) override
+        {
+            const std::optional<std::string> value = IniValue(file, "settings", key);
+            return value && !value->empty() ? *value : fallback;
+        }
+        void Set(const char*, const char*) override {}
+    } file;
+    file.file = WithIniValues("", "settings", values);
+    const Settings read = LoadSettings(file);
+    CHECK(read.Kind(PlateKind::Players).shownStatuses.empty() && read.statusPins.empty() && read.statusFavorites.empty());
+    CHECK(read.currencyFavorites.empty());
+    CHECK_EQ(read.Kind(PlateKind::Self).shownStatuses.size(), size_t{6});
 }

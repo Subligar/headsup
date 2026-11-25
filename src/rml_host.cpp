@@ -15,7 +15,6 @@ namespace headsup
     {
         constexpr const char* kBarContext     = "bar";
         constexpr const char* kOverlayContext = "overlay";
-        constexpr int kLeftButton = 0, kRightButton = 1, kMiddleButton = 2; // as RmlUi numbers them
         constexpr int kKeyToggledBit      = 0x0001;                          // GetKeyState: a lock is on
         constexpr int kTypedAtMost        = 4;                               // UTF-16 units one key can type
         constexpr wchar_t kFirstPrintable = L' ';
@@ -166,17 +165,22 @@ namespace headsup
         if (!Running()) return false;
         const int modifiers = Modifiers();
         const int px = static_cast<int>(x), py = static_cast<int>(y);
+        const std::optional<Rml::Vector2f> was = m_Pointer;
         if (message != WM_MOUSEWHEEL) m_Pointer = Rml::Vector2f{x, y}; // a wheel's point is the screen's
+        // A pointer the game windows' keys took away (ProcessMouseLeave) comes back as it moves, clicks or scrolls.
+        if (message == WM_MOUSEMOVE && m_Pointer == was) return m_Overlay->IsMouseInteracting();
+        if (message != WM_MOUSEMOVE && m_Pointer)
+            m_Overlay->ProcessMouseMove(static_cast<int>(m_Pointer->x), static_cast<int>(m_Pointer->y), modifiers);
         // Each returns true when the mouse is not interacting with any element.
         switch (message)
         {
         case WM_MOUSEMOVE: return !m_Overlay->ProcessMouseMove(px, py, modifiers);
-        case WM_LBUTTONDOWN: return Press(kLeftButton, modifiers);
-        case WM_LBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kLeftButton, modifiers);
-        case WM_RBUTTONDOWN: return Press(kRightButton, modifiers);
-        case WM_RBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kRightButton, modifiers);
-        case WM_MBUTTONDOWN: return Press(kMiddleButton, modifiers);
-        case WM_MBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kMiddleButton, modifiers);
+        case WM_LBUTTONDOWN: return Press(kRmlLeftButton, modifiers);
+        case WM_LBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kRmlLeftButton, modifiers);
+        case WM_RBUTTONDOWN: return Press(kRmlRightButton, modifiers);
+        case WM_RBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kRmlRightButton, modifiers);
+        case WM_MBUTTONDOWN: return Press(kRmlMiddleButton, modifiers);
+        case WM_MBUTTONUP: return !m_Overlay->ProcessMouseButtonUp(kRmlMiddleButton, modifiers);
         case WM_MOUSEWHEEL: return !m_Overlay->ProcessMouseWheel(WheelNotches(wheelDelta), modifiers);
         default: return false;
         }

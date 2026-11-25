@@ -5,6 +5,7 @@
 #include "bar_fps.h"
 #include "bar_job.h"
 #include "bar_memory.h"
+#include "bar_dps.h"
 #include "bar_party.h"
 #include "bar_statuses.h"
 #include "bar_types.h"
@@ -12,6 +13,7 @@
 #include "game_packets.h"
 #include "game_state.h"
 #include "outposts.h"
+#include "ph_timers.h"
 #include "icons.h"
 #include "settings.h"
 #include "strip_text.h"
@@ -52,7 +54,9 @@ namespace headsup
         int64_t unixMs = 0; // Earth time, UTC, for the Vana'diel clock
         int earthYear = 0, earthMonth = 0, earthDay = 0, earthHour = 0, earthMinute = 0, earthSecond = 0; // local
         uint16_t zone = 0; // 0 while unknown
+        std::string mapSquare; // the game's <pos> text; empty while it has none
         uint16_t homePoint = 0; // the zone your home point is in; 0 while unknown
+        std::vector<TimerLine> phTimers; // PhTimers::Lines, while PhTimersRun
         const ActorInfo* target = nullptr;
         std::optional<float> targetDistance;   // yalms, with the target
         // The game's name for an item ID, for a mob's drops; nullptr, or an empty name, when it has none.
@@ -84,11 +88,12 @@ namespace headsup
         LinuxXIState linuxxi;
         const std::map<std::string, std::string>* pickedTabs = nullptr; // the tab the player picked in a card, by its heading
         const std::map<std::string, size_t>* scrolled        = nullptr; // lines a part of a popup is scrolled past, by its key
-        bool pinRefused = false; // Status Timers kept its last pin since its popup opened
         const GuildPatterns* turnIns = nullptr; // today's guild point turn-ins, once fetched
         bool turnInsFailed = false;             // the last fetch got no answer
         std::optional<CraftRanks> crafts;       // yours, once the server sent them
         const std::vector<FriendEntry>* friends = nullptr; // the game's friend list, as last read
+        const DamageMeter* damage = nullptr; // your party's, with the plugin's clock at its last Add
+        double damageNow = 0.0;
     };
 
     // What the panel reads of your character, which the game empties or fills partway while you change zones.
@@ -108,12 +113,13 @@ namespace headsup
     void HoldWhileLoading(BarState& state, CharacterReadings& held, bool loaded);
 
     // The parts of BarState that the shown widgets and the open popup read, for the plugin to gather only those; it
-    // always copies the weather, the owners, the shares and your home point.
+    // always copies the weather, the owners, the shares, your home point and your respawn timers.
     struct BarNeeds
     {
         bool unixTime   = false; // unixMs
         bool localTime  = false; // the earth date and time
         bool zone       = false;
+        bool mapSquare  = false;
         bool target     = false; // with its placeholder's countdown and a player's check
         bool gil        = false;
         bool strip      = false; // the game's top-strip text
@@ -126,13 +132,10 @@ namespace headsup
         bool cpu        = false;
         bool linuxxi    = false;
         bool conquest   = false; // your nation and supply runs, for World Info's conquest and Currency's points
+        bool dps        = false; // the party's fighters, for the meter
         int containers = 0; // bags from 0 up to this
     };
     BarNeeds NeedsOf(const Settings& settings, const std::vector<PanelWidget>& showing); // showing: the popups shown
-    // Does to the settings what a press on a popup's pressable cell told (PopupCell::press): a currency's or a
-    // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
-    // off. The last pin stays, by its pin or its star: Refused.
-    enum class PressResult : uint8_t { None, Changed, Refused };
     // A weather's icons as Use Custom Icons picks them: HeadsUp's own picture, or the game's element icon, twice for a
     // double weather; none for a weather that has none of the kind picked.
     std::vector<Icon> WeatherIcons(Weather weather, CustomIcons use);
@@ -146,7 +149,10 @@ namespace headsup
     // Clones the widget a press names or takes its copy off: the widget whose settings show next, the clone or the
     // first copy (a created widget itself, gone, so they close); nothing for any other press, or when nothing changed.
     std::optional<PanelWidget> ApplyWidgetPress(Settings& settings, std::string_view press);
-    PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
+    // Does to the settings what a press on a popup's pressable cell told (PopupCell::press): a currency's or a
+    // status's star adds it to the favorites or takes it off, and a status's pin shows it on the panel or takes it
+    // off. Whether it changed the settings.
+    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation);
     // Whether a copy of widget shows, or a created widget showing one of its parts.
     bool WidgetShown(const Settings& settings, BarWidget widget);
     // Whether the conquest standings show: the Zone widget, a World Info showing a nation, or a popup in showing with

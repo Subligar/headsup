@@ -56,14 +56,27 @@ TEST(exp_gained_counts_within_a_level_and_across_a_level_up)
     CHECK_EQ(Gained(Sample(30, 7400, 7600), Sample(31, 150, 8000)), 350u); // 200 to finish 30, then 150 into 31
 }
 
-TEST(nothing_counts_for_a_death_a_job_change_or_a_level_lost_or_synced)
+TEST(nothing_counts_for_a_death_a_job_change_a_level_lost_or_two_levels_at_once)
 {
     CHECK_EQ(Gained(Sample(30, 1300, 7600), Sample(30, 1000, 7600)), 0u);
     JobSample whm = Sample(30, 1300, 7600);
     whm.mainJob   = kWhm;
     CHECK_EQ(Gained(Sample(30, 1000, 7600), whm), 0u);
     CHECK_EQ(Gained(Sample(31, 100, 8000), Sample(30, 7500, 7600)), 0u);
-    CHECK_EQ(Gained(Sample(30, 1000, 7600), Sample(32, 100, 8400)), 0u); // a sync lifted, not EXP
+    CHECK_EQ(Gained(Sample(30, 1000, 7600), Sample(32, 100, 8400)), 0u);
+}
+
+// The level comes from 0x01B and the EXP from 0x061, which the server sends last on a level-up or a level lost, at
+// times a tick later. Levels 30, 31, 74 and 75 need 5,700, 5,800, 40,000 and 42,000 EXP (Phoenix's exp_base).
+TEST(a_level_that_arrives_before_its_exp_counts_only_the_exp_earned)
+{
+    CHECK_EQ(Gained(Sample(30, 5600, 5700), Sample(31, 5600, 5700)) + Gained(Sample(31, 5600, 5700), Sample(31, 100, 5800)),
+        200u);
+    CHECK_EQ(Gained(Sample(74, 39900, 40000), Sample(75, 39900, 40000)) +
+                 Gained(Sample(75, 39900, 40000), Sample(75, 100, 42000)),
+        0u); // limit points take over at the cap, so the 200 is not seen
+    CHECK_EQ(Gained(Sample(31, 100, 5800), Sample(30, 100, 5800)) + Gained(Sample(30, 100, 5800), Sample(30, 5300, 5700)),
+        0u); // a death that takes a level
 }
 
 TEST(at_the_cap_limit_points_count_and_a_merit_is_ten_thousand_of_them)
@@ -139,8 +152,7 @@ TEST(a_merit_arriving_after_its_limit_points_wrapped_is_not_a_gain)
 
 TEST(reaching_the_cap_counts_the_last_levels_exp)
 {
-    JobSample cap = Sample(kLevelCap, 100, 0);
-    CHECK_EQ(Gained(Sample(74, 5000, 7600), cap), 2700u);
+    CHECK_EQ(Gained(Sample(74, 37400, 40000), Sample(kLevelCap, 100, 42000)), 2700u);
 }
 
 TEST(the_cap_counts_limit_points_with_limit_mode_off)
@@ -328,4 +340,42 @@ TEST(the_exp_bar_takes_its_custom_background_and_fill_colors_and_the_themes_with
     o.expBarBack = 0x40FFFFFFu;
     o.expBarFill = 0xFF20C040u;
     CHECK(bar().back == 0x40FFFFFFu && bar().fill == 0xFF20C040u);
+}
+
+// Phoenix's SUBJOB_RATIO 1 (battle_entity.cpp SetSLevel): the subjob at most half the main job, and 1 under a level 1.
+TEST(a_subjobs_level_is_its_own_up_to_half_the_main_jobs)
+{
+    CHECK_EQ(SubLevelUnder(30, 10), 10);
+    CHECK_EQ(SubLevelUnder(30, 29), 15);
+    CHECK_EQ(SubLevelUnder(75, 75), 37);
+    CHECK_EQ(SubLevelUnder(1, 5), 1);
+    CHECK_EQ(SubLevelUnder(30, 0), 0); // no subjob
+}
+
+TEST(use_synced_level_says_the_levels_you_play_at_and_off_your_jobs_own)
+{
+    // WAR 30 / NIN 15, synced to 20.
+    JobSample s       = Sample(30, 12345, 20000);
+    s.syncedMainLevel = 20;
+    s.syncedSubLevel  = 10;
+    WidgetOptions o;
+    o.expBarText = ExpText::Jobs;
+    const auto said = [&](WidgetPart which) {
+        WidgetContent base;
+        for (const PartContent& part : JobParts(JobReport{s, std::nullopt}, o, base))
+            if (part.part == which) return which == WidgetPart::JobBar ? part.spans.front().bar->text : part.spans.front().text;
+        return std::string("no such part");
+    };
+    CHECK_EQ(said(WidgetPart::JobJobs), "WAR 30 / NIN 15");
+    CHECK_EQ(said(WidgetPart::JobBar), "WAR 30 / NIN 15");
+    o.syncedLevel = true;
+    CHECK_EQ(said(WidgetPart::JobJobs), "WAR 20 / NIN 10");
+    CHECK_EQ(said(WidgetPart::JobBar), "WAR 20 / NIN 10");
+    // The EXP is your job's own, whichever levels are said.
+    CHECK_EQ(said(WidgetPart::JobEarned), "12,345 / 20,000 EXP");
+    // A capped job synced down still earns limit points.
+    JobSample capped       = AtCap(3, 4000);
+    capped.syncedMainLevel = 30;
+    s                      = capped;
+    CHECK_EQ(said(WidgetPart::JobEarned), "4,000 / 10,000 LP");
 }

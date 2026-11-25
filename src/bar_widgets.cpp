@@ -55,7 +55,9 @@ namespace headsup
         constexpr int kWorldGuildColumns   = 3; // a shop open or closed, when that changes, and who and where
         constexpr int kZoneRollColumns     = 3; // a zone, and its chance of the element today and tomorrow
         constexpr int kTurnInColumns       = 6; // a rank, its item and its points, its high quality's, and the most a day
+        constexpr int kSupplyColumns       = 2; // a region's name, and its supply run's flag and word
         constexpr uint16_t kGilItem  = 0xFFFF;
+        constexpr const char* kNoMapSquare = "(?-?)"; // the game's <pos> in a zone without a map
 
         Span Percent(int percent)
         {
@@ -1055,12 +1057,13 @@ namespace headsup
             return ranks;
         }
 
-        // A craft guild's turn-ins today, from Phoenix's site, under a line of their own: the item each rank from Novice
-        // to Expert is asked for today and its high quality, each with its picture and its points, and the most a day,
-        // your rank starred and lit; until the site answers, a line saying so.
+        // A craft guild's turn-ins today, from Phoenix's site, under a line of their own beside the shops: the item each
+        // rank from Novice to Expert is asked for today and its high quality, each with its picture and its points, and
+        // the most a day, your rank starred and lit; until the site answers, a line saying so.
         std::vector<PopupRow> TurnIns(const BarState& state, int craft, const std::string& guild)
         {
             std::vector<PopupRow> rows = ListOf(LineOf("Today's Turn-Ins", Tone::Heading));
+            rows.front().beside = true;
             if (state.turnIns == nullptr)
             {
                 PopupRow waiting = LineOf(state.turnInsFailed ? "phoenix-xi.com did not answer; trying again soon"
@@ -1203,11 +1206,11 @@ namespace headsup
             return popup;
         }
 
-        constexpr int kSupplyColumns = 3; // a region's name, then "Supply run available" and its flag
+        constexpr uint32_t kSupplyToDoColor = 0xFFF2D45C, kSupplyDoneColor = kBarGreen, kSupplyUnavailableColor = 0xFFE35F5F;
 
         // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
-        // opens. Your nation's say which outposts you have not run supplies to, as far as overseers told.
-        PopupSection ConquestSection(const BarState& state)
+        // opens. Your nation's say which outposts you have run supplies to, as far as overseers told.
+        PopupSection ConquestSection(const BarState& state, bool flags)
         {
             PopupSection conquest =
                 Section(CardKind::WorldConquest, "Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")");
@@ -1228,38 +1231,39 @@ namespace headsup
                 bool unknown     = false;
                 PopupTab held{Colored(NationName(nation), NationColor(nation)), {}};
                 held.picture = NationCrest(nation);
-                std::vector<std::pair<uint8_t, std::optional<bool>>> regions; // each held, and whether you ran supplies there
+                std::vector<uint8_t> regions;
                 for (int region = 0; region < kConquestRegionCount; ++region)
-                    if ((*state.owners)[region] == nation)
-                    {
-                        const auto r = static_cast<uint8_t>(region);
-                        regions.emplace_back(r, yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true));
-                        unknown = unknown || !regions.back().second;
-                    }
-                // While one has a supply run to make, every region is a line of a grid whose words and gray flag
-                // stand against the card's right, so they line up.
-                const bool runs = std::ranges::any_of(regions, [](const auto& region) { return region.second == false; });
-                for (const auto& [r, ran] : regions)
+                    if ((*state.owners)[region] == nation) regions.push_back(static_cast<uint8_t>(region));
+                if (yours && !regions.empty())
                 {
-                    if (!runs)
+                    PopupRow grid = Grid(kSupplyColumns, (regions.size() + 1) * kSupplyColumns);
+                    grid.header   = true;
+                    grid.trailing = true;
+                    for (const char* heading : {"Region", "Supply Run"})
+                        grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
+                    for (const uint8_t r : regions)
                     {
-                        held.rows.push_back(LineOf(std::string(RegionName(r))));
-                        continue;
+                        const bool runs               = HasSupplyRun(r);
+                        const std::optional<bool> ran = runs ? state.outposts->Ran(nation, r) : std::nullopt;
+                        unknown                       = unknown || (runs && !ran);
+                        grid.cells.push_back(Cell(Text(std::string(RegionName(r)))));
+                        PopupCell run;
+                        if (!runs || ran)
+                        {
+                            run.text = ListOf(!runs ? Text("Unavailable", Tone::Dim) : *ran ? Text("Complete", Tone::Dim) : Text("Available"));
+                            if (flags)
+                            {
+                                run.icon = Icon::Flag;
+                                run.tint = Colored("", !runs ? kSupplyUnavailableColor : *ran ? kSupplyDoneColor : kSupplyToDoColor);
+                            }
+                        }
+                        grid.cells.push_back(std::move(run));
                     }
-                    PopupRow row{RowKind::Grid, kSupplyColumns, {Cell(Text(std::string(RegionName(r))))}};
-                    row.trailing = true;
-                    if (ran == false)
-                    {
-                        PopupCell said = Cell(Text("Supply run available"));
-                        said.align     = Align::Right;
-                        PopupCell flag;
-                        flag.icon = Icon::Flag;
-                        flag.tint = Text("", Tone::Dim);
-                        row.cells.push_back(std::move(said));
-                        row.cells.push_back(std::move(flag));
-                    }
-                    held.rows.push_back(std::move(row));
+                    held.rows.push_back(std::move(grid));
                 }
+                else
+                    for (const uint8_t r : regions)
+                        held.rows.push_back(LineOf(std::string(RegionName(r))));
                 if (held.rows.empty()) held.rows.push_back(LineOf("None", Tone::Dim));
                 if (unknown)
                     held.rows.push_back(LineOf("Talk to a conquest overseer in your nation's city to see your supply runs.", Tone::Dim));
@@ -1301,11 +1305,11 @@ namespace headsup
         Span ShopPlace(const GuildShop& shop) { return Text(std::string(shop.shops) + ", " + shop.zone, Tone::Dim); }
 
         // The Conquest card, Travel and the Calendar in a column beside it, and Guilds under them all.
-        PopupContent WorldPopup(const BarState& state)
+        PopupContent WorldPopup(const BarState& state, const WidgetOptions& o)
         {
             PopupContent popup;
             popup.title = ListOf(Text("World Info"));
-            popup.sections.push_back(ConquestSection(state));
+            popup.sections.push_back(ConquestSection(state, o.supplyFlags));
             {
                 // A tab for each kind of ship, its routes together in the data.
                 PopupSection travel = Section(CardKind::WorldTravel, "Travel");
@@ -1384,7 +1388,7 @@ namespace headsup
         bool HoldsPartOn(const WidgetOptions& created, BarWidget widget)
         {
             return std::ranges::any_of(created.design.lines, [&](const std::vector<DesignChip>& line) {
-                return std::ranges::any_of(line, [&](const DesignChip& chip) { return chip.on && WidgetOfPart(chip.part) == widget; });
+                return std::ranges::any_of(line, [&](const DesignChip& chip) { return ChipOn(chip) && WidgetOfPart(chip.part) == widget; });
             });
         }
 
@@ -1466,12 +1470,16 @@ namespace headsup
             if (state.targetDistance && std::isfinite(*state.targetDistance))
             {
                 constexpr float kFarthest = 99.9f; // the farthest a target's distance reads
-                const auto said = [](float yalms) { return "(" + Decimal(yalms, 1) + ")"; };
-                Span far = Text(said(*state.targetDistance), Tone::Dim);
-                far.room = {said(kFarthest)};
+                Span far = Text(DistanceText(*state.targetDistance), Tone::Dim);
+                far.room = {DistanceText(kFarthest)};
                 parts.push_back({WidgetPart::TargetDistance, ListOf(std::move(far))});
             }
             return parts;
+        }
+
+        std::vector<DpsRow> DpsRowsOf(const BarState& state, const WidgetOptions& o)
+        {
+            return state.damage != nullptr ? state.damage->Rows(state.damageNow, o.dpsSeconds, o.dpsPets) : std::vector<DpsRow>{};
         }
 
         // What each part of a widget shows now, base taking whether it shows at all, its popup and its figures.
@@ -1496,6 +1504,8 @@ namespace headsup
                 }
                 else if (const GamePicture crest = HomeCrest(zone); crest != GamePicture::None)
                     parts.push_back({WidgetPart::ZoneCrest, ListOf(Mark(crest))});
+                if (!state.mapSquare.empty() && state.mapSquare != kNoMapSquare)
+                    parts.push_back({WidgetPart::ZoneCoordinates, ListOf(Text(state.mapSquare, Tone::Dim))});
                 base.hasPopup = state.zone != 0;
                 return parts;
             }
@@ -1552,7 +1562,12 @@ namespace headsup
             case BarWidget::GameHelp: return {};
             case BarWidget::Performance: return PerformanceParts(state, o, base);
             case BarWidget::Job: return JobParts(state.job, o, base);
-            case BarWidget::Party: return PartyParts(state.party, base);
+            case BarWidget::Party:
+            {
+                std::vector<PartContent> parts = PartyParts(state.party, base);
+                parts.push_back({WidgetPart::PartyIcon, ListOf(Mark(Icon::Person))});
+                return parts;
+            }
             case BarWidget::StatusTimers:
                 base.hasPopup = true;
             {
@@ -1569,6 +1584,8 @@ namespace headsup
             }
             case BarWidget::World: return WorldParts(state, o, base);
             case BarWidget::Settings: base.cog = true; return {};
+            case BarWidget::PhTimers: return {};
+            case BarWidget::Dps: return DpsParts(DpsRowsOf(state, o), state.damage != nullptr && state.damage->InParty(), base);
             case BarWidget::HomePoint:
                 base.wrap = o.wrapText;
                 return {{WidgetPart::HomePointIcon, ListOf(Mark(Icon::HomePoint))},
@@ -1614,7 +1631,22 @@ namespace headsup
                     for (const uint16_t id : pinned[line])
                         AddPart(lines[line], PinnedStatus(state.statuses, id, o.statusDisplay, o.timerFormat, OwnPalette(settings)));
                 if (lines[0].empty()) std::swap(lines[0], lines[1]);
-                base.title    = lines[0].empty() ? ListOf(Text("Status Timers", Tone::Dim)) : std::move(lines[0]);
+                base.title    = std::move(lines[0]);
+                base.subtitle = std::move(lines[1]);
+                return base;
+            }
+            if (widget.kind == BarWidget::PhTimers)
+            {
+                // The first, third and so on on top, as the Status Timers' pins are.
+                std::array<std::vector<Span>, kDesignLines> lines;
+                const uint32_t upColor = ToArgb(settings.palette.aggression[static_cast<int>(Nature::Placeholder)]);
+                for (size_t i = 0; i < state.phTimers.size(); ++i)
+                {
+                    const TimerLine& timer = state.phTimers[i];
+                    AddPart(lines[i % kDesignLines], ListOf(timer.up ? Colored(timer.text, upColor) : Text(timer.text)));
+                }
+                base.idle     = lines[0].empty();
+                base.title    = base.idle ? ListOf(Text("-")) : std::move(lines[0]);
                 base.subtitle = std::move(lines[1]);
                 return base;
             }
@@ -1635,13 +1667,16 @@ namespace headsup
             WidgetDesign design = o.design;
             for (std::vector<DesignChip>& line : design.lines)
                 for (DesignChip& chip : line)
-                    chip.on = chip.on || IsPinnedStatus(chip.part);
+                    chip.on = ChipOn(chip);
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
             {
-                // Linked with every part off, or Performance with no messages waiting, it takes no room.
-                w.idle  = !AnyPartOn(design) || widget.kind == BarWidget::Performance;
-                w.title = ListOf(Text("-"));
+                // With every part off it is an empty box; Performance with no messages waiting takes no room.
+                if (AnyPartOn(design))
+                {
+                    w.idle  = widget.kind == BarWidget::Performance;
+                    w.title = ListOf(Text("-"));
+                }
             }
             return w;
         }
@@ -1712,7 +1747,7 @@ namespace headsup
         return std::nullopt;
     }
 
-    PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
+    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
     {
         // A status's star or pin; a status taken off the favorites leaves the panel too, as only they have pins.
         for (const std::string_view kind : {kStatusFavoritePress, kStatusPinPress})
@@ -1722,7 +1757,7 @@ namespace headsup
             char* end           = nullptr;
             const unsigned long id = std::strtoul(number.c_str(), &end, 10);
             if (number.empty() || *end != '\0' || id > UINT16_MAX || *StatusName(static_cast<uint16_t>(id)) == '\0')
-                return PressResult::None;
+                return false;
             const auto status = static_cast<uint16_t>(id);
             // Every pin keeps the place it shows at in each copy, before and after the change.
             const auto place = [&] {
@@ -1731,7 +1766,6 @@ namespace headsup
             };
             std::vector<uint16_t>& list = kind == kStatusPinPress ? settings.statusPins : settings.statusFavorites;
             const auto at = std::ranges::find(list, status);
-            if (at != list.end() && settings.statusPins == std::vector<uint16_t>{status}) return PressResult::Refused;
             place();
             if (at != list.end())
             {
@@ -1741,30 +1775,30 @@ namespace headsup
             else
                 list.push_back(status);
             place();
-            return PressResult::Changed;
+            return true;
         }
         if (press.starts_with(kPopupResetPress))
         {
             const std::string number(press.substr(std::string_view(kPopupResetPress).size()));
             char* end = nullptr;
             const long slot = std::strtol(number.c_str(), &end, 10);
-            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return PressResult::None;
+            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return false;
             settings.widgets[static_cast<size_t>(slot)].popupSpot.reset();
-            return PressResult::Changed;
+            return true;
         }
         if (press.starts_with(kCollapsePress))
         {
             const std::string key(press.substr(std::string_view(kCollapsePress).size()));
-            if (key.empty() || key.find(' ') != std::string::npos) return PressResult::None;
+            if (key.empty() || key.find(' ') != std::string::npos) return false;
             if (const auto at = std::ranges::find(settings.collapsedSections, key); at != settings.collapsedSections.end())
                 settings.collapsedSections.erase(at);
             else
                 settings.collapsedSections.push_back(key);
-            return PressResult::Changed;
+            return true;
         }
-        if (!press.starts_with(kFavoritePress)) return PressResult::None;
+        if (!press.starts_with(kFavoritePress)) return false;
         const std::string key(press.substr(std::string_view(kFavoritePress).size()));
-        if (!CurrencyOfKey(key)) return PressResult::None;
+        if (!CurrencyOfKey(key)) return false;
         // Your nation's points by their own key once it is known, so its star takes them off.
         std::vector<std::string> favorites;
         for (const std::string& held : settings.currencyFavorites)
@@ -1778,7 +1812,7 @@ namespace headsup
         else
             favorites.push_back(key);
         settings.currencyFavorites = std::move(favorites);
-        return PressResult::Changed;
+        return true;
     }
 
     bool WidgetShown(const Settings& settings, BarWidget widget)
@@ -1854,6 +1888,9 @@ namespace headsup
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
         needs.localTime  = localClock;
         needs.zone       = either(BarWidget::Zone) || either(BarWidget::Weather);
+        EachShownCopy(settings, BarWidget::Zone, [&](const WidgetOptions& o) {
+            needs.mapSquare = needs.mapSquare || PartOn(o.design, WidgetPart::ZoneCoordinates);
+        });
         needs.target     = either(BarWidget::Target);
         needs.gil        = either(BarWidget::Currency);
         needs.strip      = shown(BarWidget::GameHelp);
@@ -1869,6 +1906,7 @@ namespace headsup
         needs.job        = either(BarWidget::Job);
         needs.connection = (perf & kConnectionParts) != 0 || perfPopup;
         needs.party      = either(BarWidget::Party);
+        needs.dps        = either(BarWidget::Dps);
         needs.statuses   = (shown(BarWidget::StatusTimers) && !settings.statusPins.empty()) || opened(BarWidget::StatusTimers);
         needs.memory     = (perf & PerfBit(PerfPart::Memory)) != 0 || perfPopup;
         needs.cpu        = perfPopup;
@@ -2106,14 +2144,14 @@ namespace headsup
                 if (!here.empty())
                 {
                     constexpr int kFriendColumns = 2;
-                    PopupSection players = Section(CardKind::ZonePlayers, "Players");
+                    PopupSection players = Section(CardKind::ZoneFriends, "Nearby Friends");
                     PopupRow grid        = Grid(kFriendColumns, here.size() * kFriendColumns);
                     for (const FriendEntry* f : here)
                     {
                         grid.cells.push_back(Cell(Text(FriendName(*f))));
                         grid.cells.push_back(Cell(Text(ZoneTitle(f->zone), Tone::Dim)));
                     }
-                    ScrollsBy(grid, state, "Zone/Players");
+                    ScrollsBy(grid, state, "Zone/Friends");
                     players.rows.push_back(std::move(grid));
                     popup.sections.push_back(std::move(players));
                 }
@@ -2248,10 +2286,12 @@ namespace headsup
             return PartyPopup(state.party);
         case BarWidget::StatusTimers:
             return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins, OwnPalette(settings),
-                ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
+                ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey));
         case BarWidget::World:
-            return WorldPopup(state);
-        case BarWidget::Settings: break;
+            return WorldPopup(state, o);
+        case BarWidget::Settings:
+        case BarWidget::PhTimers: break;
+        case BarWidget::Dps: return DpsPopup(DpsRowsOf(state, o));
         case BarWidget::HomePoint:
             popup.title = ListOf(Text("Home Point")); // its settings pop-out's
             break;

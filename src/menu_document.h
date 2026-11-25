@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace headsup
 {
@@ -82,6 +83,15 @@ namespace headsup
     constexpr const char* kSetupPreviewClass = "setup-preview"; // Setup's picture, as wide as its card
     constexpr const char* kPageNoteClass   = "page-note"; // a page's own words over its cards
     constexpr const char* kMenuTipAttribute = "tip";
+    constexpr const char* kMenuTipTitleAttribute = "tip-title"; // a tip's title, drawn over it after a SENDS PACKETS mark
+    constexpr const char* kTipTitleClass         = "tip-title";
+
+    // A window's title handle's attributes: it moves the window, which it lets off the screen but for kWindowKeptOn of
+    // it, and never off the top.
+    std::string MoveHandleAttributes();
+    // A window's place as that handle keeps it, by its top-left corner: one from a larger screen comes back with the
+    // same share on.
+    std::pair<int, int> KeptOnScreen(int x, int y, int width, int height, int screenWidth, int screenHeight);
 
     // The settings window's document: its frame, the sidebar and page to fill, the popup and the tip, and its style.
     std::string MenuDocument(const MenuLook& look);

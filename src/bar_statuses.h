@@ -29,6 +29,12 @@ namespace headsup
     // A status's name; "" for an id Phoenix lacks.
     const char* StatusName(uint16_t id);
 
+    // Whether a status's name is the name of one of the starred.
+    bool StarredByName(const std::vector<uint16_t>& starred, uint16_t id);
+    // Every buff, or every debuff, once by name with its name's first id: the starred names first, then the rest,
+    // each part by name.
+    std::vector<uint16_t> StarredFirst(const std::vector<uint16_t>& starred, bool debuffs);
+
     // A status you have, and its seconds left: nothing for one that never runs out or whose timer could not be read.
     struct ActiveStatus
     {
@@ -53,9 +59,7 @@ namespace headsup
         TimerFormat format, const BarPalette& theme);
     // Your favorites, each with its pin and star, over every other buff in a scrolling list and every other debuff in
     // another, each scrolled its many lines: those you have first, the rest by name, one line a name, each name with
-    // its icon in the theme's status icons, in one column. refused: the last pin was kept, which it says under its
-    // title.
+    // its icon in the theme's status icons, in one column.
     PopupContent StatusTimersPopup(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& favorites,
-        const std::vector<uint16_t>& pins, const BarPalette& theme, size_t buffsScrolled, size_t debuffsScrolled,
-        bool refused = false);
+        const std::vector<uint16_t>& pins, const BarPalette& theme, size_t buffsScrolled, size_t debuffsScrolled);
 }

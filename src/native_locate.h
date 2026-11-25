@@ -38,6 +38,7 @@ namespace headsup
         NoEntityCaller,
         EntityWrapperChanged,
         NoEntityWrapperCalls,
+        AmbiguousEntityWrapperCalls,
         NoModelDraws,
         ModelDrawsDiffer,
         NoArrowDraws,
@@ -54,6 +55,8 @@ namespace headsup
         NoKeyHide,
         AmbiguousKeyHide,
         KeyHideDiffers,
+        NoImGuiMouse,
+        AmbiguousImGuiMouse,
         NoWindowDraw,
         AmbiguousWindowDraw,
         WindowDrawChanged,
@@ -78,6 +81,9 @@ namespace headsup
         NoWeather,
         AmbiguousWeather,
         NoConfigGet,
+        NoPosText,
+        AmbiguousPosText,
+        PosTextChanged,
         NoSearchAddress,
         NoFish,
         AmbiguousFish,
@@ -99,8 +105,8 @@ namespace headsup
         uint32_t entry = 0, hook = 0, resume = 0, exit = 0;
         std::vector<uint32_t> callerReturns;
         uint32_t entityCaller = 0; // the one of those that entities' names come back to
-        uint32_t wrapper = 0;               // the wrapper that one is in, which takes the actor in ecx
-        std::vector<uint32_t> wrapperCalls; // the calls into it
+        uint32_t wrapperCall = 0; // the name method's call into the wrapper that one is in, which takes the actor in ecx
+        uint32_t entityDraw  = 0; // where that call goes: the wrapper, or another plugin's hook on it
     };
 
     // Found by the two icon tables it reads (from .rdata, which is in the file) rather than by its own bytes, so it
@@ -156,6 +162,20 @@ namespace headsup
     };
     constexpr uint32_t kPointerShownOffset = 0x4E;
     PointerShow LocatePointerShow(const ImageSection& text);
+
+    // Ashita's ImGui backend (Ashita.dll) hands ImGui the mouse in the game window's client pixels, which ImGui lays
+    // out in the viewport's: its poll after ScreenToClient, its WM_MOUSEMOVE and its WM_MOUSELEAVE each call
+    // ImGuiIO::AddMousePosEvent with the io in ecx, x in xmm1 and y in xmm2. RVAs of every five-byte call to it, found
+    // through the poll's. A button press also updates ImGui's hovered window at once from the raw client point, an
+    // ImVec2 on the stack whose address is in ecx: the RVAs of that call and of the update. Found both or neither.
+    struct ImGuiMouseCalls
+    {
+        LocateProblem problem = LocateProblem::None;
+        std::vector<uint32_t> calls;
+        uint32_t addMousePos = 0;
+        uint32_t hoverCall = 0, hoverUpdate = 0;
+    };
+    ImGuiMouseCalls LocateImGuiMouseCalls(const ImageSection& text);
 
     // The game's command check ends by turning mouse use on (1) for a few mouse commands and off (0) for the rest, which
     // hides the pointer whenever a key sets off a command: two thiscalls into one routine on the mouse controller.
@@ -319,8 +339,11 @@ namespace headsup
     constexpr int kMaxWindowOffset = 2000;
     // The text up to the first separator, which is taken off text with it.
     std::string_view NextField(std::string_view& text, char separator);
-    // The places the player puts windows at, from the settings file's "equip:100,200 statcom:0,40": a name no window
-    // could have, a strip window, a repeat and any past kMaxWindowKeys go; places are held to 0 to kMaxWindowOffset.
+    // Places from a settings file's "equip:100,200 statcom:0,40": a name named refuses, a repeat and any past
+    // kMaxWindowKeys go; x and y are held to low to high.
+    std::vector<WindowPlace> PlacesFrom(std::string_view text, bool (*named)(std::string_view name), int low, int high);
+    // The places the player puts the game's windows at: a name no window could have and a strip window go too; places
+    // are held to 0 to kMaxWindowOffset.
     std::vector<WindowPlace> WindowPlacesFrom(std::string_view text);
     std::string WindowPlaceText(const std::vector<WindowPlace>& places);
     // The windows the player hides, by short name, from the settings file's "statcom inventor": a name no window
@@ -345,6 +368,11 @@ namespace headsup
     bool FollowsHelpStrip(const WindowKey& key);
     // The title alone.
     bool TitleWindow(const WindowKey& key);
+    // The compass: no window of the game's list, so it can be hidden (LocateCompassShown) and nothing places it.
+    bool CompassWindow(const WindowKey& key);
+    // The RVA of the byte that is the answer of the routine saying whether the zone shows the compass (1, or 0 to
+    // hide it, as HUDBeGone writes); none unless found exactly once.
+    std::optional<uint32_t> LocateCompassShown(const ImageSection& text);
     struct WindowSpot
     {
         int left = 0, top = 0;
@@ -495,6 +523,16 @@ namespace headsup
     constexpr int32_t kWindowTypeConfig = 18;
     // Key 19 is Config > Damage Display: 0 in the log only, 1 popups and the log, 2 popups only.
     constexpr int32_t kDamageDisplayConfig = 19, kDamageInLogOnly = 0;
+
+    // The routine behind <pos> (const char* __cdecl (uint8_t checked), pass 0): "(H-8)", "(?-?)" without a map, or null
+    // with no zone or actor. It calls the floor routine on [zoneMap] without checking it for null.
+    struct PosTextSite
+    {
+        LocateProblem problem = LocateProblem::None;
+        uint32_t entry        = 0; // RVA
+        uint32_t zoneMap      = 0; // the zone map global's address, as the code holds it
+    };
+    PosTextSite LocatePosText(const ImageSection& text);
 
     // Where the client keeps the search server's address (4 bytes as they go on the wire) and its uint16 port, filled
     // in at login from the lobby: the two its search client's setup clears, side by side.

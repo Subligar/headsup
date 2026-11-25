@@ -1,5 +1,7 @@
 #include "tracker.h"
 
+#include "markup.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -81,6 +83,9 @@ namespace headsup
             info.status = a.status;
             info.jobs   = a.jobs;
             info.title  = a.title;
+            // A stranger's are left out while Players' Only Party Members is on.
+            if (a.kind != EntityKind::Player || a.self || a.party || !settings.Kind(PlateKind::Players).statusPartyOnly)
+                info.statuses = a.statuses;
             EntityState& st = info.state;
             st.kind      = a.kind;
             st.self      = a.self;
@@ -158,6 +163,8 @@ namespace headsup
             if (*p >= codeBegin && *p < codeEnd) return FindOwner(p + 1, end, tracker);
         return FindOwner(begin, end, tracker);
     }
+
+    std::string DistanceText(float yalms) { return std::isfinite(yalms) ? "(" + Decimal(yalms, 1) + ")" : std::string(); }
 
     float DistanceFromSquared(float squared)
     {

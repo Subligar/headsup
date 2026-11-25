@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <span>
 #include <unordered_map>
 #include <unordered_set>
@@ -66,6 +67,7 @@ namespace headsup
         std::optional<PlayerJobs> jobs = std::nullopt;
         const char* ownerName          = "";
         uint32_t title                 = 0; // a player's, 0 while unknown
+        StatusList statuses{};              // a player's or mob's
     };
 
     struct ActorInfo
@@ -92,6 +94,7 @@ namespace headsup
         std::optional<PlayerJobs> jobs{};
         char ownerName[32] = {};
         uint32_t title     = 0; // a player's, 0 while unknown
+        StatusList statuses{};
     };
 
     // Whether a mob's claim (IEntity's ClaimStatus: the claimer's whole server ID, and 0 once the claim has ended) is
@@ -138,4 +141,6 @@ namespace headsup
     // Yalms from Ashita's squared entity distance. A NaN stays NaN, so no distance limit passes it; a negative value
     // becomes 0.
     float DistanceFromSquared(float squared);
+    // How far, as the Target widget and the nameplates' $distance say it: "(12.3)"; nothing for a distance not known.
+    std::string DistanceText(float yalms);
 }

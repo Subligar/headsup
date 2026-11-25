@@ -5,6 +5,7 @@
 #include <optional>
 #include <algorithm>
 #include <cstdint>
+#include <cmath>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -1254,4 +1255,122 @@ TEST(a_gm_has_a_plate_whatever_their_row_is_set_to)
         CHECK(HookActionFor(other, s, kPlayer, false, false) != HookAction::Replace);
     }
     CHECK(HookActionFor(staff, s, kPlayer, true, false) == HookAction::Hide); // screenshot mode still hides every name
+}
+
+// "Add a distance tag to the nameplate designer, so you can place the distance to the target on a nameplate like any
+// other tag." It reads as the Target widget's Show Distance does, and the line's conditions still pick its plates.
+TEST(the_distance_tag_shows_how_far_each_entity_is_as_the_target_widget_says_it)
+{
+    Settings s;
+    s.Kind(PlateKind::Mobs).lines[2].text = "$name $distance";
+    ActorInfo mob = AggressiveMob();
+    mob.distance  = 12.34f;
+    CHECK_EQ(Rendered(Compose(mob, s).lines[2]), "Young Quadav (12.3)");
+    CHECK_EQ(DistanceText(mob.distance), "(12.3)"); // the Target widget's, its test says
+    mob.distance = std::nanf("");
+    CHECK_EQ(DistanceText(mob.distance), "");
+    mob.distance = 12.34f;
+    // With Targeted alone, it is on your target's plate only.
+    s.Kind(PlateKind::Mobs).lines[2].show = LineShow{false, ConditionBit(ShowCondition::Targeted)};
+    CHECK_EQ(Compose(mob, s).lines.size(), size_t{2});
+    mob.state.target = TargetState::Targeted;
+    CHECK_EQ(Rendered(Compose(mob, s).lines[2]), "Young Quadav (12.3)");
+}
+
+namespace
+{
+    constexpr uint16_t kSleep = 2, kSleepII = 19, kParalysis = 4, kSlow = 13, kProtect = 40;
+
+    StatusList ListOf(std::initializer_list<uint16_t> ids)
+    {
+        StatusList list;
+        for (const uint16_t id : ids)
+            list.Add(id);
+        return list;
+    }
+    // Each status icon a plate draws, line by line.
+    std::vector<uint16_t> StatusesDrawn(const ComposedPlate& plate)
+    {
+        std::vector<uint16_t> ids;
+        for (const ComposedLine& line : plate.lines)
+            for (const PlateItem& item : line.items)
+                for (const IconDraw& icon : item.icons)
+                    if (icon.status) ids.push_back(*icon.status);
+        return ids;
+    }
+    Settings StatusLines()
+    {
+        Settings s;
+        KindSettings& players  = s.Kind(PlateKind::Players);
+        players.lines[0].text  = "$buffs";
+        players.lines[1].text  = "$debuffs";
+        players.shownStatuses  = {kProtect, kParalysis};
+        return s;
+    }
+}
+
+// John (2026-11-19): "Add separate Buffs and Debuffs tag buttons ... Only statuses that have their star icon filled
+// should be shown."
+TEST(the_status_tags_draw_the_starred_buffs_and_debuffs_each_on_its_side)
+{
+    Settings s      = StatusLines();
+    ActorInfo info  = LinkshellPlayer();
+    info.statuses   = ListOf({kProtect, kParalysis, kSlow});
+    ComposedPlate plate = Compose(info, s);
+    CHECK_EQ(plate.lines.size(), size_t{3});
+    CHECK_EQ(Rendered(plate.lines[0]), "[1]");
+    CHECK_EQ(Rendered(plate.lines[1]), "[1]");
+    CHECK((StatusesDrawn(plate) == std::vector<uint16_t>{kProtect, kParalysis}));
+    CHECK(!plate.lines[0].items[0].icons[0].back);
+    s.Kind(PlateKind::Players).statusBack = true;
+    CHECK(Compose(info, s).lines[0].items[0].icons[0].back);
+    // Unstarred, a line of only debuffs has nothing and is no line.
+    s.Kind(PlateKind::Players).shownStatuses = {kProtect};
+    plate = Compose(info, s);
+    CHECK_EQ(plate.lines.size(), size_t{2});
+    CHECK((StatusesDrawn(plate) == std::vector<uint16_t>{kProtect}));
+}
+
+TEST(a_status_is_starred_by_its_name_and_drawn_once_a_name)
+{
+    Settings s     = StatusLines();
+    s.Kind(PlateKind::Players).shownStatuses = {kSleep};
+    ActorInfo info = LinkshellPlayer();
+    info.statuses  = ListOf({kSleepII});
+    CHECK((StatusesDrawn(Compose(info, s)) == std::vector<uint16_t>{kSleepII}));
+    info.statuses = ListOf({kSleep, kSleepII});
+    CHECK((StatusesDrawn(Compose(info, s)) == std::vector<uint16_t>{kSleep}));
+}
+
+TEST(status_icons_are_not_counted_by_max_icons_and_join_the_other_icons)
+{
+    Settings s             = StatusLines();
+    KindSettings& players  = s.Kind(PlateKind::Players);
+    players.lines[1].text  = "$away$sync$debuffs";
+    players.maxIcons       = 1;
+    PlayerStatus status;
+    status.away = status.levelSync = true;
+    ActorInfo info = PlayerWith(status);
+    info.statuses  = ListOf({kParalysis});
+    const ComposedPlate plate = Compose(info, s);
+    CHECK_EQ(Rendered(plate.lines[0]), "[2]"); // Away and Paralysis, in one run; Level Sync over the limit
+    CHECK(plate.lines[0].items[0].icons[0].icon == Icon::Away);
+    CHECK(plate.lines[0].items[0].icons[1].status == std::optional<uint16_t>(kParalysis));
+}
+
+TEST(a_link_dead_player_or_a_dead_mob_draws_no_status)
+{
+    Settings s = StatusLines();
+    PlayerStatus dropping;
+    dropping.linkDead = true;
+    ActorInfo player  = PlayerWith(dropping);
+    player.statuses   = ListOf({kProtect, kParalysis});
+    CHECK(StatusesDrawn(Compose(player, s)).empty());
+    s.Kind(PlateKind::Mobs).lines[0].text     = "$debuffs";
+    s.Kind(PlateKind::Mobs).shownStatuses     = {kParalysis};
+    ActorInfo mob = AggressiveMob();
+    mob.statuses  = ListOf({kParalysis});
+    CHECK((StatusesDrawn(Compose(mob, s)) == std::vector<uint16_t>{kParalysis}));
+    mob.state.alive = false;
+    CHECK(StatusesDrawn(Compose(mob, s)).empty());
 }

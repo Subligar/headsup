@@ -17,10 +17,14 @@ namespace headsup
         constexpr uint8_t kFirstCityRegion = 19, kLastCityRegion = 21;
         constexpr std::array<int32_t, 8> kDelivery{16, 0, 0, 0, 1, 0, 0, 255}; // 'you have brought us supplies!'
 
+        constexpr uint8_t kTuLiaRegion = 16, kMovalpolosRegion = 17;
+
         size_t SlotOf(Nation nation) { return static_cast<size_t>(nation) - static_cast<size_t>(Nation::SanDoria); }
         bool IsNation(Nation n) { return n == Nation::SanDoria || n == Nation::Bastok || n == Nation::Windurst; }
         uint32_t BitOf(uint8_t region) { return 1u << (region + kFirstRunBit); }
     }
+
+    bool HasSupplyRun(uint8_t region) { return region < kConquestRegionCount && region != kTuLiaRegion && region != kMovalpolosRegion; }
 
     std::optional<GuardEvent> ParseGuardEvent(const uint8_t* data, uint32_t size)
     {

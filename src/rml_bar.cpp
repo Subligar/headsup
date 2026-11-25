@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <utility>
 
 namespace headsup
@@ -168,7 +169,7 @@ namespace headsup
     const RmlBar::Rows& RmlBar::RowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, float fontRatio, int helpText,
         const char* titleFont, const char* detailFont)
     {
-        return m_Rows.Get(LinesKey{m.height, shape, fontRatio, m.lineSeparation, titleFont, detailFont, helpText},
+        return m_Rows.Get(LinesKey{m.height, shape, m.title, fontRatio, m.lineSeparation, titleFont, detailFont, helpText},
             [&](const LinesKey&) { return MakeRows(host, m, titleFont, detailFont, helpText); });
     }
 
@@ -200,7 +201,7 @@ namespace headsup
     const RmlBar::Rows& RmlBar::OwnRowsFor(RmlHost& host, const BarMetrics& m, BarShape shape, float fontRatio,
         const char* titleFont, const char* detailFont)
     {
-        const LinesKey key{m.height, shape, fontRatio, m.lineSeparation, titleFont, detailFont};
+        const LinesKey key{m.height, shape, m.title, fontRatio, m.lineSeparation, titleFont, detailFont};
         for (const auto& [known, rows] : m_OwnRows)
             if (known == key) return rows;
         for (auto& [known, rows] : m_OwnRowsBefore)
@@ -595,12 +596,14 @@ namespace headsup
         popup.preview  = preview;
         const BarPalette& p = look.palette;
         const BarMetrics& m = look.metrics;
+        // The look it is laid out in: its own, or smaller to fit across the screen.
+        BarLook sized = look;
         // Figures measured at the font's widest digit, so a popup does not change its width as its times tick.
         auto measure = [&](const Span& s, PopupFont f) {
-            const TextFace face  = look.FaceOf(f);
+            const TextFace face  = sized.FaceOf(f);
             const FaceLine& line = FaceLineOf(host, face.family, WholePixels(face.size));
-            const auto [width, fresh] =
-                popup.widths[static_cast<size_t>(f)].try_emplace(SteadyFigures(s.text, WidestDigitOf(host, face)));
+            auto& widths         = popup.widths[sized.metrics.popupText][static_cast<size_t>(f)];
+            const auto [width, fresh] = widths.try_emplace(SteadyFigures(s.text, WidestDigitOf(host, face)));
             if (fresh) width->second = Width(host, width->first, face);
             return TextSize{width->second, line.height, line.inkTop, line.inkBottom, 0.0f};
         };
@@ -615,17 +618,24 @@ namespace headsup
         std::optional<SettingsRoom> room = settings ? std::optional(settingsRoom.value_or(SettingsRoom{})) : std::nullopt;
         // The preview goes on the side of the popup with more of the screen: toward its middle, from the widget.
         if (preview == SettingsPreview::Cards) room->cardsLeft = anchor->x + anchor->width / 2.0f > screenWidth / 2.0f;
+        // Inside the clear space PlacePopup keeps either side; a popup with settings keeps their width.
+        const float across = settings ? std::numeric_limits<float>::infinity() : screenWidth - 2.0f * (m.gap + out);
         PopupKey key{preview == SettingsPreview::Cards ? PreviewPopupContent(open, state, look.settings)
                                                        : PanelPopupContent(open, state, look.settings),
             pinned, m.height, m.popupText,
-            PopupRoom(barBottom, screenHeight, m.gap, out), popup.widest, room};
-        bool fresh            = false;
-        const PopupLayout& pl = popup.layout.Get(std::move(key), [&](const PopupKey& k) {
+            PopupRoom(barBottom, screenHeight, m.gap, out), std::min(popup.widest, across), room, across};
+        bool fresh                = false;
+        const FittedPopup& fitted = popup.layout.Get(std::move(key), [&](const PopupKey& k) {
             fresh           = true;
-            PopupLayout cut = LayoutPopup(k.content, m, k.pinned, measure, k.room, k.least, k.settings);
-            CutPopup(cut, k.room, m.popupPadding);
-            return cut;
+            FittedPopup fit = FitPopupAcross(m, k.across, [&](const BarMetrics& at) {
+                sized.metrics = at;
+                return LayoutPopup(k.content, at, k.pinned, measure, k.room, k.least, k.settings);
+            });
+            CutPopup(fit.layout, k.room, fit.metrics.popupPadding);
+            return fit;
         });
+        const PopupLayout& pl = fitted.layout;
+        sized.metrics         = fitted.metrics;
         popup.widest = std::max(popup.widest, pl.width);
         const BarRect under = PlacePopup(*anchor, barBottom, pl.width, pl.height, screenWidth, screenHeight, m.gap, out);
         // Placed by a drag or a spot, it opens under its widget again once that is reset.
@@ -634,7 +644,7 @@ namespace headsup
         const BarRect rect = PopupAt(under, pl.height, placed, screenWidth, screenHeight, BarBottom(p, m) + out, out, popup.keptX);
         if (fresh || !popup.marked)
         {
-            popup.element->SetInnerRML(PopupRml(pl, look, FacesOf(host, look)));
+            popup.element->SetInnerRML(PopupRml(pl, sized, FacesOf(host, sized)));
             popup.marked = true;
         }
         Set(popup.element, Rml::PropertyId::Left, popup.left, std::round(rect.x));

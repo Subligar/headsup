@@ -50,13 +50,15 @@ namespace headsup
         World,
         Settings, // the cog alone, which opens the settings window: no popup, settings or copies
         HomePoint, // the zone your home point is in: no popup
+        PhTimers,  // the placeholder and NM respawn timers shown over your name: no popup
+        Dps,       // your party's damage per second
         Custom,   // the widgets the player creates, each a copy, shown only once made: any widget's parts and cards
     };
     constexpr int kBarWidgetCount = static_cast<int>(BarWidget::Custom) + 1;
     // Which widgets a new settings file shows, by BarWidget. to_array takes its size from the list, so a widget added
     // to BarWidget without a default here fails the assert.
     constexpr auto kBarWidgetDefaults =
-        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false, false, false, false});
+        std::to_array<bool>({true, true, true, true, true, true, true, true, true, false, false, false, false, false, false, false, false});
     static_assert(kBarWidgetDefaults.size() == kBarWidgetCount);
 
     // What the Performance widget shows on the panel, a bit each, in this order on its line.
@@ -171,6 +173,8 @@ namespace headsup
     // kFontRatioStepBelow under it and kFontRatioStepAbove over it.
     constexpr float kMinFontRatio = 0.2f, kMaxFontRatio = 2.0f, kDefaultFontRatio = 1.2f;
     constexpr int kFontRatioSteps = 20; // a side
+    // A widget's own Font Size, pixels: about the sizes the panel's least and greatest heights give.
+    constexpr int kMinWidgetFontSize = 8, kMaxWidgetFontSize = 26;
     constexpr float kFontRatioStepBelow = (1.0f - kMinFontRatio) / kFontRatioSteps;
     constexpr float kFontRatioStepAbove = (kMaxFontRatio - 1.0f) / kFontRatioSteps;
     // Its slider's positions, 0 to 2 * kFontRatioSteps: the ratio at one, and the nearest to a ratio.

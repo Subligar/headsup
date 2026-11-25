@@ -21,11 +21,9 @@ namespace headsup
     };
     bool IsInvite(NoticeKind kind);
 
-    constexpr float kInviteSeconds     = 90.0f; // the time the server gives you to answer an invite
-    constexpr float kNoticeFadeSeconds = 0.5f;  // after its time is up
-    constexpr int kNoticeSampleCount   = 3;     // the page's test notices: online, offline, invite
-    // A real invite and a test one are not counted in Max Notifications.
-    constexpr int kNoticeBoxes            = kMaxNoticeMost + 2 + kNoticeSampleCount;
+    constexpr float kInviteSeconds = 90.0f; // the time the server gives you to answer an invite
+    // Max Notifications counts the invites and the page's test notices too.
+    constexpr int kNoticeBoxes            = kMaxNoticeMost;
     constexpr float kNoticeGap = 10.0f, kNoticeBarHeight = 4.0f;
     constexpr float kMinNoticeText        = 6.0f; // pixels: Shrink goes no smaller
     constexpr float kNoticeSlidePerSecond = 8.0f, kNoticeSlideSnap = 0.5f;
@@ -35,8 +33,8 @@ namespace headsup
     constexpr const char* kFriendSampleName = "Test Friend", *kInviteSampleName = "Test Leader";
     constexpr const char* kDeclineWord = "Decline", *kAcceptWord = "Accept";
 
-    // 1 until its time is up, then down to 0 over kNoticeFadeSeconds.
-    float NoticeOpacity(float age, float life);
+    // 1 until its time is up, then down to 0 over fade seconds; with no fade, 0 the moment it is up.
+    float NoticeOpacity(float age, float life, float fade);
     // 1 down to 0 over its life.
     float NoticeBarShare(float age, float life);
 
@@ -47,6 +45,7 @@ namespace headsup
         std::string name;
         float opacity = 1.0f, share = 1.0f;
         bool buttons = false; // an invite's Decline and Accept
+        std::string aka{};    // a friend on an alt: the name they are on your friend list by
     };
 
     class NoticeStack
@@ -54,11 +53,12 @@ namespace headsup
     public:
         // test: the page's Test made it. An invite takes the place of the invite held of its own sort (real or
         // test), so a Test never costs you a real invite. Its id.
-        uint32_t Add(NoticeKind kind, std::string name, bool test = false);
-        // seconds: the frame's. held: the pointer is over a notification, which stops every clock but a real
-        // invite's. life: Duration, which a real invite swaps for kInviteSeconds. most: Max Notifications, the
-        // invites apart. buttons: Show Buttons. The real invite first, then a test one, then the rest oldest first.
-        std::vector<ShownNotice> Shown(float seconds, bool held, float life, int most, bool buttons);
+        uint32_t Add(NoticeKind kind, std::string name, bool test = false, std::string aka = {});
+        // seconds: the frame's. held: the pointer is over a notification, which stops the friends' clocks; an
+        // invite's runs on for kInviteSeconds, whatever Duration (life) says. fade: Fade Speed. most: Max
+        // Notifications, the invites counted: friends' go oldest first to make room, and a test invite before a
+        // real one. buttons: Show Buttons. The real invite first, then a test one, then the rest oldest first.
+        std::vector<ShownNotice> Shown(float seconds, bool held, float life, float fade, int most, bool buttons);
         // This one goes now. True when it was a real invite, which the game is then to answer.
         bool Close(uint32_t id);
         // The real invite goes: it was answered, or you zoned or signed off.
@@ -70,6 +70,7 @@ namespace headsup
             uint32_t id;
             NoticeKind kind;
             std::string name;
+            std::string aka;
             float age = 0.0f;
         };
         std::optional<Notice> m_Invite, m_TestInvite;
@@ -130,8 +131,13 @@ namespace headsup
     };
 
     // The page's test notices: one of each kind that is on (Show Online, Show Offline, Show Invites as a party
-    // invite), an online one when none is.
-    std::vector<ShownNotice> NoticeSamples(const Settings& settings);
+    // invite), an online one when none is; the first room of them, the room Max Notifications leaves.
+    std::vector<ShownNotice> NoticeSamples(const Settings& settings, int room);
+    // Invite Position: the invites moved to the start of the stack's order or its end, the rest kept in theirs.
+    void PlaceInvites(std::vector<ShownNotice>& shown, const Settings& settings);
+    // The frame's notices: the stack's shown, then on the Notifications page (page) the samples in the room Max
+    // Notifications leaves, the invites among them all put by Invite Position.
+    std::vector<ShownNotice> NoticesToShow(std::vector<ShownNotice> shown, const Settings& settings, bool page);
     // The Notifications card's Test: of the kinds that are on, in the enum's order, the one at the seed's remainder
     // by their count; nothing when none is.
     std::optional<NoticeKind> TestKind(uint32_t seed, const Settings& settings);
@@ -140,6 +146,7 @@ namespace headsup
     int NoticeVolumeOf(const Settings& settings, NoticeKind kind);
 
     uint32_t NoticeColor(NoticeKind kind);
-    const char* NoticeTitle(NoticeKind kind);
-    std::string NoticeMessage(NoticeKind kind, std::string_view name);
+    // A friend's heading says who logged in or out; the line under it is only for an alt (aka).
+    std::string NoticeTitle(NoticeKind kind, std::string_view name);
+    std::string NoticeMessage(NoticeKind kind, std::string_view name, std::string_view aka);
 }

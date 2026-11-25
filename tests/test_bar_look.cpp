@@ -111,7 +111,8 @@ TEST(a_widgets_text_starts_after_its_icons_and_coin_each_with_a_gap)
     WidgetContent weather;
     weather.icons = {Icon::Lightning, Icon::Lightning};
     CHECK(Near(look.Leading(weather), 2.0f * (0.85f * 34.0f + 7.65f))); // icons 85% of the pill's 34 px inside, gaps 0.17 H
-    CHECK(Near(look.Leading(WidgetContent{}), 0.0f));
+    // An empty widget keeps one icon's room, as the Settings widget's cog alone, so it still draws a box.
+    CHECK(Near(look.Leading(WidgetContent{}), 0.85f * 34.0f));
     // Gil's picture has an icon's room, as every icon.
     WidgetContent gil;
     gil.icons = {Icon::Gil};
@@ -198,6 +199,24 @@ TEST(uniform_font_size_puts_both_lines_at_one_size_whatever_the_ratio)
     own.uniformFont = true;
     const BarMetrics uniform = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
     CHECK(Near(uniform.subtitle, uniform.title) && Near(uniform.title, apart.title));
+}
+
+TEST(a_widgets_font_size_sets_its_main_line_and_the_ratio_sizes_its_second_against_it)
+{
+    Settings s;
+    s.barHeight    = 40;
+    s.barFontRatio = 1.6f;
+    WidgetOptions own;
+    // Unchanged is the size the panel's height gives: 40% of 40 px.
+    CHECK(Near(MetricsOf(s, BarShape::Pills, BarWidget::Zone, own).title, 16.0f));
+    own.fontSize = 12;
+    const BarMetrics sized = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
+    CHECK(Near(sized.title, 12.0f) && Near(sized.subtitle, 12.0f / 1.6f));
+    own.fontRatio = 0.5f;
+    CHECK(Near(MetricsOf(s, BarShape::Pills, BarWidget::Zone, own).subtitle, 24.0f));
+    own.uniformFont = true;
+    const BarMetrics uniform = MetricsOf(s, BarShape::Pills, BarWidget::Zone, own);
+    CHECK(Near(uniform.title, 12.0f) && Near(uniform.subtitle, 12.0f));
 }
 
 TEST(home_point_and_status_timers_set_their_lines_closer_and_the_timers_draw_their_icons_larger)

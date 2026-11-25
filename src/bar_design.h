@@ -17,7 +17,7 @@ namespace headsup
     // What a widget can show on the panel, each part on its own button in the Widget Designer.
     enum class WidgetPart : uint8_t
     {
-        ZoneName, ZoneRegion, ZoneCrest, ZoneNation,
+        ZoneName, ZoneRegion, ZoneCrest, ZoneNation, ZoneCoordinates,
         WeatherIcon, WeatherName, VanaDate, VanaDay, VanaTime, VanaMoon, VanaSeason,
         TargetAggro, TargetName, TargetDistance, TargetDetection, TargetLevel, TargetPlayer, TargetWeak,
         CurrencyCoin, Currency1Name, Currency2Name, Currency1Amount, Currency2Amount, Currency1Icon, Currency2Icon,
@@ -25,10 +25,11 @@ namespace headsup
         ClockTime, ClockServer, ClockVana, ClockIcon, ClockDate,
         JobJobs, JobEarned, JobToNext, JobPercent, JobBar,
         PerfFps, PerfSent, PerfReceived, PerfPercent, PerfMemory, PerfMessages,
-        PartyCount, PartyHealth,
+        PartyCount, PartyHealth, PartyIcon,
         StatusPin1, StatusPin2, StatusPin3, StatusPin4, StatusPin5, StatusPin6,
         WorldShip, WorldGuild, WorldSanDoria, WorldBastok, WorldWindurst, WorldBeastmen,
         HomePointName, HomePointIcon,
+        DpsYou, DpsParty,
         CustomName, // a created widget's Name
     };
     constexpr int kWidgetPartCount = static_cast<int>(WidgetPart::CustomName) + 1;
@@ -41,6 +42,8 @@ namespace headsup
         bool on = true;
         bool operator==(const DesignChip&) const = default;
     };
+    // Whether a chip shows when there is something for it: a Pinned Status button's switch only mirrors the pins.
+    constexpr bool ChipOn(const DesignChip& chip) { return chip.on || IsPinnedStatus(chip.part); }
     constexpr int kDesignLines = 2;
     constexpr char kDesignLineBreak = '|'; // between a design's lines, and a pop-out's rows, in the settings file
     // A widget's two lines, each its parts in order, shown or not. Every part of its widget is on one line once.
@@ -52,8 +55,8 @@ namespace headsup
 
     // None for the game's help; for a created widget every part of every widget, icons too, and its own Name.
     std::span<const WidgetPart> PartsOf(BarWidget kind);
-    // A widget whose parts its Widget Designer arranges and its settings file keeps: Home Point's name is always on,
-    // so it has none.
+    // A widget whose parts its Widget Designer arranges and its settings file keeps: Home Point's name and the DPS
+    // widget's two lines are always on, so they have none.
     bool HasDesigner(BarWidget kind);
     // The widget whose part it is: its icon's too, and the created widget's for its Name.
     BarWidget WidgetOfPart(WidgetPart part);
@@ -74,18 +77,15 @@ namespace headsup
     // A part the design lacks, on, in line before the part at at, or at its end. False when the design holds it.
     bool PutPart(WidgetDesign& design, WidgetPart part, int line, size_t at);
     bool HoldsPart(const WidgetDesign& design, WidgetPart part);
-    // The part out of the design. False, and nothing changed, when it is not there, or is the last part on and not
-    // pillShows (as TurnOff).
-    bool TakePart(WidgetDesign& design, WidgetPart part, bool pillShows);
-    // The first part on when none is, for a widget with parts.
-    void TurnOnFirst(WidgetDesign& design);
+    // The part out of the design. False when it is not there.
+    bool TakePart(WidgetDesign& design, WidgetPart part);
     bool PartOn(const WidgetDesign& design, WidgetPart part);
     bool AnyPartOn(const WidgetDesign& design);
     // The part at from on fromLine moved to toLine before the part at at (counted before the move), or to its end.
     // False when nothing moved.
     bool MovePart(WidgetDesign& design, int fromLine, size_t from, int toLine, size_t at);
-    // False, and nothing changed, for the last part on, unless pillShows: another widget of its pill has a part on.
-    bool TurnOff(WidgetDesign& design, WidgetPart part, bool pillShows);
+    // False when the design holds no such part on.
+    bool TurnOff(WidgetDesign& design, WidgetPart part);
 
     // The Status Timers' two lines of status ids: every status ever pinned, where it was last put; the pinned show.
     using StatusDesign = std::array<std::vector<uint16_t>, kDesignLines>;

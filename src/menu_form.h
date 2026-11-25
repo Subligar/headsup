@@ -8,6 +8,7 @@
 #include "setup.h"
 #include "window_skin.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -47,7 +48,6 @@ namespace headsup
         const std::string* lastReport = nullptr; // the file the last report went to, empty before one
         const std::string* logFile    = nullptr; // the file notes go to, empty before one
         bool exportable = false; // a developer's build, which can write its built-in layout out as a file
-        bool popupTestReady = false; // the game's code that starts a combat popup was found
         const std::vector<FriendEntry>* friends = nullptr; // the game's friend list, as last read
         const FriendsIncluded* included         = nullptr;
         std::optional<NoticeRect> noticeBounds;         // the notifications as last drawn, which an anchor change keeps put
@@ -102,8 +102,6 @@ namespace headsup
         // A widget whose settings the panel's popup is to show, or stop showing when it shows them: a chip clicked in
         // the Layout, a clone made, a copy removed. Once, for the plugin.
         std::optional<PanelWidget> settingsAsked;
-        // A widget whose designer was asked to switch off its last part: it says why under its lines.
-        std::optional<PanelWidget> partRefused;
         // A widget whose Pop-out Designer was asked to put a card in a full row: it says why under its rows.
         std::optional<PanelWidget> popupRefused;
         EditSide editSide = EditSide::Widget; // one pick for every created widget's settings
@@ -112,9 +110,7 @@ namespace headsup
         bool confirmReset  = false; // the reset button was pressed once and asks for a second press
         bool debugRequested = false;
         bool caseMoveRequested = false, caseTestRequested = false; // pressed: the plugin shows the boxes, or plays one
-        bool popupTestRequested = false; // the Combat Popups card's Test: the plugin starts its samples
         bool noticeTestRequested       = false; // the Notifications card's Test: a kind at random
-        bool friendNoticeTestRequested = false; // Friend Notifications' Test: a friend comes online, or goes offline
         std::optional<NoticeKind> soundPicked;  // a Sound Effect was picked: the plugin plays it
         std::optional<FriendsIncluded> includedAsked; // Friends Included as clicked, which is no setting: the plugin keeps it
         bool watchRequested = false; // the debug watch is to start, or stop
@@ -147,12 +143,26 @@ namespace headsup
         FeedbackDraft feedback;
         FeedbackStatus feedbackStatus = FeedbackStatus::None;
         bool feedbackRequested = false; // Send Feedback was pressed with the form filled: the plugin is to send it, once
+        // The Buffs & Debuffs card's buffs and debuffs, starred first as the page they were made for opened, so a star
+        // clicked moves nothing until it opens again; and their rows' markup, made again only when what it shows
+        // changes, as some 600 rows cost a frame a millisecond or more.
+        struct StatusLists
+        {
+            std::optional<PlateKind> kind;
+            std::array<std::vector<uint16_t>, 2> order;
+            std::array<std::string, 2> rows;
+            std::vector<uint16_t> rowsShown;
+            bool rowsBack = false;
+            int rowsPack  = 0;
+            std::string rowsIds; // the stars' ids' start
+        } statusLists;
 
         // What a page was in the middle of is dropped when it is left, by another page or by the window closing: a
         // row waiting for a key would take one pressed for the game, and a reset asked once would wait armed.
         void Leave()
         {
             form.popup.clear();
+            statusLists = {};
             confirmReset   = false;
             keyCapture     = {};
             shotKeyCapture = {};

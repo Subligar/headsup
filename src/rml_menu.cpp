@@ -202,10 +202,9 @@ namespace headsup
     bool RmlMenu::TakeDebugRequest() { return std::exchange(m_State.debugRequested, false); }
     bool RmlMenu::TakeCaseMove() { return std::exchange(m_State.caseMoveRequested, false); }
     bool RmlMenu::TakeCaseTest() { return std::exchange(m_State.caseTestRequested, false); }
-    bool RmlMenu::TakePopupTest() { return std::exchange(m_State.popupTestRequested, false); }
+    bool RmlMenu::DamageNumbersPageOpen() const { return open && !InSetup() && m_State.page == Page::DamageNumbers; }
     bool RmlMenu::TakeNoticeTest() { return std::exchange(m_State.noticeTestRequested, false); }
     bool RmlMenu::NoticesPageOpen() const { return open && !InSetup() && m_State.page == Page::Notifications; }
-    bool RmlMenu::TakeFriendNoticeTest() { return std::exchange(m_State.friendNoticeTestRequested, false); }
     std::optional<NoticeKind> RmlMenu::TakeSoundPicked() { return std::exchange(m_State.soundPicked, std::nullopt); }
     std::optional<FriendsIncluded> RmlMenu::TakeIncludedAsked() { return std::exchange(m_State.includedAsked, std::nullopt); }
     bool RmlMenu::TakeSetupBackup() { return std::exchange(m_State.setupBackup, false); }
@@ -289,15 +288,20 @@ namespace headsup
         }
     }
 
-    bool RmlMenu::Document(const MenuHost& host, const Settings& settings)
+    MenuLook MenuLookFor(const MenuHost& host, const Settings& settings)
     {
         const GameSkinLook* skin = host.skin ? &*host.skin : nullptr;
         const MenuTheme theme    = MenuThemeFor(settings, skin);
-        MenuLook look{theme, host.textFont, kMarcellusSC, settings.menuFontSize, m_Look.textLift, host.developer,
-            MenuColorsFor(settings, skin), theme == MenuTheme::GameWindow ? std::optional(FrameAsSet(settings, skin->frame)) : std::nullopt,
+        return MenuLook{theme, host.textFont, kMarcellusSC, settings.menuFontSize, LiftOf(host.textFont, settings.menuFontSize),
+            host.developer, MenuColorsFor(settings, skin),
+            theme == MenuTheme::GameWindow ? std::optional(FrameAsSet(settings, skin->frame)) : std::nullopt,
             OwnPalette(settings).windowRounding != kShapeRounding ? std::optional(OwnPalette(settings).windowRounding) : std::nullopt};
+    }
+
+    bool RmlMenu::Document(const MenuHost& host, const Settings& settings)
+    {
+        MenuLook look = MenuLookFor(host, settings);
         if (m_Document != nullptr && look == m_Look) return true;
-        look.textLift = LiftOf(host.textFont, settings.menuFontSize);
         if (m_Document != nullptr && look.SameFrame(m_Look))
         {
             m_Document->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(MenuStyle(look)));
@@ -335,6 +339,7 @@ namespace headsup
             for (const Rml::EventId id : {Rml::EventId::Focus, Rml::EventId::Blur, Rml::EventId::Keydown})
                 document->AddEventListener(id, this, true);
         }
+        m_Document->AddEventListener(Rml::EventId::Mousedown, this, true);
         return m_Sidebar != nullptr && m_Page != nullptr && m_PageTitle != nullptr && m_PageSwitch != nullptr && m_Popup != nullptr && m_Tip != nullptr &&
                m_ViewBody != nullptr && m_ViewPopup != nullptr && m_ViewTip != nullptr;
     }
@@ -515,17 +520,28 @@ namespace headsup
     void RmlMenu::ShowTip(Rml::Element* under, float x, float y)
     {
         Rml::ElementDocument* document = under != nullptr ? under->GetOwnerDocument() : nullptr;
+        // A tray chip's lines take no pointer, so the chip gets every press: pointer-events on its SENDS PACKETS mark lost
+        // the chip's click on a press at the mark's edge. The mark's tip is found by where the pointer is instead.
+        if (under != nullptr && under->IsClassSet(kTrayChipClass))
+        {
+            Rml::ElementList marks;
+            under->GetElementsByClassName(marks, kSendsPacketsClass);
+            for (Rml::Element* mark : marks)
+                if (mark->IsPointWithinElement(Rml::Vector2f(x, y))) under = mark;
+        }
         while (under != nullptr && !under->HasAttribute(kMenuTipAttribute))
             under = under->GetParentNode();
-        const std::string text = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipAttribute, "") : std::string();
+        const std::string text  = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipAttribute, "") : std::string();
+        const std::string title = under != nullptr ? under->GetAttribute<Rml::String>(kMenuTipTitleAttribute, "") : std::string();
         Rml::Element* tip = document == m_View ? m_ViewTip : m_Tip;
         m_Tip->SetClass(kHiddenClass, text.empty() || tip != m_Tip);
         m_ViewTip->SetClass(kHiddenClass, text.empty() || tip != m_ViewTip);
         if (text.empty()) return;
-        if (text != m_TipShown || tip != m_TipIn)
+        if (title + text != m_TipShown || tip != m_TipIn)
         {
-            tip->SetInnerRML(EscapedRml(text));
-            m_TipShown = text;
+            tip->SetInnerRML((title.empty() ? std::string() : std::string("<div class=\"") + kTipTitleClass + "\"><span class=\"" +
+                                 kSendsPacketsClass + "\">!</span>" + EscapedRml(title) + "</div>") + EscapedRml(text));
+            m_TipShown = title + text;
             m_TipIn    = tip;
         }
         // From the pointer toward the document's middle: there it has room whichever edge the pointer is near, and it
@@ -662,6 +678,7 @@ namespace headsup
         const std::string id = named != nullptr ? named->GetId() : std::string();
         switch (event.GetId())
         {
+        case Rml::EventId::Mousedown: m_Document->PullToFront(); break;
         case Rml::EventId::Click:
             if (id == kMenuCloseId) m_Closed = true;
             m_Reload |= id == kMenuReloadId;
@@ -895,6 +912,7 @@ namespace headsup
         if (!m_Visible)
         {
             m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::Auto);
+            m_Document->PullToFront();
             // RmlUi applies an animation once its clock has passed the start, so the frame that sets one draws the
             // window whole: hidden that frame, it comes in already fading.
             m_Document->SetClass("open", true);
@@ -978,14 +996,9 @@ namespace headsup
             const Rml::Vector2i screen = host.context->GetDimensions();
             if (settings.menuWidth > 0 && settings.menuHeight > 0)
             {
-                // As the title's handle keeps it: a place from a larger screen comes back with the same share on.
-                const auto kept = [](int at, int side, int screenSide) {
-                    const int on = static_cast<int>(std::lround(static_cast<float>(side) * kWindowKeptOn));
-                    return std::clamp(at, on - side, std::max(on - side, screenSide - on));
-                };
-                SetPx(m_Document, Rml::PropertyId::Left, static_cast<float>(kept(settings.menuX, settings.menuWidth, screen.x)));
-                SetPx(m_Document, Rml::PropertyId::Top,
-                    static_cast<float>(std::clamp(kept(settings.menuY, settings.menuHeight, screen.y), 0, std::max(0, screen.y))));
+                const auto [x, y] = KeptOnScreen(settings.menuX, settings.menuY, settings.menuWidth, settings.menuHeight, screen.x, screen.y);
+                SetPx(m_Document, Rml::PropertyId::Left, static_cast<float>(x));
+                SetPx(m_Document, Rml::PropertyId::Top, static_cast<float>(y));
                 SetPx(m_Document, Rml::PropertyId::Width, static_cast<float>(settings.menuWidth));
                 SetPx(m_Document, Rml::PropertyId::Height, static_cast<float>(settings.menuHeight));
             }

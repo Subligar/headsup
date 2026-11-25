@@ -69,6 +69,16 @@ namespace headsup
             0x53, 0x8B, 0x5C, 0x24, 0x0C, 0x85, 0xC9, 0x74, 0x0C, 0x53, 0xE8, -1, -1, -1, -1, 0x8B, 0x0D, -1, -1, -1, -1, 0x38, 0x5E,
             static_cast<int16_t>(kPointerShownOffset)};
         constexpr uint8_t kModRmRegister = 3, kRegisterBits = 7;
+        // Ashita's poll: call [ScreenToClient]; test eax,eax; je; movd xmm2,[ebp-y]; movd xmm1,[ebp-x]; mov ecx,[ebp-io];
+        // cvtdq2ps xmm2,xmm2; cvtdq2ps xmm1,xmm1; call AddMousePosEvent, 29 bytes in.
+        constexpr int16_t kImGuiPoll[] = {0xFF, 0x15, -1, -1, -1, -1, 0x85, 0xC0, 0x74, -1, 0x66, 0x0F, 0x6E, 0x55, -1, 0x66, 0x0F,
+            0x6E, 0x4D, -1, 0x8B, 0x4D, -1, 0x0F, 0x5B, 0xD2, 0x0F, 0x5B, 0xC9, 0xE8};
+        constexpr uint32_t kImGuiPollCall = 29;
+        // The press's point: movd xmm0,[ebp-x]; lea ecx,[ebp-p]; cvtdq2ps xmm0,xmm0; movss [ebp-p],xmm0; and the same for
+        // y into [ebp-p+4]; then the hover update, 29 bytes in.
+        constexpr int16_t kImGuiPressHover[] = {0x66, 0x0F, 0x6E, 0x45, -1, 0x8D, 0x4D, -1, 0x0F, 0x5B, 0xC0, 0xF3, 0x0F, 0x11,
+            0x45, -1, 0x66, 0x0F, 0x6E, 0x45, -1, 0x0F, 0x5B, 0xC0, 0xF3, 0x0F, 0x11, 0x45, -1, 0xE8};
+        constexpr uint32_t kImGuiHoverCall = 29;
 
         // The draw loop: mov ecx,esi; call the window draw; mov eax,[esp+0Ch]; test eax,eax; jnz next; inc bl;
         // cmp bl,9; jl the next layer.
@@ -101,6 +111,12 @@ namespace headsup
             0x8B, 0x4A, 0x08, 0xE8, -1, -1, -1, -1, 0x8B, 0x4C, 0x24, 0x0A, 0x8B, 0x54, 0x24, 0x04, 0x8D, 0x44, 0x24, 0x10,
             0x68, 0x80, 0x80, 0x80, 0x80, 0x83, 0xC1, 0x03};
         constexpr uint32_t kScanLabelCall = 17;
+        // The routine that says whether the zone shows the compass, from its zone test to its `mov al,1; ret`. The
+        // answer is a wildcard: another tool (HUDBeGone) may already have written 0 there.
+        constexpr int16_t kCompassShown[] = {0x33, 0xC0, 0x66, 0x8B, 0x81, -1, -1, -1, -1, 0x48, 0x3D, 0xE3, 0x00, 0x00,
+            0x00, 0x77, 0x12, 0x33, 0xC9, 0x8A, 0x88, -1, -1, -1, -1, 0xFF, 0x24, 0x8D, -1, -1, -1, -1, 0x32, 0xC0, 0xC3,
+            0xB0, -1, 0xC3};
+        constexpr uint32_t kCompassShownAnswer = 0x24;
         constexpr int16_t kStripCount[] = {0xA1, -1, -1, -1, -1, 0x83, 0xEC, 0x2C, 0x53, 0x33, 0xDB, 0x56, 0x3B, 0xC3, 0x57,
             0x0F, 0x84, -1, -1, -1, -1, 0x39, 0x58, 0x08, 0x0F, 0x84, -1, -1, -1, -1, 0x8D, 0x4C, 0x24, 0x0C, 0x66, 0x89,
             0x5C, 0x24, 0x0C, 0x66, 0x89, 0x5C, 0x24, 0x0E, 0x66, 0x89, 0x5C, 0x24, 0x10, 0x66, 0x89, 0x5C, 0x24, 0x12, 0x51,
@@ -189,6 +205,7 @@ namespace headsup
         constexpr char kNetstatWindow[]      = "menu    netstat "; // the space is part of its name
         constexpr char kAuctionListWindow[]  = "menu    auclist ";
         constexpr char kCommandsWindow[]     = "menu    menuwind";
+        constexpr char kCompassWindow[]      = "menu    compass "; // the space is part of its name
 
         // The menu catalog's records: two dwords, the window's name, and kCatalogSlot in, its owner's slot.
         constexpr int16_t kHelpRecord[]  = {0x2B, 0x00, 0x01, 0x00, 0x35, 0x07, 0x00, 0x00, 'm', 'e', 'n', 'u', ' ', ' ',
@@ -225,6 +242,12 @@ namespace headsup
         // mov ecx,[config]; test ecx,ecx; jz; mov eax,[esp+4]; push eax; call get; ret; or eax,-1; ret.
         constexpr int16_t kConfigGet[] = {0x8B, 0x0D, -1, -1, -1, -1, 0x85, 0xC9, 0x74, -1, 0x8B, 0x44, 0x24, 0x04, 0x50,
             0xE8, -1, -1, -1, -1, 0xC3, 0x83, 0xC8, 0xFF, 0xC3};
+        // mov esi,[esp+14]; mov eax,[esp+10]; mov edi,[esp+C]; mov ecx,[zoneMap]; push esi; push eax; push edi; call floor.
+        constexpr int16_t kPosTextCall[] = {0x8B, 0x74, 0x24, 0x14, 0x8B, 0x44, 0x24, 0x10, 0x8B, 0x7C, 0x24, 0x0C, 0x8B,
+            0x0D, -1, -1, -1, -1, 0x56, 0x50, 0x57, 0xE8};
+        constexpr uint32_t kPosTextGlobal = 0x0E, kPosTextCallAt = 0x86;
+        // mov eax,[zone]; sub esp,14h; test eax,eax; jz.
+        constexpr int16_t kPosTextEntry[] = {0xA1, -1, -1, -1, -1, 0x83, 0xEC, 0x14, 0x85, 0xC0, 0x0F, 0x84};
         constexpr size_t kCounterLoads        = 2;
         constexpr int16_t kMailGet[]          = {0xA1, -1, -1, -1, -1, 0x85, 0xC0, 0x74, 0x05, 0x66, 0x8B, 0x40, 0x0E, 0xC3};
         constexpr int16_t kMessagesGet[]      = {0xA1, -1, -1, -1, -1, 0x85, 0xC0, 0x74, 0x06, 0x66, 0x8B, 0x40, 0x0A, 0xEB, 0x02,
@@ -289,7 +312,9 @@ namespace headsup
         // actor and are not compared: xirml puts its jump over them.
         constexpr uint8_t kEntityWrapperPass[] = {0x8B, 0x44, 0x24, 0x14, 0x8B, 0x4C, 0x24, 0x10, 0x8B, 0x54, 0x24, 0x0C,
             0x50, 0x8B, 0x44, 0x24, 0x0C, 0x51, 0x8B, 0x4C, 0x24, 0x0C, 0x52, 0x50, 0x51};
-        constexpr uint32_t kEntityWrapperPassAt = 0x0A;
+        // The name method's pushes, mov ecx,esi and its call into the wrapper. Found by these bytes, as Signet points the
+        // call at its own gate before HeadsUp starts.
+        constexpr uint8_t kEntityNameCallLead[] = {0x50, 0x8D, 0x54, 0x24, 0x1C, 0x51, 0x52, 0x8B, 0xCE, kCallOpcode};
 
         bool Matches(const ImageSection& section, uint32_t offset, const uint8_t* bytes, uint32_t count)
         {
@@ -380,6 +405,7 @@ namespace headsup
         case LocateProblem::NoEntityCaller: return "the call that draws entities' names was not found";
         case LocateProblem::EntityWrapperChanged: return "the call that draws entities' names is not laid out as HeadsUp expects";
         case LocateProblem::NoEntityWrapperCalls: return "nothing was found to call the game's entity name draw";
+        case LocateProblem::AmbiguousEntityWrapperCalls: return "the call to the game's entity name draw was found more than once";
         case LocateProblem::NoModelDraws: return "the calls that draw characters' models were not found";
         case LocateProblem::ModelDrawsDiffer: return "the calls that draw characters' models go to different routines";
         case LocateProblem::NoArrowDraws: return "the target window's arrow draws were not found";
@@ -395,6 +421,8 @@ namespace headsup
         case LocateProblem::PointerShowChanged: return "the game's showing of its pointer is not as expected";
         case LocateProblem::NoKeyHide: return "where the game hides its pointer for a key was not found";
         case LocateProblem::AmbiguousKeyHide: return "where the game hides its pointer for a key was found more than once";
+        case LocateProblem::NoImGuiMouse: return "where Ashita hands ImGui the mouse was not found";
+        case LocateProblem::AmbiguousImGuiMouse: return "where Ashita hands ImGui the mouse was found more than once";
         case LocateProblem::KeyHideDiffers: return "the game hides its pointer for a key through an unexpected function";
         case LocateProblem::NoWindowDraw: return "the game's menu window draw loop was not found";
         case LocateProblem::AmbiguousWindowDraw: return "the game's menu window draw loop was found more than once";
@@ -412,6 +440,9 @@ namespace headsup
         case LocateProblem::NoPopupEarly: return "where the game parses an action for its combat popups was not found";
         case LocateProblem::AmbiguousPopupEarly: return "where the game parses an action for its combat popups was found more than once";
         case LocateProblem::NoConfigGet: return "the game's config values were not found";
+        case LocateProblem::NoPosText: return "the game's <pos> routine was not found";
+        case LocateProblem::AmbiguousPosText: return "the game's <pos> routine was found more than once";
+        case LocateProblem::PosTextChanged: return "the game's <pos> routine does not start as it did";
         case LocateProblem::NoSearchAddress: return "where the game keeps the search server's address was not found";
         case LocateProblem::NoWindowMove: return "the game's window move was not found";
         case LocateProblem::AmbiguousWindowMove: return "the game's window move was found more than once";
@@ -489,10 +520,14 @@ namespace headsup
             result.problem = LocateProblem::EntityWrapperChanged;
             return result;
         }
-        result.wrapper = pass - kEntityWrapperPassAt;
-        for (const uint32_t returnRva : ReturnsFromCallsTo(result.wrapper, text))
-            result.wrapperCalls.push_back(returnRva - kBranchLength);
-        if (result.wrapperCalls.empty()) result.problem = LocateProblem::NoEntityWrapperCalls;
+        const std::vector<uint32_t> calls = CallsAfter(kEntityNameCallLead, sizeof(kEntityNameCallLead), text);
+        if (calls.size() != 1)
+        {
+            result.problem = calls.empty() ? LocateProblem::NoEntityWrapperCalls : LocateProblem::AmbiguousEntityWrapperCalls;
+            return result;
+        }
+        result.wrapperCall = calls.front();
+        result.entityDraw  = CallTarget(result.wrapperCall, text);
         return result;
     }
 
@@ -553,6 +588,23 @@ namespace headsup
                 .empty())
             return PointerShow{LocateProblem::PointerShowChanged};
         return PointerShow{LocateProblem::None, controller, show};
+    }
+
+    ImGuiMouseCalls LocateImGuiMouseCalls(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kImGuiPoll, text), hover = Find(kImGuiPressHover, text);
+        const auto fits = [&](uint32_t at, uint32_t call) { return text.size - at >= call + kBranchLength; };
+        if (found.empty() || hover.empty() || !fits(found.front(), kImGuiPollCall) || !fits(hover.front(), kImGuiHoverCall))
+            return ImGuiMouseCalls{LocateProblem::NoImGuiMouse, {}, 0, 0, 0};
+        if (found.size() > 1 || hover.size() > 1) return ImGuiMouseCalls{LocateProblem::AmbiguousImGuiMouse, {}, 0, 0, 0};
+        ImGuiMouseCalls result;
+        result.hoverCall   = text.rva + hover.front() + kImGuiHoverCall;
+        result.hoverUpdate = CallTarget(result.hoverCall, text);
+        result.addMousePos = CallTarget(text.rva + found.front() + kImGuiPollCall, text);
+        for (uint32_t at = 0; at + kBranchLength <= text.size; ++at)
+            if (text.bytes[at] == kCallOpcode && CallTarget(text.rva + at, text) == result.addMousePos)
+                result.calls.push_back(text.rva + at);
+        return result;
     }
 
     KeyHide LocateKeyHide(const ImageSection& text)
@@ -628,6 +680,18 @@ namespace headsup
         const std::vector<uint32_t> found = Find(kConfigGet, text);
         if (found.empty()) return ConfigGetSite{LocateProblem::NoConfigGet};
         return ConfigGetSite{LocateProblem::None, text.rva + found.front()};
+    }
+
+    PosTextSite LocatePosText(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kPosTextCall, text);
+        if (found.empty()) return PosTextSite{LocateProblem::NoPosText};
+        if (found.size() > 1) return PosTextSite{LocateProblem::AmbiguousPosText};
+        const uint32_t entry = found.front() - kPosTextCallAt;
+        if (found.front() < kPosTextCallAt ||
+            Find(kPosTextEntry, ImageSection{0, text.bytes + entry, static_cast<uint32_t>(std::size(kPosTextEntry))}).empty())
+            return PosTextSite{LocateProblem::PosTextChanged};
+        return PosTextSite{LocateProblem::None, text.rva + entry, ReadAt<uint32_t>(text.bytes, found.front() + kPosTextGlobal)};
     }
 
     SearchAddressSite LocateSearchAddress(const ImageSection& text)
@@ -863,6 +927,13 @@ namespace headsup
         return TitleRectSite{LocateProblem::None, call};
     }
 
+    std::optional<uint32_t> LocateCompassShown(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kCompassShown, text);
+        if (found.size() != 1) return std::nullopt;
+        return text.rva + found.front() + kCompassShownAnswer;
+    }
+
     std::optional<WindowKey> WindowKeyOf(const char* name)
     {
         if (name == nullptr || std::memcmp(name, kMenuPrefix, kMenuPrefixLength) != 0) return std::nullopt;
@@ -904,6 +975,8 @@ namespace headsup
 
     bool TitleWindow(const WindowKey& key) { return KeyOf(key, kTitleWindow); }
 
+    bool CompassWindow(const WindowKey& key) { return KeyOf(key, kCompassWindow); }
+
     bool MovableWindow(const WindowKey& key) { return !FollowsHelpStrip(key); }
 
     bool MovesWhenBuilt(const WindowKey& key) { return KeyOf(key, kAuctionListWindow) || KeyOf(key, kCommandsWindow); }
@@ -916,7 +989,7 @@ namespace headsup
         return field;
     }
 
-    std::vector<WindowPlace> WindowPlacesFrom(std::string_view text)
+    std::vector<WindowPlace> PlacesFrom(std::string_view text, bool (*named)(std::string_view name), int low, int high)
     {
         std::vector<WindowPlace> places;
         while (!text.empty() && places.size() < kMaxWindowKeys)
@@ -925,18 +998,25 @@ namespace headsup
             const size_t colon = entry.find(':'), comma = entry.find(',', colon == std::string_view::npos ? 0 : colon);
             if (colon == std::string_view::npos || comma == std::string_view::npos) continue;
             const std::string_view name = entry.substr(0, colon);
-            const std::optional<WindowKey> key = KeyFromShortName(name);
             int x = 0, y = 0;
             const auto number = [](std::string_view digits, int& out) {
                 const auto [end, problem] = std::from_chars(digits.data(), digits.data() + digits.size(), out);
                 return problem == std::errc{} && end == digits.data() + digits.size();
             };
-            if (!key || !MovableWindow(*key) || !number(entry.substr(colon + 1, comma - colon - 1), x) ||
-                !number(entry.substr(comma + 1), y) || std::ranges::any_of(places, [&](const WindowPlace& p) { return p.name == name; }))
+            if (!named(name) || !number(entry.substr(colon + 1, comma - colon - 1), x) || !number(entry.substr(comma + 1), y) ||
+                std::ranges::any_of(places, [&](const WindowPlace& p) { return p.name == name; }))
                 continue;
-            places.push_back(WindowPlace{std::string(name), std::clamp(x, 0, kMaxWindowOffset), std::clamp(y, 0, kMaxWindowOffset)});
+            places.push_back(WindowPlace{std::string(name), std::clamp(x, low, high), std::clamp(y, low, high)});
         }
         return places;
+    }
+
+    std::vector<WindowPlace> WindowPlacesFrom(std::string_view text)
+    {
+        return PlacesFrom(text, [](std::string_view name) {
+            const std::optional<WindowKey> key = KeyFromShortName(name);
+            return key && MovableWindow(*key);
+        }, 0, kMaxWindowOffset);
     }
 
     std::string WindowPlaceText(const std::vector<WindowPlace>& places)

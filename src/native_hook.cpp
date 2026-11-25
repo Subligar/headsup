@@ -58,6 +58,11 @@ extern "C"
     void HeadsUpPopupStartGate();
     __attribute__((used)) void HeadsUpOnPopupStarted(uintptr_t task);
     int __stdcall HeadsUpSystemMetric(int index);
+    float g_HeadsUpImGuiScale[2] = {1.0f, 1.0f}; // ImGui's pixels per client pixel, across and down
+    uintptr_t g_HeadsUpAddMousePos = 0;
+    void HeadsUpImGuiMouseGate();
+    uintptr_t g_HeadsUpImGuiHover = 0;
+    void HeadsUpImGuiHoverGate();
 }
 
 // Entered by a jump from MCD::MoveTo's start (thiscall: ecx the window, then x and y): HeadsUp may change where it goes
@@ -201,6 +206,38 @@ _HeadsUpEntityNameGate:
     .att_syntax prefix
 )");
 
+// In place of Ashita's calls to ImGuiIO::AddMousePosEvent (ecx the io, x in xmm1, y in xmm2): the client position in
+// ImGui's pixels, then on to the call's target. No mouse is -FLT_MAX, which scales to -inf, which ImGui takes the same.
+asm(R"(
+    .text
+    .p2align 4
+    .globl _HeadsUpImGuiMouseGate
+_HeadsUpImGuiMouseGate:
+    .intel_syntax noprefix
+    mulss xmm1, dword ptr [_g_HeadsUpImGuiScale]
+    mulss xmm2, dword ptr [_g_HeadsUpImGuiScale + 4]
+    jmp dword ptr [_g_HeadsUpAddMousePos]
+    .att_syntax prefix
+)");
+
+// In place of Ashita's call that updates ImGui's hovered window from a button press's client point, the ImVec2 at ecx
+// on its stack: the point in ImGui's pixels, so the press goes to the window under it and not to the game.
+asm(R"(
+    .text
+    .p2align 4
+    .globl _HeadsUpImGuiHoverGate
+_HeadsUpImGuiHoverGate:
+    .intel_syntax noprefix
+    movss xmm0, dword ptr [ecx]
+    mulss xmm0, dword ptr [_g_HeadsUpImGuiScale]
+    movss dword ptr [ecx], xmm0
+    movss xmm0, dword ptr [ecx + 4]
+    mulss xmm0, dword ptr [_g_HeadsUpImGuiScale + 4]
+    movss dword ptr [ecx + 4], xmm0
+    jmp dword ptr [_g_HeadsUpImGuiHover]
+    .att_syntax prefix
+)");
+
 // Called in place of the shape draw, a thiscall: ecx is the arrow's shape and the stack holds the return address, then
 // the eight arguments. A call boundary, so the x87 stack is empty. On 0 it jumps on to the shape draw with all of that
 // as it was; otherwise it returns and pops the arguments as the shape draw would (kArrowArgumentBytes).
@@ -335,6 +372,8 @@ namespace headsup
         bool g_FishBarHidden = false, g_KeepInside = false;
         WindowRect g_KeptWindow{};
         WindowKeyList g_HiddenKeys; // the windows the player hides
+        uint8_t* g_CompassShown = nullptr; // LocateCompassShown's answer byte, while the window hook runs
+        constexpr uint8_t kCompassHidden = 0;
         // The rectangles of those that drew, in menu pixels: this frame's as they come, and the last whole frame's.
         std::array<WindowRect, kMaxWindowKeys> g_HiddenRects{}, g_ShownHiddenRects{};
         size_t g_HiddenRectCount = 0, g_ShownHiddenRectCount = 0;
@@ -609,15 +648,17 @@ namespace headsup
             return false;
         }
 
-        // The game's image, its code in text; nullptr, with why, when it is not loaded or its code cannot be read.
-        uint8_t* GameCode(ImageSection& text, std::string& why)
+        // A module's image, its code in text; nullptr, with why, when it is not loaded or its code cannot be read.
+        uint8_t* ModuleCode(const char* module, ImageSection& text, std::string& why)
         {
-            auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-            if (base == nullptr) why = std::string(kGameModule) + " is not loaded";
+            auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(module));
+            if (base == nullptr) why = std::string(module) + " is not loaded";
             else if (!FindSection(base, kCodeSection, text)) why = kCodeNotRead;
             else return base;
             return nullptr;
         }
+
+        uint8_t* GameCode(ImageSection& text, std::string& why) { return ModuleCode(kGameModule, text, why); }
 
         // Whether count bytes at at lie in the readable image at base, whose headers FindSection has checked.
         bool InImage(const uint8_t* base, const uint8_t* at, size_t count)
@@ -726,15 +767,12 @@ namespace headsup
         g_HeadsUpNameResume = moduleBase + routine.resume;
         g_HeadsUpNameExit   = moduleBase + routine.exit;
         g_HeadsUpNameActor  = 0;
-        g_HeadsUpEntityNameDraw = moduleBase + routine.wrapper;
+        g_HeadsUpEntityNameDraw = moduleBase + routine.entityDraw;
 
         std::vector<CodePatch> patches = {Instruction(site, sizeof(kNameHookBytes), kJumpOpcode,
             BranchOperand(Address(site), Address(&HeadsUpNameGate)))};
-        for (const uint32_t rva : routine.wrapperCalls)
-        {
-            uint8_t* call = base + rva;
-            patches.push_back(Retarget(call, Address(call), Address(&HeadsUpEntityNameGate)));
-        }
+        uint8_t* call = base + routine.wrapperCall;
+        patches.push_back(Retarget(call, Address(call), Address(&HeadsUpEntityNameGate)));
         if (const std::string failure = PutIn(patches); !failure.empty()) return failure;
         m_Patches = std::move(patches);
 #ifdef HEADSUP_DEV
@@ -912,11 +950,16 @@ namespace headsup
 
     void CombatTextHook::Take(bool take) { g_TakeCombatText = take && Running(); }
 
-    void CombatTextHook::NewFrame(double now)
+    void CombatTextHook::NewFrame(double now, bool keepImage)
     {
         g_PopupTies.SetNow(now);
         g_SentActions.Clear();
         g_CombatPopups.NewFrame();
+        if (!keepImage) ForgetImage();
+    }
+
+    void CombatTextHook::ForgetImage()
+    {
         LetGo(g_CombatTarget);
         LetGo(g_CombatDepth);
         g_CombatTargetWidth  = 0;
@@ -929,6 +972,7 @@ namespace headsup
         g_EarlyPopups.SetOn(on);
         g_PopupTies.SetSpread(on);
     }
+    void CombatTextHook::SetLife(double seconds) { g_PopupTies.SetLife(seconds); }
     void CombatTextHook::SetSides(const PopupSides& sides) { g_PopupTies.SetSides(sides); }
     void CombatTextHook::Sent(const SentAction& action) { g_SentActions.Put(action); }
 
@@ -1000,6 +1044,8 @@ namespace headsup
         g_HeadsUpWindowDraw = Address(base) + found.draw;
         if (const std::string failure = PutIn({&call, 1}); !failure.empty()) return failure;
         m_Call = call;
+        if (const std::optional<uint32_t> at = LocateCompassShown(text)) g_CompassShown = base + *at;
+        else m_CompassProblem = "the game's compass routine was not found";
         // Without the move the windows stay where the game puts them; hiding works either way.
         const WindowMoveSite move = LocateWindowMove(text);
         g_WindowMoveTo            = move.problem == LocateProblem::None ? Address(base) + move.moveTo : 0;
@@ -1064,6 +1110,8 @@ namespace headsup
         g_PlannedFrame = 0;
         g_PlannedKeys.Clear();
         g_WindowsBand  = 0;
+        PutCompassBack();
+        g_CompassShown = nullptr;
         const auto takeOut = [](CodePatch& member, const char* what) {
             const CodePatch patch = std::exchange(member, {});
             return patch.at == nullptr ? std::string() : TakeOut({&patch, 1}, what);
@@ -1083,8 +1131,27 @@ namespace headsup
     void WindowHook::HideWindows(const std::vector<std::string>& names)
     {
         g_HiddenKeys.Clear();
+        bool compass = false;
         for (const std::string& name : names)
-            if (const std::optional<WindowKey> key = KeyFromShortName(name)) g_HiddenKeys.Add(*key);
+            if (const std::optional<WindowKey> key = KeyFromShortName(name))
+            {
+                g_HiddenKeys.Add(*key);
+                compass = compass || CompassWindow(*key);
+            }
+        if (!compass) PutCompassBack();
+        else if (m_Compass.at == nullptr && g_CompassShown != nullptr)
+        {
+            CodePatch answer{.at = g_CompassShown, .bytes = 1};
+            answer.ours[0] = kCompassHidden;
+            if (PutIn({&answer, 1}).empty()) m_Compass = answer;
+        }
+    }
+
+    // Restore, not TakeOut: nothing jumps into HeadsUp from this byte, so another tool's byte over it is left alone.
+    void WindowHook::PutCompassBack()
+    {
+        const CodePatch patch = std::exchange(m_Compass, {});
+        if (patch.at != nullptr) Restore({&patch, 1}, WriteCode);
     }
 
     bool WindowHook::Silent() { return g_SilentDraw; }
@@ -1256,6 +1323,28 @@ namespace headsup
         return type;
     }
 
+    std::string MapSquareReader::Find()
+    {
+        ImageSection text{};
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
+        const PosTextSite found = LocatePosText(text);
+        if (found.problem != LocateProblem::None) return Describe(found.problem);
+        if (!InImage(base, Pointer(found.zoneMap), sizeof(uint32_t))) return "the zone's map is not in the game's image";
+        m_PosText = reinterpret_cast<const char*(__cdecl*)(uint8_t)>(base + found.entry);
+        m_ZoneMap = found.zoneMap;
+        return "";
+    }
+
+    std::string MapSquareReader::Read() const
+    {
+        // The routine casts a ray at [zoneMap] without checking it: 0 between zones would crash the game.
+        if (m_PosText == nullptr || ReadAt<uint32_t>(Pointer(m_ZoneMap), 0) == 0) return "";
+        const char* text = m_PosText(0);
+        return text != nullptr ? text : "";
+    }
+
     const uint8_t* FriendListReader::Slots()
     {
         // Each search reads the whole of the game's data: after this many the client is taken to have no such list.
@@ -1379,6 +1468,29 @@ namespace headsup
         uint8_t* keyCall = base + keyHide.offCall;
         patches.push_back(Instruction(keyCall, kBranchLength, kCallOpcode,
             BranchOperand(Address(keyCall), Address(&MouseOffUnlessKept))));
+        // Ashita's ImGui is optional: without it (Signet, another Ashita) the game's part still goes in.
+        m_ImGuiProblem.clear();
+        ImageSection ashitaText{};
+        std::string noAshita;
+        if (uint8_t* ashita = ModuleCode(kAshitaModule, ashitaText, noAshita); ashita != nullptr)
+        {
+            const ImGuiMouseCalls imgui = LocateImGuiMouseCalls(ashitaText);
+            if (imgui.problem != LocateProblem::None) m_ImGuiProblem = Describe(imgui.problem);
+            else
+            {
+                g_HeadsUpAddMousePos = reinterpret_cast<uintptr_t>(ashita) + imgui.addMousePos;
+                g_HeadsUpImGuiHover  = reinterpret_cast<uintptr_t>(ashita) + imgui.hoverUpdate;
+                for (const uint32_t at : imgui.calls)
+                {
+                    uint8_t* call = ashita + at;
+                    patches.push_back(Instruction(
+                        call, kBranchLength, kCallOpcode, BranchOperand(Address(call), Address(&HeadsUpImGuiMouseGate))));
+                }
+                uint8_t* hover = ashita + imgui.hoverCall;
+                patches.push_back(
+                    Instruction(hover, kBranchLength, kCallOpcode, BranchOperand(Address(hover), Address(&HeadsUpImGuiHoverGate))));
+            }
+        }
         if (const std::string failure = PutIn(patches); !failure.empty()) return failure;
         m_Patches          = std::move(patches);
         g_ControllerGlobal = show.controllerGlobal;
@@ -1390,6 +1502,7 @@ namespace headsup
     std::string PointerFix::Stop()
     {
         g_FixPointer = false;
+        g_HeadsUpImGuiScale[0] = g_HeadsUpImGuiScale[1] = 1.0f;
         g_KeepKeys.clear();
         const std::string failure = TakeOut(m_Patches, "the game's reading of the mouse");
         m_Patches.clear();
@@ -1397,7 +1510,18 @@ namespace headsup
         return failure;
     }
 
-    void PointerFix::Enable(bool on) { g_FixPointer = on; }
+    void PointerFix::Enable(bool on)
+    {
+        g_FixPointer = on;
+        if (!on) g_HeadsUpImGuiScale[0] = g_HeadsUpImGuiScale[1] = 1.0f;
+    }
+
+    void PointerFix::ImGuiSize(float width, float height, int clientWidth, int clientHeight)
+    {
+        if (!g_FixPointer || width <= 0.0f || height <= 0.0f || clientWidth <= 0 || clientHeight <= 0) return;
+        g_HeadsUpImGuiScale[0] = width / static_cast<float>(clientWidth);
+        g_HeadsUpImGuiScale[1] = height / static_cast<float>(clientHeight);
+    }
 
     void PointerFix::KeepPointerFor(const std::vector<uint8_t>& keys)
     {

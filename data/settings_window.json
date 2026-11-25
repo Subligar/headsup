@@ -1,5 +1,5 @@
 {
-  "version": "0.5.11",
+  "version": "0.6.0",
   "pages": [
     {
       "key": "entities",
@@ -48,60 +48,6 @@
             {"key": "opacity", "name": "Opacity"},
             {"key": "outline-fade-in", "name": "Fade In", "tip": "If enabled, outlines will become more transparent the further you get from the entity."},
             {"key": "stencil-note", "name": "Outlines are unavailable: the depth buffer has no stencil bits."}
-          ]
-        },
-        {
-          "key": "target-cursor",
-          "name": "Target Cursor",
-          "description": "Appearance settings for the cursor that appears above the target entity.",
-          "settings": [
-            {
-              "key": "cursor-style",
-              "name": "Cursor Style",
-              "tip": "What icon should be used for the target cursor? You can place custom images in the config/cursors folder and they will appear in the drop-down menu as options.",
-              "options": [
-                {"name": "Vanilla", "tip": "Uses the vanilla target cursor. WARNING: May be invisible or flicker if the vanilla target frame is hidden by any addons."},
-                {"name": "Vanilla-like", "tip": "Uses a simple triangle target cursor, which looks similar to the vanilla target cursor."},
-                {"name": "Phoenix Feather", "tip": "Uses a phoenix feather icon as the target cursor."},
-                {"name": "Chocobo", "tip": "Uses the PlayOnline chocobo mouse pointer as the target cursor."},
-                {"tip": "Uses a custom icon as the target cursor."}
-              ]
-            },
-            {"key": "width", "name": "Width"},
-            {"key": "cursor-height", "name": "Height"},
-            {"key": "outline-thickness", "name": "Outline Thickness", "tip": "The thickness of the target cursor's outline."},
-            {"key": "cursor-vertical-offset", "name": "Vertical Offset", "tip": "Offsets the target cursor upward by this many pixels."},
-            {"key": "color", "name": "Color", "tip": "Determines the color of the target cursor."},
-            {"key": "edge-color", "name": "Outline Color", "tip": "Determines the color of the target cursor's outline."},
-            {"key": "scale", "name": "Scale with Distance", "tip": "Automatically scales the target cursor based on distance to the player character."},
-            {"key": "float", "name": "Floating Cursor", "tip": "If enabled, the target cursor will bob gently up and down."}
-          ]
-        },
-        {
-          "key": "combat-popups",
-          "name": "Combat Popups",
-          "description": "Draws the game's damage, recovery and Miss popups in your own font, size and colors, in place of the game's stretched ones, and pops each one as soon as its result arrives instead of when the animation lands. They only show while the game's Config is set to display damage on the game screen. Turn this off to keep the game's. Default: On.",
-          "settings": [
-            {"key": "combat-popup-font", "name": "Font", "tip": "The font the popups are drawn in. Default: your nameplates' Default Font."},
-            {"key": "combat-popup-size", "name": "Size", "tip": "How big the popups are against the game's own. They still shrink with distance. Default: 100%."},
-            {"key": "combat-popup-words", "name": "Words", "tip": "Shows what a miss was: Evade, Parry, Shadow, Resist and the like. Turn this off to see the game's plain Miss for all of them. Default: On."},
-            {"key": "combat-popup-labels", "name": "Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."},
-            {"key": "combat-popup-skillchain-names", "name": "Skillchain Names", "tip": "Puts a skillchain's name before its damage: Fusion 412. Turn this off to see the game's plain number. Default: On."},
-            {"key": "combat-popup-right-away", "name": "Show Right Away", "tip": "Pops each number as soon as its result arrives, before the spell or swing lands, and spreads popups that start together so each reads. Turn this off to keep the game's timing. Default: On."},
-            {"key": "combat-popup-placement", "name": "Custom Placement", "tip": "Puts each kind of popup in its column below, left of what it happened to, centered on it or right of it, at your Start Height and moved by the offsets. Drag a kind to another column to move it there. Turn this off to leave them all where the game puts them. Default: On."},
-            {"key": "combat-popup-columns"},
-            {"key": "combat-popup-height", "name": "Start Height", "tip": "How high up what they happened to the popups start: 0% at its feet, 100% at the top of its head, so they reach its head on a Tarutaru or a Behemoth alike. Default: 90%."},
-            {"key": "combat-popup-x", "name": "Horizontal Offset", "tip": "Moves the popups right by this many pixels, or left by a number below 0. Default: 0 px."},
-            {"key": "combat-popup-y", "name": "Vertical Offset", "tip": "Moves the popups up by this many pixels, or down by a number below 0. Default: 0 px."},
-            {
-              "key": "combat-popup-test",
-              "name": "Test",
-              "tip": "Pops a sample of each kind over your character, in your font, size and colors, even while the game's Config shows damage in the log only. Click it again to see them again.",
-              "words": [
-                {"key": "not-found", "name": "Test", "tip": "Your game's code for starting a popup was not found, so Test cannot pop one."}
-              ]
-            },
-            {"key": "combat-popup-statuses", "name": "Status Popups", "tip": "Pops the name of a buff or debuff over what it lands on, when you, your pet or your party cast it or take it. The game has no popup for these. Default: On."}
           ]
         }
       ]
@@ -197,6 +143,8 @@
                 {"key": "alignment", "name": "Alignment", "tip": "Puts the widget's content against the left or right of its pill, or in its middle. Set by Location lines it up with the side of the panel it is on. Default is {default}."},
                 {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is {default}."},
                 {"key": "wrap-text", "name": "Wrap Text", "tip": "Puts the zone's name on two lines, broken where it keeps the widget narrowest. Off, it stays on one line. Default is {default}."},
+                {"key": "average-over", "name": "Average Over", "tip": "How many seconds of damage the widget adds up. Your DPS is the damage dealt in that time divided by those seconds, so it drops to 0 that long after the last hit. Default is {default}."},
+                {"key": "include-pets", "name": "Include Pets", "tip": "Counts each pet's damage as its owner's. Default is {default}."},
                 {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
                 {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is {default}."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
@@ -209,6 +157,7 @@
                 {"key": "custom-icons", "name": "Use Custom Icons", "tip": "When the widget and its pop-out show HeadsUp's own weather pictures in place of the game's element icons. Default is {default}."},
                 {"key": "ship", "name": "Tracked Ship", "tip": "The boat or airship whose next sailing the Ship button shows."},
                 {"key": "guild", "name": "Tracked Guild", "tip": "The guild shop whose hours the Guild button shows."},
+                {"key": "supply-flags", "name": "Supply Run Flags", "tip": "Puts a flag before each supply run in the pop-out's Conquest card: yellow while its supply run is available, green once it's complete and red where there is none. Off, the words alone. Default is {default}."},
                 {"key": "bag-1", "name": "Bag 1", "tip": "The bag the widget's Bag 1 buttons show. Hover the widget for every bag. Default is {default}."},
                 {"key": "bag-2", "name": "Bag 2", "tip": "The bag the widget's Bag 2 buttons show. Default is {default}."},
                 {"key": "local-timezone", "name": "Local Timezone", "tip": "The zone of the Local Time button. Automatic is your computer's. Another zone goes before the time, as in PDT 21:07. Default is Automatic."},
@@ -230,6 +179,7 @@
                 {"key": "percent-align", "name": "EXP Percentage Alignment", "tip": "Puts the EXP Percentage text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
                 {"key": "job-text", "name": "Job Text", "tip": "How Job Info and the EXP Bar's Job Text write your jobs and levels. Default is {default}."},
                 {"key": "job-text-align", "name": "Job Text Alignment", "tip": "Puts the Job Info text at the left or right of the widget, or in its middle. Texts on one line with the same alignment go together, two spaces apart. Default is {default}."},
+                {"key": "synced-level", "name": "Use Synced Level", "tip": "Shows the levels Level Sync or a level cap holds you to in Job Info and the EXP Bar's Job Text. Off, your jobs' own levels. Default is {default}."},
                 {"key": "own-looks", "name": "Appearance Overrides"},
                 {"key": "widget-spacing", "name": "Widget Spacing", "tip": "The space between this widget and the widgets beside it. The gap between two widgets is the average of their spacings. Default: the Top Panel's."},
                 {"key": "widget-padding", "name": "Padding", "tip": "The room inside this widget, from its edges to its text. Default: the Top Panel's."},
@@ -237,7 +187,8 @@
                 {"key": "corner-rounding", "name": "Corner Rounding", "tip": "How round the corners of this widget's background are. Default: the Top Panel's."},
                 {"key": "primary-font", "name": "Primary Font", "tip": "The font of this widget's top line, of the widget on one line, and of its pop-out's headings. Default: the Top Panel's."},
                 {"key": "secondary-font", "name": "Secondary Font", "tip": "The font of this widget's second line, its numbers and its pop-out's text. Default: the Top Panel's."},
-                {"key": "uniform-font", "name": "Uniform Font Size", "tip": "Draws both of this widget's lines at the same size and hides its Font Size Ratio. Default is {default}."},
+                {"key": "font-size", "name": "Font Size", "tip": "The size of this widget's top line of text, or of its only line. Its second line is this size over the Font Size Ratio. Both lines shrink together if they need to, to fit the Panel Height. Default: the Top Panel's, the size its Panel Height gives."},
+                {"key": "uniform-font", "name": "Uniform Font Size", "tip": "Draws both of this widget's lines at its Font Size and hides its Font Size Ratio. Default is {default}."},
                 {"key": "font-ratio", "name": "Font Size Ratio", "tip": "Ratio of the size of this widget's primary line's text to the size of its secondary line's text. At 1 both lines are the same size; above 1 the secondary line is smaller. Default: the Top Panel's."},
                 {"key": "line-separation", "name": "Line Separation", "tip": "The space between this widget's top and bottom line of text. Above 1, both lines shrink together if they need to, to fit the Panel Height. Default: the Top Panel's."},
                 {"key": "icon-scale", "name": "Icon Scale", "tip": "The size of every icon in this widget. At 100% its own icon is as tall as the widget can hold, and an icon in a line of text is as tall as its letters. Default: the Top Panel's."},
@@ -248,7 +199,6 @@
                 {"key": "remove-copy", "name": "Remove This Copy", "tip": "Takes this copy off the panel. Its settings go with it."},
                 {"key": "combine-none", "name": "None"},
                 {"key": "link-disabled", "name": "(disabled)"},
-                {"key": "design-last-on", "name": "At least one button must be enabled."},
                 {"key": "design-status-timers", "name": "Use the lines below to change how info is organized in the widget."},
                 {"key": "add-from", "name": "Add From", "tip": "The widget whose buttons or sections are listed under this, for you to drag into the lines or rows above. It starts on Zone."},
                 {"key": "popup-row-full", "name": "A row can hold at most 3 sections."},
@@ -280,7 +230,7 @@
               ]
             },
             {"key": "pointer-size", "name": "Cursor Size", "tip": "How large the mouse cursor is, the game's own included."},
-            {"key": "pointer-fix", "name": "Pointer Fix", "tip": "Keeps the game's pointer under yours after a resize, and clicks where you click. It also shows the pointer again over Ashita's windows."},
+            {"key": "pointer-fix", "name": "Pointer Fix", "tip": "Keeps the game's pointer and Ashita's windows lined up with yours after a resize, and clicks where you click. It also shows the pointer again over Ashita's windows."},
             {"key": "keep-pointer", "name": "Keep Pointer", "tip": "The game hides its pointer when a key runs a command. While only these keys are held, it stays."},
             {"key": "lock-cursor", "name": "Lock Cursor to Window", "tip": "While the game has the focus, the mouse cursor can not leave its window. Default is off."}
           ]
@@ -292,6 +242,83 @@
           "settings": [
             {"key": "key", "name": "Key", "tip": "Turns screenshot mode on and off. The game sees the key too, so pick one it does not use."},
             {"key": "hide-game-windows", "name": "Hide Game Windows", "tip": "The game's own windows and chat go too."}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "targetcursor",
+      "name": "Target Cursor",
+      "child": true,
+      "cards": [
+        {
+          "key": "target-cursor",
+          "name": "Target Cursor",
+          "description": "Appearance settings for the cursor that appears above the target entity.",
+          "settings": [
+            {
+              "key": "cursor-style",
+              "name": "Cursor Style",
+              "tip": "What icon should be used for the target cursor? You can place custom images in the config/cursors folder and they will appear in the drop-down menu as options.",
+              "options": [
+                {"name": "Vanilla", "tip": "Uses the vanilla target cursor. WARNING: May be invisible or flicker if the vanilla target frame is hidden by any addons."},
+                {"name": "Vanilla-like", "tip": "Uses a simple triangle target cursor, which looks similar to the vanilla target cursor."},
+                {"name": "Phoenix Feather", "tip": "Uses a phoenix feather icon as the target cursor."},
+                {"name": "Chocobo", "tip": "Uses the PlayOnline chocobo mouse pointer as the target cursor."},
+                {"tip": "Uses a custom icon as the target cursor."}
+              ]
+            },
+            {"key": "width", "name": "Width"},
+            {"key": "cursor-height", "name": "Height"},
+            {"key": "outline-thickness", "name": "Outline Thickness", "tip": "The thickness of the target cursor's outline."},
+            {"key": "cursor-vertical-offset", "name": "Vertical Offset", "tip": "Offsets the target cursor upward by this many pixels."},
+            {"key": "color", "name": "Color", "tip": "Determines the color of the target cursor."},
+            {"key": "edge-color", "name": "Outline Color", "tip": "Determines the color of the target cursor's outline."},
+            {"key": "scale", "name": "Scale with Distance", "tip": "Automatically scales the target cursor based on distance to the player character."},
+            {"key": "float", "name": "Floating Cursor", "tip": "If enabled, the target cursor will bob gently up and down."}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "damagenumbers",
+      "name": "Damage Numbers",
+      "child": true,
+      "description": "Improves the appearance of combat text that appears on-screen, and allows you to customize it.",
+      "cards": [
+        {
+          "key": "damage-appearance",
+          "name": "Appearance",
+          "settings": [
+            {"key": "combat-popup-font", "name": "Font", "tip": "The font the numbers are drawn in. Default: Marcellus SC."},
+            {"key": "combat-popup-size", "name": "Text Size", "tip": "How tall the numbers are up close, in pixels. Farther off they shrink, as the game's do. Default: 43 px."},
+            {"key": "combat-popup-words", "name": "Detailed Miss", "tip": "Shows what a miss was: Evade, Parry, Shadow, Resist and the like. Turn this off to see the game's plain Miss for all of them. Default: On."},
+            {"key": "combat-popup-labels", "name": "Show Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."},
+            {"key": "combat-popup-skillchain-names", "name": "Show Skillchain Names", "tip": "Puts a skillchain's name before its damage: Fusion 412. Turn this off to see the game's plain number. Default: On."},
+            {"key": "combat-popup-statuses", "name": "Show Status Effects", "tip": "Pops the name of a buff or debuff over what it lands on, when you, your pet or your party cast it or take it. The game has no popup for these. Default: On."},
+            {"key": "combat-popup-outline", "name": "Outline", "tip": "How thick the edge around the text is, in pixels, and its color. Default: 3 px, black."},
+            {"key": "combat-popup-duration", "name": "Duration", "tip": "How many seconds the numbers stay fully visible before they start to fade. Default: 0.4 s."},
+            {"key": "combat-popup-fade", "name": "Fade Speed", "tip": "How many seconds the numbers take to go from fully visible to gone once they start fading. Default: 0.4 s."},
+            {
+              "key": "combat-popup-timing",
+              "name": "Popup Timing",
+              "tip": "When each number pops. Default: Instant.",
+              "options": [
+                {"name": "Vanilla", "tip": "Pops each number when the spell or swing lands, as the game does."},
+                {"name": "Instant", "tip": "Pops each number as soon as its result arrives, before the spell or swing lands, and spreads numbers that start together so each one reads."}
+              ]
+            }
+          ]
+        },
+        {
+          "key": "damage-placement",
+          "name": "Placement",
+          "description": "Each kind of number goes in its column: left of what it happened to, centered on it, or right of it. Drag a kind to another column to move it there.",
+          "settings": [
+            {"key": "combat-popup-columns"},
+            {"key": "combat-popup-height", "name": "Initial Height", "tip": "How high up what they happened to the numbers start: 0% at its feet, 100% at the top of its head, so they reach its head on a Tarutaru or a Behemoth alike. Default: 90%."},
+            {"key": "combat-popup-spread", "name": "Spread", "tip": "How far the Left and Right columns sit out from what they happened to, past its body. Default: 0 px."},
+            {"key": "combat-popup-y", "name": "Vertical Offset", "tip": "Moves the numbers up by this many pixels, or down by a number below 0. Default: 0 px."}
           ]
         }
       ]
@@ -380,6 +407,110 @@
       ]
     },
     {
+      "key": "notifications",
+      "name": "Notifications",
+      "child": true,
+      "cards": [
+        {
+          "key": "notice-look",
+          "name": "Notifications",
+          "description": "How every notification looks and acts. While this page is open, a test notification of each kind stays on screen, and you can drag one to move them all. On any other page, hold Shift and drag.",
+          "settings": [
+            {
+              "key": "notice-style",
+              "name": "Style",
+              "tip": "How each notification looks. Default: Full.",
+              "options": [
+                {"name": "Full", "tip": "A heading over a line of text. A friend's says who logged in or out, and an invite's who invited you, with Decline and Accept buttons."},
+                {"name": "Compact", "tip": "Just a dot and the name: green when a friend logs in, gray when they log out, blue for an invite, with its Decline and Accept icons under the name. Each is as small as its name, so Width and Height are hidden."}
+              ]
+            },
+            {"key": "notice-width", "name": "Width", "tip": "How wide each notification is. Flexible makes each one as wide as its text. Default: 300 px."},
+            {"key": "notice-height", "name": "Height", "tip": "How tall each notification is. Flexible makes each one as tall as its text. Default: Flexible."},
+            {
+              "key": "notice-fit",
+              "name": "Text Fitting",
+              "tip": "What happens to text that does not fit in a notification. Default: Shrink.",
+              "options": [
+                {"name": "Shrink", "tip": "Makes the text smaller until it fits."},
+                {"name": "Truncate", "tip": "Cuts the text off and ends it with an ellipsis."}
+              ]
+            },
+            {"key": "notice-rounding", "name": "Corner Rounding", "tip": "How round the corners are. Set by Theme uses your theme's Window Rounding. Default: Set by Theme."},
+            {"key": "notice-bar", "name": "Countdown Bar", "tip": "Shows a thin bar in each notification that runs down until the notification goes. Default: On."},
+            {"key": "notice-master-volume", "name": "Master Volume", "tip": "How loud every notification's sound is. Each kind's Alert Volume is multiplied by this. Default: 100%."},
+            {"key": "notice-fade", "name": "Fade Speed", "tip": "How long a notification takes to fade out once its time is up. At 0 s it goes at once. Default: 1.4 s."},
+            {
+              "key": "notice-anchor",
+              "name": "Horizontal Anchor",
+              "tip": "Which side of the notifications stays put when their width changes. It does not move them or their text. Default: Left.",
+              "options": [
+                {"name": "Left", "tip": "Their left edges line up."},
+                {"name": "Center", "tip": "Their middles line up."},
+                {"name": "Right", "tip": "Their right edges line up."}
+              ]
+            },
+            {
+              "key": "notice-edge",
+              "name": "Vertical Anchor",
+              "tip": "Which way the notifications stack. It does not move them. Default: Top.",
+              "options": [
+                {"name": "Top", "tip": "New notifications go under the older ones."},
+                {"name": "Bottom", "tip": "New notifications go above the older ones."}
+              ]
+            },
+            {
+              "key": "notice-align",
+              "name": "Text Alignment",
+              "tip": "Where the text sits inside a notification. Default: Center.",
+              "options": [
+                {"name": "Left", "tip": "Text on the left."},
+                {"name": "Center", "tip": "Text in the middle."},
+                {"name": "Right", "tip": "Text on the right."}
+              ]
+            },
+            {"key": "notice-most", "name": "Max Notifications", "tip": "How many notifications show at once, counting party invites and the test notifications on this page. One more pushes the oldest friend's notification out. Default: 6."},
+            {"key": "notice-test", "name": "Test", "tip": "Shows a test notification, picked at random from the kinds that are on, with its sound."}
+          ]
+        },
+        {
+          "key": "notice-friends",
+          "name": "Friend Notifications",
+          "description": "A notification when someone on your friend list comes online or goes offline. It reads the friend list the game already keeps, so it asks the server for nothing.",
+          "settings": [
+            {"key": "friend-notice-online", "name": "Show Online", "tip": "Shows a notification when a friend comes online. Default: On."},
+            {"key": "friend-notice-offline", "name": "Show Offline", "tip": "Shows a notification when a friend goes offline. Default: On."},
+            {"key": "notice-seconds", "name": "Duration", "tip": "How long a friend's notification stays on screen before it fades out. Put the pointer over any notification to keep the friends' ones on screen. A party or alliance invite always stays for the 90 seconds you have to answer it, and the pointer does not stop it. Default: 8 s."},
+            {"key": "friend-notice-online-sound", "name": "Online Sound Effect", "tip": "The sound when a friend comes online, at most once every 10 seconds. Default: Chime."},
+            {"key": "friend-notice-offline-sound", "name": "Offline Sound Effect", "tip": "The sound when a friend goes offline, at most once every 10 seconds. Default: None."},
+            {"key": "friend-notice-volume", "name": "Alert Volume", "tip": "How loud the friend sounds are. It is multiplied by Master Volume. Default: 60%."},
+            {"key": "friends-included", "name": "Friends Included", "tip": "Which friends you get notifications for. All also covers friends you add later. Your picks count for all your characters. Default: All."}
+          ]
+        },
+        {
+          "key": "notice-party",
+          "name": "Party Notifications",
+          "description": "A notification when someone invites you to a party or an alliance. It stays for 90 seconds, or until you answer the invite.",
+          "settings": [
+            {"key": "party-notice", "name": "Show Invites", "tip": "Shows a notification when you are invited. Default: On."},
+            {"key": "party-notice-buttons", "name": "Show Buttons", "tip": "Adds Decline and Accept buttons to the notification. They answer the invite the way /decline and /join do. Default: On."},
+            {
+              "key": "party-notice-place",
+              "name": "Invite Position",
+              "tip": "Where an invite sits among your notifications. Default: Auto.",
+              "options": [
+                {"name": "Auto", "tip": "At the top when notifications stack down from the top, at the bottom when they stack up from the bottom."},
+                {"name": "Top", "tip": "Always at the top."},
+                {"name": "Bottom", "tip": "Always at the bottom."}
+              ]
+            },
+            {"key": "party-notice-sound", "name": "Sound Effect", "tip": "The sound when you are invited. Default: Call 14."},
+            {"key": "party-notice-volume", "name": "Alert Volume", "tip": "How loud the invite sound is. It is multiplied by Master Volume. Default: 60%."}
+          ]
+        }
+      ]
+    },
+    {
       "key": "vanillaui",
       "name": "Vanilla UI",
       "child": true,
@@ -427,91 +558,6 @@
                 {"key": "row-tip", "tip": "Its shift down from where the game puts its windows, up when below zero."}
               ]
             }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "notifications",
-      "name": "Notifications",
-      "child": true,
-      "cards": [
-        {
-          "key": "notice-look",
-          "name": "Notifications",
-          "description": "How every notification looks and acts. While this page is open, a test notification of each kind stays on screen, and you can drag one to move them all. On any other page, hold Shift and drag.",
-          "settings": [
-            {"key": "notice-width", "name": "Width", "tip": "How wide each notification is. Flexible makes each one as wide as its text. Default: 300 px."},
-            {"key": "notice-height", "name": "Height", "tip": "How tall each notification is. Flexible makes each one as tall as its text. Default: Flexible."},
-            {
-              "key": "notice-fit",
-              "name": "Text Fitting",
-              "tip": "What happens to text that does not fit in a notification. Default: Shrink.",
-              "options": [
-                {"name": "Shrink", "tip": "Makes the text smaller until it fits."},
-                {"name": "Truncate", "tip": "Cuts the text off and ends it with an ellipsis."}
-              ]
-            },
-            {"key": "notice-rounding", "name": "Corner Rounding", "tip": "How round the corners are. Set by Theme uses your theme's Window Rounding. Default: Set by Theme."},
-            {"key": "notice-bar", "name": "Countdown Bar", "tip": "Shows a thin bar in each notification that runs down until the notification goes. Default: On."},
-            {"key": "notice-master-volume", "name": "Master Volume", "tip": "How loud every notification's sound is. Each kind's Alert Volume is multiplied by this. Default: 100%."},
-            {"key": "notice-seconds", "name": "Duration", "tip": "How long a notification stays on screen before it fades out. Put the pointer over any notification to keep them all on screen. Default: 8 s."},
-            {
-              "key": "notice-anchor",
-              "name": "Horizontal Anchor",
-              "tip": "Which side of the notifications stays put when their width changes. It does not move them or their text. Default: Left.",
-              "options": [
-                {"name": "Left", "tip": "Their left edges line up."},
-                {"name": "Center", "tip": "Their middles line up."},
-                {"name": "Right", "tip": "Their right edges line up."}
-              ]
-            },
-            {
-              "key": "notice-edge",
-              "name": "Vertical Anchor",
-              "tip": "Which way the notifications stack. It does not move them. Default: Top.",
-              "options": [
-                {"name": "Top", "tip": "New notifications go under the older ones."},
-                {"name": "Bottom", "tip": "New notifications go above the older ones."}
-              ]
-            },
-            {
-              "key": "notice-align",
-              "name": "Text Alignment",
-              "tip": "Where the text sits inside a notification. Default: Left.",
-              "options": [
-                {"name": "Left", "tip": "Text on the left."},
-                {"name": "Center", "tip": "Text in the middle."},
-                {"name": "Right", "tip": "Text on the right."}
-              ]
-            },
-            {"key": "notice-most", "name": "Max Notifications", "tip": "How many notifications show at once. One more pushes the oldest out. A party invite is not counted. Default: 5."},
-            {"key": "notice-test", "name": "Test", "tip": "Shows a test notification, picked at random from the kinds that are on, with its sound."}
-          ]
-        },
-        {
-          "key": "notice-friends",
-          "name": "Friend Notifications",
-          "description": "A notification when someone on your friend list comes online or goes offline. It reads the friend list the game already keeps, so it asks the server for nothing.",
-          "settings": [
-            {"key": "friend-notice-online", "name": "Show Online", "tip": "Shows a notification when a friend comes online. Default: On."},
-            {"key": "friend-notice-offline", "name": "Show Offline", "tip": "Shows a notification when a friend goes offline. Default: On."},
-            {"key": "friend-notice-online-sound", "name": "Online Sound Effect", "tip": "The sound when a friend comes online, at most once every 10 seconds. Default: Chime."},
-            {"key": "friend-notice-offline-sound", "name": "Offline Sound Effect", "tip": "The sound when a friend goes offline, at most once every 10 seconds. Default: None."},
-            {"key": "friend-notice-volume", "name": "Alert Volume", "tip": "How loud the friend sounds are. It is multiplied by Master Volume. Default: 60%."},
-            {"key": "friends-included", "name": "Friends Included", "tip": "Which friends you get notifications for. All also covers friends you add later. Your picks count for all your characters. Default: All."},
-            {"key": "friend-notice-test", "name": "Test", "tip": "Acts as if a friend came online, with its sound, and as if they went offline at the next press."}
-          ]
-        },
-        {
-          "key": "notice-party",
-          "name": "Party Notifications",
-          "description": "A notification when someone invites you to a party or an alliance. It stays for 90 seconds, or until you answer the invite.",
-          "settings": [
-            {"key": "party-notice", "name": "Show Invites", "tip": "Shows a notification when you are invited. Default: On."},
-            {"key": "party-notice-buttons", "name": "Show Buttons", "tip": "Adds Decline and Accept buttons to the notification. They answer the invite the way /decline and /join do. Default: On."},
-            {"key": "party-notice-sound", "name": "Sound Effect", "tip": "The sound when you are invited. Default: Call 14."},
-            {"key": "party-notice-volume", "name": "Alert Volume", "tip": "How loud the invite sound is. It is multiplied by Master Volume. Default: 60%."}
           ]
         }
       ]
@@ -711,7 +757,7 @@
         {
           "key": "colors-combat-popups",
           "name": "Combat Popups",
-          "description": "The colors of each kind of combat popup, while the Combat Popups card on the Nameplates & Outlines page is on.",
+          "description": "The colors of each kind of combat popup, while Damage Numbers is on.",
           "settings": [
             {"key": "combat-popup-custom-colors", "name": "Custom Colors", "tip": "Colors each kind of popup with its pick below. Turn this off to see every popup in the game's own color. Default: On."},
             {"key": "combat-popup-dealt-color", "name": "Damage You Deal", "tip": "The color of the damage you and your pet deal. Damage between other players and mobs always keeps the game's color. Default: Vanilla Color."},
@@ -976,6 +1022,23 @@
         ]
       },
       {
+        "key": "plate-statuses",
+        "name": "Buffs & Debuffs",
+        "description": "Pick which buffs and debuffs the Buffs and Debuffs tags show on this nameplate. Click a status's star to show it. Starred statuses move to the top of their list the next time you open this page.\n\nYours and your party's statuses are always right. For other players and mobs, HeadsUp only knows what it saw land, so a status can still show for a while after it ends.",
+        "kinds": ["mobs", "players", "self"],
+        "settings": [
+          {"key": "plate-status-background", "name": "Show Status Background", "tip": "Shows the buff or debuff background behind each status icon, on the nameplate and in the lists below. Off by default."},
+          {"key": "status-party-only", "name": "Only Party Members", "tip": "Shows statuses only on members of your party or alliance, not on every player. On by default.", "kinds": ["players"]},
+          {
+            "key": "shown-statuses",
+            "words": [
+              {"key": "buffs", "name": "Buffs"},
+              {"key": "debuffs", "name": "Debuffs"}
+            ]
+          }
+        ]
+      },
+      {
         "key": "line-style",
         "name": "Line Style",
         "description": "These are settings to change the appearance of each line individually.",
@@ -1175,8 +1238,8 @@
         {"name": "Magic Bursts", "tip": "Magic burst damage."},
         {"name": "Skillchains", "tip": "A skillchain's name and number."},
         {"name": "Spells", "tip": "The damage a spell does."},
-        {"name": "Buffs", "tip": "A buff's name, while Status Popups is on."},
-        {"name": "Debuffs", "tip": "A debuff's name, while Status Popups is on."}
+        {"name": "Buffs", "tip": "A buff's name, while Show Status Effects is on."},
+        {"name": "Debuffs", "tip": "A debuff's name, while Show Status Effects is on."}
       ]
     },
     {
@@ -1281,6 +1344,8 @@
         {"name": "World Info", "tip": "The next ship, a weather, a guild's hours, the RSE, the moon or how many regions each nation holds, as you pick. Hover for every ship, the guilds with today's turn-ins from Phoenix's website, the calendar and each nation's regions."},
         {"name": "Settings", "tip": "Just the settings cog. Click it to open these settings on the Top Panel page, at Widget Layout."},
         {"name": "Home Point", "tip": "The zone your home point is in."},
+        {"name": "Placeholder Timers", "tip": "The respawn timers of the NMs and placeholders that died near you, the same ones shown over your name, even when the game draws no name for you. It runs them by itself, so Respawn Timer, under NM Placeholder Timers, only decides whether they also show over your name. Shows nothing while no timer runs."},
+        {"name": "DPS", "tip": "Your damage per second, with your party's total under it. Hover for each member's."},
         {"name": "Custom Widget", "tip": "A widget you made. It can show any widget's buttons on the panel and any widget's sections in its pop-out."}
       ]
     },
@@ -1343,6 +1408,9 @@
         {"name": "Line Break", "tip": "Shows Line Break when your line could snap. The game warns of this only with a bad feeling."},
         {"name": "Rod Break", "tip": "Shows Rod Break when your rod could break. The game warns of this only with a terrible feeling."},
         {"name": "Disconnecting", "tip": "Shows the game's red circle (R0) while a player is losing their connection. While it shows, it is the only icon on their nameplate, and it shows even if no line has this tag."},
+        {"name": "Distance", "tip": "How far the entity is from you in yalms, as the Target widget shows it: (12.3). To show it only on your target, set its line's Line Visibility to Targeted."},
+        {"name": "Buffs", "tip": "Shows an icon for each buff the entity has that is starred in the Buffs & Debuffs card. Yours and your party's are always right. For other players and mobs, HeadsUp only knows what it saw land, so a buff can still show for a while after it ends."},
+        {"name": "Debuffs", "tip": "Shows an icon for each debuff the entity has that is starred in the Buffs & Debuffs card. Yours and your party's are always right. For other players and mobs, HeadsUp only knows what it saw land, so a debuff can still show for a while after it ends."},
         {"name": "Line Break", "tip": "Puts what follows on a row of its own under the rest of the line, in the line's own style. Press Enter in a line to make one."}
       ]
     },
@@ -1474,7 +1542,7 @@
       "options": [
         {"name": "Where You Are", "tip": "The zone, its weather, your home point and what is around you."},
         {"name": "Time", "tip": "Your computer's time."},
-        {"name": "You", "tip": "Your job, experience, gil, inventory, party and target."},
+        {"name": "You", "tip": "Your job, experience, gil, inventory, party, target and damage."},
         {"name": "System", "tip": "Your frame rate, connection, memory and the game's help line."}
       ]
     },
@@ -1515,6 +1583,7 @@
         {"name": "Region Name", "tip": "The zone's region."},
         {"name": "Conquest Icon", "tip": "The crest of the nation that holds the region; a nation's own in its city, Jeuno's in Jeuno, and Aht Urhgan's in the regions of its Besieged map."},
         {"name": "Conquest Nation", "tip": "The name of the nation that holds the region."},
+        {"name": "Coordinates", "tip": "The map square you are in, as the game's <pos> shows it. Nothing shows in a zone without a map."},
         {"name": "Weather Icon", "tip": "The weather's picture, as Use Custom Icons picks it."},
         {"name": "Weather Name", "tip": "The weather now."},
         {"name": "Vana'diel Date", "tip": "Vana'diel's date."},
@@ -1559,6 +1628,7 @@
         {"name": "Messages", "tip": "PlayOnline's mail and messenger icons while something waits, with how many."},
         {"name": "Party Size", "tip": "How many are in your party, or Solo."},
         {"name": "HP and MP", "tip": "The lowest HP and MP in your party."},
+        {"name": "Party Icon", "tip": "A person's picture."},
         {"name": "Pinned Status #1", "tip": "The status pinned first in the pop-out, with its time left. Its pin turns it on and off."},
         {"name": "Pinned Status #2", "tip": "The status pinned second in the pop-out, with its time left. Its pin turns it on and off."},
         {"name": "Pinned Status #3", "tip": "The status pinned third in the pop-out, with its time left. Its pin turns it on and off."},
@@ -1573,6 +1643,8 @@
         {"name": "Beastmen", "tip": "The beastmen's crest and how many regions they hold."},
         {"name": "Home Point Name", "tip": "The zone your home point is in."},
         {"name": "Home Point Icon", "tip": "A house with a map pin."},
+        {"name": "Your DPS", "tip": "Your damage per second."},
+        {"name": "Party DPS", "tip": "Your party's damage per second, all of you added up. Shows nothing while you are not in a party."},
         {"name": "Widget Name", "tip": "This widget's name, as its Name setting has it."}
       ]
     },
@@ -1580,7 +1652,7 @@
       "key": "popup-cards",
       "options": [
         {"name": "Influence", "tip": "How much of the zone's region each nation holds, and when the tally is."},
-        {"name": "Players", "tip": "Your friends playing in the zone's region, and the zone each is in. The game updates where they are about every two minutes."},
+        {"name": "Nearby Friends", "tip": "Your friends playing in the zone's region, and the zone each is in. The game updates where they are about every two minutes."},
         {"name": "Travel", "tip": "Every airship, boat, manaclipper and barge leaving from the zone's region, and when each boards or departs."},
         {"name": "Shop Hours", "tip": "Every guild shop in the zone's region, whether it is open and when that changes."},
         {"name": "Today", "tip": "Vana'diel's day and time, today's weather in your zone and the moon."},
@@ -1627,7 +1699,8 @@
         {"name": "Conquest", "tip": "The regions each nation holds, and your supply runs."},
         {"name": "Travel", "tip": "When each boat and airship leaves or arrives."},
         {"name": "Calendar", "tip": "The RSE and the next full and new moons."},
-        {"name": "Guilds", "tip": "Each guild's shop hours and today's turn-ins."}
+        {"name": "Guilds", "tip": "Each guild's shop hours and today's turn-ins."},
+        {"name": "Members", "tip": "Each party member's damage per second, highest first."}
       ]
     },
     {
@@ -1722,6 +1795,7 @@
     {"key": "switch-on", "name": "On"},
     {"key": "switched-off-top-panel", "name": "These settings are the top panel's, which is off: the Top Panel page switches it on."},
     {"key": "switched-off-headsup", "name": "HeadsUp is off: the HeadsUp Config page switches it on."},
+    {"key": "switched-off-damage-numbers", "name": "HeadsUp's damage numbers are off, so the game draws its own: the switch beside this page's title turns them on."},
     {"key": "key-add", "name": "+ Add Key"},
     {"key": "key-waiting", "name": "Press a Key..."},
     {"key": "always", "name": "Always", "tip": "This line is always visible as long as the nameplate as a whole is visible."},
@@ -1759,6 +1833,13 @@
     {"key": "setup-advanced", "name": "Advanced", "tip": "Shows each part of this step's preset on its own, to change in detail."},
     {"key": "setup-simple", "name": "Hide Advanced", "tip": "Hides the parts of each step's preset again. What you changed stays."},
     {"key": "setup-cancel", "name": "Cancel", "tip": "Puts back the settings you had before Setup and closes it."},
+    {"key": "sends-packets", "name": "SENDS PACKETS"},
+    {"key": "sends-auto-check", "tip": "Uses /check on mobs when they come into view. Limited to two checks per second at most."},
+    {"key": "sends-look-up-players", "tip": "Uses /sea on individual players to get their job and level. Happens when they first come into view, when they change gear, and every half an hour that they are still in view."},
+    {"key": "sends-conquest", "tip": "Asks the server for the conquest settings when zoning."},
+    {"key": "sends-world-conquest", "tip": "Asks the server for conquest standings when zoning."},
+    {"key": "sends-turn-ins", "tip": "Also asks the Phoenix website for guild turn-ins once per real world day."},
+    {"key": "sends-currencies", "tip": "Asks the server for your currencies when logging in. Otherwise, tracks currency changes as they happen."},
     {"key": "setup-warning", "name": "WARNING", "tip": "Setup changes your settings as you pick. Your settings are saved to {file} first, and Cancel puts them back."},
     {"key": "setup-step-welcome", "name": "Welcome to HeadsUp", "tip": "HeadsUp outlines mobs by whether they will attack you and draws its own nameplates over the game's. These steps set the main things, with a preview of each. Everything else is in the settings window: type /hu to open it."},
     {"key": "setup-step-theme", "name": "Theme", "tip": "Pick how the Top Panel looks. The settings window takes on the same look. Advanced has the fonts and sizes."},

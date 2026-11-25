@@ -168,11 +168,17 @@ namespace headsup
     BarMetrics MetricsOf(const Settings& s, BarShape shape, BarWidget kind, const WidgetOptions& own)
     {
         constexpr float kCloserLines = 0.8f, kLargerStatusIcons = 1.45f;
-        const bool closer = kind == BarWidget::HomePoint || kind == BarWidget::StatusTimers;
+        const bool closer = kind == BarWidget::HomePoint || kind == BarWidget::StatusTimers || kind == BarWidget::PhTimers;
         const float icons = kind == BarWidget::StatusTimers ? kLargerStatusIcons : 1.0f;
-        return MetricsFor(s.barHeight, shape, FontRatioOf(s, own), own.popupTextScale.value_or(s.popupTextScale),
+        BarMetrics m = MetricsFor(s.barHeight, shape, FontRatioOf(s, own), own.popupTextScale.value_or(s.popupTextScale),
             static_cast<float>(own.iconScale.value_or(s.barIconScale)) * icons, s.popupWidthScale, s.popupHeightScale,
             own.lineSeparation.value_or(s.barLineSeparation) * (closer ? kCloserLines : 1.0f));
+        if (own.fontSize)
+        {
+            m.title    = static_cast<float>(*own.fontSize);
+            m.subtitle = m.title / FontRatioOf(s, own);
+        }
+        return m;
     }
 
     const char* FishBarFont(const Settings& settings)
@@ -203,8 +209,10 @@ namespace headsup
     float BarLook::Leading(const WidgetContent& content) const
     {
         const size_t icons = content.icons.size() + (content.picture != GamePicture::None ? 1 : 0);
+        // An empty widget keeps an icon's room, as the cog alone, so its box shows at any padding.
+        const bool empty = icons == 0 && content.title.empty() && content.subtitle.empty();
         return static_cast<float>(icons) * (metrics.icon + metrics.gap) +
-               (content.cog ? metrics.icon : 0.0f); // alone, with no text to keep a gap from
+               (content.cog || empty ? metrics.icon : 0.0f); // alone, with no text to keep a gap from
     }
 
     std::optional<BoxStyle> BarLook::BoxOf(BarWidget widget, bool lit, bool backed) const

@@ -50,6 +50,9 @@ namespace headsup
             {Tag::Status, "$status", kMobKinds, false, {}, nullptr, BadgeGroup::Status},
             {Tag::Immune, "$immune", kMobKinds, false, {}, nullptr, BadgeGroup::Immune},
             {Tag::Owner, "$owner", kPetKinds, kText},
+            {Tag::Distance, "$distance", kMobKinds | KindBit(PlateKind::Players) | kNpcKinds | kPetKinds, kText}, // not yours: 0
+            {Tag::Buffs, "$buffs", kMobKinds | kPlayerKinds},
+            {Tag::Debuffs, "$debuffs", kMobKinds | kPlayerKinds},
             {Tag::Break, "$break", 0}, // Enter in a line's box makes it, and no page offers it as a chip
         };
         static_assert(std::size(kTags) == kTagCount);

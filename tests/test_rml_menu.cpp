@@ -7,6 +7,7 @@
 #include "game_font.h"
 #include "layout_edit.h"
 #include "menu_state.h"
+#include "menu_window.h"
 #include "plate_template.h"
 #include "rml_session.h"
 #include "test.h"
@@ -99,11 +100,15 @@ namespace
             }
             return changed;
         }
-        // In the window, or the settings over the panel's popup.
+        // In the window, or the settings over the panel's popup: they share ids, and the window is the lower.
         Rml::Element* Find(const std::string& id)
         {
+            std::vector<Rml::ElementDocument*> documents;
             for (int i = 0; i < m_Host.context->GetNumDocuments(); ++i)
-                if (Rml::Element* found = m_Host.context->GetDocument(i)->GetElementById(id)) return found;
+                documents.push_back(m_Host.context->GetDocument(i));
+            std::ranges::stable_sort(documents, {}, [](Rml::ElementDocument* d) { return d->GetComputedValues().z_index().value; });
+            for (Rml::ElementDocument* document : documents)
+                if (Rml::Element* found = document->GetElementById(id)) return found;
             return nullptr;
         }
         bool Shows(const std::string& id)
@@ -171,6 +176,7 @@ namespace
             return box->GetValue();
         }
         Rml::Element* Focused() { return m_Host.context->GetFocusElement(); }
+        Rml::Context* Context() { return m_Host.context; }
 
         // Presses the left button on one control and lets it go on another, or that far from the first.
         bool Drag(const std::string& from, const std::string& onto) { return Drag(from, Center(onto) - Center(from)); }
@@ -258,7 +264,7 @@ namespace
             Rml::Element* page = Find(kMenuPageId);
             const float seenTo = std::min(static_cast<float>(test::RmlSession::kHeight),
                 page->GetAbsoluteOffset(Rml::BoxArea::Border).y + page->GetBox().GetSize(Rml::BoxArea::Border).y);
-            std::vector<Rml::Element*> left{m_Host.context->GetDocument(0)};
+            std::vector<Rml::Element*> left{page->GetOwnerDocument()};
             while (!left.empty())
             {
                 Rml::Element* element = left.back();
@@ -1675,22 +1681,24 @@ TEST(a_slider_given_its_value_never_writes_it_back_over_a_newer_one)
 TEST(a_setting_of_something_switched_off_is_not_shown)
 {
     Window window;
-    const std::string least = "entities-nameplates-min-size", cursor = "entities-target-cursor-cursor-height";
-    CHECK(window.Shows(least) && window.Shows(cursor));
+    const std::string least = "entities-nameplates-min-size", cursor = "targetcursor-target-cursor-cursor-height";
+    CHECK(window.Shows(least));
     // Its own switch stays, to turn it back on.
     CHECK(window.Click("entities-nameplates-scale-with-distance"));
     CHECK(!window.settings.scaleWithDistance && !window.Shows(least) && window.Shows("entities-nameplates-scale-with-distance"));
     CHECK(!window.Shows(least + "-label-row")); // its row with it, label and all
-    window.Click("entities-target-cursor-cursor-style");
-    CHECK(window.Click("entities-target-cursor-cursor-style-o-0")); // the game's own cursor
-    CHECK(!window.Shows(cursor) && window.Shows("entities-target-cursor-cursor-style"));
     CHECK(window.Click("entities-nameplates-scale-with-distance"));
     CHECK(window.Shows(least));
+    window.Page("targetcursor");
+    CHECK(window.Shows(cursor));
+    window.Click("targetcursor-target-cursor-cursor-style");
+    CHECK(window.Click("targetcursor-target-cursor-cursor-style-o-0")); // the game's own cursor
+    CHECK(!window.Shows(cursor) && window.Shows("targetcursor-target-cursor-cursor-style"));
     // A card of what is off is gone whole.
-    CHECK(window.Shows("entities-target-cursor-head"));
+    CHECK(window.Shows("targetcursor-target-cursor-head"));
     window.settings.enabled = false;
     window.Frames(2);
-    CHECK(!window.Shows("entities-target-cursor-head") && !window.Shows(least));
+    CHECK(!window.Shows("targetcursor-target-cursor-head"));
 }
 
 TEST(deleting_a_custom_theme_that_differs_from_its_theme_goes_back_to_that_theme_and_its_looks)
@@ -1976,6 +1984,49 @@ TEST(a_clone_has_a_chip_of_its_own_and_its_settings_are_its_own)
     CHECK_EQ(window.Said(), "");
 }
 
+namespace
+{
+    // The first element of this class inside the control, scrolled into view.
+    Rml::Element* FirstOfClass(Window& window, const std::string& id, const char* className)
+    {
+        window.Center(id);
+        Rml::ElementList found;
+        window.Find(id)->GetElementsByClassName(found, className);
+        if (found.empty()) throw test::Failure{id + " holds no " + className};
+        return found[0];
+    }
+}
+
+// The warning on a chip shows its own tip under the pointer, not the chip's, and the chip still drags from it.
+TEST(the_sends_packets_mark_on_a_widgets_chip_shows_its_tip_and_drags_the_chip)
+{
+    Window window;
+    window.Page("toppanel");
+    const std::vector<PanelWidget> left = window.settings.barSections[static_cast<int>(BarSection::Left)];
+    CHECK(left[0] == PanelWidget{BarWidget::Zone});
+    const std::string zone = "toppanel-layout-chip-" + std::to_string(SlotOf(left[0]));
+    const std::string next = "toppanel-layout-chip-" + std::to_string(SlotOf(left[1]));
+    window.Center(next);
+    Rml::Element* sends    = FirstOfClass(window, zone, kSendsPacketsClass);
+    const Rml::Vector2f mark = sends->GetAbsoluteOffset(Rml::BoxArea::Border) + sends->GetBox().GetSize(Rml::BoxArea::Border) / 2.0f;
+    window.PointerTo(mark);
+    CHECK(window.Shows(kMenuTipId));
+    // Its title at the top, after a mark of its own, then what it sends.
+    Rml::Element* title = window.Find(kMenuTipId)->GetFirstChild();
+    const std::string titled = sends->GetAttribute<Rml::String>(kMenuTipTitleAttribute, "");
+    CHECK(!titled.empty() && title != nullptr && title->IsClassSet(kTipTitleClass));
+    CHECK(title->GetFirstChild() != nullptr && title->GetFirstChild()->IsClassSet(kSendsPacketsClass));
+    CHECK(title->GetInnerRML().ends_with(EscapedRml(titled)));
+    CHECK(window.TextOf(kMenuTipId).ends_with(EscapedRml(sends->GetAttribute<Rml::String>(kMenuTipAttribute, ""))));
+    CHECK(!sends->GetAttribute<Rml::String>(kMenuTipAttribute, "").starts_with(titled));
+    // Dropped on the bottom half of the widget after it, it goes below that one.
+    Rml::Element* after       = window.Find(next);
+    const Rml::Vector2f size  = after->GetBox().GetSize(Rml::BoxArea::Border);
+    const Rml::Vector2f below = after->GetAbsoluteOffset(Rml::BoxArea::Border) + Rml::Vector2f(size.x / 2.0f, size.y * 0.75f);
+    CHECK(window.DragFrom(mark, below - mark));
+    CHECK(window.settings.barSections[static_cast<int>(BarSection::Left)][1] == PanelWidget{BarWidget::Zone});
+}
+
 TEST(a_widgets_settings_show_over_the_panels_popup_with_the_window_closed_and_a_second_click_takes_them_away)
 {
     Window window;
@@ -2172,6 +2223,21 @@ TEST(a_setup_step_shows_its_presets_parts_only_under_advanced)
     const std::string party = "setup-top-panel-setup-widget-" + std::to_string(static_cast<int>(BarWidget::Party));
     CHECK(window.Click(party));
     CHECK(AnyCopyShown(window.settings, BarWidget::Party));
+}
+
+// Setup's switches for the widgets that make HeadsUp ask the server for something warn of it, as their chips do.
+TEST(setups_widget_switches_warn_of_the_packets_their_widgets_send)
+{
+    SetupWindow window(false);
+    window.Click("setup-buttons-start");
+    window.Click("nav-setup-top-panel");
+    window.Click("setup-top-panel-advanced");
+    const auto label = [](BarWidget w) { return "setup-top-panel-setup-widget-" + std::to_string(static_cast<int>(w)) + "-label"; };
+    for (const BarWidget w : {BarWidget::Zone, BarWidget::World, BarWidget::Currency})
+        CHECK(!FirstOfClass(window, label(w), kSendsPacketsClass)->GetAttribute<Rml::String>(kMenuTipAttribute, "").empty());
+    Rml::ElementList marks;
+    window.Find(label(BarWidget::Party))->GetElementsByClassName(marks, kSendsPacketsClass);
+    CHECK(marks.empty());
 }
 
 TEST(skipping_setup_puts_back_its_defaults_closes_the_window_and_counts_it_done)
@@ -2662,4 +2728,75 @@ TEST(the_top_panels_switch_is_on_its_pages_title_line_and_turns_the_panel_off_an
     // Another page's title has none.
     window.Page("theme");
     CHECK(!window.Shows("toppanel-on"));
+}
+
+TEST(the_damage_numbers_switch_sits_on_the_titles_line_and_their_page_runs_the_samples_while_open)
+{
+    Window window;
+    window.Page("damagenumbers");
+    Rml::Element* title = window.Find(kMenuPageTitleId);
+    Rml::Element* on    = window.Find("damagenumbers-on");
+    CHECK(on != nullptr && window.Shows("damagenumbers-on") && window.Find(std::string(kPageSwitchBlock) + "-test") == nullptr);
+    const auto middle = [](Rml::Element* e) { return e->GetAbsoluteOffset(Rml::BoxArea::Border).y + e->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f; };
+    CHECK(std::abs(middle(on) - middle(title)) < 2.0f);
+    CHECK(window.Click("damagenumbers-on") && !window.settings.combatPopups);
+    CHECK(window.Click("damagenumbers-on") && window.settings.combatPopups);
+    CHECK(window.menu.DamageNumbersPageOpen());
+    window.Page("theme");
+    CHECK(!window.menu.DamageNumbersPageOpen());
+}
+
+TEST(the_settings_window_or_a_game_window_comes_to_the_front_as_it_is_clicked_or_opened)
+{
+    Window window;
+    Rml::ElementDocument* settings = window.Find(kMenuCloseId)->GetOwnerDocument();
+    const Rml::Vector2f corner = settings->GetAbsoluteOffset(Rml::BoxArea::Border);
+    const Rml::Vector2f size   = settings->GetBox().GetSize(Rml::BoxArea::Border);
+    // A game window over the settings window's right edge.
+    constexpr float kOverlap = 100.0f;
+    const MenuLook look{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
+    GameWindows games;
+    games.Update(window.Context(), look,
+        {{"pack", static_cast<int>(corner.x + size.x - kOverlap), static_cast<int>(corner.y + kOverlap)}});
+    CHECK(games.Open({"pack", "Pack", {{"", GameButtonRml("pack-use", "Use")}}, "", "", ""}));
+    window.Frames();
+    Rml::ElementDocument* game = window.Find("pack-use")->GetOwnerDocument();
+    const float y = game->GetAbsoluteOffset(Rml::BoxArea::Border).y + game->GetBox().GetSize(Rml::BoxArea::Border).y / 2.0f;
+    const Rml::Vector2f both{corner.x + size.x - kOverlap / 2.0f, y}, settingsAlone{corner.x + kOverlap, y},
+        gameAlone{corner.x + size.x + kOverlap / 4.0f, y};
+    const auto onTop = [&] {
+        window.PointerTo(both);
+        return window.Context()->GetHoverElement()->GetOwnerDocument() == settings;
+    };
+    CHECK(!onTop());
+    window.ClickAt(settingsAlone);
+    CHECK(onTop());
+    window.ClickAt(gameAlone);
+    CHECK(!onTop());
+    // Opened again, the settings window comes over it.
+    window.menu.open = false;
+    window.Frames(2);
+    window.menu.open = true;
+    window.Frames(2);
+    CHECK(onTop());
+    CHECK_EQ(window.Said(), "");
+}
+
+TEST(a_sub_window_opened_while_the_settings_window_is_in_front_brings_its_parent_over_it_too)
+{
+    Window window;
+    Rml::ElementDocument* settings = window.Find(kMenuCloseId)->GetOwnerDocument();
+    const MenuLook look{MenuTheme::Phoenix, kBarlowCondensed, kMarcellusSC, 16, 0, false, kPhoenixMenuColors, std::nullopt, std::nullopt};
+    GameWindows games;
+    games.Update(window.Context(), look, {});
+    CHECK(games.Open({"pack", "Pack", {{"", GameButtonRml("pack-use", "Use")}}, "", "", ""}));
+    settings->PullToFront();
+    CHECK(games.Open({"sure", "Sure?", {{"", GameButtonRml("sure-yes", "Yes")}}, "", "", ""}, "pack"));
+    const auto place = [&](const Rml::ElementDocument* document) {
+        for (int i = 0; i < window.Context()->GetNumDocuments(); ++i)
+            if (window.Context()->GetDocument(i) == document) return i;
+        return -1;
+    };
+    CHECK(place(settings) < place(games.DocumentOf("pack")));
+    CHECK(place(games.DocumentOf("pack")) < place(games.DocumentOf("sure")));
 }

@@ -107,6 +107,21 @@ namespace headsup
         }
     }
 
+    bool StarredByName(const std::vector<uint16_t>& starred, uint16_t id)
+    {
+        const std::string_view name = StatusName(id);
+        return std::ranges::any_of(starred, [&](uint16_t star) { return name == StatusName(star); });
+    }
+
+    std::vector<uint16_t> StarredFirst(const std::vector<uint16_t>& starred, bool debuffs)
+    {
+        std::vector<uint16_t> ids;
+        for (const bool first : {true, false})
+            for (const auto& [name, id] : ByName())
+                if (IsDebuff(id) == debuffs && StarredByName(starred, id) == first) ids.push_back(id);
+        return ids;
+    }
+
     std::optional<double> StatusSecondsLeft(uint32_t raw, int64_t unixMs)
     {
         if (raw == kNoExpiry) return std::nullopt;
@@ -207,12 +222,10 @@ namespace headsup
     }
 
     PopupContent StatusTimersPopup(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& favorites,
-        const std::vector<uint16_t>& pins, const BarPalette& theme, size_t buffsScrolled, size_t debuffsScrolled, bool refused)
+        const std::vector<uint16_t>& pins, const BarPalette& theme, size_t buffsScrolled, size_t debuffsScrolled)
     {
         PopupContent popup;
         popup.title     = ListOf(Text("Status Timers"));
-        if (refused)
-            popup.subtitle = ListOf(Colored("Must have at least one status pinned.", kErrorColor));
         const std::vector<Named> named = NamedAll(active);
         const auto nameCell = [&](uint16_t id, const std::string& name) {
             PopupCell cell = Cell(Text(name));

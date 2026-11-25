@@ -61,7 +61,8 @@ namespace
                                 0x24, 0x10, 0x8B, 0x54, 0x24, 0x0C, 0x50, 0x8B, 0x44, 0x24, 0x0C, 0x51, 0x8B, 0x4C, 0x24, 0x0C,
                                 0x52, 0x50, 0x51});
         image.Put(0x0D08A3, {0xE8, 0x68, 0x59, 0xFB, 0xFF, 0x83, 0xC4, 0x14, 0xC2, 0x14, 0x00});
-        image.Put(0x0D068A, {0x8B, 0xCE, 0xE8, 0xEF, 0x01, 0x00, 0x00}); // the entity loop: mov ecx,esi; call the wrapper
+        // The name method's pushes, mov ecx,esi and its call into the wrapper (Signet's pattern for build 0x6AC37846).
+        image.Put(0x0D0683, {0x50, 0x8D, 0x54, 0x24, 0x1C, 0x51, 0x52, 0x8B, 0xCE, 0xE8, 0xEF, 0x01, 0x00, 0x00});
         image.Put(0x17570C, {0xE8, 0xFF, 0x0A, 0xF1, 0xFF, 0x83, 0xC4, 0x14, 0x8B, 0x47, 0x10}); // a loop over world labels
         return image;
     }
@@ -103,8 +104,20 @@ TEST(the_entity_loops_call_into_the_wrapper_is_found)
     // The actor goes into the wrapper in ecx and no further, so it is caught at this call.
     const NameRoutine found = Locate(ClientImage());
     CHECK(found.problem == LocateProblem::None);
-    CHECK_EQ(found.wrapper, 0x0D0880u);
-    CHECK((found.wrapperCalls == std::vector<uint32_t>{0x0D068C}));
+    CHECK_EQ(found.wrapperCall, 0x0D068Cu);
+    CHECK_EQ(found.entityDraw, 0x0D0880u);
+}
+
+TEST(a_call_another_plugin_sent_elsewhere_is_found_and_goes_on_there)
+{
+    // Signet points this call at its own gate at the game's first frame, before HeadsUp's name hook starts.
+    constexpr uint32_t kOtherGate = 0x10070880;
+    Image image = ClientImage();
+    image.Put32(0x0D068D, kOtherGate - (kClientBase + 0x0D068C + kBranchLength));
+    const NameRoutine found = Locate(image);
+    CHECK(found.problem == LocateProblem::None);
+    CHECK_EQ(found.wrapperCall, 0x0D068Cu);
+    CHECK_EQ(kClientBase + found.entityDraw, kOtherGate);
 }
 
 TEST(a_jump_another_plugin_put_over_the_wrappers_start_leaves_it_found)
@@ -114,7 +127,7 @@ TEST(a_jump_another_plugin_put_over_the_wrappers_start_leaves_it_found)
     image.Put(0x0D0880, {0xE9, 0xCB, 0x89, 0x89, 0x73});
     const NameRoutine found = Locate(image);
     CHECK(found.problem == LocateProblem::None);
-    CHECK((found.wrapperCalls == std::vector<uint32_t>{0x0D068C}));
+    CHECK_EQ(found.wrapperCall, 0x0D068Cu);
 }
 
 TEST(a_wrapper_that_passes_its_arguments_otherwise_is_refused)
@@ -124,11 +137,18 @@ TEST(a_wrapper_that_passes_its_arguments_otherwise_is_refused)
     CHECK(Locate(image).problem == LocateProblem::EntityWrapperChanged);
 }
 
-TEST(a_wrapper_nothing_calls_is_refused)
+TEST(a_name_method_laid_out_otherwise_is_refused)
 {
     Image image = ClientImage();
-    image.Put(0x0D068C, {0xE8, 0x00, 0x00, 0x00, 0x00});
+    image.Put(0x0D0687, {0x20}); // lea edx,[esp+0x20]
     CHECK(Locate(image).problem == LocateProblem::NoEntityWrapperCalls);
+}
+
+TEST(a_name_method_found_twice_is_refused)
+{
+    Image image = ClientImage();
+    image.Put(0x100000, {0x50, 0x8D, 0x54, 0x24, 0x1C, 0x51, 0x52, 0x8B, 0xCE, 0xE8, 0x00, 0x00, 0x00, 0x00});
+    CHECK(Locate(image).problem == LocateProblem::AmbiguousEntityWrapperCalls);
 }
 
 TEST(without_that_wrapper_the_routine_is_refused)
@@ -805,6 +825,33 @@ namespace
     }
 }
 
+TEST(the_compass_routines_answer_is_found_once_whatever_it_says_now)
+{
+    // From the client (RVA 0xAD7D9): the zone test, the jump table by zone, "no" (xor al,al; ret) and "yes"
+    // (mov al,1; ret), whose 1 is 36 bytes in.
+    constexpr uint32_t kRoutine = 0xAD7D9, kAnswer = kRoutine + 36;
+    const auto put = [](Image& image, uint32_t at) {
+        image.Put(at, {0x33, 0xC0, 0x66, 0x8B, 0x81, 0x7C, 0x0D, 0x04, 0x00, 0x48, 0x3D, 0xE3, 0x00, 0x00, 0x00, 0x77,
+                          0x12, 0x33, 0xC9, 0x8A, 0x88, 0x08, 0xD8, 0xA0, 0x02, 0xFF, 0x24, 0x8D, 0x00, 0xD8, 0xA0, 0x02,
+                          0x32, 0xC0, 0xC3, 0xB0, 0x01, 0xC3});
+    };
+    CHECK(!LocateCompassShown(Image{}.Text()));
+    Image image;
+    put(image, kRoutine);
+    CHECK_EQ(*LocateCompassShown(image.Text()), kAnswer);
+    // HUDBeGone writes 0 there to hide the compass: still the same place.
+    image.Put(kAnswer, {0x00});
+    CHECK_EQ(*LocateCompassShown(image.Text()), kAnswer);
+    put(image, 0x100000);
+    CHECK(!LocateCompassShown(image.Text()));
+}
+
+TEST(the_compass_is_a_window_the_player_can_hide)
+{
+    CHECK(CompassWindow(*KeyFromShortName("compass")) && !CompassWindow(*KeyFromShortName("equip")));
+    CHECK((HiddenWindowsFrom("compass") == std::vector<std::string>{"compass"}));
+}
+
 TEST(wide_scans_grid_label_takes_the_title_windows_place_from_one_call_to_get_rect)
 {
     Image image;
@@ -1292,6 +1339,29 @@ TEST(the_config_getter_is_the_first_place_its_bytes_are)
     CHECK(found.problem == LocateProblem::None && found.entry == kGetter);
 }
 
+TEST(the_pos_text_routine_is_found_by_its_call_of_the_floor_routine_with_the_zone_map_global)
+{
+    // From the client (RVA 0x1F7600): its prologue, and at +0x86 the loads of x, height and y, ecx from the zone map
+    // global (0x22101F24 in that dump) and the call of the floor routine.
+    constexpr uint32_t kEntry = 0x1F7600, kCall = kEntry + 0x86;
+    const auto putCall = [](Image& image, uint32_t at) {
+        image.Put(at, {0x8B, 0x74, 0x24, 0x14, 0x8B, 0x44, 0x24, 0x10, 0x8B, 0x7C, 0x24, 0x0C, 0x8B, 0x0D, 0x24, 0x1F,
+                          0x10, 0x22, 0x56, 0x50, 0x57, 0xE8, 0x30, 0x9B, 0xF8, 0xFF});
+    };
+    Image image;
+    CHECK(LocatePosText(image.Text()).problem == LocateProblem::NoPosText);
+    image.Put(kEntry, {0xA1, 0x98, 0xFD, 0xFA, 0x21, 0x83, 0xEC, 0x14, 0x85, 0xC0, 0x0F, 0x84, 0x15, 0x01, 0x00, 0x00});
+    putCall(image, kCall);
+    const PosTextSite found = LocatePosText(image.Text());
+    CHECK(found.problem == LocateProblem::None && found.entry == kEntry && found.zoneMap == 0x22101F24u);
+    // The next routine starts with the same load but a smaller frame (RVA 0x1F7730): not the one.
+    Image other = image;
+    other.Put(kEntry + 5, {0x83, 0xEC, 0x10});
+    CHECK(LocatePosText(other.Text()).problem == LocateProblem::PosTextChanged);
+    putCall(image, kEntry + 0x1000);
+    CHECK(LocatePosText(image.Text()).problem == LocateProblem::AmbiguousPosText);
+}
+
 TEST(the_search_servers_address_is_where_the_search_clients_setup_clears_it)
 {
     // From the client (RVA 0xE1470): xor ebx,ebx; push edi; mov [address],ebx; mov [port],bx; call.
@@ -1654,4 +1724,67 @@ TEST(the_popups_own_decision_is_not_the_chat_lines)
     Image image = PopupEarly();
     image.Put(kPopupLineRva + 10, {0x01}); // push 1, as the popup's decision does
     CHECK(LocatePopupEarly(image.Text(), kPopupDecisionRoutine).problem == LocateProblem::NoPopupEarly);
+}
+
+namespace
+{
+    // Ashita.dll's ImGui backend (sha256 a9ee596e..., RVAs from its base): the poll's ScreenToClient then
+    // AddMousePosEvent at 0x156275, and the message handler's two calls (a move at 0x158077, a leave at 0x1580EF), all
+    // to AddMousePosEvent at 0x2FE50; and the button press's hover update on the raw point, at 0x1581D5 to 0x383D0.
+    constexpr uint32_t kImGuiPoll = 0x156258, kImGuiPollCall = 0x156275, kImGuiMoveCall = 0x158077,
+                       kImGuiLeaveCall = 0x1580EF, kAddMousePos = 0x2FE50, kImGuiPressHover = 0x1581B8,
+                       kImGuiHoverCall = 0x1581D5, kHoverUpdate = 0x383D0;
+    constexpr std::initializer_list<uint8_t> kPressHoverBytes = {0x66, 0x0F, 0x6E, 0x45, 0xF0, 0x8D, 0x4D, 0xC0, 0x0F, 0x5B,
+        0xC0, 0xF3, 0x0F, 0x11, 0x45, 0xC0, 0x66, 0x0F, 0x6E, 0x45, 0xF4, 0x0F, 0x5B, 0xC0, 0xF3, 0x0F, 0x11, 0x45, 0xC4};
+
+    void PutCallTo(Image& image, uint32_t call, uint32_t target)
+    {
+        image.Put(call, {0xE8});
+        image.Put32(call + 1, target - (call + kBranchLength));
+    }
+
+    Image ImGuiClient()
+    {
+        Image image;
+        image.Put(kImGuiPoll, {0xFF, 0x15, 0x48, 0x04, 0x1E, 0x10, 0x85, 0xC0, 0x74, 0x18, 0x66, 0x0F, 0x6E, 0x55, 0xDC,
+                                  0x66, 0x0F, 0x6E, 0x4D, 0xD8, 0x8B, 0x4D, 0xB0, 0x0F, 0x5B, 0xD2, 0x0F, 0x5B, 0xC9});
+        PutCallTo(image, kImGuiPollCall, kAddMousePos);
+        image.Put(kImGuiMoveCall - 16, {0x8B, 0xCF, 0x66, 0x0F, 0x6E, 0x55, 0xF4, 0x66, 0x0F, 0x6E, 0x4D, 0xF0, 0x0F, 0x5B, 0xD2,
+                                           0x0F, 0x5B, 0xC9});
+        PutCallTo(image, kImGuiMoveCall, kAddMousePos);
+        image.Put(kImGuiLeaveCall - 8, {0x0F, 0x28, 0xD1, 0x8B, 0x7D, 0xCC, 0x8B, 0xCF});
+        PutCallTo(image, kImGuiLeaveCall, kAddMousePos);
+        PutCallTo(image, 0x158200, kAddMousePos + 0x10); // a call to another routine
+        image.Put(kImGuiPressHover, kPressHoverBytes);
+        PutCallTo(image, kImGuiHoverCall, kHoverUpdate);
+        return image;
+    }
+}
+
+TEST(every_call_into_imguis_mouse_position_is_found_from_ashitas_poll)
+{
+    const ImGuiMouseCalls found = LocateImGuiMouseCalls(ImGuiClient().Text());
+    CHECK(found.problem == LocateProblem::None);
+    CHECK_EQ(found.addMousePos, kAddMousePos);
+    CHECK(found.calls == (std::vector<uint32_t>{kImGuiPollCall, kImGuiMoveCall, kImGuiLeaveCall}));
+    CHECK_EQ(found.hoverCall, kImGuiHoverCall);
+    CHECK_EQ(found.hoverUpdate, kHoverUpdate);
+}
+
+TEST(imguis_mouse_is_left_alone_when_a_press_would_still_test_the_raw_point)
+{
+    // Scaled moves with an unscaled press check would hand the game presses over ImGui's windows.
+    Image noHover = ImGuiClient();
+    noHover.Put(kImGuiPressHover + 6, {0x4E}); // lea ecx,[esi-40h]: not the point it built
+    CHECK(LocateImGuiMouseCalls(noHover.Text()).problem == LocateProblem::NoImGuiMouse);
+}
+
+TEST(imguis_mouse_position_is_left_alone_without_one_poll)
+{
+    CHECK(LocateImGuiMouseCalls(Image{}.Text()).problem == LocateProblem::NoImGuiMouse);
+    Image twice = ImGuiClient();
+    twice.Put(0x160000, {0xFF, 0x15, 0x48, 0x04, 0x1E, 0x10, 0x85, 0xC0, 0x74, 0x18, 0x66, 0x0F, 0x6E, 0x55, 0xDC, 0x66, 0x0F,
+                            0x6E, 0x4D, 0xD8, 0x8B, 0x4D, 0xB0, 0x0F, 0x5B, 0xD2, 0x0F, 0x5B, 0xC9});
+    PutCallTo(twice, 0x16001D, kAddMousePos);
+    CHECK(LocateImGuiMouseCalls(twice.Text()).problem == LocateProblem::AmbiguousImGuiMouse);
 }

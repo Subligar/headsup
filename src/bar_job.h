@@ -18,10 +18,12 @@ namespace headsup
     constexpr double kExpLeastSpan          = 60.0;  // seconds of them before it is shown
     constexpr double kExpMaxGap             = 5.0;   // seconds without a sample after which the next one is a new start
 
-    // Your jobs and EXP as the game keeps them (Ashita's IPlayer, from the server's 0x061 and 0x063).
+    // Your jobs and EXP as the game keeps them (Ashita's IPlayer, from the server's 0x061 and 0x063). The levels are
+    // your jobs' own (0x01B); the synced ones those Level Sync or a level cap holds you to.
     struct JobSample
     {
         uint8_t mainJob = 0, mainLevel = 0, subJob = 0, subLevel = 0;
+        uint8_t syncedMainLevel = 0, syncedSubLevel = 0;
         uint32_t exp = 0, expNeeded = 0; // into this level, and the whole of it
         uint32_t limitPoints = 0, merits = 0, meritsMax = 0;
         bool limitMode = false;
@@ -32,8 +34,10 @@ namespace headsup
     const char* JobName(uint8_t job);
     // "WAR 75 / NIN 37", the subjob left out when it has no name or no levels; "-" without a main job.
     std::string JobsText(uint8_t mainJob, uint8_t mainLevel, uint8_t subJob, uint8_t subLevel);
+    // A subjob's level under a main job's: its own, up to half the main job's (Phoenix's SUBJOB_RATIO 1).
+    uint8_t SubLevelUnder(uint8_t mainLevel, uint8_t subLevel);
     // What after earned over before: EXP below the cap; limit points (and any EXP) at it. Nothing across a job change,
-    // a lost level, a jump of more than one (a sync lifted) or EXP lost.
+    // a lost level, a jump of more than one or EXP lost.
     uint32_t Gained(const JobSample& before, const JobSample& after);
 
     class ExpTracker
@@ -67,8 +71,8 @@ namespace headsup
         bool operator==(const JobReport&) const = default;
     };
 
-    // The Job & EXP widget's parts as o sets them: Job Info by its Job Text, or with Job Names off the levels alone,
-    // "Lv 30 / 15"; each EXP text; the bar. base takes its popup and figures while there is a job to show.
+    // The Job & EXP widget's parts as o sets them: Job Info by its Job Text, at the synced levels with Use Synced Level;
+    // each EXP text; the bar. base takes its popup and figures while there is a job to show.
     std::vector<PartContent> JobParts(const std::optional<JobReport>& job, const WidgetOptions& o, WidgetContent& base);
     PopupContent JobPopup(const std::optional<JobReport>& job);
 }

@@ -112,6 +112,12 @@ namespace headsup
     using RegionShares = std::array<RegionShare, kContenderNations>;
     // Nothing for a short packet, or for shares of more than 100 in all, which a layout other than Phoenix's would
     // give.
+    // What a kConquestPacket says of your own: your nation's conquest points and your Imperial Standing.
+    struct ConquestCurrencies
+    {
+        uint32_t points = 0, imperialStanding = 0;
+    };
+    std::optional<ConquestCurrencies> ParseConquestCurrencies(const uint8_t* data, uint32_t size);
     std::optional<RegionShares> ParseRegionShares(const uint8_t* data, uint32_t size);
     constexpr uint8_t NationBit(Nation nation) { return static_cast<uint8_t>(1u << (static_cast<int>(nation) - 1)); }
     const char* NationName(Nation nation); // "San d'Oria", ...; "" for none

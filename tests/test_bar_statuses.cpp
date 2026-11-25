@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -186,11 +187,6 @@ TEST(the_popup_lists_your_favorites_with_pins_over_every_buff_then_every_debuff_
     CHECK(buffs.cells[1].status && buffs.cells[1].status->id == 33 && debuffs.cells[1].status->id == 134);
     // No favorites: a line saying how to keep one.
     CHECK(StatusTimersPopup(active, {}, {}, theme, 0, 0).sections[0].rows[0].kind == RowKind::Line);
-    // A refused unpin says why just under the title, in the error red.
-    const PopupContent refused = StatusTimersPopup(active, {kSignetEffect}, {kSignetEffect}, theme, 0, 0, true);
-    CHECK(Joined(refused.subtitle) == "Must have at least one status pinned." && refused.subtitle[0].tone == Tone::Own &&
-          refused.subtitle[0].argb == kErrorColor);
-    CHECK(refused.sections[0].rows[0].kind == RowKind::Grid);
 }
 
 TEST(the_popups_status_icons_are_the_themes_with_its_background_setting)
@@ -201,4 +197,20 @@ TEST(the_popups_status_icons_are_the_themes_with_its_background_setting)
     const PopupContent p = StatusTimersPopup({}, {40}, {40}, theme, 0, 0);
     CHECK(p.sections[0].rows[0].cells[2].status == (StatusMark{40, 2, true}));
     CHECK(p.sections[1].rows[0].cells[1].status->pack == 2 && p.sections[2].rows[0].cells[1].status->back);
+}
+
+TEST(the_starred_statuses_come_first_in_their_list_and_each_name_once)
+{
+    const std::vector<uint16_t> starred = {41, 19}; // Shell, and Sleep by its second id
+    const std::vector<uint16_t> buffs = StarredFirst(starred, false), debuffs = StarredFirst(starred, true);
+    CHECK_EQ(buffs.front(), 41);
+    CHECK_EQ(debuffs.front(), 2); // Sleep by its first id
+    std::vector<std::string> names;
+    for (const uint16_t id : debuffs)
+        names.push_back(StatusName(id));
+    CHECK(std::ranges::is_sorted(names.begin() + 1, names.end()));
+    CHECK(std::set<std::string>(names.begin(), names.end()).size() == names.size());
+    for (const uint16_t id : buffs)
+        CHECK(!IsDebuff(id));
+    CHECK(StarredByName(starred, 2) && StarredByName(starred, 41) && !StarredByName(starred, 40));
 }
