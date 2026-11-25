@@ -268,6 +268,8 @@ namespace headsup
         uint32_t color = 0, alpha = 0;
         ScreenPoint center;
         float lineHeight = 0.0f, depth = 0.0f, across = 0.5f;
+        uint32_t target = 0; // its target's entity index, 0 for none known
+        PopupSide side   = PopupSide::Middle;
     };
 
     // A target's body on screen, in the scene image's pixels: the rows of the bottom of the game's name over its head
@@ -335,6 +337,10 @@ namespace headsup
     // over those down (PlaceSquarePixels' toX / toY), so the game's copy to the screen gives the letters their shape back.
     SquareQuad PlaceCombatPopupText(ScreenPoint center, float lineHeight, const CombatTextSize& text, float pixelShape,
         float across);
+
+    // A background behind each target's column of popups, around their quads (by shown) and pad pixels more.
+    std::vector<SquareQuad> PopupColumnBacks(const std::vector<ShownCombatPopup>& shown, const std::vector<SquareQuad>& quads,
+        float pad);
 
     // One line each for the draw dump: what the game's call drew, and what HeadsUp drew.
     std::string DescribeCombatPopup(const CombatPopup& popup);

@@ -1040,3 +1040,25 @@ TEST(a_popup_is_text_size_tall_where_the_games_is_close_up_and_shrinks_with_it)
     // On a smaller screen the game's number is smaller too, and so the same Text Size takes the same share of it.
     CHECK(Near(CombatPopupScale(43, 720.0f), 2.0f * scale));
 }
+
+// While the Damage Numbers page is open, a background behind each column of each target shows how wide it is and how
+// far apart the columns sit.
+TEST(each_targets_column_has_one_background_around_its_numbers_with_a_margin)
+{
+    std::vector<ShownCombatPopup> shown(4);
+    shown[0].target = 7, shown[0].side = PopupSide::Right;
+    shown[1].target = 7, shown[1].side = PopupSide::Right;
+    shown[2].target = 7, shown[2].side = PopupSide::Left;
+    shown[3].target = 9, shown[3].side = PopupSide::Right;
+    const std::vector<SquareQuad> quads = {{100, 50, 40, 20}, {100, 70, 60, 20}, {10, 50, 30, 20}, {500, 50, 40, 20}};
+    const std::vector<SquareQuad> backs = PopupColumnBacks(shown, quads, 2.0f);
+    CHECK_EQ(backs.size(), size_t{3});
+    const auto has = [&](SquareQuad want) {
+        return std::ranges::any_of(backs, [&](const SquareQuad& b) {
+            return Near(b.x, want.x) && Near(b.y, want.y) && Near(b.width, want.width) && Near(b.height, want.height);
+        });
+    };
+    CHECK(has({98, 48, 64, 44}));  // target 7's Right: both its lines, as wide as the wider
+    CHECK(has({8, 48, 34, 24}));   // its Left
+    CHECK(has({498, 48, 44, 24})); // another target's Right is its own
+}

@@ -1760,7 +1760,7 @@ private:
         const bool saved = WithSavedState([&] {
             if (FAILED(m_Device->SetRenderTarget(m_CombatTextHook.Target(), m_CombatTextHook.Depth()))) return;
             m_CombatPopups.Draw(m_Device, shown, headsup::CombatPopupFont(m_Settings), m_Settings.combatPopupOutline,
-                headsup::ToArgb(m_Settings.combatPopupOutlineColor), toX, toY);
+                headsup::ToArgb(m_Settings.combatPopupOutlineColor), toX, toY, m_RmlMenu.DamageNumbersPageOpen());
         });
         if (!saved) NotDrawn("combat popups are");
     }

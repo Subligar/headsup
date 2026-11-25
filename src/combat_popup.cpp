@@ -534,10 +534,11 @@ namespace headsup
             const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
             const std::optional<PopupBody> body = p.event && placing.bodyOf ? placing.bodyOf(p.event->target) : std::nullopt;
             const uint32_t color = on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate);
+            const PopupSide side = SideOf(p.event, placing.sides);
             shown.push_back(Place(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
-                                      ScreenPoint{p.box.CenterX(), p.box.CenterY()},
-                                      p.box.Height() * scale, p.depth, kCentered},
-                p.event ? p.event->line : 0, body, SideOf(p.event, placing.sides), placing));
+                                      ScreenPoint{p.box.CenterX(), p.box.CenterY()}, p.box.Height() * scale, p.depth,
+                                      kCentered, p.event ? p.event->target : 0, side},
+                p.event ? p.event->line : 0, body, side, placing));
         }
         return shown;
     }
@@ -548,6 +549,25 @@ namespace headsup
         const float fit = lineHeight / static_cast<float>(text.raster), width = text.width * fit * pixelShape;
         const float capitals = text.halo + (text.capitalTop + text.capitalBottom) / 2.0f;
         return SquareQuad{std::round(center.x - width * across), std::round(center.y - capitals * fit), width, text.height * fit};
+    }
+
+    std::vector<SquareQuad> PopupColumnBacks(const std::vector<ShownCombatPopup>& shown, const std::vector<SquareQuad>& quads,
+        float pad)
+    {
+        std::vector<std::pair<std::pair<uint32_t, PopupSide>, ScreenBox>> columns;
+        for (size_t i = 0; i < shown.size() && i < quads.size(); ++i)
+        {
+            const std::pair key{shown[i].target, shown[i].side};
+            const SquareQuad& q = quads[i];
+            auto column = std::ranges::find(columns, key, &decltype(columns)::value_type::first);
+            if (column == columns.end()) column = columns.insert(columns.end(), {key, ScreenBox{}});
+            column->second.Add(q.x, q.y);
+            column->second.Add(q.x + q.width, q.y + q.height);
+        }
+        std::vector<SquareQuad> backs;
+        for (const auto& [key, box] : columns)
+            backs.push_back(SquareQuad{box.minX - pad, box.minY - pad, box.Width() + 2.0f * pad, box.Height() + 2.0f * pad});
+        return backs;
     }
 
     float CombatPopupScale(int textSize, float screenHeight)

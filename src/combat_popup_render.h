@@ -19,9 +19,10 @@ namespace headsup
     {
     public:
         // Into the scene image, toX by toY times the screen, inside the caller's saved states, the edge reaching edge
-        // screen pixels around the letters in outlineColor (opaque ARGB).
+        // screen pixels around the letters in outlineColor (opaque ARGB); with columns, a background behind each
+        // target's column of them.
         void Draw(IDirect3DDevice8* device, const std::vector<ShownCombatPopup>& popups, const std::string& font,
-            int edge, uint32_t outlineColor, float toX, float toY);
+            int edge, uint32_t outlineColor, float toX, float toY, bool columns);
         // Once GDI or Direct3D refused a texture: nothing more is drawn until HeadsUp reloads.
         bool Failed() const { return m_Failed; }
         // What was refused, once.
@@ -43,6 +44,8 @@ namespace headsup
         GdiText m_Text;
         // font, words, color, raster, edge, the edge's color
         FrameCache<std::tuple<std::string, std::string, uint32_t, int, int, uint32_t>, Texture> m_Textures;
+        IDirect3DTexture8* m_White = nullptr; // one opaque white pixel, under the columns' tint
+        float m_WhiteU = 0.0f, m_WhiteV = 0.0f;
         uint32_t m_Frame = 0;
         bool m_Failed    = false;
         std::string m_Failure;
