@@ -764,8 +764,7 @@ namespace headsup
         }
 
         // A widget's parts as chips on its two lines, each with a toggle and its icon where it has one: a chip drags
-        // within its line or to the other, before the chip it is dropped on or to the end. The last part on cannot be
-        // switched off; trying says so under the lines until the next toggle or move. A created widget's lines take
+        // within its line or to the other, before the chip it is dropped on or to the end. A created widget's lines take
         // any widget's parts from the list under them of the widget picked, and a chip let go off the lines goes back.
         void Designer(Context& c, PanelWidget widget)
         {
@@ -792,7 +791,6 @@ namespace headsup
             std::optional<Move> move; // applied after the lines are written, as the trays' drop is
             std::optional<Put> put;   // a listed chip dropped on a line
             std::optional<WidgetPart> taken; // a line's chip let go
-            bool toggled = false, refused = false;
             const auto dropped = [&](const std::string& target, int toLine, size_t at) {
                 const FormEvent* event = form.Took(target, kDropEvent);
                 if (event == nullptr) return;
@@ -832,19 +830,7 @@ namespace headsup
                     const auto pin = static_cast<size_t>(chip.part) - static_cast<size_t>(WidgetPart::StatusPin1);
                     const bool pinned = IsPinnedStatus(chip.part);
                     if (pinned) chip.on = pin < c.s.statusPins.size();
-                    bool on = chip.on;
-                    if (!pinned) form.CheckAt((name + kChipToggle).c_str(), on);
-                    if (on != chip.on)
-                    {
-                        toggled = true;
-                        if (on)
-                            chip.on = true;
-                        else if (!TurnOff(d, chip.part, PillShowsOther(c.s, Panel(c.s), widget)))
-                        {
-                            refused = true;
-                            form.Set(form.Named(name + kChipToggle), FormValueKind::Class, "on", {}, true);
-                        }
-                    }
+                    if (!pinned) form.CheckAt((name + kChipToggle).c_str(), chip.on);
                     std::string text(Said(names[part].name));
                     if (created && WidgetOfPart(chip.part) != BarWidget::Custom) text += " (" + widgetName(WidgetOfPart(chip.part)) + ")";
                     form.Raw(picture(part) + EscapedRml(text) + "</div>");
@@ -864,16 +850,9 @@ namespace headsup
                 changed = MovePart(d, move->line, move->index, move->toLine, move->at);
             else if (put)
                 changed = PutPart(d, put->part, put->line, put->at);
-            else if (taken && !(changed = TakePart(d, *taken, PillShowsOther(c.s, Panel(c.s), widget))))
-                refused = true;
+            else if (taken)
+                changed = TakePart(d, *taken);
             if (changed) form.changed = true;
-            if (refused)
-                c.state.partRefused = widget;
-            else if ((toggled || changed) && c.state.partRefused == widget)
-                c.state.partRefused.reset();
-            if (c.state.partRefused == widget)
-                form.Raw(std::string("<div class=\"error\">") + EscapedRml(Said(Word(c, WindowWord::WidgetTabsDesignLastOn))) +
-                         "</div>");
             if (!created) return;
             std::vector<BarWidget> from;
             for (const WidgetPart part : PartsOf(BarWidget::Custom))
@@ -1080,6 +1059,27 @@ namespace headsup
             form.Raw("</div>");
         }
 
+        // A created widget's rows about itself, which it never takes from a widget it borrows from: Show Zone ID in
+        // Header and Wrap Text change only their own widget's title and lines.
+        constexpr WidgetTabsRow kOwnRows[] = {WidgetTabsRow::Name, WidgetTabsRow::Icon, WidgetTabsRow::Alignment,
+            WidgetTabsRow::Combine, WidgetTabsRow::LinkedPadding, WidgetTabsRow::ShowZoneId, WidgetTabsRow::WrapText};
+
+        // The widgets a created widget shows parts or cards of, in the order it first has them.
+        std::vector<BarWidget> BorrowedFrom(const headsup::WidgetOptions& created)
+        {
+            std::vector<BarWidget> from;
+            const auto add = [&](BarWidget kind) {
+                if (kind != BarWidget::Custom && std::ranges::find(from, kind) == from.end()) from.push_back(kind);
+            };
+            for (const std::vector<DesignChip>& line : created.design.lines)
+                for (const DesignChip& chip : line)
+                    if (ChipOn(chip)) add(WidgetOfPart(chip.part));
+            for (const std::vector<CardKind>& row : created.popup.rows)
+                for (const CardKind card : row)
+                    add(WidgetOfCard(card));
+            return from;
+        }
+
         // One widget's options: what it shows and its own settings, as the layout orders them, a row the widget has
         // nothing for left out; then its Clone and, on a copy, its Remove.
         void WidgetOptions(Context& c, const LayoutSetting& e, PanelWidget widget)
@@ -1089,8 +1089,6 @@ namespace headsup
             headsup::WidgetOptions& o = s.Widget(widget);
             const BarWidget kind      = widget.kind;
             const bool created = kind == BarWidget::Custom;
-            const bool jobs = kind == BarWidget::Job && PartOn(o.design, WidgetPart::JobJobs);
-            const bool bar  = kind == BarWidget::Job && PartOn(o.design, WidgetPart::JobBar);
             const bool off = !BarOn(s) || !o.on;
             // Its pill's spacing, background, rounding and pop-out are its first widget's, set there alone.
             const bool pillLooks = HasOwnLooks(kind) && Panel(s).group[SlotOf(widget)] == widget;
@@ -1110,8 +1108,15 @@ namespace headsup
             };
             // Each copy's rows have ids of their own: nothing open or typed is carried to another tab.
             const std::string scope = std::string(" ") + BarWidgetName(kind) + (widget.copy > 0 ? " " + std::to_string(widget.copy + 1) : "");
-            const auto show = [&](const LayoutRow& row) {
-                const auto which = static_cast<WidgetTabsRow>(row.row);
+            // A row of owner's settings: this widget's own, or on a created widget one it borrows parts or cards from,
+            // whose own setting the row sets, shown by the parts on this widget's lines.
+            const auto show = [&](const LayoutRow& row, PanelWidget owner) {
+                const BarWidget kind       = owner.kind;
+                headsup::WidgetOptions& o  = s.Widget(owner);
+                const WidgetDesign& design = s.Widget(widget).design;
+                const bool jobs            = kind == BarWidget::Job && PartOn(design, WidgetPart::JobJobs);
+                const bool bar             = kind == BarWidget::Job && PartOn(design, WidgetPart::JobBar);
+                const auto which           = static_cast<WidgetTabsRow>(row.row);
                 // A created widget's rows are its Name, the Edit choice, then one side's: the Pop-out Designer, or all the
                 // rest. The pick is read here, as a press on it lands in this pass.
                 if (created && which != WidgetTabsRow::Name && which != WidgetTabsRow::Edit &&
@@ -1120,7 +1125,7 @@ namespace headsup
                 const std::string label = Labeled(row.name, row.key, scope);
                 // The tip, naming this widget's own default.
                 const auto ownDefault = [&] {
-                    return Filled(Said(row.tip), kDefaultMark, WidgetDefaultText(c.layout, which, widget, c.readings.today));
+                    return Filled(Said(row.tip), kDefaultMark, WidgetDefaultText(c.layout, which, owner, c.readings.today));
                 };
                 // A look of its own on a slider whose step under lowest is the Top Panel's.
                 const auto ownSlider = [&](std::optional<int>& own, int lowest, int highest, FunctionRef<std::string(int)> shown,
@@ -1133,7 +1138,7 @@ namespace headsup
                 };
                 // A Job & EXP alignment, shown while the part it places is on.
                 const auto alignRow = [&](WidgetPart part, Align& align) {
-                    if (kind != BarWidget::Job || !PartOn(o.design, part)) return;
+                    if (kind != BarWidget::Job || !PartOn(design, part)) return;
                     const std::vector<const char*> names = NamesOf(c.layout.OptionsOf(WindowList::Align));
                     form.Segments(label.c_str(), align, names.data(), kAlignCount, ownDefault().c_str());
                 };
@@ -1227,12 +1232,12 @@ namespace headsup
                     }
                     break;
                 case WidgetTabsRow::Ship:
-                    if (kind == BarWidget::World && PartOn(o.design, WidgetPart::WorldShip))
+                    if (kind == BarWidget::World && PartOn(design, WidgetPart::WorldShip))
                         form.NumberDropdown(label.c_str(), o.worldRoute, 0, static_cast<int>(TravelRoutes().size()) - 1,
                             [](int r) { return std::string(TravelRoutes()[static_cast<size_t>(r)].name); }, row.tip);
                     break;
                 case WidgetTabsRow::Guild:
-                    if (kind == BarWidget::World && PartOn(o.design, WidgetPart::WorldGuild))
+                    if (kind == BarWidget::World && PartOn(design, WidgetPart::WorldGuild))
                         form.NumberDropdown(label.c_str(), o.worldGuild, 0, static_cast<int>(GuildShops().size()) - 1,
                             [](int g) {
                                 const GuildShop& shop = GuildShops()[static_cast<size_t>(g)];
@@ -1258,7 +1263,7 @@ namespace headsup
                     if (kind == BarWidget::EarthTime)
                     {
                         const bool local = static_cast<WidgetTabsRow>(row.row) == WidgetTabsRow::LocalTimezone;
-                        if (!PartOn(o.design, local ? WidgetPart::ClockTime : WidgetPart::ClockServer)) break;
+                        if (!PartOn(design, local ? WidgetPart::ClockTime : WidgetPart::ClockServer)) break;
                         std::optional<ClockZone>& picked = local ? o.clockZone : o.clockSecondZone;
                         int zone = ClockZoneChoice(picked);
                         form.NumberDropdown(label.c_str(), zone, 0, kClockZoneChoices - 1,
@@ -1273,7 +1278,7 @@ namespace headsup
                     if (kind == BarWidget::EarthTime) form.Switch(label.c_str(), o.clockSeconds, row.tip);
                     break;
                 case WidgetTabsRow::DateFormat:
-                    if (kind == BarWidget::EarthTime && PartOn(o.design, WidgetPart::ClockDate))
+                    if (kind == BarWidget::EarthTime && PartOn(design, WidgetPart::ClockDate))
                     {
                         // Each format as today reads in it.
                         int format = static_cast<int>(o.dateFormat);
@@ -1401,7 +1406,7 @@ namespace headsup
                         form.SliderInt(label.c_str(), o.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight, Pixels, ownDefault().c_str());
                     break;
                 case WidgetTabsRow::MemText:
-                    if (kind == BarWidget::Performance && PartOn(o.design, WidgetPart::PerfMemory))
+                    if (kind == BarWidget::Performance && PartOn(design, WidgetPart::PerfMemory))
                         form.Switch(label.c_str(), o.memText, ownDefault().c_str());
                     break;
                 case WidgetTabsRow::OwnLooks: break; // its section's title
@@ -1518,25 +1523,32 @@ namespace headsup
             const auto is      = [](const LayoutRow& row, WidgetTabsRow which) { return static_cast<WidgetTabsRow>(row.row) == which; };
             const auto designs = [&](const LayoutRow& row) { return is(row, WidgetTabsRow::Design) || is(row, WidgetTabsRow::PopupDesign); };
             for (const LayoutRow& row : rows)
-                if (is(row, WidgetTabsRow::Edit)) show(row);
+                if (is(row, WidgetTabsRow::Edit)) show(row, widget);
             for (const LayoutRow& row : rows)
                 if (designs(row))
                 {
                     form.Fade(off);
                     form.BeginSection(Labeled(row.name, row.key, scope).c_str(), false);
-                    show(row);
+                    show(row, widget);
                     form.EndSection();
                 }
             form.Fade(off);
             form.BeginSection(Labeled(Word(c, WindowWord::WidgetTabsSettings), kSettingsSectionKey, scope).c_str(), false);
+            const std::vector<BarWidget> borrowed = created ? BorrowedFrom(o) : std::vector<BarWidget>{};
             for (auto row = rows.begin(); row != looks; ++row)
-                if (!designs(*row) && !is(*row, WidgetTabsRow::Edit)) show(*row);
+                if (!designs(*row) && !is(*row, WidgetTabsRow::Edit))
+                {
+                    show(*row, widget);
+                    if (std::ranges::find(kOwnRows, static_cast<WidgetTabsRow>(row->row)) == std::end(kOwnRows))
+                        for (const BarWidget from : borrowed)
+                            show(*row, PanelWidget{from});
+                }
             form.EndSection();
             if (looks == rows.end() || !HasOwnLooks(kind) || (created && c.state.editSide == EditSide::Popup)) return;
             form.Fade(off);
             if (form.BeginSection(Labeled(looks->name, looks->key, scope).c_str(), true))
                 for (auto row = looks + 1; row != rows.end(); ++row)
-                    show(*row);
+                    show(*row, widget);
             form.EndSection();
         }
 

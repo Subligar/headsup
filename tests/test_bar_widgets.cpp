@@ -848,7 +848,7 @@ TEST(each_headed_card_of_a_pop_out_collapses_by_its_press_and_stays_collapsed_ac
     for (const PopupSection& section : popup.sections)
         CHECK(section.heading.empty() || !section.collapsePress.empty());
     const std::string press = today.collapsePress;
-    CHECK(ApplyPopupPress(settings, press, Nation::None) == PressResult::Changed);
+    CHECK(ApplyPopupPress(settings, press, Nation::None));
     popup = PanelPopupContent(BarWidget::Weather, state, settings);
     CHECK(popup.sections[0].collapsed && !popup.sections[1].collapsed);
     // The next day's Today card, under another date, is the same card.
@@ -856,7 +856,7 @@ TEST(each_headed_card_of_a_pop_out_collapses_by_its_press_and_stays_collapsed_ac
     popup = PanelPopupContent(BarWidget::Weather, state, settings);
     CHECK(popup.sections[0].collapsed && popup.sections[0].collapsePress == press);
     // Pressed again, it opens.
-    CHECK(ApplyPopupPress(settings, press, Nation::None) == PressResult::Changed);
+    CHECK(ApplyPopupPress(settings, press, Nation::None));
     CHECK(!PanelPopupContent(BarWidget::Weather, state, settings).sections[0].collapsed);
 }
 
@@ -868,7 +868,7 @@ TEST(a_pop_out_moved_from_its_place_offers_its_reset_which_puts_it_back)
     settings.Widget(BarWidget::Bags).popupSpot = PopupSpot{10, 20, false, false};
     const std::string press = PanelPopupContent(BarWidget::Bags, state, settings).resetPress;
     CHECK(!press.empty());
-    CHECK(ApplyPopupPress(settings, press, Nation::None) == PressResult::Changed);
+    CHECK(ApplyPopupPress(settings, press, Nation::None));
     CHECK(!settings.Widget(BarWidget::Bags).popupSpot);
     CHECK(PanelPopupContent(BarWidget::Bags, state, settings).resetPress.empty());
 }
@@ -1722,14 +1722,25 @@ TEST(the_performance_widget_hides_while_messages_alone_are_on_and_none_wait)
     CHECK(TakesRoom(mail, performance, std::nullopt) && !mail.title.empty());
 }
 
-// The card "Allow disabling widget text when linked": a widget linked into a pill may have every part off.
-TEST(a_widget_with_every_part_off_hides_and_one_with_a_part_on_and_nothing_to_say_shows_a_dash)
+// The card "Allow empty widgets": "If empty, a widget should still be visible in the top panel but its contents
+// should be empty." The user, of one linked into a pill: "Always a box."
+TEST(a_widget_with_every_part_off_shows_an_empty_box_in_a_pill_too_and_one_with_nothing_to_say_shows_a_dash)
 {
     Settings settings;
     settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "-name -region -nation |");
     BarState state;
-    CHECK(!TakesRoom(Content(BarWidget::Zone, state, settings), BarWidget::Zone, std::nullopt));
-    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), BarWidget::Zone, PanelWidget{BarWidget::Zone}));
+    const WidgetContent empty = Content(BarWidget::Zone, state, settings);
+    CHECK(TakesRoom(empty, BarWidget::Zone, std::nullopt) && empty.title.empty() && empty.subtitle.empty());
+    const PanelWidget clock{BarWidget::EarthTime};
+    settings.Widget(BarWidget::Zone).combine = clock;
+    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), clock, std::nullopt));
+    // Linked into Performance with Messages alone on and none waiting, it is the pill's one box.
+    const PanelWidget performance{BarWidget::Performance};
+    settings.Widget(BarWidget::Zone).combine = performance;
+    settings.Widget(performance).design      = DesignFrom(BarWidget::Performance, "messages |");
+    state.connection                         = SteadyLink();
+    CHECK(!TakesRoom(Content(performance, state, settings), performance, std::nullopt));
+    CHECK(TakesRoom(Content(BarWidget::Zone, state, settings), performance, std::nullopt));
     settings.Widget(BarWidget::Bags).design = DesignFrom(BarWidget::Bags, "count1 |");
     CHECK(Joined(Content(BarWidget::Bags, state, settings).title) == "-");
     CHECK(TakesRoom(Content(BarWidget::Bags, state, settings), BarWidget::Bags, std::nullopt));
@@ -1989,22 +2000,19 @@ TEST(a_statuss_star_and_pin_add_it_and_take_it_off_and_its_star_takes_its_pin_to
     const auto press = [&](const char* kind, uint16_t id) {
         return ApplyPopupPress(s, std::string(kind) + std::to_string(id), Nation::None);
     };
-    CHECK(press(kStatusFavoritePress, 40) == PressResult::Changed);
+    CHECK(press(kStatusFavoritePress, 40));
     CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect, 40}));
-    CHECK(press(kStatusPinPress, 40) == PressResult::Changed);
+    CHECK(press(kStatusPinPress, 40));
     CHECK((s.statusPins == std::vector<uint16_t>{kSignetEffect, 40}));
-    CHECK(press(kStatusPinPress, kSignetEffect) == PressResult::Changed);
+    CHECK(press(kStatusPinPress, kSignetEffect));
     CHECK((s.statusPins == std::vector<uint16_t>{40}));
-    // The last pin stays, by its pin or by its star, which would take it off too.
-    CHECK(press(kStatusPinPress, 40) == PressResult::Refused);
-    CHECK(press(kStatusFavoritePress, 40) == PressResult::Refused);
-    CHECK((s.statusPins == std::vector<uint16_t>{40}) && s.statusFavorites.size() == 3);
-    CHECK(press(kStatusPinPress, kSignetEffect) == PressResult::Changed);
-    CHECK(press(kStatusFavoritePress, 40) == PressResult::Changed);
-    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) &&
-          (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
+    // The last pin comes off as any other, by its pin or by its star.
+    CHECK(press(kStatusPinPress, 40) && s.statusPins.empty());
+    CHECK(press(kStatusPinPress, 40));
+    CHECK(press(kStatusFavoritePress, 40));
+    CHECK((s.statusFavorites == std::vector<uint16_t>{kSignetEffect, kSanctionEffect}) && s.statusPins.empty());
     for (const char* bad : {"status favorite ", "status favorite 4x", "status pin 65000", "status pin 99999999"})
-        CHECK(ApplyPopupPress(s, bad, Nation::None) == PressResult::None);
+        CHECK(!ApplyPopupPress(s, bad, Nation::None));
 }
 
 TEST(a_new_pin_takes_its_place_in_every_status_timers_copy_and_an_unpinned_one_keeps_its_own)
@@ -2015,23 +2023,23 @@ TEST(a_new_pin_takes_its_place_in_every_status_timers_copy_and_an_unpinned_one_k
     s.Widget(first).pinDesign  = {std::vector<uint16_t>{kSignetEffect}, {}};
     s.Widget(second).pinDesign = {std::vector<uint16_t>{}, {kSignetEffect}};
     const auto press = [&](uint16_t id) { return ApplyPopupPress(s, std::string(kStatusPinPress) + std::to_string(id), Nation::None); };
-    CHECK(press(40) == PressResult::Changed);
+    CHECK(press(40));
     CHECK((s.Widget(first).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect}, {40}}));
     CHECK((s.Widget(second).pinDesign == StatusDesign{std::vector<uint16_t>{40}, {kSignetEffect}}));
     // Unpinned, it stays in each design, so its next pin finds it where it was moved.
     CHECK(MoveStatus(s.Widget(first).pinDesign, 40, 0, kSignetEffect));
-    CHECK(press(40) == PressResult::Changed && (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
-    CHECK(press(40) == PressResult::Changed);
+    CHECK(press(40) && (s.statusPins == std::vector<uint16_t>{kSignetEffect}));
+    CHECK(press(40));
     CHECK((s.Widget(first).pinDesign == StatusDesign{std::vector<uint16_t>{40, kSignetEffect}, {}}));
     CHECK((s.Widget(second).pinDesign == StatusDesign{std::vector<uint16_t>{40}, {kSignetEffect}}));
     // A pin a copy's design lacks keeps the place it showed at when another goes.
     s.statusPins = {kSignetEffect, 40, 33};
     s.Widget(second).pinDesign = {};
-    CHECK(press(kSignetEffect) == PressResult::Changed);
+    CHECK(press(kSignetEffect));
     CHECK((s.Widget(second).pinDesign == StatusDesign{std::vector<uint16_t>{kSignetEffect, 33}, {40}}));
     // There is no most there can be.
     s.statusPins = {kSignetEffect, 40, 33, 41, 42, 43};
-    CHECK(press(116) == PressResult::Changed && s.statusPins.size() == 7);
+    CHECK(press(116) && s.statusPins.size() == 7);
 }
 
 TEST(the_status_timers_widget_shows_each_pinned_status_where_its_design_puts_it)
@@ -2062,9 +2070,13 @@ TEST(the_status_timers_widget_shows_each_pinned_status_where_its_design_puts_it)
     settings.Widget(BarWidget::StatusTimers).timerFormat = TimerFormat::Short;
     w = Content(BarWidget::StatusTimers, state, settings);
     CHECK(Joined(w.title) == "Haste 1.5m" && Joined(w.subtitle) == "Protect 30m");
-    // None pinned: its name, dim.
+    // None pinned: an empty box.
     settings.statusPins.clear();
-    CHECK(Content(BarWidget::StatusTimers, state, settings).title == ListOf(Text("Status Timers", Tone::Dim)));
+    w = Content(BarWidget::StatusTimers, state, settings);
+    CHECK(w.title.empty() && w.subtitle.empty() && TakesRoom(w, BarWidget::StatusTimers, std::nullopt));
+    // In a pill too.
+    settings.Widget(BarWidget::StatusTimers).combine = PanelWidget{BarWidget::EarthTime};
+    CHECK(TakesRoom(Content(BarWidget::StatusTimers, state, settings), BarWidget::EarthTime, std::nullopt));
 }
 
 TEST(a_created_widget_borrows_the_pinned_statuses_by_the_order_they_were_pinned)
@@ -2155,16 +2167,15 @@ TEST(the_currency_popup_lists_your_favorites_then_every_currency_by_amount_or_by
 TEST(a_currencys_star_adds_it_to_the_favorites_and_takes_it_off)
 {
     Settings s;
-    CHECK(ApplyPopupPress(s, "favorite sparks", Nation::Bastok) == PressResult::Changed);
+    CHECK(ApplyPopupPress(s, "favorite sparks", Nation::Bastok));
     CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "cp_bastok", "sparks"}));
-    CHECK(ApplyPopupPress(s, "favorite cp_bastok", Nation::Bastok) == PressResult::Changed);
+    CHECK(ApplyPopupPress(s, "favorite cp_bastok", Nation::Bastok));
     CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "sparks"}));
-    CHECK(ApplyPopupPress(s, "favorite nothing", Nation::Bastok) == PressResult::None &&
-          ApplyPopupPress(s, "something else", Nation::Bastok) == PressResult::None);
+    CHECK(!ApplyPopupPress(s, "favorite nothing", Nation::Bastok) && !ApplyPopupPress(s, "something else", Nation::Bastok));
     CHECK((s.currencyFavorites == std::vector<std::string>{"gil", "sparks"}));
     // Before your nation is known, its points stay yours, whichever nation that turns out to be.
     Settings early;
-    CHECK(ApplyPopupPress(early, "favorite sparks", Nation::None) == PressResult::Changed);
+    CHECK(ApplyPopupPress(early, "favorite sparks", Nation::None));
     CHECK((early.currencyFavorites == std::vector<std::string>{"gil", kYourConquestPoints, "sparks"}));
 }
 
@@ -3808,6 +3819,9 @@ TEST(a_created_widgets_parts_have_their_widgets_data_gathered_while_it_shows)
     CHECK(needs("name | performance.fps").frames && !needs("name | -performance.fps").frames);
     CHECK(needs("gil.amount1 |").gil && WidgetShown(settings, BarWidget::Currency) && !AnyCopyShown(settings, BarWidget::Currency));
     CHECK(needs("statusTimers.pin1 |").statuses && needs("earthTime.date |").localTime);
+    // A Pinned Status button shows by the pins, so its switch, which the Widget Designer wrote while none was
+    // pinned, does not stop your statuses being read.
+    CHECK(needs("name | -statusTimers.pin1").statuses);
     settings.Widget(BarWidget::Bags).secondBag = kMogSatchel;
     CHECK_EQ(needs("bags.count2 |").containers, kMogSatchel + 1);
     settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | world.windurst");

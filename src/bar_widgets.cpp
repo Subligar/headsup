@@ -1388,7 +1388,7 @@ namespace headsup
         bool HoldsPartOn(const WidgetOptions& created, BarWidget widget)
         {
             return std::ranges::any_of(created.design.lines, [&](const std::vector<DesignChip>& line) {
-                return std::ranges::any_of(line, [&](const DesignChip& chip) { return chip.on && WidgetOfPart(chip.part) == widget; });
+                return std::ranges::any_of(line, [&](const DesignChip& chip) { return ChipOn(chip) && WidgetOfPart(chip.part) == widget; });
             });
         }
 
@@ -1631,7 +1631,7 @@ namespace headsup
                     for (const uint16_t id : pinned[line])
                         AddPart(lines[line], PinnedStatus(state.statuses, id, o.statusDisplay, o.timerFormat, OwnPalette(settings)));
                 if (lines[0].empty()) std::swap(lines[0], lines[1]);
-                base.title    = lines[0].empty() ? ListOf(Text("Status Timers", Tone::Dim)) : std::move(lines[0]);
+                base.title    = std::move(lines[0]);
                 base.subtitle = std::move(lines[1]);
                 return base;
             }
@@ -1667,13 +1667,16 @@ namespace headsup
             WidgetDesign design = o.design;
             for (std::vector<DesignChip>& line : design.lines)
                 for (DesignChip& chip : line)
-                    chip.on = chip.on || IsPinnedStatus(chip.part);
+                    chip.on = ChipOn(chip);
             WidgetContent w = ComposeContent(design, std::move(parts), std::move(base));
             if (w.title.empty() && w.icons.empty() && !w.cog && w.picture == GamePicture::None)
             {
-                // Linked with every part off, or Performance with no messages waiting, it takes no room.
-                w.idle  = !AnyPartOn(design) || widget.kind == BarWidget::Performance;
-                w.title = ListOf(Text("-"));
+                // With every part off it is an empty box; Performance with no messages waiting takes no room.
+                if (AnyPartOn(design))
+                {
+                    w.idle  = widget.kind == BarWidget::Performance;
+                    w.title = ListOf(Text("-"));
+                }
             }
             return w;
         }
@@ -1744,7 +1747,7 @@ namespace headsup
         return std::nullopt;
     }
 
-    PressResult ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
+    bool ApplyPopupPress(Settings& settings, std::string_view press, Nation nation)
     {
         // A status's star or pin; a status taken off the favorites leaves the panel too, as only they have pins.
         for (const std::string_view kind : {kStatusFavoritePress, kStatusPinPress})
@@ -1754,7 +1757,7 @@ namespace headsup
             char* end           = nullptr;
             const unsigned long id = std::strtoul(number.c_str(), &end, 10);
             if (number.empty() || *end != '\0' || id > UINT16_MAX || *StatusName(static_cast<uint16_t>(id)) == '\0')
-                return PressResult::None;
+                return false;
             const auto status = static_cast<uint16_t>(id);
             // Every pin keeps the place it shows at in each copy, before and after the change.
             const auto place = [&] {
@@ -1763,7 +1766,6 @@ namespace headsup
             };
             std::vector<uint16_t>& list = kind == kStatusPinPress ? settings.statusPins : settings.statusFavorites;
             const auto at = std::ranges::find(list, status);
-            if (at != list.end() && settings.statusPins == std::vector<uint16_t>{status}) return PressResult::Refused;
             place();
             if (at != list.end())
             {
@@ -1773,30 +1775,30 @@ namespace headsup
             else
                 list.push_back(status);
             place();
-            return PressResult::Changed;
+            return true;
         }
         if (press.starts_with(kPopupResetPress))
         {
             const std::string number(press.substr(std::string_view(kPopupResetPress).size()));
             char* end = nullptr;
             const long slot = std::strtol(number.c_str(), &end, 10);
-            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return PressResult::None;
+            if (number.empty() || *end != '\0' || slot < 0 || slot >= kPanelSlots) return false;
             settings.widgets[static_cast<size_t>(slot)].popupSpot.reset();
-            return PressResult::Changed;
+            return true;
         }
         if (press.starts_with(kCollapsePress))
         {
             const std::string key(press.substr(std::string_view(kCollapsePress).size()));
-            if (key.empty() || key.find(' ') != std::string::npos) return PressResult::None;
+            if (key.empty() || key.find(' ') != std::string::npos) return false;
             if (const auto at = std::ranges::find(settings.collapsedSections, key); at != settings.collapsedSections.end())
                 settings.collapsedSections.erase(at);
             else
                 settings.collapsedSections.push_back(key);
-            return PressResult::Changed;
+            return true;
         }
-        if (!press.starts_with(kFavoritePress)) return PressResult::None;
+        if (!press.starts_with(kFavoritePress)) return false;
         const std::string key(press.substr(std::string_view(kFavoritePress).size()));
-        if (!CurrencyOfKey(key)) return PressResult::None;
+        if (!CurrencyOfKey(key)) return false;
         // Your nation's points by their own key once it is known, so its star takes them off.
         std::vector<std::string> favorites;
         for (const std::string& held : settings.currencyFavorites)
@@ -1810,7 +1812,7 @@ namespace headsup
         else
             favorites.push_back(key);
         settings.currencyFavorites = std::move(favorites);
-        return PressResult::Changed;
+        return true;
     }
 
     bool WidgetShown(const Settings& settings, BarWidget widget)
@@ -2284,7 +2286,7 @@ namespace headsup
             return PartyPopup(state.party);
         case BarWidget::StatusTimers:
             return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins, OwnPalette(settings),
-                ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
+                ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey));
         case BarWidget::World:
             return WorldPopup(state, o);
         case BarWidget::Settings:

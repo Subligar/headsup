@@ -222,12 +222,10 @@ namespace headsup
     }
 
     PopupContent StatusTimersPopup(const std::vector<ActiveStatus>& active, const std::vector<uint16_t>& favorites,
-        const std::vector<uint16_t>& pins, const BarPalette& theme, size_t buffsScrolled, size_t debuffsScrolled, bool refused)
+        const std::vector<uint16_t>& pins, const BarPalette& theme, size_t buffsScrolled, size_t debuffsScrolled)
     {
         PopupContent popup;
         popup.title     = ListOf(Text("Status Timers"));
-        if (refused)
-            popup.subtitle = ListOf(Colored("Must have at least one status pinned.", kErrorColor));
         const std::vector<Named> named = NamedAll(active);
         const auto nameCell = [&](uint16_t id, const std::string& name) {
             PopupCell cell = Cell(Text(name));

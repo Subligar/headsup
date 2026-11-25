@@ -214,6 +214,7 @@ namespace headsup
         constexpr const char* kScaleCursorKey = "scaleCursor";
         constexpr const char* kKeepPointerKey = "keepPointerKeys"; // hex virtual-key codes, a space apart
         constexpr const char* kCurrencyFavoritesKey = "currencyFavorites"; // kCurrencyTable's keys, a space apart
+        constexpr const char* kNoCurrencies = "none"; // an emptied list, which a reader may take an empty value as no key for
         constexpr const char* kCollapsedKey = "popupCollapsed"; // the collapsed pop-out cards' keys, a space apart
         constexpr const char* kStatusFavoritesKey = "statusFavorites", *kStatusPinsKey = "statusPins"; // status ids
 
@@ -1476,17 +1477,7 @@ namespace headsup
             status.resistRank = std::clamp(status.resistRank, kMinResistRank, kNoResistRank);
         }
         // A linked widget sits just after its own in the layout too, as the panel draws it.
-        const PanelGroups panel = Panel(s);
-        s.barSections           = panel.placement;
-        // A pill needs a part on among its widgets that are on, a widget alone one of its own: a created widget
-        // emptied in a pill that no longer shows anything else gets its Name back.
-        for (int slot = 0; slot < kPanelSlots; ++slot)
-        {
-            if (PillShowsOther(s, panel, WidgetInSlot(slot))) continue;
-            WidgetDesign& design = s.widgets[slot].design;
-            if (WidgetInSlot(slot).kind == BarWidget::Custom && design == WidgetDesign{}) design = DefaultDesign(BarWidget::Custom);
-            TurnOnFirst(design);
-        }
+        s.barSections = Panel(s).placement;
         return s;
     }
 
@@ -1762,12 +1753,6 @@ namespace headsup
         for (int slot = 0; slot < kPanelSlots; ++slot)
             widgets[slot] = NewWidget(WidgetInSlot(slot));
         return widgets;
-    }
-
-    bool PillShowsOther(const Settings& s, const PanelGroups& panel, PanelWidget widget)
-    {
-        return std::ranges::any_of(Members(panel, panel.group[SlotOf(widget)]),
-            [&](PanelWidget w) { return w != widget && s.Widget(w).on && AnyPartOn(s.Widget(w).design); });
     }
 
     bool Shows(const Settings& s, PanelWidget widget)
@@ -2125,10 +2110,10 @@ namespace headsup
             keys += (keys.empty() ? "" : " ") + std::string(hex);
         }
         store.Set(kKeepPointerKey, keys.c_str());
-        store.Set(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str());
+        store.Set(kCurrencyFavoritesKey, s.currencyFavorites.empty() ? kNoCurrencies : SpaceApart(s.currencyFavorites).c_str());
         store.Set(kCollapsedKey, SpaceApart(s.collapsedSections).c_str());
-        store.Set(kStatusFavoritesKey, SpaceApart(s.statusFavorites).c_str());
-        store.Set(kStatusPinsKey, SpaceApart(s.statusPins).c_str());
+        store.Set(kStatusFavoritesKey, s.statusFavorites.empty() ? kNoStatuses : SpaceApart(s.statusFavorites).c_str());
+        store.Set(kStatusPinsKey, s.statusPins.empty() ? kNoStatuses : SpaceApart(s.statusPins).c_str());
         for (int i = 0; i < kStatusRankCount; ++i)
         {
             const std::string base = kStatusKeys[i];

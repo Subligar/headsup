@@ -42,6 +42,8 @@ namespace headsup
         bool on = true;
         bool operator==(const DesignChip&) const = default;
     };
+    // Whether a chip shows when there is something for it: a Pinned Status button's switch only mirrors the pins.
+    constexpr bool ChipOn(const DesignChip& chip) { return chip.on || IsPinnedStatus(chip.part); }
     constexpr int kDesignLines = 2;
     constexpr char kDesignLineBreak = '|'; // between a design's lines, and a pop-out's rows, in the settings file
     // A widget's two lines, each its parts in order, shown or not. Every part of its widget is on one line once.
@@ -75,18 +77,15 @@ namespace headsup
     // A part the design lacks, on, in line before the part at at, or at its end. False when the design holds it.
     bool PutPart(WidgetDesign& design, WidgetPart part, int line, size_t at);
     bool HoldsPart(const WidgetDesign& design, WidgetPart part);
-    // The part out of the design. False, and nothing changed, when it is not there, or is the last part on and not
-    // pillShows (as TurnOff).
-    bool TakePart(WidgetDesign& design, WidgetPart part, bool pillShows);
-    // The first part on when none is, for a widget with parts.
-    void TurnOnFirst(WidgetDesign& design);
+    // The part out of the design. False when it is not there.
+    bool TakePart(WidgetDesign& design, WidgetPart part);
     bool PartOn(const WidgetDesign& design, WidgetPart part);
     bool AnyPartOn(const WidgetDesign& design);
     // The part at from on fromLine moved to toLine before the part at at (counted before the move), or to its end.
     // False when nothing moved.
     bool MovePart(WidgetDesign& design, int fromLine, size_t from, int toLine, size_t at);
-    // False, and nothing changed, for the last part on, unless pillShows: another widget of its pill has a part on.
-    bool TurnOff(WidgetDesign& design, WidgetPart part, bool pillShows);
+    // False when the design holds no such part on.
+    bool TurnOff(WidgetDesign& design, WidgetPart part);
 
     // The Status Timers' two lines of status ids: every status ever pinned, where it was last put; the pinned show.
     using StatusDesign = std::array<std::vector<uint16_t>, kDesignLines>;

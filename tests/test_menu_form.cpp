@@ -326,6 +326,47 @@ TEST(a_created_widgets_edit_choice_shows_its_widget_designer_or_its_pop_out_desi
     CHECK(w.state.editSide == EditSide::Widget);
 }
 
+TEST(a_created_widget_shows_the_settings_of_the_widgets_it_borrows_from_and_they_set_those_widgets)
+{
+    Window w;
+    const PanelWidget made = *CreateWidget(w.settings), world{BarWidget::World};
+    w.readings.settingsOf  = {made};
+    const auto rml   = [](const Form& f) { return Block(f, "toppanel-widgets")->rml; };
+    const auto shown = [&](const Form& f, const char* id) { return Has(rml(f), (std::string("id=\"") + id + "\"").c_str()); };
+    const char* flags = "toppanel-widgets-supply-flags-custom";
+    const char* ship  = "toppanel-widgets-ship-custom";
+    // Nothing of World Info's yet: none of its settings.
+    CHECK(!shown(w.Pass(), flags) && !shown(w.Pass(), ship));
+    // World Info's Conquest card in its pop-out: Supply Run Flags, with its other settings, and a switch there sets
+    // World Info's own, which the card shows by.
+    w.settings.Widget(made).popup = PopupDesignFrom(BarWidget::Custom, "world.conquest");
+    const Form card = w.Pass();
+    CHECK(shown(card, flags) && !shown(card, ship));
+    CHECK(w.settings.Widget(world).supplyFlags);
+    w.Pass({{flags, kClickEvent, ""}});
+    CHECK(!w.settings.Widget(world).supplyFlags && w.settings.Widget(made).supplyFlags);
+    // Its Ship button on a line: Tracked Ship too, as World Info's own shows while its button is.
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | world.ship");
+    CHECK(shown(w.Pass(), ship));
+    // What is about the created widget itself stays its own: Zone's crest borrows no Show Zone ID in Header, as its
+    // pop-out's title is its own, and no second Alignment or Show Icon.
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | zone.crest world.ship");
+    const std::string zone = rml(w.Pass());
+    CHECK(!Has(zone, "toppanel-widgets-show-zone-id-custom"));
+    const std::string alignment = "id=\"toppanel-widgets-alignment-custom\"";
+    CHECK(zone.find(alignment) != std::string::npos && zone.find(alignment) == zone.rfind(alignment));
+    // Job & EXP's Bar Width shows by the EXP Bar on the created widget's own lines.
+    const char* barWidth = "toppanel-widgets-bar-width-custom";
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | job.jobs job.bar");
+    CHECK(shown(w.Pass(), barWidth));
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | job.jobs -job.bar");
+    CHECK(!shown(w.Pass(), barWidth));
+    // A Pinned Status button borrows Status Timers' Display with nothing pinned, as it shows once a status is.
+    w.settings.statusPins.clear();
+    w.settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name | statusTimers.pin1");
+    CHECK(shown(w.Pass(), "toppanel-widgets-status-display-custom"));
+}
+
 TEST(a_created_widgets_pop_out_designer_is_its_sections_title_then_its_rows_with_no_note_between)
 {
     Window w;
@@ -1818,7 +1859,7 @@ TEST(an_override_left_unchanged_shows_the_top_panels_value_as_it_is_now)
     CHECK_EQ(shown("widget-spacing"), "3 px");
 }
 
-TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
+TEST(the_widget_designer_moves_and_toggles_its_parts_down_to_none_on)
 {
     Window w;
     const PanelWidget zone{BarWidget::Zone};
@@ -1837,19 +1878,13 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK_EQ(design(), "name nation | region -coordinates");
     w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, chip(WidgetPart::ZoneNation)}});
     CHECK_EQ(design(), "nation name | region -coordinates");
-    // Off one by one until one is left: the last stays on, and the designer says why under its lines.
+    // Off one by one, the last too (the card "Allow empty widgets"), and on again.
     w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneRegion)});
     CHECK_EQ(design(), "-nation name | -region -coordinates");
-    CHECK(!Has(rml(w.Pass()), "class=\"error\""));
-    const Form refused = w.Pass({toggle(WidgetPart::ZoneName)});
-    CHECK_EQ(design(), "-nation name | -region -coordinates");
-    CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
-    bool shownOn = false; // the toggle's last word on its look
-    for (const FormValue& v : refused.values)
-        if (v.id == chip(WidgetPart::ZoneName) + "-on" && v.kind == FormValueKind::Class && v.name == "on") shownOn = v.on;
-    CHECK(shownOn);
-    // The next toggle or move takes the message away.
-    CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "class=\"error\""));
+    const Form empty = w.Pass({toggle(WidgetPart::ZoneName)});
+    CHECK(empty.changed && !AnyPartOn(w.settings.Widget(zone).design));
+    CHECK(!Has(rml(empty), "class=\"error\"") && !Has(rml(w.Pass()), "class=\"error\""));
+    w.Pass({toggle(WidgetPart::ZoneName), toggle(WidgetPart::ZoneRegion)});
     CHECK_EQ(design(), "-nation name | region -coordinates");
     // Another widget's chip dropped here moves nothing.
     const std::string weather = "toppanel-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
@@ -1889,18 +1924,18 @@ TEST(a_created_widgets_designer_lists_the_picked_widgets_unplaced_buttons_and_pu
     const Form placed = w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, listed(WidgetPart::Bag1Count)}});
     CHECK_EQ(design(), "name | bags.count1 zone.name");
     CHECK(!shown(placed, listed(WidgetPart::ZoneName)) && Has(rml(placed), "Name (Zone)</div>"));
-    // Let go off the lines, a button goes back to the lists; the last one on stays, and the designer says why.
+    // Let go off the lines, a button goes back to the lists, the last one on too.
     w.Pass({{chip(WidgetPart::ZoneName), kDragEndEvent, ""}});
     CHECK_EQ(design(), "name | bags.count1");
     CHECK(shown(w.Pass(), listed(WidgetPart::ZoneName)));
     w.Pass({{chip(WidgetPart::Bag1Count) + "-on", kClickEvent, ""}});
     CHECK_EQ(design(), "name | -bags.count1");
-    const Form refused = w.Pass({{chip(WidgetPart::CustomName), kDragEndEvent, ""}});
-    CHECK_EQ(design(), "name | -bags.count1");
-    CHECK(Has(rml(refused), "class=\"error\""));
+    const Form empty = w.Pass({{chip(WidgetPart::CustomName), kDragEndEvent, ""}});
+    CHECK_EQ(design(), "| -bags.count1");
+    CHECK(empty.changed && !Has(rml(empty), "class=\"error\""));
     // A drop ends the drag too: the button moves once and stays.
     w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::Bag1Count)}, {chip(WidgetPart::Bag1Count), kDragEndEvent, ""}});
-    CHECK_EQ(design(), "name -bags.count1 |");
+    CHECK_EQ(design(), "-bags.count1 |");
     // A Pinned Status button has no switch here either: the pins turn it on.
     w.Pass({{base + "end-1", kDropEvent, listed(WidgetPart::StatusPin1)}});
     CHECK(!Has(rml(w.Pass()), (chip(WidgetPart::StatusPin1) + "-on").c_str()));

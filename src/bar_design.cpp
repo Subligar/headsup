@@ -333,7 +333,7 @@ namespace headsup
     WidgetDesign DesignFrom(BarWidget kind, std::string_view text)
     {
         // A design of none of the parts the widget has now, such as one saved before its parts changed, is no design;
-        // a created widget's is empty, as its pill may show another widget's parts (Clamp gives a lone one its Name).
+        // a created widget's may be empty.
         const WidgetDesign parsed = Parsed(kind, text);
         if (kind == BarWidget::Custom) return text.empty() ? DefaultDesign(kind) : Whole(kind, parsed);
         const bool none = std::ranges::all_of(parsed.lines, [](const auto& line) { return line.empty(); });
@@ -369,27 +369,15 @@ namespace headsup
         return std::ranges::any_of(design.lines, [&](const auto& line) { return std::ranges::find(line, part, &DesignChip::part) != line.end(); });
     }
 
-    bool TakePart(WidgetDesign& design, WidgetPart part, bool pillShows)
+    bool TakePart(WidgetDesign& design, WidgetPart part)
     {
         for (auto& line : design.lines)
             if (const auto chip = std::ranges::find(line, part, &DesignChip::part); chip != line.end())
             {
-                if (chip->on && !TurnOff(design, part, pillShows)) return false;
                 line.erase(chip);
                 return true;
             }
         return false;
-    }
-
-    void TurnOnFirst(WidgetDesign& design)
-    {
-        if (AnyPartOn(design)) return;
-        for (auto& line : design.lines)
-            if (!line.empty())
-            {
-                line.front().on = true;
-                return;
-            }
     }
 
     bool AnyPartOn(const WidgetDesign& design)
@@ -545,18 +533,15 @@ namespace headsup
         return widest;
     }
 
-    bool TurnOff(WidgetDesign& design, WidgetPart part, bool pillShows)
+    bool TurnOff(WidgetDesign& design, WidgetPart part)
     {
-        DesignChip* found = nullptr;
-        int on            = 0;
         for (auto& line : design.lines)
             for (DesignChip& chip : line)
-            {
-                on += chip.on ? 1 : 0;
-                if (chip.part == part) found = &chip;
-            }
-        if (found == nullptr || !found->on || (on <= 1 && !pillShows)) return false;
-        found->on = false;
-        return true;
+                if (chip.part == part && chip.on)
+                {
+                    chip.on = false;
+                    return true;
+                }
+        return false;
     }
 }

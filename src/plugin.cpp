@@ -1161,15 +1161,8 @@ public:
                                             ? std::optional(headsup::Panel(m_Settings).group[headsup::SlotOf(*next)])
                                             : std::nullopt);
             }
-            else switch (headsup::ApplyPopupPress(m_Settings, press, NationNow()))
-            {
-            case headsup::PressResult::Changed:
+            else if (headsup::ApplyPopupPress(m_Settings, press, NationNow()))
                 m_SettingsChangedAt = now;
-                m_BarInput.Refuse(false); // what it said no longer holds
-                break;
-            case headsup::PressResult::Refused: m_BarInput.Refuse(); break;
-            case headsup::PressResult::None: break;
-            }
         if (const bool fishing = m_Settings.enabled && m_Settings.fishStamina == headsup::FishBarShown::HeadsUp; m_Rml.Running() &&
             m_FishBar.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings,
                 fishing ? FishBarNow() : std::nullopt))
@@ -3182,7 +3175,6 @@ private:
         s.phTimers   = m_TimerLines;
         s.pickedTabs = &m_BarInput.PickedTabs();
         s.scrolled   = &m_BarInput.Scrolled();
-        s.pinRefused = m_BarInput.Refused();
         s.friends    = &m_FriendEntries;
         if (needs.conquest)
         {
