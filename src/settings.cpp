@@ -361,6 +361,7 @@ namespace headsup
         constexpr const char* kSupplyFlagsKey = "supplyFlags";
         constexpr const char* kMemTextKey   = "memText";
         constexpr const char* kHomePointWrapKey = "homePointWrap";
+        constexpr const char* kDpsSecondsKey = "dpsSeconds", *kDpsPetsKey = "dpsPets";
         constexpr const char* kStatusDisplayKey = "statusDisplay";
         const char* const kStatusDisplayNames[kStatusDisplayCount] = {"name", "icon", "both"};
         constexpr const char* kTimerFormatKey = "statusTimerFormat";
@@ -397,7 +398,7 @@ namespace headsup
         constexpr const char* kNoticeSoundKeys[] = {"friendNoticeOnlineSound", "friendNoticeOfflineSound", "partyNoticeSound"};
         static_assert(std::size(kNoticeSoundFields) == std::size(kNoticeSoundKeys));
         const char* const kBarWidgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers", "barCustom"};
+            "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers", "barDps", "barCustom"};
         static_assert(std::size(kBarWidgetKeys) == kBarWidgetCount);
         const char* const kBarSectionKeys[] = {"barLeft", "barCenter", "barRight"};
         static_assert(std::size(kBarSectionKeys) == kBarSectionCount);
@@ -450,6 +451,10 @@ namespace headsup
         constexpr const char *kNoTargetKey = "NoTarget", *kNotTargetedKey = "NotTargeted", *kTargetedKey = "Targeted",
                              *kFadeInKey = "FadeIn", *kRangeKey = "Range";
         constexpr const char* kMaxIconsSuffix   = "MaxIcons";
+        // A kind's starred statuses (ids a space apart, kNoStatuses for none, as an empty value may read as no key)
+        // and their background; on Players alone, whether they show only on your party.
+        constexpr const char *kShownStatusesSuffix = "ShownStatuses", *kStatusBackgroundSuffix = "StatusBackground",
+                             *kStatusPartyOnlySuffix = "StatusPartyOnly", *kNoStatuses = "none";
         constexpr const char* kDefaultFontKey   = "defaultFont";
         constexpr const char* kDetectionShownKey = "detectionShown";
 
@@ -784,6 +789,21 @@ namespace headsup
             StoreFloat(store, base + kHeightKey, static_cast<float>(k.ornament.height));
             SavePick(store, base + kColorKey, k.ornament.color);
             if (HasStatusIcons(kind)) StoreFloat(store, std::string(KindKey(kind)) + kMaxIconsSuffix, static_cast<float>(k.maxIcons));
+            if (!HasPlateStatuses(kind)) return;
+            const std::string own = KindKey(kind);
+            store.Set((own + kShownStatusesSuffix).c_str(), k.shownStatuses.empty() ? kNoStatuses : SpaceApart(k.shownStatuses).c_str());
+            StoreBool(store, own + kStatusBackgroundSuffix, k.statusBack);
+            if (kind == PlateKind::Players) StoreBool(store, own + kStatusPartyOnlySuffix, k.statusPartyOnly);
+        }
+
+        void LoadPlateStatuses(SettingsStore& store, PlateKind kind, KindSettings& k)
+        {
+            const std::string own = KindKey(kind);
+            if (const std::string ids = store.GetString((own + kShownStatusesSuffix).c_str(), kNoText); ids != kNoText)
+                k.shownStatuses = StatusIds(ids); // kNoStatuses holds no id
+            k.statusBack = HeldSwitch(store, own + kStatusBackgroundSuffix).value_or(k.statusBack);
+            if (kind == PlateKind::Players)
+                k.statusPartyOnly = HeldSwitch(store, own + kStatusPartyOnlySuffix).value_or(k.statusPartyOnly);
         }
 
         void LoadDesigner(SettingsStore& store, Settings& s)
@@ -1416,6 +1436,7 @@ namespace headsup
             w.linkPadding  = std::clamp(w.linkPadding, 0, kMaxWidgetSpacing);
             w.expBarWidth  = std::clamp(w.expBarWidth, kMinExpBarWidth, kMaxExpBarWidth);
             w.expBarHeight = std::clamp(w.expBarHeight, kMinExpBarHeight, kMaxExpBarHeight);
+            w.dpsSeconds   = std::clamp(w.dpsSeconds, kMinDpsSeconds, kMaxDpsSeconds);
             w.targetDetection &= kAllDetection;
             if (w.worldRoute < 0 || w.worldRoute >= static_cast<int>(TravelRoutes().size())) w.worldRoute = fresh.worldRoute;
             if (w.worldGuild < 0 || w.worldGuild >= static_cast<int>(GuildShops().size())) w.worldGuild = fresh.worldGuild;
@@ -1567,6 +1588,10 @@ namespace headsup
             case BarWidget::HomePoint:
                 o.wrapText = flag(kHomePointWrapKey, o.wrapText);
                 break;
+            case BarWidget::Dps:
+                o.dpsSeconds = number(kDpsSecondsKey, o.dpsSeconds);
+                o.dpsPets    = flag(kDpsPetsKey, o.dpsPets);
+                break;
             case BarWidget::StatusTimers:
                 o.statusDisplay = static_cast<StatusDisplay>(NameIndex(kStatusDisplayNames, kStatusDisplayCount,
                     text(kStatusDisplayKey), static_cast<int>(o.statusDisplay)));
@@ -1682,6 +1707,10 @@ namespace headsup
                 break;
             case BarWidget::HomePoint:
                 flag(kHomePointWrapKey, o.wrapText);
+                break;
+            case BarWidget::Dps:
+                StoreFloat(store, CopyKey(kDpsSecondsKey, w), static_cast<float>(o.dpsSeconds));
+                flag(kDpsPetsKey, o.dpsPets);
                 break;
             case BarWidget::StatusTimers:
                 text(kStatusDisplayKey, kStatusDisplayNames[static_cast<int>(o.statusDisplay)]);
@@ -2049,6 +2078,7 @@ namespace headsup
                 LoadGlowOff(store, kind, s.kinds[k]);
                 if (HasStatusIcons(kind))
                     s.kinds[k].maxIcons = LoadInt(store, std::string(KindKey(kind)) + kMaxIconsSuffix, s.kinds[k].maxIcons);
+                if (HasPlateStatuses(kind)) LoadPlateStatuses(store, kind, s.kinds[k]);
             }
             LoadOpacity(store, s.opacity);
             return Clamp(s);

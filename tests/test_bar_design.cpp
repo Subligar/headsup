@@ -46,7 +46,8 @@ TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
     CHECK_EQ(DesignText(BarWidget::Party, DefaultDesign(BarWidget::Party)), "count | health");
     CHECK(WidgetOfPart(WidgetPart::HomePointIcon) == BarWidget::HomePoint);
     CHECK_EQ(DesignText(BarWidget::HomePoint, DefaultDesign(BarWidget::HomePoint)), "name |");
-    CHECK(!IconPartOf(BarWidget::Performance) && !IconPartOf(BarWidget::GameHelp));
+    CHECK_EQ(DesignText(BarWidget::Dps, DefaultDesign(BarWidget::Dps)), "you | party");
+    CHECK(!IconPartOf(BarWidget::Performance) && !IconPartOf(BarWidget::GameHelp) && !IconPartOf(BarWidget::Dps));
     for (int k = 0; k < kBarWidgetCount; ++k)
     {
         const auto kind = static_cast<BarWidget>(k);
@@ -226,6 +227,8 @@ TEST(every_pop_out_card_is_one_widgets_and_saves_by_a_name_of_its_own)
         listed += cards.size();
     }
     CHECK_EQ(listed, static_cast<size_t>(kCardKindCount));
+    CHECK(CardsOf(BarWidget::Dps) == std::vector<CardKind>{CardKind::DpsMembers});
+    CHECK(DefaultPopupDesign(BarWidget::Dps).rows == std::vector<std::vector<CardKind>>{{CardKind::DpsMembers}});
     for (int c = 0; c < kCardKindCount; ++c)
         names.emplace_back(CardFileName(static_cast<CardKind>(c)));
     std::ranges::sort(names);

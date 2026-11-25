@@ -39,3 +39,14 @@ TEST(debuffs_are_xiuis_and_every_other_status_is_a_buff)
     CHECK(!IsDebuff(777));                                                 // a Prowess: not in XIUI's table
     CHECK(IsDebuff(0) && IsDebuff(793) && IsDebuff(802) && IsDebuff(804)); // KO, Ninjutsu Ele Debuff, Ele. Res. Down, Hysteria
 }
+
+// The background is a shield past the icon on every side, its point under a buff and over a debuff.
+TEST(a_status_background_reaches_past_its_icon_and_sits_by_its_kind)
+{
+    const StatusBack buff = StatusBackBox(40), debuff = StatusBackBox(4); // Protect, Paralysis
+    for (const StatusBack& back : {buff, debuff})
+        CHECK(back.side > 1.0f && back.left < 0.0f && back.top < 0.0f && back.left + back.side > 1.0f &&
+              back.top + back.side > 1.0f);
+    CHECK(buff.left == debuff.left && buff.side == debuff.side);
+    CHECK(buff.top < debuff.top); // a buff's point hangs below its icon
+}

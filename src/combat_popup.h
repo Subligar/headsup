@@ -103,6 +103,7 @@ namespace headsup
         uint32_t actor  = 0;
         uint8_t records = 0;
         std::array<uint16_t, kMostSentRecords> messages{};
+        uint32_t damage = 0; // the damage it deals, every target's and result's added up
     };
     std::optional<SentAction> ParseSentAction(const uint8_t* data, uint32_t size);
 

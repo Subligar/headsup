@@ -66,9 +66,12 @@ TEST(each_kind_offers_its_own_tags)
     CHECK(std::ranges::find(players, Tag::Con) == players.end());
     CHECK(std::ranges::find(players, Tag::JobLevel) == std::ranges::find(players, Tag::Level) + 1);
     CHECK(std::ranges::find(mobs, Tag::JobLevel) == mobs.end());
-    CHECK(TagsFor(PlateKind::Self) == players);
-    CHECK(TagsFor(PlateKind::Npcs) == std::vector<Tag>{Tag::Name});
-    CHECK((TagsFor(PlateKind::Pets) == std::vector<Tag>{Tag::Name, Tag::Owner}));
+    // Your own plate is no distance from you.
+    std::vector<Tag> self = players;
+    std::erase(self, Tag::Distance);
+    CHECK(self.size() + 1 == players.size() && TagsFor(PlateKind::Self) == self);
+    CHECK((TagsFor(PlateKind::Npcs) == std::vector<Tag>{Tag::Name, Tag::Distance}));
+    CHECK((TagsFor(PlateKind::Pets) == std::vector<Tag>{Tag::Name, Tag::Owner, Tag::Distance}));
 }
 
 TEST(a_design_is_its_stretches_of_text_as_typed_and_the_tags_between_them)
@@ -327,10 +330,11 @@ TEST(every_tag_is_offered_and_each_kind_lists_its_chips_in_order)
         CHECK(offered || static_cast<Tag>(t) == Tag::Break); // Enter makes a break, and no chip
     }
     CHECK((TagsFor(PlateKind::Mobs) == std::vector<Tag>{Tag::Name, Tag::Level, Tag::Con, Tag::Id, Tag::ServerId, Tag::Ph,
-                                           Tag::Detect, Tag::Weak, Tag::Resist, Tag::Status, Tag::Immune}));
+                                           Tag::Detect, Tag::Weak, Tag::Resist, Tag::Status, Tag::Immune, Tag::Distance,
+                                           Tag::Buffs, Tag::Debuffs}));
     CHECK((TagsFor(PlateKind::Players) == std::vector<Tag>{Tag::Name, Tag::Gm, Tag::LinkDead, Tag::Mentor, Tag::New, Tag::Sync, Tag::Away,
                                               Tag::Linkshell, Tag::Bazaar, Tag::Seeking, Tag::Job, Tag::Level, Tag::JobLevel,
-                                              Tag::SubLevel, Tag::Title}));
+                                              Tag::SubLevel, Tag::Title, Tag::Distance, Tag::Buffs, Tag::Debuffs}));
 }
 
 TEST(a_line_break_is_a_tag_that_shares_no_slot)
@@ -354,4 +358,13 @@ TEST(a_tag_name_runs_to_the_last_letter_and_text_around_unknown_tags_stays_whole
     CHECK((ParseTemplate("$id$serverid") == std::vector<Atom>{Of(Tag::Id), Of(Tag::ServerId)}));
     CHECK((ParseTemplate("\xC3\x97$name\xC3\x97") == std::vector<Atom>{Text("\xC3\x97"), Of(Tag::Name), Text("\xC3\x97")}));
     CHECK(ParseTemplate("a$nopeb") == std::vector<Atom>{Text("a$nopeb")});
+}
+
+TEST(the_status_tags_parse_and_share_a_slot)
+{
+    CHECK(ParseTemplate("$buffs") == std::vector<Atom>{Of(Tag::Buffs)});
+    CHECK(ParseTemplate("$debuffs") == std::vector<Atom>{Of(Tag::Debuffs)});
+    CHECK((ParseTemplate("${debuffs|sync}") == std::vector<Atom>{Atom{{Tag::Debuffs, Tag::Sync}, ""}}));
+    const std::vector<Tag> self = TagsFor(PlateKind::Self);
+    CHECK(std::ranges::find(self, Tag::Buffs) != self.end() && std::ranges::find(self, Tag::Debuffs) != self.end());
 }

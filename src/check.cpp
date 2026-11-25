@@ -50,6 +50,13 @@ namespace headsup
         return CheckAnswer{ReadAt<uint32_t>(data, kReplyServerId), GivesLevel(*message)};
     }
 
+    std::optional<BasicMessage> ParseBasicMessage(const uint8_t* data, uint32_t size)
+    {
+        const std::optional<uint16_t> message = ReplyMessage(data, size);
+        if (!message) return std::nullopt;
+        return BasicMessage{ReadAt<uint32_t>(data, kReplyServerId), ReadAt<uint32_t>(data, kReplyLevel), *message};
+    }
+
     std::optional<uint32_t> ParseMobDeath(const uint8_t* data, uint32_t size)
     {
         const std::optional<uint16_t> message = ReplyMessage(data, size);

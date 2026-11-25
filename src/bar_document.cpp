@@ -25,14 +25,6 @@ namespace headsup
                                    kItemKind = "item", kStatusKind = "status";
         // A separator's, by DashMark.
         constexpr std::string_view kSeparatorKinds[kDashMarkCount] = {"dash", "dot", "square", "diamond", "blank"};
-        // XIUI's party list draws a status's background 1.1 icons wide and 0.75 as wide as tall. Here the icon fills its
-        // mark's box as it does with no background, and the background's square picture reaches past it, the icon's
-        // middle on its frame's inside: BuffIcon.png and DebuffIcon.png are 15 by 20 shields squared on 20 px, their
-        // inside columns 1 to 13 and rows 5 to 18 under a buff's point, rows 1 to 14 over a debuff's.
-        constexpr float kBackWide = 1.1f, kBackAspect = 0.75f;
-        constexpr float kBackedIcon = kBackAspect / kBackWide; // the icon's side, of the background's square
-        constexpr float kBackPixels = 20.0f, kBackInsideX = (2.0f + 7.5f) / kBackPixels;
-        constexpr float kBuffInsideY = 12.0f / kBackPixels, kDebuffInsideY = 8.0f / kBackPixels;
         // RmlUi blurs a glow by a Gaussian of this share of its width; the bar's shadow is a CSS blur radius, twice
         // its Gaussian's.
         constexpr float kGlowSigmaPerWidth = 0.4f;
@@ -91,25 +83,24 @@ namespace headsup
             if (error != std::errc() || end != text.data() + text.size()) return std::nullopt;
             return value;
         }
+    }
 
-        // A status's icon filling a square box of side at x, y in unit, each moved and sized by its own icon
-        // adjustment. With Show Status Background its background is drawn under it, larger than the box.
-        std::string StatusPictures(const StatusMark& mark, float x, float y, float side, const char* unit)
-        {
-            const auto at = [&](float left, float top, float size) {
-                return "left:" + RcssNumber(x + left * side) + unit + ";top:" + RcssNumber(y + top * side) + unit +
-                       ";width:" + RcssNumber(size * side) + unit + ";height:" + RcssNumber(size * side) + unit + ";";
-            };
-            const std::string icon = "<img class=\"p\" src=\"" + StatusSource(mark) + "\" style=\"" + at(0.0f, 0.0f, 1.0f) +
-                                     AdjustRules(AdjustOf(mark)) + "\"/>";
-            if (!mark.back) return icon;
-            const Icon back   = IsDebuff(mark.id) ? Icon::DebuffBack : Icon::BuffBack;
-            const float insideY = IsDebuff(mark.id) ? kDebuffInsideY : kBuffInsideY;
-            return "<img class=\"p\" src=\"" + IconSource(back) + "\" style=\"" +
-                   at(0.5f - kBackInsideX / kBackedIcon, 0.5f - insideY / kBackedIcon, 1.0f / kBackedIcon) +
-                   AdjustRules(AdjustOf(back)) + "\"/>" + icon;
-        }
+    std::string StatusPictures(const StatusMark& mark, float x, float y, float side, const char* unit)
+    {
+        const auto at = [&](float left, float top, float size) {
+            return "left:" + RcssNumber(x + left * side) + unit + ";top:" + RcssNumber(y + top * side) + unit +
+                   ";width:" + RcssNumber(size * side) + unit + ";height:" + RcssNumber(size * side) + unit + ";";
+        };
+        const std::string icon = "<img class=\"p\" src=\"" + StatusSource(mark) + "\" style=\"" + at(0.0f, 0.0f, 1.0f) +
+                                 AdjustRules(AdjustOf(mark)) + "\"/>";
+        if (!mark.back) return icon;
+        const StatusBack back = StatusBackBox(mark.id);
+        return "<img class=\"p\" src=\"" + IconSource(back.icon) + "\" style=\"" + at(back.left, back.top, back.side) +
+               AdjustRules(AdjustOf(back.icon)) + "\"/>" + icon;
+    }
 
+    namespace
+    {
         // A span's mark, before its text; last: the span ends its line.
         std::string Picture(const Span& span, const BarLook& look, bool last)
         {

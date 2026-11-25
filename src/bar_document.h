@@ -38,6 +38,9 @@ namespace headsup
     // A status name's icon: its pack's, else the game's (nothing from game when it has none), else XIView's
     // unknown.png; nothing for a name that is no status.
     std::optional<Image> StatusImage(std::string_view name, FunctionRef<std::optional<Image>(uint16_t)> game);
+    // A status's icon filling a square box of side at x, y in unit, each moved and sized by its own icon adjustment, as
+    // images of class "p" to place absolutely. With its background, that is drawn under it, larger than the box.
+    std::string StatusPictures(const StatusMark& mark, float x, float y, float side, const char* unit);
     std::string ResetSource(uint32_t argb, int pixels); // the circular arrow that puts a color back
     std::string CogSource(uint32_t argb, int pixels);   // the cog on a popup's settings chip
     // The image a name stands for; nothing for a name that is none of the above.

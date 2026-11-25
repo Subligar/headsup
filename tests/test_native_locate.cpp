@@ -61,7 +61,8 @@ namespace
                                 0x24, 0x10, 0x8B, 0x54, 0x24, 0x0C, 0x50, 0x8B, 0x44, 0x24, 0x0C, 0x51, 0x8B, 0x4C, 0x24, 0x0C,
                                 0x52, 0x50, 0x51});
         image.Put(0x0D08A3, {0xE8, 0x68, 0x59, 0xFB, 0xFF, 0x83, 0xC4, 0x14, 0xC2, 0x14, 0x00});
-        image.Put(0x0D068A, {0x8B, 0xCE, 0xE8, 0xEF, 0x01, 0x00, 0x00}); // the entity loop: mov ecx,esi; call the wrapper
+        // The name method's pushes, mov ecx,esi and its call into the wrapper (Signet's pattern for build 0x6AC37846).
+        image.Put(0x0D0683, {0x50, 0x8D, 0x54, 0x24, 0x1C, 0x51, 0x52, 0x8B, 0xCE, 0xE8, 0xEF, 0x01, 0x00, 0x00});
         image.Put(0x17570C, {0xE8, 0xFF, 0x0A, 0xF1, 0xFF, 0x83, 0xC4, 0x14, 0x8B, 0x47, 0x10}); // a loop over world labels
         return image;
     }
@@ -103,8 +104,20 @@ TEST(the_entity_loops_call_into_the_wrapper_is_found)
     // The actor goes into the wrapper in ecx and no further, so it is caught at this call.
     const NameRoutine found = Locate(ClientImage());
     CHECK(found.problem == LocateProblem::None);
-    CHECK_EQ(found.wrapper, 0x0D0880u);
-    CHECK((found.wrapperCalls == std::vector<uint32_t>{0x0D068C}));
+    CHECK_EQ(found.wrapperCall, 0x0D068Cu);
+    CHECK_EQ(found.entityDraw, 0x0D0880u);
+}
+
+TEST(a_call_another_plugin_sent_elsewhere_is_found_and_goes_on_there)
+{
+    // Signet points this call at its own gate at the game's first frame, before HeadsUp's name hook starts.
+    constexpr uint32_t kOtherGate = 0x10070880;
+    Image image = ClientImage();
+    image.Put32(0x0D068D, kOtherGate - (kClientBase + 0x0D068C + kBranchLength));
+    const NameRoutine found = Locate(image);
+    CHECK(found.problem == LocateProblem::None);
+    CHECK_EQ(found.wrapperCall, 0x0D068Cu);
+    CHECK_EQ(kClientBase + found.entityDraw, kOtherGate);
 }
 
 TEST(a_jump_another_plugin_put_over_the_wrappers_start_leaves_it_found)
@@ -114,7 +127,7 @@ TEST(a_jump_another_plugin_put_over_the_wrappers_start_leaves_it_found)
     image.Put(0x0D0880, {0xE9, 0xCB, 0x89, 0x89, 0x73});
     const NameRoutine found = Locate(image);
     CHECK(found.problem == LocateProblem::None);
-    CHECK((found.wrapperCalls == std::vector<uint32_t>{0x0D068C}));
+    CHECK_EQ(found.wrapperCall, 0x0D068Cu);
 }
 
 TEST(a_wrapper_that_passes_its_arguments_otherwise_is_refused)
@@ -124,11 +137,18 @@ TEST(a_wrapper_that_passes_its_arguments_otherwise_is_refused)
     CHECK(Locate(image).problem == LocateProblem::EntityWrapperChanged);
 }
 
-TEST(a_wrapper_nothing_calls_is_refused)
+TEST(a_name_method_laid_out_otherwise_is_refused)
 {
     Image image = ClientImage();
-    image.Put(0x0D068C, {0xE8, 0x00, 0x00, 0x00, 0x00});
+    image.Put(0x0D0687, {0x20}); // lea edx,[esp+0x20]
     CHECK(Locate(image).problem == LocateProblem::NoEntityWrapperCalls);
+}
+
+TEST(a_name_method_found_twice_is_refused)
+{
+    Image image = ClientImage();
+    image.Put(0x100000, {0x50, 0x8D, 0x54, 0x24, 0x1C, 0x51, 0x52, 0x8B, 0xCE, 0xE8, 0x00, 0x00, 0x00, 0x00});
+    CHECK(Locate(image).problem == LocateProblem::AmbiguousEntityWrapperCalls);
 }
 
 TEST(without_that_wrapper_the_routine_is_refused)

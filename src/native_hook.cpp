@@ -728,15 +728,12 @@ namespace headsup
         g_HeadsUpNameResume = moduleBase + routine.resume;
         g_HeadsUpNameExit   = moduleBase + routine.exit;
         g_HeadsUpNameActor  = 0;
-        g_HeadsUpEntityNameDraw = moduleBase + routine.wrapper;
+        g_HeadsUpEntityNameDraw = moduleBase + routine.entityDraw;
 
         std::vector<CodePatch> patches = {Instruction(site, sizeof(kNameHookBytes), kJumpOpcode,
             BranchOperand(Address(site), Address(&HeadsUpNameGate)))};
-        for (const uint32_t rva : routine.wrapperCalls)
-        {
-            uint8_t* call = base + rva;
-            patches.push_back(Retarget(call, Address(call), Address(&HeadsUpEntityNameGate)));
-        }
+        uint8_t* call = base + routine.wrapperCall;
+        patches.push_back(Retarget(call, Address(call), Address(&HeadsUpEntityNameGate)));
         if (const std::string failure = PutIn(patches); !failure.empty()) return failure;
         m_Patches = std::move(patches);
 #ifdef HEADSUP_DEV

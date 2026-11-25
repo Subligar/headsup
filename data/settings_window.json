@@ -143,6 +143,8 @@
                 {"key": "alignment", "name": "Alignment", "tip": "Puts the widget's content against the left or right of its pill, or in its middle. Set by Location lines it up with the side of the panel it is on. Default is {default}."},
                 {"key": "show-zone-id", "name": "Show Zone ID in Header", "tip": "The zone's number after its name at the top of the pop-out, as in Valkurm Dunes (Zone #103). Default is {default}."},
                 {"key": "wrap-text", "name": "Wrap Text", "tip": "Puts the zone's name on two lines, broken where it keeps the widget narrowest. Off, it stays on one line. Default is {default}."},
+                {"key": "average-over", "name": "Average Over", "tip": "How many seconds of damage the widget adds up. Your DPS is the damage dealt in that time divided by those seconds, so it drops to 0 that long after the last hit. Default is {default}."},
+                {"key": "include-pets", "name": "Include Pets", "tip": "Counts each pet's damage as its owner's. Default is {default}."},
                 {"key": "combine", "name": "Link Widget", "tip": "Merges this widget with the selected widget to show their content in a single pill and pop-out. Default is None."},
                 {"key": "linked-padding", "name": "Linked Padding", "tip": "The space between this widget and the one it is linked to. Default is {default}."},
                 {"key": "visibility", "name": "Visibility", "tip": "The kinds of target the widget shows for. With one left out, the widget hides while you target one. Default is all of them."},
@@ -1021,6 +1023,23 @@
         ]
       },
       {
+        "key": "plate-statuses",
+        "name": "Buffs & Debuffs",
+        "description": "Pick which buffs and debuffs the Buffs and Debuffs tags show on this nameplate. Click a status's star to show it. Starred statuses move to the top of their list the next time you open this page.\n\nYours and your party's statuses are always right. For other players and mobs, HeadsUp only knows what it saw land, so a status can still show for a while after it ends.",
+        "kinds": ["mobs", "players", "self"],
+        "settings": [
+          {"key": "plate-status-background", "name": "Show Status Background", "tip": "Shows the buff or debuff background behind each status icon, on the nameplate and in the lists below. Off by default."},
+          {"key": "status-party-only", "name": "Only Party Members", "tip": "Shows statuses only on members of your party or alliance, not on every player. On by default.", "kinds": ["players"]},
+          {
+            "key": "shown-statuses",
+            "words": [
+              {"key": "buffs", "name": "Buffs"},
+              {"key": "debuffs", "name": "Debuffs"}
+            ]
+          }
+        ]
+      },
+      {
         "key": "line-style",
         "name": "Line Style",
         "description": "These are settings to change the appearance of each line individually.",
@@ -1327,6 +1346,7 @@
         {"name": "Settings", "tip": "Just the settings cog. Click it to open these settings on the Top Panel page, at Widget Layout."},
         {"name": "Home Point", "tip": "The zone your home point is in."},
         {"name": "Placeholder Timers", "tip": "The respawn timers of the NMs and placeholders that died near you, the same ones shown over your name, even when the game draws no name for you. It runs them by itself, so Respawn Timer, under NM Placeholder Timers, only decides whether they also show over your name. Shows nothing while no timer runs."},
+        {"name": "DPS", "tip": "Your damage per second, with your party's total under it. Hover for each member's."},
         {"name": "Custom Widget", "tip": "A widget you made. It can show any widget's buttons on the panel and any widget's sections in its pop-out."}
       ]
     },
@@ -1389,6 +1409,9 @@
         {"name": "Line Break", "tip": "Shows Line Break when your line could snap. The game warns of this only with a bad feeling."},
         {"name": "Rod Break", "tip": "Shows Rod Break when your rod could break. The game warns of this only with a terrible feeling."},
         {"name": "Disconnecting", "tip": "Shows the game's red circle (R0) while a player is losing their connection. While it shows, it is the only icon on their nameplate, and it shows even if no line has this tag."},
+        {"name": "Distance", "tip": "How far the entity is from you in yalms, as the Target widget shows it: (12.3). To show it only on your target, set its line's Line Visibility to Targeted."},
+        {"name": "Buffs", "tip": "Shows an icon for each buff the entity has that is starred in the Buffs & Debuffs card. Yours and your party's are always right. For other players and mobs, HeadsUp only knows what it saw land, so a buff can still show for a while after it ends."},
+        {"name": "Debuffs", "tip": "Shows an icon for each debuff the entity has that is starred in the Buffs & Debuffs card. Yours and your party's are always right. For other players and mobs, HeadsUp only knows what it saw land, so a debuff can still show for a while after it ends."},
         {"name": "Line Break", "tip": "Puts what follows on a row of its own under the rest of the line, in the line's own style. Press Enter in a line to make one."}
       ]
     },
@@ -1520,7 +1543,7 @@
       "options": [
         {"name": "Where You Are", "tip": "The zone, its weather, your home point and what is around you."},
         {"name": "Time", "tip": "Your computer's time."},
-        {"name": "You", "tip": "Your job, experience, gil, inventory, party and target."},
+        {"name": "You", "tip": "Your job, experience, gil, inventory, party, target and damage."},
         {"name": "System", "tip": "Your frame rate, connection, memory and the game's help line."}
       ]
     },
@@ -1621,6 +1644,8 @@
         {"name": "Beastmen", "tip": "The beastmen's crest and how many regions they hold."},
         {"name": "Home Point Name", "tip": "The zone your home point is in."},
         {"name": "Home Point Icon", "tip": "A house with a map pin."},
+        {"name": "Your DPS", "tip": "Your damage per second."},
+        {"name": "Party DPS", "tip": "Your party's damage per second, all of you added up. Shows nothing while you are not in a party."},
         {"name": "Widget Name", "tip": "This widget's name, as its Name setting has it."}
       ]
     },
@@ -1675,7 +1700,8 @@
         {"name": "Conquest", "tip": "The regions each nation holds, and your supply runs."},
         {"name": "Travel", "tip": "When each boat and airship leaves or arrives."},
         {"name": "Calendar", "tip": "The RSE and the next full and new moons."},
-        {"name": "Guilds", "tip": "Each guild's shop hours and today's turn-ins."}
+        {"name": "Guilds", "tip": "Each guild's shop hours and today's turn-ins."},
+        {"name": "Members", "tip": "Each party member's damage per second, highest first."}
       ]
     },
     {

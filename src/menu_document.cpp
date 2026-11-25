@@ -25,6 +25,8 @@ namespace headsup
         constexpr float kPadX         = 0.6f;  // a control's text from its sides
         constexpr float kHeadHeight   = 2.05f; // the window's title row
         constexpr float kPopupTall    = 18.0f; // the most of a dropdown's list shown before it scrolls
+        constexpr float kStatusRow = 1.6f, kStatusIcon = 1.2f, kStatusGap = 0.4f; // a Buffs & Debuffs row, its icons
+        constexpr float kDimStar   = 0.45f; // an unstarred status's star
         constexpr float kNavHeight    = 1.75f; // each page in the sidebar
         constexpr float kNavGap       = 0.2f;  // between two pages of the sidebar
         constexpr float kNavSlide     = 0.35f; // how far a page's name moves under the pointer
@@ -361,6 +363,14 @@ namespace headsup
         css += std::string("#") + kMenuPopupId + ".open{animation:0.16s cubic-out drop-in;}";
         css += "@keyframes drop-in{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0px);}}";
         css += ".list{max-height:" + Em(kPopupTall) + ";overflow-y:auto;}";
+        // A Buffs & Debuffs row: its star, its status's icon with any background placed in the icon's box, its name.
+        css += ".srow{display:flex;flex-direction:row;align-items:center;height:" + Em(kStatusRow) + ";}";
+        css += ".sstar{flex:0 0 auto;width:" + Em(kStatusIcon) + ";height:" + Em(kStatusIcon) + ";}";
+        css += ".sstar img{width:100%;height:100%;}";
+        css += ".sstar.dim{opacity:" + RcssNumber(kDimStar) + ";}";
+        css += ".smark{position:relative;flex:0 0 auto;width:" + Em(kStatusIcon) + ";height:" + Em(kStatusIcon) + ";margin:0px " +
+               Em(kStatusGap) + ";}";
+        css += ".smark .p{position:absolute;}";
         css += ".opt{height:" + frame + ";" + framed + "padding:0px " + Em(kPadX) + ";border-radius:" + radius +
                ";white-space:nowrap;}";
         css += ".opt:hover,.opt.picked{background-color:" + color(c.accentSoft) + ";}";

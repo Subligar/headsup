@@ -265,6 +265,7 @@ barWorld=true
 barSettings=true
 barHomePoint=true
 barPhTimers=true
+barDps=true
 barZoneLine2=true
 barZoneIcons=true
 barWeatherLine2=true
@@ -305,7 +306,7 @@ untargetedOpacity=40.0000
 clockSeconds=true
 serverSeconds=true
 barPerformanceParts=16.0000
-barLeft=zone weather job party statusTimers world homePoint phTimers
+barLeft=zone weather job party statusTimers world homePoint phTimers dps
 barCenter=
 barRight=target gil bags performance earthTime settings
 hideHelpBar=true
@@ -1061,7 +1062,7 @@ TEST(each_theme_and_bar_widget_has_its_own_key)
         CHECK(saved.values["barTheme"] == t.name);
     }
     const char* const widgetKeys[] = {"barZone", "barWeather", "barTarget", "barGil", "barBags",
-        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers"}; // in BarWidget's order, but a created widget's
+        "barEarthTime", "barGameHelp", "barPerformance", "barJob", "barParty", "barStatusTimers", "barWorld", "barSettings", "barHomePoint", "barPhTimers", "barDps"}; // in BarWidget's order, but a created widget's
     static_assert(std::size(widgetKeys) == kBarWidgetCount - 1); // read only once made, as every copy's
     for (int w = 0; w < kBarWidgetCount - 1; ++w)
     {
@@ -3109,6 +3110,26 @@ TEST(the_home_point_widgets_wrap_text_starts_on_and_is_kept)
     CHECK(LoadSettings(store).Widget(BarWidget::HomePoint).design == DefaultDesign(BarWidget::HomePoint));
 }
 
+TEST(the_dps_widgets_average_over_and_include_pets_are_each_copys_own_and_kept)
+{
+    Settings s;
+    const PanelWidget first{BarWidget::Dps}, copy = *CloneWidget(s, BarWidget::Dps);
+    CHECK(s.Widget(first).dpsSeconds == kDefaultDpsSeconds && s.Widget(first).dpsPets);
+    s.Widget(first).dpsSeconds = 25;
+    s.Widget(copy).dpsPets     = false;
+    MapStore store;
+    SaveSettings(s, store);
+    const Settings read = LoadSettings(store);
+    CHECK(read.Widget(first).dpsSeconds == 25 && read.Widget(first).dpsPets);
+    CHECK(read.Widget(copy).dpsSeconds == kDefaultDpsSeconds && !read.Widget(copy).dpsPets);
+    store.values["dpsSeconds"] = "0";
+    CHECK_EQ(LoadSettings(store).Widget(first).dpsSeconds, kMinDpsSeconds);
+    store.values["dpsSeconds"] = "999";
+    CHECK_EQ(LoadSettings(store).Widget(first).dpsSeconds, kMaxDpsSeconds);
+    // No Widget Designer: both lines stay on.
+    CHECK(!HasDesigner(BarWidget::Dps) && !store.values.contains("barDpsDesign"));
+}
+
 TEST(lock_cursor_to_window_starts_off_and_is_kept)
 {
     Settings s;
@@ -3672,4 +3693,60 @@ TEST(each_combat_popup_switch_is_on_until_switched_off_and_saves)
         SaveSettings(s, saved);
         CHECK(!(LoadSettings(saved).*field));
     }
+}
+
+// John (2026-11-19): each page's Buffs & Debuffs, Show Status Background and, on Players, Only Party Members.
+TEST(each_kinds_starred_statuses_and_their_switches_are_kept_and_only_its_kinds_write_them)
+{
+    Settings s;
+    for (const PlateKind kind : {PlateKind::Mobs, PlateKind::Players, PlateKind::Self})
+        CHECK((s.Kind(kind).shownStatuses == std::vector<uint16_t>{40, 41, 2, 4, 7, 5})); // Protect to Blindness
+    s.Kind(PlateKind::Mobs).shownStatuses    = {4, 134};
+    s.Kind(PlateKind::Players).shownStatuses = {40};
+    s.Kind(PlateKind::Self).shownStatuses    = {41, 2};
+    s.Kind(PlateKind::Self).statusBack       = true;
+    s.Kind(PlateKind::Players).statusPartyOnly = false;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK(store.values["mobsShownStatuses"] == "4 134" && store.values["selfShownStatuses"] == "41 2");
+    CHECK(!store.values.contains("npcsShownStatuses") && !store.values.contains("petsStatusBackground"));
+    CHECK(!store.values.contains("mobsStatusPartyOnly") && !store.values.contains("selfStatusPartyOnly"));
+    const Settings read = LoadSettings(store);
+    for (const PlateKind kind : {PlateKind::Mobs, PlateKind::Players, PlateKind::Self})
+    {
+        CHECK(read.Kind(kind).shownStatuses == s.Kind(kind).shownStatuses);
+        CHECK_EQ(read.Kind(kind).statusBack, s.Kind(kind).statusBack);
+    }
+    CHECK(!read.Kind(PlateKind::Players).statusPartyOnly);
+    store.values["mobsShownStatuses"] = "40 x 65000 40";
+    CHECK((LoadSettings(store).Kind(PlateKind::Mobs).shownStatuses == std::vector<uint16_t>{40}));
+}
+
+// An emptied list must not come back as the six a file without the key gets, even through a reader that takes an
+// empty value for none, as Windows' profile reader can for a line with nothing after its "=".
+TEST(an_emptied_starred_list_stays_empty_through_the_settings_file)
+{
+    Settings s;
+    s.Kind(PlateKind::Players).shownStatuses.clear();
+    MapStore saved;
+    ChangedKeys changed(saved);
+    SaveSettings(s, changed);
+    std::vector<KeyText> values;
+    for (const auto& [key, text] : saved.values)
+        values.push_back({key, text});
+    class IniStore final : public SettingsStore
+    {
+    public:
+        std::string file;
+        std::string GetString(const char* key, const char* fallback) override
+        {
+            const std::optional<std::string> value = IniValue(file, "settings", key);
+            return value && !value->empty() ? *value : fallback;
+        }
+        void Set(const char*, const char*) override {}
+    } file;
+    file.file = WithIniValues("", "settings", values);
+    const Settings read = LoadSettings(file);
+    CHECK(read.Kind(PlateKind::Players).shownStatuses.empty());
+    CHECK_EQ(read.Kind(PlateKind::Self).shownStatuses.size(), size_t{6});
 }

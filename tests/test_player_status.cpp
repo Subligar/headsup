@@ -262,11 +262,11 @@ namespace
 {
     // A party member's status icons as Phoenix's StatusEffectContainer::UpdateStatusIcons packs them for 0x076: each
     // icon's low byte in its slot, and in the mask bit 2 * slot for the 256 range and the next bit for the 512 range.
-    struct PartyIcons
+    struct IconSlots
     {
         uint8_t icons[kStatusIconSlots];
         uint64_t bitMask = 0;
-        PartyIcons() { std::memset(icons, 0xFF, sizeof(icons)); }
+        IconSlots() { std::memset(icons, 0xFF, sizeof(icons)); }
         void Put(int slot, uint16_t icon)
         {
             icons[slot] = static_cast<uint8_t>(icon);
@@ -278,19 +278,19 @@ namespace
 
 TEST(a_party_members_level_sync_comes_from_their_status_icons)
 {
-    PartyIcons none;
+    IconSlots none;
     CHECK(!LevelSyncInPartyIcons(none.icons, none.bitMask));
-    PartyIcons first;
+    IconSlots first;
     first.Put(0, 269);
     CHECK(LevelSyncInPartyIcons(first.icons, first.bitMask));
-    PartyIcons last; // the mask's top bits: a 64-bit shift
+    IconSlots last; // the mask's top bits: a 64-bit shift
     last.Put(0, 13);
     last.Put(31, 269);
     CHECK(LevelSyncInPartyIcons(last.icons, last.bitMask));
-    PartyIcons slow;
+    IconSlots slow;
     slow.Put(5, 13);
     CHECK(!LevelSyncInPartyIcons(slow.icons, slow.bitMask));
-    PartyIcons high;
+    IconSlots high;
     high.Put(5, 525);
     CHECK(!LevelSyncInPartyIcons(high.icons, high.bitMask));
     CHECK(!LevelSyncInPartyIcons(nullptr, first.bitMask));
@@ -330,4 +330,32 @@ TEST(the_rest_comes_from_the_packets_once_known)
     const PlayerStatus stale = WithPacketStatus(packet, &memory); // the other way round, every field differs
     CheckStatus(stale, {false, false, false, false, false, false, false});
     CheckStatus(WithPacketStatus(memory, nullptr), {true, true, true, false, false, false, false});
+}
+
+TEST(a_party_members_status_list_is_their_icons_in_slot_order)
+{
+    IconSlots slots;
+    slots.Put(0, 40);  // Protect
+    slots.Put(1, 269); // Level Sync, the 256 range
+    slots.Put(3, 525); // the 512 range, past an empty slot
+    const StatusList list = PartyIcons(slots.icons, slots.bitMask);
+    CHECK_EQ(list.count, 3);
+    CHECK_EQ(list.ids[0], 40);
+    CHECK_EQ(list.ids[1], 269);
+    CHECK_EQ(list.ids[2], 525);
+    CHECK_EQ(PartyIcons(nullptr, slots.bitMask).count, 0);
+}
+
+TEST(your_status_list_is_your_buffs_without_the_empty_slots)
+{
+    int16_t buffs[kStatusIconSlots];
+    for (int16_t& b : buffs)
+        b = -1;
+    buffs[1] = 2;  // Sleep
+    buffs[4] = 41; // Shell
+    const StatusList list = BuffIcons(buffs);
+    CHECK_EQ(list.count, 2);
+    CHECK_EQ(list.ids[0], 2);
+    CHECK_EQ(list.ids[1], 41);
+    CHECK_EQ(BuffIcons(nullptr).count, 0);
 }

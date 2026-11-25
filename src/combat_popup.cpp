@@ -1,5 +1,6 @@
 #include "combat_popup.h"
 
+#include "action_bits.h"
 #include "argb.h"
 #include "auto_check.h"
 #include "bar_content.h"
@@ -48,6 +49,16 @@ namespace headsup
 
     namespace
     {
+        // By the server's msg_basic.h and msg.lua ids of the messages whose value is damage the actor dealt: a result's
+        // own, and an additional effect's (a skillchain's too, SkillchainDamage). Spikes and counters are the target's
+        // damage to the actor, so they are left out.
+        constexpr uint32_t kDamageMessages[] = {1, 2, 67, 77, 110, 157, 185, 187, 197, 227, 252, 264, 274, 281, 317, 352,
+            353, 379, 522, 576, 577, 747};
+        constexpr uint32_t kAddedDamageMessages[] = {161, 163, 229};
+    }
+
+    namespace
+    {
         struct Skillchain
         {
             std::string_view name;
@@ -76,6 +87,12 @@ namespace headsup
             if (message == kRadianceDamage || message == kRadianceHealing) return kSkillchains[kRadiance - 1];
             if (message == kUmbraDamage || message == kUmbraHealing) return kSkillchains[kUmbra - 1];
             return std::nullopt;
+        }
+
+        bool SkillchainDamage(uint32_t message)
+        {
+            return (message > kSkillchainDamage && message <= kSkillchainDamage + kSkillchainCount) ||
+                   message == kRadianceDamage || message == kUmbraDamage;
         }
 
         // By the server's msg_basic.h ids; the first that fits wins. 264, damage to an area spell's next target, is the
@@ -131,65 +148,21 @@ namespace headsup
         return IsDebuff(status) ? kDamage : kRecovery;
     }
 
-    namespace
-    {
-        // The server's packing: fields of bits from byte kActionBits / 8, each from its lowest bit.
-        constexpr uint32_t kActionBits = 40;
-        constexpr uint32_t kActorBits = 32, kTargetsBits = 6, kResultsSumBits = 4, kCommandBits = 4, kArgumentBits = 32,
-                           kInfoBits = 32, kTargetIdBits = 32, kResultsBits = 4;
-        // A result: miss, kind, animation, info, distortion and knockback, then value, message and modifier; an
-        // additional effect's 37 bits and spikes' 34 after a bit each that says they are there.
-        constexpr uint32_t kResultLeadBits = 3 + 2 + 12 + 5 + 2 + 3, kValueBits = 17, kMessageBits = 10, kModifierBits = 31,
-                           kAddedBits = 6 + 4 + 17 + 10, kSpikesBits = 6 + 4 + 14 + 10;
-
-        class BitReader
-        {
-        public:
-            BitReader(const uint8_t* data, uint32_t size) : m_Data(data), m_Bits(size * 8) {}
-            // Nothing once past the end.
-            std::optional<uint32_t> Read(uint32_t bits)
-            {
-                if (m_Bit + bits > m_Bits) return std::nullopt;
-                uint32_t value = 0;
-                for (uint32_t i = 0; i < bits; ++i, ++m_Bit)
-                    value |= static_cast<uint32_t>(m_Data[m_Bit / 8] >> m_Bit % 8 & 1) << i;
-                return value;
-            }
-            void Skip(uint32_t bits) { m_Bit += bits; }
-
-        private:
-            const uint8_t* m_Data;
-            uint32_t m_Bits, m_Bit = kActionBits;
-        };
-    }
-
     std::optional<SentAction> ParseSentAction(const uint8_t* data, uint32_t size)
     {
-        BitReader bits(data, size);
+        const std::optional<ParsedAction> parsed = ParseAction(data, size);
+        if (!parsed) return std::nullopt;
         SentAction sent;
-        const std::optional<uint32_t> actor = bits.Read(kActorBits), targets = bits.Read(kTargetsBits);
-        if (!actor || !targets) return std::nullopt;
-        sent.actor = *actor;
-        bits.Skip(kResultsSumBits + kCommandBits + kArgumentBits + kInfoBits);
-        const bool lone = *targets == 1;
-        for (uint32_t t = 0; t < *targets; ++t)
+        sent.actor      = parsed->actor;
+        const bool lone = parsed->targets == 1;
+        for (const ParsedResult& r : parsed->results)
         {
-            bits.Skip(kTargetIdBits);
-            const std::optional<uint32_t> results = bits.Read(kResultsBits);
-            if (!results) return std::nullopt;
-            for (uint32_t r = 0; r < *results; ++r)
-            {
-                bits.Skip(kResultLeadBits + kValueBits);
-                const std::optional<uint32_t> message = bits.Read(kMessageBits);
-                bits.Skip(kModifierBits);
-                const std::optional<uint32_t> added = bits.Read(1);
-                if (added && *added) bits.Skip(kAddedBits);
-                const std::optional<uint32_t> spikes = bits.Read(1);
-                if (spikes && *spikes) bits.Skip(kSpikesBits);
-                if (!message || !spikes) return std::nullopt;
-                const bool kept = lone ? r < kMostLoneResults : r == 0;
-                if (kept && sent.records < kMostSentRecords) sent.messages[sent.records++] = static_cast<uint16_t>(*message);
-            }
+            if (std::ranges::find(kDamageMessages, r.message) != std::end(kDamageMessages)) sent.damage += r.value;
+            if (std::ranges::find(kAddedDamageMessages, r.addedMessage) != std::end(kAddedDamageMessages) ||
+                SkillchainDamage(r.addedMessage))
+                sent.damage += r.addedValue;
+            const bool kept = lone ? r.index < kMostLoneResults : r.index == 0;
+            if (kept && sent.records < kMostSentRecords) sent.messages[sent.records++] = static_cast<uint16_t>(r.message);
         }
         return sent;
     }

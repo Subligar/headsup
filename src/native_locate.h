@@ -38,6 +38,7 @@ namespace headsup
         NoEntityCaller,
         EntityWrapperChanged,
         NoEntityWrapperCalls,
+        AmbiguousEntityWrapperCalls,
         NoModelDraws,
         ModelDrawsDiffer,
         NoArrowDraws,
@@ -102,8 +103,8 @@ namespace headsup
         uint32_t entry = 0, hook = 0, resume = 0, exit = 0;
         std::vector<uint32_t> callerReturns;
         uint32_t entityCaller = 0; // the one of those that entities' names come back to
-        uint32_t wrapper = 0;               // the wrapper that one is in, which takes the actor in ecx
-        std::vector<uint32_t> wrapperCalls; // the calls into it
+        uint32_t wrapperCall = 0; // the name method's call into the wrapper that one is in, which takes the actor in ecx
+        uint32_t entityDraw  = 0; // where that call goes: the wrapper, or another plugin's hook on it
     };
 
     // Found by the two icon tables it reads (from .rdata, which is in the file) rather than by its own bytes, so it

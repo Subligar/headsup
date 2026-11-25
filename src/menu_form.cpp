@@ -2,6 +2,7 @@
 
 #include "bar_document.h"
 #include "bar_look.h"
+#include "bar_statuses.h"
 #include "bar_theme.h"
 #include "icon_adjust.h"
 #include "cursor_picture.h"
@@ -47,6 +48,7 @@ namespace headsup
         constexpr const char* kPopupKindChip = "popup kind ", *kPopupColumnEnd = "popup column end ";
         // The Status Timers designer's chip, before its widget's slot and its status.
         constexpr const char* kStatusChip = "pin ";
+        constexpr const char* kStatusStar = "star "; // a Buffs & Debuffs row's star, before its status
         constexpr const char* kSettingsSectionKey = "settings"; // a widget's settings' section, after its designer
         constexpr size_t kFewestPinsToDesign = 2; // one pin has nowhere to move
         // A Pop-out Designer chip's name in a row and in the lists, before its widget's slot and its card.
@@ -934,6 +936,67 @@ namespace headsup
             if (MoveStatus(d, move->status, move->line, move->before)) form.changed = true;
         }
 
+        // The page's buffs and debuffs in two scrolling lists side by side, a row a status name: its star, its icon in
+        // the theme's status icons with the card's background, and its name. A click on a star stars the name, or takes
+        // every star of that name off.
+        void ShownStatuses(Context& c)
+        {
+            Form& form                        = c.form;
+            KindSettings& kind                = c.s.Kind(*c.kind);
+            MenuFormState::StatusLists& lists = c.state.statusLists;
+            if (lists.kind != c.kind)
+            {
+                lists       = {};
+                lists.kind  = c.kind;
+                lists.order = {StarredFirst(kind.shownStatuses, false), StarredFirst(kind.shownStatuses, true)};
+            }
+            const int pack        = OwnPalette(c.s).statusIcons;
+            const std::string ids = form.Named(kStatusStar);
+            const auto starOf     = [&](uint16_t id) { return form.Named(kStatusStar + std::to_string(id)); };
+            if (lists.rowsShown != kind.shownStatuses || lists.rowsBack != kind.statusBack || lists.rowsPack != pack ||
+                lists.rowsIds != ids)
+            {
+                for (size_t side = 0; side < lists.order.size(); ++side)
+                {
+                    std::string& rml = lists.rows[side];
+                    rml.clear();
+                    for (const uint16_t id : lists.order[side])
+                    {
+                        const bool starred = StarredByName(kind.shownStatuses, id);
+                        rml += "<div class=\"srow\"><div class=\"sstar" + std::string(starred ? "" : " dim") + "\" id=\"" + starOf(id) +
+                               "\"><img src=\"" + IconSource(starred ? Icon::Star : Icon::StarEmpty) + "\"" +
+                               (starred ? " style=\"image-color:" + RcssColor(kStarColor) + ";\"" : std::string()) +
+                               "/></div><span class=\"smark\">" +
+                               StatusPictures(StatusMark{id, pack, kind.statusBack}, 0.0f, 0.0f, kPercentWhole, "%") + "</span>" +
+                               "<div class=\"label\">" + EscapedRml(StatusName(id)) + "</div></div>";
+                    }
+                }
+                lists.rowsShown = kind.shownStatuses;
+                lists.rowsBack  = kind.statusBack;
+                lists.rowsPack  = pack;
+                lists.rowsIds   = ids;
+            }
+            std::optional<uint16_t> clicked;
+            form.Raw("<div class=\"columns\">");
+            for (size_t side = 0; side < lists.order.size(); ++side)
+            {
+                const bool debuffs = side == 1;
+                form.Raw(std::string("<div class=\"column") + (debuffs ? " second" : "") + "\"><div class=\"line-name\">" +
+                         EscapedRml(Words(Word(c, debuffs ? WindowWord::ShownStatusesDebuffs : WindowWord::ShownStatusesBuffs))) +
+                         "</div><div class=\"list\">" + lists.rows[side] + "</div></div>");
+                for (const uint16_t id : lists.order[side])
+                    if (form.Clicked(starOf(id))) clicked = id;
+            }
+            form.Raw("</div>");
+            if (!clicked || form.Off()) return;
+            std::vector<uint16_t>& shown = kind.shownStatuses;
+            if (StarredByName(shown, *clicked))
+                std::erase_if(shown, [&](uint16_t id) { return std::string_view(StatusName(id)) == StatusName(*clicked); });
+            else
+                shown.push_back(*clicked);
+            form.changed = true;
+        }
+
         // A widget's pop-out as rows of chips, a card each, then the list of the cards it does not show of the widget
         // picked: a chip drags within its row, to another, or onto the empty row after them for a new one; a row's chip
         // let go off every row leaves the pop-out. A row of kMostCardsInRow takes no other card; trying says so under the
@@ -1227,6 +1290,13 @@ namespace headsup
                     break;
                 case WidgetTabsRow::WrapText:
                     if (kind == BarWidget::HomePoint) form.Switch(label.c_str(), o.wrapText, ownDefault().c_str());
+                    break;
+                case WidgetTabsRow::AverageOver:
+                    if (kind == BarWidget::Dps)
+                        form.SliderInt(label.c_str(), o.dpsSeconds, kMinDpsSeconds, kMaxDpsSeconds, Seconds, ownDefault().c_str());
+                    break;
+                case WidgetTabsRow::IncludePets:
+                    if (kind == BarWidget::Dps) form.Switch(label.c_str(), o.dpsPets, ownDefault().c_str());
                     break;
                 case WidgetTabsRow::Icon:
                     // Named after its widget's icon, as the Widget Designer's button for it was; the row's own name
@@ -2266,6 +2336,18 @@ namespace headsup
                 break;
             }
             case SettingPiece::StatusTable: StatusTable(c, e); break;
+            case SettingPiece::PlateStatusBackground:
+                form.Fade(!shown);
+                form.Switch(label.c_str(), s.Kind(*c.kind).statusBack, tip);
+                break;
+            case SettingPiece::StatusPartyOnly:
+                form.Fade(!shown);
+                if (*c.kind == PlateKind::Players) form.Switch(label.c_str(), s.Kind(*c.kind).statusPartyOnly, tip);
+                break;
+            case SettingPiece::ShownStatuses:
+                form.Fade(!shown);
+                ShownStatuses(c);
+                break;
             case SettingPiece::RespawnTimers:
                 form.Fade(!on);
                 form.Switch(label.c_str(), s.phTimers, tip);
@@ -3042,6 +3124,8 @@ namespace headsup
             case CardPiece::DetectionIcons:
             case CardPiece::Weaknesses:
             case CardPiece::Statuses: return {false, !plates};
+            case CardPiece::PlateStatuses:
+                return {!c.kind || (!UsesTag(s.Kind(*c.kind), Tag::Buffs) && !UsesTag(s.Kind(*c.kind), Tag::Debuffs)), !plates};
             case CardPiece::TopPanel: return {false, !on};
             case CardPiece::HelpBar: return {false, !BarOn(s), &s.Widget(BarWidget::GameHelp).on};
             case CardPiece::Widgets: return {.skipped = true}; // in the panel's popup, by BuildWidgetSettings
@@ -3288,6 +3372,8 @@ namespace headsup
         case WidgetTabsRow::MemText: return onOff(o.memText);
         case WidgetTabsRow::SyncedLevel: return onOff(o.syncedLevel);
         case WidgetTabsRow::WrapText: return onOff(o.wrapText);
+        case WidgetTabsRow::AverageOver: return Seconds(o.dpsSeconds);
+        case WidgetTabsRow::IncludePets: return onOff(o.dpsPets);
         case WidgetTabsRow::UniformFont: return onOff(o.uniformFont);
         case WidgetTabsRow::StatusDisplay: return option(WindowList::StatusDisplay, o.statusDisplay);
         case WidgetTabsRow::TimerFormat: return option(WindowList::TimerFormat, o.timerFormat);

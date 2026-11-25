@@ -48,6 +48,7 @@
 #include "wave_out.h"
 #include "settings.h"
 #include "shot_watch.h"
+#include "status_track.h"
 #include "tracker.h"
 #include "window_skin.h"
 #include "linuxxi_report.h"
@@ -241,6 +242,14 @@ namespace
         return headsup::ResourcePicture(found->Bitmap, std::min<size_t>(found->ImageSize, sizeof(found->Bitmap)));
     }
 
+    // A status's icon, from the game's own resources.
+    std::optional<headsup::Image> GameStatusIcon(uint16_t id)
+    {
+        const IStatusIcon* icon = g_Resources != nullptr ? g_Resources->GetStatusIconById(id) : nullptr;
+        if (icon == nullptr) return std::nullopt;
+        return headsup::ResourcePicture(icon->Bitmap, std::min<size_t>(icon->ImageSize, sizeof(icon->Bitmap)));
+    }
+
     const char* SpellName(uint16_t spell)
     {
         const ISpell* found = g_Resources != nullptr ? g_Resources->GetSpellById(spell) : nullptr;
@@ -337,6 +346,9 @@ class HeadsUp final : public IPlugin
     std::vector<headsup::PetLink> m_Pets;
     std::vector<headsup::CheckCandidate> m_Checkable;
     headsup::PhTimers m_PhTimers;
+    headsup::DamageMeter m_DamageMeter;
+    headsup::StatusTrack m_StatusTrack;
+    std::vector<uint32_t> m_Living; // the living players' and mobs' server ids, who keep their tracked statuses
     headsup::Activity m_Activity; // whether you have moved or turned lately, which a placeholder's timer asks
     std::optional<headsup::OutpostFile> m_Outposts; // read from its file when first needed
     std::vector<headsup::TimerLine> m_TimerLines;
@@ -707,6 +719,7 @@ public:
         m_Outline.SetDevice(device);
         m_Names.SetDevice(device);
         m_Nameplates.SetDevice(device);
+        m_Nameplates.SetGameStatusIcon(GameStatusIcon);
         m_SetupPreview.SetDevice(device);
         m_NameHook.SetDevice(device);
         m_CombatTextHook.SetDevice(device);
@@ -907,7 +920,12 @@ public:
         if (!injected) m_Connection.Received(Now()); // an addon's injected packet never came from the server
         // data is the packet as the server sent it, before any addon blanked a message in what the game gets.
         if (id == headsup::kActionPacket)
-            if (const std::optional<headsup::SentAction> sent = headsup::ParseSentAction(data, size)) m_CombatTextHook.Sent(*sent);
+            if (const std::optional<headsup::SentAction> sent = headsup::ParseSentAction(data, size))
+            {
+                m_CombatTextHook.Sent(*sent);
+                if (!injected) m_DamageMeter.Add(Now(), sent->actor, sent->damage);
+            }
+        if (!injected) TrackStatuses(id, data, size);
         const headsup::PacketFollowUp next = m_GameState.Received(id, data, size);
         if (next.zonedIn)
         {
@@ -930,6 +948,32 @@ public:
         if (next.mobDied && headsup::PhTimersRun(m_Settings))
             if (const auto mob = headsup::SightingOf(headsup::MobById(*next.mobDied))) m_PhTimers.Died(Now(), *mob);
         return next.answer && m_AutoCheck.TakeAnswer(*next.answer, Now());
+    }
+
+    void TrackStatuses(uint16_t id, const uint8_t* data, uint32_t size)
+    {
+        const double now = Now();
+        if (id == headsup::kActionPacket)
+            if (const std::optional<headsup::ActionStatuses> action = headsup::ParseActionStatuses(data, size))
+            {
+                if (action->finished) m_StatusTrack.Acted(action->actor);
+                for (const headsup::StatusChange& change : action->changes)
+                    m_StatusTrack.Apply(change, now);
+            }
+        if (id == headsup::kCheckReplyPacket)
+            if (const std::optional<headsup::StatusChange> change = headsup::ParseStatusMessage(data, size))
+                m_StatusTrack.Apply(*change, now);
+    }
+
+    // The statuses a player's or mob's plate can show: yours and your party's as the game keeps them, anyone else's
+    // as the packets told.
+    headsup::StatusList StatusesOf(IParty* party, IPlayer* player, uint32_t serverId, bool self, double now) const
+    {
+        if (self) return headsup::BuffIcons(player->GetBuffs());
+        for (uint32_t member = 0; member < kPartyIconMembers; ++member)
+            if (party->GetStatusIconsServerId(member) == serverId)
+                return headsup::PartyIcons(party->GetStatusIcons(member), party->GetStatusIconsBitMask(member));
+        return m_StatusTrack.Statuses(serverId, now);
     }
 
     // HeadsUp never changes or blocks the game's packets: every one still goes to the server.
@@ -2514,12 +2558,7 @@ private:
                 if (std::optional<headsup::Image> piece = headsup::SkinImage(m_WindowSkins, name)) return piece;
                 if (std::optional<headsup::Image> picture = headsup::GamePictureImage(m_PlayOnlineIcons, m_NationCrests, name)) return picture;
                 if (const std::optional<uint16_t> item = headsup::ItemOfSource(name)) return ItemPicture(*item);
-                if (std::optional<headsup::Image> status = headsup::StatusImage(name, [](uint16_t id) {
-                        const IStatusIcon* icon = g_Resources != nullptr ? g_Resources->GetStatusIconById(id) : nullptr;
-                        if (icon == nullptr) return std::optional<headsup::Image>{};
-                        return headsup::ResourcePicture(icon->Bitmap, std::min<size_t>(icon->ImageSize, sizeof(icon->Bitmap)));
-                    }))
-                    return status;
+                if (std::optional<headsup::Image> status = headsup::StatusImage(name, GameStatusIcon)) return status;
                 return headsup::HostImage(name);
             });
         if (!started) Print("RmlUi did not start: the top panel and the settings window are off until HeadsUp reloads.");
@@ -3248,6 +3287,23 @@ private:
             }
             m_PartySeen = s.party;
         }
+        std::vector<headsup::Fighter> fighters;
+        if (needs.dps)
+        {
+            IParty* party   = m_AshitaCore->GetMemoryManager()->GetParty();
+            IEntity* entity = m_AshitaCore->GetMemoryManager()->GetEntity();
+            for (uint32_t m = 0; m < static_cast<uint32_t>(headsup::kPartySize); ++m)
+            {
+                if (party->GetMemberIsActive(m) == 0) continue;
+                const char* name     = party->GetMemberName(m);
+                const uint32_t index = party->GetMemberTargetIndex(m);
+                const uint32_t pet   = index != 0 ? entity->GetPetTargetIndex(index) : 0;
+                fighters.push_back({party->GetMemberServerId(m), pet != 0 ? entity->GetServerId(pet) : 0, name != nullptr ? name : ""});
+            }
+            s.damage    = &m_DamageMeter;
+            s.damageNow = now;
+        }
+        m_DamageMeter.SetFighters(std::move(fighters));
         if (needs.memory) GatherMemory(now, s, needs.cpu);
         if (needs.linuxxi) s.linuxxi = LinuxXINow(now);
         if (needs.statuses)
@@ -3527,6 +3583,7 @@ private:
         m_AliveMobs.clear();
         m_Pets.clear();
         m_Checkable.clear();
+        m_Living.clear();
         const bool autoChecks = m_Settings.enabled && m_Settings.autoCheck;
         if (m_Checks.LevelIs(player->GetMainJobLevel())) m_AutoCheck.AskAgain();
         for (uint32_t i = 0; i < count; ++i)
@@ -3567,6 +3624,7 @@ private:
                 candidate.name      = name;
             }
             if (isMob && alive) m_AliveMobs.push_back(serverId);
+            if ((isMob || isPlayer) && alive) m_Living.push_back(serverId);
             const headsup::WorldPoint feet =
                 headsup::FromEntityPosition(entity->GetLocalPositionX(i), entity->GetLocalPositionY(i), entity->GetLocalPositionZ(i));
             if (self) m_Activity.Pose(now, feet, entity->GetLocalPositionYaw(i));
@@ -3597,8 +3655,10 @@ private:
                 .self           = self,
                 .jobs           = isPlayer ? JobsOf(index, serverId) : std::nullopt,
                 .title          = isPlayer ? TitleOf(self, serverId, player) : 0,
+                .statuses       = isMob || isPlayer ? StatusesOf(party, player, serverId, self, now) : headsup::StatusList{},
             });
         }
+        m_StatusTrack.Keep(m_Living);
         const std::unordered_map<uint16_t, uint16_t> petOwners = headsup::PetOwners(m_Pets);
         for (headsup::ActorInput& input : m_Inputs)
             if (const auto owner = petOwners.find(input.index); owner != petOwners.end())
