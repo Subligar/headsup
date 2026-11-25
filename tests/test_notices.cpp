@@ -260,8 +260,8 @@ TEST(a_notice_says_who_and_what_in_its_kinds_color)
     CHECK_EQ(NoticeTitle(NoticeKind::Offline, "Two"), "Two logged out");
     CHECK_EQ(NoticeMessage(NoticeKind::Online, "Two", ""), "");
     CHECK_EQ(NoticeMessage(NoticeKind::Offline, "Alt", "Two"), "Also known as Two");
-    CHECK_EQ(NoticeMessage(NoticeKind::PartyInvite, "Lead", ""), "Lead invited you to a party");
-    CHECK_EQ(NoticeMessage(NoticeKind::AllianceInvite, "Lead", ""), "Lead invited you to an alliance");
+    CHECK_EQ(NoticeMessage(NoticeKind::PartyInvite, "Lead", ""), "Invited by Lead");
+    CHECK_EQ(NoticeMessage(NoticeKind::AllianceInvite, "Lead", ""), "Invited by Lead");
     CHECK_EQ(NoticeTitle(NoticeKind::PartyInvite, "Lead"), "Party Invite");
     CHECK_EQ(NoticeTitle(NoticeKind::AllianceInvite, "Lead"), "Alliance Invite");
     CHECK(NoticeColor(NoticeKind::Online) != NoticeColor(NoticeKind::Offline));

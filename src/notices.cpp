@@ -188,8 +188,8 @@ namespace headsup
         {
         case NoticeKind::Online:
         case NoticeKind::Offline: return aka.empty() ? std::string() : "Also known as " + std::string(aka);
-        case NoticeKind::PartyInvite: return std::string(name) + " invited you to a party";
-        case NoticeKind::AllianceInvite: return std::string(name) + " invited you to an alliance";
+        case NoticeKind::PartyInvite:
+        case NoticeKind::AllianceInvite: return "Invited by " + std::string(name);
         }
         return std::string(name);
     }
