@@ -25,7 +25,9 @@
 #include "game_state.h"
 #include "import_slot.h"
 #include "installed_fonts.h"
+#include "menu_nav.h"
 #include "menu_state.h"
+#include "menu_window.h"
 #include "mobdata.h"
 #include "nameplate_render.h"
 #include "native_hook.h"
@@ -66,6 +68,7 @@
 #include "testpopup.h"
 #include "stackdump.h"
 #include "stripdump.h"
+#include "testmenu.h"
 #include "window_file.h"
 #endif
 
@@ -132,6 +135,7 @@ namespace
     constexpr const char* kRegistry          = "ffxi.registry";
     constexpr const char* kMenuWidth         = "0037";
     constexpr const char* kMenuHeight        = "0038";
+    constexpr const char* kPadButtons        = "padsin000"; // the pad button the player set for each of the game's actions
     // XIPivot, which puts its overlays' DAT files in place of the game's, and where it keeps its config and overlays.
     constexpr const char* kPivotModule       = "pivot.dll";
     constexpr const char* kPivotConfig       = "config\\pivot\\pivot.ini";
@@ -312,13 +316,56 @@ namespace
         return g_GamePresses.Keep(message, blocked || KeepMouse(message, wParam, lParam, blocked)) ? TRUE : FALSE;
     }
 
+    // The game windows' input as Ashita's callbacks hand it over, kept until Present acts on it.
+    struct MenuInbox
+    {
+        std::mutex lock;
+        std::vector<headsup::MenuEvent> events; // what came while a window was open
+        headsup::InputTaken taken;
+        bool open = false; // a game window is open, as the last Present left them
+
+        // True when the game must not get it.
+        bool Take(const headsup::MenuEvent& event)
+        {
+            const std::lock_guard hold(lock);
+            if (open) events.push_back(event);
+            return taken.Keep(event, open);
+        }
+
+        bool HoldsKeys()
+        {
+            const std::lock_guard hold(lock);
+            return taken.HoldsKeys([](uint32_t key) { return KeyDown(static_cast<uint8_t>(key)); });
+        }
+    };
+    MenuInbox g_MenuInbox;
+
     // Ashita's keyboard hook: wParam the virtual key, lParam the message's flags, whose top bit says the key went up.
     constexpr uint32_t kKeyUpFlag = 0x80000000;
     BOOL __stdcall OnKeyboard(WPARAM wParam, LPARAM lParam, bool blocked)
     {
         if (blocked || g_Rml == nullptr || !g_Rml->Running()) return FALSE;
         const headsup::CNumbers numbers;
-        return g_Rml->Key(static_cast<uint32_t>(wParam), (static_cast<uint32_t>(lParam) & kKeyUpFlag) == 0) ? TRUE : FALSE;
+        const auto key  = static_cast<uint32_t>(wParam);
+        const bool down = (static_cast<uint32_t>(lParam) & kKeyUpFlag) == 0;
+        // The game windows' keys, but for one typed into a text box of the settings window.
+        if (!g_Rml->WantsText() && g_MenuInbox.Take({headsup::InputSource::Keyboard, key, down ? 1 : 0})) return TRUE;
+        return g_Rml->Key(key, down) ? TRUE : FALSE;
+    }
+
+    // A DirectInput pad's change, one DIDEVICEOBJECTDATA at a time, and XInput's, one button or axis at a time.
+    BOOL __stdcall OnDirectInput(uint32_t* offset, int32_t* data, bool blocked, bool injected)
+    {
+        UNREFERENCED_PARAMETER(injected);
+        if (blocked || offset == nullptr || data == nullptr) return FALSE;
+        return g_MenuInbox.Take({headsup::InputSource::DirectInput, *offset, *data}) ? TRUE : FALSE;
+    }
+
+    BOOL __stdcall OnXInput(uint8_t* button, int16_t* state, bool blocked, bool injected)
+    {
+        UNREFERENCED_PARAMETER(injected);
+        if (blocked || button == nullptr || state == nullptr) return FALSE;
+        return g_MenuInbox.Take({headsup::InputSource::XInput, *button, *state}) ? TRUE : FALSE;
     }
 }
 
@@ -363,6 +410,8 @@ class HeadsUp final : public IPlugin
     headsup::RmlHost m_Rml;
     headsup::RmlBar m_RmlBar;
     headsup::RmlMenu m_RmlMenu;
+    headsup::GameWindows m_GameWindows;
+    headsup::MenuInput m_MenuInput;
     bool m_RmlTried = false;
     headsup::BarClicks m_BarClicks{m_BarInput};
     headsup::PointerSwap m_Pointer;
@@ -496,6 +545,7 @@ class HeadsUp final : public IPlugin
         LPARAM lParam;
     };
     std::deque<PlayedInput> m_Played;
+    bool m_TestMenuAsked = false; // /hu testmenu, for the next frame's windows
 #endif
     bool m_Drawing      = false; // drawing nameplates: our own draws come back through the hooks
     bool m_DrewInScene  = false; // this frame
@@ -613,6 +663,10 @@ public:
         m_Store.config                = config;
         m_MenuWidth                   = config->GetFloat(kBootConfig, kRegistry, kMenuWidth, 0.0f);
         m_MenuHeight                  = config->GetFloat(kBootConfig, kRegistry, kMenuHeight, 0.0f);
+        const char* padsin            = config->GetString(kBootConfig, kRegistry, kPadButtons);
+        const headsup::PadBindings pad = headsup::PadBindingsFrom(padsin != nullptr ? padsin : "");
+        g_MenuInbox.taken             = headsup::InputTaken(pad);
+        m_MenuInput                   = headsup::MenuInput(pad);
         size_t fonts = 0;
         for (const headsup::BundledFont* font = headsup::BundledFonts(fonts); fonts-- > 0; ++font)
         {
@@ -647,6 +701,8 @@ public:
 #endif
         core->GetInputManager()->GetMouse()->AddCallback(kName, OnMouse);
         core->GetInputManager()->GetKeyboard()->AddCallback(kName, nullptr, nullptr, OnKeyboard);
+        core->GetInputManager()->GetController()->AddCallback(kName, nullptr, nullptr, OnDirectInput);
+        core->GetInputManager()->GetXInput()->AddCallback(kName, nullptr, OnXInput);
         g_Rml = &m_Rml;
         return true;
     }
@@ -660,7 +716,14 @@ public:
         LockCursor(false);
         m_AshitaCore->GetInputManager()->GetMouse()->RemoveCallback(kName);
         m_AshitaCore->GetInputManager()->GetKeyboard()->RemoveCallback(kName);
+        m_AshitaCore->GetInputManager()->GetController()->RemoveCallback(kName);
+        m_AshitaCore->GetInputManager()->GetXInput()->RemoveCallback(kName);
         g_Rml = nullptr;
+        {
+            const std::lock_guard hold(g_MenuInbox.lock);
+            g_MenuInbox.open = false;
+            g_MenuInbox.events.clear();
+        }
         g_SyncClicks = false;
         g_Gui        = nullptr;
         g_Resources  = nullptr;
@@ -685,6 +748,7 @@ public:
         g_Plugin = nullptr;
         m_RmlBar.Release();
         m_RmlMenu.Close();
+        m_GameWindows.Close();
         m_FishBar.Close();
         m_NoticeBox.Close();
         m_CaseBoxes.Close();
@@ -865,6 +929,13 @@ public:
             FindStripText();
             Print(headsup::WriteStripDump(m_StripText, *m_StripTextFound, OwnFolder(kLogsFolder)));
         }
+        else if (args[1] == "testmenu")
+        {
+            if (m_Rml.Running())
+                m_TestMenuAsked = true;
+            else
+                Print("RmlUi is not running.");
+        }
 #endif
         else
         {
@@ -887,6 +958,7 @@ public:
             Print("/hu pointerwatch [stop]: log every change in the mouse pointer and the game's own to logs/headsup until stopped");
             Print("/hu mousewatch [stop]: log every mouse message and what HeadsUp made of it to logs/headsup until stopped");
             Print("/hu stripdump: write the game's top-strip text, every level, to logs/headsup");
+            Print("/hu testmenu: open or close a game window that shows what every game window can do");
 #endif
         }
     }
@@ -1210,11 +1282,13 @@ public:
         static const std::vector<uint8_t> kNoKeys;
         m_PointerFix.KeepPointerFor(m_Settings.enabled ? m_Settings.keepPointerKeys : kNoKeys);
         g_SyncClicks = m_Settings.enabled && m_Settings.fixPointer;
+        UpdateGameWindows(now);
         UpdateMenu(now, drewInScene, band);
         if (m_Settings.autoSave && headsup::SaveDue(m_SettingsChangedAt, now, m_RmlMenu.open)) SaveSettings();
         UpdatePointer();
         LockCursor(m_Settings.enabled && m_Settings.lockCursor);
-        HoldGameKeys(m_Rml.HoldsKeys());
+        // The inbox first: it forgets the keys let go unseen each frame, with a window open or not.
+        HoldGameKeys(g_MenuInbox.HoldsKeys() || m_Rml.HoldsKeys() || m_GameWindows.AnyOpen());
         m_NameHook.NewFrame(NameOwners());
         DrawPanel();
     }
@@ -1292,6 +1366,57 @@ public:
             m_LastOpen = open;
         }
         return band;
+    }
+
+    // HeadsUp's game windows: the input Ashita handed over since the last frame, then what their buttons asked for. A
+    // cog opens the settings window over them, or closes it when it is open, and a window dragged is saved where it was
+    // let go.
+    void UpdateGameWindows(double now)
+    {
+        std::vector<headsup::MenuEvent> events;
+        {
+            const std::lock_guard hold(g_MenuInbox.lock);
+            events.swap(g_MenuInbox.events);
+        }
+        if (!m_Rml.Running()) return;
+        bool asked = false;
+#ifdef HEADSUP_DEV
+        asked = std::exchange(m_TestMenuAsked, false);
+#endif
+        if (m_GameWindows.AnyOpen() || asked)
+            m_GameWindows.Update(m_Rml.Overlay(), headsup::MenuLookFor(MenuHostNow(), m_Settings), m_Settings.menuPlaces);
+#ifdef HEADSUP_DEV
+        if (asked) headsup::ToggleTestMenu(m_GameWindows);
+#endif
+        for (const headsup::MenuEvent& event : events)
+        {
+            const headsup::MenuAction action = m_MenuInput.Feed(event, now);
+            m_GameWindows.Act(action);
+#ifdef HEADSUP_DEV
+            headsup::TestMenuInput(m_GameWindows, event, action);
+#endif
+        }
+        for (headsup::MenuAction action = m_MenuInput.Due(now); action != headsup::MenuAction::None; action = m_MenuInput.Due(now))
+            m_GameWindows.Act(action);
+        [[maybe_unused]] const std::vector<std::string> presses = m_GameWindows.TakePressed();
+#ifdef HEADSUP_DEV
+        for (const std::string& press : presses)
+            headsup::TestMenuPressed(m_GameWindows, press);
+#endif
+        if (const auto page = m_GameWindows.TakeSettingsAsked(); page && m_RmlMenu.open)
+            m_RmlMenu.open = false;
+        else if (page && !m_RmlMenu.OpenPage(page->first, page->second))
+            Print("a game window's cog has no settings page: " + page->first + ".");
+        for (headsup::WindowPlace& moved : m_GameWindows.TakeMoved())
+        {
+            std::erase_if(m_Settings.menuPlaces, [&](const headsup::WindowPlace& place) { return place.name == moved.name; });
+            m_Settings.menuPlaces.push_back(std::move(moved));
+            m_SettingsChangedAt = now;
+        }
+        const bool open = m_GameWindows.AnyOpen();
+        if (!open) m_MenuInput.Reset();
+        const std::lock_guard hold(g_MenuInbox.lock);
+        g_MenuInbox.open = open;
     }
 
     // The settings window, and what it hands back: saves, reverts, profile and theme picks.

@@ -276,6 +276,8 @@ namespace headsup
         // Where the player left the settings window, in pixels; no width for one never moved, which opens in the
         // screen's middle.
         int menuX = 0, menuY = 0, menuWidth = 0, menuHeight = 0;
+        // Where the player left each of HeadsUp's game windows, by id, in pixels; one not here opens in the middle.
+        std::vector<WindowPlace> menuPlaces;
         FishBarShown fishStamina = FishBarShown::HeadsUp;
         int fishBarWidth = 300;
         int fishBarX = kFishBarUnplaced, fishBarY = kFishBarUnplaced;

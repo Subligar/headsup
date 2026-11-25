@@ -288,15 +288,20 @@ namespace headsup
         }
     }
 
-    bool RmlMenu::Document(const MenuHost& host, const Settings& settings)
+    MenuLook MenuLookFor(const MenuHost& host, const Settings& settings)
     {
         const GameSkinLook* skin = host.skin ? &*host.skin : nullptr;
         const MenuTheme theme    = MenuThemeFor(settings, skin);
-        MenuLook look{theme, host.textFont, kMarcellusSC, settings.menuFontSize, m_Look.textLift, host.developer,
-            MenuColorsFor(settings, skin), theme == MenuTheme::GameWindow ? std::optional(FrameAsSet(settings, skin->frame)) : std::nullopt,
+        return MenuLook{theme, host.textFont, kMarcellusSC, settings.menuFontSize, LiftOf(host.textFont, settings.menuFontSize),
+            host.developer, MenuColorsFor(settings, skin),
+            theme == MenuTheme::GameWindow ? std::optional(FrameAsSet(settings, skin->frame)) : std::nullopt,
             OwnPalette(settings).windowRounding != kShapeRounding ? std::optional(OwnPalette(settings).windowRounding) : std::nullopt};
+    }
+
+    bool RmlMenu::Document(const MenuHost& host, const Settings& settings)
+    {
+        MenuLook look = MenuLookFor(host, settings);
         if (m_Document != nullptr && look == m_Look) return true;
-        look.textLift = LiftOf(host.textFont, settings.menuFontSize);
         if (m_Document != nullptr && look.SameFrame(m_Look))
         {
             m_Document->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(MenuStyle(look)));
@@ -334,6 +339,7 @@ namespace headsup
             for (const Rml::EventId id : {Rml::EventId::Focus, Rml::EventId::Blur, Rml::EventId::Keydown})
                 document->AddEventListener(id, this, true);
         }
+        m_Document->AddEventListener(Rml::EventId::Mousedown, this, true);
         return m_Sidebar != nullptr && m_Page != nullptr && m_PageTitle != nullptr && m_PageSwitch != nullptr && m_Popup != nullptr && m_Tip != nullptr &&
                m_ViewBody != nullptr && m_ViewPopup != nullptr && m_ViewTip != nullptr;
     }
@@ -672,6 +678,7 @@ namespace headsup
         const std::string id = named != nullptr ? named->GetId() : std::string();
         switch (event.GetId())
         {
+        case Rml::EventId::Mousedown: m_Document->PullToFront(); break;
         case Rml::EventId::Click:
             if (id == kMenuCloseId) m_Closed = true;
             m_Reload |= id == kMenuReloadId;
@@ -905,6 +912,7 @@ namespace headsup
         if (!m_Visible)
         {
             m_Document->Show(Rml::ModalFlag::None, Rml::FocusFlag::Auto);
+            m_Document->PullToFront();
             // RmlUi applies an animation once its clock has passed the start, so the frame that sets one draws the
             // window whole: hidden that frame, it comes in already fading.
             m_Document->SetClass("open", true);
@@ -988,14 +996,9 @@ namespace headsup
             const Rml::Vector2i screen = host.context->GetDimensions();
             if (settings.menuWidth > 0 && settings.menuHeight > 0)
             {
-                // As the title's handle keeps it: a place from a larger screen comes back with the same share on.
-                const auto kept = [](int at, int side, int screenSide) {
-                    const int on = static_cast<int>(std::lround(static_cast<float>(side) * kWindowKeptOn));
-                    return std::clamp(at, on - side, std::max(on - side, screenSide - on));
-                };
-                SetPx(m_Document, Rml::PropertyId::Left, static_cast<float>(kept(settings.menuX, settings.menuWidth, screen.x)));
-                SetPx(m_Document, Rml::PropertyId::Top,
-                    static_cast<float>(std::clamp(kept(settings.menuY, settings.menuHeight, screen.y), 0, std::max(0, screen.y))));
+                const auto [x, y] = KeptOnScreen(settings.menuX, settings.menuY, settings.menuWidth, settings.menuHeight, screen.x, screen.y);
+                SetPx(m_Document, Rml::PropertyId::Left, static_cast<float>(x));
+                SetPx(m_Document, Rml::PropertyId::Top, static_cast<float>(y));
                 SetPx(m_Document, Rml::PropertyId::Width, static_cast<float>(settings.menuWidth));
                 SetPx(m_Document, Rml::PropertyId::Height, static_cast<float>(settings.menuHeight));
             }
