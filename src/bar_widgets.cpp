@@ -55,7 +55,9 @@ namespace headsup
         constexpr int kWorldGuildColumns   = 3; // a shop open or closed, when that changes, and who and where
         constexpr int kZoneRollColumns     = 3; // a zone, and its chance of the element today and tomorrow
         constexpr int kTurnInColumns       = 6; // a rank, its item and its points, its high quality's, and the most a day
+        constexpr int kSupplyColumns       = 2; // a region's name, and its supply run's flag and word
         constexpr uint16_t kGilItem  = 0xFFFF;
+        constexpr const char* kNoMapSquare = "(?-?)"; // the game's <pos> in a zone without a map
 
         Span Percent(int percent)
         {
@@ -1055,12 +1057,13 @@ namespace headsup
             return ranks;
         }
 
-        // A craft guild's turn-ins today, from Phoenix's site, under a line of their own: the item each rank from Novice
-        // to Expert is asked for today and its high quality, each with its picture and its points, and the most a day,
-        // your rank starred and lit; until the site answers, a line saying so.
+        // A craft guild's turn-ins today, from Phoenix's site, under a line of their own beside the shops: the item each
+        // rank from Novice to Expert is asked for today and its high quality, each with its picture and its points, and
+        // the most a day, your rank starred and lit; until the site answers, a line saying so.
         std::vector<PopupRow> TurnIns(const BarState& state, int craft, const std::string& guild)
         {
             std::vector<PopupRow> rows = ListOf(LineOf("Today's Turn-Ins", Tone::Heading));
+            rows.front().beside = true;
             if (state.turnIns == nullptr)
             {
                 PopupRow waiting = LineOf(state.turnInsFailed ? "phoenix-xi.com did not answer; trying again soon"
@@ -1203,11 +1206,11 @@ namespace headsup
             return popup;
         }
 
-        constexpr int kSupplyColumns = 3; // a region's name, then "Supply run available" and its flag
+        constexpr uint32_t kSupplyToDoColor = 0xFFF2D45C, kSupplyDoneColor = kBarGreen, kSupplyUnavailableColor = 0xFFE35F5F;
 
         // The regions each nation holds, a tab each in two rows of two, yours first and picked each time the popup
-        // opens. Your nation's say which outposts you have not run supplies to, as far as overseers told.
-        PopupSection ConquestSection(const BarState& state)
+        // opens. Your nation's say which outposts you have run supplies to, as far as overseers told.
+        PopupSection ConquestSection(const BarState& state, bool flags)
         {
             PopupSection conquest =
                 Section(CardKind::WorldConquest, "Conquest (Next Tally in " + Countdown(SecondsToTally(state.unixMs)) + ")");
@@ -1228,38 +1231,39 @@ namespace headsup
                 bool unknown     = false;
                 PopupTab held{Colored(NationName(nation), NationColor(nation)), {}};
                 held.picture = NationCrest(nation);
-                std::vector<std::pair<uint8_t, std::optional<bool>>> regions; // each held, and whether you ran supplies there
+                std::vector<uint8_t> regions;
                 for (int region = 0; region < kConquestRegionCount; ++region)
-                    if ((*state.owners)[region] == nation)
-                    {
-                        const auto r = static_cast<uint8_t>(region);
-                        regions.emplace_back(r, yours ? state.outposts->Ran(nation, r) : std::optional<bool>(true));
-                        unknown = unknown || !regions.back().second;
-                    }
-                // While one has a supply run to make, every region is a line of a grid whose words and gray flag
-                // stand against the card's right, so they line up.
-                const bool runs = std::ranges::any_of(regions, [](const auto& region) { return region.second == false; });
-                for (const auto& [r, ran] : regions)
+                    if ((*state.owners)[region] == nation) regions.push_back(static_cast<uint8_t>(region));
+                if (yours && !regions.empty())
                 {
-                    if (!runs)
+                    PopupRow grid = Grid(kSupplyColumns, (regions.size() + 1) * kSupplyColumns);
+                    grid.header   = true;
+                    grid.trailing = true;
+                    for (const char* heading : {"Region", "Supply Run"})
+                        grid.cells.push_back(Cell(Text(heading, Tone::Dim)));
+                    for (const uint8_t r : regions)
                     {
-                        held.rows.push_back(LineOf(std::string(RegionName(r))));
-                        continue;
+                        const bool runs               = HasSupplyRun(r);
+                        const std::optional<bool> ran = runs ? state.outposts->Ran(nation, r) : std::nullopt;
+                        unknown                       = unknown || (runs && !ran);
+                        grid.cells.push_back(Cell(Text(std::string(RegionName(r)))));
+                        PopupCell run;
+                        if (!runs || ran)
+                        {
+                            run.text = ListOf(!runs ? Text("Unavailable", Tone::Dim) : *ran ? Text("Complete", Tone::Dim) : Text("Available"));
+                            if (flags)
+                            {
+                                run.icon = Icon::Flag;
+                                run.tint = Colored("", !runs ? kSupplyUnavailableColor : *ran ? kSupplyDoneColor : kSupplyToDoColor);
+                            }
+                        }
+                        grid.cells.push_back(std::move(run));
                     }
-                    PopupRow row{RowKind::Grid, kSupplyColumns, {Cell(Text(std::string(RegionName(r))))}};
-                    row.trailing = true;
-                    if (ran == false)
-                    {
-                        PopupCell said = Cell(Text("Supply run available"));
-                        said.align     = Align::Right;
-                        PopupCell flag;
-                        flag.icon = Icon::Flag;
-                        flag.tint = Text("", Tone::Dim);
-                        row.cells.push_back(std::move(said));
-                        row.cells.push_back(std::move(flag));
-                    }
-                    held.rows.push_back(std::move(row));
+                    held.rows.push_back(std::move(grid));
                 }
+                else
+                    for (const uint8_t r : regions)
+                        held.rows.push_back(LineOf(std::string(RegionName(r))));
                 if (held.rows.empty()) held.rows.push_back(LineOf("None", Tone::Dim));
                 if (unknown)
                     held.rows.push_back(LineOf("Talk to a conquest overseer in your nation's city to see your supply runs.", Tone::Dim));
@@ -1301,11 +1305,11 @@ namespace headsup
         Span ShopPlace(const GuildShop& shop) { return Text(std::string(shop.shops) + ", " + shop.zone, Tone::Dim); }
 
         // The Conquest card, Travel and the Calendar in a column beside it, and Guilds under them all.
-        PopupContent WorldPopup(const BarState& state)
+        PopupContent WorldPopup(const BarState& state, const WidgetOptions& o)
         {
             PopupContent popup;
             popup.title = ListOf(Text("World Info"));
-            popup.sections.push_back(ConquestSection(state));
+            popup.sections.push_back(ConquestSection(state, o.supplyFlags));
             {
                 // A tab for each kind of ship, its routes together in the data.
                 PopupSection travel = Section(CardKind::WorldTravel, "Travel");
@@ -1496,6 +1500,8 @@ namespace headsup
                 }
                 else if (const GamePicture crest = HomeCrest(zone); crest != GamePicture::None)
                     parts.push_back({WidgetPart::ZoneCrest, ListOf(Mark(crest))});
+                if (!state.mapSquare.empty() && state.mapSquare != kNoMapSquare)
+                    parts.push_back({WidgetPart::ZoneCoordinates, ListOf(Text(state.mapSquare, Tone::Dim))});
                 base.hasPopup = state.zone != 0;
                 return parts;
             }
@@ -1854,6 +1860,9 @@ namespace headsup
                            opened(BarWidget::Zone); // the Zone popup counts down to the tally
         needs.localTime  = localClock;
         needs.zone       = either(BarWidget::Zone) || either(BarWidget::Weather);
+        EachShownCopy(settings, BarWidget::Zone, [&](const WidgetOptions& o) {
+            needs.mapSquare = needs.mapSquare || PartOn(o.design, WidgetPart::ZoneCoordinates);
+        });
         needs.target     = either(BarWidget::Target);
         needs.gil        = either(BarWidget::Currency);
         needs.strip      = shown(BarWidget::GameHelp);
@@ -2106,14 +2115,14 @@ namespace headsup
                 if (!here.empty())
                 {
                     constexpr int kFriendColumns = 2;
-                    PopupSection players = Section(CardKind::ZonePlayers, "Players");
+                    PopupSection players = Section(CardKind::ZoneFriends, "Nearby Friends");
                     PopupRow grid        = Grid(kFriendColumns, here.size() * kFriendColumns);
                     for (const FriendEntry* f : here)
                     {
                         grid.cells.push_back(Cell(Text(FriendName(*f))));
                         grid.cells.push_back(Cell(Text(ZoneTitle(f->zone), Tone::Dim)));
                     }
-                    ScrollsBy(grid, state, "Zone/Players");
+                    ScrollsBy(grid, state, "Zone/Friends");
                     players.rows.push_back(std::move(grid));
                     popup.sections.push_back(std::move(players));
                 }
@@ -2250,7 +2259,7 @@ namespace headsup
             return StatusTimersPopup(state.statuses, settings.statusFavorites, settings.statusPins, OwnPalette(settings),
                 ScrolledBy(state, kBuffsKey), ScrolledBy(state, kDebuffsKey), state.pinRefused);
         case BarWidget::World:
-            return WorldPopup(state);
+            return WorldPopup(state, o);
         case BarWidget::Settings: break;
         case BarWidget::HomePoint:
             popup.title = ListOf(Text("Home Point")); // its settings pop-out's

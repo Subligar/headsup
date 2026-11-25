@@ -54,7 +54,7 @@ TEST(a_widgets_icon_is_a_setting_of_its_own_and_no_part_of_its_design)
 
 TEST(a_design_saves_as_text_and_loads_back)
 {
-    CHECK_EQ(DesignText(BarWidget::Zone, DefaultDesign(BarWidget::Zone)), "name | region nation");
+    CHECK_EQ(DesignText(BarWidget::Zone, DefaultDesign(BarWidget::Zone)), "name coordinates | region nation");
     CHECK_EQ(DesignText(BarWidget::EarthTime, DefaultDesign(BarWidget::EarthTime)), "time | -server -vana -date");
     const char* const job = "-jobs tonext bar | -earned -percent";
     CHECK_EQ(DesignText(BarWidget::Job, DesignFrom(BarWidget::Job, job)), job);
@@ -67,11 +67,23 @@ TEST(a_design_saves_as_text_and_loads_back)
     CHECK(DesignFrom(BarWidget::Weather, "") == DefaultDesign(BarWidget::Weather));
 }
 
+TEST(the_zone_widgets_coordinates_are_on_right_after_its_name)
+{
+    const WidgetDesign d = DefaultDesign(BarWidget::Zone);
+    CHECK((d.lines[0] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneCoordinates, true}}));
+    const WidgetDesign on = DesignFrom(BarWidget::Zone, "name coordinates | region");
+    CHECK((on.lines[0] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneCoordinates, true}}));
+    CHECK_EQ(DesignText(BarWidget::Zone, on), "name coordinates | region -nation");
+    // A design saved before it existed comes back whole, with it off.
+    CHECK(!PartOn(DesignFrom(BarWidget::Zone, "name | region nation"), WidgetPart::ZoneCoordinates));
+    CHECK(HoldsPart(DesignFrom(BarWidget::Zone, "name | region nation"), WidgetPart::ZoneCoordinates));
+}
+
 TEST(a_design_from_text_keeps_each_part_once_and_adds_the_missing_off)
 {
     const WidgetDesign d = DesignFrom(BarWidget::Zone, "nation nation nonsense amount crest | name");
     CHECK((d.lines[0] == std::vector<DesignChip>{{WidgetPart::ZoneNation, true}}));
-    CHECK((d.lines[1] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneRegion, false}}));
+    CHECK((d.lines[1] == std::vector<DesignChip>{{WidgetPart::ZoneName, true}, {WidgetPart::ZoneRegion, false}, {WidgetPart::ZoneCoordinates, false}}));
     // All off stays so: Clamp keeps one on where the widget's pill needs it.
     const WidgetDesign off = DesignFrom(BarWidget::Zone, "-name -region -nation |");
     CHECK(!PartOn(off, WidgetPart::ZoneName) && !PartOn(off, WidgetPart::ZoneRegion) && !PartOn(off, WidgetPart::ZoneNation));
@@ -79,17 +91,17 @@ TEST(a_design_from_text_keeps_each_part_once_and_adds_the_missing_off)
 
 TEST(a_part_moves_within_and_across_lines)
 {
-    WidgetDesign d = DefaultDesign(BarWidget::Zone); // name | region nation
+    WidgetDesign d = DesignFrom(BarWidget::Zone, "name | region nation coordinates");
     CHECK(MovePart(d, 1, 1, 0, 0)); // the nation before the name
-    CHECK_EQ(DesignText(BarWidget::Zone, d), "nation name | region");
-    CHECK(MovePart(d, 0, 0, 1, 1)); // and back to the end of line 2
-    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | region nation");
-    CHECK(MovePart(d, 1, 0, 1, 2)); // the region to the end of its own line
-    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | nation region");
+    CHECK_EQ(DesignText(BarWidget::Zone, d), "nation name | region coordinates");
+    CHECK(MovePart(d, 0, 0, 1, 1)); // and back after the region
+    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | region nation coordinates");
+    CHECK(MovePart(d, 1, 0, 1, 3)); // the region to the end of its own line
+    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | nation coordinates region");
     CHECK(!MovePart(d, 1, 0, 1, 0)); // onto its own place
     CHECK(!MovePart(d, 1, 0, 1, 1)); // or just after itself
     CHECK(!MovePart(d, 0, 5, 1, 0)); // a part that is not there
-    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | nation region");
+    CHECK_EQ(DesignText(BarWidget::Zone, d), "name | nation coordinates region");
 }
 
 TEST(the_last_part_on_turns_off_only_when_the_widgets_pill_shows_another)
@@ -337,7 +349,7 @@ TEST(a_created_widgets_design_names_each_part_with_its_widget_and_keeps_only_the
     CHECK_EQ(DesignText(BarWidget::Custom, DesignFrom(BarWidget::Custom, "name amount1 zone.name | zone.name")), "name zone.name |");
     CHECK(DesignFrom(BarWidget::Custom, "") == DefaultDesign(BarWidget::Custom));
     // A built-in widget's own parts keep their plain names.
-    CHECK_EQ(DesignText(BarWidget::Zone, DefaultDesign(BarWidget::Zone)), "name | region nation");
+    CHECK_EQ(DesignText(BarWidget::Zone, DefaultDesign(BarWidget::Zone)), "name coordinates | region nation");
     CHECK(DesignFrom(BarWidget::Zone, "zone.name | region nation") != DefaultDesign(BarWidget::Zone));
 }
 

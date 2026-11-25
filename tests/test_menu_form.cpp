@@ -1744,6 +1744,7 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     Window w;
     const PanelWidget zone{BarWidget::Zone};
     w.readings.settingsOf  = {zone};
+    w.settings.Widget(zone).design = DesignFrom(BarWidget::Zone, "name | region nation -coordinates");
     const std::string base = "toppanel-widgets-part-" + std::to_string(SlotOf(zone)) + "-";
     const auto chip        = [&](WidgetPart part) { return base + std::to_string(static_cast<int>(part)); };
     const auto toggle      = [&](WidgetPart part) { return FormEvent{chip(part) + "-on", kClickEvent, ""}; };
@@ -1754,15 +1755,15 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK(!Has(rml(first), ("id=\"" + chip(WidgetPart::ZoneCrest) + "\"").c_str())); // its Icon setting has it
     // A drop at a line's end moves the part there; on a chip, before it.
     w.Pass({{base + "end-0", kDropEvent, chip(WidgetPart::ZoneNation)}});
-    CHECK_EQ(design(), "name nation | region");
+    CHECK_EQ(design(), "name nation | region -coordinates");
     w.Pass({{chip(WidgetPart::ZoneName), kDropEvent, chip(WidgetPart::ZoneNation)}});
-    CHECK_EQ(design(), "nation name | region");
+    CHECK_EQ(design(), "nation name | region -coordinates");
     // Off one by one until one is left: the last stays on, and the designer says why under its lines.
     w.Pass({toggle(WidgetPart::ZoneNation), toggle(WidgetPart::ZoneRegion)});
-    CHECK_EQ(design(), "-nation name | -region");
+    CHECK_EQ(design(), "-nation name | -region -coordinates");
     CHECK(!Has(rml(w.Pass()), "class=\"error\""));
     const Form refused = w.Pass({toggle(WidgetPart::ZoneName)});
-    CHECK_EQ(design(), "-nation name | -region");
+    CHECK_EQ(design(), "-nation name | -region -coordinates");
     CHECK(Has(rml(refused), "class=\"error\"") && Has(rml(w.Pass()), "class=\"error\""));
     bool shownOn = false; // the toggle's last word on its look
     for (const FormValue& v : refused.values)
@@ -1770,12 +1771,12 @@ TEST(the_widget_designer_moves_toggles_and_refuses_to_switch_off_the_last_part)
     CHECK(shownOn);
     // The next toggle or move takes the message away.
     CHECK(!Has(rml(w.Pass({toggle(WidgetPart::ZoneRegion)})), "class=\"error\""));
-    CHECK_EQ(design(), "-nation name | region");
+    CHECK_EQ(design(), "-nation name | region -coordinates");
     // Another widget's chip dropped here moves nothing.
     const std::string weather = "toppanel-widgets-part-" + std::to_string(SlotOf(PanelWidget{BarWidget::Weather})) + "-" +
                                 std::to_string(static_cast<int>(WidgetPart::WeatherName));
     w.Pass({{base + "end-1", kDropEvent, weather}});
-    CHECK_EQ(design(), "-nation name | region");
+    CHECK_EQ(design(), "-nation name | region -coordinates");
 }
 
 TEST(a_created_widgets_designer_lists_the_picked_widgets_unplaced_buttons_and_puts_takes_and_names_them)
@@ -2040,6 +2041,23 @@ TEST(the_home_point_widgets_settings_have_no_designer_and_a_wrap_text_switch)
     CHECK(w.settings.Widget(home).wrapText);
     w.Pass({{"toppanel-widgets-wrap-text-homepoint", kClickEvent, ""}});
     CHECK(!w.settings.Widget(home).wrapText);
+}
+
+TEST(supply_run_flags_shows_only_for_the_world_info_widget_and_switches_its_flags)
+{
+    Window w;
+    const PanelWidget world{BarWidget::World}, zone{BarWidget::Zone};
+    w.settings.Widget(world).on = w.settings.Widget(zone).on = true;
+    const auto rows = [&](PanelWidget widget) {
+        w.readings.settingsOf = {widget};
+        const Form form = w.Pass();
+        return std::ranges::find(form.blocks, "toppanel-widgets", &FormBlock::id)->rml;
+    };
+    CHECK(!Has(rows(zone), "supply-flags"));
+    CHECK(Has(rows(world), "supply-flags"));
+    CHECK(w.settings.Widget(world).supplyFlags);
+    w.Pass({{"toppanel-widgets-supply-flags-world", kClickEvent, ""}});
+    CHECK(!w.settings.Widget(world).supplyFlags);
 }
 
 TEST(show_mem_text_shows_with_the_performance_widgets_memory_button_and_switches_its_label)

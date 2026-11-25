@@ -146,4 +146,13 @@ namespace headsup
     // A layout taller than height keeps the title and the cards that end padding or more above it, and shrinks to
     // them with its padding under the lowest.
     void CutPopup(PopupLayout& layout, float height, float padding);
+    // The layout and the metrics it was laid out with: smaller than its own where it would not fit across.
+    struct FittedPopup
+    {
+        PopupLayout layout;
+        BarMetrics metrics;
+    };
+    // A layout wider than across is laid out again with its text a whole pixel or more smaller and its spacing in
+    // proportion, until it fits or its text is as small as the least Text Scale sets it.
+    FittedPopup FitPopupAcross(const BarMetrics& metrics, float across, FunctionRef<PopupLayout(const BarMetrics&)> layOut);
 }

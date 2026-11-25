@@ -146,6 +146,7 @@ namespace headsup
         int columns  = 0; // Grid
         std::vector<PopupCell> cells;
         bool nested = false; // set in a socket with the nested rows beside it, as a tab's rows are
+        bool beside = false; // starts a column right of the card's rows before it, at their top
         bool header = false; // Grid: its first line heads its columns, and each group of them set side by side
         bool spread = false; // Grid: a right-aligned column at the card's right edge, a centered middle one right of middle
         bool trailing = false; // Grid: its columns after the first against the card's right edge, as they are to each other
@@ -170,7 +171,7 @@ namespace headsup
     // Each card a widget's pop-out can show: the Pop-out Designer puts any of them in any widget's pop-out.
     enum class CardKind : uint8_t
     {
-        ZoneInfluence, ZonePlayers, ZoneTravel, ZoneShops,
+        ZoneInfluence, ZoneFriends, ZoneTravel, ZoneShops,
         WeatherToday, WeatherForecast, WeatherByElement,
         TargetOverview, TargetDamage, TargetElements, TargetStatuses, TargetImmune, TargetStats, TargetMoves, TargetSpells,
         TargetSpawn, TargetDrops, TargetSteal, TargetDespoil, TargetShop, TargetClick, TargetTrade, TargetPops,
@@ -264,8 +265,9 @@ namespace headsup
         return items;
     }
 
-    // A part added to a line of parts, two spaces after the one before.
-    void AddPart(std::vector<Span>& line, std::vector<Span> part);
+    inline constexpr std::string_view kPartGap = "  ";
+    // A part added to a line of parts, gap after the one before.
+    void AddPart(std::vector<Span>& line, std::vector<Span> part, std::string_view gap = kPartGap);
     Span Text(std::string text, Tone tone = Tone::Normal);
     Span Colored(std::string text, uint32_t argb);
     PopupCell Cell(std::vector<Span> text, std::optional<Icon> icon = std::nullopt);

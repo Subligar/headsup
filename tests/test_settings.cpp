@@ -1168,7 +1168,7 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     s.Widget(second).design  = DesignFrom(BarWidget::Weather, "weather | -date -day -time -moon");
     MapStore saved;
     SaveSettings(s, saved);
-    CHECK_EQ(saved.values["barZoneDesign"], "nation name | -region");
+    CHECK_EQ(saved.values["barZoneDesign"], "nation name | -region -coordinates");
     CHECK_EQ(saved.values["barWeatherDesign_2"], "weather | -date -day -time -moon -season");
     CHECK_EQ(saved.values["barWeatherDesign"], "weather | day time -date -moon -season");
     const Settings loaded = LoadSettings(saved);
@@ -1178,7 +1178,7 @@ TEST(each_widgets_design_saves_under_its_own_key_and_each_copys_under_its_own)
     CHECK(!saved.values.contains("barGameHelpDesign"));
     // A design a hand broke is made whole: every part once.
     saved.values["barZoneDesign"] = "name name";
-    CHECK_EQ(DesignText(BarWidget::Zone, LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation");
+    CHECK_EQ(DesignText(BarWidget::Zone, LoadSettings(saved).Widget(BarWidget::Zone).design), "name | -region -nation -coordinates");
 }
 
 TEST(a_created_widgets_pop_out_design_saves_under_its_own_key_and_clones_with_it_and_a_built_ins_is_always_its_own)
@@ -3046,6 +3046,17 @@ TEST(the_job_widgets_text_alignments_and_bar_colors_are_kept_and_its_colors_star
     store.values["barExpBarFill"]   = "orange";
     const WidgetOptions read = LoadSettings(store).Widget(BarWidget::Job);
     CHECK(read.percentAlign == Align::Left && !read.expBarFill);
+}
+
+TEST(the_world_info_widgets_supply_run_flags_are_on_and_kept_off)
+{
+    Settings s;
+    CHECK(s.Widget(BarWidget::World).supplyFlags);
+    s.Widget(BarWidget::World).supplyFlags = false;
+    MapStore store;
+    SaveSettings(s, store);
+    CHECK_EQ(store.values["supplyFlags"], "false");
+    CHECK(!LoadSettings(store).Widget(BarWidget::World).supplyFlags);
 }
 
 TEST(the_zone_widgets_show_zone_id_in_header_is_kept)

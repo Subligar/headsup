@@ -17,7 +17,7 @@ namespace headsup
     // What a widget can show on the panel, each part on its own button in the Widget Designer.
     enum class WidgetPart : uint8_t
     {
-        ZoneName, ZoneRegion, ZoneCrest, ZoneNation,
+        ZoneName, ZoneRegion, ZoneCrest, ZoneNation, ZoneCoordinates,
         WeatherIcon, WeatherName, VanaDate, VanaDay, VanaTime, VanaMoon, VanaSeason,
         TargetAggro, TargetName, TargetDistance, TargetDetection, TargetLevel, TargetPlayer, TargetWeak,
         CurrencyCoin, Currency1Name, Currency2Name, Currency1Amount, Currency2Amount, Currency1Icon, Currency2Icon,

@@ -353,6 +353,7 @@ namespace headsup
         constexpr std::pair<const char*, std::optional<uint32_t> WidgetOptions::*> kExpBarColors[] = {
             {kExpBarBackKey, &WidgetOptions::expBarBack}, {kExpBarFillKey, &WidgetOptions::expBarFill}};
         constexpr const char* kZoneIdKey    = "zoneId";
+        constexpr const char* kSupplyFlagsKey = "supplyFlags";
         constexpr const char* kMemTextKey   = "memText";
         constexpr const char* kHomePointWrapKey = "homePointWrap";
         constexpr const char* kStatusDisplayKey = "statusDisplay";
@@ -1540,6 +1541,7 @@ namespace headsup
                     if (route == TravelRoutes()[r].name) o.worldRoute = static_cast<int>(r);
                 for (size_t g = 0; g < GuildShops().size(); ++g)
                     if (guild == GuildShops()[g].shops) o.worldGuild = static_cast<int>(g);
+                o.supplyFlags = flag(kSupplyFlagsKey, o.supplyFlags);
                 break;
             }
             case BarWidget::Zone:
@@ -1654,6 +1656,7 @@ namespace headsup
             case BarWidget::World:
                 text(kWorldRouteKey, TravelRoutes()[static_cast<size_t>(o.worldRoute)].name);
                 text(kWorldGuildKey, GuildShops()[static_cast<size_t>(o.worldGuild)].shops);
+                flag(kSupplyFlagsKey, o.supplyFlags);
                 break;
             case BarWidget::Zone:
                 flag(kZoneIdKey, o.zoneId);

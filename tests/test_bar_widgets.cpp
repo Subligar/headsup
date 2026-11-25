@@ -619,6 +619,48 @@ TEST(the_zone_widget_names_the_zone_and_its_region)
     CHECK(Joined(w.title) == "-" && !w.hasPopup);
 }
 
+TEST(the_zone_widget_shows_the_games_map_square_only_where_the_zone_has_a_map)
+{
+    Settings settings;
+    BarState state;
+    state.zone      = 246;
+    state.mapSquare = "(H-8)";
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name coordinates | region");
+    WidgetContent w = Content(BarWidget::Zone, state, settings);
+    // One space after the name, and no room kept for a wider square, which would pad it on the left.
+    CHECK(w.title.back().text == " (H-8)" && w.title.back().tone == Tone::Dim && w.title.back().room.empty());
+    const std::string name = Joined(w.title).substr(0, Joined(w.title).size() - w.title.back().text.size());
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "coordinates name | region");
+    CHECK(Joined(Content(BarWidget::Zone, state, settings).title).starts_with("(H-8)  "));
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name coordinates | region");
+    // The game's "(?-?)" where the zone has no map, and nothing while zoning: the name alone.
+    for (const char* none : {"", "(?-?)"})
+    {
+        state.mapSquare = none;
+        CHECK_EQ(Joined(Content(BarWidget::Zone, state, settings).title), name);
+    }
+    state.mapSquare = "(H-8)";
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name -coordinates | region");
+    CHECK_EQ(Joined(Content(BarWidget::Zone, state, settings).title), name);
+}
+
+TEST(the_map_square_is_read_only_while_a_shown_widget_shows_it)
+{
+    Settings settings;
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name -coordinates | region");
+    CHECK(!NeedsOf(settings, {}).mapSquare);
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name coordinates | region");
+    CHECK(NeedsOf(settings, {}).mapSquare);
+    settings.Widget(BarWidget::Zone).on = false;
+    CHECK(!NeedsOf(settings, {}).mapSquare);
+    settings.Widget(BarWidget::Zone).design = DesignFrom(BarWidget::Zone, "name -coordinates | region");
+    const PanelWidget made = *CreateWidget(settings);
+    settings.Widget(made).design = DesignFrom(BarWidget::Custom, "name zone.coordinates |");
+    CHECK(NeedsOf(settings, {}).mapSquare);
+    settings.Widget(made).on = false;
+    CHECK(!NeedsOf(settings, {}).mapSquare);
+}
+
 TEST(gil_bags_and_earth_time)
 {
     Settings settings;
@@ -1200,7 +1242,7 @@ TEST(the_zone_popups_shop_hours_are_every_guild_shop_in_its_region_with_its_guil
     CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Shop Hours"));
 }
 
-TEST(the_zone_popups_players_are_your_friends_playing_in_its_region)
+TEST(the_zone_popups_nearby_friends_are_your_friends_playing_in_its_region)
 {
     Settings settings;
     BarState state;
@@ -1209,14 +1251,14 @@ TEST(the_zone_popups_players_are_your_friends_playing_in_its_region)
         {1003, "Cee", "Cee", false, 246}, {1004, "Dee", "Dee", true, 0}, {1005, "Abe", "Abe", true, 246}};
     state.friends = &friends;
     const PopupContent jeuno    = BarPopupContent(BarWidget::Zone, state, settings);
-    const PopupSection* players = Section(jeuno, "Players");
-    CHECK(players != nullptr);
+    const PopupSection* players = Section(jeuno, "Nearby Friends");
+    CHECK(players != nullptr && players->card == std::optional(CardKind::ZoneFriends));
     // Playing in Jeuno's zones, by name, each with the zone they are in: not Bee in Bastok, Cee offline or Dee unknown.
     CHECK((GridLines(*players) == std::vector<std::string>{"Abe|Port Jeuno", "Zed|Lower Jeuno"}));
     friends = {friends[1], friends[2]};
-    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Players"));
+    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Nearby Friends"));
     state.friends = nullptr;
-    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Players"));
+    CHECK(!Section(BarPopupContent(BarWidget::Zone, state, settings), "Nearby Friends"));
 }
 
 TEST(the_zone_popup_ranks_the_influence_in_its_region_and_stars_who_holds_it)
@@ -2945,7 +2987,20 @@ TEST(the_bags_popup_always_lists_storage_and_never_the_temporary_items)
         CHECK(BagChoices()[static_cast<size_t>(choice)] != 3);
 }
 
-TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
+namespace
+{
+    // A flag drawn in a color whose channels at more are each over twice those at less.
+    bool FlagTinted(const PopupCell& flag, std::initializer_list<int> more, std::initializer_list<int> less)
+    {
+        if (flag.icon != Icon::Flag || !flag.tint || flag.tint->tone != Tone::Own) return false;
+        for (const int high : more)
+            for (const int low : less)
+                if (Channel(flag.tint->argb, high) <= 2 * Channel(flag.tint->argb, low)) return false;
+        return true;
+    }
+}
+
+TEST(world_infos_conquest_card_says_your_nations_supply_runs_are_available_with_a_yellow_flag_or_complete_with_a_green_one)
 {
     Settings settings;
     settings.Widget(BarWidget::World).on = true;
@@ -2954,44 +3009,54 @@ TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
     owners[3] = owners[4] = Nation::Bastok; // Gustaberg and Derfland
     state.owners = owners;
     state.nation = Nation::Bastok;
-    // Before an overseer has told: one line says how to learn them.
+    // A grid of each region and its supply run under their heads, two cells a line: the run's flag and word in one.
+    const auto lines = [](const PopupSection& card) {
+        const PopupRow& grid = card.tabs.at(card.tab).rows.at(0);
+        std::vector<std::vector<PopupCell>> out;
+        for (size_t i = grid.header ? 2 : 0; i + 2 <= grid.cells.size(); i += 2)
+            out.emplace_back(grid.cells.begin() + static_cast<std::ptrdiff_t>(i), grid.cells.begin() + static_cast<std::ptrdiff_t>(i) + 2);
+        return std::pair{grid, out};
+    };
+    // Before an overseer has told: neither run is known, so neither has a flag, and one line says how to learn them.
     OutpostRuns runs;
     state.outposts = &runs;
-    std::vector<std::string> lines = TabLines(ConquestCard(BarPopupContent(BarWidget::World, state, settings)));
-    CHECK(lines.size() == 3 && lines[0] == "Gustaberg" && lines[2].find("overseer") != std::string::npos);
-    // Told by Bastok's overseer that Gustaberg's was run: Derfland says "Supply run available" in a column against
-    // the card's right, a gray flag after it; Gustaberg does not.
+    const PopupSection before = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
+    const auto [unknownGrid, unknown] = lines(before);
+    CHECK(unknownGrid.kind == RowKind::Grid && unknownGrid.columns == 2 && unknownGrid.header && unknown.size() == 2);
+    CHECK(CellText(unknownGrid.cells[0]) == "Region" && CellText(unknownGrid.cells[1]) == "Supply Run");
+    CHECK(CellText(unknown[0][0]) == "Gustaberg" && unknown[0][1].text.empty() && !unknown[0][1].icon);
+    const std::vector<PopupRow>& beforeRows = before.tabs.at(before.tab).rows;
+    CHECK(beforeRows.size() == 2 && Lines(PopupSection{"", {beforeRows[1]}})[0].find("overseer") != std::string::npos);
+    // Told by Bastok's overseer that Gustaberg's was run: Gustaberg's is Complete, dim, with a green flag, and
+    // Derfland's Available with a yellow one.
     runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
     const PopupContent popup = BarPopupContent(BarWidget::World, state, settings);
     const PopupSection told  = ConquestCard(popup);
-    CHECK((TabLines(told) == std::vector<std::string>{"Gustaberg", "DerflandSupply run available"}));
-    const std::vector<PopupRow>& rows = told.tabs.at(told.tab).rows;
-    const auto flagged = [](const PopupRow& row) {
-        return std::ranges::any_of(row.cells, [](const PopupCell& c) {
-            return c.icon == Icon::Flag && c.tint && c.tint->tone == Tone::Dim && c.text.empty();
-        });
-    };
-    CHECK(!flagged(rows[0]) && flagged(rows[1]));
-    CHECK(rows[1].cells.back().icon == Icon::Flag);
+    const auto [grid, known] = lines(told);
+    CHECK(told.tabs.at(told.tab).rows.size() == 1 && known.size() == 2);
+    CHECK(CellText(known[0][0]) == "Gustaberg" && known[0][1].text == ListOf(Text("Complete", Tone::Dim)));
+    CHECK(FlagTinted(known[0][1], {kGreenShift}, {kRedShift, kBlueShift}));
+    CHECK(CellText(known[1][0]) == "Derfland" && known[1][1].text == ListOf(Text("Available")));
+    CHECK(FlagTinted(known[1][1], {kRedShift, kGreenShift}, {kBlueShift}));
     const BarMetrics m = MetricsFor(45, BarShape::Pills);
     const auto measure = [](const Span& span, PopupFont font) {
         const float height = font == PopupFont::Title ? 24.0f : 18.0f;
         return TextSize{8.0f * static_cast<float>(span.text.size()), height, 0.3f * height, height - 1.0f};
     };
     const PopupLayout l = LayoutPopup(popup, m, false, measure, 1000.0f);
-    const auto piece = [&](auto is) { return std::ranges::find_if(l.pieces, is); };
-    const auto name  = piece([](const PopupPiece& p) { return p.span.text == "Derfland"; });
-    const auto said  = piece([](const PopupPiece& p) { return p.span.text == "Supply run available"; });
-    const auto flag  = piece([](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Flag; });
-    const auto ran   = piece([](const PopupPiece& p) { return p.span.text == "Gustaberg"; });
-    CHECK(name != l.pieces.end() && said != l.pieces.end() && flag != l.pieces.end() && ran != l.pieces.end());
-    const auto socket = piece([](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Socket; });
-    CHECK(socket != l.pieces.end());
-    // On Derfland's line, the words after the name and the flag after them, ending as far in from the tab's right as
-    // the name starts from its left; Gustaberg lined up with it.
-    CHECK(said->x > name->x + name->width && flag->x >= said->x + said->width);
-    CHECK(std::fabs((socket->x + socket->width) - (flag->x + flag->width) - (name->x - socket->x)) < 0.5f);
-    CHECK(std::fabs((flag->y + flag->height / 2.0f) - (name->y + name->height / 2.0f)) < name->height / 2.0f);
+    const auto piece  = [&](auto is) { return std::ranges::find_if(l.pieces, is); };
+    const auto named  = [&](const char* text) { return piece([&](const PopupPiece& p) { return p.span.text == text; }); };
+    const auto isFlag = [](const PopupPiece& p) { return p.kind == PopupPiece::Kind::Icon && p.icon == Icon::Flag; };
+    const auto green = piece(isFlag), name = named("Derfland"), ran = named("Gustaberg"), head = named("Supply Run");
+    const auto said = named("Available"), done = named("Complete");
+    CHECK(green != l.pieces.end() && name != l.pieces.end() && ran != l.pieces.end() && head != l.pieces.end());
+    const auto yellow = std::find_if(std::next(green), l.pieces.end(), isFlag); // Derfland's, after Gustaberg's
+    CHECK(yellow != l.pieces.end() && said != l.pieces.end() && done != l.pieces.end());
+    // Each flag starts under the run's head after the names, and its word follows it after no more than a space.
+    const float space = measure(Text(" "), PopupFont::Text).width, gap = said->x - (yellow->x + yellow->width);
+    CHECK(head->x > name->x + name->width && green->x == head->x && yellow->x == head->x);
+    CHECK(gap > 0.0f && gap <= space && done->x == said->x);
+    CHECK(std::fabs((yellow->y + yellow->height / 2.0f) - (name->y + name->height / 2.0f)) < name->height / 2.0f);
     CHECK_EQ(ran->x, name->x);
     // Another nation's regions are not yours to run supplies to.
     owners[0] = Nation::SanDoria;
@@ -2999,6 +3064,57 @@ TEST(world_infos_conquest_card_marks_your_nations_regions_without_a_supply_run)
     const PopupSection all = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
     CHECK(all.tabs.size() == 4 && all.tabs[1].name.text == "San d'Oria");
     CHECK((Lines(PopupSection{"", all.tabs[1].rows}) == std::vector<std::string>{"Ronfaure"}));
+}
+
+TEST(world_infos_conquest_card_says_tulia_and_movalpolos_are_unavailable_with_a_red_flag)
+{
+    Settings settings;
+    settings.Widget(BarWidget::World).on = true;
+    BarState state;
+    RegionOwners owners{};
+    owners[16] = owners[17] = Nation::Bastok; // Tu'Lia and Movalpolos: no overseer takes supplies there
+    state.owners = owners;
+    state.nation = Nation::Bastok;
+    OutpostRuns runs;
+    state.outposts = &runs;
+    const auto rows = [&] {
+        const PopupSection card = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
+        return card.tabs.at(card.tab).rows;
+    };
+    const auto noOutpost = [](const std::vector<PopupRow>& r) {
+        bool all = r.size() == 1 && r[0].header && r[0].cells.size() == 6;
+        for (size_t line = 1; all && line < 3; ++line)
+            all = r[0].cells[line * 2 + 1].text == ListOf(Text("Unavailable", Tone::Dim)) &&
+                  FlagTinted(r[0].cells[line * 2 + 1], {kRedShift}, {kGreenShift, kBlueShift});
+        return all && CellText(r[0].cells[2]) == "Tu'Lia" && CellText(r[0].cells[4]) == "Movalpolos";
+    };
+    // Before any overseer has told, neither asks you to go and ask one.
+    CHECK(noOutpost(rows()));
+    // Told by Bastok's overseer that no run was made: still neither is Available.
+    runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 0, 0, 0, 0}}, 20);
+    CHECK(noOutpost(rows()));
+}
+
+TEST(world_infos_conquest_card_leaves_the_supply_run_flags_out_with_supply_run_flags_off)
+{
+    Settings settings;
+    settings.Widget(BarWidget::World).on          = true;
+    settings.Widget(BarWidget::World).supplyFlags = false;
+    BarState state;
+    RegionOwners owners{};
+    owners[3] = owners[4] = Nation::Bastok; // Gustaberg and Derfland
+    owners[16]            = Nation::Bastok; // Tu'Lia
+    state.owners = owners;
+    state.nation = Nation::Bastok;
+    OutpostRuns runs;
+    state.outposts = &runs;
+    runs.Heard(GuardEvent{Nation::Bastok, {1, 0, 0, 0, 1 << (3 + 5), 0, 0, 0}}, 20);
+    const PopupSection card = ConquestCard(BarPopupContent(BarWidget::World, state, settings));
+    const PopupRow& grid    = card.tabs.at(card.tab).rows.at(0);
+    // Two cells a line, the region and its run's word, and no flag anywhere.
+    CHECK(grid.columns == 2 && grid.cells.size() == 8);
+    CHECK(std::ranges::none_of(grid.cells, [](const PopupCell& cell) { return cell.icon.has_value(); }));
+    CHECK(CellText(grid.cells[3]) == "Complete" && CellText(grid.cells[5]) == "Available" && CellText(grid.cells[7]) == "Unavailable");
 }
 
 TEST(world_infos_conquest_card_has_your_nation_first_picked_anew_each_time_and_its_tabs_two_by_two)
@@ -3211,9 +3327,10 @@ TEST(a_craft_guilds_tab_lists_todays_turn_ins_apart_from_its_shops_with_yours_li
         const PopupSection guilds = BarPopupContent(BarWidget::World, state, settings).sections.at(3);
         return guilds.tabs[guilds.tab].rows;
     };
-    // The shops in one socket under their title, the turn-ins under a line of their own in another.
+    // The shops in one socket under their title, the turn-ins beside them under a line of their own in another.
     std::vector<PopupRow> rows = fishing();
     CHECK(rows.size() == 4 && !rows[0].nested && rows[1].nested && !rows[2].nested && rows[3].nested);
+    CHECK(!rows[0].beside && !rows[1].beside && rows[2].beside && !rows[3].beside);
     CHECK_EQ(Lines(PopupSection{"", {rows[2]}}).front(), "Today's Turn-Ins");
     // Not fetched yet, it says so.
     CHECK_EQ(Lines(PopupSection{"", {rows[3]}}).front(), "They come from phoenix-xi.com");

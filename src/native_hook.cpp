@@ -1256,6 +1256,28 @@ namespace headsup
         return type;
     }
 
+    std::string MapSquareReader::Find()
+    {
+        ImageSection text{};
+        std::string why;
+        uint8_t* base = GameCode(text, why);
+        if (base == nullptr) return why;
+        const PosTextSite found = LocatePosText(text);
+        if (found.problem != LocateProblem::None) return Describe(found.problem);
+        if (!InImage(base, Pointer(found.zoneMap), sizeof(uint32_t))) return "the zone's map is not in the game's image";
+        m_PosText = reinterpret_cast<const char*(__cdecl*)(uint8_t)>(base + found.entry);
+        m_ZoneMap = found.zoneMap;
+        return "";
+    }
+
+    std::string MapSquareReader::Read() const
+    {
+        // The routine casts a ray at [zoneMap] without checking it: 0 between zones would crash the game.
+        if (m_PosText == nullptr || ReadAt<uint32_t>(Pointer(m_ZoneMap), 0) == 0) return "";
+        const char* text = m_PosText(0);
+        return text != nullptr ? text : "";
+    }
+
     const uint8_t* FriendListReader::Slots()
     {
         // Each search reads the whole of the game's data: after this many the client is taken to have no such list.
