@@ -1743,7 +1743,7 @@ private:
                     body.feet = feet * toY;
                 return body;
             }};
-        return headsup::ShownCombatPopups(m_HeldPopups.Shown(), static_cast<float>(m_Settings.combatPopupSize) * toY,
+        return headsup::ShownCombatPopups(m_HeldPopups.Shown(), headsup::CombatPopupScale(m_Settings.combatPopupSize, m_Names.BackBufferHeight()),
             m_Settings.combatPopupColors, placing, headsup::PopupSwitchesOf(m_Settings));
     }
 

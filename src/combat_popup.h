@@ -290,13 +290,18 @@ namespace headsup
         std::function<std::optional<PopupBody>(uint32_t target)> bodyOf;
     };
     // Two popups of a frame with the same text whose centers are within half a box height are one, the later, which the
-    // game draws on top. Each line is lineHeight tall, at any distance. A popup with a type takes its pick's color, by
+    // game draws on top. Each line is its box's height times scale: the box shrinks with distance. A popup with a type takes its pick's color, by
     // PopupType, at its alpha. It goes in its kind's column, at the start height: Left or Right its words end or start
     // the spread past its target's body, in the Middle they are centered on the game's place. With the body's height not
     // known it keeps the game's height, one line and the spread past the game's place Left or Right. Its line moves it
     // that many lines down, and the nudge moves it on.
-    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, float lineHeight,
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, float scale,
         const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on = {});
+
+    // The game's number close up (about 4 yalms), as a share of the screen's height: 81 rows of a 2160-row scene image.
+    constexpr float kCloseCombatPopupShare = 81.0f / 2160.0f;
+    // The scale that makes a popup textSize screen pixels tall where the game's is close up, on a screen this tall.
+    float CombatPopupScale(int textSize, float screenHeight);
 
     // The game's popups kept past its own end of them: each whole for duration seconds from the frame it first showed,
     // then fading to clear over fade seconds, its alpha HeadsUp's in place of the game's. A particle drawn on the frame

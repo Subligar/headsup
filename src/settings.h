@@ -169,7 +169,7 @@ namespace headsup
     int NoticeSoundChoice(std::string_view key); // kNoSound for a key that is none of them
     constexpr int kCasePlaceWhole = 10000; // a placed Case's across and down count ten-thousandths of the screen
     constexpr int kMinCaseScale = 50, kDefaultCaseScale = 65, kMaxCaseScale = 200;         // percent
-    // Pixels tall, at any distance: the default is 80% of the game's own close up at 1440 rows.
+    // Pixels tall where the game's number is close up, smaller farther off as the game's: the default is 80% of the game's.
     constexpr int kMinCombatPopupSize = 10, kDefaultCombatPopupSize = 43, kMaxCombatPopupSize = 120;
     // What a combat popup is, each with its own color pick, in the Combat Popups card's order.
     enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Skillchain, Spell, Buff, Debuff };

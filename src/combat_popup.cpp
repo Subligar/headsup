@@ -521,7 +521,7 @@ namespace headsup
         }
     }
 
-    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, float lineHeight,
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, float scale,
         const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on)
     {
         std::vector<ShownCombatPopup> shown;
@@ -536,7 +536,7 @@ namespace headsup
             const uint32_t color = on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate);
             shown.push_back(Place(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
                                       ScreenPoint{p.box.CenterX(), p.box.CenterY()},
-                                      lineHeight, p.depth, kCentered},
+                                      p.box.Height() * scale, p.depth, kCentered},
                 p.event ? p.event->line : 0, body, SideOf(p.event, placing.sides), placing));
         }
         return shown;
@@ -548,6 +548,11 @@ namespace headsup
         const float fit = lineHeight / static_cast<float>(text.raster), width = text.width * fit * pixelShape;
         const float capitals = text.halo + (text.capitalTop + text.capitalBottom) / 2.0f;
         return SquareQuad{std::round(center.x - width * across), std::round(center.y - capitals * fit), width, text.height * fit};
+    }
+
+    float CombatPopupScale(int textSize, float screenHeight)
+    {
+        return static_cast<float>(textSize) / (kCloseCombatPopupShare * screenHeight);
     }
 
     const std::vector<CombatPopup>& HeldPopups::Update(const std::vector<CombatPopup>& drawn, double now, double duration,

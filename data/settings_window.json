@@ -288,7 +288,7 @@
           "name": "Appearance",
           "settings": [
             {"key": "combat-popup-font", "name": "Font", "tip": "The font the numbers are drawn in. Default: Marcellus SC."},
-            {"key": "combat-popup-size", "name": "Text Size", "tip": "How tall the numbers are, in pixels. They stay this size at any distance. Default: 43 px."},
+            {"key": "combat-popup-size", "name": "Text Size", "tip": "How tall the numbers are up close, in pixels. Farther off they shrink, as the game's do. Default: 43 px."},
             {"key": "combat-popup-words", "name": "Detailed Miss", "tip": "Shows what a miss was: Evade, Parry, Shadow, Resist and the like. Turn this off to see the game's plain Miss for all of them. Default: On."},
             {"key": "combat-popup-labels", "name": "Show Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."},
             {"key": "combat-popup-skillchain-names", "name": "Show Skillchain Names", "tip": "Puts a skillchain's name before its damage: Fusion 412. Turn this off to see the game's plain number. Default: On."},
