@@ -55,6 +55,8 @@ namespace headsup
         NoKeyHide,
         AmbiguousKeyHide,
         KeyHideDiffers,
+        NoImGuiMouse,
+        AmbiguousImGuiMouse,
         NoWindowDraw,
         AmbiguousWindowDraw,
         WindowDrawChanged,
@@ -160,6 +162,18 @@ namespace headsup
     };
     constexpr uint32_t kPointerShownOffset = 0x4E;
     PointerShow LocatePointerShow(const ImageSection& text);
+
+    // Ashita's ImGui backend (Ashita.dll) hands ImGui the mouse in the game window's client pixels, which ImGui lays
+    // out in the viewport's: its poll after ScreenToClient, its WM_MOUSEMOVE and its WM_MOUSELEAVE each call
+    // ImGuiIO::AddMousePosEvent with the io in ecx, x in xmm1 and y in xmm2. RVAs of every five-byte call to it, found
+    // through the poll's.
+    struct ImGuiMouseCalls
+    {
+        LocateProblem problem = LocateProblem::None;
+        std::vector<uint32_t> calls;
+        uint32_t addMousePos = 0;
+    };
+    ImGuiMouseCalls LocateImGuiMouseCalls(const ImageSection& text);
 
     // The game's command check ends by turning mouse use on (1) for a few mouse commands and off (0) for the rest, which
     // hides the pointer whenever a key sets off a command: two thiscalls into one routine on the mouse controller.

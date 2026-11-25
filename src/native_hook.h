@@ -25,6 +25,7 @@ struct IDirect3DSurface8;
 namespace headsup
 {
     constexpr const char* kGameModule = "FFXiMain.dll";
+    constexpr const char* kAshitaModule = "Ashita.dll";
     // The folder a loaded module was loaded from, without its last separator; empty when it is not loaded.
     std::string ModuleFolder(const char* module);
 
@@ -275,7 +276,8 @@ namespace headsup
     // Puts right the game's guess of its window's client area (native_locate.h's PointerMapping): each guess's
     // GetWindowRect call and GetSystemMetrics load go to HeadsUp, which answers with the client area and no borders
     // while the fix is on, and as Windows would while it is off. It also brings back the pointer the game hid for
-    // typing when the mouse moves over an Ashita window, which keeps those moves from the game.
+    // typing when the mouse moves over an Ashita window, which keeps those moves from the game. And it scales the mouse Ashita hands ImGui from
+    // client pixels to ImGui's (ImGuiMouseCalls), which differ once the window is resized away from the game's size.
     class PointerFix
     {
     public:
@@ -291,9 +293,14 @@ namespace headsup
         // Keys that set off a game command without hiding its pointer (native_locate.h's KeyHide); none keeps the game's
         // behavior.
         void KeepPointerFor(const std::vector<uint8_t>& keys);
+        // Each frame: ImGui's display size and the game window's client size.
+        void ImGuiSize(float width, float height, int clientWidth, int clientHeight);
+        // Why Ashita's ImGui mouse was not fixed though Ashita.dll is loaded, or empty.
+        const std::string& ImGuiProblem() const { return m_ImGuiProblem; }
 
     private:
         std::vector<CodePatch> m_Patches;
+        std::string m_ImGuiProblem;
     };
 
 #ifdef HEADSUP_DEV

@@ -1175,6 +1175,8 @@ public:
                 g_MenuScaleX = m_MenuWidth / static_cast<float>(client.right);
                 g_MenuScaleY = m_MenuHeight / static_cast<float>(client.bottom);
             }
+            if (g_Gui != nullptr)
+                m_PointerFix.ImGuiSize(g_Gui->GetIO().DisplaySize.x, g_Gui->GetIO().DisplaySize.y, client.right, client.bottom);
             // RmlUi's windows read the mouse through this scale too, with the panel off and before you are in game.
             if (m_Names.BackBufferWidth() > 0.0f && m_Names.BackBufferHeight() > 0.0f)
             {
@@ -1987,6 +1989,8 @@ private:
             Note("could not hook the game's model draws, so outlines guess whose each one is: " + failure + ".");
         if (const std::string failure = m_PointerFix.Start(); !failure.empty())
             Note("could not fix the game's mouse pointer: " + failure + ".");
+        else if (!m_PointerFix.ImGuiProblem().empty())
+            Note("could not line up Ashita's windows with the mouse after a resize: " + m_PointerFix.ImGuiProblem() + ".");
         ReadGameFont();
         SayGameFontFailure();
         ReadWindowSkins();
