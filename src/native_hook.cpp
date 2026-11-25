@@ -914,11 +914,16 @@ namespace headsup
 
     void CombatTextHook::Take(bool take) { g_TakeCombatText = take && Running(); }
 
-    void CombatTextHook::NewFrame(double now)
+    void CombatTextHook::NewFrame(double now, bool keepImage)
     {
         g_PopupTies.SetNow(now);
         g_SentActions.Clear();
         g_CombatPopups.NewFrame();
+        if (!keepImage) ForgetImage();
+    }
+
+    void CombatTextHook::ForgetImage()
+    {
         LetGo(g_CombatTarget);
         LetGo(g_CombatDepth);
         g_CombatTargetWidth  = 0;
@@ -931,6 +936,7 @@ namespace headsup
         g_EarlyPopups.SetOn(on);
         g_PopupTies.SetSpread(on);
     }
+    void CombatTextHook::SetLife(double seconds) { g_PopupTies.SetLife(seconds); }
     void CombatTextHook::SetSides(const PopupSides& sides) { g_PopupTies.SetSides(sides); }
     void CombatTextHook::Sent(const SentAction& action) { g_SentActions.Put(action); }
 

@@ -2227,8 +2227,8 @@ TEST(the_damage_numbers_page_takes_changes_only_while_its_titles_switch_is_on)
     CHECK_EQ(w.settings.combatPopupSize, kDefaultCombatPopupSize);
     w.Pass({{"damagenumbers-on", kClickEvent, ""}});
     CHECK(w.settings.combatPopups);
-    CHECK(w.Pass({{size, kChangeEvent, "150"}}).changed);
-    CHECK_EQ(w.settings.combatPopupSize, 150);
+    CHECK(w.Pass({{size, kChangeEvent, "60"}}).changed);
+    CHECK_EQ(w.settings.combatPopupSize, 60);
     CHECK(w.Pass({{font, kClickEvent, ""}}).popup);
     // Default, then the game's two fonts, then the installed ones.
     w.Pass({{font + "-o-2", kClickEvent, ""}});
@@ -2287,7 +2287,7 @@ TEST(only_the_skillchains_color_can_be_its_elements)
     CHECK(pickLast(PopupType::Critical, "combat-popup-critical-color") == ColorSource::Game);
 }
 
-TEST(the_damage_numbers_outline_takes_its_thickness_and_color_on_one_row_and_the_fade_its_speed)
+TEST(the_damage_numbers_outline_takes_its_thickness_and_color_on_one_row_and_the_duration_and_fade_their_seconds)
 {
     Window w;
     w.state.page = Page::DamageNumbers;
@@ -2299,13 +2299,15 @@ TEST(the_damage_numbers_outline_takes_its_thickness_and_color_on_one_row_and_the
     const std::string& rml = block->rml;
     const size_t row = rml.find("id=\"" + outline + "-label-row\""), swatch = rml.find("id=\"" + outline + "-swatch\"");
     CHECK(row != std::string::npos && swatch != std::string::npos && swatch > row && rml.find("class=\"row", row + 1) > swatch);
-    CHECK(w.Pass({{outline, kChangeEvent, "150"}}).changed);
-    CHECK_EQ(w.settings.combatPopupOutline, 150);
+    CHECK(w.Pass({{outline, kChangeEvent, "5"}}).changed);
+    CHECK_EQ(w.settings.combatPopupOutline, 5);
     CHECK(w.Pass({{outline + "-swatch", kClickEvent, ""}}).popup);
     CHECK(w.Pass({{outline + "-swatch-p-r", kChangeEvent, "255"}}).changed);
     CHECK_EQ(ToArgb(w.settings.combatPopupOutlineColor), 0xFFFF0000u);
-    CHECK(w.Pass({{card + "-combat-popup-fade", kChangeEvent, "150"}}).changed);
-    CHECK_EQ(w.settings.combatPopupFade, 150);
+    CHECK(w.Pass({{card + "-combat-popup-fade", kChangeEvent, "1.3"}}).changed);
+    CHECK_EQ(w.settings.combatPopupFade, 1.3f);
+    CHECK(w.Pass({{card + "-combat-popup-duration", kChangeEvent, "2.5"}}).changed);
+    CHECK_EQ(w.settings.combatPopupDuration, 2.5f);
 }
 
 TEST(popup_timing_is_vanilla_or_instant_and_instant_starts_them_early)
@@ -2320,26 +2322,6 @@ TEST(popup_timing_is_vanilla_or_instant_and_instant_starts_them_early)
     w.Pass({{timing, kClickEvent, ""}});
     w.Pass({{timing + "-o-1", kClickEvent, ""}});
     CHECK(w.settings.combatPopupRightAway);
-}
-
-TEST(the_damage_numbers_test_button_asks_the_plugin_only_while_they_are_on_and_the_game_can_pop)
-{
-    Window w;
-    w.state.page             = Page::DamageNumbers;
-    w.readings.popupTestReady = true;
-    const std::string test = std::string(kPageSwitchBlock) + "-test";
-    w.settings.combatPopups = false;
-    w.Pass({{test, kClickEvent, ""}});
-    CHECK(!w.state.popupTestRequested);
-    w.settings.combatPopups   = true;
-    w.readings.popupTestReady = false;
-    CHECK(ClassOn(w.Pass(), test.c_str(), kOffClass));
-    w.Pass({{test, kClickEvent, ""}});
-    CHECK(!w.state.popupTestRequested);
-    w.readings.popupTestReady = true;
-    CHECK(!ClassOn(w.Pass(), test.c_str(), kOffClass));
-    w.Pass({{test, kClickEvent, ""}});
-    CHECK(w.state.popupTestRequested);
 }
 
 namespace

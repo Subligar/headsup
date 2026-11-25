@@ -42,7 +42,7 @@ namespace headsup
     }
 
     void CombatPopupRender::Draw(IDirect3DDevice8* device, const std::vector<ShownCombatPopup>& popups, const std::string& font,
-        int outlinePercent, uint32_t outlineColor, float toX, float toY)
+        int edge, uint32_t outlineColor, float toX, float toY)
     {
         ++m_Frame;
         for (Texture& idle : m_Textures.TakeIdle(m_Frame, kIdleFrames))
@@ -53,7 +53,7 @@ namespace headsup
         for (const ShownCombatPopup& popup : popups)
         {
             // Drawn at the height it shows on the screen, which the scene image is toY times.
-            const int raster = RasterHeight(popup.lineHeight / toY, 0), edge = CombatPopupEdge(raster, outlinePercent);
+            const int raster = RasterHeight(popup.lineHeight / toY, 0);
             Texture& t       = m_Textures.Use(std::tuple{font, popup.words, popup.color, raster, edge, outlineColor}, m_Frame);
             if (t.texture == nullptr && !Prepare(device, t, popup.words, popup.color, font, raster, edge, outlineColor)) break;
             const SquareQuad q = PlaceCombatPopupText(popup.center, popup.lineHeight, t.size, toX / toY, popup.across);

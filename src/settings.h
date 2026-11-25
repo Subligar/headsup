@@ -169,7 +169,8 @@ namespace headsup
     int NoticeSoundChoice(std::string_view key); // kNoSound for a key that is none of them
     constexpr int kCasePlaceWhole = 10000; // a placed Case's across and down count ten-thousandths of the screen
     constexpr int kMinCaseScale = 50, kDefaultCaseScale = 65, kMaxCaseScale = 200;         // percent
-    constexpr int kMinCombatPopupSize = 25, kDefaultCombatPopupSize = 100, kMaxCombatPopupSize = 200; // percent of the game's own size
+    // Pixels tall, at any distance: the default is 80% of the game's own close up at 1440 rows.
+    constexpr int kMinCombatPopupSize = 10, kDefaultCombatPopupSize = 43, kMaxCombatPopupSize = 120;
     // What a combat popup is, each with its own color pick, in the Combat Popups card's order.
     enum class PopupType : uint8_t { Dealt, Taken, Recovery, Miss, Critical, Burst, Skillchain, Spell, Buff, Debuff };
     constexpr int kPopupTypeCount = 10;
@@ -181,9 +182,11 @@ namespace headsup
     // How high on its target's body a popup beside it starts: percent of the way from its feet to the top of its head.
     constexpr int kMaxCombatPopupHeight = 100, kDefaultCombatPopupHeight = 90;
     constexpr int kMaxCombatPopupNudge = 200; // pixels either way
-    constexpr int kMaxCombatPopupSpread = 50, kDefaultCombatPopupSpread = 20; // pixels between a side column and the body
-    constexpr int kMinCombatPopupOutline = 25, kDefaultCombatPopupOutline = 100, kMaxCombatPopupOutline = 300; // percent
-    constexpr int kMinCombatPopupFade = 50, kDefaultCombatPopupFade = 100, kMaxCombatPopupFade = 200; // percent of the game's
+    constexpr int kMaxCombatPopupSpread = 50, kDefaultCombatPopupSpread = 0; // pixels between a side column and the body
+    constexpr int kMinCombatPopupOutline = 1, kDefaultCombatPopupOutline = 3, kMaxCombatPopupOutline = 10; // pixels
+    // Seconds: how long a popup shows whole, then how long it takes to fade to clear.
+    constexpr float kMinCombatPopupDuration = 0.1f, kDefaultCombatPopupDuration = 0.4f, kMaxCombatPopupDuration = 5.0f;
+    constexpr float kMinCombatPopupFade = 0.1f, kDefaultCombatPopupFade = 0.4f, kMaxCombatPopupFade = 3.0f;
 
     constexpr int kMaxHelpBarOffset = 4000; // pixels either way
     constexpr int kMinHelpBarWidth = 10, kDefaultHelpBarWidth = 50, kMaxHelpBarWidth = 100; // percent of the screen
@@ -278,14 +281,15 @@ namespace headsup
         bool combatPopupSkillchainNames = true; // a skillchain's number comes with its name
         bool combatPopupRightAway = true; // popups start as their result arrives, not at the hit
         bool combatPopupStatuses = true; // and has the game pop each buff and debuff that lands, by name
-        std::string combatPopupFont; // empty for the nameplates' default font
+        std::string combatPopupFont; // empty for Marcellus SC
         int combatPopupSize         = kDefaultCombatPopupSize;
         PopupSides combatPopupSides = {PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right, PopupSide::Right,
             PopupSide::Right, PopupSide::Right, PopupSide::Right, PopupSide::Left, PopupSide::Right};
         int combatPopupHeight = kDefaultCombatPopupHeight;
         int combatPopupSpread = kDefaultCombatPopupSpread;
         int combatPopupY      = 0; // pixels up from where the side puts them
-        int combatPopupOutline = kDefaultCombatPopupOutline, combatPopupFade = kDefaultCombatPopupFade;
+        int combatPopupOutline = kDefaultCombatPopupOutline;
+        float combatPopupDuration = kDefaultCombatPopupDuration, combatPopupFade = kDefaultCombatPopupFade;
         Color combatPopupOutlineColor = ColorFromRgb(0x000000);
         // By PopupType. Game is the game's own color, which tells party, alliance and others apart.
         std::array<ColorPick, kPopupTypeCount> combatPopupColors = {{{ColorSource::Game, ColorFromRgb(0xFFFFFF)},

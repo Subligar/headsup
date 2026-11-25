@@ -331,7 +331,8 @@ class HeadsUp final : public IPlugin
     headsup::Tracker m_Tracker;
     // UpdateTracker's, kept as members for their room.
     std::vector<headsup::ActorInput> m_Inputs;
-    headsup::PopupTestRun m_PopupTest; // the Damage Numbers page's Test
+    headsup::PopupTestRun m_PopupTest; // the Damage Numbers page's samples, while it is open
+    headsup::HeldPopups m_HeldPopups;   // the game's popups as HeadsUp shows them, past the game's end of them
     std::vector<uint32_t> m_AliveMobs; // which lose their placeholder timers
     std::vector<headsup::PetLink> m_Pets;
     std::vector<headsup::CheckCandidate> m_Checkable;
@@ -971,7 +972,8 @@ public:
 #endif
         StartHooks();
         m_ModelHook.NewFrame();
-        m_CombatTextHook.NewFrame(Now());
+        m_CombatTextHook.NewFrame(Now(), !m_HeldPopups.Shown().empty());
+        m_CombatTextHook.SetLife(m_Settings.combatPopupDuration + m_Settings.combatPopupFade);
         m_CombatTextHook.SetRightAway(m_Settings.combatPopupRightAway);
         m_CombatTextHook.SetSides(m_Settings.combatPopupSides);
         m_PopupsDrawn = false;
@@ -1300,7 +1302,6 @@ public:
 #ifdef HEADSUP_DEV
             .exportable       = true,
 #endif
-            .popupTestReady   = m_CombatTextHook.CanStartPopups(),
             .friends          = &m_FriendEntries,
             .included         = &Included(),
             .noticeBounds     = m_NoticeBox.Bounds(),
@@ -1327,7 +1328,9 @@ public:
         }
         if (m_RmlMenu.TakeDebugRequest()) m_DebugPending = true;
         if (m_RmlMenu.TakeCaseMove()) m_CaseMoving = true;
-        if (m_RmlMenu.TakePopupTest()) m_PopupTest.Start(now);
+        if (m_RmlMenu.DamageNumbersPageOpen() && m_Settings.enabled && m_Settings.combatPopups &&
+            m_CombatTextHook.CanStartPopups() && m_PopupTest.Over(now))
+            m_PopupTest.Start(now);
         // As a friend would: online, then offline at the next press.
         if (m_RmlMenu.TakeNoticeTest())
             if (const std::optional<headsup::NoticeKind> kind =
@@ -1740,16 +1743,18 @@ private:
                     body.feet = feet * toY;
                 return body;
             }};
-        return headsup::ShownCombatPopups(m_CombatTextHook.Popups(), m_Settings.combatPopupSize, m_Settings.combatPopupColors, placing,
-            headsup::PopupSwitchesOf(m_Settings), m_Settings.combatPopupFade);
+        return headsup::ShownCombatPopups(m_HeldPopups.Shown(), static_cast<float>(m_Settings.combatPopupSize) * toY,
+            m_Settings.combatPopupColors, placing, headsup::PopupSwitchesOf(m_Settings));
     }
 
     void DrawCombatPopupsBeforeSceneCopy()
     {
-        if (m_PopupsDrawn || m_CombatTextHook.Popups().empty() || m_CombatTextHook.Target() == nullptr ||
-            m_Names.BackBufferWidth() <= 0.0f || m_Names.BackBufferHeight() <= 0.0f || !m_Names.DrawingToBackBuffer())
+        if (m_PopupsDrawn || m_CombatTextHook.Target() == nullptr || m_Names.BackBufferWidth() <= 0.0f ||
+            m_Names.BackBufferHeight() <= 0.0f || !m_Names.DrawingToBackBuffer())
             return;
         m_PopupsDrawn = true;
+        if (m_HeldPopups.Update(m_CombatTextHook.Popups(), Now(), m_Settings.combatPopupDuration, m_Settings.combatPopupFade).empty())
+            return;
         const float toX = PopupsToX(), toY = PopupsToY();
         const std::vector<headsup::ShownCombatPopup> shown = ShownPopupsNow();
         const bool saved = WithSavedState([&] {
@@ -2244,6 +2249,7 @@ private:
     {
         m_Rml.ReleaseLayers();
         m_SetupPreview.ReleaseTarget();
+        headsup::CombatTextHook::ForgetImage();
     }
 
     // RmlUi's overlay (the popups and the settings window), over every ImGui window: in a scene of its own.

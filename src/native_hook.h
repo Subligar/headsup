@@ -150,9 +150,13 @@ namespace headsup
         bool Running() const { return m_Call.at != nullptr; }
         // Whether popups are taken from now on: never while the gate is not in.
         void Take(bool take);
-        // At Present: the last frame's popups and their image are forgotten, and the popups the game starts next count
-        // as started now.
-        void NewFrame(double now);
+        // At Present: the last frame's popups are forgotten, and their image unless HeadsUp still draws popups into it,
+        // and the popups the game starts next count as started now.
+        void NewFrame(double now, bool keepImage);
+        // Before the device's Reset, which a kept image would make fail.
+        static void ForgetImage();
+        // At Present: how long HeadsUp shows a popup, which its line is kept for.
+        static void SetLife(double seconds);
         // At Present, for the popups the game starts next: your entity index and your pet's (0 for none).
         static void SetYou(uint32_t you, uint32_t pet);
         // At Present: whether popups start as soon as their action arrives and spread when started together.

@@ -11,7 +11,7 @@ namespace headsup
 
     std::string CombatPopupFont(const Settings& settings)
     {
-        return settings.combatPopupFont.empty() ? settings.defaultFont : settings.combatPopupFont;
+        return settings.combatPopupFont.empty() ? kMarcellusSC : settings.combatPopupFont;
     }
 
     uint32_t BadgeColor(BadgeKind kind, const Settings& settings)

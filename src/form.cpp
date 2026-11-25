@@ -355,14 +355,14 @@ namespace headsup
             static_cast<float>(kPercentStep), Formatted("%d%%", value), tip);
     }
 
-    void Form::SliderPercentSwatch(const char* label, int& value, int lo, int hi, Color& color, const char* tip)
+    void Form::SliderSwatch(const char* label, int& value, int lo, int hi, FunctionRef<std::string(int)> shown, Color& color,
+        const char* tip)
     {
         const std::string slider = Id(label);
-        TakeWhole(slider, value, lo, hi, kPercentStep);
+        TakeWhole(slider, value, lo, hi);
         Row(label, tip);
         Out() += "<div class=\"swatched\">";
-        SliderAt(slider, static_cast<float>(value), static_cast<float>(lo), static_cast<float>(hi), static_cast<float>(kPercentStep),
-            Formatted("%d%%", value));
+        SliderAt(slider, static_cast<float>(value), static_cast<float>(lo), static_cast<float>(hi), 1.0f, shown(value));
         Out() += "</div>";
         SwatchAt((std::string(label) + " swatch").c_str(), color);
         EndRow();

@@ -32,9 +32,6 @@ namespace headsup
         bool operator==(const PopupEvent&) const = default;
     };
 
-    // How long a popup keeps its line: the game's lifetime of one, 22 to 23 frames at about 30 fps, and a little more.
-    constexpr double kPopupSpreadSeconds = 0.8;
-
     // Ties each popup particle to its message, from the game's three calls as it starts one: its decision to pop, the
     // effect's task it starts, and the particles it builds from that task. It keeps the last kKeptTies of each, in
     // fixed arrays, as the calls come on the game's stack.
@@ -52,6 +49,8 @@ namespace headsup
         void SetNow(double now) { m_Now = now; }
         // At Present: whether popups started together spread over lines (Popup Timing is Instant), or all keep line 0.
         void SetSpread(bool spread) { m_Spread = spread; }
+        // At Present: how long HeadsUp shows a popup, so how long it keeps its line.
+        void SetLife(double seconds) { m_Life = seconds; }
         // At Present: the column each kind of popup goes in; popups in one column of a target spread apart.
         void SetSides(const PopupSides& sides) { m_Sides = sides; }
         // At Present: the server ids of you, your party and your alliance, and whether statuses pop (Show Status Effects
@@ -64,7 +63,7 @@ namespace headsup
         uint8_t Decide(const uint32_t* actor, const uint32_t* target, uint32_t message, uint32_t value, uint8_t answer,
             uint8_t& kind) const;
         // The game decided to pop one for event: the next start is its, with the event's type, and the first line no
-        // popup started on its target and side in the last kPopupSpreadSeconds holds.
+        // popup started on its target and side in the last life holds.
         void Decided(PopupEvent event);
         void Started(uintptr_t task);
         void Built(uintptr_t particle, uintptr_t task);
@@ -85,6 +84,7 @@ namespace headsup
         uint32_t m_You = 0, m_Pet = 0;
         double m_Now  = 0.0;
         bool m_Spread = true;
+        double m_Life = kDefaultCombatPopupDuration + kDefaultCombatPopupFade;
         PopupSides m_Sides{};
         std::array<uint32_t, kPartyMembers> m_Party{};
         bool m_Statuses = false;
@@ -181,7 +181,7 @@ namespace headsup
     // What the game would decide on for sample over you; other is any other entity, or you with none.
     PopupEvent SampleEvent(const PopupSample& sample, uint32_t you, uint32_t other);
 
-    // The Test button's run: a sample of each type, kTestGap seconds apart from its start.
+    // The Damage Numbers page's run: a sample of each type, kTestGap seconds apart from its start.
     class PopupTestRun
     {
     public:
@@ -193,6 +193,8 @@ namespace headsup
         }
         // The next sample due by now, each once; none once the run is over.
         std::optional<PopupSample> Next(double now);
+        // Whether the next run may start: the last sample was a gap ago.
+        bool Over(double now) const;
 
     private:
         double m_Start = 0.0;
@@ -243,9 +245,6 @@ namespace headsup
     constexpr const char* kMissWord = "Miss";
     // The popup's draw treats 808080 as no tint, as the game's names do, so it shows a vertex color twice as bright.
     constexpr uint32_t kCombatPopupModulate = 2;
-    // The black edge around a popup's letters, per pixel of the height they are drawn at.
-    constexpr float kCombatPopupEdgePerHeight = 0.1f;
-
     // Which of HeadsUp's own touches popups get, by the card's switches; each one off gives what the game shows.
     struct PopupSwitches
     {
@@ -279,7 +278,7 @@ namespace headsup
         std::optional<float> feet;
     };
     // A body beside which a popup goes is taken to reach this share of its height to either side of its middle.
-    constexpr float kPopupBodyReach = 0.5f;
+    constexpr float kPopupBodyReach = 0.25f;
     // Where the frame's popups go: the column of each kind, how far up its target's body from the feet (0) to the top
     // of its head (1) they start, the spread between the body and the side columns and a nudge down, both in the scene
     // image's pixels, and each target's body by entity index, where known.
@@ -291,15 +290,33 @@ namespace headsup
         std::function<std::optional<PopupBody>(uint32_t target)> bodyOf;
     };
     // Two popups of a frame with the same text whose centers are within half a box height are one, the later, which the
-    // game draws on top. A line is as tall as its box at 100 percent: the box already shrinks with distance. A popup
-    // with a type takes its pick's color, by PopupType, at the game's alpha. It goes in its kind's column, at the start
-    // height: Left or Right its words end or start the spread past its target's body, in the Middle they are centered
-    // on the game's place. With the body's height not known it keeps the game's height, one line and the spread past
-    // the game's place Left or Right. Its line moves it that many lines down, and the nudge moves it on. Its alpha is
-    // the game's share of opaque to the power of fadePercent over 100, so a faster fade is further along at each step.
-    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
-        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on = {},
-        int fadePercent = kDefaultCombatPopupFade);
+    // game draws on top. Each line is lineHeight tall, at any distance. A popup with a type takes its pick's color, by
+    // PopupType, at its alpha. It goes in its kind's column, at the start height: Left or Right its words end or start
+    // the spread past its target's body, in the Middle they are centered on the game's place. With the body's height not
+    // known it keeps the game's height, one line and the spread past the game's place Left or Right. Its line moves it
+    // that many lines down, and the nudge moves it on.
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, float lineHeight,
+        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on = {});
+
+    // The game's popups kept past its own end of them: each whole for duration seconds from the frame it first showed,
+    // then fading to clear over fade seconds, its alpha HeadsUp's in place of the game's. A particle drawn on the frame
+    // before with the same text is the same popup, which follows the game's box while the game draws it.
+    class HeldPopups
+    {
+    public:
+        const std::vector<CombatPopup>& Update(const std::vector<CombatPopup>& drawn, double now, double duration, double fade);
+        const std::vector<CombatPopup>& Shown() const { return m_Shown; }
+
+    private:
+        struct Held
+        {
+            CombatPopup popup;
+            double first = 0.0, seen = 0.0;
+        };
+        std::vector<Held> m_Held;
+        std::vector<CombatPopup> m_Shown;
+        double m_Last = 0.0;
+    };
 
     // A popup's text as drawn into its texture: the image's size and halo in its own pixels, and its capitals' top and
     // bottom in rows under the halo, drawn raster pixels tall.
@@ -313,8 +330,6 @@ namespace headsup
     // over those down (PlaceSquarePixels' toX / toY), so the game's copy to the screen gives the letters their shape back.
     SquareQuad PlaceCombatPopupText(ScreenPoint center, float lineHeight, const CombatTextSize& text, float pixelShape,
         float across);
-    // How many pixels the edge reaches around letters drawn raster pixels tall, at a thickness in percent.
-    int CombatPopupEdge(int raster, int thicknessPercent);
 
     // One line each for the draw dump: what the game's call drew, and what HeadsUp drew.
     std::string DescribeCombatPopup(const CombatPopup& popup);

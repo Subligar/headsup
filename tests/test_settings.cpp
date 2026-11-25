@@ -3447,27 +3447,26 @@ TEST(a_created_widget_is_named_by_its_number_keeps_its_name_and_a_clone_gets_one
     CHECK_EQ(s.Widget(clone).name, std::string(kCreatedWidgetName) + " 3");
 }
 
-TEST(combat_popups_are_on_in_the_nameplates_font_at_the_games_own_size_until_changed)
+TEST(combat_popups_are_on_in_their_default_font_at_43_pixels_until_changed)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
-    CHECK(fresh.combatPopups && fresh.combatPopupFont.empty() && fresh.combatPopupSize == 100);
+    CHECK(fresh.combatPopups && fresh.combatPopupFont.empty() && fresh.combatPopupSize == 43);
     MapStore store;
-    store.values["combatPopups"]    = "false";
-    store.values["combatPopupFont"] = "Arial";
-    store.values["combatPopupSize"] = "150";
+    store.values["combatPopups"]        = "false";
+    store.values["combatPopupFont"]     = "Arial";
+    store.values["combatPopupTextSize"] = "60";
+    store.values["combatPopupSize"]     = "150"; // the old percent is no longer read
     const Settings s = LoadSettings(store);
-    CHECK(!s.combatPopups && s.combatPopupFont == "Arial" && s.combatPopupSize == 150);
+    CHECK(!s.combatPopups && s.combatPopupFont == "Arial" && s.combatPopupSize == 60);
     MapStore saved;
     SaveSettings(s, saved);
     const Settings back = LoadSettings(saved);
-    CHECK(!back.combatPopups && back.combatPopupFont == "Arial" && back.combatPopupSize == 150);
-    store.values["combatPopupSize"] = "999";
-    CHECK_EQ(LoadSettings(store).combatPopupSize, 200);
-    store.values["combatPopupSize"] = "7";
-    CHECK_EQ(LoadSettings(store).combatPopupSize, 25);
-    store.values["combatPopupSize"] = "52";
-    CHECK_EQ(LoadSettings(store).combatPopupSize, 50);
+    CHECK(!back.combatPopups && back.combatPopupFont == "Arial" && back.combatPopupSize == 60);
+    store.values["combatPopupTextSize"] = "999";
+    CHECK_EQ(LoadSettings(store).combatPopupSize, 120);
+    store.values["combatPopupTextSize"] = "7";
+    CHECK_EQ(LoadSettings(store).combatPopupSize, 10);
     store.values["combatPopupFont"] = "";
     CHECK(LoadSettings(store).combatPopupFont.empty());
     store.values["combatPopupFont"] = std::string(40, 'x');
@@ -3521,7 +3520,7 @@ TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_spread_and_
         const bool left = type == PopupType::Buff || type == PopupType::Recovery;
         CHECK(fresh.combatPopupSides[static_cast<size_t>(t)] == (left ? PopupSide::Left : PopupSide::Right));
     }
-    CHECK(fresh.combatPopupSpread == 20 && fresh.combatPopupY == 0);
+    CHECK(fresh.combatPopupSpread == 0 && fresh.combatPopupY == 0);
     MapStore store;
     store.values["combatPopupColumns"] = "dealt buff | spell recovery dealt chocobo | ";
     store.values["combatPopupSpread"]  = "35";
@@ -3546,26 +3545,32 @@ TEST(buffs_and_recovery_pop_in_the_left_column_the_rest_in_the_right_spread_and_
     CHECK_EQ(LoadSettings(store).combatPopupSpread, 0);
 }
 
-TEST(the_combat_popups_outline_and_fade_are_headsups_and_the_games_until_set_and_they_save)
+TEST(the_combat_popups_outline_duration_and_fade_are_pixels_and_seconds_and_they_save)
 {
     MapStore empty;
     const Settings fresh = LoadSettings(empty);
-    CHECK(fresh.combatPopupOutline == 100 && fresh.combatPopupFade == 100 && ToArgb(fresh.combatPopupOutlineColor) == 0xFF000000u);
+    CHECK(fresh.combatPopupOutline == 3 && fresh.combatPopupDuration == 0.4f && fresh.combatPopupFade == 0.4f &&
+          ToArgb(fresh.combatPopupOutlineColor) == 0xFF000000u);
     MapStore store;
-    store.values["combatPopupOutline"]       = "150";
-    store.values["combatPopupFade"]          = "52";
+    store.values["combatPopupOutline"]       = "5";
+    store.values["combatPopupDuration"]      = "2.5";
+    store.values["combatPopupFade"]          = "1.2";
     store.values["combatPopupOutlineColorR"] = "1.0000";
     store.values["combatPopupOutlineColorG"] = "0.0000";
     store.values["combatPopupOutlineColorB"] = "0.0000";
     const Settings s = LoadSettings(store);
-    CHECK(s.combatPopupOutline == 150 && s.combatPopupFade == 50 && ToArgb(s.combatPopupOutlineColor) == 0xFFFF0000u);
+    CHECK(s.combatPopupOutline == 5 && s.combatPopupDuration == 2.5f && s.combatPopupFade == 1.2f &&
+          ToArgb(s.combatPopupOutlineColor) == 0xFFFF0000u);
     MapStore saved;
     SaveSettings(s, saved);
     const Settings back = LoadSettings(saved);
-    CHECK(back.combatPopupOutline == 150 && back.combatPopupFade == 50 && back.combatPopupOutlineColor == s.combatPopupOutlineColor);
-    store.values["combatPopupOutline"] = "999";
-    store.values["combatPopupFade"]    = "1";
-    CHECK(LoadSettings(store).combatPopupOutline == 300 && LoadSettings(store).combatPopupFade == 50);
+    CHECK(back.combatPopupOutline == 5 && back.combatPopupDuration == 2.5f && back.combatPopupFade == 1.2f &&
+          back.combatPopupOutlineColor == s.combatPopupOutlineColor);
+    store.values["combatPopupOutline"]  = "999";
+    store.values["combatPopupDuration"] = "0";
+    store.values["combatPopupFade"]     = "99";
+    const Settings clamped = LoadSettings(store);
+    CHECK(clamped.combatPopupOutline == 10 && clamped.combatPopupDuration == 0.1f && clamped.combatPopupFade == 3.0f);
 }
 
 TEST(popups_beside_their_target_start_near_its_head_until_their_start_height_is_set_and_it_saves)

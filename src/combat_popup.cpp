@@ -304,7 +304,7 @@ namespace headsup
         for (size_t i = 0; i < kKeptTies; ++i)
         {
             const PopupEvent& e = m_Tasks.events[i];
-            if (m_Spread && m_Tasks.keys[i] != 0 && e.target == event.target && m_Now - e.started < kPopupSpreadSeconds &&
+            if (m_Spread && m_Tasks.keys[i] != 0 && e.target == event.target && m_Now - e.started < m_Life &&
                 SideOf(e, m_Sides) == SideOf(event, m_Sides))
                 held[e.line] = true;
         }
@@ -332,6 +332,8 @@ namespace headsup
             {7, 34, kRecovery, false}, {25, 20, kRecovery, false}, {15, 0, kMiss, false}, {32, 0, kMiss, false},
             {230, 40, kRecovery, true}, {236, 4, kDamage, false}}; // Protect, and Paralysis
     }
+
+    bool PopupTestRun::Over(double now) const { return now >= m_Start + static_cast<double>(std::size(kTestSamples)) * kTestGap; }
 
     std::optional<PopupSample> PopupTestRun::Next(double now)
     {
@@ -519,9 +521,8 @@ namespace headsup
         }
     }
 
-    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, int sizePercent,
-        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on,
-        int fadePercent)
+    std::vector<ShownCombatPopup> ShownCombatPopups(const std::vector<CombatPopup>& popups, float lineHeight,
+        const std::array<ColorPick, kPopupTypeCount>& colors, const PopupPlacing& placing, const PopupSwitches& on)
     {
         std::vector<ShownCombatPopup> shown;
         for (size_t i = 0; i < popups.size(); ++i)
@@ -530,14 +531,12 @@ namespace headsup
             if (std::any_of(popups.begin() + static_cast<std::ptrdiff_t>(i) + 1, popups.end(),
                     [&](const CombatPopup& later) { return Twins(p, later); }))
                 continue;
-            const uint32_t game = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
-            const float faded   = std::pow(static_cast<float>(game) / kOpaqueAlpha, static_cast<float>(fadePercent) / kPercent);
-            const auto alpha    = static_cast<uint32_t>(std::lround(faded * kOpaqueAlpha));
+            const uint32_t alpha = std::min(Channel(p.color, kAlphaShift) * kCombatPopupModulate, kOpaqueAlpha);
             const std::optional<PopupBody> body = p.event && placing.bodyOf ? placing.bodyOf(p.event->target) : std::nullopt;
             const uint32_t color = on.colors ? PickedColor(p, colors) : ShownColor(p.color, kCombatPopupModulate);
             shown.push_back(Place(ShownCombatPopup{CombatPopupWords(p.text, p.event, on), color, alpha,
                                       ScreenPoint{p.box.CenterX(), p.box.CenterY()},
-                                      p.box.Height() * static_cast<float>(sizePercent) / kPercent, p.depth, kCentered},
+                                      lineHeight, p.depth, kCentered},
                 p.event ? p.event->line : 0, body, SideOf(p.event, placing.sides), placing));
         }
         return shown;
@@ -551,9 +550,34 @@ namespace headsup
         return SquareQuad{std::round(center.x - width * across), std::round(center.y - capitals * fit), width, text.height * fit};
     }
 
-    int CombatPopupEdge(int raster, int thicknessPercent)
+    const std::vector<CombatPopup>& HeldPopups::Update(const std::vector<CombatPopup>& drawn, double now, double duration,
+        double fade)
     {
-        return WholePixels(static_cast<float>(raster) * kCombatPopupEdgePerHeight * static_cast<float>(thicknessPercent) / kPercent);
+        for (const CombatPopup& p : drawn)
+        {
+            const auto same = std::ranges::find_if(m_Held, [&](const Held& h) {
+                return h.seen == m_Last && h.popup.particle == p.particle && std::string_view(h.popup.text) == p.text;
+            });
+            if (same == m_Held.end()) m_Held.push_back(Held{p, now, now});
+            else
+            {
+                same->popup = p;
+                same->seen  = now;
+            }
+        }
+        m_Last = now;
+        std::erase_if(m_Held, [&](const Held& h) { return now - h.first >= duration + fade; });
+        m_Shown.clear();
+        for (const Held& h : m_Held)
+        {
+            const double past  = now - h.first - duration;
+            const double whole = past <= 0.0 ? 1.0 : 1.0 - past / fade;
+            // Half strength, as the game passes it.
+            const auto alpha = static_cast<uint32_t>(std::lround(whole * kOpaqueAlpha / kCombatPopupModulate));
+            m_Shown.push_back(h.popup);
+            m_Shown.back().color = (h.popup.color & ~(kOpaqueAlpha << kAlphaShift)) | (alpha << kAlphaShift);
+        }
+        return m_Shown;
     }
 
     std::string DescribeCombatPopup(const CombatPopup& popup)

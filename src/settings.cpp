@@ -116,11 +116,10 @@ namespace headsup
             {"fishCaseAcross", &Settings::fishCaseAcross, kFishBarUnplaced, kCasePlaceWhole},
             {"fishCaseDown", &Settings::fishCaseDown, kFishBarUnplaced, kCasePlaceWhole},
             {"fishCaseScale", &Settings::fishCaseScale, kMinCaseScale, kMaxCaseScale},
-            {"combatPopupSize", &Settings::combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, kPercentStep},
+            {"combatPopupTextSize", &Settings::combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize},
             {"combatPopupHeight", &Settings::combatPopupHeight, 0, kMaxCombatPopupHeight},
             {"combatPopupSpread", &Settings::combatPopupSpread, 0, kMaxCombatPopupSpread},
-            {"combatPopupOutline", &Settings::combatPopupOutline, kMinCombatPopupOutline, kMaxCombatPopupOutline, kPercentStep},
-            {"combatPopupFade", &Settings::combatPopupFade, kMinCombatPopupFade, kMaxCombatPopupFade, kPercentStep},
+            {"combatPopupOutline", &Settings::combatPopupOutline, kMinCombatPopupOutline, kMaxCombatPopupOutline},
             {"combatPopupY", &Settings::combatPopupY, -kMaxCombatPopupNudge, kMaxCombatPopupNudge},
             {"noticeWidth", &Settings::noticeWidth, kFlexibleNoticeWidth, kMaxNoticeWidth},
             {"noticeHeight", &Settings::noticeHeight, kFlexibleNoticeHeight, kMaxNoticeHeight},
@@ -174,7 +173,9 @@ namespace headsup
             {"barLineSeparation", &Settings::barLineSeparation, kMinLineSeparation, kMaxLineSeparation},
             {"popupTextScale", &Settings::popupTextScale, kMinPopupScale, kMaxPopupScale},
             {"popupWidthScale", &Settings::popupWidthScale, kMinPopupBoxScale, kMaxPopupScale},
-            {"popupHeightScale", &Settings::popupHeightScale, kMinPopupBoxScale, kMaxPopupScale}};
+            {"popupHeightScale", &Settings::popupHeightScale, kMinPopupBoxScale, kMaxPopupScale},
+            {"combatPopupDuration", &Settings::combatPopupDuration, kMinCombatPopupDuration, kMaxCombatPopupDuration},
+            {"combatPopupFade", &Settings::combatPopupFade, kMinCombatPopupFade, kMaxCombatPopupFade}};
 
         struct ColorKey
         {

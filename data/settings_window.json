@@ -287,14 +287,15 @@
           "key": "damage-appearance",
           "name": "Appearance",
           "settings": [
-            {"key": "combat-popup-font", "name": "Font", "tip": "The font the numbers are drawn in. Default: your nameplates' Default Font."},
-            {"key": "combat-popup-size", "name": "Text Size", "tip": "How big the numbers are against the game's own. They still shrink with distance. Default: 100%."},
+            {"key": "combat-popup-font", "name": "Font", "tip": "The font the numbers are drawn in. Default: Marcellus SC."},
+            {"key": "combat-popup-size", "name": "Text Size", "tip": "How tall the numbers are, in pixels. They stay this size at any distance. Default: 43 px."},
             {"key": "combat-popup-words", "name": "Detailed Miss", "tip": "Shows what a miss was: Evade, Parry, Shadow, Resist and the like. Turn this off to see the game's plain Miss for all of them. Default: On."},
             {"key": "combat-popup-labels", "name": "Show Labels", "tip": "Shows what an amount is: 20 MP, 300 TP, Drain 55. Turn this off to see the game's bare number. Default: On."},
             {"key": "combat-popup-skillchain-names", "name": "Show Skillchain Names", "tip": "Puts a skillchain's name before its damage: Fusion 412. Turn this off to see the game's plain number. Default: On."},
             {"key": "combat-popup-statuses", "name": "Show Status Effects", "tip": "Pops the name of a buff or debuff over what it lands on, when you, your pet or your party cast it or take it. The game has no popup for these. Default: On."},
-            {"key": "combat-popup-outline", "name": "Outline", "tip": "How thick the edge around the text is, and its color. Default: 100%, black."},
-            {"key": "combat-popup-fade", "name": "Fade Speed", "tip": "How quickly the numbers fade away. At 100% they fade as the game's do, at 200% twice as quickly, and at 50% they stay clear for longer. They still go when the game's would. Default: 100%."},
+            {"key": "combat-popup-outline", "name": "Outline", "tip": "How thick the edge around the text is, in pixels, and its color. Default: 3 px, black."},
+            {"key": "combat-popup-duration", "name": "Duration", "tip": "How many seconds the numbers stay fully visible before they start to fade. Default: 0.4 s."},
+            {"key": "combat-popup-fade", "name": "Fade Speed", "tip": "How many seconds the numbers take to go from fully visible to gone once they start fading. Default: 0.4 s."},
             {
               "key": "combat-popup-timing",
               "name": "Popup Timing",
@@ -313,7 +314,7 @@
           "settings": [
             {"key": "combat-popup-columns"},
             {"key": "combat-popup-height", "name": "Initial Height", "tip": "How high up what they happened to the numbers start: 0% at its feet, 100% at the top of its head, so they reach its head on a Tarutaru or a Behemoth alike. Default: 90%."},
-            {"key": "combat-popup-spread", "name": "Spread", "tip": "How far the Left and Right columns sit out from what they happened to, past its body. Default: 20 px."},
+            {"key": "combat-popup-spread", "name": "Spread", "tip": "How far the Left and Right columns sit out from what they happened to, past its body. Default: 0 px."},
             {"key": "combat-popup-y", "name": "Vertical Offset", "tip": "Moves the numbers up by this many pixels, or down by a number below 0. Default: 0 px."}
           ]
         }
@@ -1772,8 +1773,6 @@
     {"key": "or", "name": "or"},
     {"key": "reload", "name": "Reload", "tip": "Reads settings_window.json from config/headsup again and builds this window from it, or from the built-in one when there is none."},
     {"key": "export", "name": "Export", "tip": "Writes the built-in settings_window.json to config/headsup, where it can be edited and read with Reload."},
-    {"key": "combat-popup-test", "name": "Test", "tip": "Pops a sample of each kind over your character, in your font, size and colors, even while the game's Config shows damage in the log only. Click it again to see them again."},
-    {"key": "combat-popup-test-not-found", "tip": "Your game's code for starting a popup was not found, so Test cannot pop one."},
     {"key": "setup-title", "name": "HeadsUp Setup"},
     {"key": "setup-step", "name": "Step {count} of {total}"},
     {"key": "setup-start", "name": "Start", "tip": "Starts Setup."},

@@ -254,8 +254,9 @@ namespace headsup
         // shown: the value as text, as it is after this pass.
         void SliderInt(const char* label, int& value, int lo, int hi, FunctionRef<std::string(int)> shown, const char* tip);
         void SliderPercent(const char* label, int& value, int lo, int hi, const char* tip);
-        // A slider in percent with a swatch beside it, on one row.
-        void SliderPercentSwatch(const char* label, int& value, int lo, int hi, Color& color, const char* tip);
+        // A slider with a swatch beside it, on one row.
+        void SliderSwatch(const char* label, int& value, int lo, int hi, FunctionRef<std::string(int)> shown, Color& color,
+            const char* tip);
         // A number stepped one at a time by the arrows either side of it, for one whose change moves the window under
         // the pointer, as a slider's would.
         void Stepper(const char* label, int& value, int lo, int hi, const char* format, const char* tip);

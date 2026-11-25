@@ -135,49 +135,35 @@ namespace
         Popup(":", kMissLeft, kMissTop2, kMissRight, kMissBottom2, 0x80404040, 0.5f)};
 }
 
-TEST(the_games_two_calls_for_one_miss_are_one_word_where_the_later_was_as_tall_as_its_box)
+TEST(the_games_two_calls_for_one_miss_are_one_word_where_the_later_was)
 {
-    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(kMissTwins, 100, kGamePicks, kOnTarget);
+    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(kMissTwins, 81.0f, kGamePicks, kOnTarget);
     CHECK_EQ(shown.size(), size_t{1});
     CHECK(shown[0].words == "Miss");
     CHECK_EQ(shown[0].color, 0xFF808080u);
     CHECK_EQ(shown[0].alpha, 0xFFu);
     CHECK(Near(shown[0].center.x, 1924.0444f) && Near(shown[0].center.y, 222.49231f));
-    CHECK(Near(shown[0].lineHeight, 81.0f));
     CHECK_EQ(shown[0].depth, 0.5f);
-    CHECK(Near(ShownCombatPopups(kMissTwins, 50, kGamePicks, kOnTarget)[0].lineHeight, 40.5f));
+    // Its line is the Text Size, whatever the game's box.
+    CHECK(Near(ShownCombatPopups(kMissTwins, 43.0f, kGamePicks, kOnTarget)[0].lineHeight, 43.0f));
 }
 
 TEST(popups_with_the_same_text_far_apart_or_other_texts_on_one_box_stay_apart)
 {
     const std::vector<CombatPopup> apart = {Popup("12", 1000, 200, 1108, 281, 0x80404040, 0.5f),
         Popup("12", 1200, 200, 1308, 281, 0x80404040, 0.5f)};
-    CHECK_EQ(ShownCombatPopups(apart, 100, kGamePicks, kOnTarget).size(), size_t{2});
+    CHECK_EQ(ShownCombatPopups(apart, 81.0f, kGamePicks, kOnTarget).size(), size_t{2});
     const std::vector<CombatPopup> others = {Popup("12", 1000, 200, 1108, 281, 0x80404040, 0.5f),
         Popup("21", 1000, 200, 1108, 281, 0x80404040, 0.5f)};
-    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(others, 100, kGamePicks, kOnTarget);
+    const std::vector<ShownCombatPopup> shown = ShownCombatPopups(others, 81.0f, kGamePicks, kOnTarget);
     CHECK(shown.size() == 2 && shown[0].words == "12" && shown[1].words == "21");
 }
 
 TEST(a_popups_color_shows_twice_as_bright_and_its_alpha_twice_as_strong_up_to_opaque)
 {
-    const std::vector<ShownCombatPopup> half = ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0x40404040, 0.5f)}, 100, kGamePicks, kOnTarget);
+    const std::vector<ShownCombatPopup> half = ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0x40404040, 0.5f)}, 81.0f, kGamePicks, kOnTarget);
     CHECK(half.size() == 1 && half[0].color == 0xFF808080u && half[0].alpha == 0x80u);
-    CHECK_EQ(ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0xFF404040, 0.5f)}, 100, kGamePicks, kOnTarget)[0].alpha, 0xFFu);
-}
-
-TEST(a_faster_fade_takes_a_popup_further_toward_clear_at_every_step_of_the_games_fade)
-{
-    // The game's alpha 0x40, shown as 128 of 255: its fade speed is the power of its share of opaque.
-    const auto alpha = [](uint32_t color, int fade) {
-        return ShownCombatPopups({Popup("7", 0, 0, 54, 81, color, 0.5f)}, 100, kGamePicks, kOnTarget, {}, fade)[0].alpha;
-    };
-    CHECK_EQ(alpha(0x40404040, kDefaultCombatPopupFade), 128u);
-    CHECK_EQ(alpha(0x40404040, 200), 64u);  // 255 * (128 / 255)^2
-    CHECK_EQ(alpha(0x40404040, 50), 181u);  // 255 * (128 / 255)^0.5
-    CHECK_EQ(alpha(0x08404040, 200), 1u);   // 16 of 255, squared
-    CHECK_EQ(alpha(0xFF404040, 200), 0xFFu); // opaque stays opaque
-    CHECK_EQ(alpha(0x00404040, 50), 0u);     // and clear clear
+    CHECK_EQ(ShownCombatPopups({Popup("7", 0, 0, 54, 81, 0xFF404040, 0.5f)}, 81.0f, kGamePicks, kOnTarget)[0].alpha, 0xFFu);
 }
 
 TEST(a_miss_says_what_happened_by_its_message)
@@ -236,7 +222,7 @@ TEST(with_labels_off_an_amount_or_a_drain_is_the_games_bare_number)
 TEST(a_shown_miss_has_its_messages_word)
 {
     const CombatPopup parry = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.5f, PopupEvent{70, 0, 0});
-    CHECK(ShownCombatPopups({parry}, 100, kGamePicks, kOnTarget)[0].words == "Parry");
+    CHECK(ShownCombatPopups({parry}, 81.0f, kGamePicks, kOnTarget)[0].words == "Parry");
 }
 
 TEST(a_popups_text_is_centered_across_with_its_capitals_middle_on_the_popups_middle)
@@ -255,7 +241,7 @@ TEST(the_draw_dump_lines_hold_a_popups_text_color_place_and_depth)
     CHECK_EQ(DescribeCombatPopup(miss), std::string(": | 80404040 | 1874.54,181.99 to 1973.54,262.99 | 0.99876 | message -"));
     const CombatPopup parry = Popup(":", kMissLeft, kMissTop1, kMissRight, kMissBottom1, 0x80404040, 0.99876f, PopupEvent{70, 0, 0});
     CHECK_EQ(DescribeCombatPopup(parry), std::string(": | 80404040 | 1874.54,181.99 to 1973.54,262.99 | 0.99876 | message 70"));
-    const ShownCombatPopup shown = ShownCombatPopups({miss}, 100, kGamePicks, kOnTarget)[0];
+    const ShownCombatPopup shown = ShownCombatPopups({miss}, 81.0f, kGamePicks, kOnTarget)[0];
     CHECK_EQ(DescribeCombatPopup(shown), std::string("Miss | FF808080 alpha 255 | 1924.04,222.49 line 81.00 | 0.99876"));
 }
 
@@ -393,17 +379,17 @@ TEST(a_popup_of_a_type_picked_custom_takes_that_color_at_the_games_alpha)
     const CombatPopup popup = Popup("210", 0, 0, 54, 81, 0x40404040, 0.5f, critical);
     std::array<ColorPick, kPopupTypeCount> picks{};
     picks[static_cast<size_t>(PopupType::Critical)] = ColorPick{ColorSource::Custom, ColorFromRgb(0xFF0000)};
-    const ShownCombatPopup custom = ShownCombatPopups({popup}, 100, picks, kOnTarget)[0];
+    const ShownCombatPopup custom = ShownCombatPopups({popup}, 81.0f, picks, kOnTarget)[0];
     CHECK_EQ(custom.color, 0xFFFF0000u);
     CHECK_EQ(custom.alpha, 0x80u);
     picks[static_cast<size_t>(PopupType::Critical)].source = ColorSource::Game;
-    CHECK_EQ(ShownCombatPopups({popup}, 100, picks, kOnTarget)[0].color, 0xFF808080u);
+    CHECK_EQ(ShownCombatPopups({popup}, 81.0f, picks, kOnTarget)[0].color, 0xFF808080u);
 }
 
 TEST(a_popup_with_no_type_keeps_the_games_color_whatever_is_picked)
 {
     const auto shown = [](std::optional<PopupEvent> event) {
-        return ShownCombatPopups({Popup("128", 0, 0, 54, 81, 0x40404040, 0.5f, event)}, 100, Picks(ColorPick{ColorSource::Custom, ColorFromRgb(0x00FF00)}), kOnTarget)[0].color;
+        return ShownCombatPopups({Popup("128", 0, 0, 54, 81, 0x40404040, 0.5f, event)}, 81.0f, Picks(ColorPick{ColorSource::Custom, ColorFromRgb(0x00FF00)}), kOnTarget)[0].color;
     };
     CHECK_EQ(shown(PopupEvent{1, kPartyMember, kMob, kDamageKind}), 0xFF808080u);
     CHECK_EQ(shown(std::nullopt), 0xFF808080u);
@@ -417,8 +403,8 @@ TEST(with_custom_colors_off_every_popup_keeps_the_games_color)
     const PopupEvent critical{67, kYou, kMob, kDamageKind, PopupType::Critical};
     std::array<ColorPick, kPopupTypeCount> picks = Picks(ColorPick{ColorSource::Custom, ColorFromRgb(0xFF0000)});
     const CombatPopup popup = Popup("210", 0, 0, 54, 81, 0x40404040, 0.5f, critical);
-    CHECK_EQ(ShownCombatPopups({popup}, 100, picks, kOnTarget, off)[0].color, 0xFF808080u);
-    CHECK_EQ(ShownCombatPopups({popup}, 100, picks, kOnTarget)[0].color, 0xFFFF0000u);
+    CHECK_EQ(ShownCombatPopups({popup}, 81.0f, picks, kOnTarget, off)[0].color, 0xFF808080u);
+    CHECK_EQ(ShownCombatPopups({popup}, 81.0f, picks, kOnTarget)[0].color, 0xFFFF0000u);
 }
 
 TEST(a_skillchain_says_its_name_by_the_servers_number_for_it)
@@ -449,7 +435,7 @@ TEST(a_skillchain_on_element_takes_its_elements_color_and_on_custom_the_custom_o
         std::array<ColorPick, kPopupTypeCount> picks = kGamePicks;
         picks[static_cast<size_t>(PopupType::Skillchain)] = pick;
         const PopupEvent skillchain{message, kYou, kMob, kDamageKind, PopupType::Skillchain};
-        return ShownCombatPopups({Popup("412", 0, 0, 54, 81, 0x40404040, 0.5f, skillchain)}, 100, picks, kOnTarget)[0].color;
+        return ShownCombatPopups({Popup("412", 0, 0, 54, 81, 0x40404040, 0.5f, skillchain)}, 81.0f, picks, kOnTarget)[0].color;
     };
     CHECK_EQ(shown(287 + 6, ColorPick{ColorSource::Element}), ElementColor(Element::Fire));
     CHECK_EQ(shown(287 + 14, ColorPick{ColorSource::Element}), ElementColor(Element::Lightning));
@@ -491,6 +477,12 @@ TEST(the_test_run_ends_after_its_last_sample)
     while (run.Next(1000.0)) ++samples;
     CHECK(samples > 0);
     CHECK(!run.Next(2000.0));
+    // The next run starts a gap after the last sample, so the samples keep their pace from one run to the next.
+    run.Start(10.0);
+    const double last = 10.0 + static_cast<double>(samples - 1) * PopupTestRun::kTestGap;
+    CHECK(!run.Over(last));
+    CHECK(!run.Over(last + PopupTestRun::kTestGap - 0.001));
+    CHECK(run.Over(last + PopupTestRun::kTestGap));
 }
 
 TEST(the_test_runs_samples_have_every_type_with_a_color_pick)
@@ -560,17 +552,20 @@ TEST(popups_on_different_sides_of_one_target_spread_in_stacks_of_their_own)
 TEST(a_popups_line_is_free_again_once_the_popup_on_it_is_gone)
 {
     PopupTies ties;
+    // A line is held as long as HeadsUp shows its popup: Duration and then Fade Speed.
+    constexpr double kLife = 1.5;
+    ties.SetLife(kLife);
     CHECK_EQ(LineOf(ties, kYou, 10.0, 0x1000), 0);
-    CHECK_EQ(LineOf(ties, kYou, 10.5, 0x2000), 1);
-    CHECK_EQ(LineOf(ties, kYou, 10.0 + kPopupSpreadSeconds, 0x3000), 0);
-    CHECK_EQ(LineOf(ties, kYou, 10.5 + kPopupSpreadSeconds, 0x4000), 1);
+    CHECK_EQ(LineOf(ties, kYou, 11.0, 0x2000), 1);
+    CHECK_EQ(LineOf(ties, kYou, 10.0 + kLife, 0x3000), 0);
+    CHECK_EQ(LineOf(ties, kYou, 11.0 + kLife, 0x4000), 1);
 }
 
 TEST(a_popup_on_a_later_line_is_drawn_that_many_lines_lower)
 {
     PopupEvent event{1, kMob, kYou, kDamageKind, PopupType::Taken};
     event.line = 2;
-    const ShownCombatPopup shown = ShownCombatPopups({Popup("64", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 50, kGamePicks, kOnTarget)[0];
+    const ShownCombatPopup shown = ShownCombatPopups({Popup("64", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 40.5f, kGamePicks, kOnTarget)[0];
     CHECK(Near(shown.center.x, 127.0f));
     CHECK(Near(shown.center.y, 240.5f + 2 * 40.5f));
 }
@@ -668,18 +663,18 @@ namespace
     {
         PopupEvent event = kOnMob;
         event.line       = line;
-        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks,
+        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 81.0f, kGamePicks,
             Placing(Each(side), body, spread, nudge))[0];
     }
 }
 
-TEST(a_popup_to_the_right_starts_half_its_bodys_height_right_of_the_games_place)
+TEST(a_popup_to_the_right_starts_a_quarter_of_its_bodys_height_right_of_the_games_place)
 {
     const ShownCombatPopup right = Placed(PopupSide::Right, kMobBody);
-    CHECK(Near(right.center.x, 127.0f + 200.0f) && Near(right.center.y, kHeadRow));
+    CHECK(Near(right.center.x, 127.0f + 100.0f) && Near(right.center.y, kHeadRow));
     CHECK_EQ(right.across, 0.0f);
     const ShownCombatPopup left = Placed(PopupSide::Left, kMobBody);
-    CHECK(Near(left.center.x, 127.0f - 200.0f) && Near(left.center.y, kHeadRow));
+    CHECK(Near(left.center.x, 127.0f - 100.0f) && Near(left.center.y, kHeadRow));
     CHECK_EQ(left.across, 1.0f);
 }
 
@@ -688,7 +683,7 @@ TEST(a_popup_beside_its_target_starts_at_its_share_of_the_body_up_from_the_feet_
     const auto row = [](PopupSide side, float height, uint8_t line) {
         PopupEvent event = kOnMob;
         event.line       = line;
-        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks,
+        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 81.0f, kGamePicks,
             Placing(Each(side), kMobBody, 0.0f, 0.0f, height))[0].center.y;
     };
     CHECK(Near(row(PopupSide::Right, 0.0f, 0), 540.0f));
@@ -705,10 +700,10 @@ TEST(each_kind_of_popup_goes_to_the_side_picked_for_it)
     const PopupEvent cure{7, kYou, kMob, kRecoveryKind, PopupType::Recovery}, miss{15, kYou, kMob, kMissKind, PopupType::Miss};
     const std::vector<ShownCombatPopup> shown = ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, kOnMob),
         Popup("34", 100, 200, 154, 281, 0x80404040, 0.5f, cure), Popup(":", 100, 200, 154, 281, 0x80404040, 0.5f, miss)},
-        100, kGamePicks, Placing(sides, kMobBody));
+        81.0f, kGamePicks, Placing(sides, kMobBody));
     CHECK_EQ(shown.size(), size_t{3});
-    CHECK(Near(shown[0].center.x, 327.0f) && shown[0].across == 0.0f);
-    CHECK(Near(shown[1].center.x, -73.0f) && shown[1].across == 1.0f);
+    CHECK(Near(shown[0].center.x, 227.0f) && shown[0].across == 0.0f);
+    CHECK(Near(shown[1].center.x, 27.0f) && shown[1].across == 1.0f);
     CHECK(Near(shown[2].center.x, 127.0f) && Near(shown[2].center.y, kHeadRow) && shown[2].across == 0.5f);
 }
 
@@ -718,7 +713,7 @@ TEST(plain_damage_between_others_goes_where_yours_dealt_goes_on_a_mob_and_where_
     sides[static_cast<size_t>(PopupType::Dealt)] = PopupSide::Right;
     sides[static_cast<size_t>(PopupType::Taken)] = PopupSide::Left;
     const auto across = [&](std::optional<PopupEvent> event) {
-        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 100, kGamePicks,
+        return ShownCombatPopups({Popup("128", 100, 200, 154, 281, 0x80404040, 0.5f, event)}, 81.0f, kGamePicks,
             Placing(sides, kMobBody))[0].across;
     };
     CHECK_EQ(across(PopupEvent{1, kPartyMember, kMob, kDamageKind}), 0.0f);
@@ -745,8 +740,8 @@ TEST(a_popup_in_the_middle_is_centered_on_its_target_at_the_start_height_and_lat
 
 TEST(the_spread_moves_the_side_columns_out_from_the_body_and_leaves_the_middle)
 {
-    CHECK(Near(Placed(PopupSide::Right, kMobBody, 0, 20.0f).center.x, 127.0f + 200.0f + 20.0f));
-    CHECK(Near(Placed(PopupSide::Left, kMobBody, 0, 20.0f).center.x, 127.0f - 200.0f - 20.0f));
+    CHECK(Near(Placed(PopupSide::Right, kMobBody, 0, 20.0f).center.x, 127.0f + 100.0f + 20.0f));
+    CHECK(Near(Placed(PopupSide::Left, kMobBody, 0, 20.0f).center.x, 127.0f - 100.0f - 20.0f));
     CHECK(Near(Placed(PopupSide::Right, std::nullopt, 0, 20.0f).center.x, 127.0f + 81.0f + 20.0f));
     CHECK(Near(Placed(PopupSide::Middle, kMobBody, 0, 20.0f).center.x, 127.0f));
 }
@@ -754,15 +749,7 @@ TEST(the_spread_moves_the_side_columns_out_from_the_body_and_leaves_the_middle)
 TEST(a_nudge_moves_a_popup_up_or_down_from_its_place)
 {
     const ShownCombatPopup nudged = Placed(PopupSide::Right, kMobBody, 0, 0.0f, -20.0f);
-    CHECK(Near(nudged.center.x, 327.0f) && Near(nudged.center.y, kHeadRow - 20.0f));
-}
-
-TEST(a_popups_outline_is_a_tenth_of_its_height_at_its_default_thickness_and_never_under_a_pixel)
-{
-    CHECK_EQ(CombatPopupEdge(40, kDefaultCombatPopupOutline), 4);
-    CHECK_EQ(CombatPopupEdge(40, 200), 8);
-    CHECK_EQ(CombatPopupEdge(40, 50), 2);
-    CHECK_EQ(CombatPopupEdge(8, 25), 1);
+    CHECK(Near(nudged.center.x, 227.0f) && Near(nudged.center.y, kHeadRow - 20.0f));
 }
 
 TEST(a_popups_text_starts_or_ends_on_its_place_when_it_is_beside_its_target)
@@ -991,4 +978,51 @@ TEST(the_sent_actions_go_to_their_parses_oldest_first_by_actor_and_records)
     CHECK(!sent.Take(65001, 1));
     sent.Clear();
     CHECK(!sent.Take(65002, 1));
+}
+
+namespace
+{
+    CombatPopup Drawn(std::string_view text, uintptr_t particle, float x, uint32_t color = 0x20404040)
+    {
+        CombatPopup popup = Popup(text, x, 200, x + 54, 281, color, 0.5f);
+        popup.particle    = particle;
+        return popup;
+    }
+    // The alpha HeadsUp draws a kept popup at, out of 255.
+    uint32_t ShownAlpha(const CombatPopup& popup) { return ShownCombatPopups({popup}, 81.0f, kGamePicks, kOnTarget)[0].alpha; }
+}
+
+TEST(a_popup_stays_whole_for_its_duration_then_fades_to_clear_over_the_fade_after_the_game_ends_it)
+{
+    HeldPopups held;
+    constexpr double kDuration = 1.0, kFade = 0.5;
+    // The game's own alpha, faint here, is not HeadsUp's.
+    const std::vector<CombatPopup>* shown = &held.Update({Drawn("128", 1, 100)}, 10.0, kDuration, kFade);
+    CHECK(shown->size() == 1 && ShownAlpha((*shown)[0]) == 0xFFu);
+    shown = &held.Update({}, 10.9, kDuration, kFade); // the game is done with it
+    CHECK(shown->size() == 1 && ShownAlpha((*shown)[0]) == 0xFFu && (*shown)[0].text == std::string_view("128"));
+    shown = &held.Update({}, 11.25, kDuration, kFade);
+    CHECK(shown->size() == 1 && ShownAlpha((*shown)[0]) == 128u); // half way to clear
+    CHECK(held.Update({}, 11.5, kDuration, kFade).empty());
+}
+
+TEST(a_popup_the_game_keeps_drawing_follows_its_box_and_keeps_its_first_frames_time)
+{
+    HeldPopups held;
+    held.Update({Drawn("128", 1, 100)}, 10.0, 1.0, 0.5);
+    const std::vector<CombatPopup>& moved = held.Update({Drawn("128", 1, 120)}, 10.1, 1.0, 0.5);
+    CHECK(moved.size() == 1 && Near(moved[0].box.minX, 120.0f));
+    const std::vector<CombatPopup>& fading = held.Update({}, 11.25, 1.0, 0.5);
+    CHECK(fading.size() == 1 && ShownAlpha(fading[0]) == 128u && Near(fading[0].box.minX, 120.0f));
+}
+
+TEST(a_particle_drawn_again_after_a_gap_or_with_other_text_is_a_new_popup)
+{
+    HeldPopups held;
+    held.Update({Drawn("12", 1, 100)}, 10.0, 1.0, 0.5);
+    held.Update({}, 10.1, 1.0, 0.5);
+    CHECK_EQ(held.Update({Drawn("12", 1, 300)}, 10.2, 1.0, 0.5).size(), size_t{2});
+    CHECK_EQ(held.Update({Drawn("40", 1, 500)}, 10.3, 1.0, 0.5).size(), size_t{3});
+    // Each keeps its own clock: the first goes first.
+    CHECK_EQ(held.Update({}, 11.6, 1.0, 0.5).size(), size_t{2});
 }

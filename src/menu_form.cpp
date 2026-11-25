@@ -132,6 +132,7 @@ namespace headsup
 
         std::string Pixels(int px) { return Formatted("%d px", px); }
         std::string Seconds(int seconds) { return Formatted("%d s", seconds); }
+        constexpr const char* kSecondsUnit = " s";
         std::string Count(int n) { return std::to_string(n); }
         // A scale, as 1.5x.
         constexpr const char* kTimes = "x";
@@ -2317,12 +2318,17 @@ namespace headsup
                 break;
             case SettingPiece::CombatPopupOutline:
                 form.Fade(!s.combatPopups);
-                form.SliderPercentSwatch(label.c_str(), s.combatPopupOutline, kMinCombatPopupOutline, kMaxCombatPopupOutline,
+                form.SliderSwatch(label.c_str(), s.combatPopupOutline, kMinCombatPopupOutline, kMaxCombatPopupOutline, Pixels,
                     s.combatPopupOutlineColor, tip);
+                break;
+            case SettingPiece::CombatPopupDuration:
+                form.Fade(!s.combatPopups);
+                form.SliderFloat(label.c_str(), s.combatPopupDuration, kMinCombatPopupDuration, kMaxCombatPopupDuration, 1,
+                    kSecondsUnit, tip);
                 break;
             case SettingPiece::CombatPopupFade:
                 form.Fade(!s.combatPopups);
-                form.SliderPercent(label.c_str(), s.combatPopupFade, kMinCombatPopupFade, kMaxCombatPopupFade, tip);
+                form.SliderFloat(label.c_str(), s.combatPopupFade, kMinCombatPopupFade, kMaxCombatPopupFade, 1, kSecondsUnit, tip);
                 break;
             case SettingPiece::CombatPopupSkillchainNames:
                 form.Fade(!s.combatPopups);
@@ -2334,7 +2340,7 @@ namespace headsup
                 break;
             case SettingPiece::CombatPopupSize:
                 form.Fade(!s.combatPopups);
-                form.SliderPercent(label.c_str(), s.combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, tip);
+                form.SliderInt(label.c_str(), s.combatPopupSize, kMinCombatPopupSize, kMaxCombatPopupSize, Pixels, tip);
                 break;
             case SettingPiece::CombatPopupCustomColors:
                 form.Fade(!s.combatPopups);
@@ -3288,22 +3294,13 @@ namespace headsup
     {
         form.layout = &layout;
         // The top panel's and the damage numbers' switches are their pages', beside the title: each turns the whole
-        // of it on and off. Test, before the damage numbers' switch, pops a sample of each kind.
+        // of it on and off.
         const auto pageSwitch = [&] {
             form.Fade(!s.enabled);
             form.BeginBlock(kPageSwitchBlock);
             const std::string id = std::string(layout.PageOf(state.page).key) + "-on";
             if (!state.setup && state.page == Page::TopPanel) form.PageSwitch(id, s.showBar);
-            if (!state.setup && state.page == Page::DamageNumbers)
-            {
-                const LayoutWord& test = layout.WordOf(WindowWord::CombatPopupTest);
-                form.Fade(!s.enabled || !s.combatPopups || !readings.popupTestReady);
-                if (form.Button(test.name, test.name, kWashPill,
-                        readings.popupTestReady ? test.tip : layout.WordOf(WindowWord::CombatPopupTestNotFound).tip))
-                    state.popupTestRequested = true;
-                form.Fade(!s.enabled);
-                form.PageSwitch(id, s.combatPopups);
-            }
+            if (!state.setup && state.page == Page::DamageNumbers) form.PageSwitch(id, s.combatPopups);
             form.Fade(false);
         };
         if (state.setup)

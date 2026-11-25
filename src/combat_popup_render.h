@@ -18,10 +18,10 @@ namespace headsup
     class CombatPopupRender
     {
     public:
-        // Into the scene image, toX by toY times the screen, inside the caller's saved states, the edge outlinePercent
-        // of HeadsUp's own thickness in outlineColor (opaque ARGB).
+        // Into the scene image, toX by toY times the screen, inside the caller's saved states, the edge reaching edge
+        // screen pixels around the letters in outlineColor (opaque ARGB).
         void Draw(IDirect3DDevice8* device, const std::vector<ShownCombatPopup>& popups, const std::string& font,
-            int outlinePercent, uint32_t outlineColor, float toX, float toY);
+            int edge, uint32_t outlineColor, float toX, float toY);
         // Once GDI or Direct3D refused a texture: nothing more is drawn until HeadsUp reloads.
         bool Failed() const { return m_Failed; }
         // What was refused, once.

@@ -202,7 +202,7 @@ namespace headsup
     bool RmlMenu::TakeDebugRequest() { return std::exchange(m_State.debugRequested, false); }
     bool RmlMenu::TakeCaseMove() { return std::exchange(m_State.caseMoveRequested, false); }
     bool RmlMenu::TakeCaseTest() { return std::exchange(m_State.caseTestRequested, false); }
-    bool RmlMenu::TakePopupTest() { return std::exchange(m_State.popupTestRequested, false); }
+    bool RmlMenu::DamageNumbersPageOpen() const { return open && !InSetup() && m_State.page == Page::DamageNumbers; }
     bool RmlMenu::TakeNoticeTest() { return std::exchange(m_State.noticeTestRequested, false); }
     bool RmlMenu::NoticesPageOpen() const { return open && !InSetup() && m_State.page == Page::Notifications; }
     bool RmlMenu::TakeFriendNoticeTest() { return std::exchange(m_State.friendNoticeTestRequested, false); }
