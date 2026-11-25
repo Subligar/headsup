@@ -45,7 +45,6 @@ namespace headsup
             m_Untargetable.clear();
             m_CalledForHelp.clear();
             m_ConquestOwed   = true;
-            m_CurrenciesOwed = true;
             m_Loading        = true;
             m_Shares.reset();
             m_Weather    = ParseZoneInWeather(data, size);
@@ -59,6 +58,7 @@ namespace headsup
                 {
                     m_ConquestBytes.clear();
                     m_Currencies = CurrencyValues{};
+                    m_YourPoints.reset();
                     m_Crafts.reset();
                 }
                 m_Player = *player;
@@ -91,8 +91,16 @@ namespace headsup
             if (const auto owners = ParseConquest(data, size)) m_Owners = *owners;
             if (const auto shares = ParseRegionShares(data, size)) m_Shares = *shares;
             if (data != nullptr) m_ConquestBytes.assign(data, data + size);
+            if (const std::optional<ConquestCurrencies> own = ParseConquestCurrencies(data, size))
+            {
+                m_YourPoints = own->points;
+                m_Currencies[*CurrencyOfKey(kImperialStandingKey)] = own->imperialStanding;
+            }
             break;
         case kCurrencies1Packet:
+            m_YourPoints.reset();
+            ReadCurrencies(m_Currencies, id, data, size);
+            break;
         case kCurrencies2Packet:
             ReadCurrencies(m_Currencies, id, data, size);
             break;
@@ -195,9 +203,16 @@ namespace headsup
         m_ConquestAsked = now;
     }
 
-    bool GameState::CurrencyRequestDue(double now, bool open, bool refresh) const
+    bool GameState::CurrencyRequestDue(double now, bool open) const
     {
-        return open && RequestDue(now, m_CurrenciesOwed, m_CurrenciesAsked, refresh);
+        return open && RequestDue(now, m_CurrenciesOwed, m_CurrenciesAsked, false);
+    }
+
+    CurrencyValues GameState::Currencies(Nation yours) const
+    {
+        CurrencyValues values = m_Currencies;
+        if (const std::optional<int> points = NationPoints(yours); points && m_YourPoints) values[*points] = *m_YourPoints;
+        return values;
     }
 
     void GameState::CurrencyRequested(double now)

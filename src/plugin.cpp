@@ -1017,6 +1017,7 @@ public:
         {
             m_FriendWatch.Forget();
             m_Notices.EndInvite();
+            m_GameState.LoggedIn(); // the currencies are asked for again once in the game
         }
         const bool mapShown = headsup::MapShown(m_OpenWindows);
         m_UiHidden          = m_Screenshot || m_Player.inEvent || mapShown;
@@ -1037,12 +1038,11 @@ public:
                 static_cast<uint32_t>(request.size()), request.data());
             m_GameState.ConquestRequested(now);
         }
-        // Opening the Currencies menu asks for them; HeadsUp asks the same, as for the conquest standings.
-        const bool gilOpen = opened(headsup::BarWidget::Currency);
+        // Opening the Currencies menu asks for them; HeadsUp asks the same once after a login, and the conquest packet
+        // keeps your conquest points and Imperial Standing current.
         if (m_GameState.CurrencyRequestDue(now,
-                g_BarOn && (headsup::WidgetShown(m_Settings, headsup::BarWidget::Currency) || gilOpen) &&
-                    m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0,
-                gilOpen))
+                g_BarOn && (headsup::WidgetShown(m_Settings, headsup::BarWidget::Currency) || opened(headsup::BarWidget::Currency)) &&
+                    m_AshitaCore->GetMemoryManager()->GetPlayer()->GetIsZoning() == 0))
         {
             auto first = headsup::kCurrencies1RequestBytes, second = headsup::kCurrencies2RequestBytes;
             m_AshitaCore->GetPacketManager()->AddOutgoingPacket(headsup::kCurrencies1Request,
@@ -3284,8 +3284,8 @@ private:
         }
         if (needs.gil)
         {
-            s.currencies = m_GameState.Currencies();
             s.nation     = NationNow(); // whose conquest points are yours
+            s.currencies = m_GameState.Currencies(NationNow());
         }
         if (!needs.gil && needs.containers == 0) return s;
         const Ashita::FFXI::item_t* gil =

@@ -29,6 +29,7 @@ namespace headsup
         uint16_t item = 0; // the item it is held as or was before, whose picture is its icon; 0 for none
     };
     // Gil first; the rest in the order of Phoenix's GP_SERV_COMMAND_CURRENCIES_1 and _2.
+    constexpr const char* kImperialStandingKey = "imperial_standing";
     inline constexpr CurrencyInfo kCurrencyTable[] = {
         {"gil", "Gil", 0, 0, 0},
         {"cp_sandoria", "Conquest Points (San d'Oria)", kCurrencies1Packet, 0x04, 4},
@@ -62,7 +63,7 @@ namespace headsup
         {"legion_points", "Legion Points", kCurrencies1Packet, 0x70, 4},
         {"sparks", "Sparks of Eminence", kCurrencies1Packet, 0x74, 4},
         {"shining_stars", "Shining Stars", kCurrencies1Packet, 0x78, 4},
-        {"imperial_standing", "Imperial Standing", kCurrencies1Packet, 0x7C, 4},
+        {kImperialStandingKey, "Imperial Standing", kCurrencies1Packet, 0x7C, 4},
         {"assault_leujaoam", "Assault Points (Leujaoam)", kCurrencies1Packet, 0x80, 4},
         {"assault_mamool", "Assault Points (Mamool Ja)", kCurrencies1Packet, 0x84, 4},
         {"assault_lebros", "Assault Points (Lebros)", kCurrencies1Packet, 0x88, 4},
