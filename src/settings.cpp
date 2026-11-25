@@ -214,6 +214,7 @@ namespace headsup
         constexpr const char* kScaleCursorKey = "scaleCursor";
         constexpr const char* kKeepPointerKey = "keepPointerKeys"; // hex virtual-key codes, a space apart
         constexpr const char* kCurrencyFavoritesKey = "currencyFavorites"; // kCurrencyTable's keys, a space apart
+        constexpr const char* kNoCurrencies = "none"; // an emptied list, which a reader may take an empty value as no key for
         constexpr const char* kCollapsedKey = "popupCollapsed"; // the collapsed pop-out cards' keys, a space apart
         constexpr const char* kStatusFavoritesKey = "statusFavorites", *kStatusPinsKey = "statusPins"; // status ids
 
@@ -2109,7 +2110,7 @@ namespace headsup
             keys += (keys.empty() ? "" : " ") + std::string(hex);
         }
         store.Set(kKeepPointerKey, keys.c_str());
-        store.Set(kCurrencyFavoritesKey, SpaceApart(s.currencyFavorites).c_str());
+        store.Set(kCurrencyFavoritesKey, s.currencyFavorites.empty() ? kNoCurrencies : SpaceApart(s.currencyFavorites).c_str());
         store.Set(kCollapsedKey, SpaceApart(s.collapsedSections).c_str());
         store.Set(kStatusFavoritesKey, s.statusFavorites.empty() ? kNoStatuses : SpaceApart(s.statusFavorites).c_str());
         store.Set(kStatusPinsKey, s.statusPins.empty() ? kNoStatuses : SpaceApart(s.statusPins).c_str());

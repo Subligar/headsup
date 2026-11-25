@@ -3368,7 +3368,7 @@ TEST(the_currency_favorites_are_kept_in_order_and_an_unknown_or_repeated_one_is_
     CHECK((LoadSettings(store).currencyFavorites == std::vector<std::string>{"sparks", "gil"}));
     store.values["currencyFavorites"] = "nothing sparks cp_nation sparks";
     CHECK((LoadSettings(store).currencyFavorites == std::vector<std::string>{"sparks", kYourConquestPoints}));
-    store.values["currencyFavorites"] = "";
+    store.values["currencyFavorites"] = "none";
     CHECK(LoadSettings(store).currencyFavorites.empty()); // every star taken off
 }
 
@@ -3706,6 +3706,7 @@ TEST(an_emptied_starred_list_stays_empty_through_the_settings_file)
     s.Kind(PlateKind::Players).shownStatuses.clear();
     s.statusPins.clear(); // Status Timers emptied: a file without the key pins Signet
     s.statusFavorites.clear(); // and has Signet and Sanction as favorites
+    s.currencyFavorites.clear(); // and gil and your conquest points
     MapStore saved;
     ChangedKeys changed(saved);
     SaveSettings(s, changed);
@@ -3726,5 +3727,6 @@ TEST(an_emptied_starred_list_stays_empty_through_the_settings_file)
     file.file = WithIniValues("", "settings", values);
     const Settings read = LoadSettings(file);
     CHECK(read.Kind(PlateKind::Players).shownStatuses.empty() && read.statusPins.empty() && read.statusFavorites.empty());
+    CHECK(read.currencyFavorites.empty());
     CHECK_EQ(read.Kind(PlateKind::Self).shownStatuses.size(), size_t{6});
 }
