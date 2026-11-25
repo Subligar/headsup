@@ -1725,3 +1725,66 @@ TEST(the_popups_own_decision_is_not_the_chat_lines)
     image.Put(kPopupLineRva + 10, {0x01}); // push 1, as the popup's decision does
     CHECK(LocatePopupEarly(image.Text(), kPopupDecisionRoutine).problem == LocateProblem::NoPopupEarly);
 }
+
+namespace
+{
+    // Ashita.dll's ImGui backend (sha256 a9ee596e..., RVAs from its base): the poll's ScreenToClient then
+    // AddMousePosEvent at 0x156275, and the message handler's two calls (a move at 0x158077, a leave at 0x1580EF), all
+    // to AddMousePosEvent at 0x2FE50; and the button press's hover update on the raw point, at 0x1581D5 to 0x383D0.
+    constexpr uint32_t kImGuiPoll = 0x156258, kImGuiPollCall = 0x156275, kImGuiMoveCall = 0x158077,
+                       kImGuiLeaveCall = 0x1580EF, kAddMousePos = 0x2FE50, kImGuiPressHover = 0x1581B8,
+                       kImGuiHoverCall = 0x1581D5, kHoverUpdate = 0x383D0;
+    constexpr std::initializer_list<uint8_t> kPressHoverBytes = {0x66, 0x0F, 0x6E, 0x45, 0xF0, 0x8D, 0x4D, 0xC0, 0x0F, 0x5B,
+        0xC0, 0xF3, 0x0F, 0x11, 0x45, 0xC0, 0x66, 0x0F, 0x6E, 0x45, 0xF4, 0x0F, 0x5B, 0xC0, 0xF3, 0x0F, 0x11, 0x45, 0xC4};
+
+    void PutCallTo(Image& image, uint32_t call, uint32_t target)
+    {
+        image.Put(call, {0xE8});
+        image.Put32(call + 1, target - (call + kBranchLength));
+    }
+
+    Image ImGuiClient()
+    {
+        Image image;
+        image.Put(kImGuiPoll, {0xFF, 0x15, 0x48, 0x04, 0x1E, 0x10, 0x85, 0xC0, 0x74, 0x18, 0x66, 0x0F, 0x6E, 0x55, 0xDC,
+                                  0x66, 0x0F, 0x6E, 0x4D, 0xD8, 0x8B, 0x4D, 0xB0, 0x0F, 0x5B, 0xD2, 0x0F, 0x5B, 0xC9});
+        PutCallTo(image, kImGuiPollCall, kAddMousePos);
+        image.Put(kImGuiMoveCall - 16, {0x8B, 0xCF, 0x66, 0x0F, 0x6E, 0x55, 0xF4, 0x66, 0x0F, 0x6E, 0x4D, 0xF0, 0x0F, 0x5B, 0xD2,
+                                           0x0F, 0x5B, 0xC9});
+        PutCallTo(image, kImGuiMoveCall, kAddMousePos);
+        image.Put(kImGuiLeaveCall - 8, {0x0F, 0x28, 0xD1, 0x8B, 0x7D, 0xCC, 0x8B, 0xCF});
+        PutCallTo(image, kImGuiLeaveCall, kAddMousePos);
+        PutCallTo(image, 0x158200, kAddMousePos + 0x10); // a call to another routine
+        image.Put(kImGuiPressHover, kPressHoverBytes);
+        PutCallTo(image, kImGuiHoverCall, kHoverUpdate);
+        return image;
+    }
+}
+
+TEST(every_call_into_imguis_mouse_position_is_found_from_ashitas_poll)
+{
+    const ImGuiMouseCalls found = LocateImGuiMouseCalls(ImGuiClient().Text());
+    CHECK(found.problem == LocateProblem::None);
+    CHECK_EQ(found.addMousePos, kAddMousePos);
+    CHECK(found.calls == (std::vector<uint32_t>{kImGuiPollCall, kImGuiMoveCall, kImGuiLeaveCall}));
+    CHECK_EQ(found.hoverCall, kImGuiHoverCall);
+    CHECK_EQ(found.hoverUpdate, kHoverUpdate);
+}
+
+TEST(imguis_mouse_is_left_alone_when_a_press_would_still_test_the_raw_point)
+{
+    // Scaled moves with an unscaled press check would hand the game presses over ImGui's windows.
+    Image noHover = ImGuiClient();
+    noHover.Put(kImGuiPressHover + 6, {0x4E}); // lea ecx,[esi-40h]: not the point it built
+    CHECK(LocateImGuiMouseCalls(noHover.Text()).problem == LocateProblem::NoImGuiMouse);
+}
+
+TEST(imguis_mouse_position_is_left_alone_without_one_poll)
+{
+    CHECK(LocateImGuiMouseCalls(Image{}.Text()).problem == LocateProblem::NoImGuiMouse);
+    Image twice = ImGuiClient();
+    twice.Put(0x160000, {0xFF, 0x15, 0x48, 0x04, 0x1E, 0x10, 0x85, 0xC0, 0x74, 0x18, 0x66, 0x0F, 0x6E, 0x55, 0xDC, 0x66, 0x0F,
+                            0x6E, 0x4D, 0xD8, 0x8B, 0x4D, 0xB0, 0x0F, 0x5B, 0xD2, 0x0F, 0x5B, 0xC9});
+    PutCallTo(twice, 0x16001D, kAddMousePos);
+    CHECK(LocateImGuiMouseCalls(twice.Text()).problem == LocateProblem::AmbiguousImGuiMouse);
+}

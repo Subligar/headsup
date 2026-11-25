@@ -69,6 +69,16 @@ namespace headsup
             0x53, 0x8B, 0x5C, 0x24, 0x0C, 0x85, 0xC9, 0x74, 0x0C, 0x53, 0xE8, -1, -1, -1, -1, 0x8B, 0x0D, -1, -1, -1, -1, 0x38, 0x5E,
             static_cast<int16_t>(kPointerShownOffset)};
         constexpr uint8_t kModRmRegister = 3, kRegisterBits = 7;
+        // Ashita's poll: call [ScreenToClient]; test eax,eax; je; movd xmm2,[ebp-y]; movd xmm1,[ebp-x]; mov ecx,[ebp-io];
+        // cvtdq2ps xmm2,xmm2; cvtdq2ps xmm1,xmm1; call AddMousePosEvent, 29 bytes in.
+        constexpr int16_t kImGuiPoll[] = {0xFF, 0x15, -1, -1, -1, -1, 0x85, 0xC0, 0x74, -1, 0x66, 0x0F, 0x6E, 0x55, -1, 0x66, 0x0F,
+            0x6E, 0x4D, -1, 0x8B, 0x4D, -1, 0x0F, 0x5B, 0xD2, 0x0F, 0x5B, 0xC9, 0xE8};
+        constexpr uint32_t kImGuiPollCall = 29;
+        // The press's point: movd xmm0,[ebp-x]; lea ecx,[ebp-p]; cvtdq2ps xmm0,xmm0; movss [ebp-p],xmm0; and the same for
+        // y into [ebp-p+4]; then the hover update, 29 bytes in.
+        constexpr int16_t kImGuiPressHover[] = {0x66, 0x0F, 0x6E, 0x45, -1, 0x8D, 0x4D, -1, 0x0F, 0x5B, 0xC0, 0xF3, 0x0F, 0x11,
+            0x45, -1, 0x66, 0x0F, 0x6E, 0x45, -1, 0x0F, 0x5B, 0xC0, 0xF3, 0x0F, 0x11, 0x45, -1, 0xE8};
+        constexpr uint32_t kImGuiHoverCall = 29;
 
         // The draw loop: mov ecx,esi; call the window draw; mov eax,[esp+0Ch]; test eax,eax; jnz next; inc bl;
         // cmp bl,9; jl the next layer.
@@ -411,6 +421,8 @@ namespace headsup
         case LocateProblem::PointerShowChanged: return "the game's showing of its pointer is not as expected";
         case LocateProblem::NoKeyHide: return "where the game hides its pointer for a key was not found";
         case LocateProblem::AmbiguousKeyHide: return "where the game hides its pointer for a key was found more than once";
+        case LocateProblem::NoImGuiMouse: return "where Ashita hands ImGui the mouse was not found";
+        case LocateProblem::AmbiguousImGuiMouse: return "where Ashita hands ImGui the mouse was found more than once";
         case LocateProblem::KeyHideDiffers: return "the game hides its pointer for a key through an unexpected function";
         case LocateProblem::NoWindowDraw: return "the game's menu window draw loop was not found";
         case LocateProblem::AmbiguousWindowDraw: return "the game's menu window draw loop was found more than once";
@@ -576,6 +588,23 @@ namespace headsup
                 .empty())
             return PointerShow{LocateProblem::PointerShowChanged};
         return PointerShow{LocateProblem::None, controller, show};
+    }
+
+    ImGuiMouseCalls LocateImGuiMouseCalls(const ImageSection& text)
+    {
+        const std::vector<uint32_t> found = Find(kImGuiPoll, text), hover = Find(kImGuiPressHover, text);
+        const auto fits = [&](uint32_t at, uint32_t call) { return text.size - at >= call + kBranchLength; };
+        if (found.empty() || hover.empty() || !fits(found.front(), kImGuiPollCall) || !fits(hover.front(), kImGuiHoverCall))
+            return ImGuiMouseCalls{LocateProblem::NoImGuiMouse, {}, 0, 0, 0};
+        if (found.size() > 1 || hover.size() > 1) return ImGuiMouseCalls{LocateProblem::AmbiguousImGuiMouse, {}, 0, 0, 0};
+        ImGuiMouseCalls result;
+        result.hoverCall   = text.rva + hover.front() + kImGuiHoverCall;
+        result.hoverUpdate = CallTarget(result.hoverCall, text);
+        result.addMousePos = CallTarget(text.rva + found.front() + kImGuiPollCall, text);
+        for (uint32_t at = 0; at + kBranchLength <= text.size; ++at)
+            if (text.bytes[at] == kCallOpcode && CallTarget(text.rva + at, text) == result.addMousePos)
+                result.calls.push_back(text.rva + at);
+        return result;
     }
 
     KeyHide LocateKeyHide(const ImageSection& text)

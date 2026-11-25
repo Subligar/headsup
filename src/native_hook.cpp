@@ -58,6 +58,11 @@ extern "C"
     void HeadsUpPopupStartGate();
     __attribute__((used)) void HeadsUpOnPopupStarted(uintptr_t task);
     int __stdcall HeadsUpSystemMetric(int index);
+    float g_HeadsUpImGuiScale[2] = {1.0f, 1.0f}; // ImGui's pixels per client pixel, across and down
+    uintptr_t g_HeadsUpAddMousePos = 0;
+    void HeadsUpImGuiMouseGate();
+    uintptr_t g_HeadsUpImGuiHover = 0;
+    void HeadsUpImGuiHoverGate();
 }
 
 // Entered by a jump from MCD::MoveTo's start (thiscall: ecx the window, then x and y): HeadsUp may change where it goes
@@ -198,6 +203,38 @@ _HeadsUpEntityNameGate:
     .intel_syntax noprefix
     mov dword ptr [_g_HeadsUpNameActor], ecx
     jmp dword ptr [_g_HeadsUpEntityNameDraw]
+    .att_syntax prefix
+)");
+
+// In place of Ashita's calls to ImGuiIO::AddMousePosEvent (ecx the io, x in xmm1, y in xmm2): the client position in
+// ImGui's pixels, then on to the call's target. No mouse is -FLT_MAX, which scales to -inf, which ImGui takes the same.
+asm(R"(
+    .text
+    .p2align 4
+    .globl _HeadsUpImGuiMouseGate
+_HeadsUpImGuiMouseGate:
+    .intel_syntax noprefix
+    mulss xmm1, dword ptr [_g_HeadsUpImGuiScale]
+    mulss xmm2, dword ptr [_g_HeadsUpImGuiScale + 4]
+    jmp dword ptr [_g_HeadsUpAddMousePos]
+    .att_syntax prefix
+)");
+
+// In place of Ashita's call that updates ImGui's hovered window from a button press's client point, the ImVec2 at ecx
+// on its stack: the point in ImGui's pixels, so the press goes to the window under it and not to the game.
+asm(R"(
+    .text
+    .p2align 4
+    .globl _HeadsUpImGuiHoverGate
+_HeadsUpImGuiHoverGate:
+    .intel_syntax noprefix
+    movss xmm0, dword ptr [ecx]
+    mulss xmm0, dword ptr [_g_HeadsUpImGuiScale]
+    movss dword ptr [ecx], xmm0
+    movss xmm0, dword ptr [ecx + 4]
+    mulss xmm0, dword ptr [_g_HeadsUpImGuiScale + 4]
+    movss dword ptr [ecx + 4], xmm0
+    jmp dword ptr [_g_HeadsUpImGuiHover]
     .att_syntax prefix
 )");
 
@@ -611,15 +648,17 @@ namespace headsup
             return false;
         }
 
-        // The game's image, its code in text; nullptr, with why, when it is not loaded or its code cannot be read.
-        uint8_t* GameCode(ImageSection& text, std::string& why)
+        // A module's image, its code in text; nullptr, with why, when it is not loaded or its code cannot be read.
+        uint8_t* ModuleCode(const char* module, ImageSection& text, std::string& why)
         {
-            auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(kGameModule));
-            if (base == nullptr) why = std::string(kGameModule) + " is not loaded";
+            auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(module));
+            if (base == nullptr) why = std::string(module) + " is not loaded";
             else if (!FindSection(base, kCodeSection, text)) why = kCodeNotRead;
             else return base;
             return nullptr;
         }
+
+        uint8_t* GameCode(ImageSection& text, std::string& why) { return ModuleCode(kGameModule, text, why); }
 
         // Whether count bytes at at lie in the readable image at base, whose headers FindSection has checked.
         bool InImage(const uint8_t* base, const uint8_t* at, size_t count)
@@ -1429,6 +1468,29 @@ namespace headsup
         uint8_t* keyCall = base + keyHide.offCall;
         patches.push_back(Instruction(keyCall, kBranchLength, kCallOpcode,
             BranchOperand(Address(keyCall), Address(&MouseOffUnlessKept))));
+        // Ashita's ImGui is optional: without it (Signet, another Ashita) the game's part still goes in.
+        m_ImGuiProblem.clear();
+        ImageSection ashitaText{};
+        std::string noAshita;
+        if (uint8_t* ashita = ModuleCode(kAshitaModule, ashitaText, noAshita); ashita != nullptr)
+        {
+            const ImGuiMouseCalls imgui = LocateImGuiMouseCalls(ashitaText);
+            if (imgui.problem != LocateProblem::None) m_ImGuiProblem = Describe(imgui.problem);
+            else
+            {
+                g_HeadsUpAddMousePos = reinterpret_cast<uintptr_t>(ashita) + imgui.addMousePos;
+                g_HeadsUpImGuiHover  = reinterpret_cast<uintptr_t>(ashita) + imgui.hoverUpdate;
+                for (const uint32_t at : imgui.calls)
+                {
+                    uint8_t* call = ashita + at;
+                    patches.push_back(Instruction(
+                        call, kBranchLength, kCallOpcode, BranchOperand(Address(call), Address(&HeadsUpImGuiMouseGate))));
+                }
+                uint8_t* hover = ashita + imgui.hoverCall;
+                patches.push_back(
+                    Instruction(hover, kBranchLength, kCallOpcode, BranchOperand(Address(hover), Address(&HeadsUpImGuiHoverGate))));
+            }
+        }
         if (const std::string failure = PutIn(patches); !failure.empty()) return failure;
         m_Patches          = std::move(patches);
         g_ControllerGlobal = show.controllerGlobal;
@@ -1440,6 +1502,7 @@ namespace headsup
     std::string PointerFix::Stop()
     {
         g_FixPointer = false;
+        g_HeadsUpImGuiScale[0] = g_HeadsUpImGuiScale[1] = 1.0f;
         g_KeepKeys.clear();
         const std::string failure = TakeOut(m_Patches, "the game's reading of the mouse");
         m_Patches.clear();
@@ -1447,7 +1510,18 @@ namespace headsup
         return failure;
     }
 
-    void PointerFix::Enable(bool on) { g_FixPointer = on; }
+    void PointerFix::Enable(bool on)
+    {
+        g_FixPointer = on;
+        if (!on) g_HeadsUpImGuiScale[0] = g_HeadsUpImGuiScale[1] = 1.0f;
+    }
+
+    void PointerFix::ImGuiSize(float width, float height, int clientWidth, int clientHeight)
+    {
+        if (!g_FixPointer || width <= 0.0f || height <= 0.0f || clientWidth <= 0 || clientHeight <= 0) return;
+        g_HeadsUpImGuiScale[0] = width / static_cast<float>(clientWidth);
+        g_HeadsUpImGuiScale[1] = height / static_cast<float>(clientHeight);
+    }
 
     void PointerFix::KeepPointerFor(const std::vector<uint8_t>& keys)
     {
