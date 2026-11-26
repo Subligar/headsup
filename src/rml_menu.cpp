@@ -36,7 +36,6 @@ namespace headsup
 
         constexpr const char* kDocumentName = "settings", *kViewName = "widget settings";
         constexpr float kPopupDrop  = 2.0f;  // pixels between a control and its popup
-        constexpr float kTipDrop    = 18.0f; // pixels from the pointer to its tip
         constexpr char kKeySeparator = '\x1f';
         // Ems past the last letter of a stretch in a design line's box: its caret, and a place to click.
         constexpr float kCaretRoom = 0.4f;
@@ -549,7 +548,7 @@ namespace headsup
         const Rml::Vector2f window = document->GetAbsoluteOffset(Rml::BoxArea::Border);
         const Rml::Vector2f size   = document->GetBox().GetSize(Rml::BoxArea::Border);
         const Rml::Vector2f in(x - window.x, y - window.y);
-        const float gap     = kTipDrop * 0.5f;
+        const float gap     = kMenuTipDrop * 0.5f;
         const bool leftward = in.x > size.x / 2.0f, upward = in.y > size.y / 2.0f;
         tip->RemoveProperty(leftward ? Rml::PropertyId::Left : Rml::PropertyId::Right);
         tip->RemoveProperty(upward ? Rml::PropertyId::Top : Rml::PropertyId::Bottom);
@@ -560,7 +559,7 @@ namespace headsup
         if (upward)
             SetPx(tip, Rml::PropertyId::Bottom, std::round(size.y - in.y + gap));
         else
-            SetPx(tip, Rml::PropertyId::Top, std::round(in.y + kTipDrop));
+            SetPx(tip, Rml::PropertyId::Top, std::round(in.y + kMenuTipDrop));
     }
 
     // A key in a stretch that is not the stretch's own: Backspace at its start and Delete at its end are for the tag

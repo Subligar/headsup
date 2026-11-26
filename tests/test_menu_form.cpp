@@ -100,6 +100,26 @@ TEST(a_page_with_a_description_says_it_on_the_page_above_its_first_card)
     CHECK(w.layout.PageOf(Page::Entities).description == nullptr && !w.Pass().blocks[2].bare);
 }
 
+TEST(an_added_page_is_drawn_by_its_readings_alone)
+{
+    Window w;
+    std::vector<LayoutPage> owned;
+    w.layout  = WithExtraPage(kWindowLayout, "added", "Added", owned);
+    int drawn = 0;
+    w.readings.extraPage = [&](Form& form) {
+        ++drawn;
+        if (!form.BeginCard("Added Card")) return;
+        form.Note("Its own words.");
+        form.EndCard();
+    };
+    CHECK(Has(w.Pass().blocks.front().rml, "<div class=\"nav child\" id=\"nav-added\">"));
+    CHECK_EQ(drawn, 0);
+    const Form form = w.Pass({{"nav-added", kClickEvent, ""}});
+    CHECK(w.state.page == Page::Extra && ClassOn(form, "nav-added", "picked"));
+    CHECK_EQ(drawn, 1);
+    CHECK_EQ(form.CardsShown(), 1);
+}
+
 TEST(the_credits_page_comes_after_feedback_and_shows_its_words_with_no_cards)
 {
     Window w;
