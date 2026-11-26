@@ -336,6 +336,16 @@ _HeadsUpPopupStartGate:
 
 namespace headsup
 {
+    bool WriteCode(uint8_t* at, const uint8_t* bytes, size_t count)
+    {
+        DWORD old = 0;
+        if (!VirtualProtect(at, count, PAGE_EXECUTE_READWRITE, &old)) return false;
+        std::memcpy(at, bytes, count);
+        FlushInstructionCache(GetCurrentProcess(), at, count);
+        VirtualProtect(at, count, old, &old);
+        return true;
+    }
+
     namespace
     {
         constexpr char kCodeSection[]     = ".text";
@@ -666,16 +676,6 @@ namespace headsup
             const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS32*>(
                 base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew);
             return at >= base && at + count <= base + nt->OptionalHeader.SizeOfImage && Readable(at, count);
-        }
-
-        bool WriteCode(uint8_t* at, const uint8_t* bytes, size_t count)
-        {
-            DWORD old = 0;
-            if (!VirtualProtect(at, count, PAGE_EXECUTE_READWRITE, &old)) return false;
-            std::memcpy(at, bytes, count);
-            FlushInstructionCache(GetCurrentProcess(), at, count);
-            VirtualProtect(at, count, old, &old);
-            return true;
         }
 
         // A patch Stop could not take back, or another tool's patch over it that may call on into HeadsUp's gate,

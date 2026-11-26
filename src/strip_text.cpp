@@ -2,6 +2,7 @@
 
 #include "bytes.h"
 #include "native_locate.h"
+#include "world_info.h"
 
 #include <algorithm>
 
@@ -11,6 +12,7 @@ namespace headsup
     {
         constexpr uint8_t kNoWidth = 0x04; // never a CP932 trail byte (0x40 and up), so safe to drop
         constexpr uint8_t kFirstNonAscii = 0x80;
+        constexpr uint8_t kElementMark = 0xEF, kFirstElement = 0x1F; // Fire's mark; the rest follow in Element's order
 
         bool IsLeadByte(uint8_t b) { return (b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC); }
 
@@ -37,6 +39,27 @@ namespace headsup
         const size_t first = text.find_first_not_of(' ');
         if (first == std::string::npos) return "";
         return text.substr(first, text.find_last_not_of(' ') - first + 1);
+    }
+
+    std::string NamedElementMarks(const std::string& cp932)
+    {
+        std::string named;
+        for (size_t i = 0; i < cp932.size(); ++i)
+        {
+            const auto byte = static_cast<uint8_t>(cp932[i]);
+            const auto next = i + 1 < cp932.size() ? static_cast<uint8_t>(cp932[i + 1]) : uint8_t{0};
+            if (byte == kElementMark && next >= kFirstElement && next < kFirstElement + kElementCount)
+                named += ElementName(static_cast<Element>(next - kFirstElement));
+            else if (IsLeadByte(byte) && i + 1 < cp932.size())
+                named += cp932.substr(i, 2);
+            else
+            {
+                named += cp932[i];
+                continue;
+            }
+            ++i;
+        }
+        return named;
     }
 
     std::string Cp932ToUtf8(const std::string& cp932, FunctionRef<std::string(const std::string&)> convert)

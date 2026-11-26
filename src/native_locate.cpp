@@ -44,7 +44,6 @@ namespace headsup
 
         // The guesses' bytes: -1 for the import table addresses, which depend on where the client was loaded. The call is
         // 4 bytes in, the load 10.
-        constexpr int16_t kAnyByte = -1;
         constexpr uint32_t kGuessCall = 4, kGuessLoad = 10;
         constexpr int16_t kMessageGuess[] = {0x8B, 0x48, 0x18, 0x51, 0xFF, 0x15, -1, -1, -1, -1, 0x8B, 0x2D, -1, -1, -1, -1, 0x6A, 0x20,
             0xFF, 0xD5, 0x6A, 0x21};
@@ -358,20 +357,6 @@ namespace headsup
             return calls;
         }
 
-        // Offsets into the section where the pattern matches, its -1 bytes matching anything.
-        std::vector<uint32_t> Find(std::span<const int16_t> pattern, const ImageSection& section)
-        {
-            std::vector<uint32_t> found;
-            for (uint32_t at = 0; at + pattern.size() <= section.size; ++at)
-            {
-                size_t i = 0;
-                while (i < pattern.size() && (pattern[i] == kAnyByte || section.bytes[at + i] == pattern[i]))
-                    ++i;
-                if (i == pattern.size()) found.push_back(at);
-            }
-            return found;
-        }
-
         uint32_t CallTarget(uint32_t call, const ImageSection& text)
         {
             return call + kBranchLength + ReadAt<uint32_t>(text.bytes, call - text.rva + 1);
@@ -388,6 +373,19 @@ namespace headsup
             }
             return returns;
         }
+    }
+
+    std::vector<uint32_t> Find(std::span<const int16_t> pattern, const ImageSection& section)
+    {
+        std::vector<uint32_t> found;
+        for (uint32_t at = 0; at + pattern.size() <= section.size; ++at)
+        {
+            size_t i = 0;
+            while (i < pattern.size() && (pattern[i] == kAnyByte || section.bytes[at + i] == pattern[i]))
+                ++i;
+            if (i == pattern.size()) found.push_back(at);
+        }
+        return found;
     }
 
     const char* Describe(LocateProblem problem)

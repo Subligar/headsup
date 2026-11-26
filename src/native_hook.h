@@ -28,6 +28,8 @@ namespace headsup
     constexpr const char* kAshitaModule = "Ashita.dll";
     // The folder a loaded module was loaded from, without its last separator; empty when it is not loaded.
     std::string ModuleFolder(const char* module);
+    // The plugin's CodeWriter.
+    bool WriteCode(uint8_t* at, const uint8_t* bytes, size_t count);
 
     // An entity whose names the hook may meet this frame, and what becomes of them: kept, hidden or replaced.
     struct NameOwner

@@ -24,6 +24,9 @@ namespace headsup
     // game pads a scrolling line with two; empty while nothing is shown or the level is one the game never draws.
     // The game clears a level by writing a NUL to its first byte, so whatever follows a NUL is never read.
     std::string ShownCp932(const uint8_t* object, size_t size);
+    // The game's text with each element's mark (0xEF then 0x1F for Fire to 0x26 for Dark, drawn as its icon) put as the
+    // element's name; still CP932.
+    std::string NamedElementMarks(const std::string& cp932);
     // ASCII as it is; anything else through convert, the plugin's CP932 to UTF-8.
     std::string Cp932ToUtf8(const std::string& cp932, FunctionRef<std::string(const std::string&)> convert);
 

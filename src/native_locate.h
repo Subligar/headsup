@@ -21,6 +21,11 @@ namespace headsup
         uint32_t size;
     };
 
+    // A byte pattern's byte that matches anything.
+    constexpr int16_t kAnyByte = -1;
+    // Offsets into the section where the pattern matches.
+    std::vector<uint32_t> Find(std::span<const int16_t> pattern, const ImageSection& section);
+
     // The game's name routine overwritten at hook, a whole number of instructions the gate runs again on its way to
     // resume.
     constexpr uint8_t kNameHookBytes[] = {0x33, 0xD2, 0x33, 0xED, 0x33, 0xF6}; // xor edx,edx; xor ebp,ebp; xor esi,esi
