@@ -51,18 +51,28 @@ namespace headsup
         targets.subAnchorY = window.subAnkY * y;
     }
 
-    bool GamePresses::Keep(uint32_t message, bool kept)
+    bool GamePresses::Keep(uint32_t message, bool kept, bool inClient)
     {
-        const auto press = [&](bool& got) {
-            got = !kept;
+        const auto press = [&](Press& got) {
+            got = kept ? Press::Kept : Press::Game;
             return kept;
         };
-        const auto release = [&](bool& got) { return !std::exchange(got, false); };
+        const auto twice = [&](Press& got) {
+            if (got == Press::None) got = Press::Kept;
+            return kept;
+        };
+        const auto release = [&](Press& got) {
+            const Press was = std::exchange(got, Press::None);
+            return was == Press::Kept || (was == Press::None && inClient);
+        };
         switch (message)
         {
         case kLeftDown: return press(m_Left);
         case kRightDown: return press(m_Right);
         case kMiddleDown: return press(m_Middle);
+        case kLeftDouble: return twice(m_Left);
+        case kRightDouble: return twice(m_Right);
+        case kMiddleDouble: return twice(m_Middle);
         case kLeftUp: return release(m_Left);
         case kRightUp: return release(m_Right);
         case kMiddleUp: return release(m_Middle);

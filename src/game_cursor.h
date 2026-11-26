@@ -59,15 +59,22 @@ namespace headsup
     // The game flips a button's held state at each release it gets (FFXiMain 0x1249E0 xors the left one's), so a
     // release whose press it never got leaves the button held: with the left one, the mouse turns the camera. Each
     // release goes to the game only when its press did, whatever is under the pointer by then. The game acts on no
-    // double-click message, so a double-click is no press of its own and the release after one is kept.
+    // double-click message, so a double-click is no press of its own and the release after one is kept. A release
+    // outside the client area with no press before it ends Windows' drag of the title bar or a border, and goes on.
     class GamePresses
     {
     public:
         // kept: HeadsUp's own answer for the message. True when the game must not get it.
-        bool Keep(uint32_t message, bool kept);
+        bool Keep(uint32_t message, bool kept, bool inClient);
 
     private:
-        bool m_Left = false, m_Right = false, m_Middle = false; // the game got the press and not yet its release
+        enum class Press : uint8_t
+        {
+            None,
+            Game, // the game got the press and not yet its release
+            Kept,
+        };
+        Press m_Left = Press::None, m_Right = Press::None, m_Middle = Press::None;
     };
 
     struct CursorName
