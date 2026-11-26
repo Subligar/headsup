@@ -86,20 +86,26 @@ namespace test
         FT_Face m_Face       = nullptr;
     };
 
-    // RmlUi asks for geometry and textures and is given handles that draw nothing.
+    // RmlUi asks for geometry and textures and is given handles that draw nothing. It keeps each texture's source as it
+    // is loaded and as it is let go.
     class NoRender : public Rml::RenderInterface
     {
     public:
         Rml::CompiledGeometryHandle CompileGeometry(Rml::Span<const Rml::Vertex>, Rml::Span<const int>) override { return ++m_Next; }
         void RenderGeometry(Rml::CompiledGeometryHandle, Rml::Vector2f, Rml::TextureHandle) override {}
         void ReleaseGeometry(Rml::CompiledGeometryHandle) override {}
-        Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String&) override
+        Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String& source) override
         {
+            loads.push_back(source);
             dimensions = Rml::Vector2i(kImageSide, kImageSide);
-            return ++m_Next;
+            m_Sources[++m_Next] = source;
+            return m_Next;
         }
         Rml::TextureHandle GenerateTexture(Rml::Span<const Rml::byte>, Rml::Vector2i) override { return ++m_Next; }
-        void ReleaseTexture(Rml::TextureHandle) override {}
+        void ReleaseTexture(Rml::TextureHandle texture) override
+        {
+            if (const auto loaded = m_Sources.find(texture); loaded != m_Sources.end()) releases.push_back(loaded->second);
+        }
         void EnableScissorRegion(bool) override {}
         void SetScissorRegion(Rml::Rectanglei) override {}
         void SetTransform(const Rml::Matrix4f*) override {}
@@ -122,9 +128,11 @@ namespace test
         }
         void PopLayer() override {}
         std::vector<float> composited;
+        std::vector<std::string> loads, releases;
 
     private:
         std::map<uintptr_t, float> m_Filters;
+        std::map<uintptr_t, std::string> m_Sources;
         static constexpr int kImageSide = 16;
         uintptr_t m_Next                = 0;
     };

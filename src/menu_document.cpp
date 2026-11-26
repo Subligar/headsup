@@ -283,7 +283,7 @@ namespace headsup
         // Joined choices. These, tabs, buttons and lists ease between their looks, and the picked one is the gradient.
         css += std::string(".seg,.tab,.btn,.dd,.opt,.wchip{transition:background-color") + kEase + ",border-color" + kEase +
                ",color" + kEase + ";}";
-        css += ".seg.picked,.tab.picked,.btn.accent{decorator:horizontal-gradient(" + color(c.accent) + " " + color(c.accentEnd) +
+        css += ".seg.picked,.tab.picked,.btn.accent,.btn.picked{decorator:horizontal-gradient(" + color(c.accent) + " " + color(c.accentEnd) +
                ");color:" + color(OnAccent(c)) + ";}";
         // Rounded buttons a little apart, as wide together as a slider, a longer name taking more of it; wider only
         // where the names need it in a wide font.

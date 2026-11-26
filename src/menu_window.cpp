@@ -7,6 +7,7 @@
 #include "menu_sizes.h"
 #include "rml_pure.h"
 
+#include <RmlUi/Core/Elements/ElementFormControlInput.h>
 #include <RmlUi/Core/Factory.h>
 #include <RmlUi/Core/StyleSheetContainer.h>
 
@@ -35,6 +36,13 @@ namespace headsup
         constexpr const char* kEntryClass   = "entry";
         constexpr const char* kTextClass    = "text";
         constexpr const char* kKeptClass    = "kept"; // a list's entry the keys chose, lit while the selection is elsewhere
+        constexpr const char* kDimClass     = "dim";
+        constexpr const char* kFillClass    = "fill"; // an entry's first cell
+        constexpr const char* kCellClass    = "cell"; // and the rest
+        constexpr const char* kArrowsClass  = "arrows"; // a text box that takes the arrows
+        constexpr const char* kPictureAttribute = "picture"; // its source, drawn by a decorator once its row is near the view
+        constexpr const char* kSourceAttribute  = "src";
+        constexpr const char* kDetailsAttribute = "details";
         // In ems of the window's text.
         constexpr float kWidth       = 34.0f;
         constexpr float kHeadHeight  = 2.4f; // the title's row, with the cog and the close button in its corner
@@ -46,6 +54,12 @@ namespace headsup
         constexpr float kEntryPad    = 0.6f;  // an entry's text from its sides
         constexpr float kCogShare    = 0.7f;  // the cog's picture, of its button
         constexpr float kListEdge    = 1.0f;  // pixels
+        constexpr float kPictureSide = 1.5f;  // a square a little under the entry's height
+        // The rows in view, part-shown ones too, and one more get their pictures at once; each frame gives as many more,
+        // nearest them first, so textures never load in a burst. Drawn by a decorator: setting an <img>'s source lays the
+        // whole window out again.
+        constexpr int kRowsPictured  = kListRows + 2;
+        constexpr int kPicturesAhead = kRowsPictured;
         // The selection: its ground drawn this much larger, its text made bold by a copy of itself a pixel to the right,
         // as each font is loaded in one weight. Text drawn larger or edged by half a pixel is blurred.
         constexpr float kSelectedGrowth = 1.04f;
@@ -65,6 +79,14 @@ namespace headsup
         }
 
         std::string GroundRml() { return std::string("<div class=\"") + kGameGroundClass + "\"></div>"; }
+
+        // An entry's picture, just after its ground; none without one.
+        Rml::Element* PictureIn(Rml::Element* entry)
+        {
+            Rml::Element* picture = entry->GetNumChildren() > 1 ? entry->GetChild(1) : nullptr;
+            return picture != nullptr && picture->IsClassSet(kGamePictureClass) ? picture : nullptr;
+        }
+        bool Drawn(Rml::Element* picture) { return picture->GetLocalProperty(Rml::PropertyId::Decorator) != nullptr; }
 
         std::string CogFor(const MenuLook& look)
         {
@@ -99,10 +121,14 @@ namespace headsup
             css += std::string(".") + kListClass + "{box-sizing:border-box;width:" + Em(kListWidth + 2.0f * kEntryRoom) + ";height:" +
                    Px(listTall) + ";overflow-y:auto;padding:" + Em(kEntryGap) + " " + side + " 0px " + side + ";background-color:" +
                    RcssColor(c.inset) + ";border:" + Px(kListEdge) + " " + RcssColor(c.border) + ";border-radius:" + Em(kRadius) + ";}";
-            css += std::string(".") + kEntryClass + "{box-sizing:border-box;height:" + Em(kEntryHeight) + ";margin-bottom:" + Em(kEntryGap) + ";padding:0px " +
+            css += std::string(".") + kEntryClass + "{display:flex;box-sizing:border-box;height:" + Em(kEntryHeight) + ";margin-bottom:" + Em(kEntryGap) + ";padding:0px " +
                    Em(kEntryPad) + ";line-height:" + Em(kEntryHeight) + ";white-space:nowrap;border-radius:" + Em(kRadius) +
                    ";background-color:" + RcssColor(c.control) + ";}";
             css += std::string(".") + kEntryClass + ":hover{background-color:" + RcssColor(c.hover) + ";}";
+            css += std::string(".") + kFillClass + "{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;}";
+            css += std::string(".") + kCellClass + "{flex:0 0 auto;margin-left:" + Em(kControlGap) + ";}";
+            css += std::string(".") + kGamePictureClass + "{flex:0 0 auto;align-self:center;width:" + Em(kPictureSide) + ";height:" + Em(kPictureSide) +
+                   ";margin-right:" + Em(kControlGap) + ";}";
             css += std::string(".") + kTextClass + "{color:" + RcssColor(c.label) + ";}";
             css += std::string("#") + kFootId + "{margin-top:" + Em(kGutter) + ";color:" + RcssColor(c.muted) + ";}";
             // Each selectable element stands over its ground, which takes its shape.
@@ -112,18 +138,45 @@ namespace headsup
             css += ".btn" + ground + "," + cog + ground + "," + close + ground + "{border-radius:" + Em(kFrame / 2.0f) + ";}";
             css += std::string(".") + kEntryClass + ground + "{border-radius:" + Em(kRadius) + ";}";
             css += std::string(".") + kTabClass + ground + "{border-radius:" + Em(kRadius) + " " + Em(kRadius) + " 0px 0px;}";
-            const std::string lit = RcssColor(LitGround(c)), selected = std::string("#") + kBodyId + " ." + kGameNavClass + "." + kGameSelClass;
-            css += selected + "{background-color:transparent;border-color:transparent;color:" + RcssColor(c.text) + ";font-effect:shadow(" +
-                   Px(static_cast<float>(kBoldShift)) + " 0px " + RcssColor(c.text) + ");}";
+            // A text box is lit by its own look of having the keyboard, which it has while selected.
+            const std::string lit = RcssColor(LitGround(c)), selected = std::string("#") + kBodyId + " div." + kGameNavClass + "." + kGameSelClass;
+            const auto bold = [](uint32_t color) { return "font-effect:shadow(" + Px(static_cast<float>(kBoldShift)) + " 0px " + RcssColor(color) + ");"; };
+            css += selected + "{background-color:transparent;border-color:transparent;color:" + RcssColor(c.text) + ";" + bold(c.text) + "}";
+            css += std::string(".") + kEntryClass + "." + kDimClass + "{color:" + RcssColor(c.muted) + ";}";
+            css += selected + "." + kDimClass + "{color:" + RcssColor(c.muted) + ";" + bold(c.muted) + "}";
             css += selected + ground + "{background-color:" + lit + ";transform:scale(" + RcssNumber(kSelectedGrowth) + ");}";
-            css += std::string("#") + kBodyId + " ." + kKeptClass + "{background-color:" + lit + ";}";
+            css += std::string("#") + kBodyId + " ." + kKeptClass + ",#" + kBodyId + " ." + kEntryClass + "." + kPickedClass + "{background-color:" + lit + ";}";
             return css;
+        }
+
+        // The settings window's tip in a document of its own: what it shows is laid out apart from the windows' lists.
+        std::string TipStyle(const MenuLook& look)
+        {
+            return MenuViewStyle(look) + "body{pointer-events:none;}#" + kMenuTipId + "{position:static;}";
+        }
+        std::string TipRml(const MenuLook& look)
+        {
+            return "<rml><head><style>" + TipStyle(look) + "</style></head><body><div id=\"" + kMenuTipId + "\"></div></body></rml>";
+        }
+
+        // Where a tip goes beside what it is about: right of it with a gap, else left; from down, else ending at up.
+        struct TipSides
+        {
+            float left, right, down, up;
+        };
+        Rml::Vector2f TipPlace(const TipSides& about, Rml::Vector2f size, Rml::Vector2i screen)
+        {
+            const float gap = kMenuTipDrop * 0.5f;
+            const auto width = static_cast<float>(screen.x), height = static_cast<float>(screen.y);
+            const float x = about.right + gap + size.x <= width ? about.right + gap : about.left - gap - size.x;
+            const float y = about.down + size.y <= height ? about.down : about.up - size.y;
+            return {std::round(std::clamp(x, 0.0f, std::max(0.0f, width - size.x))), std::round(std::clamp(y, 0.0f, std::max(0.0f, height - size.y)))};
         }
 
         std::string WindowRml(const GameWindowSpec& spec, const MenuLook& look)
         {
             const std::string nav = std::string(" class=\"") + kGameNavClass + "\"";
-            std::string rml = "<rml><head><style>" + GameWindowStyle(look) + "</style></head><body id=\"" + kBodyId + "\"><div id=\"" +
+            std::string rml = "<rml><head><style>" + GameWindowStyle(look) + spec.style + "</style></head><body id=\"" + kBodyId + "\"><div id=\"" +
                               kMenuArtId + "\">" + kArtRml + "</div><handle id=\"" + kHeadId + "\" " + MoveHandleAttributes() +
                               "><div id=\"" + kTitleId + "\">" + EscapedRml(spec.title) + "</div></handle>";
             rml += std::string("<div id=\"") + kGameCogId + "\"" + nav + ">" + GroundRml() + "<img id=\"" + kCogPicture + "\" src=\"" +
@@ -145,7 +198,11 @@ namespace headsup
         }
 
         // A move of the pointer, not a mouseover: one comes each update an element scrolls or opens under a pointer at rest.
-        constexpr std::array kListened{Rml::EventId::Click, Rml::EventId::Mousemove, Rml::EventId::Mousedown, Rml::EventId::Dragend};
+        constexpr std::array kListened{Rml::EventId::Click, Rml::EventId::Mousemove, Rml::EventId::Mousedown, Rml::EventId::Dragend, Rml::EventId::Scroll};
+        // A text box's keys: it keeps them from the document's bubbling listeners.
+        constexpr bool kInCapture = true;
+
+        bool IsTextBox(const Rml::Element* element) { return element != nullptr && element->GetTagName() == "input"; }
 
         Rml::Element* ListOf(Rml::Element* element)
         {
@@ -177,20 +234,46 @@ namespace headsup
         }
     }
 
-    std::string GameButtonRml(const std::string& id, const std::string& label)
+    std::string GameButtonRml(const std::string& id, const std::string& label, bool picked)
     {
-        return std::string("<div class=\"") + kRaisedPill + " " + kGameNavClass + "\" id=\"" + id + "\">" + GroundRml() + EscapedRml(label) +
-               "</div>";
+        return std::string("<div class=\"") + kRaisedPill + " " + kGameNavClass + (picked ? std::string(" ") + kPickedClass : std::string()) +
+               "\" id=\"" + id + "\">" + GroundRml() + EscapedRml(label) + "</div>";
     }
 
-    std::string GameListRml(const std::string& id, const std::vector<std::string>& entries)
+    std::string GameListRml(const std::string& id, const std::vector<GameEntry>& entries)
     {
-        std::string rml = std::string("<div class=\"") + kListClass + "\" id=\"" + id + "\">";
-        for (size_t i = 0; i < entries.size(); ++i)
-            rml += std::string("<div class=\"") + kEntryClass + " " + kGameNavClass + "\" id=\"" + id + "-" + std::to_string(i) + "\">" + GroundRml() +
-                   EscapedRml(entries[i]) + "</div>";
-        return rml + "</div>";
+        return std::string("<div class=\"") + kListClass + "\" id=\"" + id + "\">" + GameEntriesRml(id, entries) + "</div>";
     }
+
+    std::string GameEntriesRml(const std::string& listId, const std::vector<GameEntry>& entries)
+    {
+        std::string rml;
+        for (size_t i = 0; i < entries.size(); ++i)
+        {
+            rml += std::string("<div class=\"") + kEntryClass + " " + kGameNavClass + (entries[i].dim ? std::string(" ") + kDimClass : std::string()) +
+                   (entries[i].picked ? std::string(" ") + kPickedClass : std::string()) + "\" id=\"" + listId + "-" + std::to_string(i) + "\"" +
+                   (entries[i].details.empty() ? std::string() : GameDetailsAttribute(entries[i].details)) + ">" + GroundRml();
+            if (!entries[i].picture.empty())
+                rml += std::string("<div class=\"") + kGamePictureClass + "\" " + kPictureAttribute + "=\"" + EscapedRml(entries[i].picture) + "\"></div>";
+            for (size_t cell = 0; cell < entries[i].cells.size(); ++cell)
+                rml += std::string("<div class=\"") + (cell == 0 ? kFillClass : kCellClass) + "\">" + EscapedRml(entries[i].cells[cell]) + "</div>";
+            rml += "</div>";
+        }
+        return rml;
+    }
+
+    std::string GameTextBoxRml(const std::string& id, const std::string& hint, bool takesArrows)
+    {
+        return std::string("<input type=\"text\" class=\"") + kGameNavClass + (takesArrows ? std::string(" ") + kArrowsClass : std::string()) +
+               "\" id=\"" + id + "\" placeholder=\"" + EscapedRml(hint) + "\"/>";
+    }
+
+    std::string GameDetailsAttribute(const std::string& details)
+    {
+        return std::string(" ") + kDetailsAttribute + "=\"" + EscapedRml(details) + "\"";
+    }
+
+    std::string ArrowPress(const std::string& id, MenuAction arrow) { return id + ":" + MenuActionName(arrow); }
 
     std::string GameRowRml(const std::string& rml) { return std::string("<div class=\"") + kRowClass + "\">" + rml + "</div>"; }
     std::string GameColumnRml(const std::string& rml) { return std::string("<div class=\"") + kColumnClass + "\">" + rml + "</div>"; }
@@ -202,19 +285,153 @@ namespace headsup
     void GameWindows::Update(Rml::Context* context, const MenuLook& look, const std::vector<WindowPlace>& places)
     {
         // Another context: the one the windows were in is gone, and they with it.
-        if (context != m_Context) m_Open.clear();
+        if (context != m_Context)
+        {
+            m_Open.clear();
+            LetGoOfPictures();
+            m_Tip = nullptr;
+            m_TipShown.clear();
+            m_TipUp = false;
+        }
         m_Context = context;
         m_Places  = places;
-        if (m_Look == look) return;
-        m_Look = look;
-        for (const Window& window : m_Open)
-            Restyle(window);
+        if (m_Look != look)
+        {
+            m_Look = look;
+            for (Window& window : m_Open)
+                Restyle(window);
+            if (m_Tip != nullptr) m_Tip->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(TipStyle(look)));
+        }
+        int ahead = kPicturesAhead;
+        for (Window& window : m_Open)
+            ShowPictures(window, ahead);
+        ShowTip();
     }
 
-    void GameWindows::Restyle(const Window& window) const
+    void GameWindows::ShowTip()
     {
-        window.document->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(GameWindowStyle(*m_Look)));
-        if (Rml::Element* picture = window.document->GetElementById(kCogPicture)) picture->SetAttribute("src", CogFor(*m_Look));
+        // What the pointer is over first, then what the keys chose in the newest window.
+        Rml::Element* over = m_Context->GetHoverElement();
+        while (over != nullptr && !over->HasAttribute(kDetailsAttribute))
+            over = over->GetParentNode();
+        if (over != nullptr && std::none_of(m_Open.begin(), m_Open.end(), [&](const Window& w) { return w.document == over->GetOwnerDocument(); }))
+            over = nullptr;
+        Rml::Element* chosen = over == nullptr && !m_Open.empty() && m_Open.back().byKeys ? m_Open.back().selected : nullptr;
+        Rml::Element* about  = over != nullptr ? over : chosen;
+        const std::string details = about != nullptr ? about->GetAttribute<Rml::String>(kDetailsAttribute, "") : std::string();
+        if (details.empty()) return HideTip();
+        if (m_Tip == nullptr && (m_Tip = m_Context->LoadDocumentFromMemory(TipRml(*m_Look), kSource)) == nullptr) return;
+        Rml::Element* tip = m_Tip->GetElementById(kMenuTipId);
+        if (details != m_TipShown)
+        {
+            // Measured at the screen's corner, where it has all the room it may take.
+            m_Tip->SetProperty(Rml::PropertyId::Left, Rml::Property(0.0f, Rml::Unit::PX));
+            m_Tip->SetProperty(Rml::PropertyId::Top, Rml::Property(0.0f, Rml::Unit::PX));
+            tip->SetInnerRML(details);
+            m_Tip->UpdateDocument();
+            m_TipShown = details;
+            m_TipAt.reset();
+        }
+        TipSides sides{m_Pointer.x, m_Pointer.x, m_Pointer.y + kMenuTipDrop, m_Pointer.y - kMenuTipDrop * 0.5f};
+        if (over == nullptr)
+        {
+            // Laid out where it stands now: a window placed this frame is laid out there only at the context's update.
+            // Beside the window, level with what was chosen: beside the entry, it would cover the buttons next to its list.
+            Rml::ElementDocument* window = chosen->GetOwnerDocument();
+            window->UpdateDocument();
+            const float y = chosen->GetAbsoluteOffset(Rml::BoxArea::Border).y, x = window->GetAbsoluteOffset(Rml::BoxArea::Border).x;
+            sides = {x, x + window->GetBox().GetSize(Rml::BoxArea::Border).x, y, y + chosen->GetBox().GetSize(Rml::BoxArea::Border).y};
+        }
+        const Rml::Vector2f at = TipPlace(sides, tip->GetBox().GetSize(Rml::BoxArea::Border), m_Context->GetDimensions());
+        if (at != m_TipAt)
+        {
+            m_Tip->SetProperty(Rml::PropertyId::Left, Rml::Property(at.x, Rml::Unit::PX));
+            m_Tip->SetProperty(Rml::PropertyId::Top, Rml::Property(at.y, Rml::Unit::PX));
+            m_TipAt = at;
+        }
+        if (!std::exchange(m_TipUp, true)) m_Tip->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+    }
+
+    void GameWindows::HideTip()
+    {
+        if (m_Tip != nullptr && std::exchange(m_TipUp, false)) m_Tip->Hide();
+    }
+
+    void GameWindows::Restyle(Window& window) const
+    {
+        window.document->SetStyleSheetContainer(Rml::Factory::InstanceStyleSheetString(GameWindowStyle(*m_Look) + window.style));
+        if (Rml::Element* picture = window.document->GetElementById(kCogPicture)) picture->SetAttribute(kSourceAttribute, CogFor(*m_Look));
+        window.picturesDue = true;
+    }
+
+    void GameWindows::ShowPictures(Window& window, int& ahead)
+    {
+        if (!std::exchange(window.picturesDue, false)) return;
+        // Every entry stands at the same pitch from the list's top.
+        const float pitch = (kEntryHeight + kEntryGap) * static_cast<float>(m_Look->fontPixels);
+        Rml::ElementList lists;
+        window.document->GetElementsByClassName(lists, kListClass);
+        const auto view = [&](Rml::Element* list) {
+            const int first = std::min(static_cast<int>(list->GetScrollTop() / pitch), list->GetNumChildren());
+            return std::pair(first, std::min(first + kRowsPictured, list->GetNumChildren()));
+        };
+        for (Rml::Element* list : lists)
+            for (auto [row, end] = view(list); row < end; ++row)
+                if (Rml::Element* picture = PictureIn(list->GetChild(row))) Draw(picture);
+        for (Rml::Element* list : lists)
+        {
+            const auto [first, end] = view(list);
+            const int rows = list->GetNumChildren();
+            for (int away = 0; end + away < rows || first - away > 0; ++away)
+                for (const int row : {end + away, first - 1 - away})
+                {
+                    Rml::Element* picture = row >= 0 && row < rows ? PictureIn(list->GetChild(row)) : nullptr;
+                    if (picture == nullptr || Drawn(picture)) continue;
+                    // Ahead of the view only while there is room to keep them, or they would push out what is shown.
+                    if (m_Pictures.size() >= kGamePicturesKept) return;
+                    if (ahead == 0)
+                    {
+                        window.picturesDue = true;
+                        return;
+                    }
+                    --ahead;
+                    Draw(picture);
+                }
+        }
+    }
+
+    void GameWindows::Draw(Rml::Element* picture)
+    {
+        const std::string source = picture->GetAttribute<Rml::String>(kPictureAttribute, "");
+        if (!Drawn(picture)) picture->SetProperty("decorator", "image(\"" + source + "\")");
+        std::erase(m_Pictures, source);
+        m_Pictures.push_back(source);
+        if (m_Pictures.size() > kGamePicturesKept) LetGo(std::string(m_Pictures.front()));
+    }
+
+    void GameWindows::LetGo(const std::string& source)
+    {
+        // RmlUi would load it again for anything still drawing it.
+        for (Window& window : m_Open)
+        {
+            Rml::ElementList pictures;
+            window.document->GetElementsByClassName(pictures, kGamePictureClass);
+            for (Rml::Element* picture : pictures)
+                if (Drawn(picture) && picture->GetAttribute<Rml::String>(kPictureAttribute, "") == source)
+                {
+                    picture->RemoveProperty(Rml::PropertyId::Decorator);
+                    window.picturesDue = true;
+                }
+        }
+        Rml::ReleaseTexture(source);
+        std::erase(m_Pictures, source);
+    }
+
+    void GameWindows::LetGoOfPictures()
+    {
+        for (const std::string& source : m_Pictures)
+            Rml::ReleaseTexture(source);
+        m_Pictures.clear();
     }
 
     bool GameWindows::Open(const GameWindowSpec& spec, const std::string& parent)
@@ -224,8 +441,9 @@ namespace headsup
         if (document == nullptr) return false;
         for (const Rml::EventId id : kListened)
             document->AddEventListener(id, this);
+        document->AddEventListener(Rml::EventId::Keydown, this, kInCapture);
         document->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
-        m_Open.push_back({spec.id, parent, spec.settingsPage, spec.settingsCard, document, spec.tabs.size()});
+        m_Open.push_back({spec.id, parent, spec.settingsPage, spec.settingsCard, spec.style, document, spec.tabs.size(), 0, nullptr, false, spec.ownsCancel});
         PullToFront();
         // Measured as it shows its first tab alone.
         ShowTab(m_Open.back(), 0, true);
@@ -258,15 +476,22 @@ namespace headsup
             closing.push_back(at->id);
             for (const Rml::EventId event : kListened)
                 at->document->RemoveEventListener(event, this);
+            at->document->RemoveEventListener(Rml::EventId::Keydown, this, kInCapture);
             at->document->Close();
             at = m_Open.erase(at);
         }
+        HideTip();
     }
 
     void GameWindows::Close()
     {
         while (!m_Open.empty())
             Close(std::string(m_Open.front().id));
+        LetGoOfPictures();
+        if (m_Tip != nullptr) m_Tip->Close();
+        m_Tip = nullptr;
+        m_TipShown.clear();
+        m_TipUp = false;
     }
 
     bool GameWindows::Act(MenuAction action)
@@ -282,7 +507,12 @@ namespace headsup
         case MenuAction::Confirm:
             if (window.selected != nullptr) Activate(window, window.selected);
             break;
-        case MenuAction::Cancel: Close(std::string(window.id)); break;
+        case MenuAction::Cancel:
+            if (window.ownsCancel)
+                m_Pressed.push_back(kGameCancelId);
+            else
+                Close(std::string(window.id));
+            break;
         case MenuAction::TabLeft:
             if (window.tab > 0) ShowTab(window, window.tab - 1, true);
             break;
@@ -299,11 +529,58 @@ namespace headsup
 
     bool GameWindows::IsOpen(const std::string& id) const { return Find(id) != nullptr; }
 
-    void GameWindows::SetText(const std::string& window, const std::string& id, const std::string& text)
+    void GameWindows::SetText(const std::string& window, const std::string& id, const std::string& text) { SetRml(window, id, EscapedRml(text)); }
+
+    void GameWindows::SetRml(const std::string& window, const std::string& id, const std::string& rml)
+    {
+        Window* open          = Find(window);
+        Rml::Element* element = open != nullptr ? open->document->GetElementById(id) : nullptr;
+        if (element == nullptr) return;
+        open->picturesDue = true;
+        if (open->selected != nullptr && (open->selected == element || element->Contains(open->selected)))
+        {
+            if (IsTextBox(open->selected)) open->selected->Blur();
+            open->selected = nullptr;
+        }
+        element->SetInnerRML(rml);
+    }
+
+    void GameWindows::SetCell(const std::string& window, const std::string& entry, size_t cell, const std::string& text)
     {
         const Window* open = Find(window);
-        if (Rml::Element* element = open != nullptr ? open->document->GetElementById(id) : nullptr) element->SetInnerRML(EscapedRml(text));
+        Rml::Element* element = open != nullptr ? open->document->GetElementById(entry) : nullptr;
+        for (int i = 0; element != nullptr && i < element->GetNumChildren(); ++i)
+            if (Rml::Element* child = element->GetChild(i); !child->IsClassSet(kGameGroundClass) && !child->IsClassSet(kGamePictureClass) && cell-- == 0)
+                return child->SetInnerRML(EscapedRml(text));
     }
+
+    std::string GameWindows::TextOf(const std::string& window, const std::string& id) const
+    {
+        const Window* open = Find(window);
+        Rml::Element* element = open != nullptr ? open->document->GetElementById(id) : nullptr;
+        const auto* box = IsTextBox(element) ? rmlui_dynamic_cast<Rml::ElementFormControlInput*>(element) : nullptr;
+        return box != nullptr ? box->GetValue() : std::string();
+    }
+
+    void GameWindows::SetValue(const std::string& window, const std::string& id, const std::string& text)
+    {
+        const Window* open = Find(window);
+        Rml::Element* element = open != nullptr ? open->document->GetElementById(id) : nullptr;
+        if (auto* box = IsTextBox(element) ? rmlui_dynamic_cast<Rml::ElementFormControlInput*>(element) : nullptr) box->SetValue(text);
+    }
+
+    void GameWindows::ShowTab(const std::string& window, size_t tab)
+    {
+        if (Window* open = Find(window)) ShowTab(*open, tab, true);
+    }
+
+    void GameWindows::Select(const std::string& window, const std::string& id)
+    {
+        Window* open = Find(window);
+        if (Rml::Element* element = open != nullptr ? open->document->GetElementById(id) : nullptr) Select(*open, element, true);
+    }
+
+    bool GameWindows::SelectedByKeys() const { return !m_Open.empty() && m_Open.back().byKeys; }
 
     std::string GameWindows::Selected() const
     {
@@ -336,6 +613,7 @@ namespace headsup
             if (Rml::Element* was = window.selected)
             {
                 was->SetClass(kGameSelClass, false);
+                if (IsTextBox(was)) was->Blur();
                 if (window.byKeys && ListOf(was) != nullptr && ListOf(was) != list) was->SetClass(kKeptClass, true);
             }
             if (list != nullptr)
@@ -343,12 +621,15 @@ namespace headsup
                     list->GetChild(i)->SetClass(kKeptClass, false);
             window.selected = element;
             element->SetClass(kGameSelClass, true);
+            if (IsTextBox(element)) element->Focus();
         }
         window.byKeys = byKeys;
         if (!byKeys) return;
         // The pointer lets go of what it is over, which would look selected too, until it moves.
         m_Context->ProcessMouseLeave();
-        if (list != nullptr) ScrollToShow(list, element);
+        if (list == nullptr) return;
+        window.document->UpdateDocument(); // an entry set since the last update has no place yet
+        ScrollToShow(list, element);
     }
 
     void GameWindows::Activate(Window& window, Rml::Element* element)
@@ -367,21 +648,31 @@ namespace headsup
     void GameWindows::ShowTab(Window& window, size_t tab, bool selectContent)
     {
         if (tab >= window.tabs) return;
-        window.tab = tab;
+        window.tab         = tab;
+        window.picturesDue = true;
         for (size_t i = 0; i < window.tabs; ++i)
         {
             if (Rml::Element* name = window.document->GetElementById(kGameTabId + std::to_string(i))) name->SetClass(kPickedClass, i == tab);
             if (Rml::Element* pane = window.document->GetElementById(kPaneId + std::to_string(i))) pane->SetClass(kHiddenClass, i != tab);
         }
-        if (!selectContent) return;
+        if (selectContent) SelectFirst(window);
+    }
+
+    void GameWindows::SelectFirst(Window& window)
+    {
         window.document->UpdateDocument();
-        const std::vector<Rml::Element*> inside = Selectable(window.document->GetElementById(kPaneId + std::to_string(tab)));
-        Rml::Element* first = !inside.empty() ? inside.front() : window.document->GetElementById(kGameTabId + std::to_string(tab));
+        const std::vector<Rml::Element*> inside = Selectable(window.document->GetElementById(kPaneId + std::to_string(window.tab)));
+        Rml::Element* first = !inside.empty() ? inside.front() : window.document->GetElementById(kGameTabId + std::to_string(window.tab));
         Select(window, first != nullptr ? first : window.document->GetElementById(kMenuCloseId), true);
     }
 
     void GameWindows::Move(Window& window, MenuAction move)
     {
+        if (window.selected != nullptr && window.selected->IsClassSet(kArrowsClass))
+        {
+            m_Pressed.push_back(ArrowPress(window.selected->GetId(), move));
+            return;
+        }
         window.document->UpdateDocument();
         std::vector<Rml::Element*> elements = Selectable(window.document);
         // Left and right keep to the tab's own parts: past its edge is the title bar's cog, which they stand apart from.
@@ -411,7 +702,7 @@ namespace headsup
         }
         if (current == elements.size())
         {
-            if (!elements.empty()) Select(window, elements.front(), true);
+            SelectFirst(window);
             return;
         }
         const std::optional<size_t> next = NextFocus(boxes, current, move);
@@ -420,6 +711,12 @@ namespace headsup
         Rml::Element* list = ListOf(to);
         Rml::Element* kept = list != nullptr && list != ListOf(window.selected) ? list->QuerySelector(std::string(".") + kKeptClass) : nullptr;
         Select(window, kept != nullptr ? kept : to, true);
+    }
+
+    bool GameWindows::Typing() const
+    {
+        const Rml::Element* focus = m_Context != nullptr ? m_Context->GetFocusElement() : nullptr;
+        return IsTextBox(focus) && std::any_of(m_Open.begin(), m_Open.end(), [&](const Window& w) { return w.document == focus->GetOwnerDocument(); });
     }
 
     void GameWindows::PullToFront() const
@@ -434,6 +731,13 @@ namespace headsup
         const Rml::ElementDocument* document = target != nullptr ? target->GetOwnerDocument() : nullptr;
         const auto window = std::find_if(m_Open.begin(), m_Open.end(), [&](const Window& w) { return w.document == document; });
         if (window == m_Open.end()) return;
+        if (event.GetId() == Rml::EventId::Mousemove)
+            m_Pointer = {event.GetParameter<float>("mouse_x", 0.0f), event.GetParameter<float>("mouse_y", 0.0f)};
+        if (event.GetId() == Rml::EventId::Scroll)
+        {
+            window->picturesDue = true;
+            return;
+        }
         if (event.GetId() == Rml::EventId::Dragend)
         {
             // The handle has moved it, but it is laid out there only on the next update.
@@ -449,12 +753,24 @@ namespace headsup
             if (event.GetParameter<int>("button", 0) == kRmlRightButton) Act(MenuAction::Cancel);
             return;
         }
+        if (event.GetId() == Rml::EventId::Keydown)
+        {
+            if (!IsTextBox(target) || target != window->selected) return;
+            switch (static_cast<Rml::Input::KeyIdentifier>(event.GetParameter<int>("key_identifier", 0)))
+            {
+            case Rml::Input::KI_UP: Move(*window, MenuAction::Up); break;
+            case Rml::Input::KI_DOWN: Move(*window, MenuAction::Down); break;
+            default: break;
+            }
+            return;
+        }
         if (std::any_of(m_Open.begin(), m_Open.end(), [&](const Window& w) { return w.parent == window->id; })) return;
         Rml::Element* nav = target;
         while (nav != nullptr && nav != document && !nav->IsClassSet(kGameNavClass))
             nav = nav->GetParentNode();
         if (nav == nullptr || nav == document) return;
         Select(*window, nav, false);
-        if (event.GetId() == Rml::EventId::Click) Activate(*window, nav);
+        // A click into a text box gives it the keyboard; only Enter presses it.
+        if (event.GetId() == Rml::EventId::Click && !IsTextBox(nav)) Activate(*window, nav);
     }
 }
