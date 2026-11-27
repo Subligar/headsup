@@ -85,6 +85,7 @@ namespace headsup
     constexpr const char* kMenuTipAttribute = "tip";
     constexpr const char* kMenuTipTitleAttribute = "tip-title"; // a tip's title, drawn over it after a SENDS PACKETS mark
     constexpr const char* kTipTitleClass         = "tip-title";
+    constexpr float kMenuTipDrop = 18.0f; // pixels from the pointer down to its tip, and twice what stands it off
 
     // A window's title handle's attributes: it moves the window, which it lets off the screen but for kWindowKeptOn of
     // it, and never off the top.

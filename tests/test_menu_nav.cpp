@@ -336,3 +336,14 @@ TEST(only_what_the_windows_use_is_kept)
     CHECK(!taken.Keep({InputSource::DirectInput, 0, 100}, true)); // a DirectInput stick is left to the game
     CHECK(taken.Keep(DirectButton(5, true), true));
 }
+
+TEST(while_a_game_windows_text_box_has_the_keyboard_only_enter_and_escape_go_to_the_windows)
+{
+    constexpr uint32_t kEnter = 0x0D, kEscape = 0x1B, kLeft = 0x25, kDown = 0x28; // Windows' virtual keys
+    for (const uint32_t key : {kEnter, kEscape, kLeft, kDown, uint32_t{'C'}})
+    {
+        CHECK(WindowsHearKey(key, false, false));  // no text box has it
+        CHECK(!WindowsHearKey(key, true, false)); // the settings window's
+        CHECK_EQ(WindowsHearKey(key, true, true), key == kEnter || key == kEscape);
+    }
+}

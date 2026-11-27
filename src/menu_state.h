@@ -27,6 +27,8 @@ namespace headsup
     bool KindPagesShown(const Settings& s);
     // The sidebar's pages in the file's order, but Vanilla UI always the last of the pages under User Interface.
     std::vector<const LayoutPage*> SidebarPages(const WindowLayout& layout);
+    // The layout with Page::Extra as the last page under User Interface, its pages kept in owned.
+    WindowLayout WithExtraPage(const WindowLayout& layout, const char* key, const char* name, std::vector<LayoutPage>& owned);
 
 
     // A label with each word capitalized after a space or a hyphen ("Sub-Target"), but for the small words inside it

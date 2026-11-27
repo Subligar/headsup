@@ -33,6 +33,7 @@ namespace headsup
         TargetCursor,
         DamageNumbers,
         Credits,
+        Extra, // a developer build's own page, in no layout file
     };
     constexpr int kPageCount = static_cast<int>(Page::Credits) + 1;
 

@@ -11,6 +11,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -57,6 +58,7 @@ namespace headsup
         std::array<PartMark, kWidgetPartCount> partMarks{};
         std::string localZone; // the computer's time zone, as LocalZoneName names it
         CalendarDay today;     // the computer's date
+        std::function<void(Form&)> extraPage = {}; // draws Page::Extra's cards
     };
 
     // The Game Windows card's own state: its filter and whether it lists every window.

@@ -26,6 +26,17 @@ namespace headsup
         return pages;
     }
 
+    WindowLayout WithExtraPage(const WindowLayout& layout, const char* key, const char* name, std::vector<LayoutPage>& owned)
+    {
+        owned.assign(layout.pages.begin(), layout.pages.end());
+        auto at = std::next(std::ranges::find(owned, Page::UserInterface, &LayoutPage::page));
+        while (at != owned.end() && at->child) ++at;
+        owned.insert(at, LayoutPage{Page::Extra, key, name, nullptr, true, 0, 0});
+        WindowLayout with = layout;
+        with.pages        = owned;
+        return with;
+    }
+
     std::optional<PlateKind> KindOfPage(Page page)
     {
         switch (page)

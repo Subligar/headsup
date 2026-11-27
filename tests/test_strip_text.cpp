@@ -192,3 +192,14 @@ TEST(a_strip_window_whose_record_changes_or_does_not_match_is_checked_again_and_
     m.Put(0xB0000 + kNameAt, "menu    helpwind", kWindowNameLength);
     CHECK_EQ(Read(reader, m, why), std::string("Commands"));
 }
+
+TEST(an_items_element_marks_are_named_and_its_other_two_byte_characters_kept)
+{
+    // Descriptions from the client's item files (Phoenix's ROM/118 overlay): items 16793 and 16675, then the full-width
+    // tilde of item 5920 and the arrow of item 11290, whose trail bytes may be the marks' own.
+    CHECK_EQ(NamedElementMarks("Latent effect: HP+20 \xef#+10 \xef%+10"), std::string("Latent effect: HP+20 Lightning+10 Light+10"));
+    CHECK_EQ(NamedElementMarks("DMG:32 Delay:276 \xef -10 \xef!+10 \xef\"+10"), std::string("DMG:32 Delay:276 Ice-10 Wind+10 Earth+10"));
+    CHECK_EQ(NamedElementMarks("\xef\x1f+5 \xef&+5"), std::string("Fire+5 Dark+5"));
+    CHECK_EQ(NamedElementMarks("Valentione\x81\x60s \x81\xcb Jeuno"), std::string("Valentione\x81\x60s \x81\xcb Jeuno"));
+    CHECK_EQ(NamedElementMarks("\x81\xef#"), std::string("\x81\xef#")); // a lead byte's trail is no mark
+}

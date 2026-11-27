@@ -262,6 +262,12 @@ namespace headsup
         return pressed ? action : MenuAction::None;
     }
 
+    bool WindowsHearKey(uint32_t vk, bool typing, bool windowsBox)
+    {
+        const MenuAction action = KeyAction(vk);
+        return !typing || (windowsBox && (action == MenuAction::Confirm || action == MenuAction::Cancel));
+    }
+
     MenuAction MenuInput::Feed(const MenuEvent& event, double now)
     {
         switch (event.source)

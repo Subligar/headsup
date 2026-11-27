@@ -97,6 +97,10 @@ namespace headsup
         std::map<std::pair<InputSource, uint32_t>, bool> m_Down; // the keys and buttons down: whether their press was kept
     };
 
+    // Whether a key goes to the windows' input rather than to the text box that has the keyboard (typing): Enter and
+    // Escape do in a game window's box (windowsBox), so they act once a press there too, however long they are held.
+    bool WindowsHearKey(uint32_t vk, bool typing, bool windowsBox);
+
     // The actions inputs ask for, a held d-pad repeating its move.
     class MenuInput
     {

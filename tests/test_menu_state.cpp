@@ -291,3 +291,25 @@ TEST(vanilla_ui_is_the_last_page_under_user_interface_wherever_the_file_puts_it)
     added.MovePage("notifications", static_cast<size_t>(std::ranges::find(kWindowLayout.pages, Page::VanillaUi, &LayoutPage::page) - kWindowLayout.pages.begin()) + 1);
     check(added.Layout());
 }
+
+TEST(an_added_page_is_the_last_under_user_interface_but_vanilla_ui)
+{
+    const auto check = [](const WindowLayout& from) {
+        std::vector<LayoutPage> owned;
+        const WindowLayout layout = WithExtraPage(from, "added", "Added", owned);
+        CHECK_EQ(layout.pages.size(), from.pages.size() + 1);
+        CHECK(layout.PageNamed("added") == Page::Extra);
+        CHECK(layout.PageOf(Page::Extra).child && layout.PageOf(Page::Extra).cardCount == 0);
+        const std::vector<const LayoutPage*> pages = SidebarPages(layout);
+        auto at = std::ranges::find(pages, Page::UserInterface, &LayoutPage::page);
+        while (std::next(at) != pages.end() && (*std::next(at))->child) ++at;
+        CHECK((*at)->page == Page::VanillaUi && (*std::prev(at))->page == Page::Extra);
+    };
+    check(kWindowLayout);
+    for (const size_t place : {size_t{0}, kWindowLayout.pages.size()})
+    {
+        test::EditedLayout edited;
+        edited.MovePage("vanillaui", place);
+        check(edited.Layout());
+    }
+}

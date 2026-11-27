@@ -60,6 +60,7 @@
 #include "setup.h"
 #ifdef HEADSUP_DEV
 #include "codedump.h"
+#include "dev_extras.h"
 #include "drawdump.h"
 #include "mousewatch.h"
 #include "namedump.h"
@@ -73,8 +74,10 @@
 #endif
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <charconv>
+#include <cmath>
 #include <chrono>
 #include <cstring>
 #include <deque>
@@ -86,6 +89,7 @@
 #include <cstdio>
 #include <ctime>
 #include <optional>
+#include <span>
 #include <string>
 #include <unordered_set>
 #include <tuple>
@@ -100,6 +104,9 @@ namespace
     constexpr const char* kCaseRefused = "The case opening can't be drawn: Direct3D refused one of its pictures. Reload HeadsUp to try again.";
     constexpr double kSeedsPerSecond   = 1000.0; // a Case's seed is the time in milliseconds
     constexpr const char* kJoinCommand = "/join", *kDeclineCommand = "/decline"; // the game's answers to an invite
+#ifdef HEADSUP_DEV
+    constexpr int32_t kChatLineBytes = 4096; // Ashita's own buffer for one chat line
+#endif
     // The release tag's version, which the release workflow checks. Ashita takes one number: the major.minor at its front.
     constexpr const char* kVersion           = "0.6.0";
     // Before the addon host (LinuxXI's -1000 is seen to be), so an addon that skips blocked packets misses Auto-Check's.
@@ -323,6 +330,7 @@ namespace
         std::vector<headsup::MenuEvent> events; // what came while a window was open
         headsup::InputTaken taken;
         bool open = false; // a game window is open, as the last Present left them
+        std::atomic<bool> typing = false; // and one of their text boxes has the keyboard
 
         // True when the game must not get it.
         bool Take(const headsup::MenuEvent& event)
@@ -348,8 +356,10 @@ namespace
         const headsup::CNumbers numbers;
         const auto key  = static_cast<uint32_t>(wParam);
         const bool down = (static_cast<uint32_t>(lParam) & kKeyUpFlag) == 0;
-        // The game windows' keys, but for one typed into a text box of the settings window.
-        if (!g_Rml->WantsText() && g_MenuInbox.Take({headsup::InputSource::Keyboard, key, down ? 1 : 0})) return TRUE;
+        // The game windows' keys, but for one typed into a text box.
+        if (headsup::WindowsHearKey(key, g_Rml->WantsText(), g_MenuInbox.typing) &&
+            g_MenuInbox.Take({headsup::InputSource::Keyboard, key, down ? 1 : 0}))
+            return TRUE;
         return g_Rml->Key(key, down) ? TRUE : FALSE;
     }
 
@@ -535,6 +545,9 @@ class HeadsUp final : public IPlugin
     // config/headsup/settings_window.json, the window's layout in place of the built-in one while one is read.
     std::unique_ptr<headsup::OwnedLayout> m_WindowFile;
     headsup::WindowLayout m_WindowFileView;
+    // The layout with the extras' settings page, while they have one.
+    std::vector<headsup::LayoutPage> m_ExtraPages;
+    headsup::WindowLayout m_ExtraLayout;
     // Input played into HeadsUp's own mouse and keyboard handlers as Ashita would hand it over, a step a frame:
     // what /hu play queued, for trying the windows where no real pointer is.
     struct PlayedInput
@@ -751,6 +764,9 @@ public:
         m_GameWindows.Close();
         m_FishBar.Close();
         m_NoticeBox.Close();
+#ifdef HEADSUP_DEV
+        headsup::dev::Close();
+#endif
         m_CaseBoxes.Close();
         m_CaseRender.Release();
         m_CombatPopups.Release();
@@ -936,6 +952,8 @@ public:
             else
                 Print("RmlUi is not running.");
         }
+        else if (headsup::dev::Command(args, [&](const std::string& line) { Print(line); }))
+            return;
 #endif
         else
         {
@@ -959,6 +977,7 @@ public:
             Print("/hu mousewatch [stop]: log every mouse message and what HeadsUp made of it to logs/headsup until stopped");
             Print("/hu stripdump: write the game's top-strip text, every level, to logs/headsup");
             Print("/hu testmenu: open or close a game window that shows what every game window can do");
+            headsup::dev::Help([&](const std::string& line) { Print(line); });
 #endif
         }
     }
@@ -974,8 +993,69 @@ public:
         UNREFERENCED_PARAMETER(modifiedMessage);
         UNREFERENCED_PARAMETER(injected);
         UNREFERENCED_PARAMETER(blocked);
+#ifdef HEADSUP_DEV
+        if (message != nullptr && !injected && m_Settings.enabled)
+        {
+            // The game's line holds each auto-translate phrase as its code: Ashita spells it out.
+            char spelled[kChatLineBytes] = {};
+            m_AshitaCore->GetChatManager()->ParseAutoTranslate(message, spelled, sizeof(spelled), true);
+            WithDevHost([&](const headsup::dev::Host& host) { headsup::dev::ChatLine(spelled[0] != '\0' ? spelled : message, host); });
+        }
+#endif
         return message != nullptr && m_AutoCheck.OwnReport(message, Now());
     }
+
+#ifdef HEADSUP_DEV
+    // What the developer's extras are lent for one call.
+    template <typename Use>
+    void WithDevHost(Use use)
+    {
+        const auto command = [&](const std::string& line) {
+            m_AshitaCore->GetChatManager()->QueueCommand(static_cast<int32_t>(Ashita::CommandMode::Typed), line.c_str());
+        };
+        const auto sound = [&](headsup::NoticeKind kind) { PlayNotice(kind); };
+        const auto read  = [&](std::string_view name) { return ReadText(ConfigPath(name)); };
+        const auto write = [&](std::string_view name, std::string_view text) { return WriteText(ConfigPath(name), text); };
+        std::vector<std::string> party;
+        IMemoryManager* memory = m_AshitaCore->GetMemoryManager();
+        IParty* members        = memory->GetParty();
+        for (uint32_t m = 1; m < static_cast<uint32_t>(headsup::kPartySize); ++m) // 0 is you
+            if (const char* name = members->GetMemberName(m); members->GetMemberIsActive(m) != 0 && name != nullptr && *name != '\0')
+                party.emplace_back(name);
+        const auto send = [&](uint16_t id, std::span<const uint8_t> bytes) {
+            std::vector<uint8_t> packet(bytes.begin(), bytes.end()); // Ashita takes the bytes as non-const
+            m_AshitaCore->GetPacketManager()->AddOutgoingPacket(id, static_cast<uint32_t>(packet.size()), packet.data());
+        };
+        IInventory* inventory = memory->GetInventory();
+        const auto item = [&](uint32_t container, uint32_t slot) -> std::optional<headsup::dev::BagItem> {
+            const Ashita::FFXI::item_t* in = inventory->GetContainerItem(container, slot);
+            if (in == nullptr || in->Id == 0) return std::nullopt;
+            return headsup::dev::BagItem{in->Id, in->Count, in->Flags};
+        };
+        const auto bagSize = [&](uint32_t container) { return inventory->GetContainerCountMax(container); };
+        const auto facts   = [](uint16_t id) -> std::optional<headsup::dev::ItemFacts> {
+            const IItem* found = g_Resources != nullptr ? g_Resources->GetItemById(id) : nullptr;
+            if (found == nullptr) return std::nullopt;
+            const std::string description = found->Description[0] != nullptr ? found->Description[0] : "";
+            return headsup::dev::ItemFacts{found->Name[0] != nullptr ? found->Name[0] : "", found->Flags, found->StackSize,
+                found->Level, found->Races, found->Jobs, found->Damage, found->Delay,
+                headsup::Cp932ToUtf8(headsup::NamedElementMarks(description), [](const std::string& bytes) { return Cp932AsUtf8(bytes); })};
+        };
+        IEntity* entities     = memory->GetEntity();
+        const auto distanceTo = [&](uint32_t id) -> std::optional<float> {
+            const uint32_t index = id & headsup::kTargetIndexBits;
+            if (entities->GetRawEntity(index) == nullptr || entities->GetServerId(index) != id) return std::nullopt;
+            // In 3D, as the server measures a talk: GetDistance leaves the height out.
+            const float x = entities->GetLocalPositionX(index) - entities->GetLocalPositionX(m_SelfIndex);
+            const float y = entities->GetLocalPositionY(index) - entities->GetLocalPositionY(m_SelfIndex);
+            const float z = entities->GetLocalPositionZ(index) - entities->GetLocalPositionZ(m_SelfIndex);
+            return std::sqrt(x * x + y * y + z * z);
+        };
+        IPlayer* player = memory->GetPlayer();
+        use(headsup::dev::Host{Now(), m_Zone, KnowsSpell, command, sound, read, write, std::move(party), send, item, bagSize,
+            facts, distanceTo, entities->GetRace(m_SelfIndex), player->GetMainJob(), player->GetMainJobLevel()});
+    }
+#endif
 
     // HeadsUp reads packets and lets every one reach the game, but for the answer to a check it made by itself
     // (Auto-Check), whose chat line nobody asked to read.
@@ -986,8 +1066,11 @@ public:
         UNREFERENCED_PARAMETER(sizeChunk);
         UNREFERENCED_PARAMETER(dataChunk);
         UNREFERENCED_PARAMETER(blocked);
+        bool kept = false; // by a developer build's extras
 #ifdef HEADSUP_DEV
         m_DrawDump.SawPacket(id, data, size, Now());
+        if (m_Settings.enabled)
+            WithDevHost([&](const headsup::dev::Host& host) { kept = headsup::dev::PacketIn(id, std::span(data, size), host); });
 #endif
         if (!injected) m_Connection.Received(Now()); // an addon's injected packet never came from the server
         // data is the packet as the server sent it, before any addon blanked a message in what the game gets.
@@ -1019,7 +1102,7 @@ public:
         if (next.guardEvent) HeardOverseer(*next.guardEvent);
         if (next.mobDied && headsup::PhTimersRun(m_Settings))
             if (const auto mob = headsup::SightingOf(headsup::MobById(*next.mobDied))) m_PhTimers.Died(Now(), *mob);
-        return next.answer && m_AutoCheck.TakeAnswer(*next.answer, Now());
+        return (next.answer && m_AutoCheck.TakeAnswer(*next.answer, Now())) || kept;
     }
 
     void TrackStatuses(uint16_t id, const uint8_t* data, uint32_t size)
@@ -1253,20 +1336,26 @@ public:
             m_Settings.partyNoticeButtons), m_Settings, noticesPage);
         if (m_Rml.Running())
         {
-            const headsup::NoticeTook took = m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()),
-                m_Settings, shown,
-                headsup::NoticeFrame{KeyDown(VK_SHIFT) || noticesPage, g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f, noticeFrame,
-                    PointerOverGame() ? m_Rml.PointerAt() : std::nullopt,
-                    headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
-                        ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
-                        : std::nullopt,
-                    headsup::PanelFontsOf(m_Settings, headsup::PaletteFor(m_Settings, SkinNow()).shape,
-                        [&](const std::string& font) { return m_Rml.EnsureFont(font); })});
+            const headsup::NoticeFrame frame{KeyDown(VK_SHIFT) || noticesPage, g_BarOn ? m_RmlBar.BarBottomNow() : 0.0f,
+                noticeFrame, PointerOverGame() ? m_Rml.PointerAt() : std::nullopt,
+                headsup::UsesGameArt(m_Settings) && SkinNow() != nullptr
+                    ? std::optional(headsup::FrameAsSet(m_Settings, SkinNow()->frame))
+                    : std::nullopt,
+                headsup::PanelFontsOf(m_Settings, headsup::PaletteFor(m_Settings, SkinNow()).shape,
+                    [&](const std::string& font) { return m_Rml.EnsureFont(font); })};
+            const headsup::NoticeTook took =
+                m_NoticeBox.Update(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings, shown, frame);
             if (took.moved) m_SettingsChangedAt = now;
             m_NoticeHeld = took.hovered;
             if (took.press && m_Notices.Close(took.press->id))
                 m_AshitaCore->GetChatManager()->QueueCommand(static_cast<int32_t>(Ashita::CommandMode::Typed),
                     took.press->accept ? kJoinCommand : kDeclineCommand);
+#ifdef HEADSUP_DEV
+            WithDevHost([&](const headsup::dev::Host& host) {
+                headsup::dev::Frame(m_Rml.Overlay(), headsup::PaletteFor(m_Settings, SkinNow()), m_Settings, frame,
+                    m_Settings.enabled && !m_UiHidden && loginStatus == headsup::kLoginInGame, host);
+            });
+#endif
         }
         m_NoticesAt = now;
         if (const std::optional<CaseCaught> caught = std::exchange(m_CaseCaught, std::nullopt)) StartCase(caught->item, caught->angler);
@@ -1385,11 +1474,12 @@ public:
             events.swap(g_MenuInbox.events);
         }
         if (!m_Rml.Running()) return;
-        bool asked = false;
+        bool asked = false, wanted = false; // the test menu, and the extras' windows
 #ifdef HEADSUP_DEV
-        asked = std::exchange(m_TestMenuAsked, false);
+        asked  = std::exchange(m_TestMenuAsked, false);
+        wanted = headsup::dev::WantsWindows();
 #endif
-        if (m_GameWindows.AnyOpen() || asked)
+        if (m_GameWindows.AnyOpen() || asked || wanted)
             m_GameWindows.Update(m_Rml.Overlay(), headsup::MenuLookFor(MenuHostNow(), m_Settings), m_Settings.menuPlaces);
 #ifdef HEADSUP_DEV
         if (asked) headsup::ToggleTestMenu(m_GameWindows);
@@ -1408,6 +1498,7 @@ public:
 #ifdef HEADSUP_DEV
         for (const std::string& press : presses)
             headsup::TestMenuPressed(m_GameWindows, press);
+        WithDevHost([&](const headsup::dev::Host& host) { headsup::dev::Windows(m_GameWindows, presses, host); });
 #endif
         if (const auto page = m_GameWindows.TakeSettingsAsked(); page && m_RmlMenu.open)
             m_RmlMenu.open = false;
@@ -1421,6 +1512,7 @@ public:
         }
         const bool open = m_GameWindows.AnyOpen();
         if (!open) m_MenuInput.Reset();
+        g_MenuInbox.typing = m_GameWindows.Typing();
         const std::lock_guard hold(g_MenuInbox.lock);
         g_MenuInbox.open = open;
     }
@@ -1476,6 +1568,11 @@ public:
             .partMarks        = {},
             .localZone        = LocalZoneNow(),
             .today            = TodayNow(),
+#ifdef HEADSUP_DEV
+            .extraPage        = [this](headsup::Form& form) {
+                WithDevHost([&](const headsup::dev::Host& host) { headsup::dev::DrawSettings(form, host); });
+            },
+#endif
         };
         if (!readings.settingsOf.empty())
             readings.partMarks = headsup::PartMarksNow(readings.settingsOf, BarStateNow(now), m_Settings);
@@ -2440,6 +2537,11 @@ private:
 #ifdef HEADSUP_DEV
         host.developer = true;
         if (m_WindowFile != nullptr) host.layout = &m_WindowFileView;
+        if (const headsup::dev::PageName extra = headsup::dev::SettingsPage(); extra.key != nullptr)
+        {
+            m_ExtraLayout = headsup::WithExtraPage(*host.layout, extra.key, extra.name, m_ExtraPages);
+            host.layout   = &m_ExtraLayout;
+        }
 #endif
         return host;
     }
